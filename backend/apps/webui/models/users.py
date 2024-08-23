@@ -1,12 +1,10 @@
-from pydantic import BaseModel, ConfigDict, parse_obj_as
-from typing import List, Union, Optional
+from pydantic import BaseModel, ConfigDict
+from typing import Optional
 import time
 
 from sqlalchemy import String, Column, BigInteger, Text
 
-from utils.misc import get_gravatar_url
-
-from apps.webui.internal.db import Base, JSONField, Session, get_db
+from apps.webui.internal.db import Base, JSONField, get_db
 from apps.webui.models.chats import Chats
 
 ####################
@@ -78,7 +76,6 @@ class UserUpdateForm(BaseModel):
 
 
 class UsersTable:
-
     def insert_new_user(
         self,
         id: str,
@@ -122,31 +119,28 @@ class UsersTable:
     def get_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
-
                 user = db.query(User).filter_by(api_key=api_key).first()
                 return UserModel.model_validate(user)
-        except:
+        except Exception:
             return None
 
     def get_user_by_email(self, email: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
-
                 user = db.query(User).filter_by(email=email).first()
                 return UserModel.model_validate(user)
-        except:
+        except Exception:
             return None
 
     def get_user_by_oauth_sub(self, sub: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
-
                 user = db.query(User).filter_by(oauth_sub=sub).first()
                 return UserModel.model_validate(user)
-        except:
+        except Exception:
             return None
 
-    def get_users(self, skip: int = 0, limit: int = 50) -> List[UserModel]:
+    def get_users(self, skip: int = 0, limit: int = 50) -> list[UserModel]:
         with get_db() as db:
             users = (
                 db.query(User)
@@ -164,7 +158,7 @@ class UsersTable:
             with get_db() as db:
                 user = db.query(User).order_by(User.created_at).first()
                 return UserModel.model_validate(user)
-        except:
+        except Exception:
             return None
 
     def update_user_role_by_id(self, id: str, role: str) -> Optional[UserModel]:
@@ -174,7 +168,7 @@ class UsersTable:
                 db.commit()
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
-        except:
+        except Exception:
             return None
 
     def update_user_profile_image_url_by_id(
@@ -189,13 +183,12 @@ class UsersTable:
 
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
-        except:
+        except Exception:
             return None
 
     def update_user_last_active_by_id(self, id: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
-
                 db.query(User).filter_by(id=id).update(
                     {"last_active_at": int(time.time())}
                 )
@@ -203,7 +196,7 @@ class UsersTable:
 
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
-        except:
+        except Exception:
             return None
 
     def update_user_oauth_sub_by_id(
@@ -216,7 +209,7 @@ class UsersTable:
 
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
-        except:
+        except Exception:
             return None
 
     def update_user_by_id(self, id: str, updated: dict) -> Optional[UserModel]:
@@ -245,7 +238,7 @@ class UsersTable:
                 return True
             else:
                 return False
-        except:
+        except Exception:
             return False
 
     def update_user_api_key_by_id(self, id: str, api_key: str) -> str:
@@ -254,7 +247,7 @@ class UsersTable:
                 result = db.query(User).filter_by(id=id).update({"api_key": api_key})
                 db.commit()
                 return True if result == 1 else False
-        except:
+        except Exception:
             return False
 
     def get_user_api_key_by_id(self, id: str) -> Optional[str]:

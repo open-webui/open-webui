@@ -17,7 +17,7 @@ def search_jina(query: str, count: int) -> list[SearchResult]:
         count (int): The number of results to return
 
     Returns:
-        List[SearchResult]: A list of search results
+        list[SearchResult]: A list of search results
     """
     jina_search_endpoint = "https://s.jina.ai/"
     headers = {

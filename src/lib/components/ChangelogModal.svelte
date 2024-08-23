@@ -75,12 +75,12 @@
 										class="font-semibold uppercase text-xs {section === 'added'
 											? 'text-white bg-blue-600'
 											: section === 'fixed'
-											? 'text-white bg-green-600'
-											: section === 'changed'
-											? 'text-white bg-yellow-600'
-											: section === 'removed'
-											? 'text-white bg-red-600'
-											: ''}  w-fit px-3 rounded-full my-2.5"
+												? 'text-white bg-green-600'
+												: section === 'changed'
+													? 'text-white bg-yellow-600'
+													: section === 'removed'
+														? 'text-white bg-red-600'
+														: ''}  w-fit px-3 rounded-full my-2.5"
 									>
 										{section}
 									</div>

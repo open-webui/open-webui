@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { v4 as uuidv4 } from 'uuid';
-	import { chats, config, settings, user as _user, mobile, currentChatPage } from '$lib/stores';
-	import { tick, getContext, onMount } from 'svelte';
-	import { toast } from 'svelte-sonner';
-	import { getChatList, updateChatById } from '$lib/apis/chats';
-	import UserMessage from './Messages/UserMessage.svelte';
-	import ResponseMessage from './Messages/ResponseMessage.svelte';
-	import Placeholder from './Messages/Placeholder.svelte';
-	import Spinner from '../common/Spinner.svelte';
-	import { imageGenerations } from '$lib/apis/images';
-	import { copyToClipboard, findWordIndices } from '$lib/utils'
-	import CompareMessages from './Messages/CompareMessages.svelte';
-	import { stringify } from 'postcss';
+import { v4 as uuidv4 } from 'uuid';
+import { chats, config, settings, user as _user, mobile, currentChatPage } from '$lib/stores';
+import { tick, getContext, onMount } from 'svelte';
+import { toast } from 'svelte-sonner';
+import { getChatList, updateChatById } from '$lib/apis/chats';
+import UserMessage from './Messages/UserMessage.svelte';
+import ResponseMessage from './Messages/ResponseMessage.svelte';
+import Placeholder from './Messages/Placeholder.svelte';
+import Spinner from '../common/Spinner.svelte';
+import { imageGenerations } from '$lib/apis/images';
+import { copyToClipboard, findWordIndices } from '$lib/utils';
+import CompareMessages from './Messages/CompareMessages.svelte';
+import MultiResponseMessages from './Messages/MultiResponseMessages.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -20,6 +20,7 @@
 	export let sendPrompt: Function;
 	export let continueGeneration: Function;
 	export let regenerateResponse: Function;
+	export let mergeResponses: Function;
 	export let chatActionHandler: Function;
 
 	export let user = $_user;
@@ -51,34 +52,43 @@
 		}
 	};
 
-	const confirmEditMessage = async (messageId, content) => {
-		let userPrompt = content;
-		let userMessageId = uuidv4();
+	const confirmEditMessage = async (messageId, content, submit = true) => {
+		if (submit) {
+			let userPrompt = content;
+			let userMessageId = uuidv4();
 
-		let userMessage = {
-			id: userMessageId,
-			parentId: history.messages[messageId].parentId,
-			childrenIds: [],
-			role: 'user',
-			content: userPrompt,
-			...(history.messages[messageId].files && { files: history.messages[messageId].files }),
-			models: selectedModels.filter((m, mIdx) => selectedModels.indexOf(m) === mIdx)
-		};
+			let userMessage = {
+				id: userMessageId,
+				parentId: history.messages[messageId].parentId,
+				childrenIds: [],
+				role: 'user',
+				content: userPrompt,
+				...(history.messages[messageId].files && { files: history.messages[messageId].files }),
+				models: selectedModels
+			};
 
-		let messageParentId = history.messages[messageId].parentId;
+			let messageParentId = history.messages[messageId].parentId;
 
-		if (messageParentId !== null) {
-			history.messages[messageParentId].childrenIds = [
-				...history.messages[messageParentId].childrenIds,
-				userMessageId
-			];
+			if (messageParentId !== null) {
+				history.messages[messageParentId].childrenIds = [
+					...history.messages[messageParentId].childrenIds,
+					userMessageId
+				];
+			}
+
+			history.messages[userMessageId] = userMessage;
+			history.currentId = userMessageId;
+
+			await tick();
+			await sendPrompt(userPrompt, userMessageId);
+		} else {
+			history.messages[messageId].content = content;
+			await tick();
+			await updateChatById(localStorage.token, chatId, {
+				messages: messages,
+				history: history
+			});
 		}
-
-		history.messages[userMessageId] = userMessage;
-		history.currentId = userMessageId;
-
-		await tick();
-		await sendPrompt(userPrompt, userMessageId);
 	};
 
 	const updateChatMessages = async () => {
@@ -303,7 +313,7 @@
 				{#each messages as message, messageIdx}
 					<div class=" w-full {messageIdx === messages.length - 1 ? ' pb-12' : ''}">
 						<div
-							class="flex flex-col justify-between px-5 mb-3 {$settings?.widescreenMode ?? null
+							class="flex flex-col justify-between px-5 mb-3 {($settings?.widescreenMode ?? null)
 								? 'max-w-full'
 								: 'max-w-5xl'} mx-auto rounded-lg group"
 						>
@@ -315,16 +325,16 @@
 									{message}
 									isFirstMessage={messageIdx === 0}
 									siblings={message.parentId !== null
-										? history.messages[message.parentId]?.childrenIds ?? []
-										: Object.values(history.messages)
+										? (history.messages[message.parentId]?.childrenIds ?? [])
+										: (Object.values(history.messages)
 												.filter((message) => message.parentId === null)
-												.map((message) => message.id) ?? []}
+												.map((message) => message.id) ?? [])}
 									{confirmEditMessage}
 									{showPreviousMessage}
 									{showNextMessage}
 									copyToClipboard={copyToClipboardWithToast}
 								/>
-							{:else if $mobile || (history.messages[message.parentId]?.models?.length ?? 1) === 1}
+							{:else if (history.messages[message.parentId]?.models?.length ?? 1) === 1}
 								{#key message.id && history.currentId}
 									<ResponseMessage
 										{message}
@@ -341,7 +351,13 @@
 										{regenerateResponse}
 										{chatActionHandler}
 										on:action={async (e) => {
-											await chatActionHandler(chatId, e.detail, message.model, message.id);
+											console.log('action', e);
+											if (typeof e.detail === 'string') {
+												await chatActionHandler(chatId, e.detail, message.model, message.id);
+											} else {
+												const { id, event } = e.detail;
+												await chatActionHandler(chatId, id, message.model, message.id, event);
+											}
 										}}
 										on:save={async (e) => {
 											console.log('save', e);
@@ -357,8 +373,9 @@
 								{/key}
 							{:else}
 								{#key message.parentId}
-									<CompareMessages
+									<MultiResponseMessages
 										bind:history
+										isLastMessage={messageIdx + 1 === messages.length}
 										{messages}
 										{readOnly}
 										{chatId}
@@ -369,7 +386,17 @@
 										{rateMessage}
 										copyToClipboard={copyToClipboardWithToast}
 										{continueGeneration}
+										{mergeResponses}
 										{regenerateResponse}
+										on:action={async (e) => {
+											console.log('action', e);
+											if (typeof e.detail === 'string') {
+												await chatActionHandler(chatId, e.detail, message.model, message.id);
+											} else {
+												const { id, event } = e.detail;
+												await chatActionHandler(chatId, id, message.model, message.id, event);
+											}
+										}}
 										on:change={async () => {
 											await updateChatById(localStorage.token, chatId, {
 												messages: messages,

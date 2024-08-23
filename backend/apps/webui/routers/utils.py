@@ -17,7 +17,7 @@ from utils.misc import calculate_sha256, get_gravatar_url
 
 from config import OLLAMA_BASE_URLS, DATA_DIR, UPLOAD_DIR, ENABLE_ADMIN_EXPORT
 from constants import ERROR_MESSAGES
-from typing import List
+
 
 router = APIRouter()
 
@@ -57,7 +57,7 @@ async def get_html_from_markdown(
 
 class ChatForm(BaseModel):
     title: str
-    messages: List[dict]
+    messages: list[dict]
 
 
 @router.post("/pdf")
@@ -85,9 +85,10 @@ async def download_chat_as_pdf(
     pdf.add_font("NotoSans", "i", f"{FONTS_DIR}/NotoSans-Italic.ttf")
     pdf.add_font("NotoSansKR", "", f"{FONTS_DIR}/NotoSansKR-Regular.ttf")
     pdf.add_font("NotoSansJP", "", f"{FONTS_DIR}/NotoSansJP-Regular.ttf")
+    pdf.add_font("NotoSansSC", "", f"{FONTS_DIR}/NotoSansSC-Regular.ttf")
 
     pdf.set_font("NotoSans", size=12)
-    pdf.set_fallback_fonts(["NotoSansKR", "NotoSansJP"])
+    pdf.set_fallback_fonts(["NotoSansKR", "NotoSansJP", "NotoSansSC"])
 
     pdf.set_auto_page_break(auto=True, margin=15)
 

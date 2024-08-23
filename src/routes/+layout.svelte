@@ -38,8 +38,6 @@
 	let loaded = false;
 	const BREAKPOINT = 768;
 
-	let wakeLock = null;
-
 	onMount(async () => {
 		theme.set(localStorage.theme);
 
@@ -53,34 +51,6 @@
 		};
 
 		window.addEventListener('resize', onResize);
-
-		const setWakeLock = async () => {
-			try {
-				wakeLock = await navigator.wakeLock.request('screen');
-			} catch (err) {
-				// The Wake Lock request has failed - usually system related, such as battery.
-				console.log(err);
-			}
-
-			if (wakeLock) {
-				// Add a listener to release the wake lock when the page is unloaded
-				wakeLock.addEventListener('release', () => {
-					// the wake lock has been released
-					console.log('Wake Lock released');
-				});
-			}
-		};
-
-		if ('wakeLock' in navigator) {
-			await setWakeLock();
-
-			document.addEventListener('visibilitychange', async () => {
-				// Re-request the wake lock if the document becomes visible
-				if (wakeLock !== null && document.visibilityState === 'visible') {
-					await setWakeLock();
-				}
-			});
-		}
 
 		let backendConfig = null;
 		try {
@@ -111,12 +81,31 @@
 
 			if ($config) {
 				const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
+					reconnection: true,
+					reconnectionDelay: 1000,
+					reconnectionDelayMax: 5000,
+					randomizationFactor: 0.5,
 					path: '/ws/socket.io',
 					auth: { token: localStorage.token }
 				});
 
 				_socket.on('connect', () => {
 					console.log('connected');
+				});
+
+				_socket.on('reconnect_attempt', (attempt) => {
+					console.log('reconnect_attempt', attempt);
+				});
+
+				_socket.on('reconnect_failed', () => {
+					console.log('reconnect_failed');
+				});
+
+				_socket.on('disconnect', (reason, details) => {
+					console.log(`Socket ${socket.id} disconnected due to ${reason}`);
+					if (details) {
+						console.log('Additional details:', details);
+					}
 				});
 
 				await socket.set(_socket);
@@ -141,6 +130,7 @@
 					if (sessionUser) {
 						// Save Session User to Store
 						await user.set(sessionUser);
+						await config.set(await getBackendConfig());
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');

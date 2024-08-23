@@ -9,7 +9,7 @@ import { WEBUI_BASE_URL } from '$lib/constants';
 const convertLatexToSingleLine = (content) => {
 	// Patterns to match multiline LaTeX blocks
 	const patterns = [
-		/(\$\$[\s\S]*?\$\$)/g, // Match $$ ... $$
+		/(\$\$\s[\s\S]*?\s\$\$)/g, // Match $$ ... $$
 		/(\\\[[\s\S]*?\\\])/g, // Match \[ ... \]
 		/(\\begin\{[a-z]+\}[\s\S]*?\\end\{[a-z]+\})/g // Match \begin{...} ... \end{...}
 	];
@@ -21,38 +21,6 @@ const convertLatexToSingleLine = (content) => {
 	});
 
 	return content;
-};
-
-export const sanitizeResponseContent = (content: string) => {
-	// replace single backslash with double backslash
-	content = content.replace(/\\/g, '\\\\');
-	content = convertLatexToSingleLine(content);
-
-	// First, temporarily replace valid <video> tags with a placeholder
-	const videoTagRegex = /<video\s+src="([^"]+)"\s+controls><\/video>/gi;
-	const placeholders: string[] = [];
-	content = content.replace(videoTagRegex, (_, src) => {
-		const placeholder = `{{VIDEO_${placeholders.length}}}`;
-		placeholders.push(`<video src="${src}" controls></video>`);
-		return placeholder;
-	});
-
-	// Now apply the sanitization to the rest of the content
-	content = content
-		.replace(/<\|[a-z]*$/, '')
-		.replace(/<\|[a-z]+\|$/, '')
-		.replace(/<$/, '')
-		.replaceAll(/<\|[a-z]+\|>/g, ' ')
-		.replaceAll('<', '&lt;')
-		.replaceAll('>', '&gt;')
-		.trim();
-
-	// Replace placeholders with original <video> tags
-	placeholders.forEach((placeholder, index) => {
-		content = content.replace(`{{VIDEO_${index}}}`, placeholder);
-	});
-
-	return content.trim();
 };
 
 export const replaceTokens = (content, char, user) => {
@@ -84,6 +52,22 @@ export const replaceTokens = (content, char, user) => {
 	});
 
 	return content;
+};
+
+export const sanitizeResponseContent = (content: string) => {
+	return content
+		.replace(/<\|[a-z]*$/, '')
+		.replace(/<\|[a-z]+\|$/, '')
+		.replace(/<$/, '')
+		.replaceAll(/<\|[a-z]+\|>/g, ' ')
+		.replaceAll('<', '&lt;')
+		.replaceAll('>', '&gt;')
+		.trim();
+};
+
+export const processResponseContent = (content: string) => {
+	content = convertLatexToSingleLine(content);
+	return content.trim();
 };
 
 export const revertSanitizedResponseContent = (content: string) => {
@@ -226,7 +210,7 @@ export const generateInitialsImage = (name) => {
 	const initials =
 		sanitizedName.length > 0
 			? sanitizedName[0] +
-			  (sanitizedName.split(' ').length > 1
+				(sanitizedName.split(' ').length > 1
 					? sanitizedName[sanitizedName.lastIndexOf(' ') + 1]
 					: '')
 			: '';
@@ -285,7 +269,7 @@ export const compareVersion = (latest, current) => {
 				numeric: true,
 				sensitivity: 'case',
 				caseFirst: 'upper'
-		  }) < 0;
+			}) < 0;
 };
 
 export const findWordIndices = (text) => {

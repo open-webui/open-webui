@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import List, Optional
+from typing import Optional
 import time
 import logging
 from sqlalchemy import String, Column, BigInteger, Text
@@ -45,7 +45,7 @@ class ToolModel(BaseModel):
     user_id: str
     name: str
     content: str
-    specs: List[dict]
+    specs: list[dict]
     meta: ToolMeta
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
@@ -81,7 +81,7 @@ class ToolValves(BaseModel):
 class ToolsTable:
 
     def insert_new_tool(
-        self, user_id: str, form_data: ToolForm, specs: List[dict]
+        self, user_id: str, form_data: ToolForm, specs: list[dict]
     ) -> Optional[ToolModel]:
 
         with get_db() as db:
@@ -115,10 +115,10 @@ class ToolsTable:
 
                 tool = db.get(Tool, id)
                 return ToolModel.model_validate(tool)
-        except:
+        except Exception:
             return None
 
-    def get_tools(self) -> List[ToolModel]:
+    def get_tools(self) -> list[ToolModel]:
         with get_db() as db:
             return [ToolModel.model_validate(tool) for tool in db.query(Tool).all()]
 
@@ -141,7 +141,7 @@ class ToolsTable:
                 )
                 db.commit()
                 return self.get_tool_by_id(id)
-        except:
+        except Exception:
             return None
 
     def get_user_valves_by_id_and_user_id(
@@ -196,7 +196,7 @@ class ToolsTable:
                 tool = db.query(Tool).get(id)
                 db.refresh(tool)
                 return ToolModel.model_validate(tool)
-        except:
+        except Exception:
             return None
 
     def delete_tool_by_id(self, id: str) -> bool:
@@ -206,7 +206,7 @@ class ToolsTable:
                 db.commit()
 
                 return True
-        except:
+        except Exception:
             return False
 
 
