@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { onMount, tick, getContext } from 'svelte';
+
 	import {
 		type Model,
 		mobile,
@@ -12,15 +13,9 @@
 		tools,
 		user as _user
 	} from '$lib/stores';
-	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
-
-	import {
-		processDocToVectorDB,
-		uploadDocToVectorDB,
-		uploadWebToVectorDB,
-		uploadYoutubeTranscriptionToVectorDB
-	} from '$lib/apis/rag';
-
+	import { blobToFile, findWordIndices } from '$lib/utils';
+	import { processDocToVectorDB } from '$lib/apis/rag';
+	import { transcribeAudio } from '$lib/apis/audio';
 	import { uploadFile } from '$lib/apis/files';
 	import {
 		SUPPORTED_FILE_TYPE,
@@ -29,19 +24,14 @@
 		WEBUI_API_BASE_URL
 	} from '$lib/constants';
 
-	import Prompts from './MessageInput/PromptCommands.svelte';
-	import Suggestions from './MessageInput/Suggestions.svelte';
-	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
-	import Documents from './MessageInput/Documents.svelte';
-	import Models from './MessageInput/Models.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
 	import InputMenu from './MessageInput/InputMenu.svelte';
 	import Headphone from '../icons/Headphone.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
-	import { transcribeAudio } from '$lib/apis/audio';
 	import FileItem from '../common/FileItem.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
+	import Commands from './MessageInput/Commands.svelte';
+	import XMark from '../icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -60,9 +50,7 @@
 	let chatTextAreaElement: HTMLTextAreaElement;
 	let filesInputElement;
 
-	let promptsElement;
-	let documentsElement;
-	let modelsElement;
+	let commandsElement;
 
 	let inputFiles;
 	let dragged = false;
@@ -180,62 +168,6 @@
 		}
 	};
 
-	const uploadWeb = async (url) => {
-		console.log(url);
-
-		const doc = {
-			type: 'doc',
-			name: url,
-			collection_name: '',
-			status: false,
-			url: url,
-			error: ''
-		};
-
-		try {
-			files = [...files, doc];
-			const res = await uploadWebToVectorDB(localStorage.token, '', url);
-
-			if (res) {
-				doc.status = 'processed';
-				doc.collection_name = res.collection_name;
-				files = files;
-			}
-		} catch (e) {
-			// Remove the failed doc from the files array
-			files = files.filter((f) => f.name !== url);
-			toast.error(e);
-		}
-	};
-
-	const uploadYoutubeTranscription = async (url) => {
-		console.log(url);
-
-		const doc = {
-			type: 'doc',
-			name: url,
-			collection_name: '',
-			status: false,
-			url: url,
-			error: ''
-		};
-
-		try {
-			files = [...files, doc];
-			const res = await uploadYoutubeTranscriptionToVectorDB(localStorage.token, url);
-
-			if (res) {
-				doc.status = 'processed';
-				doc.collection_name = res.collection_name;
-				files = files;
-			}
-		} catch (e) {
-			// Remove the failed doc from the files array
-			files = files.filter((f) => f.name !== url);
-			toast.error(e);
-		}
-	};
-
 	onMount(() => {
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
@@ -346,48 +278,9 @@
 			</div>
 
 			<div class="w-full relative">
-				{#if prompt.charAt(0) === '/'}
-					<Prompts bind:this={promptsElement} bind:prompt bind:files />
-				{:else if prompt.charAt(0) === '#'}
-					<Documents
-						bind:this={documentsElement}
-						bind:prompt
-						on:youtube={(e) => {
-							console.log(e);
-							uploadYoutubeTranscription(e.detail);
-						}}
-						on:url={(e) => {
-							console.log(e);
-							uploadWeb(e.detail);
-						}}
-						on:select={(e) => {
-							console.log(e);
-							files = [
-								...files,
-								{
-									type: e?.detail?.type ?? 'file',
-									...e.detail,
-									status: 'processed'
-								}
-							];
-						}}
-					/>
-				{/if}
-
-				<Models
-					bind:this={modelsElement}
-					bind:prompt
-					bind:chatInputPlaceholder
-					{messages}
-					on:select={(e) => {
-						atSelectedModel = e.detail;
-						chatTextAreaElement?.focus();
-					}}
-				/>
-
 				{#if atSelectedModel !== undefined}
 					<div
-						class="px-3 py-2.5 text-left w-full flex justify-between items-center absolute bottom-0 left-0 right-0 bg-gradient-to-t from-50% from-white dark:from-gray-900 z-50"
+						class="px-3 py-2.5 text-left w-full flex justify-between items-center absolute bottom-0 left-0 right-0 bg-gradient-to-t from-50% from-white dark:from-gray-900 z-10"
 					>
 						<div class="flex items-center gap-2 text-sm dark:text-gray-500">
 							<img
@@ -416,6 +309,21 @@
 						</div>
 					</div>
 				{/if}
+
+				<Commands
+					bind:this={commandsElement}
+					bind:prompt
+					bind:files
+					on:select={(e) => {
+						const data = e.detail;
+
+						if (data?.type === 'model') {
+							atSelectedModel = data.data;
+						}
+
+						chatTextAreaElement?.focus();
+					}}
+				/>
 			</div>
 		</div>
 	</div>
@@ -641,6 +549,7 @@
 									}}
 									on:keydown={async (e) => {
 										const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
+										const commandsContainerElement = document.getElementById('commands-container');
 
 										// Check if Ctrl + R is pressed
 										if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
@@ -671,10 +580,9 @@
 											editButton?.click();
 										}
 
-										if (['/', '#', '@'].includes(prompt.charAt(0)) && e.key === 'ArrowUp') {
+										if (commandsContainerElement && e.key === 'ArrowUp') {
 											e.preventDefault();
-
-											(promptsElement || documentsElement || modelsElement).selectUp();
+											commandsElement.selectUp();
 
 											const commandOptionButton = [
 												...document.getElementsByClassName('selected-command-option-button')
@@ -682,10 +590,9 @@
 											commandOptionButton.scrollIntoView({ block: 'center' });
 										}
 
-										if (['/', '#', '@'].includes(prompt.charAt(0)) && e.key === 'ArrowDown') {
+										if (commandsContainerElement && e.key === 'ArrowDown') {
 											e.preventDefault();
-
-											(promptsElement || documentsElement || modelsElement).selectDown();
+											commandsElement.selectDown();
 
 											const commandOptionButton = [
 												...document.getElementsByClassName('selected-command-option-button')
@@ -693,7 +600,7 @@
 											commandOptionButton.scrollIntoView({ block: 'center' });
 										}
 
-										if (['/', '#', '@'].includes(prompt.charAt(0)) && e.key === 'Enter') {
+										if (commandsContainerElement && e.key === 'Enter') {
 											e.preventDefault();
 
 											const commandOptionButton = [
@@ -709,7 +616,7 @@
 											}
 										}
 
-										if (['/', '#', '@'].includes(prompt.charAt(0)) && e.key === 'Tab') {
+										if (commandsContainerElement && e.key === 'Tab') {
 											e.preventDefault();
 
 											const commandOptionButton = [
@@ -789,7 +696,7 @@
 												type="button"
 												on:click={async () => {
 													try {
-														const res = await navigator.mediaDevices
+														let stream = await navigator.mediaDevices
 															.getUserMedia({ audio: true })
 															.catch(function (err) {
 																toast.error(
@@ -803,9 +710,12 @@
 																return null;
 															});
 
-														if (res) {
+														if (stream) {
 															recording = true;
+															const tracks = stream.getTracks();
+															tracks.forEach((track) => track.stop());
 														}
+														stream = null;
 													} catch {
 														toast.error($i18n.t('Permission denied when accessing microphone'));
 													}

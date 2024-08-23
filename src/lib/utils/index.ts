@@ -288,6 +288,20 @@ export const findWordIndices = (text) => {
 	return matches;
 };
 
+export const removeLastWordFromString = (inputString, wordString) => {
+	// Split the string into an array of words
+	const words = inputString.split(' ');
+
+	if (words.at(-1) === wordString) {
+		words.pop();
+	}
+
+	// Join the remaining words back into a string
+	const resultString = words.join(' ');
+
+	return resultString;
+};
+
 export const removeFirstHashWord = (inputString) => {
 	// Split the string into an array of words
 	const words = inputString.split(' ');

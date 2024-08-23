@@ -7,27 +7,30 @@
 	const i18n = getContext('i18n');
 
 	export let files;
-	export let prompt = '';
-	let selectedCommandIdx = 0;
-	let filteredPromptCommands = [];
 
-	$: filteredPromptCommands = $prompts
-		.filter((p) => p.command.toLowerCase().includes(prompt.toLowerCase()))
+	export let prompt = '';
+	export let command = '';
+
+	let selectedPromptIdx = 0;
+	let filteredPrompts = [];
+
+	$: filteredPrompts = $prompts
+		.filter((p) => p.command.toLowerCase().includes(command.toLowerCase()))
 		.sort((a, b) => a.title.localeCompare(b.title));
 
-	$: if (prompt) {
-		selectedCommandIdx = 0;
+	$: if (command) {
+		selectedPromptIdx = 0;
 	}
 
 	export const selectUp = () => {
-		selectedCommandIdx = Math.max(0, selectedCommandIdx - 1);
+		selectedPromptIdx = Math.max(0, selectedPromptIdx - 1);
 	};
 
 	export const selectDown = () => {
-		selectedCommandIdx = Math.min(selectedCommandIdx + 1, filteredPromptCommands.length - 1);
+		selectedPromptIdx = Math.min(selectedPromptIdx + 1, filteredPrompts.length - 1);
 	};
 
-	const confirmCommand = async (command) => {
+	const confirmPrompt = async (command) => {
 		let text = command.content;
 
 		if (command.content.includes('{{CLIPBOARD}}')) {
@@ -79,7 +82,6 @@
 		await tick();
 
 		const words = findWordIndices(prompt);
-
 		if (words.length > 0) {
 			const word = words.at(0);
 			chatInputElement.setSelectionRange(word?.startIndex, word.endIndex + 1);
@@ -87,8 +89,11 @@
 	};
 </script>
 
-{#if filteredPromptCommands.length > 0}
-	<div class="pl-1 pr-12 mb-3 text-left w-full absolute bottom-0 left-0 right-0 z-10">
+{#if filteredPrompts.length > 0}
+	<div
+		id="commands-container"
+		class="pl-1 pr-12 mb-3 text-left w-full absolute bottom-0 left-0 right-0 z-10"
+	>
 		<div class="flex w-full dark:border dark:border-gray-850 rounded-lg">
 			<div class="  bg-gray-50 dark:bg-gray-850 w-10 rounded-l-lg text-center">
 				<div class=" text-lg font-semibold mt-2">/</div>
@@ -98,26 +103,26 @@
 				class="max-h-60 flex flex-col w-full rounded-r-lg bg-white dark:bg-gray-900 dark:text-gray-100"
 			>
 				<div class="m-1 overflow-y-auto p-1 rounded-r-lg space-y-0.5 scrollbar-hidden">
-					{#each filteredPromptCommands as command, commandIdx}
+					{#each filteredPrompts as prompt, promptIdx}
 						<button
-							class=" px-3 py-1.5 rounded-xl w-full text-left {commandIdx === selectedCommandIdx
+							class=" px-3 py-1.5 rounded-xl w-full text-left {promptIdx === selectedPromptIdx
 								? '  bg-gray-50 dark:bg-gray-850 selected-command-option-button'
 								: ''}"
 							type="button"
 							on:click={() => {
-								confirmCommand(command);
+								confirmPrompt(prompt);
 							}}
 							on:mousemove={() => {
-								selectedCommandIdx = commandIdx;
+								selectedPromptIdx = promptIdx;
 							}}
 							on:focus={() => {}}
 						>
 							<div class=" font-medium text-black dark:text-gray-100">
-								{command.command}
+								{prompt.command}
 							</div>
 
 							<div class=" text-xs text-gray-600 dark:text-gray-100">
-								{command.title}
+								{prompt.title}
 							</div>
 						</button>
 					{/each}
