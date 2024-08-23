@@ -155,6 +155,14 @@ class AuthsTable:
         except Exception:
             return False
 
+    def authenticate_user_by_email(self, email: str) -> Optional[UserModel]:
+        log.info(f"authenticate_user_by_trusted_header: {email}")
+        try:
+            user = Users.get_user_by_email(email)
+            return user
+        except Exception:
+            return None
+
     def authenticate_user_by_trusted_header(self, email: str) -> Optional[UserModel]:
         log.info(f"authenticate_user_by_trusted_header: {email}")
         try:

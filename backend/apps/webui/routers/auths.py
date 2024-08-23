@@ -37,6 +37,7 @@ from config import (
     WEBUI_AUTH,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
+    JWT_EXPIRES_IN
 )
 
 router = APIRouter()
@@ -116,6 +117,8 @@ async def update_password(
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
 
+
+    
 ############################
 # SignIn
 ############################
