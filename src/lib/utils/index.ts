@@ -297,7 +297,10 @@ export const removeLastWordFromString = (inputString, wordString) => {
 	}
 
 	// Join the remaining words back into a string
-	const resultString = words.join(' ');
+	let resultString = words.join(' ');
+	if (resultString !== '') {
+		resultString += ' ';
+	}
 
 	return resultString;
 };

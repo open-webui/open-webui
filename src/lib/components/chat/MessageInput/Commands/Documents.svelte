@@ -2,7 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 
 	import { documents } from '$lib/stores';
-	import { removeFirstHashWord, isValidHttpUrl } from '$lib/utils';
+	import { removeLastWordFromString, isValidHttpUrl } from '$lib/utils';
 	import { tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -79,7 +79,7 @@
 	const confirmSelect = async (doc) => {
 		dispatch('select', doc);
 
-		prompt = removeFirstHashWord(prompt);
+		prompt = removeLastWordFromString(prompt, command);
 		const chatInputElement = document.getElementById('chat-textarea');
 
 		await tick();
@@ -90,7 +90,7 @@
 	const confirmSelectWeb = async (url) => {
 		dispatch('url', url);
 
-		prompt = removeFirstHashWord(prompt);
+		prompt = removeLastWordFromString(prompt, command);
 		const chatInputElement = document.getElementById('chat-textarea');
 
 		await tick();
@@ -101,7 +101,7 @@
 	const confirmSelectYoutube = async (url) => {
 		dispatch('youtube', url);
 
-		prompt = removeFirstHashWord(prompt);
+		prompt = removeLastWordFromString(prompt, command);
 		const chatInputElement = document.getElementById('chat-textarea');
 
 		await tick();
