@@ -85,9 +85,10 @@ async def download_chat_as_pdf(
     pdf.add_font("NotoSans", "i", f"{FONTS_DIR}/NotoSans-Italic.ttf")
     pdf.add_font("NotoSansKR", "", f"{FONTS_DIR}/NotoSansKR-Regular.ttf")
     pdf.add_font("NotoSansJP", "", f"{FONTS_DIR}/NotoSansJP-Regular.ttf")
+    pdf.add_font("NotoSansSC", "", f"{FONTS_DIR}/NotoSansSC-Regular.ttf")
 
     pdf.set_font("NotoSans", size=12)
-    pdf.set_fallback_fonts(["NotoSansKR", "NotoSansJP"])
+    pdf.set_fallback_fonts(["NotoSansKR", "NotoSansJP", "NotoSansSC"])
 
     pdf.set_auto_page_break(auto=True, margin=15)
 

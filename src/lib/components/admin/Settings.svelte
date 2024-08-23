@@ -336,8 +336,11 @@
 	<div class="flex-1 mt-3 lg:mt-0 overflow-y-scroll">
 		{#if selectedTab === 'general'}
 			<General
-				saveHandler={() => {
+				saveHandler={async () => {
 					toast.success($i18n.t('Settings saved successfully!'));
+
+					await tick();
+					await config.set(await getBackendConfig());
 				}}
 			/>
 		{:else if selectedTab === 'users'}
