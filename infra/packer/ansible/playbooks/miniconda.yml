@@ -1,0 +1,12 @@
+- hosts: all
+  vars:
+    miniconda_prefix: /conda
+    miniconda_conda_environments:
+      python@3.11:
+        channels:  # optional, defaults to miniconda_channels
+          - conda-forge
+          - defaults
+        packages:
+          - python=3.11
+  roles:
+    - role: ansible-miniconda
