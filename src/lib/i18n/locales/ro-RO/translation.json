@@ -6,7 +6,6 @@
 	"(latest)": "(ultimul)",
 	"{{ models }}": "{{ modele }}",
 	"{{ owner }}: You cannot delete a base model": "{{ owner }}: Nu puteți șterge un model de bază",
-	"{{modelName}} is thinking...": "{{modelName}} gândește...",
 	"{{user}}'s Chats": "Conversațiile lui {{user}}",
 	"{{webUIName}} Backend Required": "Este necesar backend-ul {{webUIName}}",
 	"*Prompt node ID(s) are required for image generation": "",

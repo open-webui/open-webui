@@ -6,7 +6,6 @@
 	"(latest)": "(terkini)",
 	"{{ models }}": "{{ models }}",
 	"{{ owner }}: You cannot delete a base model": "{{ owner }}: Anda tidak boleh memadamkan model asas",
-	"{{modelName}} is thinking...": "{{modelName}} sedang berfikir...",
 	"{{user}}'s Chats": "Perbualan {{user}}",
 	"{{webUIName}} Backend Required": "{{webUIName}} Backend diperlukan",
 	"*Prompt node ID(s) are required for image generation": "",
