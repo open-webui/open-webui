@@ -237,6 +237,20 @@ async def get_user_chat_list_by_tag_name(
 
 
 ############################
+# GetChatsWithoutTag
+############################
+
+
+
+@router.get("/untagged", response_model=list[ChatResponse])
+async def get_user_chats(user=Depends(get_verified_user)):
+    return [
+        ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
+        for chat in Tags.get_chat_ids_by_and_user_id_without_tag(user.id)
+    ]
+
+
+############################
 # GetAllTags
 ############################
 

@@ -11,6 +11,7 @@ from sqlalchemy import String, Column, BigInteger, Text
 from apps.webui.internal.db import Base, get_db
 
 from env import SRC_LOG_LEVELS
+from apps.webui.models.chats import Chat, ChatModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -193,6 +194,23 @@ class TagTable:
                     db.query(ChatIdTag)
                     .filter_by(user_id=user_id, tag_name=tag_name)
                     .order_by(ChatIdTag.timestamp.desc())
+                    .all()
+                )
+            ]
+
+    def get_chat_ids_by_and_user_id_without_tag(
+        self, user_id: str
+    ) -> list[ChatModel]:
+        with get_db() as db:
+
+            return [
+                ChatModel.model_validate(chat_id_tag)
+                for chat_id_tag in (
+                    db.query(Chat)
+                    .outerjoin(ChatIdTag, Chat.id == ChatIdTag.chat_id)
+                    .filter(Chat.user_id == user_id)
+                    .filter(ChatIdTag.id == None)
+                    .order_by(Chat.created_at.desc())
                     .all()
                 )
             ]

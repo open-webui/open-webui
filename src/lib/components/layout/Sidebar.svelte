@@ -29,7 +29,8 @@
 		updateChatById,
 		getAllChatTags,
 		archiveChatById,
-		cloneChatById
+		cloneChatById,
+		getUntaggedChatList
 	} from '$lib/apis/chats';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -427,6 +428,24 @@
 						}}
 					>
 						{$i18n.t('all')}
+					</button>
+					<button
+						class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
+						on:click={async () => {
+							scrollPaginationEnabled.set(false);
+							let chatIds = await getUntaggedChatList(localStorage.token);
+							if (chatIds.length === 0) {
+								await tags.set(await getAllChatTags(localStorage.token));
+
+								// if the tag we deleted is no longer a valid tag, return to main chat list view
+								await enablePagination();
+							}
+							await chats.set(chatIds);
+
+							chatListLoading = false;
+						}}
+					>
+						{$i18n.t('untagged')}
 					</button>
 					{#each $tags.filter((t) => t.name !== 'pinned') as tag}
 						<button
