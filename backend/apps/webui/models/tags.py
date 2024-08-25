@@ -10,7 +10,7 @@ from sqlalchemy import String, Column, BigInteger, Text
 
 from apps.webui.internal.db import Base, get_db
 
-from config import SRC_LOG_LEVELS
+from env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
