@@ -366,7 +366,7 @@
 					<div class="flex items-center relative">
 						<select
 							class="dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
-							placeholder="Select how to split response text"
+							aria-label="Select how to split message text for TTS requests"
 							bind:value={TTS_SPLIT_ON}
 						>
 						{#each Object.values(TTS_RESPONSE_SPLIT) as split}
@@ -377,7 +377,7 @@
 				</div>
 				<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
 					{$i18n.t(
-						"Choose how to split response text for speech synthesis. 'Punctuation' splits by sentences, 'paragraphs' splits by paragraphs, and 'none' sends the response as a single string."
+						"Control how message text is split for TTS requests. 'Punctuation' splits into sentences, 'paragraphs' splits into paragraphs, and 'none' keeps the message as a single string."
 					)}
 				</div>
 			</div>
