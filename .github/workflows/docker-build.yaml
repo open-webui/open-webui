@@ -67,8 +67,6 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
-          # While 'raw' should work below, I'm worried about collisions and wonder if there isn't a better way to handle this
-          # https://github.com/docker/metadata-action?tab=readme-ov-file#typeraw
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=${{ steps.get_version.outputs.version }},enable=${{ github.ref == 'refs/heads/main' }}
