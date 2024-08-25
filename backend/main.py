@@ -1,7 +1,6 @@
 import base64
 import uuid
 from contextlib import asynccontextmanager
-
 from authlib.integrations.starlette_client import OAuth
 from authlib.oidc.core import UserInfo
 import json
@@ -87,6 +86,7 @@ from utils.misc import (
 from apps.rag.utils import get_rag_context, rag_template
 
 from config import (
+    run_migrations,
     WEBUI_NAME,
     WEBUI_URL,
     WEBUI_AUTH,
@@ -163,17 +163,6 @@ v{VERSION} - building the best open-source AI user interface.
 https://github.com/open-webui/open-webui
 """
 )
-
-
-def run_migrations():
-    try:
-        from alembic.config import Config
-        from alembic import command
-
-        alembic_cfg = Config("alembic.ini")
-        command.upgrade(alembic_cfg, "head")
-    except Exception as e:
-        print(f"Error: {e}")
 
 
 @asynccontextmanager
