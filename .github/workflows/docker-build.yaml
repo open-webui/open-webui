@@ -26,6 +26,8 @@ jobs:
           - linux/arm64
 
     steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
       - name: Set repository and image name to lowercase
         run: |
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
@@ -160,21 +162,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for Docker images (cuda tag)
+      - name: Get version number from package.json
+        id: get_version
+        run: |
+          VERSION=$(jq -r '.version' package.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Extract metadata for Docker images
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=tag
-            type=sha,prefix=git-
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,enable=${{ github.ref == 'refs/heads/main' }},prefix=,suffix=,value=cuda
-          flavor: |
-            latest=${{ github.ref == 'refs/heads/main' }}
-            suffix=-cuda,onlatest=true
+            type=raw,value=latest-cuda,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ steps.get_version.outputs.version }}-cuda,enable=${{ github.ref == 'refs/heads/main' }}
+            type=ref,event=branch,suffix=-cuda
+            type=ref,event=tag,suffix=-cuda
+            type=sha,prefix=git-,suffix=-cuda
+            type=semver,pattern={{version}},suffix=-cuda
+            type=semver,pattern={{major}}.{{minor}},suffix=-cuda
 
       - name: Extract metadata for Docker cache
         id: cache-meta
@@ -196,7 +202,8 @@ jobs:
           push: true
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          tags: ${{ steps.meta.outputs.tags }}
+          outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push=true
           cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
           cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
           build-args: |
@@ -260,21 +267,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for Docker images (ollama tag)
+      - name: Get version number from package.json
+        id: get_version
+        run: |
+          VERSION=$(jq -r '.version' package.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Extract metadata for Docker images
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=tag
-            type=sha,prefix=git-
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,enable=${{ github.ref == 'refs/heads/main' }},prefix=,suffix=,value=ollama
-          flavor: |
-            latest=${{ github.ref == 'refs/heads/main' }}
-            suffix=-ollama,onlatest=true
+            type=raw,value=latest-ollama,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ steps.get_version.outputs.version }}-ollama,enable=${{ github.ref == 'refs/heads/main' }}
+            type=ref,event=branch,suffix=-ollama
+            type=ref,event=tag,suffix=-ollama
+            type=sha,prefix=git-,suffix=-ollama
+            type=semver,pattern={{version}},suffix=-ollama
+            type=semver,pattern={{major}}.{{minor}},suffix=-ollama
 
       - name: Extract metadata for Docker cache
         id: cache-meta
@@ -296,7 +307,8 @@ jobs:
           push: true
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          tags: ${{ steps.meta.outputs.tags }}
+          outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push=true
           cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
           cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
           build-args: |
@@ -316,7 +328,6 @@ jobs:
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
-
   merge-main-images:
     runs-on: ubuntu-latest
     needs: [ build-main-image ]
