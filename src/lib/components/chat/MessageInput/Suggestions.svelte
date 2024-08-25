@@ -33,7 +33,7 @@
 </script>
 
 {#if prompts.length > 0}
-	<div class="mb-2 flex gap-1 text-sm font-medium items-center text-gray-400 dark:text-gray-600">
+	<div class="mb-2 flex gap-1 text-sm font-medium items-center text-gray-500">
 		<Bolt />
 		{$i18n.t('Suggested')}
 	</div>
@@ -59,7 +59,7 @@
 							>
 								{prompt.title[0]}
 							</div>
-							<div class="text-sm text-gray-600 font-normal line-clamp-2">{prompt.title[1]}</div>
+							<div class="text-sm text-gray-600 dark:text-gray-300 font-normal line-clamp-2">{prompt.title[1]}</div>
 						{:else}
 							<div
 								class="  text-sm font-medium dark:text-gray-300 dark:group-hover:text-gray-100 transition line-clamp-2"
@@ -71,13 +71,13 @@
 
 					<div class="w-full flex justify-between">
 						<div
-							class="text-xs text-gray-400 group-hover:text-gray-500 dark:text-gray-600 dark:group-hover:text-gray-500 transition self-center"
+							class="text-xs text-gray-400 group-hover:text-gray-500 dark:text-gray-300 dark:group-hover:text-gray-500 transition self-center"
 						>
 							{$i18n.t('Prompt')}
 						</div>
 
 						<div
-							class="self-end p-1 rounded-lg text-gray-300 group-hover:text-gray-800 dark:text-gray-700 dark:group-hover:text-gray-100 transition"
+							class="self-end p-1 rounded-lg text-gray-300 group-hover:text-gray-800 dark:text-gray-300 dark:group-hover:text-gray-100 transition"
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
