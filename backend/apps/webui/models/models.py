@@ -6,7 +6,7 @@ from sqlalchemy import Column, BigInteger, Text
 
 from apps.webui.internal.db import Base, JSONField, get_db
 
-from config import SRC_LOG_LEVELS
+from env import SRC_LOG_LEVELS
 
 import time
 
