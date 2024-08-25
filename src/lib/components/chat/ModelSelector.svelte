@@ -34,7 +34,7 @@
 	}
 </script>
 
-<div class="flex flex-col w-full items-start">
+<div class="flex flex-col w-full items-start gap-2">
 	{#each selectedModels as selectedModel, selectedModelIdx}
 		<div class="flex w-full max-w-fit">
 			<div class="overflow-hidden w-full">
@@ -58,7 +58,7 @@
 				<div class="  self-center mr-2 disabled:text-gray-600 disabled:hover:text-gray-600">
 					<Tooltip content={$i18n.t('Add Model')}>
 						<button
-							class=" "
+							class=" p-[7px]"
 							{disabled}
 							on:click={() => {
 								selectedModels = [...selectedModels, ''];
