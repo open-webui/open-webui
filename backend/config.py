@@ -181,7 +181,6 @@ class PersistentConfig(Generic[T]):
                         config[key] = {}
                     config = config[key]
                 config[path_parts[-1]] = self.value
-                existing_config.version += 1
             else:  # This case should not actually occur as there should always be at least one entry
                 new_data = {}
                 config = new_data
@@ -189,7 +188,7 @@ class PersistentConfig(Generic[T]):
                     config[key] = {}
                     config = config[key]
                 config[path_parts[-1]] = self.value
-                new_config = Config(data=new_data, version=1)
+                new_config = Config(data=new_data, version=0)
                 db.add(new_config)
             db.commit()
         self.config_value = self.value
