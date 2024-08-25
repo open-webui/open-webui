@@ -106,7 +106,10 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
 
 @router.get("/", response_model=list[FileModel])
 async def list_files(user=Depends(get_verified_user)):
-    files = Files.get_files()
+    if user.role == "admin":
+        files = Files.get_files()
+    else:
+        files = Files.get_files_by_user_id(user.id)
     return files
 
 
@@ -156,7 +159,7 @@ async def delete_all_files(user=Depends(get_admin_user)):
 async def get_file_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
 
-    if file:
+    if file and (file.user_id == user.id or user.role == "admin"):
         return file
     else:
         raise HTTPException(
@@ -174,7 +177,7 @@ async def get_file_by_id(id: str, user=Depends(get_verified_user)):
 async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
 
-    if file:
+    if file and (file.user_id == user.id or user.role == "admin"):
         file_path = Path(file.meta["path"])
 
         # Check if the file already exists in the cache
@@ -220,7 +223,7 @@ async def get_file_content_by_id(id: str):
 async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
 
-    if file:
+    if file and (file.user_id == user.id or user.role == "admin"):
         file_path = Path(file.meta["path"])
 
         # Check if the file already exists in the cache
@@ -247,8 +250,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
 @router.delete("/{id}")
 async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
-
-    if file:
+    if file and (file.user_id == user.id or user.role == "admin"):
         result = Files.delete_file_by_id(id)
         if result:
             return {"message": "File deleted successfully"}

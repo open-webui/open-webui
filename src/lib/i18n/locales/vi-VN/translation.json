@@ -6,7 +6,6 @@
 	"(latest)": "(mới nhất)",
 	"{{ models }}": "{{ mô hình }}",
 	"{{ owner }}: You cannot delete a base model": "{{ owner }}: Bạn không thể xóa base model",
-	"{{modelName}} is thinking...": "{{modelName}} đang suy nghĩ...",
 	"{{user}}'s Chats": "{{user}}'s Chats",
 	"{{webUIName}} Backend Required": "{{webUIName}} Yêu cầu Backend",
 	"*Prompt node ID(s) are required for image generation": "",

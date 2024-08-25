@@ -98,6 +98,13 @@ class FilesTable:
 
             return [FileModel.model_validate(file) for file in db.query(File).all()]
 
+    def get_files_by_user_id(self, user_id: str) -> list[FileModel]:
+        with get_db() as db:
+            return [
+                FileModel.model_validate(file)
+                for file in db.query(File).filter_by(user_id=user_id).all()
+            ]
+
     def delete_file_by_id(self, id: str) -> bool:
 
         with get_db() as db:

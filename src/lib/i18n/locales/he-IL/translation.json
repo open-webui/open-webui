@@ -6,7 +6,6 @@
 	"(latest)": "(האחרון)",
 	"{{ models }}": "{{ דגמים }}",
 	"{{ owner }}: You cannot delete a base model": "{{ בעלים }}: לא ניתן למחוק מודל בסיס",
-	"{{modelName}} is thinking...": "{{modelName}} חושב...",
 	"{{user}}'s Chats": "צ'אטים של {{user}}",
 	"{{webUIName}} Backend Required": "נדרש Backend של {{webUIName}}",
 	"*Prompt node ID(s) are required for image generation": "",

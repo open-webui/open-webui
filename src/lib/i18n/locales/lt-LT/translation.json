@@ -6,7 +6,6 @@
 	"(latest)": "(naujausias)",
 	"{{ models }}": "{{ models }}",
 	"{{ owner }}: You cannot delete a base model": "{{ owner }}: Negalite ištrinti bazinio modelio",
-	"{{modelName}} is thinking...": "{{modelName}} mąsto...",
 	"{{user}}'s Chats": "{{user}} susirašinėjimai",
 	"{{webUIName}} Backend Required": "{{webUIName}} būtinas serveris",
 	"*Prompt node ID(s) are required for image generation": "",

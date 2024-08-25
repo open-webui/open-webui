@@ -6,7 +6,6 @@
 	"(latest)": "(最新)",
 	"{{ models }}": "{{ モデル }}",
 	"{{ owner }}: You cannot delete a base model": "{{ owner }}: ベースモデルは削除できません",
-	"{{modelName}} is thinking...": "{{modelName}} は思考中です...",
 	"{{user}}'s Chats": "{{user}} のチャット",
 	"{{webUIName}} Backend Required": "{{webUIName}} バックエンドが必要です",
 	"*Prompt node ID(s) are required for image generation": "",

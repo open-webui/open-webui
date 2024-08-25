@@ -6,7 +6,6 @@
 	"(latest)": "(latest)",
 	"{{ models }}": "{{ मॉडल }}",
 	"{{ owner }}: You cannot delete a base model": "{{ मालिक }}: आप बेस मॉडल को हटा नहीं सकते",
-	"{{modelName}} is thinking...": "{{modelName}} सोच रहा है...",
 	"{{user}}'s Chats": "{{user}} की चैट",
 	"{{webUIName}} Backend Required": "{{webUIName}} बैकएंड आवश्यक",
 	"*Prompt node ID(s) are required for image generation": "",

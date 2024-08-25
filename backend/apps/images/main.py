@@ -15,6 +15,7 @@ import json
 import logging
 import re
 import requests
+import asyncio
 
 from utils.utils import (
     get_verified_user,
@@ -535,7 +536,9 @@ async def image_generations(
             if form_data.negative_prompt is not None:
                 data["negative_prompt"] = form_data.negative_prompt
 
-            r = requests.post(
+            # Use asyncio.to_thread for the requests.post call
+            r = await asyncio.to_thread(
+                requests.post,
                 url=f"{app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/txt2img",
                 json=data,
                 headers={"authorization": get_automatic1111_api_auth()},
@@ -555,7 +558,6 @@ async def image_generations(
                     json.dump({**data, "info": res["info"]}, f)
 
             return images
-
     except Exception as e:
         error = e
         if r != None:

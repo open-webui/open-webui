@@ -6,7 +6,6 @@
 	"(latest)": "(siste)",
 	"{{ models }}": "{{ modeller }}",
 	"{{ owner }}: You cannot delete a base model": "{{ eier }}: Du kan ikke slette en grunnmodell",
-	"{{modelName}} is thinking...": "{{modelName}} tenker...",
 	"{{user}}'s Chats": "{{user}}s samtaler",
 	"{{webUIName}} Backend Required": "{{webUIName}} Backend kreves",
 	"*Prompt node ID(s) are required for image generation": "",

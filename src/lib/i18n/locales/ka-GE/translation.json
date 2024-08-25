@@ -6,7 +6,6 @@
 	"(latest)": "(უახლესი)",
 	"{{ models }}": "{{ models }}",
 	"{{ owner }}: You cannot delete a base model": "{{ owner }}: თქვენ არ შეგიძლიათ წაშალოთ ბაზის მოდელი",
-	"{{modelName}} is thinking...": "{{modelName}} ფიქრობს...",
 	"{{user}}'s Chats": "{{user}}-ის ჩათები",
 	"{{webUIName}} Backend Required": "{{webUIName}} საჭიროა ბექენდი",
 	"*Prompt node ID(s) are required for image generation": "",
