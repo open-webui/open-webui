@@ -132,7 +132,11 @@ export const synthesizeOpenAISpeech = async (
 	return res;
 };
 
-export const getModels = async (token: string = '') => {
+interface AvailableModelsResponse {
+	models: { name: string; id: string }[] | { id: string }[];
+}
+
+export const getModels = async (token: string = ''): Promise<AvailableModelsResponse> => {
 	let error = null;
 
 	const res = await fetch(`${AUDIO_API_BASE_URL}/models`, {

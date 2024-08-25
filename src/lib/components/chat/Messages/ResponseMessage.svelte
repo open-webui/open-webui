@@ -2,11 +2,10 @@
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 
-	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, tick, getContext } from 'svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	const dispatch = createEventDispatcher();
 
@@ -15,20 +14,18 @@
 	import { imageGenerations } from '$lib/apis/images';
 	import {
 		approximateToHumanReadable,
-		extractSentences,
-		replaceTokens,
-		processResponseContent
+		extractParagraphsForAudio,
+		extractSentencesForAudio,
+		prepareTextForTTS,
 	} from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
 	import Skeleton from './Skeleton.svelte';
-	import CodeBlock from './CodeBlock.svelte';
 	import Image from '$lib/components/common/Image.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import RateComment from './RateComment.svelte';
-	import CitationsModal from '$lib/components/chat/Messages/CitationsModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import WebSearchResults from './ResponseMessage/WebSearchResults.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
@@ -36,7 +33,38 @@
 	import Error from './Error.svelte';
 	import Citations from './Citations.svelte';
 
-	export let message;
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+	import { TTS_RESPONSE_SPLIT } from '$lib/types';
+
+	interface MessageType {
+		id: string;
+		model: string;
+		content: string;
+		files?: { type: string; url: string }[];
+		timestamp: number;
+		role: string;
+		statusHistory?: { done: boolean; action: string; description: string; urls?: string[]; query?: string; }[];
+		status?: { done: boolean; action: string; description: string; urls?: string[]; query?: string; };
+		done: boolean;
+		error?: boolean | { content: string };
+		citations?: string[];
+		info?: {
+			openai?: boolean;
+			prompt_tokens?: number;
+			completion_tokens?: number;
+			total_tokens?: number;
+			eval_count?: number;
+			eval_duration?: number;
+			prompt_eval_count?: number;
+			prompt_eval_duration?: number;
+			total_duration?: number;
+			load_duration?: number;
+		};
+		annotation?: { type: string; rating: number; };
+	}
+
+	export let message: MessageType;
 	export let siblings;
 
 	export let isLastMessage = true;
@@ -60,28 +88,33 @@
 	let editedContent = '';
 	let editTextAreaElement: HTMLTextAreaElement;
 
-	let sentencesAudio = {};
-	let speaking = null;
-	let speakingIdx = null;
+	let audioParts: Record<number, HTMLAudioElement | null> = {};
+	let speaking = false;
+	let speakingIdx: number | undefined;
 
 	let loadingSpeech = false;
 	let generatingImage = false;
 
 	let showRateComment = false;
 
-	const playAudio = (idx) => {
-		return new Promise((res) => {
+	const playAudio = (idx: number) => {
+		return new Promise<void>((res) => {
 			speakingIdx = idx;
-			const audio = sentencesAudio[idx];
+			const audio = audioParts[idx];
+
+			if (!audio) {
+				return res();
+			}
+
 			audio.play();
-			audio.onended = async (e) => {
+			audio.onended = async () => {
 				await new Promise((r) => setTimeout(r, 300));
 
-				if (Object.keys(sentencesAudio).length - 1 === idx) {
-					speaking = null;
+				if (Object.keys(audioParts).length - 1 === idx) {
+					speaking = false;
 				}
 
-				res(e);
+				res();
 			};
 		});
 	};
@@ -91,113 +124,119 @@
 			try {
 				speechSynthesis.cancel();
 
-				sentencesAudio[speakingIdx].pause();
-				sentencesAudio[speakingIdx].currentTime = 0;
+				if (speakingIdx !== undefined && audioParts[speakingIdx]) {
+					audioParts[speakingIdx]!.pause();
+					audioParts[speakingIdx]!.currentTime = 0;
+				}
 			} catch {}
 
-			speaking = null;
-			speakingIdx = null;
-		} else {
-			if ((message?.content ?? '').trim() !== '') {
-				speaking = true;
+			speaking = false;
+			speakingIdx = undefined;
+			return;
+		}
 
-				if ($config.audio.tts.engine !== '') {
-					loadingSpeech = true;
+		if (!(message?.content ?? '').trim().length) {
+			toast.info($i18n.t('No content to speak'));
+			return;
+		}
 
-					const sentences = extractSentences(message.content).reduce((mergedTexts, currentText) => {
-						const lastIndex = mergedTexts.length - 1;
-						if (lastIndex >= 0) {
-							const previousText = mergedTexts[lastIndex];
-							const wordCount = previousText.split(/\s+/).length;
-							if (wordCount < 2) {
-								mergedTexts[lastIndex] = previousText + ' ' + currentText;
-							} else {
-								mergedTexts.push(currentText);
-							}
-						} else {
-							mergedTexts.push(currentText);
-						}
-						return mergedTexts;
-					}, []);
+		speaking = true;
 
-					console.log(sentences);
+		if ($config.audio.tts.engine !== '') {
+			loadingSpeech = true;
 
-					if (sentences.length > 0) {
-						sentencesAudio = sentences.reduce((a, e, i, arr) => {
-							a[i] = null;
-							return a;
-						}, {});
+			const preparedMessageContent: string[] = [];
 
-						let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
-
-						for (const [idx, sentence] of sentences.entries()) {
-							const res = await synthesizeOpenAISpeech(
-								localStorage.token,
-								$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
-									? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-									: $config?.audio?.tts?.voice,
-								sentence
-							).catch((error) => {
-								toast.error(error);
-
-								speaking = null;
-								loadingSpeech = false;
-
-								return null;
-							});
-
-							if (res) {
-								const blob = await res.blob();
-								const blobUrl = URL.createObjectURL(blob);
-								const audio = new Audio(blobUrl);
-								sentencesAudio[idx] = audio;
-								loadingSpeech = false;
-								lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
-							}
-						}
-					} else {
-						speaking = null;
-						loadingSpeech = false;
-					}
-				} else {
-					let voices = [];
-					const getVoicesLoop = setInterval(async () => {
-						voices = await speechSynthesis.getVoices();
-						if (voices.length > 0) {
-							clearInterval(getVoicesLoop);
-
-							const voice =
-								voices
-									?.filter(
-										(v) =>
-											v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-									)
-									?.at(0) ?? undefined;
-
-							console.log(voice);
-
-							const speak = new SpeechSynthesisUtterance(message.content);
-
-							console.log(speak);
-
-							speak.onend = () => {
-								speaking = null;
-								if ($settings.conversationMode) {
-									document.getElementById('voice-input-button')?.click();
-								}
-							};
-
-							if (voice) {
-								speak.voice = voice;
-							}
-
-							speechSynthesis.speak(speak);
-						}
-					}, 100);
-				}
-			} else {
-				toast.error($i18n.t('No content to speak'));
+			switch ($config.audio.tts.split_on) {
+				default:
+				case TTS_RESPONSE_SPLIT.PUNCTUATION:
+				preparedMessageContent.push(...extractSentencesForAudio(message.content));
+					break;
+				case TTS_RESPONSE_SPLIT.PARAGRAPHS:
+				preparedMessageContent.push(...extractParagraphsForAudio(message.content));
+					break;
+				case TTS_RESPONSE_SPLIT.NONE:
+				preparedMessageContent.push(prepareTextForTTS(message.content));
+					break;
 			}
+
+			if (!preparedMessageContent.length) {
+				console.log('No content to speak');
+				toast.info($i18n.t('No content to speak'));
+
+				speaking = false;
+				loadingSpeech = false;
+				return;
+			}
+
+			console.debug('Prepared message content for TTS', preparedMessageContent);
+
+			audioParts = preparedMessageContent.reduce((acc, _sentence, idx) => {
+				acc[idx] = null;
+				return acc;
+			}, {} as typeof audioParts);
+
+			let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
+
+			for (const [idx, sentence] of preparedMessageContent.entries()) {
+				const res = await synthesizeOpenAISpeech(
+					localStorage.token,
+					$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
+						? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
+						: $config?.audio?.tts?.voice,
+					sentence
+				).catch((error) => {
+					console.error(error);
+					toast.error(error);
+
+					speaking = false;
+					loadingSpeech = false;
+				});
+
+				if (res) {
+					const blob = await res.blob();
+					const blobUrl = URL.createObjectURL(blob);
+					const audio = new Audio(blobUrl);
+					audioParts[idx] = audio;
+					loadingSpeech = false;
+					lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
+				}
+			}
+		} else {
+			let voices = [];
+			const getVoicesLoop = setInterval(() => {
+				voices = speechSynthesis.getVoices();
+				if (voices.length > 0) {
+					clearInterval(getVoicesLoop);
+
+					const voice =
+						voices
+							?.filter(
+								(v) =>
+									v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
+							)
+							?.at(0) ?? undefined;
+
+					console.log(voice);
+
+					const speak = new SpeechSynthesisUtterance(message.content);
+
+					console.log(speak);
+
+					speak.onend = () => {
+						speaking = false;
+						if ($settings.conversationMode) {
+							document.getElementById('voice-input-button')?.click();
+						}
+					};
+
+					if (voice) {
+						speak.voice = voice;
+					}
+
+					speechSynthesis.speak(speak);
+				}
+			}, 100);
 		}
 	};
 
@@ -230,7 +269,7 @@
 		await tick();
 	};
 
-	const generateImage = async (message) => {
+	const generateImage = async (message: MessageType) => {
 		generatingImage = true;
 		const res = await imageGenerations(localStorage.token, message.content).catch((error) => {
 			toast.error(error);
@@ -285,7 +324,7 @@
 			</Name>
 
 			<div>
-				{#if (message?.files ?? []).filter((f) => f.type === 'image').length > 0}
+				{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
 					<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
 						{#each message.files as file}
 							<div>
@@ -304,7 +343,7 @@
 								message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]
 							).at(-1)}
 							<div class="flex items-center gap-2 pt-0.5 pb-1">
-								{#if status.done === false}
+								{#if status?.done === false}
 									<div class="">
 										<Spinner className="size-4" />
 									</div>
@@ -521,7 +560,7 @@
 											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 										on:click={() => {
 											if (!loadingSpeech) {
-												toggleSpeakMessage(message);
+												toggleSpeakMessage();
 											}
 										}}
 									>
@@ -661,7 +700,7 @@
 													`${
 														Math.round(
 															((message.info.eval_count ?? 0) /
-																(message.info.eval_duration / 1000000000)) *
+																((message.info.eval_duration ?? 0) / 1000000000)) *
 																100
 														) / 100
 													} tokens` ?? 'N/A'
@@ -669,7 +708,7 @@
 					prompt_token/s: ${
 						Math.round(
 							((message.info.prompt_eval_count ?? 0) /
-								(message.info.prompt_eval_duration / 1000000000)) *
+								((message.info.prompt_eval_duration ?? 0) / 1000000000)) *
 								100
 						) / 100 ?? 'N/A'
 					} tokens<br/>
@@ -688,7 +727,7 @@
 		            eval_duration: ${
 									Math.round(((message.info.eval_duration ?? 0) / 1000000) * 100) / 100 ?? 'N/A'
 								}ms<br/>
-		            approximate_total: ${approximateToHumanReadable(message.info.total_duration)}`}
+		            approximate_total: ${approximateToHumanReadable((message.info.total_duration ?? 0))}`}
 										placement="top"
 									>
 										<Tooltip content={$i18n.t('Generation Info')} placement="bottom">
