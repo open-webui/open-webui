@@ -1,8 +1,7 @@
 nameOverride: ""
 
 ollama:
-  externalHost: "http://192.168.100.14:31774"
-  # externalHost: "http://192.168.100.14:32381"
+  externalHost: ""
   annotations: {}
   podAnnotations: {}
   replicaCount: 1
@@ -83,7 +82,7 @@ hrwebui:
   replicaCount: 1
   image:
     repository: ghcr.io/ciai-engineering/open-webui
-    tag: "git-bb01763"
+    tag: "local_dev"
     pullPolicy: Always
   resources: {}
   imagePullSecrets: 
@@ -107,8 +106,7 @@ hrwebui:
     storageClass: ""
     selector: {}
     annotations: {}
-  nodeSelector: 
-    kubernetes.io/hostname: ciai-cpu-w05588
+  nodeSelector: {}
   tolerations: []
   service:
     type: NodePort
@@ -121,17 +119,13 @@ hrwebui:
   sso:
     azure:
       enabled: true
-      clientId: "2b0e50f6-6937-4a32-9501-94bf7357e883"
-      clientSecret: "********"
-      tenant: "c93272d3-1b07-4b3d-a3b6-19b34a973915"
-      redirectUri: "https://hr.ciai-mbzuai.ac.ae/login"
+      tenant: ""
+      redirectUri: ""
   mail:
     enabled: false
-    hr: "Qinghao.Zhang@mbzuai.ac.ae"
+    hr: ""
   mssql:
     enabled: true
-    server: "10.127.129.4"
-    user: "ciai_rag"
-    password: "******"
-    database: "ADERP"
-    view: "EMPLOYEE_INFO_V"
+    server: ""
+    database: ""
+    view: ""
