@@ -288,6 +288,7 @@
 	"File": "Fichier",
 	"File Mode": "Mode fichier",
 	"File not found.": "Fichier introuvable.",
+	"File size exceeds the limit of {{size}}MB": "",
 	"Files": "Fichiers",
 	"Filter is now globally disabled": "Le filtre est maintenant désactivé globalement",
 	"Filter is now globally enabled": "Le filtre est désormais activé globalement",
