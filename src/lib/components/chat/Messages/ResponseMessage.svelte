@@ -16,7 +16,8 @@
 		approximateToHumanReadable,
 		extractParagraphsForAudio,
 		extractSentencesForAudio,
-		prepareTextForTTS,
+		cleanText,
+		getMessageContentParts
 	} from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -35,7 +36,6 @@
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
 	interface MessageType {
 		id: string;
@@ -44,8 +44,20 @@
 		files?: { type: string; url: string }[];
 		timestamp: number;
 		role: string;
-		statusHistory?: { done: boolean; action: string; description: string; urls?: string[]; query?: string; }[];
-		status?: { done: boolean; action: string; description: string; urls?: string[]; query?: string; };
+		statusHistory?: {
+			done: boolean;
+			action: string;
+			description: string;
+			urls?: string[];
+			query?: string;
+		}[];
+		status?: {
+			done: boolean;
+			action: string;
+			description: string;
+			urls?: string[];
+			query?: string;
+		};
 		done: boolean;
 		error?: boolean | { content: string };
 		citations?: string[];
@@ -61,7 +73,7 @@
 			total_duration?: number;
 			load_duration?: number;
 		};
-		annotation?: { type: string; rating: number; };
+		annotation?: { type: string; rating: number };
 	}
 
 	export let message: MessageType;
@@ -145,22 +157,12 @@
 		if ($config.audio.tts.engine !== '') {
 			loadingSpeech = true;
 
-			const preparedMessageContent: string[] = [];
+			const messageContentParts: string[] = getMessageContentParts(
+				message.content,
+				$config?.audio?.tts?.split_on ?? 'punctuation'
+			);
 
-			switch ($config.audio.tts.split_on) {
-				default:
-				case TTS_RESPONSE_SPLIT.PUNCTUATION:
-				preparedMessageContent.push(...extractSentencesForAudio(message.content));
-					break;
-				case TTS_RESPONSE_SPLIT.PARAGRAPHS:
-				preparedMessageContent.push(...extractParagraphsForAudio(message.content));
-					break;
-				case TTS_RESPONSE_SPLIT.NONE:
-				preparedMessageContent.push(prepareTextForTTS(message.content));
-					break;
-			}
-
-			if (!preparedMessageContent.length) {
+			if (!messageContentParts.length) {
 				console.log('No content to speak');
 				toast.info($i18n.t('No content to speak'));
 
@@ -169,16 +171,19 @@
 				return;
 			}
 
-			console.debug('Prepared message content for TTS', preparedMessageContent);
+			console.debug('Prepared message content for TTS', messageContentParts);
 
-			audioParts = preparedMessageContent.reduce((acc, _sentence, idx) => {
-				acc[idx] = null;
-				return acc;
-			}, {} as typeof audioParts);
+			audioParts = messageContentParts.reduce(
+				(acc, _sentence, idx) => {
+					acc[idx] = null;
+					return acc;
+				},
+				{} as typeof audioParts
+			);
 
 			let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
 
-			for (const [idx, sentence] of preparedMessageContent.entries()) {
+			for (const [idx, sentence] of messageContentParts.entries()) {
 				const res = await synthesizeOpenAISpeech(
 					localStorage.token,
 					$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
@@ -212,8 +217,7 @@
 					const voice =
 						voices
 							?.filter(
-								(v) =>
-									v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
+								(v) => v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
 							)
 							?.at(0) ?? undefined;
 
@@ -727,7 +731,7 @@
 		            eval_duration: ${
 									Math.round(((message.info.eval_duration ?? 0) / 1000000) * 100) / 100 ?? 'N/A'
 								}ms<br/>
-		            approximate_total: ${approximateToHumanReadable((message.info.total_duration ?? 0))}`}
+		            approximate_total: ${approximateToHumanReadable(message.info.total_duration ?? 0)}`}
 										placement="top"
 									>
 										<Tooltip content={$i18n.t('Generation Info')} placement="bottom">
