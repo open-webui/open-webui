@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { models, showSettings, settings, user, mobile } from '$lib/stores';
+	import { models, showSettings, settings, user, mobile, config } from '$lib/stores';
 	import { onMount, tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Selector from './ModelSelector/Selector.svelte';
@@ -46,6 +46,9 @@
 							label: model.name,
 							model: model
 						}))}
+						showTemporaryChatControl={$user.role === 'user'
+							? ($config?.permissions?.chat?.temporary ?? true)
+							: true}
 						bind:value={selectedModel}
 					/>
 				</div>

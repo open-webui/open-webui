@@ -8,6 +8,7 @@
 	import { toast } from 'svelte-sonner';
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
 	import { page } from '$app/stores';
+	import { getBackendConfig } from '$lib/apis';
 
 	const i18n = getContext('i18n');
 
@@ -28,6 +29,7 @@
 
 			$socket.emit('user-join', { auth: { token: sessionUser.token } });
 			await user.set(sessionUser);
+			await config.set(await getBackendConfig());
 			goto('/');
 		}
 	};

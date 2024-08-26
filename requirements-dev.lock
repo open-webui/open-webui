@@ -50,7 +50,7 @@ backoff==2.2.1
     # via langfuse
     # via posthog
     # via unstructured
-bcrypt==4.1.3
+bcrypt==4.2.0
     # via chromadb
     # via open-webui
     # via passlib
@@ -63,9 +63,9 @@ black==24.8.0
     # via open-webui
 blinker==1.8.2
     # via flask
-boto3==1.34.153
+boto3==1.35.0
     # via open-webui
-botocore==1.34.155
+botocore==1.35.2
     # via boto3
     # via s3transfer
 build==1.2.1
@@ -156,7 +156,7 @@ fastapi==0.111.0
     # via open-webui
 fastapi-cli==0.0.4
     # via fastapi
-faster-whisper==1.0.2
+faster-whisper==1.0.3
     # via open-webui
 filelock==3.14.0
     # via huggingface-hub
@@ -632,7 +632,7 @@ sniffio==1.3.1
     # via openai
 soupsieve==2.5
     # via beautifulsoup4
-sqlalchemy==2.0.31
+sqlalchemy==2.0.32
     # via alembic
     # via langchain
     # via langchain-community
@@ -703,7 +703,7 @@ tzlocal==5.2
     # via extract-msg
 ujson==5.10.0
     # via fastapi
-unstructured==0.15.0
+unstructured==0.15.5
     # via open-webui
 unstructured-client==0.22.0
     # via unstructured
@@ -715,7 +715,7 @@ urllib3==2.2.1
     # via kubernetes
     # via requests
     # via unstructured-client
-uvicorn==0.22.0
+uvicorn==0.30.6
     # via chromadb
     # via fastapi
     # via open-webui

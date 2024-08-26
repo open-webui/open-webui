@@ -1,12 +1,10 @@
-from pydantic import BaseModel, ConfigDict, parse_obj_as
-from typing import Union, Optional
+from pydantic import BaseModel, ConfigDict
+from typing import Optional
 import time
 
 from sqlalchemy import String, Column, BigInteger, Text
 
-from utils.misc import get_gravatar_url
-
-from apps.webui.internal.db import Base, JSONField, Session, get_db
+from apps.webui.internal.db import Base, JSONField, get_db
 from apps.webui.models.chats import Chats
 
 ####################
@@ -78,7 +76,6 @@ class UserUpdateForm(BaseModel):
 
 
 class UsersTable:
-
     def insert_new_user(
         self,
         id: str,
@@ -122,7 +119,6 @@ class UsersTable:
     def get_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
-
                 user = db.query(User).filter_by(api_key=api_key).first()
                 return UserModel.model_validate(user)
         except Exception:
@@ -131,7 +127,6 @@ class UsersTable:
     def get_user_by_email(self, email: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
-
                 user = db.query(User).filter_by(email=email).first()
                 return UserModel.model_validate(user)
         except Exception:
@@ -140,7 +135,6 @@ class UsersTable:
     def get_user_by_oauth_sub(self, sub: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
-
                 user = db.query(User).filter_by(oauth_sub=sub).first()
                 return UserModel.model_validate(user)
         except Exception:
@@ -195,7 +189,6 @@ class UsersTable:
     def update_user_last_active_by_id(self, id: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
-
                 db.query(User).filter_by(id=id).update(
                     {"last_active_at": int(time.time())}
                 )
