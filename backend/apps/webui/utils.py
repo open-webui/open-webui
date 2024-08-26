@@ -4,6 +4,9 @@ import re
 import sys
 import subprocess
 
+
+from apps.webui.models.tools import Tools
+from apps.webui.models.functions import Functions
 from config import TOOLS_DIR, FUNCTIONS_DIR
 
 
@@ -49,6 +52,15 @@ def extract_frontmatter(file_path):
 
 def load_toolkit_module_by_id(toolkit_id):
     toolkit_path = os.path.join(TOOLS_DIR, f"{toolkit_id}.py")
+
+    if not os.path.exists(toolkit_path):
+        tool = Tools.get_tool_by_id(toolkit_id)
+        if tool:
+            with open(toolkit_path, "w") as file:
+                file.write(tool.content)
+        else:
+            raise Exception(f"Toolkit not found: {toolkit_id}")
+
     spec = util.spec_from_file_location(toolkit_id, toolkit_path)
     module = util.module_from_spec(spec)
     frontmatter = extract_frontmatter(toolkit_path)
@@ -70,6 +82,14 @@ def load_toolkit_module_by_id(toolkit_id):
 
 def load_function_module_by_id(function_id):
     function_path = os.path.join(FUNCTIONS_DIR, f"{function_id}.py")
+
+    if not os.path.exists(function_path):
+        function = Functions.get_function_by_id(function_id)
+        if function:
+            with open(function_path, "w") as file:
+                file.write(function.content)
+        else:
+            raise Exception(f"Function not found: {function_id}")
 
     spec = util.spec_from_file_location(function_id, function_path)
     module = util.module_from_spec(spec)
