@@ -2,13 +2,13 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: open-webui-ingress
-  namespace: open-webui
-  #annotations:
-    # Use appropriate annotations for your Ingress controller, e.g., for NGINX:
-    # nginx.ingress.kubernetes.io/rewrite-target: /
+  namespace: model-serving
+  # https://cloud.google.com/kubernetes-engine/docs/concepts/ingress#controller_summary
+  annotations:
+    kubernetes.io/ingress.class: "nginx" # which can be replaced by gce, gce-internal or istio
 spec:
   rules:
-  - host: open-webui.minikube.local
+  - host: 34.142.232.205.nip.io
     http:
       paths:
       - path: /

@@ -4,7 +4,7 @@ metadata:
   labels:
     app: open-webui
   name: open-webui-pvc
-  namespace: open-webui
+  namespace: model-serving
 spec:
   accessModes: ["ReadWriteOnce"]
   resources:

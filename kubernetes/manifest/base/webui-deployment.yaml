@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: open-webui-deployment
-  namespace: open-webui
+  namespace: model-serving
 spec:
   replicas: 1
   selector:
@@ -23,11 +23,13 @@ spec:
             cpu: "500m"
             memory: "500Mi"
           limits:
-            cpu: "1000m"
-            memory: "1Gi"
+            cpu: "2000m"
+            memory: "2Gi"
         env:
-        - name: OLLAMA_BASE_URL
-          value: "http://ollama-service.open-webui.svc.cluster.local:11434"
+        # - name: OLLAMA_BASE_URL
+        #   value: "http://ollama-service.model-serving.svc.cluster.local:11434"
+        - name: OPENAI_API_BASE_URL
+          value: "http://litellm.model-serving.svc.cluster.local:4000"
         tty: true
         volumeMounts:
         - name: webui-volume
