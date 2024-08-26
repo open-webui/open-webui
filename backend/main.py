@@ -313,7 +313,7 @@ class RAGMiddleware(BaseHTTPMiddleware):
 
         response = await call_next(request)
 
-        if return_citations:
+        if return_citations and citations != []:
           
             log.info(f"check score: {citations}")
 
