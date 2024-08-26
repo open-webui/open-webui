@@ -517,7 +517,7 @@ else:
     )
 
 CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE", "1500"))
-CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP", "100"))
+CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP", "400"))
 
 DEFAULT_RAG_TEMPLATE = """Use the following context as your learned knowledge, inside <context></context> XML tags.
 <context>

@@ -586,13 +586,16 @@ def store_data_in_vector_db(data, collection_name, overwrite: bool = False, file
             new_document = Document(page_content=table_texts, metadata={"source": file_path, "type": "tables"})
             data.append(new_document)
 
+    concatenated_content = "".join([doc.page_content for doc in data])
+    combined_document = Document(page_content=concatenated_content, metadata={"source": file_path})
+    
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=app.state.CHUNK_SIZE,
         chunk_overlap=app.state.CHUNK_OVERLAP,
         add_start_index=True,
     )
 
-    docs = text_splitter.split_documents(data)
+    docs = text_splitter.split_documents([combined_document])
 
     if len(docs) > 0:
         log.info(f"store_data_in_vector_db {docs}")
