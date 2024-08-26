@@ -1,6 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
+
 import { WEBUI_BASE_URL } from '$lib/constants';
+import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
 //////////////////////////
 // Helper functions
@@ -537,7 +539,7 @@ export const removeFormattings = (str: string) => {
 	return str.replace(/(\*)(.*?)\1/g, '').replace(/(```)(.*?)\1/gs, '');
 };
 
-export const prepareTextForTTS = (content: string) => {
+export const cleanText = (content: string) => {
 	return removeFormattings(removeEmojis(content.trim()));
 };
 
@@ -564,9 +566,7 @@ export const extractSentences = (text: string) => {
 		return sentence.replace(/\u0000(\d+)\u0000/g, (_, idx) => codeBlocks[idx]);
 	});
 
-	return sentences
-		.map(prepareTextForTTS)
-		.filter(Boolean);
+	return sentences.map(cleanText).filter(Boolean);
 };
 
 export const extractParagraphsForAudio = (text: string) => {
@@ -589,9 +589,7 @@ export const extractParagraphsForAudio = (text: string) => {
 		return paragraph.replace(/\u0000(\d+)\u0000/g, (_, idx) => codeBlocks[idx]);
 	});
 
-	return paragraphs
-		.map(prepareTextForTTS)
-		.filter(Boolean);
+	return paragraphs.map(cleanText).filter(Boolean);
 };
 
 export const extractSentencesForAudio = (text: string) => {
@@ -611,6 +609,25 @@ export const extractSentencesForAudio = (text: string) => {
 		}
 		return mergedTexts;
 	}, [] as string[]);
+};
+
+export const getMessageContentParts = (content: string, split_on: string = 'punctuation') => {
+	const messageContentParts: string[] = [];
+
+	switch (split_on) {
+		default:
+		case TTS_RESPONSE_SPLIT.PUNCTUATION:
+			messageContentParts.push(...extractSentencesForAudio(content));
+			break;
+		case TTS_RESPONSE_SPLIT.PARAGRAPHS:
+			messageContentParts.push(...extractParagraphsForAudio(content));
+			break;
+		case TTS_RESPONSE_SPLIT.NONE:
+			messageContentParts.push(cleanText(content));
+			break;
+	}
+
+	return messageContentParts;
 };
 
 export const blobToFile = (blob, fileName) => {

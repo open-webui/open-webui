@@ -30,6 +30,7 @@
 	import {
 		convertMessagesToHistory,
 		copyToClipboard,
+		getMessageContentParts,
 		extractSentencesForAudio,
 		promptTemplate,
 		splitStream
@@ -926,18 +927,26 @@
 										navigator.vibrate(5);
 									}
 
-									const sentences = extractSentencesForAudio(responseMessage.content);
-									sentences.pop();
+									const messageContentParts = getMessageContentParts(
+										responseMessage.content,
+										$config?.audio?.tts?.split_on ?? 'punctuation'
+									);
+									messageContentParts.pop();
 
 									// dispatch only last sentence and make sure it hasn't been dispatched before
 									if (
-										sentences.length > 0 &&
-										sentences[sentences.length - 1] !== responseMessage.lastSentence
+										messageContentParts.length > 0 &&
+										messageContentParts[messageContentParts.length - 1] !==
+											responseMessage.lastSentence
 									) {
-										responseMessage.lastSentence = sentences[sentences.length - 1];
+										responseMessage.lastSentence =
+											messageContentParts[messageContentParts.length - 1];
 										eventTarget.dispatchEvent(
 											new CustomEvent('chat', {
-												detail: { id: responseMessageId, content: sentences[sentences.length - 1] }
+												detail: {
+													id: responseMessageId,
+													content: messageContentParts[messageContentParts.length - 1]
+												}
 											})
 										);
 									}
@@ -1040,14 +1049,19 @@
 		stopResponseFlag = false;
 		await tick();
 
-		let lastSentence = extractSentencesForAudio(responseMessage.content)?.at(-1) ?? '';
-		if (lastSentence) {
+		let lastMessageContentPart =
+			getMessageContentParts(
+				responseMessage.content,
+				$config?.audio?.tts?.split_on ?? 'punctuation'
+			)?.at(-1) ?? '';
+		if (lastMessageContentPart) {
 			eventTarget.dispatchEvent(
 				new CustomEvent('chat', {
-					detail: { id: responseMessageId, content: lastSentence }
+					detail: { id: responseMessageId, content: lastMessageContentPart }
 				})
 			);
 		}
+
 		eventTarget.dispatchEvent(
 			new CustomEvent('chat:finish', {
 				detail: {
@@ -1247,18 +1261,24 @@
 							navigator.vibrate(5);
 						}
 
-						const sentences = extractSentencesForAudio(responseMessage.content);
-						sentences.pop();
+						const messageContentParts = getMessageContentParts(
+							responseMessage.content,
+							$config?.audio?.tts?.split_on ?? 'punctuation'
+						);
+						messageContentParts.pop();
 
 						// dispatch only last sentence and make sure it hasn't been dispatched before
 						if (
-							sentences.length > 0 &&
-							sentences[sentences.length - 1] !== responseMessage.lastSentence
+							messageContentParts.length > 0 &&
+							messageContentParts[messageContentParts.length - 1] !== responseMessage.lastSentence
 						) {
-							responseMessage.lastSentence = sentences[sentences.length - 1];
+							responseMessage.lastSentence = messageContentParts[messageContentParts.length - 1];
 							eventTarget.dispatchEvent(
 								new CustomEvent('chat', {
-									detail: { id: responseMessageId, content: sentences[sentences.length - 1] }
+									detail: {
+										id: responseMessageId,
+										content: messageContentParts[messageContentParts.length - 1]
+									}
 								})
 							);
 						}
@@ -1313,11 +1333,15 @@
 		stopResponseFlag = false;
 		await tick();
 
-		let lastSentence = extractSentencesForAudio(responseMessage.content)?.at(-1) ?? '';
-		if (lastSentence) {
+		let lastMessageContentPart =
+			getMessageContentParts(
+				responseMessage.content,
+				$config?.audio?.tts?.split_on ?? 'punctuation'
+			)?.at(-1) ?? '';
+		if (lastMessageContentPart) {
 			eventTarget.dispatchEvent(
 				new CustomEvent('chat', {
-					detail: { id: responseMessageId, content: lastSentence }
+					detail: { id: responseMessageId, content: lastMessageContentPart }
 				})
 			);
 		}
