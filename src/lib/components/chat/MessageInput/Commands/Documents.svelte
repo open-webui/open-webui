@@ -2,13 +2,14 @@
 	import { createEventDispatcher } from 'svelte';
 
 	import { documents } from '$lib/stores';
-	import { removeFirstHashWord, isValidHttpUrl } from '$lib/utils';
+	import { removeLastWordFromString, isValidHttpUrl } from '$lib/utils';
 	import { tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
 
 	export let prompt = '';
+	export let command = '';
 
 	const dispatch = createEventDispatcher();
 	let selectedIdx = 0;
@@ -43,16 +44,16 @@
 	];
 
 	$: filteredCollections = collections
-		.filter((collection) => findByName(collection, prompt))
+		.filter((collection) => findByName(collection, command))
 		.sort((a, b) => a.name.localeCompare(b.name));
 
 	$: filteredDocs = $documents
-		.filter((doc) => findByName(doc, prompt))
+		.filter((doc) => findByName(doc, command))
 		.sort((a, b) => a.title.localeCompare(b.title));
 
 	$: filteredItems = [...filteredCollections, ...filteredDocs];
 
-	$: if (prompt) {
+	$: if (command) {
 		selectedIdx = 0;
 
 		console.log(filteredCollections);
@@ -62,9 +63,9 @@
 		name: string;
 	};
 
-	const findByName = (obj: ObjectWithName, prompt: string) => {
+	const findByName = (obj: ObjectWithName, command: string) => {
 		const name = obj.name.toLowerCase();
-		return name.includes(prompt.toLowerCase().split(' ')?.at(0)?.substring(1) ?? '');
+		return name.includes(command.toLowerCase().split(' ')?.at(0)?.substring(1) ?? '');
 	};
 
 	export const selectUp = () => {
@@ -78,7 +79,7 @@
 	const confirmSelect = async (doc) => {
 		dispatch('select', doc);
 
-		prompt = removeFirstHashWord(prompt);
+		prompt = removeLastWordFromString(prompt, command);
 		const chatInputElement = document.getElementById('chat-textarea');
 
 		await tick();
@@ -89,7 +90,7 @@
 	const confirmSelectWeb = async (url) => {
 		dispatch('url', url);
 
-		prompt = removeFirstHashWord(prompt);
+		prompt = removeLastWordFromString(prompt, command);
 		const chatInputElement = document.getElementById('chat-textarea');
 
 		await tick();
@@ -100,7 +101,7 @@
 	const confirmSelectYoutube = async (url) => {
 		dispatch('youtube', url);
 
-		prompt = removeFirstHashWord(prompt);
+		prompt = removeLastWordFromString(prompt, command);
 		const chatInputElement = document.getElementById('chat-textarea');
 
 		await tick();
@@ -110,7 +111,10 @@
 </script>
 
 {#if filteredItems.length > 0 || prompt.split(' ')?.at(0)?.substring(1).startsWith('http')}
-	<div class="pl-1 pr-12 mb-3 text-left w-full absolute bottom-0 left-0 right-0 z-10">
+	<div
+		id="commands-container"
+		class="pl-1 pr-12 mb-3 text-left w-full absolute bottom-0 left-0 right-0 z-10"
+	>
 		<div class="flex w-full dark:border dark:border-gray-850 rounded-lg">
 			<div class=" bg-gray-50 dark:bg-gray-850 w-10 rounded-l-lg text-center">
 				<div class=" text-lg font-semibold mt-2">#</div>

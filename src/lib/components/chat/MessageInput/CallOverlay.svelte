@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { config, models, settings, showCallOverlay } from '$lib/stores';
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, tick, getContext, onDestroy, createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher();
 
 	import {
 		blobToFile,
@@ -19,14 +21,13 @@
 	const i18n = getContext('i18n');
 
 	export let eventTarget: EventTarget;
-
 	export let submitPrompt: Function;
 	export let stopResponse: Function;
-
 	export let files;
-
 	export let chatId;
 	export let modelId;
+
+	let wakeLock = null;
 
 	let model = null;
 
@@ -45,6 +46,7 @@
 	let rmsLevel = 0;
 	let hasStartedSpeaking = false;
 	let mediaRecorder;
+	let audioStream = null;
 	let audioChunks = [];
 
 	let videoInputDevices = [];
@@ -210,17 +212,23 @@
 		} else {
 			audioChunks = [];
 			mediaRecorder = false;
+
+			if (audioStream) {
+				const tracks = audioStream.getTracks();
+				tracks.forEach((track) => track.stop());
+			}
+			audioStream = null;
 		}
 	};
 
 	const startRecording = async () => {
-		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-		mediaRecorder = new MediaRecorder(stream);
+		audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		mediaRecorder = new MediaRecorder(audioStream);
 
 		mediaRecorder.onstart = () => {
 			console.log('Recording started');
 			audioChunks = [];
-			analyseAudio(stream);
+			analyseAudio(audioStream);
 		};
 
 		mediaRecorder.ondataavailable = (event) => {
@@ -235,6 +243,15 @@
 		};
 
 		mediaRecorder.start();
+	};
+
+	const stopAudioStream = async () => {
+		if (audioStream) {
+			const tracks = audioStream.getTracks();
+			tracks.forEach((track) => track.stop());
+		}
+
+		audioStream = null;
 	};
 
 	// Function to calculate the RMS level from time domain data
@@ -509,6 +526,34 @@
 	};
 
 	onMount(async () => {
+		const setWakeLock = async () => {
+			try {
+				wakeLock = await navigator.wakeLock.request('screen');
+			} catch (err) {
+				// The Wake Lock request has failed - usually system related, such as battery.
+				console.log(err);
+			}
+
+			if (wakeLock) {
+				// Add a listener to release the wake lock when the page is unloaded
+				wakeLock.addEventListener('release', () => {
+					// the wake lock has been released
+					console.log('Wake Lock released');
+				});
+			}
+		};
+
+		if ('wakeLock' in navigator) {
+			await setWakeLock();
+
+			document.addEventListener('visibilitychange', async () => {
+				// Re-request the wake lock if the document becomes visible
+				if (wakeLock !== null && document.visibilityState === 'visible') {
+					await setWakeLock();
+				}
+			});
+		}
+
 		model = $models.find((m) => m.id === modelId);
 
 		startRecording();
@@ -585,302 +630,225 @@
 			await stopCamera();
 		};
 	});
+
+	onDestroy(async () => {
+		await stopAllAudio();
+		await stopRecordingCallback(false);
+		await stopCamera();
+	});
 </script>
 
 {#if $showCallOverlay}
-	<div class=" absolute w-full h-screen max-h-[100dvh] flex z-[999] overflow-hidden">
-		<div
-			class="absolute w-full h-screen max-h-[100dvh] bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center"
-		>
-			<div class="max-w-lg w-full h-screen max-h-[100dvh] flex flex-col justify-between p-3 md:p-6">
-				{#if camera}
-					<button
-						type="button"
-						class="flex justify-center items-center w-full h-20 min-h-20"
-						on:click={() => {
-							if (assistantSpeaking) {
-								stopAllAudio();
-							}
-						}}
+	<div class="max-w-lg w-full h-full max-h-[100dvh] flex flex-col justify-between p-3 md:p-6">
+		{#if camera}
+			<button
+				type="button"
+				class="flex justify-center items-center w-full h-20 min-h-20"
+				on:click={() => {
+					if (assistantSpeaking) {
+						stopAllAudio();
+					}
+				}}
+			>
+				{#if emoji}
+					<div
+						class="  transition-all rounded-full"
+						style="font-size:{rmsLevel * 100 > 4
+							? '4.5'
+							: rmsLevel * 100 > 2
+								? '4.25'
+								: rmsLevel * 100 > 1
+									? '3.75'
+									: '3.5'}rem;width: 100%; text-align:center;"
 					>
-						{#if emoji}
-							<div
-								class="  transition-all rounded-full"
-								style="font-size:{rmsLevel * 100 > 4
-									? '4.5'
-									: rmsLevel * 100 > 2
-										? '4.25'
-										: rmsLevel * 100 > 1
-											? '3.75'
-											: '3.5'}rem;width: 100%; text-align:center;"
-							>
-								{emoji}
-							</div>
-						{:else if loading || assistantSpeaking}
-							<svg
-								class="size-12 text-gray-900 dark:text-gray-400"
-								viewBox="0 0 24 24"
-								fill="currentColor"
-								xmlns="http://www.w3.org/2000/svg"
-								><style>
-									.spinner_qM83 {
-										animation: spinner_8HQG 1.05s infinite;
-									}
-									.spinner_oXPr {
-										animation-delay: 0.1s;
-									}
-									.spinner_ZTLf {
-										animation-delay: 0.2s;
-									}
-									@keyframes spinner_8HQG {
-										0%,
-										57.14% {
-											animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
-											transform: translate(0);
-										}
-										28.57% {
-											animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
-											transform: translateY(-6px);
-										}
-										100% {
-											transform: translate(0);
-										}
-									}
-								</style><circle class="spinner_qM83" cx="4" cy="12" r="3" /><circle
-									class="spinner_qM83 spinner_oXPr"
-									cx="12"
-									cy="12"
-									r="3"
-								/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="3" /></svg
-							>
-						{:else}
-							<div
-								class=" {rmsLevel * 100 > 4
-									? ' size-[4.5rem]'
-									: rmsLevel * 100 > 2
-										? ' size-16'
-										: rmsLevel * 100 > 1
-											? 'size-14'
-											: 'size-12'}  transition-all rounded-full {(model?.info?.meta
-									?.profile_image_url ?? '/static/favicon.png') !== '/static/favicon.png'
-									? ' bg-cover bg-center bg-no-repeat'
-									: 'bg-black dark:bg-white'}  bg-black dark:bg-white"
-								style={(model?.info?.meta?.profile_image_url ?? '/static/favicon.png') !==
-								'/static/favicon.png'
-									? `background-image: url('${model?.info?.meta?.profile_image_url}');`
-									: ''}
-							/>
-						{/if}
-						<!-- navbar -->
-					</button>
-				{/if}
-
-				<div class="flex justify-center items-center flex-1 h-full w-full max-h-full">
-					{#if !camera}
-						<button
-							type="button"
-							on:click={() => {
-								if (assistantSpeaking) {
-									stopAllAudio();
+						{emoji}
+					</div>
+				{:else if loading || assistantSpeaking}
+					<svg
+						class="size-12 text-gray-900 dark:text-gray-400"
+						viewBox="0 0 24 24"
+						fill="currentColor"
+						xmlns="http://www.w3.org/2000/svg"
+						><style>
+							.spinner_qM83 {
+								animation: spinner_8HQG 1.05s infinite;
+							}
+							.spinner_oXPr {
+								animation-delay: 0.1s;
+							}
+							.spinner_ZTLf {
+								animation-delay: 0.2s;
+							}
+							@keyframes spinner_8HQG {
+								0%,
+								57.14% {
+									animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
+									transform: translate(0);
 								}
-							}}
+								28.57% {
+									animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
+									transform: translateY(-6px);
+								}
+								100% {
+									transform: translate(0);
+								}
+							}
+						</style><circle class="spinner_qM83" cx="4" cy="12" r="3" /><circle
+							class="spinner_qM83 spinner_oXPr"
+							cx="12"
+							cy="12"
+							r="3"
+						/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="3" /></svg
+					>
+				{:else}
+					<div
+						class=" {rmsLevel * 100 > 4
+							? ' size-[4.5rem]'
+							: rmsLevel * 100 > 2
+								? ' size-16'
+								: rmsLevel * 100 > 1
+									? 'size-14'
+									: 'size-12'}  transition-all rounded-full {(model?.info?.meta
+							?.profile_image_url ?? '/static/favicon.png') !== '/static/favicon.png'
+							? ' bg-cover bg-center bg-no-repeat'
+							: 'bg-black dark:bg-white'}  bg-black dark:bg-white"
+						style={(model?.info?.meta?.profile_image_url ?? '/static/favicon.png') !==
+						'/static/favicon.png'
+							? `background-image: url('${model?.info?.meta?.profile_image_url}');`
+							: ''}
+					/>
+				{/if}
+				<!-- navbar -->
+			</button>
+		{/if}
+
+		<div class="flex justify-center items-center flex-1 h-full w-full max-h-full">
+			{#if !camera}
+				<button
+					type="button"
+					on:click={() => {
+						if (assistantSpeaking) {
+							stopAllAudio();
+						}
+					}}
+				>
+					{#if emoji}
+						<div
+							class="  transition-all rounded-full"
+							style="font-size:{rmsLevel * 100 > 4
+								? '13'
+								: rmsLevel * 100 > 2
+									? '12'
+									: rmsLevel * 100 > 1
+										? '11.5'
+										: '11'}rem;width:100%;text-align:center;"
 						>
-							{#if emoji}
-								<div
-									class="  transition-all rounded-full"
-									style="font-size:{rmsLevel * 100 > 4
-										? '13'
-										: rmsLevel * 100 > 2
-											? '12'
-											: rmsLevel * 100 > 1
-												? '11.5'
-												: '11'}rem;width:100%;text-align:center;"
-								>
-									{emoji}
-								</div>
-							{:else if loading || assistantSpeaking}
-								<svg
-									class="size-44 text-gray-900 dark:text-gray-400"
-									viewBox="0 0 24 24"
-									fill="currentColor"
-									xmlns="http://www.w3.org/2000/svg"
-									><style>
-										.spinner_qM83 {
-											animation: spinner_8HQG 1.05s infinite;
-										}
-										.spinner_oXPr {
-											animation-delay: 0.1s;
-										}
-										.spinner_ZTLf {
-											animation-delay: 0.2s;
-										}
-										@keyframes spinner_8HQG {
-											0%,
-											57.14% {
-												animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
-												transform: translate(0);
-											}
-											28.57% {
-												animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
-												transform: translateY(-6px);
-											}
-											100% {
-												transform: translate(0);
-											}
-										}
-									</style><circle class="spinner_qM83" cx="4" cy="12" r="3" /><circle
-										class="spinner_qM83 spinner_oXPr"
-										cx="12"
-										cy="12"
-										r="3"
-									/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="3" /></svg
-								>
-							{:else}
-								<div
-									class=" {rmsLevel * 100 > 4
-										? ' size-52'
-										: rmsLevel * 100 > 2
-											? 'size-48'
-											: rmsLevel * 100 > 1
-												? 'size-[11.5rem]'
-												: 'size-44'}  transition-all rounded-full {(model?.info?.meta
-										?.profile_image_url ?? '/static/favicon.png') !== '/static/favicon.png'
-										? ' bg-cover bg-center bg-no-repeat'
-										: 'bg-black dark:bg-white'} "
-									style={(model?.info?.meta?.profile_image_url ?? '/static/favicon.png') !==
-									'/static/favicon.png'
-										? `background-image: url('${model?.info?.meta?.profile_image_url}');`
-										: ''}
-								/>
-							{/if}
-						</button>
+							{emoji}
+						</div>
+					{:else if loading || assistantSpeaking}
+						<svg
+							class="size-44 text-gray-900 dark:text-gray-400"
+							viewBox="0 0 24 24"
+							fill="currentColor"
+							xmlns="http://www.w3.org/2000/svg"
+							><style>
+								.spinner_qM83 {
+									animation: spinner_8HQG 1.05s infinite;
+								}
+								.spinner_oXPr {
+									animation-delay: 0.1s;
+								}
+								.spinner_ZTLf {
+									animation-delay: 0.2s;
+								}
+								@keyframes spinner_8HQG {
+									0%,
+									57.14% {
+										animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
+										transform: translate(0);
+									}
+									28.57% {
+										animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
+										transform: translateY(-6px);
+									}
+									100% {
+										transform: translate(0);
+									}
+								}
+							</style><circle class="spinner_qM83" cx="4" cy="12" r="3" /><circle
+								class="spinner_qM83 spinner_oXPr"
+								cx="12"
+								cy="12"
+								r="3"
+							/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="3" /></svg
+						>
 					{:else}
 						<div
-							class="relative flex video-container w-full max-h-full pt-2 pb-4 md:py-6 px-2 h-full"
-						>
-							<video
-								id="camera-feed"
-								autoplay
-								class="rounded-2xl h-full min-w-full object-cover object-center"
-								playsinline
-							/>
-
-							<canvas id="camera-canvas" style="display:none;" />
-
-							<div class=" absolute top-4 md:top-8 left-4">
-								<button
-									type="button"
-									class="p-1.5 text-white cursor-pointer backdrop-blur-xl bg-black/10 rounded-full"
-									on:click={() => {
-										stopCamera();
-									}}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-										class="size-6"
-									>
-										<path
-											d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
-										/>
-									</svg>
-								</button>
-							</div>
-						</div>
+							class=" {rmsLevel * 100 > 4
+								? ' size-52'
+								: rmsLevel * 100 > 2
+									? 'size-48'
+									: rmsLevel * 100 > 1
+										? 'size-44'
+										: 'size-40'}  transition-all rounded-full {(model?.info?.meta
+								?.profile_image_url ?? '/static/favicon.png') !== '/static/favicon.png'
+								? ' bg-cover bg-center bg-no-repeat'
+								: 'bg-black dark:bg-white'} "
+							style={(model?.info?.meta?.profile_image_url ?? '/static/favicon.png') !==
+							'/static/favicon.png'
+								? `background-image: url('${model?.info?.meta?.profile_image_url}');`
+								: ''}
+						/>
 					{/if}
-				</div>
+				</button>
+			{:else}
+				<div class="relative flex video-container w-full max-h-full pt-2 pb-4 md:py-6 px-2 h-full">
+					<video
+						id="camera-feed"
+						autoplay
+						class="rounded-2xl h-full min-w-full object-cover object-center"
+						playsinline
+					/>
 
-				<div class="flex justify-between items-center pb-2 w-full">
-					<div>
-						{#if camera}
-							<VideoInputMenu
-								devices={videoInputDevices}
-								on:change={async (e) => {
-									console.log(e.detail);
-									selectedVideoInputDeviceId = e.detail;
-									await stopVideoStream();
-									await startVideoStream();
-								}}
-							>
-								<button class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900" type="button">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="size-5"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H3.989a.75.75 0 0 0-.75.75v4.242a.75.75 0 0 0 1.5 0v-2.43l.31.31a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm1.23-3.723a.75.75 0 0 0 .219-.53V2.929a.75.75 0 0 0-1.5 0V5.36l-.31-.31A7 7 0 0 0 3.239 8.188a.75.75 0 1 0 1.448.389A5.5 5.5 0 0 1 13.89 6.11l.311.31h-2.432a.75.75 0 0 0 0 1.5h4.243a.75.75 0 0 0 .53-.219Z"
-											clip-rule="evenodd"
-										/>
-									</svg>
-								</button>
-							</VideoInputMenu>
-						{:else}
-							<Tooltip content={$i18n.t('Camera')}>
-								<button
-									class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900"
-									type="button"
-									on:click={async () => {
-										await navigator.mediaDevices.getUserMedia({ video: true });
-										startCamera();
-									}}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke-width="1.5"
-										stroke="currentColor"
-										class="size-5"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"
-										/>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z"
-										/>
-									</svg>
-								</button>
-							</Tooltip>
-						{/if}
-					</div>
+					<canvas id="camera-canvas" style="display:none;" />
 
-					<div>
+					<div class=" absolute top-4 md:top-8 left-4">
 						<button
 							type="button"
+							class="p-1.5 text-white cursor-pointer backdrop-blur-xl bg-black/10 rounded-full"
 							on:click={() => {
-								if (assistantSpeaking) {
-									stopAllAudio();
-								}
+								stopCamera();
 							}}
 						>
-							<div class=" line-clamp-1 text-sm font-medium">
-								{#if loading}
-									{$i18n.t('Thinking...')}
-								{:else if assistantSpeaking}
-									{$i18n.t('Tap to interrupt')}
-								{:else}
-									{$i18n.t('Listening...')}
-								{/if}
-							</div>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 16 16"
+								fill="currentColor"
+								class="size-6"
+							>
+								<path
+									d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
+								/>
+							</svg>
 						</button>
 					</div>
+				</div>
+			{/if}
+		</div>
 
-					<div>
-						<button
-							class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900"
-							on:click={async () => {
-								showCallOverlay.set(false);
-							}}
-							type="button"
-						>
+		<div class="flex justify-between items-center pb-2 w-full">
+			<div>
+				{#if camera}
+					<VideoInputMenu
+						devices={videoInputDevices}
+						on:change={async (e) => {
+							console.log(e.detail);
+							selectedVideoInputDeviceId = e.detail;
+							await stopVideoStream();
+							await startVideoStream();
+						}}
+					>
+						<button class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900" type="button">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 20 20"
@@ -888,12 +856,90 @@
 								class="size-5"
 							>
 								<path
-									d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"
+									fill-rule="evenodd"
+									d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H3.989a.75.75 0 0 0-.75.75v4.242a.75.75 0 0 0 1.5 0v-2.43l.31.31a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm1.23-3.723a.75.75 0 0 0 .219-.53V2.929a.75.75 0 0 0-1.5 0V5.36l-.31-.31A7 7 0 0 0 3.239 8.188a.75.75 0 1 0 1.448.389A5.5 5.5 0 0 1 13.89 6.11l.311.31h-2.432a.75.75 0 0 0 0 1.5h4.243a.75.75 0 0 0 .53-.219Z"
+									clip-rule="evenodd"
 								/>
 							</svg>
 						</button>
+					</VideoInputMenu>
+				{:else}
+					<Tooltip content={$i18n.t('Camera')}>
+						<button
+							class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900"
+							type="button"
+							on:click={async () => {
+								await navigator.mediaDevices.getUserMedia({ video: true });
+								startCamera();
+							}}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="1.5"
+								stroke="currentColor"
+								class="size-5"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"
+								/>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z"
+								/>
+							</svg>
+						</button>
+					</Tooltip>
+				{/if}
+			</div>
+
+			<div>
+				<button
+					type="button"
+					on:click={() => {
+						if (assistantSpeaking) {
+							stopAllAudio();
+						}
+					}}
+				>
+					<div class=" line-clamp-1 text-sm font-medium">
+						{#if loading}
+							{$i18n.t('Thinking...')}
+						{:else if assistantSpeaking}
+							{$i18n.t('Tap to interrupt')}
+						{:else}
+							{$i18n.t('Listening...')}
+						{/if}
 					</div>
-				</div>
+				</button>
+			</div>
+
+			<div>
+				<button
+					class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900"
+					on:click={async () => {
+						stopAudioStream();
+						stopVideoStream();
+						showCallOverlay.set(false);
+						dispatch('close');
+					}}
+					type="button"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 20 20"
+						fill="currentColor"
+						class="size-5"
+					>
+						<path
+							d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"
+						/>
+					</svg>
+				</button>
 			</div>
 		</div>
 	</div>

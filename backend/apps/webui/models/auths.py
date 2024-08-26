@@ -4,12 +4,12 @@ import uuid
 import logging
 from sqlalchemy import String, Column, Boolean, Text
 
-from apps.webui.models.users import UserModel, Users
 from utils.utils import verify_password
 
+from apps.webui.models.users import UserModel, Users
 from apps.webui.internal.db import Base, get_db
 
-from config import SRC_LOG_LEVELS
+from env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
