@@ -77,9 +77,11 @@ async def generate_replicate_chat_completion(form_data: dict, user=Depends(get_v
         else:
             input = {
                 "prompt": prompt,
-                # "temperature": form_data.get("temperature") or 0.75,
-                # "max_length": form_data.get("max_tokens") or 500,
             }
+            if "temperature" in form_data and form_data["temperature"]:
+                input["temperature"] = form_data["temperature"]
+            if "max_tokens" in form_data and form_data["max_tokens"]:
+                input["max_length"] = form_data["max_tokens"]
             output = replicate.run(
                 model,
                 input
@@ -114,11 +116,16 @@ def construct_prompt(messages):
 
 async def stream_replicate_response(client, model: str, prompt: str, form_data: dict):
     try:
+        input = {
+            "prompt": prompt,
+        }
+        if "temperature" in form_data and form_data["temperature"]:
+            input["temperature"] = form_data["temperature"]
+        if "max_tokens" in form_data and form_data["max_tokens"]:
+            input["max_length"] = form_data["max_tokens"]
         for event in client.run(
                 model,
-                input={
-                    "prompt": prompt,
-                },
+                input=input,
                 stream=True,
         ):
             yield f"data: {json.dumps({'choices': [{'delta': {'content': event}}]})}\n\n"
@@ -176,63 +183,14 @@ async def get_all_models():
                 "owned_by": "replicate",
             },
             {
-                "id": "01-ai/yi-34b-chat",
-                "name": "replicate: yi [34b, chat]",
-                "object": "model",
-                "created": int(time.time()),
-                "owned_by": "replicate",
-            },
-            {
-                "id": "google-deepmind/gemma-7b-it",
-                "name": "replicate: gemma [7b, instruct]",
-                "object": "model",
-                "created": int(time.time()),
-                "owned_by": "replicate",
-            },
-            {
-                "id": "lucataco/qwen1.5-72b",
-                "name": "replicate: qwen1.5 [72b]",
-                "object": "model",
-                "created": int(time.time()),
-                "owned_by": "replicate",
-            },
-            {
-                "id": "adirik/mamba-2.8b",
-                "name": "replicate: mamba [2.8b]",
-                "object": "model",
-                "created": int(time.time()),
-                "owned_by": "replicate",
-            },
-            {
                 "id": "meta/llama-2-70b-chat",
                 "name": "replicate: llama-2 [70b, chat]",
                 "object": "model",
                 "created": int(time.time()),
                 "owned_by": "replicate",
             },
-            {
-                "id": "lucataco/phi-2",
-                "name": "replicate: phi-2",
-                "object": "model",
-                "created": int(time.time()),
-                "owned_by": "replicate",
-            },
-            {
-                "id": "replit/replit-code-v1-3b",
-                "name": "replicate: replit-code-v1 [3b]",
-                "object": "model",
-                "created": int(time.time()),
-                "owned_by": "replicate",
-            },
-            {
-                "id": "nateraw/nous-hermes-2-solar-10.7b",
-                "name": "replicate: nous-hermes-2-solar [10.7b]",
-                "object": "model",
-                "created": int(time.time()),
-                "owned_by": "replicate",
-            }
         ]
-        if str(REPLICATE_API_TOKEN) != '': # only add models if the API token is set, otherwise return empty list
+        if str(REPLICATE_API_TOKEN) != '':  # only add models if the API token is set, otherwise return empty list
             app.state.MODELS = {model["id"]: model for model in models}
             return models
         else:
