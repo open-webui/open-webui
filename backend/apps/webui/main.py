@@ -295,6 +295,7 @@ async def generate_function_chat_completion(form_data, user):
         "__event_emitter__": __event_emitter__,
         "__event_call__": __event_call__,
         "__task__": __task__,
+        "__files__": files,
         "__user__": {
             "id": user.id,
             "email": user.email,
