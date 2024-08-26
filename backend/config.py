@@ -517,7 +517,7 @@ else:
     )
 
 CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE", "1500"))
-CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP", "100"))
+CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP", "400"))
 
 DEFAULT_RAG_TEMPLATE = """Use the following context as your learned knowledge, inside <context></context> XML tags.
 <context>
@@ -528,6 +528,7 @@ When answer to user:
 - If you don't know, just say that you don't know.
 - If you don't know when you are not sure, ask for clarification.
 - If you find any relevant links or urls, then make sure to include that in your answer. Don't create own url.
+- Do not change months to days or vice versa. Give the information as it is in the documents.
 Avoid mentioning that you obtained the information from the context.
 And answer according to the language of the user's question.
 
