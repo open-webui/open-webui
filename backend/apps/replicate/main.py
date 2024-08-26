@@ -110,7 +110,7 @@ def construct_prompt(messages):
             prompt += f"Human: {msg['content']}\n"
         elif msg["role"] == "assistant":
             prompt += f"Assistant: {msg['content']}\n"
-    prompt += "Assistant: "
+    # prompt += "Assistant: " # removed because it created artefacts
     return prompt
 
 
@@ -139,66 +139,95 @@ async def chat_completions(form_data: ChatCompletionRequest, user=Depends(get_ve
     return await generate_replicate_chat_completion(form_data.dict(), user)
 
 
+formatted_models = [] # caching models, so we don't have to fetch them every time. Fetching takes a (relatively) long time.
+
 async def get_all_models():
-    log.info("get_all_models()")
+    global formatted_models # accessing the global caching variable
     if not is_enabled():
         raise HTTPException(status_code=400, detail="Replicate API is not enabled")
+    if len(formatted_models) > 0:
+        log.info(f"get_all_models()")
+        return formatted_models
 
     try:
-        # This is a placeholder. In a real implementation, you'd fetch this from Replicate or maintain a list.
-        models = [
-            {
-                "id": "meta/meta-llama-3.1-405b-instruct",
-                "name": "replicate: llama-3.1 [405b, instruct]",
-                "object": "model",
-                "created": int(time.time()),
-                "owned_by": "replicate",
-            },
-            {
-                "id": "meta/meta-llama-3-70b-instruct",
-                "name": "replicate: llama-3 [70b, instruct]",
-                "object": "model",
-                "created": int(time.time()),
-                "owned_by": "replicate",
-            },
-            {
-                "id": "meta/meta-llama-3-8b-instruct",
-                "name": "replicate: llama-3 [8b, instruct]",
-                "object": "model",
-                "created": int(time.time()),
-                "owned_by": "replicate",
-            },
-            {
-                "id": "mistralai/mixtral-8x7b-instruct-v0.1",
-                "name": "replicate: mixtral [8x7b, instruct]",
-                "object": "model",
-                "created": int(time.time()),
-                "owned_by": "replicate",
-            },
-            {
-                "id": "mistralai/mistral-7b-instruct-v0.2",
-                "name": "replicate: mistral [7b, instruct-v0.2]",
-                "object": "model",
-                "created": int(time.time()),
-                "owned_by": "replicate",
-            },
-            {
-                "id": "meta/llama-2-70b-chat",
-                "name": "replicate: llama-2 [70b, chat]",
-                "object": "model",
-                "created": int(time.time()),
-                "owned_by": "replicate",
-            },
-        ]
-        if str(REPLICATE_API_TOKEN) != '':  # only add models if the API token is set, otherwise return empty list
-            app.state.MODELS = {model["id"]: model for model in models}
-            return models
+        if str(REPLICATE_API_TOKEN) != '':
+
+            models = []
+            n_models_to_fetch = 500 # 500 takes some time (~10s), but is a good number to fetch all models. One needs to find a balance between speed and comprehensiveness
+            log.info(f"get_all_models() - this might take around {n_models_to_fetch * 0.02} seconds, but only once to build the cache") # around 0.02 seconds per model
+
+            for page in replicate.paginate(replicate.models.list):
+                models.extend(page.results)
+                if len(models) > n_models_to_fetch:
+                    break
+
+            def is_llm_model(model):
+                if model.id is None or model.description is None: # some models don't have a description, so if not checked, it will throw an error
+                    return False
+                owners = ['meta'] # right now, only meta seems to work...
+                # additionally (taken from https://replicate.com/collections/language-models): 'replicate', '01-ai', 'stability-ai', 'nateraw', 'kcaverly', 'lucataco', 'replit', 'adirik'
+                owner_filtered_model = any(owner in model.id for owner in owners)
+
+                keywords = ['llm', 'language model'] # not amazing, but works (most applicable models have language model in their description)
+                keyword_filtered_models = any(keyword in model.description.lower() for keyword in keywords)
+
+                return owner_filtered_model and keyword_filtered_models
+
+            llm_models = [model for model in models if is_llm_model(model)]
+
+            for model in llm_models:
+                formatted_model = {
+                    "id": f"{model.id}",
+                    "name": f"replicate: {model.name}",
+                    "object": "model",
+                    "created": int(time.time()),
+                    "owned_by": "replicate",
+                    "description": model.description
+                }
+                formatted_models.append(formatted_model)
+
+            formatted_models += [ # hard-coded models, for some reason, they don't show up in the list of models (or my filter doesn't work)
+                {
+                    "id": "mistralai/mixtral-8x7b-instruct-v0.1",
+                    "name": "replicate: mistralai/mixtral-8x7b-instruct-v0.1",
+                    "object": "model",
+                    "created": int(time.time()),
+                    "owned_by": "replicate",
+                    "description": "Language model, hard-coded"
+                },
+                {
+                    "id": "mistralai/mistral-7b-instruct-v0.2",
+                    "name": "replicate: mistralai/mistral-7b-instruct-v0.2",
+                    "object": "model",
+                    "created": int(time.time()),
+                    "owned_by": "replicate",
+                    "description": "Language model, hard-coded"
+                },
+                {
+                    "id": "mistralai/mistral-7b-v0.1",
+                    "name": "replicate: mistralai/mistral-7b-v0.1",
+                    "object": "model",
+                    "created": int(time.time()),
+                    "owned_by": "replicate",
+                    "description": "Language model, hard-coded"
+                },
+                {
+                    "id": "mistralai/mistral-7b-instruct-v0.1",
+                    "name": "replicate: mistralai/mistral-7b-instruct-v0.1",
+                    "object": "model",
+                    "created": int(time.time()),
+                    "owned_by": "replicate",
+                    "description": "Language model, hard-coded"
+                }
+            ]
+
+            app.state.MODELS = {model["id"]: model for model in formatted_models}
+            return formatted_models
         else:
             return []
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @app.get("/models")
 async def get_models(user=Depends(get_verified_user)):
