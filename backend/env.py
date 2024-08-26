@@ -58,6 +58,7 @@ log_sources = [
     "MODELS",
     "OLLAMA",
     "OPENAI",
+    "REPLICATE",
     "RAG",
     "WEBHOOK",
 ]
