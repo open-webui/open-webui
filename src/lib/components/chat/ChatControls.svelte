@@ -78,7 +78,17 @@
 		<div
 			class="absolute w-full h-screen max-h-[100dvh] bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center"
 		>
-			<CallOverlay bind:files {submitPrompt} {stopResponse} {modelId} {chatId} {eventTarget} />
+			<CallOverlay
+				bind:files
+				{submitPrompt}
+				{stopResponse}
+				{modelId}
+				{chatId}
+				{eventTarget}
+				on:close={() => {
+					show = false;
+				}}
+			/>
 		</div>
 	</div>
 {:else}
