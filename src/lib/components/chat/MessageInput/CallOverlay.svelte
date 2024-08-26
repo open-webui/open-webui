@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { config, models, settings, showCallOverlay } from '$lib/stores';
-	import { onMount, tick, getContext, onDestroy } from 'svelte';
+	import { onMount, tick, getContext, onDestroy, createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher();
 
 	import {
 		blobToFile,
@@ -923,6 +925,7 @@
 						stopAudioStream();
 						stopVideoStream();
 						showCallOverlay.set(false);
+						dispatch('close');
 					}}
 					type="button"
 				>
