@@ -99,7 +99,9 @@
 
 		if (res) {
 			saveHandler();
-			getBackendConfig().then(config.set).catch(() => {});
+			getBackendConfig()
+				.then(config.set)
+				.catch(() => {});
 		}
 	};
 
@@ -369,9 +371,11 @@
 							aria-label="Select how to split message text for TTS requests"
 							bind:value={TTS_SPLIT_ON}
 						>
-						{#each Object.values(TTS_RESPONSE_SPLIT) as split}
-							<option value={split}>{$i18n.t(split.charAt(0).toUpperCase() + split.slice(1))}</option>
-						{/each}
+							{#each Object.values(TTS_RESPONSE_SPLIT) as split}
+								<option value={split}
+									>{$i18n.t(split.charAt(0).toUpperCase() + split.slice(1))}</option
+								>
+							{/each}
 						</select>
 					</div>
 				</div>
