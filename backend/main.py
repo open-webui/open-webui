@@ -1933,6 +1933,7 @@ async def get_app_config(request: Request):
                     "tts": {
                         "engine": audio_app.state.config.TTS_ENGINE,
                         "voice": audio_app.state.config.TTS_VOICE,
+                        "split_on": audio_app.state.config.TTS_SPLIT_ON,
                     },
                     "stt": {
                         "engine": audio_app.state.config.STT_ENGINE,

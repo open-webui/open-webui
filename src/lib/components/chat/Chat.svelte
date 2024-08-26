@@ -3,13 +3,13 @@
 	import { toast } from 'svelte-sonner';
 	import mermaid from 'mermaid';
 
-	import { getContext, onMount, tick } from 'svelte';
+	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
-	import type { Writable } from 'svelte/store';
+	import type { Unsubscriber, Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	import { OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import {
 		chatId,
@@ -19,31 +19,26 @@
 		models,
 		settings,
 		showSidebar,
-		tags as _tags,
 		WEBUI_NAME,
 		banners,
 		user,
 		socket,
 		showCallOverlay,
-		tools,
 		currentChatPage,
 		temporaryChatEnabled
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
 		copyToClipboard,
+		getMessageContentParts,
 		extractSentencesForAudio,
-		getUserPosition,
 		promptTemplate,
 		splitStream
 	} from '$lib/utils';
 
 	import { generateChatCompletion } from '$lib/apis/ollama';
 	import {
-		addTagById,
 		createNewChat,
-		deleteTagById,
-		getAllChatTags,
 		getChatById,
 		getChatList,
 		getTagsById,
@@ -66,8 +61,6 @@
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
-	import CallOverlay from './MessageInput/CallOverlay.svelte';
-	import { error } from '@sveltejs/kit';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 
@@ -117,6 +110,8 @@
 	};
 
 	let params = {};
+
+	let chatIdUnsubscriber: Unsubscriber | undefined;
 
 	$: if (history.currentId !== null) {
 		let _messages = [];
@@ -207,47 +202,51 @@
 		}
 	};
 
-	onMount(async () => {
-		const onMessageHandler = async (event) => {
-			if (event.origin === window.origin) {
-				// Replace with your iframe's origin
-				console.log('Message received from iframe:', event.data);
-				if (event.data.type === 'input:prompt') {
-					console.log(event.data.text);
+	const onMessageHandler = async (event: {
+		origin: string;
+		data: { type: string; text: string };
+	}) => {
+		if (event.origin !== window.origin) {
+			return;
+		}
 
-					const inputElement = document.getElementById('chat-textarea');
+		// Replace with your iframe's origin
+		if (event.data.type === 'input:prompt') {
+			console.debug(event.data.text);
 
-					if (inputElement) {
-						prompt = event.data.text;
-						inputElement.focus();
-					}
-				}
+			const inputElement = document.getElementById('chat-textarea');
 
-				if (event.data.type === 'action:submit') {
-					console.log(event.data.text);
-
-					if (prompt !== '') {
-						await tick();
-						submitPrompt(prompt);
-					}
-				}
-
-				if (event.data.type === 'input:prompt:submit') {
-					console.log(event.data.text);
-
-					if (prompt !== '') {
-						await tick();
-						submitPrompt(event.data.text);
-					}
-				}
+			if (inputElement) {
+				prompt = event.data.text;
+				inputElement.focus();
 			}
-		};
-		window.addEventListener('message', onMessageHandler);
+		}
 
-		$socket.on('chat-events', chatEventHandler);
+		if (event.data.type === 'action:submit') {
+			console.debug(event.data.text);
+
+			if (prompt !== '') {
+				await tick();
+				submitPrompt(prompt);
+			}
+		}
+
+		if (event.data.type === 'input:prompt:submit') {
+			console.debug(event.data.text);
+
+			if (prompt !== '') {
+				await tick();
+				submitPrompt(event.data.text);
+			}
+		}
+	};
+
+	onMount(async () => {
+		window.addEventListener('message', onMessageHandler);
+		$socket?.on('chat-events', chatEventHandler);
 
 		if (!$chatId) {
-			chatId.subscribe(async (value) => {
+			chatIdUnsubscriber = chatId.subscribe(async (value) => {
 				if (!value) {
 					await initNewChat();
 				}
@@ -257,12 +256,12 @@
 				await goto('/');
 			}
 		}
+	});
 
-		return () => {
-			window.removeEventListener('message', onMessageHandler);
-
-			$socket.off('chat-events');
-		};
+	onDestroy(() => {
+		chatIdUnsubscriber?.();
+		window.removeEventListener('message', onMessageHandler);
+		$socket?.off('chat-events');
 	});
 
 	//////////////////////////
@@ -595,11 +594,11 @@
 	};
 
 	const sendPrompt = async (
-		prompt,
-		parentId,
+		prompt: string,
+		parentId: string,
 		{ modelId = null, modelIdx = null, newChat = false } = {}
 	) => {
-		let _responses = [];
+		let _responses: string[] = [];
 
 		// If modelId is provided, use it, else use selected model
 		let selectedModelIds = modelId
@@ -609,7 +608,7 @@
 				: selectedModels;
 
 		// Create response messages for each selected model
-		const responseMessageIds = {};
+		const responseMessageIds: Record<PropertyKey, string> = {};
 		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
 			const model = $models.filter((m) => m.id === modelId).at(0);
 
@@ -739,13 +738,13 @@
 		);
 
 		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		chats.set(await getChatList(localStorage.token, $currentChatPage));
 
 		return _responses;
 	};
 
 	const sendPromptOllama = async (model, userPrompt, responseMessageId, _chatId) => {
-		let _response = null;
+		let _response: string | null = null;
 
 		const responseMessage = history.messages[responseMessageId];
 		const userMessage = history.messages[responseMessage.parentId];
@@ -776,7 +775,7 @@
 			...messages
 		]
 			.filter((message) => message?.content?.trim())
-			.map((message, idx, arr) => {
+			.map((message) => {
 				// Prepare the base message object
 				const baseMessage = {
 					role: message.role,
@@ -928,18 +927,26 @@
 										navigator.vibrate(5);
 									}
 
-									const sentences = extractSentencesForAudio(responseMessage.content);
-									sentences.pop();
+									const messageContentParts = getMessageContentParts(
+										responseMessage.content,
+										$config?.audio?.tts?.split_on ?? 'punctuation'
+									);
+									messageContentParts.pop();
 
 									// dispatch only last sentence and make sure it hasn't been dispatched before
 									if (
-										sentences.length > 0 &&
-										sentences[sentences.length - 1] !== responseMessage.lastSentence
+										messageContentParts.length > 0 &&
+										messageContentParts[messageContentParts.length - 1] !==
+											responseMessage.lastSentence
 									) {
-										responseMessage.lastSentence = sentences[sentences.length - 1];
+										responseMessage.lastSentence =
+											messageContentParts[messageContentParts.length - 1];
 										eventTarget.dispatchEvent(
 											new CustomEvent('chat', {
-												detail: { id: responseMessageId, content: sentences[sentences.length - 1] }
+												detail: {
+													id: responseMessageId,
+													content: messageContentParts[messageContentParts.length - 1]
+												}
 											})
 										);
 									}
@@ -1042,14 +1049,19 @@
 		stopResponseFlag = false;
 		await tick();
 
-		let lastSentence = extractSentencesForAudio(responseMessage.content)?.at(-1) ?? '';
-		if (lastSentence) {
+		let lastMessageContentPart =
+			getMessageContentParts(
+				responseMessage.content,
+				$config?.audio?.tts?.split_on ?? 'punctuation'
+			)?.at(-1) ?? '';
+		if (lastMessageContentPart) {
 			eventTarget.dispatchEvent(
 				new CustomEvent('chat', {
-					detail: { id: responseMessageId, content: lastSentence }
+					detail: { id: responseMessageId, content: lastMessageContentPart }
 				})
 			);
 		}
+
 		eventTarget.dispatchEvent(
 			new CustomEvent('chat:finish', {
 				detail: {
@@ -1249,18 +1261,24 @@
 							navigator.vibrate(5);
 						}
 
-						const sentences = extractSentencesForAudio(responseMessage.content);
-						sentences.pop();
+						const messageContentParts = getMessageContentParts(
+							responseMessage.content,
+							$config?.audio?.tts?.split_on ?? 'punctuation'
+						);
+						messageContentParts.pop();
 
 						// dispatch only last sentence and make sure it hasn't been dispatched before
 						if (
-							sentences.length > 0 &&
-							sentences[sentences.length - 1] !== responseMessage.lastSentence
+							messageContentParts.length > 0 &&
+							messageContentParts[messageContentParts.length - 1] !== responseMessage.lastSentence
 						) {
-							responseMessage.lastSentence = sentences[sentences.length - 1];
+							responseMessage.lastSentence = messageContentParts[messageContentParts.length - 1];
 							eventTarget.dispatchEvent(
 								new CustomEvent('chat', {
-									detail: { id: responseMessageId, content: sentences[sentences.length - 1] }
+									detail: {
+										id: responseMessageId,
+										content: messageContentParts[messageContentParts.length - 1]
+									}
 								})
 							);
 						}
@@ -1315,11 +1333,15 @@
 		stopResponseFlag = false;
 		await tick();
 
-		let lastSentence = extractSentencesForAudio(responseMessage.content)?.at(-1) ?? '';
-		if (lastSentence) {
+		let lastMessageContentPart =
+			getMessageContentParts(
+				responseMessage.content,
+				$config?.audio?.tts?.split_on ?? 'punctuation'
+			)?.at(-1) ?? '';
+		if (lastMessageContentPart) {
 			eventTarget.dispatchEvent(
 				new CustomEvent('chat', {
-					detail: { id: responseMessageId, content: lastSentence }
+					detail: { id: responseMessageId, content: lastMessageContentPart }
 				})
 			);
 		}
