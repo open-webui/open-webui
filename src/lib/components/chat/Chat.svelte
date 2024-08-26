@@ -1286,8 +1286,13 @@
 		return _response;
 	};
 
-	const sendPromptReplicate = async (model, userPrompt, responseMessageId, _chatId) => {
-		let _response = null;
+	const sendPromptReplicate = async (
+		model: Model,
+		userPrompt: string,
+		responseMessageId: string,
+		_chatId: string
+	): Promise<string | null> => {
+		let _response: string | null = null;
 
 		const responseMessage = history.messages[responseMessageId];
 		const userMessage = history.messages[responseMessage.parentId];
@@ -1369,10 +1374,23 @@
 		if (res && res.ok) {
 			console.log('controller', controller);
 
-			const reader = res.body
-				.pipeThrough(new TextDecoderStream())
-				.pipeThrough(splitStream('\n'))
-				.getReader();
+			const reader = res.body.getReader();
+			const decoder = new TextDecoder();
+
+			const updateMessage = (newContent: string) => {
+				responseMessage.content += newContent;
+				messages = messages.map(msg =>
+					msg.id === responseMessageId ? { ...msg, content: responseMessage.content } : msg
+				);
+
+				requestAnimationFrame(() => {
+					eventTarget.dispatchEvent(
+						new CustomEvent('chat', {
+							detail: { id: responseMessageId, content: newContent }
+						})
+					);
+				});
+			};
 
 			while (true) {
 				const { value, done } = await reader.read();
@@ -1383,92 +1401,42 @@
 					if (stopResponseFlag) {
 						controller.abort('User: Stop Response');
 					} else {
-						const messages = createMessagesList(responseMessageId);
-						await chatCompletedHandler(_chatId, model.id, responseMessageId, messages);
+						const updatedMessages = createMessagesList(responseMessageId);
+						await chatCompletedHandler(_chatId, model.id, responseMessageId, updatedMessages);
 					}
 
 					_response = responseMessage.content;
 					break;
 				}
 
-				try {
-					if (value.startsWith('data: ')) {
-						const jsonData = JSON.parse(value.slice(6)); // Remove 'data: ' prefix
-						if (jsonData.choices && jsonData.choices.length > 0) {
-							const content = jsonData.choices[0].delta.content;
+				const chunk = decoder.decode(value);
+				const lines = chunk.split('\n');
 
-							if (content) {
-								if (responseMessage.content === '' && content === '\n\n') {
-									continue;
+				for (const line of lines) {
+					if (line.startsWith('data: ')) {
+						try {
+							const jsonData = JSON.parse(line.slice(5).trim());
+							if (jsonData.choices && jsonData.choices.length > 0) {
+								const content = jsonData.choices[0].delta.content;
+
+								if (content) {
+									updateMessage(content);
+
+									if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+										navigator.vibrate(5);
+									}
 								}
-
-								responseMessage.content += content;
-
-								if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
-									navigator.vibrate(5);
-								}
-
-								const sentences = extractSentencesForAudio(responseMessage.content);
-								sentences.pop();
-
-								if (
-									sentences.length > 0 &&
-									sentences[sentences.length - 1] !== responseMessage.lastSentence
-								) {
-									responseMessage.lastSentence = sentences[sentences.length - 1];
-									eventTarget.dispatchEvent(
-										new CustomEvent('chat', {
-											detail: { id: responseMessageId, content: sentences[sentences.length - 1] }
-										})
-									);
-								}
-
-								messages = messages;
-							}
-						}
-
-						if (jsonData.done) {
-							responseMessage.done = true;
-
-							if (responseMessage.content === '') {
-								responseMessage.error = {
-									code: 400,
-									content: `Oops! No text generated from Replicate, Please try again.`
-								};
 							}
 
-							// Add any additional info if available in the response
-							if (jsonData.info) {
-								responseMessage.info = jsonData.info;
+							if (jsonData.error) {
+								console.error("Error from server:", jsonData.error);
+								toast.error(jsonData.error);
+								break;
 							}
-
-							messages = messages;
-
-							if ($settings.notificationEnabled && !document.hasFocus()) {
-								const notification = new Notification(`${model.id}`, {
-									body: responseMessage.content,
-									icon: `${WEBUI_BASE_URL}/static/favicon.png`
-								});
-							}
-
-							if ($settings?.responseAutoCopy ?? false) {
-								copyToClipboard(responseMessage.content);
-							}
-
-							if ($settings.responseAutoPlayback && !$showCallOverlay) {
-								await tick();
-								document.getElementById(`speak-button-${responseMessage.id}`)?.click();
-							}
-
-							break;
+						} catch (error) {
+							console.error("Error parsing JSON:", error);
 						}
 					}
-				} catch (error) {
-					console.log(error);
-					if ('detail' in error) {
-						toast.error(error.detail);
-					}
-					break;
 				}
 
 				if (autoScroll) {
