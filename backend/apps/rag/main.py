@@ -577,6 +577,14 @@ async def get_query_settings(user=Depends(get_admin_user)):
     }
 
 
+@app.get("/file/limit/settings")
+async def get_query_settings(user=Depends(get_verified_user)):
+    return {
+        "max_file_size": app.state.config.MAX_FILE_SIZE,
+        "max_file_count": app.state.config.MAX_FILE_COUNT,
+    }
+
+
 class QuerySettingsForm(BaseModel):
     k: Optional[int] = None
     r: Optional[float] = None
