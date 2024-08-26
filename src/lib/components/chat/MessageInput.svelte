@@ -18,11 +18,8 @@
 	import { transcribeAudio } from '$lib/apis/audio';
 
 	import {
-		getQuerySettings,
+		getFileLimitSettings,
 		processDocToVectorDB,
-		uploadDocToVectorDB,
-		uploadWebToVectorDB,
-		uploadYoutubeTranscriptionToVectorDB
 	} from '$lib/apis/rag';
 
 	import { uploadFile } from '$lib/apis/files';
@@ -62,7 +59,7 @@
 	let commandsElement;
 
 	let inputFiles;
-	let querySettings;
+	let fileLimitSettings;
 	let dragged = false;
 
 	let user = null;
@@ -196,8 +193,8 @@
 		return [true, inputFiles];
 	};
 
-	const processFileSizeLimit = async (querySettings, file) => {
-		if (file.size <= querySettings.max_file_size * 1024 * 1024) {
+	const processFileSizeLimit = async (fileLimitSettings, file) => {
+		if (file.size <= fileLimitSettings.max_file_size * 1024 * 1024) {
 			if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
 				if (visionCapableModels.length === 0) {
 					toast.error($i18n.t('Selected model(s) do not support image inputs'));
@@ -220,21 +217,22 @@
 		} else {
 			toast.error(
 				$i18n.t('File size exceeds the limit of {{size}}MB', {
-					size: querySettings.max_file_size
+					size: fileLimitSettings.max_file_size
 				})
 			);
 		}
 	};
 
 	onMount(() => {
-		const initializeSettings = async () => {
+		const initFileLimitSettings = async () => {
 			try {
-				querySettings = await getQuerySettings(localStorage.token);
+				fileLimitSettings = await getFileLimitSettings(localStorage.token);
 			} catch (error) {
 				console.error('Error fetching query settings:', error);
 			}
 		};
-		initializeSettings();
+		initFileLimitSettings();
+
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
 		const dropZone = document.querySelector('body');
@@ -265,7 +263,7 @@
 				if (inputFiles && inputFiles.length > 0) {
 					console.log(inputFiles);
 					const [canProcess, filesToProcess] = await processFileCountLimit(
-						querySettings,
+						fileLimitSettings,
 						inputFiles
 					);
 					if (!canProcess) {
@@ -275,7 +273,7 @@
 					console.log(filesToProcess);
 					filesToProcess.forEach((file) => {
 						console.log(file, file.name.split('.').at(-1));
-						processFileSizeLimit(querySettings, file);
+						processFileSizeLimit(fileLimitSettings, file);
 					});
 				} else {
 					toast.error($i18n.t(`File not found.`));
@@ -400,7 +398,7 @@
 							const _inputFiles = Array.from(inputFiles);
 							console.log(_inputFiles);
 							const [canProcess, filesToProcess] = await processFileCountLimit(
-								querySettings,
+								fileLimitSettings,
 								_inputFiles
 							);
 							if (!canProcess) {
@@ -410,7 +408,7 @@
 							console.log(filesToProcess);
 							filesToProcess.forEach((file) => {
 								console.log(file, file.name.split('.').at(-1));
-								processFileSizeLimit(querySettings, file);
+								processFileSizeLimit(fileLimitSettings, file);
 							});
 						} else {
 							toast.error($i18n.t(`File not found.`));
@@ -703,37 +701,40 @@
 										}
 									}}
 									rows="1"
-									on:input={(e) => {
+									on:input={async (e) => {
 										e.target.style.height = '';
 										e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
 										user = null;
 									}}
-									on:focus={(e) => {
+									on:focus={async (e) => {
 										e.target.style.height = '';
 										e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
 									}}
-									on:paste={(e) => {
+									on:paste={async (e) => {
 										const clipboardData = e.clipboardData || window.clipboardData;
+										try {
+											if (clipboardData && clipboardData.items) {
+												const inputFiles = Array.from(clipboardData.items)
+													.map((item) => item.getAsFile())
+													.filter((file) => file);
 
-										if (clipboardData && clipboardData.items) {
-											for (const item of clipboardData.items) {
-												if (item.type.indexOf('image') !== -1) {
-													const blob = item.getAsFile();
-													const reader = new FileReader();
-
-													reader.onload = function (e) {
-														files = [
-															...files,
-															{
-																type: 'image',
-																url: `${e.target.result}`
-															}
-														];
-													};
-
-													reader.readAsDataURL(blob);
+												const [canProcess, filesToProcess] = await processFileCountLimit(
+													fileLimitSettings,
+													inputFiles
+												);
+												if (!canProcess) {
+													return;
 												}
+												filesToProcess.forEach((file) => {
+													console.log(file, file.name.split('.').at(-1));
+													processFileSizeLimit(fileLimitSettings, file);
+												});
+											} else {
+												toast.error($i18n.t(`File not found.`));
 											}
+										} catch (error) {
+											console.error('Error processing files:', error);
+											toast.error($i18n.t(`An error occurred while processing files.`));
 										}
 									}}
 								/>
