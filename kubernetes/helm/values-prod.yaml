@@ -1,0 +1,17 @@
+# values-prod.yaml
+hrwebui:
+  persistence:
+    size: 5Gi
+  sso:
+    azure:
+      enabled: true
+      tenant: "c93272d3-1b07-4b3d-a3b6-19b34a973915"
+      redirectUri: "https://hr.ciai-mbzuai.ac.ae/login"
+  mail:
+    enabled: false
+    hr: ""
+  mssql:
+    enabled: true
+    server: "10.127.129.4"
+    database: "ADERP"
+    view: "EMPLOYEE_INFO_V"
