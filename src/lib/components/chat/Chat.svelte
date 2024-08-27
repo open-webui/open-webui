@@ -552,17 +552,6 @@
 					maxCount: $config?.file?.max_count
 				})
 			);
-		} else if (
-			($config?.file?.max_size ?? null) !== null &&
-			[...files, ...chatFiles].some(
-				(file) => file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
-			)
-		) {
-			toast.error(
-				$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
-					maxSize: $config?.file?.max_size
-				})
-			);
 		} else {
 			// Reset chat input textarea
 			const chatTextAreaElement = document.getElementById('chat-textarea');
