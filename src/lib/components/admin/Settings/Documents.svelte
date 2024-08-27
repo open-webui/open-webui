@@ -37,6 +37,9 @@
 	let embeddingModel = '';
 	let rerankingModel = '';
 
+	let fileMaxSize = null;
+	let fileMaxCount = null;
+
 	let contentExtractionEngine = 'default';
 	let tikaServerUrl = '';
 	let showTikaServerUrl = false;
@@ -53,8 +56,6 @@
 		template: '',
 		r: 0.0,
 		k: 4,
-		max_file_size: 10,
-		max_file_count: 5,
 		hybrid: false
 	};
 
@@ -220,7 +221,6 @@
 		await setRerankingConfig();
 
 		querySettings = await getQuerySettings(localStorage.token);
-
 		const res = await getRAGConfig(localStorage.token);
 
 		if (res) {
@@ -232,6 +232,9 @@
 			contentExtractionEngine = res.content_extraction.engine;
 			tikaServerUrl = res.content_extraction.tika_server_url;
 			showTikaServerUrl = contentExtractionEngine === 'tika';
+
+			fileMaxSize = res.file.file_max_size;
+			fileMaxCount = res.file.file_max_count;
 		}
 	});
 </script>
@@ -387,41 +390,6 @@
 					</div>
 				</div>
 			{/if}
-
-			<div class=" my-2 flex gap-1.5">
-				<div class="  w-full justify-between">
-					<div class="self-center text-xs font-medium min-w-fit mb-1">
-						{$i18n.t('Max File Count')}
-					</div>
-					<div class="self-center">
-						<input
-							class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-							type="number"
-							placeholder={$i18n.t('Enter Max File Count')}
-							bind:value={querySettings.max_file_count}
-							autocomplete="off"
-							min="0"
-						/>
-					</div>
-				</div>
-
-				<div class="w-full">
-					<div class=" self-center text-xs font-medium min-w-fit mb-1">
-						{$i18n.t('Max File Size(MB)')}
-					</div>
-
-					<div class="self-center">
-						<input
-							class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-							type="number"
-							placeholder={$i18n.t('Enter Max File Size(MB)')}
-							bind:value={querySettings.max_file_size}
-							autocomplete="off"
-							min="0"
-						/>
-					</div>
-				</div>
-			</div>
 
 			<div class=" flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Hybrid Search')}</div>
@@ -647,6 +615,48 @@
 				</div>
 			{/if}
 		</div>
+
+		<hr class=" dark:border-gray-850" />
+
+		<div class="">
+			<div class="text-sm font-medium">{$i18n.t('Files')}</div>
+
+			<div class=" my-2 flex gap-1.5">
+				<div class="  w-full justify-between">
+					<div class="self-center text-xs font-medium min-w-fit mb-1">
+						{$i18n.t('Max Upload Count')}
+					</div>
+					<div class="self-center">
+						<input
+							class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							type="number"
+							placeholder={$i18n.t('Enter File Count')}
+							bind:value={fileMaxCount}
+							autocomplete="off"
+							min="0"
+						/>
+					</div>
+				</div>
+
+				<div class="w-full">
+					<div class=" self-center text-xs font-medium min-w-fit mb-1">
+						{$i18n.t('Max Upload Size')}
+					</div>
+
+					<div class="self-center">
+						<input
+							class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							type="number"
+							placeholder={$i18n.t('Enter File Size (MB)')}
+							bind:value={fileMaxSize}
+							autocomplete="off"
+							min="0"
+						/>
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<hr class=" dark:border-gray-850" />
 
 		<div class=" ">

@@ -145,8 +145,8 @@ app.state.config = AppConfig()
 
 app.state.config.TOP_K = RAG_TOP_K
 app.state.config.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
-app.state.config.MAX_FILE_SIZE = RAG_FILE_MAX_SIZE
-app.state.config.MAX_FILE_COUNT = RAG_FILE_MAX_COUNT
+app.state.config.FILE_MAX_SIZE = RAG_FILE_MAX_SIZE
+app.state.config.FILE_MAX_COUNT = RAG_FILE_MAX_COUNT
 
 app.state.config.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH
 app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
@@ -397,6 +397,10 @@ async def get_rag_config(user=Depends(get_admin_user)):
     return {
         "status": True,
         "pdf_extract_images": app.state.config.PDF_EXTRACT_IMAGES,
+        "file": {
+            "max_size": app.state.config.FILE_MAX_SIZE,
+            "max_count": app.state.config.FILE_MAX_COUNT,
+        },
         "content_extraction": {
             "engine": app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": app.state.config.TIKA_SERVER_URL,
@@ -522,6 +526,10 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
 
     return {
         "status": True,
+        "file": {
+            "max_size": app.state.config.FILE_MAX_SIZE,
+            "max_count": app.state.config.FILE_MAX_COUNT,
+        },
         "pdf_extract_images": app.state.config.PDF_EXTRACT_IMAGES,
         "content_extraction": {
             "engine": app.state.config.CONTENT_EXTRACTION_ENGINE,
@@ -571,8 +579,6 @@ async def get_query_settings(user=Depends(get_admin_user)):
         "template": app.state.config.RAG_TEMPLATE,
         "k": app.state.config.TOP_K,
         "r": app.state.config.RELEVANCE_THRESHOLD,
-        "max_file_size": app.state.config.MAX_FILE_SIZE,
-        "max_file_count": app.state.config.MAX_FILE_COUNT,
         "hybrid": app.state.config.ENABLE_RAG_HYBRID_SEARCH,
     }
 
@@ -580,16 +586,16 @@ async def get_query_settings(user=Depends(get_admin_user)):
 @app.get("/file/limit/settings")
 async def get_query_settings(user=Depends(get_verified_user)):
     return {
-        "max_file_size": app.state.config.MAX_FILE_SIZE,
-        "max_file_count": app.state.config.MAX_FILE_COUNT,
+        "FILE_MAX_SIZE": app.state.config.FILE_MAX_SIZE,
+        "FILE_MAX_COUNT": app.state.config.FILE_MAX_COUNT,
     }
 
 
 class QuerySettingsForm(BaseModel):
     k: Optional[int] = None
     r: Optional[float] = None
-    max_file_size: Optional[int] = None
-    max_file_count: Optional[int] = None
+    FILE_MAX_SIZE: Optional[int] = None
+    FILE_MAX_COUNT: Optional[int] = None
     template: Optional[str] = None
     hybrid: Optional[bool] = None
 
@@ -606,11 +612,11 @@ async def update_query_settings(
     app.state.config.ENABLE_RAG_HYBRID_SEARCH = (
         form_data.hybrid if form_data.hybrid else False
     )
-    app.state.config.MAX_FILE_SIZE = (
-        form_data.max_file_size if form_data.max_file_size else 10
+    app.state.config.FILE_MAX_SIZE = (
+        form_data.FILE_MAX_SIZE if form_data.FILE_MAX_SIZE else 10
     )
-    app.state.config.MAX_FILE_COUNT = (
-        form_data.max_file_count if form_data.max_file_count else 5
+    app.state.config.FILE_MAX_COUNT = (
+        form_data.FILE_MAX_COUNT if form_data.FILE_MAX_COUNT else 5
     )
 
     return {
@@ -618,8 +624,8 @@ async def update_query_settings(
         "template": app.state.config.RAG_TEMPLATE,
         "k": app.state.config.TOP_K,
         "r": app.state.config.RELEVANCE_THRESHOLD,
-        "max_file_size": app.state.config.MAX_FILE_SIZE,
-        "max_file_count": app.state.config.MAX_FILE_COUNT,
+        "FILE_MAX_SIZE": app.state.config.FILE_MAX_SIZE,
+        "FILE_MAX_COUNT": app.state.config.FILE_MAX_COUNT,
         "hybrid": app.state.config.ENABLE_RAG_HYBRID_SEARCH,
     }
 
