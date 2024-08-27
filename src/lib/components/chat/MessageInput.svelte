@@ -20,7 +20,6 @@
 
 	import { blobToFile, findWordIndices } from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
-	import { processDocToVectorDB } from '$lib/apis/rag';
 	import { uploadFile } from '$lib/apis/files';
 
 	import {
