@@ -297,6 +297,7 @@
 	"February": "二月",
 	"Feel free to add specific details": "欢迎补充具体细节",
 	"File": "文件",
+	"File count exceeds the limit of {{maxFiles}}. Please remove some files.": "文件数量超过{{maxFiles}}，请删除一些文件。",
 	"File Mode": "文件模式",
 	"File not found.": "文件未找到。",
 	"File size should not exceed {{maxSize}} MB.": "文件大小不应超过 {{maxSize}} MB。",

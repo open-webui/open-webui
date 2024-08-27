@@ -213,7 +213,11 @@
 		const totalFilesCount = currentFilesCount + inputFilesCount;
 
 		if (currentFilesCount >= maxFiles || totalFilesCount > maxFiles) {
-			toast.error(`File count exceeds the limit of '${maxFiles}'. Please remove some files.`);
+			toast.error(
+				$i18n.t('File count exceeds the limit of {{maxFiles}}. Please remove some files.', {
+					maxFiles: maxFiles
+				})
+			);
 			if (currentFilesCount >= maxFiles) {
 				return [false, null];
 			}
@@ -251,8 +255,8 @@
 			}
 		} else {
 			toast.error(
-				$i18n.t('File size exceeds the limit of {{size}}MB', {
-					size: fileLimitSettings.max_file_size
+				$i18n.t('File size should not exceed {{maxSize}} MB.', {
+					maxSize: fileLimitSettings.max_file_size
 				})
 			);
 		}
