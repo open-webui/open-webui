@@ -15,11 +15,11 @@
 		user as _user
 	} from '$lib/stores';
 	import { blobToFile, findWordIndices } from '$lib/utils';
+
 	import { transcribeAudio } from '$lib/apis/audio';
-
 	import { processDocToVectorDB } from '$lib/apis/rag';
-
 	import { uploadFile } from '$lib/apis/files';
+
 	import {
 		SUPPORTED_FILE_TYPE,
 		SUPPORTED_FILE_EXTENSIONS,
@@ -169,24 +169,6 @@
 			fileItem.status = 'processed';
 			files = files;
 		}
-	};
-
-	const processFileCountLimit = async (querySettings, inputFiles) => {
-		const maxFiles = querySettings.FILE_MAX_COUNT;
-		const currentFilesCount = files.length;
-		const inputFilesCount = inputFiles.length;
-		const totalFilesCount = currentFilesCount + inputFilesCount;
-
-		if (currentFilesCount >= maxFiles || totalFilesCount > maxFiles) {
-			toast.error(`File count exceeds the limit of '${maxFiles}'. Please remove some files.`);
-			if (currentFilesCount >= maxFiles) {
-				return [false, null];
-			}
-			if (totalFilesCount > maxFiles) {
-				inputFiles = inputFiles.slice(0, maxFiles - currentFilesCount);
-			}
-		}
-		return [true, inputFiles];
 	};
 
 	const inputFilesHandler = async (inputFiles) => {
