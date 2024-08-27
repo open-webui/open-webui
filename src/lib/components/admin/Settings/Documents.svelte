@@ -233,8 +233,8 @@
 			tikaServerUrl = res.content_extraction.tika_server_url;
 			showTikaServerUrl = contentExtractionEngine === 'tika';
 
-			fileMaxSize = res.file.file_max_size;
-			fileMaxCount = res.file.file_max_count;
+			fileMaxSize = res.file.max_size;
+			fileMaxCount = res.file.max_count;
 		}
 	});
 </script>
