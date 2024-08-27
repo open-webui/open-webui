@@ -42,7 +42,13 @@ type YoutubeConfigForm = {
 	translation?: string | null;
 };
 
+type File = {
+	max_size: number;
+	max_count: number;
+}
+
 type RAGConfigForm = {
+	file?: File | null;
 	pdf_extract_images?: boolean;
 	chunk?: ChunkConfigForm;
 	content_extraction?: ContentExtractConfigForm;

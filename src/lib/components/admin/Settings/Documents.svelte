@@ -39,8 +39,8 @@
 	let embeddingModel = '';
 	let rerankingModel = '';
 
-	let fileMaxSize = null;
-	let fileMaxCount = null;
+	let fileMaxSize = 5;
+	let fileMaxCount = 10;
 
 	let contentExtractionEngine = 'default';
 	let tikaServerUrl = '';
@@ -182,8 +182,8 @@
 		const res = await updateRAGConfig(localStorage.token, {
 			pdf_extract_images: pdfExtractImages,
 			file: {
-				max_size: fileMaxSize === '' ? null : fileMaxSize,
-				max_count: fileMaxCount === '' ? null : fileMaxCount
+				max_size: fileMaxSize,
+				max_count: fileMaxCount
 			},
 			chunk: {
 				chunk_overlap: chunkOverlap,
@@ -194,7 +194,8 @@
 				tika_server_url: tikaServerUrl
 			}
 		});
-
+		querySettings.max_file_count = fileMaxCount;
+		querySettings.max_file_size = fileMaxSize;
 		await updateQuerySettings(localStorage.token, querySettings);
 
 		dispatch('save');
