@@ -1373,12 +1373,12 @@ def scan_docs_dir(user=Depends(get_admin_user)):
     return True
 
 
-@app.get("/reset/db")
+@app.post("/reset/db")
 def reset_vector_db(user=Depends(get_admin_user)):
     CHROMA_CLIENT.reset()
 
 
-@app.get("/reset/uploads")
+@app.post("/reset/uploads")
 def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
     folder = f"{UPLOAD_DIR}"
     try:
@@ -1402,7 +1402,7 @@ def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
     return True
 
 
-@app.get("/reset")
+@app.post("/reset")
 def reset(user=Depends(get_admin_user)) -> bool:
     folder = f"{UPLOAD_DIR}"
     for filename in os.listdir(folder):

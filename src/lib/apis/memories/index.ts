@@ -156,7 +156,7 @@ export const deleteMemoryById = async (token: string, id: string) => {
 export const deleteMemoriesByUserId = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/user`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/delete/user`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
