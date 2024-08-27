@@ -15,9 +15,11 @@
 	import { imageGenerations } from '$lib/apis/images';
 	import {
 		approximateToHumanReadable,
-		extractSentences,
 		replaceTokens,
 		processResponseContent,
+		extractParagraphsForAudio,
+		extractSentencesForAudio,
+		cleanText,
 		getMessageContentParts
 	} from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
