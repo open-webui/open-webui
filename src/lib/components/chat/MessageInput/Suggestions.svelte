@@ -59,7 +59,9 @@
 							>
 								{prompt.title[0]}
 							</div>
-							<div class="text-sm text-gray-600 dark:text-gray-300 font-normal line-clamp-2">{prompt.title[1]}</div>
+							<div class="text-sm text-gray-600 dark:text-gray-300 font-normal line-clamp-2">
+								{prompt.title[1]}
+							</div>
 						{:else}
 							<div
 								class="  text-sm font-medium dark:text-gray-300 dark:group-hover:text-gray-100 transition line-clamp-2"
