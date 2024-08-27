@@ -1679,25 +1679,6 @@
 
 <audio id="audioElement" src="" style="display: none;" />
 
-<ChatControls
-	models={selectedModelIds.reduce((a, e, i, arr) => {
-		const model = $models.find((m) => m.id === e);
-		if (model) {
-			return [...a, model];
-		}
-		return a;
-	}, [])}
-	bind:show={showControls}
-	bind:chatFiles
-	bind:params
-	bind:files
-	{submitPrompt}
-	{stopResponse}
-	modelId={selectedModelIds?.at(0) ?? null}
-	chatId={$chatId}
-	{eventTarget}
-/>
-
 <EventConfirmDialog
 	bind:show={showEventConfirmation}
 	title={eventConfirmationTitle}
@@ -1835,3 +1816,22 @@
 		</div>
 	</div>
 {/if}
+
+<ChatControls
+	models={selectedModelIds.reduce((a, e, i, arr) => {
+		const model = $models.find((m) => m.id === e);
+		if (model) {
+			return [...a, model];
+		}
+		return a;
+	}, [])}
+	bind:show={showControls}
+	bind:chatFiles
+	bind:params
+	bind:files
+	{submitPrompt}
+	{stopResponse}
+	modelId={selectedModelIds?.at(0) ?? null}
+	chatId={$chatId}
+	{eventTarget}
+/>
