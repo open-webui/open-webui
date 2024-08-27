@@ -17,7 +17,7 @@
 	import { blobToFile, findWordIndices } from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
 
-	import { getFileLimitSettings, processDocToVectorDB } from '$lib/apis/rag';
+	import { processDocToVectorDB } from '$lib/apis/rag';
 
 	import { uploadFile } from '$lib/apis/files';
 	import {
@@ -56,7 +56,6 @@
 	let commandsElement;
 
 	let inputFiles;
-	let fileLimitSettings;
 	let dragged = false;
 
 	let user = null;
@@ -173,7 +172,7 @@
 	};
 
 	const processFileCountLimit = async (querySettings, inputFiles) => {
-		const maxFiles = querySettings.max_file_count;
+		const maxFiles = querySettings.FILE_MAX_COUNT;
 		const currentFilesCount = files.length;
 		const inputFilesCount = inputFiles.length;
 		const totalFilesCount = currentFilesCount + inputFilesCount;
@@ -190,8 +189,8 @@
 		return [true, inputFiles];
 	};
 
-	const processFileSizeLimit = async (fileLimitSettings, file) => {
-		if (file.size <= fileLimitSettings.max_file_size * 1024 * 1024) {
+	const inputFilesHandler = async (inputFiles) => {
+		inputFiles.forEach((file) => {
 			if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
 				if (visionCapableModels.length === 0) {
 					toast.error($i18n.t('Selected model(s) do not support image inputs'));
@@ -211,25 +210,10 @@
 			} else {
 				uploadFileHandler(file);
 			}
-		} else {
-			toast.error(
-				$i18n.t('File size exceeds the limit of {{size}}MB', {
-					size: fileLimitSettings.max_file_size
-				})
-			);
-		}
+		});
 	};
 
 	onMount(() => {
-		const initFileLimitSettings = async () => {
-			try {
-				fileLimitSettings = await getFileLimitSettings(localStorage.token);
-			} catch (error) {
-				console.error('Error fetching query settings:', error);
-			}
-		};
-		initFileLimitSettings();
-
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
 		const dropZone = document.querySelector('body');
@@ -256,22 +240,10 @@
 
 			if (e.dataTransfer?.files) {
 				const inputFiles = Array.from(e.dataTransfer?.files);
-
+				console.log(file, file.name.split('.').at(-1));
 				if (inputFiles && inputFiles.length > 0) {
 					console.log(inputFiles);
-					const [canProcess, filesToProcess] = await processFileCountLimit(
-						fileLimitSettings,
-						inputFiles
-					);
-					if (!canProcess) {
-						dragged = false;
-						return;
-					}
-					console.log(filesToProcess);
-					filesToProcess.forEach((file) => {
-						console.log(file, file.name.split('.').at(-1));
-						processFileSizeLimit(fileLimitSettings, file);
-					});
+					inputFilesHandler(inputFiles);
 				} else {
 					toast.error($i18n.t(`File not found.`));
 				}
@@ -392,21 +364,7 @@
 					multiple
 					on:change={async () => {
 						if (inputFiles && inputFiles.length > 0) {
-							const _inputFiles = Array.from(inputFiles);
-							console.log(_inputFiles);
-							const [canProcess, filesToProcess] = await processFileCountLimit(
-								fileLimitSettings,
-								_inputFiles
-							);
-							if (!canProcess) {
-								filesInputElement.value = '';
-								return;
-							}
-							console.log(filesToProcess);
-							filesToProcess.forEach((file) => {
-								console.log(file, file.name.split('.').at(-1));
-								processFileSizeLimit(fileLimitSettings, file);
-							});
+							inputFilesHandler(inputFiles);
 						} else {
 							toast.error($i18n.t(`File not found.`));
 						}
@@ -715,17 +673,7 @@
 													.map((item) => item.getAsFile())
 													.filter((file) => file);
 
-												const [canProcess, filesToProcess] = await processFileCountLimit(
-													fileLimitSettings,
-													inputFiles
-												);
-												if (!canProcess) {
-													return;
-												}
-												filesToProcess.forEach((file) => {
-													console.log(file, file.name.split('.').at(-1));
-													processFileSizeLimit(fileLimitSettings, file);
-												});
+												inputFilesHandler(inputFiles);
 											} else {
 												toast.error($i18n.t(`File not found.`));
 											}
