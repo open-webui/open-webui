@@ -1286,6 +1286,12 @@ TAVILY_API_KEY = PersistentConfig(
     os.getenv("TAVILY_API_KEY", ""),
 )
 
+SEARCHAPI_API_KEY = PersistentConfig(
+    "SEARCHAPI_API_KEY",
+    "rag.web.search.searchapi_api_key",
+    os.getenv("SEARCHAPI_API_KEY", ""),
+)
+
 RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(
     "RAG_WEB_SEARCH_RESULT_COUNT",
     "rag.web.search.result_count",
