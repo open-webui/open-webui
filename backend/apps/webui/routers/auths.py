@@ -1,43 +1,33 @@
-import logging
-
-from fastapi import Request, UploadFile, File
-from fastapi import Depends, HTTPException, status
-from fastapi.responses import Response
-
-from fastapi import APIRouter
-from pydantic import BaseModel
 import re
 import uuid
-import csv
 
 from apps.webui.models.auths import (
-    SigninForm,
-    SignupForm,
     AddUserForm,
-    UpdateProfileForm,
-    UpdatePasswordForm,
-    UserResponse,
-    SigninResponse,
-    Auths,
     ApiKey,
+    Auths,
+    SigninForm,
+    SigninResponse,
+    SignupForm,
+    UpdatePasswordForm,
+    UpdateProfileForm,
+    UserResponse,
 )
 from apps.webui.models.users import Users
-
-from utils.utils import (
-    get_password_hash,
-    get_current_user,
-    get_admin_user,
-    create_token,
-    create_api_key,
-)
-from utils.misc import parse_duration, validate_email_format
-from utils.webhook import post_webhook
+from config import WEBUI_AUTH
 from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
-from config import (
-    WEBUI_AUTH,
-    WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
-    WEBUI_AUTH_TRUSTED_NAME_HEADER,
+from env import WEBUI_AUTH_TRUSTED_EMAIL_HEADER, WEBUI_AUTH_TRUSTED_NAME_HEADER
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import Response
+from pydantic import BaseModel
+from utils.misc import parse_duration, validate_email_format
+from utils.utils import (
+    create_api_key,
+    create_token,
+    get_admin_user,
+    get_current_user,
+    get_password_hash,
 )
+from utils.webhook import post_webhook
 
 router = APIRouter()
 
@@ -273,7 +263,6 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
 @router.post("/add", response_model=SigninResponse)
 async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
-
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
@@ -283,7 +272,6 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
     try:
-
         print(form_data)
         hashed = get_password_hash(form_data.password)
         user = Auths.insert_new_auth(

@@ -1,42 +1,17 @@
-from fastapi import (
-    Depends,
-    FastAPI,
-    HTTPException,
-    status,
-    Request,
-    UploadFile,
-    File,
-    Form,
-)
-
-
-from datetime import datetime, timedelta
-from typing import Union, Optional
-from pathlib import Path
-
-from fastapi import APIRouter
-from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
-
-from pydantic import BaseModel
-import json
-
-from apps.webui.models.files import (
-    Files,
-    FileForm,
-    FileModel,
-    FileModelResponse,
-)
-from utils.utils import get_verified_user, get_admin_user
-from constants import ERROR_MESSAGES
-
-from importlib import util
+import logging
 import os
+import shutil
 import uuid
-import os, shutil, logging, re
+from pathlib import Path
+from typing import Optional
 
-
-from config import SRC_LOG_LEVELS, UPLOAD_DIR
-
+from apps.webui.models.files import FileForm, FileModel, Files
+from config import UPLOAD_DIR
+from constants import ERROR_MESSAGES
+from env import SRC_LOG_LEVELS
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
+from utils.utils import get_admin_user, get_verified_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])

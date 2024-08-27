@@ -1,52 +1,42 @@
-from fastapi import (
-    FastAPI,
-    Request,
-    Depends,
-    HTTPException,
-)
-from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional
-from pydantic import BaseModel
-from pathlib import Path
-import mimetypes
-import uuid
+import asyncio
 import base64
 import json
 import logging
+import mimetypes
 import re
+import uuid
+from pathlib import Path
+from typing import Optional
+
 import requests
-import asyncio
-
-from utils.utils import (
-    get_verified_user,
-    get_admin_user,
-)
-
 from apps.images.utils.comfyui import (
-    ComfyUIWorkflow,
     ComfyUIGenerateImageForm,
+    ComfyUIWorkflow,
     comfyui_generate_image,
 )
-
-from constants import ERROR_MESSAGES
 from config import (
-    SRC_LOG_LEVELS,
-    CACHE_DIR,
-    IMAGE_GENERATION_ENGINE,
-    ENABLE_IMAGE_GENERATION,
-    AUTOMATIC1111_BASE_URL,
     AUTOMATIC1111_API_AUTH,
+    AUTOMATIC1111_BASE_URL,
+    CACHE_DIR,
     COMFYUI_BASE_URL,
     COMFYUI_WORKFLOW,
     COMFYUI_WORKFLOW_NODES,
-    IMAGES_OPENAI_API_BASE_URL,
-    IMAGES_OPENAI_API_KEY,
+    CORS_ALLOW_ORIGIN,
+    ENABLE_IMAGE_GENERATION,
+    IMAGE_GENERATION_ENGINE,
     IMAGE_GENERATION_MODEL,
     IMAGE_SIZE,
     IMAGE_STEPS,
-    CORS_ALLOW_ORIGIN,
+    IMAGES_OPENAI_API_BASE_URL,
+    IMAGES_OPENAI_API_KEY,
     AppConfig,
 )
+from constants import ERROR_MESSAGES
+from env import SRC_LOG_LEVELS
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from utils.utils import get_admin_user, get_verified_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["IMAGES"])
@@ -186,7 +176,7 @@ async def verify_url(user=Depends(get_admin_user)):
             )
             r.raise_for_status()
             return True
-        except Exception as e:
+        except Exception:
             app.state.config.ENABLED = False
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
     elif app.state.config.ENGINE == "comfyui":
@@ -194,7 +184,7 @@ async def verify_url(user=Depends(get_admin_user)):
             r = requests.get(url=f"{app.state.config.COMFYUI_BASE_URL}/object_info")
             r.raise_for_status()
             return True
-        except Exception as e:
+        except Exception:
             app.state.config.ENABLED = False
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
     else:
@@ -397,7 +387,6 @@ def save_url_image(url):
         r = requests.get(url)
         r.raise_for_status()
         if r.headers["content-type"].split("/")[0] == "image":
-
             mime_type = r.headers["content-type"]
             image_format = mimetypes.guess_extension(mime_type)
 
@@ -412,7 +401,7 @@ def save_url_image(url):
                     image_file.write(chunk)
             return image_filename
         else:
-            log.error(f"Url does not point to an image.")
+            log.error("Url does not point to an image.")
             return None
 
     except Exception as e:
@@ -430,7 +419,6 @@ async def image_generations(
     r = None
     try:
         if app.state.config.ENGINE == "openai":
-
             headers = {}
             headers["Authorization"] = f"Bearer {app.state.config.OPENAI_API_KEY}"
             headers["Content-Type"] = "application/json"
