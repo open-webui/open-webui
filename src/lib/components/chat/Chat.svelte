@@ -542,6 +542,27 @@
 					`Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.`
 				)
 			);
+		} else if (
+			($config?.file?.max_count ?? null) !== null &&
+			files.length + chatFiles.length > $config?.file?.max_count
+		) {
+			console.log(chatFiles.length, files.length);
+			toast.error(
+				$i18n.t(`You can only chat with a maximum of {{maxCount}} file(s) at a time.`, {
+					maxCount: $config?.file?.max_count
+				})
+			);
+		} else if (
+			($config?.file?.max_size ?? null) !== null &&
+			[...files, ...chatFiles].some(
+				(file) => file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
+			)
+		) {
+			toast.error(
+				$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
+					maxSize: $config?.file?.max_size
+				})
+			);
 		} else {
 			// Reset chat input textarea
 			const chatTextAreaElement = document.getElementById('chat-textarea');
