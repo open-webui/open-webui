@@ -148,7 +148,9 @@ async def cleanup_response(
         await session.close()
 
 
-async def post_streaming_url(url: str, payload: Union[str, bytes], stream: bool = True):
+async def post_streaming_url(
+    url: str, payload: Union[str, bytes], stream: bool = True, content_type=None
+):
     r = None
     try:
         session = aiohttp.ClientSession(
@@ -162,10 +164,13 @@ async def post_streaming_url(url: str, payload: Union[str, bytes], stream: bool 
         r.raise_for_status()
 
         if stream:
+            headers = dict(r.headers)
+            if content_type:
+                headers["Content-Type"] = content_type
             return StreamingResponse(
                 r.content,
                 status_code=r.status,
-                headers=dict(r.headers),
+                headers=headers,
                 background=BackgroundTask(
                     cleanup_response, response=r, session=session
                 ),
@@ -769,7 +774,9 @@ async def generate_chat_completion(
     log.info(f"url: {url}")
     log.debug(payload)
 
-    return await post_streaming_url(f"{url}/api/chat", json.dumps(payload))
+    return await post_streaming_url(
+        f"{url}/api/chat", json.dumps(payload), content_type="application/x-ndjson"
+    )
 
 
 # TODO: we should update this part once Ollama supports other types
