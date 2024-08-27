@@ -3,18 +3,19 @@ import logging
 import json
 from contextlib import contextmanager
 
-from peewee_migrate import Router
-from apps.webui.internal.wrappers import register_connection
 
 from typing import Optional, Any
 from typing_extensions import Self
 
 from sqlalchemy import create_engine, types, Dialect
+from sqlalchemy.sql.type_api import _T
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.sql.type_api import _T
 
-from config import SRC_LOG_LEVELS, DATA_DIR, DATABASE_URL, BACKEND_DIR
+
+from peewee_migrate import Router
+from apps.webui.internal.wrappers import register_connection
+from env import SRC_LOG_LEVELS, BACKEND_DIR, DATABASE_URL
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["DB"])
@@ -42,34 +43,21 @@ class JSONField(types.TypeDecorator):
             return json.loads(value)
 
 
-# Check if the file exists
-if os.path.exists(f"{DATA_DIR}/ollama.db"):
-    # Rename the file
-    os.rename(f"{DATA_DIR}/ollama.db", f"{DATA_DIR}/webui.db")
-    log.info("Database migrated from Ollama-WebUI successfully.")
-else:
-    pass
-
-
 # Workaround to handle the peewee migration
 # This is required to ensure the peewee migration is handled before the alembic migration
 def handle_peewee_migration(DATABASE_URL):
+    # db = None
     try:
-        # Replace the postgresql:// with postgres:// and %40 with @ in the DATABASE_URL
-        db = register_connection(
-            DATABASE_URL.replace("postgresql://", "postgres://").replace("%40", "@")
-        )
+        # Replace the postgresql:// with postgres:// to handle the peewee migration
+        db = register_connection(DATABASE_URL.replace("postgresql://", "postgres://"))
         migrate_dir = BACKEND_DIR / "apps" / "webui" / "internal" / "migrations"
         router = Router(db, logger=log, migrate_dir=migrate_dir)
         router.run()
         db.close()
 
-        # check if db connection has been closed
-
     except Exception as e:
         log.error(f"Failed to initialize the database connection: {e}")
         raise
-
     finally:
         # Properly closing the database connection
         if db and not db.is_closed():
@@ -98,7 +86,6 @@ Base = declarative_base()
 Session = scoped_session(SessionLocal)
 
 
-# Dependency
 def get_session():
     db = SessionLocal()
     try:

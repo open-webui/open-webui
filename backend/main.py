@@ -1,7 +1,6 @@
 import base64
 import uuid
 from contextlib import asynccontextmanager
-
 from authlib.integrations.starlette_client import OAuth
 from authlib.oidc.core import UserInfo
 import json
@@ -87,6 +86,7 @@ from utils.misc import (
 from apps.rag.utils import get_rag_context, rag_template
 
 from config import (
+    run_migrations,
     WEBUI_NAME,
     WEBUI_URL,
     WEBUI_AUTH,
@@ -163,17 +163,6 @@ v{VERSION} - building the best open-source AI user interface.
 https://github.com/open-webui/open-webui
 """
 )
-
-
-def run_migrations():
-    try:
-        from alembic.config import Config
-        from alembic import command
-
-        alembic_cfg = Config("alembic.ini")
-        command.upgrade(alembic_cfg, "head")
-    except Exception as e:
-        print(f"Error: {e}")
 
 
 @asynccontextmanager
@@ -299,23 +288,25 @@ async def chat_completion_filter_functions_handler(body, model, extra_params):
 
             # Get the signature of the function
             sig = inspect.signature(inlet)
-            params = {"body": body}
+            params = {"body": body} | {
+                k: v
+                for k, v in {
+                    **extra_params,
+                    "__model__": model,
+                    "__id__": filter_id,
+                }.items()
+                if k in sig.parameters
+            }
 
-            # Extra parameters to be passed to the function
-            custom_params = {**extra_params, "__model__": model, "__id__": filter_id}
-            if hasattr(function_module, "UserValves") and "__user__" in sig.parameters:
+            if "__user__" in params and hasattr(function_module, "UserValves"):
                 try:
-                    uid = custom_params["__user__"]["id"]
-                    custom_params["__user__"]["valves"] = function_module.UserValves(
-                        **Functions.get_user_valves_by_id_and_user_id(filter_id, uid)
+                    params["__user__"]["valves"] = function_module.UserValves(
+                        **Functions.get_user_valves_by_id_and_user_id(
+                            filter_id, params["__user__"]["id"]
+                        )
                     )
                 except Exception as e:
                     print(e)
-
-            # Add extra params in contained in function signature
-            for key, value in custom_params.items():
-                if key in sig.parameters:
-                    params[key] = value
 
             if inspect.iscoroutinefunction(inlet):
                 body = await inlet(**params)
@@ -372,7 +363,9 @@ async def chat_completion_tools_handler(
 ) -> tuple[dict, dict]:
     # If tool_ids field is present, call the functions
     metadata = body.get("metadata", {})
+
     tool_ids = metadata.get("tool_ids", None)
+    log.debug(f"{tool_ids=}")
     if not tool_ids:
         return body, {}
 
@@ -381,16 +374,17 @@ async def chat_completion_tools_handler(
     citations = []
 
     task_model_id = get_task_model_id(body["model"])
-
-    log.debug(f"{tool_ids=}")
-
-    custom_params = {
-        **extra_params,
-        "__model__": app.state.MODELS[task_model_id],
-        "__messages__": body["messages"],
-        "__files__": metadata.get("files", []),
-    }
-    tools = get_tools(webui_app, tool_ids, user, custom_params)
+    tools = get_tools(
+        webui_app,
+        tool_ids,
+        user,
+        {
+            **extra_params,
+            "__model__": app.state.MODELS[task_model_id],
+            "__messages__": body["messages"],
+            "__files__": metadata.get("files", []),
+        },
+    )
     log.info(f"{tools=}")
 
     specs = [tool["spec"] for tool in tools.values()]
@@ -530,17 +524,15 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
         }
         body["metadata"] = metadata
 
-        __user__ = {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-        }
-
         extra_params = {
-            "__user__": __user__,
             "__event_emitter__": get_event_emitter(metadata),
             "__event_call__": get_event_call(metadata),
+            "__user__": {
+                "id": user.id,
+                "email": user.email,
+                "name": user.name,
+                "role": user.role,
+            },
         }
 
         # Initialize data_items to store additional data to be sent to the client
@@ -989,11 +981,20 @@ async def get_models(user=Depends(get_verified_user)):
 @app.post("/api/chat/completions")
 async def generate_chat_completions(form_data: dict, user=Depends(get_verified_user)):
     model_id = form_data["model"]
+
     if model_id not in app.state.MODELS:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Model not found",
         )
+
+    if app.state.config.ENABLE_MODEL_FILTER:
+        if user.role == "user" and model_id not in app.state.config.MODEL_FILTER_LIST:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Model not found",
+            )
+
     model = app.state.MODELS[model_id]
     if model.get("pipe"):
         return await generate_function_chat_completion(form_data, user=user)
@@ -1932,10 +1933,15 @@ async def get_app_config(request: Request):
                     "tts": {
                         "engine": audio_app.state.config.TTS_ENGINE,
                         "voice": audio_app.state.config.TTS_VOICE,
+                        "split_on": audio_app.state.config.TTS_SPLIT_ON,
                     },
                     "stt": {
                         "engine": audio_app.state.config.STT_ENGINE,
                     },
+                },
+                "file": {
+                    "max_size": rag_app.state.config.FILE_MAX_SIZE,
+                    "max_count": rag_app.state.config.FILE_MAX_COUNT,
                 },
                 "permissions": {**webui_app.state.config.USER_PERMISSIONS},
             }

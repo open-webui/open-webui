@@ -3,6 +3,8 @@
 	import Modal from '../common/Modal.svelte';
 	import Controls from './Controls/Controls.svelte';
 	import { onMount } from 'svelte';
+	import { mobile, showCallOverlay } from '$lib/stores';
+	import CallOverlay from './MessageInput/CallOverlay.svelte';
 
 	export let show = false;
 
@@ -11,6 +13,12 @@
 	export let chatId = null;
 	export let chatFiles = [];
 	export let params = {};
+
+	export let eventTarget: EventTarget;
+	export let submitPrompt: Function;
+	export let stopResponse: Function;
+	export let files;
+	export let modelId;
 
 	let largeScreen = false;
 	onMount(() => {
@@ -42,18 +50,47 @@
 				<div
 					class="w-full h-full px-5 py-4 bg-white dark:shadow-lg dark:bg-gray-850 border border-gray-50 dark:border-gray-800 rounded-xl z-50 pointer-events-auto overflow-y-auto scrollbar-hidden"
 				>
-					<Controls
-						on:close={() => {
-							show = false;
-						}}
-						{models}
-						bind:chatFiles
-						bind:params
-					/>
+					{#if $showCallOverlay}
+						<CallOverlay
+							bind:files
+							{submitPrompt}
+							{stopResponse}
+							{modelId}
+							{chatId}
+							{eventTarget}
+						/>
+					{:else}
+						<Controls
+							on:close={() => {
+								show = false;
+							}}
+							{models}
+							bind:chatFiles
+							bind:params
+						/>
+					{/if}
 				</div>
 			</div>
 		</div>
 	{/if}
+{:else if $showCallOverlay}
+	<div class=" absolute w-full h-screen max-h-[100dvh] flex z-[999] overflow-hidden">
+		<div
+			class="absolute w-full h-screen max-h-[100dvh] bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center"
+		>
+			<CallOverlay
+				bind:files
+				{submitPrompt}
+				{stopResponse}
+				{modelId}
+				{chatId}
+				{eventTarget}
+				on:close={() => {
+					show = false;
+				}}
+			/>
+		</div>
+	</div>
 {:else}
 	<Modal bind:show>
 		<div class="  px-6 py-4 h-full">

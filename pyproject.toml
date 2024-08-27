@@ -41,8 +41,8 @@ dependencies = [
     "google-generativeai==0.7.2",
     "tiktoken",
 
-    "langchain==0.2.12",
-    "langchain-community==0.2.10",
+    "langchain==0.2.14",
+    "langchain-community==0.2.12",
     "langchain-chroma==0.1.2",
 
     "fake-useragent==1.5.1",
@@ -51,8 +51,9 @@ dependencies = [
     "pypdf==4.3.1",
     "docx2txt==0.8",
     "python-pptx==1.0.0",
-    "unstructured==0.15.5",
-    "Markdown==3.6",
+    "unstructured==0.15.7",
+    "nltk==3.9.1",
+    "Markdown==3.7",
     "pypandoc==1.13",
     "pandas==2.2.2",
     "openpyxl==3.1.5",
@@ -73,7 +74,7 @@ dependencies = [
     "authlib==1.3.1",
 
     "black==24.8.0",
-    "langfuse==2.43.3",
+    "langfuse==2.44.0",
     "youtube-transcript-api==0.6.2",
     "pytube==15.0.0",
 

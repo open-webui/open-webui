@@ -37,6 +37,7 @@ from config import (
     AUDIO_TTS_ENGINE,
     AUDIO_TTS_MODEL,
     AUDIO_TTS_VOICE,
+    AUDIO_TTS_SPLIT_ON,
     AppConfig,
     CORS_ALLOW_ORIGIN,
 )
@@ -72,6 +73,7 @@ app.state.config.TTS_ENGINE = AUDIO_TTS_ENGINE
 app.state.config.TTS_MODEL = AUDIO_TTS_MODEL
 app.state.config.TTS_VOICE = AUDIO_TTS_VOICE
 app.state.config.TTS_API_KEY = AUDIO_TTS_API_KEY
+app.state.config.TTS_SPLIT_ON = AUDIO_TTS_SPLIT_ON
 
 # setting device type for whisper model
 whisper_device_type = DEVICE_TYPE if DEVICE_TYPE and DEVICE_TYPE == "cuda" else "cpu"
@@ -88,6 +90,7 @@ class TTSConfigForm(BaseModel):
     ENGINE: str
     MODEL: str
     VOICE: str
+    SPLIT_ON: str
 
 
 class STTConfigForm(BaseModel):
@@ -139,6 +142,7 @@ async def get_audio_config(user=Depends(get_admin_user)):
             "ENGINE": app.state.config.TTS_ENGINE,
             "MODEL": app.state.config.TTS_MODEL,
             "VOICE": app.state.config.TTS_VOICE,
+            "SPLIT_ON": app.state.config.TTS_SPLIT_ON,
         },
         "stt": {
             "OPENAI_API_BASE_URL": app.state.config.STT_OPENAI_API_BASE_URL,
@@ -159,6 +163,7 @@ async def update_audio_config(
     app.state.config.TTS_ENGINE = form_data.tts.ENGINE
     app.state.config.TTS_MODEL = form_data.tts.MODEL
     app.state.config.TTS_VOICE = form_data.tts.VOICE
+    app.state.config.TTS_SPLIT_ON = form_data.tts.SPLIT_ON
 
     app.state.config.STT_OPENAI_API_BASE_URL = form_data.stt.OPENAI_API_BASE_URL
     app.state.config.STT_OPENAI_API_KEY = form_data.stt.OPENAI_API_KEY
@@ -173,6 +178,7 @@ async def update_audio_config(
             "ENGINE": app.state.config.TTS_ENGINE,
             "MODEL": app.state.config.TTS_MODEL,
             "VOICE": app.state.config.TTS_VOICE,
+            "SPLIT_ON": app.state.config.TTS_SPLIT_ON,
         },
         "stt": {
             "OPENAI_API_BASE_URL": app.state.config.STT_OPENAI_API_BASE_URL,

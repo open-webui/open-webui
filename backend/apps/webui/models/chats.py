@@ -249,22 +249,25 @@ class ChatTable:
         self,
         user_id: str,
         include_archived: bool = False,
-        skip: int = 0,
-        limit: int = -1,
+        skip: Optional[int] = None,
+        limit: Optional[int] = None,
     ) -> list[ChatTitleIdResponse]:
         with get_db() as db:
             query = db.query(Chat).filter_by(user_id=user_id)
             if not include_archived:
                 query = query.filter_by(archived=False)
 
-            all_chats = (
-                query.order_by(Chat.updated_at.desc())
-                # limit cols
-                .with_entities(Chat.id, Chat.title, Chat.updated_at, Chat.created_at)
-                .limit(limit)
-                .offset(skip)
-                .all()
+            query = query.order_by(Chat.updated_at.desc()).with_entities(
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at
             )
+
+            if limit:
+                query = query.limit(limit)
+            if skip:
+                query = query.offset(skip)
+
+            all_chats = query.all()
+
             # result has to be destrctured from sqlalchemy `row` and mapped to a dict since the `ChatModel`is not the returned dataclass.
             return [
                 ChatTitleIdResponse.model_validate(
