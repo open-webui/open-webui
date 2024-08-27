@@ -3,7 +3,6 @@ from test.util.mock_user import mock_webui_user
 
 
 class TestDocuments(AbstractPostgresTest):
-
     BASE_PATH = "/api/v1/documents"
 
     def setup_class(cls):

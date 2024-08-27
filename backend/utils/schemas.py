@@ -1,7 +1,7 @@
 from ast import literal_eval
+from typing import Any, Literal, Optional, Type
 
 from pydantic import BaseModel, Field, create_model
-from typing import Any, Optional, Type, Literal
 
 
 def json_schema_to_model(tool_dict: dict[str, Any]) -> Type[BaseModel]:

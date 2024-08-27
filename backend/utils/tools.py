@@ -5,7 +5,6 @@ from typing import Awaitable, Callable, get_type_hints
 from apps.webui.models.tools import Tools
 from apps.webui.models.users import UserModel
 from apps.webui.utils import load_toolkit_module_by_id
-
 from utils.schemas import json_schema_to_model
 
 log = logging.getLogger(__name__)

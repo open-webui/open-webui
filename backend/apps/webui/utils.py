@@ -1,13 +1,12 @@
-from importlib import util
 import os
 import re
-import sys
 import subprocess
+import sys
+from importlib import util
 
-
-from apps.webui.models.tools import Tools
 from apps.webui.models.functions import Functions
-from config import TOOLS_DIR, FUNCTIONS_DIR
+from apps.webui.models.tools import Tools
+from config import FUNCTIONS_DIR, TOOLS_DIR
 
 
 def extract_frontmatter(file_path):

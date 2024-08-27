@@ -1,27 +1,18 @@
-from fastapi import Depends, FastAPI, HTTPException, status, Request
-from datetime import datetime, timedelta
-from typing import Union, Optional
-
-from fastapi import APIRouter
-from pydantic import BaseModel
-import json
+import os
+from pathlib import Path
+from typing import Optional
 
 from apps.webui.models.functions import (
-    Functions,
     FunctionForm,
     FunctionModel,
     FunctionResponse,
+    Functions,
 )
 from apps.webui.utils import load_function_module_by_id
-from utils.utils import get_verified_user, get_admin_user
+from config import CACHE_DIR, FUNCTIONS_DIR
 from constants import ERROR_MESSAGES
-
-from importlib import util
-import os
-from pathlib import Path
-
-from config import DATA_DIR, CACHE_DIR, FUNCTIONS_DIR
-
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from utils.utils import get_admin_user, get_verified_user
 
 router = APIRouter()
 
@@ -304,7 +295,6 @@ async def update_function_valves_by_id(
 ):
     function = Functions.get_function_by_id(id)
     if function:
-
         if id in request.app.state.FUNCTIONS:
             function_module = request.app.state.FUNCTIONS[id]
         else:
