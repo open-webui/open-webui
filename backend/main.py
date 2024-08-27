@@ -1939,6 +1939,10 @@ async def get_app_config(request: Request):
                         "engine": audio_app.state.config.STT_ENGINE,
                     },
                 },
+                "file": {
+                    "max_size": rag_app.state.config.FILE_MAX_SIZE,
+                    "max_count": rag_app.state.config.FILE_MAX_COUNT,
+                },
                 "permissions": {**webui_app.state.config.USER_PERMISSIONS},
             }
             if user is not None
