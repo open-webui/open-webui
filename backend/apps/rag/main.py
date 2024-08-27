@@ -583,19 +583,9 @@ async def get_query_settings(user=Depends(get_admin_user)):
     }
 
 
-@app.get("/file/limit/settings")
-async def get_query_settings(user=Depends(get_verified_user)):
-    return {
-        "FILE_MAX_SIZE": app.state.config.FILE_MAX_SIZE,
-        "FILE_MAX_COUNT": app.state.config.FILE_MAX_COUNT,
-    }
-
-
 class QuerySettingsForm(BaseModel):
     k: Optional[int] = None
     r: Optional[float] = None
-    FILE_MAX_SIZE: Optional[int] = None
-    FILE_MAX_COUNT: Optional[int] = None
     template: Optional[str] = None
     hybrid: Optional[bool] = None
 
@@ -612,20 +602,12 @@ async def update_query_settings(
     app.state.config.ENABLE_RAG_HYBRID_SEARCH = (
         form_data.hybrid if form_data.hybrid else False
     )
-    app.state.config.FILE_MAX_SIZE = (
-        form_data.FILE_MAX_SIZE if form_data.FILE_MAX_SIZE else 10
-    )
-    app.state.config.FILE_MAX_COUNT = (
-        form_data.FILE_MAX_COUNT if form_data.FILE_MAX_COUNT else 5
-    )
 
     return {
         "status": True,
         "template": app.state.config.RAG_TEMPLATE,
         "k": app.state.config.TOP_K,
         "r": app.state.config.RELEVANCE_THRESHOLD,
-        "FILE_MAX_SIZE": app.state.config.FILE_MAX_SIZE,
-        "FILE_MAX_COUNT": app.state.config.FILE_MAX_COUNT,
         "hybrid": app.state.config.ENABLE_RAG_HYBRID_SEARCH,
     }
 
