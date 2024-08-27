@@ -1,0 +1,69 @@
+# syntax=docker/dockerfile:1
+ARG UID=0
+ARG GID=0
+
+######## WebUI frontend ########
+FROM --platform=$BUILDPLATFORM node:21-alpine3.19 as build
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+ENV NODE_OPTIONS="--max_old_space_size=6000"
+RUN npm run build --verbose
+
+######## WebUI backend ########
+FROM python:3.11-slim-bookworm as base
+
+ARG UID
+ARG GID
+
+ENV ENV=prod \
+    PORT=8080 \
+    SCARF_NO_ANALYTICS=true \
+    DO_NOT_TRACK=true \
+    ANONYMIZED_TELEMETRY=false
+
+WORKDIR /app/backend
+
+ENV HOME /root
+# Create user and group if not root
+RUN if [ $UID -ne 0 ]; then \
+    if [ $GID -ne 0 ]; then \
+    addgroup --gid $GID app; \
+    fi; \
+    adduser --uid $UID --gid $GID --home $HOME --disabled-password --no-create-home app; \
+    fi
+
+RUN mkdir -p $HOME/.cache/chroma
+RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry_user_id
+
+# Make sure the user has access to the app and root directory
+RUN chown -R $UID:$GID /app $HOME
+
+# Install basic dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends pandoc gcc netcat-openbsd curl jq ffmpeg libsm6 libxext6 && \
+    rm -rf /var/lib/apt/lists/*
+
+# install python dependencies
+COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# copy built frontend files
+COPY --chown=$UID:$GID --from=build /app/build /app/build
+COPY --chown=$UID:$GID --from=build /app/CHANGELOG.md /app/CHANGELOG.md
+COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
+
+# copy backend files
+COPY --chown=$UID:$GID ./backend .
+
+EXPOSE 8080
+
+HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq -ne 'input.status == true' || exit 1
+
+USER $UID:$GID
+
+CMD [ "bash", "start.sh"]
