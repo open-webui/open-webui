@@ -1005,6 +1005,26 @@ ENABLE_RAG_HYBRID_SEARCH = PersistentConfig(
     os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "").lower() == "true",
 )
 
+RAG_FILE_MAX_COUNT = PersistentConfig(
+    "RAG_FILE_MAX_COUNT",
+    "rag.file.max_count",
+    (
+        int(os.environ.get("RAG_FILE_MAX_COUNT"))
+        if os.environ.get("RAG_FILE_MAX_COUNT")
+        else None
+    ),
+)
+
+RAG_FILE_MAX_SIZE = PersistentConfig(
+    "RAG_FILE_MAX_SIZE",
+    "rag.file.max_size",
+    (
+        int(os.environ.get("RAG_FILE_MAX_SIZE"))
+        if os.environ.get("RAG_FILE_MAX_SIZE")
+        else None
+    ),
+)
+
 ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = PersistentConfig(
     "ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION",
     "rag.enable_web_loader_ssl_verification",

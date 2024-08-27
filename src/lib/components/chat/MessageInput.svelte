@@ -15,9 +15,11 @@
 		user as _user
 	} from '$lib/stores';
 	import { blobToFile, findWordIndices } from '$lib/utils';
-	import { processDocToVectorDB } from '$lib/apis/rag';
+
 	import { transcribeAudio } from '$lib/apis/audio';
+	import { processDocToVectorDB } from '$lib/apis/rag';
 	import { uploadFile } from '$lib/apis/files';
+
 	import {
 		SUPPORTED_FILE_TYPE,
 		SUPPORTED_FILE_EXTENSIONS,
@@ -169,6 +171,44 @@
 		}
 	};
 
+	const inputFilesHandler = async (inputFiles) => {
+		inputFiles.forEach((file) => {
+			console.log(file, file.name.split('.').at(-1));
+
+			if (
+				($config?.file?.max_size ?? null) !== null &&
+				file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
+			) {
+				toast.error(
+					$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
+						maxSize: $config?.file?.max_size
+					})
+				);
+				return;
+			}
+
+			if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
+				if (visionCapableModels.length === 0) {
+					toast.error($i18n.t('Selected model(s) do not support image inputs'));
+					return;
+				}
+				let reader = new FileReader();
+				reader.onload = (event) => {
+					files = [
+						...files,
+						{
+							type: 'image',
+							url: `${event.target.result}`
+						}
+					];
+				};
+				reader.readAsDataURL(file);
+			} else {
+				uploadFileHandler(file);
+			}
+		});
+	};
+
 	onMount(() => {
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
@@ -196,30 +236,9 @@
 
 			if (e.dataTransfer?.files) {
 				const inputFiles = Array.from(e.dataTransfer?.files);
-
 				if (inputFiles && inputFiles.length > 0) {
-					inputFiles.forEach((file) => {
-						console.log(file, file.name.split('.').at(-1));
-						if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
-							if (visionCapableModels.length === 0) {
-								toast.error($i18n.t('Selected model(s) do not support image inputs'));
-								return;
-							}
-							let reader = new FileReader();
-							reader.onload = (event) => {
-								files = [
-									...files,
-									{
-										type: 'image',
-										url: `${event.target.result}`
-									}
-								];
-							};
-							reader.readAsDataURL(file);
-						} else {
-							uploadFileHandler(file);
-						}
-					});
+					console.log(inputFiles);
+					inputFilesHandler(inputFiles);
 				} else {
 					toast.error($i18n.t(`File not found.`));
 				}
@@ -341,27 +360,7 @@
 					on:change={async () => {
 						if (inputFiles && inputFiles.length > 0) {
 							const _inputFiles = Array.from(inputFiles);
-							_inputFiles.forEach((file) => {
-								if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
-									if (visionCapableModels.length === 0) {
-										toast.error($i18n.t('Selected model(s) do not support image inputs'));
-										return;
-									}
-									let reader = new FileReader();
-									reader.onload = (event) => {
-										files = [
-											...files,
-											{
-												type: 'image',
-												url: `${event.target.result}`
-											}
-										];
-									};
-									reader.readAsDataURL(file);
-								} else {
-									uploadFileHandler(file);
-								}
-							});
+							inputFilesHandler(_inputFiles);
 						} else {
 							toast.error($i18n.t(`File not found.`));
 						}
@@ -653,16 +652,16 @@
 										}
 									}}
 									rows="1"
-									on:input={(e) => {
+									on:input={async (e) => {
 										e.target.style.height = '';
 										e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
 										user = null;
 									}}
-									on:focus={(e) => {
+									on:focus={async (e) => {
 										e.target.style.height = '';
 										e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
 									}}
-									on:paste={(e) => {
+									on:paste={async (e) => {
 										const clipboardData = e.clipboardData || window.clipboardData;
 
 										if (clipboardData && clipboardData.items) {

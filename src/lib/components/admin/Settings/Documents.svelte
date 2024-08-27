@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { onMount, getContext, createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher();
+
 	import { getDocs } from '$lib/apis/documents';
 	import { deleteAllFiles, deleteFileById } from '$lib/apis/files';
 	import {
@@ -18,13 +22,11 @@
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	import { documents, models } from '$lib/stores';
-	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
-
-	export let saveHandler: Function;
 
 	let scanDirLoading = false;
 	let updateEmbeddingModelLoading = false;
@@ -36,6 +38,9 @@
 	let embeddingEngine = '';
 	let embeddingModel = '';
 	let rerankingModel = '';
+
+	let fileMaxSize = null;
+	let fileMaxCount = null;
 
 	let contentExtractionEngine = 'default';
 	let tikaServerUrl = '';
@@ -161,19 +166,22 @@
 	};
 
 	const submitHandler = async () => {
-		embeddingModelUpdateHandler();
+		await embeddingModelUpdateHandler();
 
 		if (querySettings.hybrid) {
-			rerankingModelUpdateHandler();
+			await rerankingModelUpdateHandler();
 		}
 
 		if (contentExtractionEngine === 'tika' && tikaServerUrl === '') {
 			toast.error($i18n.t('Tika Server URL required.'));
 			return;
 		}
-
 		const res = await updateRAGConfig(localStorage.token, {
 			pdf_extract_images: pdfExtractImages,
+			file: {
+				max_size: fileMaxSize === '' ? null : fileMaxSize,
+				max_count: fileMaxCount === '' ? null : fileMaxCount
+			},
 			chunk: {
 				chunk_overlap: chunkOverlap,
 				chunk_size: chunkSize
@@ -185,6 +193,8 @@
 		});
 
 		await updateQuerySettings(localStorage.token, querySettings);
+
+		dispatch('save');
 	};
 
 	const setEmbeddingConfig = async () => {
@@ -218,7 +228,6 @@
 		await setRerankingConfig();
 
 		querySettings = await getQuerySettings(localStorage.token);
-
 		const res = await getRAGConfig(localStorage.token);
 
 		if (res) {
@@ -230,6 +239,9 @@
 			contentExtractionEngine = res.content_extraction.engine;
 			tikaServerUrl = res.content_extraction.tika_server_url;
 			showTikaServerUrl = contentExtractionEngine === 'tika';
+
+			fileMaxSize = res?.file.max_size ?? '';
+			fileMaxCount = res?.file.max_count ?? '';
 		}
 	});
 </script>
@@ -266,7 +278,6 @@
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={() => {
 		submitHandler();
-		saveHandler();
 	}}
 >
 	<div class=" space-y-2.5 overflow-y-scroll scrollbar-hidden h-full pr-1.5">
@@ -610,6 +621,62 @@
 				</div>
 			{/if}
 		</div>
+
+		<hr class=" dark:border-gray-850" />
+
+		<div class="">
+			<div class="text-sm font-medium">{$i18n.t('Files')}</div>
+
+			<div class=" my-2 flex gap-1.5">
+				<div class="w-full">
+					<div class=" self-center text-xs font-medium min-w-fit mb-1">
+						{$i18n.t('Max Upload Size')}
+					</div>
+
+					<div class="self-center">
+						<Tooltip
+							content={$i18n.t(
+								'The maximum file size in MB. If the file size exceeds this limit, the file will not be uploaded.'
+							)}
+							placement="top-start"
+						>
+							<input
+								class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								type="number"
+								placeholder={$i18n.t('Leave empty for unlimited')}
+								bind:value={fileMaxSize}
+								autocomplete="off"
+								min="0"
+							/>
+						</Tooltip>
+					</div>
+				</div>
+
+				<div class="  w-full">
+					<div class="self-center text-xs font-medium min-w-fit mb-1">
+						{$i18n.t('Max Upload Count')}
+					</div>
+					<div class="self-center">
+						<Tooltip
+							content={$i18n.t(
+								'The maximum number of files that can be used at once in chat. If the number of files exceeds this limit, the files will not be uploaded.'
+							)}
+							placement="top-start"
+						>
+							<input
+								class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								type="number"
+								placeholder={$i18n.t('Leave empty for unlimited')}
+								bind:value={fileMaxCount}
+								autocomplete="off"
+								min="0"
+							/>
+						</Tooltip>
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<hr class=" dark:border-gray-850" />
 
 		<div class=" ">
