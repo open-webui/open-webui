@@ -1,9 +1,9 @@
 import logging
-import requests
-from yarl import URL
 
+import requests
 from apps.rag.search.main import SearchResult
-from config import SRC_LOG_LEVELS
+from env import SRC_LOG_LEVELS
+from yarl import URL
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])

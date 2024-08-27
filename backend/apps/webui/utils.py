@@ -1,10 +1,10 @@
-from importlib import util
 import os
 import re
-import sys
 import subprocess
+import sys
+from importlib import util
 
-from config import TOOLS_DIR, FUNCTIONS_DIR
+from config import FUNCTIONS_DIR, TOOLS_DIR
 
 
 def extract_frontmatter(file_path):

@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field, create_model
 from typing import Any, Optional, Type
+
+from pydantic import BaseModel, Field, create_model
 
 
 def json_schema_to_model(tool_dict: dict[str, Any]) -> Type[BaseModel]:

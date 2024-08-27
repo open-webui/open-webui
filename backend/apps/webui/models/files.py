@@ -1,15 +1,11 @@
-from pydantic import BaseModel, ConfigDict
-from typing import Union, Optional
-import time
 import logging
+import time
+from typing import Optional
 
-from sqlalchemy import Column, String, BigInteger, Text
-
-from apps.webui.internal.db import JSONField, Base, get_db
-
-import json
-
+from apps.webui.internal.db import Base, JSONField, get_db
 from env import SRC_LOG_LEVELS
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import BigInteger, Column, String, Text
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -59,10 +55,8 @@ class FileForm(BaseModel):
 
 
 class FilesTable:
-
     def insert_new_file(self, user_id: str, form_data: FileForm) -> Optional[FileModel]:
         with get_db() as db:
-
             file = FileModel(
                 **{
                     **form_data.model_dump(),
@@ -86,7 +80,6 @@ class FilesTable:
 
     def get_file_by_id(self, id: str) -> Optional[FileModel]:
         with get_db() as db:
-
             try:
                 file = db.get(File, id)
                 return FileModel.model_validate(file)
@@ -95,7 +88,6 @@ class FilesTable:
 
     def get_files(self) -> list[FileModel]:
         with get_db() as db:
-
             return [FileModel.model_validate(file) for file in db.query(File).all()]
 
     def get_files_by_user_id(self, user_id: str) -> list[FileModel]:
@@ -106,9 +98,7 @@ class FilesTable:
             ]
 
     def delete_file_by_id(self, id: str) -> bool:
-
         with get_db() as db:
-
             try:
                 db.query(File).filter_by(id=id).delete()
                 db.commit()
@@ -118,9 +108,7 @@ class FilesTable:
                 return False
 
     def delete_all_files(self) -> bool:
-
         with get_db() as db:
-
             try:
                 db.query(File).delete()
                 db.commit()
