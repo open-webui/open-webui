@@ -10,31 +10,36 @@
 		getModels as _getModels,
 		getVoices as _getVoices
 	} from '$lib/apis/audio';
-	import { user, settings, config } from '$lib/stores';
+	import { config } from '$lib/stores';
 
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
-	const i18n = getContext('i18n');
+	import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
-	export let saveHandler: Function;
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+
+	const i18n = getContext<Writable<i18nType>>('i18n');
+
+	export let saveHandler: () => void;
 
 	// Audio
-
 	let TTS_OPENAI_API_BASE_URL = '';
 	let TTS_OPENAI_API_KEY = '';
 	let TTS_API_KEY = '';
 	let TTS_ENGINE = '';
 	let TTS_MODEL = '';
 	let TTS_VOICE = '';
+	let TTS_SPLIT_ON: TTS_RESPONSE_SPLIT = TTS_RESPONSE_SPLIT.PUNCTUATION;
 
 	let STT_OPENAI_API_BASE_URL = '';
 	let STT_OPENAI_API_KEY = '';
 	let STT_ENGINE = '';
 	let STT_MODEL = '';
 
-	let voices = [];
-	let models = [];
-	let nonLocalVoices = false;
+	// eslint-disable-next-line no-undef
+	let voices: SpeechSynthesisVoice[] = [];
+	let models: Awaited<ReturnType<typeof _getModels>>['models'] = [];
 
 	const getModels = async () => {
 		if (TTS_ENGINE === '') {
@@ -53,8 +58,8 @@
 
 	const getVoices = async () => {
 		if (TTS_ENGINE === '') {
-			const getVoicesLoop = setInterval(async () => {
-				voices = await speechSynthesis.getVoices();
+			const getVoicesLoop = setInterval(() => {
+				voices = speechSynthesis.getVoices();
 
 				// do your loop
 				if (voices.length > 0) {
@@ -81,7 +86,8 @@
 				API_KEY: TTS_API_KEY,
 				ENGINE: TTS_ENGINE,
 				MODEL: TTS_MODEL,
-				VOICE: TTS_VOICE
+				VOICE: TTS_VOICE,
+				SPLIT_ON: TTS_SPLIT_ON
 			},
 			stt: {
 				OPENAI_API_BASE_URL: STT_OPENAI_API_BASE_URL,
@@ -92,9 +98,10 @@
 		});
 
 		if (res) {
-			toast.success($i18n.t('Audio settings updated successfully'));
-
-			config.set(await getBackendConfig());
+			saveHandler();
+			getBackendConfig()
+				.then(config.set)
+				.catch(() => {});
 		}
 	};
 
@@ -110,6 +117,8 @@
 			TTS_ENGINE = res.tts.ENGINE;
 			TTS_MODEL = res.tts.MODEL;
 			TTS_VOICE = res.tts.VOICE;
+
+			TTS_SPLIT_ON = res.tts.SPLIT_ON || TTS_RESPONSE_SPLIT.PUNCTUATION;
 
 			STT_OPENAI_API_BASE_URL = res.stt.OPENAI_API_BASE_URL;
 			STT_OPENAI_API_KEY = res.stt.OPENAI_API_KEY;
@@ -139,7 +148,7 @@
 					<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
 					<div class="flex items-center relative">
 						<select
-							class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+							class="dark:bg-gray-900 cursor-pointer w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 							bind:value={STT_ENGINE}
 							placeholder="Select an engine"
 						>
@@ -195,7 +204,7 @@
 					<div class=" self-center text-xs font-medium">{$i18n.t('Text-to-Speech Engine')}</div>
 					<div class="flex items-center relative">
 						<select
-							class=" dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+							class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 							bind:value={TTS_ENGINE}
 							placeholder="Select a mode"
 							on:change={async (e) => {
@@ -203,7 +212,7 @@
 								await getVoices();
 								await getModels();
 
-								if (e.target.value === 'openai') {
+								if (e.target?.value === 'openai') {
 									TTS_VOICE = 'alloy';
 									TTS_MODEL = 'tts-1';
 								} else {
@@ -351,6 +360,30 @@
 						</div>
 					</div>
 				{/if}
+
+				<hr class="dark:border-gray-850 my-2" />
+
+				<div class="pt-0.5 flex w-full justify-between">
+					<div class="self-center text-xs font-medium">{$i18n.t('Response splitting')}</div>
+					<div class="flex items-center relative">
+						<select
+							class="dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+							aria-label="Select how to split message text for TTS requests"
+							bind:value={TTS_SPLIT_ON}
+						>
+							{#each Object.values(TTS_RESPONSE_SPLIT) as split}
+								<option value={split}
+									>{$i18n.t(split.charAt(0).toUpperCase() + split.slice(1))}</option
+								>
+							{/each}
+						</select>
+					</div>
+				</div>
+				<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+					{$i18n.t(
+						"Control how message text is split for TTS requests. 'Punctuation' splits into sentences, 'paragraphs' splits into paragraphs, and 'none' keeps the message as a single string."
+					)}
+				</div>
 			</div>
 		</div>
 	</div>

@@ -3,18 +3,19 @@ import logging
 import json
 from contextlib import contextmanager
 
-from peewee_migrate import Router
-from apps.webui.internal.wrappers import register_connection
 
 from typing import Optional, Any
 from typing_extensions import Self
 
 from sqlalchemy import create_engine, types, Dialect
+from sqlalchemy.sql.type_api import _T
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.sql.type_api import _T
 
-from config import SRC_LOG_LEVELS, DATA_DIR, DATABASE_URL, BACKEND_DIR
+
+from peewee_migrate import Router
+from apps.webui.internal.wrappers import register_connection
+from env import SRC_LOG_LEVELS, BACKEND_DIR, DATABASE_URL
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["DB"])
@@ -40,15 +41,6 @@ class JSONField(types.TypeDecorator):
     def python_value(self, value):
         if value is not None:
             return json.loads(value)
-
-
-# Check if the file exists
-if os.path.exists(f"{DATA_DIR}/ollama.db"):
-    # Rename the file
-    os.rename(f"{DATA_DIR}/ollama.db", f"{DATA_DIR}/webui.db")
-    log.info("Database migrated from Ollama-WebUI successfully.")
-else:
-    pass
 
 
 # Workaround to handle the peewee migration
@@ -94,7 +86,6 @@ Base = declarative_base()
 Session = scoped_session(SessionLocal)
 
 
-# Dependency
 def get_session():
     db = SessionLocal()
     try:

@@ -10,12 +10,12 @@ from datetime import datetime, timedelta, UTC
 import jwt
 import uuid
 import logging
-import config
+from env import WEBUI_SECRET_KEY
 
 logging.getLogger("passlib").setLevel(logging.ERROR)
 
 
-SESSION_SECRET = config.WEBUI_SECRET_KEY
+SESSION_SECRET = WEBUI_SECRET_KEY
 ALGORITHM = "HS256"
 
 ##############

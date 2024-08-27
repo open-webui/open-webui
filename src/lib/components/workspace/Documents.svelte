@@ -24,6 +24,7 @@
 	let importFiles = '';
 
 	let inputFiles = '';
+
 	let query = '';
 	let documentsImportInputElement: HTMLInputElement;
 	let tags = [];

@@ -20,7 +20,9 @@
 
 	import { blobToFile, findWordIndices } from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
+	import { processDocToVectorDB } from '$lib/apis/rag';
 	import { uploadFile } from '$lib/apis/files';
+
 	import {
 		SUPPORTED_FILE_TYPE,
 		SUPPORTED_FILE_EXTENSIONS,
@@ -286,7 +288,6 @@
 
 			if (e.dataTransfer?.files) {
 				const inputFiles = Array.from(e.dataTransfer?.files);
-
 				if (inputFiles && inputFiles.length > 0) {
 					const [canProcess, filesToProcess] = await processFileCountLimit(
 						fileLimitSettings,

@@ -430,7 +430,7 @@ export const resetUploadDir = async (token: string) => {
 	let error = null;
 
 	const res = await fetch(`${RAG_API_BASE_URL}/reset/uploads`, {
-		method: 'GET',
+		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			authorization: `Bearer ${token}`
@@ -456,7 +456,7 @@ export const resetVectorDB = async (token: string) => {
 	let error = null;
 
 	const res = await fetch(`${RAG_API_BASE_URL}/reset/db`, {
-		method: 'GET',
+		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			authorization: `Bearer ${token}`

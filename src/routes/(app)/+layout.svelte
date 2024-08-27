@@ -81,9 +81,17 @@
 			});
 
 			if (userSettings) {
-				await settings.set(userSettings.ui);
+				settings.set(userSettings.ui);
 			} else {
-				await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
+				let localStorageSettings = {} as Parameters<(typeof settings)['set']>[0];
+
+				try {
+					localStorageSettings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+				} catch (e: unknown) {
+					console.error('Failed to parse settings from localStorage', e);
+				}
+
+				settings.set(localStorageSettings);
 			}
 
 			await Promise.all([

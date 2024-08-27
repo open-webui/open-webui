@@ -9,6 +9,18 @@ import sys
 import time
 import uuid
 from contextlib import asynccontextmanager
+from authlib.integrations.starlette_client import OAuth
+from authlib.oidc.core import UserInfo
+import json
+import time
+import os
+import sys
+import logging
+import aiohttp
+import requests
+import mimetypes
+import shutil
+import inspect
 from typing import Optional
 
 import aiohttp
@@ -57,6 +69,7 @@ from apps.webui.models.users import change_init_background_random_image_url
 from apps.webui.routers.users import change_background_random_image_url
 from apps.webui.utils import load_function_module_by_id
 from config import (
+    run_migrations,
     WEBUI_NAME,
     WEBUI_URL,
     WEBUI_AUTH,
@@ -158,17 +171,6 @@ v{VERSION} - building the best open-source AI user interface.
 https://github.com/open-webui/open-webui
 """
 )
-
-
-def run_migrations():
-    try:
-        from alembic.config import Config
-        from alembic import command
-
-        alembic_cfg = Config("alembic.ini")
-        command.upgrade(alembic_cfg, "head")
-    except Exception as e:
-        print(f"Error: {e}")
 
 
 @asynccontextmanager
@@ -1004,6 +1006,14 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Model not found",
         )
+
+    if app.state.config.ENABLE_MODEL_FILTER:
+        if user.role == "user" and model_id not in app.state.config.MODEL_FILTER_LIST:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Model not found",
+            )
+
     model = app.state.MODELS[model_id]
     if model.get("pipe"):
         return await generate_function_chat_completion(form_data, user=user)
@@ -1917,10 +1927,15 @@ async def get_app_config(request: Request):
                     "tts": {
                         "engine": audio_app.state.config.TTS_ENGINE,
                         "voice": audio_app.state.config.TTS_VOICE,
+                        "split_on": audio_app.state.config.TTS_SPLIT_ON,
                     },
                     "stt": {
                         "engine": audio_app.state.config.STT_ENGINE,
                     },
+                },
+                "file": {
+                    "max_size": rag_app.state.config.FILE_MAX_SIZE,
+                    "max_count": rag_app.state.config.FILE_MAX_COUNT,
                 },
                 "permissions": {**webui_app.state.config.USER_PERMISSIONS},
             }

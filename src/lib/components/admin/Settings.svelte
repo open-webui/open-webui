@@ -386,8 +386,11 @@
 			<Models />
 		{:else if selectedTab === 'documents'}
 			<Documents
-				saveHandler={() => {
+				on:save={async () => {
 					toast.success($i18n.t('Settings saved successfully!'));
+
+					await tick();
+					await config.set(await getBackendConfig());
 				}}
 			/>
 		{:else if selectedTab === 'web'}

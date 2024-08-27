@@ -148,7 +148,9 @@ async def cleanup_response(
         await session.close()
 
 
-async def post_streaming_url(url: str, payload: Union[str, bytes], stream: bool = True):
+async def post_streaming_url(
+    url: str, payload: Union[str, bytes], stream: bool = True, content_type=None
+):
     r = None
     try:
         session = aiohttp.ClientSession(
@@ -162,10 +164,13 @@ async def post_streaming_url(url: str, payload: Union[str, bytes], stream: bool 
         r.raise_for_status()
 
         if stream:
+            headers = dict(r.headers)
+            if content_type:
+                headers["Content-Type"] = content_type
             return StreamingResponse(
                 r.content,
                 status_code=r.status,
-                headers=dict(r.headers),
+                headers=headers,
                 background=BackgroundTask(
                     cleanup_response, response=r, session=session
                 ),
@@ -736,6 +741,14 @@ async def generate_chat_completion(
         del payload["metadata"]
 
     model_id = form_data.model
+
+    if app.state.config.ENABLE_MODEL_FILTER:
+        if user.role == "user" and model_id not in app.state.config.MODEL_FILTER_LIST:
+            raise HTTPException(
+                status_code=403,
+                detail="Model not found",
+            )
+
     model_info = Models.get_model_by_id(model_id)
 
     if model_info:
@@ -760,7 +773,9 @@ async def generate_chat_completion(
     log.info(f"url: {url}")
     log.debug(payload)
 
-    return await post_streaming_url(f"{url}/api/chat", json.dumps(payload))
+    return await post_streaming_url(
+        f"{url}/api/chat", json.dumps(payload), content_type="application/x-ndjson"
+    )
 
 
 # TODO: we should update this part once Ollama supports other types
@@ -796,6 +811,14 @@ async def generate_openai_chat_completion(
         del payload["metadata"]
 
     model_id = completion_form.model
+
+    if app.state.config.ENABLE_MODEL_FILTER:
+        if user.role == "user" and model_id not in app.state.config.MODEL_FILTER_LIST:
+            raise HTTPException(
+                status_code=403,
+                detail="Model not found",
+            )
+
     model_info = Models.get_model_by_id(model_id)
 
     if model_info:
