@@ -1043,6 +1043,13 @@
 				};
 			}
 			responseMessage.done = true;
+
+			if (responseMessage.statusHistory) {
+				responseMessage.statusHistory = responseMessage.statusHistory.filter(
+					(status) => status.action !== 'knowledge_search'
+				);
+			}
+
 			messages = messages;
 		}
 
@@ -1404,6 +1411,12 @@
 				errorMessage
 		};
 		responseMessage.done = true;
+
+		if (responseMessage.statusHistory) {
+			responseMessage.statusHistory = responseMessage.statusHistory.filter(
+				(status) => status.action !== 'knowledge_search'
+			);
+		}
 
 		messages = messages;
 	};
