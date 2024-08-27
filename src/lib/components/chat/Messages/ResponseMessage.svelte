@@ -346,7 +346,7 @@
 							{@const status = (
 								message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]
 							).at(-1)}
-							<div class="flex items-center gap-2 pt-0.5 pb-1">
+							<div class="status-description flex items-center gap-2 pt-0.5 pb-1">
 								{#if status?.done === false}
 									<div class="">
 										<Spinner className="size-4" />
@@ -356,14 +356,16 @@
 								{#if status?.action === 'web_search' && status?.urls}
 									<WebSearchResults {status}>
 										<div class="flex flex-col justify-center -space-y-0.5">
-											<div class="text-base line-clamp-1 text-wrap">
+											<div class="shimmer text-base line-clamp-1 text-wrap">
 												{status?.description}
 											</div>
 										</div>
 									</WebSearchResults>
 								{:else}
 									<div class="flex flex-col justify-center -space-y-0.5">
-										<div class=" text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap">
+										<div
+											class="shimmer text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
+										>
 											{status?.description}
 										</div>
 									</div>
@@ -1026,5 +1028,48 @@
 	.buttons {
 		-ms-overflow-style: none; /* IE and Edge */
 		scrollbar-width: none; /* Firefox */
+	}
+	@keyframes shimmer {
+		0% {
+			background-position: 200% 0;
+		}
+		100% {
+			background-position: -200% 0;
+		}
+	}
+
+	.shimmer {
+		background: linear-gradient(90deg, #9a9b9e 25%, #2a2929 50%, #9a9b9e 75%);
+		background-size: 200% 100%;
+		background-clip: text;
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		animation: shimmer 4s linear infinite;
+		color: #818286; /* Fallback color */
+	}
+
+	:global(.dark) .shimmer {
+		background: linear-gradient(90deg, #818286 25%, #eae5e5 50%, #818286 75%);
+		background-size: 200% 100%;
+		background-clip: text;
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		animation: shimmer 4s linear infinite;
+		color: #a1a3a7; /* Darker fallback color for dark mode */
+	}
+
+	@keyframes smoothFadeIn {
+		0% {
+			opacity: 0;
+			transform: translateY(-10px);
+		}
+		100% {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.status-description {
+		animation: smoothFadeIn 0.2s forwards;
 	}
 </style>
