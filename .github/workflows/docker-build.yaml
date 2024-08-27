@@ -56,25 +56,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get version number from package.json
-        id: get_version
-        run: |
-          VERSION=$(jq -r '.version' package.json)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Extract metadata for Docker images
+      - name: Extract metadata for Docker images (default latest tag)
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ steps.get_version.outputs.version }},enable=${{ github.ref == 'refs/heads/main' }}
             type=ref,event=branch
             type=ref,event=tag
             type=sha,prefix=git-
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+          flavor: |
+            latest=${{ github.ref == 'refs/heads/main' }}
 
       - name: Extract metadata for Docker cache
         id: cache-meta
@@ -88,7 +82,7 @@ jobs:
             prefix=cache-${{ matrix.platform }}-
             latest=false
 
-      - name: Build Docker image
+      - name: Build Docker image (latest)
         uses: docker/build-push-action@v5
         id: build
         with:
@@ -96,8 +90,7 @@ jobs:
           push: true
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          tags: ${{ steps.meta.outputs.tags }}
-          outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push=true
+          outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
           cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
           build-args: |
@@ -160,25 +153,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get version number from package.json
-        id: get_version
-        run: |
-          VERSION=$(jq -r '.version' package.json)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Extract metadata for Docker images
+      - name: Extract metadata for Docker images (cuda tag)
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
-            type=raw,value=latest-cuda,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ steps.get_version.outputs.version }}-cuda,enable=${{ github.ref == 'refs/heads/main' }}
-            type=ref,event=branch,suffix=-cuda
-            type=ref,event=tag,suffix=-cuda
-            type=sha,prefix=git-,suffix=-cuda
-            type=semver,pattern={{version}},suffix=-cuda
-            type=semver,pattern={{major}}.{{minor}},suffix=-cuda
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=git-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,enable=${{ github.ref == 'refs/heads/main' }},prefix=,suffix=,value=cuda
+          flavor: |
+            latest=${{ github.ref == 'refs/heads/main' }}
+            suffix=-cuda,onlatest=true
 
       - name: Extract metadata for Docker cache
         id: cache-meta
@@ -200,8 +189,7 @@ jobs:
           push: true
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          tags: ${{ steps.meta.outputs.tags }}
-          outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push=true
+          outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
           cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
           build-args: |
@@ -265,25 +253,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get version number from package.json
-        id: get_version
-        run: |
-          VERSION=$(jq -r '.version' package.json)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Extract metadata for Docker images
+      - name: Extract metadata for Docker images (ollama tag)
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
-            type=raw,value=latest-ollama,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ steps.get_version.outputs.version }}-ollama,enable=${{ github.ref == 'refs/heads/main' }}
-            type=ref,event=branch,suffix=-ollama
-            type=ref,event=tag,suffix=-ollama
-            type=sha,prefix=git-,suffix=-ollama
-            type=semver,pattern={{version}},suffix=-ollama
-            type=semver,pattern={{major}}.{{minor}},suffix=-ollama
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=git-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,enable=${{ github.ref == 'refs/heads/main' }},prefix=,suffix=,value=ollama
+          flavor: |
+            latest=${{ github.ref == 'refs/heads/main' }}
+            suffix=-ollama,onlatest=true
 
       - name: Extract metadata for Docker cache
         id: cache-meta
@@ -305,8 +289,7 @@ jobs:
           push: true
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          tags: ${{ steps.meta.outputs.tags }}
-          outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push=true
+          outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
           cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
           build-args: |
@@ -326,9 +309,10 @@ jobs:
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
+
   merge-main-images:
     runs-on: ubuntu-latest
-    needs: [ build-main-image ]
+    needs: [build-main-image]
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
       # although the repository owner has a lowercase username, this prevents some people from running actions after forking
@@ -380,10 +364,9 @@ jobs:
         run: |
           docker buildx imagetools inspect ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
 
-
   merge-cuda-images:
     runs-on: ubuntu-latest
-    needs: [ build-cuda-image ]
+    needs: [build-cuda-image]
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
       # although the repository owner has a lowercase username, this prevents some people from running actions after forking
@@ -439,7 +422,7 @@ jobs:
 
   merge-ollama-images:
     runs-on: ubuntu-latest
-    needs: [ build-ollama-image ]
+    needs: [build-ollama-image]
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
       # although the repository owner has a lowercase username, this prevents some people from running actions after forking
