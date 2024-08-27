@@ -76,6 +76,7 @@ from apps.rag.search.serply import search_serply
 from apps.rag.search.duckduckgo import search_duckduckgo
 from apps.rag.search.tavily import search_tavily
 from apps.rag.search.jina_search import search_jina
+from apps.rag.search.searchapi import search_searchapi
 
 from utils.misc import (
     calculate_sha256,
@@ -126,6 +127,7 @@ from config import (
     SERPER_API_KEY,
     SERPLY_API_KEY,
     TAVILY_API_KEY,
+    SEARCHAPI_API_KEY,
     RAG_WEB_SEARCH_RESULT_COUNT,
     RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
     RAG_EMBEDDING_OPENAI_BATCH_SIZE,
@@ -185,6 +187,7 @@ app.state.config.SERPSTACK_HTTPS = SERPSTACK_HTTPS
 app.state.config.SERPER_API_KEY = SERPER_API_KEY
 app.state.config.SERPLY_API_KEY = SERPLY_API_KEY
 app.state.config.TAVILY_API_KEY = TAVILY_API_KEY
+app.stage.config.SEARCHAPI_API_KEY = SEARCHAPI_API_KEY
 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
 app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
 
@@ -419,6 +422,7 @@ async def get_rag_config(user=Depends(get_admin_user)):
                 "serper_api_key": app.state.config.SERPER_API_KEY,
                 "serply_api_key": app.state.config.SERPLY_API_KEY,
                 "tavily_api_key": app.state.config.TAVILY_API_KEY,
+                "searchapi_api_key": app.state.config.SEARCHAPI_API_KEY,
                 "result_count": app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             },
@@ -453,6 +457,7 @@ class WebSearchConfig(BaseModel):
     serper_api_key: Optional[str] = None
     serply_api_key: Optional[str] = None
     tavily_api_key: Optional[str] = None
+    searchapi_api_key: Optional[str] = None
     result_count: Optional[int] = None
     concurrent_requests: Optional[int] = None
 
@@ -511,6 +516,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
         app.state.config.SERPER_API_KEY = form_data.web.search.serper_api_key
         app.state.config.SERPLY_API_KEY = form_data.web.search.serply_api_key
         app.state.config.TAVILY_API_KEY = form_data.web.search.tavily_api_key
+        app.state.config.SEARCHAPI_API_KEY = form_data.web.search.searchapi_api_key
         app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = form_data.web.search.result_count
         app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = (
             form_data.web.search.concurrent_requests
@@ -794,6 +800,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
     - SERPER_API_KEY
     - SERPLY_API_KEY
     - TAVILY_API_KEY
+    - SEARCHAPI_API_KEY
     Args:
         query (str): The query to search for
     """
@@ -881,6 +888,16 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
             )
         else:
             raise Exception("No TAVILY_API_KEY found in environment variables")
+    elif engine == "searchapi":
+        if app.state.config.SEARCHAPI_API_KEY:
+            return search_searchapi(
+                app.state.config.SEARCHAPI_API_KEY,
+                query,
+                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception("No SEARCHAPI_API_KEY found in environment variables")
     elif engine == "jina":
         return search_jina(query, app.state.config.RAG_WEB_SEARCH_RESULT_COUNT)
     else:
