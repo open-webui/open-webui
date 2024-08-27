@@ -318,7 +318,7 @@ __builtins__.input = input`);
 		<div
 			class="flex justify-between bg-[#202123] text-white text-xs px-4 pt-1 pb-0.5 rounded-t-lg overflow-x-auto"
 		>
-			<div class="p-1">{lang}</div>
+			<button class="p-1" on:click={toggleAllExpand}>{lang}</button>
 
 			<div class="flex items-center">
 				{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
@@ -350,7 +350,7 @@ __builtins__.input = input`);
 					class="language-{lang} rounded-t-none whitespace-pre"
 					>{#if highlightedCode}{@html highlightedCode}{:else}{code}{/if}</code
 				>
-		</pre>
+			</pre>
 
 			<div
 				id="plt-canvas-{id}"
