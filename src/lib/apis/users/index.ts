@@ -116,7 +116,14 @@ export const getUsers = async (token: string) => {
 	return res ? res : [];
 };
 
-export const getFirstUser = async ({ users = [] }) => users.length ? users[0] : null;
+export const getFirstUser = ({ users = [] }) => {
+	if (!users.length) return null;
+
+	return users.reduce((minUser, currentUser) =>
+		currentUser.created_at < minUser.created_at ? currentUser : minUser,
+		users[0]
+	);
+};
 
 export const getUserSettings = async (token: string) => {
 	let error = null;
