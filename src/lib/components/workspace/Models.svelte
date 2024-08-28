@@ -339,7 +339,7 @@
 				>
 					<div class="  font-semibold line-clamp-1">{model.name}</div>
 					<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
-						{!!model?.info?.meta?.description ? model?.info?.meta?.description : model.id}
+						{model?.info?.meta?.description ? model?.info?.meta?.description : model.id}
 					</div>
 				</div>
 			</a>

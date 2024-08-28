@@ -74,15 +74,15 @@ const readPngChunks = (data) => {
 
 	if (!isValidPng) throw new Error('Invalid PNG file');
 
-	let chunks = [];
+	const chunks = [];
 	let offset = 8; // Skip PNG signature
 
 	while (offset < data.length) {
-		let length =
+		const length =
 			(data[offset] << 24) | (data[offset + 1] << 16) | (data[offset + 2] << 8) | data[offset + 3];
-		let type = String.fromCharCode.apply(null, data.slice(offset + 4, offset + 8));
-		let chunkData = data.slice(offset + 8, offset + 8 + length);
-		let crc =
+		const type = String.fromCharCode.apply(null, data.slice(offset + 4, offset + 8));
+		const chunkData = data.slice(offset + 8, offset + 8 + length);
+		const crc =
 			(data[offset + 8 + length] << 24) |
 			(data[offset + 8 + length + 1] << 16) |
 			(data[offset + 8 + length + 2] << 8) |
