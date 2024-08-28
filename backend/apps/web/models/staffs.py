@@ -30,6 +30,7 @@ class Staff(Base):
     new_department = Column(name='NewDepartment', type_=String)
     line_manager_name = Column(name='LineManagername', type_=String)
     line_manager_email = Column(name='LineManagerEmail', type_=String)
+    contract_type = Column(name='ContractType', type_=String)
 
 class StaffsTable:
     def __init__(self, db):
