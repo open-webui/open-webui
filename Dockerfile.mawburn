@@ -44,14 +44,11 @@ RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry
 RUN chown -R $UID:$GID /app $HOME
 
 # Install basic dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends gnupg && \
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 04EE7237B7D453EC && \
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 648ACFD622F3D138 && \
-    echo "deb http://deb.debian.org/debian bookworm main" > /etc/apt/sources.list && \
-    echo "deb http://deb.debian.org/debian bookworm-updates main" >> /etc/apt/sources.list && \
-    echo "deb http://deb.debian.org/debian-security bookworm-security main" >> /etc/apt/sources.list && \
-    apt-get update && \
+RUN echo "deb [trusted=yes] http://deb.debian.org/debian bookworm main" > /etc/apt/sources.list.d/custom.list && \
+    echo "deb [trusted=yes] http://deb.debian.org/debian bookworm-updates main" >> /etc/apt/sources.list.d/custom.list && \
+    echo "deb [trusted=yes] http://deb.debian.org/debian-security bookworm-security main" >> /etc/apt/sources.list.d/custom.list && \
+    apt-get update -o Acquire::AllowInsecureRepositories=true -o Acquire::AllowDowngradeToInsecureRepositories=true && \
+    apt-get install -y --no-install-recommends gnupg debian-archive-keyring && \
     apt-get install -y --no-install-recommends pandoc gcc netcat-openbsd curl jq && \
     apt-get install -y --no-install-recommends gcc python3-dev && \
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
