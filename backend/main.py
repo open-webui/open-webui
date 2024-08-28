@@ -2009,7 +2009,7 @@ async def get_app_latest_release_version():
     try:
         async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.get(
-                    "https://api.github.com/repos/open-webui/open-webui/releases/latest"
+                    "https://api.github.com/yubb-ai/open-ui/releases/latest"
             ) as response:
                 response.raise_for_status()
                 data = await response.json()
