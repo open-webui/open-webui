@@ -6,8 +6,7 @@ ARG GID=0
 FROM --platform=$BUILDPLATFORM node:21-alpine3.19 AS build
 
 # Install Yarn
-RUN apk add --no-cache yarn
-RUN npm install -g npm@10.8.2
+RUN apk update && apk add --no-cache yarn
 
 WORKDIR /app
 
