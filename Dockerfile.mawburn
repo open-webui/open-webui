@@ -7,13 +7,14 @@ FROM --platform=$BUILDPLATFORM node:21-alpine3.19 AS build
 
 # Install Yarn
 RUN apk add --no-cache yarn
+RUN npm install -g npm@10.8.2
 
 WORKDIR /app
 
 COPY package.json yarn.lock ./
 
 # Install dependencies using Yarn
-RUN yarn install
+RUN yarn install --production=false
 
 COPY . .
 ENV NODE_OPTIONS="--max_old_space_size=2048"
