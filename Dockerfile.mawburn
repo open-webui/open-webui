@@ -67,11 +67,11 @@ RUN apt-get update && \
 
 # Install python dependencies
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
-RUN pip3 install --no-cache-dir -r requirements.txt && \
+RUN pip3 install -r requirements.txt && \
     if [ "$USE_CUDA" = "true" ]; then \
-        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir; \
+        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER; \
     else \
-        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir; \
+        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; \
     fi
 
 # Copy backend files
