@@ -95,7 +95,7 @@ if WEBUI_NAME != "Open WebUI":
 
 WEBUI_URL = os.environ.get("WEBUI_URL", "http://localhost:3000")
 
-WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
+WEBUI_FAVICON_URL = "https://openwebui.com/favicon1.png"
 
 
 ####################################
@@ -488,21 +488,21 @@ load_oauth_providers()
 
 STATIC_DIR = Path(os.getenv("STATIC_DIR", BACKEND_DIR / "static")).resolve()
 
-frontend_favicon = FRONTEND_BUILD_DIR / "static" / "favicon.png"
+frontend_favicon = FRONTEND_BUILD_DIR / "static" / "favicon1.png"
 
 if frontend_favicon.exists():
     try:
-        shutil.copyfile(frontend_favicon, STATIC_DIR / "favicon.png")
+        shutil.copyfile(frontend_favicon, STATIC_DIR / "favicon1.png")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
 else:
     logging.warning(f"Frontend favicon not found at {frontend_favicon}")
 
-frontend_splash = FRONTEND_BUILD_DIR / "static" / "splash.png"
+frontend_splash = FRONTEND_BUILD_DIR / "static" / "splash1.png"
 
 if frontend_splash.exists():
     try:
-        shutil.copyfile(frontend_splash, STATIC_DIR / "splash.png")
+        shutil.copyfile(frontend_splash, STATIC_DIR / "splash1.png")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
 else:
@@ -529,7 +529,7 @@ if CUSTOM_NAME:
 
                 r = requests.get(url, stream=True)
                 if r.status_code == 200:
-                    with open(f"{STATIC_DIR}/favicon.png", "wb") as f:
+                    with open(f"{STATIC_DIR}/favicon1.png", "wb") as f:
                         r.raw.decode_content = True
                         shutil.copyfileobj(r.raw, f)
 
@@ -542,7 +542,7 @@ if CUSTOM_NAME:
 
                 r = requests.get(url, stream=True)
                 if r.status_code == 200:
-                    with open(f"{STATIC_DIR}/splash.png", "wb") as f:
+                    with open(f"{STATIC_DIR}/splash1.png", "wb") as f:
                         r.raw.decode_content = True
                         shutil.copyfileobj(r.raw, f)
 

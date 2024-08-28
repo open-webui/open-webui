@@ -662,11 +662,11 @@
 										: rmsLevel * 100 > 1
 											? 'size-14'
 											: 'size-12'}  transition-all rounded-full {(model?.info?.meta
-									?.profile_image_url ?? '/static/favicon.png') !== '/static/favicon.png'
+									?.profile_image_url ?? '/static/favicon1.png') !== '/static/favicon1.png'
 									? ' bg-cover bg-center bg-no-repeat'
 									: 'bg-black dark:bg-white'}  bg-black dark:bg-white"
-								style={(model?.info?.meta?.profile_image_url ?? '/static/favicon.png') !==
-								'/static/favicon.png'
+								style={(model?.info?.meta?.profile_image_url ?? '/static/favicon1.png') !==
+								'/static/favicon1.png'
 									? `background-image: url('${model?.info?.meta?.profile_image_url}');`
 									: ''}
 							/>
@@ -744,11 +744,11 @@
 											: rmsLevel * 100 > 1
 												? 'size-[11.5rem]'
 												: 'size-44'}  transition-all rounded-full {(model?.info?.meta
-										?.profile_image_url ?? '/static/favicon.png') !== '/static/favicon.png'
+										?.profile_image_url ?? '/static/favicon1.png') !== '/static/favicon1.png'
 										? ' bg-cover bg-center bg-no-repeat'
 										: 'bg-black dark:bg-white'} "
-									style={(model?.info?.meta?.profile_image_url ?? '/static/favicon.png') !==
-									'/static/favicon.png'
+									style={(model?.info?.meta?.profile_image_url ?? '/static/favicon1.png') !==
+									'/static/favicon1.png'
 										? `background-image: url('${model?.info?.meta?.profile_image_url}');`
 										: ''}
 								/>

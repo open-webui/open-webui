@@ -268,7 +268,7 @@
 	>
 		<ProfileImage
 			src={model?.info?.meta?.profile_image_url ??
-				($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
+				($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon1.png`)}
 		/>
 
 		<div class="w-full overflow-hidden pl-1">

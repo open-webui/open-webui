@@ -27,7 +27,7 @@ class ModelParams(BaseModel):
 
 # ModelMeta is a model for the data stored in the meta field of the Model table
 class ModelMeta(BaseModel):
-    profile_image_url: Optional[str] = "/static/favicon.png"
+    profile_image_url: Optional[str] = "/static/favicon1.png"
 
     description: Optional[str] = None
     """
