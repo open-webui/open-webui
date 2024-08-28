@@ -87,7 +87,7 @@ export const sanitizeResponseContent = (content: string) => {
 };
 
 export const processResponseContent = (content: string) => {
-	content = convertLatexToSingleLine(escapeBrackets(content));
+	content = escapeBrackets(content);
 	return content.trim();
 };
 
