@@ -44,13 +44,12 @@ RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry
 RUN chown -R $UID:$GID /app $HOME
 
 # Install basic dependencies
-RUN apt-get update && \
+RUN apt-get update --allow-releaseinfo-change && \
     apt-get install -y --no-install-recommends gnupg debian-archive-keyring && \
     apt-get install -y --no-install-recommends pandoc gcc netcat-openbsd curl jq && \
     apt-get install -y --no-install-recommends gcc python3-dev && \
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
     rm -rf /var/lib/apt/lists/*
-
 
 # install python dependencies
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
