@@ -45,6 +45,9 @@ RUN chown -R $UID:$GID /app $HOME
 
 # Install basic dependencies
 RUN apt-get update && \
+    apt-get install -y --no-install-recommends wget gnupg2 && \
+    wget -qO - https://archive.ubuntu.com/ubuntu/project/ubuntu-archive-keyring.gpg | apt-key add - && \
+    apt-get update && \
     apt-get install -y --no-install-recommends pandoc gcc netcat-openbsd curl jq ffmpeg libsm6 libxext6 && \
     rm -rf /var/lib/apt/lists/*
 
