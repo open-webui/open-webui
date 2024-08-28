@@ -19,7 +19,7 @@ COPY . .
 ENV NODE_OPTIONS="--max_old_space_size=2048"
 
 # Build the project using Yarn
-RUN yarn build --verbose
+RUN yarn build
 
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base
