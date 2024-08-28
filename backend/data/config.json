@@ -53,7 +53,7 @@
 				"content": "Check the following sentence for grammar and clarity: \"[sentence]\". Rewrite it for better readability while maintaining its original meaning."
 			}
 		],
-		"default_models": "gpt-4o-mini-2024-07-18",
+		"default_models": "virtual-personal-assistant",
 		"user_permissions": {
 			"chat": {
 				"deletion": true
@@ -112,15 +112,67 @@
 		}
 	},
 	"image_generation": {
-		"engine": "openai",
+		"engine": "comfyui",
 		"enable": true,
 		"openai": {
 			"api_base_url": "https://api.openai.com/v1",
 			"api_key": ""
 		},
-		"model": "dall-e-3",
-		"size": "512x512",
-		"steps": 5
+		"model": "flux1-schnell.safetensors",
+		"size": "1024x1024",
+		"steps": 4,
+		"automatic1111": {
+			"base_url": "http://localhost:7860",
+			"api_auth": ""
+		},
+		"comfyui": {
+			"base_url": "http://localhost:8188",
+			"workflow": "{\n  \"5\": {\n    \"inputs\": {\n      \"width\": 1024,\n      \"height\": 1024,\n      \"batch_size\": 1\n    },\n    \"class_type\": \"EmptyLatentImage\",\n    \"_meta\": {\n      \"title\": \"Empty Latent Image\"\n    }\n  },\n  \"6\": {\n    \"inputs\": {\n      \"text\": \"A humanoid bear wearing beautiful business suit holding a sign with a stylish text 'MyImaginationAI'. Color pallete: black, white, purple, teal and orange.\",\n      \"clip\": [\n        \"11\",\n        0\n      ]\n    },\n    \"class_type\": \"CLIPTextEncode\",\n    \"_meta\": {\n      \"title\": \"CLIP Text Encode (Prompt)\"\n    }\n  },\n  \"8\": {\n    \"inputs\": {\n      \"samples\": [\n        \"13\",\n        0\n      ],\n      \"vae\": [\n        \"10\",\n        0\n      ]\n    },\n    \"class_type\": \"VAEDecode\",\n    \"_meta\": {\n      \"title\": \"VAE Decode\"\n    }\n  },\n  \"9\": {\n    \"inputs\": {\n      \"filename_prefix\": \"ComfyUI\",\n      \"images\": [\n        \"8\",\n        0\n      ]\n    },\n    \"class_type\": \"SaveImage\",\n    \"_meta\": {\n      \"title\": \"Save Image\"\n    }\n  },\n  \"10\": {\n    \"inputs\": {\n      \"vae_name\": \"ae.safetensors\"\n    },\n    \"class_type\": \"VAELoader\",\n    \"_meta\": {\n      \"title\": \"Load VAE\"\n    }\n  },\n  \"11\": {\n    \"inputs\": {\n      \"clip_name1\": \"t5xxl_fp8_e4m3fn.safetensors\",\n      \"clip_name2\": \"clip_l.safetensors\",\n      \"type\": \"flux\"\n    },\n    \"class_type\": \"DualCLIPLoader\",\n    \"_meta\": {\n      \"title\": \"DualCLIPLoader\"\n    }\n  },\n  \"12\": {\n    \"inputs\": {\n      \"unet_name\": \"flux1-schnell.safetensors\",\n      \"weight_dtype\": \"default\"\n    },\n    \"class_type\": \"UNETLoader\",\n    \"_meta\": {\n      \"title\": \"Load Diffusion Model\"\n    }\n  },\n  \"13\": {\n    \"inputs\": {\n      \"noise\": [\n        \"25\",\n        0\n      ],\n      \"guider\": [\n        \"22\",\n        0\n      ],\n      \"sampler\": [\n        \"16\",\n        0\n      ],\n      \"sigmas\": [\n        \"17\",\n        0\n      ],\n      \"latent_image\": [\n        \"5\",\n        0\n      ]\n    },\n    \"class_type\": \"SamplerCustomAdvanced\",\n    \"_meta\": {\n      \"title\": \"SamplerCustomAdvanced\"\n    }\n  },\n  \"16\": {\n    \"inputs\": {\n      \"sampler_name\": \"euler\"\n    },\n    \"class_type\": \"KSamplerSelect\",\n    \"_meta\": {\n      \"title\": \"KSamplerSelect\"\n    }\n  },\n  \"17\": {\n    \"inputs\": {\n      \"scheduler\": \"simple\",\n      \"steps\": 20,\n      \"denoise\": 1,\n      \"model\": [\n        \"12\",\n        0\n      ]\n    },\n    \"class_type\": \"BasicScheduler\",\n    \"_meta\": {\n      \"title\": \"BasicScheduler\"\n    }\n  },\n  \"22\": {\n    \"inputs\": {\n      \"model\": [\n        \"12\",\n        0\n      ],\n      \"conditioning\": [\n        \"6\",\n        0\n      ]\n    },\n    \"class_type\": \"BasicGuider\",\n    \"_meta\": {\n      \"title\": \"BasicGuider\"\n    }\n  },\n  \"25\": {\n    \"inputs\": {\n      \"noise_seed\": 1123827438685089\n    },\n    \"class_type\": \"RandomNoise\",\n    \"_meta\": {\n      \"title\": \"RandomNoise\"\n    }\n  }\n}\n",
+			"nodes": [
+				{
+					"type": "prompt",
+					"key": "text",
+					"node_ids": [
+						"6"
+					]
+				},
+				{
+					"type": "model",
+					"key": "unet_name",
+					"node_ids": [
+						"12"
+					]
+				},
+				{
+					"type": "width",
+					"key": "width",
+					"node_ids": [
+						"5"
+					]
+				},
+				{
+					"type": "height",
+					"key": "height",
+					"node_ids": [
+						"5"
+					]
+				},
+				{
+					"type": "steps",
+					"key": "steps",
+					"node_ids": [
+						"17"
+					]
+				},
+				{
+					"type": "seed",
+					"key": "seed",
+					"node_ids": [
+						"25"
+					]
+				}
+			]
+		}
 	},
 	"ollama": {
 		"base_urls": [
