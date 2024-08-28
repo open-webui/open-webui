@@ -45,11 +45,11 @@
 <div class="flex flex-col h-full justify-between space-y-3 text-sm mb-6">
 	<div class=" space-y-3">
 		<hr class=" dark:border-gray-850" />
-		<div class="text-center text-lg mt-1">
+		<div class="w-full items-center text-center">
 			<b> 本站使用协议 </b> <br />
 		</div>
 
-		<div class="act-content">
+		<div class="text-xs w-full justify-between items-cent">
 			<li>
 				根据<a
 					href="https://www.gov.cn/zhengce/zhengceku/202307/content_6891752.htm"
@@ -91,7 +91,18 @@
 				/>
 			</a>
 		</div> -->
-
+		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500 text-right">
+			{#if !$WEBUI_NAME.includes('Open WebUI')}
+				<span class=" text-gray-500 dark:text-gray-300 font-medium">{$WEBUI_NAME}</span> -
+			{/if}
+			{$i18n.t('Amend by')}
+			<a
+				class=" text-gray-500 dark:text-gray-300 font-medium"
+				href="https://github.com/yubb-ai/open-ui"
+				target="_blank">Yanyutin753</a
+			>
+		</div>
+		
 		<hr class=" dark:border-gray-850" />
 
 		<div>
@@ -153,17 +164,5 @@
 				</div>
 			</div>
 		{/if}
-
-		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500 text-right">
-			{#if !$WEBUI_NAME.includes('Open WebUI')}
-				<span class=" text-gray-500 dark:text-gray-300 font-medium">{$WEBUI_NAME}</span> -
-			{/if}
-			{$i18n.t('Amend by')}
-			<a
-				class=" text-gray-500 dark:text-gray-300 font-medium"
-				href="https://github.com/yubb-ai/open-ui"
-				target="_blank">Yanyutin753</a
-			>
-		</div>
 	</div>
 </div>
