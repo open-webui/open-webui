@@ -44,12 +44,12 @@ RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry
 RUN chown -R $UID:$GID /app $HOME
 
 # Install basic dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends wget gnupg2 && \
-    wget -qO - https://archive.ubuntu.com/ubuntu/project/ubuntu-archive-keyring.gpg | apt-key add - && \
+RUN sed -i 's|http://archive.ubuntu.com/ubuntu|http://mirror.math.princeton.edu/pub/ubuntu|g' /etc/apt/sources.list && \
     apt-get update && \
+    apt-get install -y --no-install-recommends wget gnupg2 && \
     apt-get install -y --no-install-recommends pandoc gcc netcat-openbsd curl jq ffmpeg libsm6 libxext6 && \
     rm -rf /var/lib/apt/lists/*
+
 
 # install python dependencies
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
