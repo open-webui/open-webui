@@ -83,7 +83,7 @@ def json_schema_to_pydantic_type(json_schema: dict[str, Any]) -> Any:
         return float
     elif type_ == "boolean" or type_ == "bool":
         return bool
-    elif type_ == "array":
+    elif type_ == "array" or type_ == "list":
         items_schema = json_schema.get("items")
         if items_schema:
             item_type = json_schema_to_pydantic_type(items_schema)
