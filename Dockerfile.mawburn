@@ -1,69 +1,84 @@
-# syntax=docker/dockerfile:1
+ARG USE_CUDA=false
+ARG USE_OLLAMA=false
+ARG USE_CUDA_VER=cu121
+ARG USE_EMBEDDING_MODEL=text-embedding-3-small
+ARG USE_RERANKING_MODEL=""
 ARG UID=0
 ARG GID=0
 
 ######## WebUI frontend ########
-FROM --platform=$BUILDPLATFORM node:21-alpine3.19 AS build
-
-# Install Yarn
-RUN apk update && apk add --no-cache yarn
-
+# Use a base node image to copy pre-built frontend files
+FROM node:21-alpine3.19 as frontend
 WORKDIR /app
-
-COPY package.json yarn.lock ./
-
-# Install dependencies using Yarn
-RUN yarn install --production=false
-
-COPY . .
-ENV NODE_OPTIONS="--max_old_space_size=2048"
-RUN yarn build
+COPY ./build /app/build
+COPY package.json package-lock.json ./
 
 ######## WebUI backend ########
-FROM python:3.11-slim-bookworm AS base
+FROM python:3.11-slim-bookworm as backend
 
+# Use args
+ARG USE_CUDA
+ARG USE_OLLAMA
+ARG USE_CUDA_VER
+ARG USE_EMBEDDING_MODEL
+ARG USE_RERANKING_MODEL
 ARG UID
 ARG GID
 
+# Set environment variables
 ENV ENV=prod \
     PORT=8080 \
+    USE_OLLAMA_DOCKER=${USE_OLLAMA} \
+    USE_CUDA_DOCKER=${USE_CUDA} \
+    USE_CUDA_DOCKER_VER=${USE_CUDA_VER} \
+    USE_EMBEDDING_MODEL_DOCKER=${USE_EMBEDDING_MODEL} \
+    USE_RERANKING_MODEL_DOCKER=${USE_RERANKING_MODEL} \
+    OLLAMA_BASE_URL="/ollama" \
+    OPENAI_API_BASE_URL="" \
+    OPENAI_API_KEY="" \
+    WEBUI_SECRET_KEY="" \
     SCARF_NO_ANALYTICS=true \
     DO_NOT_TRACK=true \
-    ANONYMIZED_TELEMETRY=false
+    ANONYMIZED_TELEMETRY=false \
+    WHISPER_MODEL="base" \
+    WHISPER_MODEL_DIR="/app/backend/data/cache/whisper/models" \
+    RAG_EMBEDDING_MODEL="$USE_EMBEDDING_MODEL_DOCKER" \
+    RAG_RERANKING_MODEL="$USE_RERANKING_MODEL_DOCKER" \
+    SENTENCE_TRANSFORMERS_HOME="/app/backend/data/cache/embedding/models" \
+    HF_HOME="/app/backend/data/cache/embedding/models"
 
 WORKDIR /app/backend
 
-ENV HOME /root
 # Create user and group if not root
 RUN if [ $UID -ne 0 ]; then \
-    if [ $GID -ne 0 ]; then \
-    addgroup --gid $GID app; \
-    fi; \
-    adduser --uid $UID --gid $GID --home $HOME --disabled-password --no-create-home app; \
+        if [ $GID -ne 0 ]; then \
+            addgroup --gid $GID app; \
+        fi; \
+        adduser --uid $UID --gid $GID --home /root --disabled-password --no-create-home app; \
     fi
 
-RUN mkdir -p $HOME/.cache/chroma
-RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry_user_id
-
-# Make sure the user has access to the app and root directory
-RUN chown -R $UID:$GID /app $HOME
-
-# Install basic dependencies
+# Install necessary packages
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends pandoc gcc netcat-openbsd curl jq ffmpeg libsm6 libxext6 && \
+    apt-get install -y --no-install-recommends pandoc netcat-openbsd curl jq gcc python3-dev ffmpeg libsm6 libxext6 && \
+    if [ "$USE_OLLAMA" = "true" ]; then \
+        curl -fsSL https://ollama.com/install.sh | sh; \
+    fi && \
     rm -rf /var/lib/apt/lists/*
 
-# install python dependencies
+# Install python dependencies
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt && \
+    if [ "$USE_CUDA" = "true" ]; then \
+        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir; \
+    else \
+        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir; \
+    fi
 
-# copy built frontend files
-COPY --chown=$UID:$GID --from=build /app/build /app/build
-COPY --chown=$UID:$GID --from=build /app/CHANGELOG.md /app/CHANGELOG.md
-COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
-
-# copy backend files
+# Copy backend files
 COPY --chown=$UID:$GID ./backend .
+
+# Copy built frontend files from the frontend stage
+COPY --from=frontend --chown=$UID:$GID /app/build /app/build
 
 EXPOSE 8080
 
@@ -71,4 +86,4 @@ HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq 
 
 USER $UID:$GID
 
-CMD [ "bash", "start.sh"]
+CMD ["bash", "start.sh"]
