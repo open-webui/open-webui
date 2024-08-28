@@ -136,7 +136,7 @@
 	"Context Length": "Mida del context",
 	"Continue Response": "Continuar la resposta",
 	"Continue with {{provider}}": "Continuar amb {{provider}}",
-	"Control how message text is split for TTS requests. 'Punctuation' splits into sentences, 'paragraphs' splits into paragraphs, and 'none' keeps the message as a single string.": "Controleu com es divideix el text del missatge per a les sol·licituds TTS. 'Puntuació' divideix en frases, 'paràgrafs' divideix en paràgrafs i 'cap' manté el missatge com una cadena única.",
+	"Control how message text is split for TTS requests. 'Punctuation' splits into sentences, 'paragraphs' splits into paragraphs, and 'none' keeps the message as a single string.": "Controlar com es divideix el text del missatge per a les sol·licituds TTS. 'Puntuació' divideix en frases, 'paràgrafs' divideix en paràgrafs i 'cap' manté el missatge com una cadena única.",
 	"Controls": "Controls",
 	"Copied": "Copiat",
 	"Copied shared chat URL to clipboard!": "S'ha copiat l'URL compartida al porta-retalls!",
