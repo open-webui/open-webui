@@ -170,7 +170,7 @@
 						</div>
 					</div>
 					<div class="w-full">
-						<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Replace bad words Words')}</div>
+						<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Replace bad words')}</div>
 						<div class="flex w-full">
 							<div class="flex-1">
 								<input

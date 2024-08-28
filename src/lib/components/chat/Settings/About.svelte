@@ -45,11 +45,11 @@
 <div class="flex flex-col h-full justify-between space-y-3 text-sm mb-6">
 	<div class=" space-y-3">
 		<hr class=" dark:border-gray-850" />
-		<div class="w-full items-center text-center">
+		<div class="w-full items-center text-center text-lg">
 			<b> 本站使用协议 </b> <br />
 		</div>
 
-		<div class="text-xs w-full justify-between items-cent">
+		<div class="text-xm text-gray-700 dark:text-gray-200 w-full justify-between items-cent">
 			<li>
 				根据<a
 					href="https://www.gov.cn/zhengce/zhengceku/202307/content_6891752.htm"
@@ -105,13 +105,13 @@
 
 		<hr class=" dark:border-gray-850" />
 
-		<div>
-			<!-- <div class=" mb-2.5 text-sm font-medium flex space-x-2 items-center">
+		<!-- <div>
+			<div class=" mb-2.5 text-sm font-medium flex space-x-2 items-center">
 				<div>
 					{$WEBUI_NAME}
 					{$i18n.t('Version')}
 				</div>
-			</div> -->
+			</div>
 			<div class="flex w-full justify-between items-center">
 				<div class="flex flex-col text-xs text-gray-700 dark:text-gray-200">
 					<div class="flex gap-1">
@@ -163,6 +163,6 @@
 					</div>
 				</div>
 			</div>
-		{/if}
+		{/if} -->
 	</div>
 </div>
