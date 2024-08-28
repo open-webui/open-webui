@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt -U --cache-dir ~/.pip-cache
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR" || exit
