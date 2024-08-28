@@ -26,6 +26,7 @@
 		"@sveltejs/vite-plugin-svelte": "^3.1.1",
 		"@tailwindcss/typography": "^0.5.13",
 		"@types/bun": "latest",
+		"@types/katex": "^0.16.7",
 		"@typescript-eslint/eslint-plugin": "^6.17.0",
 		"@typescript-eslint/parser": "^6.17.0",
 		"autoprefixer": "^10.4.16",
