@@ -3,7 +3,7 @@ ARG UID=0
 ARG GID=0
 
 ######## WebUI frontend ########
-FROM --platform=$BUILDPLATFORM node:21-alpine3.19 as build
+FROM --platform=$BUILDPLATFORM node:21-alpine3.19 AS build
 
 WORKDIR /app
 
@@ -15,7 +15,7 @@ ENV NODE_OPTIONS="--max_old_space_size=6000"
 RUN npm run build --verbose
 
 ######## WebUI backend ########
-FROM python:3.11-slim-bookworm as base
+FROM python:3.11-slim-bookworm AS base
 
 ARG UID
 ARG GID
