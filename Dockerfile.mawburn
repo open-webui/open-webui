@@ -15,7 +15,7 @@ ENV NODE_OPTIONS="--max_old_space_size=6000"
 RUN npm run build --verbose
 
 ######## WebUI backend ########
-FROM python:3.11-slim-bookworm AS base
+FROM ubuntu:22.04 AS base
 
 ARG UID
 ARG GID
@@ -44,14 +44,8 @@ RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry
 RUN chown -R $UID:$GID /app $HOME
 
 # Install basic dependencies
-RUN echo "deb [trusted=yes] http://deb.debian.org/debian bookworm main" > /etc/apt/sources.list.d/custom.list && \
-    echo "deb [trusted=yes] http://deb.debian.org/debian bookworm-updates main" >> /etc/apt/sources.list.d/custom.list && \
-    echo "deb [trusted=yes] http://deb.debian.org/debian-security bookworm-security main" >> /etc/apt/sources.list.d/custom.list && \
-    apt-get update -o Acquire::AllowInsecureRepositories=true -o Acquire::AllowDowngradeToInsecureRepositories=true && \
-    apt-get install -y --no-install-recommends gnupg debian-archive-keyring && \
-    apt-get install -y --no-install-recommends pandoc gcc netcat-openbsd curl jq && \
-    apt-get install -y --no-install-recommends gcc python3-dev && \
-    apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends pandoc gcc netcat-openbsd curl jq ffmpeg libsm6 libxext6 && \
     rm -rf /var/lib/apt/lists/*
 
 # install python dependencies
