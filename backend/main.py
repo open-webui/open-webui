@@ -204,7 +204,9 @@ async def get_function_call_response(prompt, tool_id, template, task_model_id, u
                         result["parameters"] = {}
                         if user.extra_sso:
                             extra_sso_dict = json.loads(user.extra_sso)
-                            result["parameters"]["user_type"] = extra_sso_dict.get("emp_type", "").lower() if extra_sso_dict.get("emp_type") else None
+                            user_type = extra_sso_dict.get("contract_type").lower() if extra_sso_dict.get("contract_type") else 'ad_user'
+                            print(f"FINAL user_type: {user_type}")
+                            result["parameters"]["user_type"] = user_type
                         else: 
                             result["parameters"]["user_type"] = None
                         log.info(f'final resuls: {result}')
@@ -391,7 +393,6 @@ async def on_startup():
         asyncio.create_task(start_litellm_background())
     # Initialize toolkits
     await initialize_toolkits()
-
 
 
 app.mount("/api/v1", webui_app)
