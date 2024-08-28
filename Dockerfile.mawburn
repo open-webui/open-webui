@@ -5,14 +5,21 @@ ARG GID=0
 ######## WebUI frontend ########
 FROM --platform=$BUILDPLATFORM node:21-alpine3.19 AS build
 
+# Install Yarn
+RUN apk add --no-cache yarn
+
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json yarn.lock ./
+
+# Install dependencies using Yarn
+RUN yarn install
 
 COPY . .
-ENV NODE_OPTIONS="--max_old_space_size=6000"
-RUN npm run build --verbose
+ENV NODE_OPTIONS="--max_old_space_size=2048"
+
+# Build the project using Yarn
+RUN yarn build --verbose
 
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base
