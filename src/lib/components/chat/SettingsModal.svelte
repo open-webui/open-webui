@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { models, settings, user } from '$lib/stores';
+	import { config, models, settings, user } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
 	import { getModels as _getModels } from '$lib/apis';
 	import { goto } from '$app/navigation';
@@ -15,38 +15,26 @@
 	import Chats from './Settings/Chats.svelte';
 	import User from '../icons/User.svelte';
 	import Personalization from './Settings/Personalization.svelte';
+	import { getBackendConfig } from '$lib/apis';
 
 	const i18n = getContext('i18n');
 
 	export let show = false;
 
 	const saveSettings = async (updated) => {
-		try {
-			const newSettings = { ...$settings, ...updated };
-			console.log(newSettings);
+		console.log(updated);
 
-			const res_setting = await updateUserSettings(localStorage.token, { ui: newSettings });
+		const newSettings = { ...$settings, ...updated };
+		if (newSettings.backgroundImageUrl === 'Random Image') {
+			const backendConfig = await getBackendConfig();
+			const backgroundImageUrl = backendConfig.random_image_url ?? 'https://t.alcy.cc/fj/';
 
-			if (res_setting) {
-				const initialBackgroundImageUrl = newSettings.backgroundImageUrl;
-				await settings.set(newSettings);
-
-				const modelsData = await getModels();
-				await models.set(modelsData);
-
-				if (initialBackgroundImageUrl === 'Random Image') {
-					console.log(res_setting);
-					const backgroundImageUrl = res_setting.ui?.backgroundImageUrl ?? null;
-
-					if (backgroundImageUrl) {
-						newSettings.backgroundImageUrl = backgroundImageUrl;
-						await settings.set(newSettings);
-					}
-				}
+			if (backgroundImageUrl) {
+				newSettings.backgroundImageUrl = backgroundImageUrl;
 			}
-		} catch (error) {
-			toast.error(`Error: ${error}`);
 		}
+		await Promise.all([settings.set(newSettings), models.set(await getModels())]);
+		await updateUserSettings(localStorage.token, { ui: newSettings });
 	};
 
 	const getModels = async () => {

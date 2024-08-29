@@ -4,11 +4,11 @@
 	const { saveAs } = fileSaver;
 
 	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, documents, showSidebar } from '$lib/stores';
+	import { WEBUI_NAME, documents, showSidebar, config } from '$lib/stores';
 	import { createNewDoc, deleteDocByName, getDocs } from '$lib/apis/documents';
 
 	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS } from '$lib/constants';
-	import { getFileLimitSettings, processDocToVectorDB, uploadDocToVectorDB } from '$lib/apis/rag';
+	import { processDocToVectorDB, uploadDocToVectorDB } from '$lib/apis/rag';
 	import { blobToFile, transformFileName } from '$lib/utils';
 
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
@@ -36,7 +36,6 @@
 	let selectedTag = '';
 
 	let dragged = false;
-	let fileLimitSettings = {};
 
 	const deleteDoc = async (name) => {
 		await deleteDocByName(localStorage.token, name);
@@ -103,17 +102,7 @@
 		}
 	};
 
-	const initFileLimitSettings = async () => {
-		try {
-			fileLimitSettings = await getFileLimitSettings(localStorage.token);
-		} catch (error) {
-			console.error('Error fetching query settings:', error);
-		}
-	};
-
 	onMount(() => {
-		initFileLimitSettings();
-
 		documents.subscribe((docs) => {
 			tags = docs.reduce((a, e, i, arr) => {
 				return [...new Set([...a, ...(e?.content?.tags ?? []).map((tag) => tag.name)])];
@@ -151,7 +140,7 @@
 				if (inputFiles && inputFiles.length > 0) {
 					for (const file of inputFiles) {
 						console.log(file, file.name.split('.').at(-1));
-						if (file.size <= fileLimitSettings.max_file_size * 1024 * 1024) {
+						if (file.size <= $config?.file?.max_size * 1024 * 1024) {
 							if (
 								SUPPORTED_FILE_TYPE.includes(file['type']) ||
 								SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
@@ -166,7 +155,7 @@
 						} else {
 							toast.error(
 								$i18n.t('File size exceeds the limit of {{size}}MB', {
-									size: fileLimitSettings.max_file_size
+									size: $config?.file?.max_size
 								})
 							);
 						}

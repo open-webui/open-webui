@@ -23,7 +23,7 @@
 
 	const init = async () => {
 		try {
-			const backendConfig = await getBackendConfig(localStorage.token);
+			const backendConfig = await getBackendConfig();
 			if (backendConfig) {
 				modelStatus = backendConfig?.model_status ?? '';
 				lobeChat_url = backendConfig?.lobeChat_url ?? '';

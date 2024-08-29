@@ -157,10 +157,19 @@ type Document = {
 	title: string;
 };
 
+type File = {
+	max_size: number;
+	max_count: number;
+}
+
 type Config = {
 	status: boolean;
 	name: string;
 	version: string;
+	file: File;
+	lobeChat_url: string;
+	midjourney_url: string;
+	random_image_url: string;
 	default_locale: string;
 	default_models: string[];
 	default_prompt_suggestions: PromptSuggestion[];
