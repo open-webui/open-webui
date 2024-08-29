@@ -215,7 +215,10 @@
 
 <div class="mb-3">
 	<div class="flex justify-between items-center">
-		<div class=" text-lg font-semibold self-center">{$i18n.t('Documents')}</div>
+		<div class="text-lg font-semibold self-center flex items-center space-x-2">
+			<span>{$i18n.t('Documents')}</span>
+			<span class="text-sm font-normal text-gray-500">({$documents.length})</span>
+		</div>
 	</div>
 </div>
 
