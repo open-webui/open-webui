@@ -19,6 +19,7 @@
 	import { parseFile } from '$lib/utils/characters';
 	import FiltersSelector from '$lib/components/workspace/Models/FiltersSelector.svelte';
 	import ActionsSelector from '$lib/components/workspace/Models/ActionsSelector.svelte';
+	import { uploadModelImage, base64ToFile } from '$lib/apis/files';
 
 	const i18n = getContext('i18n');
 
@@ -280,7 +281,7 @@
 				const img = new Image();
 				img.src = originalImageUrl;
 
-				img.onload = function () {
+				img.onload = async () => {
 					const canvas = document.createElement('canvas');
 					const ctx = canvas.getContext('2d');
 
@@ -311,8 +312,15 @@
 					// Get the base64 representation of the compressed image
 					const compressedSrc = canvas.toDataURL('image/jpeg');
 
-					// Display the compressed image
-					info.meta.profile_image_url = compressedSrc;
+					const file = base64ToFile(compressedSrc, `${uuidv4()}.jpg`);
+
+					// try to upload the image
+					const res = await uploadModelImage(localStorage.token, file);
+
+					// update the profile_image_url
+					info.meta.profile_image_url = res?.filename
+						? `/api/v1/files/model/images/${res.filename}`
+						: compressedSrc;
 
 					inputFiles = null;
 				};

@@ -19,7 +19,7 @@
 	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
 	import FiltersSelector from '$lib/components/workspace/Models/FiltersSelector.svelte';
 	import ActionsSelector from '$lib/components/workspace/Models/ActionsSelector.svelte';
-	import { uploadModelImage } from '$lib/apis/files';
+	import { uploadModelImage, base64ToFile } from '$lib/apis/files';
 
 	const i18n = getContext('i18n');
 
@@ -126,22 +126,6 @@
 		loading = false;
 		success = false;
 	};
-
-	function base64ToFile(base64Data, fileName) {
-		const base64ImageData = base64Data.split(',')[1];
-
-		const byteCharacters = atob(base64ImageData);
-		const byteNumbers = new Array(byteCharacters.length);
-		for (let i = 0; i < byteCharacters.length; i++) {
-			byteNumbers[i] = byteCharacters.charCodeAt(i);
-		}
-
-		const byteArray = new Uint8Array(byteNumbers);
-		const blob = new Blob([byteArray], { type: 'image/jpeg' });
-		const file = new File([blob], fileName, { type: 'image/jpeg' });
-
-		return file;
-	}
 
 	onMount(() => {
 		const _id = $page.url.searchParams.get('id');
@@ -263,12 +247,10 @@
 					const res = await uploadModelImage(localStorage.token, file);
 
 					// update the profile_image_url
-					if (res?.filename) {
-						const filename = res.filename;
-						info.meta.profile_image_url = `/api/v1/files/model/images/${filename}`;
-					} else {
-						info.meta.profile_image_url = compressedSrc;
-					}
+					info.meta.profile_image_url = res?.filename
+						? `/api/v1/files/model/images/${res.filename}`
+						: compressedSrc;
+
 					inputFiles = null;
 				};
 			};

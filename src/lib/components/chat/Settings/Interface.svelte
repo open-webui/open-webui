@@ -7,6 +7,8 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { updateUserInfo } from '$lib/apis/users';
 	import { getUserPosition } from '$lib/utils';
+	import { uploadBackgroundImage } from '$lib/apis/files';
+
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -190,25 +192,37 @@
 		type="file"
 		hidden
 		accept="image/*"
-		on:change={() => {
-			let reader = new FileReader();
-			reader.onload = (event) => {
-				let originalImageUrl = `${event.target.result}`;
+		on:change={async () => {
+			if (!inputFiles || inputFiles.length === 0) {
+				toast.error($i18n.t(`File not found.`));
+				return;
+			}
 
-				backgroundImageUrl = originalImageUrl;
-				saveSettings({ backgroundImageUrl });
+			const file = inputFiles[0];
+			const validImageTypes = ['image/gif', 'image/webp', 'image/jpeg', 'image/png'];
+
+			if (!validImageTypes.includes(file.type)) {
+				toast.error(`文件只支持以下格式：${validImageTypes.join(', ')}`);
+				inputFiles = null;
+				return;
+			}
+
+			const reader = new FileReader();
+			reader.onload = async (event) => {
+				try {
+					const res = await uploadBackgroundImage(localStorage.token, file);
+					backgroundImageUrl = res?.filename
+						? `/api/v1/files/background/images/${res.filename}`
+						: event.target.result;
+					saveSettings({ backgroundImageUrl });
+				} catch (error) {
+					console.error('Error uploading image:', error);
+					backgroundImageUrl = event.target.result;
+					saveSettings({ backgroundImageUrl });
+				}
 			};
 
-			if (
-				inputFiles &&
-				inputFiles.length > 0 &&
-				['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(inputFiles[0]['type'])
-			) {
-				reader.readAsDataURL(inputFiles[0]);
-			} else {
-				console.log(`Unsupported File Type '${inputFiles[0]['type']}'.`);
-				inputFiles = null;
-			}
+			reader.readAsDataURL(file);
 		}}
 	/>
 

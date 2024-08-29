@@ -10,7 +10,7 @@ from apps.webui.models.files import (
     FileForm,
     FileModel,
 )
-from config import SRC_LOG_LEVELS, UPLOAD_DIR, MODEL_IMAGES_DIR
+from config import SRC_LOG_LEVELS, UPLOAD_DIR, MODEL_IMAGES_DIR, BACKGROUND_IMAGES_DIR, USER_IMAGES_DIR
 from constants import ERROR_MESSAGES
 from fastapi import APIRouter
 from fastapi import (
@@ -84,46 +84,51 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
         )
 
 
-# Model Image
-@router.post("/model/images/")
-def upload_model_image(file: UploadFile = File(...), user=Depends(get_admin_user)):
+# background Images
+def save_file(file: UploadFile, directory: str) -> dict:
     log.info(f"file.content_type: {file.content_type}")
     try:
-        unsanitized_filename = file.filename
-        filename = os.path.basename(unsanitized_filename)
-
-        name = filename
-        file_path = f"{MODEL_IMAGES_DIR}/{filename}"
+        filename = os.path.basename(file.filename)
+        file_path = os.path.join(directory, filename)
 
         contents = file.file.read()
         with open(file_path, "wb") as f:
             f.write(contents)
-            f.close()
 
-        file = {
+        return {
             "filename": filename,
             "meta": {
-                "name": name,
+                "name": filename,
                 "content_type": file.content_type,
                 "size": len(contents),
                 "path": file_path,
             },
         }
 
-        if file:
-            return file
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("Error uploading model image"),
-            )
-
     except Exception as e:
         log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=f"Error uploading image: {str(e)}",
         )
+
+
+# Model Images
+@router.post("/model/images")
+def upload_model_image(file: UploadFile = File(...), user=Depends(get_admin_user)):
+    return save_file(file, MODEL_IMAGES_DIR)
+
+
+# Background Images
+@router.post("/background/images")
+def upload_background_image(file: UploadFile = File(...), user=Depends(get_verified_user)):
+    return save_file(file, BACKGROUND_IMAGES_DIR)
+
+
+# User Images
+@router.post("/user/images")
+def upload_user_image(file: UploadFile = File(...), user=Depends(get_verified_user)):
+    return save_file(file, USER_IMAGES_DIR)
 
 
 ############################
@@ -246,18 +251,35 @@ async def get_file_content_by_id(id: str):
         )
 
 
-@router.get("/model/images/{filename}", response_model=Optional[FileModel])
-async def get_image_by_filename(filename: str, user=Depends(get_verified_user)):
-    # Check if the file already exists in the path
-    file_path = Path(f"{MODEL_IMAGES_DIR}/{filename}")
+# Get File Response
+def get_file_response(directory: str, filename: str) -> FileResponse:
+    file_path = Path(directory) / filename
     if file_path.is_file():
-        print(f"Model Image File_path: {file_path}")
+        print(f"File Path: {file_path}")
         return FileResponse(file_path)
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
+
+# Model Images
+@router.get("/model/images/{filename}", response_model=Optional[FileModel])
+async def get_model_image_by_filename(filename: str, user=Depends(get_verified_user)):
+    return get_file_response(MODEL_IMAGES_DIR, filename)
+
+
+# Background Images
+@router.get("/background/images/{filename}", response_model=Optional[FileModel])
+async def get_background_image_by_filename(filename: str, user=Depends(get_verified_user)):
+    return get_file_response(BACKGROUND_IMAGES_DIR, filename)
+
+
+# User Images
+@router.get("/user/images/{filename}", response_model=Optional[FileModel])
+async def get_user_image_by_filename(filename: str, user=Depends(get_verified_user)):
+    return get_file_response(USER_IMAGES_DIR, filename)
 
 
 @router.get("/{id}/content/{file_name}", response_model=Optional[FileModel])

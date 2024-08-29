@@ -527,6 +527,20 @@ MODEL_IMAGES_DIR = f"{DATA_DIR}/model_images"
 Path(MODEL_IMAGES_DIR).mkdir(parents=True, exist_ok=True)
 
 ####################################
+# User IMAGES DIR
+####################################
+
+USER_IMAGES_DIR = f"{DATA_DIR}/user_images"
+Path(USER_IMAGES_DIR).mkdir(parents=True, exist_ok=True)
+
+####################################
+# Background IMAGES DIR
+####################################
+
+BACKGROUND_IMAGES_DIR = f"{DATA_DIR}/background_images"
+Path(BACKGROUND_IMAGES_DIR).mkdir(parents=True, exist_ok=True)
+
+####################################
 # Cache DIR
 ####################################
 

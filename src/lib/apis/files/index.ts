@@ -1,64 +1,66 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
+const upload = async (token: string, file: File, endpoint: string) => {
+	const data = new FormData();
+	data.append('file', file);
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}${endpoint}`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: data
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const uploadFile = async (token: string, file: File) => {
-	const data = new FormData();
-	data.append('file', file);
-	let error = null;
+	return upload(token, file, '/files/');
+}
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: data
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+export const uploadModelImage = (token: string, file: File) => {
+	return upload(token, file, '/files/model/images');
 };
 
-export const uploadModelImage = async (token: string, file: File) => {
-	const data = new FormData();
-	data.append('file', file);
-	let error = null;
+export const uploadUserImage = (token: string, file: File) => {
+	return upload(token, file, '/files/user/images');
+};
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/model/images/`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: data
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.log(err);
-			return null;
-		});
+export const uploadBackgroundImage = (token: string, file: File) => {
+	return upload(token, file, '/files/background/images');
+};
 
-	if (error) {
-		throw error;
+export const base64ToFile = (base64Data: string, fileName: string) => {
+	const base64ImageData = base64Data.split(',')[1];
+
+	const byteCharacters = atob(base64ImageData);
+	const byteNumbers = new Array(byteCharacters.length);
+	for (let i = 0; i < byteCharacters.length; i++) {
+		byteNumbers[i] = byteCharacters.charCodeAt(i);
 	}
 
-	return res;
-};
+	const byteArray = new Uint8Array(byteNumbers);
+	const blob = new Blob([byteArray], { type: 'image/jpeg' });
+	const file = new File([blob], fileName, { type: 'image/jpeg' });
+
+	return file;
+}
 
 export const getFiles = async (token: string = '') => {
 	let error = null;

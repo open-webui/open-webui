@@ -12,6 +12,8 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import { uploadUserImage, base64ToFile } from '$lib/apis/files';
+	import { v4 as uuidv4 } from 'uuid';
 
 	const i18n = getContext('i18n');
 
@@ -77,7 +79,7 @@
 			type="file"
 			hidden
 			accept="image/*"
-			on:change={(e) => {
+			on:change={async (e) => {
 				const files = profileImageInputElement.files ?? [];
 				let reader = new FileReader();
 				reader.onload = (event) => {
@@ -86,7 +88,7 @@
 					const img = new Image();
 					img.src = originalImageUrl;
 
-					img.onload = function () {
+					img.onload = async () => {
 						const canvas = document.createElement('canvas');
 						const ctx = canvas.getContext('2d');
 
@@ -117,8 +119,15 @@
 						// Get the base64 representation of the compressed image
 						const compressedSrc = canvas.toDataURL('image/jpeg');
 
-						// Display the compressed image
-						profileImageUrl = compressedSrc;
+						const file = base64ToFile(compressedSrc, `${uuidv4()}.jpg`);
+
+						// try to upload the image
+						const res = await uploadUserImage(localStorage.token, file);
+
+						// update the profile_image_url
+						profileImageUrl = res?.filename
+							? `/api/v1/files/user/images/${res.filename}`
+							: compressedSrc;
 
 						profileImageInputElement.files = null;
 					};
