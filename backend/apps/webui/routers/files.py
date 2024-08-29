@@ -86,14 +86,14 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
 
 # Model Image
 @router.post("/model/images/")
-def upload_file(file: UploadFile = File(...), user=Depends(get_admin_user)):
+def upload_model_image(file: UploadFile = File(...), user=Depends(get_admin_user)):
     log.info(f"file.content_type: {file.content_type}")
     try:
         unsanitized_filename = file.filename
         filename = os.path.basename(unsanitized_filename)
 
         name = filename
-        file_path = f"{MODEL_IMAGES_DIR}{filename}"
+        file_path = f"{MODEL_IMAGES_DIR}/{filename}"
 
         contents = file.file.read()
         with open(file_path, "wb") as f:
@@ -246,11 +246,12 @@ async def get_file_content_by_id(id: str):
         )
 
 
-@router.get("/model/images/{file_path}", response_model=Optional[FileModel])
-async def get_file_content_by_id(file_path: str, user=Depends(get_verified_user)):
+@router.get("/model/images/{filename}", response_model=Optional[FileModel])
+async def get_image_by_filename(filename: str, user=Depends(get_verified_user)):
     # Check if the file already exists in the path
-    if Path(file_path).is_file():
-        print(f"file_path: {file_path}")
+    file_path = Path(f"{MODEL_IMAGES_DIR}/{filename}")
+    if file_path.is_file():
+        print(f"Model Image File_path: {file_path}")
         return FileResponse(file_path)
     else:
         raise HTTPException(

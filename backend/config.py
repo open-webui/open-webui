@@ -523,7 +523,7 @@ Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 # MODEL IMAGES DIR
 ####################################
 
-MODEL_IMAGES_DIR = f"{UPLOAD_DIR}/model_images"
+MODEL_IMAGES_DIR = f"{DATA_DIR}/model_images"
 Path(MODEL_IMAGES_DIR).mkdir(parents=True, exist_ok=True)
 
 ####################################

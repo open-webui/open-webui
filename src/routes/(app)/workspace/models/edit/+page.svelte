@@ -263,9 +263,9 @@
 					const res = await uploadModelImage(localStorage.token, file);
 
 					// update the profile_image_url
-					if (res?.meta?.path) {
-						const path = res.meta.path.startsWith('/') ? res.meta.path : `/${res.meta.path}`;
-						info.meta.profile_image_url = `${WEBUI_API_BASE_URL}/files/model/images${path}`;
+					if (res?.filename) {
+						const filename = res.filename;
+						info.meta.profile_image_url = `/api/v1/files/model/images/${filename}`;
 					} else {
 						info.meta.profile_image_url = compressedSrc;
 					}
