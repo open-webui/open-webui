@@ -247,7 +247,7 @@ async def get_file_content_by_id(id: str):
 
 
 @router.get("/model/images/{file_path}", response_model=Optional[FileModel])
-async def get_file_content_by_id(file_path: str):
+async def get_file_content_by_id(file_path: str, user=Depends(get_verified_user)):
     # Check if the file already exists in the path
     if file_path.is_file():
         print(f"file_path: {file_path}")
