@@ -1,48 +1,33 @@
-from fastapi import (
-    Depends,
-    FastAPI,
-    HTTPException,
-    status,
-    Request,
-    UploadFile,
-    File,
-    Form,
-)
-
-
-from datetime import datetime, timedelta
-from typing import Union, Optional
+import logging
+import os
+import shutil
+import uuid
 from pathlib import Path
-
-from fastapi import APIRouter
-from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
-
-from pydantic import BaseModel
-import json
+from typing import Optional
 
 from apps.webui.models.files import (
     Files,
     FileForm,
     FileModel,
-    FileModelResponse,
 )
-from utils.utils import get_verified_user, get_admin_user
-from constants import ERROR_MESSAGES
-
-from importlib import util
-import os
-import uuid
-import os, shutil, logging, re
-
-
 from config import SRC_LOG_LEVELS, UPLOAD_DIR
-
+from constants import ERROR_MESSAGES
+from fastapi import APIRouter
+from fastapi import (
+    Depends,
+    HTTPException,
+    status,
+    UploadFile,
+    File,
+)
+from fastapi.responses import FileResponse
+from utils.utils import get_verified_user, get_admin_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
-
 router = APIRouter()
+
 
 ############################
 # Upload File
@@ -89,6 +74,48 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT("Error uploading file"),
+            )
+
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
+
+
+# Model Image
+@router.post("/model/images/")
+def upload_file(file: UploadFile = File(...), user=Depends(get_admin_user)):
+    log.info(f"file.content_type: {file.content_type}")
+    try:
+        unsanitized_filename = file.filename
+        filename = os.path.basename(unsanitized_filename)
+
+        name = filename
+        file_path = f"{UPLOAD_DIR}/model/image/{filename}"
+
+        contents = file.file.read()
+        with open(file_path, "wb") as f:
+            f.write(contents)
+            f.close()
+
+        file = {
+            "filename": filename,
+            "meta": {
+                "name": name,
+                "content_type": file.content_type,
+                "size": len(contents),
+                "path": file_path,
+            },
+        }
+
+        if file:
+            return file
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error uploading model image"),
             )
 
     except Exception as e:
@@ -212,6 +239,19 @@ async def get_file_content_by_id(id: str):
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=ERROR_MESSAGES.NOT_FOUND,
             )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+@router.get("/model/images/{file_path}", response_model=Optional[FileModel])
+async def get_file_content_by_id(file_path: str):
+    # Check if the file already exists in the path
+    if file_path.is_file():
+        print(f"file_path: {file_path}")
+        return FileResponse(file_path)
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
