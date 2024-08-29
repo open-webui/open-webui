@@ -40,6 +40,10 @@ spec:
         - name: http
           containerPort: {{ .Values.ollama.service.containerPort }}
         env:
+        {{- if .Values.ollama.keepAlive }}
+          - name: OLLAMA_KEEP_ALIVE
+            value: "-1"
+        {{- end }}
         {{- if .Values.ollama.gpu.enabled }}
           - name: PATH
             value: /usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
