@@ -419,7 +419,7 @@ You are a RAG system designed to support HR services for MBZUAI university. You 
 			model: model,
 			messages: messagesBody,
 			options: {
-				temperature: '0.4',
+				temperature: 0.4,
 				...($settings.options ?? {}),
 				stop:
 					$settings?.options?.stop ?? undefined
