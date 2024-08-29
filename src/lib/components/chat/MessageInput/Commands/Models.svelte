@@ -63,7 +63,7 @@
 						<button
 							class="px-3 py-1.5 rounded-xl w-full text-left {modelIdx === selectedIdx
 								? 'bg-gray-50 dark:bg-gray-850 selected-command-option-button'
-								: ''}"
+								: ''} {model?.info?.meta?.hidden ? 'hidden' : ''}"
 							type="button"
 							on:click={() => {
 								confirmSelect(model);
