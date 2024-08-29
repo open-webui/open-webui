@@ -380,6 +380,7 @@
 			model: model,
 			messages: messagesBody,
 			options: {
+				temperature: '0.4',
 				...($settings.options ?? {}),
 				stop:
 					$settings?.options?.stop ?? undefined
