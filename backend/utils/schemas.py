@@ -102,7 +102,7 @@ def json_schema_to_pydantic_type(json_schema: dict[str, Any]) -> Any:
             return dict
     elif type_ == "null":
         return Optional[Any]  # Use Optional[Any] for nullable fields
-    elif type_ is "literal":
+    elif type_ == "literal":
         return Literal[literal_eval(json_schema.get("enum"))]
     else:
         raise ValueError(f"Unsupported JSON schema type: {type_}")
