@@ -644,15 +644,16 @@ INITIAL_TOOLKITS = os.environ.get(
             "        \"\"\"\n"
             "        This function is used to assist users in **initiating** a leave application process (e.g., sick leave, maternity leave, annual leave) by providing a relevant form or URL. It should be triggered **only when the user's query clearly indicates an intent to apply for or request leave**. Simple mentions of a leave type (e.g., 'sick leave', 'maternity leave') without a clear request to apply or take action should **not** trigger this function. This function is **not** intended for queries that merely mention leave, confirm submission, or inquire about the status of previous leave requests, nor for general job titles, occupational roles, or unrelated HR inquiries (e.g., probation periods). The query must explicitly request to begin the leave application process. If the query does not explicitly request to begin the leave application process, this function should not be triggered.\n"
             "        \"\"\"\n"
-            "        if user_type == \"staff\" or user_type == \"outsource\":\n"
+            "        if user_type != \"unlimited contract\" and user_type is not None:\n"
             "            return \"annual_leave_form=True\"\n"
-            "        elif user_type == \"faculty\":\n"
+            "        elif user_type == \"unlimited contract\":\n"
             "            return \"You can use https://aderp.dof.abudhabi.ae/OA_HTML/AppsLocalLogin.jsp for leave application.\"\n"
             "        else:\n"
-            "            return \"Due to your account type, this feature has been restricted. Please try logging in with an Outlook account or contacting the administrator.\"\n"
+            "            return \"Due to your account type, this feature has been restricted. Please try logging in with Outlook account or contacting the administrator.\"\n"
         )
     })
 )
+
 
 INITIAL_TOOLKITS = json.loads(INITIAL_TOOLKITS)
 
