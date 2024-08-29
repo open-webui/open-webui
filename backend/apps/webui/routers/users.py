@@ -110,9 +110,6 @@ async def get_user_settings_by_session_user(user=Depends(get_verified_user)):
 async def update_user_settings_by_session_user(
         form_data: UserSettings, user=Depends(get_verified_user)
 ):
-    if form_data.ui.get("backgroundImageUrl", None) == "Random Image":
-        form_data.ui["backgroundImageUrl"] = backgroundImageUrl
-
     if form_data.ui.get("enableFileUpdateBase64", False):
         if enableBase64:
             form_data.ui["enableFileUpdateBase64"] = enableBase64

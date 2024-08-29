@@ -5,9 +5,8 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { goto } from '$app/navigation';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
-	import { showSettings, activeUserCount, USAGE_POOL } from '$lib/stores';
+	import { showSettings, activeUserCount, USAGE_POOL, config } from '$lib/stores';
 	import { fade, slide } from 'svelte/transition';
-	import { getBackendConfig } from '$lib/apis';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
@@ -17,25 +16,7 @@
 	export let className = 'max-w-[240px]';
 
 	const dispatch = createEventDispatcher();
-	let modelStatus = '';
-	let lobeChat_url = '';
-	let midjourney_url = '';
 
-	const init = async () => {
-		try {
-			const backendConfig = await getBackendConfig();
-			if (backendConfig) {
-				modelStatus = backendConfig?.model_status ?? '';
-				lobeChat_url = backendConfig?.lobeChat_url ?? '';
-				midjourney_url = backendConfig?.midjourney_url ?? '';
-			} else {
-				console.log('backendConfig is null or undefined');
-			}
-		} catch (err) {
-			console.error('Error fetching backendConfig:', err);
-		}
-	};
-	init();
 </script>
 
 <DropdownMenu.Root
@@ -100,11 +81,11 @@
 				<div class=" self-center font-medium">{$i18n.t('Archived Chats')}</div>
 			</button>
 
-			{#if modelStatus}
+			{#if $config?.model_status}
 				<button
 					class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 					on:click={() => {
-						window.open(modelStatus, '_blank');
+						window.open($config?.model_status, '_blank');
 						showDropdown = false;
 					}}
 				>
@@ -126,11 +107,11 @@
 				</button>
 			{/if}
 
-			{#if lobeChat_url}
+			{#if $config?.lobeChat_url}
 				<button
 					class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 					on:click={() => {
-						window.open(lobeChat_url, '_blank');
+						window.open($config?.lobeChat_url, '_blank');
 						showDropdown = false;
 					}}
 				>
@@ -152,11 +133,11 @@
 				</button>
 			{/if}
 
-			{#if midjourney_url}
+			{#if $config?.midjourney_url}
 				<button
 					class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 					on:click={() => {
-						window.open(midjourney_url, '_blank');
+						window.open($config?.midjourney_url, '_blank');
 						showDropdown = false;
 					}}
 				>

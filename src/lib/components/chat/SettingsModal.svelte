@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { config, models, settings, user } from '$lib/stores';
+	import { models, settings, user } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
 	import { getModels as _getModels } from '$lib/apis';
 	import { goto } from '$app/navigation';
@@ -23,18 +23,9 @@
 
 	const saveSettings = async (updated) => {
 		console.log(updated);
-
-		const newSettings = { ...$settings, ...updated };
-		if (newSettings.backgroundImageUrl === 'Random Image') {
-			const backendConfig = await getBackendConfig();
-			const backgroundImageUrl = backendConfig.random_image_url ?? 'https://t.alcy.cc/fj/';
-
-			if (backgroundImageUrl) {
-				newSettings.backgroundImageUrl = backgroundImageUrl;
-			}
-		}
-		await Promise.all([settings.set(newSettings), models.set(await getModels())]);
-		await updateUserSettings(localStorage.token, { ui: newSettings });
+		await settings.set({ ...$settings, ...updated });
+		await models.set(await getModels());
+		await updateUserSettings(localStorage.token, { ui: $settings });
 	};
 
 	const getModels = async () => {

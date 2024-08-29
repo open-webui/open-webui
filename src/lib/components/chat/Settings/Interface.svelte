@@ -13,7 +13,8 @@
 
 	export let saveSettings: Function;
 
-	let backgroundImageUrl = null;
+	let backgroundImageUrl = '';
+	let random_image_url = '';
 	let inputFiles = null;
 	let filesInputElement;
 
@@ -172,6 +173,7 @@
 		}
 
 		backgroundImageUrl = $settings.backgroundImageUrl ?? null;
+		random_image_url = $config?.random_image_url ?? '';
 	});
 </script>
 
@@ -352,7 +354,7 @@
 							if (backgroundImageUrl !== null) {
 								backgroundImageUrl = null;
 							} else {
-								backgroundImageUrl = 'Random Image';
+								backgroundImageUrl = random_image_url;
 								toast.success(
 									$i18n.t(
 										'Random background image has been enabled, you will get a new background image every time you refresh the page~'

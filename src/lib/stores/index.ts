@@ -167,6 +167,7 @@ type Config = {
 	name: string;
 	version: string;
 	file: File;
+	model_status: string;
 	lobeChat_url: string;
 	midjourney_url: string;
 	random_image_url: string;
