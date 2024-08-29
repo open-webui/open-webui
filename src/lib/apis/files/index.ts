@@ -35,7 +35,7 @@ export const uploadModelImage = async (token: string, file: File) => {
 	data.append('file', file);
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/model/images/`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
