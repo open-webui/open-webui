@@ -1893,7 +1893,7 @@ async def get_app_config(request: Request):
         "model_status": MODEL_STATUS,
         "lobeChat_url": LOBECHAT_URL,
         "midjourney_url": MIDJOURNEY_URL,
-        "random_image_url":app.state.config.BACKGROUND_RANDOM_IMAGE_URL,
+        "random_image_url": app.state.config.BACKGROUND_RANDOM_IMAGE_URL,
         "version": VERSION,
         "default_locale": str(DEFAULT_LOCALE),
         "oauth": {
