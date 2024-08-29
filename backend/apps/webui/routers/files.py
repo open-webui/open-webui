@@ -10,7 +10,7 @@ from apps.webui.models.files import (
     FileForm,
     FileModel,
 )
-from config import SRC_LOG_LEVELS, UPLOAD_DIR
+from config import SRC_LOG_LEVELS, UPLOAD_DIR, MODEL_IMAGES_DIR
 from constants import ERROR_MESSAGES
 from fastapi import APIRouter
 from fastapi import (
@@ -93,7 +93,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_admin_user)):
         filename = os.path.basename(unsanitized_filename)
 
         name = filename
-        file_path = f"{UPLOAD_DIR}/model/image/{filename}"
+        file_path = f"{MODEL_IMAGES_DIR}{filename}"
 
         contents = file.file.read()
         with open(file_path, "wb") as f:
@@ -249,7 +249,7 @@ async def get_file_content_by_id(id: str):
 @router.get("/model/images/{file_path}", response_model=Optional[FileModel])
 async def get_file_content_by_id(file_path: str, user=Depends(get_verified_user)):
     # Check if the file already exists in the path
-    if file_path.is_file():
+    if Path(file_path).is_file():
         print(f"file_path: {file_path}")
         return FileResponse(file_path)
     else:

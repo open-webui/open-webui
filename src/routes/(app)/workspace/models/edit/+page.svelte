@@ -265,7 +265,7 @@
 					// update the profile_image_url
 					if (res?.meta?.path) {
 						const path = res.meta.path.startsWith('/') ? res.meta.path : `/${res.meta.path}`;
-						info.meta.profile_image_url = `${WEBUI_API_BASE_URL}/files${path}`;
+						info.meta.profile_image_url = `${WEBUI_API_BASE_URL}/files/model/images${path}`;
 					} else {
 						info.meta.profile_image_url = compressedSrc;
 					}

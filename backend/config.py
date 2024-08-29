@@ -519,6 +519,12 @@ MIDJOURNEY_URL = os.environ.get("MIDJOURNEY_URL", "")
 UPLOAD_DIR = f"{DATA_DIR}/uploads"
 Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 
+####################################
+# MODEL IMAGES DIR
+####################################
+
+MODEL_IMAGES_DIR = f"{UPLOAD_DIR}/model_images"
+Path(MODEL_IMAGES_DIR).mkdir(parents=True, exist_ok=True)
 
 ####################################
 # Cache DIR
