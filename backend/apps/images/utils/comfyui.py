@@ -15,20 +15,33 @@ from pydantic import BaseModel
 
 from typing import Optional
 
+default_headers = {"User-Agent": "Mozilla/5.0"}
+
 
 def queue_prompt(prompt, client_id, base_url):
     log.info("queue_prompt")
     p = {"prompt": prompt, "client_id": client_id}
     data = json.dumps(p).encode("utf-8")
-    req = urllib.request.Request(f"{base_url}/prompt", data=data)
-    return json.loads(urllib.request.urlopen(req).read())
+    log.debug(f"queue_prompt data: {data}")
+    try:
+        req = urllib.request.Request(
+            f"{base_url}/prompt", data=data, headers=default_headers
+        )
+        response = urllib.request.urlopen(req).read()
+        return json.loads(response)
+    except Exception as e:
+        log.exception(f"Error while queuing prompt: {e}")
+        raise e
 
 
 def get_image(filename, subfolder, folder_type, base_url):
     log.info("get_image")
     data = {"filename": filename, "subfolder": subfolder, "type": folder_type}
     url_values = urllib.parse.urlencode(data)
-    with urllib.request.urlopen(f"{base_url}/view?{url_values}") as response:
+    req = urllib.request.Request(
+        f"{base_url}/view?{url_values}", headers=default_headers
+    )
+    with urllib.request.urlopen(req) as response:
         return response.read()
 
 
@@ -41,7 +54,11 @@ def get_image_url(filename, subfolder, folder_type, base_url):
 
 def get_history(prompt_id, base_url):
     log.info("get_history")
-    with urllib.request.urlopen(f"{base_url}/history/{prompt_id}") as response:
+
+    req = urllib.request.Request(
+        f"{base_url}/history/{prompt_id}", headers=default_headers
+    )
+    with urllib.request.urlopen(req) as response:
         return json.loads(response.read())
 
 
