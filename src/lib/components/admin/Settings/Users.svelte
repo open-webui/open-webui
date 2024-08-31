@@ -14,8 +14,8 @@
 
 	let defaultModelId = '';
 
-	let whitelistEnabled = false;
-	let whitelistModels = [''];
+	let allowlistEnabled = false;
+	let allowlistModels = [''];
 	let permissions = {
 		chat: {
 			deletion: true,
@@ -29,8 +29,8 @@
 
 		const res = await getModelFilterConfig(localStorage.token);
 		if (res) {
-			whitelistEnabled = res.enabled;
-			whitelistModels = res.models.length > 0 ? res.models : [''];
+			allowlistEnabled = res.enabled;
+			allowlistModels = res.models.length > 0 ? res.models : [''];
 		}
 
 		defaultModelId = $config.default_models ? $config?.default_models.split(',')[0] : '';
@@ -44,7 +44,7 @@
 
 		await setDefaultModels(localStorage.token, defaultModelId);
 		await updateUserPermissions(localStorage.token, permissions);
-		await updateModelFilterConfig(localStorage.token, whitelistEnabled, whitelistModels);
+		await updateModelFilterConfig(localStorage.token, allowlistEnabled, allowlistModels);
 		saveHandler();
 
 		await config.set(await getBackendConfig());
@@ -211,16 +211,16 @@
 				<div class=" space-y-1">
 					<div class="mb-2">
 						<div class="flex justify-between items-center text-xs">
-							<div class=" text-xs font-medium">{$i18n.t('Model Whitelisting')}</div>
+							<div class=" text-xs font-medium">{$i18n.t('Model Allowlisting')}</div>
 
-							<Switch bind:state={whitelistEnabled} />
+							<Switch bind:state={allowlistEnabled} />
 						</div>
 					</div>
 
-					{#if whitelistEnabled}
+					{#if allowlistEnabled}
 						<div>
 							<div class=" space-y-1.5">
-								{#each whitelistModels as modelId, modelIdx}
+								{#each allowlistModels as modelId, modelIdx}
 									<div class="flex w-full">
 										<div class="flex-1 mr-2">
 											<select
@@ -242,8 +242,8 @@
 												class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-white rounded-lg transition"
 												type="button"
 												on:click={() => {
-													if (whitelistModels.at(-1) !== '') {
-														whitelistModels = [...whitelistModels, ''];
+													if (allowlistModels.at(-1) !== '') {
+														allowlistModels = [...allowlistModels, ''];
 													}
 												}}
 											>
@@ -263,8 +263,8 @@
 												class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-white rounded-lg transition"
 												type="button"
 												on:click={() => {
-													whitelistModels.splice(modelIdx, 1);
-													whitelistModels = whitelistModels;
+													allowlistModels.splice(modelIdx, 1);
+													allowlistModels = allowlistModels;
 												}}
 											>
 												<svg
@@ -283,8 +283,8 @@
 
 							<div class="flex justify-end items-center text-xs mt-1.5 text-right">
 								<div class=" text-xs font-medium">
-									{whitelistModels.length}
-									{$i18n.t('Model(s) Whitelisted')}
+									{allowlistModels.length}
+									{$i18n.t('Model(s) Allowlisted')}
 								</div>
 							</div>
 						</div>
