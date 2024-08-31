@@ -1,15 +1,13 @@
-from pydantic import BaseModel
-from typing import Optional
-import uuid
 import logging
-from sqlalchemy import String, Column, Boolean, Text
+import uuid
+from typing import Optional
 
-from utils.utils import verify_password
-
-from apps.webui.models.users import UserModel, Users
 from apps.webui.internal.db import Base, get_db
-
+from apps.webui.models.users import UserModel, Users
 from env import SRC_LOG_LEVELS
+from pydantic import BaseModel
+from sqlalchemy import Boolean, Column, String, Text
+from utils.utils import verify_password
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -92,7 +90,6 @@ class AddUserForm(SignupForm):
 
 
 class AuthsTable:
-
     def insert_new_auth(
         self,
         email: str,
@@ -103,7 +100,6 @@ class AuthsTable:
         oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
-
             log.info("insert_new_auth")
 
             id = str(uuid.uuid4())
@@ -130,7 +126,6 @@ class AuthsTable:
         log.info(f"authenticate_user: {email}")
         try:
             with get_db() as db:
-
                 auth = db.query(Auth).filter_by(email=email, active=True).first()
                 if auth:
                     if verify_password(password, auth.password):
@@ -189,7 +184,6 @@ class AuthsTable:
     def delete_auth_by_id(self, id: str) -> bool:
         try:
             with get_db() as db:
-
                 # Delete User
                 result = Users.delete_user_by_id(id)
 

@@ -1,65 +1,59 @@
-from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
-from fastapi.middleware.cors import CORSMiddleware
-from apps.webui.routers import (
-    auths,
-    users,
-    chats,
-    documents,
-    tools,
-    models,
-    prompts,
-    configs,
-    memories,
-    utils,
-    files,
-    functions,
-)
-from apps.webui.models.functions import Functions
-from apps.webui.models.models import Models
-from apps.webui.utils import load_function_module_by_id
-
-from utils.misc import (
-    openai_chat_chunk_message_template,
-    openai_chat_completion_message_template,
-    apply_model_params_to_body_openai,
-    apply_model_system_prompt_to_body,
-)
-
-from utils.tools import get_tools
-
-from config import (
-    SHOW_ADMIN_DETAILS,
-    ADMIN_EMAIL,
-    WEBUI_AUTH,
-    DEFAULT_MODELS,
-    DEFAULT_PROMPT_SUGGESTIONS,
-    DEFAULT_USER_ROLE,
-    ENABLE_SIGNUP,
-    ENABLE_LOGIN_FORM,
-    USER_PERMISSIONS,
-    WEBHOOK_URL,
-    WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
-    WEBUI_AUTH_TRUSTED_NAME_HEADER,
-    JWT_EXPIRES_IN,
-    WEBUI_BANNERS,
-    ENABLE_COMMUNITY_SHARING,
-    ENABLE_MESSAGE_RATING,
-    AppConfig,
-    OAUTH_USERNAME_CLAIM,
-    OAUTH_PICTURE_CLAIM,
-    OAUTH_EMAIL_CLAIM,
-    CORS_ALLOW_ORIGIN,
-)
-
-from apps.socket.main import get_event_call, get_event_emitter
-
 import inspect
 import json
 import logging
+from typing import AsyncGenerator, Generator, Iterator
 
-from typing import Iterator, Generator, AsyncGenerator
+from apps.socket.main import get_event_call, get_event_emitter
+from apps.webui.models.functions import Functions
+from apps.webui.models.models import Models
+from apps.webui.routers import (
+    auths,
+    chats,
+    configs,
+    documents,
+    files,
+    functions,
+    memories,
+    models,
+    prompts,
+    tools,
+    users,
+    utils,
+)
+from apps.webui.utils import load_function_module_by_id
+from config import (
+    ADMIN_EMAIL,
+    CORS_ALLOW_ORIGIN,
+    DEFAULT_MODELS,
+    DEFAULT_PROMPT_SUGGESTIONS,
+    DEFAULT_USER_ROLE,
+    ENABLE_COMMUNITY_SHARING,
+    ENABLE_LOGIN_FORM,
+    ENABLE_MESSAGE_RATING,
+    ENABLE_SIGNUP,
+    JWT_EXPIRES_IN,
+    OAUTH_EMAIL_CLAIM,
+    OAUTH_PICTURE_CLAIM,
+    OAUTH_USERNAME_CLAIM,
+    SHOW_ADMIN_DETAILS,
+    USER_PERMISSIONS,
+    WEBHOOK_URL,
+    WEBUI_AUTH,
+    WEBUI_BANNERS,
+    AppConfig,
+)
+from env import WEBUI_AUTH_TRUSTED_EMAIL_HEADER, WEBUI_AUTH_TRUSTED_NAME_HEADER
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from utils.misc import (
+    apply_model_params_to_body_openai,
+    apply_model_system_prompt_to_body,
+    openai_chat_chunk_message_template,
+    openai_chat_completion_message_template,
+)
+from utils.tools import get_tools
 
 app = FastAPI()
 

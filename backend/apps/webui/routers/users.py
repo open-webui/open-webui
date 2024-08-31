@@ -1,33 +1,20 @@
-from fastapi import Response, Request
-from fastapi import Depends, FastAPI, HTTPException, status
-from datetime import datetime, timedelta
-from typing import Union, Optional
-
-from fastapi import APIRouter
-from pydantic import BaseModel
-import time
-import uuid
 import logging
+from typing import Optional
 
-from apps.webui.models.users import (
-    UserModel,
-    UserUpdateForm,
-    UserRoleUpdateForm,
-    UserSettings,
-    Users,
-)
 from apps.webui.models.auths import Auths
 from apps.webui.models.chats import Chats
-
-from utils.utils import (
-    get_verified_user,
-    get_password_hash,
-    get_current_user,
-    get_admin_user,
+from apps.webui.models.users import (
+    UserModel,
+    UserRoleUpdateForm,
+    Users,
+    UserSettings,
+    UserUpdateForm,
 )
 from constants import ERROR_MESSAGES
-
-from config import SRC_LOG_LEVELS
+from env import SRC_LOG_LEVELS
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel
+from utils.utils import get_admin_user, get_password_hash, get_verified_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -69,7 +56,6 @@ async def update_user_permissions(
 
 @router.post("/update/role", response_model=Optional[UserModel])
 async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin_user)):
-
     if user.id != form_data.id and form_data.id != Users.get_first_user().id:
         return Users.update_user_role_by_id(form_data.id, form_data.role)
 
@@ -173,7 +159,6 @@ class UserResponse(BaseModel):
 
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
-
     # Check if user_id is a shared chat
     # If it is, get the user_id from the chat
     if user_id.startswith("shared-"):

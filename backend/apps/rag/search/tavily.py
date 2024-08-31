@@ -1,9 +1,8 @@
 import logging
 
 import requests
-
 from apps.rag.search.main import SearchResult
-from config import SRC_LOG_LEVELS
+from env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])

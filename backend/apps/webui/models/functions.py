@@ -1,18 +1,12 @@
-from pydantic import BaseModel, ConfigDict
-from typing import Union, Optional
-import time
 import logging
+import time
+from typing import Optional
 
-from sqlalchemy import Column, String, Text, BigInteger, Boolean
-
-from apps.webui.internal.db import JSONField, Base, get_db
+from apps.webui.internal.db import Base, JSONField, get_db
 from apps.webui.models.users import Users
-
-import json
-import copy
-
-
 from env import SRC_LOG_LEVELS
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import BigInteger, Boolean, Column, String, Text
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -87,11 +81,9 @@ class FunctionValves(BaseModel):
 
 
 class FunctionsTable:
-
     def insert_new_function(
         self, user_id: str, type: str, form_data: FunctionForm
     ) -> Optional[FunctionModel]:
-
         function = FunctionModel(
             **{
                 **form_data.model_dump(),
@@ -119,7 +111,6 @@ class FunctionsTable:
     def get_function_by_id(self, id: str) -> Optional[FunctionModel]:
         try:
             with get_db() as db:
-
                 function = db.get(Function, id)
                 return FunctionModel.model_validate(function)
         except Exception:
@@ -127,7 +118,6 @@ class FunctionsTable:
 
     def get_functions(self, active_only=False) -> list[FunctionModel]:
         with get_db() as db:
-
             if active_only:
                 return [
                     FunctionModel.model_validate(function)
@@ -143,7 +133,6 @@ class FunctionsTable:
         self, type: str, active_only=False
     ) -> list[FunctionModel]:
         with get_db() as db:
-
             if active_only:
                 return [
                     FunctionModel.model_validate(function)
@@ -159,7 +148,6 @@ class FunctionsTable:
 
     def get_global_filter_functions(self) -> list[FunctionModel]:
         with get_db() as db:
-
             return [
                 FunctionModel.model_validate(function)
                 for function in db.query(Function)
@@ -178,7 +166,6 @@ class FunctionsTable:
 
     def get_function_valves_by_id(self, id: str) -> Optional[dict]:
         with get_db() as db:
-
             try:
                 function = db.get(Function, id)
                 return function.valves if function.valves else {}
@@ -190,7 +177,6 @@ class FunctionsTable:
         self, id: str, valves: dict
     ) -> Optional[FunctionValves]:
         with get_db() as db:
-
             try:
                 function = db.get(Function, id)
                 function.valves = valves
@@ -204,7 +190,6 @@ class FunctionsTable:
     def get_user_valves_by_id_and_user_id(
         self, id: str, user_id: str
     ) -> Optional[dict]:
-
         try:
             user = Users.get_user_by_id(user_id)
             user_settings = user.settings.model_dump() if user.settings else {}
@@ -223,7 +208,6 @@ class FunctionsTable:
     def update_user_valves_by_id_and_user_id(
         self, id: str, user_id: str, valves: dict
     ) -> Optional[dict]:
-
         try:
             user = Users.get_user_by_id(user_id)
             user_settings = user.settings.model_dump() if user.settings else {}
@@ -246,7 +230,6 @@ class FunctionsTable:
 
     def update_function_by_id(self, id: str, updated: dict) -> Optional[FunctionModel]:
         with get_db() as db:
-
             try:
                 db.query(Function).filter_by(id=id).update(
                     {
@@ -261,7 +244,6 @@ class FunctionsTable:
 
     def deactivate_all_functions(self) -> Optional[bool]:
         with get_db() as db:
-
             try:
                 db.query(Function).update(
                     {

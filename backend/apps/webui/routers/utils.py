@@ -1,23 +1,16 @@
-from pathlib import Path
 import site
+from pathlib import Path
 
-from fastapi import APIRouter, UploadFile, File, Response
-from fastapi import Depends, HTTPException, status
-from starlette.responses import StreamingResponse, FileResponse
-from pydantic import BaseModel
-
-
-from fpdf import FPDF
-import markdown
 import black
-
-
-from utils.utils import get_admin_user
-from utils.misc import calculate_sha256, get_gravatar_url
-
-from config import OLLAMA_BASE_URLS, DATA_DIR, UPLOAD_DIR, ENABLE_ADMIN_EXPORT
+import markdown
+from config import DATA_DIR, ENABLE_ADMIN_EXPORT
 from constants import ERROR_MESSAGES
-
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fpdf import FPDF
+from pydantic import BaseModel
+from starlette.responses import FileResponse
+from utils.misc import get_gravatar_url
+from utils.utils import get_admin_user
 
 router = APIRouter()
 
@@ -115,7 +108,7 @@ async def download_chat_as_pdf(
     return Response(
         content=bytes(pdf_bytes),
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment;filename=chat.pdf"},
+        headers={"Content-Disposition": "attachment;filename=chat.pdf"},
     )
 
 
