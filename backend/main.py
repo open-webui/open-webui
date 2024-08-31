@@ -628,7 +628,10 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             async for data in original_generator:
                 yield data
 
-        return StreamingResponse(stream_wrapper(response.body_iterator, data_items))
+        return StreamingResponse(
+            stream_wrapper(response.body_iterator, data_items),
+            headers=dict(response.headers),
+        )
 
     async def _receive(self, body: bytes):
         return {"type": "http.request", "body": body, "more_body": False}
