@@ -132,8 +132,8 @@ async def update_config(form_data: ConfigForm, user=Depends(get_admin_user)):
     app.state.config.AUTOMATIC1111_API_AUTH = (
         form_data.automatic1111.AUTOMATIC1111_API_AUTH
     )
-
-    app.state.config.COMFYUI_BASE_URL = form_data.comfyui.COMFYUI_BASE_URL
+    
+    app.state.config.COMFYUI_BASE_URL = clean_comfyui_base_url(form_data.comfyui.COMFYUI_BASE_URL)
     app.state.config.COMFYUI_WORKFLOW = form_data.comfyui.COMFYUI_WORKFLOW
     app.state.config.COMFYUI_WORKFLOW_NODES = form_data.comfyui.COMFYUI_WORKFLOW_NODES
 
@@ -208,6 +208,10 @@ def set_image_model(model: str):
                 headers={"authorization": api_auth},
             )
     return app.state.config.MODEL
+
+
+def clean_comfyui_base_url(url: str) -> str:
+    return url.strip("/")
 
 
 def get_image_model():
