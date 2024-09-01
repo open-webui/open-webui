@@ -86,8 +86,10 @@ class Pipeline:
 
         # Extract the last assistant message
         ai_message = self.get_last_assistant_message(body["messages"])
+        total_words = ai_message.replace('\u200C', ' ').split()
+        total_words += self.get_last_user_message(body['messages']).replace('\u200C', ' ').split() / 20
         request = {
-            "words": len(str(ai_message).split()),
+            "words": total_words,
             "chat_user_id": user["id"] if user else None,
             "model": body["model"]
         }
