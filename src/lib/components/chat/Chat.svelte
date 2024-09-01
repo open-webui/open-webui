@@ -978,6 +978,7 @@
 					await chats.set(await getChatList(localStorage.token, $currentChatPage));
 				}
 			}
+
 		} else {
 			if (res !== null) {
 				const error = await res.json();
@@ -1032,6 +1033,8 @@
 			const _title = await generateChatTitle(userPrompt);
 			await setChatTitle(_chatId, _title);
 		}
+		const charge = await updateRemainingWords($_user.id);
+		remainingWords.set(charge);
 
 		return _response;
 	};
@@ -1290,6 +1293,8 @@
 			const _title = await generateChatTitle(userPrompt);
 			await setChatTitle(_chatId, _title);
 		}
+		const charge = await updateRemainingWords($_user.id);
+		remainingWords.set(charge);
 
 		return _response;
 	};

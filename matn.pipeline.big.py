@@ -13,6 +13,7 @@ import os
 import uuid
 import requests
 import json
+import string
 from logging import getLogger, basicConfig, INFO
 from pydantic import BaseModel
 
@@ -56,7 +57,7 @@ class Pipeline:
                             return item["text"]
                 logger.debug(f"Found last user message: {message['content']}")
                 return message["content"]
-        return None
+        return ''
 
     def get_last_assistant_message(self, messages: List[dict]) -> str:
         logger.debug("Retrieving last assistant message")
@@ -69,7 +70,7 @@ class Pipeline:
                             return item["text"]
                 logger.debug(f"Found last assistant message: {message['content']}")
                 return message["content"]
-        return None
+        return ''
 
     def get_system_message(self, messages: List[dict]) -> dict:
         logger.debug("Retrieving system message")
@@ -79,15 +80,21 @@ class Pipeline:
                 return message
         return None
 
-    async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
+    async def outlet(self, body: dict, user: Optional[dict] = None) -> dict:
         logger.info(f"inlet called")
         logger.debug(f"Received body: {body}")
         logger.debug(f"User: {user}")
 
         # Extract the last assistant message
         ai_message = self.get_last_assistant_message(body["messages"])
+        assistant_message = self.get_last_user_message(body['messages'])
+        total_words = len(str(ai_message).replace('\u200C', ' ').split())
+        total_words = sum(1 for char in ai_message if char in string.punctuation)
+        total_words += len(str(assistant_message).replace('\u200C', ' ').split()) // 20 + 1
+        total_words += sum(1 for char in assistant_message if char in string.punctuation)
+        
         request = {
-            "words": len(str(ai_message).split()),
+            "words": total_words,
             "chat_user_id": user["id"] if user else None,
             "model": body["model"]
         }
@@ -99,18 +106,21 @@ class Pipeline:
         headers = {'Content-Type': 'application/json'}
 
         try:
-            response = requests.post(self.valves.api_url, headers=headers, data=payload)
+            response = requests.request( "POST", self.valves.api_url, headers=headers, data=payload)
             response.raise_for_status()
-            logger.info(f"API Response: {response.text}")
+
+            result = json.loads(response.content)
+            logger.info(f"API Response: {response.content}")
+            charge = result.get('remain')
+            if charge is not None and int(charge) < 10:
+                raise Exception("You've exceeded your available balance. Please top up your account on matn.ai.")
             
-            # You can process the API response here if needed
-            # For now, we'll just pass the original body through
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Error calling the API: {e}")
 
         return body
 
-    async def outlet(self, body: dict, user: Optional[dict] = None) -> dict:
+    async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
         logger.info(f"outlet called")
         return body
