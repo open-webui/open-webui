@@ -7,6 +7,11 @@ from functools import lru_cache
 from pathlib import Path
 
 import requests
+from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
+
 from config import (
     AUDIO_STT_ENGINE,
     AUDIO_STT_MODEL,
@@ -29,10 +34,6 @@ from config import (
 )
 from constants import ERROR_MESSAGES
 from env import SRC_LOG_LEVELS
-from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from pydantic import BaseModel
 from utils.utils import get_admin_user, get_current_user, get_verified_user
 
 log = logging.getLogger(__name__)

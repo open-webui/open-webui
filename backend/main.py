@@ -15,37 +15,49 @@ import aiohttp
 import requests
 from authlib.integrations.starlette_client import OAuth
 from authlib.oidc.core import UserInfo
-from fastapi import FastAPI, Request, Depends, status, UploadFile, File, Form, HTTPException
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 from sqlalchemy import text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import JSONResponse, StreamingResponse, Response, RedirectResponse
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from starlette.responses import RedirectResponse, Response, StreamingResponse
 
 from apps.audio.main import app as audio_app
-from apps.filter.main import app as filter_app, filter_message, app_start
+from apps.filter.main import app as filter_app
+from apps.filter.main import filter_message, app_start
 from apps.images.main import app as images_app
+from apps.ollama.main import app as ollama_app
 from apps.ollama.main import (
-    app as ollama_app,
-    get_all_models as get_ollama_models,
     generate_openai_chat_completion as generate_ollama_chat_completion,
 )
+from apps.ollama.main import get_all_models as get_ollama_models
+from apps.openai.main import app as openai_app
+from apps.openai.main import generate_chat_completion as generate_openai_chat_completion
+from apps.openai.main import get_all_models as get_openai_models
 from apps.rag.main import app as rag_app
 from apps.rag.utils import get_rag_context, rag_template
-from apps.socket.main import app as socket_app, get_event_emitter, get_event_call
+from apps.socket.main import app as socket_app
+from apps.socket.main import get_event_call, get_event_emitter
 from apps.webui.internal.db import Session
-from apps.webui.main import (
-    app as webui_app,
-    get_pipe_models,
-    generate_function_chat_completion,
-)
+from apps.webui.main import app as webui_app
+from apps.webui.main import generate_function_chat_completion, get_pipe_models
 from apps.webui.models.auths import Auths
 from apps.webui.models.functions import Functions
 from apps.webui.models.models import Models
-from apps.webui.models.users import Users, UserModel, change_init_background_random_image_url
+from apps.webui.models.users import UserModel, Users, change_init_background_random_image_url
 from apps.webui.routers.users import change_background_random_image_url
 from apps.webui.utils import load_function_module_by_id
 from config import (
@@ -72,8 +84,8 @@ from config import (
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     WEBHOOK_URL,
     WEBUI_AUTH,
-    WEBUI_NAME,
-    run_migrations,
+    AppConfig,
+    run_migrations, BACKGROUND_RANDOM_IMAGE_URL, MODEL_STATUS, LOBECHAT_URL, MIDJOURNEY_URL,
 )
 from constants import ERROR_MESSAGES, TASKS, WEBHOOK_MESSAGES
 from env import (
@@ -87,6 +99,7 @@ from env import (
     WEBUI_SESSION_COOKIE_SAME_SITE,
     WEBUI_SESSION_COOKIE_SECURE,
     WEBUI_URL,
+    WEBUI_NAME,
 )
 from utils.misc import (
     add_or_update_system_message,
@@ -95,8 +108,8 @@ from utils.misc import (
     prepend_to_first_user_message_content,
 )
 from utils.task import (
-    title_generation_template,
     search_query_generation_template,
+    title_generation_template,
     tools_function_calling_generation_template,
 )
 from utils.tools import get_tools
@@ -514,7 +527,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             setting_enableFileUpdateBase64 = user.settings.ui.get("enableFileUpdateBase64", False)
         except AttributeError:
             setting_enableFileUpdateBase64 = False
-            
+
         extra_params = {
             "__event_emitter__": get_event_emitter(metadata),
             "__event_call__": get_event_call(metadata),

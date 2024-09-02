@@ -1,6 +1,10 @@
 import re
 import uuid
 
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import Response
+from pydantic import BaseModel
+
 from apps.webui.models.auths import (
     AddUserForm,
     ApiKey,
@@ -16,9 +20,6 @@ from apps.webui.models.users import Users
 from config import WEBUI_AUTH
 from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from env import WEBUI_AUTH_TRUSTED_EMAIL_HEADER, WEBUI_AUTH_TRUSTED_NAME_HEADER
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import Response
-from pydantic import BaseModel
 from utils.misc import parse_duration, validate_email_format
 from utils.utils import (
     create_api_key,

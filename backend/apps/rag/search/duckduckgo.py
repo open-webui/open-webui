@@ -1,8 +1,9 @@
 import logging
 from typing import Optional
 
-from apps.rag.search.main import SearchResult, get_filtered_results
 from duckduckgo_search import DDGS
+
+from apps.rag.search.main import SearchResult, get_filtered_results
 from env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)

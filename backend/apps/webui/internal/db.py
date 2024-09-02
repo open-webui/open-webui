@@ -2,15 +2,16 @@ import json
 import logging
 from contextlib import contextmanager
 from typing import Any, Optional
+from typing_extensions import Self
 
-from apps.webui.internal.wrappers import register_connection
-from env import BACKEND_DIR, DATABASE_URL, SRC_LOG_LEVELS
 from peewee_migrate import Router
 from sqlalchemy import Dialect, create_engine, types
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.sql.type_api import _T
-from typing_extensions import Self
+
+from apps.webui.internal.wrappers import register_connection
+from env import BACKEND_DIR, DATABASE_URL, SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["DB"])

@@ -8,6 +8,7 @@ from pathlib import Path
 
 import markdown
 from bs4 import BeautifulSoup
+
 from constants import ERROR_MESSAGES
 
 ####################################

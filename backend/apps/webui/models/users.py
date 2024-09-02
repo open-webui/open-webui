@@ -1,10 +1,11 @@
 import time
 from typing import Optional
 
-from apps.webui.internal.db import Base, JSONField, get_db
-from apps.webui.models.chats import Chats
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text
+
+from apps.webui.internal.db import Base, JSONField, get_db
+from apps.webui.models.chats import Chats
 
 ####################
 # User DB Schema

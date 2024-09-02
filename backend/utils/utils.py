@@ -4,12 +4,13 @@ from datetime import UTC, datetime, timedelta
 from typing import Optional, Union
 
 import jwt
-from apps.webui.models.users import Users
-from constants import ERROR_MESSAGES
-from env import WEBUI_SECRET_KEY
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
+
+from apps.webui.models.users import Users
+from constants import ERROR_MESSAGES
+from env import WEBUI_SECRET_KEY
 
 logging.getLogger("passlib").setLevel(logging.ERROR)
 

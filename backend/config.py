@@ -8,10 +8,12 @@ from typing import Generic, Optional, TypeVar
 from urllib.parse import urlparse
 
 import chromadb
-import requests
 import yaml
-from apps.webui.internal.db import Base, get_db
 from chromadb import Settings
+from pydantic import BaseModel
+from sqlalchemy import JSON, Column, DateTime, Integer, func
+
+from apps.webui.internal.db import Base, get_db
 from env import (
     BACKEND_DIR,
     CONFIG_DATA,
@@ -19,12 +21,8 @@ from env import (
     ENV,
     FRONTEND_BUILD_DIR,
     WEBUI_AUTH,
-    WEBUI_FAVICON_URL,
-    WEBUI_NAME,
     log,
 )
-from pydantic import BaseModel
-from sqlalchemy import JSON, Column, DateTime, Integer, func
 
 
 class EndpointFilter(logging.Filter):

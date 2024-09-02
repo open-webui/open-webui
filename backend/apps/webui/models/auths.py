@@ -2,11 +2,12 @@ import logging
 import uuid
 from typing import Optional
 
+from pydantic import BaseModel
+from sqlalchemy import Boolean, Column, String, Text
+
 from apps.webui.internal.db import Base, get_db
 from apps.webui.models.users import UserModel, Users
 from env import SRC_LOG_LEVELS
-from pydantic import BaseModel
-from sqlalchemy import Boolean, Column, String, Text
 from utils.utils import verify_password
 
 log = logging.getLogger(__name__)

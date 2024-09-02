@@ -2,11 +2,12 @@ import logging
 import time
 from typing import Optional
 
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import BigInteger, Column, String, Text
+
 from apps.webui.internal.db import Base, JSONField, get_db
 from apps.webui.models.users import Users
 from env import SRC_LOG_LEVELS
-from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])

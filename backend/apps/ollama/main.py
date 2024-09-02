@@ -10,6 +10,12 @@ from urllib.parse import urlparse
 
 import aiohttp
 import requests
+from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, ConfigDict
+from starlette.background import BackgroundTask
+
 from apps.webui.models.models import Models
 from config import (
     AIOHTTP_CLIENT_TIMEOUT,
@@ -23,11 +29,6 @@ from config import (
 )
 from constants import ERROR_MESSAGES
 from env import SRC_LOG_LEVELS
-from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, ConfigDict
-from starlette.background import BackgroundTask
 from utils.misc import (
     apply_model_params_to_body_ollama,
     apply_model_params_to_body_openai,

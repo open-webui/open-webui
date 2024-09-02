@@ -3,39 +3,36 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import List, Optional, Literal, overload
+from typing import Literal, Optional, overload
 
 import aiohttp
 import requests
-from pydantic import BaseModel
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
+from pydantic import BaseModel
 from starlette.background import BackgroundTask
 
-from apps.webui.models.models import Models
 from apps.filter.main import process_user_usage
-from constants import ERROR_MESSAGES
-from utils.utils import (
-    get_verified_user,
-    get_admin_user,
+from apps.webui.models.models import Models
+from config import (
+    AIOHTTP_CLIENT_TIMEOUT,
+    CACHE_DIR,
+    CORS_ALLOW_ORIGIN,
+    ENABLE_MODEL_FILTER,
+    ENABLE_OPENAI_API,
+    MODEL_FILTER_LIST,
+    OPENAI_API_BASE_URLS,
+    OPENAI_API_KEYS,
+    AppConfig,
 )
+from constants import ERROR_MESSAGES
+from env import SRC_LOG_LEVELS
 from utils.misc import (
     apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
 )
-from config import (
-    SRC_LOG_LEVELS,
-    ENABLE_OPENAI_API,
-    AIOHTTP_CLIENT_TIMEOUT,
-    OPENAI_API_BASE_URLS,
-    OPENAI_API_KEYS,
-    CACHE_DIR,
-    ENABLE_MODEL_FILTER,
-    MODEL_FILTER_LIST,
-    AppConfig,
-    CORS_ALLOW_ORIGIN,
-)
+from utils.utils import get_admin_user, get_verified_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
@@ -194,8 +191,8 @@ async def fetch_url(url, key):
 
 
 async def cleanup_response(
-    response: Optional[aiohttp.ClientResponse],
-    session: Optional[aiohttp.ClientSession],
+        response: Optional[aiohttp.ClientResponse],
+        session: Optional[aiohttp.ClientSession],
 ):
     if response:
         response.close()
@@ -220,8 +217,8 @@ def merge_models_lists(model_lists):
                     }
                     for model in models
                     if "api.openai.com"
-                    not in app.state.config.OPENAI_API_BASE_URLS[idx]
-                    or "gpt" in model["id"]
+                       not in app.state.config.OPENAI_API_BASE_URLS[idx]
+                       or "gpt" in model["id"]
                 ]
             )
 
@@ -349,9 +346,9 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
 @app.post("/chat/completions")
 @app.post("/chat/completions/{url_idx}")
 async def generate_chat_completion(
-    form_data: dict,
-    url_idx: Optional[int] = None,
-    user=Depends(get_verified_user),
+        form_data: dict,
+        url_idx: Optional[int] = None,
+        user=Depends(get_verified_user),
 ):
     idx = 0
     error = False

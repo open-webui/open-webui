@@ -1,6 +1,7 @@
-from config import BannerModel
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
+
+from config import BannerModel
 from utils.utils import get_admin_user, get_verified_user
 
 router = APIRouter()

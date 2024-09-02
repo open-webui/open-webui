@@ -3,13 +3,14 @@ import os
 from typing import Optional, Union
 
 import requests
-from apps.ollama.main import GenerateEmbeddingsForm, generate_ollama_embeddings
-from config import CHROMA_CLIENT
-from env import SRC_LOG_LEVELS
 from huggingface_hub import snapshot_download
 from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
+
+from apps.ollama.main import GenerateEmbeddingsForm, generate_ollama_embeddings
+from config import CHROMA_CLIENT
+from env import SRC_LOG_LEVELS
 from utils.misc import get_last_user_message
 
 log = logging.getLogger(__name__)

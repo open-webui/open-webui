@@ -1,9 +1,11 @@
 import time
 from typing import Optional
 
-from apps.webui.internal.db import Base, get_db
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text
+
+from apps.webui.internal.db import Base, get_db
+
 
 ####################
 # Prompts DB Schema

@@ -1,8 +1,9 @@
 from typing import Optional
 
+from fastapi import APIRouter, Depends, HTTPException, status
+
 from apps.webui.models.prompts import PromptForm, PromptModel, Prompts
 from constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, status
 from utils.utils import get_admin_user, get_verified_user
 
 router = APIRouter()

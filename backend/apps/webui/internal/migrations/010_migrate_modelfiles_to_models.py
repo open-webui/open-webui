@@ -24,16 +24,16 @@ Some examples (model - class or model name)::
 
 """
 
+import json
 from contextlib import suppress
 
 import peewee as pw
 from peewee_migrate import Migrator
-import json
 
 from utils.misc import parse_ollama_modelfile
 
 with suppress(ImportError):
-    import playhouse.postgres_ext as pw_pext
+    pass
 
 
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):

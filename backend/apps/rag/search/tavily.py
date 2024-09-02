@@ -1,6 +1,7 @@
 import logging
 
 import requests
+
 from apps.rag.search.main import SearchResult
 from env import SRC_LOG_LEVELS
 

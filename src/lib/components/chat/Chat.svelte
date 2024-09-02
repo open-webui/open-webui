@@ -1336,17 +1336,19 @@
 				}
 
 				if ($chatId == _chatId) {
-					if ($settings.saveChatHistory ?? true) {
-						chat = await updateChatById(localStorage.token, _chatId, {
-							models: selectedModels,
-							messages: messages,
-							history: history,
-							params: params,
-							files: chatFiles
-						});
+					if (!$temporaryChatEnabled) {
+						if ($settings.saveChatHistory ?? true) {
+							chat = await updateChatById(localStorage.token, _chatId, {
+								models: selectedModels,
+								messages: messages,
+								history: history,
+								params: params,
+								files: chatFiles
+							});
 
-						currentChatPage.set(1);
-						await chats.set(await getChatList(localStorage.token, $currentChatPage));
+							currentChatPage.set(1);
+							await chats.set(await getChatList(localStorage.token, $currentChatPage));
+						}
 					}
 				}
 			} else {

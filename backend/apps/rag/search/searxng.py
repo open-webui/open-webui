@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 
 import requests
+
 from apps.rag.search.main import SearchResult, get_filtered_results
 from env import SRC_LOG_LEVELS
 

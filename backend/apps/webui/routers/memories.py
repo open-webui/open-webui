@@ -1,11 +1,12 @@
 import logging
 from typing import Optional
 
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
+
 from apps.webui.models.memories import Memories, MemoryModel
 from config import CHROMA_CLIENT
 from env import SRC_LOG_LEVELS
-from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
 from utils.utils import get_verified_user
 
 log = logging.getLogger(__name__)

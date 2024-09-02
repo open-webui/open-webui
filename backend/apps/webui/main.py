@@ -3,6 +3,11 @@ import json
 import logging
 from typing import AsyncGenerator, Generator, Iterator
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+
 from apps.socket.main import get_event_call, get_event_emitter
 from apps.webui.models.functions import Functions
 from apps.webui.models.models import Models
@@ -43,10 +48,6 @@ from config import (
     AppConfig,
 )
 from env import WEBUI_AUTH_TRUSTED_EMAIL_HEADER, WEBUI_AUTH_TRUSTED_NAME_HEADER
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 from utils.misc import (
     apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
@@ -54,8 +55,6 @@ from utils.misc import (
     openai_chat_completion_message_template,
 )
 from utils.tools import get_tools
-
-from apps.rag.main import app as rag_app
 
 app = FastAPI()
 
@@ -69,10 +68,8 @@ app.state.config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
 app.state.AUTH_TRUSTED_NAME_HEADER = WEBUI_AUTH_TRUSTED_NAME_HEADER
 
-
 app.state.config.SHOW_ADMIN_DETAILS = SHOW_ADMIN_DETAILS
 app.state.config.ADMIN_EMAIL = ADMIN_EMAIL
-
 
 app.state.config.DEFAULT_MODELS = DEFAULT_MODELS
 app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
@@ -99,7 +96,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 app.include_router(configs.router, prefix="/configs", tags=["configs"])
 app.include_router(auths.router, prefix="/auths", tags=["auths"])
@@ -251,20 +247,6 @@ def get_function_params(function_module, form_data, user, extra_params=None):
     # Get the signature of the function
     sig = inspect.signature(function_module.pipe)
 
-    # try:
-    #     setting_enableFileUpdateBase64 = user.settings.ui.get("enableFileUpdateBase64", False)
-    # except AttributeError:
-    #     setting_enableFileUpdateBase64 = False
-        
-    # if "__user__" in sig.parameters:
-    #     __user__ = {
-    #         "id": user.id,
-    #         "email": user.email,
-    #         "name": user.name,
-    #         "role": user.role,
-    #         "enableFileUpdateBase64": setting_enableFileUpdateBase64 and rag_app.state.config.ENABLE_BASE64,
-    #     }
-
     params = {"body": form_data} | {
         k: v for k, v in extra_params.items() if k in sig.parameters
     }
@@ -357,7 +339,7 @@ async def generate_function_chat_completion(form_data, user):
 
             except Exception as e:
                 print(f"Error: {e}")
-                yield f"data: {json.dumps({'error': {'detail':str(e)}})}\n\n"
+                yield f"data: {json.dumps({'error': {'detail': str(e)}})}\n\n"
                 return
 
             if isinstance(res, str):

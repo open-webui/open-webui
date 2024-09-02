@@ -2,6 +2,8 @@ import os
 from pathlib import Path
 from typing import Optional
 
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+
 from apps.webui.models.functions import (
     FunctionForm,
     FunctionModel,
@@ -11,7 +13,6 @@ from apps.webui.models.functions import (
 from apps.webui.utils import load_function_module_by_id
 from config import CACHE_DIR, FUNCTIONS_DIR
 from constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, Request, status
 from utils.utils import get_admin_user, get_verified_user
 
 router = APIRouter()

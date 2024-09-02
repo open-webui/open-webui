@@ -1,8 +1,9 @@
 from typing import Optional
 
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+
 from apps.webui.models.models import ModelForm, ModelModel, ModelResponse, Models
 from constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, Request, status
 from utils.utils import get_admin_user, get_verified_user
 
 router = APIRouter()

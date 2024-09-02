@@ -1,58 +1,42 @@
-import logging
-import os
-import shutil
-import uuid
-import socket
 import json
-import random
+import logging
 import mimetypes
+import os
+import random
+import shutil
+import socket
 import urllib.parse
-import validators
-import requests
-import re
+import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterator, List, Optional, Sequence, Tuple, Union
+from typing import Iterator, Optional, Sequence, Union, List, Tuple, Any
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, UploadFile, File, Form, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-
-from pydantic import BaseModel, Field
-
+import requests
+import validators
 from chromadb.utils.batch_utils import create_batches
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi.middleware.cors import CORSMiddleware
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_core.documents import Document
 from langchain_community.document_loaders import (
-    WebBaseLoader,
-    TextLoader,
-    PyPDFLoader,
-    CSVLoader,
     BSHTMLLoader,
+    CSVLoader,
     Docx2txtLoader,
-    UnstructuredEPubLoader,
-    UnstructuredWordDocumentLoader,
-    UnstructuredMarkdownLoader,
-    UnstructuredXMLLoader,
-    UnstructuredRSTLoader,
-    UnstructuredExcelLoader,
-    UnstructuredPowerPointLoader,
-    YoutubeLoader,
     OutlookMessageLoader,
+    PyPDFLoader,
+    TextLoader,
+    UnstructuredEPubLoader,
+    UnstructuredExcelLoader,
+    UnstructuredMarkdownLoader,
+    UnstructuredPowerPointLoader,
+    UnstructuredRSTLoader,
+    UnstructuredXMLLoader,
+    WebBaseLoader,
+    YoutubeLoader,
 )
+from langchain_core.documents import Document
+from pydantic import BaseModel
+from pydantic import Field
 
-from apps.webui.models.documents import Documents, DocumentForm, DocumentResponse
-from apps.webui.models.files import Files
-from apps.webui.models.users import Users
-from apps.webui.routers.users import change_enableBase64
-from apps.rag.utils import (
-    get_model_path,
-    get_embedding_function,
-    query_doc,
-    query_doc_with_hybrid_search,
-    query_collection,
-    query_collection_with_hybrid_search,
-)
 from apps.rag.search.brave import search_brave
 from apps.rag.search.duckduckgo import search_duckduckgo
 from apps.rag.search.google_pse import search_google_pse
@@ -64,7 +48,18 @@ from apps.rag.search.serper import search_serper
 from apps.rag.search.serply import search_serply
 from apps.rag.search.serpstack import search_serpstack
 from apps.rag.search.tavily import search_tavily
-
+from apps.rag.utils import (
+    get_embedding_function,
+    get_model_path,
+    query_collection,
+    query_collection_with_hybrid_search,
+    query_doc,
+    query_doc_with_hybrid_search,
+)
+from apps.webui.models.documents import DocumentForm, Documents
+from apps.webui.models.files import Files
+from apps.webui.models.users import Users
+from apps.webui.routers.users import change_enableBase64
 from config import (
     BRAVE_SEARCH_API_KEY,
     CHROMA_CLIENT,
@@ -86,13 +81,14 @@ from config import (
     RAG_EMBEDDING_MODEL,
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
-    ENABLE_BASE64,
-    RAG_RERANKING_MODEL,
-    RAG_RERANKING_MODEL_AUTO_UPDATE,
-    RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
+    RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+    RAG_FILE_MAX_COUNT,
+    RAG_FILE_MAX_SIZE,
     RAG_OPENAI_API_BASE_URL,
     RAG_OPENAI_API_KEY,
     RAG_RELEVANCE_THRESHOLD,
+    RAG_RERANKING_MODEL,
+    RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_TEMPLATE,
     RAG_TOP_K,
     RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
@@ -107,16 +103,14 @@ from config import (
     SERPSTACK_API_KEY,
     SERPSTACK_HTTPS,
     TAVILY_API_KEY,
-    SILICONFLOW_API_BASE_URL,
-    SILICONFLOW_API_KEY,
     TIKA_SERVER_URL,
     UPLOAD_DIR,
     YOUTUBE_LOADER_LANGUAGE,
     AppConfig,
 )
+from config import SILICONFLOW_API_KEY, SILICONFLOW_API_BASE_URL, ENABLE_BASE64
 from constants import ERROR_MESSAGES
 from env import SRC_LOG_LEVELS
-
 from utils.misc import (
     calculate_sha256,
     calculate_sha256_string,

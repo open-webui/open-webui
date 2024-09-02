@@ -5,10 +5,9 @@ import time
 import docker
 import pytest
 from docker import DockerClient
-from pytest_docker.plugin import get_docker_ip
 from fastapi.testclient import TestClient
+from pytest_docker.plugin import get_docker_ip
 from sqlalchemy import text, create_engine
-
 
 log = logging.getLogger(__name__)
 

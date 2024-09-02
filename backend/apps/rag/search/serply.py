@@ -3,6 +3,7 @@ from typing import Optional
 from urllib.parse import urlencode
 
 import requests
+
 from apps.rag.search.main import SearchResult, get_filtered_results
 from env import SRC_LOG_LEVELS
 

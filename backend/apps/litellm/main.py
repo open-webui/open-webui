@@ -1,17 +1,12 @@
-import sys
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.routing import APIRoute
+from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 import logging
-from fastapi import FastAPI, Request, Depends, status, Response
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Request, Depends, status
 
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import StreamingResponse
-import json
 import time
 import requests
 
@@ -19,7 +14,7 @@ from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 
 from utils.utils import get_verified_user, get_current_user, get_admin_user
-from config import SRC_LOG_LEVELS, ENV
+from env import SRC_LOG_LEVELS
 from constants import MESSAGES
 
 import os
@@ -163,7 +158,7 @@ async def startup_event():
 
 
 app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
-app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIS
+app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 
 @app.get("/")
