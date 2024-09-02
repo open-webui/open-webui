@@ -1,23 +1,21 @@
-from fastapi import FastAPI, Request, HTTPException, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, FileResponse
-
-import requests
-import aiohttp
 import asyncio
 import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Literal, overload
 
 import aiohttp
 import requests
+from pydantic import BaseModel
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, StreamingResponse
+from starlette.background import BackgroundTask
 
 from apps.webui.models.models import Models
+from apps.filter.main import process_user_usage
 from constants import ERROR_MESSAGES
-from pydantic import BaseModel
-from starlette.background import BackgroundTask
 from utils.utils import (
     get_verified_user,
     get_admin_user,
@@ -26,7 +24,6 @@ from utils.misc import (
     apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
 )
-
 from config import (
     SRC_LOG_LEVELS,
     ENABLE_OPENAI_API,
@@ -39,9 +36,6 @@ from config import (
     AppConfig,
     CORS_ALLOW_ORIGIN,
 )
-from typing import Optional, Literal, overload
-
-from apps.filter.main import process_user_usage
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])

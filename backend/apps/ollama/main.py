@@ -1,54 +1,40 @@
-from fastapi import (
-    FastAPI,
-    Request,
-    HTTPException,
-    Depends,
-    UploadFile,
-    File,
-)
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
-
-from pydantic import BaseModel, ConfigDict
-
-import os
-import re
-import random
-import requests
-import json
-import aiohttp
 import asyncio
+import json
 import logging
+import os
+import random
+import re
 import time
-from urllib.parse import urlparse
 from typing import Optional, Union
+from urllib.parse import urlparse
 
-from starlette.background import BackgroundTask
-
+import aiohttp
+import requests
 from apps.webui.models.models import Models
-from constants import ERROR_MESSAGES
-from utils.utils import (
-    get_verified_user,
-    get_admin_user,
-)
-
 from config import (
-    SRC_LOG_LEVELS,
-    OLLAMA_BASE_URLS,
-    ENABLE_OLLAMA_API,
     AIOHTTP_CLIENT_TIMEOUT,
+    CORS_ALLOW_ORIGIN,
     ENABLE_MODEL_FILTER,
+    ENABLE_OLLAMA_API,
     MODEL_FILTER_LIST,
+    OLLAMA_BASE_URLS,
     UPLOAD_DIR,
     AppConfig,
-    CORS_ALLOW_ORIGIN,
 )
+from constants import ERROR_MESSAGES
+from env import SRC_LOG_LEVELS
+from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, ConfigDict
+from starlette.background import BackgroundTask
 from utils.misc import (
-    calculate_sha256,
     apply_model_params_to_body_ollama,
     apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
+    calculate_sha256,
 )
+from utils.utils import get_admin_user, get_verified_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OLLAMA"])

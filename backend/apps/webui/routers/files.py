@@ -5,22 +5,12 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
-from apps.webui.models.files import (
-    Files,
-    FileForm,
-    FileModel,
-)
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi.responses import FileResponse
+
+from apps.webui.models.files import Files, FileForm, FileModel
 from config import SRC_LOG_LEVELS, UPLOAD_DIR, MODEL_IMAGES_DIR, BACKGROUND_IMAGES_DIR, USER_IMAGES_DIR
 from constants import ERROR_MESSAGES
-from fastapi import APIRouter
-from fastapi import (
-    Depends,
-    HTTPException,
-    status,
-    UploadFile,
-    File,
-)
-from fastapi.responses import FileResponse
 from utils.utils import get_verified_user, get_admin_user
 
 log = logging.getLogger(__name__)

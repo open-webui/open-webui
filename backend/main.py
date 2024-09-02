@@ -9,35 +9,21 @@ import sys
 import time
 import uuid
 from contextlib import asynccontextmanager
-from authlib.integrations.starlette_client import OAuth
-from authlib.oidc.core import UserInfo
-import json
-import time
-import os
-import sys
-import logging
-import aiohttp
-import requests
-import mimetypes
-import shutil
-import inspect
 from typing import Optional
 
 import aiohttp
 import requests
 from authlib.integrations.starlette_client import OAuth
 from authlib.oidc.core import UserInfo
-from fastapi import FastAPI, Request, Depends, status, UploadFile, File, Form
-from fastapi import HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from fastapi import FastAPI, Request, Depends, status, UploadFile, File, Form, HTTPException
 from sqlalchemy import text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import StreamingResponse, Response, RedirectResponse
+from starlette.responses import JSONResponse, StreamingResponse, Response, RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from apps.audio.main import app as audio_app
 from apps.filter.main import app as filter_app, filter_message, app_start
@@ -46,11 +32,6 @@ from apps.ollama.main import (
     app as ollama_app,
     get_all_models as get_ollama_models,
     generate_openai_chat_completion as generate_ollama_chat_completion,
-)
-from apps.openai.main import (
-    app as openai_app,
-    get_all_models as get_openai_models,
-    generate_chat_completion as generate_openai_chat_completion,
 )
 from apps.rag.main import app as rag_app
 from apps.rag.utils import get_rag_context, rag_template
@@ -64,58 +45,54 @@ from apps.webui.main import (
 from apps.webui.models.auths import Auths
 from apps.webui.models.functions import Functions
 from apps.webui.models.models import Models
-from apps.webui.models.users import Users, UserModel
-from apps.webui.models.users import change_init_background_random_image_url
+from apps.webui.models.users import Users, UserModel, change_init_background_random_image_url
 from apps.webui.routers.users import change_background_random_image_url
 from apps.webui.utils import load_function_module_by_id
 from config import (
-    run_migrations,
-    WEBUI_NAME,
-    WEBUI_URL,
-    WEBUI_AUTH,
-    ENV,
-    VERSION,
-    MODEL_STATUS,
-    LOBECHAT_URL,
-    MIDJOURNEY_URL,
-    CHANGELOG,
-    FRONTEND_BUILD_DIR,
     CACHE_DIR,
-    STATIC_DIR,
+    CORS_ALLOW_ORIGIN,
     DEFAULT_LOCALE,
-    ENABLE_OPENAI_API,
-    ENABLE_OLLAMA_API,
-    ENABLE_MODEL_FILTER,
-    MODEL_FILTER_LIST,
-    GLOBAL_LOG_LEVEL,
-    SRC_LOG_LEVELS,
-    WEBHOOK_URL,
+    ENABLE_ADMIN_CHAT_ACCESS,
     ENABLE_ADMIN_EXPORT,
-    WEBUI_BUILD_HASH,
+    ENABLE_MODEL_FILTER,
+    ENABLE_OAUTH_SIGNUP,
+    ENABLE_OLLAMA_API,
+    ENABLE_OPENAI_API,
+    ENV,
+    FRONTEND_BUILD_DIR,
+    MODEL_FILTER_LIST,
+    OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
+    OAUTH_PROVIDERS,
+    SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
+    SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD,
+    STATIC_DIR,
     TASK_MODEL,
     TASK_MODEL_EXTERNAL,
     TITLE_GENERATION_PROMPT_TEMPLATE,
-    SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
-    SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD,
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
-    BACKGROUND_RANDOM_IMAGE_URL,
+    WEBHOOK_URL,
+    WEBUI_AUTH,
+    WEBUI_NAME,
+    run_migrations,
+)
+from constants import ERROR_MESSAGES, TASKS, WEBHOOK_MESSAGES
+from env import (
+    CHANGELOG,
+    GLOBAL_LOG_LEVEL,
     SAFE_MODE,
-    OAUTH_PROVIDERS,
-    ENABLE_OAUTH_SIGNUP,
-    OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
+    SRC_LOG_LEVELS,
+    VERSION,
+    WEBUI_BUILD_HASH,
     WEBUI_SECRET_KEY,
     WEBUI_SESSION_COOKIE_SAME_SITE,
     WEBUI_SESSION_COOKIE_SECURE,
-    ENABLE_ADMIN_CHAT_ACCESS,
-    AppConfig,
-    CORS_ALLOW_ORIGIN,
+    WEBUI_URL,
 )
-from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES, TASKS
 from utils.misc import (
-    get_last_user_message,
     add_or_update_system_message,
-    prepend_to_first_user_message_content,
+    get_last_user_message,
     parse_duration,
+    prepend_to_first_user_message_content,
 )
 from utils.task import (
     title_generation_template,
@@ -124,15 +101,13 @@ from utils.task import (
 )
 from utils.tools import get_tools
 from utils.utils import (
+    create_token,
     decode_token,
-)
-from utils.utils import (
     get_admin_user,
-    get_verified_user,
     get_current_user,
     get_http_authorization_cred,
     get_password_hash,
-    create_token,
+    get_verified_user,
 )
 from utils.webhook import post_webhook
 
@@ -645,7 +620,10 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             async for data in original_generator:
                 yield data
 
-        return StreamingResponse(stream_wrapper(response.body_iterator, data_items))
+        return StreamingResponse(
+            stream_wrapper(response.body_iterator, data_items),
+            headers=dict(response.headers),
+        )
 
     async def _receive(self, body: bytes):
         return {"type": "http.request", "body": body, "more_body": False}

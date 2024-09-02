@@ -1,23 +1,28 @@
-from fastapi import (
-    FastAPI,
-    Depends,
-    HTTPException,
-    status,
-    UploadFile,
-    File,
-    Form,
-)
-from fastapi.middleware.cors import CORSMiddleware
+import logging
+import os
+import shutil
+import uuid
+import socket
+import json
+import random
+import mimetypes
+import urllib.parse
+import validators
 import requests
-import os, shutil, logging, re
+import re
 from datetime import datetime
-
 from pathlib import Path
 from typing import Any, Iterator, List, Optional, Sequence, Tuple, Union
 
-from chromadb.utils.batch_utils import create_batches
-from langchain_core.documents import Document
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, UploadFile, File, Form, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
+from pydantic import BaseModel, Field
+
+from chromadb.utils.batch_utils import create_batches
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
 from langchain_community.document_loaders import (
     WebBaseLoader,
     TextLoader,
@@ -35,30 +40,11 @@ from langchain_community.document_loaders import (
     YoutubeLoader,
     OutlookMessageLoader,
 )
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-import validators
-import urllib.parse
-import socket
-
-from pydantic import BaseModel, Field
-from typing import Optional
-import mimetypes
-import uuid
-import json
-import random
-
-from apps.webui.models.documents import (
-    Documents,
-    DocumentForm,
-    DocumentResponse,
-)
-from apps.webui.models.files import (
-    Files,
-)
-
+from apps.webui.models.documents import Documents, DocumentForm, DocumentResponse
+from apps.webui.models.files import Files
+from apps.webui.models.users import Users
 from apps.webui.routers.users import change_enableBase64
-
 from apps.rag.utils import (
     get_model_path,
     get_embedding_function,
@@ -67,83 +53,77 @@ from apps.rag.utils import (
     query_collection,
     query_collection_with_hybrid_search,
 )
-
 from apps.rag.search.brave import search_brave
+from apps.rag.search.duckduckgo import search_duckduckgo
 from apps.rag.search.google_pse import search_google_pse
+from apps.rag.search.jina_search import search_jina
 from apps.rag.search.main import SearchResult
+from apps.rag.search.searchapi import search_searchapi
 from apps.rag.search.searxng import search_searxng
 from apps.rag.search.serper import search_serper
-from apps.rag.search.serpstack import search_serpstack
 from apps.rag.search.serply import search_serply
-from apps.rag.search.duckduckgo import search_duckduckgo
+from apps.rag.search.serpstack import search_serpstack
 from apps.rag.search.tavily import search_tavily
-from apps.rag.search.jina_search import search_jina
-
-from utils.misc import (
-    calculate_sha256,
-    calculate_sha256_string,
-    sanitize_filename,
-    extract_folders_after_data_docs,
-)
-from utils.utils import get_verified_user, get_admin_user
 
 from config import (
-    AppConfig,
-    ENV,
-    SRC_LOG_LEVELS,
-    UPLOAD_DIR,
-    DOCS_DIR,
+    BRAVE_SEARCH_API_KEY,
+    CHROMA_CLIENT,
+    CHUNK_OVERLAP,
+    CHUNK_SIZE,
     CONTENT_EXTRACTION_ENGINE,
-    TIKA_SERVER_URL,
-    RAG_TOP_K,
-    RAG_RELEVANCE_THRESHOLD,
-    RAG_FILE_MAX_SIZE,
-    RAG_FILE_MAX_COUNT,
+    CORS_ALLOW_ORIGIN,
+    DEVICE_TYPE,
+    DOCS_DIR,
+    ENABLE_RAG_HYBRID_SEARCH,
+    ENABLE_RAG_LOCAL_WEB_FETCH,
+    ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+    ENABLE_RAG_WEB_SEARCH,
+    ENV,
+    GOOGLE_PSE_API_KEY,
+    GOOGLE_PSE_ENGINE_ID,
+    PDF_EXTRACT_IMAGES,
     RAG_EMBEDDING_ENGINE,
     RAG_EMBEDDING_MODEL,
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
-    ENABLE_RAG_HYBRID_SEARCH,
     ENABLE_BASE64,
-    ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     RAG_RERANKING_MODEL,
-    PDF_EXTRACT_IMAGES,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     RAG_OPENAI_API_BASE_URL,
     RAG_OPENAI_API_KEY,
-    PDF_EXTRACT_IMAGES,
-    DEVICE_TYPE,
-    CHROMA_CLIENT,
-    CHUNK_SIZE,
-    CHUNK_OVERLAP,
+    RAG_RELEVANCE_THRESHOLD,
     RAG_TEMPLATE,
-    ENABLE_RAG_LOCAL_WEB_FETCH,
-    YOUTUBE_LOADER_LANGUAGE,
-    ENABLE_RAG_WEB_SEARCH,
-    RAG_WEB_SEARCH_ENGINE,
+    RAG_TOP_K,
+    RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
     RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+    RAG_WEB_SEARCH_ENGINE,
+    RAG_WEB_SEARCH_RESULT_COUNT,
+    SEARCHAPI_API_KEY,
+    SEARCHAPI_ENGINE,
     SEARXNG_QUERY_URL,
-    GOOGLE_PSE_API_KEY,
-    GOOGLE_PSE_ENGINE_ID,
-    BRAVE_SEARCH_API_KEY,
-    SERPSTACK_API_KEY,
-    SERPSTACK_HTTPS,
     SERPER_API_KEY,
     SERPLY_API_KEY,
+    SERPSTACK_API_KEY,
+    SERPSTACK_HTTPS,
     TAVILY_API_KEY,
     SILICONFLOW_API_BASE_URL,
     SILICONFLOW_API_KEY,
-    RAG_WEB_SEARCH_RESULT_COUNT,
-    RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
-    RAG_EMBEDDING_OPENAI_BATCH_SIZE,
-    CORS_ALLOW_ORIGIN,
-)
-
-from apps.webui.models.users import (
-    Users,
+    TIKA_SERVER_URL,
+    UPLOAD_DIR,
+    YOUTUBE_LOADER_LANGUAGE,
+    AppConfig,
 )
 from constants import ERROR_MESSAGES
+from env import SRC_LOG_LEVELS
+
+from utils.misc import (
+    calculate_sha256,
+    calculate_sha256_string,
+    extract_folders_after_data_docs,
+    sanitize_filename,
+)
+from utils.utils import get_admin_user, get_verified_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -200,6 +180,8 @@ app.state.config.SERPSTACK_HTTPS = SERPSTACK_HTTPS
 app.state.config.SERPER_API_KEY = SERPER_API_KEY
 app.state.config.SERPLY_API_KEY = SERPLY_API_KEY
 app.state.config.TAVILY_API_KEY = TAVILY_API_KEY
+app.state.config.SEARCHAPI_API_KEY = SEARCHAPI_API_KEY
+app.state.config.SEARCHAPI_ENGINE = SEARCHAPI_ENGINE
 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
 app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
 
@@ -496,6 +478,8 @@ async def get_rag_config(user=Depends(get_admin_user)):
                 "serper_api_key": app.state.config.SERPER_API_KEY,
                 "serply_api_key": app.state.config.SERPLY_API_KEY,
                 "tavily_api_key": app.state.config.TAVILY_API_KEY,
+                "searchapi_api_key": app.state.config.SEARCHAPI_API_KEY,
+                "seaarchapi_engine": app.state.config.SEARCHAPI_ENGINE,
                 "result_count": app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             },
@@ -535,6 +519,8 @@ class WebSearchConfig(BaseModel):
     serper_api_key: Optional[str] = None
     serply_api_key: Optional[str] = None
     tavily_api_key: Optional[str] = None
+    searchapi_api_key: Optional[str] = None
+    searchapi_engine: Optional[str] = None
     result_count: Optional[int] = None
     concurrent_requests: Optional[int] = None
 
@@ -598,6 +584,8 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
         app.state.config.SERPER_API_KEY = form_data.web.search.serper_api_key
         app.state.config.SERPLY_API_KEY = form_data.web.search.serply_api_key
         app.state.config.TAVILY_API_KEY = form_data.web.search.tavily_api_key
+        app.state.config.SEARCHAPI_API_KEY = form_data.web.search.searchapi_api_key
+        app.state.config.SEARCHAPI_ENGINE = form_data.web.search.searchapi_engine
         app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = form_data.web.search.result_count
         app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = (
             form_data.web.search.concurrent_requests
@@ -635,6 +623,8 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
                 "serpstack_https": app.state.config.SERPSTACK_HTTPS,
                 "serper_api_key": app.state.config.SERPER_API_KEY,
                 "serply_api_key": app.state.config.SERPLY_API_KEY,
+                "serachapi_api_key": app.state.config.SEARCHAPI_API_KEY,
+                "searchapi_engine": app.state.config.SEARCHAPI_ENGINE,
                 "tavily_api_key": app.state.config.TAVILY_API_KEY,
                 "result_count": app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
@@ -911,6 +901,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
     - SERPER_API_KEY
     - SERPLY_API_KEY
     - TAVILY_API_KEY
+    - SEARCHAPI_API_KEY + SEARCHAPI_ENGINE (by default `google`)
     Args:
         query (str): The query to search for
     """
@@ -998,6 +989,17 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
             )
         else:
             raise Exception("No TAVILY_API_KEY found in environment variables")
+    elif engine == "searchapi":
+        if app.state.config.SEARCHAPI_API_KEY:
+            return search_searchapi(
+                app.state.config.SEARCHAPI_API_KEY,
+                app.state.config.SEARCHAPI_ENGINE,
+                query,
+                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception("No SEARCHAPI_API_KEY found in environment variables")
     elif engine == "jina":
         return search_jina(query, app.state.config.RAG_WEB_SEARCH_RESULT_COUNT)
     else:

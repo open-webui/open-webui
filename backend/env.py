@@ -1,19 +1,13 @@
-from pathlib import Path
-import os
-import logging
-import sys
-import json
-
-
 import importlib.metadata
+import json
+import logging
+import os
 import pkgutil
-from urllib.parse import urlparse
-from datetime import datetime
-
+import sys
+from pathlib import Path
 
 import markdown
 from bs4 import BeautifulSoup
-
 from constants import ERROR_MESSAGES
 
 ####################################
@@ -26,7 +20,7 @@ BASE_DIR = BACKEND_DIR.parent  # the path containing the backend/
 print(BASE_DIR)
 
 try:
-    from dotenv import load_dotenv, find_dotenv
+    from dotenv import find_dotenv, load_dotenv
 
     load_dotenv(find_dotenv(str(BASE_DIR / ".env")))
 except ImportError:

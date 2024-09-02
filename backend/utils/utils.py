@@ -1,16 +1,15 @@
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi import HTTPException, status, Depends, Request
-
-from apps.webui.models.users import Users
-
-from typing import Union, Optional
-from constants import ERROR_MESSAGES
-from passlib.context import CryptContext
-from datetime import datetime, timedelta, UTC
-import jwt
-import uuid
 import logging
+import uuid
+from datetime import UTC, datetime, timedelta
+from typing import Optional, Union
+
+import jwt
+from apps.webui.models.users import Users
+from constants import ERROR_MESSAGES
 from env import WEBUI_SECRET_KEY
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from passlib.context import CryptContext
 
 logging.getLogger("passlib").setLevel(logging.ERROR)
 

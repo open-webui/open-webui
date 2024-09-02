@@ -1,27 +1,16 @@
-import os
 import logging
+import os
+from typing import Optional, Union
+
 import requests
-
-from typing import Union
-
-from apps.ollama.main import (
-    generate_ollama_embeddings,
-    GenerateEmbeddingsForm,
-)
-
+from apps.ollama.main import GenerateEmbeddingsForm, generate_ollama_embeddings
+from config import CHROMA_CLIENT
+from env import SRC_LOG_LEVELS
 from huggingface_hub import snapshot_download
-
-from langchain_core.documents import Document
+from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
-from langchain.retrievers import (
-    ContextualCompressionRetriever,
-    EnsembleRetriever,
-)
-
-from typing import Optional
-
-from utils.misc import get_last_user_message, add_or_update_system_message
-from config import SRC_LOG_LEVELS, CHROMA_CLIENT
+from langchain_core.documents import Document
+from utils.misc import get_last_user_message
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -261,7 +250,9 @@ def get_rag_context(
         collection_names = (
             file["collection_names"]
             if file["type"] == "collection"
-            else [file["collection_name"]] if file["collection_name"] else []
+            else [file["collection_name"]]
+            if file["collection_name"]
+            else []
         )
 
         collection_names = set(collection_names).difference(extracted_collections)
@@ -401,8 +392,8 @@ def generate_openai_batch_embeddings(
 
 from typing import Any
 
-from langchain_core.retrievers import BaseRetriever
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
+from langchain_core.retrievers import BaseRetriever
 
 
 class ChromaRetriever(BaseRetriever):
@@ -439,11 +430,10 @@ class ChromaRetriever(BaseRetriever):
 
 
 import operator
-
 from typing import Optional, Sequence
 
-from langchain_core.documents import BaseDocumentCompressor, Document
 from langchain_core.callbacks import Callbacks
+from langchain_core.documents import BaseDocumentCompressor, Document
 from langchain_core.pydantic_v1 import Extra
 
 

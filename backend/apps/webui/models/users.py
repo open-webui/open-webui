@@ -1,11 +1,10 @@
-from pydantic import BaseModel, ConfigDict
-from typing import Optional
 import time
-
-from sqlalchemy import String, Column, BigInteger, Text
+from typing import Optional
 
 from apps.webui.internal.db import Base, JSONField, get_db
 from apps.webui.models.chats import Chats
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import BigInteger, Column, String, Text
 
 ####################
 # User DB Schema
@@ -123,7 +122,7 @@ class UsersTable:
             with get_db() as db:
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
-        except Exception as e:
+        except Exception:
             return None
 
     def get_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
@@ -231,7 +230,7 @@ class UsersTable:
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
                 # return UserModel(**user.dict())
-        except Exception as e:
+        except Exception:
             return None
 
     def delete_user_by_id(self, id: str) -> bool:
@@ -265,7 +264,7 @@ class UsersTable:
             with get_db() as db:
                 user = db.query(User).filter_by(id=id).first()
                 return user.api_key
-        except Exception as e:
+        except Exception:
             return None
 
 

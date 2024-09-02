@@ -13,6 +13,7 @@
 		<meta name="apple-touch-icon" href="%sveltekit.assets%/logo.png">
 		<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 		<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+		<meta name="description" content="Yubb Chat" />
 		<link
 			rel="search"
 			type="application/opensearchdescription+xml"
@@ -29,10 +30,33 @@
 		<script>
 			// 在页面加载时或切换主题时执行，最好将代码放在 `head` 中，避免 FOUC
 			(() => {
-				const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+				if (!localStorage?.theme) {
+					localStorage.theme = 'system';
+				}
 
-				function updateThemeColor(color) {
-					themeColorMeta.setAttribute('content', color);
+				if (localStorage?.theme && localStorage?.theme.includes('oled')) {
+					document.documentElement.style.setProperty('--color-gray-800', '#101010');
+					document.documentElement.style.setProperty('--color-gray-850', '#050505');
+					document.documentElement.style.setProperty('--color-gray-900', '#000000');
+					document.documentElement.style.setProperty('--color-gray-950', '#000000');
+					document.documentElement.classList.add('dark');
+				} else if (
+					localStorage.theme === 'light' ||
+					(!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: light)').matches)
+				) {
+					document.documentElement.classList.add('light');
+				} else if (localStorage.theme && localStorage.theme !== 'system') {
+					localStorage.theme.split(' ').forEach((e) => {
+						document.documentElement.classList.add(e);
+					});
+				} else if (localStorage.theme && localStorage.theme === 'system') {
+					systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
+					document.documentElement.classList.add(systemTheme ? 'dark' : 'light');
+				} else if (localStorage.theme && localStorage.theme === 'her') {
+					document.documentElement.classList.add('dark');
+					document.documentElement.classList.add('her');
+				} else {
+					document.documentElement.classList.add('dark');
 				}
 
 				function applyTheme(theme) {

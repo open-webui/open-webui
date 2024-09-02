@@ -5,7 +5,6 @@ from test.util.mock_user import mock_webui_user
 
 
 class TestChats(AbstractPostgresTest):
-
     BASE_PATH = "/api/v1/chats"
 
     def setup_class(cls):
@@ -13,8 +12,7 @@ class TestChats(AbstractPostgresTest):
 
     def setup_method(self):
         super().setup_method()
-        from apps.webui.models.chats import ChatForm
-        from apps.webui.models.chats import Chats
+        from apps.webui.models.chats import ChatForm, Chats
 
         self.chats = Chats
         self.chats.insert_new_chat(

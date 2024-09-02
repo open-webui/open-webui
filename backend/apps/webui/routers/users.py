@@ -10,17 +10,11 @@ from apps.webui.models.users import (
     UserSettings,
     Users,
 )
-from config import SRC_LOG_LEVELS
-from constants import ERROR_MESSAGES
-from fastapi import APIRouter
-from fastapi import Depends, HTTPException, status
-from fastapi import Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
-from utils.utils import (
-    get_verified_user,
-    get_password_hash,
-    get_admin_user,
-)
+from utils.utils import get_admin_user, get_password_hash, get_verified_user
+from constants import ERROR_MESSAGES
+from config import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
