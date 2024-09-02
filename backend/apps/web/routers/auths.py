@@ -364,13 +364,13 @@ async def delete_api_key(user=Depends(get_current_user)):
 # get api key
 @router.get("/api_key", response_model=ApiKey)
 async def get_api_key(user=Depends(get_current_user)):
-    api_key = Users.get_user_api_key_by_id(user.id)
-    if api_key:
-        return {
-            "api_key": api_key,
-        }
-    else:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+
+    try:
+        api_key = user.api_key
+        return {"api_key": api_key}
+    except Exception as e:
+        logging.error(f"Error getting API key for user {user.id}. Exception: {e}")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_MESSAGES.DEFAULT())
 
 ############################
 # SignIn with Microsoft Entra ID - SSO
