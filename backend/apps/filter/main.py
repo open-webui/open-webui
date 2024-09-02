@@ -336,7 +336,8 @@ async def content_filter_message(payload: dict, content: str, user):
                         if share_id:
                             log.info(f"Share ID: {share_id}")
                             data = await prepare_data_to_wechatapp(
-                                share_id, user, app.state.config.SEND_FILTER_MESSAGE_TYPE
+                                share_id, user, 
+                                app.state.config.SEND_FILTER_MESSAGE_TYPE,content
                             )
                             await send_message_to_wechatapp(data)
                     else:
