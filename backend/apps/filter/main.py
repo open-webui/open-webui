@@ -6,13 +6,9 @@ import time
 from collections import defaultdict
 
 import aiohttp
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-
 from apps.filter.wordsSearch import wordsSearch
 from apps.webui.routers.chats import request_share_chat_by_id, request_get_chat_by_id
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from config import (
     AppConfig,
     ENABLE_MESSAGE_FILTER,
@@ -27,6 +23,9 @@ from config import (
     WECHAT_APP_SECRET,
 )
 from env import DATA_DIR, SRC_LOG_LEVELS, WEBUI_URL, WEBUI_NAME
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from utils.utils import (
     get_admin_user,
 )
@@ -92,7 +91,7 @@ async def prepare_usage_to_wechatapp():
     return data
 
 
-async def prepare_data_to_wechatapp(share_id, user, type: str):
+async def prepare_data_to_wechatapp(share_id, user, type: str, content: str):
     if type.lower() == "markdown":
         data = {
             "msgtype": "news",
@@ -111,7 +110,11 @@ async def prepare_data_to_wechatapp(share_id, user, type: str):
         data = {
             "msgtype": "text",
             "text": {
-                "content": f"🚨🚨🚨 警告\n\n{user.name}提问敏感消息！\n\n🔗{WEBUI_URL}/s/{share_id}\n\n💢为了API的正常运行，赶紧点开看看吧！"
+                "content": f"🚨🚨🚨 警告"
+                           f"\n\n{user.name}提问敏感消息！"
+                           f"\n\n😅 {content}"
+                           f"\n\n🔗 {WEBUI_URL}/s/{share_id}"
+                           f"\n\n💢 为了API的正常运行，赶紧点开看看吧！"
                            f"\n\n{app.state.config.WECHAT_NOTICE_SUFFIX}"
             }
         }
@@ -340,10 +343,11 @@ async def content_filter_message(payload: dict, content: str, user):
                         data = {
                             "msgtype": "text",
                             "text": {
-                                "content": (
-                                    f"🚨🚨🚨 警告\n\n{user.name}提问敏感消息！\n\n🔗{WEBUI_URL}/s/{content}\n\n"
-                                    f"💢为了API的正常运行，赶紧点开看看吧！\n\n{app.state.config.WECHAT_NOTICE_SUFFIX}"
-                                )
+                                "content": f"🚨🚨🚨 警告"
+                                           f"\n\n{user.name}提问敏感消息！"
+                                           f"\n\n😅 {content}"
+                                           f"\n\n💢 为了API的正常运行，赶紧点开看看吧！"
+                                           f"\n\n{app.state.config.WECHAT_NOTICE_SUFFIX}"
                             }
                         }
                         await send_message_to_wechatapp(data)
