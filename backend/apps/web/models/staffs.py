@@ -8,7 +8,8 @@ from apps.web.internal.db import MSSQL_DB
 from config import MSSQL_VIEW
 
 from sqlalchemy import create_engine, Column, String
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
+
 from sqlalchemy.orm import sessionmaker
 
 Base = declarative_base()

@@ -1,0 +1,2 @@
+class IllegalAccountException(Exception):
+    pass

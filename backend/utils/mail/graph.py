@@ -76,7 +76,7 @@ class Graph:
         try:
             await self.user_client.me.send_mail.post(body=request_body, request_configuration=requestConfiguration)
         except ValueError as e:
-            logging.error(f"Error sending email: {ERROR_MESSAGES.EMAIL_ERROR}")
+            logging.error(f"Error sending email: {e}")
             raise PermissionError(message=ERROR_MESSAGES.EMAIL_ERROR)
         except Exception as e:
             logging.error(f"Error sending email: {e}")

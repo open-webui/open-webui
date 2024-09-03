@@ -235,3 +235,5 @@ regex
 
 SQLAlchemy>=2.0.31
 pyodbc>=5.1.0
+
+pytest>=7.4.3
