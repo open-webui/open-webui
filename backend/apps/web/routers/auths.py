@@ -9,7 +9,7 @@ from pydantic import BaseModel
 import re
 import uuid
 import json
-from utils.mail.mail import Mail
+from utils.avatar import generate_avatar
 from apps.web.exceptions.exception import IllegalAccountException
 
 
@@ -394,72 +394,85 @@ async def signin_with_sso():
     with sso:
         return await sso.get_login_redirect()
 
-ACCESS_TOKEN="access_token"
+
+ACCESS_TOKEN = "access_token"
 @router.get("/signin/callback", response_model=SigninResponse)
 async def signin_callback(request: Request):
     """Verify login"""
     logging.info(f"Request query params: {request.headers}")
     try:
-        sso_user = None
-        with sso:
-            sso_user = await sso.verify_and_process(request)
-            logging.debug(f"sso.access_token(): {sso.access_token}")
-            sso_user_email = sso_user.email
-            sso_user_display_name = sso_user.display_name
-            staff = Staffs.get_staff_by_email(sso_user_email.lower())
-            if staff is None:
-                raise IllegalAccountException("Staff is not None")
-            staff_dict = staff.__dict__.copy()
-            staff_dict.pop("_sa_instance_state")
-            staff_dict[ACCESS_TOKEN] = sso.access_token
-            staff_dict_json = json.dumps(staff_dict)
-            logging.info(f"Got staff info from MSSQL by email where email is {sso_user_email}. Staff info is {staff_dict_json}")
-            user = Users.get_user_by_email(sso_user_email.lower())
-            logging.info(f"Got user info by email where email is {sso_user_email.lower()}. User info is {user}")
-            if not user:
-                logging.info("User not found. Then going to signup.")
-                await signup(
-                    request,
-                    SignupForm(
-                        email=sso_user_email, password=str(uuid.uuid4()), name=sso_user_display_name, profile_image_url="/user.png", extra_sso=staff_dict_json
-                    ),
-                )
-                logging.info("Signup done.")
-                user = Auths.authenticate_user_by_trusted_header(sso_user_email.lower())
-                role = (
-                    "admin"
-                    if Users.get_num_users() == 0
-                    else "user"
-                )
-                user = Users.update_user_role_by_id(user.id, role)
-                logging.info(f"Update user's role to {role}.")
-            else:
-                logging.info("User found. Then going to update user's extra_sso.")
-                user = Users.update_user_by_id(
-                    user.id, {"extra_sso": staff_dict_json}
-                )
+        sso_user = await get_sso_user(request)
+        staff_dict = await get_staff_dict(sso_user)
+        user = await get_or_create_user(request, sso_user, staff_dict)
+        token = create_token(data={"id": user.id}, expires_delta=parse_duration(request.app.state.JWT_EXPIRES_IN))
 
-            token = create_token(
-                data={"id": user.id},
-                expires_delta=parse_duration(request.app.state.JWT_EXPIRES_IN),
-            )
-
-            return {
-                "token": token,
-                "token_type": "Bearer",
-                "id": user.id,
-                "email": user.email,
-                "name": user.name,
-                "role": user.role,
-                "profile_image_url": user.profile_image_url,
-                "extra_sso": user.extra_sso,
-            }
+        return {
+            "token": token,
+            "token_type": "Bearer",
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "role": user.role,
+            "profile_image_url": user.profile_image_url,
+            "extra_sso": user.extra_sso,
+        }
     except IllegalAccountException as e:
         logging.error(f"Illegal account exception: {e}")
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.INVALID_ACCOUNT)
     except Exception as e:
         logging.error(f"Error in signin_callback: {e}")
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error in signin_callback")
+
+async def get_sso_user(request: Request):
+    """Get SSO user information"""
+    with sso:
+        sso_user = await sso.verify_and_process(request)
+        logging.debug(f"sso.access_token(): {sso.access_token}")
+        return sso_user
+
+async def get_staff_dict(sso_user):
+    """Get staff information dictionary"""
+    sso_user_email = sso_user.email.lower()
+    staff = Staffs.get_staff_by_email(sso_user_email)
+    if staff is None:
+        raise IllegalAccountException("Staff is not None")
+    staff_dict = {key: value for key, value in staff.__dict__.items() if key != "_sa_instance_state"}
+    staff_dict[ACCESS_TOKEN] = sso.access_token
+
+    # Hide access token
+    staff_dict_hidden_token = {key: ("******" if key == ACCESS_TOKEN else value) for key, value in staff_dict.items()}
+    staff_dict_json_hidden_token = json.dumps(staff_dict_hidden_token)
+    logging.info(f"Got staff info from MSSQL by email where email is {sso_user_email}. Staff info is {staff_dict_json_hidden_token}")
+
+    return json.dumps(staff_dict)
+
+async def get_or_create_user(request: Request, sso_user, staff_dict):
+    """Get or create user"""
+    sso_user_email = sso_user.email.lower()
+    user = Users.get_user_by_email(sso_user_email)
+    if not user:
+        logging.info("User not found. Then going to signup.")
+        await signup(
+            request,
+            SignupForm(
+                email=sso_user_email, password=str(uuid.uuid4()), name=sso_user.display_name, profile_image_url=generate_avatar(sso_user.first_name, sso_user.last_name), extra_sso=staff_dict
+            ),
+        )
+        logging.info("Signup done.")
+        user = Auths.authenticate_user_by_trusted_header(sso_user_email)
+        role = "admin" if Users.get_num_users() <= 2 else "user"
+        user = Users.update_user_role_by_id(user.id, role)
+        logging.info(f"Update user's role to {role}.")
+    else:
+        user_info = user.__dict__.copy()
+        if "extra_sso" in user_info:
+            extra_sso = json.loads(user_info["extra_sso"])
+            if "access_token" in extra_sso:
+                extra_sso["access_token"] = "******"
+            user_info["extra_sso"] = json.dumps(extra_sso)
+        logging.info(f"User found {user_info}. Then going to update user's extra_sso.")
+        user = Users.update_user_by_id(user.id, {"extra_sso": staff_dict})
+    return user
 
 
 SSO_LOGOUT_REDIRECT_URL = "https://hr.ciai-mbzuai.ac.ae/auth"
