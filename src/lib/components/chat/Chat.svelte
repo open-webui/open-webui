@@ -863,7 +863,7 @@
 			model: model.id,
 			messages: messagesBody,
 			options: {
-				...(params ?? $settings.params ?? {}),
+				...{ ...($settings?.params ?? {}), ...params },
 				stop:
 					(params?.stop ?? $settings?.params?.stop ?? undefined)
 						? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
