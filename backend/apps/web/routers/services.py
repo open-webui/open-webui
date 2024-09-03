@@ -85,10 +85,10 @@ Sincerely,
             logging.info(f"Email sent to {recipient}")
         except PermissionError as e:
             logging.error(f"Error sending email: {e}")
-            raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=f"Oops! Something went wrong while sending the email. Error: {e}.")
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.EMAIL_ERROR)
         except ValueError as e:
             logging.error(f"Error sending email: {e}")
-            raise HTTPException(status.HTTP_406_NOT_ACCEPTABLE, detail=f"Oops! Something went wrong. {e}")
+            raise HTTPException(status.HTTP_406_NOT_ACCEPTABLE, detail=ERROR_MESSAGES.ILIGAL_PARAM)
         except Exception as e:
             logging.error(f"Error sending email: {e}")
             raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Oops! Something went wrong while sending the email.")

@@ -10,6 +10,7 @@ import re
 import uuid
 import json
 from utils.mail.mail import Mail
+from apps.web.exceptions.exception import IllegalAccountException
 
 
 from apps.web.models.auths import (
@@ -406,6 +407,8 @@ async def signin_callback(request: Request):
             sso_user_email = sso_user.email
             sso_user_display_name = sso_user.display_name
             staff = Staffs.get_staff_by_email(sso_user_email.lower())
+            if staff is None:
+                raise IllegalAccountException("Staff is not None")
             staff_dict = staff.__dict__.copy()
             staff_dict.pop("_sa_instance_state")
             staff_dict[ACCESS_TOKEN] = sso.access_token
@@ -451,6 +454,9 @@ async def signin_callback(request: Request):
                 "profile_image_url": user.profile_image_url,
                 "extra_sso": user.extra_sso,
             }
+    except IllegalAccountException as e:
+        logging.error(f"Illegal account exception: {e}")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.INVALID_ACCOUNT)
     except Exception as e:
         logging.error(f"Error in signin_callback: {e}")
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error in signin_callback")
