@@ -15,7 +15,7 @@ import requests
 import shutil
 
 from secrets import token_bytes
-from constants import ERROR_MESSAGES
+from backend.constants import ERROR_MESSAGES
 
 
 ####################################

@@ -4,11 +4,12 @@ from playhouse.shortcuts import model_to_dict
 from typing import List, Union, Optional
 import logging
 
-from apps.web.internal.db import MSSQL_DB
-from config import MSSQL_VIEW
+from backend.apps.web.internal.db import MSSQL_DB
+from backend.config import MSSQL_VIEW
 
 from sqlalchemy import create_engine, Column, String
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
+
 from sqlalchemy.orm import sessionmaker
 
 Base = declarative_base()

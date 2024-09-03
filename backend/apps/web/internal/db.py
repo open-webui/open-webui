@@ -1,7 +1,7 @@
 from peewee import *
 from peewee_migrate import Router
 from playhouse.db_url import connect
-from config import SRC_LOG_LEVELS, DATA_DIR, DATABASE_URL
+from backend.config import SRC_LOG_LEVELS, DATA_DIR, DATABASE_URL
 import os
 import logging
 import json
@@ -35,10 +35,11 @@ DB.connect(reuse_if_open=True)
 
 
 from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
+# from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 import urllib
-from config import MSSQL_SERVER, MSSQL_USER, MSSQL_PASSWORD, MSSQL_DATABASE
+from backend.config import MSSQL_SERVER, MSSQL_USER, MSSQL_PASSWORD, MSSQL_DATABASE
 
 Base = declarative_base()
 

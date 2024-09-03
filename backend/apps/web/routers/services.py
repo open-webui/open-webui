@@ -6,9 +6,9 @@ from fastapi_sso.sso.microsoft import MicrosoftSSO
 
 from fastapi import APIRouter
 import json
-from utils.mail.mail import Mail
+from backend.utils.mail.mail import Mail
 
-from utils.utils import (
+from backend.utils.utils import (
     get_current_user,
 )
 
