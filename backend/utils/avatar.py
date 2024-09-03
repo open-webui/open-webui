@@ -22,17 +22,17 @@ def create_avatar(initials, size=130, bg_color=(240, 173, 78), text_color=(255, 
     return image
 
 def save_avatar_to_file(avatar, filename="avatar.png"):
+    avatar = avatar.resize((64, 64), Image.Resampling.LANCZOS)
     avatar.save(filename)
     print(f"Avatar saved as {filename}")
 
 def avatar_to_base64(avatar):
+    avatar = avatar.resize((64, 64), Image.Resampling.LANCZOS)
     buffered = io.BytesIO()
     avatar.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
 
 def generate_avatar(first_name, last_name):
-    first_name = "Qinghao"
-    last_name = "Zhang"
 
     initials = f"{first_name[0]}{last_name[0]}"
     avatar = create_avatar(initials)
