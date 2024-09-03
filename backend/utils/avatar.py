@@ -10,8 +10,7 @@ def create_avatar(initials, size=130, bg_color=(240, 173, 78), text_color=(255, 
     try:
         font = ImageFont.truetype("Arial.ttf", font_size)
     except IOError:
-        font = ImageFont.load_default()
-    
+        font = ImageFont.load_default(size=font_size)
     left, top, right, bottom = draw.textbbox((0, 0), initials, font=font)
     text_width = right - left
     text_height = bottom - top
