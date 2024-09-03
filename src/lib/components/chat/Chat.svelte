@@ -1328,27 +1328,26 @@
 
 					document.getElementById(`speak-button-${responseMessage.id}`)?.click();
 				}
-
-				if ($chatId == _chatId) {
-					if ($settings.saveChatHistory ?? true) {
-						chat = await updateChatById(localStorage.token, _chatId, {
-							models: selectedModels,
-							messages: messages,
-							history: history,
-							params: params,
-							files: chatFiles
-						});
-
-						currentChatPage.set(1);
-						await chats.set(await getChatList(localStorage.token, $currentChatPage));
-					}
-				}
 			} else {
 				await handleOpenAIError(null, res, model, responseMessage);
 			}
 		} catch (error) {
 			await handleOpenAIError(error, null, model, responseMessage);
 		}
+
+		if ($chatId == _chatId) {
+			chat = await updateChatById(localStorage.token, _chatId, {
+				models: selectedModels,
+				messages: messages,
+				history: history,
+				params: params,
+				files: chatFiles
+			});
+
+			currentChatPage.set(1);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		}
+
 		messages = messages;
 
 		stopResponseFlag = false;
