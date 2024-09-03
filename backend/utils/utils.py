@@ -125,7 +125,7 @@ def get_current_user_by_api_key(api_key: str):
 
 
 def get_verified_user(user=Depends(get_current_user)):
-    if user.role not in {"user", "admin"}:
+    if user.role not in {"user", "admin", "content admin"}:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -135,6 +135,15 @@ def get_verified_user(user=Depends(get_current_user)):
 
 def get_admin_user(user=Depends(get_current_user)):
     if user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+    return user
+
+
+def get_admin_or_content_admin_user(user=Depends(get_current_user)):
+    if user.role not in ["content admin", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,

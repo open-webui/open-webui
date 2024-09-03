@@ -14,7 +14,7 @@ from apps.webui.models.documents import (
     DocumentResponse,
 )
 
-from utils.utils import get_verified_user, get_admin_user
+from utils.utils import get_verified_user, get_admin_or_content_admin_user
 from constants import ERROR_MESSAGES
 
 router = APIRouter()
@@ -44,7 +44,9 @@ async def get_documents(user=Depends(get_verified_user)):
 
 
 @router.post("/create", response_model=Optional[DocumentResponse])
-async def create_new_doc(form_data: DocumentForm, user=Depends(get_admin_user)):
+async def create_new_doc(
+    form_data: DocumentForm, user=Depends(get_admin_or_content_admin_user)
+):
     doc = Documents.get_doc_by_name(form_data.name)
     if doc is None:
         doc = Documents.insert_new_doc(user.id, form_data)
@@ -132,7 +134,7 @@ async def tag_doc_by_name(form_data: TagDocumentForm, user=Depends(get_verified_
 async def update_doc_by_name(
     name: str,
     form_data: DocumentUpdateForm,
-    user=Depends(get_admin_user),
+    user=Depends(get_admin_or_content_admin_user),
 ):
     doc = Documents.update_doc_by_name(name, form_data)
     if doc:
@@ -155,6 +157,6 @@ async def update_doc_by_name(
 
 
 @router.delete("/doc/delete", response_model=bool)
-async def delete_doc_by_name(name: str, user=Depends(get_admin_user)):
+async def delete_doc_by_name(name: str, user=Depends(get_admin_or_content_admin_user)):
     result = Documents.delete_doc_by_name(name)
     return result
