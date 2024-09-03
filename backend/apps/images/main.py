@@ -133,7 +133,7 @@ async def update_config(form_data: ConfigForm, user=Depends(get_admin_user)):
         form_data.automatic1111.AUTOMATIC1111_API_AUTH
     )
 
-    app.state.config.COMFYUI_BASE_URL = form_data.comfyui.COMFYUI_BASE_URL
+    app.state.config.COMFYUI_BASE_URL = form_data.comfyui.COMFYUI_BASE_URL.strip("/")
     app.state.config.COMFYUI_WORKFLOW = form_data.comfyui.COMFYUI_WORKFLOW
     app.state.config.COMFYUI_WORKFLOW_NODES = form_data.comfyui.COMFYUI_WORKFLOW_NODES
 
