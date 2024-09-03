@@ -217,8 +217,10 @@ __builtins__.input = input`);
 
 	const drawMermaidDiagram = async () => {
 		try {
-			const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
-			mermaidHtml = svg;
+			if (await mermaid.parse(code)) {
+				const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
+				mermaidHtml = svg;
+			}
 		} catch (error) {
 			console.log('Error:', error);
 		}
