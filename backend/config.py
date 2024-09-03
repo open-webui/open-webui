@@ -47,7 +47,7 @@ def run_migrations():
         from alembic import command
         from alembic.config import Config
 
-        alembic_cfg = Config(BACKEND_DIR / "alembic.ini")
+        alembic_cfg = Config("alembic.ini")
         command.upgrade(alembic_cfg, "head")
     except Exception as e:
         print(f"Error: {e}")
@@ -89,15 +89,6 @@ if os.path.exists(f"{DATA_DIR}/config.json"):
     data = load_json_config()
     save_to_db(data)
     os.rename(f"{DATA_DIR}/config.json", f"{DATA_DIR}/old_config.json")
-
-
-def save_config():
-    try:
-        with open(f"{DATA_DIR}/config.json", "w") as f:
-            json.dump(CONFIG_DATA, f, indent="\t")
-    except Exception as e:
-        log.exception(e)
-
 
 DEFAULT_CONFIG = {
     "version": 0,
@@ -172,6 +163,25 @@ def get_config_value(config_path: str):
     return cur_config
 
 
+PERSISTENT_CONFIG_REGISTRY = []
+
+
+def save_config(config):
+    global CONFIG_DATA
+    global PERSISTENT_CONFIG_REGISTRY
+    try:
+        save_to_db(config)
+        CONFIG_DATA = config
+
+        # Trigger updates on all registered PersistentConfig entries
+        for config_item in PERSISTENT_CONFIG_REGISTRY:
+            config_item.update()
+    except Exception as e:
+        log.exception(e)
+        return False
+    return True
+
+
 T = TypeVar("T")
 
 
@@ -186,6 +196,8 @@ class PersistentConfig(Generic[T]):
             self.value = self.config_value
         else:
             self.value = env_value
+
+        PERSISTENT_CONFIG_REGISTRY.append(self)
 
     def __str__(self):
         return str(self.value)
@@ -202,6 +214,12 @@ class PersistentConfig(Generic[T]):
                 "PersistentConfig object cannot be converted to dict, use config_get or .value instead."
             )
         return super().__getattribute__(item)
+
+    def update(self):
+        new_value = get_config_value(self.config_path)
+        if new_value is not None:
+            self.value = new_value
+            log.info(f"Updated {self.env_name} to new value {self.value}")
 
     def save(self):
         log.info(f"Saving '{self.env_name}' to the database")
