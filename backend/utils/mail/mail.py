@@ -2,7 +2,7 @@ import logging
 
 from .graph import Graph
 from .fill_form import FillLeaveForm
-from backend.apps.web.models.services import LeaveForm
+from apps.web.models.services import LeaveForm
 
 class Mail:
     graph: Graph

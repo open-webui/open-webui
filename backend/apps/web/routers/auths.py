@@ -9,10 +9,10 @@ from pydantic import BaseModel
 import re
 import uuid
 import json
-from backend.utils.mail.mail import Mail
+from utils.mail.mail import Mail
 
 
-from backend.apps.web.models.auths import (
+from apps.web.models.auths import (
     SigninForm,
     SignupForm,
     AddUserForm,
@@ -23,20 +23,20 @@ from backend.apps.web.models.auths import (
     Auths,
     ApiKey,
 )
-from backend.apps.web.models.users import Users
-from backend.apps.web.models.staffs import Staffs
+from apps.web.models.users import Users
+from apps.web.models.staffs import Staffs
 
-from backend.utils.utils import (
+from utils.utils import (
     get_password_hash,
     get_current_user,
     get_admin_user,
     create_token,
     create_api_key,
 )
-from backend.utils.misc import parse_duration, validate_email_format
-from backend.utils.webhook import post_webhook
-from backend.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
-from backend.config import (
+from utils.misc import parse_duration, validate_email_format
+from utils.webhook import post_webhook
+from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
+from config import (
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     CLIENT_ID,
     CLIENT_SECRET,

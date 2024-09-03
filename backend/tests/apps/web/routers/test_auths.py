@@ -12,8 +12,8 @@ warnings.filterwarnings("ignore", category=DeprecationWarning, module="passlib.u
 # Dynamically add the project root directory to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../../")))
 
-from backend.apps.web.routers.auths import router
-from backend.utils.utils import get_current_user
+from apps.web.routers.auths import router
+from utils.utils import get_current_user
 
 # Create a FastAPI application instance and include the router
 app = FastAPI()

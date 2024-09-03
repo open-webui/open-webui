@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set environment variable
-export PYTHONPATH=$(pwd)
+export PYTHONPATH=$(pwd)/..
 
 # Set log file
 LOG_FILE="test_log.txt"
@@ -15,7 +15,7 @@ exec > >(tee -a $LOG_FILE) 2>&1
 # Cleanup function
 clean_up() {
     echo "Cleaning up..."
-    find . -type d -name "__pycache__" -exec rm -r {} + \
+    find $PYTHONPATH -type d -name "__pycache__" -exec rm -r {} + \
         -o -type f -name "*.py[co]" -delete \
         -o -type d -name "*.egg-info" -exec rm -r {} +
     rm -rf build dist data
@@ -25,7 +25,7 @@ clean_up() {
 # Run tests function
 run_tests() {
     echo "Starting tests..."
-    local test_dir="tests"
+    local test_dir="."
     local test_files=$(find $test_dir -name "test_*.py")
 
     for test_file in $test_files; do

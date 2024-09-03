@@ -1,18 +1,18 @@
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import HTTPException, status, Depends
 
-from backend.apps.web.models.users import Users
+from apps.web.models.users import Users
 
 from pydantic import BaseModel
 from typing import Union, Optional
-from backend.constants import ERROR_MESSAGES
+from constants import ERROR_MESSAGES
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 import requests
 import jwt
 import uuid
 import logging
-from backend import config
+import config
 
 logging.getLogger("passlib").setLevel(logging.ERROR)
 

@@ -3,10 +3,10 @@ from peewee import *
 from playhouse.shortcuts import model_to_dict
 from typing import List, Union, Optional
 import time
-from backend.utils.misc import get_gravatar_url
+from utils.misc import get_gravatar_url
 
-from backend.apps.web.internal.db import DB
-from backend.apps.web.models.chats import Chats
+from apps.web.internal.db import DB
+from apps.web.models.chats import Chats
 
 ####################
 # User DB Schema
