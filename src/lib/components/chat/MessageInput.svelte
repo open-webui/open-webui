@@ -504,6 +504,7 @@
 										<button
 											class="bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
 											type="button"
+											aria-label="More"
 										>
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
@@ -720,6 +721,7 @@
 														toast.error($i18n.t('Permission denied when accessing microphone'));
 													}
 												}}
+												aria-label="Voice Input"
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
@@ -779,6 +781,7 @@
 														toast.error($i18n.t('Permission denied when accessing media devices'));
 													}
 												}}
+												aria-label="Call"
 											>
 												<Headphone className="size-6" />
 											</button>

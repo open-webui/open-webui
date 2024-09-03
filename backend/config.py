@@ -1,58 +1,30 @@
-from sqlalchemy import create_engine, Column, Integer, DateTime, JSON, func
-from contextlib import contextmanager
-
-
-import os
-import sys
+import json
 import logging
-import importlib.metadata
-import pkgutil
-from urllib.parse import urlparse
+import os
+import shutil
 from datetime import datetime
+from pathlib import Path
+from typing import Generic, Optional, TypeVar
+from urllib.parse import urlparse
 
 import chromadb
-from chromadb import Settings
-from typing import TypeVar, Generic
-from pydantic import BaseModel
-from typing import Optional
-
-from pathlib import Path
-import json
-import yaml
-
 import requests
-import shutil
-
-
+import yaml
 from apps.webui.internal.db import Base, get_db
-
-from constants import ERROR_MESSAGES
-
+from chromadb import Settings
 from env import (
-    ENV,
-    VERSION,
-    SAFE_MODE,
-    GLOBAL_LOG_LEVEL,
-    SRC_LOG_LEVELS,
-    BASE_DIR,
-    DATA_DIR,
     BACKEND_DIR,
-    FRONTEND_BUILD_DIR,
-    WEBUI_NAME,
-    WEBUI_URL,
-    WEBUI_FAVICON_URL,
-    WEBUI_BUILD_HASH,
     CONFIG_DATA,
-    DATABASE_URL,
-    CHANGELOG,
+    DATA_DIR,
+    ENV,
+    FRONTEND_BUILD_DIR,
     WEBUI_AUTH,
-    WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
-    WEBUI_AUTH_TRUSTED_NAME_HEADER,
-    WEBUI_SECRET_KEY,
-    WEBUI_SESSION_COOKIE_SAME_SITE,
-    WEBUI_SESSION_COOKIE_SECURE,
+    WEBUI_FAVICON_URL,
+    WEBUI_NAME,
     log,
 )
+from pydantic import BaseModel
+from sqlalchemy import JSON, Column, DateTime, Integer, func
 
 
 class EndpointFilter(logging.Filter):
@@ -72,10 +44,10 @@ logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 def run_migrations():
     print("Running migrations")
     try:
-        from alembic.config import Config
         from alembic import command
+        from alembic.config import Config
 
-        alembic_cfg = Config("alembic.ini")
+        alembic_cfg = Config(BACKEND_DIR / "alembic.ini")
         command.upgrade(alembic_cfg, "head")
     except Exception as e:
         print(f"Error: {e}")
@@ -1235,6 +1207,18 @@ TAVILY_API_KEY = PersistentConfig(
     "TAVILY_API_KEY",
     "rag.web.search.tavily_api_key",
     os.getenv("TAVILY_API_KEY", ""),
+)
+
+SEARCHAPI_API_KEY = PersistentConfig(
+    "SEARCHAPI_API_KEY",
+    "rag.web.search.searchapi_api_key",
+    os.getenv("SEARCHAPI_API_KEY", ""),
+)
+
+SEARCHAPI_ENGINE = PersistentConfig(
+    "SEARCHAPI_ENGINE",
+    "rag.web.search.searchapi_engine",
+    os.getenv("SEARCHAPI_ENGINE", ""),
 )
 
 RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(

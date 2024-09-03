@@ -1,14 +1,11 @@
-from pydantic import BaseModel, ConfigDict
-from typing import Union, Optional
-
 import json
-import uuid
 import time
-
-from sqlalchemy import Column, String, BigInteger, Boolean, Text
+import uuid
+from typing import Optional
 
 from apps.webui.internal.db import Base, get_db
-
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import BigInteger, Boolean, Column, String, Text
 
 ####################
 # Chat DB Schema
@@ -77,10 +74,8 @@ class ChatTitleIdResponse(BaseModel):
 
 
 class ChatTable:
-
     def insert_new_chat(self, user_id: str, form_data: ChatForm) -> Optional[ChatModel]:
         with get_db() as db:
-
             id = str(uuid.uuid4())
             chat = ChatModel(
                 **{
@@ -106,7 +101,6 @@ class ChatTable:
     def update_chat_by_id(self, id: str, chat: dict) -> Optional[ChatModel]:
         try:
             with get_db() as db:
-
                 chat_obj = db.get(Chat, id)
                 chat_obj.chat = json.dumps(chat)
                 chat_obj.title = chat["title"] if "title" in chat else "New Chat"
@@ -115,12 +109,11 @@ class ChatTable:
                 db.refresh(chat_obj)
 
                 return ChatModel.model_validate(chat_obj)
-        except Exception as e:
+        except Exception:
             return None
 
     def insert_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
         with get_db() as db:
-
             # Get the existing chat to share
             chat = db.get(Chat, chat_id)
             # Check if the chat is already shared
@@ -154,7 +147,6 @@ class ChatTable:
     def update_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
         try:
             with get_db() as db:
-
                 print("update_shared_chat_by_id")
                 chat = db.get(Chat, chat_id)
                 print(chat)
@@ -170,7 +162,6 @@ class ChatTable:
     def delete_shared_chat_by_chat_id(self, chat_id: str) -> bool:
         try:
             with get_db() as db:
-
                 db.query(Chat).filter_by(user_id=f"shared-{chat_id}").delete()
                 db.commit()
 
@@ -183,7 +174,6 @@ class ChatTable:
     ) -> Optional[ChatModel]:
         try:
             with get_db() as db:
-
                 chat = db.get(Chat, id)
                 chat.share_id = share_id
                 db.commit()
@@ -195,7 +185,6 @@ class ChatTable:
     def toggle_chat_archive_by_id(self, id: str) -> Optional[ChatModel]:
         try:
             with get_db() as db:
-
                 chat = db.get(Chat, id)
                 chat.archived = not chat.archived
                 db.commit()
@@ -217,7 +206,6 @@ class ChatTable:
         self, user_id: str, skip: int = 0, limit: int = 50
     ) -> list[ChatModel]:
         with get_db() as db:
-
             all_chats = (
                 db.query(Chat)
                 .filter_by(user_id=user_id, archived=True)
@@ -297,7 +285,6 @@ class ChatTable:
     def get_chat_by_id(self, id: str) -> Optional[ChatModel]:
         try:
             with get_db() as db:
-
                 chat = db.get(Chat, id)
                 return ChatModel.model_validate(chat)
         except Exception:
@@ -306,20 +293,18 @@ class ChatTable:
     def get_chat_by_share_id(self, id: str) -> Optional[ChatModel]:
         try:
             with get_db() as db:
-
                 chat = db.query(Chat).filter_by(share_id=id).first()
 
                 if chat:
                     return self.get_chat_by_id(id)
                 else:
                     return None
-        except Exception as e:
+        except Exception:
             return None
 
     def get_chat_by_id_and_user_id(self, id: str, user_id: str) -> Optional[ChatModel]:
         try:
             with get_db() as db:
-
                 chat = db.query(Chat).filter_by(id=id, user_id=user_id).first()
                 return ChatModel.model_validate(chat)
         except Exception:
@@ -327,7 +312,6 @@ class ChatTable:
 
     def get_chats(self, skip: int = 0, limit: int = 50) -> list[ChatModel]:
         with get_db() as db:
-
             all_chats = (
                 db.query(Chat)
                 # .limit(limit).offset(skip)
@@ -337,7 +321,6 @@ class ChatTable:
 
     def get_chats_by_user_id(self, user_id: str) -> list[ChatModel]:
         with get_db() as db:
-
             all_chats = (
                 db.query(Chat)
                 .filter_by(user_id=user_id)
@@ -347,7 +330,6 @@ class ChatTable:
 
     def get_archived_chats_by_user_id(self, user_id: str) -> list[ChatModel]:
         with get_db() as db:
-
             all_chats = (
                 db.query(Chat)
                 .filter_by(user_id=user_id, archived=True)
@@ -358,7 +340,6 @@ class ChatTable:
     def delete_chat_by_id(self, id: str) -> bool:
         try:
             with get_db() as db:
-
                 db.query(Chat).filter_by(id=id).delete()
                 db.commit()
 
@@ -369,7 +350,6 @@ class ChatTable:
     def delete_chat_by_id_and_user_id(self, id: str, user_id: str) -> bool:
         try:
             with get_db() as db:
-
                 db.query(Chat).filter_by(id=id, user_id=user_id).delete()
                 db.commit()
 
@@ -379,9 +359,7 @@ class ChatTable:
 
     def delete_chats_by_user_id(self, user_id: str) -> bool:
         try:
-
             with get_db() as db:
-
                 self.delete_shared_chats_by_user_id(user_id)
 
                 db.query(Chat).filter_by(user_id=user_id).delete()
@@ -393,9 +371,7 @@ class ChatTable:
 
     def delete_shared_chats_by_user_id(self, user_id: str) -> bool:
         try:
-
             with get_db() as db:
-
                 chats_by_user = db.query(Chat).filter_by(user_id=user_id).all()
                 shared_chat_ids = [f"shared-{chat.id}" for chat in chats_by_user]
 

@@ -1,5 +1,7 @@
+from ast import literal_eval
+from typing import Any, Literal, Optional, Type
+
 from pydantic import BaseModel, Field, create_model
-from typing import Any, Optional, Type
 
 
 def json_schema_to_model(tool_dict: dict[str, Any]) -> Type[BaseModel]:
@@ -100,5 +102,7 @@ def json_schema_to_pydantic_type(json_schema: dict[str, Any]) -> Any:
             return dict
     elif type_ == "null":
         return Optional[Any]  # Use Optional[Any] for nullable fields
+    elif type_ == "literal":
+        return Literal[literal_eval(json_schema.get("enum"))]
     else:
         raise ValueError(f"Unsupported JSON schema type: {type_}")

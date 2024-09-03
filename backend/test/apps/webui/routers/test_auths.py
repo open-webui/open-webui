@@ -1,5 +1,3 @@
-import pytest
-
 from test.util.abstract_integration_test import AbstractPostgresTest
 from test.util.mock_user import mock_webui_user
 
@@ -9,8 +7,8 @@ class TestAuths(AbstractPostgresTest):
 
     def setup_class(cls):
         super().setup_class()
-        from apps.webui.models.users import Users
         from apps.webui.models.auths import Auths
+        from apps.webui.models.users import Users
 
         cls.users = Users
         cls.auths = Auths
