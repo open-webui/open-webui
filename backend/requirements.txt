@@ -11,7 +11,7 @@ python-jose==3.3.0
 passlib[bcrypt]==1.7.4
 
 requests==2.32.3
-aiohttp==3.10.2
+aiohttp==3.10.5
 
 sqlalchemy==2.0.32
 alembic==1.13.2
