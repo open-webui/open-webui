@@ -1020,21 +1020,6 @@
 					scrollToBottom();
 				}
 			}
-
-			if ($chatId == _chatId) {
-				if ($settings.saveChatHistory ?? true) {
-					chat = await updateChatById(localStorage.token, _chatId, {
-						messages: messages,
-						history: history,
-						models: selectedModels,
-						params: params,
-						files: chatFiles
-					});
-
-					currentChatPage.set(1);
-					await chats.set(await getChatList(localStorage.token, $currentChatPage));
-				}
-			}
 		} else {
 			if (res !== null) {
 				const error = await res.json();
@@ -1066,6 +1051,7 @@
 
 			messages = messages;
 		}
+		await saveChatHandler(_chatId);
 
 		stopResponseFlag = false;
 		await tick();
@@ -1335,18 +1321,7 @@
 			await handleOpenAIError(error, null, model, responseMessage);
 		}
 
-		if ($chatId == _chatId) {
-			chat = await updateChatById(localStorage.token, _chatId, {
-				models: selectedModels,
-				messages: messages,
-				history: history,
-				params: params,
-				files: chatFiles
-			});
-
-			currentChatPage.set(1);
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		}
+		await saveChatHandler(_chatId);
 
 		messages = messages;
 
