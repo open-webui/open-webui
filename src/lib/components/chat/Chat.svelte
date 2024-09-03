@@ -297,6 +297,10 @@
 			selectedModels = [''];
 		}
 
+		if ($page.url.searchParams.get('web-search') === 'true') {
+			webSearchEnabled = true;
+		}
+
 		if ($page.url.searchParams.get('q')) {
 			prompt = $page.url.searchParams.get('q') ?? '';
 			selectedToolIds = ($page.url.searchParams.get('tool_ids') ?? '')
