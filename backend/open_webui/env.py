@@ -4,6 +4,7 @@ import logging
 import os
 import pkgutil
 import sys
+import shutil
 from pathlib import Path
 
 import markdown
@@ -190,7 +191,7 @@ if PIP_INSTALL:
     # Check if the data directory exists in the package directory
     if DATA_DIR.exists():
         log.info(f"Moving {DATA_DIR} to {OPEN_WEBUI_DIR / 'data'}")
-        DATA_DIR.rename(OPEN_WEBUI_DIR / "data")
+        shutil.move(str(DATA_DIR), str(OPEN_WEBUI_DIR / "data"))
     DATA_DIR = OPEN_WEBUI_DIR / "data"
 
 
