@@ -40,9 +40,9 @@ def serve(
                 "/usr/local/lib/python3.11/site-packages/nvidia/cudnn/lib",
             ]
         )
-    import main  # we need set environment variables before importing main
+    import open_webui.main  # we need set environment variables before importing main
 
-    uvicorn.run(main.app, host=host, port=port, forwarded_allow_ips="*")
+    uvicorn.run(open_webui.main.app, host=host, port=port, forwarded_allow_ips="*")
 
 
 @app.command()
@@ -52,7 +52,11 @@ def dev(
     reload: bool = True,
 ):
     uvicorn.run(
-        "main:app", host=host, port=port, reload=reload, forwarded_allow_ips="*"
+        "open_webui.main:app",
+        host=host,
+        port=port,
+        reload=reload,
+        forwarded_allow_ips="*",
     )
 
 
