@@ -739,10 +739,16 @@ class PipelineMiddleware(BaseHTTPMiddleware):
         try:
             data = filter_pipeline(data, user)
         except Exception as e:
-            return JSONResponse(
-                status_code=e.args[0],
-                content={"detail": e.args[1]},
-            )
+            if len(e.args) > 1:
+                return JSONResponse(
+                    status_code=e.args[0],
+                    content={"detail": e.args[1]},
+                )
+            else:
+                return JSONResponse(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    content={"detail": str(e)},
+                )
 
         modified_body_bytes = json.dumps(data).encode("utf-8")
         # Replace the request body with the modified one
@@ -1386,10 +1392,16 @@ async def generate_title(form_data: dict, user=Depends(get_verified_user)):
     try:
         payload = filter_pipeline(payload, user)
     except Exception as e:
-        return JSONResponse(
-            status_code=e.args[0],
-            content={"detail": e.args[1]},
-        )
+        if len(e.args) > 1:
+            return JSONResponse(
+                status_code=e.args[0],
+                content={"detail": e.args[1]},
+            )
+        else:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={"detail": str(e)},
+            )
 
     if "chat_id" in payload:
         del payload["chat_id"]
@@ -1439,10 +1451,16 @@ async def generate_search_query(form_data: dict, user=Depends(get_verified_user)
     try:
         payload = filter_pipeline(payload, user)
     except Exception as e:
-        return JSONResponse(
-            status_code=e.args[0],
-            content={"detail": e.args[1]},
-        )
+        if len(e.args) > 1:
+            return JSONResponse(
+                status_code=e.args[0],
+                content={"detail": e.args[1]},
+            )
+        else:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={"detail": str(e)},
+            )
 
     if "chat_id" in payload:
         del payload["chat_id"]
@@ -1496,10 +1514,16 @@ Message: """{{prompt}}"""
     try:
         payload = filter_pipeline(payload, user)
     except Exception as e:
-        return JSONResponse(
-            status_code=e.args[0],
-            content={"detail": e.args[1]},
-        )
+        if len(e.args) > 1:
+            return JSONResponse(
+                status_code=e.args[0],
+                content={"detail": e.args[1]},
+            )
+        else:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={"detail": str(e)},
+            )
 
     if "chat_id" in payload:
         del payload["chat_id"]
@@ -1548,10 +1572,16 @@ Responses from models: {{responses}}"""
     try:
         payload = filter_pipeline(payload, user)
     except Exception as e:
-        return JSONResponse(
-            status_code=e.args[0],
-            content={"detail": e.args[1]},
-        )
+        if len(e.args) > 1:
+            return JSONResponse(
+                status_code=e.args[0],
+                content={"detail": e.args[1]},
+            )
+        else:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={"detail": str(e)},
+            )
 
     if "chat_id" in payload:
         del payload["chat_id"]
