@@ -79,7 +79,7 @@ def load_toolkit_module_by_id(toolkit_id, content=None):
         content = replace_imports(content)
         Tools.update_tool_by_id(toolkit_id, {"content": content})
 
-    module_name = f"{toolkit_id}"
+    module_name = f"tool_{toolkit_id}"
     module = types.ModuleType(module_name)
     sys.modules[module_name] = module
 
@@ -117,7 +117,7 @@ def load_function_module_by_id(function_id, content=None):
         content = replace_imports(content)
         Functions.update_function_by_id(function_id, {"content": content})
 
-    module_name = f"{function_id}"
+    module_name = f"function_{function_id}"
     module = types.ModuleType(module_name)
     sys.modules[module_name] = module
 
