@@ -9,8 +9,6 @@ import uvicorn
 app = typer.Typer()
 
 KEY_FILE = Path.cwd() / ".webui_secret_key"
-if (frontend_build_dir := Path(__file__).parent / "frontend").exists():
-    os.environ["FRONTEND_BUILD_DIR"] = str(frontend_build_dir)
 
 
 @app.command()

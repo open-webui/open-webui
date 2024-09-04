@@ -188,14 +188,28 @@ WEBUI_BUILD_HASH = os.environ.get("WEBUI_BUILD_HASH", "dev-build")
 DATA_DIR = Path(os.getenv("DATA_DIR", BACKEND_DIR / "data")).resolve()
 
 if PIP_INSTALL:
+    NEW_DATA_DIR = Path(os.getenv("DATA_DIR", OPEN_WEBUI_DIR / "data")).resolve()
+    NEW_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
     # Check if the data directory exists in the package directory
     if DATA_DIR.exists():
-        log.info(f"Moving {DATA_DIR} to {OPEN_WEBUI_DIR / 'data'}")
-        shutil.move(str(DATA_DIR), str(OPEN_WEBUI_DIR / "data"))
+        log.info(f"Moving {DATA_DIR} to {NEW_DATA_DIR}")
+        for item in DATA_DIR.iterdir():
+            dest = NEW_DATA_DIR / item.name
+            if item.is_dir():
+                shutil.copytree(item, dest, dirs_exist_ok=True)
+            else:
+                shutil.copy2(item, dest)
+
     DATA_DIR = OPEN_WEBUI_DIR / "data"
 
 
 FRONTEND_BUILD_DIR = Path(os.getenv("FRONTEND_BUILD_DIR", BASE_DIR / "build")).resolve()
+if PIP_INSTALL:
+    FRONTEND_BUILD_DIR = Path(
+        os.getenv("FRONTEND_BUILD_DIR", OPEN_WEBUI_DIR / "frontend")
+    ).resolve()
+
 
 RESET_CONFIG_ON_START = (
     os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
