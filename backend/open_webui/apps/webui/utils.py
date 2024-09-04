@@ -54,8 +54,7 @@ def load_toolkit_module_by_id(toolkit_id):
 
     if not os.path.exists(toolkit_path):
         tool = Tools.get_tool_by_id(toolkit_id)
-
-        if tool and not os.path.exists(f"{toolkit_path}.error"):
+        if tool:
             with open(toolkit_path, "w") as file:
                 content = tool.content
                 content = content.replace("from utils", "from open_webui.utils")
@@ -95,8 +94,7 @@ def load_function_module_by_id(function_id):
 
     if not os.path.exists(function_path):
         function = Functions.get_function_by_id(function_id)
-
-        if function and not os.path.exists(f"{function_path}.error"):
+        if function:
             with open(function_path, "w") as file:
                 content = function.content
                 content = content.replace("from utils", "from open_webui.utils")
