@@ -1,10 +1,13 @@
 # values-prod.yaml
+ollama:
+  keepAlive: true
+  # externalHost: "http://ollama"
 hrwebui:
   persistence:
     size: 5Gi
     existingClaim: "hrwebui"
     annotations:
-      - "helm.sh/resource-policy": keep
+      "helm.sh/resource-policy": keep
   sso:
     azure:
       enabled: true

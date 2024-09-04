@@ -1,7 +1,7 @@
 nameOverride: ""
 
 ollama:
-  keepAlive: true
+  keepAlive: false
   externalHost: ""
   annotations: {}
   podAnnotations: {}
