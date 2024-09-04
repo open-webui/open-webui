@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Optional
 
 from open_webui.apps.webui.models.tools import ToolForm, ToolModel, ToolResponse, Tools
-from open_webui.apps.webui.utils import load_toolkit_module_by_id
+from open_webui.apps.webui.utils import load_toolkit_module_by_id, replace_imports
 from open_webui.config import CACHE_DIR, DATA_DIR
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -59,12 +59,11 @@ async def create_new_toolkit(
 
     toolkit = Tools.get_tool_by_id(form_data.id)
     if toolkit is None:
-        toolkit_path = os.path.join(TOOLS_DIR, f"{form_data.id}.py")
         try:
-            with open(toolkit_path, "w") as tool_file:
-                tool_file.write(form_data.content)
-
-            toolkit_module, frontmatter = load_toolkit_module_by_id(form_data.id)
+            form_data.content = replace_imports(form_data.content)
+            toolkit_module, frontmatter = load_toolkit_module_by_id(
+                form_data.id, content=form_data.content
+            )
             form_data.meta.manifest = frontmatter
 
             TOOLS = request.app.state.TOOLS
@@ -126,13 +125,11 @@ async def update_toolkit_by_id(
     form_data: ToolForm,
     user=Depends(get_admin_user),
 ):
-    toolkit_path = os.path.join(TOOLS_DIR, f"{id}.py")
-
     try:
-        with open(toolkit_path, "w") as tool_file:
-            tool_file.write(form_data.content)
-
-        toolkit_module, frontmatter = load_toolkit_module_by_id(id)
+        form_data.content = replace_imports(form_data.content)
+        toolkit_module, frontmatter = load_toolkit_module_by_id(
+            id, content=form_data.content
+        )
         form_data.meta.manifest = frontmatter
 
         TOOLS = request.app.state.TOOLS
@@ -176,10 +173,6 @@ async def delete_toolkit_by_id(request: Request, id: str, user=Depends(get_admin
         TOOLS = request.app.state.TOOLS
         if id in TOOLS:
             del TOOLS[id]
-
-        # delete the toolkit file
-        toolkit_path = os.path.join(TOOLS_DIR, f"{id}.py")
-        os.remove(toolkit_path)
 
     return result
 

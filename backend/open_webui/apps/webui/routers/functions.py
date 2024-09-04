@@ -8,7 +8,7 @@ from open_webui.apps.webui.models.functions import (
     FunctionResponse,
     Functions,
 )
-from open_webui.apps.webui.utils import load_function_module_by_id
+from open_webui.apps.webui.utils import load_function_module_by_id, replace_imports
 from open_webui.config import CACHE_DIR, FUNCTIONS_DIR
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -55,13 +55,11 @@ async def create_new_function(
 
     function = Functions.get_function_by_id(form_data.id)
     if function is None:
-        function_path = os.path.join(FUNCTIONS_DIR, f"{form_data.id}.py")
         try:
-            with open(function_path, "w") as function_file:
-                function_file.write(form_data.content)
-
+            form_data.content = replace_imports(form_data.content)
             function_module, function_type, frontmatter = load_function_module_by_id(
-                form_data.id
+                form_data.id,
+                content=form_data.content,
             )
             form_data.meta.manifest = frontmatter
 
@@ -174,13 +172,11 @@ async def toggle_global_by_id(id: str, user=Depends(get_admin_user)):
 async def update_function_by_id(
     request: Request, id: str, form_data: FunctionForm, user=Depends(get_admin_user)
 ):
-    function_path = os.path.join(FUNCTIONS_DIR, f"{id}.py")
-
     try:
-        with open(function_path, "w") as function_file:
-            function_file.write(form_data.content)
-
-        function_module, function_type, frontmatter = load_function_module_by_id(id)
+        form_data.content = replace_imports(form_data.content)
+        function_module, function_type, frontmatter = load_function_module_by_id(
+            id, content=form_data.content
+        )
         form_data.meta.manifest = frontmatter
 
         FUNCTIONS = request.app.state.FUNCTIONS
@@ -221,13 +217,6 @@ async def delete_function_by_id(
         FUNCTIONS = request.app.state.FUNCTIONS
         if id in FUNCTIONS:
             del FUNCTIONS[id]
-
-        # delete the function file
-        function_path = os.path.join(FUNCTIONS_DIR, f"{id}.py")
-        try:
-            os.remove(function_path)
-        except Exception:
-            pass
 
     return result
 
