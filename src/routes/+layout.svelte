@@ -38,6 +38,59 @@
 	let loaded = false;
 	const BREAKPOINT = 768;
 
+	const setupSocket = (websocket = true) => {
+		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
+			reconnection: true,
+			reconnectionDelay: 1000,
+			reconnectionDelayMax: 5000,
+			randomizationFactor: 0.5,
+			path: '/ws/socket.io',
+			auth: { token: localStorage.token },
+			transports: websocket ? ['websocket'] : ['polling']
+		});
+
+		socket.set(_socket);
+
+		_socket.on('connect_error', (err) => {
+			if (err.message.includes('websocket')) {
+				console.log('WebSocket connection failed, falling back to polling');
+				_socket.close();
+				setupSocket(false);
+			} else {
+				console.log('connect_error', err);
+			}
+		});
+
+		_socket.on('connect', () => {
+			console.log('connected', _socket.id);
+		});
+
+		_socket.on('reconnect_attempt', (attempt) => {
+			console.log('reconnect_attempt', attempt);
+		});
+
+		_socket.on('reconnect_failed', () => {
+			console.log('reconnect_failed');
+		});
+
+		_socket.on('disconnect', (reason, details) => {
+			console.log(`Socket ${_socket.id} disconnected due to ${reason}`);
+			if (details) {
+				console.log('Additional details:', details);
+			}
+		});
+
+		_socket.on('user-count', (data) => {
+			console.log('user-count', data);
+			activeUserCount.set(data.count);
+		});
+
+		_socket.on('usage', (data) => {
+			console.log('usage', data);
+			USAGE_POOL.set(data['models']);
+		});
+	};
+
 	onMount(async () => {
 		theme.set(localStorage.theme);
 
@@ -80,45 +133,7 @@
 			await WEBUI_NAME.set(backendConfig.name);
 
 			if ($config) {
-				const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
-					reconnection: true,
-					reconnectionDelay: 1000,
-					reconnectionDelayMax: 5000,
-					randomizationFactor: 0.5,
-					path: '/ws/socket.io',
-					auth: { token: localStorage.token }
-				});
-
-				_socket.on('connect', () => {
-					console.log('connected');
-				});
-
-				_socket.on('reconnect_attempt', (attempt) => {
-					console.log('reconnect_attempt', attempt);
-				});
-
-				_socket.on('reconnect_failed', () => {
-					console.log('reconnect_failed');
-				});
-
-				_socket.on('disconnect', (reason, details) => {
-					console.log(`Socket ${socket.id} disconnected due to ${reason}`);
-					if (details) {
-						console.log('Additional details:', details);
-					}
-				});
-
-				await socket.set(_socket);
-
-				_socket.on('user-count', (data) => {
-					console.log('user-count', data);
-					activeUserCount.set(data.count);
-				});
-
-				_socket.on('usage', (data) => {
-					console.log('usage', data);
-					USAGE_POOL.set(data['models']);
-				});
+				setupSocket();
 
 				if (localStorage.token) {
 					// Get Session User Info
