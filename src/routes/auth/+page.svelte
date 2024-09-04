@@ -3,7 +3,7 @@
 	import { userSignIn, userSignUp } from '$lib/apis/auths';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { WEBUI_NAME, config, user } from '$lib/stores';
+	import { WEBUI_NAME, config, user, isMobile } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
@@ -11,7 +11,7 @@
 	const i18n = getContext('i18n');
 
 	let loaded = false;
-	let mode = 'signin';
+	let mode = '';
 
 	let name = '';
 	let email = '';
@@ -63,6 +63,7 @@
 		if ($config?.trusted_header_auth ?? false) {
 			await signInHandler();
 		}
+		isMobile.set(window.innerWidth <= 768);
 	});
 </script>
 
@@ -93,8 +94,97 @@
 			<span class="text-base font-normal text-black pc-only opacity-75">MBZUAI ServiceDesk Chatbot</span>
 		</div>
 	</div>
-	<svg class="z-0 absolute top-0 left-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="Gradient1" cx="50%" cy="50%" fx="0.441602%" fy="50%" r=".5"><animate attributeName="fx" dur="34s" values="0%;3%;0%" repeatCount="indefinite"></animate><stop offset="0%" stop-color="rgba(105, 18, 204, 1)"></stop><stop offset="100%" stop-color="rgba(105, 18, 204, 0)"></stop></radialGradient><radialGradient id="Gradient2" cx="50%" cy="50%" fx="2.68147%" fy="50%" r=".5"><animate attributeName="fx" dur="23.5s" values="0%;3%;0%" repeatCount="indefinite"></animate><stop offset="0%" stop-color="rgba(128, 219, 191, 1)"></stop><stop offset="100%" stop-color="rgba(128, 219, 191, 0)"></stop></radialGradient><radialGradient id="Gradient3" cx="50%" cy="50%" fx="0.836536%" fy="50%" r=".5"><animate attributeName="fx" dur="21.5s" values="0%;3%;0%" repeatCount="indefinite"></animate><stop offset="0%" stop-color="rgba(1, 225, 148, 1)"></stop><stop offset="100%" stop-color="rgba(1, 225, 148, 0)"></stop></radialGradient></defs><rect x="13.744%" y="1.18473%" width="100%" height="100%" fill="url(#Gradient1)" transform="rotate(334.41 50 50)"><animate attributeName="x" dur="20s" values="25%;0%;25%" repeatCount="indefinite"></animate><animate attributeName="y" dur="21s" values="0%;25%;0%" repeatCount="indefinite"></animate><animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="7s" repeatCount="indefinite"></animateTransform></rect><rect x="-2.17916%" y="35.4267%" width="100%" height="100%" fill="url(#Gradient2)" transform="rotate(255.072 50 50)"><animate attributeName="x" dur="23s" values="-25%;0%;-25%" repeatCount="indefinite"></animate><animate attributeName="y" dur="24s" values="0%;50%;0%" repeatCount="indefinite"></animate><animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="12s" repeatCount="indefinite"></animateTransform></rect><rect x="9.00483%" y="14.5733%" width="100%" height="100%" fill="url(#Gradient3)" transform="rotate(139.903 50 50)"><animate attributeName="x" dur="25s" values="0%;25%;0%" repeatCount="indefinite"></animate><animate attributeName="y" dur="12s" values="0%;25%;0%" repeatCount="indefinite"></animate><animateTransform attributeName="transform" type="rotate" from="360 50 50" to="0 50 50" dur="9s" repeatCount="indefinite"></animateTransform></rect></svg>
-	<div class=" z-50 bg-[#ffffff80] dark:bg-[#ffffff80] backdrop-blur-xl min-h-screen w-full flex justify-center font-mona">
+	<svg
+		class="z-0 absolute top-0 left-0 w-full h-full"
+		viewBox="0 0 100 100"
+		preserveAspectRatio="xMidYMid slice"
+		><defs
+			><radialGradient id="Gradient1" cx="50%" cy="50%" fx="0.441602%" fy="50%" r=".5"
+				><animate attributeName="fx" dur="34s" values="0%;3%;0%" repeatCount="indefinite" /><stop
+					offset="0%"
+					stop-color="rgba(105, 18, 204, 1)"
+				/><stop offset="100%" stop-color="rgba(105, 18, 204, 0)" /></radialGradient
+			><radialGradient id="Gradient2" cx="50%" cy="50%" fx="2.68147%" fy="50%" r=".5"
+				><animate attributeName="fx" dur="23.5s" values="0%;3%;0%" repeatCount="indefinite" /><stop
+					offset="0%"
+					stop-color="rgba(128, 219, 191, 1)"
+				/><stop offset="100%" stop-color="rgba(128, 219, 191, 0)" /></radialGradient
+			><radialGradient id="Gradient3" cx="50%" cy="50%" fx="0.836536%" fy="50%" r=".5"
+				><animate attributeName="fx" dur="21.5s" values="0%;3%;0%" repeatCount="indefinite" /><stop
+					offset="0%"
+					stop-color="rgba(1, 225, 148, 1)"
+				/><stop offset="100%" stop-color="rgba(1, 225, 148, 0)" /></radialGradient
+			></defs
+		><rect
+			x="13.744%"
+			y="1.18473%"
+			width="100%"
+			height="100%"
+			fill="url(#Gradient1)"
+			transform="rotate(334.41 50 50)"
+			><animate attributeName="x" dur="20s" values="25%;0%;25%" repeatCount="indefinite" /><animate
+				attributeName="y"
+				dur="21s"
+				values="0%;25%;0%"
+				repeatCount="indefinite"
+			/><animateTransform
+				attributeName="transform"
+				type="rotate"
+				from="0 50 50"
+				to="360 50 50"
+				dur="7s"
+				repeatCount="indefinite"
+			/></rect
+		><rect
+			x="-2.17916%"
+			y="35.4267%"
+			width="100%"
+			height="100%"
+			fill="url(#Gradient2)"
+			transform="rotate(255.072 50 50)"
+			><animate
+				attributeName="x"
+				dur="23s"
+				values="-25%;0%;-25%"
+				repeatCount="indefinite"
+			/><animate
+				attributeName="y"
+				dur="24s"
+				values="0%;50%;0%"
+				repeatCount="indefinite"
+			/><animateTransform
+				attributeName="transform"
+				type="rotate"
+				from="0 50 50"
+				to="360 50 50"
+				dur="12s"
+				repeatCount="indefinite"
+			/></rect
+		><rect
+			x="9.00483%"
+			y="14.5733%"
+			width="100%"
+			height="100%"
+			fill="url(#Gradient3)"
+			transform="rotate(139.903 50 50)"
+			><animate attributeName="x" dur="25s" values="0%;25%;0%" repeatCount="indefinite" /><animate
+				attributeName="y"
+				dur="12s"
+				values="0%;25%;0%"
+				repeatCount="indefinite"
+			/><animateTransform
+				attributeName="transform"
+				type="rotate"
+				from="360 50 50"
+				to="0 50 50"
+				dur="9s"
+				repeatCount="indefinite"
+			/></rect
+		></svg
+	>
+	<div
+		class=" z-50 bg-[#ffffff80] dark:bg-[#ffffff80] backdrop-blur-xl min-h-screen w-full flex justify-center font-mona"
+	>
 		<!-- <div class="hidden lg:flex lg:flex-1 px-10 md:px-16 w-full bg-yellow-50 justify-center">
 			<div class=" my-auto pb-16 text-left">
 				<div>
@@ -127,15 +217,20 @@
 					</div>
 				</div>
 			{:else}
-				<div class=" my-auto pb-10 w-full">
+				<div class=" my-auto w-full relative">
+					<div
+						class="bg-white rounded-full absolute top-0 left-[50%] p-4 -translate-x-1/2 -translate-y-1/2"
+					>
+						<img src="/logo-main.png" class={$isMobile ? 'h-[4rem]' : 'h-[70px]'} alt="logo" />
+					</div>
 					<form
-						class=" flex flex-col justify-center bg-white py-6 sm:py-16 px-6 sm:px-16 rounded-2xl"
+						class=" flex flex-col justify-center bg-white pt-16 pb-8 px-8 sm:px-16 rounded-2xl"
 						on:submit|preventDefault={() => {
 							submitHandler();
 						}}
 					>
-						<div class=" text-xl sm:text-2xl font-bold">
-							{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Sign up')}
+						<div class=" text-xl sm:text-2xl font-bold ">
+							{mode === 'signup' ? $i18n.t('Sign up') : $i18n.t('Sign in')}
 							{$i18n.t('to')}
 						</div>
 						<div class="text-xl sm:text-xl font-semibold">{$WEBUI_NAME}</div>
@@ -166,55 +261,70 @@
 								<hr class=" my-3" />
 							{/if}
 
-							<div class="mb-2">
-								<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Email')}</div>
-								<input
-									bind:value={email}
-									type="email"
-									class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
-									autocomplete="email"
-									placeholder={$i18n.t('Enter Your Email')}
-									required
-								/>
-							</div>
+							{#if !!mode}
+								<div class="mb-2">
+									<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Email')}</div>
+									<input
+										bind:value={email}
+										type="email"
+										class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
+										autocomplete="email"
+										placeholder={$i18n.t('Enter Your Email')}
+										required
+									/>
+								</div>
 
-							<div>
-								<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Password')}</div>
-								<input
-									bind:value={password}
-									type="password"
-									class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
-									placeholder={$i18n.t('Enter Your Password')}
-									autocomplete="current-password"
-									required
-								/>
-							</div>
+								<div>
+									<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Password')}</div>
+									<input
+										bind:value={password}
+										type="password"
+										class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
+										placeholder={$i18n.t('Enter Your Password')}
+										autocomplete="current-password"
+										required
+									/>
+								</div>
+							{/if}
 						</div>
 
 						<div class="mt-5">
-							<button
-								class=" bg-gray-900 hover:bg-gray-800 w-full rounded-full text-white font-semibold text-sm py-3 transition"
-								type="submit"
-							>
-								{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
-							</button>
-							<div class="text-[#6A707C] text-sm w-full flex justify-center items-center mt-4">
-								<div class="h-[1px] flex-1 bg-[#E8ECF4]"></div>
-								<div class="mx-2">Or Sign in with</div>
-								<div class="h-[1px] flex-1 bg-[#E8ECF4]"></div>
-							</div>
-							<button
-								class=" bg-[#2073B7] hover:bg-[#2073B7dd] w-full rounded-full text-white font-semibold text-sm py-3 transition mt-4 flex justify-center"
-								type="button"
-								on:click={() => {
-									window.location.href = '/api/v1/auths/signin/sso'
-								}}
-							>
-								<img src="/outlook.png" alt="outlook" class="w-[20px] mr-2" />
-								Outlook Account
-							</button>
+							{#if mode === ''}
+								<button
+									class=" bg-[#0979F0] hover:bg-[#0979F0ee] w-full rounded-full text-white font-semibold text-sm py-4 transition flex justify-center"
+									style="box-shadow: 0px 4px 8.7px 0px rgba(0, 0, 0, 0.25);"
+									type="button"
+									on:click={() => {
+										window.location.href = '/api/v1/auths/signin/sso';
+									}}
+								>
+									<img src="/mbzuai_login.png" alt="mbzuai_login" class="w-[20px] mr-2" />
+									MBZUAI Account
+								</button>
+								<div class="text-[#6A707C] text-sm w-full flex justify-center items-center mt-4">
+									<!-- <div class="h-[1px] flex-1 bg-[#E8ECF4]" />
+									<div class="mx-2">Or sign in with</div>
+									<div class="h-[1px] flex-1 bg-[#E8ECF4]" /> -->
+								</div>
+								<button
+									class=" bg-white w-full rounded-full text-[#0979F0] font-semibold text-sm py-4 mt-4 mb-8 transition hover:shadow-md"
+									style="border: 1px solid #0979F0;"
+									on:click={() => {
+										mode = 'signin';
+									}}
+								>
+									Email and Password
+								</button>
+							{:else}
+								<button
+									class=" bg-white hover:bg-[#0979F0] border-2 border-[#0979F0] w-full rounded-full text-[#0979F0] hover:text-white font-semibold text-sm py-4 mt-4 transition"
+									type="submit"
+								>
+									{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
+								</button>
+							{/if}
 							<div class=" mt-4 text-sm text-center">
-								{mode === 'signin'
+								{mode === 'signin' || mode === ''
 									? $i18n.t("Don't have an account?")
 									: $i18n.t('Already have an account?')}
 
@@ -222,14 +332,14 @@
 									class=" font-medium underline"
 									type="button"
 									on:click={() => {
-										if (mode === 'signin') {
+										if (mode === 'signin' || mode === '') {
 											mode = 'signup';
 										} else {
-											mode = 'signin';
+											mode = '';
 										}
 									}}
 								>
-									{mode === 'signin' ? $i18n.t('Sign up') : $i18n.t('Sign in')}
+									{mode === 'signup' ? $i18n.t('Sign in') : $i18n.t('Sign up')}
 								</button>
 							</div>
 						</div>
