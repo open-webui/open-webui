@@ -54,9 +54,20 @@ def load_toolkit_module_by_id(toolkit_id):
 
     if not os.path.exists(toolkit_path):
         tool = Tools.get_tool_by_id(toolkit_id)
-        if tool:
+
+        if tool and not os.path.exists(f"{toolkit_path}.error"):
             with open(toolkit_path, "w") as file:
-                file.write(tool.content)
+                content = tool.content
+                content = content.replace("from utils", "from open_webui.utils")
+                content = content.replace("from apps", "from open_webui.apps")
+                content = content.replace("from main", "from open_webui.main")
+                content = content.replace("from config", "from open_webui.config")
+
+                if tool.content != content:
+                    print(f"Replaced imports for: {toolkit_id}")
+                    Tools.update_tool_by_id(toolkit_id, {"content": content})
+
+                file.write(content)
         else:
             raise Exception(f"Toolkit not found: {toolkit_id}")
 
@@ -84,9 +95,20 @@ def load_function_module_by_id(function_id):
 
     if not os.path.exists(function_path):
         function = Functions.get_function_by_id(function_id)
-        if function:
+
+        if function and not os.path.exists(f"{function_path}.error"):
             with open(function_path, "w") as file:
-                file.write(function.content)
+                content = function.content
+                content = content.replace("from utils", "from open_webui.utils")
+                content = content.replace("from apps", "from open_webui.apps")
+                content = content.replace("from main", "from open_webui.main")
+                content = content.replace("from config", "from open_webui.config")
+
+                if function.content != content:
+                    print(f"Replaced imports for: {function_id}")
+                    Functions.update_function_by_id(function_id, {"content": content})
+
+                file.write(content)
         else:
             raise Exception(f"Function not found: {function_id}")
 
