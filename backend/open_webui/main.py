@@ -110,7 +110,6 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse, Response, StreamingResponse
 
 
-
 from open_webui.utils.misc import (
     add_or_update_system_message,
     get_last_user_message,
