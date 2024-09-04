@@ -3,6 +3,8 @@ hrwebui:
   persistence:
     size: 5Gi
     existingClaim: "hrwebui"
+    annotations:
+      - "helm.sh/resource-policy": keep
   sso:
     azure:
       enabled: true
