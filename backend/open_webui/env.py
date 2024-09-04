@@ -96,6 +96,10 @@ except importlib.metadata.PackageNotFoundError:
     pass
 
 
+PIP_INSTALL = (
+    os.environ.get("PIP_INSTALL") if os.environ.get("PIP_INSTALL") else PIP_INSTALL
+)
+
 if PIP_INSTALL:
     PACKAGE_DATA = {"version": importlib.metadata.version("open-webui")}
 else:
