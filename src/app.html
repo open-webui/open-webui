@@ -6,6 +6,7 @@
 		<link rel="manifest" href="%sveltekit.assets%/manifest.json" crossorigin="use-credentials" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 		<meta name="robots" content="noindex,nofollow" />
+		<meta name="description" content="Open WebUI" />
 		<link
 			rel="search"
 			type="application/opensearchdescription+xml"
@@ -22,6 +23,10 @@
 		<script>
 			// On page load or when changing themes, best to add inline in `head` to avoid FOUC
 			(() => {
+				if (!localStorage?.theme) {
+					localStorage.theme = 'system';
+				}
+
 				if (localStorage?.theme && localStorage?.theme.includes('oled')) {
 					document.documentElement.style.setProperty('--color-gray-800', '#101010');
 					document.documentElement.style.setProperty('--color-gray-850', '#050505');

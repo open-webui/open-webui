@@ -297,6 +297,10 @@
 			selectedModels = [''];
 		}
 
+		if ($page.url.searchParams.get('web-search') === 'true') {
+			webSearchEnabled = true;
+		}
+
 		if ($page.url.searchParams.get('q')) {
 			prompt = $page.url.searchParams.get('q') ?? '';
 			selectedToolIds = ($page.url.searchParams.get('tool_ids') ?? '')
@@ -859,7 +863,7 @@
 			model: model.id,
 			messages: messagesBody,
 			options: {
-				...(params ?? $settings.params ?? {}),
+				...{ ...($settings?.params ?? {}), ...params },
 				stop:
 					(params?.stop ?? $settings?.params?.stop ?? undefined)
 						? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
@@ -1016,21 +1020,6 @@
 					scrollToBottom();
 				}
 			}
-
-			if ($chatId == _chatId) {
-				if ($settings.saveChatHistory ?? true) {
-					chat = await updateChatById(localStorage.token, _chatId, {
-						messages: messages,
-						history: history,
-						models: selectedModels,
-						params: params,
-						files: chatFiles
-					});
-
-					currentChatPage.set(1);
-					await chats.set(await getChatList(localStorage.token, $currentChatPage));
-				}
-			}
 		} else {
 			if (res !== null) {
 				const error = await res.json();
@@ -1062,6 +1051,7 @@
 
 			messages = messages;
 		}
+		await saveChatHandler(_chatId);
 
 		stopResponseFlag = false;
 		await tick();
@@ -1324,27 +1314,15 @@
 
 					document.getElementById(`speak-button-${responseMessage.id}`)?.click();
 				}
-
-				if ($chatId == _chatId) {
-					if ($settings.saveChatHistory ?? true) {
-						chat = await updateChatById(localStorage.token, _chatId, {
-							models: selectedModels,
-							messages: messages,
-							history: history,
-							params: params,
-							files: chatFiles
-						});
-
-						currentChatPage.set(1);
-						await chats.set(await getChatList(localStorage.token, $currentChatPage));
-					}
-				}
 			} else {
 				await handleOpenAIError(null, res, model, responseMessage);
 			}
 		} catch (error) {
 			await handleOpenAIError(error, null, model, responseMessage);
 		}
+
+		await saveChatHandler(_chatId);
+
 		messages = messages;
 
 		stopResponseFlag = false;

@@ -4,14 +4,14 @@ pydantic==2.8.2
 python-multipart==0.0.9
 
 Flask==3.0.3
-Flask-Cors==4.0.1
+Flask-Cors==5.0.0
 
 python-socketio==5.11.3
 python-jose==3.3.0
 passlib[bcrypt]==1.7.4
 
 requests==2.32.3
-aiohttp==3.10.2
+aiohttp==3.10.5
 
 sqlalchemy==2.0.32
 alembic==1.13.2
@@ -34,7 +34,7 @@ anthropic
 google-generativeai==0.7.2
 tiktoken
 
-langchain==0.2.14
+langchain==0.2.15
 langchain-community==0.2.12
 langchain-chroma==0.1.2
 
@@ -44,7 +44,7 @@ sentence-transformers==3.0.1
 pypdf==4.3.1
 docx2txt==0.8
 python-pptx==1.0.0
-unstructured==0.15.7
+unstructured==0.15.9
 nltk==3.9.1
 Markdown==3.7
 pypandoc==1.13
@@ -64,7 +64,7 @@ rank-bm25==0.2.2
 faster-whisper==1.0.3
 
 PyJWT[crypto]==2.9.0
-authlib==1.3.1
+authlib==1.3.2
 
 black==24.8.0
 langfuse==2.44.0
@@ -73,7 +73,7 @@ pytube==15.0.0
 
 extract_msg
 pydub
-duckduckgo-search~=6.2.1
+duckduckgo-search~=6.2.11
 
 ## Tests
 docker~=7.1.0
