@@ -95,8 +95,10 @@ try:
 except importlib.metadata.PackageNotFoundError:
     pass
 
-OVERRIDE_PIP_INSTALL = os.environ.get("OVERRIDE_PIP_INSTALL")
-PIP_INSTALL = OVERRIDE_PIP_INSTALL if (OVERRIDE_PIP_INSTALL != None) else PIP_INSTALL
+
+PIP_INSTALL = (
+    os.environ.get("PIP_INSTALL") if os.environ.get("PIP_INSTALL") else PIP_INSTALL
+)
 
 if PIP_INSTALL:
     PACKAGE_DATA = {"version": importlib.metadata.version("open-webui")}
