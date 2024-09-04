@@ -2,6 +2,7 @@
 hrwebui:
   persistence:
     size: 5Gi
+    existingClaim: "hrwebui"
   sso:
     azure:
       enabled: true
