@@ -1324,26 +1324,6 @@
 
 					document.getElementById(`speak-button-${responseMessage.id}`)?.click();
 				}
-<<<<<<< HEAD
-
-				if ($chatId == _chatId) {
-					if (!$temporaryChatEnabled) {
-						if ($settings.saveChatHistory ?? true) {
-							chat = await updateChatById(localStorage.token, _chatId, {
-								models: selectedModels,
-								messages: messages,
-								history: history,
-								params: params,
-								files: chatFiles
-							});
-
-							currentChatPage.set(1);
-							await chats.set(await getChatList(localStorage.token, $currentChatPage));
-						}
-					}
-				}
-=======
->>>>>>> 9bcbf5e9b3d6adaff56fcf253d5787035067ce6b
 			} else {
 				await handleOpenAIError(null, res, model, responseMessage);
 			}
