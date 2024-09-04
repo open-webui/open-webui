@@ -192,6 +192,7 @@ async def verify_url(user=Depends(get_admin_user)):
 
 
 def set_image_model(model: str):
+    log.info(f"Setting image model to {model}")
     app.state.config.MODEL = model
     if app.state.config.ENGINE in ["", "automatic1111"]:
         api_auth = get_automatic1111_api_auth()
@@ -245,7 +246,8 @@ async def get_image_config(user=Depends(get_admin_user)):
 
 @app.post("/image/config/update")
 async def update_image_config(form_data: ImageConfigForm, user=Depends(get_admin_user)):
-    app.state.config.MODEL = form_data.MODEL
+
+    set_image_model(form_data.MODEL)
 
     pattern = r"^\d+x\d+$"
     if re.match(pattern, form_data.IMAGE_SIZE):
