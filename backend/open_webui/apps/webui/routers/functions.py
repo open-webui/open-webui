@@ -56,11 +56,11 @@ async def create_new_function(
     function = Functions.get_function_by_id(form_data.id)
     if function is None:
         try:
+            form_data.content = replace_imports(form_data.content)
             function_module, function_type, frontmatter = load_function_module_by_id(
                 form_data.id,
                 content=form_data.content,
             )
-            form_data.content = replace_imports(form_data.content)
             form_data.meta.manifest = frontmatter
 
             FUNCTIONS = request.app.state.FUNCTIONS
@@ -173,10 +173,10 @@ async def update_function_by_id(
     request: Request, id: str, form_data: FunctionForm, user=Depends(get_admin_user)
 ):
     try:
+        form_data.content = replace_imports(form_data.content)
         function_module, function_type, frontmatter = load_function_module_by_id(
             id, content=form_data.content
         )
-        form_data.content = replace_imports(form_data.content)
         form_data.meta.manifest = frontmatter
 
         FUNCTIONS = request.app.state.FUNCTIONS

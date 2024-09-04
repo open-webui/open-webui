@@ -60,10 +60,10 @@ async def create_new_toolkit(
     toolkit = Tools.get_tool_by_id(form_data.id)
     if toolkit is None:
         try:
+            form_data.content = replace_imports(form_data.content)
             toolkit_module, frontmatter = load_toolkit_module_by_id(
                 form_data.id, content=form_data.content
             )
-            form_data.content = replace_imports(form_data.content)
             form_data.meta.manifest = frontmatter
 
             TOOLS = request.app.state.TOOLS
@@ -126,10 +126,10 @@ async def update_toolkit_by_id(
     user=Depends(get_admin_user),
 ):
     try:
+        form_data.content = replace_imports(form_data.content)
         toolkit_module, frontmatter = load_toolkit_module_by_id(
             id, content=form_data.content
         )
-        form_data.content = replace_imports(form_data.content)
         form_data.meta.manifest = frontmatter
 
         TOOLS = request.app.state.TOOLS

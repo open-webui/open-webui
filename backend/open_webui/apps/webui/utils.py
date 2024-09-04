@@ -76,8 +76,8 @@ def load_toolkit_module_by_id(toolkit_id, content=None):
 
         content = tool.content
 
-    content = replace_imports(content)
-    Tools.update_tool_by_id(toolkit_id, {"content": content})
+        content = replace_imports(content)
+        Tools.update_tool_by_id(toolkit_id, {"content": content})
 
     module_name = f"{toolkit_id}"
     module = types.ModuleType(module_name)
@@ -114,9 +114,8 @@ def load_function_module_by_id(function_id, content=None):
             raise Exception(f"Function not found: {function_id}")
         content = function.content
 
-    # Replace the module paths in the function content
-    content = replace_imports(content)
-    Functions.update_function_by_id(function_id, {"content": content})
+        content = replace_imports(content)
+        Functions.update_function_by_id(function_id, {"content": content})
 
     module_name = f"{function_id}"
     module = types.ModuleType(module_name)
