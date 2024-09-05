@@ -9,7 +9,7 @@ from pathlib import Path
 import markdown
 from bs4 import BeautifulSoup
 
-from constants import ERROR_MESSAGES
+from open_webui.constants import ERROR_MESSAGES
 
 ####################################
 # Load .env file

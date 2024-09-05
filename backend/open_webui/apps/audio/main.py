@@ -32,7 +32,7 @@ from config import (
     WHISPER_MODEL_DIR,
     AppConfig,
 )
-from constants import ERROR_MESSAGES
+from open_webui.constants import ERROR_MESSAGES
 from env import SRC_LOG_LEVELS
 from utils.utils import get_admin_user, get_current_user, get_verified_user
 
