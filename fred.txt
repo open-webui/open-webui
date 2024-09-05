@@ -1,0 +1,14 @@
+/usr/local/Cellar/python@3.11/3.11.9_1/bin/pip3.11 install open-webui
+
+open-webui serve
+
+/usr/local/Cellar/python@3.11/3.11.9_1/bin/pip3.11 install -r backend/requirements.txt
+
+配置backend为source文件，在Preferences中
+
+nvm use 20
+1.npm install in the root dir
+2.npm run dev
+3.make a python virtual environment
+4.install backend dependencies into that venv (pip install -r backend/requirements.txt)
+5.run ./start.sh or ./dev.sh in another shell
