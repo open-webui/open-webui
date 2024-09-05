@@ -427,7 +427,11 @@
 								{#if status?.action === 'web_search' && status?.urls}
 									<WebSearchResults {status}>
 										<div class="flex flex-col justify-center -space-y-0.5">
-											<div class="shimmer text-base line-clamp-1 text-wrap">
+											<div
+												class="{status?.done === false
+													? 'shimmer'
+													: ''} text-base line-clamp-1 text-wrap"
+											>
 												{status?.description}
 											</div>
 										</div>
@@ -435,7 +439,9 @@
 								{:else}
 									<div class="flex flex-col justify-center -space-y-0.5">
 										<div
-											class="shimmer text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
+											class="{status?.done === false
+												? 'shimmer'
+												: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
 										>
 											{status?.description}
 										</div>
