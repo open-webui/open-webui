@@ -5,6 +5,7 @@
 	import { onMount } from 'svelte';
 	import { mobile, showCallOverlay } from '$lib/stores';
 	import CallOverlay from './MessageInput/CallOverlay.svelte';
+	import Drawer from '../common/Drawer.svelte';
 
 	export let show = false;
 
@@ -91,8 +92,8 @@
 			/>
 		</div>
 	</div>
-{:else}
-	<Modal bind:show>
+{:else if show}
+	<Drawer bind:show>
 		<div class="  px-6 py-4 h-full">
 			<Controls
 				on:close={() => {
@@ -103,5 +104,5 @@
 				bind:params
 			/>
 		</div>
-	</Modal>
+	</Drawer>
 {/if}
