@@ -1,9 +1,7 @@
-import os
 from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-
 from open_webui.apps.webui.models.functions import (
     FunctionForm,
     FunctionModel,
@@ -11,7 +9,7 @@ from open_webui.apps.webui.models.functions import (
     Functions,
 )
 from open_webui.apps.webui.utils import load_function_module_by_id
-from open_webui.config import CACHE_DIR, FUNCTIONS_DIR
+from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.utils import get_admin_user, get_verified_user
 

@@ -1,7 +1,6 @@
 import asyncio
 
 import socketio
-
 from open_webui.apps.webui.models.users import Users
 from open_webui.utils.utils import decode_token
 

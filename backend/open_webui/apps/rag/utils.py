@@ -7,7 +7,6 @@ from huggingface_hub import snapshot_download
 from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
-
 from open_webui.apps.ollama.main import GenerateEmbeddingsForm, generate_ollama_embeddings
 from open_webui.config import CHROMA_CLIENT
 from open_webui.env import SRC_LOG_LEVELS

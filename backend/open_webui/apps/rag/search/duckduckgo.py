@@ -2,7 +2,6 @@ import logging
 from typing import Optional
 
 from duckduckgo_search import DDGS
-
 from open_webui.apps.rag.search.main import SearchResult, get_filtered_results
 from open_webui.env import SRC_LOG_LEVELS
 

@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-
 from open_webui.apps.webui.models.tools import ToolForm, ToolModel, ToolResponse, Tools
 from open_webui.apps.webui.utils import load_toolkit_module_by_id
 from open_webui.config import CACHE_DIR, DATA_DIR

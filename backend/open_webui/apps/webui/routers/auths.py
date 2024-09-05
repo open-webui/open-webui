@@ -3,8 +3,6 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import Response
-from pydantic import BaseModel
-
 from open_webui.apps.webui.models.auths import (
     AddUserForm,
     ApiKey,
@@ -29,6 +27,7 @@ from open_webui.utils.utils import (
     get_password_hash,
 )
 from open_webui.utils.webhook import post_webhook
+from pydantic import BaseModel
 
 router = APIRouter()
 

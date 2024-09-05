@@ -8,7 +8,6 @@ from pathlib import Path
 
 import markdown
 from bs4 import BeautifulSoup
-
 from open_webui.constants import ERROR_MESSAGES
 
 ####################################

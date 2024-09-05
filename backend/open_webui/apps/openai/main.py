@@ -10,9 +10,6 @@ import requests
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
-from pydantic import BaseModel
-from starlette.background import BackgroundTask
-
 from open_webui.apps.filter.main import process_user_usage
 from open_webui.apps.webui.models.models import Models
 from open_webui.config import (
@@ -33,6 +30,8 @@ from open_webui.utils.misc import (
     apply_model_system_prompt_to_body,
 )
 from open_webui.utils.utils import get_admin_user, get_verified_user
+from pydantic import BaseModel
+from starlette.background import BackgroundTask
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])

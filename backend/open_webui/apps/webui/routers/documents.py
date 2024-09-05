@@ -2,8 +2,6 @@ import json
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
-
 from open_webui.apps.webui.models.documents import (
     DocumentForm,
     DocumentResponse,
@@ -12,6 +10,7 @@ from open_webui.apps.webui.models.documents import (
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.utils import get_admin_user, get_verified_user
+from pydantic import BaseModel
 
 router = APIRouter()
 

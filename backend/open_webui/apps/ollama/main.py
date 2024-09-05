@@ -13,9 +13,6 @@ import requests
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, ConfigDict
-from starlette.background import BackgroundTask
-
 from open_webui.apps.webui.models.models import Models
 from open_webui.config import (
     AIOHTTP_CLIENT_TIMEOUT,
@@ -36,6 +33,8 @@ from open_webui.utils.misc import (
     calculate_sha256,
 )
 from open_webui.utils.utils import get_admin_user, get_verified_user
+from pydantic import BaseModel, ConfigDict
+from starlette.background import BackgroundTask
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
