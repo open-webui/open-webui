@@ -88,19 +88,16 @@ WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
 
 ENV = os.environ.get("ENV", "dev")
 
-PIP_INSTALL = False
+PIP_INSTALL = "false"
 try:
     importlib.metadata.version("open-webui")
-    PIP_INSTALL = True
+    PIP_INSTALL = "true"
 except importlib.metadata.PackageNotFoundError:
     pass
 
-
 PIP_INSTALL = (
-    os.environ.get("PIP_INSTALL", "False").lower() == "true"
-    if os.environ.get("PIP_INSTALL")
-    else PIP_INSTALL
-)
+    os.environ.get("PIP_INSTALL") if os.environ.get("PIP_INSTALL") else PIP_INSTALL
+).lower() == "true"
 
 if PIP_INSTALL:
     PACKAGE_DATA = {"version": importlib.metadata.version("open-webui")}
