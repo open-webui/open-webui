@@ -13,9 +13,9 @@ import requests
 from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 
-from utils.utils import get_verified_user, get_current_user, get_admin_user
-from env import SRC_LOG_LEVELS
-from constants import MESSAGES
+from open_webui.utils.utils import get_verified_user, get_current_user, get_admin_user
+from open_webui.env import SRC_LOG_LEVELS
+from open_webui.constants import MESSAGES
 
 import os
 
@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["LITELLM"])
 
 
-from config import (
+from open_webui.config import (
     ENABLE_LITELLM,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,

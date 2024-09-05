@@ -25,7 +25,7 @@ from open_webui.apps.webui.routers import (
     users,
     utils,
 )
-from open_webui.apps..webui.utils import load_function_module_by_id
+from open_webui.apps.webui.utils import load_function_module_by_id
 from open_webui.config import (
     ADMIN_EMAIL,
     CORS_ALLOW_ORIGIN,

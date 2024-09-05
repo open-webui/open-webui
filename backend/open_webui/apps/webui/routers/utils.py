@@ -120,7 +120,7 @@ async def download_db(user=Depends(get_admin_user)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
-    from open_webui.apps..webui.internal.db import engine
+    from open_webui.apps.webui.internal.db import engine
 
     if engine.name != "sqlite":
         raise HTTPException(

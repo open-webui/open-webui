@@ -1,5 +1,5 @@
-from apps.filter.hashNode import hashNode
-from apps.filter.trieNode import trieNode
+from open_webui.apps.filter.hashNode import hashNode
+from open_webui.apps.filter.trieNode import trieNode
 
 
 class wordsSearch:

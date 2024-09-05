@@ -6,10 +6,10 @@ import time
 from collections import defaultdict
 
 import aiohttp
-from apps.filter.wordsSearch import wordsSearch
-from apps.webui.routers.chats import request_share_chat_by_id, request_get_chat_by_id
+from open_webui.apps.filter.wordsSearch import wordsSearch
+from open_webui.apps.webui.routers.chats import request_share_chat_by_id, request_get_chat_by_id
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from config import (
+from open_webui.config import (
     AppConfig,
     ENABLE_MESSAGE_FILTER,
     CHAT_FILTER_WORDS_FILE,
@@ -22,11 +22,11 @@ from config import (
     WECHAT_NOTICE_SUFFIX,
     WECHAT_APP_SECRET,
 )
-from env import DATA_DIR, SRC_LOG_LEVELS, WEBUI_URL, WEBUI_NAME
+from open_webui.env import DATA_DIR, SRC_LOG_LEVELS, WEBUI_URL, WEBUI_NAME
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from utils.utils import (
+from open_webui.utils.utils import (
     get_admin_user,
 )
 
