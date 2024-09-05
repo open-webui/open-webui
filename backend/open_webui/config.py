@@ -18,6 +18,7 @@ from open_webui.env import (
     FRONTEND_BUILD_DIR,
     WEBUI_AUTH,
     log,
+    OPEN_WEBUI_DIR,
 )
 from pydantic import BaseModel
 from sqlalchemy import JSON, Column, DateTime, Integer, func

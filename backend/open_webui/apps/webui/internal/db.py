@@ -6,6 +6,7 @@ from typing_extensions import Self
 
 from open_webui.apps.webui.internal.wrappers import register_connection
 from open_webui.env import DATABASE_URL, SRC_LOG_LEVELS
+from open_webui.env import OPEN_WEBUI_DIR
 from peewee_migrate import Router
 from sqlalchemy import Dialect, create_engine, types
 from sqlalchemy.ext.declarative import declarative_base
@@ -64,7 +65,6 @@ def handle_peewee_migration(DATABASE_URL):
 
 handle_peewee_migration(DATABASE_URL)
 
-
 SQLALCHEMY_DATABASE_URL = DATABASE_URL
 if "sqlite" in SQLALCHEMY_DATABASE_URL:
     engine = create_engine(
@@ -72,7 +72,6 @@ if "sqlite" in SQLALCHEMY_DATABASE_URL:
     )
 else:
     engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
-
 
 SessionLocal = sessionmaker(
     autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
