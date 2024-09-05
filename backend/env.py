@@ -209,7 +209,7 @@ if os.path.exists(f"{DATA_DIR}/ollama.db"):
 else:
     pass
 
-DATABASE_URL = 'postgresql://root:156cC2329Xn2JR1RFaYOlttN9p0fvCQY@db:5432/openweb' # os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
+DATABASE_URL = 'postgresql://0.0.0.0:5432' # os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
 
 # Replace the postgres:// with postgresql://
 if "postgres://" in DATABASE_URL:
