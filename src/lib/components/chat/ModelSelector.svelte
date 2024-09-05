@@ -55,7 +55,9 @@
 			</div>
 
 			{#if selectedModelIdx === 0}
-				<div class="  self-center mr-2 disabled:text-gray-600 disabled:hover:text-gray-600">
+				<div
+					class="  self-center mr-2 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.75px]"
+				>
 					<Tooltip content={$i18n.t('Add Model')}>
 						<button
 							class=" "
@@ -79,7 +81,9 @@
 					</Tooltip>
 				</div>
 			{:else}
-				<div class="  self-center disabled:text-gray-600 disabled:hover:text-gray-600 mr-2">
+				<div
+					class="  self-center disabled:text-gray-600 disabled:hover:text-gray-600 mr-2 -translate-y-[0.75px]"
+				>
 					<Tooltip content={$i18n.t('Remove Model')}>
 						<button
 							{disabled}
@@ -107,8 +111,8 @@
 	{/each}
 </div>
 
-{#if showSetDefault && !$mobile}
-	<div class="text-left mt-[1px] ml-1 text-[0.7rem] text-gray-500 font-primary">
+{#if showSetDefault}
+	<div class=" absolute text-left mt-[1px] ml-1 text-[0.7rem] text-gray-500 font-primary">
 		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
 	</div>
 {/if}
