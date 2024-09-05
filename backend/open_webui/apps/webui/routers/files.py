@@ -7,12 +7,11 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import FileResponse
-
 from open_webui.apps.webui.models.files import Files, FileForm, FileModel
 from open_webui.config import UPLOAD_DIR, MODEL_IMAGES_DIR, BACKGROUND_IMAGES_DIR, USER_IMAGES_DIR
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.utils.utils import get_verified_user, get_admin_user
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.utils.utils import get_verified_user, get_admin_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])

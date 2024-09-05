@@ -10,12 +10,8 @@ from urllib.parse import urlparse
 import chromadb
 import yaml
 from chromadb import Settings
-from pydantic import BaseModel
-from sqlalchemy import JSON, Column, DateTime, Integer, func
-
 from open_webui.apps.webui.internal.db import Base, get_db
 from open_webui.env import (
-    BACKEND_DIR,
     CONFIG_DATA,
     DATA_DIR,
     ENV,
@@ -23,6 +19,8 @@ from open_webui.env import (
     WEBUI_AUTH,
     log,
 )
+from pydantic import BaseModel
+from sqlalchemy import JSON, Column, DateTime, Integer, func
 
 
 class EndpointFilter(logging.Filter):

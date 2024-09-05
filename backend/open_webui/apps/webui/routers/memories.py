@@ -2,12 +2,11 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
-
 from open_webui.apps.webui.models.memories import Memories, MemoryModel
 from open_webui.config import CHROMA_CLIENT
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.utils.utils import get_verified_user
+from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
