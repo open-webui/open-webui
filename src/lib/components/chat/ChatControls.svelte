@@ -45,21 +45,6 @@
 </script>
 
 {#if !largeScreen}
-	{#if show}
-		<Drawer bind:show>
-			<div class="  px-6 py-4 h-full">
-				<Controls
-					on:close={() => {
-						show = false;
-					}}
-					{models}
-					bind:chatFiles
-					bind:params
-				/>
-			</div>
-		</Drawer>
-	{/if}
-
 	{#if $showCallOverlay}
 		<div class=" absolute w-full h-screen max-h-[100dvh] flex z-[999] overflow-hidden">
 			<div
@@ -78,6 +63,19 @@
 				/>
 			</div>
 		</div>
+	{:else if show}
+		<Drawer bind:show>
+			<div class="  px-6 py-4 h-full">
+				<Controls
+					on:close={() => {
+						show = false;
+					}}
+					{models}
+					bind:chatFiles
+					bind:params
+				/>
+			</div>
+		</Drawer>
 	{/if}
 {:else if show}
 	<div class=" absolute bottom-0 right-0 z-20 h-full pointer-events-none">
