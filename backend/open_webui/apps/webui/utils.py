@@ -11,9 +11,9 @@ from open_webui.apps.webui.models.tools import Tools
 from open_webui.config import FUNCTIONS_DIR, TOOLS_DIR
 
 
-def extract_frontmatter(file_path):
+def extract_frontmatter(content):
     """
-    Extract frontmatter as a dictionary from the specified file path.
+    Extract frontmatter as a dictionary from the provided content string.
     """
     frontmatter = {}
     frontmatter_started = False
@@ -21,29 +21,25 @@ def extract_frontmatter(file_path):
     frontmatter_pattern = re.compile(r"^\s*([a-z_]+):\s*(.*)\s*$", re.IGNORECASE)
 
     try:
-        with open(file_path, "r", encoding="utf-8") as file:
-            first_line = file.readline()
-            if first_line.strip() != '"""':
-                # The file doesn't start with triple quotes
-                return {}
+        lines = content.splitlines()
+        if len(lines) < 1 or lines[0].strip() != '"""':
+            # The content doesn't start with triple quotes
+            return {}
 
-            frontmatter_started = True
+        frontmatter_started = True
 
-            for line in file:
-                if '"""' in line:
-                    if frontmatter_started:
-                        frontmatter_ended = True
-                        break
+        for line in lines[1:]:
+            if '"""' in line:
+                if frontmatter_started:
+                    frontmatter_ended = True
+                    break
 
-                if frontmatter_started and not frontmatter_ended:
-                    match = frontmatter_pattern.match(line)
-                    if match:
-                        key, value = match.groups()
-                        frontmatter[key.strip()] = value.strip()
+            if frontmatter_started and not frontmatter_ended:
+                match = frontmatter_pattern.match(line)
+                if match:
+                    key, value = match.groups()
+                    frontmatter[key.strip()] = value.strip()
 
-    except FileNotFoundError:
-        print(f"Error: The file {file_path} does not exist.")
-        return {}
     except Exception as e:
         print(f"An error occurred: {e}")
         return {}
