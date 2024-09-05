@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { onDestroy, onMount, createEventDispatcher } from 'svelte';
 	import { flyAndScale } from '$lib/utils/transitions';
+	import { fade, fly, slide } from 'svelte/transition';
 
-	export let show = true;
+	export let show = false;
 	export let size = 'md';
 
 	let modalElement = null;
@@ -56,10 +57,11 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
+
 <div
 	bind:this={modalElement}
 	class="modal fixed right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center z-[9999] overflow-hidden overscroll-contain"
-	in:flyAndScale
+	in:fly={{ y: 100, duration: 100 }}
 	on:mousedown={() => {
 		show = false;
 	}}
