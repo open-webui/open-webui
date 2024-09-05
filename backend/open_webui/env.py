@@ -3,8 +3,8 @@ import json
 import logging
 import os
 import pkgutil
-import sys
 import shutil
+import sys
 from pathlib import Path
 
 import markdown

@@ -1,9 +1,7 @@
 import re
 import subprocess
 import sys
-from importlib import util
 import types
-
 
 from open_webui.apps.webui.models.functions import Functions
 from open_webui.apps.webui.models.tools import Tools

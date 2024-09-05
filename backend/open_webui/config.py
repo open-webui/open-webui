@@ -12,13 +12,14 @@ import yaml
 from chromadb import Settings
 from open_webui.apps.webui.internal.db import Base, get_db
 from open_webui.env import (
-    CONFIG_DATA,
+    OPEN_WEBUI_DIR,
     DATA_DIR,
     ENV,
     FRONTEND_BUILD_DIR,
     WEBUI_AUTH,
+    WEBUI_FAVICON_URL,
+    WEBUI_NAME,
     log,
-    OPEN_WEBUI_DIR,
 )
 from pydantic import BaseModel
 from sqlalchemy import JSON, Column, DateTime, Integer, func
