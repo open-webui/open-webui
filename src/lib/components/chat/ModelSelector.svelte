@@ -108,7 +108,7 @@
 </div>
 
 {#if showSetDefault && !$mobile}
-	<div class="text-left mt-0.5 ml-1 text-[0.7rem] text-gray-500 font-primary">
+	<div class="text-left mt-[1px] ml-1 text-[0.7rem] text-gray-500 font-primary">
 		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
 	</div>
 {/if}
