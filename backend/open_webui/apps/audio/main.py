@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from config import (
+from open_webui.config import (
     AUDIO_STT_ENGINE,
     AUDIO_STT_MODEL,
     AUDIO_STT_OPENAI_API_BASE_URL,
@@ -33,8 +33,8 @@ from config import (
     AppConfig,
 )
 from open_webui.constants import ERROR_MESSAGES
-from env import SRC_LOG_LEVELS
-from utils.utils import get_admin_user, get_current_user, get_verified_user
+from open_webui.env import SRC_LOG_LEVELS
+from open_webui.utils.utils import get_admin_user, get_current_user, get_verified_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["AUDIO"])
