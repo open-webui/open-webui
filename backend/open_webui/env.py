@@ -96,7 +96,9 @@ except importlib.metadata.PackageNotFoundError:
 
 
 PIP_INSTALL = (
-    os.environ.get("PIP_INSTALL") if os.environ.get("PIP_INSTALL") else PIP_INSTALL
+    os.environ.get("PIP_INSTALL", "False").lower() == "true"
+    if os.environ.get("PIP_INSTALL")
+    else PIP_INSTALL
 )
 
 if PIP_INSTALL:
@@ -195,7 +197,7 @@ if PIP_INSTALL:
     NEW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     # Check if the data directory exists in the package directory
-    if DATA_DIR.exists():
+    if DATA_DIR.exists() and DATA_DIR != NEW_DATA_DIR:
         log.info(f"Moving {DATA_DIR} to {NEW_DATA_DIR}")
         for item in DATA_DIR.iterdir():
             dest = NEW_DATA_DIR / item.name
@@ -204,10 +206,11 @@ if PIP_INSTALL:
             else:
                 shutil.copy2(item, dest)
 
-    DATA_DIR = OPEN_WEBUI_DIR / "data"
+    DATA_DIR = Path(os.getenv("DATA_DIR", OPEN_WEBUI_DIR / "data"))
 
 
 FRONTEND_BUILD_DIR = Path(os.getenv("FRONTEND_BUILD_DIR", BASE_DIR / "build")).resolve()
+
 if PIP_INSTALL:
     FRONTEND_BUILD_DIR = Path(
         os.getenv("FRONTEND_BUILD_DIR", OPEN_WEBUI_DIR / "frontend")
