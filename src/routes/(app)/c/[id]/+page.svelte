@@ -390,8 +390,8 @@
 						: undefined
 			},
 			format: $settings.requestFormat ?? undefined,
-			// keep_alive: $settings.keepAlive ?? undefined,
-			keep_alive: '60m',
+			keep_alive: $settings.keepAlive ?? undefined,
+			// keep_alive: '60m',
 			docs: docs.length > 0 ? docs : undefined,
 			citations: docs.length > 0
 		});

@@ -84,6 +84,7 @@
 					alt="system-logo"
 				/>
 			</button>
+			<img src="/logo-mbzuai-mobile.svg" class="w-[28px] mobile-only mr-4" alt="logo-mbzuai" />
 
 			<div class="overflow-hidden flex-1 font-normal text-base text-black dark:text-white opacity-75">
 				MBZUAI ServiceDesk Chatbot

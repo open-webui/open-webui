@@ -52,7 +52,7 @@
 		{#each prompts as prompt, promptIdx}
 			<div class="snap-center shrink-0">
 				<button
-					class="flex flex-col flex-1 shrink-0 w-64 justify-between h-36 p-5 px-6 bg-white rounded-3xl transition group"
+					class="flex flex-col flex-1 shrink-0 w-64 justify-between h-36 p-5 px-6 bg-[#FFFFFFCC] hover:bg-white rounded-3xl transition group"
 					on:click={() => {
 						submitPrompt(prompt.content);
 					}}
