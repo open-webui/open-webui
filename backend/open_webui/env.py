@@ -4,6 +4,7 @@ import logging
 import os
 import pkgutil
 import sys
+import shutil
 from pathlib import Path
 
 import markdown
@@ -14,9 +15,13 @@ from open_webui.constants import ERROR_MESSAGES
 # Load .env file
 ####################################
 
-BACKEND_DIR = Path(__file__).parent  # the path containing this file
+OPEN_WEBUI_DIR = Path(__file__).parent  # the path containing this file
+print(OPEN_WEBUI_DIR)
+
+BACKEND_DIR = OPEN_WEBUI_DIR.parent  # the path containing this file
 BASE_DIR = BACKEND_DIR.parent  # the path containing the backend/
 
+print(BACKEND_DIR)
 print(BASE_DIR)
 
 try:
@@ -82,13 +87,26 @@ WEBUI_FAVICON_URL =  os.environ.get("WEBUI_FAVICON_URL", f"{WEBUI_URL}/favicon.p
 
 ENV = os.environ.get("ENV", "dev")
 
+PIP_INSTALL = False
 try:
-    PACKAGE_DATA = json.loads((BASE_DIR / "package.json").read_text())
-except Exception:
+    importlib.metadata.version("open-webui")
+    PIP_INSTALL = True
+except importlib.metadata.PackageNotFoundError:
+    pass
+
+
+PIP_INSTALL = (
+    os.environ.get("PIP_INSTALL") if os.environ.get("PIP_INSTALL") else PIP_INSTALL
+)
+
+if PIP_INSTALL:
+    PACKAGE_DATA = {"version": importlib.metadata.version("open-webui")}
+else:
     try:
-        PACKAGE_DATA = {"version": importlib.metadata.version("open-webui")}
-    except importlib.metadata.PackageNotFoundError:
+        PACKAGE_DATA = json.loads((BASE_DIR / "package.json").read_text())
+    except Exception:
         PACKAGE_DATA = {"version": "0.0.0"}
+
 
 VERSION = PACKAGE_DATA["version"]
 
@@ -171,11 +189,35 @@ WEBUI_BUILD_HASH = os.environ.get("WEBUI_BUILD_HASH", "dev-build")
 ####################################
 
 DATA_DIR = Path(os.getenv("DATA_DIR", BACKEND_DIR / "data")).resolve()
+
+if PIP_INSTALL:
+    NEW_DATA_DIR = Path(os.getenv("DATA_DIR", OPEN_WEBUI_DIR / "data")).resolve()
+    NEW_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Check if the data directory exists in the package directory
+    if DATA_DIR.exists():
+        log.info(f"Moving {DATA_DIR} to {NEW_DATA_DIR}")
+        for item in DATA_DIR.iterdir():
+            dest = NEW_DATA_DIR / item.name
+            if item.is_dir():
+                shutil.copytree(item, dest, dirs_exist_ok=True)
+            else:
+                shutil.copy2(item, dest)
+
+    DATA_DIR = OPEN_WEBUI_DIR / "data"
+
+
 FRONTEND_BUILD_DIR = Path(os.getenv("FRONTEND_BUILD_DIR", BASE_DIR / "build")).resolve()
+if PIP_INSTALL:
+    FRONTEND_BUILD_DIR = Path(
+        os.getenv("FRONTEND_BUILD_DIR", OPEN_WEBUI_DIR / "frontend")
+    ).resolve()
+
 
 RESET_CONFIG_ON_START = (
     os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
 )
+
 if RESET_CONFIG_ON_START:
     try:
         os.remove(f"{DATA_DIR}/config.json")
@@ -183,12 +225,6 @@ if RESET_CONFIG_ON_START:
             f.write("{}")
     except Exception:
         pass
-
-try:
-    CONFIG_DATA = json.loads((DATA_DIR / "config.json").read_text())
-except Exception:
-    CONFIG_DATA = {}
-
 
 ####################################
 # Database
