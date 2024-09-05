@@ -17,8 +17,9 @@ spec:
     metadata:
       labels:
         {{- include "hrwebui.labels" . | nindent 8 }}
-      {{- with .Values.hrwebui.podAnnotations }}
       annotations:
+        kubernetes.io/change-cause: "Upgrade at {{ now }}"
+      {{- with .Values.hrwebui.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
