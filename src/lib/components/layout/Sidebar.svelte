@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
+	import { slide } from 'svelte/transition';
 	import { goto } from '$app/navigation';
 	import {
 		user,
@@ -38,6 +39,7 @@
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
+	import ActionButton from './ActionButton.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -57,6 +59,9 @@
 	// Pagination variables
 	let chatListLoading = false;
 	let allChatsLoaded = false;
+
+	// Used to show/hide chat history upon clicking the history button
+	let showChatHistoryDropdown: boolean = true;
 
 	$: filteredChatList = $chats.filter((chat) => {
 		if (search === '') {
@@ -340,6 +345,7 @@
 			</button>
 		</div>
 
+		<!-- Workspace Button -->
 		{#if $user?.role === 'admin'}
 			<div class="px-2.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
@@ -378,6 +384,14 @@
 				</a>
 			</div>
 		{/if}
+
+		<hr />
+
+		<ActionButton name={'✨ Assistant'} />
+		<ActionButton name={'🗂️ Research'} />
+		<ActionButton name={'🗄️ Vault'} />
+		<ActionButton name={'🔄 Workflows'} />
+		<ActionButton name={'📚 Library'} />
 
 		<div class="relative flex flex-col flex-1 overflow-y-auto">
 			{#if !($settings.saveChatHistory ?? true)}
@@ -423,168 +437,184 @@
 				</div>
 			{/if}
 
-			<div class="px-2 mt-0.5 mb-2 flex justify-center space-x-2">
-				<div class="flex w-full rounded-xl" id="chat-search">
-					<div class="self-center pl-3 py-2 rounded-l-xl bg-transparent">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-								clip-rule="evenodd"
-							/>
-						</svg>
+			<ActionButton
+				name={'🕒️ History'}
+				onClick={() => (showChatHistoryDropdown = !showChatHistoryDropdown)}
+			/>
+
+			{#if showChatHistoryDropdown}
+				<div
+					transition:slide={{
+						duration: 300,
+						easing: (t) => {
+							const f = t - 1.0;
+							return f * f * f + 1.0;
+						}
+					}}
+				>
+					<div class="ml-8 border-l-2 border-gray-100">
+						<!-- Introducing indentation to the chat history elements and a unified container for all-->
+						<div class="px-2 mt-0.5 mb-2 flex justify-center space-x-2">
+							<div class="flex w-full rounded-xl" id="chat-search">
+								<div class="self-center pl-3 py-2 rounded-l-xl bg-transparent">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 20 20"
+										fill="currentColor"
+										class="w-4 h-4"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								</div>
+								<input
+									class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm bg-transparent dark:text-gray-300 outline-none"
+									placeholder={$i18n.t('Search')}
+									bind:value={search}
+									on:focus={async () => {
+										// TODO: migrate backend for more scalable search mechanism
+										scrollPaginationEnabled.set(false);
+										await chats.set(await getChatList(localStorage.token)); // when searching, load all chats
+										enrichChatsWithContent($chats);
+									}}
+								/>
+							</div>
+						</div>
+						{#if $tags.filter((t) => t.name !== 'pinned').length > 0}
+							<div class="px-2.5 mb-2 flex gap-1 flex-wrap">
+								<button
+									class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
+									on:click={async () => {
+										await enablePagination();
+									}}
+								>
+									{$i18n.t('all')}
+								</button>
+								{#each $tags.filter((t) => t.name !== 'pinned') as tag}
+									<button
+										class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
+										on:click={async () => {
+											scrollPaginationEnabled.set(false);
+											let chatIds = await getChatListByTagName(localStorage.token, tag.name);
+											if (chatIds.length === 0) {
+												await tags.set(await getAllChatTags(localStorage.token));
+												// if the tag we deleted is no longer a valid tag, return to main chat list view
+												await enablePagination();
+											}
+											await chats.set(chatIds);
+											chatListLoading = false;
+										}}
+									>
+										{tag.name}
+									</button>
+								{/each}
+							</div>
+						{/if}
+						{#if $pinnedChats.length > 0}
+							<div class="pl-2 py-2 flex flex-col space-y-1">
+								<div class="">
+									<div
+										class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium pb-1.5"
+									>
+										{$i18n.t('Pinned')}
+									</div>
+									{#each $pinnedChats as chat, idx}
+										<ChatItem
+											{chat}
+											{shiftKey}
+											selected={selectedChatId === chat.id}
+											on:select={() => {
+												selectedChatId = chat.id;
+											}}
+											on:unselect={() => {
+												selectedChatId = null;
+											}}
+											on:delete={(e) => {
+												if ((e?.detail ?? '') === 'shift') {
+													deleteChatHandler(chat.id);
+												} else {
+													deleteChat = chat;
+													showDeleteConfirm = true;
+												}
+											}}
+										/>
+									{/each}
+								</div>
+							</div>
+						{/if}
+						<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden">
+							{#each filteredChatList as chat, idx}
+								{#if idx === 0 || (idx > 0 && chat.time_range !== filteredChatList[idx - 1].time_range)}
+									<div
+										class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
+										0
+											? ''
+											: 'pt-5'} pb-0.5"
+									>
+										{$i18n.t(chat.time_range)}
+										<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
+								{$i18n.t('Today')}
+								{$i18n.t('Yesterday')}
+								{$i18n.t('Previous 7 days')}
+								{$i18n.t('Previous 30 days')}
+								{$i18n.t('January')}
+								{$i18n.t('February')}
+								{$i18n.t('March')}
+								{$i18n.t('April')}
+								{$i18n.t('May')}
+								{$i18n.t('June')}
+								{$i18n.t('July')}
+								{$i18n.t('August')}
+								{$i18n.t('September')}
+								{$i18n.t('October')}
+								{$i18n.t('November')}
+								{$i18n.t('December')}
+								-->
+									</div>
+								{/if}
+								<ChatItem
+									{chat}
+									{shiftKey}
+									selected={selectedChatId === chat.id}
+									on:select={() => {
+										selectedChatId = chat.id;
+									}}
+									on:unselect={() => {
+										selectedChatId = null;
+									}}
+									on:delete={(e) => {
+										if ((e?.detail ?? '') === 'shift') {
+											deleteChatHandler(chat.id);
+										} else {
+											deleteChat = chat;
+											showDeleteConfirm = true;
+										}
+									}}
+								/>
+							{/each}
+							{#if $scrollPaginationEnabled && !allChatsLoaded}
+								<Loader
+									on:visible={(e) => {
+										if (!chatListLoading) {
+											loadMoreChats();
+										}
+									}}
+								>
+									<div
+										class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
+									>
+										<Spinner className=" size-4" />
+										<div class=" ">Loading...</div>
+									</div>
+								</Loader>
+							{/if}
+						</div>
 					</div>
-
-					<input
-						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm bg-transparent dark:text-gray-300 outline-none"
-						placeholder={$i18n.t('Search')}
-						bind:value={search}
-						on:focus={async () => {
-							// TODO: migrate backend for more scalable search mechanism
-							scrollPaginationEnabled.set(false);
-							await chats.set(await getChatList(localStorage.token)); // when searching, load all chats
-							enrichChatsWithContent($chats);
-						}}
-					/>
-				</div>
-			</div>
-
-			{#if $tags.filter((t) => t.name !== 'pinned').length > 0}
-				<div class="px-2.5 mb-2 flex gap-1 flex-wrap">
-					<button
-						class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
-						on:click={async () => {
-							await enablePagination();
-						}}
-					>
-						{$i18n.t('all')}
-					</button>
-					{#each $tags.filter((t) => t.name !== 'pinned') as tag}
-						<button
-							class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
-							on:click={async () => {
-								scrollPaginationEnabled.set(false);
-								let chatIds = await getChatListByTagName(localStorage.token, tag.name);
-								if (chatIds.length === 0) {
-									await tags.set(await getAllChatTags(localStorage.token));
-
-									// if the tag we deleted is no longer a valid tag, return to main chat list view
-									await enablePagination();
-								}
-								await chats.set(chatIds);
-
-								chatListLoading = false;
-							}}
-						>
-							{tag.name}
-						</button>
-					{/each}
 				</div>
 			{/if}
-
-			{#if $pinnedChats.length > 0}
-				<div class="pl-2 py-2 flex flex-col space-y-1">
-					<div class="">
-						<div class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium pb-1.5">
-							{$i18n.t('Pinned')}
-						</div>
-
-						{#each $pinnedChats as chat, idx}
-							<ChatItem
-								{chat}
-								{shiftKey}
-								selected={selectedChatId === chat.id}
-								on:select={() => {
-									selectedChatId = chat.id;
-								}}
-								on:unselect={() => {
-									selectedChatId = null;
-								}}
-								on:delete={(e) => {
-									if ((e?.detail ?? '') === 'shift') {
-										deleteChatHandler(chat.id);
-									} else {
-										deleteChat = chat;
-										showDeleteConfirm = true;
-									}
-								}}
-							/>
-						{/each}
-					</div>
-				</div>
-			{/if}
-
-			<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden">
-				{#each filteredChatList as chat, idx}
-					{#if idx === 0 || (idx > 0 && chat.time_range !== filteredChatList[idx - 1].time_range)}
-						<div
-							class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
-								? ''
-								: 'pt-5'} pb-0.5"
-						>
-							{$i18n.t(chat.time_range)}
-							<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
-							{$i18n.t('Today')}
-							{$i18n.t('Yesterday')}
-							{$i18n.t('Previous 7 days')}
-							{$i18n.t('Previous 30 days')}
-							{$i18n.t('January')}
-							{$i18n.t('February')}
-							{$i18n.t('March')}
-							{$i18n.t('April')}
-							{$i18n.t('May')}
-							{$i18n.t('June')}
-							{$i18n.t('July')}
-							{$i18n.t('August')}
-							{$i18n.t('September')}
-							{$i18n.t('October')}
-							{$i18n.t('November')}
-							{$i18n.t('December')}
-							-->
-						</div>
-					{/if}
-
-					<ChatItem
-						{chat}
-						{shiftKey}
-						selected={selectedChatId === chat.id}
-						on:select={() => {
-							selectedChatId = chat.id;
-						}}
-						on:unselect={() => {
-							selectedChatId = null;
-						}}
-						on:delete={(e) => {
-							if ((e?.detail ?? '') === 'shift') {
-								deleteChatHandler(chat.id);
-							} else {
-								deleteChat = chat;
-								showDeleteConfirm = true;
-							}
-						}}
-					/>
-				{/each}
-
-				{#if $scrollPaginationEnabled && !allChatsLoaded}
-					<Loader
-						on:visible={(e) => {
-							if (!chatListLoading) {
-								loadMoreChats();
-							}
-						}}
-					>
-						<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
-							<Spinner className=" size-4" />
-							<div class=" ">Loading...</div>
-						</div>
-					</Loader>
-				{/if}
-			</div>
 		</div>
 
 		<div class="px-2.5">

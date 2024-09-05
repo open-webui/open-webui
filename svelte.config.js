@@ -21,7 +21,15 @@ const config = {
 		if (code === 'css-unused-selector') return;
 
 		handler(warning);
-	}
+	},
+	vitePlugin: {
+		// set to true for defaults or customize with object
+		inspector: {
+		  toggleKeyCombo: 'control-shift',
+		  showToggleButton: 'always',
+		  toggleButtonPos: 'bottom-right'
+		}
+	  }
 };
 
 export default config;
