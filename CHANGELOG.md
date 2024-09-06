@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.19] - 2024-09-05
+
+### Added
+
+- **🌐 Translation Update**: Improved Chinese translations.
+
+### Fixed
+
+- **📂 DATA_DIR Overriding**: Fixed an issue to avoid overriding DATA_DIR, preventing errors when directories are set identically, ensuring smoother operation and data management.
+- **🛠️ Frontmatter Extraction**: Fixed the extraction process for frontmatter in tools and functions.
+
+### Changed
+
+- **🎨 UI Styling**: Refined the user interface styling for enhanced visual coherence and user experience.
+
 ## [0.3.18] - 2024-09-04
 
 ### Added
