@@ -42,7 +42,7 @@
 	});
 </script>
 
-<div class="flex flex-col h-full justify-between space-y-3 text-sm mb-6">
+<div class="text-sm text-gray-700 dark:text-gray-200 w-full flex flex-col space-y-4">
 	<div class=" space-y-3">
 		<hr class=" dark:border-gray-850" />
 		<div class="w-full items-center text-center text-lg">
