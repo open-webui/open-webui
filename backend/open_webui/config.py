@@ -1463,6 +1463,18 @@ AUDIO_STT_OPENAI_API_KEY = PersistentConfig(
     os.getenv("AUDIO_STT_OPENAI_API_KEY", OPENAI_API_KEY),
 )
 
+AUDIO_STT_GROQAI_API_BASE_URL = PersistentConfig(
+    "AUDIO_STT_GROQAI_API_BASE_URL",
+    "audio.stt.groqai.api_base_url",
+    os.getenv("AUDIO_STT_GROQAI_API_BASE_URL", "https://api.groq.com/openai/v1"),
+)
+
+AUDIO_STT_GROQAI_API_KEY = PersistentConfig(
+    "AUDIO_STT_GROQAI_API_KEY",
+    "audio.stt.groqai.api_key",
+    os.getenv("AUDIO_STT_GROQAI_API_KEY", ""),
+)
+
 AUDIO_STT_ENGINE = PersistentConfig(
     "AUDIO_STT_ENGINE",
     "audio.stt.engine",

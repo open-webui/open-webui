@@ -56,7 +56,10 @@ class ERROR_MESSAGES(str, Enum):
 
     FILE_NOT_SENT = "FILE_NOT_SENT"
     FILE_NOT_SUPPORTED = "Oops! It seems like the file format you're trying to upload is not supported. Please upload a file with a supported format (e.g., JPG, PNG, PDF, TXT) and try again."
-
+    FILE_SIZE_EXCEEDS_LIMIT = (
+        lambda max_size: f"The uploaded file exceeds the maximum allowed size of {max_size / (1024 * 1024):.2f} MB. "
+                         f"Please upload a smaller file or try compressing the file before uploading."
+    )
     NOT_FOUND = "We could not find what you're looking for :/"
     USER_NOT_FOUND = "We could not find what you're looking for :/"
     API_KEY_NOT_FOUND = "Oops! It looks like there's a hiccup. The API key is missing. Please make sure to provide a valid API key to access this feature."

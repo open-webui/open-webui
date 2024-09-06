@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import uuid
+import time
 from functools import lru_cache
 from pathlib import Path
 
@@ -12,6 +13,8 @@ from open_webui.config import (
     AUDIO_STT_MODEL,
     AUDIO_STT_OPENAI_API_BASE_URL,
     AUDIO_STT_OPENAI_API_KEY,
+    AUDIO_STT_GROQAI_API_BASE_URL,
+    AUDIO_STT_GROQAI_API_KEY,
     AUDIO_TTS_API_KEY,
     AUDIO_TTS_ENGINE,
     AUDIO_TTS_MODEL,
@@ -51,6 +54,8 @@ app.state.config = AppConfig()
 
 app.state.config.STT_OPENAI_API_BASE_URL = AUDIO_STT_OPENAI_API_BASE_URL
 app.state.config.STT_OPENAI_API_KEY = AUDIO_STT_OPENAI_API_KEY
+app.state.config.STT_GROQAI_API_BASE_URL = AUDIO_STT_GROQAI_API_BASE_URL
+app.state.config.STT_GROQAI_API_KEY = AUDIO_STT_GROQAI_API_KEY
 app.state.config.STT_ENGINE = AUDIO_STT_ENGINE
 app.state.config.STT_MODEL = AUDIO_STT_MODEL
 
@@ -86,6 +91,8 @@ class TTSConfigForm(BaseModel):
 class STTConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
     OPENAI_API_KEY: str
+    GROQAI_API_BASE_URL: str
+    GROQAI_API_KEY: str
     ENGINE: str
     MODEL: str
 
@@ -170,6 +177,8 @@ async def get_audio_config(user=Depends(get_admin_user)):
         "stt": {
             "OPENAI_API_BASE_URL": app.state.config.STT_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": app.state.config.STT_OPENAI_API_KEY,
+            "GROQAI_API_BASE_URL": app.state.config.STT_GROQAI_API_BASE_URL,
+            "GROQAI_API_KEY": app.state.config.STT_GROQAI_API_KEY,
             "ENGINE": app.state.config.STT_ENGINE,
             "MODEL": app.state.config.STT_MODEL,
         },
@@ -190,6 +199,8 @@ async def update_audio_config(
 
     app.state.config.STT_OPENAI_API_BASE_URL = form_data.stt.OPENAI_API_BASE_URL
     app.state.config.STT_OPENAI_API_KEY = form_data.stt.OPENAI_API_KEY
+    app.state.config.STT_GROQAI_API_BASE_URL = form_data.stt.GROQAI_API_BASE_URL
+    app.state.config.STT_GROQAI_API_KEY = form_data.stt.GROQAI_API_KEY
     app.state.config.STT_ENGINE = form_data.stt.ENGINE
     app.state.config.STT_MODEL = form_data.stt.MODEL
 
@@ -206,6 +217,8 @@ async def update_audio_config(
         "stt": {
             "OPENAI_API_BASE_URL": app.state.config.STT_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": app.state.config.STT_OPENAI_API_KEY,
+            "GROQAI_API_BASE_URL": app.state.config.STT_GROQAI_API_BASE_URL,
+            "GROQAI_API_KEY": app.state.config.STT_GROQAI_API_KEY,
             "ENGINE": app.state.config.STT_ENGINE,
             "MODEL": app.state.config.STT_MODEL,
         },
@@ -336,6 +349,60 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 status_code=r.status_code if r != None else 500,
                 detail=error_detail,
             )
+
+
+def handle_groqai_stt(file_path: str, file_dir: str, filename: str, id: uuid.UUID) -> dict:
+    groqai_start_time = time.time()
+    if is_mp4_audio(file_path):
+        os.rename(file_path, file_path.replace(".wav", ".mp4"))
+        # Convert MP4 audio file to WAV format
+        convert_mp4_to_wav(file_path.replace(".wav", ".mp4"), file_path)
+        filename = os.path.basename(file_path)  # Update filename after conversion
+
+    headers = {"Authorization": f"Bearer {app.state.config.STT_GROQAI_API_KEY}"}
+
+    files = {"file": (filename, open(file_path, "rb"))}
+    data = {
+        "model": app.state.config.STT_MODEL,
+        "response_format": "json",
+        "language": "en",
+    }
+
+    r = None
+    try:
+        r = requests.post(
+            url=f"{app.state.config.STT_GROQAI_API_BASE_URL}/audio/transcriptions",
+            headers=headers,
+            files=files,
+            data=data,
+        )
+
+        r.raise_for_status()
+
+        data = r.json()
+
+        # Save the transcript to a JSON file
+        transcript_file = f"{file_dir}/{id}.json"
+        with open(transcript_file, "w") as f:
+            json.dump(data, f)
+
+        log.info(f"GroqAI transcription took: {time.time() - groqai_start_time} seconds")
+        return data
+    except Exception as e:
+        log.exception(e)
+        error_detail = "Open WebUI: Server Connection Error"
+        if r is not None:
+            try:
+                res = r.json()
+                if "error" in res:
+                    error_detail = f"External: {res['error']['message']}"
+            except Exception:
+                error_detail = f"External: {e}"
+
+        raise HTTPException(
+            status_code=r.status_code if r is not None else 500,
+            detail=error_detail,
+        )
 
 
 @app.post("/transcriptions")
@@ -478,7 +545,10 @@ def transcribe(
                     status_code=r.status_code if r != None else 500,
                     detail=error_detail,
                 )
+        elif app.state.config.STT_ENGINE == "groqai":
+            data = handle_groqai_stt(file_path, file_dir, filename, id)
 
+        return data
     except Exception as e:
         log.exception(e)
 
