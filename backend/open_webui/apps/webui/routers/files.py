@@ -246,7 +246,6 @@ async def get_file_content_by_id(id: str):
 def get_file_response(directory: str, filename: str) -> FileResponse:
     file_path = Path(directory) / filename
     if file_path.is_file():
-        print(f"File Path: {file_path}")
         return FileResponse(file_path)
     else:
         raise HTTPException(
