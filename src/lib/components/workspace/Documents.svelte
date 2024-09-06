@@ -17,7 +17,15 @@
 	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
 	import AddDocModal from '$lib/components/documents/AddDocModal.svelte';
 	import { transcribeAudio } from '$lib/apis/audio';
+	import { isAudioFile, isMoreThan25Mb } from '$lib/utils/documents';
 	import { uploadFile } from '$lib/apis/files';
+	import 'nprogress/nprogress.css';
+	import NProgress from 'nprogress';
+
+	NProgress.configure({
+		// Full list: https://github.com/rstacruz/nprogress#configuration
+		minimum: 0.16
+	});
 
 	const i18n = getContext('i18n');
 
@@ -52,50 +60,74 @@
 		await documents.set(await getDocs(localStorage.token));
 	};
 
-	const uploadDoc = async (file, tags?: object) => {
-		console.log(file);
-		// Check if the file is an audio file and transcribe/convert it to text file
-		if (['audio/mpeg', 'audio/wav'].includes(file['type'])) {
-			const transcribeRes = await transcribeAudio(localStorage.token, file).catch((error) => {
-				toast.error(error);
-				return null;
-			});
-
-			if (transcribeRes) {
-				console.log(transcribeRes);
-				const blob = new Blob([transcribeRes.text], { type: 'text/plain' });
-				file = blobToFile(blob, `${file.name}.txt`);
-			}
+	const uploadDoc = async (file: File, tags?: object) => {
+		if (!file) {
+			return null;
 		}
-
-		// Upload the file to the server
-		const uploadedFile = await uploadFile(localStorage.token, file).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-
-		const res = await processDocToVectorDB(localStorage.token, uploadedFile.id).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-
-		if (res) {
-			await createNewDoc(
-				localStorage.token,
-				res.collection_name,
-				res.filename,
-				transformFileName(res.filename),
-				res.filename,
-				tags?.length > 0
-					? {
-							tags: tags
+		NProgress.start();
+		toast.loading('Processing...');
+		try {
+			if (isAudioFile(file)) {
+				const isLargeFile = isMoreThan25Mb(file);
+				if (isLargeFile) {
+					toast.warning(
+						`The file ${file.name} is larger than 25MB. We will try to compress it, but this process might take 2-3 minutes. Please wait...`,
+						{
+							duration: 8000,
 						}
-					: null
-			).catch((error) => {
+					);
+				}
+				// transcribe/convert it to text file
+				const transcribeRes = await transcribeAudio(localStorage.token, file).catch((error) => {
+					toast.error(error);
+					return null;
+				});
+
+				if (transcribeRes) {
+					const blob = new Blob([transcribeRes.text], { type: 'text/plain' });
+					file = blobToFile(blob, `${file.name}.txt`);
+				}
+			}
+
+			// Upload the file to the server
+			const uploadedFile = await uploadFile(localStorage.token, file).catch((error) => {
 				toast.error(error);
 				return null;
 			});
-			await documents.set(await getDocs(localStorage.token));
+
+			const res = await processDocToVectorDB(localStorage.token, uploadedFile.id).catch((error) => {
+				toast.error(error);
+				return null;
+			});
+
+			if (res) {
+				await createNewDoc(
+					localStorage.token,
+					res.collection_name,
+					res.filename,
+					transformFileName(res.filename),
+					res.filename,
+					(tags && tags.length > 0)
+						? {
+								tags: tags
+							}
+						: null
+				).catch((error) => {
+					toast.error(error);
+					return null;
+				});
+				await documents.set(await getDocs(localStorage.token));
+			}
+			toast.success(
+				`The file ${file.name} is uploaded successfully!`,
+				{
+					duration: 3000,
+				},
+			);
+		} catch (error) {
+			toast.error('Upload failed.');
+		} finally {
+			NProgress.done();
 		}
 	};
 
