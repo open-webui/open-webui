@@ -69,6 +69,9 @@ log.info(f"whisper_device_type: {whisper_device_type}")
 SPEECH_CACHE_DIR = Path(CACHE_DIR).joinpath("./audio/speech/")
 SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
+MAX_FILE_SIZE_MB = 25  # Maximum file size in megabytes
+MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert to bytes
+
 
 class TTSConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
@@ -117,6 +120,39 @@ def convert_mp4_to_wav(file_path, output_path):
     audio = AudioSegment.from_file(file_path, format="mp4")
     audio.export(output_path, format="wav")
     print(f"Converted {file_path} to {output_path}")
+
+
+def compress_audio(file_path, target_size):
+    # Load the audio file
+    audio = AudioSegment.from_file(file_path)
+    
+    # Get the original file size
+    original_size = os.path.getsize(file_path)
+    print(f"Original size: {original_size} bytes")
+    
+    # If the file is already smaller than the target size, no compression is needed
+    if original_size <= target_size:
+        print("No compression needed.")
+        return file_path, os.path.basename(file_path)
+
+    # Define the path for the compressed file
+    compressed_file_path = f"{os.path.splitext(file_path)[0]}_compressed.mp3"
+    
+    # Start with a high quality (128kbps) and gradually reduce
+    for bitrate in [64, 32, 16]:
+        audio.export(compressed_file_path, format="mp3", bitrate=f"{bitrate}k")
+        compressed_size = os.path.getsize(compressed_file_path)
+        print(f"Compressed size at {bitrate}kbps: {compressed_size} bytes")
+        
+        if compressed_size <= target_size:
+            print(f"Compression successful at {bitrate}kbps. File saved at: {compressed_file_path}")
+            return compressed_file_path, os.path.basename(compressed_file_path)
+    
+    # If we've tried all bitrates and still can't meet the target size
+    print("Could not compress to target size. Returning original file.")
+    if os.path.exists(compressed_file_path):
+        os.remove(compressed_file_path)
+    return file_path, os.path.basename(file_path)
 
 
 @app.get("/config")
@@ -331,6 +367,26 @@ def transcribe(
         with open(file_path, "wb") as f:
             f.write(contents)
             f.close()
+
+        # Compress the audio if its size exceeds the 25MB limit
+        file_size = len(contents)
+        print(f"File size before {file_size}")
+        if file_size > MAX_FILE_SIZE_BYTES:
+            compressed_file_path, filename = compress_audio(file_path, MAX_FILE_SIZE_BYTES)
+            if compressed_file_path != file_path:
+                file_path = compressed_file_path
+                file_size = os.path.getsize(file_path)
+                print(f"File compressed. New size: {file_size}")
+            else:
+                print("Compression not needed or unsuccessful")
+
+        # Check the file size again after compression
+        print(f"Final file size: {file_size}")
+        if file_size > MAX_FILE_SIZE_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=ERROR_MESSAGES.FILE_SIZE_EXCEEDS_LIMIT(MAX_FILE_SIZE_BYTES),
+            )
 
         if app.state.config.STT_ENGINE == "":
             from faster_whisper import WhisperModel
