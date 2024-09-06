@@ -88,21 +88,9 @@ WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
 
 ENV = os.environ.get("ENV", "dev")
 
-PIP_INSTALL = False
-try:
-    importlib.metadata.version("open-webui")
-    PIP_INSTALL = True
-except importlib.metadata.PackageNotFoundError:
-    pass
+FROM_INIT_PY = os.environ.get("FROM_INIT_PY", "False").lower() == "true"
 
-
-PIP_INSTALL = (
-    os.environ.get("PIP_INSTALL", "False").lower() == "true"
-    if os.environ.get("PIP_INSTALL")
-    else PIP_INSTALL
-)
-
-if PIP_INSTALL:
+if FROM_INIT_PY:
     PACKAGE_DATA = {"version": importlib.metadata.version("open-webui")}
 else:
     try:
@@ -193,7 +181,7 @@ WEBUI_BUILD_HASH = os.environ.get("WEBUI_BUILD_HASH", "dev-build")
 
 DATA_DIR = Path(os.getenv("DATA_DIR", BACKEND_DIR / "data")).resolve()
 
-if PIP_INSTALL:
+if FROM_INIT_PY:
     NEW_DATA_DIR = Path(os.getenv("DATA_DIR", OPEN_WEBUI_DIR / "data")).resolve()
     NEW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -212,7 +200,7 @@ if PIP_INSTALL:
 
 FRONTEND_BUILD_DIR = Path(os.getenv("FRONTEND_BUILD_DIR", BASE_DIR / "build")).resolve()
 
-if PIP_INSTALL:
+if FROM_INIT_PY:
     FRONTEND_BUILD_DIR = Path(
         os.getenv("FRONTEND_BUILD_DIR", OPEN_WEBUI_DIR / "frontend")
     ).resolve()
