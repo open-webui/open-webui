@@ -3,10 +3,12 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Literal, Optional, overload
+from typing import Literal, Optional, overload, AsyncGenerator
 
 import aiohttp
 import requests
+import tiktoken
+
 from open_webui.apps.webui.models.models import Models
 from open_webui.config import (
     AIOHTTP_CLIENT_TIMEOUT,
@@ -30,7 +32,7 @@ from open_webui.utils.misc import (
     apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
 )
-from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.utils.utils import get_admin_user, get_verified_user, prompt_tokens, completion_tokens
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
@@ -379,6 +381,8 @@ async def generate_chat_completion(
         }
 
     # Convert the modified body back to JSON
+    encoding = tiktoken.encoding_for_model(model_id)
+    pt = prompt_tokens(encoding, payload["messages"])
     payload = json.dumps(payload)
 
     log.debug(payload)
@@ -413,8 +417,17 @@ async def generate_chat_completion(
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
+
+            async def token_counting_generator(response: aiohttp.ClientResponse) -> AsyncGenerator[bytes, None]:
+                ct = 0
+                async for chunk in response.content.iter_any():  # 流式获取响应内容
+                    ct += await completion_tokens(encoding, chunk)
+                    yield chunk  # 将块传递给客户端
+                # 完成后可以记录或处理 token 数量
+                yield f"Prompt tokens:{pt}, Completion tokens: {ct}".encode('utf-8')
+                print(f"Prompt tokens:{pt}, Completion tokens: {ct}")
             return StreamingResponse(
-                r.content,
+                token_counting_generator(r),
                 status_code=r.status,
                 headers=dict(r.headers),
                 background=BackgroundTask(

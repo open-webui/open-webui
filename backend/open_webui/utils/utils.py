@@ -1,9 +1,13 @@
 import logging
 import uuid
+import json
 from datetime import UTC, datetime, timedelta
 from typing import Optional, Union
 
 import jwt
+import tiktoken
+from tiktoken import Encoding
+
 from open_webui.apps.webui.models.users import Users
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import WEBUI_SECRET_KEY
@@ -12,7 +16,6 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
 
 logging.getLogger("passlib").setLevel(logging.ERROR)
-
 
 SESSION_SECRET = WEBUI_SECRET_KEY
 ALGORITHM = "HS256"
@@ -55,7 +58,7 @@ def decode_token(token: str) -> Optional[dict]:
 
 
 def extract_token_from_auth_header(auth_header: str):
-    return auth_header[len("Bearer ") :]
+    return auth_header[len("Bearer "):]
 
 
 def create_api_key():
@@ -72,8 +75,8 @@ def get_http_authorization_cred(auth_header: str):
 
 
 def get_current_user(
-    request: Request,
-    auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
+        request: Request,
+        auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
 ):
     token = None
 
@@ -139,3 +142,36 @@ def get_admin_user(user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
     return user
+
+
+def prompt_tokens(encoding: Encoding, messages) -> int:
+    count = sum(len(encoding.encode(msg['content'])) for msg in messages)
+    return count
+
+
+async def completion_tokens(encoding: Encoding, data: bytes):
+    total_tokens = 0
+    # 将bytes解码为字符串
+    decoded_data = data.decode("utf-8")
+
+    # 逐行处理解码后的数据
+    for line in decoded_data.splitlines():
+        # 检查数据是否以 'data: ' 开头
+        if line.startswith("data: "):
+            # 移除 'data: '，并解析为 JSON 对象
+            json_data = line[len("data: "):]
+            if json_data == '[DONE]':
+                break
+            try:
+                # 解析 JSON
+                parsed_data = json.loads(json_data)
+                # 从JSON中的'delta'字段中提取'content'
+                if 'choices' in parsed_data and parsed_data['choices']:
+                    delta = parsed_data['choices'][0].get('delta', {})
+                    content = delta.get('content', "")
+                    # 对内容进行分词（以空格分词，这里可以根据实际需要修改）
+                    total_tokens += len(encoding.encode(content))
+            except json.JSONDecodeError:
+                continue  # 如果解析失败，跳过这行数据
+
+    return total_tokens
