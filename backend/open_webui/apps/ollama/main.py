@@ -543,6 +543,8 @@ class GenerateEmbeddingsForm(BaseModel):
     keep_alive: Optional[Union[int, str]] = None
 
 
+@app.post("/api/embed")
+@app.post("/api/embed/{url_idx}")
 @app.post("/api/embeddings")
 @app.post("/api/embeddings/{url_idx}")
 async def generate_embeddings(
@@ -569,7 +571,7 @@ async def generate_embeddings(
 
     r = requests.request(
         method="POST",
-        url=f"{url}/api/embeddings",
+        url=f"{url}/api/embed",
         headers={"Content-Type": "application/json"},
         data=form_data.model_dump_json(exclude_none=True).encode(),
     )
