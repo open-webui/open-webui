@@ -20,6 +20,7 @@
 	let email = '';
 	let password = '';
 	let turnstileToken = '';
+	let turnstileVerify = false;
 
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
@@ -46,12 +47,19 @@
 	};
 
 	const signUpHandler = async () => {
-		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name), turnstileToken).catch(
-			(error) => {
-				toast.error(error);
-				return null;
-			}
-		);
+		if ($config?.turnstile_check && !turnstileVerify) {
+			toast.error('Please complete the CAPTCHA verification to proceed!');
+		}
+		const sessionUser = await userSignUp(
+			name,
+			email,
+			password,
+			generateInitialsImage(name),
+			turnstileToken
+		).catch((error) => {
+			toast.error(error);
+			return null;
+		});
 
 		await setSessionUser(sessionUser);
 	};
@@ -219,12 +227,18 @@
 										required
 									/>
 								</div>
-								
-								{#if $config?.turnstile_check}
+
+								{#if $config?.turnstile_check && mode !== 'signin'}
 									<Turnstile
 										siteKey={$config?.turnstile_site_key}
-										on:callback={(event) => (turnstileToken = event.detail.token)}
-										on:unsupported={() => toast.error('当前浏览器不支持')}
+										on:callback={(event) => {
+											turnstileToken = event.detail.token;
+											turnstileVerify = true;
+										}}
+										on:unsupported={() =>
+											toast.error(
+												'This browser does not support the required features for verification.'
+											)}
 									/>
 								{/if}
 							</div>
