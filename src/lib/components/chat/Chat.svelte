@@ -1529,7 +1529,7 @@
 				done: true,
 				error: true,
 				action: 'web_search',
-				description: 'No search query generated'
+				description: $i18n.t('No search query generated')
 			});
 			messages = messages;
 			return;
