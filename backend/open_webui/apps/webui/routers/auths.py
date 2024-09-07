@@ -193,14 +193,23 @@ async def validate_token(token, secret):
         'secret': secret
     }
     
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, json=payload, headers=headers) as response:
-            data = await response.json()
-    
-    return {
-        'success': data.get('success', False),
-        'error': data.get('error-codes', [None])[0]
-    }
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, headers=headers) as response:
+                response.raise_for_status()
+                data = await response.json()
+                print(data)
+                
+                return {
+                    'success': data.get('success', False),
+                    'error': data.get('error-codes', [None])[0]
+                }
+            
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Unexpected error: {str(e)}'
+        }
 
 
 @router.post("/signup", response_model=SigninResponse)

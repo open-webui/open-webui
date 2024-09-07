@@ -1586,7 +1586,7 @@ SEND_FILTER_MESSAGE_TYPE = PersistentConfig(
 
 REGISTERED_EMAIL_SUFFIX = os.environ.get("REGISTERED_EMAIL_SUFFIX", "").lower()
 
-TURNSTILE_CHECK = os.environ.get("TURNSTILE_CHECK", "").lower() == "true"
+TURNSTILE_CHECK = os.environ.get("TURNSTILE_CHECK", "false").lower() == "true"
 
 TURNSTILE_SITE_KEY = os.environ.get("TURNSTILE_SITE_KEY", "")
 
