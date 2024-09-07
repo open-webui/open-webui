@@ -25,10 +25,22 @@ from open_webui.config import (
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
+<<<<<<< HEAD
 from open_webui.utils.misc import (
+=======
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, StreamingResponse
+from pydantic import BaseModel
+from starlette.background import BackgroundTask
+
+
+from open_webui.utils.payload import (
+>>>>>>> 2544f7eaf0c71bc668963b9a0c0d160e6c0a7707
     apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
 )
+
 from open_webui.utils.utils import get_admin_user, get_verified_user
 from pydantic import BaseModel
 from starlette.background import BackgroundTask

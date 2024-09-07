@@ -31,7 +31,13 @@
 			{token.text}
 		{/if}
 	{:else if token.type === 'link'}
-		<a href={token.href} target="_blank" rel="nofollow" title={token.title}>{token.text}</a>
+		{#if token.tokens}
+			<a href={token.href} target="_blank" rel="nofollow" title={token.title}>
+				<svelte:self id={`${id}-a`} tokens={token.tokens} />
+			</a>
+		{:else}
+			<a href={token.href} target="_blank" rel="nofollow" title={token.title}>{token.text}</a>
+		{/if}
 	{:else if token.type === 'image'}
 		<Image src={token.href} alt={token.text} isMarkdown={true} />
 	{:else if token.type === 'strong'}

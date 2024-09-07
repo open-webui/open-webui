@@ -311,7 +311,7 @@
 	{:else}
 		<div class="w-full pt-2">
 			{#key chatId}
-				{#each messages as message, messageIdx}
+				{#each messages as message, messageIdx (message.id)}
 					<div class=" w-full {messageIdx === messages.length - 1 ? ' pb-12' : ''}">
 						<div
 							class="flex flex-col justify-between px-5 mb-3 {($settings?.widescreenMode ?? null)
@@ -335,8 +335,13 @@
 									{showNextMessage}
 									copyToClipboard={copyToClipboardWithToast}
 								/>
+<<<<<<< HEAD
 							{:else if $mobile || (history.messages[message.parentId]?.models?.length ?? 1) === 1}
 								{#key message.id && history.currentId}
+=======
+							{:else if (history.messages[message.parentId]?.models?.length ?? 1) === 1}
+								{#key message.id}
+>>>>>>> 2544f7eaf0c71bc668963b9a0c0d160e6c0a7707
 									<ResponseMessage
 										{message}
 										siblings={history.messages[message.parentId]?.childrenIds ?? []}

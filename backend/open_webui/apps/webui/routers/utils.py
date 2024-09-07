@@ -3,6 +3,12 @@ from pathlib import Path
 
 import black
 import markdown
+<<<<<<< HEAD
+=======
+from open_webui.config import DATA_DIR, ENABLE_ADMIN_EXPORT
+from open_webui.env import FONTS_DIR
+from open_webui.constants import ERROR_MESSAGES
+>>>>>>> 2544f7eaf0c71bc668963b9a0c0d160e6c0a7707
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fpdf import FPDF
 from open_webui.config import DATA_DIR, ENABLE_ADMIN_EXPORT
@@ -57,13 +63,10 @@ class ChatForm(BaseModel):
 async def download_chat_as_pdf(
     form_data: ChatForm,
 ):
+    global FONTS_DIR
+
     pdf = FPDF()
     pdf.add_page()
-
-    # When running in docker, workdir is /app/backend, so fonts is in /app/backend/static/fonts
-    FONTS_DIR = Path("./static/fonts")
-
-    # Non Docker Installation
 
     # When running using `pip install` the static directory is in the site packages.
     if not FONTS_DIR.exists():

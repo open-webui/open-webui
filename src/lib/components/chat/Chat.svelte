@@ -740,6 +740,8 @@
 					responseMessage.userContext = userContext;
 
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
+
+					scrollToBottom();
 					if (webSearchEnabled) {
 						await getWebSearchResults(model.id, parentId, responseMessageId);
 					}
@@ -1522,23 +1524,25 @@
 		messages = messages;
 
 		const prompt = userMessage.content;
-		let searchQuery = await generateSearchQuery(localStorage.token, model, messages, prompt).catch(
-			(error) => {
-				console.log(error);
-				return prompt;
-			}
-		);
+		let searchQuery = await generateSearchQuery(
+			localStorage.token,
+			model,
+			messages.filter((message) => message?.content?.trim()),
+			prompt
+		).catch((error) => {
+			console.log(error);
+			return prompt;
+		});
 
-		if (!searchQuery) {
-			toast.warning($i18n.t('No search query generated'));
+		if (!searchQuery || searchQuery == '') {
 			responseMessage.statusHistory.push({
 				done: true,
 				error: true,
 				action: 'web_search',
-				description: 'No search query generated'
+				description: $i18n.t('No search query generated')
 			});
-
 			messages = messages;
+			return;
 		}
 
 		responseMessage.statusHistory.push({

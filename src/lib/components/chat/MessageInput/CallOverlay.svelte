@@ -922,8 +922,8 @@
 				<button
 					class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900"
 					on:click={async () => {
-						stopAudioStream();
-						stopVideoStream();
+						await stopAudioStream();
+						await stopVideoStream();
 						showCallOverlay.set(false);
 						dispatch('close');
 					}}
