@@ -17,7 +17,7 @@ from open_webui.apps.webui.models.auths import (
     UserResponse,
 )
 from open_webui.apps.webui.models.users import Users
-from open_webui.config import WEBUI_AUTH
+from open_webui.config import WEBUI_AUTH, REGISTERED_EMAIL_SUFFIX
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import WEBUI_AUTH_TRUSTED_EMAIL_HEADER, WEBUI_AUTH_TRUSTED_NAME_HEADER
 from open_webui.utils.misc import parse_duration, validate_email_format
@@ -268,6 +268,11 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
+        )
+    
+    if REGISTERED_EMAIL_SUFFIX and not form_data.email.lower().endswith(REGISTERED_EMAIL_SUFFIX):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_CUSTOMER_EMAIL_FORMAT
         )
 
     if Users.get_user_by_email(form_data.email.lower()):

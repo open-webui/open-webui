@@ -1578,3 +1578,10 @@ SEND_FILTER_MESSAGE_TYPE = PersistentConfig(
     "wechatapp.send_filter_message_type",
     os.getenv("SEND_FILTER_MESSAGE_TYPE", "Markdown"),
 )
+
+
+####################################
+# REGISTERED_EMAIL_SUFFIX
+####################################
+
+REGISTERED_EMAIL_SUFFIX = os.environ.get("REGISTERED_EMAIL_SUFFIX", "").lower()
