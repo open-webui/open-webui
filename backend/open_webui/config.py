@@ -1267,6 +1267,24 @@ AUTOMATIC1111_API_AUTH = PersistentConfig(
     os.getenv("AUTOMATIC1111_API_AUTH", ""),
 )
 
+AUTOMATIC1111_CFG_SCALE = PersistentConfig(
+    "AUTOMATIC1111_CFG_SCALE",
+    "image_generation.automatic1111.cfg_scale",
+    float(os.getenv("AUTOMATIC1111_CFG_SCALE", 7.0)),
+)
+
+AUTOMATIC1111_SAMPLER = PersistentConfig(
+    "AUTOMATIC1111_SAMPLERE",
+    "image_generation.automatic1111.sampler",
+    os.getenv("AUTOMATIC1111_SAMPLER", "Euler"),
+)
+
+AUTOMATIC1111_SCHEDULER = PersistentConfig(
+    "AUTOMATIC1111_SCHEDULER",
+    "image_generation.automatic1111.scheduler",
+    os.getenv("AUTOMATIC1111_SCHEDULER", "Automatic"),
+)
+
 COMFYUI_BASE_URL = PersistentConfig(
     "COMFYUI_BASE_URL",
     "image_generation.comfyui.base_url",
