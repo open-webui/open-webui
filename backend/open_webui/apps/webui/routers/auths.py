@@ -199,10 +199,11 @@ async def validate_token(token, secret):
                 response.raise_for_status()
                 data = await response.json()
                 print(data)
-                
+                error_codes = data.get('error-codes', [])
+                error = error_codes[0] if error_codes else None
                 return {
                     'success': data.get('success', False),
-                    'error': data.get('error-codes', [None])[0]
+                    'error': error
                 }
             
     except Exception as e:
