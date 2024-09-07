@@ -215,7 +215,7 @@
 									/>
 								</div>
 
-								<div class="$config?.turnstile_check && mode !== 'signin' ? 'mb-8' : ''">
+								<div class="{$config?.turnstile_check && mode !== 'signin' ? 'mb-8' : ''}">
 									<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Password')}</div>
 
 									<input
