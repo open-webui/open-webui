@@ -12,7 +12,6 @@ import sqlalchemy as sa
 from alembic import op
 from migrations.util import get_existing_tables
 
-import open_webui.apps.webui.internal.db
 from open_webui.apps.webui.internal.db import JSONField
 from open_webui.migrations.util import get_existing_tables
 
