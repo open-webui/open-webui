@@ -198,7 +198,6 @@ async def validate_token(token, secret):
             async with session.post(url, json=payload, headers=headers) as response:
                 response.raise_for_status()
                 data = await response.json()
-                print(data)
                 error_codes = data.get('error-codes', [])
                 error = error_codes[0] if error_codes else None
                 return {
