@@ -150,6 +150,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 data=body,
                 headers=headers,
                 stream=True,
+                stream_options={"include_usage": True} #Testing
             )
 
             r.raise_for_status()
@@ -351,7 +352,7 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
             )
 
 
-@app.post("/chat/completions")
+'''@app.post("/chat/completions")
 @app.post("/chat/completions/{url_idx}")
 async def generate_chat_completion(
     form_data: dict,
@@ -360,17 +361,14 @@ async def generate_chat_completion(
 ):
     idx = 0
     payload = {**form_data}
-
     if "metadata" in payload:
         del payload["metadata"]
-
+    
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
-
     if model_info:
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
-
         params = model_info.params.model_dump()
         payload = apply_model_params_to_body_openai(params, payload)
         payload = apply_model_system_prompt_to_body(params, payload, user)
@@ -386,14 +384,16 @@ async def generate_chat_completion(
             "role": user.role,
         }
 
+    # Add stream options to the payload
+    payload["stream"] = True
+    payload["stream_options"] = {"include_usage": True}
+
     # Convert the modified body back to JSON
     payload = json.dumps(payload)
-
     log.debug(payload)
 
     url = app.state.config.OPENAI_API_BASE_URLS[idx]
     key = app.state.config.OPENAI_API_KEYS[idx]
-
     headers = {}
     headers["Authorization"] = f"Bearer {key}"
     headers["Content-Type"] = "application/json"
@@ -415,14 +415,28 @@ async def generate_chat_completion(
             data=payload,
             headers=headers,
         )
-
         r.raise_for_status()
 
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
+            
+            async def token_counter(content):
+                total_tokens = 0
+                async for line in content:
+                    if line.startswith(b"data: "):
+                        try:
+                            data = json.loads(line.decode("utf-8")[6:])
+                            if "usage" in data and data["usage"] is not None:
+                                total_tokens = data["usage"].get("total_tokens", 0)
+                                print(f"Total tokens used: {total_tokens}")
+                        except json.JSONDecodeError:
+                            pass
+                    yield line
+                print(f"Final total tokens used: {total_tokens}")
+
             return StreamingResponse(
-                r.content,
+                token_counter(r.content),
                 status_code=r.status,
                 headers=dict(r.headers),
                 background=BackgroundTask(
@@ -431,7 +445,11 @@ async def generate_chat_completion(
             )
         else:
             response_data = await r.json()
+            if "usage" in response_data and response_data["usage"] is not None:
+                total_tokens = response_data["usage"].get("total_tokens", 0)
+                print(f"Total tokens used: {total_tokens}")
             return response_data
+
     except Exception as e:
         log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
@@ -449,6 +467,170 @@ async def generate_chat_completion(
             if r:
                 r.close()
             await session.close()
+
+async def cleanup_response(response: aiohttp.ClientResponse, session: aiohttp.ClientSession):
+    await response.release()
+    await session.close()'''
+
+
+
+
+
+
+from apps.webui.internal.db import Session
+from apps.webui.models.users import User
+
+
+'''
+@app.post("/chat/completions")
+@app.post("/chat/completions/{url_idx}")
+async def generate_chat_completion(
+    form_data: dict,
+    url_idx: Optional[int] = None,
+    user=Depends(get_verified_user),
+):
+    idx = 0
+    payload = {**form_data}
+    if "metadata" in payload:
+        del payload["metadata"]
+    
+    model_id = form_data.get("model")
+    model_info = Models.get_model_by_id(model_id)
+    if model_info:
+        if model_info.base_model_id:
+            payload["model"] = model_info.base_model_id
+        params = model_info.params.model_dump()
+        payload = apply_model_params_to_body_openai(params, payload)
+        payload = apply_model_system_prompt_to_body(params, payload, user)
+
+    model = app.state.MODELS[payload.get("model")]
+    idx = model["urlIdx"]
+
+    if "pipeline" in model and model.get("pipeline"):
+        payload["user"] = {
+            "name": user.name,
+            "id": user.id,
+            "email": user.email,
+            "role": user.role,
+        }
+
+    # Add stream options to the payload
+    payload["stream"] = True
+    payload["stream_options"] = {"include_usage": True}
+
+    # Convert the modified body back to JSON
+    payload = json.dumps(payload)
+    log.debug(payload)
+
+    url = app.state.config.OPENAI_API_BASE_URLS[idx]
+    key = app.state.config.OPENAI_API_KEYS[idx]
+    headers = {}
+    headers["Authorization"] = f"Bearer {key}"
+    headers["Content-Type"] = "application/json"
+    if "openrouter.ai" in app.state.config.OPENAI_API_BASE_URLS[idx]:
+        headers["HTTP-Referer"] = "https://openwebui.com/"
+        headers["X-Title"] = "Open WebUI"
+
+    r = None
+    session = None
+    streaming = False
+
+    try:
+        session = aiohttp.ClientSession(
+            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        )
+        r = await session.request(
+            method="POST",
+            url=f"{url}/chat/completions",
+            data=payload,
+            headers=headers,
+        )
+        r.raise_for_status()
+
+        # Check if response is SSE
+        if "text/event-stream" in r.headers.get("Content-Type", ""):
+            streaming = True
+            
+            async def token_counter(content):
+                total_tokens = 0
+                async for line in content:
+                    if line.startswith(b"data: "):
+                        try:
+                            data = json.loads(line.decode("utf-8")[6:])
+                            if "usage" in data and data["usage"] is not None:
+                                total_tokens = data["usage"].get("total_tokens", 0)
+                                print(f"Total tokens used: {total_tokens}")
+                        except json.JSONDecodeError:
+                            pass
+                    yield line
+                print(f"Final total tokens used: {total_tokens}")
+                
+                if total_tokens > 0:
+                    db_session = Session()
+                    try:
+                        db_user = db_session.query(User).filter_by(id=user.id).first()
+                        db_user.token_usage += total_tokens
+                        db_session.commit()
+                        log.info(f"Token usage updated successfully for streaming response: {db_user.token_usage}")
+                    finally:
+                        db_session.close()
+
+            return StreamingResponse(
+                token_counter(r.content),
+                status_code=r.status,
+                headers=dict(r.headers),
+                background=BackgroundTask(
+                    cleanup_response, response=r, session=session
+                ),
+            )
+        else:
+            response_data = await r.json()
+            total_tokens = 0
+            if "usage" in response_data and response_data["usage"] is not None:
+                total_tokens = response_data["usage"].get("total_tokens", 0)
+                print(f"Total tokens used: {total_tokens}")
+            
+            if total_tokens > 0:
+                db_session = Session()
+                try:
+                    db_user = db_session.query(User).filter_by(id=user.id).first()
+                    db_user.token_usage += total_tokens
+                    db_session.commit()
+                    log.info(f"Token usage updated successfully for non-streaming response: {db_user.token_usage}")
+                finally:
+                    db_session.close()
+            
+            return response_data
+
+    except Exception as e:
+        log.exception(e)
+        error_detail = "Open WebUI: Server Connection Error"
+        if r is not None:
+            try:
+                res = await r.json()
+                print(res)
+                if "error" in res:
+                    error_detail = f"External: {res['error']['message'] if 'message' in res['error'] else res['error']}"
+            except Exception:
+                error_detail = f"External: {e}"
+        raise HTTPException(status_code=r.status if r else 500, detail=error_detail)
+    finally:
+        if not streaming and session:
+            if r:
+                r.close()
+            await session.close()
+
+async def cleanup_response(response: aiohttp.ClientResponse, session: aiohttp.ClientSession):
+    await response.release()
+    await session.close()'''
+
+
+
+
+
+
+
+
 
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])

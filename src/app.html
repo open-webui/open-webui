@@ -144,6 +144,37 @@
 				Footer content
 			</span> -->
 		</div>
+		<div id="token-usage" style="position: absolute; top: 20px; right: 200px; color: white;">
+			Token Usage: Loading...
+		</div>  
+		
+		<script>
+			const fetchTokenUsage = async () => {
+				try {
+					const response = await fetch('/api/token-usage');
+					const data = await response.json();
+		
+					console.log(`Latest Token Usage: ${data.token_usage}`);
+		
+					document.getElementById('token-usage').innerText = `Token Usage: ${data.token_usage}`;
+		
+					const event = new CustomEvent('tokenUsageUpdated', { detail: { tokenUsage: data.token_usage } });
+					window.dispatchEvent(event);
+				} catch (error) {
+					console.error('Error fetching token usage:', error);
+				}
+			};
+		
+			window.onload = fetchTokenUsage;
+		
+			// Add event listener for token usage update after each chat completion
+			window.addEventListener('chatCompleted', () => {
+				fetchTokenUsage();
+			});
+		</script>
+		
+	</body>
+	
 	</body>
 </html>
 

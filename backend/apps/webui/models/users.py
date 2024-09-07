@@ -30,6 +30,7 @@ class User(Base):
     info = Column(JSONField, nullable=True)
 
     oauth_sub = Column(Text, unique=True)
+    token_usage = Column(BigInteger)
 
 
 class UserSettings(BaseModel):
@@ -54,6 +55,7 @@ class UserModel(BaseModel):
     info: Optional[dict] = None
 
     oauth_sub: Optional[str] = None
+    token_usage: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -97,6 +99,7 @@ class UsersTable:
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                     "oauth_sub": oauth_sub,
+                    "token_usage": 0,
                 }
             )
             result = User(**user.model_dump())

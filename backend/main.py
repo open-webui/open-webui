@@ -986,6 +986,23 @@ async def get_models(user=Depends(get_verified_user)):
     return {"data": models}
 
 
+
+
+
+
+
+from apps.webui.models.users import User  # Import the SQLAlchemy User model
+
+@app.get("/api/token-usage")
+async def get_token_usage(user=Depends(get_verified_user)):
+    return {"token_usage": user.token_usage}
+
+
+
+
+
+
+'''
 @app.post("/api/chat/completions")
 async def generate_chat_completions(form_data: dict, user=Depends(get_verified_user)):
     model_id = form_data["model"]
@@ -1001,6 +1018,43 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
         return await generate_ollama_chat_completion(form_data, user=user)
     else:
         return await generate_openai_chat_completion(form_data, user=user)
+'''    
+
+
+
+
+
+
+
+
+
+
+@app.post("/api/chat/completions")
+async def generate_chat_completions(form_data: dict, user=Depends(get_verified_user)):
+    model_id = form_data["model"]
+    if model_id not in app.state.MODELS:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model not found",
+        )
+    model = app.state.MODELS[model_id]
+    if model.get("pipe"):
+        return await generate_function_chat_completion(form_data, user=user)
+    if model["owned_by"] == "ollama":
+        return await generate_ollama_chat_completion(form_data, user=user)
+    else:
+        return await generate_openai_chat_completion(form_data, user=user)
+
+
+
+
+
+
+
+
+
+
+
 
 
 @app.post("/api/chat/completed")

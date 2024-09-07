@@ -307,3 +307,8 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
+
+# testing
+
+*.bak
+/backend/data/config.json

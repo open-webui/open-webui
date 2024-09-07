@@ -268,6 +268,21 @@ export const getOpenAIModelsDirect = async (
 		});
 };
 
+const fetchTokenUsage = async () => {
+	try {
+		const response = await fetch('/api/token-usage');
+		const data = await response.json();
+
+		console.log(`Latest Token Usage: ${data.token_usage}`);
+		document.getElementById('token-usage')!.innerText = `Token Usage: ${data.token_usage}`;
+
+		const event = new CustomEvent('tokenUsageUpdated', { detail: { tokenUsage: data.token_usage } });
+		window.dispatchEvent(event);
+	} catch (error) {
+		console.error('Error fetching token usage:', error);
+	}
+};
+
 export const generateOpenAIChatCompletion = async (
 	token: string = '',
 	body: object,
@@ -293,6 +308,9 @@ export const generateOpenAIChatCompletion = async (
 	if (error) {
 		throw error;
 	}
+
+	// Fetch and update token usage after the chat completion request
+	await fetchTokenUsage();
 
 	return [res, controller];
 };

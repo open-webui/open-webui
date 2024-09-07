@@ -66,43 +66,48 @@ export const getModels = async (token: string = '') => {
 };
 
 type ChatCompletedForm = {
-	model: string;
-	messages: string[];
-	chat_id: string;
-	session_id: string;
+  model: string;
+  messages: string[];
+  chat_id: string;
+  session_id: string;
 };
 
 export const chatCompleted = async (token: string, body: ChatCompletedForm) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_BASE_URL}/api/chat/completed`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		},
-		body: JSON.stringify(body)
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = err;
-			}
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+  let error: any = null;
+  let res: any = null;
+  try {
+    res = await fetch(`${WEBUI_BASE_URL}/api/chat/completed`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        ...(token && { authorization: `Bearer ${token}` })
+      },
+      body: JSON.stringify(body)
+    })
+    .then(async (res) => {
+      if (!res.ok) throw await res.json();
+      return res.json();
+    });
+  } catch (err: unknown) {
+    console.log(err);
+    if (typeof err === 'object' && err !== null && 'detail' in err) {
+      error = (err as { detail: string }).detail;
+    } else if (err instanceof Error) {
+      error = err.message;
+    } else {
+      error = String(err);
+    }
+  } finally {
+    // Trigger the chatCompleted event regardless of success or failure
+    const event = new CustomEvent('chatCompleted');
+    window.dispatchEvent(event);
+    console.log('chatCompleted event dispatched');  // Add this log for debugging
+  }
+  if (error) {
+    throw error;
+  }
+  return res;
 };
 
 type ChatActionForm = {
@@ -241,6 +246,13 @@ export const generateTitle = async (
 	if (error) {
 		throw error;
 	}
+
+
+
+	// Trigger the chatCompleted event
+	const event = new CustomEvent('chatCompleted');
+	window.dispatchEvent(event);
+
 
 	return res?.choices[0]?.message?.content.replace(/["']/g, '') ?? 'New Chat';
 };

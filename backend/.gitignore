@@ -1,5 +1,6 @@
 __pycache__
 .env
+.venv
 _old
 uploads
 .ipynb_checkpoints
