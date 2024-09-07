@@ -16,7 +16,7 @@
 <button
 	class={className}
 	on:click={() => {
-		showImagePreview = true;
+		showImagePreview = false;
 	}}
 >
 	<img src={_src} {alt} class=" rounded-lg cursor-pointer" draggable="false" data-cy="image" />
