@@ -3,13 +3,15 @@ import time
 import uuid
 from typing import Optional
 
-from open_webui.apps.webui.internal.db import Base, get_db
-from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text
 
+from open_webui.apps.webui.internal.db import Base, get_db
+from open_webui.env import SRC_LOG_LEVELS
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
+
 
 ####################
 # Tag DB Schema
@@ -90,7 +92,7 @@ class TagTable:
                 return None
 
     def get_tag_by_name_and_user_id(
-        self, name: str, user_id: str
+            self, name: str, user_id: str
     ) -> Optional[TagModel]:
         try:
             with get_db() as db:
@@ -100,7 +102,7 @@ class TagTable:
             return None
 
     def add_tag_to_chat(
-        self, user_id: str, form_data: ChatIdTagForm
+            self, user_id: str, form_data: ChatIdTagForm
     ) -> Optional[ChatIdTagModel]:
         tag = self.get_tag_by_name_and_user_id(form_data.tag_name, user_id)
         if tag is None:
@@ -135,9 +137,9 @@ class TagTable:
                 chat_id_tag.tag_name
                 for chat_id_tag in (
                     db.query(ChatIdTag)
-                    .filter_by(user_id=user_id)
-                    .order_by(ChatIdTag.timestamp.desc())
-                    .all()
+                        .filter_by(user_id=user_id)
+                        .order_by(ChatIdTag.timestamp.desc())
+                        .all()
                 )
             ]
 
@@ -145,23 +147,23 @@ class TagTable:
                 TagModel.model_validate(tag)
                 for tag in (
                     db.query(Tag)
-                    .filter_by(user_id=user_id)
-                    .filter(Tag.name.in_(tag_names))
-                    .all()
+                        .filter_by(user_id=user_id)
+                        .filter(Tag.name.in_(tag_names))
+                        .all()
                 )
             ]
 
     def get_tags_by_chat_id_and_user_id(
-        self, chat_id: str, user_id: str
+            self, chat_id: str, user_id: str
     ) -> list[TagModel]:
         with get_db() as db:
             tag_names = [
                 chat_id_tag.tag_name
                 for chat_id_tag in (
                     db.query(ChatIdTag)
-                    .filter_by(user_id=user_id, chat_id=chat_id)
-                    .order_by(ChatIdTag.timestamp.desc())
-                    .all()
+                        .filter_by(user_id=user_id, chat_id=chat_id)
+                        .order_by(ChatIdTag.timestamp.desc())
+                        .all()
                 )
             ]
 
@@ -169,34 +171,34 @@ class TagTable:
                 TagModel.model_validate(tag)
                 for tag in (
                     db.query(Tag)
-                    .filter_by(user_id=user_id)
-                    .filter(Tag.name.in_(tag_names))
-                    .all()
+                        .filter_by(user_id=user_id)
+                        .filter(Tag.name.in_(tag_names))
+                        .all()
                 )
             ]
 
     def get_chat_ids_by_tag_name_and_user_id(
-        self, tag_name: str, user_id: str
+            self, tag_name: str, user_id: str
     ) -> list[ChatIdTagModel]:
         with get_db() as db:
             return [
                 ChatIdTagModel.model_validate(chat_id_tag)
                 for chat_id_tag in (
                     db.query(ChatIdTag)
-                    .filter_by(user_id=user_id, tag_name=tag_name)
-                    .order_by(ChatIdTag.timestamp.desc())
-                    .all()
+                        .filter_by(user_id=user_id, tag_name=tag_name)
+                        .order_by(ChatIdTag.timestamp.desc())
+                        .all()
                 )
             ]
 
     def count_chat_ids_by_tag_name_and_user_id(
-        self, tag_name: str, user_id: str
+            self, tag_name: str, user_id: str
     ) -> int:
         with get_db() as db:
             return (
                 db.query(ChatIdTag)
-                .filter_by(tag_name=tag_name, user_id=user_id)
-                .count()
+                    .filter_by(tag_name=tag_name, user_id=user_id)
+                    .count()
             )
 
     def delete_tag_by_tag_name_and_user_id(self, tag_name: str, user_id: str) -> bool:
@@ -204,8 +206,8 @@ class TagTable:
             with get_db() as db:
                 res = (
                     db.query(ChatIdTag)
-                    .filter_by(tag_name=tag_name, user_id=user_id)
-                    .delete()
+                        .filter_by(tag_name=tag_name, user_id=user_id)
+                        .delete()
                 )
                 log.debug(f"res: {res}")
                 db.commit()
@@ -223,14 +225,14 @@ class TagTable:
             return False
 
     def delete_tag_by_tag_name_and_chat_id_and_user_id(
-        self, tag_name: str, chat_id: str, user_id: str
+            self, tag_name: str, chat_id: str, user_id: str
     ) -> bool:
         try:
             with get_db() as db:
                 res = (
                     db.query(ChatIdTag)
-                    .filter_by(tag_name=tag_name, chat_id=chat_id, user_id=user_id)
-                    .delete()
+                        .filter_by(tag_name=tag_name, chat_id=chat_id, user_id=user_id)
+                        .delete()
                 )
                 log.debug(f"res: {res}")
                 db.commit()

@@ -1,27 +1,22 @@
-from contextlib import asynccontextmanager
-
-from fastapi import HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-
 import logging
-from fastapi import FastAPI, Request, Depends, status
-
-from starlette.responses import StreamingResponse
+import os
 import time
-import requests
-
-from pydantic import BaseModel, ConfigDict
+from contextlib import asynccontextmanager
 from typing import Optional, List
 
-from open_webui.utils.utils import get_verified_user, get_current_user, get_admin_user
-from open_webui.env import SRC_LOG_LEVELS
-from open_webui.constants import MESSAGES
+import requests
+from fastapi import FastAPI, Request, Depends, status
+from fastapi import HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, ConfigDict
+from starlette.responses import StreamingResponse
 
-import os
+from open_webui.constants import MESSAGES
+from open_webui.env import SRC_LOG_LEVELS
+from open_webui.utils.utils import get_verified_user, get_current_user, get_admin_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["LITELLM"])
-
 
 from open_webui.config import (
     ENABLE_LITELLM,
@@ -63,16 +58,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 LITELLM_CONFIG_DIR = f"{DATA_DIR}/litellm/config.yaml"
 
 with open(LITELLM_CONFIG_DIR, "r") as file:
     litellm_config = yaml.safe_load(file)
 
-
 app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER.value
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST.value
-
 
 app.state.ENABLE = ENABLE_LITELLM
 app.state.CONFIG = litellm_config
@@ -225,7 +217,6 @@ async def update_config(form_data: LiteLLMConfigForm, user=Depends(get_admin_use
 @app.get("/models")
 @app.get("/v1/models")
 async def get_models(user=Depends(get_current_user)):
-
     if app.state.ENABLE:
         while not background_process:
             await asyncio.sleep(0.1)
@@ -292,7 +283,7 @@ class AddLiteLLMModelForm(BaseModel):
 
 @app.post("/model/new")
 async def add_model_to_config(
-    form_data: AddLiteLLMModelForm, user=Depends(get_admin_user)
+        form_data: AddLiteLLMModelForm, user=Depends(get_admin_user)
 ):
     try:
         get_llm_provider(model=form_data.model_name)
@@ -317,7 +308,7 @@ class DeleteLiteLLMModelForm(BaseModel):
 
 @app.post("/model/delete")
 async def delete_model_from_config(
-    form_data: DeleteLiteLLMModelForm, user=Depends(get_admin_user)
+        form_data: DeleteLiteLLMModelForm, user=Depends(get_admin_user)
 ):
     app.state.CONFIG["model_list"] = [
         model

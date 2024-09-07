@@ -3,6 +3,8 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import Response
+from pydantic import BaseModel
+
 from open_webui.apps.webui.models.auths import (
     AddUserForm,
     ApiKey,
@@ -27,9 +29,9 @@ from open_webui.utils.utils import (
     get_password_hash,
 )
 from open_webui.utils.webhook import post_webhook
-from pydantic import BaseModel
 
 router = APIRouter()
+
 
 ############################
 # GetSessionUser
@@ -38,7 +40,7 @@ router = APIRouter()
 
 @router.get("/", response_model=UserResponse)
 async def get_session_user(
-    request: Request, response: Response, user=Depends(get_current_user)
+        request: Request, response: Response, user=Depends(get_current_user)
 ):
     token = create_token(
         data={"id": user.id},
@@ -68,7 +70,7 @@ async def get_session_user(
 
 @router.post("/update/profile", response_model=UserResponse)
 async def update_profile(
-    form_data: UpdateProfileForm, session_user=Depends(get_current_user)
+        form_data: UpdateProfileForm, session_user=Depends(get_current_user)
 ):
     if session_user:
         user = Users.update_user_by_id(
@@ -90,7 +92,7 @@ async def update_profile(
 
 @router.post("/update/password", response_model=bool)
 async def update_password(
-    form_data: UpdatePasswordForm, session_user=Depends(get_current_user)
+        form_data: UpdatePasswordForm, session_user=Depends(get_current_user)
 ):
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         raise HTTPException(400, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
@@ -186,9 +188,9 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 @router.post("/signup", response_model=SigninResponse)
 async def signup(request: Request, response: Response, form_data: SignupForm):
     if (
-        not request.app.state.config.ENABLE_SIGNUP
-        and request.app.state.config.ENABLE_LOGIN_FORM
-        and WEBUI_AUTH
+            not request.app.state.config.ENABLE_SIGNUP
+            and request.app.state.config.ENABLE_LOGIN_FORM
+            and WEBUI_AUTH
     ):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
@@ -358,7 +360,7 @@ class AdminConfig(BaseModel):
 
 @router.post("/admin/config")
 async def update_admin_config(
-    request: Request, form_data: AdminConfig, user=Depends(get_admin_user)
+        request: Request, form_data: AdminConfig, user=Depends(get_admin_user)
 ):
     request.app.state.config.SHOW_ADMIN_DETAILS = form_data.SHOW_ADMIN_DETAILS
     request.app.state.config.ENABLE_SIGNUP = form_data.ENABLE_SIGNUP

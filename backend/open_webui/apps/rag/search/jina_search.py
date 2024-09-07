@@ -1,9 +1,10 @@
 import logging
 
 import requests
+from yarl import URL
+
 from open_webui.apps.rag.search.main import SearchResult
 from open_webui.env import SRC_LOG_LEVELS
-from yarl import URL
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])

@@ -3,9 +3,10 @@ import time
 import uuid
 from typing import Optional
 
-from open_webui.apps.webui.internal.db import Base, get_db
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text
+
+from open_webui.apps.webui.internal.db import Base, get_db
 
 
 ####################
@@ -139,8 +140,8 @@ class ChatTable:
             # Update the original chat with the share_id
             result = (
                 db.query(Chat)
-                .filter_by(id=chat_id)
-                .update({"share_id": shared_chat.id})
+                    .filter_by(id=chat_id)
+                    .update({"share_id": shared_chat.id})
             )
             db.commit()
             return shared_chat if (shared_result and result) else None
@@ -171,7 +172,7 @@ class ChatTable:
             return False
 
     def update_chat_share_id_by_id(
-        self, id: str, share_id: Optional[str]
+            self, id: str, share_id: Optional[str]
     ) -> Optional[ChatModel]:
         try:
             with get_db() as db:
@@ -204,24 +205,24 @@ class ChatTable:
             return False
 
     def get_archived_chat_list_by_user_id(
-        self, user_id: str, skip: int = 0, limit: int = 50
+            self, user_id: str, skip: int = 0, limit: int = 50
     ) -> list[ChatModel]:
         with get_db() as db:
             all_chats = (
                 db.query(Chat)
-                .filter_by(user_id=user_id, archived=True)
-                .order_by(Chat.updated_at.desc())
-                # .limit(limit).offset(skip)
-                .all()
+                    .filter_by(user_id=user_id, archived=True)
+                    .order_by(Chat.updated_at.desc())
+                    # .limit(limit).offset(skip)
+                    .all()
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chat_list_by_user_id(
-        self,
-        user_id: str,
-        include_archived: bool = False,
-        skip: int = 0,
-        limit: int = 50,
+            self,
+            user_id: str,
+            include_archived: bool = False,
+            skip: int = 0,
+            limit: int = 50,
     ) -> list[ChatModel]:
         with get_db() as db:
             query = db.query(Chat).filter_by(user_id=user_id)
@@ -229,17 +230,17 @@ class ChatTable:
                 query = query.filter_by(archived=False)
             all_chats = (
                 query.order_by(Chat.updated_at.desc())
-                # .limit(limit).offset(skip)
-                .all()
+                    # .limit(limit).offset(skip)
+                    .all()
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chat_title_id_list_by_user_id(
-        self,
-        user_id: str,
-        include_archived: bool = False,
-        skip: Optional[int] = None,
-        limit: Optional[int] = None,
+            self,
+            user_id: str,
+            include_archived: bool = False,
+            skip: Optional[int] = None,
+            limit: Optional[int] = None,
     ) -> list[ChatTitleIdResponse]:
         with get_db() as db:
             query = db.query(Chat).filter_by(user_id=user_id)
@@ -271,15 +272,15 @@ class ChatTable:
             ]
 
     def get_chat_list_by_chat_ids(
-        self, chat_ids: list[str], skip: int = 0, limit: int = 50
+            self, chat_ids: list[str], skip: int = 0, limit: int = 50
     ) -> list[ChatModel]:
         with get_db() as db:
             all_chats = (
                 db.query(Chat)
-                .filter(Chat.id.in_(chat_ids))
-                .filter_by(archived=False)
-                .order_by(Chat.updated_at.desc())
-                .all()
+                    .filter(Chat.id.in_(chat_ids))
+                    .filter_by(archived=False)
+                    .order_by(Chat.updated_at.desc())
+                    .all()
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
@@ -315,8 +316,8 @@ class ChatTable:
         with get_db() as db:
             all_chats = (
                 db.query(Chat)
-                # .limit(limit).offset(skip)
-                .order_by(Chat.updated_at.desc())
+                    # .limit(limit).offset(skip)
+                    .order_by(Chat.updated_at.desc())
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
@@ -324,8 +325,8 @@ class ChatTable:
         with get_db() as db:
             all_chats = (
                 db.query(Chat)
-                .filter_by(user_id=user_id)
-                .order_by(Chat.updated_at.desc())
+                    .filter_by(user_id=user_id)
+                    .order_by(Chat.updated_at.desc())
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
@@ -333,8 +334,8 @@ class ChatTable:
         with get_db() as db:
             all_chats = (
                 db.query(Chat)
-                .filter_by(user_id=user_id, archived=True)
-                .order_by(Chat.updated_at.desc())
+                    .filter_by(user_id=user_id, archived=True)
+                    .order_by(Chat.updated_at.desc())
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 

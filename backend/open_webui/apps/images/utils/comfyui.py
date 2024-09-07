@@ -7,8 +7,9 @@ import urllib.request
 from typing import Optional
 
 import websocket  # NOTE: websocket-client (https://github.com/websocket-client/websocket-client)
-from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel
+
+from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["COMFYUI"])
@@ -113,7 +114,7 @@ class ComfyUIGenerateImageForm(BaseModel):
 
 
 async def comfyui_generate_image(
-    model: str, payload: ComfyUIGenerateImageForm, client_id, base_url
+        model: str, payload: ComfyUIGenerateImageForm, client_id, base_url
 ):
     ws_url = base_url.replace("http://", "ws://").replace("https://", "wss://")
     workflow = json.loads(payload.workflow.workflow)

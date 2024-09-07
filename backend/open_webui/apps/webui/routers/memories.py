@@ -2,11 +2,12 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
+
 from open_webui.apps.webui.models.memories import Memories, MemoryModel
 from open_webui.config import CHROMA_CLIENT
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.utils.utils import get_verified_user
-from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -44,9 +45,9 @@ class MemoryUpdateModel(BaseModel):
 
 @router.post("/add", response_model=Optional[MemoryModel])
 async def add_memory(
-    request: Request,
-    form_data: AddMemoryForm,
-    user=Depends(get_verified_user),
+        request: Request,
+        form_data: AddMemoryForm,
+        user=Depends(get_verified_user),
 ):
     memory = Memories.insert_new_memory(user.id, form_data.content)
     memory_embedding = request.app.state.EMBEDDING_FUNCTION(memory.content)
@@ -74,7 +75,7 @@ class QueryMemoryForm(BaseModel):
 
 @router.post("/query")
 async def query_memory(
-    request: Request, form_data: QueryMemoryForm, user=Depends(get_verified_user)
+        request: Request, form_data: QueryMemoryForm, user=Depends(get_verified_user)
 ):
     query_embedding = request.app.state.EMBEDDING_FUNCTION(form_data.content)
     collection = CHROMA_CLIENT.get_or_create_collection(name=f"user-memory-{user.id}")
@@ -92,7 +93,7 @@ async def query_memory(
 ############################
 @router.post("/reset", response_model=bool)
 async def reset_memory_from_vector_db(
-    request: Request, user=Depends(get_verified_user)
+        request: Request, user=Depends(get_verified_user)
 ):
     CHROMA_CLIENT.delete_collection(f"user-memory-{user.id}")
     collection = CHROMA_CLIENT.get_or_create_collection(name=f"user-memory-{user.id}")
@@ -134,10 +135,10 @@ async def delete_memory_by_user_id(user=Depends(get_verified_user)):
 
 @router.post("/{memory_id}/update", response_model=Optional[MemoryModel])
 async def update_memory_by_id(
-    memory_id: str,
-    request: Request,
-    form_data: MemoryUpdateModel,
-    user=Depends(get_verified_user),
+        memory_id: str,
+        request: Request,
+        form_data: MemoryUpdateModel,
+        user=Depends(get_verified_user),
 ):
     memory = Memories.update_memory_by_id(memory_id, form_data.content)
     if memory is None:

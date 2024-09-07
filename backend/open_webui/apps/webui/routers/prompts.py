@@ -1,11 +1,13 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
+
 from open_webui.apps.webui.models.prompts import PromptForm, PromptModel, Prompts
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.utils import get_admin_user, get_verified_user
 
 router = APIRouter()
+
 
 ############################
 # GetPrompts
@@ -65,9 +67,9 @@ async def get_prompt_by_command(command: str, user=Depends(get_verified_user)):
 
 @router.post("/command/{command}/update", response_model=Optional[PromptModel])
 async def update_prompt_by_command(
-    command: str,
-    form_data: PromptForm,
-    user=Depends(get_admin_user),
+        command: str,
+        form_data: PromptForm,
+        user=Depends(get_admin_user),
 ):
     prompt = Prompts.update_prompt_by_command(f"/{command}", form_data)
     if prompt:

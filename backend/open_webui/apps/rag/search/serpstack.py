@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 
 import requests
+
 from open_webui.apps.rag.search.main import SearchResult, get_filtered_results
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -10,11 +11,11 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_serpstack(
-    api_key: str,
-    query: str,
-    count: int,
-    filter_list: Optional[list[str]] = None,
-    https_enabled: bool = True,
+        api_key: str,
+        query: str,
+        count: int,
+        filter_list: Optional[list[str]] = None,
+        https_enabled: bool = True,
 ) -> list[SearchResult]:
     """Search using serpstack.com's and return the results as a list of SearchResult objects.
 

@@ -3,12 +3,9 @@ from pathlib import Path
 
 import black
 import markdown
-<<<<<<< HEAD
-=======
 from open_webui.config import DATA_DIR, ENABLE_ADMIN_EXPORT
 from open_webui.env import FONTS_DIR
 from open_webui.constants import ERROR_MESSAGES
->>>>>>> 2544f7eaf0c71bc668963b9a0c0d160e6c0a7707
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fpdf import FPDF
 from open_webui.config import DATA_DIR, ENABLE_ADMIN_EXPORT

@@ -2,10 +2,11 @@ import logging
 import time
 from typing import Optional
 
-from open_webui.apps.webui.internal.db import Base, JSONField, get_db
-from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, Text
+
+from open_webui.apps.webui.internal.db import Base, JSONField, get_db
+from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -109,7 +110,7 @@ class ModelForm(BaseModel):
 
 class ModelsTable:
     def insert_new_model(
-        self, form_data: ModelForm, user_id: str
+            self, form_data: ModelForm, user_id: str
     ) -> Optional[ModelModel]:
         model = ModelModel(
             **{
@@ -152,8 +153,8 @@ class ModelsTable:
                 # update only the fields that are present in the model
                 result = (
                     db.query(Model)
-                    .filter_by(id=id)
-                    .update(model.model_dump(exclude={"id"}, exclude_none=True))
+                        .filter_by(id=id)
+                        .update(model.model_dump(exclude={"id"}, exclude_none=True))
                 )
                 db.commit()
 

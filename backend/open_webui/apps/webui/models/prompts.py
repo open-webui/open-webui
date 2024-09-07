@@ -1,9 +1,10 @@
 import time
 from typing import Optional
 
-from open_webui.apps.webui.internal.db import Base, get_db
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text
+
+from open_webui.apps.webui.internal.db import Base, get_db
 
 
 ####################
@@ -44,7 +45,7 @@ class PromptForm(BaseModel):
 
 class PromptsTable:
     def insert_new_prompt(
-        self, user_id: str, form_data: PromptForm
+            self, user_id: str, form_data: PromptForm
     ) -> Optional[PromptModel]:
         prompt = PromptModel(
             **{
@@ -84,7 +85,7 @@ class PromptsTable:
             ]
 
     def update_prompt_by_command(
-        self, command: str, form_data: PromptForm
+            self, command: str, form_data: PromptForm
     ) -> Optional[PromptModel]:
         try:
             with get_db() as db:

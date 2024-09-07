@@ -1,10 +1,11 @@
 import time
 from typing import Optional
 
-from open_webui.apps.webui.internal.db import Base, JSONField, get_db
-from open_webui.apps.webui.models.chats import Chats
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text
+
+from open_webui.apps.webui.internal.db import Base, JSONField, get_db
+from open_webui.apps.webui.models.chats import Chats
 
 ####################
 # User DB Schema
@@ -83,13 +84,13 @@ class UserUpdateForm(BaseModel):
 
 class UsersTable:
     def insert_new_user(
-        self,
-        id: str,
-        name: str,
-        email: str,
-        profile_image_url: str = "/user.png",
-        role: str = "pending",
-        oauth_sub: Optional[str] = None,
+            self,
+            id: str,
+            name: str,
+            email: str,
+            profile_image_url: str = "/user.png",
+            role: str = "pending",
+            oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
             init_settings = UserSettings()
@@ -153,8 +154,8 @@ class UsersTable:
         with get_db() as db:
             users = (
                 db.query(User)
-                # .offset(skip).limit(limit)
-                .all()
+                    # .offset(skip).limit(limit)
+                    .all()
             )
             return [UserModel.model_validate(user) for user in users]
 
@@ -181,7 +182,7 @@ class UsersTable:
             return None
 
     def update_user_profile_image_url_by_id(
-        self, id: str, profile_image_url: str
+            self, id: str, profile_image_url: str
     ) -> Optional[UserModel]:
         try:
             with get_db() as db:
@@ -209,7 +210,7 @@ class UsersTable:
             return None
 
     def update_user_oauth_sub_by_id(
-        self, id: str, oauth_sub: str
+            self, id: str, oauth_sub: str
     ) -> Optional[UserModel]:
         try:
             with get_db() as db:

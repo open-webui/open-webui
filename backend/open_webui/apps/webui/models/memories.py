@@ -2,9 +2,10 @@ import time
 import uuid
 from typing import Optional
 
-from open_webui.apps.webui.internal.db import Base, get_db
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text
+
+from open_webui.apps.webui.internal.db import Base, get_db
 
 
 ####################
@@ -39,9 +40,9 @@ class MemoryModel(BaseModel):
 
 class MemoriesTable:
     def insert_new_memory(
-        self,
-        user_id: str,
-        content: str,
+            self,
+            user_id: str,
+            content: str,
     ) -> Optional[MemoryModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
@@ -65,9 +66,9 @@ class MemoriesTable:
                 return None
 
     def update_memory_by_id(
-        self,
-        id: str,
-        content: str,
+            self,
+            id: str,
+            content: str,
     ) -> Optional[MemoryModel]:
         with get_db() as db:
             try:

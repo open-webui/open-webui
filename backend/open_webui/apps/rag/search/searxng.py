@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 
 import requests
+
 from open_webui.apps.rag.search.main import SearchResult, get_filtered_results
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -10,11 +11,11 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_searxng(
-    query_url: str,
-    query: str,
-    count: int,
-    filter_list: Optional[list[str]] = None,
-    **kwargs,
+        query_url: str,
+        query: str,
+        count: int,
+        filter_list: Optional[list[str]] = None,
+        **kwargs,
 ) -> list[SearchResult]:
     """
     Search a SearXNG instance for a given query and return the results as a list of SearchResult objects.

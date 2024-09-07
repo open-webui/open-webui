@@ -8,17 +8,13 @@ Create Date: 2024-06-24 13:15:33.808998
 
 from typing import Sequence, Union
 
-import apps.webui.internal.db
 import sqlalchemy as sa
 from alembic import op
-<<<<<<< HEAD
 from migrations.util import get_existing_tables
-=======
 
 import open_webui.apps.webui.internal.db
 from open_webui.apps.webui.internal.db import JSONField
 from open_webui.migrations.util import get_existing_tables
->>>>>>> 2544f7eaf0c71bc668963b9a0c0d160e6c0a7707
 
 # revision identifiers, used by Alembic.
 revision: str = "7e5b5dc7342b"

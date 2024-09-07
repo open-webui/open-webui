@@ -2,6 +2,8 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel
+
 from open_webui.apps.webui.models.auths import Auths
 from open_webui.apps.webui.models.chats import Chats
 from open_webui.apps.webui.models.users import (
@@ -14,7 +16,6 @@ from open_webui.apps.webui.models.users import (
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.utils.utils import get_admin_user, get_password_hash, get_verified_user
-from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])

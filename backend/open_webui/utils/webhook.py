@@ -2,6 +2,7 @@ import json
 import logging
 
 import requests
+
 from open_webui.env import SRC_LOG_LEVELS, VERSION, WEBUI_FAVICON_URL, WEBUI_NAME
 
 log = logging.getLogger(__name__)

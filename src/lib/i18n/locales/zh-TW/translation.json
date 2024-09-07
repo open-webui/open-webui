@@ -382,12 +382,8 @@
 	"large language models, locally.": "在本機執行大型語言模型。",
 	"Last Active": "上次活動時間",
 	"Last Modified": "上次修改時間",
-<<<<<<< HEAD
 	"Leave empty for unlimited": "留空無限制",
-=======
-	"Leave empty for unlimited": "",
 	"Leave empty to use the default prompt, or enter a custom prompt": "",
->>>>>>> 2544f7eaf0c71bc668963b9a0c0d160e6c0a7707
 	"Light": "淺色",
 	"Listening...": "正在聆聽...",
 	"LLMs can make mistakes. Verify important information.": "大型語言模型可能會出錯。請驗證重要資訊。",

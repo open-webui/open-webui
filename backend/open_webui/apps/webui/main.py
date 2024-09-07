@@ -6,6 +6,8 @@ from typing import AsyncGenerator, Generator, Iterator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+
 from open_webui.apps.socket.main import get_event_call, get_event_emitter
 from open_webui.apps.webui.models.functions import Functions
 from open_webui.apps.webui.models.models import Models
@@ -54,10 +56,7 @@ from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
 )
-
-
 from open_webui.utils.tools import get_tools
-from pydantic import BaseModel
 
 app = FastAPI()
 

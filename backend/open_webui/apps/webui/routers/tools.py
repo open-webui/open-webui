@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+
 from open_webui.apps.webui.models.tools import ToolForm, ToolModel, ToolResponse, Tools
 from open_webui.apps.webui.utils import load_toolkit_module_by_id, replace_imports
 from open_webui.config import CACHE_DIR, DATA_DIR
@@ -13,8 +14,8 @@ from open_webui.utils.utils import get_admin_user, get_verified_user
 TOOLS_DIR = f"{DATA_DIR}/tools"
 os.makedirs(TOOLS_DIR, exist_ok=True)
 
-
 router = APIRouter()
+
 
 ############################
 # GetToolkits
@@ -45,9 +46,9 @@ async def get_toolkits(user=Depends(get_admin_user)):
 
 @router.post("/create", response_model=Optional[ToolResponse])
 async def create_new_toolkit(
-    request: Request,
-    form_data: ToolForm,
-    user=Depends(get_admin_user),
+        request: Request,
+        form_data: ToolForm,
+        user=Depends(get_admin_user),
 ):
     if not form_data.id.isidentifier():
         raise HTTPException(
@@ -120,10 +121,10 @@ async def get_toolkit_by_id(id: str, user=Depends(get_admin_user)):
 
 @router.post("/id/{id}/update", response_model=Optional[ToolModel])
 async def update_toolkit_by_id(
-    request: Request,
-    id: str,
-    form_data: ToolForm,
-    user=Depends(get_admin_user),
+        request: Request,
+        id: str,
+        form_data: ToolForm,
+        user=Depends(get_admin_user),
 ):
     try:
         form_data.content = replace_imports(form_data.content)
@@ -208,7 +209,7 @@ async def get_toolkit_valves_by_id(id: str, user=Depends(get_admin_user)):
 
 @router.get("/id/{id}/valves/spec", response_model=Optional[dict])
 async def get_toolkit_valves_spec_by_id(
-    request: Request, id: str, user=Depends(get_admin_user)
+        request: Request, id: str, user=Depends(get_admin_user)
 ):
     toolkit = Tools.get_tool_by_id(id)
     if toolkit:
@@ -236,7 +237,7 @@ async def get_toolkit_valves_spec_by_id(
 
 @router.post("/id/{id}/valves/update", response_model=Optional[dict])
 async def update_toolkit_valves_by_id(
-    request: Request, id: str, form_data: dict, user=Depends(get_admin_user)
+        request: Request, id: str, form_data: dict, user=Depends(get_admin_user)
 ):
     toolkit = Tools.get_tool_by_id(id)
     if toolkit:
@@ -299,7 +300,7 @@ async def get_toolkit_user_valves_by_id(id: str, user=Depends(get_verified_user)
 
 @router.get("/id/{id}/valves/user/spec", response_model=Optional[dict])
 async def get_toolkit_user_valves_spec_by_id(
-    request: Request, id: str, user=Depends(get_verified_user)
+        request: Request, id: str, user=Depends(get_verified_user)
 ):
     toolkit = Tools.get_tool_by_id(id)
     if toolkit:
@@ -322,7 +323,7 @@ async def get_toolkit_user_valves_spec_by_id(
 
 @router.post("/id/{id}/valves/user/update", response_model=Optional[dict])
 async def update_toolkit_user_valves_by_id(
-    request: Request, id: str, form_data: dict, user=Depends(get_verified_user)
+        request: Request, id: str, form_data: dict, user=Depends(get_verified_user)
 ):
     toolkit = Tools.get_tool_by_id(id)
 

@@ -1,12 +1,13 @@
 import logging
 from contextvars import ContextVar
 
-from open_webui.env import SRC_LOG_LEVELS
 from peewee import *
 from peewee import InterfaceError as PeeWeeInterfaceError
 from peewee import PostgresqlDatabase
 from playhouse.db_url import connect, parse
 from playhouse.shortcuts import ReconnectMixin
+
+from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["DB"])

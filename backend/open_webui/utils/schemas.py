@@ -30,7 +30,7 @@ def json_schema_to_model(tool_dict: dict[str, Any]) -> Type[BaseModel]:
 
 
 def json_schema_to_pydantic_field(
-    name: str, json_schema: dict[str, Any], required: list[str]
+        name: str, json_schema: dict[str, Any], required: list[str]
 ) -> Any:
     """
     Converts a JSON schema property to a Pydantic field definition.

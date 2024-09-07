@@ -2,14 +2,16 @@ import logging
 import time
 from typing import Optional
 
-from open_webui.apps.webui.internal.db import Base, JSONField, get_db
-from open_webui.apps.webui.models.users import Users
-from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text
 
+from open_webui.apps.webui.internal.db import Base, JSONField, get_db
+from open_webui.apps.webui.models.users import Users
+from open_webui.env import SRC_LOG_LEVELS
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
+
 
 ####################
 # Tools DB Schema
@@ -75,7 +77,7 @@ class ToolValves(BaseModel):
 
 class ToolsTable:
     def insert_new_tool(
-        self, user_id: str, form_data: ToolForm, specs: list[dict]
+            self, user_id: str, form_data: ToolForm, specs: list[dict]
     ) -> Optional[ToolModel]:
         with get_db() as db:
             tool = ToolModel(
@@ -134,7 +136,7 @@ class ToolsTable:
             return None
 
     def get_user_valves_by_id_and_user_id(
-        self, id: str, user_id: str
+            self, id: str, user_id: str
     ) -> Optional[dict]:
         try:
             user = Users.get_user_by_id(user_id)
@@ -152,7 +154,7 @@ class ToolsTable:
             return None
 
     def update_user_valves_by_id_and_user_id(
-        self, id: str, user_id: str, valves: dict
+            self, id: str, user_id: str, valves: dict
     ) -> Optional[dict]:
         try:
             user = Users.get_user_by_id(user_id)

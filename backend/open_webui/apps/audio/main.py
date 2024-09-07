@@ -10,6 +10,8 @@ import requests
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
+
 from open_webui.config import (
     AUDIO_STT_ENGINE,
     AUDIO_STT_MODEL,
@@ -33,7 +35,6 @@ from open_webui.config import (
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.utils.utils import get_admin_user, get_current_user, get_verified_user
-from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["AUDIO"])
@@ -104,9 +105,9 @@ def is_mp4_audio(file_path):
 
     info = mediainfo(file_path)
     if (
-        info.get("codec_name") == "aac"
-        and info.get("codec_type") == "audio"
-        and info.get("codec_tag_string") == "mp4a"
+            info.get("codec_name") == "aac"
+            and info.get("codec_type") == "audio"
+            and info.get("codec_tag_string") == "mp4a"
     ):
         return True
     return False
@@ -142,7 +143,7 @@ async def get_audio_config(user=Depends(get_admin_user)):
 
 @app.post("/config/update")
 async def update_audio_config(
-    form_data: AudioConfigUpdateForm, user=Depends(get_admin_user)
+        form_data: AudioConfigUpdateForm, user=Depends(get_admin_user)
 ):
     app.state.config.TTS_OPENAI_API_BASE_URL = form_data.tts.OPENAI_API_BASE_URL
     app.state.config.TTS_OPENAI_API_KEY = form_data.tts.OPENAI_API_KEY
@@ -304,8 +305,8 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
 @app.post("/transcriptions")
 def transcribe(
-    file: UploadFile = File(...),
-    user=Depends(get_current_user),
+        file: UploadFile = File(...),
+        user=Depends(get_current_user),
 ):
     log.info(f"file.content_type: {file.content_type}")
 

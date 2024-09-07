@@ -34,6 +34,9 @@ from langchain_community.document_loaders import (
     YoutubeLoader,
 )
 from langchain_core.documents import Document
+from pydantic import BaseModel
+from pydantic import Field
+
 from open_webui.apps.rag.search.brave import search_brave
 from open_webui.apps.rag.search.duckduckgo import search_duckduckgo
 from open_webui.apps.rag.search.google_pse import search_google_pse
@@ -115,8 +118,6 @@ from open_webui.utils.misc import (
     sanitize_filename,
 )
 from open_webui.utils.utils import get_admin_user, get_verified_user
-from pydantic import BaseModel
-from pydantic import Field
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])

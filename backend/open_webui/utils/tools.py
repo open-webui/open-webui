@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 
 def apply_extra_params_to_tool_function(
-    function: Callable, extra_params: dict
+        function: Callable, extra_params: dict
 ) -> Callable[..., Awaitable]:
     sig = inspect.signature(function)
     extra_params = {
@@ -30,7 +30,7 @@ def apply_extra_params_to_tool_function(
 
 # Mutation on extra_params
 def get_tools(
-    webui_app, tool_ids: list[str], user: UserModel, extra_params: dict
+        webui_app, tool_ids: list[str], user: UserModel, extra_params: dict
 ) -> dict[str, dict]:
     tools = {}
     for tool_id in tool_ids:
@@ -105,8 +105,8 @@ def get_tools_specs(tools) -> list[dict]:
         {"name": func, "function": getattr(tools, func)}
         for func in dir(tools)
         if callable(getattr(tools, func))
-        and not func.startswith("__")
-        and not inspect.isclass(getattr(tools, func))
+           and not func.startswith("__")
+           and not inspect.isclass(getattr(tools, func))
     ]
 
     specs = []
@@ -144,8 +144,8 @@ def get_tools_specs(tools) -> list[dict]:
                             function
                         ).items()
                         if param_name != "return"
-                        and not (
-                            param_name.startswith("__") and param_name.endswith("__")
+                           and not (
+                                param_name.startswith("__") and param_name.endswith("__")
                         )
                     },
                     "required": [
@@ -154,7 +154,7 @@ def get_tools_specs(tools) -> list[dict]:
                             function
                         ).parameters.items()
                         if param.default is param.empty
-                        and not (name.startswith("__") and name.endswith("__"))
+                           and not (name.startswith("__") and name.endswith("__"))
                     ],
                 },
             }

@@ -1,11 +1,13 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+
 from open_webui.apps.webui.models.models import ModelForm, ModelModel, ModelResponse, Models
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.utils import get_admin_user, get_verified_user
 
 router = APIRouter()
+
 
 ###########################
 # getModels
@@ -24,9 +26,9 @@ async def get_models(user=Depends(get_verified_user)):
 
 @router.post("/add", response_model=Optional[ModelModel])
 async def add_new_model(
-    request: Request,
-    form_data: ModelForm,
-    user=Depends(get_admin_user),
+        request: Request,
+        form_data: ModelForm,
+        user=Depends(get_admin_user),
 ):
     if form_data.id in request.app.state.MODELS:
         raise HTTPException(
@@ -70,10 +72,10 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/update", response_model=Optional[ModelModel])
 async def update_model_by_id(
-    request: Request,
-    id: str,
-    form_data: ModelForm,
-    user=Depends(get_admin_user),
+        request: Request,
+        id: str,
+        form_data: ModelForm,
+        user=Depends(get_admin_user),
 ):
     model = Models.get_model_by_id(id)
     if model:

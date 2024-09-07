@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 
 from duckduckgo_search import DDGS
+
 from open_webui.apps.rag.search.main import SearchResult, get_filtered_results
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -10,7 +11,7 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_duckduckgo(
-    query: str, count: int, filter_list: Optional[list[str]] = None
+        query: str, count: int, filter_list: Optional[list[str]] = None
 ) -> list[SearchResult]:
     """
     Search using DuckDuckGo's Search API and return the results as a list of SearchResult objects.

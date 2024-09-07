@@ -1,6 +1,7 @@
 import logging
 
 import requests
+
 from open_webui.apps.rag.search.main import SearchResult
 from open_webui.env import SRC_LOG_LEVELS
 

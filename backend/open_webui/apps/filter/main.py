@@ -6,9 +6,13 @@ import time
 from collections import defaultdict
 
 import aiohttp
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
 from open_webui.apps.filter.wordsSearch import wordsSearch
 from open_webui.apps.webui.routers.chats import request_share_chat_by_id, request_get_chat_by_id
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from open_webui.config import (
     AppConfig,
     ENABLE_MESSAGE_FILTER,
@@ -23,9 +27,6 @@ from open_webui.config import (
     WECHAT_APP_SECRET,
 )
 from open_webui.env import DATA_DIR, SRC_LOG_LEVELS, WEBUI_URL, WEBUI_NAME
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from open_webui.utils.utils import (
     get_admin_user,
 )
@@ -336,8 +337,8 @@ async def content_filter_message(payload: dict, content: str, user):
                         if share_id:
                             log.info(f"Share ID: {share_id}")
                             data = await prepare_data_to_wechatapp(
-                                share_id, user, 
-                                app.state.config.SEND_FILTER_MESSAGE_TYPE,content
+                                share_id, user,
+                                app.state.config.SEND_FILTER_MESSAGE_TYPE, content
                             )
                             await send_message_to_wechatapp(data)
                     else:

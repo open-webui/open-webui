@@ -3,6 +3,7 @@ from typing import Optional
 from urllib.parse import urlencode
 
 import requests
+
 from open_webui.apps.rag.search.main import SearchResult, get_filtered_results
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -11,14 +12,14 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_serply(
-    api_key: str,
-    query: str,
-    count: int,
-    hl: str = "us",
-    limit: int = 10,
-    device_type: str = "desktop",
-    proxy_location: str = "US",
-    filter_list: Optional[list[str]] = None,
+        api_key: str,
+        query: str,
+        count: int,
+        hl: str = "us",
+        limit: int = 10,
+        device_type: str = "desktop",
+        proxy_location: str = "US",
+        filter_list: Optional[list[str]] = None,
 ) -> list[SearchResult]:
     """Search using serper.dev's API and return the results as a list of SearchResult objects.
 

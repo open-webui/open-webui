@@ -335,13 +335,8 @@
 									{showNextMessage}
 									copyToClipboard={copyToClipboardWithToast}
 								/>
-<<<<<<< HEAD
-							{:else if $mobile || (history.messages[message.parentId]?.models?.length ?? 1) === 1}
-								{#key message.id && history.currentId}
-=======
 							{:else if (history.messages[message.parentId]?.models?.length ?? 1) === 1}
 								{#key message.id}
->>>>>>> 2544f7eaf0c71bc668963b9a0c0d160e6c0a7707
 									<ResponseMessage
 										{message}
 										siblings={history.messages[message.parentId]?.childrenIds ?? []}

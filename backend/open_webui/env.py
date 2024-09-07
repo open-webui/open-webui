@@ -9,6 +9,7 @@ from pathlib import Path
 
 import markdown
 from bs4 import BeautifulSoup
+
 from open_webui.constants import ERROR_MESSAGES
 
 ####################################
@@ -30,7 +31,6 @@ try:
     load_dotenv(find_dotenv(str(BASE_DIR / ".env")))
 except ImportError:
     print("dotenv not installed, skipping...")
-
 
 ####################################
 # LOGGING
@@ -73,13 +73,11 @@ for source in log_sources:
 
 log.setLevel(SRC_LOG_LEVELS["CONFIG"])
 
-
 WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
 
 WEBUI_URL = os.environ.get("WEBUI_URL", "http://localhost:3000")
 
-WEBUI_FAVICON_URL =  os.environ.get("WEBUI_FAVICON_URL", f"{WEBUI_URL}/favicon.png")
-
+WEBUI_FAVICON_URL = os.environ.get("WEBUI_FAVICON_URL", f"{WEBUI_URL}/favicon.png")
 
 ####################################
 # ENV (dev,test,prod)
@@ -96,7 +94,6 @@ else:
         PACKAGE_DATA = json.loads((BASE_DIR / "package.json").read_text())
     except Exception:
         PACKAGE_DATA = {"version": "0.0.0"}
-
 
 VERSION = PACKAGE_DATA["version"]
 
@@ -128,7 +125,6 @@ try:
 except Exception:
     changelog_content = (pkgutil.get_data("open_webui", "CHANGELOG.md") or b"").decode()
 
-
 # Convert markdown content to HTML
 html_content = markdown.markdown(changelog_content)
 
@@ -158,7 +154,6 @@ for version in soup.find_all("h2"):
         current = current.find_next_sibling()
 
     changelog_json[version_number] = version_data
-
 
 CHANGELOG = changelog_json
 
@@ -196,7 +191,6 @@ if FROM_INIT_PY:
 
     DATA_DIR = Path(os.getenv("DATA_DIR", OPEN_WEBUI_DIR / "data"))
 
-
 FONTS_DIR = Path(os.getenv("FONTS_DIR", OPEN_WEBUI_DIR / "static" / "fonts"))
 
 FRONTEND_BUILD_DIR = Path(os.getenv("FRONTEND_BUILD_DIR", BASE_DIR / "build")).resolve()
@@ -206,9 +200,8 @@ if FROM_INIT_PY:
         os.getenv("FRONTEND_BUILD_DIR", OPEN_WEBUI_DIR / "frontend")
     ).resolve()
 
-
 RESET_CONFIG_ON_START = (
-    os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
+        os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
 )
 
 if RESET_CONFIG_ON_START:
@@ -237,7 +230,6 @@ DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
 if "postgres://" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")
 
-
 ####################################
 # WEBUI_AUTH (Required for security)
 ####################################
@@ -247,7 +239,6 @@ WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
     "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
 )
 WEBUI_AUTH_TRUSTED_NAME_HEADER = os.environ.get("WEBUI_AUTH_TRUSTED_NAME_HEADER", None)
-
 
 ####################################
 # WEBUI_SECRET_KEY

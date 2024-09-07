@@ -11,6 +11,8 @@ from typing import Optional
 import requests
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
 from open_webui.apps.images.utils.comfyui import (
     ComfyUIGenerateImageForm,
     ComfyUIWorkflow,
@@ -36,7 +38,6 @@ from open_webui.config import (
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.utils.utils import get_admin_user, get_verified_user
-from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["IMAGES"])
@@ -246,7 +247,6 @@ async def get_image_config(user=Depends(get_admin_user)):
 
 @app.post("/image/config/update")
 async def update_image_config(form_data: ImageConfigForm, user=Depends(get_admin_user)):
-
     set_image_model(form_data.MODEL)
 
     pattern = r"^\d+x\d+$"
@@ -325,7 +325,7 @@ def get_models(user=Depends(get_verified_user)):
                     )
                 )
         elif (
-            app.state.config.ENGINE == "automatic1111" or app.state.config.ENGINE == ""
+                app.state.config.ENGINE == "automatic1111" or app.state.config.ENGINE == ""
         ):
             r = requests.get(
                 url=f"{app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/sd-models",
@@ -415,8 +415,8 @@ def save_url_image(url):
 
 @app.post("/generations")
 async def image_generations(
-    form_data: GenerateImageForm,
-    user=Depends(get_verified_user),
+        form_data: GenerateImageForm,
+        user=Depends(get_verified_user),
 ):
     width, height = tuple(map(int, app.state.config.IMAGE_SIZE.split("x")))
 
@@ -508,7 +508,7 @@ async def image_generations(
             log.debug(f"images: {images}")
             return images
         elif (
-            app.state.config.ENGINE == "automatic1111" or app.state.config.ENGINE == ""
+                app.state.config.ENGINE == "automatic1111" or app.state.config.ENGINE == ""
         ):
             if form_data.model:
                 set_image_model(form_data.model)
