@@ -201,9 +201,14 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
         )
 
+    if REGISTERED_EMAIL_SUFFIX and not form_data.email.lower().endswith(REGISTERED_EMAIL_SUFFIX):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_CUSTOMER_EMAIL_FORMAT
+        )
+    
     if Users.get_user_by_email(form_data.email.lower()):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
-
+    
     try:
         role = (
             "admin"
@@ -268,11 +273,6 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
-        )
-    
-    if REGISTERED_EMAIL_SUFFIX and not form_data.email.lower().endswith(REGISTERED_EMAIL_SUFFIX):
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_CUSTOMER_EMAIL_FORMAT
         )
 
     if Users.get_user_by_email(form_data.email.lower()):
