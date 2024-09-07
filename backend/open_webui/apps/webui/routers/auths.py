@@ -4,6 +4,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import Response
 from pydantic import BaseModel
+import aiohttp
 
 from open_webui.apps.webui.models.auths import (
     AddUserForm,
@@ -17,7 +18,7 @@ from open_webui.apps.webui.models.auths import (
     UserResponse,
 )
 from open_webui.apps.webui.models.users import Users
-from open_webui.config import WEBUI_AUTH, REGISTERED_EMAIL_SUFFIX
+from open_webui.config import WEBUI_AUTH, REGISTERED_EMAIL_SUFFIX, TURNSTILE_CHECK, TURNSTILE_SECRET_KEY
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import WEBUI_AUTH_TRUSTED_EMAIL_HEADER, WEBUI_AUTH_TRUSTED_NAME_HEADER
 from open_webui.utils.misc import parse_duration, validate_email_format
@@ -184,17 +185,41 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 # SignUp
 ############################
 
+async def validate_token(token, secret):
+    url = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
+    headers = {'Content-Type': 'application/json'}
+    payload = {
+        'response': token,
+        'secret': secret
+    }
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, json=payload, headers=headers) as response:
+            data = await response.json()
+    
+    return {
+        'success': data.get('success', False),
+        'error': data.get('error-codes', [None])[0]
+    }
+
 
 @router.post("/signup", response_model=SigninResponse)
 async def signup(request: Request, response: Response, form_data: SignupForm):
     if (
-            not request.app.state.config.ENABLE_SIGNUP
-            and request.app.state.config.ENABLE_LOGIN_FORM
-            and WEBUI_AUTH
+        not request.app.state.config.ENABLE_SIGNUP
+        and request.app.state.config.ENABLE_LOGIN_FORM
+        and WEBUI_AUTH
     ):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
         )
+
+    if TURNSTILE_CHECK and TURNSTILE_SECRET_KEY:
+        res = await validate_token(form_data.turnstileToken, TURNSTILE_SECRET_KEY)
+        if not res.get("success", False):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access Prohibited"
+            )
 
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(

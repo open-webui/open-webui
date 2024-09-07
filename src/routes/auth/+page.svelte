@@ -9,6 +9,7 @@
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
 	import { page } from '$app/stores';
 	import { getBackendConfig } from '$lib/apis';
+	import { Turnstile } from 'svelte-turnstile';
 
 	const i18n = getContext('i18n');
 
@@ -18,6 +19,7 @@
 	let name = '';
 	let email = '';
 	let password = '';
+	let turnstileToken = '';
 
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
@@ -44,7 +46,7 @@
 	};
 
 	const signUpHandler = async () => {
-		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
+		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name), turnstileToken).catch(
 			(error) => {
 				toast.error(error);
 				return null;
@@ -205,7 +207,7 @@
 									/>
 								</div>
 
-								<div>
+								<div class="mb-2">
 									<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Password')}</div>
 
 									<input
@@ -217,6 +219,14 @@
 										required
 									/>
 								</div>
+								
+								{#if $config?.turnstile_check}
+									<Turnstile
+										siteKey={$config?.turnstile_site_key}
+										on:callback={(event) => (turnstileToken = event.detail.token)}
+										on:unsupported={() => toast.error('当前浏览器不支持')}
+									/>
+								{/if}
 							</div>
 						{/if}
 

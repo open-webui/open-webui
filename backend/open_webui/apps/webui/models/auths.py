@@ -85,6 +85,7 @@ class SignupForm(BaseModel):
     email: str
     password: str
     profile_image_url: Optional[str] = "/user.png"
+    turnstileToken: str
 
 
 class AddUserForm(SignupForm):

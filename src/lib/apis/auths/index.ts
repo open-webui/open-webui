@@ -146,7 +146,8 @@ export const userSignUp = async (
 	name: string,
 	email: string,
 	password: string,
-	profile_image_url: string
+	profile_image_url: string,
+	turnstileToken: string
 ) => {
 	let error = null;
 
@@ -160,7 +161,8 @@ export const userSignUp = async (
 			name: name,
 			email: email,
 			password: password,
-			profile_image_url: profile_image_url
+			profile_image_url: profile_image_url,
+			turnstileToken: turnstileToken
 		})
 	})
 		.then(async (res) => {

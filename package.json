@@ -41,6 +41,7 @@
 		"svelte": "^4.2.18",
 		"svelte-check": "^3.8.5",
 		"svelte-confetti": "^1.3.2",
+		"svelte-turnstile": "^0.8.0",
 		"tailwindcss": "^3.3.3",
 		"tslib": "^2.4.1",
 		"typescript": "^5.5.4",
