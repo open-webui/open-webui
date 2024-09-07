@@ -218,7 +218,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
         res = await validate_token(form_data.turnstileToken, TURNSTILE_SECRET_KEY)
         if not res.get("success", False):
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Please complete the CAPTCHA verification to proceed!"
+                status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.TURNSTILE_ERROR
             )
 
     if not validate_email_format(form_data.email.lower()):
