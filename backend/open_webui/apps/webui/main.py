@@ -51,11 +51,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from open_webui.utils.misc import (
-    apply_model_params_to_body_openai,
-    apply_model_system_prompt_to_body,
     openai_chat_chunk_message_template,
     openai_chat_completion_message_template,
 )
+from open_webui.utils.payload import (
+    apply_model_params_to_body_openai,
+    apply_model_system_prompt_to_body,
+)
+
+
 from open_webui.utils.tools import get_tools
 
 app = FastAPI()

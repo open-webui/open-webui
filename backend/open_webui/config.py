@@ -898,53 +898,27 @@ TASK_MODEL_EXTERNAL = PersistentConfig(
 TITLE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     "TITLE_GENERATION_PROMPT_TEMPLATE",
     "task.title.prompt_template",
-    os.environ.get(
-        "TITLE_GENERATION_PROMPT_TEMPLATE",
-        """Create a concise, 3-5 word title with an emoji as a title for the prompt in the given language. Suitable Emojis for the summary can be used to enhance understanding but avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
+    os.environ.get("TITLE_GENERATION_PROMPT_TEMPLATE", ""),
+)
 
-Examples of titles:
-📉 Stock Market Trends
-🍪 Perfect Chocolate Chip Recipe
-Evolution of Music Streaming
-Remote Work Productivity Tips
-Artificial Intelligence in Healthcare
-🎮 Video Game Development Insights
-
-Prompt: {{prompt:middletruncate:8000}}""",
-    ),
+ENABLE_SEARCH_QUERY = PersistentConfig(
+    "ENABLE_SEARCH_QUERY",
+    "task.search.enable",
+    os.environ.get("ENABLE_SEARCH_QUERY", "True").lower() == "true",
 )
 
 
 SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE",
     "task.search.prompt_template",
-    os.environ.get(
-        "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE",
-        """You are tasked with generating web search queries. Give me an appropriate query to answer my question for google search. Answer with only the query. Today is {{CURRENT_DATE}}.
-        
-Question:
-{{prompt:end:4000}}""",
-    ),
+    os.environ.get("SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE", ""),
 )
 
-SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD = PersistentConfig(
-    "SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD",
-    "task.search.prompt_length_threshold",
-    int(
-        os.environ.get(
-            "SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD",
-            100,
-        )
-    ),
-)
 
 TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
     "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE",
     "task.tools.prompt_template",
-    os.environ.get(
-        "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE",
-        """Available Tools: {{TOOLS}}\nReturn an empty string if no tools match the query. If a function tool matches, construct and return a JSON object in the format {\"name\": \"functionName\", \"parameters\": {\"requiredFunctionParamKey\": \"requiredFunctionParamValue\"}} using the appropriate tool and its parameters. Only return the object and limit the response to the JSON object without additional text.""",
-    ),
+    os.environ.get("TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE", ""),
 )
 
 
