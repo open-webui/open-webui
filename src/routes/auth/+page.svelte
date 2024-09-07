@@ -215,7 +215,7 @@
 									/>
 								</div>
 
-								<div class="mb-2">
+								<div class="$config?.turnstile_check && mode !== 'signin' ? 'mb-8' : ''">
 									<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Password')}</div>
 
 									<input
@@ -231,6 +231,7 @@
 								{#if $config?.turnstile_check && mode !== 'signin'}
 									<Turnstile
 										siteKey={$config?.turnstile_site_key}
+										size=flexible
 										on:callback={(event) => {
 											turnstileToken = event.detail.token;
 											turnstileVerify = true;
