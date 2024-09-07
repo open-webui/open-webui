@@ -232,6 +232,7 @@
 									<Turnstile
 										siteKey={$config?.turnstile_site_key}
 										size=flexible
+										theme=light
 										on:callback={(event) => {
 											turnstileToken = event.detail.token;
 											turnstileVerify = true;
