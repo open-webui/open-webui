@@ -334,7 +334,7 @@
 									copyToClipboard={copyToClipboardWithToast}
 								/>
 							{:else if (history.messages[message.parentId]?.models?.length ?? 1) === 1}
-								{#key message.id && history.currentId}
+								{#key message.id}
 									<ResponseMessage
 										{message}
 										siblings={history.messages[message.parentId]?.childrenIds ?? []}
