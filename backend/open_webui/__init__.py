@@ -10,14 +10,13 @@ app = typer.Typer()
 
 KEY_FILE = Path.cwd() / ".webui_secret_key"
 
-os.environ["FROM_INIT_PY"] = "true"
-
 
 @app.command()
 def serve(
     host: str = "0.0.0.0",
     port: int = 8080,
 ):
+    os.environ["FROM_INIT_PY"] = "true"
     if os.getenv("WEBUI_SECRET_KEY") is None:
         typer.echo(
             "Loading WEBUI_SECRET_KEY from file, not provided as an environment variable."
