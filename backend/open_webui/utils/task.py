@@ -4,6 +4,9 @@ from datetime import datetime
 from typing import Optional
 
 
+from open_webui.utils.misc import get_last_user_message, get_messages_content
+
+
 def prompt_template(
     template: str, user_name: Optional[str] = None, user_location: Optional[str] = None
 ) -> str:
@@ -37,9 +40,7 @@ def prompt_template(
     return template
 
 
-def title_generation_template(
-    template: str, prompt: str, user: Optional[dict] = None
-) -> str:
+def replace_prompt_variable(template: str, prompt: str) -> str:
     def replacement_function(match):
         full_match = match.group(0)
         start_length = match.group(1)
@@ -66,7 +67,13 @@ def title_generation_template(
         replacement_function,
         template,
     )
+    return template
 
+
+def title_generation_template(
+    template: str, prompt: str, user: Optional[dict] = None
+) -> str:
+    template = replace_prompt_variable(template, prompt)
     template = prompt_template(
         template,
         **(
@@ -79,35 +86,49 @@ def title_generation_template(
     return template
 
 
-def search_query_generation_template(
-    template: str, prompt: str, user: Optional[dict] = None
-) -> str:
+def replace_messages_variable(template: str, messages: list[str]) -> str:
     def replacement_function(match):
         full_match = match.group(0)
         start_length = match.group(1)
         end_length = match.group(2)
         middle_length = match.group(3)
 
-        if full_match == "{{prompt}}":
-            return prompt
+        # Process messages based on the number of messages required
+        if full_match == "{{MESSAGES}}":
+            return get_messages_content(messages)
         elif start_length is not None:
-            return prompt[: int(start_length)]
+            return get_messages_content(messages[: int(start_length)])
         elif end_length is not None:
-            return prompt[-int(end_length) :]
+            return get_messages_content(messages[-int(end_length) :])
         elif middle_length is not None:
-            middle_length = int(middle_length)
-            if len(prompt) <= middle_length:
-                return prompt
-            start = prompt[: math.ceil(middle_length / 2)]
-            end = prompt[-math.floor(middle_length / 2) :]
-            return f"{start}...{end}"
+            mid = int(middle_length)
+
+            if len(messages) <= mid:
+                return get_messages_content(messages)
+            # Handle middle truncation: split to get start and end portions of the messages list
+            half = mid // 2
+            start_msgs = messages[:half]
+            end_msgs = messages[-half:] if mid % 2 == 0 else messages[-(half + 1) :]
+            formatted_start = get_messages_content(start_msgs)
+            formatted_end = get_messages_content(end_msgs)
+            return f"{formatted_start}\n{formatted_end}"
         return ""
 
     template = re.sub(
-        r"{{prompt}}|{{prompt:start:(\d+)}}|{{prompt:end:(\d+)}}|{{prompt:middletruncate:(\d+)}}",
+        r"{{MESSAGES}}|{{MESSAGES:START:(\d+)}}|{{MESSAGES:END:(\d+)}}|{{MESSAGES:MIDDLETRUNCATE:(\d+)}}",
         replacement_function,
         template,
     )
+
+    return template
+
+
+def search_query_generation_template(
+    template: str, messages: list[dict], user: Optional[dict] = None
+) -> str:
+    prompt = get_last_user_message(messages)
+    template = replace_prompt_variable(template, prompt)
+    template = replace_messages_variable(template, messages)
 
     template = prompt_template(
         template,

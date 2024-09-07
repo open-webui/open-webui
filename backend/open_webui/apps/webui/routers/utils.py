@@ -59,6 +59,7 @@ async def download_chat_as_pdf(
     form_data: ChatForm,
 ):
     global FONTS_DIR
+
     pdf = FPDF()
     pdf.add_page()
 
