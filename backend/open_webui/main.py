@@ -1454,10 +1454,11 @@ async def generate_search_query(form_data: dict, user=Depends(get_verified_user)
     else:
         template = """Assess the need for a web search based on the current question and prior interactions, but lean towards suggesting a Google search query if uncertain. Generate a Google search query even when the answer might be straightforward, as additional information may enhance comprehension or provide updated data. If absolutely certain that no further information is required, return an empty string. Default to a search query if unsure or in doubt. Today's date is {{CURRENT_DATE}}.
 
-Interaction History:
-{{MESSAGES:END:6}}
 Current Question:
-{{prompt:end:4000}}"""
+{{prompt:end:4000}}
+
+Interaction History:
+{{MESSAGES:END:6}}"""
 
     content = search_query_generation_template(
         template, form_data["messages"], {"name": user.name}
