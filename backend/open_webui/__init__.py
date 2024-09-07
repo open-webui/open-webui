@@ -10,7 +10,7 @@ app = typer.Typer()
 
 KEY_FILE = Path.cwd() / ".webui_secret_key"
 
-os.environ["RUNNING_FROM_INIT_PY"] = "true"
+os.environ["FROM_INIT_PY"] = "true"
 
 
 @app.command()
