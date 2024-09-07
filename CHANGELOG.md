@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **📄 PDF Download Improvement**: Resolved a configuration issue with fonts directory, ensuring PDFs are now downloaded with the correct formatting.
+- **📄 PDF Download**: Resolved a configuration issue with fonts directory, ensuring PDFs are now downloaded with the correct formatting.
 - **🛠️ Installation of Tools & Functions Requirements**: Fixed a bug where necessary requirements for tools and functions were not properly installing.
 - **🔗 Inline Image Link Rendering**: Enabled rendering of images directly from links in chat.
 - **📞 Post-Call User Interface Cleanup**: Adjusted UI behavior to automatically close chat controls after a voice call ends, reducing screen clutter.
