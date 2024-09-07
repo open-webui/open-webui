@@ -84,7 +84,17 @@
 				class="w-full h-full px-5 py-4 bg-white dark:shadow-lg dark:bg-gray-850 border border-gray-50 dark:border-gray-800 rounded-xl z-50 pointer-events-auto overflow-y-auto scrollbar-hidden"
 			>
 				{#if $showCallOverlay}
-					<CallOverlay bind:files {submitPrompt} {stopResponse} {modelId} {chatId} {eventTarget} />
+					<CallOverlay
+						bind:files
+						{submitPrompt}
+						{stopResponse}
+						{modelId}
+						{chatId}
+						{eventTarget}
+						on:close={() => {
+							show = false;
+						}}
+					/>
 				{:else}
 					<Controls
 						on:close={() => {
