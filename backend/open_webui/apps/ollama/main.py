@@ -28,11 +28,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
 from starlette.background import BackgroundTask
+
+
 from open_webui.utils.misc import (
+    calculate_sha256,
+)
+from open_webui.utils.payload import (
     apply_model_params_to_body_ollama,
     apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
-    calculate_sha256,
 )
 from open_webui.utils.utils import get_admin_user, get_verified_user
 
