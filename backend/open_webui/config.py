@@ -810,6 +810,12 @@ ENABLE_MESSAGE_RATING = PersistentConfig(
     os.environ.get("ENABLE_MESSAGE_RATING", "True").lower() == "true",
 )
 
+ENABLE_WEBSOCKET_SUPPORT = PersistentConfig(
+    "ENABLE_WEBSOCKET_SUPPORT",
+    "ui.enable_websocket_support",
+    os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true",
+)
+
 
 def validate_cors_origins(origins):
     for origin in origins:
