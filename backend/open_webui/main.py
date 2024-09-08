@@ -1452,13 +1452,15 @@ async def generate_search_query(form_data: dict, user=Depends(get_verified_user)
     if app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE != "":
         template = app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE
     else:
-        template = """Assess the need for a web search based on the current user message and prior interactions, but lean towards suggesting a Google search query if uncertain. Generate a Google search query even when the answer might be straightforward, as additional information may enhance comprehension or provide updated data. If absolutely certain that no further information is required, return an empty string. Default to a search query if unsure or in doubt. Today's date is {{CURRENT_DATE}}.
+        template = """Given the user's message and interaction history, decide if a web search is necessary. You must be concise and exclusively provide a search query if one is necessary. Refrain from verbose responses or any additional commentary. Prefer suggesting a search if uncertain to provide comprehensive or updated information. If a search isn't needed at all, respond with an empty string. Default to a search query when in doubt. Today's date is {{CURRENT_DATE}}.
 
 User Message:
 {{prompt:end:4000}}
 
 Interaction History:
-{{MESSAGES:END:6}}"""
+{{MESSAGES:END:6}}
+
+Search Query:"""
 
     content = search_query_generation_template(
         template, form_data["messages"], {"name": user.name}
