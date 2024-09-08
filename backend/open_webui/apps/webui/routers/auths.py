@@ -4,7 +4,6 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import Response
 from pydantic import BaseModel
-import aiohttp
 
 from open_webui.apps.webui.models.auths import (
     AddUserForm,
@@ -195,9 +194,9 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 @router.post("/signup", response_model=SigninResponse)
 async def signup(request: Request, response: Response, form_data: SignupForm):
     if (
-        not request.app.state.config.ENABLE_SIGNUP
-        and request.app.state.config.ENABLE_LOGIN_FORM
-        and WEBUI_AUTH
+            not request.app.state.config.ENABLE_SIGNUP
+            and request.app.state.config.ENABLE_LOGIN_FORM
+            and WEBUI_AUTH
     ):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
@@ -219,10 +218,10 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_CUSTOMER_EMAIL_FORMAT
         )
-    
+
     if Users.get_user_by_email(form_data.email.lower()):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
-    
+
     try:
         role = (
             "admin"

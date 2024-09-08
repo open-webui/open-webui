@@ -1579,7 +1579,6 @@ SEND_FILTER_MESSAGE_TYPE = PersistentConfig(
     os.getenv("SEND_FILTER_MESSAGE_TYPE", "Markdown"),
 )
 
-
 ####################################
 # REGISTERED_EMAIL
 ####################################
