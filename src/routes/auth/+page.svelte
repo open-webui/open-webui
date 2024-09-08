@@ -21,15 +21,7 @@
 	let password = '';
 	let turnstileToken = '';
 	let turnstileVerify = false;
-	let turnstileRef;
-
-	$: if (turnstileVerify && (email || password)) {
-		turnstileToken = '';
-		turnstileVerify = false;
-		if (turnstileRef) {
-			turnstileRef.reset();
-		}
-	}
+	let reset;
 
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
@@ -51,6 +43,7 @@
 			toast.error('Please complete the CAPTCHA verification to proceed!');
 		}
 		const sessionUser = await userSignIn(email, password, turnstileToken).catch((error) => {
+			reset?.();
 			toast.error(error);
 			return null;
 		});
@@ -69,6 +62,7 @@
 			generateInitialsImage(name),
 			turnstileToken
 		).catch((error) => {
+			reset?.();
 			toast.error(error);
 			return null;
 		});
@@ -242,7 +236,7 @@
 
 								{#if $config?.turnstile_check}
 									<Turnstile
-										bind:this={turnstileRef}
+										bind:reset
 										siteKey={$config?.turnstile_site_key}
 										size="flexible"
 										theme="light"
