@@ -143,12 +143,12 @@ def get_admin_user(user=Depends(get_current_user)):
 
 
 async def validate_token(token, secret):
-    if not token:
+    if not token or not secret:
         return {
             'success': False,
-            'error': f'Unexpected error: token or secrect is None'
+            'error': 'Unexpected error: token or secret is None or empty'
         }
-    
+
     url = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
     headers = {'Content-Type': 'application/json'}
     payload = {
@@ -168,6 +168,16 @@ async def validate_token(token, secret):
                     'error': error
                 }
 
+    except aiohttp.ClientError as e:
+        return {
+            'success': False,
+            'error': f'HTTP error: {str(e)}'
+        }
+    except ValueError as e:
+        return {
+            'success': False,
+            'error': f'JSON decode error: {str(e)}'
+        }
     except Exception as e:
         return {
             'success': False,

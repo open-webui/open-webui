@@ -157,7 +157,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             res = await validate_token(form_data.turnstileToken, TURNSTILE_SECRET_KEY)
             if not res.get("success", False):
                 raise HTTPException(
-                    status_code=status.HTTP_401_FORBIDDEN, detail=ERROR_MESSAGES.TURNSTILE_ERROR
+                    status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.TURNSTILE_ERROR
                 )
         user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
 
