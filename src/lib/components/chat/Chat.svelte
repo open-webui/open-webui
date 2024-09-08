@@ -1084,8 +1084,7 @@
 			scrollToBottom();
 		}
 
-		// Check if it's the end of gift-situation by looking for following string in messages:END-STAGE-SITUATION to trigger chat-title-generation
-		if (messages.length >= 2 && selectedModels[0] === model.id && messages.some(message => message.content.includes('END-STAGE-SITUATION'))) {
+		if (messages.length == 5 && selectedModels[0] === model.id) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
 			const _title = await generateChatTitle(userPrompt);
 			await setChatTitle(_chatId, _title);
