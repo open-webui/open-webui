@@ -28,6 +28,7 @@ from open_webui.utils.utils import (
     get_admin_user,
     get_current_user,
     get_password_hash,
+    validate_token,
 )
 from open_webui.utils.webhook import post_webhook
 
@@ -153,6 +154,12 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
             user = Auths.authenticate_user(admin_email.lower(), admin_password)
     else:
+        if TURNSTILE_CHECK and TURNSTILE_SECRET_KEY:
+            res = await validate_token(form_data.turnstileToken, TURNSTILE_SECRET_KEY)
+            if not res.get("success", False):
+                raise HTTPException(
+                    status_code=status.HTTP_401_FORBIDDEN, detail=ERROR_MESSAGES.TURNSTILE_ERROR
+                )
         user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
 
     if user:
@@ -184,33 +191,6 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 ############################
 # SignUp
 ############################
-
-async def validate_token(token, secret):
-    url = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
-    headers = {'Content-Type': 'application/json'}
-    payload = {
-        'response': token,
-        'secret': secret
-    }
-    
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=payload, headers=headers) as response:
-                response.raise_for_status()
-                data = await response.json()
-                error_codes = data.get('error-codes', [])
-                error = error_codes[0] if error_codes else None
-                return {
-                    'success': data.get('success', False),
-                    'error': error
-                }
-            
-    except Exception as e:
-        return {
-            'success': False,
-            'error': f'Unexpected error: {str(e)}'
-        }
-
 
 @router.post("/signup", response_model=SigninResponse)
 async def signup(request: Request, response: Response, form_data: SignupForm):

@@ -139,3 +139,30 @@ def get_admin_user(user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
     return user
+
+
+async def validate_token(token, secret):
+    url = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
+    headers = {'Content-Type': 'application/json'}
+    payload = {
+        'response': token,
+        'secret': secret
+    }
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, headers=headers) as response:
+                response.raise_for_status()
+                data = await response.json()
+                error_codes = data.get('error-codes', [])
+                error = error_codes[0] if error_codes else None
+                return {
+                    'success': data.get('success', False),
+                    'error': error
+                }
+            
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Unexpected error: {str(e)}'
+        }

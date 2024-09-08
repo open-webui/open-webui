@@ -38,7 +38,10 @@
 	};
 
 	const signInHandler = async () => {
-		const sessionUser = await userSignIn(email, password).catch((error) => {
+		if ($config?.turnstile_check && !turnstileVerify) {
+			toast.error('Please complete the CAPTCHA verification to proceed!');
+		}
+		const sessionUser = await userSignIn(email, password, turnstileToken).catch((error) => {
 			toast.error(error);
 			return null;
 		});
@@ -215,7 +218,7 @@
 									/>
 								</div>
 
-								<div class="{$config?.turnstile_check && mode !== 'signin' ? 'mb-8' : ''}">
+								<div class={$config?.turnstile_check ? 'mb-8' : ''}>
 									<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Password')}</div>
 
 									<input
@@ -228,11 +231,11 @@
 									/>
 								</div>
 
-								{#if $config?.turnstile_check && mode !== 'signin'}
+								{#if $config?.turnstile_check}
 									<Turnstile
 										siteKey={$config?.turnstile_site_key}
-										size=flexible
-										theme=light
+										size="flexible"
+										theme="light"
 										on:callback={(event) => {
 											turnstileToken = event.detail.token;
 											turnstileVerify = true;

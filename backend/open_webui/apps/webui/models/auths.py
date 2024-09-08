@@ -64,6 +64,7 @@ class SigninResponse(Token, UserResponse):
 class SigninForm(BaseModel):
     email: str
     password: str
+    turnstileToken: Optional[str] = None
 
 
 class ProfileImageUrlForm(BaseModel):
@@ -85,7 +86,7 @@ class SignupForm(BaseModel):
     email: str
     password: str
     profile_image_url: Optional[str] = "/user.png"
-    turnstileToken: str
+    turnstileToken: Optional[str] = None
 
 
 class UserForm(BaseModel):
