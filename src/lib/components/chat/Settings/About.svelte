@@ -49,25 +49,28 @@
 			<b> 本站使用协议 </b> <br />
 		</div>
 
-		<div class="text-xm text-gray-700 dark:text-gray-200 w-full justify-between items-cent">
-			<li>
+		<div
+			class="text-xm text-gray-700 dark:text-gray-200 space-y-4 justify-between items-cent"
+			style="width: 95%; margin-left: 2.5%;"
+		>
+			<li style="text-align: justify;">
 				根据<a
 					href="https://www.gov.cn/zhengce/zhengceku/202307/content_6891752.htm"
 					style="color: #3A7B99;">《生成式人工智能服务管理暂行办法》</a
 				>规定生成式人工智能生成的内容应当体现社会主义价值观，严禁生成违法违规内容信息，例如政治言论、淫秽色情、枪支暴力、“科学上网”、军队战争等内容信息，本平台内容由AI生成，用户应当辨别信息的真实性，严禁引导诱导欺骗等方式使用生成式人工智能出现种族、民族、信仰、国别、地域、性别、年龄、职业等歧视；尊重知识产权、商业道德，不得利用算法、数据、平台等优势实施不公平竞争；用户应当尊重他人合法利益，防止生成伤害他人身心健康，损害肖像权、名誉权和个人隐私，侵犯知识产权的内容。
 			</li>
-			<br />
-			<li>本平台内容由AI生成，用户应当自行辨别AI大模型生成的信息的<strong>真实性</strong>！</li>
-			<br />
-			<li><strong>注意：如果在使用过程中出现不明网址和联系方式，请勿相信！</strong></li>
-			<br />
-			<li>
+			<li style="text-align: justify;">
+				本平台内容由AI生成，用户应当自行辨别AI大模型生成的信息的<strong>真实性</strong>！
+			</li>
+			<li style="text-align: justify;">
+				<strong>注意：如果在使用过程中出现不明网址和联系方式，请勿相信！</strong>
+			</li>
+			<li style="text-align: justify;">
 				如果检测到违反<a
 					href="https://www.gov.cn/zhengce/zhengceku/202307/content_6891752.htm"
 					style="color: #3A7B99;">《生成式人工智能服务管理暂行办法》</a
 				>规定，将进行<strong>封号处理！</strong>
 			</li>
-			<br />
 		</div>
 		<!-- <div class="flex space-x-1">
 			<a href="https://discord.gg/5rJgQTnV4s" target="_blank">
