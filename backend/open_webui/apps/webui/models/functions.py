@@ -44,6 +44,7 @@ class FunctionModel(BaseModel):
     type: str
     content: str
     meta: FunctionMeta
+    valves: Optional[dict]
     is_active: bool = False
     is_global: bool = False
     updated_at: int  # timestamp in epoch
@@ -82,11 +83,12 @@ class FunctionValves(BaseModel):
 
 class FunctionsTable:
     def insert_new_function(
-        self, user_id: str, type: str, form_data: FunctionForm
+        self, user_id: str, type: str, form_data: FunctionForm, valve_data: Optional[FunctionValves]
     ) -> Optional[FunctionModel]:
         function = FunctionModel(
             **{
                 **form_data.model_dump(),
+                **valve_data.model_dump(),
                 "user_id": user_id,
                 "type": type,
                 "updated_at": int(time.time()),

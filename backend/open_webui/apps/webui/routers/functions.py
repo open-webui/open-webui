@@ -6,6 +6,7 @@ from open_webui.apps.webui.models.functions import (
     FunctionForm,
     FunctionModel,
     FunctionResponse,
+    FunctionValves,
     Functions,
 )
 from open_webui.apps.webui.utils import load_function_module_by_id, replace_imports
@@ -62,11 +63,15 @@ async def create_new_function(
                 content=form_data.content,
             )
             form_data.meta.manifest = frontmatter
+            
+            valve_data = None
+            if hasattr(function_module, "valves"):
+                valve_data = FunctionValves(valves=function_module.valves.model_dump())
 
             FUNCTIONS = request.app.state.FUNCTIONS
             FUNCTIONS[form_data.id] = function_module
 
-            function = Functions.insert_new_function(user.id, function_type, form_data)
+            function = Functions.insert_new_function(user.id, function_type, form_data, valve_data)
 
             function_cache_dir = Path(CACHE_DIR) / "functions" / form_data.id
             function_cache_dir.mkdir(parents=True, exist_ok=True)
