@@ -168,16 +168,6 @@ async def validate_token(token, secret):
                     'error': error
                 }
 
-    except aiohttp.ClientError as e:
-        return {
-            'success': False,
-            'error': f'HTTP error: {str(e)}'
-        }
-    except ValueError as e:
-        return {
-            'success': False,
-            'error': f'JSON decode error: {str(e)}'
-        }
     except Exception as e:
         return {
             'success': False,

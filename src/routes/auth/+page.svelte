@@ -21,6 +21,15 @@
 	let password = '';
 	let turnstileToken = '';
 	let turnstileVerify = false;
+	let turnstileRef;
+
+	$: if (turnstileVerify && (email || password)) {
+		turnstileToken = '';
+		turnstileVerify = false;
+		if (turnstileRef) {
+			turnstileRef.reset();
+		}
+	}
 
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
@@ -233,6 +242,7 @@
 
 								{#if $config?.turnstile_check}
 									<Turnstile
+										bind:this={turnstileRef}
 										siteKey={$config?.turnstile_site_key}
 										size="flexible"
 										theme="light"
