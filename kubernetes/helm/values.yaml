@@ -83,7 +83,7 @@ hrwebui:
   replicaCount: 1
   image:
     repository: ghcr.io/ciai-engineering/open-webui
-    tag: "local_dev"
+    tag: "git-13c852e"
     pullPolicy: Always
   resources: {}
   imagePullSecrets: 
