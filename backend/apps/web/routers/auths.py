@@ -370,7 +370,7 @@ async def get_api_key(user=Depends(get_current_user)):
         api_key = user.api_key
         return {"api_key": api_key}
     except Exception as e:
-        logging.error(f"Error getting API key for user {user.id}. Exception: {e}")
+        logging.error(f"Error getting API key for user {user.id}. Exception: {e}", exc_info=True)
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_MESSAGES.DEFAULT())
 
 ############################
@@ -417,11 +417,11 @@ async def signin_callback(request: Request):
             "extra_sso": user.extra_sso,
         }
     except IllegalAccountException as e:
-        logging.error(f"Illegal account exception: {e}")
+        logging.error(f"Illegal account exception: {e}", exc_info=True)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.INVALID_ACCOUNT)
     except Exception as e:
-        logging.error(f"Error in signin_callback: {e}")
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error in signin_callback")
+        logging.error(f"Error in signin_callback: {e}", exc_info=True)
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error in signin_callback: {str(e)}")
 
 async def get_sso_user(request: Request):
     """Get SSO user information"""

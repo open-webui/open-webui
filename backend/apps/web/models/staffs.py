@@ -11,6 +11,8 @@ from sqlalchemy import create_engine, Column, String
 from sqlalchemy.orm import declarative_base
 
 from sqlalchemy.orm import sessionmaker
+from contextlib import contextmanager
+from sqlalchemy.exc import SQLAlchemyError
 
 Base = declarative_base()
 
@@ -36,18 +38,28 @@ class Staff(Base):
 class StaffsTable:
     def __init__(self, db):
         self.db = db
+        self.Session = sessionmaker(bind=self.db.engine)
+
+    @contextmanager
+    def session_scope(self):
+        session = self.Session()
+        try:
+            yield session
+            session.commit()
+        except:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
     def get_staff_by_email(self, email: str) -> Optional[Staff]:
         try:
-            self.db.create_all()
-            staff: Staff = self.db.query(Staff).filter(Staff.email == email).first()
-            # remove leading and trailing whitespaces, and also new line characters. Because this field's value is not clean.
-            staff.emp_type= staff.emp_type.strip()
-            self.db.close()
-            return staff
-        except Exception as e:
-            logging.error(f"Error getting staff by email: {email}. Exception: {e}")
+            with self.session_scope() as session:
+                result = session.query(Staff).filter(Staff.email == email).first()
+                logging.info(f"Result: {result}")
+                return result
+        except SQLAlchemyError as e:
+            logging.error(f"Error getting staff by email: {email}. Error: {e}", exc_info=True)
             return None
-
 
 Staffs = StaffsTable(MSSQL_DB)
