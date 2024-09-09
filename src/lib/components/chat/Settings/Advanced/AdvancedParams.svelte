@@ -41,7 +41,7 @@
 	}
 </script>
 
-<div class=" space-y-1 text-xs">
+<div class=" space-y-1 text-xs pb-safe-bottom">
 	<div class=" py-0.5 w-full justify-between">
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">{$i18n.t('Seed')}</div>
