@@ -1,16 +1,18 @@
 import logging
-
-from fastapi import Request
-from fastapi import Depends, HTTPException, status
-from fastapi_sso.sso.microsoft import MicrosoftSSO
-from fastapi.responses import RedirectResponse
-from fastapi import APIRouter
-from pydantic import BaseModel
 import re
 import uuid
 import json
+import asyncio
+
+from fastapi import Request, Depends, HTTPException, status, APIRouter
+from fastapi.responses import RedirectResponse
+from fastapi_sso.sso.microsoft import MicrosoftSSO
+from pydantic import BaseModel
+
 from utils.avatar import generate_avatar
 from apps.web.exceptions.exception import IllegalAccountException
+import httpcore
+import httpx
 
 
 from apps.web.models.auths import (
@@ -401,9 +403,9 @@ async def signin_callback(request: Request):
     """Verify login"""
     logging.info(f"Request query params: {request.headers}")
     try:
-        sso_user = await get_sso_user(request)
-        staff_dict = await get_staff_dict(sso_user)
-        user = await get_or_create_user(request, sso_user, staff_dict)
+        sso_user = await retry_operation(lambda: get_sso_user(request))
+        staff_dict = await retry_operation(lambda: get_staff_dict(sso_user))
+        user = await retry_operation(lambda: get_or_create_user(request, sso_user, staff_dict))
         token = create_token(data={"id": user.id}, expires_delta=parse_duration(request.app.state.JWT_EXPIRES_IN))
 
         return {
@@ -423,20 +425,37 @@ async def signin_callback(request: Request):
         logging.error(f"Error in signin_callback: {e}", exc_info=True)
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error in signin_callback: {str(e)}")
 
+async def retry_operation(operation, retries=5, delay=1):
+    """Retry operation"""
+    for attempt in range(retries):
+        try:
+            return await operation()
+        except (httpcore.ConnectError, httpx.ConnectError) as e:
+            logging.warning(f"Connection error on attempt {attempt + 1}/{retries}: {e}", exc_info=True)
+            if attempt == retries - 1:
+                raise
+        await asyncio.sleep(delay)
+    raise Exception("All retry attempts failed")
+
 async def get_sso_user(request: Request):
     """Get SSO user information"""
-    with sso:
-        sso_user = await sso.verify_and_process(request)
-        logging.debug(f"sso.access_token(): {sso.access_token}")
-        return sso_user
+    async def operation():
+        with sso:
+            sso_user = await sso.verify_and_process(request)
+            logging.debug(f"sso.access_token(): {sso.access_token}")
+            return sso_user
+
+    return await retry_operation(operation)
 
 async def get_staff_dict(sso_user):
     """Get staff information dictionary"""
     sso_user_email = sso_user.email.lower()
-    staff = Staffs.get_staff_by_email(sso_user_email)
-    if staff is None:
-        raise IllegalAccountException("Staff is not None")
-    staff_dict = {key: value for key, value in staff.__dict__.items() if key != "_sa_instance_state"}
+    logging.info(f"sso_user_email: {sso_user_email}")
+    staff_dict = Staffs.get_staff_by_email(sso_user_email)
+    if staff_dict is None:
+        raise IllegalAccountException(f"No staff record found for email: {sso_user_email}")
+    if not isinstance(staff_dict, dict):
+        raise TypeError(f"Expected dict, got {type(staff_dict)} for staff_dict")
     staff_dict[ACCESS_TOKEN] = sso.access_token
 
     # Hide access token

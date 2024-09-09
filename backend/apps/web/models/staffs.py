@@ -14,6 +14,8 @@ from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
 from sqlalchemy.exc import SQLAlchemyError
 
+from sqlalchemy.inspection import inspect
+
 Base = declarative_base()
 
 ####################
@@ -52,12 +54,15 @@ class StaffsTable:
         finally:
             session.close()
 
-    def get_staff_by_email(self, email: str) -> Optional[Staff]:
+    def get_staff_by_email(self, email: str) -> Optional[dict]:
         try:
             with self.session_scope() as session:
                 result = session.query(Staff).filter(Staff.email == email).first()
-                logging.info(f"Result: {result}")
-                return result
+                if result:
+                    staff_dict = {c.key: getattr(result, c.key) for c in inspect(result).mapper.column_attrs}
+                    logging.info(f"Result: {staff_dict}")
+                    return staff_dict
+                return None
         except SQLAlchemyError as e:
             logging.error(f"Error getting staff by email: {email}. Error: {e}", exc_info=True)
             return None
