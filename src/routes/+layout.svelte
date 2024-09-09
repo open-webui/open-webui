@@ -38,27 +38,20 @@
 	let loaded = false;
 	const BREAKPOINT = 768;
 
-	const setupSocket = (websocket = true) => {
+	const setupSocket = () => {
 		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
 			reconnection: true,
 			reconnectionDelay: 1000,
 			reconnectionDelayMax: 5000,
 			randomizationFactor: 0.5,
 			path: '/ws/socket.io',
-			auth: { token: localStorage.token },
-			transports: websocket ? ['websocket'] : ['polling']
+			auth: { token: localStorage.token }
 		});
 
 		socket.set(_socket);
 
 		_socket.on('connect_error', (err) => {
-			if (err.message.includes('websocket')) {
-				console.log('WebSocket connection failed, falling back to polling');
-				_socket.close();
-				setupSocket(false);
-			} else {
-				console.log('connect_error', err);
-			}
+			console.log('connect_error', err);
 		});
 
 		_socket.on('connect', () => {
