@@ -1378,13 +1378,13 @@ async def generate_title(form_data: dict, user=Depends(get_verified_user)):
         template = """Create a concise, 3-5 word title for the prompt in the given language for 
         gift-giving-situation. Avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
 
-Examples of titles:
-Annie's Birthday
-Housewarming at the Smiths
-Graduation Sarah
-Friend's Wedding
-
-Prompt: {{prompt:middletruncate:8000}}"""
+        Examples of titles:
+        Annie's Birthday
+        Housewarming at the Smiths
+        Graduation Sarah
+        Friend's Wedding
+        
+        Prompt: {{prompt:middletruncate:8000}}"""
 
     content = title_generation_template(
         template,
