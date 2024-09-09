@@ -2,16 +2,15 @@ import asyncio
 
 import socketio
 from open_webui.apps.webui.models.users import Users
-from open_webui.config import ENABLE_WEBSOCKET_SUPPORT
+from open_webui.env import ENABLE_WEBSOCKET_SUPPORT
 from open_webui.utils.utils import decode_token
 
 sio = socketio.AsyncServer(
     cors_allowed_origins=[],
     async_mode="asgi",
-    transports=(
-        ["polling", "websocket"] if ENABLE_WEBSOCKET_SUPPORT.value else ["polling"]
-    ),
-    allow_upgrades=ENABLE_WEBSOCKET_SUPPORT.value,
+    transports=(["polling", "websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
+    allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
+    always_connect=True,
 )
 app = socketio.ASGIApp(sio, socketio_path="/ws/socket.io")
 
