@@ -17,7 +17,15 @@ export const WEBUI_VERSION = APP_VERSION;
 export const WEBUI_BUILD_HASH = APP_BUILD_HASH;
 export const REQUIRED_OLLAMA_VERSION = '0.1.16';
 
-export const SUPPORTED_FILE_TYPE = [
+export const SUPPORTED_AUDIO_MIME_TYPES = Object.freeze([
+    'audio/mpeg',     // mp3, mpeg, mpga
+    'audio/mp4',      // mp4, m4a
+    'audio/x-m4a',    // m4a
+    'audio/wav',      // wav
+    'audio/webm',     // webm
+]);
+
+export const SUPPORTED_FILE_TYPE = Object.freeze([
 	'application/epub+zip',
 	'application/pdf',
 	'text/plain',
@@ -30,9 +38,8 @@ export const SUPPORTED_FILE_TYPE = [
 	'application/octet-stream',
 	'application/x-javascript',
 	'text/markdown',
-	'audio/mpeg',
-	'audio/wav'
-];
+	...SUPPORTED_AUDIO_MIME_TYPES,
+]);
 
 export const SUPPORTED_FILE_EXTENSIONS = [
 	'md',
@@ -97,3 +104,7 @@ export const SUPPORTED_FILE_EXTENSIONS = [
 // This feature, akin to $env/static/private, exclusively incorporates environment variables
 // that are prefixed with config.kit.env.publicPrefix (usually set to PUBLIC_).
 // Consequently, these variables can be securely exposed to client-side code.
+
+// Define constants for the file size limit
+export const MAX_FILE_SIZE_MB = 25; // 25 MB
+export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
