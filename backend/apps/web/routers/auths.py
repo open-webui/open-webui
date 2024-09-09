@@ -450,10 +450,12 @@ async def get_sso_user(request: Request):
 async def get_staff_dict(sso_user):
     """Get staff information dictionary"""
     sso_user_email = sso_user.email.lower()
-    staff = Staffs.get_staff_by_email(sso_user_email)
-    if staff is None:
-        raise IllegalAccountException("Staff is not None")
-    staff_dict = {key: value for key, value in staff.__dict__.items() if key != "_sa_instance_state"}
+    logging.info(f"sso_user_email: {sso_user_email}")
+    staff_dict = Staffs.get_staff_by_email(sso_user_email)
+    if staff_dict is None:
+        raise IllegalAccountException(f"No staff record found for email: {sso_user_email}")
+    if not isinstance(staff_dict, dict):
+        raise TypeError(f"Expected dict, got {type(staff_dict)} for staff_dict")
     staff_dict[ACCESS_TOKEN] = sso.access_token
 
     # Hide access token
