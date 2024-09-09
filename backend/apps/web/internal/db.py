@@ -34,10 +34,9 @@ router.run()
 DB.connect(reuse_if_open=True)
 
 
-from sqlalchemy import create_engine, Column, Integer, String
-# from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session
+from sqlalchemy.pool import QueuePool
 import urllib
 from config import MSSQL_SERVER, MSSQL_USER, MSSQL_PASSWORD, MSSQL_DATABASE
 
@@ -45,24 +44,32 @@ Base = declarative_base()
 
 class DatabaseConnection:
     def __init__(self, connection_string):
-        self.engine = create_engine(connection_string, echo=True)
-        Session = sessionmaker(bind=self.engine)
-        self.session = Session()
+        self.engine = create_engine(connection_string, echo=True, poolclass=QueuePool, pool_size=10, max_overflow=20)
+        self.Session = scoped_session(sessionmaker(bind=self.engine))
 
     def create_all(self):
         Base.metadata.create_all(self.engine)
 
     def query(self, model):
-        return self.session.query(model)
+        session = self.Session()
+        try:
+            return session.query(model)
+        finally:
+            session.close()
 
-    def commit(self):
-        self.session.commit()
-
-    def close(self):
-        self.session.close()
+    def commit(self, session):
+        try:
+            session.commit()
+        except:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 log.info("Creating a connection to the MSSQL database.")
-params = urllib.parse.quote_plus(f'DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={MSSQL_SERVER};DATABASE={MSSQL_DATABASE};UID={MSSQL_USER};PWD={MSSQL_PASSWORD};Encrypt=Yes;TrustServerCertificate=Yes')
-connection_string = f"mssql+pyodbc:///?odbc_connect=%s" %  params
+params = urllib.parse.quote_plus(
+    f'DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={MSSQL_SERVER};DATABASE={MSSQL_DATABASE};UID={MSSQL_USER};PWD={MSSQL_PASSWORD};Encrypt=Yes;TrustServerCertificate=Yes'
+)
+connection_string = f"mssql+pyodbc:///?odbc_connect={params}"
 MSSQL_DB = DatabaseConnection(connection_string)
 log.info("Connected to the MSSQL database.")
