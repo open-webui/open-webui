@@ -52,11 +52,36 @@
 	let videoInputDevices = [];
 	let selectedVideoInputDeviceId = null;
 
+	let speechRate = 1;
+	let showSpeedMenu = false;
+
+	const speedOptions = [0.5, 1, 1.5, 2, 2.5, 3];
+
+	const toggleSpeedMenu = () => {
+		showSpeedMenu = !showSpeedMenu;
+	};
+
+	const setSpeedRate = (rate: number) => {
+		speechRate = rate;
+		showSpeedMenu = false;
+		updateAudioSpeed();
+	};
+
+	const updateAudioSpeed = () => {
+		if (currentUtterance) {
+			currentUtterance.rate = speechRate;
+		}
+		const audioElement = document.getElementById('audioElement') as HTMLAudioElement;
+		if (audioElement) {
+			audioElement.playbackRate = speechRate;
+		}
+	};
+
 	const getVideoInputDevices = async () => {
 		const devices = await navigator.mediaDevices.enumerateDevices();
 		videoInputDevices = devices.filter((device) => device.kind === 'videoinput');
 
-		if (!!navigator.mediaDevices.getDisplayMedia) {
+		if (navigator.mediaDevices.getDisplayMedia) {
 			videoInputDevices = [
 				...videoInputDevices,
 				{
@@ -360,6 +385,7 @@
 								?.at(0) ?? undefined;
 
 						currentUtterance = new SpeechSynthesisUtterance(content);
+						currentUtterance.rate = speechRate;
 
 						if (voice) {
 							currentUtterance.voice = voice;
@@ -381,11 +407,12 @@
 	const playAudio = (audio) => {
 		if ($showCallOverlay) {
 			return new Promise((resolve) => {
-				const audioElement = document.getElementById('audioElement');
+				const audioElement = document.getElementById('audioElement') as HTMLAudioElement;
 
 				if (audioElement) {
 					audioElement.src = audio.src;
 					audioElement.muted = true;
+					audioElement.playbackRate = speechRate;
 
 					audioElement
 						.play()
@@ -916,6 +943,34 @@
 						{/if}
 					</div>
 				</button>
+			</div>
+
+			<div class="relative">
+				<button on:click={toggleSpeedMenu} class="p-2 rounded-full bg-gray-100 dark:bg-gray-800">
+					<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<polygon points="8,5 8,19 19,12" fill="currentColor"/>
+						<path d="M12 2A10 10 0 0 0 12 22" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="2,2"/>
+						<path d="M12 2A10 10 0 0 1 12 22" fill="none" stroke="currentColor" stroke-width="2"/>
+					</svg>
+				</button>
+				{#if showSpeedMenu}
+					<div 
+						class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg"
+						on:click|self={() => showSpeedMenu = false}
+						role="menu"
+						tabindex="0"
+					>
+						{#each speedOptions as speed}
+							<button 
+								on:click={() => setSpeedRate(speed)}
+								class="block w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 {speechRate === speed ? 'bg-gray-200 dark:bg-gray-600' : ''}"
+								role="menuitem"
+							>
+								{speed}x
+							</button>
+						{/each}
+					</div>
+				{/if}
 			</div>
 
 			<div>
