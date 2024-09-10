@@ -32,7 +32,8 @@ from open_webui.utils.misc import (
     apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
 )
-from open_webui.utils.utils import get_admin_user, get_verified_user, prompt_tokens, completion_tokens
+from open_webui.utils.utils import (get_admin_user, get_verified_user
+, prompt_tokens, completion_tokens)
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
