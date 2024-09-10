@@ -1,10 +1,9 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
-	import { fade } from 'svelte/transition';
-
+	import { onDestroy, onMount, createEventDispatcher } from 'svelte';
 	import { flyAndScale } from '$lib/utils/transitions';
+	import { fade, fly, slide } from 'svelte/transition';
 
-	export let show = true;
+	export let show = false;
 	export let size = 'md';
 
 	let modalElement = null;
@@ -56,30 +55,26 @@
 	});
 </script>
 
-{#if show}
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
+<!-- svelte-ignore a11y-click-events-have-key-events -->
+<!-- svelte-ignore a11y-no-static-element-interactions -->
+
+<div
+	bind:this={modalElement}
+	class="modal fixed right-0 left-0 bottom-0 bg-black/60 w-full h-screen max-h-[100dvh] flex justify-center z-[9999] overflow-hidden overscroll-contain"
+	in:fly={{ y: 100, duration: 100 }}
+	on:mousedown={() => {
+		show = false;
+	}}
+>
 	<div
-		bind:this={modalElement}
-		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full h-screen max-h-[100dvh] flex justify-center z-[9999] overflow-hidden overscroll-contain"
-		in:fade={{ duration: 10 }}
-		on:mousedown={() => {
-			show = false;
+		class=" mt-auto max-w-full w-full bg-gray-50 dark:bg-gray-900 max-h-[100dvh] overflow-y-auto scrollbar-hidden"
+		on:mousedown={(e) => {
+			e.stopPropagation();
 		}}
 	>
-		<div
-			class=" m-auto rounded-2xl max-w-full {sizeToWidth(
-				size
-			)} mx-2 bg-gray-50 dark:bg-gray-900 shadow-3xl max-h-[100dvh] overflow-y-auto scrollbar-hidden"
-			in:flyAndScale
-			on:mousedown={(e) => {
-				e.stopPropagation();
-			}}
-		>
-			<slot />
-		</div>
+		<slot />
 	</div>
-{/if}
+</div>
 
 <style>
 	.modal-content {

@@ -231,7 +231,7 @@
 >
 	<DropdownMenu.Trigger class="relative w-full font-primary" aria-label={placeholder}>
 		<div
-			class="flex w-full text-left px-0.5 outline-none bg-transparent truncate text-lg font-semibold placeholder-gray-400 focus:outline-none"
+			class="flex w-full text-left px-0.5 outline-none bg-transparent truncate text-lg font-medium placeholder-gray-400 focus:outline-none"
 		>
 			{#if selectedModel}
 				{selectedModel.label}
@@ -302,7 +302,7 @@
 					>
 						<div class="flex flex-col">
 							{#if $mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
-								<div class="flex gap-0.5 self-start h-full mb-0.5 -translate-x-1">
+								<div class="flex gap-0.5 self-start h-full mb-1.5 -translate-x-1">
 									{#each item.model?.info?.meta.tags as tag}
 										<div
 											class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
@@ -418,7 +418,7 @@
 						</div>
 
 						{#if value === item.value}
-							<div class="ml-auto pl-2">
+							<div class="ml-auto pl-2 pr-2 md:pr-0">
 								<Check />
 							</div>
 						{/if}

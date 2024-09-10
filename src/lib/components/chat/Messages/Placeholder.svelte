@@ -34,9 +34,9 @@
 </script>
 
 {#key mounted}
-	<div class="m-auto w-full max-w-6xl px-8 lg:px-20 pb-10">
+	<div class="m-auto w-full max-w-6xl px-8 lg:px-20">
 		<div class="flex justify-start">
-			<div class="flex -space-x-4 mb-1" in:fade={{ duration: 200 }}>
+			<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 200 }}>
 				{#each models as model, modelIdx}
 					<button
 						on:click={() => {
@@ -78,7 +78,7 @@
 		{/if}
 
 		<div
-			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 font-semibold text-left flex items-center gap-4 font-primary"
+			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 font-medium text-left flex items-center gap-4 font-primary"
 		>
 			<div>
 				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>

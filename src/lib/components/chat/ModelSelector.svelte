@@ -55,7 +55,9 @@
 			</div>
 
 			{#if selectedModelIdx === 0}
-				<div class="  self-center mr-2 disabled:text-gray-600 disabled:hover:text-gray-600">
+				<div
+					class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
+				>
 					<Tooltip content={$i18n.t('Add Model')}>
 						<button
 							class=" "
@@ -79,7 +81,9 @@
 					</Tooltip>
 				</div>
 			{:else}
-				<div class="  self-center disabled:text-gray-600 disabled:hover:text-gray-600 mr-2">
+				<div
+					class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
+				>
 					<Tooltip content={$i18n.t('Remove Model')}>
 						<button
 							{disabled}
@@ -95,7 +99,7 @@
 								viewBox="0 0 24 24"
 								stroke-width="2"
 								stroke="currentColor"
-								class="size-3.5"
+								class="size-3"
 							>
 								<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" />
 							</svg>
@@ -107,8 +111,8 @@
 	{/each}
 </div>
 
-{#if showSetDefault && !$mobile}
-	<div class="text-left mt-0.5 ml-1 text-[0.7rem] text-gray-500 font-primary">
+{#if showSetDefault}
+	<div class=" absolute text-left mt-[1px] ml-1 text-[0.7rem] text-gray-500 font-primary">
 		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
 	</div>
 {/if}

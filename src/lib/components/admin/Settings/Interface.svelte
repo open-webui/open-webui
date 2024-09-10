@@ -23,8 +23,8 @@
 		TASK_MODEL: '',
 		TASK_MODEL_EXTERNAL: '',
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
-		SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE: '',
-		SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD: 0
+		ENABLE_SEARCH_QUERY: true,
+		SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE: ''
 	};
 
 	let promptSuggestions = [];
@@ -43,7 +43,6 @@
 		taskConfig = await getTaskConfig(localStorage.token);
 
 		promptSuggestions = $config?.default_prompt_suggestions;
-
 		banners = await getBanners(localStorage.token);
 	});
 
@@ -119,33 +118,50 @@
 			</div>
 
 			<div class="mt-3">
-				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Title Generation Prompt')}</div>
-				<textarea
-					bind:value={taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE}
-					class="w-full rounded-lg py-3 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
-					rows="6"
-				/>
+				<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Title Generation Prompt')}</div>
+
+				<Tooltip
+					content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+					placement="top-start"
+				>
+					<textarea
+						bind:value={taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE}
+						class="w-full rounded-lg py-3 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+						rows="3"
+						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+					/>
+				</Tooltip>
 			</div>
 
-			<div class="mt-3">
-				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Search Query Generation Prompt')}</div>
-				<textarea
-					bind:value={taskConfig.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE}
-					class="w-full rounded-lg py-3 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
-					rows="6"
-				/>
-			</div>
+			<hr class=" dark:border-gray-850 my-3" />
 
-			<div class="mt-3">
-				<div class=" mb-2.5 text-sm font-medium">
-					{$i18n.t('Search Query Generation Prompt Length Threshold')}
+			<div class="my-3 flex w-full items-center justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Enable Web Search Query Generation')}
 				</div>
-				<input
-					bind:value={taskConfig.SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD}
-					class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
-					type="number"
-				/>
+
+				<Switch bind:state={taskConfig.ENABLE_SEARCH_QUERY} />
 			</div>
+
+			{#if taskConfig.ENABLE_SEARCH_QUERY}
+				<div class="">
+					<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Search Query Generation Prompt')}</div>
+
+					<Tooltip
+						content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+						placement="top-start"
+					>
+						<textarea
+							bind:value={taskConfig.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE}
+							class="w-full rounded-lg py-3 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+							rows="3"
+							placeholder={$i18n.t(
+								'Leave empty to use the default prompt, or enter a custom prompt'
+							)}
+						/>
+					</Tooltip>
+				</div>
+			{/if}
 		</div>
 
 		<hr class=" dark:border-gray-850 my-3" />

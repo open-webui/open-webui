@@ -28,11 +28,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
 from starlette.background import BackgroundTask
+
+
 from open_webui.utils.misc import (
+    calculate_sha256,
+)
+from open_webui.utils.payload import (
     apply_model_params_to_body_ollama,
     apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
-    calculate_sha256,
 )
 from open_webui.utils.utils import get_admin_user, get_verified_user
 
@@ -539,6 +543,8 @@ class GenerateEmbeddingsForm(BaseModel):
     keep_alive: Optional[Union[int, str]] = None
 
 
+@app.post("/api/embed")
+@app.post("/api/embed/{url_idx}")
 @app.post("/api/embeddings")
 @app.post("/api/embeddings/{url_idx}")
 async def generate_embeddings(
@@ -565,7 +571,7 @@ async def generate_embeddings(
 
     r = requests.request(
         method="POST",
-        url=f"{url}/api/embeddings",
+        url=f"{url}/api/embed",
         headers={"Content-Type": "application/json"},
         data=form_data.model_dump_json(exclude_none=True).encode(),
     )

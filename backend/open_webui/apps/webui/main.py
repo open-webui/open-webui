@@ -51,11 +51,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from open_webui.utils.misc import (
-    apply_model_params_to_body_openai,
-    apply_model_system_prompt_to_body,
     openai_chat_chunk_message_template,
     openai_chat_completion_message_template,
 )
+from open_webui.utils.payload import (
+    apply_model_params_to_body_openai,
+    apply_model_system_prompt_to_body,
+)
+
+
 from open_webui.utils.tools import get_tools
 
 app = FastAPI()
@@ -152,29 +156,33 @@ async def get_pipe_models():
 
         # Check if function is a manifold
         if hasattr(function_module, "pipes"):
-            manifold_pipes = []
+            sub_pipes = []
 
             # Check if pipes is a function or a list
-            if callable(function_module.pipes):
-                manifold_pipes = function_module.pipes()
-            else:
-                manifold_pipes = function_module.pipes
 
-            for p in manifold_pipes:
-                manifold_pipe_id = f'{pipe.id}.{p["id"]}'
-                manifold_pipe_name = p["name"]
+            try:
+                if callable(function_module.pipes):
+                    sub_pipes = function_module.pipes()
+                else:
+                    sub_pipes = function_module.pipes
+            except Exception as e:
+                log.exception(e)
+                sub_pipes = []
+
+            print(sub_pipes)
+
+            for p in sub_pipes:
+                sub_pipe_id = f'{pipe.id}.{p["id"]}'
+                sub_pipe_name = p["name"]
 
                 if hasattr(function_module, "name"):
-                    manifold_pipe_name = f"{function_module.name}{manifold_pipe_name}"
+                    sub_pipe_name = f"{function_module.name}{sub_pipe_name}"
 
                 pipe_flag = {"type": pipe.type}
-                if hasattr(function_module, "ChatValves"):
-                    pipe_flag["valves_spec"] = function_module.ChatValves.schema()
-
                 pipe_models.append(
                     {
-                        "id": manifold_pipe_id,
-                        "name": manifold_pipe_name,
+                        "id": sub_pipe_id,
+                        "name": sub_pipe_name,
                         "object": "model",
                         "created": pipe.created_at,
                         "owned_by": "openai",
@@ -183,8 +191,6 @@ async def get_pipe_models():
                 )
         else:
             pipe_flag = {"type": "pipe"}
-            if hasattr(function_module, "ChatValves"):
-                pipe_flag["valves_spec"] = function_module.ChatValves.schema()
 
             pipe_models.append(
                 {

@@ -5,6 +5,57 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.21] - 2024-09-08
+
+### Added
+
+- **📊 Document Count Display**: Now displays the total number of documents directly within the dashboard.
+- **🚀 Ollama Embed API Endpoint**: Enabled /api/embed endpoint proxy support.
+
+### Fixed
+
+- **🐳 Docker Launch Issue**: Resolved the problem preventing Open-WebUI from launching correctly when using Docker.
+
+### Changed
+
+- **🔍 Enhanced Search Prompts**: Improved the search query generation prompts for better accuracy and user interaction, enhancing the overall search experience.
+
+## [0.3.20] - 2024-09-07
+
+### Added
+
+- **🌐 Translation Update**: Updated Catalan translations to improve user experience for Catalan speakers.
+
+### Fixed
+
+- **📄 PDF Download**: Resolved a configuration issue with fonts directory, ensuring PDFs are now downloaded with the correct formatting.
+- **🛠️ Installation of Tools & Functions Requirements**: Fixed a bug where necessary requirements for tools and functions were not properly installing.
+- **🔗 Inline Image Link Rendering**: Enabled rendering of images directly from links in chat.
+- **📞 Post-Call User Interface Cleanup**: Adjusted UI behavior to automatically close chat controls after a voice call ends, reducing screen clutter.
+- **🎙️ Microphone Deactivation Post-Call**: Addressed an issue where the microphone remained active after calls.
+- **✍️ Markdown Spacing Correction**: Corrected spacing in Markdown rendering, ensuring text appears neatly and as expected.
+- **🔄 Message Re-rendering**: Fixed an issue causing all response messages to re-render with each new message, now improving chat performance.
+
+### Changed
+
+- **🌐 Refined Web Search Integration**: Deprecated the Search Query Generation Prompt threshold; introduced a toggle button for "Enable Web Search Query Generation" allowing users to opt-in to using web search more judiciously.
+- **📝 Default Prompt Templates Update**: Emptied environment variable templates for search and title generation now default to the Open WebUI default prompt templates, simplifying configuration efforts.
+
+## [0.3.19] - 2024-09-05
+
+### Added
+
+- **🌐 Translation Update**: Improved Chinese translations.
+
+### Fixed
+
+- **📂 DATA_DIR Overriding**: Fixed an issue to avoid overriding DATA_DIR, preventing errors when directories are set identically, ensuring smoother operation and data management.
+- **🛠️ Frontmatter Extraction**: Fixed the extraction process for frontmatter in tools and functions.
+
+### Changed
+
+- **🎨 UI Styling**: Refined the user interface styling for enhanced visual coherence and user experience.
+
 ## [0.3.18] - 2024-09-04
 
 ### Added
