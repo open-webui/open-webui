@@ -443,7 +443,7 @@ def get_available_models() -> list[dict]:
 
         try:
             response = requests.get(
-                "https://api.elevenlabs.io/v1/models", headers=headers
+                "https://api.elevenlabs.io/v1/models", headers=headers, timeout=5
             )
             response.raise_for_status()
             models = response.json()
