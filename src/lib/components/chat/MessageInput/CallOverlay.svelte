@@ -7,12 +7,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	import {
-		blobToFile,
-		calculateSHA256,
-		extractSentencesForAudio,
-		findWordIndices
-	} from '$lib/utils';
+	import { blobToFile } from '$lib/utils';
 	import { generateEmoji } from '$lib/apis';
 	import { synthesizeOpenAISpeech, transcribeAudio } from '$lib/apis/audio';
 
@@ -54,31 +49,6 @@
 
 	let videoInputDevices = [];
 	let selectedVideoInputDeviceId = null;
-
-	let speechRate = 1;
-	let showSpeedMenu = false;
-
-	const speedOptions = [2, 1.75, 1.5, 1.25, 1, 0.75, 0.5];
-
-	const toggleSpeedMenu = () => {
-		showSpeedMenu = !showSpeedMenu;
-	};
-
-	const setSpeedRate = (rate: number) => {
-		speechRate = rate;
-		showSpeedMenu = false;
-		updateAudioSpeed();
-	};
-
-	const updateAudioSpeed = () => {
-		if (currentUtterance) {
-			currentUtterance.rate = speechRate;
-		}
-		const audioElement = document.getElementById('audioElement') as HTMLAudioElement;
-		if (audioElement) {
-			audioElement.playbackRate = speechRate;
-		}
-	};
 
 	const getVideoInputDevices = async () => {
 		const devices = await navigator.mediaDevices.enumerateDevices();
@@ -459,6 +429,28 @@
 	};
 
 	let audioAbortController = new AbortController();
+
+	// Audio speed control
+	let speechRate = 1;
+	let showSpeedMenu = false;
+
+	const speedOptions = [2, 1.75, 1.5, 1.25, 1, 0.75, 0.5];
+
+	const setSpeedRate = (rate: number) => {
+		speechRate = rate;
+		showSpeedMenu = false;
+		updateAudioSpeed();
+	};
+
+	const updateAudioSpeed = () => {
+		if (currentUtterance) {
+			currentUtterance.rate = speechRate;
+		}
+		const audioElement = document.getElementById('audioElement') as HTMLAudioElement;
+		if (audioElement) {
+			audioElement.playbackRate = speechRate;
+		}
+	};
 
 	// Audio cache map where key is the content and value is the Audio object.
 	const audioCache = new Map();
