@@ -150,18 +150,20 @@
 				})()
 			]);
 
-			OPENAI_API_BASE_URLS.forEach(async (url, idx) => {
-				const res = await getOpenAIModels(localStorage.token, idx);
-				if (res.pipelines) {
-					pipelineUrls[url] = true;
-				}
-			});
-
 			const ollamaConfig = await getOllamaConfig(localStorage.token);
 			const openaiConfig = await getOpenAIConfig(localStorage.token);
 
 			ENABLE_OPENAI_API = openaiConfig.ENABLE_OPENAI_API;
 			ENABLE_OLLAMA_API = ollamaConfig.ENABLE_OLLAMA_API;
+
+			if (ENABLE_OPENAI_API) {
+				OPENAI_API_BASE_URLS.forEach(async (url, idx) => {
+					const res = await getOpenAIModels(localStorage.token, idx);
+					if (res.pipelines) {
+						pipelineUrls[url] = true;
+					}
+				});
+			}
 		}
 	});
 </script>
