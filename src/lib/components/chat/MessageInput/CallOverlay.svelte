@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { config, models, settings, showCallOverlay } from '$lib/stores';
 	import { onMount, tick, getContext, onDestroy, createEventDispatcher } from 'svelte';
+	import { DropdownMenu } from 'bits-ui';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import { flyAndScale } from '$lib/utils/transitions';
 
 	const dispatch = createEventDispatcher();
 
@@ -55,7 +58,7 @@
 	let speechRate = 1;
 	let showSpeedMenu = false;
 
-	const speedOptions = [0.5, 1, 1.5, 2, 2.5, 3];
+	const speedOptions = [2, 1.75, 1.5, 1.25, 1, 0.75, 0.5];
 
 	const toggleSpeedMenu = () => {
 		showSpeedMenu = !showSpeedMenu;
@@ -946,31 +949,38 @@
 			</div>
 
 			<div class="relative">
-				<button on:click={toggleSpeedMenu} class="p-2 rounded-full bg-gray-100 dark:bg-gray-800">
-					<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-						<polygon points="8,5 8,19 19,12" fill="currentColor"/>
-						<path d="M12 2A10 10 0 0 0 12 22" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="2,2"/>
-						<path d="M12 2A10 10 0 0 1 12 22" fill="none" stroke="currentColor" stroke-width="2"/>
-					</svg>
-				</button>
-				{#if showSpeedMenu}
-					<div 
-						class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg"
-						on:click|self={() => showSpeedMenu = false}
-						role="menu"
-						tabindex="0"
-					>
-						{#each speedOptions as speed}
-							<button 
-								on:click={() => setSpeedRate(speed)}
-								class="block w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 {speechRate === speed ? 'bg-gray-200 dark:bg-gray-600' : ''}"
-								role="menuitem"
-							>
-								{speed}x
-							</button>
-						{/each}
+				<Dropdown bind:show={showSpeedMenu}>
+					<button class="p-2 rounded-full bg-gray-50 dark:bg-gray-900">
+						<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+							<polygon points="8,5 8,19 19,12" fill="currentColor"/>
+							<path d="M12 2A10 10 0 0 0 12 22" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="2,2"/>
+							<path d="M12 2A10 10 0 0 1 12 22" fill="none" stroke="currentColor" stroke-width="2"/>
+						</svg>
+					</button>
+
+					<div slot="content">
+						<DropdownMenu.Content
+							class="w-full max-w-[180px] rounded-lg px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-[9999] bg-white dark:bg-gray-900 dark:text-white shadow-sm"
+							sideOffset={6}
+							side="top"
+							align="start"
+							transition={flyAndScale}
+						>
+							{#each speedOptions as speed}
+								<DropdownMenu.Item
+									class="flex gap-2 items-center px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md {speechRate === speed ? 'bg-gray-200 dark:bg-gray-600' : ''}"
+									on:click={() => setSpeedRate(speed)}
+								>
+									<div class="flex items-center">
+										<div class="line-clamp-1">
+											{speed}x
+										</div>
+									</div>
+								</DropdownMenu.Item>
+							{/each}
+						</DropdownMenu.Content>
 					</div>
-				{/if}
+				</Dropdown>
 			</div>
 
 			<div>
