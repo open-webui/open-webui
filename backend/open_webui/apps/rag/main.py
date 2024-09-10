@@ -12,11 +12,16 @@ from typing import Iterator, Optional, Sequence, Union
 
 import requests
 import validators
+
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+from open_webui.apps.rag.search.main import SearchResult
 from open_webui.apps.rag.search.brave import search_brave
 from open_webui.apps.rag.search.duckduckgo import search_duckduckgo
 from open_webui.apps.rag.search.google_pse import search_google_pse
 from open_webui.apps.rag.search.jina_search import search_jina
-from open_webui.apps.rag.search.main import SearchResult
 from open_webui.apps.rag.search.searchapi import search_searchapi
 from open_webui.apps.rag.search.searxng import search_searxng
 from open_webui.apps.rag.search.serper import search_serper
@@ -33,10 +38,8 @@ from open_webui.apps.rag.utils import (
 )
 from open_webui.apps.webui.models.documents import DocumentForm, Documents
 from open_webui.apps.webui.models.files import Files
-from chromadb.utils.batch_utils import create_batches
 from open_webui.config import (
     BRAVE_SEARCH_API_KEY,
-    CHROMA_CLIENT,
     CHUNK_OVERLAP,
     CHUNK_SIZE,
     CONTENT_EXTRACTION_ENGINE,
@@ -84,8 +87,16 @@ from open_webui.config import (
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS, DEVICE_TYPE
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
-from fastapi.middleware.cors import CORSMiddleware
+from open_webui.utils.misc import (
+    calculate_sha256,
+    calculate_sha256_string,
+    extract_folders_after_data_docs,
+    sanitize_filename,
+)
+from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.apps.rag.vector.connector import VECTOR_DB_CLIENT
+
+from chromadb.utils.batch_utils import create_batches
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import (
     BSHTMLLoader,
@@ -104,14 +115,6 @@ from langchain_community.document_loaders import (
     YoutubeLoader,
 )
 from langchain_core.documents import Document
-from pydantic import BaseModel
-from open_webui.utils.misc import (
-    calculate_sha256,
-    calculate_sha256_string,
-    extract_folders_after_data_docs,
-    sanitize_filename,
-)
-from open_webui.utils.utils import get_admin_user, get_verified_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -142,12 +145,10 @@ app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE = RAG_EMBEDDING_OPENAI_BATCH_SI
 app.state.config.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
 app.state.config.RAG_TEMPLATE = RAG_TEMPLATE
 
-
 app.state.config.OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
 app.state.config.OPENAI_API_KEY = RAG_OPENAI_API_KEY
 
 app.state.config.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
-
 
 app.state.config.YOUTUBE_LOADER_LANGUAGE = YOUTUBE_LOADER_LANGUAGE
 app.state.YOUTUBE_LOADER_TRANSLATION = None
@@ -997,12 +998,12 @@ def store_docs_in_vector_db(
 
     try:
         if overwrite:
-            for collection in CHROMA_CLIENT.list_collections():
+            for collection in VECTOR_DB_CLIENT.list_collections():
                 if collection_name == collection.name:
                     log.info(f"deleting existing collection {collection_name}")
-                    CHROMA_CLIENT.delete_collection(name=collection_name)
+                    VECTOR_DB_CLIENT.delete_collection(name=collection_name)
 
-        collection = CHROMA_CLIENT.create_collection(name=collection_name)
+        collection = VECTOR_DB_CLIENT.create_collection(name=collection_name)
 
         embedding_func = get_embedding_function(
             app.state.config.RAG_EMBEDDING_ENGINE,
@@ -1017,7 +1018,7 @@ def store_docs_in_vector_db(
         embeddings = embedding_func(embedding_texts)
 
         for batch in create_batches(
-            api=CHROMA_CLIENT,
+            api=VECTOR_DB_CLIENT,
             ids=[str(uuid.uuid4()) for _ in texts],
             metadatas=metadatas,
             embeddings=embeddings,
@@ -1395,7 +1396,7 @@ def scan_docs_dir(user=Depends(get_admin_user)):
 
 @app.post("/reset/db")
 def reset_vector_db(user=Depends(get_admin_user)):
-    CHROMA_CLIENT.reset()
+    VECTOR_DB_CLIENT.reset()
 
 
 @app.post("/reset/uploads")
@@ -1436,7 +1437,7 @@ def reset(user=Depends(get_admin_user)) -> bool:
             log.error("Failed to delete %s. Reason: %s" % (file_path, e))
 
     try:
-        CHROMA_CLIENT.reset()
+        VECTOR_DB_CLIENT.reset()
     except Exception as e:
         log.exception(e)
 
