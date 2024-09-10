@@ -1086,7 +1086,7 @@
 
 		if (messages.length == 6 && messages.at(1).content !== '' && selectedModels[0] === model.id) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-			const _title = await generateChatTitle(userPrompt);
+			const _title = await generateChatTitle(messages);
 			await setChatTitle(_chatId, _title);
 		}
 
@@ -1359,7 +1359,7 @@
 		if (messages.length == 6 && selectedModels[0] === model.id) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
 
-			const _title = await generateChatTitle(userPrompt);
+			const _title = await generateChatTitle(messages);
 			await setChatTitle(_chatId, _title);
 		}
 

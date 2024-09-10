@@ -130,6 +130,8 @@ from open_webui.utils.utils import (
 )
 from open_webui.utils.webhook import post_webhook
 
+from utils import open_webui_app_utils as owau
+
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
     Functions.deactivate_all_functions()
@@ -1365,6 +1367,8 @@ async def generate_title(form_data: dict, user=Depends(get_verified_user)):
     model_id = get_task_model_id(model_id)
 
     print(model_id)
+    message_history = owau.build_message_history(form_data["prompt"])
+
 
     if app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE != "":
         template = app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE
@@ -1382,7 +1386,7 @@ async def generate_title(form_data: dict, user=Depends(get_verified_user)):
 
     content = title_generation_template(
         template,
-        form_data["prompt"],
+        message_history,
         {
             "name": user.name,
             "location": user.info.get("location") if user.info else None,
