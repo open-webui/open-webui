@@ -540,40 +540,6 @@ Path(TOOLS_DIR).mkdir(parents=True, exist_ok=True)
 FUNCTIONS_DIR = os.getenv("FUNCTIONS_DIR", f"{DATA_DIR}/functions")
 Path(FUNCTIONS_DIR).mkdir(parents=True, exist_ok=True)
 
-
-####################################
-# LITELLM_CONFIG
-####################################
-
-
-def create_config_file(file_path):
-    directory = os.path.dirname(file_path)
-
-    # Check if directory exists, if not, create it
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
-    # Data to write into the YAML file
-    config_data = {
-        "general_settings": {},
-        "litellm_settings": {},
-        "model_list": [],
-        "router_settings": {},
-    }
-
-    # Write data to YAML file
-    with open(file_path, "w") as file:
-        yaml.dump(config_data, file)
-
-
-LITELLM_CONFIG_PATH = f"{DATA_DIR}/litellm/config.yaml"
-
-# if not os.path.exists(LITELLM_CONFIG_PATH):
-#     log.info("Config file doesn't exist. Creating...")
-#     create_config_file(LITELLM_CONFIG_PATH)
-#     log.info("Config file created successfully.")
-
-
 ####################################
 # OLLAMA_BASE_URL
 ####################################
@@ -1069,15 +1035,6 @@ RAG_RERANKING_MODEL_AUTO_UPDATE = (
 RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get("RAG_RERANKING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
 )
-
-
-# device type embedding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
-USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
-
-if USE_CUDA.lower() == "true":
-    DEVICE_TYPE = "cuda"
-else:
-    DEVICE_TYPE = "cpu"
 
 CHUNK_SIZE = PersistentConfig(
     "CHUNK_SIZE", "rag.chunk_size", int(os.environ.get("CHUNK_SIZE", "1500"))
