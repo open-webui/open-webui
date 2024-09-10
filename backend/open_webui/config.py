@@ -11,7 +11,6 @@ import chromadb
 import requests
 import yaml
 from open_webui.apps.webui.internal.db import Base, get_db
-from chromadb import Settings
 from open_webui.env import (
     OPEN_WEBUI_DIR,
     DATA_DIR,
@@ -926,22 +925,9 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
 # RAG document content extraction
 ####################################
 
-CONTENT_EXTRACTION_ENGINE = PersistentConfig(
-    "CONTENT_EXTRACTION_ENGINE",
-    "rag.CONTENT_EXTRACTION_ENGINE",
-    os.environ.get("CONTENT_EXTRACTION_ENGINE", "").lower(),
-)
+VECTOR_DB = os.environ.get("VECTOR_DB", "chroma")
 
-TIKA_SERVER_URL = PersistentConfig(
-    "TIKA_SERVER_URL",
-    "rag.tika_server_url",
-    os.getenv("TIKA_SERVER_URL", "http://tika:9998"),  # Default for sidecar deployment
-)
-
-####################################
-# RAG
-####################################
-
+# Chroma
 CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
 CHROMA_TENANT = os.environ.get("CHROMA_TENANT", chromadb.DEFAULT_TENANT)
 CHROMA_DATABASE = os.environ.get("CHROMA_DATABASE", chromadb.DEFAULT_DATABASE)
@@ -957,6 +943,23 @@ else:
     CHROMA_HTTP_HEADERS = None
 CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (sentence-transformers/all-MiniLM-L6-v2)
+
+####################################
+# RAG
+####################################
+
+# RAG Content Extraction
+CONTENT_EXTRACTION_ENGINE = PersistentConfig(
+    "CONTENT_EXTRACTION_ENGINE",
+    "rag.CONTENT_EXTRACTION_ENGINE",
+    os.environ.get("CONTENT_EXTRACTION_ENGINE", "").lower(),
+)
+
+TIKA_SERVER_URL = PersistentConfig(
+    "TIKA_SERVER_URL",
+    "rag.tika_server_url",
+    os.getenv("TIKA_SERVER_URL", "http://tika:9998"),  # Default for sidecar deployment
+)
 
 RAG_TOP_K = PersistentConfig(
     "RAG_TOP_K", "rag.top_k", int(os.environ.get("RAG_TOP_K", "5"))
