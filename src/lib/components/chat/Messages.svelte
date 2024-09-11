@@ -284,7 +284,9 @@
 			{submitPrompt}
 		/>
 		{#if $isMobile}
-		<SuggestionsMobile {suggestionPrompts} {submitPrompt} />
+		<div class="px-6 flex flex-col">
+			<SuggestionsMobile {suggestionPrompts} {submitPrompt} />
+		</div>
 		{/if}
 	{:else}
 		<div class="w-full pt-2">
