@@ -277,6 +277,7 @@
 												} else {
 													mode = 'signin';
 												}
+												reset?.();
 											}}
 										>
 											{mode === 'signin' ? $i18n.t('Sign up') : $i18n.t('Sign in')}
