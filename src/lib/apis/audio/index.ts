@@ -109,7 +109,7 @@ export const synthesizeOpenAISpeech = async (
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify({
-			input: text,
+			input: text.replace(/#/g, ''),
 			voice: speaker,
 			...(model && { model })
 		})

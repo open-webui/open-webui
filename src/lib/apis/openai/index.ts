@@ -313,7 +313,7 @@ export const synthesizeOpenAISpeech = async (
 		},
 		body: JSON.stringify({
 			model: model,
-			input: text,
+			input: text.replace(/#/g, ''),
 			voice: speaker
 		})
 	}).catch((err) => {
