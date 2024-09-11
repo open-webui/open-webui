@@ -1,4 +1,5 @@
 import { OPENAI_API_BASE_URL } from '$lib/constants';
+import { removeMarkdown } from '$lib/apis/utils';
 
 export const getOpenAIConfig = async (token: string = '') => {
 	let error = null;
@@ -313,7 +314,7 @@ export const synthesizeOpenAISpeech = async (
 		},
 		body: JSON.stringify({
 			model: model,
-			input: text.replace(/#/g, ''),
+			input: removeMarkdown(text),
 			voice: speaker
 		})
 	}).catch((err) => {

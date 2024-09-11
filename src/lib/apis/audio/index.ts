@@ -1,4 +1,5 @@
 import { AUDIO_API_BASE_URL } from '$lib/constants';
+import { removeMarkdown } from '$lib/apis/utils';
 
 export const getAudioConfig = async (token: string) => {
 	let error = null;
@@ -94,6 +95,8 @@ export const transcribeAudio = async (token: string, file: File) => {
 	return res;
 };
 
+
+
 export const synthesizeOpenAISpeech = async (
 	token: string = '',
 	speaker: string = 'alloy',
@@ -109,7 +112,7 @@ export const synthesizeOpenAISpeech = async (
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify({
-			input: text.replace(/#/g, ''),
+			input: removeMarkdown(text),
 			voice: speaker,
 			...(model && { model })
 		})

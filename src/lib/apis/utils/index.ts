@@ -177,3 +177,18 @@ export const downloadLiteLLMConfig = async (token: string) => {
 		throw error;
 	}
 };
+
+export const removeMarkdown = (text: string) => {
+    text = text.replace(/(^|\s)(#+)\s+/g, ' ');
+    text = text.replace(/(\*\*|__)(.*?)\1/g, '$2');
+    text = text.replace(/(\*|_)(.*?)\1/g, '$2');
+    text = text.replace(/~~(.*?)~~/g, '$1');
+    text = text.replace(/`([^`]+)`/g, '$1');
+    text = text.replace(/```[\s\S]*?```/g, '');
+    text = text.replace(/$$ ([^ $$]+)\]$ [^)]+ $/g, '$1');
+    text = text.replace(/!$$ ([^ $$]*)\]$ [^)]+ $/g, '$1');
+    text = text.replace(/^\s*>+\s?/gm, '');
+    text = text.replace(/^\s*([-*+]|\d+\.)\s+/gm, '');
+    text = text.replace(/\s{2,}/g, ' ').trim();
+    return text;
+}
