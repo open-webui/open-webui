@@ -167,6 +167,7 @@ def query_collection_with_hybrid_search(
     r: float,
 ):
     results = []
+    failed = 0
     for collection_name in collection_names:
         try:
             result = query_doc_with_hybrid_search(
@@ -183,6 +184,10 @@ def query_collection_with_hybrid_search(
                 "Error when querying the collection with "
                 f"hybrid_search: {e}"
             )
+            failed += 1
+    if failed == len(collection_names):
+        raise Exception("Hybrid search failed for all collections. Using "
+                        "Non hybrid search as fallback.")
     return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
@@ -265,19 +270,25 @@ def get_rag_context(
             continue
 
         try:
+            context = None
             if file["type"] == "text":
                 context = file["content"]
             else:
                 if hybrid_search:
-                    context = query_collection_with_hybrid_search(
-                        collection_names=collection_names,
-                        query=query,
-                        embedding_function=embedding_function,
-                        k=k,
-                        reranking_function=reranking_function,
-                        r=r,
-                    )
-                else:
+                    try:
+                        context = query_collection_with_hybrid_search(
+                            collection_names=collection_names,
+                            query=query,
+                            embedding_function=embedding_function,
+                            k=k,
+                            reranking_function=reranking_function,
+                            r=r,
+                        )
+                    except Exception as e:
+                        log.debug("Error when using hybrid search, using"
+                                    " non hybrid search as fallback.")
+
+                if (not hybrid_search) or (context is None):
                     context = query_collection(
                         collection_names=collection_names,
                         query=query,
@@ -286,7 +297,6 @@ def get_rag_context(
                     )
         except Exception as e:
             log.exception(e)
-            context = None
 
         if context:
             relevant_contexts.append({**context, "source": file})
