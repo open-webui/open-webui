@@ -96,10 +96,10 @@ class ChromaClient:
         ids = [item["id"] for item in items]
         documents = [item["text"] for item in items]
         embeddings = [item["vector"] for item in items]
-        metadata = [item["metadata"] for item in items]
+        metadatas = [item["metadata"] for item in items]
 
         collection.upsert(
-            ids=ids, documents=documents, embeddings=embeddings, metadata=metadata
+            ids=ids, documents=documents, embeddings=embeddings, metadatas=metadatas
         )
 
     def delete(self, collection_name: str, ids: list[str]):
