@@ -198,6 +198,12 @@ def rag_template(template: str, context: str, query: str):
         f"RAG template contains an unexpected number of '[context]' : {count}"
     )
     assert "[context]" in template, "RAG template does not contain '[context]'"
+    if "<context>" in context and "</context>" in context:
+        log.debug(
+            "WARNING: Potential prompt injection attack: the RAG "
+            "context contains '<context>' and '</context>'. This might be "
+            "nothing, or the user might be trying to hack something."
+        )
 
     if "[query]" in context:
         query_placeholder = str(uuid.uuid4())
