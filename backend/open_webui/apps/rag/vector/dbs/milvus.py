@@ -80,13 +80,11 @@ class MilvusClient:
             index_params=index_params,
         )
 
-    def list_collections(self) -> list[str]:
-        # List all the collections in the database.
-        return [
-            collection[len(self.collection_prefix) :]
-            for collection in self.client.list_collections()
-            if collection.startswith(self.collection_prefix)
-        ]
+    def has_collection(self, collection_name: str) -> bool:
+        # Check if the collection exists based on the collection name.
+        return self.client.has_collection(
+            collection_name=f"{self.collection_prefix}_{collection_name}"
+        )
 
     def delete_collection(self, collection_name: str):
         # Delete the collection based on the collection name.

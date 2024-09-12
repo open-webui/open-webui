@@ -997,7 +997,7 @@ def store_docs_in_vector_db(
 
     try:
         if overwrite:
-            if collection_name in VECTOR_DB_CLIENT.list_collections():
+            if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
                 log.info(f"deleting existing collection {collection_name}")
                 VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
 
