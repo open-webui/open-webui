@@ -309,7 +309,7 @@ def transcribe(
 ):
     log.info(f"file.content_type: {file.content_type}")
 
-    if file.content_type not in ["audio/mpeg", "audio/wav"]:
+    if file.content_type not in ["audio/mpeg", "audio/wav", "audio/ogg"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.FILE_NOT_SUPPORTED,
