@@ -41,10 +41,6 @@ class ChromaClient:
         collections = self.client.list_collections()
         return [collection.name for collection in collections]
 
-    def create_collection(self, collection_name: str):
-        # Create a new collection based on the collection name.
-        return self.client.create_collection(name=collection_name)
-
     def delete_collection(self, collection_name: str):
         # Delete the collection based on the collection name.
         return self.client.delete_collection(name=collection_name)
@@ -76,7 +72,7 @@ class ChromaClient:
         return None
 
     def insert(self, collection_name: str, items: list[VectorItem]):
-        # Insert the items into the collection.
+        # Insert the items into the collection, if the collection does not exist, it will be created.
         collection = self.client.get_or_create_collection(name=collection_name)
 
         ids = [item["id"] for item in items]
@@ -94,7 +90,7 @@ class ChromaClient:
             collection.add(*batch)
 
     def upsert(self, collection_name: str, items: list[VectorItem]):
-        # Update the items in the collection, if the items are not present, insert them.
+        # Update the items in the collection, if the items are not present, insert them. If the collection does not exist, it will be created.
         collection = self.client.get_or_create_collection(name=collection_name)
 
         ids = [item["id"] for item in items]

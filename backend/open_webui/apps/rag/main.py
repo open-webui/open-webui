@@ -1010,7 +1010,6 @@ def store_docs_in_vector_db(
             app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
         )
 
-        VECTOR_DB_CLIENT.create_collection(collection_name=collection_name)
         VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
             items=[
