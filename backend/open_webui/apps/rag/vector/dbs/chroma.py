@@ -1,6 +1,10 @@
 import chromadb
 from chromadb import Settings
+from chromadb.utils.batch_utils import create_batches
 
+from typing import Optional
+
+from open_webui.apps.rag.vector.main import VectorItem, QueryResult
 from open_webui.config import (
     CHROMA_DATA_PATH,
     CHROMA_HTTP_HOST,
@@ -12,7 +16,7 @@ from open_webui.config import (
 )
 
 
-class Chroma:
+class ChromaClient:
     def __init__(self):
         if CHROMA_HTTP_HOST != "":
             self.client = chromadb.HttpClient(
@@ -32,27 +36,78 @@ class Chroma:
                 database=CHROMA_DATABASE,
             )
 
-    def query_collection(self, name, query_embeddings, k):
-        collection = self.client.get_collection(name=name)
+    def list_collections(self) -> list[str]:
+        # List all the collections in the database.
+        collections = self.client.list_collections()
+        return [collection.name for collection in collections]
+
+    def delete_collection(self, collection_name: str):
+        # Delete the collection based on the collection name.
+        return self.client.delete_collection(name=collection_name)
+
+    def search(
+        self, collection_name: str, vectors: list[list[float | int]], limit: int
+    ) -> Optional[QueryResult]:
+        # Search for the nearest neighbor items based on the vectors and return 'limit' number of results.
+        collection = self.client.get_collection(name=collection_name)
         if collection:
             result = collection.query(
-                query_embeddings=[query_embeddings],
-                n_results=k,
+                query_embeddings=vectors,
+                n_results=limit,
             )
-            return result
+
+            return {
+                "ids": result["ids"],
+                "distances": result["distances"],
+                "documents": result["documents"],
+                "metadatas": result["metadatas"],
+            }
         return None
 
-    def list_collections(self):
-        return self.client.list_collections()
+    def get(self, collection_name: str) -> Optional[QueryResult]:
+        # Get all the items in the collection.
+        collection = self.client.get_collection(name=collection_name)
+        if collection:
+            return collection.get()
+        return None
 
-    def create_collection(self, name):
-        return self.client.create_collection(name=name)
+    def insert(self, collection_name: str, items: list[VectorItem]):
+        # Insert the items into the collection, if the collection does not exist, it will be created.
+        collection = self.client.get_or_create_collection(name=collection_name)
 
-    def get_or_create_collection(self, name):
-        return self.client.get_or_create_collection(name=name)
+        ids = [item["id"] for item in items]
+        documents = [item["text"] for item in items]
+        embeddings = [item["vector"] for item in items]
+        metadatas = [item["metadata"] for item in items]
 
-    def delete_collection(self, name):
-        return self.client.delete_collection(name=name)
+        for batch in create_batches(
+            api=self.client,
+            documents=documents,
+            embeddings=embeddings,
+            ids=ids,
+            metadatas=metadatas,
+        ):
+            collection.add(*batch)
+
+    def upsert(self, collection_name: str, items: list[VectorItem]):
+        # Update the items in the collection, if the items are not present, insert them. If the collection does not exist, it will be created.
+        collection = self.client.get_or_create_collection(name=collection_name)
+
+        ids = [item["id"] for item in items]
+        documents = [item["text"] for item in items]
+        embeddings = [item["vector"] for item in items]
+        metadata = [item["metadata"] for item in items]
+
+        collection.upsert(
+            ids=ids, documents=documents, embeddings=embeddings, metadata=metadata
+        )
+
+    def delete(self, collection_name: str, ids: list[str]):
+        # Delete the items from the collection based on the ids.
+        collection = self.client.get_collection(name=collection_name)
+        if collection:
+            collection.delete(ids=ids)
 
     def reset(self):
+        # Resets the database. This will delete all collections and item entries.
         return self.client.reset()

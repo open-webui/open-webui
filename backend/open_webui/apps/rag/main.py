@@ -96,7 +96,6 @@ from open_webui.utils.misc import (
 from open_webui.utils.utils import get_admin_user, get_verified_user
 from open_webui.apps.rag.vector.connector import VECTOR_DB_CLIENT
 
-from chromadb.utils.batch_utils import create_batches
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import (
     BSHTMLLoader,
@@ -998,14 +997,11 @@ def store_docs_in_vector_db(
 
     try:
         if overwrite:
-            for collection in VECTOR_DB_CLIENT.list_collections():
-                if collection_name == collection.name:
-                    log.info(f"deleting existing collection {collection_name}")
-                    VECTOR_DB_CLIENT.delete_collection(name=collection_name)
+            if collection_name in VECTOR_DB_CLIENT.list_collections():
+                log.info(f"deleting existing collection {collection_name}")
+                VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
 
-        collection = VECTOR_DB_CLIENT.create_collection(name=collection_name)
-
-        embedding_func = get_embedding_function(
+        embedding_function = get_embedding_function(
             app.state.config.RAG_EMBEDDING_ENGINE,
             app.state.config.RAG_EMBEDDING_MODEL,
             app.state.sentence_transformer_ef,
@@ -1014,17 +1010,18 @@ def store_docs_in_vector_db(
             app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
         )
 
-        embedding_texts = list(map(lambda x: x.replace("\n", " "), texts))
-        embeddings = embedding_func(embedding_texts)
-
-        for batch in create_batches(
-            api=VECTOR_DB_CLIENT,
-            ids=[str(uuid.uuid4()) for _ in texts],
-            metadatas=metadatas,
-            embeddings=embeddings,
-            documents=texts,
-        ):
-            collection.add(*batch)
+        VECTOR_DB_CLIENT.insert(
+            collection_name=collection_name,
+            items=[
+                {
+                    "id": str(uuid.uuid4()),
+                    "text": text,
+                    "vector": embedding_function(text.replace("\n", " ")),
+                    "metadata": metadatas[idx],
+                }
+                for idx, text in enumerate(texts)
+            ],
+        )
 
         return True
     except Exception as e:
