@@ -92,7 +92,7 @@ def query_doc_with_hybrid_search(
     k: int,
     reranking_function,
     r: float,
-):
+) -> dict:
     try:
         result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
 
@@ -135,7 +135,7 @@ def query_doc_with_hybrid_search(
         raise e
 
 
-def merge_and_sort_query_results(query_results, k, reverse=False):
+def merge_and_sort_query_results(query_results: list[dict], k: int, reverse: bool = False) -> list[dict]:
     # Initialize lists to store combined data
     combined_distances = []
     combined_documents = []
@@ -181,7 +181,7 @@ def query_collection(
     query: str,
     embedding_function,
     k: int,
-):
+) -> dict:
     results = []
     for collection_name in collection_names:
         if collection_name:
@@ -208,7 +208,7 @@ def query_collection_with_hybrid_search(
     k: int,
     reranking_function,
     r: float,
-):
+) -> dict:
     results = []
     failed = 0
     for collection_name in collection_names:
