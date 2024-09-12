@@ -588,6 +588,11 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             prompt = get_last_user_message(body["messages"])
             if prompt is None:
                 raise Exception("No user message found")
+            if rag_app.state.config.RELEVANCE_THRESHOLD == 0:
+                assert context_string.strip(), (
+                    "With a 0 relevancy threshold for RAG, the context cannot "
+                    "be empty"
+                )
             # Workaround for Ollama 2.0+ system prompt issue
             # TODO: replace with add_or_update_system_message
             if model["owned_by"] == "ollama":
