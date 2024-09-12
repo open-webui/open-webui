@@ -111,9 +111,9 @@ class OpenAIConfigForm(BaseModel):
 class Automatic1111ConfigForm(BaseModel):
     AUTOMATIC1111_BASE_URL: str
     AUTOMATIC1111_API_AUTH: str
-    AUTOMATIC1111_CFG_SCALE: float
-    AUTOMATIC1111_SAMPLER: str
-    AUTOMATIC1111_SCHEDULER: str
+    AUTOMATIC1111_CFG_SCALE: Optional[str]
+    AUTOMATIC1111_SAMPLER: Optional[str]
+    AUTOMATIC1111_SCHEDULER: Optional[str]
 
 
 class ComfyUIConfigForm(BaseModel):
@@ -144,12 +144,10 @@ async def update_config(form_data: ConfigForm, user=Depends(get_admin_user)):
     app.state.config.AUTOMATIC1111_API_AUTH = (
         form_data.automatic1111.AUTOMATIC1111_API_AUTH
     )
-    app.state.config.AUTOMATIC1111_CFG_SCALE = form_data.automatic1111.AUTOMATIC1111_CFG_SCALE
-    app.state.config.AUTOMATIC1111_SAMPLER = form_data.automatic1111.AUTOMATIC1111_SAMPLER
-    app.state.config.AUTOMATIC1111_SCHEDULER = (
-        form_data.automatic1111.AUTOMATIC1111_SCHEDULER
-    )
     
+    app.state.config.AUTOMATIC1111_CFG_SCALE = float(form_data.automatic1111.AUTOMATIC1111_CFG_SCALE) if form_data.automatic1111.AUTOMATIC1111_CFG_SCALE != "" else None
+    app.state.config.AUTOMATIC1111_SAMPLER = form_data.automatic1111.AUTOMATIC1111_SAMPLER if form_data.automatic1111.AUTOMATIC1111_SAMPLER != "" else None
+    app.state.config.AUTOMATIC1111_SCHEDULER = form_data.automatic1111.AUTOMATIC1111_SCHEDULER if form_data.automatic1111.AUTOMATIC1111_SCHEDULER != "" else None
 
     app.state.config.COMFYUI_BASE_URL = form_data.comfyui.COMFYUI_BASE_URL.strip("/")
     app.state.config.COMFYUI_WORKFLOW = form_data.comfyui.COMFYUI_WORKFLOW
