@@ -150,8 +150,8 @@ def query_collection(
                     embedding_function=embedding_function,
                 )
                 results.append(result)
-            except Exception:
-                pass
+            except Exception as e:
+                log.exception(f"Error when querying the collection: {e}")
         else:
             pass
 
@@ -178,8 +178,11 @@ def query_collection_with_hybrid_search(
                 r=r,
             )
             results.append(result)
-        except Exception:
-            pass
+        except Exception as e:
+            log.exception(
+                "Error when querying the collection with "
+                f"hybrid_search: {e}"
+            )
     return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
