@@ -15,7 +15,36 @@ class MilvusClient:
         self.collection_prefix = "open_webui"
         self.client = Client(uri=MILVUS_URI)
 
-    def _result_to_query_result(self, result) -> SearchResult:
+    def _result_to_get_result(self, result) -> GetResult:
+        print(result)
+
+        ids = []
+        documents = []
+        metadatas = []
+
+        for match in result:
+            _ids = []
+            _documents = []
+            _metadatas = []
+
+            for item in match:
+                _ids.append(item.get("id"))
+                _documents.append(item.get("data", {}).get("text"))
+                _metadatas.append(item.get("metadata"))
+
+            ids.append(_ids)
+            documents.append(_documents)
+            metadatas.append(_metadatas)
+
+        return GetResult(
+            **{
+                "ids": ids,
+                "documents": documents,
+                "metadatas": metadatas,
+            }
+        )
+
+    def _result_to_search_result(self, result) -> SearchResult:
         print(result)
 
         ids = []
@@ -105,7 +134,7 @@ class MilvusClient:
             output_fields=["data", "metadata"],
         )
 
-        return self._result_to_query_result(result)
+        return self._result_to_search_result(result)
 
     def get(self, collection_name: str) -> Optional[GetResult]:
         # Get all the items in the collection.
@@ -113,7 +142,7 @@ class MilvusClient:
             collection_name=f"{self.collection_prefix}_{collection_name}",
             filter='id != ""',
         )
-        return GetResult(**self._result_to_query_result(result))
+        return self._result_to_get_result([result])
 
     def insert(self, collection_name: str, items: list[VectorItem]):
         # Insert the items into the collection, if the collection does not exist, it will be created.
