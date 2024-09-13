@@ -70,13 +70,10 @@ class ChromaClient:
         # Get all the items in the collection.
         collection = self.client.get_collection(name=collection_name)
         if collection:
-
             result = collection.get()
-
             return GetResult(
                 **{
                     "ids": [result["ids"]],
-                    "distances": [result["distances"]],
                     "documents": [result["documents"]],
                     "metadatas": [result["metadatas"]],
                 }
