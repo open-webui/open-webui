@@ -97,8 +97,8 @@ def query_doc_with_hybrid_search(
         result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
 
         bm25_retriever = BM25Retriever.from_texts(
-            texts=result.documents,
-            metadatas=result.metadatas,
+            texts=result.documents[0],
+            metadatas=result.metadatas[0],
         )
         bm25_retriever.k = k
 

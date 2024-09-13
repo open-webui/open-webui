@@ -113,7 +113,7 @@ class MilvusClient:
             collection_name=f"{self.collection_prefix}_{collection_name}",
             filter='id != ""',
         )
-        return self._result_to_query_result(result)
+        return GetResult(**self._result_to_query_result(result))
 
     def insert(self, collection_name: str, items: list[VectorItem]):
         # Insert the items into the collection, if the collection does not exist, it will be created.
