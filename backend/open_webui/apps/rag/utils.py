@@ -48,9 +48,9 @@ class VectorSearchRetriever(BaseRetriever):
             limit=self.top_k,
         )
 
-        ids = result["ids"][0]
-        metadatas = result["metadatas"][0]
-        documents = result["documents"][0]
+        ids = result.ids[0]
+        metadatas = result.metadatas[0]
+        documents = result.documents[0]
 
         results = []
         for idx in range(len(ids)):
@@ -194,7 +194,7 @@ def query_collection(
                     k=k,
                     embedding_function=embedding_function,
                 )
-                results.append(result)
+                results.append(result.model_dump())
             except Exception as e:
                 log.exception(f"Error when querying the collection: {e}")
         else:
@@ -212,7 +212,7 @@ def query_collection_with_hybrid_search(
     r: float,
 ) -> dict:
     results = []
-    failed = 0
+    error = False
     for collection_name in collection_names:
         try:
             result = query_doc_with_hybrid_search(
@@ -228,12 +228,14 @@ def query_collection_with_hybrid_search(
             log.exception(
                 "Error when querying the collection with " f"hybrid_search: {e}"
             )
-            failed += 1
-    if failed == len(collection_names):
+            error = True
+
+    if error:
         raise Exception(
             "Hybrid search failed for all collections. Using "
             "Non hybrid search as fallback."
         )
+
     return merge_and_sort_query_results(results, k=k, reverse=True)
 
 

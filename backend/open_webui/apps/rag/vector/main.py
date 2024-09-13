@@ -9,8 +9,11 @@ class VectorItem(BaseModel):
     metadata: Any
 
 
-class QueryResult(BaseModel):
+class GetResult(BaseModel):
     ids: Optional[List[List[str]]]
-    distances: Optional[List[List[float | int]]]
     documents: Optional[List[List[str]]]
     metadatas: Optional[List[List[Any]]]
+
+
+class SearchResult(GetResult):
+    distances: Optional[List[List[float | int]]]
