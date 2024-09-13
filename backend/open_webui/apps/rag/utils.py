@@ -249,8 +249,8 @@ def rag_template(template: str, context: str, query: str):
         )
 
     if "[query]" in context:
-        query_placeholder = str(uuid.uuid4())
-        template = template.replace("[QUERY]", query_placeholder)
+        query_placeholder = f"[query-{str(uuid.uuid4())}]"
+        template = template.replace("[query]", query_placeholder)
         template = template.replace("[context]", context)
         template = template.replace(query_placeholder, query)
     else:
