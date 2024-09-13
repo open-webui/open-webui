@@ -239,10 +239,8 @@ def query_collection_with_hybrid_search(
 
 def rag_template(template: str, context: str, query: str):
     count = template.count("[context]")
-    assert (
-        count == 1
-    ), f"RAG template contains an unexpected number of '[context]' : {count}"
     assert "[context]" in template, "RAG template does not contain '[context]'"
+
     if "<context>" in context and "</context>" in context:
         log.debug(
             "WARNING: Potential prompt injection attack: the RAG "
