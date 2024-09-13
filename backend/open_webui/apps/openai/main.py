@@ -322,7 +322,7 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
             response_data = r.json()
             if "api.openai.com" in url:
                 response_data["data"] = list(
-                    filter(lambda model: "gpt" in model["id"], response_data["data"])
+                    filter(lambda model: "gpt" in model["id"] or model["id"].startswith("o1-"), response_data["data"])
                 )
 
             return response_data
