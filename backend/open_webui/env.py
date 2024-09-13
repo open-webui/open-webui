@@ -38,6 +38,7 @@ USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
 if USE_CUDA.lower() == "true":
     try:
         import torch
+
         assert torch.cuda.is_available(), "CUDA not available"
         DEVICE_TYPE = "cuda"
     except Exception as e:
