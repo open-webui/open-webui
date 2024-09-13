@@ -27,9 +27,42 @@
 
 	let models = null;
 
-	let samplers = ["DPM++ 2M", "DPM++ SDE", "DPM++ 2M SDE", "DPM++ 2M SDE Heun", "DPM++ 2S a", "DPM++ 3M SDE", "Euler a", "Euler", "LMS", "Heun", "DPM2", "DPM2 a", "DPM fast", "DPM adaptive", "Restart", "DDIM", "DDIM CFG++", "PLMS", "UniPC"];
+	let samplers = [
+		'DPM++ 2M',
+		'DPM++ SDE',
+		'DPM++ 2M SDE',
+		'DPM++ 2M SDE Heun',
+		'DPM++ 2S a',
+		'DPM++ 3M SDE',
+		'Euler a',
+		'Euler',
+		'LMS',
+		'Heun',
+		'DPM2',
+		'DPM2 a',
+		'DPM fast',
+		'DPM adaptive',
+		'Restart',
+		'DDIM',
+		'DDIM CFG++',
+		'PLMS',
+		'UniPC'
+	];
 
-	let schedulers = ["Automatic", "Uniform", "Karras", "Exponential", "Polyexponential", "SGM Uniform", "KL Optimal", "Align Your Steps", "Simple", "Normal", "DDIM", "Beta"];
+	let schedulers = [
+		'Automatic',
+		'Uniform',
+		'Karras',
+		'Exponential',
+		'Polyexponential',
+		'SGM Uniform',
+		'KL Optimal',
+		'Align Your Steps',
+		'Simple',
+		'Normal',
+		'DDIM',
+		'Beta'
+	];
 
 	let requiredWorkflowNodes = [
 		{
