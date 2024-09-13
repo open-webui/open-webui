@@ -41,12 +41,16 @@ def serve(
         )
         try:
             import torch
-        except Exception as e:
-            raise Exception("Error when importing torch even though USE_CUDA_DOCKER is true: ") from e
-        try:
             assert torch.cuda.is_available(), "CUDA not available"
+            typer.echo("CUDA seems to be working")
         except Exception as e:
-            raise Exception("Torch can't find CUDA but USE_CUDA_DOCKER is true: ") from e
+            typer.echo(
+                "Error when testing CUDA but USE_CUDA_DOCKER is true. "
+                "Resetting USE_CUDA_DOCKER to false and removing "
+                f"LD_LIBRARY_PATH modifications: {e}"
+            )
+            os.environ["USE_CUDA_DOCKER"] = "false"
+            os.environ["LD_LIBRARY_PATH"] = ":".join(LD_LIBRARY_PATH)
     import open_webui.main  # we need set environment variables before importing main
 
     uvicorn.run(open_webui.main.app, host=host, port=port, forwarded_allow_ips="*")

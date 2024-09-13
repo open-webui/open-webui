@@ -1044,15 +1044,17 @@ else:
 USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
 
 if USE_CUDA.lower() == "true":
-    DEVICE_TYPE = "cuda"
     try:
         import torch
-    except Exception as e:
-        raise Exception("Error when importing torch even though USE_CUDA_DOCKER is true: ") from e
-    try:
         assert torch.cuda.is_available(), "CUDA not available"
+        DEVICE_TYPE = "cuda"
     except Exception as e:
-        raise Exception("Torch can't find CUDA but USE_CUDA_DOCKER is true: ") from e
+        log.exception(
+            "Error when testing CUDA but USE_CUDA_DOCKER is true. "
+            f"Resetting USE_CUDA_DOCKER to false: {e}"
+        )
+        os.environ["USE_CUDA_DOCKER"] = "false"
+        DEVICE_TYPE = "cpu"
 else:
     DEVICE_TYPE = "cpu"
 
