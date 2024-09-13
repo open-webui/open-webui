@@ -135,7 +135,9 @@ def query_doc_with_hybrid_search(
         raise e
 
 
-def merge_and_sort_query_results(query_results: list[dict], k: int, reverse: bool = False) -> list[dict]:
+def merge_and_sort_query_results(
+    query_results: list[dict], k: int, reverse: bool = False
+) -> list[dict]:
     # Initialize lists to store combined data
     combined_distances = []
     combined_documents = []
@@ -224,21 +226,22 @@ def query_collection_with_hybrid_search(
             results.append(result)
         except Exception as e:
             log.exception(
-                "Error when querying the collection with "
-                f"hybrid_search: {e}"
+                "Error when querying the collection with " f"hybrid_search: {e}"
             )
             failed += 1
     if failed == len(collection_names):
-        raise Exception("Hybrid search failed for all collections. Using "
-                        "Non hybrid search as fallback.")
+        raise Exception(
+            "Hybrid search failed for all collections. Using "
+            "Non hybrid search as fallback."
+        )
     return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
 def rag_template(template: str, context: str, query: str):
     count = template.count("[context]")
-    assert count == 1, (
-        f"RAG template contains an unexpected number of '[context]' : {count}"
-    )
+    assert (
+        count == 1
+    ), f"RAG template contains an unexpected number of '[context]' : {count}"
     assert "[context]" in template, "RAG template does not contain '[context]'"
     if "<context>" in context and "</context>" in context:
         log.debug(
@@ -346,8 +349,10 @@ def get_rag_context(
                             r=r,
                         )
                     except Exception as e:
-                        log.debug("Error when using hybrid search, using"
-                                    " non hybrid search as fallback.")
+                        log.debug(
+                            "Error when using hybrid search, using"
+                            " non hybrid search as fallback."
+                        )
 
                 if (not hybrid_search) or (context is None):
                     context = query_collection(
