@@ -144,10 +144,22 @@ async def update_config(form_data: ConfigForm, user=Depends(get_admin_user)):
     app.state.config.AUTOMATIC1111_API_AUTH = (
         form_data.automatic1111.AUTOMATIC1111_API_AUTH
     )
-    
-    app.state.config.AUTOMATIC1111_CFG_SCALE = float(form_data.automatic1111.AUTOMATIC1111_CFG_SCALE) if form_data.automatic1111.AUTOMATIC1111_CFG_SCALE != "" else None
-    app.state.config.AUTOMATIC1111_SAMPLER = form_data.automatic1111.AUTOMATIC1111_SAMPLER if form_data.automatic1111.AUTOMATIC1111_SAMPLER != "" else None
-    app.state.config.AUTOMATIC1111_SCHEDULER = form_data.automatic1111.AUTOMATIC1111_SCHEDULER if form_data.automatic1111.AUTOMATIC1111_SCHEDULER != "" else None
+
+    app.state.config.AUTOMATIC1111_CFG_SCALE = (
+        float(form_data.automatic1111.AUTOMATIC1111_CFG_SCALE)
+        if form_data.automatic1111.AUTOMATIC1111_CFG_SCALE != ""
+        else None
+    )
+    app.state.config.AUTOMATIC1111_SAMPLER = (
+        form_data.automatic1111.AUTOMATIC1111_SAMPLER
+        if form_data.automatic1111.AUTOMATIC1111_SAMPLER != ""
+        else None
+    )
+    app.state.config.AUTOMATIC1111_SCHEDULER = (
+        form_data.automatic1111.AUTOMATIC1111_SCHEDULER
+        if form_data.automatic1111.AUTOMATIC1111_SCHEDULER != ""
+        else None
+    )
 
     app.state.config.COMFYUI_BASE_URL = form_data.comfyui.COMFYUI_BASE_URL.strip("/")
     app.state.config.COMFYUI_WORKFLOW = form_data.comfyui.COMFYUI_WORKFLOW
@@ -284,7 +296,6 @@ async def update_image_config(form_data: ImageConfigForm, user=Depends(get_admin
             status_code=400,
             detail=ERROR_MESSAGES.INCORRECT_FORMAT("  (e.g., 50)."),
         )
-
 
     return {
         "MODEL": app.state.config.MODEL,
@@ -543,7 +554,7 @@ async def image_generations(
 
             if form_data.negative_prompt is not None:
                 data["negative_prompt"] = form_data.negative_prompt
-            
+
             if app.state.config.AUTOMATIC1111_CFG_SCALE:
                 data["cfg_scale"] = app.state.config.AUTOMATIC1111_CFG_SCALE
 
