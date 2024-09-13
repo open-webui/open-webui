@@ -1271,8 +1271,7 @@ AUTOMATIC1111_SAMPLER = PersistentConfig(
         os.environ.get("AUTOMATIC1111_SAMPLER")
         if os.environ.get("AUTOMATIC1111_SAMPLER")
         else None
-    )
-   
+    ),
 )
 
 AUTOMATIC1111_SCHEDULER = PersistentConfig(
@@ -1282,7 +1281,7 @@ AUTOMATIC1111_SCHEDULER = PersistentConfig(
         os.environ.get("AUTOMATIC1111_SCHEDULER")
         if os.environ.get("AUTOMATIC1111_SCHEDULER")
         else None
-    )
+    ),
 )
 
 COMFYUI_BASE_URL = PersistentConfig(
