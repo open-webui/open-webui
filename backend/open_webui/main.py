@@ -74,7 +74,9 @@ from open_webui.config import (
     WEBUI_AUTH,
     WEBUI_NAME,
     AppConfig,
-    run_migrations, OPENAI_API_NOSTREAM_MODELS, OPENAI_API_TITLE_MODEL,
+    run_migrations,
+    OPENAI_API_NOSTREAM_MODELS,
+    OPENAI_API_TITLE_MODEL,
 )
 from open_webui.constants import ERROR_MESSAGES, TASKS, WEBHOOK_MESSAGES
 from open_webui.env import (
