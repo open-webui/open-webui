@@ -560,40 +560,6 @@ Path(TOOLS_DIR).mkdir(parents=True, exist_ok=True)
 FUNCTIONS_DIR = os.getenv("FUNCTIONS_DIR", f"{DATA_DIR}/functions")
 Path(FUNCTIONS_DIR).mkdir(parents=True, exist_ok=True)
 
-
-####################################
-# LITELLM_CONFIG
-####################################
-
-
-def create_config_file(file_path):
-    directory = os.path.dirname(file_path)
-
-    # Check if directory exists, if not, create it
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
-    # Data to write into the YAML file
-    config_data = {
-        "general_settings": {},
-        "litellm_settings": {},
-        "model_list": [],
-        "router_settings": {},
-    }
-
-    # Write data to YAML file
-    with open(file_path, "w") as file:
-        yaml.dump(config_data, file)
-
-
-LITELLM_CONFIG_PATH = f"{DATA_DIR}/litellm/config.yaml"
-
-# if not os.path.exists(LITELLM_CONFIG_PATH):
-#     log.info("Config file doesn't exist. Creating...")
-#     create_config_file(LITELLM_CONFIG_PATH)
-#     log.info("Config file created successfully.")
-
-
 ####################################
 # OLLAMA_BASE_URL
 ####################################
@@ -940,25 +906,12 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
 )
 
 ####################################
-# RAG document content extraction
+# Vector Database
 ####################################
 
-CONTENT_EXTRACTION_ENGINE = PersistentConfig(
-    "CONTENT_EXTRACTION_ENGINE",
-    "rag.CONTENT_EXTRACTION_ENGINE",
-    os.environ.get("CONTENT_EXTRACTION_ENGINE", "").lower(),
-)
+VECTOR_DB = os.environ.get("VECTOR_DB", "chroma")
 
-TIKA_SERVER_URL = PersistentConfig(
-    "TIKA_SERVER_URL",
-    "rag.tika_server_url",
-    os.getenv("TIKA_SERVER_URL", "http://tika:9998"),  # Default for sidecar deployment
-)
-
-####################################
-# RAG
-####################################
-
+# Chroma
 CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
 CHROMA_TENANT = os.environ.get("CHROMA_TENANT", chromadb.DEFAULT_TENANT)
 CHROMA_DATABASE = os.environ.get("CHROMA_DATABASE", chromadb.DEFAULT_DATABASE)
@@ -979,6 +932,26 @@ ENABLE_BASE64 = PersistentConfig(
     "ENABLE_BASE64",
     "rag.enable_base64",
     os.environ.get("ENABLE_BASE64", "False").lower() == "true",
+)
+
+# Milvus
+MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
+
+####################################
+# RAG
+####################################
+
+# RAG Content Extraction
+CONTENT_EXTRACTION_ENGINE = PersistentConfig(
+    "CONTENT_EXTRACTION_ENGINE",
+    "rag.CONTENT_EXTRACTION_ENGINE",
+    os.environ.get("CONTENT_EXTRACTION_ENGINE", "").lower(),
+)
+
+TIKA_SERVER_URL = PersistentConfig(
+    "TIKA_SERVER_URL",
+    "rag.tika_server_url",
+    os.getenv("TIKA_SERVER_URL", "http://tika:9998"),  # Default for sidecar deployment
 )
 
 RAG_TOP_K = PersistentConfig(
@@ -1110,19 +1083,25 @@ CHUNK_OVERLAP = PersistentConfig(
     int(os.environ.get("CHUNK_OVERLAP", "100")),
 )
 
-DEFAULT_RAG_TEMPLATE = """Use the following context as your learned knowledge, inside <context></context> XML tags.
+DEFAULT_RAG_TEMPLATE = """You are given a user query, some textual context and rules, all inside xml tags. You have to answer the query based on the context while respecting the rules.
+
 <context>
-    [context]
+[context]
 </context>
 
-When answer to user:
-- If you don't know, just say that you don't know.
-- If you don't know when you are not sure, ask for clarification.
-Avoid mentioning that you obtained the information from the context.
-And answer according to the language of the user's question.
+<rules>
+- If you don't know, just say so.
+- If you are not sure, ask for clarification.
+- Answer in the same language as the user query.
+- If the context appears unreadable or of poor quality, tell the user then answer as best as you can.
+- If the answer is not in the context but you think you know the answer, explain that to the user then answer with your own knowledge.
+- Answer directly and without using xml tags.
+</rules>
 
-Given the context information, answer the query.
-Query: [query]"""
+<user_query>
+[query]
+</user_query>
+"""
 
 RAG_TEMPLATE = PersistentConfig(
     "RAG_TEMPLATE",
@@ -1287,6 +1266,37 @@ AUTOMATIC1111_API_AUTH = PersistentConfig(
     "AUTOMATIC1111_API_AUTH",
     "image_generation.automatic1111.api_auth",
     os.getenv("AUTOMATIC1111_API_AUTH", ""),
+)
+
+AUTOMATIC1111_CFG_SCALE = PersistentConfig(
+    "AUTOMATIC1111_CFG_SCALE",
+    "image_generation.automatic1111.cfg_scale",
+    (
+        float(os.environ.get("AUTOMATIC1111_CFG_SCALE"))
+        if os.environ.get("AUTOMATIC1111_CFG_SCALE")
+        else None
+    ),
+)
+
+
+AUTOMATIC1111_SAMPLER = PersistentConfig(
+    "AUTOMATIC1111_SAMPLERE",
+    "image_generation.automatic1111.sampler",
+    (
+        os.environ.get("AUTOMATIC1111_SAMPLER")
+        if os.environ.get("AUTOMATIC1111_SAMPLER")
+        else None
+    ),
+)
+
+AUTOMATIC1111_SCHEDULER = PersistentConfig(
+    "AUTOMATIC1111_SCHEDULER",
+    "image_generation.automatic1111.scheduler",
+    (
+        os.environ.get("AUTOMATIC1111_SCHEDULER")
+        if os.environ.get("AUTOMATIC1111_SCHEDULER")
+        else None
+    ),
 )
 
 COMFYUI_BASE_URL = PersistentConfig(

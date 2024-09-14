@@ -1,5 +1,6 @@
 import logging
 import os
+import uuid
 from typing import Optional, Union
 
 import requests
@@ -11,10 +12,53 @@ from langchain_core.documents import Document
 from open_webui.apps.ollama.main import GenerateEmbeddingsForm, generate_ollama_embeddings
 from open_webui.config import CHROMA_CLIENT
 from open_webui.env import SRC_LOG_LEVELS
+
+from open_webui.apps.rag.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.misc import get_last_user_message
+
+from open_webui.env import SRC_LOG_LEVELS
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
+
+
+from typing import Any
+
+from langchain_core.callbacks import CallbackManagerForRetrieverRun
+from langchain_core.retrievers import BaseRetriever
+
+
+class VectorSearchRetriever(BaseRetriever):
+    collection_name: Any
+    embedding_function: Any
+    top_k: int
+
+    def _get_relevant_documents(
+        self,
+        query: str,
+        *,
+        run_manager: CallbackManagerForRetrieverRun,
+    ) -> list[Document]:
+        result = VECTOR_DB_CLIENT.search(
+            collection_name=self.collection_name,
+            vectors=[self.embedding_function(query)],
+            limit=self.top_k,
+        )
+
+        ids = result.ids[0]
+        metadatas = result.metadatas[0]
+        documents = result.documents[0]
+
+        results = []
+        for idx in range(len(ids)):
+            results.append(
+                Document(
+                    metadata=metadatas[idx],
+                    page_content=documents[idx],
+                )
+            )
+        return results
 
 
 def query_doc(
@@ -24,48 +68,47 @@ def query_doc(
         k: int,
 ):
     try:
-        collection = CHROMA_CLIENT.get_collection(name=collection_name)
-        query_embeddings = embedding_function(query)
-
-        result = collection.query(
-            query_embeddings=[query_embeddings],
-            n_results=k,
+        result = VECTOR_DB_CLIENT.search(
+            collection_name=collection_name,
+            vectors=[embedding_function(query)],
+            limit=k,
         )
+
+        print("result", result)
 
         log.info(f"query_doc:result {result}")
         return result
     except Exception as e:
+        print(e)
         raise e
 
 
 def query_doc_with_hybrid_search(
-        collection_name: str,
-        query: str,
-        embedding_function,
-        k: int,
-        reranking_function,
-        r: float,
-):
+    collection_name: str,
+    query: str,
+    embedding_function,
+    k: int,
+    reranking_function,
+    r: float,
+) -> dict:
     try:
-        collection = CHROMA_CLIENT.get_collection(name=collection_name)
-        documents = collection.get()  # get all documents
+        result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
 
         bm25_retriever = BM25Retriever.from_texts(
-            texts=documents.get("documents"),
-            metadatas=documents.get("metadatas"),
+            texts=result.documents[0],
+            metadatas=result.metadatas[0],
         )
         bm25_retriever.k = k
 
-        chroma_retriever = ChromaRetriever(
-            collection=collection,
+        vector_search_retriever = VectorSearchRetriever(
+            collection_name=collection_name,
             embedding_function=embedding_function,
-            top_n=k,
+            top_k=k,
         )
 
         ensemble_retriever = EnsembleRetriever(
-            retrievers=[bm25_retriever, chroma_retriever], weights=[0.5, 0.5]
+            retrievers=[bm25_retriever, vector_search_retriever], weights=[0.5, 0.5]
         )
-
         compressor = RerankCompressor(
             embedding_function=embedding_function,
             top_n=k,
@@ -90,7 +133,9 @@ def query_doc_with_hybrid_search(
         raise e
 
 
-def merge_and_sort_query_results(query_results, k, reverse=False):
+def merge_and_sort_query_results(
+    query_results: list[dict], k: int, reverse: bool = False
+) -> list[dict]:
     # Initialize lists to store combined data
     combined_distances = []
     combined_documents = []
@@ -132,11 +177,11 @@ def merge_and_sort_query_results(query_results, k, reverse=False):
 
 
 def query_collection(
-        collection_names: list[str],
-        query: str,
-        embedding_function,
-        k: int,
-):
+    collection_names: list[str],
+    query: str,
+    embedding_function,
+    k: int,
+) -> dict:
     results = []
     for collection_name in collection_names:
         if collection_name:
@@ -147,9 +192,9 @@ def query_collection(
                     k=k,
                     embedding_function=embedding_function,
                 )
-                results.append(result)
-            except Exception:
-                pass
+                results.append(result.model_dump())
+            except Exception as e:
+                log.exception(f"Error when querying the collection: {e}")
         else:
             pass
 
@@ -157,14 +202,15 @@ def query_collection(
 
 
 def query_collection_with_hybrid_search(
-        collection_names: list[str],
-        query: str,
-        embedding_function,
-        k: int,
-        reranking_function,
-        r: float,
-):
+    collection_names: list[str],
+    query: str,
+    embedding_function,
+    k: int,
+    reranking_function,
+    r: float,
+) -> dict:
     results = []
+    error = False
     for collection_name in collection_names:
         try:
             result = query_doc_with_hybrid_search(
@@ -176,14 +222,40 @@ def query_collection_with_hybrid_search(
                 r=r,
             )
             results.append(result)
-        except Exception:
-            pass
+        except Exception as e:
+            log.exception(
+                "Error when querying the collection with " f"hybrid_search: {e}"
+            )
+            error = True
+
+    if error:
+        raise Exception(
+            "Hybrid search failed for all collections. Using "
+            "Non hybrid search as fallback."
+        )
+
     return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
 def rag_template(template: str, context: str, query: str):
-    template = template.replace("[context]", context)
-    template = template.replace("[query]", query)
+    count = template.count("[context]")
+    assert "[context]" in template, "RAG template does not contain '[context]'"
+
+    if "<context>" in context and "</context>" in context:
+        log.debug(
+            "WARNING: Potential prompt injection attack: the RAG "
+            "context contains '<context>' and '</context>'. This might be "
+            "nothing, or the user might be trying to hack something."
+        )
+
+    if "[query]" in context:
+        query_placeholder = f"[query-{str(uuid.uuid4())}]"
+        template = template.replace("[query]", query_placeholder)
+        template = template.replace("[context]", context)
+        template = template.replace(query_placeholder, query)
+    else:
+        template = template.replace("[context]", context)
+        template = template.replace("[query]", query)
     return template
 
 
@@ -260,19 +332,27 @@ def get_rag_context(
             continue
 
         try:
+            context = None
             if file["type"] == "text":
                 context = file["content"]
             else:
                 if hybrid_search:
-                    context = query_collection_with_hybrid_search(
-                        collection_names=collection_names,
-                        query=query,
-                        embedding_function=embedding_function,
-                        k=k,
-                        reranking_function=reranking_function,
-                        r=r,
-                    )
-                else:
+                    try:
+                        context = query_collection_with_hybrid_search(
+                            collection_names=collection_names,
+                            query=query,
+                            embedding_function=embedding_function,
+                            k=k,
+                            reranking_function=reranking_function,
+                            r=r,
+                        )
+                    except Exception as e:
+                        log.debug(
+                            "Error when using hybrid search, using"
+                            " non hybrid search as fallback."
+                        )
+
+                if (not hybrid_search) or (context is None):
                     context = query_collection(
                         collection_names=collection_names,
                         query=query,
@@ -281,7 +361,6 @@ def get_rag_context(
                     )
         except Exception as e:
             log.exception(e)
-            context = None
 
         if context:
             relevant_contexts.append({**context, "source": file})
@@ -387,45 +466,6 @@ def generate_openai_batch_embeddings(
     except Exception as e:
         print(e)
         return None
-
-
-from typing import Any
-
-from langchain_core.callbacks import CallbackManagerForRetrieverRun
-from langchain_core.retrievers import BaseRetriever
-
-
-class ChromaRetriever(BaseRetriever):
-    collection: Any
-    embedding_function: Any
-    top_n: int
-
-    def _get_relevant_documents(
-            self,
-            query: str,
-            *,
-            run_manager: CallbackManagerForRetrieverRun,
-    ) -> list[Document]:
-        query_embeddings = self.embedding_function(query)
-
-        results = self.collection.query(
-            query_embeddings=[query_embeddings],
-            n_results=self.top_n,
-        )
-
-        ids = results["ids"][0]
-        metadatas = results["metadatas"][0]
-        documents = results["documents"][0]
-
-        results = []
-        for idx in range(len(ids)):
-            results.append(
-                Document(
-                    metadata=metadatas[idx],
-                    page_content=documents[idx],
-                )
-            )
-        return results
 
 
 import operator

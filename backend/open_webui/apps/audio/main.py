@@ -7,10 +7,6 @@ from functools import lru_cache
 from pathlib import Path
 
 import requests
-from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from pydantic import BaseModel
 
 from open_webui.config import (
     AUDIO_STT_ENGINE,
@@ -26,14 +22,18 @@ from open_webui.config import (
     AUDIO_TTS_VOICE,
     CACHE_DIR,
     CORS_ALLOW_ORIGIN,
-    DEVICE_TYPE,
     WHISPER_MODEL,
     WHISPER_MODEL_AUTO_UPDATE,
     WHISPER_MODEL_DIR,
     AppConfig,
 )
+
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, DEVICE_TYPE
+from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
 from open_webui.utils.utils import get_admin_user, get_current_user, get_verified_user
 
 log = logging.getLogger(__name__)
@@ -310,7 +310,7 @@ def transcribe(
 ):
     log.info(f"file.content_type: {file.content_type}")
 
-    if file.content_type not in ["audio/mpeg", "audio/wav"]:
+    if file.content_type not in ["audio/mpeg", "audio/wav", "audio/ogg"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.FILE_NOT_SUPPORTED,
@@ -444,7 +444,7 @@ def get_available_models() -> list[dict]:
 
         try:
             response = requests.get(
-                "https://api.elevenlabs.io/v1/models", headers=headers
+                "https://api.elevenlabs.io/v1/models", headers=headers, timeout=5
             )
             response.raise_for_status()
             models = response.json()

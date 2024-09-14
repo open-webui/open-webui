@@ -586,8 +586,17 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
         if len(contexts) > 0:
             context_string = "/n".join(contexts).strip()
             prompt = get_last_user_message(body["messages"])
+
             if prompt is None:
                 raise Exception("No user message found")
+            if (
+                rag_app.state.config.RELEVANCE_THRESHOLD == 0
+                and context_string.strip() == ""
+            ):
+                log.debug(
+                    f"With a 0 relevancy threshold for RAG, the context cannot be empty"
+                )
+
             # Workaround for Ollama 2.0+ system prompt issue
             # TODO: replace with add_or_update_system_message
             if model["owned_by"] == "ollama":
@@ -810,6 +819,24 @@ async def update_embedding_function(request: Request, call_next):
     if "/embedding/update" in request.url.path:
         webui_app.state.EMBEDDING_FUNCTION = rag_app.state.EMBEDDING_FUNCTION
     return response
+
+
+@app.middleware("http")
+async def inspect_websocket(request: Request, call_next):
+    if (
+        "/ws/socket.io" in request.url.path
+        and request.query_params.get("transport") == "websocket"
+    ):
+        upgrade = (request.headers.get("Upgrade") or "").lower()
+        connection = (request.headers.get("Connection") or "").lower().split(",")
+        # Check that there's the correct headers for an upgrade, else reject the connection
+        # This is to work around this upstream issue: https://github.com/miguelgrinberg/python-engineio/issues/367
+        if upgrade != "websocket" or "upgrade" not in connection:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={"detail": "Invalid WebSocket upgrade request"},
+            )
+    return await call_next(request)
 
 
 app.mount("/ws", socket_app)

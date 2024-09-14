@@ -32,6 +32,16 @@ try:
 except ImportError:
     print("dotenv not installed, skipping...")
 
+
+# device type embedding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
+USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
+
+if USE_CUDA.lower() == "true":
+    DEVICE_TYPE = "cuda"
+else:
+    DEVICE_TYPE = "cpu"
+
+
 ####################################
 # LOGGING
 ####################################
@@ -263,3 +273,7 @@ WEBUI_SESSION_COOKIE_SECURE = os.environ.get(
 
 if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
     raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
+
+ENABLE_WEBSOCKET_SUPPORT = (
+    os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true"
+)

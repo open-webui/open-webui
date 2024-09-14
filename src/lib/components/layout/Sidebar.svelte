@@ -240,7 +240,7 @@
 		deleteChatHandler(deleteChat.id);
 	}}
 >
-	<div class=" text-sm text-gray-500">
+	<div class=" text-sm text-gray-500 flex-1 line-clamp-3">
 		{$i18n.t('This will delete')} <span class="  font-semibold">{deleteChat.title}</span>.
 	</div>
 </DeleteConfirmDialog>
@@ -551,7 +551,7 @@
 			</div>
 		</div>
 
-		<div class="px-2.5">
+		<div class="px-2.5 pb-safe-bottom">
 			<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
 
 			<div class="flex flex-col font-primary">

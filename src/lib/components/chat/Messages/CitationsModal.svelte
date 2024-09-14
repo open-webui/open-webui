@@ -66,6 +66,7 @@
 								>
 									{document?.metadata?.name ?? document.source.name}
 								</a>
+								{document?.metadata?.page ? `(page ${document.metadata.page + 1})` : ''}
 							</div>
 						{:else}
 							<div class="text-sm dark:text-gray-400">

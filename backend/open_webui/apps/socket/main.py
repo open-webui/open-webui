@@ -3,9 +3,16 @@ import asyncio
 import socketio
 
 from open_webui.apps.webui.models.users import Users
+from open_webui.env import ENABLE_WEBSOCKET_SUPPORT
 from open_webui.utils.utils import decode_token
 
-sio = socketio.AsyncServer(cors_allowed_origins=[], async_mode="asgi")
+sio = socketio.AsyncServer(
+    cors_allowed_origins=[],
+    async_mode="asgi",
+    transports=(["polling", "websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
+    allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
+    always_connect=True,
+)
 app = socketio.ASGIApp(sio, socketio_path="/ws/socket.io")
 
 # Dictionary to maintain the user pool
@@ -33,7 +40,7 @@ async def connect(sid, environ, auth):
             else:
                 USER_POOL[user.id] = [sid]
 
-            print(f"user {user.name}({user.id}) connected with session ID {sid}")
+            # print(f"user {user.name}({user.id}) connected with session ID {sid}")
 
             await sio.emit("user-count", {"count": len(set(USER_POOL))})
             await sio.emit("usage", {"models": get_models_in_use()})
@@ -41,7 +48,7 @@ async def connect(sid, environ, auth):
 
 @sio.on("user-join")
 async def user_join(sid, data):
-    print("user-join", sid, data)
+    # print("user-join", sid, data)
 
     auth = data["auth"] if "auth" in data else None
     if not auth or "token" not in auth:
@@ -61,7 +68,7 @@ async def user_join(sid, data):
     else:
         USER_POOL[user.id] = [sid]
 
-    print(f"user {user.name}({user.id}) connected with session ID {sid}")
+    # print(f"user {user.name}({user.id}) connected with session ID {sid}")
 
     await sio.emit("user-count", {"count": len(set(USER_POOL))})
 
@@ -110,7 +117,7 @@ async def remove_after_timeout(sid, model_id):
     try:
         await asyncio.sleep(TIMEOUT_DURATION)
         if model_id in USAGE_POOL:
-            print(USAGE_POOL[model_id]["sids"])
+            # print(USAGE_POOL[model_id]["sids"])
             USAGE_POOL[model_id]["sids"].remove(sid)
             USAGE_POOL[model_id]["sids"] = list(set(USAGE_POOL[model_id]["sids"]))
 
@@ -137,7 +144,8 @@ async def disconnect(sid):
 
         await sio.emit("user-count", {"count": len(USER_POOL)})
     else:
-        print(f"Unknown session ID {sid} disconnected")
+        pass
+        # print(f"Unknown session ID {sid} disconnected")
 
 
 def get_event_emitter(request_info):

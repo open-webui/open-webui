@@ -9,7 +9,7 @@
 
 	let prompts = [];
 
-	$: prompts = suggestionPrompts
+	$: prompts = (suggestionPrompts ?? [])
 		.reduce((acc, current) => [...acc, ...[current]], [])
 		.sort(() => Math.random() - 0.5);
 	// suggestionPrompts.length <= 4

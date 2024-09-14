@@ -14,34 +14,17 @@ from typing import Iterator, Optional, Sequence, Union, List, Tuple, Any
 import requests
 import validators
 from chromadb.utils.batch_utils import create_batches
+from pydantic import BaseModel, Field
+
+
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import (
-    BSHTMLLoader,
-    CSVLoader,
-    Docx2txtLoader,
-    OutlookMessageLoader,
-    PyPDFLoader,
-    TextLoader,
-    UnstructuredEPubLoader,
-    UnstructuredExcelLoader,
-    UnstructuredMarkdownLoader,
-    UnstructuredPowerPointLoader,
-    UnstructuredRSTLoader,
-    UnstructuredXMLLoader,
-    WebBaseLoader,
-    YoutubeLoader,
-)
-from langchain_core.documents import Document
-from pydantic import BaseModel
-from pydantic import Field
 
+from open_webui.apps.rag.search.main import SearchResult
 from open_webui.apps.rag.search.brave import search_brave
 from open_webui.apps.rag.search.duckduckgo import search_duckduckgo
 from open_webui.apps.rag.search.google_pse import search_google_pse
 from open_webui.apps.rag.search.jina_search import search_jina
-from open_webui.apps.rag.search.main import SearchResult
 from open_webui.apps.rag.search.searchapi import search_searchapi
 from open_webui.apps.rag.search.searxng import search_searxng
 from open_webui.apps.rag.search.serper import search_serper
@@ -62,12 +45,10 @@ from open_webui.apps.webui.models.users import Users
 from open_webui.apps.webui.routers.users import change_enableBase64
 from open_webui.config import (
     BRAVE_SEARCH_API_KEY,
-    CHROMA_CLIENT,
     CHUNK_OVERLAP,
     CHUNK_SIZE,
     CONTENT_EXTRACTION_ENGINE,
     CORS_ALLOW_ORIGIN,
-    DEVICE_TYPE,
     DOCS_DIR,
     ENABLE_RAG_HYBRID_SEARCH,
     ENABLE_RAG_LOCAL_WEB_FETCH,
@@ -110,7 +91,7 @@ from open_webui.config import (
 )
 from open_webui.config import SILICONFLOW_API_KEY, SILICONFLOW_API_BASE_URL, ENABLE_BASE64
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, DEVICE_TYPE
 from open_webui.utils.misc import (
     calculate_sha256,
     calculate_sha256_string,
@@ -118,6 +99,26 @@ from open_webui.utils.misc import (
     sanitize_filename,
 )
 from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.apps.rag.vector.connector import VECTOR_DB_CLIENT
+
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import (
+    BSHTMLLoader,
+    CSVLoader,
+    Docx2txtLoader,
+    OutlookMessageLoader,
+    PyPDFLoader,
+    TextLoader,
+    UnstructuredEPubLoader,
+    UnstructuredExcelLoader,
+    UnstructuredMarkdownLoader,
+    UnstructuredPowerPointLoader,
+    UnstructuredRSTLoader,
+    UnstructuredXMLLoader,
+    WebBaseLoader,
+    YoutubeLoader,
+)
+from langchain_core.documents import Document
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -1088,14 +1089,11 @@ def store_docs_in_vector_db(
 
     try:
         if overwrite:
-            for collection in CHROMA_CLIENT.list_collections():
-                if collection_name == collection.name:
-                    log.info(f"deleting existing collection {collection_name}")
-                    CHROMA_CLIENT.delete_collection(name=collection_name)
+            if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+                log.info(f"deleting existing collection {collection_name}")
+                VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
 
-        collection = CHROMA_CLIENT.create_collection(name=collection_name)
-
-        embedding_func = get_embedding_function(
+        embedding_function = get_embedding_function(
             app.state.config.RAG_EMBEDDING_ENGINE,
             app.state.config.RAG_EMBEDDING_MODEL,
             app.state.sentence_transformer_ef,
@@ -1104,17 +1102,18 @@ def store_docs_in_vector_db(
             app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
         )
 
-        embedding_texts = list(map(lambda x: x.replace("\n", " "), texts))
-        embeddings = embedding_func(embedding_texts)
-
-        for batch in create_batches(
-                api=CHROMA_CLIENT,
-                ids=[str(uuid.uuid4()) for _ in texts],
-                metadatas=metadatas,
-                embeddings=embeddings,
-                documents=texts,
-        ):
-            collection.add(*batch)
+        VECTOR_DB_CLIENT.insert(
+            collection_name=collection_name,
+            items=[
+                {
+                    "id": str(uuid.uuid4()),
+                    "text": text,
+                    "vector": embedding_function(text.replace("\n", " ")),
+                    "metadata": metadatas[idx],
+                }
+                for idx, text in enumerate(texts)
+            ],
+        )
 
         return True
     except Exception as e:
@@ -1510,7 +1509,7 @@ def scan_docs_dir(user=Depends(get_admin_user)):
 
 @app.post("/reset/db")
 def reset_vector_db(user=Depends(get_admin_user)):
-    CHROMA_CLIENT.reset()
+    VECTOR_DB_CLIENT.reset()
 
 
 @app.post("/reset/uploads")
@@ -1551,7 +1550,7 @@ def reset(user=Depends(get_admin_user)) -> bool:
             log.error("Failed to delete %s. Reason: %s" % (file_path, e))
 
     try:
-        CHROMA_CLIENT.reset()
+        VECTOR_DB_CLIENT.reset()
     except Exception as e:
         log.exception(e)
 
