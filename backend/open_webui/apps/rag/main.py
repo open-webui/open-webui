@@ -1160,7 +1160,7 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
         elif (
             file_content_type
             == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            or file_ext in ["doc", "docx"]
+            or file_ext == "docx"
         ):
             loader = Docx2txtLoader(file_path)
         elif file_content_type in [
