@@ -80,14 +80,13 @@ class QueryMemoryForm(BaseModel):
 
 @router.post("/query")
 async def query_memory(
-        request: Request, form_data: QueryMemoryForm, user=Depends(get_verified_user)
+    request: Request, form_data: QueryMemoryForm, user=Depends(get_verified_user)
 ):
     results = VECTOR_DB_CLIENT.search(
         name=f"user-memory-{user.id}",
         vectors=[request.app.state.EMBEDDING_FUNCTION(form_data.content)],
         limit=form_data.k,
     )
-
     return results
 
 
