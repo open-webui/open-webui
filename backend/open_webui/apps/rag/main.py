@@ -195,11 +195,16 @@ def update_reranking_model(
     if reranking_model:
         import sentence_transformers
 
-        app.state.sentence_transformer_rf = sentence_transformers.CrossEncoder(
-            get_model_path(reranking_model, update_model),
-            device=DEVICE_TYPE,
-            trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
-        )
+        try:
+            app.state.sentence_transformer_rf = sentence_transformers.CrossEncoder(
+                get_model_path(reranking_model, update_model),
+                device=DEVICE_TYPE,
+                trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
+            )
+        except:
+            log.error("CrossEncoder error")
+            app.state.sentence_transformer_rf = None
+            app.state.config.ENABLE_RAG_HYBRID_SEARCH = False
     else:
         app.state.sentence_transformer_rf = None
 
