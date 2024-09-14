@@ -370,6 +370,55 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
             )
 
 
+def convert_json_to_stream(json_data: dict):
+    # Extract necessary information
+    id = json_data['id']
+    object_type = 'chat.completion.chunk'
+    created = json_data['created']
+    model = json_data['model']
+    system_fingerprint = json_data['system_fingerprint']
+    content = json_data['choices'][0]['message']['content']
+
+    # Create the base structure for each chunk
+    base_chunk = {
+        "id": id,
+        "object": object_type,
+        "created": created,
+        "model": model,
+        "system_fingerprint": system_fingerprint,
+        "choices": [{
+            "index": 0,
+            "delta": {},
+            "logprobs": None,
+            "finish_reason": None
+        }]
+    }
+
+    # Create the stream
+    stream = []
+
+    # Add the initial chunk with role
+    initial_chunk = base_chunk.copy()
+    initial_chunk['choices'][0]['delta'] = {"role": "assistant", "content": "", "refusal": None}
+    stream.append(f"data: {json.dumps(initial_chunk, separators=(',', ':'))}")
+
+    # Add chunks for each character in the content
+    chunk = base_chunk.copy()
+    chunk['choices'][0]['delta'] = {"content": content}
+    stream.append(f"data: {json.dumps(chunk, separators=(',', ':'))}")
+
+    # Add the final chunk
+    final_chunk = base_chunk.copy()
+    final_chunk['choices'][0]['delta'] = {}
+    final_chunk['choices'][0]['finish_reason'] = "stop"
+    stream.append(f"data: {json.dumps(final_chunk, separators=(',', ':'))}")
+
+    # Add the [DONE] marker
+    stream.append("data: [DONE]")
+
+    return stream
+
+
 @app.post("/chat/completions")
 @app.post("/chat/completions/{url_idx}")
 async def generate_chat_completion(
@@ -405,6 +454,14 @@ async def generate_chat_completion(
             "role": user.role,
         }
 
+    # patch max_tokens -> max_completion_tokens and stream if 🍓
+    if model["id"].startswith("o1-"):
+        if "max_tokens" in payload:
+            payload["max_completion_tokens"] = payload.pop("max_tokens")
+
+        # hard-code stream=False regardless of upstream in svelte/etc.
+        payload["stream"] = False
+
     # Convert the modified body back to JSON
     payload = json.dumps(payload)
 
@@ -422,7 +479,7 @@ async def generate_chat_completion(
 
     r = None
     session = None
-    streaming = False
+    streaming = True
 
     try:
         session = aiohttp.ClientSession(
@@ -439,7 +496,6 @@ async def generate_chat_completion(
 
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
-            streaming = True
             return StreamingResponse(
                 r.content,
                 status_code=r.status,
@@ -449,8 +505,33 @@ async def generate_chat_completion(
                 ),
             )
         else:
+            # get response data
             response_data = await r.json()
-            return response_data
+
+            # convert to stream line list
+            async def content_generator():
+                # use asyncio here to avoid nested calls or nest_async
+
+                for line in convert_json_to_stream(response_data):
+                    yield bytes(line + "\n\n", "utf-8")
+
+            # add the SSE header as if it were there originally
+            headers = dict(r.headers)
+            headers["Content-Type"] = "text/event-stream; charset=utf-8"
+            # unset content-encoding: gzip
+            if "content-encoding" in headers:
+                del headers["content-encoding"]
+            if "Content-Encoding" in headers:
+                del headers["Content-Encoding"]
+
+            return StreamingResponse(
+                content_generator(),
+                status_code=r.status,
+                headers=dict(headers),
+                background=BackgroundTask(
+                    cleanup_response, response=r, session=session
+                ),
+            )
     except Exception as e:
         log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
