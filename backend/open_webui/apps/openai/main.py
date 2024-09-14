@@ -7,6 +7,8 @@ from typing import Literal, Optional, overload
 
 import aiohttp
 import requests
+
+from open_webui.apps.openai.utils.streaming import convert_from_stream_headers, convert_to_stream_data
 from open_webui.apps.webui.models.models import Models
 from open_webui.config import (
     AIOHTTP_CLIENT_TIMEOUT,
@@ -17,6 +19,7 @@ from open_webui.config import (
     MODEL_FILTER_LIST,
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
+    OPENAI_API_NOSTREAM_MODELS,
     AppConfig,
 )
 from open_webui.constants import ERROR_MESSAGES
@@ -56,6 +59,7 @@ app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
 app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
+app.state.config.OPENAI_API_NOSTREAM_MODELS = OPENAI_API_NOSTREAM_MODELS
 
 app.state.MODELS = {}
 
@@ -370,55 +374,6 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
             )
 
 
-def convert_json_to_stream(json_data: dict):
-    # Extract necessary information
-    id = json_data['id']
-    object_type = 'chat.completion.chunk'
-    created = json_data['created']
-    model = json_data['model']
-    system_fingerprint = json_data['system_fingerprint']
-    content = json_data['choices'][0]['message']['content']
-
-    # Create the base structure for each chunk
-    base_chunk = {
-        "id": id,
-        "object": object_type,
-        "created": created,
-        "model": model,
-        "system_fingerprint": system_fingerprint,
-        "choices": [{
-            "index": 0,
-            "delta": {},
-            "logprobs": None,
-            "finish_reason": None
-        }]
-    }
-
-    # Create the stream
-    stream = []
-
-    # Add the initial chunk with role
-    initial_chunk = base_chunk.copy()
-    initial_chunk['choices'][0]['delta'] = {"role": "assistant", "content": "", "refusal": None}
-    stream.append(f"data: {json.dumps(initial_chunk, separators=(',', ':'))}")
-
-    # Add chunks for each character in the content
-    chunk = base_chunk.copy()
-    chunk['choices'][0]['delta'] = {"content": content}
-    stream.append(f"data: {json.dumps(chunk, separators=(',', ':'))}")
-
-    # Add the final chunk
-    final_chunk = base_chunk.copy()
-    final_chunk['choices'][0]['delta'] = {}
-    final_chunk['choices'][0]['finish_reason'] = "stop"
-    stream.append(f"data: {json.dumps(final_chunk, separators=(',', ':'))}")
-
-    # Add the [DONE] marker
-    stream.append("data: [DONE]")
-
-    return stream
-
-
 @app.post("/chat/completions")
 @app.post("/chat/completions/{url_idx}")
 async def generate_chat_completion(
@@ -454,8 +409,11 @@ async def generate_chat_completion(
             "role": user.role,
         }
 
-    # patch max_tokens -> max_completion_tokens and stream if 🍓
-    if model["id"].startswith("o1-"):
+    # handle special cases for certain models
+    stream_requested = payload.get("stream", False)
+    if model_id in app.state.config.OPENAI_API_NOSTREAM_MODELS:
+        log.info("Model does not support streaming; patching request")
+        # patch max_tokens -> max_completion_tokens and stream if 🍓
         if "max_tokens" in payload:
             payload["max_completion_tokens"] = payload.pop("max_tokens")
 
@@ -479,11 +437,12 @@ async def generate_chat_completion(
 
     r = None
     session = None
-    streaming = True
 
     try:
+        # NOTE: have seen better OAI performance with httpx/http2 than aiohttp/http1.1
         session = aiohttp.ClientSession(
-            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
         )
         r = await session.request(
             method="POST",
@@ -492,10 +451,16 @@ async def generate_chat_completion(
             headers=headers,
         )
 
+        # check for non-200 status and log the response if it's not a 200
+        if r.status != 200:
+            log.error(f"Non-200 status code: {r.status}")
+            log.error(f"Request: {payload}")
+            log.error(f"Response: {await r.text()}")
         r.raise_for_status()
 
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
+            log.info("Streaming response from original event stream")
             return StreamingResponse(
                 r.content,
                 status_code=r.status,
@@ -505,33 +470,31 @@ async def generate_chat_completion(
                 ),
             )
         else:
-            # get response data
+            # request here so we have status
             response_data = await r.json()
+            log.info("Received non-streaming response from upstream")
 
-            # convert to stream line list
-            async def content_generator():
-                # use asyncio here to avoid nested calls or nest_async
+            if stream_requested:
+                log.info("Streaming response from non-streaming response")
 
-                for line in convert_json_to_stream(response_data):
-                    yield bytes(line + "\n\n", "utf-8")
+                # setup async gen for Starlette
+                async def content_generator():
+                    for line in convert_to_stream_data(response_data):
+                        yield line + b"\n\n"
 
-            # add the SSE header as if it were there originally
-            headers = dict(r.headers)
-            headers["Content-Type"] = "text/event-stream; charset=utf-8"
-            # unset content-encoding: gzip
-            if "content-encoding" in headers:
-                del headers["content-encoding"]
-            if "Content-Encoding" in headers:
-                del headers["Content-Encoding"]
-
-            return StreamingResponse(
-                content_generator(),
-                status_code=r.status,
-                headers=dict(headers),
-                background=BackgroundTask(
-                    cleanup_response, response=r, session=session
-                ),
-            )
+                return StreamingResponse(
+                    content_generator(),
+                    status_code=r.status,
+                    # NOTE: header patching here
+                    headers=convert_from_stream_headers(r.headers),
+                    background=BackgroundTask(
+                        cleanup_response, response=r, session=session
+                    ),
+                )
+            else:
+                log.info("Returning non-streaming response to client")
+                # close the session
+                return response_data
     except Exception as e:
         log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
@@ -545,10 +508,11 @@ async def generate_chat_completion(
                 error_detail = f"External: {e}"
         raise HTTPException(status_code=r.status if r else 500, detail=error_detail)
     finally:
-        if not streaming and session:
+        if not stream_requested:
             if r:
                 r.close()
-            await session.close()
+            if session:
+                await session.close()
 
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])

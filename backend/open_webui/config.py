@@ -671,6 +671,24 @@ OPENAI_API_BASE_URLS = PersistentConfig(
     "OPENAI_API_BASE_URLS", "openai.api_base_urls", OPENAI_API_BASE_URLS
 )
 
+OPENAI_API_NOSTREAM_MODEL_LIST = os.environ.get("OPENAI_API_NOSTREAM_MODELS", "")
+OPENAI_API_NOSTREAM_MODEL_LIST = (
+    OPENAI_API_NOSTREAM_MODEL_LIST.split(";")
+    if OPENAI_API_NOSTREAM_MODEL_LIST != ""
+    else ["o1-mini", "o1-preview", "o1-mini-2024-09-12", "o1-preview-2024-09-12"]
+)
+OPENAI_API_NOSTREAM_MODELS = PersistentConfig(
+    "OPENAI_API_NOSTREAM_MODELS", "openai.api_nostream_models", OPENAI_API_NOSTREAM_MODEL_LIST
+)
+log.info(f"OPENAI_API_NOSTREAM_MODELS: {OPENAI_API_NOSTREAM_MODELS.value}")
+
+# Default model for chat titles with openai.
+# Currently only applies to no-stream models
+OPENAI_API_TITLE_MODEL_NAME = os.environ.get("OPENAI_API_TITLE_MODEL", "gpt-4o-mini")
+OPENAI_API_TITLE_MODEL = PersistentConfig(
+    "OPENAI_API_TITLE_MODEL", "openai.api_title_model", OPENAI_API_TITLE_MODEL_NAME
+)
+
 OPENAI_API_KEY = ""
 
 try:

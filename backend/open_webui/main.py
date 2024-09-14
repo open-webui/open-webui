@@ -74,7 +74,7 @@ from open_webui.config import (
     WEBUI_AUTH,
     WEBUI_NAME,
     AppConfig,
-    run_migrations,
+    run_migrations, OPENAI_API_NOSTREAM_MODELS, OPENAI_API_TITLE_MODEL,
 )
 from open_webui.constants import ERROR_MESSAGES, TASKS, WEBHOOK_MESSAGES
 from open_webui.env import (
@@ -189,6 +189,8 @@ app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
 
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+app.state.config.OPENAI_API_NOSTREAM_MODELS = OPENAI_API_NOSTREAM_MODELS
+app.state.config.OPENAI_API_TITLE_MODEL = OPENAI_API_TITLE_MODEL
 
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
 
@@ -1016,10 +1018,13 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
 
     model = app.state.MODELS[model_id]
     if model.get("pipe"):
+        log.info(f"Using pipeline for model: {model_id}")
         return await generate_function_chat_completion(form_data, user=user)
     if model["owned_by"] == "ollama":
+        log.info(f"Using Ollama API for model: {model_id}")
         return await generate_ollama_chat_completion(form_data, user=user)
     else:
+        log.info(f"Using OpenAI API for model: {model_id}")
         return await generate_openai_chat_completion(form_data, user=user)
 
 
@@ -1359,18 +1364,20 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
 async def generate_title(form_data: dict, user=Depends(get_verified_user)):
     print("generate_title")
 
-    model_id = form_data["model"]
+    original_model_id = form_data["model"]
+
+    # patch this up front to avoid issues with the nostream models and UX
+    if original_model_id in app.state.config.OPENAI_API_NOSTREAM_MODELS:
+        original_model_id = app.state.config.OPENAI_API_TITLE_MODEL
+
+    # Check if the user has a custom task model
+    # If the user has a custom task model, use that model
+    model_id = get_task_model_id(original_model_id)
     if model_id not in app.state.MODELS:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Model not found",
         )
-
-    # Check if the user has a custom task model
-    # If the user has a custom task model, use that model
-    model_id = get_task_model_id(model_id)
-
-    print(model_id)
 
     if app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE != "":
         template = app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE
@@ -1396,13 +1403,22 @@ Prompt: {{prompt:middletruncate:8000}}"""
         },
     )
 
+    # check if this is an OAI no-stream model and
+    if model_id in app.state.config.OPENAI_API_NOSTREAM_MODELS:
+        log.info(f"Model {model_id} needs token argument patching in generate_title")
+        # patch max_tokens -> max_completion_tokens and stream if 🍓
+        token_args = {"max_completion_tokens": 50}
+    else:
+        log.info(f"Model {model_id} does not need token argument patching in generate_title")
+        token_args = {"max_tokens": 50}
+
     payload = {
         "model": model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": False,
-        "max_tokens": 50,
         "chat_id": form_data.get("chat_id", None),
         "metadata": {"task": str(TASKS.TITLE_GENERATION)},
+        **token_args
     }
 
     log.debug(payload)
@@ -1424,7 +1440,9 @@ Prompt: {{prompt:middletruncate:8000}}"""
     if "chat_id" in payload:
         del payload["chat_id"]
 
-    return await generate_chat_completions(form_data=payload, user=user)
+    title_data = await generate_chat_completions(form_data=payload, user=user)
+    log.info(f"Generated title with model {model_id}: {title_data}")
+    return title_data
 
 
 @app.post("/api/task/query/completions")
