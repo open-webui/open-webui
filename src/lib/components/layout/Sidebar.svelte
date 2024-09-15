@@ -551,7 +551,7 @@
 			</div>
 		</div>
 
-		<div class="px-2.5 pb-safe-bottom">
+		<div class="px-2.5">
 			<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
 
 			<div class="flex flex-col font-primary">
