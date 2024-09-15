@@ -30,9 +30,6 @@ export default {
 						'code::after': false
 					}
 				}
-			},
-			padding: {
-				'safe-bottom': 'env(safe-area-inset-bottom)'
 			}
 		}
 	},

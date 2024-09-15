@@ -55,17 +55,13 @@
 		if ($config?.turnstile_check && !turnstileVerify) {
 			toast.error('Please complete the CAPTCHA verification to proceed!');
 		}
-		const sessionUser = await userSignUp(
-			name,
-			email,
-			password,
-			generateInitialsImage(name),
-			turnstileToken
-		).catch((error) => {
-			reset?.();
-			toast.error(error);
-			return null;
-		});
+		const sessionUser = await userSignUp(name, email, password, '/user.png', turnstileToken).catch(
+			(error) => {
+				reset?.();
+				toast.error(error);
+				return null;
+			}
+		);
 
 		await setSessionUser(sessionUser);
 	};
