@@ -309,7 +309,7 @@
 					ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
 
 					// Get the base64 representation of the compressed image
-					const compressedSrc = canvas.toDataURL('image/jpeg');
+					const compressedSrc = canvas.toDataURL();
 
 					// Display the compressed image
 					info.meta.profile_image_url = compressedSrc;
@@ -321,7 +321,7 @@
 			if (
 				inputFiles &&
 				inputFiles.length > 0 &&
-				['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(inputFiles[0]['type'])
+				['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/svg+xml'].includes(inputFiles[0]['type'])
 			) {
 				reader.readAsDataURL(inputFiles[0]);
 			} else {
@@ -366,7 +366,7 @@
 				<button
 					class=" {info.meta.profile_image_url
 						? ''
-						: 'p-4'} rounded-full dark:bg-gray-700 border border-dashed border-gray-200 flex items-center"
+						: 'p-4'} rounded-full border border-dashed border-gray-200 flex items-center"
 					type="button"
 					on:click={() => {
 						filesInputElement.click();
