@@ -225,6 +225,10 @@ def merge_models_lists(model_lists):
                             "embedding",
                             "tts",
                             "whisper",
+                            "swap",
+                            "BAAI",
+                            "reranker",
+                            "SenseVoiceSmall",
                         ]
                     )
                 ]
