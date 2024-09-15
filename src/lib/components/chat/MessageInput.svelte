@@ -92,6 +92,37 @@
 		});
 	};
 
+	const uploadImageHandler = async (file) => {
+		console.log(file);
+
+		const imageItem = {
+			id: null,
+			url: '/loading.gif',
+			status: '',
+			type: 'image',
+			error: ''
+		};
+
+		files = [...files, imageItem];
+
+		try {
+			let uploadedFile = null;
+			uploadedFile = await uploadFile(localStorage.token, file);
+			if (uploadedFile) {
+				const image_url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}/preview`;
+				imageItem.id = uploadFile.id;
+				imageItem.status = 'processed';
+				imageItem.url = image_url;
+				files = files;
+			} else {
+				files = files.filter((item) => item.status !== '');
+			}
+		} catch (error) {
+			toast.error(error.message || error);
+			files = files.filter((item) => item.status !== '');
+		}
+	};
+
 	const uploadFileHandler = async (file, base64_url, enableBase64) => {
 		console.log(file);
 
@@ -230,13 +261,7 @@
 				}
 				let reader = new FileReader();
 				reader.onload = (event) => {
-					files = [
-						...files,
-						{
-							type: 'image',
-							url: `${event.target.result}`
-						}
-					];
+					uploadImageHandler(file);
 				};
 				reader.readAsDataURL(file);
 			} else {
@@ -475,7 +500,7 @@
 													<img
 														src={file.url}
 														alt="input"
-														class=" h-16 w-16 rounded-xl object-cover"
+														class=" h-16 w-16 rounded-xl object-cover bg-white"
 													/>
 													{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
 														<Tooltip

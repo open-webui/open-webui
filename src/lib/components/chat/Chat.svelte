@@ -539,7 +539,7 @@
 		} else if (
 			files.length > 0 &&
 			files.filter(
-				(file) => file.type !== 'image' && !(file?.base64 ?? false) && file.status !== 'processed'
+				(file) => file.status !== 'processed'
 			).length > 0
 		) {
 			// Upload not done
