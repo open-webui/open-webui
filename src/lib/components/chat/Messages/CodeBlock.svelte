@@ -254,10 +254,19 @@ __builtins__.input = input`);
 		all_expanded = !all_expanded;
 	};
 
-	$: if (lang.toLowerCase() === 'php' || lang.toLowerCase() === 'html') {
+	$: if (
+		lang.toLowerCase() === 'php' ||
+		lang.toLowerCase() === 'html' ||
+		lang.toLocaleLowerCase() === 'suno'
+	) {
 		if (!!sandpackIframe || !enableHTML) {
 			// executeHTML(code);
 			enableHTML = true;
+		}
+		if (lang.toLocaleLowerCase() === 'suno') {
+			expanded = true;
+			all_expanded = false;
+			executeHTML(code);
 		}
 	}
 
@@ -372,7 +381,7 @@ __builtins__.input = input`);
 			{/if}
 		</div>
 	{/if}
-	{#if lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html'}
+	{#if lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html' || lang.toLocaleLowerCase() == 'suno'}
 		<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
 			<div class="text-gray-500 text-white text-xs mb-1 flex justify-between items-center">
 				<button class="p-1" on:click={toggleExpand}>
