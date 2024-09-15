@@ -37,7 +37,19 @@ except ImportError:
 USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
 
 if USE_CUDA.lower() == "true":
-    DEVICE_TYPE = "cuda"
+    try:
+        import torch
+
+        assert torch.cuda.is_available(), "CUDA not available"
+        DEVICE_TYPE = "cuda"
+    except Exception as e:
+        cuda_error = (
+            "Error when testing CUDA but USE_CUDA_DOCKER is true. "
+            f"Resetting USE_CUDA_DOCKER to false: {e}"
+        )
+        os.environ["USE_CUDA_DOCKER"] = "false"
+        USE_CUDA = "false"
+        DEVICE_TYPE = "cpu"
 else:
     DEVICE_TYPE = "cpu"
 
@@ -56,6 +68,9 @@ else:
 
 log = logging.getLogger(__name__)
 log.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
+
+if "cuda_error" in locals():
+    log.exception(cuda_error)
 
 log_sources = [
     "AUDIO",

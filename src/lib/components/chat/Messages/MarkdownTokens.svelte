@@ -34,34 +34,36 @@
 			code={revertSanitizedCodeResponseContent(token?.text ?? '')}
 		/>
 	{:else if token.type === 'table'}
-		<table>
-			<thead>
-				<tr>
-					{#each token.header as header, headerIdx}
-						<th style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}>
-							<MarkdownInlineTokens
-								id={`${id}-${tokenIdx}-header-${headerIdx}`}
-								tokens={header.tokens}
-							/>
-						</th>
-					{/each}
-				</tr>
-			</thead>
-			<tbody>
-				{#each token.rows as row, rowIdx}
+		<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
+			<table class="w-full">
+				<thead>
 					<tr>
-						{#each row ?? [] as cell, cellIdx}
-							<td style={token.align[cellIdx] ? '' : `text-align: ${token.align[cellIdx]}`}>
+						{#each token.header as header, headerIdx}
+							<th style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}>
 								<MarkdownInlineTokens
-									id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
-									tokens={cell.tokens}
+									id={`${id}-${tokenIdx}-header-${headerIdx}`}
+									tokens={header.tokens}
 								/>
-							</td>
+							</th>
 						{/each}
 					</tr>
-				{/each}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					{#each token.rows as row, rowIdx}
+						<tr>
+							{#each row ?? [] as cell, cellIdx}
+								<td style={token.align[cellIdx] ? '' : `text-align: ${token.align[cellIdx]}`}>
+									<MarkdownInlineTokens
+										id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
+										tokens={cell.tokens}
+									/>
+								</td>
+							{/each}
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	{:else if token.type === 'blockquote'}
 		<blockquote>
 			<svelte:self id={`${id}-${tokenIdx}`} tokens={token.tokens} />

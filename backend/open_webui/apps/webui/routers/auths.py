@@ -194,9 +194,9 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 @router.post("/signup", response_model=SigninResponse)
 async def signup(request: Request, response: Response, form_data: SignupForm):
     if (
-            not request.app.state.config.ENABLE_SIGNUP
-            and request.app.state.config.ENABLE_LOGIN_FORM
-            and WEBUI_AUTH
+        not request.app.state.config.ENABLE_SIGNUP
+        or not request.app.state.config.ENABLE_LOGIN_FORM
+        or not WEBUI_AUTH
     ):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED

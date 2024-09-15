@@ -39,6 +39,19 @@ def serve(
                 "/usr/local/lib/python3.11/site-packages/nvidia/cudnn/lib",
             ]
         )
+        try:
+            import torch
+
+            assert torch.cuda.is_available(), "CUDA not available"
+            typer.echo("CUDA seems to be working")
+        except Exception as e:
+            typer.echo(
+                "Error when testing CUDA but USE_CUDA_DOCKER is true. "
+                "Resetting USE_CUDA_DOCKER to false and removing "
+                f"LD_LIBRARY_PATH modifications: {e}"
+            )
+            os.environ["USE_CUDA_DOCKER"] = "false"
+            os.environ["LD_LIBRARY_PATH"] = ":".join(LD_LIBRARY_PATH)
     import open_webui.main  # we need set environment variables before importing main
 
     uvicorn.run(open_webui.main.app, host=host, port=port, forwarded_allow_ips="*")

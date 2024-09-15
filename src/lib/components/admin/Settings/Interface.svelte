@@ -327,9 +327,10 @@
 									/>
 								</div>
 
-								<input
-									class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r border-gray-100 dark:border-gray-800"
+								<textarea
+									class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r border-gray-100 dark:border-gray-800 resize-none"
 									placeholder={$i18n.t('Prompt (e.g. Tell me a fun fact about the Roman Empire)')}
+									rows="3"
 									bind:value={prompt.content}
 								/>
 							</div>

@@ -258,16 +258,21 @@ def update_reranking_model(
         update_model: bool = False,
 ):
     if reranking_model:
-        # import sentence_transformers
+        try:
+            # import sentence_transformers
 
-        # app.state.sentence_transformer_rf = sentence_transformers.CrossEncoder(
-        #     get_model_path(reranking_model, update_model),
-        #     device=DEVICE_TYPE,
-        #     trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
-        # )
-        app.state.sentence_transformer_rf = Reranking(
-            reranking_model=reranking_model
-        )
+            # app.state.sentence_transformer_rf = sentence_transformers.CrossEncoder(
+            #     get_model_path(reranking_model, update_model),
+            #     device=DEVICE_TYPE,
+            #     trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
+            # )
+            app.state.sentence_transformer_rf = Reranking(
+                reranking_model=reranking_model
+            )
+        except:
+            log.error("CrossEncoder error")
+            app.state.sentence_transformer_rf = None
+            app.state.config.ENABLE_RAG_HYBRID_SEARCH = False
     else:
         app.state.sentence_transformer_rf = None
 
@@ -1245,9 +1250,9 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
         elif file_content_type == "application/epub+zip":
             loader = UnstructuredEPubLoader(file_path)
         elif (
-                file_content_type
-                == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                or file_ext in ["doc", "docx"]
+            file_content_type
+            == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            or file_ext == "docx"
         ):
             loader = Docx2txtLoader(file_path)
         elif file_content_type in [
