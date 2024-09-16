@@ -184,10 +184,11 @@
 				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}/content`;
 				const fileType = file['type'];
 				const fileExtension = file.name.split('.').pop();
+				fileItem.id = uploadedFile.id;
 
 				if (!enableBase64) {
 					fileItem.file = uploadedFile;
-					fileItem.id = uploadedFile.id;
+					fileItem.status = 'uploaded';
 
 					if (
 						SUPPORTED_FILE_TYPE.includes(fileType) ||
@@ -207,7 +208,6 @@
 					}
 				} else {
 					fileItem.type = fileExtension;
-					fileItem.id = uploadedFile.id;
 					fileItem.base64 = true;
 					fileItem.base64_url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}/preview`;
 					fileItem.status = 'processed';
@@ -236,14 +236,13 @@
 				} else {
 					fileItem.collection_name = res.collection_name;
 				}
-				files = files;
 			}
 		} catch (e) {
 			// Remove the failed doc from the files array
 			// files = files.filter((f) => f.id !== fileItem.id);
 			toast.error(e);
-			files = files;
 		}
+		files = files;
 	};
 
 	const processFileCountLimit = async (inputFiles) => {
