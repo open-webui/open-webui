@@ -1334,7 +1334,7 @@ def process_doc(
 
         collection_name = form_data.collection_name
         if collection_name is None:
-            collection_name = calculate_sha256(f)[:63]
+            collection_name = form_data.file_id[:20] + calculate_sha256(f)[:43]
         f.close()
 
         loader, known_type = get_loader(
