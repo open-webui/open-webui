@@ -168,6 +168,7 @@
 			uploadedFile = await uploadFile(localStorage.token, file);
 
 			if (uploadedFile) {
+				fileItem.status = 'uploaded';
 				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}/content`;
 				const fileType = file['type'];
 				const fileExtension = file.name.split('.').pop();
@@ -286,7 +287,7 @@
 			if (isImage) {
 				await uploadImageHandler(file);
 			} else {
-				await uploadFileHandler(file, dataURL, settings?.enableFileUpdateBase64 ?? false);
+				await uploadFileHandler(file, dataURL, $settings?.enableFileUpdateBase64 ?? false);
 			}
 		} catch (error) {
 			console.error('Error reading file:', error);
