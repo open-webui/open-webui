@@ -13,6 +13,7 @@ from typing import Optional
 
 import aiohttp
 import requests
+from Secweb import SecWeb
 
 
 from open_webui.apps.audio.main import app as audio_app
@@ -74,6 +75,7 @@ from open_webui.config import (
     WEBUI_AUTH,
     WEBUI_NAME,
     AppConfig,
+    get_secweb_options,
     run_migrations,
 )
 from open_webui.constants import ERROR_MESSAGES, TASKS, WEBHOOK_MESSAGES
@@ -181,6 +183,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     docs_url="/docs" if ENV == "dev" else None, redoc_url=None, lifespan=lifespan
 )
+
+# Apply SecWeb middlewares to the app
+SecWeb(app=app, Option=get_secweb_options())
 
 app.state.config = AppConfig()
 

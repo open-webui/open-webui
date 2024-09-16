@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -1472,3 +1473,76 @@ AUDIO_TTS_SPLIT_ON = PersistentConfig(
     "audio.tts.split_on",
     os.getenv("AUDIO_TTS_SPLIT_ON", "punctuation"),
 )
+
+####################################
+# Security Response Headers
+####################################
+
+# Set HTTP Strict Transport Security(HSTS) response header
+def set_hsts(value: str):
+    pattern = r'^max-age=(\d+)(;includeSubDomains)?(;preload)?$'
+    match = re.match(pattern, value, re.IGNORECASE)
+    if not match:
+        return False
+    return {
+        'max-age': int(match.group(1)),
+        'includeSubDomains': bool(match.group(2)),
+        'preload': bool(match.group(3))
+    }
+
+# Set X-Frame-Options response header
+def set_xframe(value: str):
+    pattern = r'^(DENY|SAMEORIGIN)$'
+    match = re.match(pattern, value)
+    if not match:
+        return False
+    return {
+        "X-Frame-Options": value
+    }
+
+# Set Referrer-Policy response header
+def set_referrer(value: str):
+    pattern = r'^(no-referrer|no-referrer-when-downgrade|origin|origin-when-cross-origin|same-origin|strict-origin|strict-origin-when-cross-origin|unsafe-url)$'
+    match = re.match(pattern, value)
+    if not match:
+        return False
+    return {
+        'Referrer-Policy': value
+    }
+
+# Set Cache-Control response header
+def set_cache_control(value: str):
+    pattern = r'^(public|private|no-cache|no-store|must-revalidate|proxy-revalidate|max-age=\d+|s-maxage=\d+|no-transform|immutable)(,\s*(public|private|no-cache|no-store|must-revalidate|proxy-revalidate|max-age=\d+|s-maxage=\d+|no-transform|immutable))*$'
+    match = re.match(pattern, value, re.IGNORECASE)
+    if not match:
+        return False
+
+    cache_control = {}
+    max_age_match = re.search(r'max-age=(\d+)', value, re.IGNORECASE)
+    s_maxage_match = re.search(r's-maxage=(\d+)', value, re.IGNORECASE)
+
+    if max_age_match:
+        cache_control['max-age'] = int(max_age_match.group(1))
+    if s_maxage_match:
+        cache_control['s-maxage'] = int(s_maxage_match.group(1))
+
+    directives = ['no-cache', 'no-store', 'no-transform', 'must-revalidate', 'proxy-revalidate', 'must-understand', 'private', 'public', 'immutable', 'stale-while-revalidate']
+    for directive in directives:
+        if directive in value:
+            cache_control[directive] = True
+
+    return cache_control
+    
+
+# Activate/Deactivate default security headers
+def get_secweb_options():
+    return {
+        'cacheControl': set_cache_control(os.environ.get('CACHE_CONTROL', '')),
+        'coep': False,
+        'coop': False,
+        'csp': False,
+        'hsts': set_hsts(os.environ.get('HSTS', '')),
+        'referrer': set_referrer(os.environ.get('REFERRER_POLICY', '')),
+        'wshsts': set_hsts(os.environ.get('HSTS', '')),
+        'xframe': set_xframe(os.environ.get('XFRAME_ORIGIN', ''))
+    }
