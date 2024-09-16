@@ -8,7 +8,6 @@ from typing import Generic, Optional, TypeVar
 from urllib.parse import urlparse
 
 import chromadb
-import yaml
 from chromadb import Settings
 from pydantic import BaseModel
 from sqlalchemy import JSON, Column, DateTime, Integer, func
@@ -1277,7 +1276,6 @@ AUTOMATIC1111_CFG_SCALE = PersistentConfig(
         else None
     ),
 )
-
 
 AUTOMATIC1111_SAMPLER = PersistentConfig(
     "AUTOMATIC1111_SAMPLERE",
