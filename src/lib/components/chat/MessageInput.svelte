@@ -194,7 +194,7 @@
 						SUPPORTED_FILE_TYPE.includes(fileType) ||
 						SUPPORTED_FILE_EXTENSIONS.includes(fileExtension)
 					) {
-						processFileItem(fileItem);
+						await processFileItem(fileItem);
 					} else {
 						toast.error(
 							$i18n.t(
@@ -204,7 +204,7 @@
 								}
 							)
 						);
-						processFileItem(fileItem);
+						await processFileItem(fileItem);
 					}
 				} else {
 					fileItem.type = fileExtension;
