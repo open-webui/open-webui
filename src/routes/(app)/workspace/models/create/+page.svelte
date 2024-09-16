@@ -19,6 +19,7 @@
 	import { parseFile } from '$lib/utils/characters';
 	import FiltersSelector from '$lib/components/workspace/Models/FiltersSelector.svelte';
 	import ActionsSelector from '$lib/components/workspace/Models/ActionsSelector.svelte';
+	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -58,7 +59,8 @@
 
 	let params = {};
 	let capabilities = {
-		vision: true
+		vision: true,
+		usage: undefined
 	};
 
 	let toolIds = [];
@@ -647,25 +649,7 @@
 		</div>
 
 		<div class="my-1">
-			<div class="flex w-full justify-between mb-1">
-				<div class=" self-center text-sm font-semibold">{$i18n.t('Capabilities')}</div>
-			</div>
-			<div class="flex flex-col">
-				{#each Object.keys(capabilities) as capability}
-					<div class=" flex items-center gap-2">
-						<Checkbox
-							state={capabilities[capability] ? 'checked' : 'unchecked'}
-							on:change={(e) => {
-								capabilities[capability] = e.detail === 'checked';
-							}}
-						/>
-
-						<div class=" py-0.5 text-sm w-full capitalize">
-							{$i18n.t(capability)}
-						</div>
-					</div>
-				{/each}
-			</div>
+			<Capabilities bind:capabilities />
 		</div>
 
 		<div class="my-1">
