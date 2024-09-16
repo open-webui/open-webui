@@ -206,7 +206,9 @@ def update_reranking_model(
                     self.ckpt = Checkpoint(name, colbert_config=ColBERTConfig())
                     pass
 
-                def calculate_similarity_scores(query_embeddings, document_embeddings):
+                def calculate_similarity_scores(
+                    self, query_embeddings, document_embeddings
+                ):
                     # Validate dimensions to ensure compatibility
                     if query_embeddings.dim() != 3:
                         raise ValueError(
