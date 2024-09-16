@@ -266,35 +266,32 @@
 	};
 
 	const processFileSizeLimit = async (file) => {
-		if (file.size <= $config?.file?.max_size * 1024 * 1024) {
-			if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
-				if (visionCapableModels.length === 0) {
-					toast.error($i18n.t('Selected model(s) do not support image inputs'));
-					return;
-				}
-				let reader = new FileReader();
-				reader.onload = async (event) => {
-					await uploadImageHandler(file);
-				};
-				reader.readAsDataURL(file);
-			} else {
-				let reader = new FileReader();
-				reader.onload = async (event) => {
-					await uploadFileHandler(
-						file,
-						event?.target?.result,
-						$settings?.enableFileUpdateBase64 ?? false
-					);
-				};
-				reader.readAsDataURL(file);
-			}
-		} else {
+		const maxSizeInBytes = $config?.file?.max_size * 1024 * 1024;
+		const isImage = ['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file.type);
+
+		if (file.size > maxSizeInBytes) {
 			toast.error(
 				$i18n.t('File size should not exceed {{maxSize}} MB.', {
 					maxSize: $config?.file?.max_size
 				})
 			);
+			return;
 		}
+
+		if (isImage && visionCapableModels.length === 0) {
+			toast.error($i18n.t('Selected model(s) do not support image inputs'));
+			return;
+		}
+
+		const reader = new FileReader();
+		reader.onload = (event) => {
+			if (isImage) {
+				uploadImageHandler(file);
+			} else {
+				uploadFileHandler(file, event?.target?.result, $settings?.enableFileUpdateBase64 ?? false);
+			}
+		};
+		reader.readAsDataURL(file);
 	};
 
 	onMount(() => {
