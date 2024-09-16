@@ -230,8 +230,7 @@ def query_collection_with_hybrid_search(
 
     if error:
         raise Exception(
-            "Hybrid search failed for all collections. Using "
-            "Non hybrid search as fallback."
+            "Hybrid search failed for all collections. Using Non hybrid search as fallback."
         )
 
     return merge_and_sort_query_results(results, k=k, reverse=True)

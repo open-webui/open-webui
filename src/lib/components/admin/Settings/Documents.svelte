@@ -759,11 +759,17 @@
 
 			<div>
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('RAG Template')}</div>
-				<textarea
-					bind:value={querySettings.template}
-					class="w-full rounded-lg px-4 py-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
-					rows="4"
-				/>
+				<Tooltip
+					content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+					placement="top-start"
+				>
+					<textarea
+						bind:value={querySettings.template}
+						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+						class="w-full rounded-lg px-4 py-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+						rows="4"
+					/>
+				</Tooltip>
 			</div>
 		</div>
 
