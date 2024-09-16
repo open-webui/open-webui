@@ -43,6 +43,8 @@ chromadb==0.5.5
 pymilvus==2.4.6
 
 sentence-transformers==3.0.1
+colbert-ai==0.2.21
+
 pypdf==4.3.1
 docx2txt==0.8
 python-pptx==1.0.0
