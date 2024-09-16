@@ -188,8 +188,6 @@
 
 				if (!enableBase64) {
 					fileItem.file = uploadedFile;
-					fileItem.status = 'uploaded';
-
 					if (
 						SUPPORTED_FILE_TYPE.includes(fileType) ||
 						SUPPORTED_FILE_EXTENSIONS.includes(fileExtension)
@@ -275,14 +273,14 @@
 					return;
 				}
 				let reader = new FileReader();
-				reader.onload = (event) => {
-					uploadImageHandler(file);
+				reader.onload = async (event) => {
+					await uploadImageHandler(file);
 				};
 				reader.readAsDataURL(file);
 			} else {
 				let reader = new FileReader();
-				reader.onload = (event) => {
-					uploadFileHandler(
+				reader.onload = async (event) => {
+					await uploadFileHandler(
 						file,
 						event?.target?.result,
 						$settings?.enableFileUpdateBase64 ?? false
