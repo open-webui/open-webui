@@ -1411,6 +1411,12 @@ class ProcessDocForm(BaseModel):
     collection_name: Optional[str] = None
 
 
+def generate_unique_collection_name(file_id, file):
+    file_hash = calculate_sha256(file)
+    unique_name = f"{file_id[:20]}{file_hash[:43]}"
+    return unique_name
+
+
 @app.post("/process/doc")
 def process_doc(
         form_data: ProcessDocForm,
@@ -1438,7 +1444,7 @@ def process_doc(
 
         collection_name = form_data.collection_name
         if collection_name is None:
-            collection_name = calculate_sha256(f)[:63]
+            collection_name = generate_unique_collection_name(form_data.file_id, f)
         f.close()
 
         try:
@@ -1463,14 +1469,6 @@ def process_doc(
                     "known_type": known_type,
                     "filename": file.meta.get("name", file.filename),
                 }
-            # else:
-            #     return {
-            #         "status": True,
-            #         "base64": True,
-            #         "collection_name": collection_name,
-            #         "known_type": known_type,
-            #         "filename": file.meta.get("name", file.filename),
-            #     }
 
         except Exception as e:
             raise HTTPException(
