@@ -13,10 +13,6 @@ from typing import Optional
 
 import aiohttp
 import requests
-
-import asyncio
-from cachetools import TTLCache
-
 from authlib.integrations.starlette_client import OAuth
 from authlib.oidc.core import UserInfo
 from fastapi import (
@@ -857,16 +853,9 @@ app.mount("/api/v1", webui_app)
 
 webui_app.state.EMBEDDING_FUNCTION = rag_app.state.EMBEDDING_FUNCTION
 
-# create TTLCache，exprite in 10 min
-cache = TTLCache(maxsize=1, ttl=600)
-cache_lock = asyncio.Lock()
 
 async def get_all_models():
     # TODO: Optimize this function
-    # Check Cache
-    async with cache_lock:
-        if 'models' in cache:
-            return cache['models']
     pipe_models = []
     openai_models = []
     ollama_models = []
@@ -1008,9 +997,7 @@ async def get_all_models():
 
     app.state.MODELS = {model["id"]: model for model in models}
     webui_app.state.MODELS = app.state.MODELS
-    # save models to  Cache
-    async with cache_lock:
-        cache['models'] = models
+
     return models
 
 
