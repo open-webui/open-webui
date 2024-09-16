@@ -69,6 +69,7 @@ from open_webui.config import (
     RAG_RERANKING_MODEL,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
+    DEFAULT_RAG_TEMPLATE,
     RAG_TEMPLATE,
     RAG_TOP_K,
     RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
@@ -660,7 +661,7 @@ async def update_query_settings(
     form_data: QuerySettingsForm, user=Depends(get_admin_user)
 ):
     app.state.config.RAG_TEMPLATE = (
-        form_data.template if form_data.template else RAG_TEMPLATE
+        form_data.template if form_data.template != "" else DEFAULT_RAG_TEMPLATE
     )
     app.state.config.TOP_K = form_data.k if form_data.k else 4
     app.state.config.RELEVANCE_THRESHOLD = form_data.r if form_data.r else 0.0
