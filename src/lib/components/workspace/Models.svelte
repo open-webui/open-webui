@@ -322,7 +322,7 @@
 			>
 				<div class=" self-start w-8 pt-0.5">
 					<div
-						class=" rounded-full bg-stone-700 {(model?.info?.meta?.hidden ?? false)
+						class=" rounded-full object-cover {(model?.info?.meta?.hidden ?? false)
 							? 'brightness-90 dark:brightness-50'
 							: ''} "
 					>
