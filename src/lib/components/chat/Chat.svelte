@@ -536,12 +536,7 @@
 					`Oops! There was an error in the previous response. Please try again or contact admin.`
 				)
 			);
-		} else if (
-			files.length > 0 &&
-			files.filter(
-				(file) => file.status !== 'processed'
-			).length > 0
-		) {
+		} else if (files.length > 0 && files.filter((file) => file.status !== 'processed').length > 0) {
 			// Upload not done
 			toast.error(
 				$i18n.t(
@@ -568,6 +563,7 @@
 			}
 
 			const _files = JSON.parse(JSON.stringify(files));
+			
 			chatFiles.push(
 				..._files.filter(
 					(item) =>
@@ -575,11 +571,16 @@
 						(!item.base64 || item.type !== 'file')
 				)
 			);
-			chatFiles = chatFiles.filter(
-				// Remove duplicates
-				(item, index, array) =>
-					array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
-			);
+
+			const seen = new Set();
+			chatFiles = chatFiles.filter((item) => {
+				const key = `${item.name}_${item.size}_${item.type}`;
+				if (!seen.has(key)) {
+					seen.add(key);
+					return true;
+				}
+				return false;
+			});
 
 			files = [];
 

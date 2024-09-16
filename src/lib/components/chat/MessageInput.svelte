@@ -100,8 +100,17 @@
 			url: '/loading.gif',
 			status: '',
 			type: 'image',
+			name: file.name,
+			size: file.size,
 			error: ''
 		};
+
+		const isDuplicate = files.some((f) => f.name === fileItem.name && f.size === fileItem.size);
+
+		if (isDuplicate) {
+			console.log('Duplicate file detected, skipping upload');
+			return;
+		}
 
 		files = [...files, imageItem];
 
@@ -114,9 +123,12 @@
 				imageItem.status = 'processed';
 				imageItem.url = image_url;
 				files = files;
-			} else {
-				files = files.filter((item) => item.status !== '');
+				files = files.filter(
+					(f, index, self) =>
+						index === self.findIndex((t) => t.name === f.name && t.size === f.size)
+				);
 			}
+			files = files.filter((item) => item.status !== '');
 		} catch (error) {
 			toast.error(error.message || error);
 			files = files.filter((item) => item.status !== '');
@@ -127,7 +139,7 @@
 		console.log(file);
 
 		const fileItem = {
-			type: '',
+			type: 'file',
 			file: '',
 			id: null,
 			url: '',
@@ -139,9 +151,16 @@
 			base64_url: '',
 			error: ''
 		};
+
+		const isDuplicate = files.some((f) => f.name === fileItem.name && f.size === fileItem.size);
+
+		if (isDuplicate) {
+			console.log('Duplicate file detected, skipping upload');
+			return;
+		}
+
 		files = [...files, fileItem];
 
-		// Check if the file is an audio file and transcribe/convert it to text file
 		if (['audio/mpeg', 'audio/wav', 'audio/ogg'].includes(file['type'])) {
 			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
 				toast.error(error);
@@ -159,13 +178,10 @@
 		}
 
 		try {
-			// 改用传递base64_url的形式
 			let uploadedFile = null;
-			fileItem.type = 'file';
 			uploadedFile = await uploadFile(localStorage.token, file);
 
-			if (uploadedFile || enableBase64) {
-				fileItem.status = 'uploaded';
+			if (uploadedFile) {
 				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}/content`;
 				const fileType = file['type'];
 				const fileExtension = file.name.split('.').pop();
@@ -192,18 +208,21 @@
 					}
 				} else {
 					fileItem.type = fileExtension;
-					fileItem.id = uuidv4();
+					fileItem.id = uploadedFile.id;
 					fileItem.base64 = true;
 					fileItem.base64_url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}/preview`;
 					fileItem.status = 'processed';
 					files = files;
 				}
-			} else {
-				files = files.filter((item) => item.status !== null);
+				files = files.filter(
+					(f, index, self) =>
+						index === self.findIndex((t) => t.name === f.name && t.size === f.size)
+				);
 			}
+			files = files.filter((item) => item.status !== '');
 		} catch (error) {
 			toast.error(error.message || error);
-			files = files.filter((item) => item.status !== null);
+			files = files.filter((item) => item.status !== );
 		}
 	};
 
@@ -225,7 +244,6 @@
 			// Remove the failed doc from the files array
 			// files = files.filter((f) => f.id !== fileItem.id);
 			toast.error(e);
-			fileItem.status = 'processed';
 			files = files;
 		}
 	};
@@ -267,7 +285,11 @@
 			} else {
 				let reader = new FileReader();
 				reader.onload = (event) => {
-					uploadFileHandler(file, event.target.result, $settings?.enableFileUpdateBase64 ?? false);
+					uploadFileHandler(
+						file,
+						event?.target?.result,
+						$settings?.enableFileUpdateBase64 ?? false
+					);
 				};
 				reader.readAsDataURL(file);
 			}
