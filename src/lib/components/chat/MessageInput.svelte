@@ -168,7 +168,6 @@
 			uploadedFile = await uploadFile(localStorage.token, file);
 
 			if (uploadedFile) {
-				fileItem.status = 'uploaded';
 				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}/content`;
 				const fileType = file['type'];
 				const fileExtension = file.name.split('.').pop();
