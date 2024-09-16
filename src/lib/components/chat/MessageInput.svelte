@@ -98,7 +98,7 @@
 		const imageItem = {
 			id: null,
 			url: '/loading.gif',
-			status: '',
+			status: 'uploaded',
 			type: 'image',
 			name: file.name,
 			size: file.size,
@@ -122,6 +122,7 @@
 				);
 			}
 		} catch (error) {
+			imageItem.status = '';
 			toast.error(error.message || error);
 		}
 		files = files.filter((item) => item.status !== '');
@@ -137,13 +138,13 @@
 			url: '',
 			name: file.name,
 			collection_name: '',
-			status: '',
+			status: 'uploaded',
 			size: file.size,
 			base64: false,
 			base64_url: '',
 			error: ''
 		};
-		
+
 		files = [...files, fileItem];
 
 		if (['audio/mpeg', 'audio/wav', 'audio/ogg'].includes(file['type'])) {
@@ -203,6 +204,7 @@
 				);
 			}
 		} catch (error) {
+			fileItem.status = '';
 			toast.error(error.message || error);
 		}
 		files = files.filter((item) => item.status !== '');
@@ -224,6 +226,7 @@
 		} catch (e) {
 			// Remove the failed doc from the files array
 			// files = files.filter((f) => f.id !== fileItem.id);
+			fileItem.status = '';
 			toast.error(e);
 		}
 		files = files;
@@ -251,6 +254,15 @@
 		return [true, inputFiles];
 	};
 
+	const readFileAsDataURL = (file) => {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = (event) => resolve(event.target.result);
+			reader.onerror = reject;
+			reader.readAsDataURL(file);
+		});
+	};
+
 	const processFileSizeLimit = async (file) => {
 		const maxSizeInBytes = $config?.file?.max_size * 1024 * 1024;
 		const isImage = ['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file.type);
@@ -269,15 +281,16 @@
 			return;
 		}
 
-		const reader = new FileReader();
-		reader.onload = (event) => {
+		try {
+			const dataURL = await readFileAsDataURL(file);
 			if (isImage) {
-				uploadImageHandler(file);
+				await uploadImageHandler(file);
 			} else {
-				uploadFileHandler(file, event?.target?.result, $settings?.enableFileUpdateBase64 ?? false);
+				await uploadFileHandler(file, dataURL, settings?.enableFileUpdateBase64 ?? false);
 			}
-		};
-		reader.readAsDataURL(file);
+		} catch (error) {
+			console.error('Error reading file:', error);
+		}
 	};
 
 	onMount(() => {
