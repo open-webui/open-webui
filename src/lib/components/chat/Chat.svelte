@@ -563,7 +563,7 @@
 			}
 
 			const _files = JSON.parse(JSON.stringify(files));
-			
+
 			chatFiles.push(
 				..._files.filter(
 					(item) =>
@@ -850,12 +850,21 @@
 			files.push(...model.info.meta.knowledge);
 			messages = messages; // Trigger Svelte update
 		}
-		files.push(
+
+		// Combine all files from different sources
+		let combinedFiles = [
+			...files, // From knowledge (if any)
 			...(userMessage?.files ?? []).filter((item) =>
 				['doc', 'file', 'collection'].includes(item.type)
 			),
 			...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
-		);
+		];
+
+		// Use a Set or Map to filter out duplicates based on a unique property, e.g., `id`
+		const uniqueFiles = Array.from(new Map(combinedFiles.map((file) => [file.id, file])).values());
+
+		// Update the `files` with only unique entries
+		files = uniqueFiles;
 
 		scrollToBottom();
 
@@ -1123,12 +1132,21 @@
 			files.push(...model.info.meta.knowledge);
 			messages = messages; // Trigger Svelte update
 		}
-		files.push(
+
+		// Combine all files from different sources
+		let combinedFiles = [
+			...files, // From knowledge (if any)
 			...(userMessage?.files ?? []).filter((item) =>
 				['doc', 'file', 'collection'].includes(item.type)
 			),
 			...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
-		);
+		];
+
+		// Use a Set or Map to filter out duplicates based on a unique property, e.g., `id`
+		const uniqueFiles = Array.from(new Map(combinedFiles.map((file) => [file.id, file])).values());
+
+		// Update the `files` with only unique entries
+		files = uniqueFiles;
 
 		scrollToBottom();
 
