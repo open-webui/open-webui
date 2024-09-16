@@ -199,7 +199,7 @@ def update_reranking_model(
     update_model: bool = False,
 ):
     if reranking_model:
-        if reranking_model in ["jinaai/jina-colbert-v2"]:
+        if any(model in reranking_model for model in ["jinaai/jina-colbert-v2"]):
 
             class Colbert:
                 def __init__(self, name) -> None:
