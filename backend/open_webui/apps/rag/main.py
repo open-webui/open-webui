@@ -11,23 +11,35 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterator, Optional, Sequence, Union, List, Tuple, Any
 
-
-import numpy as np
-import torch
 import requests
 import validators
-from chromadb.utils.batch_utils import create_batches
-from pydantic import BaseModel, Field
-
-
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import (
+    BSHTMLLoader,
+    CSVLoader,
+    Docx2txtLoader,
+    OutlookMessageLoader,
+    PyPDFLoader,
+    TextLoader,
+    UnstructuredEPubLoader,
+    UnstructuredExcelLoader,
+    UnstructuredMarkdownLoader,
+    UnstructuredPowerPointLoader,
+    UnstructuredRSTLoader,
+    UnstructuredXMLLoader,
+    WebBaseLoader,
+    YoutubeLoader,
+)
+from langchain_core.documents import Document
+from pydantic import BaseModel, Field
 
-from open_webui.apps.rag.search.main import SearchResult
 from open_webui.apps.rag.search.brave import search_brave
 from open_webui.apps.rag.search.duckduckgo import search_duckduckgo
 from open_webui.apps.rag.search.google_pse import search_google_pse
 from open_webui.apps.rag.search.jina_search import search_jina
+from open_webui.apps.rag.search.main import SearchResult
 from open_webui.apps.rag.search.searchapi import search_searchapi
 from open_webui.apps.rag.search.searxng import search_searxng
 from open_webui.apps.rag.search.serper import search_serper
@@ -42,6 +54,7 @@ from open_webui.apps.rag.utils import (
     query_doc,
     query_doc_with_hybrid_search,
 )
+from open_webui.apps.rag.vector.connector import VECTOR_DB_CLIENT
 from open_webui.apps.webui.models.documents import DocumentForm, Documents
 from open_webui.apps.webui.models.files import Files
 from open_webui.apps.webui.models.users import Users
@@ -104,28 +117,9 @@ from open_webui.utils.misc import (
     sanitize_filename,
 )
 from open_webui.utils.utils import get_admin_user, get_verified_user
-from open_webui.apps.rag.vector.connector import VECTOR_DB_CLIENT
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import (
-    BSHTMLLoader,
-    CSVLoader,
-    Docx2txtLoader,
-    OutlookMessageLoader,
-    PyPDFLoader,
-    TextLoader,
-    UnstructuredEPubLoader,
-    UnstructuredExcelLoader,
-    UnstructuredMarkdownLoader,
-    UnstructuredPowerPointLoader,
-    UnstructuredRSTLoader,
-    UnstructuredXMLLoader,
-    WebBaseLoader,
-    YoutubeLoader,
-)
-from langchain_core.documents import Document
-from colbert.infra import ColBERTConfig
-from colbert.modeling.checkpoint import Checkpoint
+# from colbert.infra import ColBERTConfig
+# from colbert.modeling.checkpoint import Checkpoint
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -265,90 +259,90 @@ def update_reranking_model(
         update_model: bool = False,
 ):
     if reranking_model:
-        if any(model in reranking_model for model in ["jinaai/jina-colbert-v2"]):
+        try:
+            if "BAAI/bge-reranker-v2-m3" in reranking_model:
+                app.state.sentence_transformer_rf = Reranking(
+                    reranking_model=reranking_model
+                )
+            else:
+                import sentence_transformers
 
-            class Colbert:
-                def __init__(self, name) -> None:
-                    self.device = "cuda" if torch.cuda.is_available() else "cpu"
-                    self.ckpt = Checkpoint(name, colbert_config=ColBERTConfig()).to(
-                        self.device
-                    )
-                    pass
+                app.state.sentence_transformer_rf = sentence_transformers.CrossEncoder(
+                    get_model_path(reranking_model, update_model),
+                    device=DEVICE_TYPE,
+                    trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
+                )
+        except:
+            log.error("CrossEncoder error")
+            app.state.sentence_transformer_rf = None
+            app.state.config.ENABLE_RAG_HYBRID_SEARCH = False
 
-                def calculate_similarity_scores(
-                    self, query_embeddings, document_embeddings
-                ):
-
-                    query_embeddings = query_embeddings.to(self.device)
-                    document_embeddings = document_embeddings.to(self.device)
-
-                    # Validate dimensions to ensure compatibility
-                    if query_embeddings.dim() != 3:
-                        raise ValueError(
-                            f"Expected query embeddings to have 3 dimensions, but got {query_embeddings.dim()}."
-                        )
-                    if document_embeddings.dim() != 3:
-                        raise ValueError(
-                            f"Expected document embeddings to have 3 dimensions, but got {document_embeddings.dim()}."
-                        )
-                    if query_embeddings.size(0) not in [1, document_embeddings.size(0)]:
-                        raise ValueError(
-                            "There should be either one query or queries equal to the number of documents."
-                        )
-
-                    # Transpose the query embeddings to align for matrix multiplication
-                    transposed_query_embeddings = query_embeddings.permute(0, 2, 1)
-                    # Compute similarity scores using batch matrix multiplication
-                    computed_scores = torch.matmul(
-                        document_embeddings, transposed_query_embeddings
-                    )
-                    # Apply max pooling to extract the highest semantic similarity across each document's sequence
-                    maximum_scores = torch.max(computed_scores, dim=1).values
-
-                    # Sum up the maximum scores across features to get the overall document relevance scores
-                    final_scores = maximum_scores.sum(dim=1)
-
-                    normalized_scores = torch.softmax(final_scores, dim=0)
-
-                    return normalized_scores.detach().cpu().numpy().astype(np.float32)
-
-                def predict(self, sentences):
-
-                    query = sentences[0][0]
-                    docs = [i[1] for i in sentences]
-
-                    # Embedding the documents
-                    embedded_docs = self.ckpt.docFromText(docs, bsize=32)[0]
-                    # Embedding the queries
-                    embedded_queries = self.ckpt.queryFromText([query], bsize=32)
-                    embedded_query = embedded_queries[0]
-
-                    # Calculate retrieval scores for the query against all documents
-                    scores = self.calculate_similarity_scores(
-                        embedded_query.unsqueeze(0), embedded_docs
-                    )
-
-                    return scores
-
-            app.state.sentence_transformer_rf = Colbert(reranking_model)
-        else:
-            try:
-                if "BAAI/bge-reranker-v2-m3" in reranking_model:
-                    app.state.sentence_transformer_rf = Reranking(
-                        reranking_model=reranking_model
-                    )
-                else:
-                    import sentence_transformers
-
-                    app.state.sentence_transformer_rf = sentence_transformers.CrossEncoder(
-                        get_model_path(reranking_model, update_model),
-                        device=DEVICE_TYPE,
-                        trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
-                    )
-            except:
-                log.error("CrossEncoder error")
-                app.state.sentence_transformer_rf = None
-                app.state.config.ENABLE_RAG_HYBRID_SEARCH = False
+        # if any(model in reranking_model for model in ["jinaai/jina-colbert-v2"]):
+        # class Colbert:
+        #     def __init__(self, name) -> None:
+        #         self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        #         self.ckpt = Checkpoint(name, colbert_config=ColBERTConfig()).to(
+        #             self.device
+        #         )
+        #         pass
+        #
+        #     def calculate_similarity_scores(
+        #         self, query_embeddings, document_embeddings
+        #     ):
+        #
+        #         query_embeddings = query_embeddings.to(self.device)
+        #         document_embeddings = document_embeddings.to(self.device)
+        #
+        #         # Validate dimensions to ensure compatibility
+        #         if query_embeddings.dim() != 3:
+        #             raise ValueError(
+        #                 f"Expected query embeddings to have 3 dimensions, but got {query_embeddings.dim()}."
+        #             )
+        #         if document_embeddings.dim() != 3:
+        #             raise ValueError(
+        #                 f"Expected document embeddings to have 3 dimensions, but got {document_embeddings.dim()}."
+        #             )
+        #         if query_embeddings.size(0) not in [1, document_embeddings.size(0)]:
+        #             raise ValueError(
+        #                 "There should be either one query or queries equal to the number of documents."
+        #             )
+        #
+        #         # Transpose the query embeddings to align for matrix multiplication
+        #         transposed_query_embeddings = query_embeddings.permute(0, 2, 1)
+        #         # Compute similarity scores using batch matrix multiplication
+        #         computed_scores = torch.matmul(
+        #             document_embeddings, transposed_query_embeddings
+        #         )
+        #         # Apply max pooling to extract the highest semantic similarity across each document's sequence
+        #         maximum_scores = torch.max(computed_scores, dim=1).values
+        #
+        #         # Sum up the maximum scores across features to get the overall document relevance scores
+        #         final_scores = maximum_scores.sum(dim=1)
+        #
+        #         normalized_scores = torch.softmax(final_scores, dim=0)
+        #
+        #         return normalized_scores.detach().cpu().numpy().astype(np.float32)
+        #
+        #     def predict(self, sentences):
+        #
+        #         query = sentences[0][0]
+        #         docs = [i[1] for i in sentences]
+        #
+        #         # Embedding the documents
+        #         embedded_docs = self.ckpt.docFromText(docs, bsize=32)[0]
+        #         # Embedding the queries
+        #         embedded_queries = self.ckpt.queryFromText([query], bsize=32)
+        #         embedded_query = embedded_queries[0]
+        #
+        #         # Calculate retrieval scores for the query against all documents
+        #         scores = self.calculate_similarity_scores(
+        #             embedded_query.unsqueeze(0), embedded_docs
+        #         )
+        #
+        #         return scores
+        #
+        # app.state.sentence_transformer_rf = Colbert(reranking_model)
+        # else:
     else:
         app.state.sentence_transformer_rf = None
 
@@ -1326,9 +1320,9 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
         elif file_content_type == "application/epub+zip":
             loader = UnstructuredEPubLoader(file_path)
         elif (
-            file_content_type
-            == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            or file_ext == "docx"
+                file_content_type
+                == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                or file_ext == "docx"
         ):
             loader = Docx2txtLoader(file_path)
         elif file_content_type in [
