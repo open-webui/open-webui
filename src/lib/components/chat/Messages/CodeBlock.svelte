@@ -257,13 +257,13 @@ __builtins__.input = input`);
 	$: if (
 		lang.toLowerCase() === 'php' ||
 		lang.toLowerCase() === 'html' ||
-		lang.toLocaleLowerCase() === 'suno'
+		lang.toLocaleLowerCase() === 'mp4'
 	) {
 		if (!!sandpackIframe || !enableHTML) {
 			// executeHTML(code);
 			enableHTML = true;
 		}
-		if (lang.toLocaleLowerCase() === 'suno') {
+		if (lang.toLocaleLowerCase() === 'mp4') {
 			expanded = true;
 			all_expanded = false;
 			executeHTML(code);
