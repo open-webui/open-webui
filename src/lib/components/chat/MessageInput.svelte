@@ -128,11 +128,10 @@
 						index === self.findIndex((t) => t.name === f.name && t.size === f.size)
 				);
 			}
-			files = files.filter((item) => item.status !== '');
 		} catch (error) {
 			toast.error(error.message || error);
-			files = files.filter((item) => item.status !== '');
 		}
+		files = files.filter((item) => item.status !== '');
 	};
 
 	const uploadFileHandler = async (file, base64_url, enableBase64) => {
@@ -219,11 +218,10 @@
 						index === self.findIndex((t) => t.name === f.name && t.size === f.size)
 				);
 			}
-			files = files.filter((item) => item.status !== '');
 		} catch (error) {
 			toast.error(error.message || error);
-			files = files.filter((item) => item.status !== );
 		}
+		files = files.filter((item) => item.status !== '');
 	};
 
 	const processFileItem = async (fileItem) => {
