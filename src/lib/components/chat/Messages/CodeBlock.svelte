@@ -257,6 +257,7 @@ __builtins__.input = input`);
 	$: if (
 		lang.toLowerCase() === 'php' ||
 		lang.toLowerCase() === 'html' ||
+		lang.toLowerCase() === 'xml' ||
 		lang.toLocaleLowerCase() === 'mp4'
 	) {
 		if (!!sandpackIframe || !enableHTML) {
