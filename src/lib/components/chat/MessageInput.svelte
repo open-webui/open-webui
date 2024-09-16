@@ -105,13 +105,6 @@
 			error: ''
 		};
 
-		const isDuplicate = files.some((f) => f.name === fileItem.name && f.size === fileItem.size);
-
-		if (isDuplicate) {
-			console.log('Duplicate file detected, skipping upload');
-			return;
-		}
-
 		files = [...files, imageItem];
 
 		try {
@@ -150,14 +143,7 @@
 			base64_url: '',
 			error: ''
 		};
-
-		const isDuplicate = files.some((f) => f.name === fileItem.name && f.size === fileItem.size);
-
-		if (isDuplicate) {
-			console.log('Duplicate file detected, skipping upload');
-			return;
-		}
-
+		
 		files = [...files, fileItem];
 
 		if (['audio/mpeg', 'audio/wav', 'audio/ogg'].includes(file['type'])) {
