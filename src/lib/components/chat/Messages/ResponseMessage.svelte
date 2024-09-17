@@ -344,7 +344,7 @@
 						{#each message.files as file}
 							<div>
 								{#if file.type === 'image'}
-									<Image src={file.url} />
+									<Image src={file.url} alt={message.content} />
 								{/if}
 							</div>
 						{/each}
