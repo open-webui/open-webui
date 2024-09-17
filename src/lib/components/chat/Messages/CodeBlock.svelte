@@ -254,17 +254,11 @@ __builtins__.input = input`);
 		all_expanded = !all_expanded;
 	};
 
-	$: if (
-		lang.toLowerCase() === 'php' ||
-		lang.toLowerCase() === 'html' ||
-		lang.toLowerCase() === 'xml' ||
-		lang.toLocaleLowerCase() === 'mp4'
-	) {
-		if (!!sandpackIframe || !enableHTML) {
-			// executeHTML(code);
+	if (['php', 'html', 'xml', 'mp4'].includes(lang.toLowerCase())) {
+		if (!sandpackIframe && !enableHTML) {
 			enableHTML = true;
 		}
-		if (lang.toLocaleLowerCase() === 'mp4') {
+		if (lang.toLowerCase() === 'mp4') {
 			expanded = true;
 			all_expanded = false;
 			executeHTML(code);
