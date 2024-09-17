@@ -49,6 +49,10 @@
 	onDestroy(() => {
 		showControls.set(false);
 	});
+
+	$: if (!chatId) {
+		showOverview.set(false);
+	}
 </script>
 
 <SvelteFlowProvider>
