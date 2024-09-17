@@ -2,7 +2,7 @@
 	import { SvelteFlowProvider } from '@xyflow/svelte';
 	import { slide } from 'svelte/transition';
 
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { mobile, showControls, showCallOverlay, showOverview } from '$lib/stores';
 
 	import Modal from '../common/Modal.svelte';
@@ -44,6 +44,10 @@
 		return () => {
 			mediaQuery.removeEventListener('change', handleMediaQuery);
 		};
+	});
+
+	onDestroy(() => {
+		showControls.set(false);
 	});
 </script>
 
