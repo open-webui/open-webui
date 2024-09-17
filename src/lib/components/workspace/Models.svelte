@@ -94,6 +94,35 @@
 		window.addEventListener('message', messageHandler, false);
 	};
 
+	const moveToTopHandler = async (model) => {
+		let info = model.info;
+
+		if (!info) {
+			info = {
+				id: model.id,
+				name: model.name,
+				meta: {
+					position: 0
+				},
+				params: {}
+			};
+		}
+
+		info.meta = {
+			...info.meta,
+			position: 0
+		};
+
+		const res = await updateModelById(localStorage.token, info.id, info);
+
+		if (res) {
+			toast.success($i18n.t(`Model {{name}} is now at the top`, { name: info.id }));
+		}
+
+		await models.set(await getModels(localStorage.token));
+		_models = $models;
+	};
+
 	const hideModelHandler = async (model) => {
 		let info = model.info;
 
@@ -439,6 +468,9 @@
 						}}
 						exportHandler={() => {
 							exportModelHandler(model);
+						}}
+						moveToTopHandler={() => {
+							moveToTopHandler(model);
 						}}
 						hideHandler={() => {
 							hideModelHandler(model);
