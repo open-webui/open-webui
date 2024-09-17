@@ -109,6 +109,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse, Response, StreamingResponse
 
+from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
 from open_webui.utils.misc import (
     add_or_update_system_message,
@@ -788,6 +789,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 @app.middleware("http")
