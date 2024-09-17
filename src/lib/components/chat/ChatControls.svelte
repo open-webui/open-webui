@@ -78,15 +78,24 @@
 					showControls.set(false);
 				}}
 			>
-				<div class="  px-6 py-4 h-full">
-					<Controls
-						on:close={() => {
-							showControls.set(false);
-						}}
-						{models}
-						bind:chatFiles
-						bind:params
-					/>
+				<div class=" {$showOverview ? ' h-screen  w-screen' : 'px-6 py-4'} h-full">
+					{#if $showOverview}
+						<Overview
+							bind:history
+							on:close={() => {
+								showControls.set(false);
+							}}
+						/>
+					{:else}
+						<Controls
+							on:close={() => {
+								showControls.set(false);
+							}}
+							{models}
+							bind:chatFiles
+							bind:params
+						/>
+					{/if}
 				</div>
 			</Drawer>
 		{/if}
