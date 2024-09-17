@@ -228,6 +228,7 @@ def merge_models_lists(model_lists):
                             "swap",
                             "BAAI",
                             "reranker",
+                            "gizmo-g*"
                             "SenseVoiceSmall",
                         ]
                     )
