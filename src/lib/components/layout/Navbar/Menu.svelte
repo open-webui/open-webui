@@ -5,13 +5,17 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
+	import { downloadChatAsPDF } from '$lib/apis/utils';
+	import { copyToClipboard } from '$lib/utils';
+
 	import { showSettings } from '$lib/stores';
 	import { flyAndScale } from '$lib/utils/transitions';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Tags from '$lib/components/chat/Tags.svelte';
-
-	import { downloadChatAsPDF } from '$lib/apis/utils';
+	import Map from '$lib/components/icons/Map.svelte';
+	import { get } from 'svelte/store';
+	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -24,13 +28,17 @@
 	export let chat;
 	export let onClose: Function = () => {};
 
-	const downloadTxt = async () => {
+	const getChatAsText = async () => {
 		const _chat = chat.chat;
-		console.log('download', chat);
-
 		const chatText = _chat.messages.reduce((a, message, i, arr) => {
 			return `${a}### ${message.role.toUpperCase()}\n${message.content}\n\n`;
 		}, '');
+
+		return chatText.trim();
+	};
+
+	const downloadTxt = async () => {
+		const chatText = await getChatAsText();
 
 		let blob = new Blob([chatText], {
 			type: 'text/plain'
@@ -119,6 +127,30 @@
 
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				id="chat-overview-button"
+				on:click={() => {
+					shareHandler();
+				}}
+			>
+				<Map className=" size-4" strokeWidth="1.5" />
+				<div class="flex items-center">{$i18n.t('Overview')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				id="chat-copy-button"
+				on:click={async () => {
+					await copyToClipboard(await getChatAsText()).catch((e) => {
+						console.error(e);
+					});
+				}}
+			>
+				<Clipboard className=" size-4" strokeWidth="1.5" />
+				<div class="flex items-center">{$i18n.t('Copy')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				id="chat-share-button"
 				on:click={() => {
 					shareHandler();
@@ -138,12 +170,7 @@
 				</svg>
 				<div class="flex items-center">{$i18n.t('Share')}</div>
 			</DropdownMenu.Item>
-			<!-- <DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer"
-					on:click={() => {
-						downloadHandler();
-					}}
-				/> -->
+
 			<DropdownMenu.Sub>
 				<DropdownMenu.SubTrigger
 					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
