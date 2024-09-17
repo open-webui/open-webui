@@ -301,6 +301,30 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 detail=error_detail,
             )
 
+    elif app.state.config.TTS_ENGINE == "azurespeechservice":
+        payload = None
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except Exception as e:
+            log.exception(e)
+            raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+        import azure.cognitiveservices.speech as speechsdk
+
+        config = speechsdk.SpeechConfig(subscription=app.state.config.TTS_API_KEY, region="uksouth")
+        speaker_config = speechsdk.audio.AudioOutputConfig(use_default_speaker=False, filename=str(file_path))
+
+        client = speechsdk.SpeechSynthesizer(speech_config=config, audio_config=speaker_config)
+        result = client.speak_text(payload["input"])
+
+        if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+            return FileResponse(file_path)
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error synthesizing speech - {result.reason}")
+
+
 
 @app.post("/transcriptions")
 def transcribe(

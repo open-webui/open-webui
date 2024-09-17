@@ -79,6 +79,8 @@ extract_msg
 pydub
 duckduckgo-search~=6.2.11
 
+azure-cognitiveservices-speech==1.40.0
+
 ## Tests
 docker~=7.1.0
 pytest~=8.3.2
