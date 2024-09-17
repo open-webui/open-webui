@@ -1,7 +1,7 @@
 # values-prod.yaml
 ollama:
   # keepAlive: true
-  externalHost: "http://ollama"
+  externalHost: "http://ollama:11434"
 hrwebui:
   persistence:
     size: 5Gi
