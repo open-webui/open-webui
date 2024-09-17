@@ -73,6 +73,7 @@
 			</div>
 		{:else if $showControls}
 			<Drawer
+				show={$showControls}
 				on:close={() => {
 					showControls.set(false);
 				}}

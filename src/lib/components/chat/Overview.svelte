@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { getContext, createEventDispatcher } from 'svelte';
 	import { useSvelteFlow, useNodesInitialized, useStore } from '@xyflow/svelte';
 	import { SvelteFlow, Controls, Background, BackgroundVariant } from '@xyflow/svelte';
@@ -91,6 +91,8 @@
 					id: parentId + '-' + pos.id,
 					source: parentId,
 					target: pos.id,
+					selectable: false,
+
 					type: 'smoothstep',
 					animated: true
 				});

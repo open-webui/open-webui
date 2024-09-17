@@ -44,19 +44,22 @@
 		window.addEventListener('keydown', handleKeyDown);
 		document.body.style.overflow = 'hidden';
 	} else if (modalElement) {
-		window.removeEventListener('keydown', handleKeyDown);
-		document.body.removeChild(modalElement);
-		document.body.style.overflow = 'unset';
-	}
-
-	$: if (!show) {
 		dispatch('close');
+		window.removeEventListener('keydown', handleKeyDown);
+
+		if (document.body.contains(modalElement)) {
+			document.body.removeChild(modalElement);
+			document.body.style.overflow = 'unset';
+		}
 	}
 
 	onDestroy(() => {
 		show = false;
 		if (modalElement) {
-			document.body.removeChild(modalElement);
+			if (document.body.contains(modalElement)) {
+				document.body.removeChild(modalElement);
+				document.body.style.overflow = 'unset';
+			}
 		}
 	});
 </script>
