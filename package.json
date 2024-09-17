@@ -44,7 +44,7 @@
 		"tailwindcss": "^3.3.3",
 		"tslib": "^2.4.1",
 		"typescript": "^5.5.4",
-		"vite": "^5.3.5",
+		"vite": "^5.4.6",
 		"vitest": "^1.6.0"
 	},
 	"type": "module",
