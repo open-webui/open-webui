@@ -108,6 +108,33 @@
 		await updateChatMessages();
 	};
 
+	const saveNewResponseMessage = async (message, content) => {
+		const responseMessageId = uuidv4();
+		const parentId = message.parentId;
+
+		const responseMessage = {
+			...message,
+			id: responseMessageId,
+			parentId: parentId,
+			childrenIds: [],
+			content: content,
+			timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+		};
+
+		history.messages[responseMessageId] = responseMessage;
+		history.currentId = responseMessageId;
+
+		// Append messageId to childrenIds of parent message
+		if (parentId !== null) {
+			history.messages[parentId].childrenIds = [
+				...history.messages[parentId].childrenIds,
+				responseMessageId
+			];
+		}
+
+		await updateChatMessages();
+	};
+
 	const rateMessage = async (messageId, rating) => {
 		history.messages[messageId].annotation = {
 			...history.messages[messageId].annotation,
@@ -342,6 +369,7 @@
 										{readOnly}
 										{updateChatMessages}
 										{confirmEditResponseMessage}
+										{saveNewResponseMessage}
 										{showPreviousMessage}
 										{showNextMessage}
 										{rateMessage}
