@@ -424,7 +424,7 @@
 				<div class="px-3.5 mb-1 flex gap-0.5 flex-wrap">
 					<button
 						class="px-2.5 py-[1px] text-xs transition {selectedTagName === null
-							? 'bg-gray-850'
+							? 'bg-gray-900'
 							: ' '} rounded-md"
 						on:click={async () => {
 							selectedTagName = null;
@@ -436,7 +436,7 @@
 					{#each $tags.filter((t) => t.name !== 'pinned') as tag}
 						<button
 							class="px-2.5 py-[1px] text-xs transition {selectedTagName === tag.name
-								? 'bg-gray-850'
+								? 'bg-gray-900'
 								: ''}  rounded-md"
 							on:click={async () => {
 								selectedTagName = tag.name;
