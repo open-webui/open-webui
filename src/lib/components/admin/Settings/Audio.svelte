@@ -224,6 +224,7 @@
 							<option value="">{$i18n.t('Web API')}</option>
 							<option value="openai">{$i18n.t('OpenAI')}</option>
 							<option value="elevenlabs">{$i18n.t('ElevenLabs')}</option>
+							<option value="azurespeechservice">{$i18n.t('Azure Speech service')}</option>
 						</select>
 					</div>
 				</div>
@@ -252,6 +253,17 @@
 							/>
 						</div>
 					</div>
+				{:else if TTS_ENGINE === 'azurespeechservice'}
+					<div>
+						<div class="mt-1 flex gap-2 mb-1">
+							<input
+								class="flex-1 w-full rounded-lg py-2 pl-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								placeholder={$i18n.t('API Key')}
+								bind:value={TTS_API_KEY}
+								required
+							/>
+						</div>
+				</div>
 				{/if}
 
 				<hr class=" dark:border-gray-850 my-2" />
