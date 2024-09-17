@@ -156,3 +156,7 @@ input[type='number'] {
 	font-weight: 600;
 	@apply rounded-md dark:bg-gray-800 bg-gray-100 mx-0.5;
 }
+
+.svelte-flow {
+	background-color: transparent !important;
+}

@@ -23,6 +23,7 @@
 		banners,
 		user,
 		socket,
+		showControls,
 		showCallOverlay,
 		currentChatPage,
 		temporaryChatEnabled
@@ -70,7 +71,6 @@
 	let loaded = false;
 	const eventTarget = new EventTarget();
 
-	let showControls = false;
 	let stopResponseFlag = false;
 	let autoScroll = true;
 	let processing = '';
@@ -1703,7 +1703,6 @@
 			{title}
 			bind:selectedModels
 			bind:showModelSelector
-			bind:showControls
 			shareEnabled={messages.length > 0}
 			{chat}
 			{initNewChat}
@@ -1713,7 +1712,7 @@
 			<div
 				class="absolute top-[4.25rem] w-full {$showSidebar
 					? 'md:max-w-[calc(100%-260px)]'
-					: ''} {showControls ? 'lg:pr-[24rem]' : ''} z-20"
+					: ''} {$showControls ? 'lg:pr-[24rem]' : ''} z-20"
 			>
 				<div class=" flex flex-col gap-1 w-full">
 					{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
@@ -1740,7 +1739,7 @@
 
 		<div class="flex flex-col flex-auto z-10">
 			<div
-				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden {showControls
+				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden {$showControls
 					? 'lg:pr-[24rem]'
 					: ''}"
 				id="messages-container"
@@ -1770,7 +1769,7 @@
 				</div>
 			</div>
 
-			<div class={showControls ? 'lg:pr-[24rem]' : ''}>
+			<div class={$showControls ? 'lg:pr-[24rem]' : ''}>
 				<MessageInput
 					bind:files
 					bind:prompt
@@ -1791,7 +1790,7 @@
 					{submitPrompt}
 					{stopResponse}
 					on:call={() => {
-						showControls = true;
+						showControls.set(true);
 					}}
 				/>
 			</div>
@@ -1807,7 +1806,7 @@
 		}
 		return a;
 	}, [])}
-	bind:show={showControls}
+	bind:history
 	bind:chatFiles
 	bind:params
 	bind:files

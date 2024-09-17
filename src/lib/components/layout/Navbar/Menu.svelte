@@ -8,7 +8,7 @@
 	import { downloadChatAsPDF } from '$lib/apis/utils';
 	import { copyToClipboard } from '$lib/utils';
 
-	import { showSettings } from '$lib/stores';
+	import { showOverview, showControls } from '$lib/stores';
 	import { flyAndScale } from '$lib/utils/transitions';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -128,8 +128,9 @@
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				id="chat-overview-button"
-				on:click={() => {
-					shareHandler();
+				on:click={async () => {
+					await showControls.set(true);
+					await showOverview.set(true);
 				}}
 			>
 				<Map className=" size-4" strokeWidth="1.5" />

@@ -3,6 +3,8 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { fade, fly, slide } from 'svelte/transition';
 
+	const dispatch = createEventDispatcher();
+
 	export let show = false;
 	export let size = 'md';
 
@@ -45,6 +47,10 @@
 		window.removeEventListener('keydown', handleKeyDown);
 		document.body.removeChild(modalElement);
 		document.body.style.overflow = 'unset';
+	}
+
+	$: if (!show) {
+		dispatch('close');
 	}
 
 	onDestroy(() => {

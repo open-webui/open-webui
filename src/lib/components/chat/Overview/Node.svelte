@@ -1,0 +1,40 @@
+<script lang="ts">
+	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
+
+	import ProfileImageBase from '../Messages/ProfileImageBase.svelte';
+
+	type $$Props = NodeProps;
+	export let data: $$Props['data'];
+</script>
+
+<div
+	class="px-4 py-3 shadow-md rounded-xl dark:bg-black bg-white border dark:border-gray-900 w-60 h-20"
+>
+	{#if data.message.role === 'user'}
+		<div class="flex w-full">
+			<ProfileImageBase
+				src={data.user?.profile_image_url ?? '/user.png'}
+				className={'size-5 -translate-y-[1px]'}
+			/>
+			<div class="ml-2">
+				<div class="text-xs font-medium">{data.user.name}</div>
+				<div class="text-gray-500 line-clamp-2 text-xs mt-0.5">{data.message.content}</div>
+			</div>
+		</div>
+	{:else}
+		<div class="flex w-full">
+			<ProfileImageBase
+				src={data?.model?.info?.meta?.profile_image_url ?? ''}
+				className={'size-5 -translate-y-[1px]'}
+			/>
+
+			<div class="ml-2">
+				<div class="text-xs font-medium">{data.model.name}</div>
+				<div class="text-gray-500 line-clamp-2 text-xs mt-0.5">{data.message.content}</div>
+			</div>
+		</div>
+	{/if}
+	<Handle type="target" position={Position.Top} class="w-2 rounded-full dark:bg-gray-900" />
+	<Handle type="source" position={Position.Bottom} class="w-2 rounded-full dark:bg-gray-900" />
+</div>
