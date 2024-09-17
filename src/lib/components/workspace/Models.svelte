@@ -95,6 +95,29 @@
 	};
 
 	const moveToTopHandler = async (model) => {
+		// find models with position 0 and set them to 1
+		const topModels = _models.filter((m) => m.info?.meta?.position === 0);
+		for (const m of topModels) {
+			let info = m.info;
+			if (!info) {
+				info = {
+					id: m.id,
+					name: m.name,
+					meta: {
+						position: 1
+					},
+					params: {}
+				};
+			}
+
+			info.meta = {
+				...info.meta,
+				position: 1
+			};
+
+			await updateModelById(localStorage.token, info.id, info);
+		}
+
 		let info = model.info;
 
 		if (!info) {
