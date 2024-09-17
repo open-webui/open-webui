@@ -376,7 +376,7 @@ __builtins__.input = input`);
 			{/if}
 		</div>
 	{/if}
-	{#if lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html' || lang.toLocaleLowerCase() == 'suno'}
+	{#if ['php', 'html', 'xml', 'mp4'].includes(lang.toLowerCase())}
 		<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
 			<div class="text-gray-500 text-white text-xs mb-1 flex justify-between items-center">
 				<button class="p-1" on:click={toggleExpand}>
