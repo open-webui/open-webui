@@ -1,7 +1,14 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { onMount, tick, getContext } from 'svelte';
-	import { modelfiles, settings, showSidebar, documents } from '$lib/stores';
+	import {
+		modelfiles,
+		settings,
+		showSidebar,
+		documents,
+		employeeType,
+		defaultDocuments
+	} from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
 	import {
@@ -59,18 +66,41 @@
 		}
 	}
 
-	// customization: auto select for all uploaded docs
-	// $: if ($documents.length) {
-	// 	files = [
-	// 		{
-	// 			name: 'All Documents',
-	// 			type: 'collection',
-	// 			title: 'All Documents',
-	// 			collection_names: $documents.map((doc) => doc.collection_name),
-	// 			upload_status: true
-	// 		},
-	// 	];
-	// }
+	// customization: auto select based on employee type
+	$: if ($documents.length) {
+		const collections = [
+			...($documents.length > 0
+				? [
+						{
+							name: 'All Documents',
+							type: 'collection',
+							title: 'All Documents',
+							collection_names: $documents.map((doc) => doc.collection_name),
+							upload_status: true
+						}
+				  ]
+				: []),
+			...$documents
+				.reduce((a, e, i, arr) => {
+					return [...new Set([...a, ...(e?.content?.tags ?? []).map((tag) => tag.name)])];
+				}, [])
+				.map((tag) => ({
+					name: tag,
+					type: 'collection',
+					collection_names: $documents
+						.filter((doc) => (doc?.content?.tags ?? []).map((tag) => tag.name).includes(tag))
+						.map((doc) => doc.collection_name),
+					upload_status: true
+				}))
+		];
+
+		$employeeType === 'Both'
+			? defaultDocuments.set([collections[0]])
+			: defaultDocuments.set([
+					...collections.filter((el) => el.name === 'common'),
+					...collections.filter((el) => el.name === $employeeType.toLowerCase())
+			  ]);
+	}
 
 	let mediaRecorder;
 	let audioChunks = [];

@@ -14,6 +14,7 @@ export const chatId = writable('');
 
 export const chats = writable([]);
 export const tags = writable([]);
+export const defaultDocuments = writable([]);
 export const models: Writable<Model[]> = writable([]);
 
 export const modelfiles = writable([]);
@@ -40,6 +41,8 @@ export const showSettings = writable(false);
 export const showChangelog = writable(false);
 
 export const isMobile = writable(false);
+
+export const employeeType = writable('Staff');
 
 type Model = OpenAIModel | OllamaModel;
 

@@ -17,7 +17,8 @@
 		WEBUI_NAME,
 		tags as _tags,
 		showSidebar,
-		documents
+		documents,
+		defaultDocuments
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream } from '$lib/utils';
 
@@ -265,15 +266,7 @@ You are a RAG system designed to support HR services for MBZUAI university. You 
 			// Create new chat if only one message in messages
 			if (messages.length == 1) {
 				if (!history.messages[userMessageId].files) {
-					history.messages[userMessageId].files = [
-						{
-							name: 'All Documents',
-							type: 'collection',
-							title: 'All Documents',
-							collection_names: $documents.map((doc) => doc.collection_name),
-							upload_status: true
-						}
-					];
+					history.messages[userMessageId].files = $defaultDocuments;
 				}
 				if ($settings.saveChatHistory ?? true) {
 					chat = await createNewChat(localStorage.token, {

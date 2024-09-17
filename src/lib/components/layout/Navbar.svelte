@@ -10,7 +10,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import Menu from './Navbar/Menu.svelte';
 	import { page } from '$app/stores';
-
+	import EmployeeTypeSwitch from './Navbar/EmployeeTypeSwitch.svelte'
 	const i18n = getContext('i18n');
 
 	export let initNewChat: Function;
@@ -91,7 +91,8 @@
 			</div>
 
 			<div class="self-start flex flex-none items-center pc-only">
-				<div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" />
+				<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
+				<EmployeeTypeSwitch />
 				<div class="relative">
 					{#if $user !== undefined}
 						<Tooltip content={$user.name}>
