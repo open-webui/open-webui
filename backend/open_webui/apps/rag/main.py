@@ -267,8 +267,8 @@ def update_reranking_model(
 
             try:
                 app.state.sentence_transformer_rf = ColBERT(reranking_model)
-            except:
-                log.error("ColBERT error")
+            except Exception as e:
+                log.error(f"ColBERT: {e}")
                 app.state.sentence_transformer_rf = None
                 app.state.config.ENABLE_RAG_HYBRID_SEARCH = False
         else:
