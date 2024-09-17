@@ -53,6 +53,8 @@
 	let showDeleteConfirm = false;
 	let showDropdown = false;
 
+	let selectedTagName = null;
+
 	let filteredChatList = [];
 
 	// Pagination variables
@@ -419,10 +421,13 @@
 			</div>
 
 			{#if $tags.filter((t) => t.name !== 'pinned').length > 0}
-				<div class="px-2.5 mb-2 flex gap-1 flex-wrap">
+				<div class="px-3.5 mb-1 flex gap-0.5 flex-wrap">
 					<button
-						class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
+						class="px-2.5 py-[1px] text-xs transition {selectedTagName === null
+							? 'bg-gray-850'
+							: ' '} rounded-md"
 						on:click={async () => {
+							selectedTagName = null;
 							await enablePagination();
 						}}
 					>
@@ -430,8 +435,11 @@
 					</button>
 					{#each $tags.filter((t) => t.name !== 'pinned') as tag}
 						<button
-							class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
+							class="px-2.5 py-[1px] text-xs transition {selectedTagName === tag.name
+								? 'bg-gray-850'
+								: ''}  rounded-md"
 							on:click={async () => {
+								selectedTagName = tag.name;
 								scrollPaginationEnabled.set(false);
 								let chatIds = await getChatListByTagName(localStorage.token, tag.name);
 								if (chatIds.length === 0) {
