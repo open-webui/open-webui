@@ -265,7 +265,12 @@ def update_reranking_model(
 
                     return scores
 
-            app.state.sentence_transformer_rf = ColBERT(reranking_model)
+            try:
+                app.state.sentence_transformer_rf = ColBERT(reranking_model)
+            except:
+                log.error("ColBERT error")
+                app.state.sentence_transformer_rf = None
+                app.state.config.ENABLE_RAG_HYBRID_SEARCH = False
         else:
             import sentence_transformers
 
