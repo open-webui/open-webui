@@ -82,7 +82,7 @@
 						}}
 					>
 						<button
-							class="hidden md:flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 							id="chat-context-menu-button"
 						>
 							<div class=" m-auto self-center">
@@ -105,19 +105,21 @@
 					</Menu>
 				{/if}
 
-				<Tooltip content={$i18n.t('Controls')}>
-					<button
-						class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-						on:click={() => {
-							showControls.set(!$showControls);
-						}}
-						aria-label="Controls"
-					>
-						<div class=" m-auto self-center">
-							<AdjustmentsHorizontal className=" size-5" strokeWidth="0.5" />
-						</div>
-					</button>
-				</Tooltip>
+				{#if !$mobile}
+					<Tooltip content={$i18n.t('Controls')}>
+						<button
+							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							on:click={() => {
+								showControls.set(!$showControls);
+							}}
+							aria-label="Controls"
+						>
+							<div class=" m-auto self-center">
+								<AdjustmentsHorizontal className=" size-5" strokeWidth="0.5" />
+							</div>
+						</button>
+					</Tooltip>
+				{/if}
 
 				<Tooltip content={$i18n.t('New Chat')}>
 					<button

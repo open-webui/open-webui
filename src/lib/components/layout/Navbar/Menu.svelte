@@ -17,6 +17,7 @@
 	import { get } from 'svelte/store';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 	import { toast } from 'svelte-sonner';
+	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -125,6 +126,17 @@
 				</svg>
 				<div class="flex items-center">{$i18n.t('Settings')}</div>
 			</DropdownMenu.Item> -->
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				id="chat-controls-button"
+				on:click={async () => {
+					await showControls.set(true);
+				}}
+			>
+				<AdjustmentsHorizontal className=" size-4" strokeWidth="0.5" />
+				<div class="flex items-center">{$i18n.t('Controls')}</div>
+			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
