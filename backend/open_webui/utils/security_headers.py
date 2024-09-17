@@ -23,6 +23,7 @@ def set_security_headers() -> Dict[str, str]:
     - x-content-type-options
     - x-download-options
     - x-frame-options
+    - x-permitted-cross-domain-policies
 
     Each environment variable is associated with a specific setter function
     that constructs the header. If the environment variable is set, the
