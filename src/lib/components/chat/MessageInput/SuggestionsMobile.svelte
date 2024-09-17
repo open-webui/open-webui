@@ -43,14 +43,13 @@
 
 	<div
 		class="relative w-full px-4 flex flex-col items-center gap-4 snap-y snap-mandatory md:snap-none overflow-y-auto tabs mask"
-		style="max-height: {!expanded ? '12vh':'36vh'};"
+		style="height: {!expanded ? '12vh':'36vh'};"
 		id="suggestions-container"
 		on:pointermove|preventDefault={() => {if (!expanded) { expanded = true }}}
 	>
 		{#each prompts as prompt, promptIdx}
-			<div class="snap-center shrink-0 ">
 				<button
-					class="flex items-center h-16 px-4 bg-[#EEF9FD] rounded-2xl backdrop-blur group w-[80vw] notification {expanded ? 'expanded' : 'stacked'}"
+					class="flex items-center h-16 px-4 bg-[#EEF9FD] rounded-2xl backdrop-blur group w-[80vw] notification {expanded ? 'expanded' : 'stacked'} shrink-0"
 					style={
 						expanded ? '' :
 						`transform: scaleX(${(prompts.length-promptIdx/2)/prompts.length}) translateY(${promptIdx/1.5}rem); z-index: ${prompts.length-promptIdx};
@@ -79,13 +78,12 @@
 						{/if}
 					</div>
 				</button>
-			</div>
 		{/each}
 	</div>
 
 <style>
 	.notification {
-		transition: transform 1.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+		transition: transform 1s cubic-bezier(0.25, 0.8, 0.25, 1);
 		box-shadow: 0px 4px 16px 0px rgba(0, 0, 0, 0.20);
 	}
 
@@ -115,7 +113,7 @@
 		-ms-overflow-style: none; /* IE and Edge */
 		scrollbar-width: none; /* Firefox */
 		padding-bottom: 3.5rem;
-		transition: max-height 1.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+		transition: height 1s cubic-bezier(0.25, 0.8, 0.25, 1);
 	}
 	.mask {
 		mask-image: linear-gradient(to top, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 10%);
