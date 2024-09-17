@@ -16,6 +16,7 @@
 	import Map from '$lib/components/icons/Map.svelte';
 	import { get } from 'svelte/store';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
+	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
 
@@ -141,9 +142,13 @@
 				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				id="chat-copy-button"
 				on:click={async () => {
-					await copyToClipboard(await getChatAsText()).catch((e) => {
+					const res = await copyToClipboard(await getChatAsText()).catch((e) => {
 						console.error(e);
 					});
+
+					if (res) {
+						toast.success($i18n.t('Copied to clipboard'));
+					}
 				}}
 			>
 				<Clipboard className=" size-4" strokeWidth="1.5" />
