@@ -1712,7 +1712,7 @@
 			<div
 				class="absolute top-[4.25rem] w-full {$showSidebar
 					? 'md:max-w-[calc(100%-260px)]'
-					: ''} {$showControls ? 'lg:pr-[24rem]' : ''} z-20"
+					: ''} {$showControls ? 'lg:pr-[26rem]' : ''} z-20"
 			>
 				<div class=" flex flex-col gap-1 w-full">
 					{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
@@ -1740,7 +1740,7 @@
 		<div class="flex flex-col flex-auto z-10">
 			<div
 				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden {$showControls
-					? 'lg:pr-[24rem]'
+					? 'lg:pr-[26rem]'
 					: ''}"
 				id="messages-container"
 				bind:this={messagesContainerElement}
@@ -1769,7 +1769,7 @@
 				</div>
 			</div>
 
-			<div class={$showControls ? 'lg:pr-[24rem]' : ''}>
+			<div class={$showControls ? 'lg:pr-[26rem]' : ''}>
 				<MessageInput
 					bind:files
 					bind:prompt
