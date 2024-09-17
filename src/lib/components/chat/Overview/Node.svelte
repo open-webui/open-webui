@@ -18,7 +18,7 @@
 				className={'size-5 -translate-y-[1px]'}
 			/>
 			<div class="ml-2">
-				<div class="text-xs font-medium">{data.user.name}</div>
+				<div class="text-xs text-black dark:text-white font-medium">{data.user.name}</div>
 				<div class="text-gray-500 line-clamp-2 text-xs mt-0.5">{data.message.content}</div>
 			</div>
 		</div>
@@ -30,7 +30,7 @@
 			/>
 
 			<div class="ml-2">
-				<div class="text-xs font-medium">{data.model.name}</div>
+				<div class="text-xs text-black dark:text-white font-medium">{data.model.name}</div>
 				<div class="text-gray-500 line-clamp-2 text-xs mt-0.5">{data.message.content}</div>
 			</div>
 		</div>

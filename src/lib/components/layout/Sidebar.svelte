@@ -424,8 +424,8 @@
 				<div class="px-3.5 mb-1 flex gap-0.5 flex-wrap">
 					<button
 						class="px-2.5 py-[1px] text-xs transition {selectedTagName === null
-							? 'bg-gray-900'
-							: ' '} rounded-md"
+							? 'bg-gray-100 dark:bg-gray-900'
+							: ' '} rounded-md font-medium"
 						on:click={async () => {
 							selectedTagName = null;
 							await enablePagination();
@@ -436,8 +436,8 @@
 					{#each $tags.filter((t) => t.name !== 'pinned') as tag}
 						<button
 							class="px-2.5 py-[1px] text-xs transition {selectedTagName === tag.name
-								? 'bg-gray-900'
-								: ''}  rounded-md"
+								? 'bg-gray-100 dark:bg-gray-900'
+								: ''}  rounded-md font-medium"
 							on:click={async () => {
 								selectedTagName = tag.name;
 								scrollPaginationEnabled.set(false);
