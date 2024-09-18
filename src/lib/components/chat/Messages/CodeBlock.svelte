@@ -254,7 +254,7 @@ __builtins__.input = input`);
 		all_expanded = !all_expanded;
 	};
 
-	if (['php', 'html', 'xml', 'mp4'].includes(lang.toLowerCase())) {
+	$: if (['php', 'html', 'xml', 'mp4'].includes(lang.toLowerCase())) {
 		if (!sandpackIframe && !enableHTML) {
 			enableHTML = true;
 		}
