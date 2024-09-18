@@ -85,7 +85,7 @@
 
 	export let updateChatMessages: Function;
 	export let confirmEditResponseMessage: Function;
-	export let saveNewResponseMessage: Function;
+	export let saveNewResponseMessage: Function = () => {};
 
 	export let showPreviousMessage: Function;
 	export let showNextMessage: Function;
