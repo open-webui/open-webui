@@ -94,12 +94,10 @@
 				}))
 		];
 
-		$employeeType === 'Both'
-			? defaultDocuments.set([collections[0]])
-			: defaultDocuments.set([
-					...collections.filter((el) => el.name === 'common'),
-					...collections.filter((el) => el.name === $employeeType.toLowerCase())
-			  ]);
+		$employeeType === defaultDocuments.set([
+			// ...collections.filter((el) => el.name === 'common'),
+			...collections.filter((el) => el.name === $employeeType.toLowerCase())
+		]);
 	}
 
 	let mediaRecorder;

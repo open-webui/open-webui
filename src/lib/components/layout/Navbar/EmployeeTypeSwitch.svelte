@@ -60,7 +60,7 @@
 			transition:fade|slide={{ duration: 500 }}
 			bind:this={typeDropdownEl}
 		>
-			{#each ['Staff', 'Faculty', 'Both'] as type}
+			{#each ['Staff', 'Faculty'] as type}
 				<div class="p-1 py-2 w-full">
 					<button
 						class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 disabled:bg-blue-500 disabled:text-white dark:hover:bg-gray-800 transition"
