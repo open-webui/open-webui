@@ -160,3 +160,7 @@ input[type='number'] {
 .svelte-flow {
 	background-color: transparent !important;
 }
+
+.bg-gray-950-90 {
+	background-color: rgba(var(--color-gray-950, #0d0d0d), 0.9);
+}

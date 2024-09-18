@@ -382,11 +382,13 @@
 			</div>
 		{/if}
 
-		<div class="relative flex flex-col flex-1 overflow-y-auto">
+		<div
+			class="relative flex flex-col flex-1 overflow-y-auto {$temporaryChatEnabled
+				? 'opacity-20'
+				: ''}"
+		>
 			{#if $temporaryChatEnabled}
-				<div
-					class="absolute z-40 w-full h-full bg-gray-50/90 dark:bg-black/90 flex justify-center"
-				></div>
+				<div class="absolute z-40 w-full h-full flex justify-center"></div>
 			{/if}
 
 			<div class="px-2 mt-0.5 mb-2 flex justify-center space-x-2">
