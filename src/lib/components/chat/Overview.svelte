@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, createEventDispatcher } from 'svelte';
+	import { getContext, createEventDispatcher, onDestroy } from 'svelte';
 	import { useSvelteFlow, useNodesInitialized, useStore } from '@xyflow/svelte';
 
 	const dispatch = createEventDispatcher();
@@ -111,6 +111,8 @@
 	};
 
 	onMount(() => {
+		drawFlow();
+
 		nodesInitialized.subscribe(async (initialized) => {
 			if (initialized) {
 				await tick();
@@ -129,6 +131,13 @@
 				fitView();
 			}
 		});
+	});
+
+	onDestroy(() => {
+		console.log('Overview destroyed');
+
+		nodes.set([]);
+		edges.set([]);
 	});
 </script>
 

@@ -86,7 +86,10 @@
 				<div class=" {$showOverview ? ' h-screen  w-screen' : 'px-6 py-4'} h-full">
 					{#if $showOverview}
 						<Overview
-							bind:history
+							{history}
+							on:nodeclick={(e) => {
+								showMessage(e.detail.node.data.message);
+							}}
 							on:close={() => {
 								showControls.set(false);
 							}}
@@ -126,7 +129,7 @@
 						/>
 					{:else if $showOverview}
 						<Overview
-							bind:history
+							{history}
 							on:nodeclick={(e) => {
 								showMessage(e.detail.node.data.message);
 							}}
