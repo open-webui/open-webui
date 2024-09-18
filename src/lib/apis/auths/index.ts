@@ -113,6 +113,12 @@ export const getSessionUser = async (token: string) => {
 export const userSignIn = async (email: string, password: string) => {
 	let error = null;
 
+	const domain: string = "@canvas8.com";
+
+  if (email.toLowerCase().slice(-domain.length) === domain){
+    console.log("The email is from the canvas8.com domain.");
+  }
+
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signin`, {
 		method: 'POST',
 		headers: {
