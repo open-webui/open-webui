@@ -19,6 +19,8 @@ from open_webui.config import (
     AUDIO_TTS_OPENAI_API_KEY,
     AUDIO_TTS_SPLIT_ON,
     AUDIO_TTS_VOICE,
+    AUDIO_TTS_AZURE_SPEECH_REGION,
+    AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
     CACHE_DIR,
     CORS_ALLOW_ORIGIN,
     WHISPER_MODEL,
@@ -62,6 +64,9 @@ app.state.config.TTS_VOICE = AUDIO_TTS_VOICE
 app.state.config.TTS_API_KEY = AUDIO_TTS_API_KEY
 app.state.config.TTS_SPLIT_ON = AUDIO_TTS_SPLIT_ON
 
+app.state.config.TTS_AZURE_SPEECH_REGION = AUDIO_TTS_AZURE_SPEECH_REGION
+app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT
+
 # setting device type for whisper model
 whisper_device_type = DEVICE_TYPE if DEVICE_TYPE and DEVICE_TYPE == "cuda" else "cpu"
 log.info(f"whisper_device_type: {whisper_device_type}")
@@ -78,6 +83,8 @@ class TTSConfigForm(BaseModel):
     MODEL: str
     VOICE: str
     SPLIT_ON: str
+    AZURE_SPEECH_REGION: str
+    AZURE_SPEECH_OUTPUT_FORMAT: str
 
 
 class STTConfigForm(BaseModel):
@@ -130,6 +137,8 @@ async def get_audio_config(user=Depends(get_admin_user)):
             "MODEL": app.state.config.TTS_MODEL,
             "VOICE": app.state.config.TTS_VOICE,
             "SPLIT_ON": app.state.config.TTS_SPLIT_ON,
+            "AZURE_SPEECH_REGION": app.state.config.TTS_AZURE_SPEECH_REGION,
+            "AZURE_SPEECH_OUTPUT_FORMAT": app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT,
         },
         "stt": {
             "OPENAI_API_BASE_URL": app.state.config.STT_OPENAI_API_BASE_URL,
@@ -151,6 +160,8 @@ async def update_audio_config(
     app.state.config.TTS_MODEL = form_data.tts.MODEL
     app.state.config.TTS_VOICE = form_data.tts.VOICE
     app.state.config.TTS_SPLIT_ON = form_data.tts.SPLIT_ON
+    app.state.config.TTS_AZURE_SPEECH_REGION = form_data.tts.AZURE_SPEECH_REGION
+    app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = form_data.tts.AZURE_SPEECH_OUTPUT_FORMAT
 
     app.state.config.STT_OPENAI_API_BASE_URL = form_data.stt.OPENAI_API_BASE_URL
     app.state.config.STT_OPENAI_API_KEY = form_data.stt.OPENAI_API_KEY
@@ -166,6 +177,8 @@ async def update_audio_config(
             "MODEL": app.state.config.TTS_MODEL,
             "VOICE": app.state.config.TTS_VOICE,
             "SPLIT_ON": app.state.config.TTS_SPLIT_ON,
+            "AZURE_SPEECH_REGION": app.state.config.TTS_AZURE_SPEECH_REGION,
+            "AZURE_SPEECH_OUTPUT_FORMAT": app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT,
         },
         "stt": {
             "OPENAI_API_BASE_URL": app.state.config.STT_OPENAI_API_BASE_URL,
@@ -309,10 +322,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             log.exception(e)
             raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
-        region = "uksouth"
-        language = "en-GB-SoniaNeural"
-        locale = "en-GB"
-        output_format = "audio-24khz-160kbitrate-mono-mp3"
+        region = app.state.config.TTS_AZURE_SPEECH_REGION
+        language = app.state.config.TTS_VOICE
+        locale = "-".join(app.state.config.TTS_VOICE.split("-")[:1])
+        output_format = app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT
         url = f"https://{region}.tts.speech.microsoft.com/cognitiveservices/v1"
 
         headers = {
@@ -515,6 +528,22 @@ def get_available_voices() -> dict:
         except Exception:
             # Avoided @lru_cache with exception
             pass
+    elif app.state.config.TTS_ENGINE == "azurespeechservice":
+        try:
+            region = app.state.config.TTS_AZURE_SPEECH_REGION
+            url = f"https://{region}.tts.speech.microsoft.com/cognitiveservices/voices/list"
+            headers = {
+                'Ocp-Apim-Subscription-Key': app.state.config.TTS_API_KEY
+            }
+
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            voices = response.json()
+            for voice in voices:
+                ret[voice['ShortName']] = f"{voice['DisplayName']} ({voice['ShortName']})"
+        except requests.RequestException as e:
+            log.error(f"Error fetching voices: {str(e)}")
+
 
     return ret
 

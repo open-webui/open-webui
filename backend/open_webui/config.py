@@ -1472,3 +1472,15 @@ AUDIO_TTS_SPLIT_ON = PersistentConfig(
     "audio.tts.split_on",
     os.getenv("AUDIO_TTS_SPLIT_ON", "punctuation"),
 )
+
+AUDIO_TTS_AZURE_SPEECH_REGION = PersistentConfig(
+    "AUDIO_TTS_AZURE_SPEECH_REGION",
+    "audio.tts.azure_speech_region",
+    os.getenv("AUDIO_TTS_AZURE_SPEECH_REGION", "uksouth"),
+)
+
+AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
+    "AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT",
+    "audio.tts.azure_speech_output_format",
+    os.getenv("AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT", 'audio-24khz-160kbitrate-mono-mp3'),
+)
