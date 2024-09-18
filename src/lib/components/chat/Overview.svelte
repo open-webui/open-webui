@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { getContext, createEventDispatcher } from 'svelte';
 	import { useSvelteFlow, useNodesInitialized, useStore } from '@xyflow/svelte';
-	import { SvelteFlow, Controls, Background, BackgroundVariant } from '@xyflow/svelte';
 
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
@@ -148,6 +147,6 @@
 	</div>
 
 	{#if $nodes.length > 0}
-		<Flow {nodes} {nodeTypes} {edges} />
+		<Flow {nodes} {nodeTypes} {edges} on:nodeclick={(e) => dispatch('nodeclick', e.detail)} />
 	{/if}
 </div>

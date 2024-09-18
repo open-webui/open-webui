@@ -143,6 +143,28 @@
 		})();
 	}
 
+	const showMessage = async (message) => {
+		let _messageId = JSON.parse(JSON.stringify(message.id));
+
+		let messageChildrenIds = history.messages[_messageId].childrenIds;
+
+		while (messageChildrenIds.length !== 0) {
+			_messageId = messageChildrenIds.at(-1);
+			messageChildrenIds = history.messages[_messageId].childrenIds;
+		}
+
+		history.currentId = _messageId;
+
+		await tick();
+		await tick();
+		await tick();
+
+		const messageElement = document.getElementById(`message-${message.id}`);
+		if (messageElement) {
+			messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}
+	};
+
 	const chatEventHandler = async (event, cb) => {
 		if (event.chat_id === $chatId) {
 			await tick();
@@ -1812,6 +1834,7 @@
 	bind:files
 	{submitPrompt}
 	{stopResponse}
+	{showMessage}
 	modelId={selectedModelIds?.at(0) ?? null}
 	chatId={$chatId}
 	{eventTarget}

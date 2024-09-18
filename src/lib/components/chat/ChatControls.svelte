@@ -21,6 +21,7 @@
 	export let eventTarget: EventTarget;
 	export let submitPrompt: Function;
 	export let stopResponse: Function;
+	export let showMessage: Function;
 	export let files;
 	export let modelId;
 
@@ -126,6 +127,9 @@
 					{:else if $showOverview}
 						<Overview
 							bind:history
+							on:nodeclick={(e) => {
+								showMessage(e.detail.node.data.message);
+							}}
 							on:close={() => {
 								showControls.set(false);
 							}}

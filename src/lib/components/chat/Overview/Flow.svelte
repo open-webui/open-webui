@@ -1,4 +1,8 @@
 <script>
+	import { createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher();
+
 	import { theme } from '$lib/stores';
 	import { Background, Controls, SvelteFlow, BackgroundVariant } from '@xyflow/svelte';
 
@@ -22,7 +26,7 @@
 			: 'light'}
 	nodesConnectable={false}
 	nodesDraggable={false}
-	on:nodeclick={(event) => console.log('on node click', event.detail.node)}
+	on:nodeclick={(e) => dispatch('nodeclick', e.detail)}
 	oninit={() => {
 		console.log('Flow initialized');
 	}}
