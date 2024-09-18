@@ -34,6 +34,10 @@
 		drawFlow();
 	}
 
+	$: if (history?.currentId) {
+		fitView({ nodes: [{ id: history.currentId }] });
+	}
+
 	const drawFlow = async () => {
 		const nodeList = [];
 		const edgeList = [];
@@ -116,19 +120,21 @@
 		nodesInitialized.subscribe(async (initialized) => {
 			if (initialized) {
 				await tick();
-				const res = await fitView();
+				const res = await fitView({ nodes: [{ id: history.currentId }] });
 			}
 		});
 
 		width.subscribe((value) => {
 			if (value) {
-				fitView();
+				// fitView();
+				fitView({ nodes: [{ id: history.currentId }] });
 			}
 		});
 
 		height.subscribe((value) => {
 			if (value) {
-				fitView();
+				// fitView();
+				fitView({ nodes: [{ id: history.currentId }] });
 			}
 		});
 	});
