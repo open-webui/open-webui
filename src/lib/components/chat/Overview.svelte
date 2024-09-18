@@ -92,15 +92,23 @@
 					source: parentId,
 					target: pos.id,
 					selectable: false,
-
+					class: ' dark:fill-gray-300 fill-gray-300',
 					type: 'smoothstep',
-					animated: true
+					animated: history.currentId === id || recurseCheckChild(id, history.currentId)
 				});
 			}
 		});
 
 		await edges.set([...edgeList]);
 		await nodes.set([...nodeList]);
+	};
+
+	const recurseCheckChild = (nodeId, currentId) => {
+		const node = history.messages[nodeId];
+		return (
+			node.childrenIds &&
+			node.childrenIds.some((id) => id === currentId || recurseCheckChild(id, currentId))
+		);
 	};
 
 	onMount(() => {
