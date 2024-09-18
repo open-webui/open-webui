@@ -12,7 +12,10 @@
 <div
 	class="px-4 py-3 shadow-md rounded-xl dark:bg-black bg-white border dark:border-gray-900 w-60 h-20"
 >
-	<Tooltip content={data.message.content} class="w-full">
+	<Tooltip
+		content={data?.message?.error ? data.message.error.content : data.message.content}
+		class="w-full"
+	>
 		{#if data.message.role === 'user'}
 			<div class="flex w-full">
 				<ProfileImageBase
@@ -21,7 +24,12 @@
 				/>
 				<div class="ml-2">
 					<div class="text-xs text-black dark:text-white font-medium">{data.user.name}</div>
-					<div class="text-gray-500 line-clamp-2 text-xs mt-0.5">{data.message.content}</div>
+
+					{#if data?.message?.error}
+						<div class="text-red-500 line-clamp-2 text-xs mt-0.5">{data.message.error.content}</div>
+					{:else}
+						<div class="text-gray-500 line-clamp-2 text-xs mt-0.5">{data.message.content}</div>
+					{/if}
 				</div>
 			</div>
 		{:else}
@@ -33,7 +41,14 @@
 
 				<div class="ml-2">
 					<div class="text-xs text-black dark:text-white font-medium">{data.model.name}</div>
-					<div class="text-gray-500 line-clamp-2 text-xs mt-0.5">{data.message.content}</div>
+
+					{#if data?.message?.error}
+						<div class="text-red-500 line-clamp-2 text-xs mt-0.5">
+							{data.message.error.content}
+						</div>
+					{:else}
+						<div class="text-gray-500 line-clamp-2 text-xs mt-0.5">{data.message.content}</div>
+					{/if}
 				</div>
 			</div>
 		{/if}
