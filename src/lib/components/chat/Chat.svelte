@@ -161,7 +161,7 @@
 
 		const messageElement = document.getElementById(`message-${message.id}`);
 		if (messageElement) {
-			messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			messageElement.scrollIntoView({ behavior: 'smooth' });
 		}
 	};
 
