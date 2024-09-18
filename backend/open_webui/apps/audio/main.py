@@ -309,20 +309,33 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             log.exception(e)
             raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
-        import azure.cognitiveservices.speech as speechsdk
+        region = "uksouth"
+        language = "en-GB-SoniaNeural"
+        locale = "en-GB"
+        output_format = "audio-24khz-160kbitrate-mono-mp3"
+        url = f"https://{region}.tts.speech.microsoft.com/cognitiveservices/v1"
 
-        config = speechsdk.SpeechConfig(subscription=app.state.config.TTS_API_KEY, region="uksouth")
-        speaker_config = speechsdk.audio.AudioOutputConfig(use_default_speaker=False, filename=str(file_path))
+        headers = {
+            'Ocp-Apim-Subscription-Key': app.state.config.TTS_API_KEY,
+            'Content-Type': 'application/ssml+xml',
+            'X-Microsoft-OutputFormat': output_format
+        }
 
-        client = speechsdk.SpeechSynthesizer(speech_config=config, audio_config=speaker_config)
-        result = client.speak_text(payload["input"])
+        data = f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{locale}">
+                <voice name="{language}">{payload["input"]}</voice>
+            </speak>"""
 
-        if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+        response = requests.post(url, headers=headers, data=data)
+
+        if response.status_code == 200:
+            with open(file_path, "wb") as f:
+                f.write(response.content)
             return FileResponse(file_path)
         else:
+            log.error(f"Error synthesizing speech - {response.reason}")
             raise HTTPException(
                 status_code=500,
-                detail=f"Error synthesizing speech - {result.reason}")
+                detail=f"Error synthesizing speech - {response.reason}")
 
 
 
