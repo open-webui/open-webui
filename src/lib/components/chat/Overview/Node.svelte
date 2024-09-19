@@ -43,7 +43,7 @@
 
 				<div class="ml-2">
 					<div class="text-xs text-black dark:text-white font-medium">
-						{data?.model?.name ?? 'Assistant'}
+						{data?.model?.name ?? data?.message?.model ?? 'Assistant'}
 					</div>
 
 					{#if data?.message?.error}
