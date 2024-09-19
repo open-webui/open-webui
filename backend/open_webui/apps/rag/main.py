@@ -206,6 +206,18 @@ def update_reranking_model(
                     print("ColBERT: Loading model", name)
                     self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
+                    if DOCKER:
+                        # This is a workaround for the issue with the docker container
+                        # where the torch extension is not loaded properly
+                        # and the following error is thrown:
+                        # /root/.cache/torch_extensions/py311_cpu/segmented_maxsim_cpp/segmented_maxsim_cpp.so: cannot open shared object file: No such file or directory
+
+                        torch_extensions = "/root/.cache/torch_extensions/py311_cpu"
+                        try:
+                            shutil.rmtree(torch_extensions)
+                        except:
+                            pass
+
                     self.ckpt = Checkpoint(
                         name,
                         colbert_config=ColBERTConfig(model_name=name),
