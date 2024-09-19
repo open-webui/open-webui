@@ -101,10 +101,11 @@ async def notice_newnumber_signup_to_wechatapp(name, role, email):
     data = {
         "msgtype": "text",
         "text": {
-            "content": f"✨{WEBUI_NAME}"
-                       f"\n\n📮邮箱：{email}"
+            "content": f"✨✨✨{WEBUI_NAME}"
+                       f"\n\n🤖用户：{name}"
                        f"\n\n🔍角色：{role}"
-                       f"\n\n🤖用户：{name} 已注册成功请确认是否正式通过！"
+                       f"\n\n📮邮箱：{email}"
+                       f"\n\n🌟用户已注册成功，请确认是否正式通过！"
                        f"\n\n{app.state.config.WECHAT_NOTICE_SUFFIX}"
         }
     }
