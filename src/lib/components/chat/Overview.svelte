@@ -81,8 +81,7 @@
 				data: {
 					user: $user,
 					message: history.messages[id],
-					model: $models.find((model) => model.id === history.messages[id].model),
-					label: createLabel(history.messages[id].content)
+					model: $models.find((model) => model.id === history.messages[id].model)
 				},
 				position: { x, y }
 			});
@@ -162,6 +161,14 @@
 	</div>
 
 	{#if $nodes.length > 0}
-		<Flow {nodes} {nodeTypes} {edges} on:nodeclick={(e) => dispatch('nodeclick', e.detail)} />
+		<Flow
+			{nodes}
+			{nodeTypes}
+			{edges}
+			on:nodeclick={(e) => {
+				console.log(e.detail.node.data);
+				dispatch('nodeclick', e.detail);
+			}}
+		/>
 	{/if}
 </div>
