@@ -206,7 +206,7 @@ def update_reranking_model(
                     self.device = "cuda" if torch.cuda.is_available() else "cpu"
                     self.ckpt = Checkpoint(
                         get_model_path(name, auto_update),
-                        colbert_config=ColBERTConfig(),
+                        colbert_config=ColBERTConfig(model_name=name),
                     ).to(self.device)
                     pass
 
