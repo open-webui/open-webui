@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import Response
 from pydantic import BaseModel
 
+from open_webui.apps.filter.main import new_number_sign_up
 from open_webui.apps.webui.models.auths import (
     AddUserForm,
     ApiKey,
@@ -17,7 +18,8 @@ from open_webui.apps.webui.models.auths import (
     UserResponse,
 )
 from open_webui.apps.webui.models.users import Users
-from open_webui.config import WEBUI_AUTH, REGISTERED_EMAIL_SUFFIX, TURNSTILE_CHECK, TURNSTILE_SECRET_KEY
+from open_webui.config import WEBUI_AUTH, REGISTERED_EMAIL_SUFFIX, TURNSTILE_CHECK, TURNSTILE_SECRET_KEY, \
+    ENABLE_WECHAT_NOTICE
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import WEBUI_AUTH_TRUSTED_EMAIL_HEADER, WEBUI_AUTH_TRUSTED_NAME_HEADER
 from open_webui.utils.misc import parse_duration, validate_email_format
@@ -249,6 +251,12 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 value=token,
                 httponly=True,  # Ensures the cookie is not accessible via JavaScript
             )
+
+            if ENABLE_WECHAT_NOTICE:
+                try:
+                    new_number_sign_up(user.name, user.role, user.email)
+                except Exception as e:
+                    print(f"new_number_sign_up函数出现问题：{e}")
 
             if request.app.state.config.WEBHOOK_URL:
                 post_webhook(

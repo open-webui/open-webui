@@ -68,6 +68,11 @@ async def reset_usage():
     user_usage = defaultdict(lambda: defaultdict(int))
 
 
+async def new_number_sign_up(name, role, email):
+    data = await notice_newnumber_signup_to_wechatapp(name, role, email)
+    await send_message_to_wechatapp(data)
+
+
 async def daily_send_usage():
     data = await prepare_usage_to_wechatapp()
     await send_message_to_wechatapp(data)
@@ -89,6 +94,20 @@ async def prepare_usage_to_wechatapp():
                 "content": await init_usages()
             }
         }
+    return data
+
+
+async def notice_newnumber_signup_to_wechatapp(name, role, email):
+    data = {
+        "msgtype": "text",
+        "text": {
+            "content": f"✨{WEBUI_NAME}"
+                       f"\n\n📮邮箱：{email}"
+                       f"\n\n🔍角色：{role}"
+                       f"\n\n🤖用户：{name} 已注册成功请确认是否正式通过！"
+                       f"\n\n{app.state.config.WECHAT_NOTICE_SUFFIX}"
+        }
+    }
     return data
 
 
