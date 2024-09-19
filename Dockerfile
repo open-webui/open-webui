@@ -76,7 +76,7 @@ ENV RAG_EMBEDDING_MODEL="$USE_EMBEDDING_MODEL_DOCKER" \
 ENV HF_HOME="/app/backend/data/cache/embedding/models"
 
 ## Torch Extensions ##
-ENV TORCH_EXTENSIONS_DIR="/app/backend/data/cache/torch_extensions"
+ENV TORCH_EXTENSIONS_DIR="/.cache/torch_extensions"
 
 #### Other models ##########################################################
 
