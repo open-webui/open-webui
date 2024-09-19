@@ -115,9 +115,10 @@
 
 	$: if (history.currentId !== null) {
 		let _messages = [];
+		console.log(history.currentId);
 
 		let currentMessage = history.messages[history.currentId];
-		while (currentMessage !== null) {
+		while (currentMessage) {
 			_messages.unshift({ ...currentMessage });
 			currentMessage =
 				currentMessage.parentId !== null ? history.messages[currentMessage.parentId] : null;
