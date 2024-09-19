@@ -358,7 +358,7 @@
 								?.at(0) ?? undefined;
 
 						currentUtterance = new SpeechSynthesisUtterance(content);
-						currentUtterance.rate = speechRate;
+						currentUtterance.rate = $settings.audio?.tts?.speedRate ?? 1;
 
 						if (voice) {
 							currentUtterance.voice = voice;
@@ -385,7 +385,7 @@
 				if (audioElement) {
 					audioElement.src = audio.src;
 					audioElement.muted = true;
-					audioElement.playbackRate = speechRate;
+					audioElement.playbackRate = $settings.audio?.tts?.speedRate ?? 1;
 
 					audioElement
 						.play()
@@ -944,9 +944,20 @@
 				<Dropdown bind:show={showSpeedMenu}>
 					<button class="p-2 rounded-full bg-gray-50 dark:bg-gray-900">
 						<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-							<polygon points="8,5 8,19 19,12" fill="currentColor"/>
-							<path d="M12 2A10 10 0 0 0 12 22" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="2,2"/>
-							<path d="M12 2A10 10 0 0 1 12 22" fill="none" stroke="currentColor" stroke-width="2"/>
+							<polygon points="8,5 8,19 19,12" fill="currentColor" />
+							<path
+								d="M12 2A10 10 0 0 0 12 22"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-dasharray="2,2"
+							/>
+							<path
+								d="M12 2A10 10 0 0 1 12 22"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+							/>
 						</svg>
 					</button>
 
@@ -960,7 +971,10 @@
 						>
 							{#each speedOptions as speed}
 								<DropdownMenu.Item
-									class="flex gap-2 items-center px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md {speechRate === speed ? 'bg-gray-200 dark:bg-gray-600' : ''}"
+									class="flex gap-2 items-center px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md {speechRate ===
+									speed
+										? 'bg-gray-200 dark:bg-gray-600'
+										: ''}"
 									on:click={() => setSpeedRate(speed)}
 								>
 									<div class="flex items-center">

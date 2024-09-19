@@ -94,6 +94,58 @@
 		window.addEventListener('message', messageHandler, false);
 	};
 
+	const moveToTopHandler = async (model) => {
+		// find models with position 0 and set them to 1
+		const topModels = _models.filter((m) => m.info?.meta?.position === 0);
+		for (const m of topModels) {
+			let info = m.info;
+			if (!info) {
+				info = {
+					id: m.id,
+					name: m.name,
+					meta: {
+						position: 1
+					},
+					params: {}
+				};
+			}
+
+			info.meta = {
+				...info.meta,
+				position: 1
+			};
+
+			await updateModelById(localStorage.token, info.id, info);
+		}
+
+		let info = model.info;
+
+		if (!info) {
+			info = {
+				id: model.id,
+				name: model.name,
+				meta: {
+					position: 0
+				},
+				params: {}
+			};
+		}
+
+		info.meta = {
+			...info.meta,
+			position: 0
+		};
+
+		const res = await updateModelById(localStorage.token, info.id, info);
+
+		if (res) {
+			toast.success($i18n.t(`Model {{name}} is now at the top`, { name: info.id }));
+		}
+
+		await models.set(await getModels(localStorage.token));
+		_models = $models;
+	};
+
 	const hideModelHandler = async (model) => {
 		let info = model.info;
 
@@ -439,6 +491,9 @@
 						}}
 						exportHandler={() => {
 							exportModelHandler(model);
+						}}
+						moveToTopHandler={() => {
+							moveToTopHandler(model);
 						}}
 						hideHandler={() => {
 							hideModelHandler(model);

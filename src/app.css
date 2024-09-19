@@ -169,3 +169,20 @@ input[type='number'] {
 	font-weight: 600;
 	@apply rounded-md dark:bg-gray-800 bg-gray-100 mx-0.5;
 }
+
+.svelte-flow {
+	background-color: transparent !important;
+}
+
+.svelte-flow__edge > path {
+	stroke-width: 0.5;
+}
+
+.svelte-flow__edge.animated > path {
+	stroke-width: 2;
+	@apply stroke-gray-600 dark:stroke-gray-500;
+}
+
+.bg-gray-950-90 {
+	background-color: rgba(var(--color-gray-950, #0d0d0d), 0.9);
+}
