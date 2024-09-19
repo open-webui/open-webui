@@ -270,16 +270,14 @@
 									'svip' && 'text-green-600 dark:text-green-200 bg-green-200/30'} {user.role ===
 									'pending' && 'text-gray-600 dark:text-gray-200 bg-gray-200/30'}"
 								on:click={() => {
-									if (isProAdmin) {
-										let newRole = '';
-										const currentIndex = roleMap.indexOf(user.role);
-										if (currentIndex !== -1 && currentIndex < roleMap.length - 1) {
-											newRole = roleMap[currentIndex + 1];
-										} else {
-											newRole = roleMap[0];
-										}
-										updateRoleHandler(user.id, newRole);
+									let newRole = '';
+									const currentIndex = roleMap.indexOf(user.role);
+									if (currentIndex !== -1 && currentIndex < roleMap.length - 1) {
+										newRole = roleMap[currentIndex + 1];
+									} else {
+										newRole = roleMap[0];
 									}
+									updateRoleHandler(user.id, newRole);
 								}}
 							>
 								<div
