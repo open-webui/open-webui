@@ -663,7 +663,7 @@
 			if (!$temporaryChatEnabled) {
 				chat = await createNewChat(localStorage.token, {
 					id: $chatId,
-					title: $i18n.t('New Chat'),
+					title: $i18n.t('New Gift Chat'),
 					models: selectedModels,
 					system: $settings.system ?? undefined,
 					params: params,
@@ -1084,7 +1084,7 @@
 			scrollToBottom();
 		}
 
-		if (messages.length == 6 && messages.at(1).content !== '' && selectedModels[0] === model.id) {
+		if (messages.length >= 2 && messages.at(1).content !== '' && selectedModels[0] === model.id) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
 			const _title = await generateChatTitle(messages);
 			await setChatTitle(_chatId, _title);
@@ -1356,7 +1356,7 @@
 			scrollToBottom();
 		}
 
-		if (messages.length == 6 && selectedModels[0] === model.id) {
+		if (messages.length >= 2 && selectedModels[0] === model.id) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
 
 			const _title = await generateChatTitle(messages);
@@ -1478,7 +1478,7 @@
 				$chatId
 			).catch((error) => {
 				console.error(error);
-				return 'New Chat';
+				return 'New Gift Chat';
 			});
 
 			return title;
