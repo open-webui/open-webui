@@ -652,6 +652,7 @@
 	"Speed Rate": "",
 	"Stop Sequence": "停止序列 (Stop Sequence)",
 	"STDOUT/STDERR": "标准输出/标准错误",
+	"Stream Chat Response": "聊天消息流式返回",
 	"STT Model": "语音转文本模型",
 	"STT Settings": "语音转文本设置",
 	"Submit": "提交",
