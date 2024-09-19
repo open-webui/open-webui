@@ -84,7 +84,13 @@ def load_toolkit_module_by_id(toolkit_id, content=None):
     module = types.ModuleType(module_name)
     sys.modules[module_name] = module
 
+    # Create a temporary in-memory file and use it to define `__file__` so
+    # that it works as expected from the module's perspective.
+    temp_fd = os.memfd_create(f"tmp:{module_name}")
     try:
+        os.write(temp_fd, content.encode("utf-8"))
+        module.__dict__["__file__"] = f"/proc/{os.getpid()}/fd/{temp_fd}"
+
         # Executing the modified content in the created module's namespace
         exec(content, module.__dict__)
         frontmatter = extract_frontmatter(content)
@@ -96,9 +102,11 @@ def load_toolkit_module_by_id(toolkit_id, content=None):
         else:
             raise Exception("No Tools class found in the module")
     except Exception as e:
-        print(f"Error loading module: {toolkit_id}")
+        print(f"Error loading module: {toolkit_id}: {e}")
         del sys.modules[module_name]  # Clean up
         raise e
+    finally:
+        os.close(temp_fd)
 
 
 def load_function_module_by_id(function_id, content=None):
@@ -118,7 +126,13 @@ def load_function_module_by_id(function_id, content=None):
     module = types.ModuleType(module_name)
     sys.modules[module_name] = module
 
+    # Create a temporary in-memory file and use it to define `__file__` so
+    # that it works as expected from the module's perspective.
+    temp_fd = os.memfd_create(f"tmp:{module_name}")
     try:
+        os.write(temp_fd, content.encode("utf-8"))
+        module.__dict__["__file__"] = f"/proc/{os.getpid()}/fd/{temp_fd}"
+
         # Execute the modified content in the created module's namespace
         exec(content, module.__dict__)
         frontmatter = extract_frontmatter(content)
@@ -134,11 +148,13 @@ def load_function_module_by_id(function_id, content=None):
         else:
             raise Exception("No Function class found in the module")
     except Exception as e:
-        print(f"Error loading module: {function_id}")
+        print(f"Error loading module: {function_id}: {e}")
         del sys.modules[module_name]  # Cleanup by removing the module in case of error
 
         Functions.update_function_by_id(function_id, {"is_active": False})
         raise e
+    finally:
+        os.close(temp_fd)
 
 
 def install_frontmatter_requirements(requirements):
