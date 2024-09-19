@@ -1,25 +1,22 @@
 <!doctype html>
 <html lang="en">
+
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
 		<link rel="manifest" href="%sveltekit.assets%/manifest.json" crossorigin="use-credentials" />
 		<!-- <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" /> -->
-		<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+		<meta name="viewport"
+			content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
 		<meta name="robots" content="noindex,nofollow" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black">
 		<meta name="apple-mobile-web-app-capable" content="yes">
-		<meta name="mobile-web-app-capable" content="yes">		
+		<meta name="mobile-web-app-capable" content="yes">
 		<meta name="apple-touch-icon" href="%sveltekit.assets%/logo.png">
 		<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 		<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 		<meta name="description" content="Yubb Chat" />
-		<link
-			rel="search"
-			type="application/opensearchdescription+xml"
-			title="Yubb Chat"
-			href="/opensearch.xml"
-		/>
+		<link rel="search" type="application/opensearchdescription+xml" title="Yubb Chat" href="/opensearch.xml" />
 
 		<script>
 			function resizeIframe(obj) {
@@ -28,47 +25,48 @@
 		</script>
 
 		<script>
-			// 在页面加载时或切换主题时执行，最好将代码放在 `head` 中，避免 FOUC
+			// On page load or when changing themes, best to add inline in `head` to avoid FOUC
 			(() => {
-				const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+				const metaThemeColorTag = document.querySelector('meta[name="theme-color"]');
+				const prefersDarkTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-				function updateThemeColor(color) {
-					themeColorMeta.setAttribute('content', color);
+				if (!localStorage?.theme) {
+					localStorage.theme = 'system';
 				}
 
-				function applyTheme(theme) {
-					document.documentElement.className = ''; 
-					document.documentElement.className = theme;
-					const isDarkMode = theme.includes('dark') || theme.includes('oled') || window.matchMedia('(prefers-color-scheme: dark)').matches;
-					updateThemeColor(isDarkMode ? '#000000' : '#ffffff');
+				if (localStorage.theme === 'system') {
+					document.documentElement.classList.add(prefersDarkTheme ? 'dark' : 'light');
+					metaThemeColorTag.setAttribute('content', prefersDarkTheme ? '#171717' : '#ffffff');
+				} else if (localStorage.theme === 'oled-dark') {
+					document.documentElement.style.setProperty('--color-gray-800', '#101010');
+					document.documentElement.style.setProperty('--color-gray-850', '#050505');
+					document.documentElement.style.setProperty('--color-gray-900', '#000000');
+					document.documentElement.style.setProperty('--color-gray-950', '#000000');
+					document.documentElement.classList.add('dark');
+					metaThemeColorTag.setAttribute('content', '#000000');
+				} else if (localStorage.theme === 'light') {
+					document.documentElement.classList.add('light');
+					metaThemeColorTag.setAttribute('content', '#ffffff');
+				} else if (localStorage.theme === 'her') {
+					document.documentElement.classList.add('dark');
+					document.documentElement.classList.add('her');
+					metaThemeColorTag.setAttribute('content', '#983724');
+				} else {
+					document.documentElement.classList.add('dark');
+					metaThemeColorTag.setAttribute('content', '#171717');
 				}
 
-				function initializeTheme() {
-					const storedTheme = localStorage.getItem('theme');
-					if (storedTheme) {
-						if (storedTheme === 'system') {
-							applyTheme(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-						} else if (storedTheme.includes('oled')) {
-							applyTheme('dark');
-							document.documentElement.style.setProperty('--color-gray-800', '#101010');
-							document.documentElement.style.setProperty('--color-gray-850', '#050505');
-							document.documentElement.style.setProperty('--color-gray-900', '#000000');
-							document.documentElement.style.setProperty('--color-gray-950', '#000000');
+				window.matchMedia('(prefers-color-scheme: dark)').addListener((e) => {
+					if (localStorage.theme === 'system') {
+						if (e.matches) {
+							document.documentElement.classList.add('dark');
+							document.documentElement.classList.remove('light');
+							metaThemeColorTag.setAttribute('content', '#171717');
 						} else {
-							applyTheme(storedTheme);
+							document.documentElement.classList.add('light');
+							document.documentElement.classList.remove('dark');
+							metaThemeColorTag.setAttribute('content', '#ffffff');
 						}
-					} else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-						applyTheme('light');
-					} else {
-						applyTheme('dark');
-					}
-				}
-
-				initializeTheme(); 
-
-				window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-					if (localStorage.getItem('theme') === 'system') {
-						applyTheme(e.matches ? 'dark' : 'light');
 					}
 				});
 			})();
@@ -82,32 +80,23 @@
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>
 
-		<div
-			id="splash-screen"
-			style="position: fixed; z-index: 100; top: 0; left: 0; width: 100%; height: 100%"
-		>
+		<div id="splash-screen" style="position: fixed; z-index: 100; top: 0; left: 0; width: 100%; height: 100%">
 			<style type="text/css" nonce="">
 				html {
 					overflow-y: scroll !important;
 				}
 			</style>
 
-			<img
-				id="logo"
-				style="
+			<img id="logo" style="
 					position: absolute;
 					width: auto;
 					height: 6rem;
 					top: 44%;
 					left: 50%;
-					border-radius: 50%;
 					transform: translateX(-50%);
-				"
-				src="/static/splash.png"
-			/>
+				" src="/static/splash.png" />
 
-			<div
-				style="
+			<div style="
 					position: absolute;
 					top: 33%;
 					left: 50%;
@@ -118,39 +107,26 @@
 					display: flex;
 					flex-direction: column;
 					align-items: center;
-				"
-			>
-				<img
-					id="logo-her"
-					style="width: auto; height: 13rem; border-radius: 50%"
-					src="/static/splash.png"
-					class="animate-pulse-fast"
-				/>
+				">
+				<img id="logo-her" style="width: auto; height: 13rem" src="/static/splash.png" class="animate-pulse-fast" />
 
 				<div style="position: relative; width: 24rem; margin-top: 0.5rem">
-					<div
-						id="progress-background"
-						style="
+					<div id="progress-background" style="
 							position: absolute;
 							width: 100%;
 							height: 0.75rem;
 
 							border-radius: 9999px;
 							background-color: #fafafa9a;
-						"
-					></div>
+						"></div>
 
-					<div
-						id="progress-bar"
-						style="
+					<div id="progress-bar" style="
 							position: absolute;
 							width: 0%;
 							height: 0.75rem;
 							border-radius: 9999px;
 							background-color: #fff;
-						"
-						class="bg-white"
-					></div>
+						" class="bg-white"></div>
 				</div>
 			</div>
 
@@ -162,12 +138,8 @@
 </html>
 
 <style type="text/css" nonce="">
-	html, body {
-		position: fixed;
-		overflow-y: hidden;
-		height: 100%;
-		width: 100%;
-		background: #171717;
+	html {
+		overflow-y: hidden !important;
 	}
 
 	#splash-screen {
