@@ -212,11 +212,9 @@ def update_reranking_model(
                         # and the following error is thrown:
                         # /root/.cache/torch_extensions/py311_cpu/segmented_maxsim_cpp/segmented_maxsim_cpp.so: cannot open shared object file: No such file or directory
 
-                        torch_extensions = "/root/.cache/torch_extensions/py311_cpu"
-                        try:
-                            shutil.rmtree(torch_extensions)
-                        except:
-                            pass
+                        lock_file = "/root/.cache/torch_extensions/py311_cpu/segmented_maxsim_cpp/lock"
+                        if os.path.exists(lock_file):
+                            os.remove(lock_file)
 
                     self.ckpt = Checkpoint(
                         name,
