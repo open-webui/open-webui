@@ -816,7 +816,10 @@ async def generate_chat_completion(
     log.debug(payload)
 
     return await post_streaming_url(
-        f"{url}/api/chat", json.dumps(payload), content_type="application/x-ndjson"
+        f"{url}/api/chat",
+        json.dumps(payload),
+        stream=form_data.stream,
+        content_type="application/x-ndjson",
     )
 
 
