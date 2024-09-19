@@ -203,6 +203,7 @@ def update_reranking_model(
 
             class ColBERT:
                 def __init__(self, name) -> None:
+                    print("ColBERT: Loading model", name)
                     self.device = "cuda" if torch.cuda.is_available() else "cpu"
                     self.ckpt = Checkpoint(
                         name,
@@ -266,9 +267,7 @@ def update_reranking_model(
                     return scores
 
             try:
-                app.state.sentence_transformer_rf = ColBERT(
-                    get_model_path(reranking_model, auto_update)
-                )
+                app.state.sentence_transformer_rf = ColBERT(reranking_model)
             except Exception as e:
                 log.error(f"ColBERT: {e}")
                 app.state.sentence_transformer_rf = None
