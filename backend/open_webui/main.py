@@ -130,7 +130,7 @@ from open_webui.utils.utils import (
 )
 from open_webui.utils.webhook import post_webhook
 
-from utils import open_webui_app_utils as owau
+from commons.ChatState import ChatState
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -1353,6 +1353,12 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
 
 @app.post("/api/task/title/completions")
 async def generate_title(form_data: dict, user=Depends(get_verified_user)):
+    # Check if gift_request is ready for title generation
+    chat_state = ChatState.load(form_data["chat_id"])
+    if chat_state.title_generated or not chat_state.gift_request:
+        # Title already generated or gift_request not ready
+        return chat_state.chat_title
+
     print("generate_title")
 
     model_id = form_data["model"]
@@ -1367,8 +1373,7 @@ async def generate_title(form_data: dict, user=Depends(get_verified_user)):
     model_id = get_task_model_id(model_id)
 
     print(model_id)
-    message_history = owau.build_message_history(form_data["prompt"])
-
+    gift_request_desc = chat_state.gift_request.describe()
 
     if app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE != "":
         template = app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE
@@ -1386,7 +1391,7 @@ async def generate_title(form_data: dict, user=Depends(get_verified_user)):
 
     content = title_generation_template(
         template,
-        message_history,
+        gift_request_desc,
         {
             "name": user.name,
             "location": user.info.get("location") if user.info else None,
@@ -1421,7 +1426,9 @@ async def generate_title(form_data: dict, user=Depends(get_verified_user)):
     if "chat_id" in payload:
         del payload["chat_id"]
 
-    return await generate_chat_completions(form_data=payload, user=user)
+    new_title = await generate_chat_completions(form_data=payload, user=user)
+    ChatState.update(form_data["chat_id"], title_generated=True, chat_title=new_title)
+    return new_title
 
 
 @app.post("/api/task/query/completions")
