@@ -1787,6 +1787,7 @@
 						{regenerateResponse}
 						{mergeResponses}
 						{chatActionHandler}
+						{showMessage}
 					/>
 				</div>
 			</div>

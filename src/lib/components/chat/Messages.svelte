@@ -21,6 +21,7 @@
 	export let regenerateResponse: Function;
 	export let mergeResponses: Function;
 	export let chatActionHandler: Function;
+	export let showMessage: Function = () => {};
 
 	export let user = $_user;
 	export let prompt;
@@ -244,49 +245,39 @@
 
 	const deleteMessageHandler = async (messageId) => {
 		const messageToDelete = history.messages[messageId];
-
 		const parentMessageId = messageToDelete.parentId;
 		const childMessageIds = messageToDelete.childrenIds ?? [];
 
-		const hasDescendantMessages = childMessageIds.some(
-			(childId) => history.messages[childId]?.childrenIds?.length > 0
+		// Collect all grandchildren
+		const grandchildrenIds = childMessageIds.flatMap(
+			(childId) => history.messages[childId]?.childrenIds ?? []
 		);
 
-		history.currentId = parentMessageId;
-		await tick();
+		// Update parent's children
+		if (parentMessageId && history.messages[parentMessageId]) {
+			history.messages[parentMessageId].childrenIds = [
+				...history.messages[parentMessageId].childrenIds.filter((id) => id !== messageId),
+				...grandchildrenIds
+			];
+		}
 
-		// Remove the message itself from the parent message's children array
-		history.messages[parentMessageId].childrenIds = history.messages[
-			parentMessageId
-		].childrenIds.filter((id) => id !== messageId);
-
-		await tick();
-
-		childMessageIds.forEach((childId) => {
-			const childMessage = history.messages[childId];
-
-			if (childMessage && childMessage.childrenIds) {
-				if (childMessage.childrenIds.length === 0 && !hasDescendantMessages) {
-					// If there are no other responses/prompts
-					history.messages[parentMessageId].childrenIds = [];
-				} else {
-					childMessage.childrenIds.forEach((grandChildId) => {
-						if (history.messages[grandChildId]) {
-							history.messages[grandChildId].parentId = parentMessageId;
-							history.messages[parentMessageId].childrenIds.push(grandChildId);
-						}
-					});
-				}
+		// Update grandchildren's parent
+		grandchildrenIds.forEach((grandchildId) => {
+			if (history.messages[grandchildId]) {
+				history.messages[grandchildId].parentId = parentMessageId;
 			}
+		});
 
-			// Remove child message id from the parent message's children array
-			history.messages[parentMessageId].childrenIds = history.messages[
-				parentMessageId
-			].childrenIds.filter((id) => id !== childId);
+		// Delete the message and its children
+		[messageId, ...childMessageIds].forEach((id) => {
+			delete history.messages[id];
 		});
 
 		await tick();
 
+		showMessage({ id: parentMessageId });
+
+		// Update the chat
 		await updateChatById(localStorage.token, chatId, {
 			messages: messages,
 			history: history
