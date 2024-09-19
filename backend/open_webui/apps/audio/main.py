@@ -161,7 +161,9 @@ async def update_audio_config(
     app.state.config.TTS_VOICE = form_data.tts.VOICE
     app.state.config.TTS_SPLIT_ON = form_data.tts.SPLIT_ON
     app.state.config.TTS_AZURE_SPEECH_REGION = form_data.tts.AZURE_SPEECH_REGION
-    app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = form_data.tts.AZURE_SPEECH_OUTPUT_FORMAT
+    app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = (
+        form_data.tts.AZURE_SPEECH_OUTPUT_FORMAT
+    )
 
     app.state.config.STT_OPENAI_API_BASE_URL = form_data.stt.OPENAI_API_BASE_URL
     app.state.config.STT_OPENAI_API_KEY = form_data.stt.OPENAI_API_KEY
@@ -314,7 +316,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 detail=error_detail,
             )
 
-    elif app.state.config.TTS_ENGINE == "azurespeechservice":
+    elif app.state.config.TTS_ENGINE == "azure":
         payload = None
         try:
             payload = json.loads(body.decode("utf-8"))
@@ -329,9 +331,9 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         url = f"https://{region}.tts.speech.microsoft.com/cognitiveservices/v1"
 
         headers = {
-            'Ocp-Apim-Subscription-Key': app.state.config.TTS_API_KEY,
-            'Content-Type': 'application/ssml+xml',
-            'X-Microsoft-OutputFormat': output_format
+            "Ocp-Apim-Subscription-Key": app.state.config.TTS_API_KEY,
+            "Content-Type": "application/ssml+xml",
+            "X-Microsoft-OutputFormat": output_format,
         }
 
         data = f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{locale}">
@@ -347,9 +349,8 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         else:
             log.error(f"Error synthesizing speech - {response.reason}")
             raise HTTPException(
-                status_code=500,
-                detail=f"Error synthesizing speech - {response.reason}")
-
+                status_code=500, detail=f"Error synthesizing speech - {response.reason}"
+            )
 
 
 @app.post("/transcriptions")
@@ -528,22 +529,21 @@ def get_available_voices() -> dict:
         except Exception:
             # Avoided @lru_cache with exception
             pass
-    elif app.state.config.TTS_ENGINE == "azurespeechservice":
+    elif app.state.config.TTS_ENGINE == "azure":
         try:
             region = app.state.config.TTS_AZURE_SPEECH_REGION
             url = f"https://{region}.tts.speech.microsoft.com/cognitiveservices/voices/list"
-            headers = {
-                'Ocp-Apim-Subscription-Key': app.state.config.TTS_API_KEY
-            }
+            headers = {"Ocp-Apim-Subscription-Key": app.state.config.TTS_API_KEY}
 
             response = requests.get(url, headers=headers)
             response.raise_for_status()
             voices = response.json()
             for voice in voices:
-                ret[voice['ShortName']] = f"{voice['DisplayName']} ({voice['ShortName']})"
+                ret[voice["ShortName"]] = (
+                    f"{voice['DisplayName']} ({voice['ShortName']})"
+                )
         except requests.RequestException as e:
             log.error(f"Error fetching voices: {str(e)}")
-
 
     return ret
 
