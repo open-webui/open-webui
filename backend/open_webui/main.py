@@ -13,6 +13,27 @@ from typing import Optional
 
 import aiohttp
 import requests
+from authlib.integrations.starlette_client import OAuth
+from authlib.oidc.core import UserInfo
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from sqlalchemy import text
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.sessions import SessionMiddleware
+from starlette.responses import RedirectResponse, Response, StreamingResponse
 
 from open_webui.apps.audio.main import app as audio_app
 from open_webui.apps.filter.main import app as filter_app
@@ -81,28 +102,6 @@ from open_webui.env import (
     WEBUI_URL,
     WEBUI_NAME,
 )
-from fastapi import (
-    Depends,
-    FastAPI,
-    File,
-    Form,
-    HTTPException,
-    Request,
-    UploadFile,
-    status,
-)
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
-from sqlalchemy import text
-from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import RedirectResponse, Response, StreamingResponse
-
-from open_webui.utils.security_headers import SecurityHeadersMiddleware
-
 from open_webui.utils.misc import (
     add_or_update_system_message,
     get_last_user_message,
@@ -789,8 +788,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.add_middleware(SecurityHeadersMiddleware)
 
 
 @app.middleware("http")

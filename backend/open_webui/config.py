@@ -1527,7 +1527,6 @@ AUDIO_TTS_SPLIT_ON = PersistentConfig(
     os.getenv("AUDIO_TTS_SPLIT_ON", "punctuation"),
 )
 
-<<<<<<< HEAD
 ####################################
 # MESSAGE_FILTER
 ####################################
@@ -1607,18 +1606,3 @@ TURNSTILE_CHECK = os.environ.get("TURNSTILE_CHECK", "false").lower() == "true"
 TURNSTILE_SITE_KEY = os.environ.get("TURNSTILE_SITE_KEY", "")
 
 TURNSTILE_SECRET_KEY = os.environ.get("TURNSTILE_SECRET_KEY", "")
-=======
-AUDIO_TTS_AZURE_SPEECH_REGION = PersistentConfig(
-    "AUDIO_TTS_AZURE_SPEECH_REGION",
-    "audio.tts.azure.speech_region",
-    os.getenv("AUDIO_TTS_AZURE_SPEECH_REGION", "eastus"),
-)
-
-AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
-    "AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT",
-    "audio.tts.azure.speech_output_format",
-    os.getenv(
-        "AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT", "audio-24khz-160kbitrate-mono-mp3"
-    ),
-)
->>>>>>> 5c16631ec563711bbd6ae01ebf502a957de15b52
