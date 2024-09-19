@@ -204,6 +204,8 @@
 					const blob = await res.blob();
 					const blobUrl = URL.createObjectURL(blob);
 					const audio = new Audio(blobUrl);
+					audio.playbackRate = $settings.audio?.tts?.speedRate ?? 1;
+
 					audioParts[idx] = audio;
 					loadingSpeech = false;
 					lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
@@ -226,6 +228,7 @@
 					console.log(voice);
 
 					const speak = new SpeechSynthesisUtterance(message.content);
+					speak.rate = $settings.audio?.tts?.speedRate ?? 1;
 
 					console.log(speak);
 
@@ -410,7 +413,7 @@
 										const isEnterPressed = e.key === 'Enter';
 
 										if (isCmdOrCtrlPressed && isEnterPressed) {
-											document.getElementById('save-edit-message-button')?.click();
+											document.getElementById('confirm-edit-message-button')?.click();
 										}
 									}}
 								/>
@@ -418,7 +421,7 @@
 								<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
 									<div>
 										<button
-											id="close-edit-message-button"
+											id="save-new-message-button"
 											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
 											on:click={() => {
 												saveNewMessageHandler();

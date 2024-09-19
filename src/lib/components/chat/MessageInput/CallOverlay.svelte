@@ -1,15 +1,13 @@
 <script lang="ts">
 	import { config, models, settings, showCallOverlay } from '$lib/stores';
 	import { onMount, tick, getContext, onDestroy, createEventDispatcher } from 'svelte';
+	import { DropdownMenu } from 'bits-ui';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import { flyAndScale } from '$lib/utils/transitions';
 
 	const dispatch = createEventDispatcher();
 
-	import {
-		blobToFile,
-		calculateSHA256,
-		extractSentencesForAudio,
-		findWordIndices
-	} from '$lib/utils';
+	import { blobToFile } from '$lib/utils';
 	import { generateEmoji } from '$lib/apis';
 	import { synthesizeOpenAISpeech, transcribeAudio } from '$lib/apis/audio';
 
@@ -360,6 +358,7 @@
 								?.at(0) ?? undefined;
 
 						currentUtterance = new SpeechSynthesisUtterance(content);
+						currentUtterance.rate = $settings.audio?.tts?.speedRate ?? 1;
 
 						if (voice) {
 							currentUtterance.voice = voice;
@@ -381,11 +380,12 @@
 	const playAudio = (audio) => {
 		if ($showCallOverlay) {
 			return new Promise((resolve) => {
-				const audioElement = document.getElementById('audioElement');
+				const audioElement = document.getElementById('audioElement') as HTMLAudioElement;
 
 				if (audioElement) {
 					audioElement.src = audio.src;
 					audioElement.muted = true;
+					audioElement.playbackRate = $settings.audio?.tts?.speedRate ?? 1;
 
 					audioElement
 						.play()
