@@ -2,7 +2,7 @@
 	import { getContext, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
-	import { WEBUI_NAME, chatId, modelfiles, settings, showSettings, user, isMobile } from '$lib/stores';
+	import { WEBUI_NAME, chatId, modelfiles, settings, showSettings, user, isMobile, employeeType } from '$lib/stores';
 
 	import { slide, fade } from 'svelte/transition';
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
@@ -11,6 +11,8 @@
 	import Menu from './Navbar/Menu.svelte';
 	import { page } from '$app/stores';
 	import EmployeeTypeSwitch from './Navbar/EmployeeTypeSwitch.svelte'
+	import ToggleSwitch from '$lib/components/common/ToggleSwitch.svelte'
+	import ConfirmModal from '../common/ConfirmModal.svelte'
 	const i18n = getContext('i18n');
 
 	export let initNewChat: Function;
@@ -28,8 +30,14 @@
 	let dropdownElement;
 	let dropdownTrigger;
 
+	let currentEmployeeType;
+	let bkEmployeeType;
+
+	let showConfirm = false;
+
 	const handleSignOut = () => {
 		localStorage.removeItem('token');
+		localStorage.removeItem('empType');
 		let _settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 		delete _settings.system;
 		localStorage.setItem('settings', JSON.stringify(_settings));
@@ -53,7 +61,39 @@
 		}
 	};
 
+	const handleTypeChange = (val) => {
+		showConfirm = true;
+		return
+		toast('Swich user type will start a new chat. Would you like to continue?', {
+			action: {
+				label: 'Confirm',
+				onClick: async () => {
+				}
+			}
+		})
+	}
+
+	const handleConfirm = async () => {
+		await employeeType.set(currentEmployeeType);
+		localStorage.setItem('empType', currentEmployeeType)
+		const newChatButton = document.getElementById('new-chat-button');
+		setTimeout(() => {
+			newChatButton?.click();
+		}, 0);
+	}
+
 	onMount(() => {
+		const localEmpType = localStorage.getItem('empType')
+		// No data in localStorage, means new login, need to get employee type from sso data
+		if (!localEmpType) {
+			const ssoData = $user.extra_sso ? JSON.parse($user.extra_sso) : {}
+			currentEmployeeType = ssoData.emp_type ?? 'Staff'
+			employeeType.set(currentEmployeeType)
+		} else {
+			currentEmployeeType = localEmpType
+			employeeType.set(localEmpType)
+		}
+		bkEmployeeType = currentEmployeeType
 		document.addEventListener('click', handleOutsideClick);
 		return () => {
 			document.removeEventListener('click', handleOutsideClick);
@@ -61,6 +101,12 @@
 	});
 </script>
 
+<ConfirmModal 
+	bind:show={showConfirm} 
+	content="Swich user type will start a new chat. Would you like to continue?"
+	on:cancel={() => {currentEmployeeType = bkEmployeeType}}
+	on:confirm={handleConfirm}
+/>
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 <nav id="nav" class=" sticky py-2.5 top-0 flex flex-row justify-center z-30">
 	<div class=" flex max-w-full w-full mx-auto px-5 pt-3 md:px-[1.3rem]">
@@ -92,8 +138,9 @@
 
 			<div class="self-start flex flex-none items-center pc-only">
 				<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
-				<EmployeeTypeSwitch />
-				<div class="relative">
+				<!-- <EmployeeTypeSwitch /> -->
+				<ToggleSwitch bind:value={currentEmployeeType} design="inner" options={['Staff','Faculty']} label="" on:change={handleTypeChange} />
+				<div class="relative ml-2">
 					{#if $user !== undefined}
 						<Tooltip content={$user.name}>
 							<button
