@@ -58,7 +58,7 @@
 
 		Object.keys(history.messages).forEach((id) => {
 			const message = history.messages[id];
-			const level = message.parentId ? positionMap.get(message.parentId).level + 1 : 0;
+			const level = message.parentId ? (positionMap.get(message.parentId)?.level ?? -1) + 1 : 0;
 			if (!layerWidths[level]) layerWidths[level] = 0;
 
 			positionMap.set(id, {

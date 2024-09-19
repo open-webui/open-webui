@@ -123,6 +123,8 @@
 			currentMessage =
 				currentMessage.parentId !== null ? history.messages[currentMessage.parentId] : null;
 		}
+
+		// This is most likely causing the performance issue
 		messages = _messages;
 	} else {
 		messages = [];
