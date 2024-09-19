@@ -498,7 +498,7 @@
 												saveNewMessageHandler();
 											}}
 										>
-											{$i18n.t('Save New Message')}
+											{$i18n.t('Save As Copy')}
 										</button>
 									</div>
 
