@@ -254,7 +254,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
             if ENABLE_WECHAT_NOTICE:
                 try:
-                    new_number_sign_up_notice(user.name, user.role, user.email)
+                    await new_number_sign_up_notice(user.name, user.role, user.email)
                 except Exception as e:
                     print(f"new_number_sign_up函数出现问题：{e}")
 
