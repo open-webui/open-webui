@@ -67,6 +67,8 @@ from open_webui.config import (
     run_migrations, BACKGROUND_RANDOM_IMAGE_URL, MODEL_STATUS, LOBECHAT_URL, MIDJOURNEY_URL, TURNSTILE_CHECK,
     TURNSTILE_SITE_KEY
 )
+from authlib.integrations.starlette_client import OAuth
+from authlib.oidc.core import UserInfo
 from open_webui.constants import ERROR_MESSAGES, TASKS, WEBHOOK_MESSAGES
 from open_webui.env import (
     CHANGELOG,
