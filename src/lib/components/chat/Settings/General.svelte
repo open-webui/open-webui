@@ -14,7 +14,7 @@
 	export let getModels: Function;
 
 	// General
-	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light', 'oled-dark'];
+	let themes = ['dark', 'light', 'rose-pine-dark', 'rose-pine-dawn-light', 'oled-dark'];
 	let selectedTheme = 'system';
 
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
@@ -89,7 +89,7 @@
 	});
 
 	const applyTheme = (_theme: string) => {
-		let themeToApply = _theme === 'oled-dark' ? 'dark' : _theme;
+		let themeToApply = _theme === 'oled-dark' || _theme === 'rose-pine-dark' ? 'dark' : _theme;
 
 		if (_theme === 'system') {
 			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -173,8 +173,8 @@
 						<option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
 						<option value="light">☀️ {$i18n.t('Light')}</option>
 						<option value="her">🌷 Her</option>
-						<!-- <option value="rose-pine dark">🪻 {$i18n.t('Rosé Pine')}</option>
-						<option value="rose-pine-dawn light">🌷 {$i18n.t('Rosé Pine Dawn')}</option> -->
+						<option value="rose-pine-dark">🪻 {$i18n.t('Rosé Pine')}</option>
+						<option value="rose-pine-dawn-light">🌷 {$i18n.t('Rosé Pine Dawn')}</option>
 					</select>
 				</div>
 			</div>
@@ -196,7 +196,7 @@
 					</select>
 				</div>
 			</div>
-			{#if $i18n.language === 'en-US'}
+			<!-- {#if $i18n.language === 'en-US'}
 				<div class="mb-2 text-xs text-gray-400 dark:text-gray-500">
 					Couldn't find your language?
 					<a
@@ -207,7 +207,7 @@
 						Help us translate Open WebUI!
 					</a>
 				</div>
-			{/if}
+			{/if} -->
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
