@@ -39,6 +39,11 @@ from open_webui.apps.webui.models.models import Models
 from open_webui.apps.webui.models.users import UserModel, Users, change_init_background_random_image_url
 from open_webui.apps.webui.routers.users import change_background_random_image_url
 from open_webui.apps.webui.utils import load_function_module_by_id
+
+from authlib.integrations.starlette_client import OAuth
+from authlib.oidc.core import UserInfo
+
+
 from open_webui.config import (
     CACHE_DIR,
     CORS_ALLOW_ORIGIN,
@@ -67,8 +72,6 @@ from open_webui.config import (
     run_migrations, BACKGROUND_RANDOM_IMAGE_URL, MODEL_STATUS, LOBECHAT_URL, MIDJOURNEY_URL, TURNSTILE_CHECK,
     TURNSTILE_SITE_KEY
 )
-from authlib.integrations.starlette_client import OAuth
-from authlib.oidc.core import UserInfo
 from open_webui.constants import ERROR_MESSAGES, TASKS, WEBHOOK_MESSAGES
 from open_webui.env import (
     CHANGELOG,
