@@ -90,7 +90,7 @@ from open_webui.config import (
     AppConfig,
 )
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS, DEVICE_TYPE
+from open_webui.env import SRC_LOG_LEVELS, DEVICE_TYPE, DOCKER
 from open_webui.utils.misc import (
     calculate_sha256,
     calculate_sha256_string,
@@ -205,6 +205,19 @@ def update_reranking_model(
                 def __init__(self, name) -> None:
                     print("ColBERT: Loading model", name)
                     self.device = "cuda" if torch.cuda.is_available() else "cpu"
+
+                    if DOCKER:
+                        # This is a workaround for the issue with the docker container
+                        # where the torch extension is not loaded properly
+                        # and the following error is thrown:
+                        # /root/.cache/torch_extensions/py311_cpu/segmented_maxsim_cpp/segmented_maxsim_cpp.so: cannot open shared object file: No such file or directory
+
+                        lock_file = "/root/.cache/torch_extensions/py311_cpu/segmented_maxsim_cpp/lock"
+                        if os.path.exists(lock_file):
+                            os.remove(lock_file)
+                            print("ColBERT: Removed lock file")
+
+                    
                     self.ckpt = Checkpoint(
                         name,
                         colbert_config=ColBERTConfig(model_name=name),
