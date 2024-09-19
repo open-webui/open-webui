@@ -538,7 +538,7 @@
 	"Save": "儲存",
 	"Save & Create": "儲存並建立",
 	"Save & Update": "儲存並更新",
-	"Save New Message": "",
+	"Save As Copy": "",
 	"Save Tag": "儲存標籤",
 	"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through": "不再支援直接將對話記錄儲存到您的瀏覽器儲存空間。請點選下方按鈕來下載並刪除您的對話記錄。別擔心，您可以透過以下方式輕鬆地將對話記錄重新匯入後端",
 	"Scan": "掃描",

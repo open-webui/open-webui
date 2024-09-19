@@ -538,7 +538,7 @@
 	"Save": "Guardar",
 	"Save & Create": "Guardar y Crear",
 	"Save & Update": "Guardar y Actualizar",
-	"Save New Message": "",
+	"Save As Copy": "",
 	"Save Tag": "",
 	"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through": "Ya no se admite guardar registros de chat directamente en el almacenamiento de su navegador. Tómese un momento para descargar y eliminar sus registros de chat haciendo clic en el botón a continuación. No te preocupes, puedes volver a importar fácilmente tus registros de chat al backend a través de",
 	"Scan": "Escanear",

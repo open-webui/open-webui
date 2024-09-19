@@ -538,7 +538,7 @@
 	"Save": "Enregistrer",
 	"Save & Create": "Enregistrer & Créer",
 	"Save & Update": "Enregistrer & Mettre à jour",
-	"Save New Message": "",
+	"Save As Copy": "",
 	"Save Tag": "",
 	"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through": "La sauvegarde des journaux de discussion directement dans le stockage de votre navigateur n'est plus prise en charge. Veuillez prendre un instant pour télécharger et supprimer vos journaux de discussion en cliquant sur le bouton ci-dessous. Pas de soucis, vous pouvez facilement les réimporter depuis le backend via l'interface ci-dessous",
 	"Scan": "Scanner",
