@@ -53,6 +53,8 @@
 	let showDeleteConfirm = false;
 	let showDropdown = false;
 
+	let selectedTagName = null;
+
 	let filteredChatList = [];
 
 	// Pagination variables
@@ -380,11 +382,13 @@
 			</div>
 		{/if}
 
-		<div class="relative flex flex-col flex-1 overflow-y-auto">
+		<div
+			class="relative flex flex-col flex-1 overflow-y-auto {$temporaryChatEnabled
+				? 'opacity-20'
+				: ''}"
+		>
 			{#if $temporaryChatEnabled}
-				<div
-					class="absolute z-40 w-full h-full bg-gray-50/90 dark:bg-black/90 flex justify-center"
-				></div>
+				<div class="absolute z-40 w-full h-full flex justify-center"></div>
 			{/if}
 
 			<div class="px-2 mt-0.5 mb-2 flex justify-center space-x-2">
@@ -419,10 +423,13 @@
 			</div>
 
 			{#if $tags.filter((t) => t.name !== 'pinned').length > 0}
-				<div class="px-2.5 mb-2 flex gap-1 flex-wrap">
+				<div class="px-3.5 mb-1 flex gap-0.5 flex-wrap">
 					<button
-						class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
+						class="px-2.5 py-[1px] text-xs transition {selectedTagName === null
+							? 'bg-gray-100 dark:bg-gray-900'
+							: ' '} rounded-md font-medium"
 						on:click={async () => {
+							selectedTagName = null;
 							await enablePagination();
 						}}
 					>
@@ -430,8 +437,11 @@
 					</button>
 					{#each $tags.filter((t) => t.name !== 'pinned') as tag}
 						<button
-							class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
+							class="px-2.5 py-[1px] text-xs transition {selectedTagName === tag.name
+								? 'bg-gray-100 dark:bg-gray-900'
+								: ''}  rounded-md font-medium"
 							on:click={async () => {
+								selectedTagName = tag.name;
 								scrollPaginationEnabled.set(false);
 								let chatIds = await getChatListByTagName(localStorage.token, tag.name);
 								if (chatIds.length === 0) {

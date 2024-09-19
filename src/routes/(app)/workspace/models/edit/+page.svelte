@@ -259,7 +259,9 @@
 			if (
 				inputFiles &&
 				inputFiles.length > 0 &&
-				['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/svg+xml'].includes(inputFiles[0]['type'])
+				['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/svg+xml'].includes(
+					inputFiles[0]['type']
+				)
 			) {
 				reader.readAsDataURL(inputFiles[0]);
 			} else {

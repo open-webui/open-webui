@@ -23,6 +23,7 @@
 		banners,
 		user,
 		socket,
+		showControls,
 		showCallOverlay,
 		currentChatPage,
 		temporaryChatEnabled
@@ -70,7 +71,6 @@
 	let loaded = false;
 	const eventTarget = new EventTarget();
 
-	let showControls = false;
 	let stopResponseFlag = false;
 	let autoScroll = true;
 	let processing = '';
@@ -115,13 +115,16 @@
 
 	$: if (history.currentId !== null) {
 		let _messages = [];
+		console.log(history.currentId);
 
 		let currentMessage = history.messages[history.currentId];
-		while (currentMessage !== null) {
+		while (currentMessage) {
 			_messages.unshift({ ...currentMessage });
 			currentMessage =
 				currentMessage.parentId !== null ? history.messages[currentMessage.parentId] : null;
 		}
+
+		// This is most likely causing the performance issue
 		messages = _messages;
 	} else {
 		messages = [];
@@ -142,6 +145,28 @@
 			}
 		})();
 	}
+
+	const showMessage = async (message) => {
+		let _messageId = JSON.parse(JSON.stringify(message.id));
+
+		let messageChildrenIds = history.messages[_messageId].childrenIds;
+
+		while (messageChildrenIds.length !== 0) {
+			_messageId = messageChildrenIds.at(-1);
+			messageChildrenIds = history.messages[_messageId].childrenIds;
+		}
+
+		history.currentId = _messageId;
+
+		await tick();
+		await tick();
+		await tick();
+
+		const messageElement = document.getElementById(`message-${message.id}`);
+		if (messageElement) {
+			messageElement.scrollIntoView({ behavior: 'smooth' });
+		}
+	};
 
 	const chatEventHandler = async (event, cb) => {
 		if (event.chat_id === $chatId) {
@@ -1732,7 +1757,6 @@
 			{title}
 			bind:selectedModels
 			bind:showModelSelector
-			bind:showControls
 			shareEnabled={messages.length > 0}
 			{chat}
 			{initNewChat}
@@ -1742,7 +1766,7 @@
 			<div
 				class="absolute top-[4.25rem] w-full {$showSidebar
 					? 'md:max-w-[calc(100%-260px)]'
-					: ''} {showControls ? 'lg:pr-[24rem]' : ''} z-20"
+					: ''} {$showControls ? 'lg:pr-[26rem]' : ''} z-20"
 			>
 				<div class=" flex flex-col gap-1 w-full">
 					{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
@@ -1769,8 +1793,8 @@
 
 		<div class="flex flex-col flex-auto z-10">
 			<div
-				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden {showControls
-					? 'lg:pr-[24rem]'
+				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden {$showControls
+					? 'lg:pr-[26rem]'
 					: ''}"
 				id="messages-container"
 				bind:this={messagesContainerElement}
@@ -1795,11 +1819,12 @@
 						{regenerateResponse}
 						{mergeResponses}
 						{chatActionHandler}
+						{showMessage}
 					/>
 				</div>
 			</div>
 
-			<div class={showControls ? 'lg:pr-[24rem]' : ''}>
+			<div class={$showControls ? 'lg:pr-[26rem]' : ''}>
 				<MessageInput
 					bind:files
 					bind:prompt
@@ -1820,7 +1845,7 @@
 					{submitPrompt}
 					{stopResponse}
 					on:call={() => {
-						showControls = true;
+						showControls.set(true);
 					}}
 				/>
 			</div>
@@ -1836,12 +1861,13 @@
 		}
 		return a;
 	}, [])}
-	bind:show={showControls}
+	bind:history
 	bind:chatFiles
 	bind:params
 	bind:files
 	{submitPrompt}
 	{stopResponse}
+	{showMessage}
 	modelId={selectedModelIds?.at(0) ?? null}
 	chatId={$chatId}
 	{eventTarget}

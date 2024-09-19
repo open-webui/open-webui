@@ -8,7 +8,7 @@
 		mobile,
 		settings,
 		showArchivedChats,
-		showSettings,
+		showControls,
 		showSidebar,
 		user
 	} from '$lib/stores';
@@ -22,6 +22,7 @@
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import MenuLines from '../icons/MenuLines.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
+	import Map from '../icons/Map.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -31,9 +32,7 @@
 
 	export let chat;
 	export let selectedModels;
-
 	export let showModelSelector = true;
-	export let showControls = false;
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;

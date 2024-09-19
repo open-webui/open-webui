@@ -36,7 +36,7 @@
 		show = false;
 	};
 
-	const downloadImage = (url) => {
+	const downloadImage = (url, prefixName = 'image') => {
 		const isBase64 = url.startsWith('data:image/');
 		let filename = 'image.png';
 		let mimeType = 'image/png';
@@ -46,7 +46,7 @@
 			const mimeInfo = base64Parts[0].split(';')[0];
 			mimeType = mimeInfo.split(':')[1];
 			const extension = mimeType.split('/')[1];
-			filename = `image.${extension}`;
+			filename = `${prefixName}.${extension}`;
 
 			const base64Data = base64Parts[1];
 			const binaryData = atob(base64Data);
@@ -156,7 +156,7 @@
 						if (isMarkdown) {
 							window.open(src, '_blank').focus();
 						} else {
-							downloadImage(src);
+							downloadImage(src, alt);
 						}
 					}}
 				>
