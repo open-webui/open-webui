@@ -88,13 +88,6 @@
 		params.stop = $settings?.params?.stop ? ($settings?.params?.stop ?? []).join(',') : null;
 	});
 
-	const updateThemeColor = (isDarkMode: boolean) => {
-		const themeColorMeta = document.querySelector('meta[name="theme-color"]');
-		if (themeColorMeta) {
-			themeColorMeta.setAttribute('content', isDarkMode ? '#000000' : '#ffffff');
-		}
-	};
-
 	const applyTheme = (_theme: string) => {
 		let themeToApply = _theme === 'oled-dark' ? 'dark' : _theme;
 
@@ -102,14 +95,7 @@
 			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 		}
 
-		const isDarkMode = themeToApply === 'dark' && !_theme.includes('oled');
-		if (_theme.includes('rose-pine dark')) {
-			updateThemeColor(true);
-		} else {
-			updateThemeColor(isDarkMode);
-		}
-
-		if (isDarkMode) {
+		if (themeToApply === 'dark' && !_theme.includes('oled')) {
 			document.documentElement.style.setProperty('--color-gray-800', '#333');
 			document.documentElement.style.setProperty('--color-gray-850', '#262626');
 			document.documentElement.style.setProperty('--color-gray-900', '#171717');
@@ -128,24 +114,43 @@
 			document.documentElement.classList.add(e);
 		});
 
+		const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+		if (metaThemeColor) {
+			if (_theme.includes('system')) {
+				const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+					? 'dark'
+					: 'light';
+				console.log('Setting system meta theme color: ' + systemTheme);
+				metaThemeColor.setAttribute('content', systemTheme === 'light' ? '#ffffff' : '#171717');
+			} else {
+				console.log('Setting meta theme color: ' + _theme);
+				metaThemeColor.setAttribute(
+					'content',
+					_theme === 'dark'
+						? '#171717'
+						: _theme === 'oled-dark'
+							? '#000000'
+							: _theme === 'her'
+								? '#983724'
+								: '#ffffff'
+				);
+			}
+		}
+
 		console.log(_theme);
 	};
 
 	const themeChangeHandler = (_theme: string) => {
 		theme.set(_theme);
 		localStorage.setItem('theme', _theme);
-
-		const isOledTheme = _theme.includes('oled');
-		if (isOledTheme) {
+		if (_theme.includes('oled')) {
 			document.documentElement.style.setProperty('--color-gray-800', '#101010');
 			document.documentElement.style.setProperty('--color-gray-850', '#050505');
 			document.documentElement.style.setProperty('--color-gray-900', '#000000');
 			document.documentElement.style.setProperty('--color-gray-950', '#000000');
 			document.documentElement.classList.add('dark');
-			updateThemeColor(true); // OLED 主题使用深色模式
-		} else {
-			applyTheme(_theme);
 		}
+		applyTheme(_theme);
 	};
 </script>
 
@@ -167,8 +172,6 @@
 						<option value="dark">🌑 {$i18n.t('Dark')}</option>
 						<option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
 						<option value="light">☀️ {$i18n.t('Light')}</option>
-						<option value="rose-pine dark">🪻 {$i18n.t('Rosé Pine')}</option>
-						<option value="rose-pine-dawn light">🌷 {$i18n.t('Rosé Pine Dawn')}</option>
 						<option value="her">🌷 Her</option>
 						<!-- <option value="rose-pine dark">🪻 {$i18n.t('Rosé Pine')}</option>
 						<option value="rose-pine-dawn light">🌷 {$i18n.t('Rosé Pine Dawn')}</option> -->
@@ -193,7 +196,7 @@
 					</select>
 				</div>
 			</div>
-			<!-- {#if $i18n.language === 'en-US'}
+			{#if $i18n.language === 'en-US'}
 				<div class="mb-2 text-xs text-gray-400 dark:text-gray-500">
 					Couldn't find your language?
 					<a
@@ -204,7 +207,7 @@
 						Help us translate Open WebUI!
 					</a>
 				</div>
-			{/if} -->
+			{/if}
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
