@@ -51,6 +51,8 @@ dependencies = [
 
     "sentence-transformers==3.0.1",
     "colbert-ai==0.2.21",
+    "einop==0.8.0",
+    "flash_attn==2.6.3",
     
     "pypdf==4.3.1",
     "docx2txt==0.8",

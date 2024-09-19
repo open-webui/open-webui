@@ -267,7 +267,9 @@ def update_reranking_model(
                     return scores
 
             try:
-                app.state.sentence_transformer_rf = ColBERT(reranking_model)
+                app.state.sentence_transformer_rf = ColBERT(
+                    get_model_path(reranking_model, auto_update)
+                )
             except Exception as e:
                 log.error(f"ColBERT: {e}")
                 app.state.sentence_transformer_rf = None
