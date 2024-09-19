@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import Response
 from pydantic import BaseModel
 
-from open_webui.apps.filter.main import new_number_sign_up
+from open_webui.apps.filter.main import new_number_sign_up_notice
 from open_webui.apps.webui.models.auths import (
     AddUserForm,
     ApiKey,
@@ -254,7 +254,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
             if ENABLE_WECHAT_NOTICE:
                 try:
-                    new_number_sign_up(user.name, user.role, user.email)
+                    new_number_sign_up_notice(user.name, user.role, user.email)
                 except Exception as e:
                     print(f"new_number_sign_up函数出现问题：{e}")
 

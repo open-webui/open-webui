@@ -68,7 +68,7 @@ async def reset_usage():
     user_usage = defaultdict(lambda: defaultdict(int))
 
 
-async def new_number_sign_up(name, role, email):
+async def new_number_sign_up_notice(name, role, email):
     data = await notice_newnumber_signup_to_wechatapp(name, role, email)
     await send_message_to_wechatapp(data)
 
