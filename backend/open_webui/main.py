@@ -1355,8 +1355,11 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
 async def generate_title(form_data: dict, user=Depends(get_verified_user)):
     # Check if gift_request is ready for title generation
     chat_state = ChatState.load(form_data["chat_id"])
-    if chat_state.title_generated or not chat_state.gift_request:
-        # Title already generated or gift_request not ready
+    if not chat_state.gift_request:
+        # gift_request not ready. Do not generate title
+        return
+    elif chat_state.title_generated:
+        # Title already generated. return the existing title
         return chat_state.chat_title
 
     print("generate_title")
@@ -1426,9 +1429,9 @@ async def generate_title(form_data: dict, user=Depends(get_verified_user)):
     if "chat_id" in payload:
         del payload["chat_id"]
 
-    new_title = await generate_chat_completions(form_data=payload, user=user)
-    ChatState.update(form_data["chat_id"], title_generated=True, chat_title=new_title)
-    return new_title
+    chat_title = await generate_chat_completions(form_data=payload, user=user)
+    ChatState.update(form_data["chat_id"], title_generated=True, chat_title=chat_title)
+    return chat_title
 
 
 @app.post("/api/task/query/completions")
