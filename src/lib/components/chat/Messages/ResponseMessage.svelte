@@ -85,6 +85,8 @@
 
 	export let updateChatMessages: Function;
 	export let confirmEditResponseMessage: Function;
+	export let saveNewResponseMessage: Function = () => {};
+
 	export let showPreviousMessage: Function;
 	export let showNextMessage: Function;
 	export let rateMessage: Function;
@@ -202,6 +204,8 @@
 					const blob = await res.blob();
 					const blobUrl = URL.createObjectURL(blob);
 					const audio = new Audio(blobUrl);
+					audio.playbackRate = $settings.audio?.tts?.speedRate ?? 1;
+
 					audioParts[idx] = audio;
 					loadingSpeech = false;
 					lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
@@ -224,6 +228,7 @@
 					console.log(voice);
 
 					const speak = new SpeechSynthesisUtterance(message.content);
+					speak.rate = $settings.audio?.tts?.speedRate ?? 1;
 
 					console.log(speak);
 
@@ -260,6 +265,15 @@
 		}
 
 		confirmEditResponseMessage(message.id, editedContent);
+
+		edit = false;
+		editedContent = '';
+
+		await tick();
+	};
+
+	const saveNewMessageHandler = async () => {
+		saveNewResponseMessage(message, editedContent);
 
 		edit = false;
 		editedContent = '';
@@ -333,7 +347,7 @@
 						{#each message.files as file}
 							<div>
 								{#if file.type === 'image'}
-									<Image src={file.url} />
+									<Image src={file.url} alt={message.content} />
 								{/if}
 							</div>
 						{/each}
@@ -399,31 +413,45 @@
 										const isEnterPressed = e.key === 'Enter';
 
 										if (isCmdOrCtrlPressed && isEnterPressed) {
-											document.getElementById('save-edit-message-button')?.click();
+											document.getElementById('confirm-edit-message-button')?.click();
 										}
 									}}
 								/>
 
-								<div class=" mt-2 mb-1 flex justify-end space-x-1.5 text-sm font-medium">
-									<button
-										id="close-edit-message-button"
-										class="px-4 py-2 bg-white hover:bg-gray-100 text-gray-800 transition rounded-3xl"
-										on:click={() => {
-											cancelEditMessage();
-										}}
-									>
-										{$i18n.t('Cancel')}
-									</button>
+								<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
+									<div>
+										<button
+											id="save-new-message-button"
+											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
+											on:click={() => {
+												saveNewMessageHandler();
+											}}
+										>
+											{$i18n.t('Save As Copy')}
+										</button>
+									</div>
 
-									<button
-										id="save-edit-message-button"
-										class=" px-4 py-2 bg-gray-900 hover:bg-gray-850 text-gray-100 transition rounded-3xl"
-										on:click={() => {
-											editMessageConfirmHandler();
-										}}
-									>
-										{$i18n.t('Save')}
-									</button>
+									<div class="flex space-x-1.5">
+										<button
+											id="close-edit-message-button"
+											class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
+											on:click={() => {
+												cancelEditMessage();
+											}}
+										>
+											{$i18n.t('Cancel')}
+										</button>
+
+										<button
+											id="confirm-edit-message-button"
+											class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+											on:click={() => {
+												editMessageConfirmHandler();
+											}}
+										>
+											{$i18n.t('Save')}
+										</button>
+									</div>
 								</div>
 							</div>
 						{:else}

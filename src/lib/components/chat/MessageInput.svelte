@@ -93,20 +93,6 @@
 	const uploadFileHandler = async (file) => {
 		console.log(file);
 
-		// Check if the file is an audio file and transcribe/convert it to text file
-		if (['audio/mpeg', 'audio/wav'].includes(file['type'])) {
-			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
-				toast.error(error);
-				return null;
-			});
-
-			if (res) {
-				console.log(res);
-				const blob = new Blob([res.text], { type: 'text/plain' });
-				file = blobToFile(blob, `${file.name}.txt`);
-			}
-		}
-
 		const fileItem = {
 			type: 'file',
 			file: '',
@@ -119,6 +105,23 @@
 			error: ''
 		};
 		files = [...files, fileItem];
+
+		// Check if the file is an audio file and transcribe/convert it to text file
+		if (['audio/mpeg', 'audio/wav', 'audio/ogg'].includes(file['type'])) {
+			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
+				toast.error(error);
+				return null;
+			});
+
+			if (res) {
+				console.log(res);
+				const blob = new Blob([res.text], { type: 'text/plain' });
+				file = blobToFile(blob, `${file.name}.txt`);
+
+				fileItem.name = file.name;
+				fileItem.size = file.size;
+			}
+		}
 
 		try {
 			const uploadedFile = await uploadFile(localStorage.token, file);
@@ -349,7 +352,7 @@
 	</div>
 
 	<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-gray-900'} ">
-		<div class="max-w-6xl px-2.5 md:px-6 mx-auto inset-x-0">
+		<div class="max-w-6xl px-2.5 md:px-6 mx-auto inset-x-0 pb-safe-bottom">
 			<div class=" pb-2">
 				<input
 					bind:this={filesInputElement}

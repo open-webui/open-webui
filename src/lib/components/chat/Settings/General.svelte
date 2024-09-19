@@ -114,6 +114,29 @@
 			document.documentElement.classList.add(e);
 		});
 
+		const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+		if (metaThemeColor) {
+			if (_theme.includes('system')) {
+				const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+					? 'dark'
+					: 'light';
+				console.log('Setting system meta theme color: ' + systemTheme);
+				metaThemeColor.setAttribute('content', systemTheme === 'light' ? '#ffffff' : '#171717');
+			} else {
+				console.log('Setting meta theme color: ' + _theme);
+				metaThemeColor.setAttribute(
+					'content',
+					_theme === 'dark'
+						? '#171717'
+						: _theme === 'oled-dark'
+							? '#000000'
+							: _theme === 'her'
+								? '#983724'
+								: '#ffffff'
+				);
+			}
+		}
+
 		console.log(_theme);
 	};
 

@@ -23,6 +23,7 @@
 		banners,
 		user,
 		socket,
+		showControls,
 		showCallOverlay,
 		currentChatPage,
 		temporaryChatEnabled
@@ -70,7 +71,6 @@
 	let loaded = false;
 	const eventTarget = new EventTarget();
 
-	let showControls = false;
 	let stopResponseFlag = false;
 	let autoScroll = true;
 	let processing = '';
@@ -115,13 +115,14 @@
 
 	$: if (history.currentId !== null) {
 		let _messages = [];
-
 		let currentMessage = history.messages[history.currentId];
-		while (currentMessage !== null) {
+		while (currentMessage) {
 			_messages.unshift({ ...currentMessage });
 			currentMessage =
 				currentMessage.parentId !== null ? history.messages[currentMessage.parentId] : null;
 		}
+
+		// This is most likely causing the performance issue
 		messages = _messages;
 	} else {
 		messages = [];
@@ -142,6 +143,28 @@
 			}
 		})();
 	}
+
+	const showMessage = async (message) => {
+		let _messageId = JSON.parse(JSON.stringify(message.id));
+
+		let messageChildrenIds = history.messages[_messageId].childrenIds;
+
+		while (messageChildrenIds.length !== 0) {
+			_messageId = messageChildrenIds.at(-1);
+			messageChildrenIds = history.messages[_messageId].childrenIds;
+		}
+
+		history.currentId = _messageId;
+
+		await tick();
+		await tick();
+		await tick();
+
+		const messageElement = document.getElementById(`message-${message.id}`);
+		if (messageElement) {
+			messageElement.scrollIntoView({ behavior: 'smooth' });
+		}
+	};
 
 	const chatEventHandler = async (event, cb) => {
 		if (event.chat_id === $chatId) {
@@ -860,8 +883,9 @@
 
 		await tick();
 
+		const stream = $settings?.streamResponse ?? true;
 		const [res, controller] = await generateChatCompletion(localStorage.token, {
-			stream: true,
+			stream: stream,
 			model: model.id,
 			messages: messagesBody,
 			options: {
@@ -886,142 +910,162 @@
 		});
 
 		if (res && res.ok) {
-			console.log('controller', controller);
+			if (!stream) {
+				const response = await res.json();
+				console.log(response);
 
-			const reader = res.body
-				.pipeThrough(new TextDecoderStream())
-				.pipeThrough(splitStream('\n'))
-				.getReader();
+				responseMessage.content = response.message.content;
+				responseMessage.info = {
+					eval_count: response.eval_count,
+					eval_duration: response.eval_duration,
+					load_duration: response.load_duration,
+					prompt_eval_count: response.prompt_eval_count,
+					prompt_eval_duration: response.prompt_eval_duration,
+					total_duration: response.total_duration
+				};
+				responseMessage.done = true;
+			} else {
+				console.log('controller', controller);
 
-			while (true) {
-				const { value, done } = await reader.read();
-				if (done || stopResponseFlag || _chatId !== $chatId) {
-					responseMessage.done = true;
-					messages = messages;
+				const reader = res.body
+					.pipeThrough(new TextDecoderStream())
+					.pipeThrough(splitStream('\n'))
+					.getReader();
 
-					if (stopResponseFlag) {
-						controller.abort('User: Stop Response');
-					} else {
-						const messages = createMessagesList(responseMessageId);
-						await chatCompletedHandler(_chatId, model.id, responseMessageId, messages);
+				while (true) {
+					const { value, done } = await reader.read();
+					if (done || stopResponseFlag || _chatId !== $chatId) {
+						responseMessage.done = true;
+						messages = messages;
+
+						if (stopResponseFlag) {
+							controller.abort('User: Stop Response');
+						}
+
+						_response = responseMessage.content;
+						break;
 					}
 
-					_response = responseMessage.content;
-					break;
-				}
+					try {
+						let lines = value.split('\n');
 
-				try {
-					let lines = value.split('\n');
+						for (const line of lines) {
+							if (line !== '') {
+								console.log(line);
+								let data = JSON.parse(line);
 
-					for (const line of lines) {
-						if (line !== '') {
-							console.log(line);
-							let data = JSON.parse(line);
-
-							if ('citations' in data) {
-								responseMessage.citations = data.citations;
-								// Only remove status if it was initially set
-								if (model?.info?.meta?.knowledge ?? false) {
-									responseMessage.statusHistory = responseMessage.statusHistory.filter(
-										(status) => status.action !== 'knowledge_search'
-									);
-								}
-								continue;
-							}
-
-							if ('detail' in data) {
-								throw data;
-							}
-
-							if (data.done == false) {
-								if (responseMessage.content == '' && data.message.content == '\n') {
-									continue;
-								} else {
-									responseMessage.content += data.message.content;
-
-									if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
-										navigator.vibrate(5);
-									}
-
-									const messageContentParts = getMessageContentParts(
-										responseMessage.content,
-										$config?.audio?.tts?.split_on ?? 'punctuation'
-									);
-									messageContentParts.pop();
-
-									// dispatch only last sentence and make sure it hasn't been dispatched before
-									if (
-										messageContentParts.length > 0 &&
-										messageContentParts[messageContentParts.length - 1] !==
-											responseMessage.lastSentence
-									) {
-										responseMessage.lastSentence =
-											messageContentParts[messageContentParts.length - 1];
-										eventTarget.dispatchEvent(
-											new CustomEvent('chat', {
-												detail: {
-													id: responseMessageId,
-													content: messageContentParts[messageContentParts.length - 1]
-												}
-											})
+								if ('citations' in data) {
+									responseMessage.citations = data.citations;
+									// Only remove status if it was initially set
+									if (model?.info?.meta?.knowledge ?? false) {
+										responseMessage.statusHistory = responseMessage.statusHistory.filter(
+											(status) => status.action !== 'knowledge_search'
 										);
 									}
-
-									messages = messages;
+									continue;
 								}
-							} else {
-								responseMessage.done = true;
 
-								if (responseMessage.content == '') {
-									responseMessage.error = {
-										code: 400,
-										content: `Oops! No text generated from Ollama, Please try again.`
+								if ('detail' in data) {
+									throw data;
+								}
+
+								if (data.done == false) {
+									if (responseMessage.content == '' && data.message.content == '\n') {
+										continue;
+									} else {
+										responseMessage.content += data.message.content;
+
+										if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+											navigator.vibrate(5);
+										}
+
+										const messageContentParts = getMessageContentParts(
+											responseMessage.content,
+											$config?.audio?.tts?.split_on ?? 'punctuation'
+										);
+										messageContentParts.pop();
+
+										// dispatch only last sentence and make sure it hasn't been dispatched before
+										if (
+											messageContentParts.length > 0 &&
+											messageContentParts[messageContentParts.length - 1] !==
+												responseMessage.lastSentence
+										) {
+											responseMessage.lastSentence =
+												messageContentParts[messageContentParts.length - 1];
+											eventTarget.dispatchEvent(
+												new CustomEvent('chat', {
+													detail: {
+														id: responseMessageId,
+														content: messageContentParts[messageContentParts.length - 1]
+													}
+												})
+											);
+										}
+
+										messages = messages;
+									}
+								} else {
+									responseMessage.done = true;
+
+									if (responseMessage.content == '') {
+										responseMessage.error = {
+											code: 400,
+											content: `Oops! No text generated from Ollama, Please try again.`
+										};
+									}
+
+									responseMessage.context = data.context ?? null;
+									responseMessage.info = {
+										total_duration: data.total_duration,
+										load_duration: data.load_duration,
+										sample_count: data.sample_count,
+										sample_duration: data.sample_duration,
+										prompt_eval_count: data.prompt_eval_count,
+										prompt_eval_duration: data.prompt_eval_duration,
+										eval_count: data.eval_count,
+										eval_duration: data.eval_duration
 									};
-								}
+									messages = messages;
 
-								responseMessage.context = data.context ?? null;
-								responseMessage.info = {
-									total_duration: data.total_duration,
-									load_duration: data.load_duration,
-									sample_count: data.sample_count,
-									sample_duration: data.sample_duration,
-									prompt_eval_count: data.prompt_eval_count,
-									prompt_eval_duration: data.prompt_eval_duration,
-									eval_count: data.eval_count,
-									eval_duration: data.eval_duration
-								};
-								messages = messages;
+									if ($settings.notificationEnabled && !document.hasFocus()) {
+										const notification = new Notification(`${model.id}`, {
+											body: responseMessage.content,
+											icon: `${WEBUI_BASE_URL}/static/favicon.png`
+										});
+									}
 
-								if ($settings.notificationEnabled && !document.hasFocus()) {
-									const notification = new Notification(`${model.id}`, {
-										body: responseMessage.content,
-										icon: `${WEBUI_BASE_URL}/static/favicon.png`
-									});
-								}
+									if ($settings?.responseAutoCopy ?? false) {
+										copyToClipboard(responseMessage.content);
+									}
 
-								if ($settings?.responseAutoCopy ?? false) {
-									copyToClipboard(responseMessage.content);
-								}
-
-								if ($settings.responseAutoPlayback && !$showCallOverlay) {
-									await tick();
-									document.getElementById(`speak-button-${responseMessage.id}`)?.click();
+									if ($settings.responseAutoPlayback && !$showCallOverlay) {
+										await tick();
+										document.getElementById(`speak-button-${responseMessage.id}`)?.click();
+									}
 								}
 							}
 						}
+					} catch (error) {
+						console.log(error);
+						if ('detail' in error) {
+							toast.error(error.detail);
+						}
+						break;
 					}
-				} catch (error) {
-					console.log(error);
-					if ('detail' in error) {
-						toast.error(error.detail);
-					}
-					break;
-				}
 
-				if (autoScroll) {
-					scrollToBottom();
+					if (autoScroll) {
+						scrollToBottom();
+					}
 				}
 			}
+
+			await chatCompletedHandler(
+				_chatId,
+				model.id,
+				responseMessageId,
+				createMessagesList(responseMessageId)
+			);
 		} else {
 			if (res !== null) {
 				const error = await res.json();
@@ -1133,17 +1177,19 @@
 		await tick();
 
 		try {
+			const stream = $settings?.streamResponse ?? true;
 			const [res, controller] = await generateOpenAIChatCompletion(
 				localStorage.token,
 				{
-					stream: true,
+					stream: stream,
 					model: model.id,
-					stream_options:
-						(model.info?.meta?.capabilities?.usage ?? false)
-							? {
+					...(stream && (model.info?.meta?.capabilities?.usage ?? false)
+						? {
+								stream_options: {
 									include_usage: true
 								}
-							: undefined,
+							}
+						: {}),
 					messages: [
 						params?.system || $settings.system || (responseMessage?.userContext ?? null)
 							? {
@@ -1221,84 +1267,94 @@
 			scrollToBottom();
 
 			if (res && res.ok && res.body) {
-				const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
+				if (!stream) {
+					const response = await res.json();
+					console.log(response);
 
-				for await (const update of textStream) {
-					const { value, done, citations, error, usage } = update;
-					if (error) {
-						await handleOpenAIError(error, null, model, responseMessage);
-						break;
-					}
-					if (done || stopResponseFlag || _chatId !== $chatId) {
-						responseMessage.done = true;
-						messages = messages;
+					responseMessage.content = response.choices[0].message.content;
+					responseMessage.info = { ...response.usage, openai: true };
+					responseMessage.done = true;
+				} else {
+					const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
 
-						if (stopResponseFlag) {
-							controller.abort('User: Stop Response');
+					for await (const update of textStream) {
+						const { value, done, citations, error, usage } = update;
+						if (error) {
+							await handleOpenAIError(error, null, model, responseMessage);
+							break;
+						}
+						if (done || stopResponseFlag || _chatId !== $chatId) {
+							responseMessage.done = true;
+							messages = messages;
+
+							if (stopResponseFlag) {
+								controller.abort('User: Stop Response');
+							}
+							_response = responseMessage.content;
+							break;
+						}
+
+						if (usage) {
+							responseMessage.info = { ...usage, openai: true };
+						}
+
+						if (citations) {
+							responseMessage.citations = citations;
+							// Only remove status if it was initially set
+							if (model?.info?.meta?.knowledge ?? false) {
+								responseMessage.statusHistory = responseMessage.statusHistory.filter(
+									(status) => status.action !== 'knowledge_search'
+								);
+							}
+							continue;
+						}
+
+						if (responseMessage.content == '' && value == '\n') {
+							continue;
 						} else {
-							const messages = createMessagesList(responseMessageId);
+							responseMessage.content += value;
 
-							await chatCompletedHandler(_chatId, model.id, responseMessageId, messages);
-						}
+							if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+								navigator.vibrate(5);
+							}
 
-						_response = responseMessage.content;
-
-						break;
-					}
-
-					if (usage) {
-						responseMessage.info = { ...usage, openai: true };
-					}
-
-					if (citations) {
-						responseMessage.citations = citations;
-						// Only remove status if it was initially set
-						if (model?.info?.meta?.knowledge ?? false) {
-							responseMessage.statusHistory = responseMessage.statusHistory.filter(
-								(status) => status.action !== 'knowledge_search'
+							const messageContentParts = getMessageContentParts(
+								responseMessage.content,
+								$config?.audio?.tts?.split_on ?? 'punctuation'
 							);
-						}
-						continue;
-					}
+							messageContentParts.pop();
 
-					if (responseMessage.content == '' && value == '\n') {
-						continue;
-					} else {
-						responseMessage.content += value;
+							// dispatch only last sentence and make sure it hasn't been dispatched before
+							if (
+								messageContentParts.length > 0 &&
+								messageContentParts[messageContentParts.length - 1] !== responseMessage.lastSentence
+							) {
+								responseMessage.lastSentence = messageContentParts[messageContentParts.length - 1];
+								eventTarget.dispatchEvent(
+									new CustomEvent('chat', {
+										detail: {
+											id: responseMessageId,
+											content: messageContentParts[messageContentParts.length - 1]
+										}
+									})
+								);
+							}
 
-						if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
-							navigator.vibrate(5);
-						}
-
-						const messageContentParts = getMessageContentParts(
-							responseMessage.content,
-							$config?.audio?.tts?.split_on ?? 'punctuation'
-						);
-						messageContentParts.pop();
-
-						// dispatch only last sentence and make sure it hasn't been dispatched before
-						if (
-							messageContentParts.length > 0 &&
-							messageContentParts[messageContentParts.length - 1] !== responseMessage.lastSentence
-						) {
-							responseMessage.lastSentence = messageContentParts[messageContentParts.length - 1];
-							eventTarget.dispatchEvent(
-								new CustomEvent('chat', {
-									detail: {
-										id: responseMessageId,
-										content: messageContentParts[messageContentParts.length - 1]
-									}
-								})
-							);
+							messages = messages;
 						}
 
-						messages = messages;
-					}
-
-					if (autoScroll) {
-						scrollToBottom();
+						if (autoScroll) {
+							scrollToBottom();
+						}
 					}
 				}
+
+				await chatCompletedHandler(
+					_chatId,
+					model.id,
+					responseMessageId,
+					createMessagesList(responseMessageId)
+				);
 
 				if ($settings.notificationEnabled && !document.hasFocus()) {
 					const notification = new Notification(`${model.id}`, {
@@ -1703,7 +1759,6 @@
 			{title}
 			bind:selectedModels
 			bind:showModelSelector
-			bind:showControls
 			shareEnabled={messages.length > 0}
 			{chat}
 			{initNewChat}
@@ -1713,7 +1768,7 @@
 			<div
 				class="absolute top-[4.25rem] w-full {$showSidebar
 					? 'md:max-w-[calc(100%-260px)]'
-					: ''} {showControls ? 'lg:pr-[24rem]' : ''} z-20"
+					: ''} {$showControls ? 'lg:pr-[26rem]' : ''} z-20"
 			>
 				<div class=" flex flex-col gap-1 w-full">
 					{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
@@ -1740,8 +1795,8 @@
 
 		<div class="flex flex-col flex-auto z-10">
 			<div
-				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden {showControls
-					? 'lg:pr-[24rem]'
+				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden {$showControls
+					? 'lg:pr-[26rem]'
 					: ''}"
 				id="messages-container"
 				bind:this={messagesContainerElement}
@@ -1766,11 +1821,12 @@
 						{regenerateResponse}
 						{mergeResponses}
 						{chatActionHandler}
+						{showMessage}
 					/>
 				</div>
 			</div>
 
-			<div class={showControls ? 'lg:pr-[24rem]' : ''}>
+			<div class={$showControls ? 'lg:pr-[26rem]' : ''}>
 				<MessageInput
 					bind:files
 					bind:prompt
@@ -1791,7 +1847,7 @@
 					{submitPrompt}
 					{stopResponse}
 					on:call={() => {
-						showControls = true;
+						showControls.set(true);
 					}}
 				/>
 			</div>
@@ -1807,12 +1863,13 @@
 		}
 		return a;
 	}, [])}
-	bind:show={showControls}
+	bind:history
 	bind:chatFiles
 	bind:params
 	bind:files
 	{submitPrompt}
 	{stopResponse}
+	{showMessage}
 	modelId={selectedModelIds?.at(0) ?? null}
 	chatId={$chatId}
 	{eventTarget}

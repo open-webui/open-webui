@@ -423,6 +423,7 @@ async def generate_chat_completion(
     r = None
     session = None
     streaming = False
+    response = None
 
     try:
         session = aiohttp.ClientSession(
@@ -434,8 +435,6 @@ async def generate_chat_completion(
             data=payload,
             headers=headers,
         )
-
-        r.raise_for_status()
 
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
@@ -449,19 +448,23 @@ async def generate_chat_completion(
                 ),
             )
         else:
-            response_data = await r.json()
-            return response_data
+            try:
+                response = await r.json()
+            except Exception as e:
+                log.error(e)
+                response = await r.text()
+
+            r.raise_for_status()
+            return response
     except Exception as e:
         log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
-        if r is not None:
-            try:
-                res = await r.json()
-                print(res)
-                if "error" in res:
-                    error_detail = f"External: {res['error']['message'] if 'message' in res['error'] else res['error']}"
-            except Exception:
-                error_detail = f"External: {e}"
+        if isinstance(response, dict):
+            if "error" in response:
+                error_detail = f"{response['error']['message'] if 'message' in response['error'] else response['error']}"
+        elif isinstance(response, str):
+            error_detail = response
+
         raise HTTPException(status_code=r.status if r else 500, detail=error_detail)
     finally:
         if not streaming and session:

@@ -62,7 +62,7 @@
 	};
 </script>
 
-<div class=" flex w-full user-message" dir={$settings.chatDirection}>
+<div class=" flex w-full user-message" dir={$settings.chatDirection} id="message-{message.id}">
 	{#if !($settings?.chatBubble ?? true)}
 		<ProfileImage
 			src={message.user

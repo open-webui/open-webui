@@ -19,16 +19,18 @@ from open_webui.config import (
     AUDIO_TTS_OPENAI_API_KEY,
     AUDIO_TTS_SPLIT_ON,
     AUDIO_TTS_VOICE,
+    AUDIO_TTS_AZURE_SPEECH_REGION,
+    AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
     CACHE_DIR,
     CORS_ALLOW_ORIGIN,
-    DEVICE_TYPE,
     WHISPER_MODEL,
     WHISPER_MODEL_AUTO_UPDATE,
     WHISPER_MODEL_DIR,
     AppConfig,
 )
+
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, DEVICE_TYPE
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -62,6 +64,9 @@ app.state.config.TTS_VOICE = AUDIO_TTS_VOICE
 app.state.config.TTS_API_KEY = AUDIO_TTS_API_KEY
 app.state.config.TTS_SPLIT_ON = AUDIO_TTS_SPLIT_ON
 
+app.state.config.TTS_AZURE_SPEECH_REGION = AUDIO_TTS_AZURE_SPEECH_REGION
+app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT
+
 # setting device type for whisper model
 whisper_device_type = DEVICE_TYPE if DEVICE_TYPE and DEVICE_TYPE == "cuda" else "cpu"
 log.info(f"whisper_device_type: {whisper_device_type}")
@@ -78,6 +83,8 @@ class TTSConfigForm(BaseModel):
     MODEL: str
     VOICE: str
     SPLIT_ON: str
+    AZURE_SPEECH_REGION: str
+    AZURE_SPEECH_OUTPUT_FORMAT: str
 
 
 class STTConfigForm(BaseModel):
@@ -130,6 +137,8 @@ async def get_audio_config(user=Depends(get_admin_user)):
             "MODEL": app.state.config.TTS_MODEL,
             "VOICE": app.state.config.TTS_VOICE,
             "SPLIT_ON": app.state.config.TTS_SPLIT_ON,
+            "AZURE_SPEECH_REGION": app.state.config.TTS_AZURE_SPEECH_REGION,
+            "AZURE_SPEECH_OUTPUT_FORMAT": app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT,
         },
         "stt": {
             "OPENAI_API_BASE_URL": app.state.config.STT_OPENAI_API_BASE_URL,
@@ -151,6 +160,10 @@ async def update_audio_config(
     app.state.config.TTS_MODEL = form_data.tts.MODEL
     app.state.config.TTS_VOICE = form_data.tts.VOICE
     app.state.config.TTS_SPLIT_ON = form_data.tts.SPLIT_ON
+    app.state.config.TTS_AZURE_SPEECH_REGION = form_data.tts.AZURE_SPEECH_REGION
+    app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = (
+        form_data.tts.AZURE_SPEECH_OUTPUT_FORMAT
+    )
 
     app.state.config.STT_OPENAI_API_BASE_URL = form_data.stt.OPENAI_API_BASE_URL
     app.state.config.STT_OPENAI_API_KEY = form_data.stt.OPENAI_API_KEY
@@ -166,6 +179,8 @@ async def update_audio_config(
             "MODEL": app.state.config.TTS_MODEL,
             "VOICE": app.state.config.TTS_VOICE,
             "SPLIT_ON": app.state.config.TTS_SPLIT_ON,
+            "AZURE_SPEECH_REGION": app.state.config.TTS_AZURE_SPEECH_REGION,
+            "AZURE_SPEECH_OUTPUT_FORMAT": app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT,
         },
         "stt": {
             "OPENAI_API_BASE_URL": app.state.config.STT_OPENAI_API_BASE_URL,
@@ -301,6 +316,42 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 detail=error_detail,
             )
 
+    elif app.state.config.TTS_ENGINE == "azure":
+        payload = None
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except Exception as e:
+            log.exception(e)
+            raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+        region = app.state.config.TTS_AZURE_SPEECH_REGION
+        language = app.state.config.TTS_VOICE
+        locale = "-".join(app.state.config.TTS_VOICE.split("-")[:1])
+        output_format = app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT
+        url = f"https://{region}.tts.speech.microsoft.com/cognitiveservices/v1"
+
+        headers = {
+            "Ocp-Apim-Subscription-Key": app.state.config.TTS_API_KEY,
+            "Content-Type": "application/ssml+xml",
+            "X-Microsoft-OutputFormat": output_format,
+        }
+
+        data = f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{locale}">
+                <voice name="{language}">{payload["input"]}</voice>
+            </speak>"""
+
+        response = requests.post(url, headers=headers, data=data)
+
+        if response.status_code == 200:
+            with open(file_path, "wb") as f:
+                f.write(response.content)
+            return FileResponse(file_path)
+        else:
+            log.error(f"Error synthesizing speech - {response.reason}")
+            raise HTTPException(
+                status_code=500, detail=f"Error synthesizing speech - {response.reason}"
+            )
+
 
 @app.post("/transcriptions")
 def transcribe(
@@ -309,7 +360,7 @@ def transcribe(
 ):
     log.info(f"file.content_type: {file.content_type}")
 
-    if file.content_type not in ["audio/mpeg", "audio/wav"]:
+    if file.content_type not in ["audio/mpeg", "audio/wav", "audio/ogg"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.FILE_NOT_SUPPORTED,
@@ -443,7 +494,7 @@ def get_available_models() -> list[dict]:
 
         try:
             response = requests.get(
-                "https://api.elevenlabs.io/v1/models", headers=headers
+                "https://api.elevenlabs.io/v1/models", headers=headers, timeout=5
             )
             response.raise_for_status()
             models = response.json()
@@ -478,6 +529,21 @@ def get_available_voices() -> dict:
         except Exception:
             # Avoided @lru_cache with exception
             pass
+    elif app.state.config.TTS_ENGINE == "azure":
+        try:
+            region = app.state.config.TTS_AZURE_SPEECH_REGION
+            url = f"https://{region}.tts.speech.microsoft.com/cognitiveservices/voices/list"
+            headers = {"Ocp-Apim-Subscription-Key": app.state.config.TTS_API_KEY}
+
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            voices = response.json()
+            for voice in voices:
+                ret[voice["ShortName"]] = (
+                    f"{voice['DisplayName']} ({voice['ShortName']})"
+                )
+        except requests.RequestException as e:
+            log.error(f"Error fetching voices: {str(e)}")
 
     return ret
 
