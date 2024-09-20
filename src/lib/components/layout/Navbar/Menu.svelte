@@ -259,14 +259,14 @@
 						<div class="flex items-center line-clamp-1">{$i18n.t('Plain markdown (.md)')}</div>
 					</DropdownMenu.Item>
 
-					<DropdownMenu.Item
+					<!-- <DropdownMenu.Item
 						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 						on:click={() => {
 							downloadPdf();
 						}}
 					>
 						<div class="flex items-center line-clamp-1">{$i18n.t('PDF document (.pdf)')}</div>
-					</DropdownMenu.Item>
+					</DropdownMenu.Item> -->
 				</DropdownMenu.SubContent>
 			</DropdownMenu.Sub>
 

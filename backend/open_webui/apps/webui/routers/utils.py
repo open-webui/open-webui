@@ -56,7 +56,7 @@ class ChatForm(BaseModel):
 
 @router.post("/pdf")
 async def download_chat_as_pdf(
-        form_data: ChatForm,
+    form_data: ChatForm,
 ):
     global FONTS_DIR
 
@@ -85,7 +85,7 @@ async def download_chat_as_pdf(
 
     # Adjust the effective page width for multi_cell
     effective_page_width = (
-            pdf.w - 2 * pdf.l_margin - 10
+        pdf.w - 2 * pdf.l_margin - 10
     )  # Subtracted an additional 10 for extra padding
 
     # Add chat messages
@@ -108,7 +108,6 @@ async def download_chat_as_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": "attachment;filename=chat.pdf"},
     )
-
 
 @router.get("/db/download")
 async def download_db(user=Depends(get_admin_user)):
