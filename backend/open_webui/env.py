@@ -109,7 +109,7 @@ WEBUI_FAVICON_URL = os.environ.get("WEBUI_FAVICON_URL", f"{WEBUI_URL}/favicon.pn
 # ENV (dev,test,prod)
 ####################################
 
-ENV = os.environ.get("ENV", "dev")
+ENV = os.environ.get("ENV", "prod")
 
 FROM_INIT_PY = os.environ.get("FROM_INIT_PY", "False").lower() == "true"
 
