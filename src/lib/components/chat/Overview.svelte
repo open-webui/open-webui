@@ -23,6 +23,8 @@
 
 	export let history;
 
+	let selectedMessageId = null;
+
 	const nodes = writable([]);
 	const edges = writable([]);
 
@@ -34,9 +36,16 @@
 		drawFlow();
 	}
 
-	$: if (history?.currentId) {
-		fitView({ nodes: [{ id: history.currentId }] });
+	$: if (history && history.currentId) {
+		focusNode();
+		selectedMessageId = null;
 	}
+
+	const focusNode = async () => {
+		if (selectedMessageId === null) {
+			await fitView({ nodes: [{ id: history.currentId }] });
+		}
+	};
 
 	const drawFlow = async () => {
 		const nodeList = [];
@@ -168,6 +177,8 @@
 			on:nodeclick={(e) => {
 				console.log(e.detail.node.data);
 				dispatch('nodeclick', e.detail);
+				selectedMessageId = e.detail.node.data.message.id;
+				fitView({ nodes: [{ id: selectedMessageId }] });
 			}}
 		/>
 	{/if}
