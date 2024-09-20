@@ -46,7 +46,7 @@
 			type: 'text/plain'
 		});
 
-		saveAs(blob, `chat-${_chat.title}.txt`);
+		saveAs(blob, `chat-${chat.chat.title}.txt`);
 	};
 
 	const downloadPdf = async () => {
