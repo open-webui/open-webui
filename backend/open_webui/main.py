@@ -138,7 +138,10 @@ from open_webui.utils.utils import (
 from open_webui.utils.webhook import post_webhook
 
 from open_webui.utils.payload import convert_payload_openai_to_ollama
-from open_webui.utils.response import convert_response_ollama_to_openai
+from open_webui.utils.response import (
+    convert_response_ollama_to_openai,
+    convert_streaming_response_ollama_to_openai,
+)
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -1470,7 +1473,14 @@ Prompt: {{prompt:middletruncate:8000}}"""
         payload = convert_payload_openai_to_ollama(payload)
         form_data = GenerateChatCompletionForm(**payload)
         response = await generate_ollama_chat_completion(form_data=form_data, user=user)
-        return convert_response_ollama_to_openai(response)
+        if form_data.stream:
+            response.headers["content-type"] = "text/event-stream"
+            return StreamingResponse(
+                convert_streaming_response_ollama_to_openai(response),
+                headers=dict(response.headers),
+            )
+        else:
+            return convert_response_ollama_to_openai(response)
     else:
         return await generate_chat_completions(form_data=payload, user=user)
 
@@ -1554,7 +1564,14 @@ Search Query:"""
         payload = convert_payload_openai_to_ollama(payload)
         form_data = GenerateChatCompletionForm(**payload)
         response = await generate_ollama_chat_completion(form_data=form_data, user=user)
-        return convert_response_ollama_to_openai(response)
+        if form_data.stream:
+            response.headers["content-type"] = "text/event-stream"
+            return StreamingResponse(
+                convert_streaming_response_ollama_to_openai(response),
+                headers=dict(response.headers),
+            )
+        else:
+            return convert_response_ollama_to_openai(response)
     else:
         return await generate_chat_completions(form_data=payload, user=user)
 
@@ -1629,7 +1646,14 @@ Message: """{{prompt}}"""
         payload = convert_payload_openai_to_ollama(payload)
         form_data = GenerateChatCompletionForm(**payload)
         response = await generate_ollama_chat_completion(form_data=form_data, user=user)
-        return convert_response_ollama_to_openai(response)
+        if form_data.stream:
+            response.headers["content-type"] = "text/event-stream"
+            return StreamingResponse(
+                convert_streaming_response_ollama_to_openai(response),
+                headers=dict(response.headers),
+            )
+        else:
+            return convert_response_ollama_to_openai(response)
     else:
         return await generate_chat_completions(form_data=payload, user=user)
 
@@ -1694,7 +1718,14 @@ Responses from models: {{responses}}"""
         payload = convert_payload_openai_to_ollama(payload)
         form_data = GenerateChatCompletionForm(**payload)
         response = await generate_ollama_chat_completion(form_data=form_data, user=user)
-        return convert_response_ollama_to_openai(response)
+        if form_data.stream:
+            response.headers["content-type"] = "text/event-stream"
+            return StreamingResponse(
+                convert_streaming_response_ollama_to_openai(response),
+                headers=dict(response.headers),
+            )
+        else:
+            return convert_response_ollama_to_openai(response)
     else:
         return await generate_chat_completions(form_data=payload, user=user)
 
