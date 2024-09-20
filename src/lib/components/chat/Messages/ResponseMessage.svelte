@@ -364,6 +364,7 @@
 		if (res) {
 			message.files = res.map((image) => ({
 				type: 'image',
+				status: 'processed',
 				url: `${image.url}`
 			}));
 
