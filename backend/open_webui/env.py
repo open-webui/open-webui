@@ -302,3 +302,7 @@ if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
 ENABLE_WEBSOCKET_SUPPORT = (
     os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true"
 )
+
+WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
+
+WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", "redis://localhost:6379/0")
