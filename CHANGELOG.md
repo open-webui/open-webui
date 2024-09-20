@@ -7,31 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.22] - 2024-09-19
 
-### Added
+### 添加
 
-- **⭐ Chat Overview**: Introducing a node-based interactive messages diagram for improved visualization of conversation flows.
-- **🔗 Multiple Vector DB Support**: Now supports multiple vector databases, including the newly added Milvus support. Community contributions for additional database support are highly encouraged!
-- **📡 Experimental Non-Stream Chat Completion**: Experimental feature allowing the use of OpenAI o1 models, which do not support streaming, ensuring more versatile model deployment.
-- **🔍 Experimental Colbert-AI Reranker Integration**: Added support for "jinaai/jina-colbert-v2" as a reranker, enhancing search relevance and accuracy. Note: it may not function at all on low-spec computers.
-- **🕸️ ENABLE_WEBSOCKET_SUPPORT**: Added environment variable for instances to ignore websocket upgrades, stabilizing connections on platforms with websocket issues.
-- **🔊 Azure Speech Service Integration**: Added support for Azure Speech services for Text-to-Speech (TTS).
-- **🎚️ Customizable Playback Speed**: Playback speed control is now available in Call mode settings, allowing users to adjust audio playback speed to their preferences.
-- **🧠 Enhanced Error Messaging**: System now displays helpful error messages directly to users during chat completion issues.
-- **📂 Save Model as Transparent PNG**: Model profile images are now saved as PNGs, supporting transparency and improving visual integration.
-- **📱 iPhone Compatibility Adjustments**: Added padding to accommodate the iPhone navigation bar, improving UI display on these devices.
-- **🔗 Secure Response Headers**: Implemented security response headers, bolstering web application security.
-- **🔧 Enhanced AUTOMATIC1111 Settings**: Users can now configure 'CFG Scale', 'Sampler', and 'Scheduler' parameters directly in the admin settings, enhancing workflow flexibility without source code modifications.
-- **🌍 i18n Updates**: Enhanced translations for Chinese, Ukrainian, Russian, and French, fostering a better localized experience.
+- **⭐ 聊天概览**：引入基于节点的交互式消息图，以改进对话流的可视化。
+- **🔗 多向量数据库支持**：现在支持多个向量数据库，包括新添加的 Milvus 支持。强烈鼓励社区为其他数据库支持做出贡献！
+- **📡 实验性非流式聊天完成**：实验性功能允许使用不支持流式传输的 OpenAI o1 模型，确保模型部署更加灵活。
+- **🔍 实验性 Colbert-AI 重新排序器集成**：添加了对“jinaai/jina-colbert-v2”作为重新排序器的支持，增强了搜索的相关性和准确性。注意：在低规格的计算机上可能根本无法运行。
+- **🕸️ ENABLE_WEBSOCKET_SUPPORT**：为实例添加了环境变量以忽略 websocket 升级，从而稳定了存在 websocket 问题的平台上的连接。
+- **🔊 Azure 语音服务集成**：添加了对文本转语音 (TTS) Azure 语音服务的支持。
+- **🎚️ 可自定义的播放速度**：现在可在通话模式设置中控制播放速度，用户可以根据自己的喜好调整音频播放速度。
+- **🧠 增强的错误消息**：聊天完成问题期间，系统现在会直接向用户显示有用的错误消息。
+- **📂 将模型另存为透明 PNG**：模型配置文件图像现在保存为 PNG，支持透明度并改善视觉集成。
+- **📱 iPhone 兼容性调整**：添加了填充以适应 iPhone 导航栏，改善了这些设备上的 UI 显示。
+- **🔗 安全响应标头**：实现了安全响应标头，增强了 Web 应用程序的安全性。
+- **🔧 增强的 AUTOMATIC1111 设置**：用户现在可以在管理设置中直接配置“CFG Scale”、“Sampler”和“Scheduler”参数，无需修改源代码即可增强工作流程灵活性。
+- **🌍 i18n 更新**：增强了中文、乌克兰语、俄语和法语的翻译，提供更好的本地化体验。
 
-### Fixed
+### 已修复
 
-- **🛠️ Chat Message Deletion**: Resolved issues with chat message deletion, ensuring a smoother user interaction and system stability.
-- **🔢 Ordered List Numbering**: Fixed the incorrect ordering in lists.
+- **🛠️ 聊天消息删除**：解决了聊天消息删除问题，确保更顺畅的用户交互和系统稳定性。
+- **🔢 有序列表编号**：修复了列表中的错误顺序。
 
-### Changed
+### 已更改
 
-- **🎨 Transparent Icon Handling**: Allowed model icons to be displayed on transparent backgrounds, improving UI aesthetics.
-- **📝 Improved RAG Template**: Enhanced Retrieval-Augmented Generation template, optimizing context handling and error checking for more precise operation.
+- **🎨 透明图标处理**：允许模型图标显示在透明背景上，改善 UI 美感。
+- **📝 改进的 RAG 模板**：增强检索增强生成模板，优化上下文处理和错误检查，实现更精确的操作。
 
 ## [0.3.21] - 2024-09-08
 
