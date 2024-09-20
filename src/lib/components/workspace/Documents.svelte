@@ -130,6 +130,7 @@
 						...files,
 						{
 							type: 'image',
+							status: 'processed',
 							url: `${event.target.result}`
 						}
 					];

@@ -196,6 +196,7 @@
 					files = [
 						{
 							type: 'image',
+							status: 'processed',
 							url: imageUrl
 						}
 					];
