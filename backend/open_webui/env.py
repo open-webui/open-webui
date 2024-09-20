@@ -32,6 +32,7 @@ try:
 except ImportError:
     print("dotenv not installed, skipping...")
 
+DOCKER = os.environ.get("DOCKER", "False").lower() == "true"
 
 # device type embedding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
 USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")

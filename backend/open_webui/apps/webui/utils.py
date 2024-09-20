@@ -3,7 +3,7 @@ import re
 import subprocess
 import sys
 import types
-
+import tempfile
 
 from open_webui.apps.webui.models.functions import Functions
 from open_webui.apps.webui.models.tools import Tools
@@ -81,12 +81,14 @@ def load_toolkit_module_by_id(toolkit_id, content=None):
     module = types.ModuleType(module_name)
     sys.modules[module_name] = module
 
-    # Create a temporary in-memory file and use it to define `__file__` so
+    # Create a temporary file and use it to define `__file__` so
     # that it works as expected from the module's perspective.
-    temp_fd = os.memfd_create(f"tmp:{module_name}")
+    temp_file = tempfile.NamedTemporaryFile(delete=False)
+
     try:
-        os.write(temp_fd, content.encode("utf-8"))
-        module.__dict__["__file__"] = f"/proc/{os.getpid()}/fd/{temp_fd}"
+        with open(temp_file.name, "w", encoding="utf-8") as f:
+            f.write(content)
+        module.__dict__["__file__"] = temp_file.name
 
         # Executing the modified content in the created module's namespace
         exec(content, module.__dict__)
@@ -103,7 +105,7 @@ def load_toolkit_module_by_id(toolkit_id, content=None):
         del sys.modules[module_name]  # Clean up
         raise e
     finally:
-        os.close(temp_fd)
+        os.unlink(temp_file.name)
 
 
 def load_function_module_by_id(function_id, content=None):
@@ -123,12 +125,13 @@ def load_function_module_by_id(function_id, content=None):
     module = types.ModuleType(module_name)
     sys.modules[module_name] = module
 
-    # Create a temporary in-memory file and use it to define `__file__` so
+    # Create a temporary file and use it to define `__file__` so
     # that it works as expected from the module's perspective.
-    temp_fd = os.memfd_create(f"tmp:{module_name}")
+    temp_file = tempfile.NamedTemporaryFile(delete=False)
     try:
-        os.write(temp_fd, content.encode("utf-8"))
-        module.__dict__["__file__"] = f"/proc/{os.getpid()}/fd/{temp_fd}"
+        with open(temp_file.name, "w", encoding="utf-8") as f:
+            f.write(content)
+        module.__dict__["__file__"] = temp_file.name
 
         # Execute the modified content in the created module's namespace
         exec(content, module.__dict__)
@@ -151,7 +154,7 @@ def load_function_module_by_id(function_id, content=None):
         Functions.update_function_by_id(function_id, {"is_active": False})
         raise e
     finally:
-        os.close(temp_fd)
+        os.unlink(temp_file.name)
 
 
 def install_frontmatter_requirements(requirements):

@@ -148,17 +148,17 @@ async def update_config(form_data: ConfigForm, user=Depends(get_admin_user)):
 
     app.state.config.AUTOMATIC1111_CFG_SCALE = (
         float(form_data.automatic1111.AUTOMATIC1111_CFG_SCALE)
-        if form_data.automatic1111.AUTOMATIC1111_CFG_SCALE != ""
+        if form_data.automatic1111.AUTOMATIC1111_CFG_SCALE
         else None
     )
     app.state.config.AUTOMATIC1111_SAMPLER = (
         form_data.automatic1111.AUTOMATIC1111_SAMPLER
-        if form_data.automatic1111.AUTOMATIC1111_SAMPLER != ""
+        if form_data.automatic1111.AUTOMATIC1111_SAMPLER
         else None
     )
     app.state.config.AUTOMATIC1111_SCHEDULER = (
         form_data.automatic1111.AUTOMATIC1111_SCHEDULER
-        if form_data.automatic1111.AUTOMATIC1111_SCHEDULER != ""
+        if form_data.automatic1111.AUTOMATIC1111_SCHEDULER
         else None
     )
 
@@ -472,7 +472,9 @@ async def image_generations(
                 "response_format": "b64_json",
             }
 
-            r = requests.post(
+            # Use asyncio.to_thread for the requests.post call
+            r = await asyncio.to_thread(
+                requests.post,
                 url=f"{app.state.config.OPENAI_API_BASE_URL}/images/generations",
                 json=data,
                 headers=headers,
