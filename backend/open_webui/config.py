@@ -762,6 +762,7 @@ ENABLE_MODEL_FILTER = PersistentConfig(
     "model_filter.enable",
     os.environ.get("ENABLE_MODEL_FILTER", "False").lower() == "true",
 )
+
 MODEL_FILTER_LIST = os.environ.get("MODEL_FILTER_LIST", "")
 MODEL_FILTER_LIST = PersistentConfig(
     "MODEL_FILTER_LIST",

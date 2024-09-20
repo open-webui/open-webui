@@ -1022,7 +1022,7 @@ async def get_models(user=Depends(get_verified_user)):
     ]
 
     if app.state.config.ENABLE_MODEL_FILTER:
-        if user.role != "admin":
+        if str(user.role) not in ["admin", "vip", "svip"]:
             models = list(
                 filter(
                     lambda model: model["id"] in app.state.config.MODEL_FILTER_LIST,
@@ -1045,7 +1045,7 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
         )
 
     if app.state.config.ENABLE_MODEL_FILTER:
-        if user.role == "user" and model_id not in app.state.config.MODEL_FILTER_LIST:
+        if str(user.role) not in ["admin", "vip", "svip"] and model_id not in app.state.config.MODEL_FILTER_LIST:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Model not found",

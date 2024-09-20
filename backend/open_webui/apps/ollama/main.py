@@ -235,7 +235,7 @@ async def get_ollama_tags(
         models = await get_all_models()
 
         if app.state.config.ENABLE_MODEL_FILTER:
-            if user.role != "admin":
+            if str(user.role) not in ["admin", "vip", "svip"]:
                 models["models"] = list(
                     filter(
                         lambda model: model["name"]
@@ -783,7 +783,7 @@ async def generate_chat_completion(
     model_id = form_data.model
 
     if app.state.config.ENABLE_MODEL_FILTER:
-        if user.role == "user" and model_id not in app.state.config.MODEL_FILTER_LIST:
+        if str(user.role) not in ["admin", "vip", "svip"] and model_id not in app.state.config.MODEL_FILTER_LIST:
             raise HTTPException(
                 status_code=403,
                 detail="Model not found",
@@ -856,7 +856,7 @@ async def generate_openai_chat_completion(
     model_id = completion_form.model
 
     if app.state.config.ENABLE_MODEL_FILTER:
-        if user.role == "user" and model_id not in app.state.config.MODEL_FILTER_LIST:
+        if str(user.role) not in ["admin", "vip", "svip"] and model_id not in app.state.config.MODEL_FILTER_LIST:
             raise HTTPException(
                 status_code=403,
                 detail="Model not found",
@@ -897,7 +897,7 @@ async def get_openai_models(
         models = await get_all_models()
 
         if app.state.config.ENABLE_MODEL_FILTER:
-            if user.role != "admin":
+            if str(user.role) not in ["admin", "vip", "svip"]:
                 models["models"] = list(
                     filter(
                         lambda model: model["name"]

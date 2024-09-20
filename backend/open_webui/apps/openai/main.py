@@ -311,7 +311,7 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
     if url_idx is None:
         models = await get_all_models()
         if app.state.config.ENABLE_MODEL_FILTER:
-            if user.role != "admin":
+            if str(user.role) not in ["admin", "vip", "svip"]:
                 models["data"] = list(
                     filter(
                         lambda model: model["id"] in app.state.config.MODEL_FILTER_LIST,
