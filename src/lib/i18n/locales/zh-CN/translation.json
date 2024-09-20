@@ -146,7 +146,7 @@
 	"Continue Response": "继续生成",
 	"Continue with {{provider}}": "使用 {{provider}} 继续",
 	"Control how message text is split for TTS requests. 'Punctuation' splits into sentences, 'paragraphs' splits into paragraphs, and 'none' keeps the message as a single string.": "控制消息文本如何拆分以用于 TTS 请求。“Punctuation”拆分为句子，“paragraphs”拆分为段落，“none”将消息保留为单个字符串",
-	"Controls": "对话高级设置",
+	"Controls": "控制项",
 	"Copied": "已复制✨",
 	"Copied shared chat URL to clipboard!": "已复制此对话分享链接至剪贴板！",
 	"Copied to clipboard": "已复制到剪贴板",
