@@ -470,7 +470,9 @@ async def image_generations(
                 "response_format": "b64_json",
             }
 
-            r = requests.post(
+            # Use asyncio.to_thread for the requests.post call
+            r = await asyncio.to_thread(
+                requests.post,
                 url=f"{app.state.config.OPENAI_API_BASE_URL}/images/generations",
                 json=data,
                 headers=headers,
