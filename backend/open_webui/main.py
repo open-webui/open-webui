@@ -1620,8 +1620,8 @@ async def generate_moa_response(form_data: dict, user=Depends(get_verified_user)
 
     # Check if the user has a custom task model
     # If the user has a custom task model, use that model
-    model_id = get_task_model_id(model_id)
-    print(model_id)
+    task_model_id = get_task_model_id(model_id)
+    print(task_model_id)
 
     template = """You have been provided with a set of responses from various models to the latest user query: "{{prompt}}"
 
@@ -1635,13 +1635,17 @@ Responses from models: {{responses}}"""
         form_data["responses"],
     )
 
+    
+
     payload = {
-        "model": model_id,
+        "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": form_data.get("stream", False),
         "chat_id": form_data.get("chat_id", None),
         "metadata": {"task": str(TASKS.MOA_RESPONSE_GENERATION)},
     }
+
+
 
     log.debug(payload)
 
