@@ -12,7 +12,16 @@ from open_webui.utils.utils import decode_token
 
 if WEBSOCKET_MANAGER == "redis":
     mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
-    sio = socketio.AsyncServer(client_manager=mgr)
+    sio = socketio.AsyncServer(
+        cors_allowed_origins=[],
+        async_mode="asgi",
+        transports=(
+            ["polling", "websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]
+        ),
+        allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
+        always_connect=True,
+        client_manager=mgr,
+    )
 else:
     sio = socketio.AsyncServer(
         cors_allowed_origins=[],
