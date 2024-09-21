@@ -287,10 +287,14 @@
 
 		showControls.subscribe(async (value) => {
 			if (controlPane && !$mobile) {
-				if (value) {
-					controlPane.resize(parseInt(localStorage.getItem('chat-controls-size') || '35'));
-				} else {
-					controlPane.resize(0);
+				try {
+					if (value) {
+						controlPane.resize(parseInt(localStorage.getItem('chat-controls-size') || '35'));
+					} else {
+						controlPane.resize(0);
+					}
+				} catch (e) {
+					// ignore
 				}
 			}
 
