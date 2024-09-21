@@ -292,7 +292,8 @@
 						const currentSize = controlPane.getSize();
 
 						if (currentSize === 0) {
-							controlPane.resize(parseInt(localStorage?.chatControlsSize ?? '30'));
+							const size = parseInt(localStorage?.chatControlsSize ?? '30');
+							controlPane.resize(size ? size : 30);
 						}
 					} else {
 						controlPane.resize(0);
