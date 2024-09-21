@@ -131,7 +131,7 @@
 					if (!$showControls) {
 						showControls.set(true);
 					}
-					localStorage.setItem('chat-controls-size', size);
+					localStorage.chatControlsSize = size;
 				}
 			}}
 		>
