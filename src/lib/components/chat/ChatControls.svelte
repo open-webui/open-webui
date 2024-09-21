@@ -140,17 +140,19 @@
 						: 'px-5 py-4 bg-white dark:shadow-lg dark:bg-gray-850  border border-gray-50 dark:border-gray-800'}  rounded-lg z-50 pointer-events-auto overflow-y-auto scrollbar-hidden"
 				>
 					{#if $showCallOverlay}
-						<CallOverlay
-							bind:files
-							{submitPrompt}
-							{stopResponse}
-							{modelId}
-							{chatId}
-							{eventTarget}
-							on:close={() => {
-								showControls.set(false);
-							}}
-						/>
+						<div class="w-full h-full flex justify-center">
+							<CallOverlay
+								bind:files
+								{submitPrompt}
+								{stopResponse}
+								{modelId}
+								{chatId}
+								{eventTarget}
+								on:close={() => {
+									showControls.set(false);
+								}}
+							/>
+						</div>
 					{:else if $showOverview}
 						<Overview
 							{history}

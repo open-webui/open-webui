@@ -283,6 +283,16 @@
 				await goto('/');
 			}
 		}
+
+		showControls.subscribe(async (value) => {
+			if (controlPane) {
+				if (value) {
+					controlPane.resize(parseInt(localStorage.getItem('chat-controls-size') || '35'));
+				} else {
+					controlPane.resize(0);
+				}
+			}
+		});
 	});
 
 	onDestroy(() => {
@@ -1764,7 +1774,6 @@
 			bind:selectedModels
 			bind:showModelSelector
 			shareEnabled={messages.length > 0}
-			{controlPane}
 			{chat}
 			{initNewChat}
 		/>
@@ -1847,8 +1856,8 @@
 							{messages}
 							{submitPrompt}
 							{stopResponse}
-							on:call={() => {
-								showControls.set(true);
+							on:call={async () => {
+								await showControls.set(true);
 							}}
 						/>
 					</div>
