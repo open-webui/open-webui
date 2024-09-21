@@ -29,6 +29,7 @@
 	export let initNewChat: Function;
 	export let title: string = $WEBUI_NAME;
 	export let shareEnabled: boolean = false;
+	export let controlPane;
 
 	export let chat;
 	export let selectedModels;
@@ -109,8 +110,16 @@
 					<Tooltip content={$i18n.t('Controls')}>
 						<button
 							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							on:click={() => {
-								showControls.set(!$showControls);
+							on:click={async () => {
+								await showControls.set(!$showControls);
+
+								if (controlPane) {
+									if ($showControls) {
+										controlPane.resize(localStorage.getItem('chat-controls-size') || 40);
+									} else {
+										controlPane.resize(0);
+									}
+								}
 							}}
 							aria-label="Controls"
 						>
