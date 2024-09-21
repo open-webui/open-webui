@@ -289,11 +289,11 @@
 			if (controlPane && !$mobile) {
 				try {
 					if (value) {
-						controlPane.resize(
-							parseInt(localStorage.getItem('chat-controls-size') || '35')
-								? parseInt(localStorage.getItem('chat-controls-size') || '35')
-								: 35
-						);
+						const currentSize = controlPane.getSize();
+
+						if (currentSize === 0) {
+							controlPane.resize(parseInt(localStorage?.chatControlsSize ?? '30'));
+						}
 					} else {
 						controlPane.resize(0);
 					}

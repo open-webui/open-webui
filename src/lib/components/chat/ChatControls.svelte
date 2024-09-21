@@ -123,9 +123,7 @@
 		<Pane
 			bind:pane
 			defaultSize={$showControls
-				? parseInt(localStorage.getItem('chat-controls-size') || '35')
-					? parseInt(localStorage.getItem('chat-controls-size') || '35')
-					: 35
+				? controlPane.resize(parseInt(localStorage?.chatControlsSize ?? '30'))
 				: 0}
 			onResize={(size) => {
 				if (size === 0) {
