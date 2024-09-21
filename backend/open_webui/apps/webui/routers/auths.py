@@ -195,14 +195,19 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
 @router.post("/signup", response_model=SigninResponse)
 async def signup(request: Request, response: Response, form_data: SignupForm):
-    if (
-        not request.app.state.config.ENABLE_SIGNUP
-        or not request.app.state.config.ENABLE_LOGIN_FORM
-        or not WEBUI_AUTH
-    ):
-        raise HTTPException(
-            status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
-        )
+    if WEBUI_AUTH:
+        if (
+            not request.app.state.config.ENABLE_SIGNUP
+            or not request.app.state.config.ENABLE_LOGIN_FORM
+        ):
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
+            )
+    else:
+        if Users.get_num_users() != 0:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
+            )
 
     if TURNSTILE_CHECK and TURNSTILE_SECRET_KEY:
         res = await validate_token(form_data.turnstileToken, TURNSTILE_SECRET_KEY)
