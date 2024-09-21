@@ -829,6 +829,34 @@ export const bestMatchingLanguage = (supportedLanguages, preferredLanguages, def
 		.map((prefLang) => languages.find((lang) => lang.startsWith(prefLang)))
 		.find(Boolean);
 
-	console.log(languages, preferredLanguages, match, defaultLocale);
 	return match || defaultLocale;
+};
+
+// Get the date in the format YYYY-MM-DD
+export const getFormattedDate = () => {
+	const date = new Date();
+	return date.toISOString().split('T')[0];
+};
+
+// Get the time in the format HH:MM:SS
+export const getFormattedTime = () => {
+	const date = new Date();
+	return date.toTimeString().split(' ')[0];
+};
+
+// Get the current date and time in the format YYYY-MM-DD HH:MM:SS
+export const getCurrentDateTime = () => {
+	return `${getFormattedDate()} ${getFormattedTime()}`;
+};
+
+// Get the user's timezone
+export const getUserTimezone = () => {
+	return Intl.DateTimeFormat().resolvedOptions().timeZone;
+};
+
+// Get the weekday
+export const getWeekday = () => {
+	const date = new Date();
+	const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+	return weekdays[date.getDay()];
 };
