@@ -133,48 +133,50 @@
 				}
 			}}
 		>
-			<div class="pr-4 pb-8 flex max-h-full min-h-full" in:slide={{ duration: 200, axis: 'x' }}>
-				<div
-					class="w-full {$showOverview && !$showCallOverlay
-						? ' '
-						: 'px-5 py-4 bg-white dark:shadow-lg dark:bg-gray-850  border border-gray-50 dark:border-gray-800'}  rounded-lg z-50 pointer-events-auto overflow-y-auto scrollbar-hidden"
-				>
-					{#if $showCallOverlay}
-						<div class="w-full h-full flex justify-center">
-							<CallOverlay
-								bind:files
-								{submitPrompt}
-								{stopResponse}
-								{modelId}
-								{chatId}
-								{eventTarget}
+			{#if $showControls}
+				<div class="pr-4 pb-8 flex max-h-full min-h-full">
+					<div
+						class="w-full {$showOverview && !$showCallOverlay
+							? ' '
+							: 'px-5 py-4 bg-white dark:shadow-lg dark:bg-gray-850  border border-gray-50 dark:border-gray-800'}  rounded-lg z-50 pointer-events-auto overflow-y-auto scrollbar-hidden"
+					>
+						{#if $showCallOverlay}
+							<div class="w-full h-full flex justify-center">
+								<CallOverlay
+									bind:files
+									{submitPrompt}
+									{stopResponse}
+									{modelId}
+									{chatId}
+									{eventTarget}
+									on:close={() => {
+										showControls.set(false);
+									}}
+								/>
+							</div>
+						{:else if $showOverview}
+							<Overview
+								{history}
+								on:nodeclick={(e) => {
+									showMessage(e.detail.node.data.message);
+								}}
 								on:close={() => {
 									showControls.set(false);
 								}}
 							/>
-						</div>
-					{:else if $showOverview}
-						<Overview
-							{history}
-							on:nodeclick={(e) => {
-								showMessage(e.detail.node.data.message);
-							}}
-							on:close={() => {
-								showControls.set(false);
-							}}
-						/>
-					{:else}
-						<Controls
-							on:close={() => {
-								showControls.set(false);
-							}}
-							{models}
-							bind:chatFiles
-							bind:params
-						/>
-					{/if}
+						{:else}
+							<Controls
+								on:close={() => {
+									showControls.set(false);
+								}}
+								{models}
+								bind:chatFiles
+								bind:params
+							/>
+						{/if}
+					</div>
 				</div>
-			</div>
+			{/if}
 		</Pane>
 	{/if}
 </SvelteFlowProvider>

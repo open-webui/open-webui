@@ -28,7 +28,8 @@
 		showCallOverlay,
 		currentChatPage,
 		temporaryChatEnabled,
-		mobile
+		mobile,
+		showOverview
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -291,6 +292,11 @@
 				} else {
 					controlPane.resize(0);
 				}
+			}
+
+			if (!value) {
+				showCallOverlay.set(false);
+				showOverview.set(false);
 			}
 		});
 	});
