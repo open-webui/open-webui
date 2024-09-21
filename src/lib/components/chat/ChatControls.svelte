@@ -121,14 +121,10 @@
 		</PaneResizer>
 		<Pane
 			bind:pane
-			defaultSize={$showControls
-				? Math.max(parseInt(localStorage.getItem('chat-controls-size') || '35'), 35)
-				: 0}
+			defaultSize={$showControls ? parseInt(localStorage.getItem('chat-controls-size') || '35') : 0}
 			onResize={(size) => {
 				if (size === 0) {
 					showControls.set(false);
-				} else if (size < 35) {
-					pane.resize(0);
 				} else {
 					if (!$showControls) {
 						showControls.set(true);
