@@ -1459,7 +1459,7 @@ def process_doc(
 
         collection_name = form_data.collection_name
         if collection_name is None:
-            collection_name = form_data.file_id[:20] + calculate_sha256(f)[:43]
+            collection_name = calculate_sha256(f)[:63]
         f.close()
 
         try:
