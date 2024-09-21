@@ -44,6 +44,7 @@
 		return `${minutes}:${formattedSeconds}`;
 	};
 
+	let stream;
 	let speechRecognition;
 
 	let mediaRecorder;
@@ -159,7 +160,7 @@
 	const startRecording = async () => {
 		startDurationCounter();
 
-		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 		mediaRecorder = new MediaRecorder(stream);
 		mediaRecorder.onstart = () => {
 			console.log('Recording started');
@@ -251,6 +252,13 @@
 		}
 		stopDurationCounter();
 		audioChunks = [];
+
+		if (stream) {
+			const tracks = stream.getTracks();
+			tracks.forEach((track) => track.stop());
+		}
+
+		stream = null;
 	};
 
 	const confirmRecording = async () => {

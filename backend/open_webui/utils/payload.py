@@ -86,3 +86,49 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
             form_data[value] = param
 
     return form_data
+
+
+def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
+    """
+    Converts a payload formatted for OpenAI's API to be compatible with Ollama's API endpoint for chat completions.
+
+    Args:
+        openai_payload (dict): The payload originally designed for OpenAI API usage.
+
+    Returns:
+        dict: A modified payload compatible with the Ollama API.
+    """
+    ollama_payload = {}
+
+    # Mapping basic model and message details
+    ollama_payload["model"] = openai_payload.get("model")
+    ollama_payload["messages"] = openai_payload.get("messages")
+    ollama_payload["stream"] = openai_payload.get("stream", False)
+
+    # If there are advanced parameters in the payload, format them in Ollama's options field
+    ollama_options = {}
+
+    # Handle parameters which map directly
+    for param in ["temperature", "top_p", "seed"]:
+        if param in openai_payload:
+            ollama_options[param] = openai_payload[param]
+
+    # Mapping OpenAI's `max_tokens` -> Ollama's `num_predict`
+    if "max_completion_tokens" in openai_payload:
+        ollama_options["num_predict"] = openai_payload["max_completion_tokens"]
+    elif "max_tokens" in openai_payload:
+        ollama_options["num_predict"] = openai_payload["max_tokens"]
+
+    # Handle frequency / presence_penalty, which needs renaming and checking
+    if "frequency_penalty" in openai_payload:
+        ollama_options["repeat_penalty"] = openai_payload["frequency_penalty"]
+
+    if "presence_penalty" in openai_payload and "penalty" not in ollama_options:
+        # We are assuming presence penalty uses a similar concept in Ollama, which needs custom handling if exists.
+        ollama_options["new_topic_penalty"] = openai_payload["presence_penalty"]
+
+    # Add options to payload if any have been set
+    if ollama_options:
+        ollama_payload["options"] = ollama_options
+
+    return ollama_payload

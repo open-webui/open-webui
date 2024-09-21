@@ -109,8 +109,8 @@
 					<Tooltip content={$i18n.t('Controls')}>
 						<button
 							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							on:click={() => {
-								showControls.set(!$showControls);
+							on:click={async () => {
+								await showControls.set(!$showControls);
 							}}
 							aria-label="Controls"
 						>

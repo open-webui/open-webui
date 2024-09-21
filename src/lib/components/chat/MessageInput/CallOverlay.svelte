@@ -220,7 +220,9 @@
 	};
 
 	const startRecording = async () => {
-		audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		if (!audioStream) {
+			audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		}
 		mediaRecorder = new MediaRecorder(audioStream);
 
 		mediaRecorder.onstart = () => {
@@ -236,7 +238,7 @@
 		};
 
 		mediaRecorder.onstop = (e) => {
-			console.log('Recording stopped', e);
+			console.log('Recording stopped', audioStream, e);
 			stopRecordingCallback();
 		};
 
@@ -244,10 +246,11 @@
 	};
 
 	const stopAudioStream = async () => {
-		if (audioStream) {
-			const tracks = audioStream.getTracks();
-			tracks.forEach((track) => track.stop());
-		}
+		if (!audioStream) return;
+
+		audioStream.getAudioTracks().forEach(function (track) {
+			track.stop();
+		});
 
 		audioStream = null;
 	};
@@ -525,6 +528,60 @@
 		console.log(`Audio monitoring and playing stopped for message ID ${id}`);
 	};
 
+	const chatStartHandler = async (e) => {
+		const { id } = e.detail;
+
+		chatStreaming = true;
+
+		if (currentMessageId !== id) {
+			console.log(`Received chat start event for message ID ${id}`);
+
+			currentMessageId = id;
+			if (audioAbortController) {
+				audioAbortController.abort();
+			}
+			audioAbortController = new AbortController();
+
+			assistantSpeaking = true;
+			// Start monitoring and playing audio for the message ID
+			monitorAndPlayAudio(id, audioAbortController.signal);
+		}
+	};
+
+	const chatEventHandler = async (e) => {
+		const { id, content } = e.detail;
+		// "id" here is message id
+		// if "id" is not the same as "currentMessageId" then do not process
+		// "content" here is a sentence from the assistant,
+		// there will be many sentences for the same "id"
+
+		if (currentMessageId === id) {
+			console.log(`Received chat event for message ID ${id}: ${content}`);
+
+			try {
+				if (messages[id] === undefined) {
+					messages[id] = [content];
+				} else {
+					messages[id].push(content);
+				}
+
+				console.log(content);
+
+				fetchAudio(content);
+			} catch (error) {
+				console.error('Failed to fetch or play audio:', error);
+			}
+		}
+	};
+
+	const chatFinishHandler = async (e) => {
+		const { id, content } = e.detail;
+		// "content" here is the entire message from the assistant
+		finishedMessages[id] = true;
+
+		chatStreaming = false;
+	};
+
 	onMount(async () => {
 		const setWakeLock = async () => {
 			try {
@@ -558,65 +615,15 @@
 
 		startRecording();
 
-		const chatStartHandler = async (e) => {
-			const { id } = e.detail;
-
-			chatStreaming = true;
-
-			if (currentMessageId !== id) {
-				console.log(`Received chat start event for message ID ${id}`);
-
-				currentMessageId = id;
-				if (audioAbortController) {
-					audioAbortController.abort();
-				}
-				audioAbortController = new AbortController();
-
-				assistantSpeaking = true;
-				// Start monitoring and playing audio for the message ID
-				monitorAndPlayAudio(id, audioAbortController.signal);
-			}
-		};
-
-		const chatEventHandler = async (e) => {
-			const { id, content } = e.detail;
-			// "id" here is message id
-			// if "id" is not the same as "currentMessageId" then do not process
-			// "content" here is a sentence from the assistant,
-			// there will be many sentences for the same "id"
-
-			if (currentMessageId === id) {
-				console.log(`Received chat event for message ID ${id}: ${content}`);
-
-				try {
-					if (messages[id] === undefined) {
-						messages[id] = [content];
-					} else {
-						messages[id].push(content);
-					}
-
-					console.log(content);
-
-					fetchAudio(content);
-				} catch (error) {
-					console.error('Failed to fetch or play audio:', error);
-				}
-			}
-		};
-
-		const chatFinishHandler = async (e) => {
-			const { id, content } = e.detail;
-			// "content" here is the entire message from the assistant
-			finishedMessages[id] = true;
-
-			chatStreaming = false;
-		};
-
 		eventTarget.addEventListener('chat:start', chatStartHandler);
 		eventTarget.addEventListener('chat', chatEventHandler);
 		eventTarget.addEventListener('chat:finish', chatFinishHandler);
 
 		return async () => {
+			await stopAllAudio();
+
+			stopAudioStream();
+
 			eventTarget.removeEventListener('chat:start', chatStartHandler);
 			eventTarget.removeEventListener('chat', chatEventHandler);
 			eventTarget.removeEventListener('chat:finish', chatFinishHandler);
@@ -633,6 +640,17 @@
 
 	onDestroy(async () => {
 		await stopAllAudio();
+		stopAudioStream();
+
+		eventTarget.removeEventListener('chat:start', chatStartHandler);
+		eventTarget.removeEventListener('chat', chatEventHandler);
+		eventTarget.removeEventListener('chat:finish', chatFinishHandler);
+
+		audioAbortController.abort();
+		await tick();
+
+		await stopAllAudio();
+
 		await stopRecordingCallback(false);
 		await stopCamera();
 	});
@@ -924,6 +942,10 @@
 					on:click={async () => {
 						await stopAudioStream();
 						await stopVideoStream();
+
+						console.log(audioStream);
+						console.log(cameraStream);
+
 						showCallOverlay.set(false);
 						dispatch('close');
 					}}

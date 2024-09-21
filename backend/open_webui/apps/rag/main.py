@@ -1099,35 +1099,35 @@ def store_docs_in_vector_db(
                 log.info(f"deleting existing collection {collection_name}")
                 VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
 
-        embedding_function = get_embedding_function(
-            app.state.config.RAG_EMBEDDING_ENGINE,
-            app.state.config.RAG_EMBEDDING_MODEL,
-            app.state.sentence_transformer_ef,
-            app.state.config.OPENAI_API_KEY,
-            app.state.config.OPENAI_API_BASE_URL,
-            app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
-        )
-
-        VECTOR_DB_CLIENT.insert(
-            collection_name=collection_name,
-            items=[
-                {
-                    "id": str(uuid.uuid4()),
-                    "text": text,
-                    "vector": embedding_function(text.replace("\n", " ")),
-                    "metadata": metadatas[idx],
-                }
-                for idx, text in enumerate(texts)
-            ],
-        )
-
-        return True
-    except Exception as e:
-        if e.__class__.__name__ == "UniqueConstraintError":
+        if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+            log.info(f"collection {collection_name} already exists")
             return True
+        else:
+            embedding_function = get_embedding_function(
+                app.state.config.RAG_EMBEDDING_ENGINE,
+                app.state.config.RAG_EMBEDDING_MODEL,
+                app.state.sentence_transformer_ef,
+                app.state.config.OPENAI_API_KEY,
+                app.state.config.OPENAI_API_BASE_URL,
+                app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+            )
 
+            VECTOR_DB_CLIENT.insert(
+                collection_name=collection_name,
+                items=[
+                    {
+                        "id": str(uuid.uuid4()),
+                        "text": text,
+                        "vector": embedding_function(text.replace("\n", " ")),
+                        "metadata": metadatas[idx],
+                    }
+                    for idx, text in enumerate(texts)
+                ],
+            )
+
+            return True
+    except Exception as e:
         log.exception(e)
-
         return False
 
 

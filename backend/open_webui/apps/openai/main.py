@@ -405,13 +405,18 @@ async def generate_chat_completion(
             "role": user.role,
         }
 
+    url = app.state.config.OPENAI_API_BASE_URLS[idx]
+    key = app.state.config.OPENAI_API_KEYS[idx]
+
+    # Change max_completion_tokens to max_tokens (Backward compatible)
+    if "api.openai.com" not in url and not payload["model"].lower().startswith("o1-"):
+        if "max_completion_tokens" in payload:
+            payload["max_tokens"] = payload.pop("max_completion_tokens")
+
     # Convert the modified body back to JSON
     payload = json.dumps(payload)
 
     log.debug(payload)
-
-    url = app.state.config.OPENAI_API_BASE_URLS[idx]
-    key = app.state.config.OPENAI_API_KEYS[idx]
 
     headers = {}
     headers["Authorization"] = f"Bearer {key}"
