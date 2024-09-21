@@ -105,17 +105,25 @@ def openai_chat_message_template(model: str):
     }
 
 
-def openai_chat_chunk_message_template(model: str, message: str) -> dict:
+def openai_chat_chunk_message_template(
+    model: str, message: Optional[str] = None
+) -> dict:
     template = openai_chat_message_template(model)
     template["object"] = "chat.completion.chunk"
-    template["choices"][0]["delta"] = {"content": message}
+    if message:
+        template["choices"][0]["delta"] = {"content": message}
+    else:
+        template["choices"][0]["finish_reason"] = "stop"
     return template
 
 
-def openai_chat_completion_message_template(model: str, message: str) -> dict:
+def openai_chat_completion_message_template(
+    model: str, message: Optional[str] = None
+) -> dict:
     template = openai_chat_message_template(model)
     template["object"] = "chat.completion"
-    template["choices"][0]["message"] = {"content": message, "role": "assistant"}
+    if message:
+        template["choices"][0]["message"] = {"content": message, "role": "assistant"}
     template["choices"][0]["finish_reason"] = "stop"
     return template
 
