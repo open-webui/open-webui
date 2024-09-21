@@ -123,18 +123,19 @@
 		<Pane
 			bind:pane
 			defaultSize={$showControls
-				? parseInt(localStorage.getItem('chat-controls-size') || '35')
-					? parseInt(localStorage.getItem('chat-controls-size') || '35')
-					: 35
+				? parseInt(localStorage?.chatControlsSize ?? '30')
+					? parseInt(localStorage?.chatControlsSize ?? '30')
+					: 30
 				: 0}
 			onResize={(size) => {
+				console.log(size);
 				if (size === 0) {
 					showControls.set(false);
 				} else {
 					if (!$showControls) {
 						showControls.set(true);
 					}
-					localStorage.setItem('chat-controls-size', size);
+					localStorage.chatControlsSize = size;
 				}
 			}}
 		>
