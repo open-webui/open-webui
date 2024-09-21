@@ -204,7 +204,7 @@
 					const blob = await res.blob();
 					const blobUrl = URL.createObjectURL(blob);
 					const audio = new Audio(blobUrl);
-					audio.playbackRate = $settings.audio?.tts?.speedRate ?? 1;
+					audio.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
 
 					audioParts[idx] = audio;
 					loadingSpeech = false;
@@ -228,7 +228,7 @@
 					console.log(voice);
 
 					const speak = new SpeechSynthesisUtterance(message.content);
-					speak.rate = $settings.audio?.tts?.speedRate ?? 1;
+					speak.rate = $settings.audio?.tts?.playbackRate ?? 1;
 
 					console.log(speak);
 
