@@ -122,10 +122,9 @@
 		</PaneResizer>
 		<Pane
 			bind:pane
-			defaultSize={$showControls
-				? controlPane.resize(parseInt(localStorage?.chatControlsSize ?? '30'))
-				: 0}
+			defaultSize={$showControls ? parseInt(localStorage?.chatControlsSize ?? '30') : 0}
 			onResize={(size) => {
+				console.log(size);
 				if (size === 0) {
 					showControls.set(false);
 				} else {
