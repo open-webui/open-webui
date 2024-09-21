@@ -115,7 +115,9 @@
 
 								if (controlPane) {
 									if ($showControls) {
-										controlPane.resize(localStorage.getItem('chat-controls-size') || 40);
+										controlPane.resize(
+											Math.max(parseInt(localStorage.getItem('chat-controls-size') || '35'), 35)
+										);
 									} else {
 										controlPane.resize(0);
 									}
