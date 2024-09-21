@@ -1056,7 +1056,18 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
     if model.get("pipe"):
         return await generate_function_chat_completion(form_data, user=user)
     if model["owned_by"] == "ollama":
-        return await generate_ollama_openai_chat_completion(form_data, user=user)
+        # Using /ollama/api/chat endpoint
+        form_data = convert_payload_openai_to_ollama(form_data)
+        form_data = GenerateChatCompletionForm(**form_data)
+        response = await generate_ollama_chat_completion(form_data=form_data, user=user)
+        if form_data.stream:
+            response.headers["content-type"] = "text/event-stream"
+            return StreamingResponse(
+                convert_streaming_response_ollama_to_openai(response),
+                headers=dict(response.headers),
+            )
+        else:
+            return convert_response_ollama_to_openai(response)
     else:
         return await generate_openai_chat_completion(form_data, user=user)
 
@@ -1468,21 +1479,7 @@ Prompt: {{prompt:middletruncate:8000}}"""
     if "chat_id" in payload:
         del payload["chat_id"]
 
-    # Check if task model is ollama model
-    if model["owned_by"] == "ollama":
-        payload = convert_payload_openai_to_ollama(payload)
-        form_data = GenerateChatCompletionForm(**payload)
-        response = await generate_ollama_chat_completion(form_data=form_data, user=user)
-        if form_data.stream:
-            response.headers["content-type"] = "text/event-stream"
-            return StreamingResponse(
-                convert_streaming_response_ollama_to_openai(response),
-                headers=dict(response.headers),
-            )
-        else:
-            return convert_response_ollama_to_openai(response)
-    else:
-        return await generate_chat_completions(form_data=payload, user=user)
+    return await generate_chat_completions(form_data=payload, user=user)
 
 
 @app.post("/api/task/query/completions")
@@ -1559,21 +1556,7 @@ Search Query:"""
     if "chat_id" in payload:
         del payload["chat_id"]
 
-    # Check if task model is ollama model
-    if model["owned_by"] == "ollama":
-        payload = convert_payload_openai_to_ollama(payload)
-        form_data = GenerateChatCompletionForm(**payload)
-        response = await generate_ollama_chat_completion(form_data=form_data, user=user)
-        if form_data.stream:
-            response.headers["content-type"] = "text/event-stream"
-            return StreamingResponse(
-                convert_streaming_response_ollama_to_openai(response),
-                headers=dict(response.headers),
-            )
-        else:
-            return convert_response_ollama_to_openai(response)
-    else:
-        return await generate_chat_completions(form_data=payload, user=user)
+    return await generate_chat_completions(form_data=payload, user=user)
 
 
 @app.post("/api/task/emoji/completions")
@@ -1641,21 +1624,7 @@ Message: """{{prompt}}"""
     if "chat_id" in payload:
         del payload["chat_id"]
 
-    # Check if task model is ollama model
-    if model["owned_by"] == "ollama":
-        payload = convert_payload_openai_to_ollama(payload)
-        form_data = GenerateChatCompletionForm(**payload)
-        response = await generate_ollama_chat_completion(form_data=form_data, user=user)
-        if form_data.stream:
-            response.headers["content-type"] = "text/event-stream"
-            return StreamingResponse(
-                convert_streaming_response_ollama_to_openai(response),
-                headers=dict(response.headers),
-            )
-        else:
-            return convert_response_ollama_to_openai(response)
-    else:
-        return await generate_chat_completions(form_data=payload, user=user)
+    return await generate_chat_completions(form_data=payload, user=user)
 
 
 @app.post("/api/task/moa/completions")
@@ -1713,21 +1682,7 @@ Responses from models: {{responses}}"""
     if "chat_id" in payload:
         del payload["chat_id"]
 
-    # Check if task model is ollama model
-    if model["owned_by"] == "ollama":
-        payload = convert_payload_openai_to_ollama(payload)
-        form_data = GenerateChatCompletionForm(**payload)
-        response = await generate_ollama_chat_completion(form_data=form_data, user=user)
-        if form_data.stream:
-            response.headers["content-type"] = "text/event-stream"
-            return StreamingResponse(
-                convert_streaming_response_ollama_to_openai(response),
-                headers=dict(response.headers),
-            )
-        else:
-            return convert_response_ollama_to_openai(response)
-    else:
-        return await generate_chat_completions(form_data=payload, user=user)
+    return await generate_chat_completions(form_data=payload, user=user)
 
 
 ##################################
