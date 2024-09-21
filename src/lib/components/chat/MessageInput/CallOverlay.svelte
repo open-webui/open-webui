@@ -220,7 +220,9 @@
 	};
 
 	const startRecording = async () => {
-		audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		if (!audioStream) {
+			audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		}
 		mediaRecorder = new MediaRecorder(audioStream);
 
 		mediaRecorder.onstart = () => {
@@ -236,7 +238,7 @@
 		};
 
 		mediaRecorder.onstop = (e) => {
-			console.log('Recording stopped', e);
+			console.log('Recording stopped', audioStream, e);
 			stopRecordingCallback();
 		};
 
@@ -244,10 +246,11 @@
 	};
 
 	const stopAudioStream = async () => {
-		if (audioStream) {
-			const tracks = audioStream.getTracks();
-			tracks.forEach((track) => track.stop());
-		}
+		if (!audioStream) return;
+
+		audioStream.getAudioTracks().forEach(function (track) {
+			track.stop();
+		});
 
 		audioStream = null;
 	};
@@ -617,6 +620,10 @@
 		eventTarget.addEventListener('chat:finish', chatFinishHandler);
 
 		return async () => {
+			await stopAllAudio();
+
+			stopAudioStream();
+
 			eventTarget.removeEventListener('chat:start', chatStartHandler);
 			eventTarget.removeEventListener('chat', chatEventHandler);
 			eventTarget.removeEventListener('chat:finish', chatFinishHandler);
@@ -632,6 +639,9 @@
 	});
 
 	onDestroy(async () => {
+		await stopAllAudio();
+		stopAudioStream();
+
 		eventTarget.removeEventListener('chat:start', chatStartHandler);
 		eventTarget.removeEventListener('chat', chatEventHandler);
 		eventTarget.removeEventListener('chat:finish', chatFinishHandler);
@@ -932,6 +942,10 @@
 					on:click={async () => {
 						await stopAudioStream();
 						await stopVideoStream();
+
+						console.log(audioStream);
+						console.log(cameraStream);
+
 						showCallOverlay.set(false);
 						dispatch('close');
 					}}
