@@ -48,7 +48,7 @@
 		{#each _citations as citation, idx}
 			<div class="flex gap-1 text-xs font-semibold">
 				<button
-					class="flex dark:text-gray-300 py-1 px-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-xl"
+					class="flex dark:text-gray-300 py-1 px-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-xl max-w-96"
 					on:click={() => {
 						showCitationModal = true;
 						selectedCitation = citation;
