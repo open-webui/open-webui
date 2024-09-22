@@ -344,6 +344,8 @@
 
 		if ($page.url.searchParams.get('models')) {
 			selectedModels = $page.url.searchParams.get('models')?.split(',');
+		} else if ($page.url.searchParams.get('model')) {
+			selectedModels = $page.url.searchParams.get('model')?.split(',');
 		} else if ($settings?.models) {
 			selectedModels = $settings?.models;
 		} else if ($config?.default_models) {
