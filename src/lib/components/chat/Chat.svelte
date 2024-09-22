@@ -150,6 +150,7 @@
 	}
 
 	const showMessage = async (message) => {
+		const _chatId = JSON.parse(JSON.stringify($chatId));
 		let _messageId = JSON.parse(JSON.stringify(message.id));
 
 		let messageChildrenIds = history.messages[_messageId].childrenIds;
@@ -169,6 +170,9 @@
 		if (messageElement) {
 			messageElement.scrollIntoView({ behavior: 'smooth' });
 		}
+
+		await tick();
+		saveChatHandler(_chatId);
 	};
 
 	const chatEventHandler = async (event, cb) => {
