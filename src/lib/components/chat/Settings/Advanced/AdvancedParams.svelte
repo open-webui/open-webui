@@ -746,7 +746,6 @@
 						type="number"
 						class=" bg-transparent text-center w-14"
 						min="-2"
-						max="131072"
 						step="1"
 					/>
 				</div>
