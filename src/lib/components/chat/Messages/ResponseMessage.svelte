@@ -156,11 +156,16 @@
 
 		speaking = true;
 
+		// Prepare the message for the TTS system by stripping unnecessary characters 
+		// while keeping letters, numbers, and essential punctuation. 
+		// '#' is also removed for smooth pronunciation.
+		const speakMessage=message.content.replace(/[^\p{L}\p{N}.:;,?!-() ]/gu, '').replace(/#/g, '');
+
 		if ($config.audio.tts.engine !== '') {
 			loadingSpeech = true;
 
 			const messageContentParts: string[] = getMessageContentParts(
-				message.content,
+				speakMessage,
 				$config?.audio?.tts?.split_on ?? 'punctuation'
 			);
 
@@ -227,7 +232,7 @@
 
 					console.log(voice);
 
-					const speak = new SpeechSynthesisUtterance(message.content);
+					const speak = new SpeechSynthesisUtterance(speakMessage);
 					speak.rate = $settings.audio?.tts?.playbackRate ?? 1;
 
 					console.log(speak);
