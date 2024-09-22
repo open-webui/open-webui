@@ -664,6 +664,15 @@ export const promptTemplate = (
 		hour12: true
 	});
 
+	// Get the current weekday
+	const currentWeekday = getWeekday();
+
+	// Get the user's timezone
+	const currentTimezone = getUserTimezone();
+
+	// Get the user's language
+	const userLanguage = localStorage.getItem('locale') || 'en-US';
+
 	// Replace {{CURRENT_DATETIME}} in the template with the formatted datetime
 	template = template.replace('{{CURRENT_DATETIME}}', `${formattedDate} ${currentTime}`);
 
@@ -672,6 +681,15 @@ export const promptTemplate = (
 
 	// Replace {{CURRENT_TIME}} in the template with the formatted time
 	template = template.replace('{{CURRENT_TIME}}', currentTime);
+
+	// Replace {{CURRENT_WEEKDAY}} in the template with the current weekday
+	template = template.replace('{{CURRENT_WEEKDAY}}', currentWeekday);
+
+	// Replace {{CURRENT_TIMEZONE}} in the template with the user's timezone
+	template = template.replace('{{CURRENT_TIMEZONE}}', currentTimezone);
+
+	// Replace {{USER_LANGUAGE}} in the template with the user's language
+	template = template.replace('{{USER_LANGUAGE}}', userLanguage);
 
 	if (user_name) {
 		// Replace {{USER_NAME}} in the template with the user's name
