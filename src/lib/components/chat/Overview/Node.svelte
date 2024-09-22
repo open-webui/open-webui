@@ -15,6 +15,7 @@
 	<Tooltip
 		content={data?.message?.error ? data.message.error.content : data.message.content}
 		class="w-full"
+		allowHTML={false}
 	>
 		{#if data.message.role === 'user'}
 			<div class="flex w-full">

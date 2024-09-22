@@ -362,7 +362,7 @@
 								?.at(0) ?? undefined;
 
 						currentUtterance = new SpeechSynthesisUtterance(content);
-						currentUtterance.rate = $settings.audio?.tts?.speedRate ?? 1;
+						currentUtterance.rate = $settings.audio?.tts?.playbackRate ?? 1;
 
 						if (voice) {
 							currentUtterance.voice = voice;
@@ -389,7 +389,7 @@
 				if (audioElement) {
 					audioElement.src = audio.src;
 					audioElement.muted = true;
-					audioElement.playbackRate = $settings.audio?.tts?.speedRate ?? 1;
+					audioElement.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
 
 					audioElement
 						.play()

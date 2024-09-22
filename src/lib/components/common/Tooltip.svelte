@@ -1,4 +1,6 @@
 <script lang="ts">
+	import DOMPurify from 'dompurify';
+
 	import { onDestroy } from 'svelte';
 	import { marked } from 'marked';
 
@@ -10,18 +12,19 @@
 	export let touch = true;
 	export let className = 'flex';
 	export let theme = '';
+	export let allowHTML = true;
 
 	let tooltipElement;
 	let tooltipInstance;
 
 	$: if (tooltipElement && content) {
 		if (tooltipInstance) {
-			tooltipInstance.setContent(content);
+			tooltipInstance.setContent(DOMPurify.sanitize(content));
 		} else {
 			tooltipInstance = tippy(tooltipElement, {
-				content: content,
+				content: DOMPurify.sanitize(content),
 				placement: placement,
-				allowHTML: true,
+				allowHTML: allowHTML,
 				touch: touch,
 				...(theme !== '' ? { theme } : { theme: 'dark' }),
 				arrow: false,
@@ -41,6 +44,6 @@
 	});
 </script>
 
-<div bind:this={tooltipElement} aria-label={content} class={className}>
+<div bind:this={tooltipElement} aria-label={DOMPurify.sanitize(content)} class={className}>
 	<slot />
 </div>

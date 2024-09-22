@@ -643,9 +643,13 @@
 	"vip": "VIP",
 	"svip": "SVIP",
 	"Source": "來源",
+	"Speech Playback Speed": "",
 	"Speech recognition error: {{error}}": "語音辨識錯誤：{{error}}",
 	"Speech-to-Text Engine": "語音轉文字 (STT) 引擎",
+<<<<<<< HEAD
 	"Speed Rate": "速度率",
+=======
+>>>>>>> 47a9395a220b36c2cb83e0546566d2b458dcf0fd
 	"Stop Sequence": "停止序列",
 	"STDOUT/STDERR": "標準輸出/標準誤差",
 	"Stream Chat Response": "對話消息流式返回",
