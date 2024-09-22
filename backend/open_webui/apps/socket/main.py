@@ -69,7 +69,7 @@ TIMEOUT_DURATION = 3
 async def periodic_usage_pool_cleanup():
     while True:
         now = int(time.time())
-        log.debug("Cleaning up usage pool", now)
+        log.debug(f"Cleaning up usage pool: {now}")
         for model_id, connections in list(USAGE_POOL.items()):
             # Creating a list of sids to remove if they have timed out
             expired_sids = [
