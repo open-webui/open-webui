@@ -1,5 +1,7 @@
 import asyncio
 import socketio
+import logging
+import sys
 import time
 
 from open_webui.apps.webui.models.users import Users
@@ -10,6 +12,16 @@ from open_webui.env import (
 )
 from open_webui.utils.utils import decode_token
 from open_webui.apps.socket.utils import RedisDict
+
+from open_webui.env import (
+    GLOBAL_LOG_LEVEL,
+    SRC_LOG_LEVELS,
+)
+
+
+logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["SOCKET"])
 
 
 if WEBSOCKET_MANAGER == "redis":
@@ -57,7 +69,7 @@ TIMEOUT_DURATION = 3
 async def periodic_usage_pool_cleanup():
     while True:
         now = int(time.time())
-        print("Cleaning up usage pool", now)
+        log.debug("Cleaning up usage pool", now)
         for model_id, connections in list(USAGE_POOL.items()):
             # Creating a list of sids to remove if they have timed out
             expired_sids = [
