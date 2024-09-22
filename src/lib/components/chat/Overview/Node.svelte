@@ -47,7 +47,7 @@
 
 				<div class="ml-2">
 					<div class=" flex justify-between items-center">
-						<div class="text-xs text-black dark:text-white font-medium">
+						<div class="text-xs text-black dark:text-white font-medium line-clamp-1">
 							{data?.model?.name ?? data?.message?.model ?? 'Assistant'}
 						</div>
 
