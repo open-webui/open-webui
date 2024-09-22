@@ -89,8 +89,6 @@
 	let eventConfirmationInputValue = '';
 	let eventCallback = null;
 
-	let showModelSelector = true;
-
 	let selectedModels = [''];
 	let atSelectedModel: Model | undefined;
 
@@ -1790,14 +1788,7 @@
 			/>
 		{/if}
 
-		<Navbar
-			{title}
-			bind:selectedModels
-			bind:showModelSelector
-			shareEnabled={messages.length > 0}
-			{chat}
-			{initNewChat}
-		/>
+		<Navbar {chat} {title} bind:selectedModels shareEnabled={messages.length > 0} {initNewChat} />
 
 		<PaneGroup direction="horizontal" class="w-full h-full">
 			<Pane defaultSize={50} class="h-full flex w-full relative">
@@ -1840,19 +1831,19 @@
 						<div class=" h-full w-full flex flex-col {chatIdProp ? 'py-4' : 'pt-2 pb-4'}">
 							<Messages
 								chatId={$chatId}
-								{selectedModels}
-								{processing}
 								bind:history
-								bind:messages
 								bind:autoScroll
 								bind:prompt
-								bottomPadding={files.length > 0}
+								{messages}
+								{selectedModels}
+								{processing}
 								{sendPrompt}
 								{continueGeneration}
 								{regenerateResponse}
 								{mergeResponses}
 								{chatActionHandler}
 								{showMessage}
+								bottomPadding={files.length > 0}
 							/>
 						</div>
 					</div>
@@ -1865,6 +1856,8 @@
 							bind:selectedToolIds
 							bind:webSearchEnabled
 							bind:atSelectedModel
+							{messages}
+							{selectedModels}
 							availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
 								const model = $models.find((m) => m.id === e);
 								if (model?.info?.meta?.toolIds ?? false) {
@@ -1873,8 +1866,6 @@
 								return a;
 							}, [])}
 							transparentBackground={$settings?.backgroundImageUrl ?? false}
-							{selectedModels}
-							{messages}
 							{submitPrompt}
 							{stopResponse}
 							on:call={async () => {
@@ -1886,6 +1877,13 @@
 			</Pane>
 
 			<ChatControls
+				bind:history
+				bind:chatFiles
+				bind:params
+				bind:files
+				bind:pane={controlPane}
+				chatId={$chatId}
+				modelId={selectedModelIds?.at(0) ?? null}
 				models={selectedModelIds.reduce((a, e, i, arr) => {
 					const model = $models.find((m) => m.id === e);
 					if (model) {
@@ -1893,16 +1891,9 @@
 					}
 					return a;
 				}, [])}
-				bind:history
-				bind:chatFiles
-				bind:params
-				bind:files
-				bind:pane={controlPane}
 				{submitPrompt}
 				{stopResponse}
 				{showMessage}
-				modelId={selectedModelIds?.at(0) ?? null}
-				chatId={$chatId}
 				{eventTarget}
 			/>
 		</PaneGroup>
