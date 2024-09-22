@@ -15,7 +15,7 @@
 	export let chatId = '';
 	export let readOnly = false;
 	export let sendPrompt: Function;
-	export let continueGeneration: Function;
+	export let continueResponse: Function;
 	export let regenerateResponse: Function;
 	export let mergeResponses: Function;
 	export let chatActionHandler: Function;
@@ -23,7 +23,6 @@
 
 	export let user = $_user;
 	export let prompt;
-	export let processing = '';
 	export let bottomPadding = false;
 	export let autoScroll;
 	export let history = {};
@@ -43,7 +42,7 @@
 		element.scrollTop = element.scrollHeight;
 	};
 
-	const updateChatMessages = async () => {
+	const updateChatHistory = async () => {
 		await tick();
 		await updateChatById(localStorage.token, chatId, {
 			history: history
@@ -51,87 +50,6 @@
 
 		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-	};
-
-	const confirmEditMessage = async (messageId, content, submit = true) => {
-		if (submit) {
-			let userPrompt = content;
-			let userMessageId = uuidv4();
-
-			let userMessage = {
-				id: userMessageId,
-				parentId: history.messages[messageId].parentId,
-				childrenIds: [],
-				role: 'user',
-				content: userPrompt,
-				...(history.messages[messageId].files && { files: history.messages[messageId].files }),
-				models: selectedModels
-			};
-
-			let messageParentId = history.messages[messageId].parentId;
-
-			if (messageParentId !== null) {
-				history.messages[messageParentId].childrenIds = [
-					...history.messages[messageParentId].childrenIds,
-					userMessageId
-				];
-			}
-
-			history.messages[userMessageId] = userMessage;
-			history.currentId = userMessageId;
-
-			await tick();
-			await sendPrompt(userPrompt, userMessageId);
-		} else {
-			history.messages[messageId].content = content;
-			await tick();
-			await updateChatById(localStorage.token, chatId, {
-				history: history
-			});
-		}
-	};
-
-	const confirmEditResponseMessage = async (messageId, content) => {
-		history.messages[messageId].originalContent = history.messages[messageId].content;
-		history.messages[messageId].content = content;
-
-		await updateChatMessages();
-	};
-
-	const saveNewResponseMessage = async (message, content) => {
-		const responseMessageId = uuidv4();
-		const parentId = message.parentId;
-
-		const responseMessage = {
-			...message,
-			id: responseMessageId,
-			parentId: parentId,
-			childrenIds: [],
-			content: content,
-			timestamp: Math.floor(Date.now() / 1000) // Unix epoch
-		};
-
-		history.messages[responseMessageId] = responseMessage;
-		history.currentId = responseMessageId;
-
-		// Append messageId to childrenIds of parent message
-		if (parentId !== null) {
-			history.messages[parentId].childrenIds = [
-				...history.messages[parentId].childrenIds,
-				responseMessageId
-			];
-		}
-
-		await updateChatMessages();
-	};
-
-	const rateMessage = async (messageId, rating) => {
-		history.messages[messageId].annotation = {
-			...history.messages[messageId].annotation,
-			rating: rating
-		};
-
-		await updateChatMessages();
 	};
 
 	const showPreviousMessage = async (message) => {
@@ -232,6 +150,87 @@
 		}
 	};
 
+	const rateMessage = async (messageId, rating) => {
+		history.messages[messageId].annotation = {
+			...history.messages[messageId].annotation,
+			rating: rating
+		};
+
+		await updateChatHistory();
+	};
+
+	const editMessage = async (messageId, content, submit = true) => {
+		if (history.messages[messageId].role === 'user') {
+			if (submit) {
+				// New user message
+				let userPrompt = content;
+				let userMessageId = uuidv4();
+
+				let userMessage = {
+					id: userMessageId,
+					parentId: history.messages[messageId].parentId,
+					childrenIds: [],
+					role: 'user',
+					content: userPrompt,
+					...(history.messages[messageId].files && { files: history.messages[messageId].files }),
+					models: selectedModels
+				};
+
+				let messageParentId = history.messages[messageId].parentId;
+
+				if (messageParentId !== null) {
+					history.messages[messageParentId].childrenIds = [
+						...history.messages[messageParentId].childrenIds,
+						userMessageId
+					];
+				}
+
+				history.messages[userMessageId] = userMessage;
+				history.currentId = userMessageId;
+
+				await tick();
+				await sendPrompt(userPrompt, userMessageId);
+			} else {
+				// Edit user message
+				history.messages[messageId].content = content;
+				await updateChatHistory();
+			}
+		} else {
+			if (submit) {
+				// New response message
+				const responseMessageId = uuidv4();
+				const parentId = message.parentId;
+
+				const responseMessage = {
+					...message,
+					id: responseMessageId,
+					parentId: parentId,
+					childrenIds: [],
+					content: content,
+					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+				};
+
+				history.messages[responseMessageId] = responseMessage;
+				history.currentId = responseMessageId;
+
+				// Append messageId to childrenIds of parent message
+				if (parentId !== null) {
+					history.messages[parentId].childrenIds = [
+						...history.messages[parentId].childrenIds,
+						responseMessageId
+					];
+				}
+
+				await updateChatHistory();
+			} else {
+				// Edit response message
+				history.messages[messageId].originalContent = history.messages[messageId].content;
+				history.messages[messageId].content = content;
+				await updateChatHistory();
+			}
+		}
+	};
+
 	const deleteMessage = async (messageId) => {
 		const messageToDelete = history.messages[messageId];
 		const parentMessageId = messageToDelete.parentId;
@@ -267,9 +266,7 @@
 		showMessage({ id: parentMessageId });
 
 		// Update the chat
-		await updateChatById(localStorage.token, chatId, {
-			history: history
-		});
+		await updateChatHistory();
 	};
 </script>
 
@@ -315,8 +312,19 @@
 	{:else}
 		<div class="w-full pt-2">
 			{#key chatId}
-				{JSON.stringify(history)}
-				<!-- <Message {chatId} {history} messageId={history.currentId} {user}  /> -->
+				<!-- {JSON.stringify(history)} -->
+				<div class="w-full flex flex-col-reverse">
+					<Message
+						h={0}
+						{chatId}
+						{history}
+						messageId={history.currentId}
+						{user}
+						{editMessage}
+						{deleteMessage}
+						{rateMessage}
+					/>
+				</div>
 				<div class="pb-12" />
 				{#if bottomPadding}
 					<div class="  pb-6" />

@@ -1,18 +1,20 @@
 <script lang="ts">
 	import dayjs from 'dayjs';
-
+	import { toast } from 'svelte-sonner';
 	import { tick, createEventDispatcher, getContext } from 'svelte';
+
+	import { models, settings } from '$lib/stores';
+	import { user as _user } from '$lib/stores';
+	import {
+		copyToClipboard as _copyToClipboard,
+		processResponseContent,
+		replaceTokens
+	} from '$lib/utils';
+
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
-	import { models, settings } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-
-	import { user as _user } from '$lib/stores';
-	import { getFileContentById } from '$lib/apis/files';
 	import FileItem from '$lib/components/common/FileItem.svelte';
-	import { marked } from 'marked';
-	import { processResponseContent, replaceTokens } from '$lib/utils';
-	import MarkdownTokens from './Markdown/MarkdownTokens.svelte';
 	import Markdown from './Markdown.svelte';
 
 	const i18n = getContext('i18n');
@@ -23,16 +25,25 @@
 	export let message;
 	export let siblings;
 	export let isFirstMessage: boolean;
-	export let readOnly: boolean;
 
-	export let confirmEditMessage: Function;
 	export let showPreviousMessage: Function;
 	export let showNextMessage: Function;
-	export let copyToClipboard: Function;
+
+	export let editMessage: Function;
+
+	export let readOnly: boolean;
 
 	let edit = false;
 	let editedContent = '';
 	let messageEditTextAreaElement: HTMLTextAreaElement;
+
+	const copyToClipboard = async (text) => {
+		const res = await _copyToClipboard(text);
+		if (res) {
+			toast.success($i18n.t('Copying to clipboard was successful!'));
+		}
+	};
+
 	const editMessageHandler = async () => {
 		edit = true;
 		editedContent = message.content;
@@ -46,7 +57,7 @@
 	};
 
 	const editMessageConfirmHandler = async (submit = true) => {
-		confirmEditMessage(message.id, editedContent, submit);
+		editMessage(message.id, editedContent, submit);
 
 		edit = false;
 		editedContent = '';

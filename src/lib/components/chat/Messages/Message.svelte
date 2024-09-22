@@ -10,6 +10,10 @@
 	import MultiResponseMessages from './MultiResponseMessages.svelte';
 	import ResponseMessage from './ResponseMessage.svelte';
 	import UserMessage from './UserMessage.svelte';
+	import { updateChatById } from '$lib/apis/chats';
+
+	// h here refers to the height of the message graph
+	export let h;
 
 	export let chatId;
 
@@ -21,19 +25,15 @@
 	export let scrollToBottom;
 	export let chatActionHandler;
 
-	export let confirmEditMessage;
-	export let confirmEditResponseMessage;
-
 	export let showPreviousMessage;
 	export let showNextMessage;
 
-	export let rateMessage;
+	export let editMessage;
 	export let deleteMessage;
-
-	export let saveNewResponseMessage;
+	export let rateMessage;
 
 	export let regenerateResponse;
-	export let continueGeneration;
+	export let continueResponse;
 
 	// MultiResponseMessages
 	export let mergeResponses;
@@ -48,44 +48,39 @@
 	};
 </script>
 
-<div class="w-full">
-	<div
-		class="flex flex-col justify-between px-5 mb-3 {($settings?.widescreenMode ?? null)
-			? 'max-w-full'
-			: 'max-w-5xl'} mx-auto rounded-lg group"
-	>
-		{#if history.messages[messageId].role === 'user'}
-			{@const message = history.messages[messageId]}
+<div
+	class="flex flex-col justify-between px-5 mb-3 w-full {($settings?.widescreenMode ?? null)
+		? 'max-w-full'
+		: 'max-w-5xl'} mx-auto rounded-lg group"
+>
+	{#if history.messages[messageId]}
+		{@const message = history.messages[messageId]}
+		{#if message.role === 'user'}
 			<UserMessage
 				{user}
-				{history}
+				{message}
+				isFirstMessage={h === 0}
 				siblings={message.parentId !== null
 					? (history.messages[message.parentId]?.childrenIds ?? [])
 					: (Object.values(history.messages)
 							.filter((message) => message.parentId === null)
 							.map((message) => message.id) ?? [])}
-				{confirmEditMessage}
 				{showPreviousMessage}
 				{showNextMessage}
-				copyToClipboard={copyToClipboardWithToast}
-				isFirstMessage={messageIdx === 0}
+				{editMessage}
 				on:delete={() => deleteMessage(message.id)}
 				{readOnly}
 			/>
 		{:else if (history.messages[message.parentId]?.models?.length ?? 1) === 1}
 			<ResponseMessage
 				{message}
+				isLastMessage={messageId === history.currentId}
 				siblings={history.messages[message.parentId]?.childrenIds ?? []}
-				isLastMessage={messageIdx + 1 === messages.length}
-				{readOnly}
-				{updateChatMessages}
-				{confirmEditResponseMessage}
-				{saveNewResponseMessage}
 				{showPreviousMessage}
 				{showNextMessage}
+				{editMessage}
 				{rateMessage}
-				copyToClipboard={copyToClipboardWithToast}
-				{continueGeneration}
+				{continueResponse}
 				{regenerateResponse}
 				on:action={async (e) => {
 					console.log('action', e);
@@ -95,6 +90,10 @@
 						const { id, event } = e.detail;
 						await chatActionHandler(chatId, id, message.model, message.id, event);
 					}
+				}}
+				on:update={async (e) => {
+					console.log('update', e);
+					// call updateChatHistory
 				}}
 				on:save={async (e) => {
 					console.log('save', e);
@@ -111,6 +110,7 @@
 						});
 					}
 				}}
+				{readOnly}
 			/>
 		{:else}
 			<MultiResponseMessages
@@ -118,16 +118,14 @@
 				{chatId}
 				messageIds={[]}
 				parentMessage={history.messages[message.parentId]}
-				isLastMessage={messageIdx + 1 === messages.length}
-				{readOnly}
-				{updateChatMessages}
-				{saveNewResponseMessage}
-				{confirmEditResponseMessage}
+				isLastMessage={messageId === history.currentId}
+				{editMessage}
 				{rateMessage}
-				copyToClipboard={copyToClipboardWithToast}
-				{continueGeneration}
+				{continueResponse}
 				{mergeResponses}
 				{regenerateResponse}
+				copyToClipboard={copyToClipboardWithToast}
+				{readOnly}
 				on:action={async (e) => {
 					console.log('action', e);
 					if (typeof e.detail === 'string') {
@@ -152,5 +150,26 @@
 				}}
 			/>
 		{/if}
-	</div>
+	{/if}
 </div>
+
+{#if history.messages[messageId]?.parentId !== null}
+	<svelte:self
+		h={h + 1}
+		{chatId}
+		{history}
+		messageId={history.messages[messageId]?.parentId}
+		{user}
+		{scrollToBottom}
+		{chatActionHandler}
+		{showPreviousMessage}
+		{showNextMessage}
+		{editMessage}
+		{deleteMessage}
+		{rateMessage}
+		{regenerateResponse}
+		{continueResponse}
+		{mergeResponses}
+		{readOnly}
+	></svelte:self>
+{/if}

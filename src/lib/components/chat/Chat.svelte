@@ -1520,8 +1520,8 @@
 		}
 	};
 
-	const continueGeneration = async () => {
-		console.log('continueGeneration');
+	const continueResponse = async () => {
+		console.log('continueResponse');
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 
 		if (history.currentId && history.messages[history.currentId].done == true) {
@@ -1549,6 +1549,53 @@
 			}
 		} else {
 			toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
+		}
+	};
+
+	const mergeResponses = async (messageId, responses, _chatId) => {
+		console.log('mergeResponses', messageId, responses);
+		const message = history.messages[messageId];
+		const mergedResponse = {
+			status: true,
+			content: ''
+		};
+		message.merged = mergedResponse;
+		history.messages[messageId] = message;
+
+		try {
+			const [res, controller] = await generateMoACompletion(
+				localStorage.token,
+				message.model,
+				history.messages[message.parentId].content,
+				responses
+			);
+
+			if (res && res.ok && res.body) {
+				const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
+				for await (const update of textStream) {
+					const { value, done, citations, error, usage } = update;
+					if (error || done) {
+						break;
+					}
+
+					if (mergedResponse.content == '' && value == '\n') {
+						continue;
+					} else {
+						mergedResponse.content += value;
+						history.messages[messageId] = message;
+					}
+
+					if (autoScroll) {
+						scrollToBottom();
+					}
+				}
+
+				await saveChatHandler(_chatId);
+			} else {
+				console.error(res);
+			}
+		} catch (e) {
+			console.error(e);
 		}
 	};
 
@@ -1684,52 +1731,6 @@
 			}
 		}
 	};
-	const mergeResponses = async (messageId, responses, _chatId) => {
-		console.log('mergeResponses', messageId, responses);
-		const message = history.messages[messageId];
-		const mergedResponse = {
-			status: true,
-			content: ''
-		};
-		message.merged = mergedResponse;
-		history.messages[messageId] = message;
-
-		try {
-			const [res, controller] = await generateMoACompletion(
-				localStorage.token,
-				message.model,
-				history.messages[message.parentId].content,
-				responses
-			);
-
-			if (res && res.ok && res.body) {
-				const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
-				for await (const update of textStream) {
-					const { value, done, citations, error, usage } = update;
-					if (error || done) {
-						break;
-					}
-
-					if (mergedResponse.content == '' && value == '\n') {
-						continue;
-					} else {
-						mergedResponse.content += value;
-						history.messages[messageId] = message;
-					}
-
-					if (autoScroll) {
-						scrollToBottom();
-					}
-				}
-
-				await saveChatHandler(_chatId);
-			} else {
-				console.error(res);
-			}
-		} catch (e) {
-			console.error(e);
-		}
-	};
 </script>
 
 <svelte:head>
@@ -1827,13 +1828,12 @@
 								bind:autoScroll
 								bind:prompt
 								{selectedModels}
-								{processing}
 								{sendPrompt}
-								{continueGeneration}
+								{showMessage}
+								{continueResponse}
 								{regenerateResponse}
 								{mergeResponses}
 								{chatActionHandler}
-								{showMessage}
 								bottomPadding={files.length > 0}
 							/>
 						</div>

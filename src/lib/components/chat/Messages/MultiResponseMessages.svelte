@@ -34,7 +34,7 @@
 	export let rateMessage: Function;
 
 	export let copyToClipboard: Function;
-	export let continueGeneration: Function;
+	export let continueResponse: Function;
 	export let mergeResponses: Function;
 	export let regenerateResponse: Function;
 	export let saveNewResponseMessage: Function;
@@ -193,7 +193,7 @@
 								{readOnly}
 								{rateMessage}
 								{copyToClipboard}
-								{continueGeneration}
+								{continueResponse}
 								regenerateResponse={async (message) => {
 									regenerateResponse(message);
 									await tick();
