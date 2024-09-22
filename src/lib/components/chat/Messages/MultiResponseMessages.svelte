@@ -38,6 +38,7 @@
 	export let continueGeneration: Function;
 	export let mergeResponses: Function;
 	export let regenerateResponse: Function;
+	export let saveNewResponseMessage: Function;
 
 	const dispatch = createEventDispatcher();
 
@@ -184,6 +185,7 @@
 									siblings={groupedMessages[modelIdx].messages.map((m) => m.id)}
 									isLastMessage={true}
 									{updateChatMessages}
+									{saveNewResponseMessage}
 									{confirmEditResponseMessage}
 									showPreviousMessage={() => showPreviousMessage(modelIdx)}
 									showNextMessage={() => showNextMessage(modelIdx)}
