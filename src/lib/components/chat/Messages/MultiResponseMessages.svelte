@@ -22,7 +22,6 @@
 	export let chatId;
 
 	export let history;
-	export let messages = [];
 	export let messageIdx;
 
 	export let parentMessage;
@@ -46,7 +45,9 @@
 	let groupedMessages = {};
 	let groupedMessagesIdx = {};
 
-	$: if (parentMessage) {
+	$: if (history.messages) {
+		console.log('history.messages', history.messages);
+
 		initHandler();
 	}
 
@@ -87,6 +88,7 @@
 	};
 
 	const initHandler = async () => {
+		console.log('multiresponse:initHandler');
 		await tick();
 		currentMessageId = messages[messageIdx].id;
 
@@ -146,78 +148,76 @@
 		class="flex snap-x snap-mandatory overflow-x-auto scrollbar-hidden"
 		id="responses-container-{chatId}-{parentMessage.id}"
 	>
-		{#key currentMessageId}
-			{#each Object.keys(groupedMessages) as modelIdx}
-				{#if groupedMessagesIdx[modelIdx] !== undefined && groupedMessages[modelIdx].messages.length > 0}
-					<!-- svelte-ignore a11y-no-static-element-interactions -->
-					<!-- svelte-ignore a11y-click-events-have-key-events -->
-					{@const message = groupedMessages[modelIdx].messages[groupedMessagesIdx[modelIdx]]}
+		{#each Object.keys(groupedMessages) as modelIdx}
+			{#if groupedMessagesIdx[modelIdx] !== undefined && groupedMessages[modelIdx].messages.length > 0}
+				<!-- svelte-ignore a11y-no-static-element-interactions -->
+				<!-- svelte-ignore a11y-click-events-have-key-events -->
+				{@const message = groupedMessages[modelIdx].messages[groupedMessagesIdx[modelIdx]]}
 
-					<div
-						class=" snap-center w-full max-w-full m-1 border {history.messages[currentMessageId]
-							?.modelIdx == modelIdx
-							? `border-gray-100 dark:border-gray-800 border-[1.5px] ${
-									$mobile ? 'min-w-full' : 'min-w-[32rem]'
-								}`
-							: `border-gray-50 dark:border-gray-850 border-dashed ${
-									$mobile ? 'min-w-full' : 'min-w-80'
-								}`} transition-all p-5 rounded-2xl"
-						on:click={() => {
-							if (currentMessageId != message.id) {
-								currentMessageId = message.id;
-								let messageId = message.id;
-								console.log(messageId);
-								//
-								let messageChildrenIds = history.messages[messageId].childrenIds;
-								while (messageChildrenIds.length !== 0) {
-									messageId = messageChildrenIds.at(-1);
-									messageChildrenIds = history.messages[messageId].childrenIds;
-								}
-								history.currentId = messageId;
-								dispatch('change');
+				<div
+					class=" snap-center w-full max-w-full m-1 border {history.messages[currentMessageId]
+						?.modelIdx == modelIdx
+						? `border-gray-100 dark:border-gray-800 border-[1.5px] ${
+								$mobile ? 'min-w-full' : 'min-w-[32rem]'
+							}`
+						: `border-gray-50 dark:border-gray-850 border-dashed ${
+								$mobile ? 'min-w-full' : 'min-w-80'
+							}`} transition-all p-5 rounded-2xl"
+					on:click={() => {
+						if (currentMessageId != message.id) {
+							currentMessageId = message.id;
+							let messageId = message.id;
+							console.log(messageId);
+							//
+							let messageChildrenIds = history.messages[messageId].childrenIds;
+							while (messageChildrenIds.length !== 0) {
+								messageId = messageChildrenIds.at(-1);
+								messageChildrenIds = history.messages[messageId].childrenIds;
 							}
-						}}
-					>
-						{#key history.currentId}
-							{#if message}
-								<ResponseMessage
-									{message}
-									siblings={groupedMessages[modelIdx].messages.map((m) => m.id)}
-									isLastMessage={true}
-									{updateChatMessages}
-									{saveNewResponseMessage}
-									{confirmEditResponseMessage}
-									showPreviousMessage={() => showPreviousMessage(modelIdx)}
-									showNextMessage={() => showNextMessage(modelIdx)}
-									{readOnly}
-									{rateMessage}
-									{copyToClipboard}
-									{continueGeneration}
-									regenerateResponse={async (message) => {
-										regenerateResponse(message);
-										await tick();
-										groupedMessagesIdx[modelIdx] = groupedMessages[modelIdx].messages.length - 1;
-									}}
-									on:action={async (e) => {
-										dispatch('action', e.detail);
-									}}
-									on:save={async (e) => {
-										console.log('save', e);
+							history.currentId = messageId;
+							dispatch('change');
+						}
+					}}
+				>
+					{#key history.currentId}
+						{#if message}
+							<ResponseMessage
+								{message}
+								siblings={groupedMessages[modelIdx].messages.map((m) => m.id)}
+								isLastMessage={true}
+								{updateChatMessages}
+								{saveNewResponseMessage}
+								{confirmEditResponseMessage}
+								showPreviousMessage={() => showPreviousMessage(modelIdx)}
+								showNextMessage={() => showNextMessage(modelIdx)}
+								{readOnly}
+								{rateMessage}
+								{copyToClipboard}
+								{continueGeneration}
+								regenerateResponse={async (message) => {
+									regenerateResponse(message);
+									await tick();
+									groupedMessagesIdx[modelIdx] = groupedMessages[modelIdx].messages.length - 1;
+								}}
+								on:action={async (e) => {
+									dispatch('action', e.detail);
+								}}
+								on:save={async (e) => {
+									console.log('save', e);
 
-										const message = e.detail;
-										history.messages[message.id] = message;
-										await updateChatById(localStorage.token, chatId, {
-											messages: messages,
-											history: history
-										});
-									}}
-								/>
-							{/if}
-						{/key}
-					</div>
-				{/if}
-			{/each}
-		{/key}
+									const message = e.detail;
+									history.messages[message.id] = message;
+									await updateChatById(localStorage.token, chatId, {
+										messages: messages,
+										history: history
+									});
+								}}
+							/>
+						{/if}
+					{/key}
+				</div>
+			{/if}
+		{/each}
 	</div>
 
 	{#if !readOnly && isLastMessage}

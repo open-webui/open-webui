@@ -7,10 +7,8 @@
 	import { getChatList, updateChatById } from '$lib/apis/chats';
 	import { copyToClipboard, findWordIndices } from '$lib/utils';
 
-	import UserMessage from './Messages/UserMessage.svelte';
-	import ResponseMessage from './Messages/ResponseMessage.svelte';
 	import Placeholder from './Messages/Placeholder.svelte';
-	import MultiResponseMessages from './Messages/MultiResponseMessages.svelte';
+	import Message from './Messages/Message.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -45,11 +43,14 @@
 		element.scrollTop = element.scrollHeight;
 	};
 
-	const copyToClipboardWithToast = async (text) => {
-		const res = await copyToClipboard(text);
-		if (res) {
-			toast.success($i18n.t('Copying to clipboard was successful!'));
-		}
+	const updateChatMessages = async () => {
+		await tick();
+		await updateChatById(localStorage.token, chatId, {
+			history: history
+		});
+
+		currentChatPage.set(1);
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
 	};
 
 	const confirmEditMessage = async (messageId, content, submit = true) => {
@@ -85,21 +86,9 @@
 			history.messages[messageId].content = content;
 			await tick();
 			await updateChatById(localStorage.token, chatId, {
-				messages: messages,
 				history: history
 			});
 		}
-	};
-
-	const updateChatMessages = async () => {
-		await tick();
-		await updateChatById(localStorage.token, chatId, {
-			messages: messages,
-			history: history
-		});
-
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
 	};
 
 	const confirmEditResponseMessage = async (messageId, content) => {
@@ -243,7 +232,7 @@
 		}
 	};
 
-	const deleteMessageHandler = async (messageId) => {
+	const deleteMessage = async (messageId) => {
 		const messageToDelete = history.messages[messageId];
 		const parentMessageId = messageToDelete.parentId;
 		const childMessageIds = messageToDelete.childrenIds ?? [];
@@ -279,14 +268,13 @@
 
 		// Update the chat
 		await updateChatById(localStorage.token, chatId, {
-			messages: messages,
 			history: history
 		});
 	};
 </script>
 
 <div class="h-full flex">
-	{#if messages.length == 0}
+	{#if Object.keys(history?.messages ?? {}).length == 0}
 		<Placeholder
 			modelIds={selectedModels}
 			submitPrompt={async (p) => {
@@ -327,116 +315,9 @@
 	{:else}
 		<div class="w-full pt-2">
 			{#key chatId}
-				{#each messages as message, messageIdx (message.id)}
-					<div class=" w-full {messageIdx === messages.length - 1 ? ' pb-12' : ''}">
-						<div
-							class="flex flex-col justify-between px-5 mb-3 {($settings?.widescreenMode ?? null)
-								? 'max-w-full'
-								: 'max-w-5xl'} mx-auto rounded-lg group"
-						>
-							{#if message.role === 'user'}
-								<UserMessage
-									on:delete={() => deleteMessageHandler(message.id)}
-									{user}
-									{readOnly}
-									{message}
-									isFirstMessage={messageIdx === 0}
-									siblings={message.parentId !== null
-										? (history.messages[message.parentId]?.childrenIds ?? [])
-										: (Object.values(history.messages)
-												.filter((message) => message.parentId === null)
-												.map((message) => message.id) ?? [])}
-									{confirmEditMessage}
-									{showPreviousMessage}
-									{showNextMessage}
-									copyToClipboard={copyToClipboardWithToast}
-								/>
-							{:else if (history.messages[message.parentId]?.models?.length ?? 1) === 1}
-								{#key message.id}
-									<ResponseMessage
-										{message}
-										siblings={history.messages[message.parentId]?.childrenIds ?? []}
-										isLastMessage={messageIdx + 1 === messages.length}
-										{readOnly}
-										{updateChatMessages}
-										{confirmEditResponseMessage}
-										{saveNewResponseMessage}
-										{showPreviousMessage}
-										{showNextMessage}
-										{rateMessage}
-										copyToClipboard={copyToClipboardWithToast}
-										{continueGeneration}
-										{regenerateResponse}
-										on:action={async (e) => {
-											console.log('action', e);
-											if (typeof e.detail === 'string') {
-												await chatActionHandler(chatId, e.detail, message.model, message.id);
-											} else {
-												const { id, event } = e.detail;
-												await chatActionHandler(chatId, id, message.model, message.id, event);
-											}
-										}}
-										on:save={async (e) => {
-											console.log('save', e);
-
-											const message = e.detail;
-											history.messages[message.id] = message;
-											await updateChatById(localStorage.token, chatId, {
-												messages: messages,
-												history: history
-											});
-										}}
-									/>
-								{/key}
-							{:else}
-								{#key message.parentId}
-									<MultiResponseMessages
-										bind:history
-										isLastMessage={messageIdx + 1 === messages.length}
-										{messages}
-										{readOnly}
-										{chatId}
-										parentMessage={history.messages[message.parentId]}
-										{messageIdx}
-										{updateChatMessages}
-										{saveNewResponseMessage}
-										{confirmEditResponseMessage}
-										{rateMessage}
-										copyToClipboard={copyToClipboardWithToast}
-										{continueGeneration}
-										{mergeResponses}
-										{regenerateResponse}
-										on:action={async (e) => {
-											console.log('action', e);
-											if (typeof e.detail === 'string') {
-												await chatActionHandler(chatId, e.detail, message.model, message.id);
-											} else {
-												const { id, event } = e.detail;
-												await chatActionHandler(chatId, id, message.model, message.id, event);
-											}
-										}}
-										on:change={async () => {
-											await updateChatById(localStorage.token, chatId, {
-												messages: messages,
-												history: history
-											});
-
-											if (autoScroll) {
-												const element = document.getElementById('messages-container');
-												autoScroll =
-													element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-												setTimeout(() => {
-													scrollToBottom();
-												}, 100);
-											}
-										}}
-									/>
-								{/key}
-							{/if}
-						</div>
-					</div>
-				{/each}
-
+				{JSON.stringify(history)}
+				<!-- <Message {chatId} {history} messageId={history.currentId} {user}  /> -->
+				<div class="pb-12" />
 				{#if bottomPadding}
 					<div class="  pb-6" />
 				{/if}
