@@ -559,6 +559,66 @@
 		}, 1000);
 	};
 
+	const createMessagePair = async (userPrompt) => {
+		prompt = '';
+		if (selectedModels.length === 0) {
+			toast.error($i18n.t('Model not selected'));
+		} else {
+			const modelId = selectedModels[0];
+			const model = $models.filter((m) => m.id === modelId).at(0);
+
+			const messages = createMessagesList(history.currentId);
+			const parentMessage = messages.length !== 0 ? messages.at(-1) : null;
+
+			const userMessageId = uuidv4();
+			const responseMessageId = uuidv4();
+
+			const userMessage = {
+				id: userMessageId,
+				parentId: parentMessage ? parentMessage.id : null,
+				childrenIds: [responseMessageId],
+				role: 'user',
+				content: userPrompt ? userPrompt : `[PROMPT] ${userMessageId}`,
+				timestamp: Math.floor(Date.now() / 1000)
+			};
+
+			const responseMessage = {
+				id: responseMessageId,
+				parentId: userMessageId,
+				childrenIds: [],
+				role: 'assistant',
+				content: `[RESPONSE] ${responseMessageId}`,
+				done: true,
+
+				model: modelId,
+				modelName: model.name ?? model.id,
+				modelIdx: 0,
+				timestamp: Math.floor(Date.now() / 1000)
+			};
+
+			if (parentMessage) {
+				parentMessage.childrenIds.push(userMessageId);
+				history.messages[parentMessage.id] = parentMessage;
+			}
+			history.messages[userMessageId] = userMessage;
+			history.messages[responseMessageId] = responseMessage;
+
+			history.currentId = responseMessageId;
+
+			await tick();
+
+			if (autoScroll) {
+				scrollToBottom();
+			}
+
+			if (messages.length === 0) {
+				await initChatHandler();
+			} else {
+				await saveChatHandler($chatId);
+			}
+		}
+	};
+
 	//////////////////////////
 	// Chat functions
 	//////////////////////////
@@ -666,25 +726,7 @@
 			history.messages[history.currentId].parentId === null &&
 			history.messages[history.currentId].role === 'user'
 		) {
-			if (!$temporaryChatEnabled) {
-				chat = await createNewChat(localStorage.token, {
-					id: $chatId,
-					title: $i18n.t('New Chat'),
-					models: selectedModels,
-					system: $settings.system ?? undefined,
-					params: params,
-					history: history,
-					tags: [],
-					timestamp: Date.now()
-				});
-
-				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
-				await chatId.set(chat.id);
-			} else {
-				await chatId.set('local');
-			}
-			await tick();
+			await initChatHandler();
 		}
 
 		let _responses: string[] = [];
@@ -1718,6 +1760,28 @@
 		});
 	};
 
+	const initChatHandler = async () => {
+		if (!$temporaryChatEnabled) {
+			chat = await createNewChat(localStorage.token, {
+				id: $chatId,
+				title: $i18n.t('New Chat'),
+				models: selectedModels,
+				system: $settings.system ?? undefined,
+				params: params,
+				history: history,
+				tags: [],
+				timestamp: Date.now()
+			});
+
+			currentChatPage.set(1);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			await chatId.set(chat.id);
+		} else {
+			await chatId.set('local');
+		}
+		await tick();
+	};
+
 	const saveChatHandler = async (_chatId) => {
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
@@ -1861,6 +1925,7 @@
 							transparentBackground={$settings?.backgroundImageUrl ?? false}
 							{submitPrompt}
 							{stopResponse}
+							{createMessagePair}
 							on:call={async () => {
 								await showControls.set(true);
 							}}

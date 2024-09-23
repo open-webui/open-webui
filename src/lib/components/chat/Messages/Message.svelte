@@ -41,7 +41,7 @@
 	export let readOnly = false;
 
 	onMount(() => {
-		console.log('message', idx);
+		// console.log('message', idx);
 	});
 </script>
 

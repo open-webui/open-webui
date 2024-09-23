@@ -41,6 +41,7 @@
 	export let transparentBackground = false;
 
 	export let submitPrompt: Function;
+	export let createMessagePair: Function;
 	export let stopResponse: Function;
 
 	export let autoScroll = false;
@@ -553,6 +554,12 @@
 									on:keydown={async (e) => {
 										const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 										const commandsContainerElement = document.getElementById('commands-container');
+
+										// Command/Ctrl + Shift + Enter to submit a message pair
+										if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
+											e.preventDefault();
+											createMessagePair(prompt);
+										}
 
 										// Check if Ctrl + R is pressed
 										if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {

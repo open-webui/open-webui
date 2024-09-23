@@ -49,7 +49,7 @@
 
 		let message = history.messages[history.currentId];
 		while (message && _messages.length <= messagesCount) {
-			_messages.push({ ...message });
+			_messages.unshift({ ...message });
 			message = message.parentId !== null ? history.messages[message.parentId] : null;
 		}
 
@@ -341,7 +341,23 @@
 	{:else}
 		<div class="w-full pt-2">
 			{#key chatId}
-				<div class="w-full flex flex-col-reverse">
+				<div class="w-full">
+					{#if messages.at(0)?.parentId !== null}
+						<Loader
+							on:visible={(e) => {
+								console.log('visible');
+								if (!messagesLoading) {
+									loadMoreMessages();
+								}
+							}}
+						>
+							<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
+								<Spinner className=" size-4" />
+								<div class=" ">Loading...</div>
+							</div>
+						</Loader>
+					{/if}
+
 					{#each messages as message, messageIdx (message.id)}
 						<Message
 							{chatId}
@@ -372,22 +388,6 @@
 							}}
 						/>
 					{/each}
-
-					{#if messages.at(-1).parentId !== null}
-						<Loader
-							on:visible={(e) => {
-								console.log('visible');
-								if (!messagesLoading) {
-									loadMoreMessages();
-								}
-							}}
-						>
-							<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
-								<Spinner className=" size-4" />
-								<div class=" ">Loading...</div>
-							</div>
-						</Loader>
-					{/if}
 				</div>
 				<div class="pb-12" />
 				{#if bottomPadding}
