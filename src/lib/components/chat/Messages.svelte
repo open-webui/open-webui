@@ -337,9 +337,13 @@
 							messageId={message.id}
 							idx={messageIdx}
 							{user}
+							{showPreviousMessage}
+							{showNextMessage}
 							{editMessage}
 							{deleteMessage}
 							{rateMessage}
+							{regenerateResponse}
+							{continueResponse}
 						/>
 					{/each}
 				</div>
