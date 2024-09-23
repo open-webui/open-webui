@@ -49,9 +49,10 @@
 
 	const showPreviousMessage = (modelIdx) => {
 		groupedMessageIdsIdx[modelIdx] = Math.max(0, groupedMessageIdsIdx[modelIdx] - 1);
-		let messageId = groupedMessageIds[modelIdx].messages[groupedMessageIdsIdx[modelIdx]].id;
 
+		let messageId = groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]];
 		console.log(messageId);
+
 		let messageChildrenIds = history.messages[messageId].childrenIds;
 
 		while (messageChildrenIds.length !== 0) {
@@ -65,11 +66,11 @@
 
 	const showNextMessage = (modelIdx) => {
 		groupedMessageIdsIdx[modelIdx] = Math.min(
-			groupedMessageIds[modelIdx].messages.length - 1,
+			groupedMessageIds[modelIdx].messageIds.length - 1,
 			groupedMessageIdsIdx[modelIdx] + 1
 		);
 
-		let messageId = groupedMessageIds[modelIdx].messages[groupedMessageIdsIdx[modelIdx]].id;
+		let messageId = groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]];
 		console.log(messageId);
 
 		let messageChildrenIds = history.messages[messageId].childrenIds;
