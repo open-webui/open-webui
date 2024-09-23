@@ -32,7 +32,7 @@
 </script>
 
 {#key mounted}
-	<div class="m-auto w-full max-w-7xl px-8 lg:px-24 pb-6">
+	<div class="m-auto w-full max-w-7xl px-8 lg:px-24 pb-6 flex flex-col">
 		<div class="flex justify-center">
 			<!-- <img src="/logo-main.png" class="w-[7rem]" alt="logo" /> -->
 			<!-- <div class="flex -space-x-4 mb-1" in:fade={{ duration: 200 }}>

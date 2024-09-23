@@ -265,6 +265,7 @@
 
 	const handleSignOut = () => {
 		localStorage.removeItem('token');
+		localStorage.removeItem('empType');
 		let _settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 		delete _settings.system;
 		localStorage.setItem('settings', JSON.stringify(_settings));

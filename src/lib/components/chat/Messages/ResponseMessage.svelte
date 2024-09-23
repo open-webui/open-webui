@@ -450,30 +450,30 @@
 											/>
 										{:else if token.raw.includes('annual_leave_form')}
 											{#if $isMobile}
-											<FormActionModalMobile
-												show={showLeaveForm}
-												on:confirm={(e) => {
-													const data = e.detail ?? {};
-													editedContent = `Leave request submitted. You have applied for Sick leave from date ${data.leavefrom} to ${data.leaveto} for ${data.days} days.`
-													editMessageConfirmHandler();
-												}}
-												on:cancel={() => {
-													editedContent = 'leave_request_canceled';
-													editMessageConfirmHandler();
-												}}
-											/>
+												<FormActionModalMobile
+													show={showLeaveForm}
+													on:confirm={(e) => {
+														const data = e.detail ?? {};
+														editedContent = `Leave request submitted. You have applied for ${data.type_of_leave} from date ${data.leavefrom} to ${data.leaveto} for ${data.days} days.`;
+														editMessageConfirmHandler();
+													}}
+													on:cancel={() => {
+														editedContent = 'leave_request_canceled';
+														editMessageConfirmHandler();
+													}}
+												/>
 											{:else}
-											<FormActionModal
-												on:confirm={(e) => {
-													const data = e.detail ?? {};
-													editedContent = `Leave request submitted. You have applied for Sick leave from date ${data.leavefrom} to ${data.leaveto} for ${data.days} days.`
-													editMessageConfirmHandler();
-												}}
-												on:cancel={() => {
-													editedContent = 'leave_request_canceled';
-													editMessageConfirmHandler();
-												}}
-											/>
+												<FormActionModal
+													on:confirm={(e) => {
+														const data = e.detail ?? {};
+														editedContent = `Leave request submitted. You have applied for ${data.type_of_leave} from date ${data.leavefrom} to ${data.leaveto} for ${data.days} days.`;
+														editMessageConfirmHandler();
+													}}
+													on:cancel={() => {
+														editedContent = 'leave_request_canceled';
+														editMessageConfirmHandler();
+													}}
+												/>
 											{/if}
 										{:else if token.raw.includes('leave_request_canceled')}
 											<button
