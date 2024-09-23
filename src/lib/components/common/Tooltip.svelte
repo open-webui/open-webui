@@ -5,7 +5,6 @@
 	import { marked } from 'marked';
 
 	import tippy from 'tippy.js';
-	import 'tippy.js/animations/perspective.css';
 	import { roundArrow } from 'tippy.js';
 
 	export let placement = 'top';
