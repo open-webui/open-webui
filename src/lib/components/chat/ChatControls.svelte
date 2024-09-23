@@ -164,6 +164,12 @@
 							<Overview
 								{history}
 								on:nodeclick={(e) => {
+									if (e.detail.node.data.message.favorite) {
+										history.messages[e.detail.node.data.message.id].favorite = true;
+									} else {
+										history.messages[e.detail.node.data.message.id].favorite = null;
+									}
+
 									showMessage(e.detail.node.data.message);
 								}}
 								on:close={() => {

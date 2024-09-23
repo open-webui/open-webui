@@ -400,6 +400,7 @@
 										parentMessage={history.messages[message.parentId]}
 										{messageIdx}
 										{updateChatMessages}
+										{saveNewResponseMessage}
 										{confirmEditResponseMessage}
 										{rateMessage}
 										copyToClipboard={copyToClipboardWithToast}

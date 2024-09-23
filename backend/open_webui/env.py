@@ -86,6 +86,7 @@ log_sources = [
     "RAG",
     "WEBHOOK",
     "FILTER",
+    "SOCKET",
 ]
 
 SRC_LOG_LEVELS = {}
