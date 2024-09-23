@@ -1535,7 +1535,7 @@
 			);
 		}
 
-		history.messages[responseMessageId] = responseMessage;
+		history.messages[responseMessage.id] = responseMessage;
 	};
 
 	const stopResponse = () => {
