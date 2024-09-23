@@ -5,6 +5,7 @@
 	import { marked } from 'marked';
 
 	import tippy from 'tippy.js';
+	import 'tippy.js/animations/perspective.css';
 	import { roundArrow } from 'tippy.js';
 
 	export let placement = 'top';
@@ -13,6 +14,7 @@
 	export let className = 'flex';
 	export let theme = '';
 	export let allowHTML = true;
+	export let tippyOptions = {};
 
 	let tooltipElement;
 	let tooltipInstance;
@@ -28,7 +30,8 @@
 				touch: touch,
 				...(theme !== '' ? { theme } : { theme: 'dark' }),
 				arrow: false,
-				offset: [0, 4]
+				offset: [0, 4],
+				...tippyOptions
 			});
 		}
 	} else if (tooltipInstance && content === '') {
