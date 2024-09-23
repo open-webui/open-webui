@@ -39,8 +39,15 @@
 	let messagesLoading = false;
 
 	const loadMoreMessages = async () => {
+		// scroll slightly down to disable continuous loading
+		const element = document.getElementById('messages-container');
+		element.scrollTop = element.scrollTop + 100;
+
 		messagesLoading = true;
 		messagesCount += 20;
+
+		await tick();
+
 		messagesLoading = false;
 	};
 
