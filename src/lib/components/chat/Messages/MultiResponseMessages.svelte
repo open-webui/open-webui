@@ -129,7 +129,7 @@
 			} else {
 				return {
 					...a,
-					[modelIdx]: 0
+					[modelIdx]: groupedMessageIds[modelIdx].messageIds.length - 1
 				};
 			}
 		}, {});
@@ -149,7 +149,14 @@
 	};
 
 	onMount(async () => {
-		initHandler();
+		await initHandler();
+		await tick();
+
+		const messageElement = document.getElementById(`message-${messageId}`);
+		console.log(messageElement);
+		if (messageElement) {
+			messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}
 	});
 </script>
 
