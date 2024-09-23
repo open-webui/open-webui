@@ -13,7 +13,14 @@
 	const i18n = getContext('i18n');
 
 	export let chatId = '';
-	export let readOnly = false;
+	export let user = $_user;
+
+	export let prompt;
+	export let history = {};
+	export let selectedModels;
+
+	let messages = [];
+
 	export let sendPrompt: Function;
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
@@ -21,14 +28,24 @@
 	export let chatActionHandler: Function;
 	export let showMessage: Function = () => {};
 
-	export let user = $_user;
-	export let prompt;
+	export let readOnly = false;
+
 	export let bottomPadding = false;
 	export let autoScroll;
-	export let history = {};
-	export let messages = [];
 
-	export let selectedModels;
+	$: if (history.currentId) {
+		let _messages = [];
+
+		let message = history.messages[history.currentId];
+		while (message) {
+			_messages.unshift({ ...message });
+			message = message.parentId !== null ? history.messages[message.parentId] : null;
+		}
+
+		messages = _messages;
+	} else {
+		messages = [];
+	}
 
 	$: if (autoScroll && bottomPadding) {
 		(async () => {
@@ -312,18 +329,19 @@
 	{:else}
 		<div class="w-full pt-2">
 			{#key chatId}
-				<!-- {JSON.stringify(history)} -->
-				<div class="w-full flex flex-col-reverse">
-					<Message
-						h={0}
-						{chatId}
-						{history}
-						messageId={history.currentId}
-						{user}
-						{editMessage}
-						{deleteMessage}
-						{rateMessage}
-					/>
+				<div class="w-full">
+					{#each messages as message, messageIdx (message.id)}
+						<Message
+							{chatId}
+							{history}
+							messageId={message.id}
+							idx={messageIdx}
+							{user}
+							{editMessage}
+							{deleteMessage}
+							{rateMessage}
+						/>
+					{/each}
 				</div>
 				<div class="pb-12" />
 				{#if bottomPadding}

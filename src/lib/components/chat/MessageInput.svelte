@@ -271,7 +271,7 @@
 	<div class=" -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
 		<div class="flex flex-col max-w-6xl px-2.5 md:px-6 w-full">
 			<div class="relative">
-				{#if autoScroll === false && !history?.currentId}
+				{#if autoScroll === false && history?.currentId}
 					<div
 						class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none"
 					>

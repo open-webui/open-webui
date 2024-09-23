@@ -226,7 +226,7 @@ __builtins__.input = input`);
 		}
 	};
 
-	$: if (token.raw) {
+	$: if (token) {
 		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
 			(async () => {
 				await drawMermaidDiagram();
@@ -245,6 +245,7 @@ __builtins__.input = input`);
 	}
 
 	onMount(async () => {
+		console.log('codeblock', lang, code);
 		if (document.documentElement.classList.contains('dark')) {
 			mermaid.initialize({
 				startOnLoad: true,

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import dayjs from 'dayjs';
 	import { toast } from 'svelte-sonner';
-	import { tick, createEventDispatcher, getContext } from 'svelte';
+	import { tick, createEventDispatcher, getContext, onMount } from 'svelte';
 
 	import { models, settings } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
@@ -37,6 +37,10 @@
 	let editedContent = '';
 	let messageEditTextAreaElement: HTMLTextAreaElement;
 
+	$: if (message) {
+		console.log('message', message);
+	}
+
 	const copyToClipboard = async (text) => {
 		const res = await _copyToClipboard(text);
 		if (res) {
@@ -71,6 +75,10 @@
 	const deleteMessageHandler = async () => {
 		dispatch('delete', message.id);
 	};
+
+	onMount(() => {
+		console.log('UserMessage mounted');
+	});
 </script>
 
 <div class=" flex w-full user-message" dir={$settings.chatDirection} id="message-{message.id}">

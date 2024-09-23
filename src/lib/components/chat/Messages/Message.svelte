@@ -12,10 +12,8 @@
 	import UserMessage from './UserMessage.svelte';
 	import { updateChatById } from '$lib/apis/chats';
 
-	// h here refers to the height of the message graph
-	export let h;
-
 	export let chatId;
+	export let idx = 0;
 
 	export let history;
 	export let messageId;
@@ -40,12 +38,23 @@
 
 	export let readOnly = false;
 
+	let message = JSON.parse(JSON.stringify(history.messages[messageId]));
+	$: if (history.messages) {
+		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
+			message = JSON.parse(JSON.stringify(history.messages[messageId]));
+		}
+	}
+
 	const copyToClipboardWithToast = async (text) => {
 		const res = await copyToClipboard(text);
 		if (res) {
 			toast.success($i18n.t('Copying to clipboard was successful!'));
 		}
 	};
+
+	onMount(() => {
+		console.log('message', idx);
+	});
 </script>
 
 <div
@@ -53,13 +62,12 @@
 		? 'max-w-full'
 		: 'max-w-5xl'} mx-auto rounded-lg group"
 >
-	{#if history.messages[messageId]}
-		{@const message = history.messages[messageId]}
+	{#if message}
 		{#if message.role === 'user'}
 			<UserMessage
 				{user}
 				{message}
-				isFirstMessage={h === 0}
+				isFirstMessage={idx === 0}
 				siblings={message.parentId !== null
 					? (history.messages[message.parentId]?.childrenIds ?? [])
 					: (Object.values(history.messages)
@@ -152,24 +160,3 @@
 		{/if}
 	{/if}
 </div>
-
-{#if history.messages[messageId]?.parentId !== null}
-	<svelte:self
-		h={h + 1}
-		{chatId}
-		{history}
-		messageId={history.messages[messageId]?.parentId}
-		{user}
-		{scrollToBottom}
-		{chatActionHandler}
-		{showPreviousMessage}
-		{showNextMessage}
-		{editMessage}
-		{deleteMessage}
-		{rateMessage}
-		{regenerateResponse}
-		{continueResponse}
-		{mergeResponses}
-		{readOnly}
-	></svelte:self>
-{/if}
