@@ -20,25 +20,30 @@
 	const i18n = getContext('i18n');
 
 	const dispatch = createEventDispatcher();
-
 	export let user;
-	export let message;
+
+	export let history;
+	export let messageId;
+
 	export let siblings;
-	export let isFirstMessage: boolean;
 
 	export let showPreviousMessage: Function;
 	export let showNextMessage: Function;
 
 	export let editMessage: Function;
 
+	export let isFirstMessage: boolean;
 	export let readOnly: boolean;
 
 	let edit = false;
 	let editedContent = '';
 	let messageEditTextAreaElement: HTMLTextAreaElement;
 
-	$: if (message) {
-		console.log('message', message);
+	let message = JSON.parse(JSON.stringify(history.messages[messageId]));
+	$: if (history.messages) {
+		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
+			message = JSON.parse(JSON.stringify(history.messages[messageId]));
+		}
 	}
 
 	const copyToClipboard = async (text) => {

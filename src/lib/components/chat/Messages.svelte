@@ -333,7 +333,7 @@
 					{#each messages as message, messageIdx (message.id)}
 						<Message
 							{chatId}
-							{history}
+							bind:history
 							messageId={message.id}
 							idx={messageIdx}
 							{user}
@@ -344,6 +344,20 @@
 							{rateMessage}
 							{regenerateResponse}
 							{continueResponse}
+							{mergeResponses}
+							{updateChatHistory}
+							{chatActionHandler}
+							{readOnly}
+							on:scroll={() => {
+								if (autoScroll) {
+									const element = document.getElementById('messages-container');
+									autoScroll =
+										element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+									setTimeout(() => {
+										scrollToBottom();
+									}, 100);
+								}
+							}}
 						/>
 					{/each}
 				</div>

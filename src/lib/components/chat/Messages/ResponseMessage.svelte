@@ -77,14 +77,17 @@
 		annotation?: { type: string; rating: number };
 	}
 
-	export let message: MessageType;
+	export let history;
+	export let messageId;
+
+	let message: MessageType = JSON.parse(JSON.stringify(history.messages[messageId]));
+	$: if (history.messages) {
+		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
+			message = JSON.parse(JSON.stringify(history.messages[messageId]));
+		}
+	}
+
 	export let siblings;
-
-	export let isLastMessage = true;
-
-	export let readOnly = false;
-
-	export let saveNewResponseMessage: Function = () => {};
 
 	export let showPreviousMessage: Function;
 	export let showNextMessage: Function;
@@ -94,6 +97,9 @@
 
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
+
+	export let isLastMessage = true;
+	export let readOnly = false;
 
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);

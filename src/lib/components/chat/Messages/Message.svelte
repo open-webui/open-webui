@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 
-	import { tick, getContext, onMount } from 'svelte';
+	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
+	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
 	import { settings } from '$lib/stores';
@@ -20,7 +21,7 @@
 
 	export let user;
 
-	export let scrollToBottom;
+	export let updateChatHistory;
 	export let chatActionHandler;
 
 	export let showPreviousMessage;
@@ -36,21 +37,8 @@
 	// MultiResponseMessages
 	export let mergeResponses;
 
+	export let autoScroll = false;
 	export let readOnly = false;
-
-	let message = JSON.parse(JSON.stringify(history.messages[messageId]));
-	$: if (history.messages) {
-		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
-			message = JSON.parse(JSON.stringify(history.messages[messageId]));
-		}
-	}
-
-	const copyToClipboardWithToast = async (text) => {
-		const res = await copyToClipboard(text);
-		if (res) {
-			toast.success($i18n.t('Copying to clipboard was successful!'));
-		}
-	};
 
 	onMount(() => {
 		console.log('message', idx);
@@ -62,28 +50,30 @@
 		? 'max-w-full'
 		: 'max-w-5xl'} mx-auto rounded-lg group"
 >
-	{#if message}
-		{#if message.role === 'user'}
+	{#if history.messages[messageId]}
+		{#if history.messages[messageId].role === 'user'}
 			<UserMessage
 				{user}
-				{message}
+				{history}
+				{messageId}
 				isFirstMessage={idx === 0}
-				siblings={message.parentId !== null
-					? (history.messages[message.parentId]?.childrenIds ?? [])
+				siblings={history.messages[messageId].parentId !== null
+					? (history.messages[history.messages[messageId].parentId]?.childrenIds ?? [])
 					: (Object.values(history.messages)
 							.filter((message) => message.parentId === null)
 							.map((message) => message.id) ?? [])}
 				{showPreviousMessage}
 				{showNextMessage}
 				{editMessage}
-				on:delete={() => deleteMessage(message.id)}
+				on:delete={() => deleteMessage(messageId)}
 				{readOnly}
 			/>
-		{:else if (history.messages[message.parentId]?.models?.length ?? 1) === 1}
+		{:else if (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) === 1}
 			<ResponseMessage
-				{message}
+				{history}
+				{messageId}
 				isLastMessage={messageId === history.currentId}
-				siblings={history.messages[message.parentId]?.childrenIds ?? []}
+				siblings={history.messages[history.messages[messageId].parentId]?.childrenIds ?? []}
 				{showPreviousMessage}
 				{showNextMessage}
 				{editMessage}
@@ -92,6 +82,7 @@
 				{regenerateResponse}
 				on:action={async (e) => {
 					console.log('action', e);
+					const message = history.messages[messageId];
 					if (typeof e.detail === 'string') {
 						await chatActionHandler(chatId, e.detail, message.model, message.id);
 					} else {
@@ -101,7 +92,7 @@
 				}}
 				on:update={async (e) => {
 					console.log('update', e);
-					// call updateChatHistory
+					updateChatHistory();
 				}}
 				on:save={async (e) => {
 					console.log('save', e);
@@ -124,18 +115,16 @@
 			<MultiResponseMessages
 				bind:history
 				{chatId}
-				messageIds={[]}
-				parentMessage={history.messages[message.parentId]}
-				isLastMessage={messageId === history.currentId}
-				{editMessage}
+				{messageId}
+				isLastMessage={messageId === history?.currentId}
 				{rateMessage}
+				{editMessage}
 				{continueResponse}
-				{mergeResponses}
 				{regenerateResponse}
-				copyToClipboard={copyToClipboardWithToast}
-				{readOnly}
+				{mergeResponses}
 				on:action={async (e) => {
 					console.log('action', e);
+					const message = history.messages[messageId];
 					if (typeof e.detail === 'string') {
 						await chatActionHandler(chatId, e.detail, message.model, message.id);
 					} else {
@@ -143,19 +132,34 @@
 						await chatActionHandler(chatId, id, message.model, message.id, event);
 					}
 				}}
+				on:update={async (e) => {
+					console.log('update', e);
+					updateChatHistory();
+				}}
+				on:save={async (e) => {
+					console.log('save', e);
+
+					const message = e.detail;
+					if (message) {
+						history.messages[message.id] = message;
+						await updateChatById(localStorage.token, chatId, {
+							history: history
+						});
+					} else {
+						await updateChatById(localStorage.token, chatId, {
+							history: history
+						});
+					}
+				}}
 				on:change={async () => {
+					await tick();
 					await updateChatById(localStorage.token, chatId, {
 						history: history
 					});
 
-					if (autoScroll) {
-						const element = document.getElementById('messages-container');
-						autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-						setTimeout(() => {
-							scrollToBottom();
-						}, 100);
-					}
+					dispatch('scroll');
 				}}
+				{readOnly}
 			/>
 		{/if}
 	{/if}
