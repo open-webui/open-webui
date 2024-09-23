@@ -210,6 +210,8 @@
 			} else {
 				console.log('Unknown message type', data);
 			}
+
+			history.messages[event.message_id] = message;
 		}
 	};
 
