@@ -216,6 +216,7 @@
 			if (submit) {
 				// New response message
 				const responseMessageId = uuidv4();
+				const message = history.messages[messageId];
 				const parentId = message.parentId;
 
 				const responseMessage = {
