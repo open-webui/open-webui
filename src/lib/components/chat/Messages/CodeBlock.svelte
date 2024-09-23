@@ -20,6 +20,8 @@
 	export let lang = '';
 	export let code = '';
 
+	let _token = null;
+
 	let mermaidHtml = null;
 
 	let highlightedCode = null;
@@ -226,7 +228,7 @@ __builtins__.input = input`);
 		}
 	};
 
-	$: if (token) {
+	const render = async () => {
 		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
 			(async () => {
 				await drawMermaidDiagram();
@@ -242,6 +244,17 @@ __builtins__.input = input`);
 			// Set a new timeout to debounce the code highlighting
 			debounceTimeout = setTimeout(highlightCode, 10);
 		}
+	};
+
+	$: if (token) {
+		if (JSON.stringify(token) !== JSON.stringify(_token)) {
+			console.log('hi');
+			_token = token;
+		}
+	}
+
+	$: if (_token) {
+		render();
 	}
 
 	onMount(async () => {

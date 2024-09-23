@@ -128,7 +128,6 @@
 					: 30
 				: 0}
 			onResize={(size) => {
-				console.log(size);
 				if (size === 0) {
 					showControls.set(false);
 				} else {
