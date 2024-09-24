@@ -8,23 +8,6 @@ import { TTS_RESPONSE_SPLIT } from '$lib/types';
 // Helper functions
 //////////////////////////
 
-const convertLatexToSingleLine = (content) => {
-	// Patterns to match multiline LaTeX blocks
-	const patterns = [
-		/(\$\$\s[\s\S]*?\s\$\$)/g, // Match $$ ... $$
-		/(\\\[[\s\S]*?\\\])/g, // Match \[ ... \]
-		/(\\begin\{[a-z]+\}[\s\S]*?\\end\{[a-z]+\})/g // Match \begin{...} ... \end{...}
-	];
-
-	patterns.forEach((pattern) => {
-		content = content.replace(pattern, (match) => {
-			return match.replace(/\s*\n\s*/g, ' ').trim();
-		});
-	});
-
-	return content;
-};
-
 export const replaceTokens = (content, char, user) => {
 	const charToken = /{{char}}/gi;
 	const userToken = /{{user}}/gi;
@@ -68,7 +51,6 @@ export const sanitizeResponseContent = (content: string) => {
 };
 
 export const processResponseContent = (content: string) => {
-	content = convertLatexToSingleLine(content);
 	return content.trim();
 };
 

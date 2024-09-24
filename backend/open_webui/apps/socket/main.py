@@ -93,7 +93,6 @@ async def periodic_usage_pool_cleanup():
 app = socketio.ASGIApp(
     sio,
     socketio_path="/ws/socket.io",
-    on_startup=asyncio.create_task(periodic_usage_pool_cleanup()),
 )
 
 
