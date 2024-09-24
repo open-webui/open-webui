@@ -87,6 +87,12 @@ def save_to_db(data):
         db.commit()
 
 
+def reset_config():
+    with get_db() as db:
+        db.query(Config).delete()
+        db.commit()
+
+
 # When initializing, check if config.json exists and migrate it to the database
 if os.path.exists(f"{DATA_DIR}/config.json"):
     data = load_json_config()
