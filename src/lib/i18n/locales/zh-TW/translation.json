@@ -615,7 +615,7 @@
 	"Sign up": "註冊",
 	"Signing in": "正在登入",
 	"Source": "來源",
-	"Speech Playback Speed": "",
+	"Speech Playback Speed": "語音播放速度",
 	"Speech recognition error: {{error}}": "語音辨識錯誤：{{error}}",
 	"Speech-to-Text Engine": "語音轉文字 (STT) 引擎",
 	"Stop Sequence": "停止序列",
