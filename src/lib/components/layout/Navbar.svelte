@@ -121,7 +121,7 @@
 					</Tooltip>
 				{/if}
 
-				<Tooltip content={$i18n.t('New Chat')}>
+				<Tooltip content={$i18n.t('New Gift Chat')}>
 					<button
 						id="new-chat-button"
 						class=" flex {$showSidebar
@@ -130,7 +130,7 @@
 						on:click={() => {
 							initNewChat();
 						}}
-						aria-label="New Chat"
+						aria-label="New Gift Chat"
 					>
 						<div class=" m-auto self-center">
 							<svg
