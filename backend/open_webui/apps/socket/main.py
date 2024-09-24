@@ -48,20 +48,6 @@ else:
     )
 
 
-app = socketio.ASGIApp(sio, socketio_path="/ws/socket.io")
-
-# Dictionary to maintain the user pool
-
-if WEBSOCKET_MANAGER == "redis":
-    SESSION_POOL = RedisDict("open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL)
-    USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL)
-    USAGE_POOL = RedisDict("open-webui:usage_pool", redis_url=WEBSOCKET_REDIS_URL)
-else:
-    SESSION_POOL = {}
-    USER_POOL = {}
-    USAGE_POOL = {}
-
-
 # Timeout duration in seconds
 TIMEOUT_DURATION = 3
 
@@ -92,8 +78,22 @@ async def periodic_usage_pool_cleanup():
         await asyncio.sleep(TIMEOUT_DURATION)
 
 
-# Start the cleanup task when your app starts
-asyncio.create_task(periodic_usage_pool_cleanup())
+app = socketio.ASGIApp(
+    sio,
+    socketio_path="/ws/socket.io",
+    on_startup=asyncio.create_task(periodic_usage_pool_cleanup()),
+)
+
+# Dictionary to maintain the user pool
+
+if WEBSOCKET_MANAGER == "redis":
+    SESSION_POOL = RedisDict("open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL)
+    USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL)
+    USAGE_POOL = RedisDict("open-webui:usage_pool", redis_url=WEBSOCKET_REDIS_URL)
+else:
+    SESSION_POOL = {}
+    USER_POOL = {}
+    USAGE_POOL = {}
 
 
 def get_models_in_use():
