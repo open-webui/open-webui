@@ -31,6 +31,28 @@ try:
 except ImportError:
     print("dotenv not installed, skipping...")
 
+DOCKER = os.environ.get("DOCKER", "False").lower() == "true"
+
+# device type embedding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
+USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
+
+if USE_CUDA.lower() == "true":
+    try:
+        import torch
+
+        assert torch.cuda.is_available(), "CUDA not available"
+        DEVICE_TYPE = "cuda"
+    except Exception as e:
+        cuda_error = (
+            "Error when testing CUDA but USE_CUDA_DOCKER is true. "
+            f"Resetting USE_CUDA_DOCKER to false: {e}"
+        )
+        os.environ["USE_CUDA_DOCKER"] = "false"
+        USE_CUDA = "false"
+        DEVICE_TYPE = "cpu"
+else:
+    DEVICE_TYPE = "cpu"
+
 
 ####################################
 # LOGGING
@@ -47,6 +69,9 @@ else:
 log = logging.getLogger(__name__)
 log.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
 
+if "cuda_error" in locals():
+    log.exception(cuda_error)
+
 log_sources = [
     "AUDIO",
     "COMFYUI",
@@ -59,6 +84,7 @@ log_sources = [
     "OPENAI",
     "RAG",
     "WEBHOOK",
+    "SOCKET",
 ]
 
 SRC_LOG_LEVELS = {}
@@ -273,3 +299,11 @@ WEBUI_SESSION_COOKIE_SECURE = os.environ.get(
 
 if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
     raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
+
+ENABLE_WEBSOCKET_SUPPORT = (
+    os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true"
+)
+
+WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
+
+WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", "redis://localhost:6379/0")

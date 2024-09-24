@@ -12,6 +12,7 @@
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
+	import ArrowUpCircle from '$lib/components/icons/ArrowUpCircle.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -21,6 +22,7 @@
 	export let cloneHandler: Function;
 	export let exportHandler: Function;
 
+	export let moveToTopHandler: Function;
 	export let hideHandler: Function;
 	export let deleteHandler: Function;
 	export let onClose: Function;
@@ -78,6 +80,17 @@
 				<ArrowDownTray />
 
 				<div class="flex items-center">{$i18n.t('Export')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				on:click={() => {
+					moveToTopHandler();
+				}}
+			>
+				<ArrowUpCircle />
+
+				<div class="flex items-center">{$i18n.t('Move to Top')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item

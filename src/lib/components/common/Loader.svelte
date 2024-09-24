@@ -1,16 +1,24 @@
 <script lang="ts">
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher, onDestroy, onMount } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	let loaderElement: HTMLElement;
 
+	let observer;
+	let intervalId;
+
 	onMount(() => {
-		const observer = new IntersectionObserver(
+		observer = new IntersectionObserver(
 			(entries, observer) => {
 				entries.forEach((entry) => {
 					if (entry.isIntersecting) {
-						dispatch('visible');
+						intervalId = setInterval(() => {
+							dispatch('visible');
+						}, 100);
+						// dispatch('visible');
 						// observer.unobserve(loaderElement); // Stop observing until content is loaded
+					} else {
+						clearInterval(intervalId);
 					}
 				});
 			},
@@ -22,6 +30,14 @@
 		);
 
 		observer.observe(loaderElement);
+	});
+
+	onDestroy(() => {
+		observer.disconnect();
+
+		if (intervalId) {
+			clearInterval(intervalId);
+		}
 	});
 </script>
 

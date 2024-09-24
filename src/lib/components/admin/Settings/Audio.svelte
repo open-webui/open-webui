@@ -31,6 +31,8 @@
 	let TTS_MODEL = '';
 	let TTS_VOICE = '';
 	let TTS_SPLIT_ON: TTS_RESPONSE_SPLIT = TTS_RESPONSE_SPLIT.PUNCTUATION;
+	let TTS_AZURE_SPEECH_REGION = '';
+	let TTS_AZURE_SPEECH_OUTPUT_FORMAT = '';
 
 	let STT_OPENAI_API_BASE_URL = '';
 	let STT_OPENAI_API_KEY = '';
@@ -87,7 +89,9 @@
 				ENGINE: TTS_ENGINE,
 				MODEL: TTS_MODEL,
 				VOICE: TTS_VOICE,
-				SPLIT_ON: TTS_SPLIT_ON
+				SPLIT_ON: TTS_SPLIT_ON,
+				AZURE_SPEECH_REGION: TTS_AZURE_SPEECH_REGION,
+				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT
 			},
 			stt: {
 				OPENAI_API_BASE_URL: STT_OPENAI_API_BASE_URL,
@@ -119,6 +123,9 @@
 			TTS_VOICE = res.tts.VOICE;
 
 			TTS_SPLIT_ON = res.tts.SPLIT_ON || TTS_RESPONSE_SPLIT.PUNCTUATION;
+
+			TTS_AZURE_SPEECH_OUTPUT_FORMAT = res.tts.AZURE_SPEECH_OUTPUT_FORMAT;
+			TTS_AZURE_SPEECH_REGION = res.tts.AZURE_SPEECH_REGION;
 
 			STT_OPENAI_API_BASE_URL = res.stt.OPENAI_API_BASE_URL;
 			STT_OPENAI_API_KEY = res.stt.OPENAI_API_KEY;
@@ -224,6 +231,7 @@
 							<option value="">{$i18n.t('Web API')}</option>
 							<option value="openai">{$i18n.t('OpenAI')}</option>
 							<option value="elevenlabs">{$i18n.t('ElevenLabs')}</option>
+							<option value="azure">{$i18n.t('Azure AI Speech')}</option>
 						</select>
 					</div>
 				</div>
@@ -248,6 +256,23 @@
 								class="flex-1 w-full rounded-lg py-2 pl-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 								placeholder={$i18n.t('API Key')}
 								bind:value={TTS_API_KEY}
+								required
+							/>
+						</div>
+					</div>
+				{:else if TTS_ENGINE === 'azure'}
+					<div>
+						<div class="mt-1 flex gap-2 mb-1">
+							<input
+								class="flex-1 w-full rounded-lg py-2 pl-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								placeholder={$i18n.t('API Key')}
+								bind:value={TTS_API_KEY}
+								required
+							/>
+							<input
+								class="flex-1 w-full rounded-lg py-2 pl-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								placeholder={$i18n.t('Azure Region')}
+								bind:value={TTS_AZURE_SPEECH_REGION}
 								required
 							/>
 						</div>
@@ -355,6 +380,49 @@
 											<option value={model.id} />
 										{/each}
 									</datalist>
+								</div>
+							</div>
+						</div>
+					</div>
+				{:else if TTS_ENGINE === 'azure'}
+					<div class=" flex gap-2">
+						<div class="w-full">
+							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('TTS Voice')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										list="voice-list"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										bind:value={TTS_VOICE}
+										placeholder="Select a voice"
+									/>
+
+									<datalist id="voice-list">
+										{#each voices as voice}
+											<option value={voice.id}>{voice.name}</option>
+										{/each}
+									</datalist>
+								</div>
+							</div>
+						</div>
+						<div class="w-full">
+							<div class=" mb-1.5 text-sm font-medium">
+								{$i18n.t('Output format')}
+								<a
+									href="https://learn.microsoft.com/en-us/azure/ai-services/speech-service/rest-text-to-speech?tabs=streaming#audio-outputs"
+									target="_blank"
+								>
+									<small>{$i18n.t('Available list')}</small>
+								</a>
+							</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										list="tts-model-list"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										bind:value={TTS_AZURE_SPEECH_OUTPUT_FORMAT}
+										placeholder="Select a output format"
+									/>
 								</div>
 							</div>
 						</div>

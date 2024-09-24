@@ -8,7 +8,7 @@
 		mobile,
 		settings,
 		showArchivedChats,
-		showSettings,
+		showControls,
 		showSidebar,
 		user
 	} from '$lib/stores';
@@ -22,6 +22,7 @@
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import MenuLines from '../icons/MenuLines.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
+	import Map from '../icons/Map.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -31,9 +32,7 @@
 
 	export let chat;
 	export let selectedModels;
-
 	export let showModelSelector = true;
-	export let showControls = false;
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
@@ -83,7 +82,7 @@
 						}}
 					>
 						<button
-							class="hidden md:flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 							id="chat-context-menu-button"
 						>
 							<div class=" m-auto self-center">
@@ -106,7 +105,23 @@
 					</Menu>
 				{/if}
 
-				<Tooltip content={$i18n.t('New Chat')}>
+				{#if !$mobile}
+					<Tooltip content={$i18n.t('Controls')}>
+						<button
+							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							on:click={async () => {
+								await showControls.set(!$showControls);
+							}}
+							aria-label="Controls"
+						>
+							<div class=" m-auto self-center">
+								<AdjustmentsHorizontal className=" size-5" strokeWidth="0.5" />
+							</div>
+						</button>
+					</Tooltip>
+				{/if}
+
+				<Tooltip content={$i18n.t('New Gift Chat')}>
 					<button
 						id="new-chat-button"
 						class=" flex {$showSidebar
@@ -115,7 +130,7 @@
 						on:click={() => {
 							initNewChat();
 						}}
-						aria-label="New Chat"
+						aria-label="New Gift Chat"
 					>
 						<div class=" m-auto self-center">
 							<svg

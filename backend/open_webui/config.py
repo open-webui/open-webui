@@ -11,7 +11,6 @@ import chromadb
 import requests
 import yaml
 from open_webui.apps.webui.internal.db import Base, get_db
-from chromadb import Settings
 from open_webui.env import (
     OPEN_WEBUI_DIR,
     DATA_DIR,
@@ -540,40 +539,6 @@ Path(TOOLS_DIR).mkdir(parents=True, exist_ok=True)
 FUNCTIONS_DIR = os.getenv("FUNCTIONS_DIR", f"{DATA_DIR}/functions")
 Path(FUNCTIONS_DIR).mkdir(parents=True, exist_ok=True)
 
-
-####################################
-# LITELLM_CONFIG
-####################################
-
-
-def create_config_file(file_path):
-    directory = os.path.dirname(file_path)
-
-    # Check if directory exists, if not, create it
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
-    # Data to write into the YAML file
-    config_data = {
-        "general_settings": {},
-        "litellm_settings": {},
-        "model_list": [],
-        "router_settings": {},
-    }
-
-    # Write data to YAML file
-    with open(file_path, "w") as file:
-        yaml.dump(config_data, file)
-
-
-LITELLM_CONFIG_PATH = f"{DATA_DIR}/litellm/config.yaml"
-
-# if not os.path.exists(LITELLM_CONFIG_PATH):
-#     log.info("Config file doesn't exist. Creating...")
-#     create_config_file(LITELLM_CONFIG_PATH)
-#     log.info("Config file created successfully.")
-
-
 ####################################
 # OLLAMA_BASE_URL
 ####################################
@@ -923,25 +888,12 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
 
 
 ####################################
-# RAG document content extraction
+# Vector Database
 ####################################
 
-CONTENT_EXTRACTION_ENGINE = PersistentConfig(
-    "CONTENT_EXTRACTION_ENGINE",
-    "rag.CONTENT_EXTRACTION_ENGINE",
-    os.environ.get("CONTENT_EXTRACTION_ENGINE", "").lower(),
-)
+VECTOR_DB = os.environ.get("VECTOR_DB", "chroma")
 
-TIKA_SERVER_URL = PersistentConfig(
-    "TIKA_SERVER_URL",
-    "rag.tika_server_url",
-    os.getenv("TIKA_SERVER_URL", "http://tika:9998"),  # Default for sidecar deployment
-)
-
-####################################
-# RAG
-####################################
-
+# Chroma
 CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
 CHROMA_TENANT = os.environ.get("CHROMA_TENANT", chromadb.DEFAULT_TENANT)
 CHROMA_DATABASE = os.environ.get("CHROMA_DATABASE", chromadb.DEFAULT_DATABASE)
@@ -958,8 +910,29 @@ else:
 CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (sentence-transformers/all-MiniLM-L6-v2)
 
+# Milvus
+
+MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
+
+####################################
+# RAG
+####################################
+
+# RAG Content Extraction
+CONTENT_EXTRACTION_ENGINE = PersistentConfig(
+    "CONTENT_EXTRACTION_ENGINE",
+    "rag.CONTENT_EXTRACTION_ENGINE",
+    os.environ.get("CONTENT_EXTRACTION_ENGINE", "").lower(),
+)
+
+TIKA_SERVER_URL = PersistentConfig(
+    "TIKA_SERVER_URL",
+    "rag.tika_server_url",
+    os.getenv("TIKA_SERVER_URL", "http://tika:9998"),  # Default for sidecar deployment
+)
+
 RAG_TOP_K = PersistentConfig(
-    "RAG_TOP_K", "rag.top_k", int(os.environ.get("RAG_TOP_K", "5"))
+    "RAG_TOP_K", "rag.top_k", int(os.environ.get("RAG_TOP_K", "3"))
 )
 RAG_RELEVANCE_THRESHOLD = PersistentConfig(
     "RAG_RELEVANCE_THRESHOLD",
@@ -1048,36 +1021,8 @@ RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get("RAG_RERANKING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
 )
 
-
-if CHROMA_HTTP_HOST != "":
-    CHROMA_CLIENT = chromadb.HttpClient(
-        host=CHROMA_HTTP_HOST,
-        port=CHROMA_HTTP_PORT,
-        headers=CHROMA_HTTP_HEADERS,
-        ssl=CHROMA_HTTP_SSL,
-        tenant=CHROMA_TENANT,
-        database=CHROMA_DATABASE,
-        settings=Settings(allow_reset=True, anonymized_telemetry=False),
-    )
-else:
-    CHROMA_CLIENT = chromadb.PersistentClient(
-        path=CHROMA_DATA_PATH,
-        settings=Settings(allow_reset=True, anonymized_telemetry=False),
-        tenant=CHROMA_TENANT,
-        database=CHROMA_DATABASE,
-    )
-
-
-# device type embedding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
-USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
-
-if USE_CUDA.lower() == "true":
-    DEVICE_TYPE = "cuda"
-else:
-    DEVICE_TYPE = "cpu"
-
 CHUNK_SIZE = PersistentConfig(
-    "CHUNK_SIZE", "rag.chunk_size", int(os.environ.get("CHUNK_SIZE", "1500"))
+    "CHUNK_SIZE", "rag.chunk_size", int(os.environ.get("CHUNK_SIZE", "1000"))
 )
 CHUNK_OVERLAP = PersistentConfig(
     "CHUNK_OVERLAP",
@@ -1085,19 +1030,25 @@ CHUNK_OVERLAP = PersistentConfig(
     int(os.environ.get("CHUNK_OVERLAP", "100")),
 )
 
-DEFAULT_RAG_TEMPLATE = """Use the following context as your learned knowledge, inside <context></context> XML tags.
+DEFAULT_RAG_TEMPLATE = """You are given a user query, some textual context and rules, all inside xml tags. You have to answer the query based on the context while respecting the rules.
+
 <context>
-    [context]
+[context]
 </context>
 
-When answer to user:
-- If you don't know, just say that you don't know.
-- If you don't know when you are not sure, ask for clarification.
-Avoid mentioning that you obtained the information from the context.
-And answer according to the language of the user's question.
+<rules>
+- If you don't know, just say so.
+- If you are not sure, ask for clarification.
+- Answer in the same language as the user query.
+- If the context appears unreadable or of poor quality, tell the user then answer as best as you can.
+- If the answer is not in the context but you think you know the answer, explain that to the user then answer with your own knowledge.
+- Answer directly and without using xml tags.
+</rules>
 
-Given the context information, answer the query.
-Query: [query]"""
+<user_query>
+[query]
+</user_query>
+"""
 
 RAG_TEMPLATE = PersistentConfig(
     "RAG_TEMPLATE",
@@ -1265,6 +1216,37 @@ AUTOMATIC1111_API_AUTH = PersistentConfig(
     "AUTOMATIC1111_API_AUTH",
     "image_generation.automatic1111.api_auth",
     os.getenv("AUTOMATIC1111_API_AUTH", ""),
+)
+
+AUTOMATIC1111_CFG_SCALE = PersistentConfig(
+    "AUTOMATIC1111_CFG_SCALE",
+    "image_generation.automatic1111.cfg_scale",
+    (
+        float(os.environ.get("AUTOMATIC1111_CFG_SCALE"))
+        if os.environ.get("AUTOMATIC1111_CFG_SCALE")
+        else None
+    ),
+)
+
+
+AUTOMATIC1111_SAMPLER = PersistentConfig(
+    "AUTOMATIC1111_SAMPLERE",
+    "image_generation.automatic1111.sampler",
+    (
+        os.environ.get("AUTOMATIC1111_SAMPLER")
+        if os.environ.get("AUTOMATIC1111_SAMPLER")
+        else None
+    ),
+)
+
+AUTOMATIC1111_SCHEDULER = PersistentConfig(
+    "AUTOMATIC1111_SCHEDULER",
+    "image_generation.automatic1111.scheduler",
+    (
+        os.environ.get("AUTOMATIC1111_SCHEDULER")
+        if os.environ.get("AUTOMATIC1111_SCHEDULER")
+        else None
+    ),
 )
 
 COMFYUI_BASE_URL = PersistentConfig(
@@ -1489,4 +1471,18 @@ AUDIO_TTS_SPLIT_ON = PersistentConfig(
     "AUDIO_TTS_SPLIT_ON",
     "audio.tts.split_on",
     os.getenv("AUDIO_TTS_SPLIT_ON", "punctuation"),
+)
+
+AUDIO_TTS_AZURE_SPEECH_REGION = PersistentConfig(
+    "AUDIO_TTS_AZURE_SPEECH_REGION",
+    "audio.tts.azure.speech_region",
+    os.getenv("AUDIO_TTS_AZURE_SPEECH_REGION", "eastus"),
+)
+
+AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
+    "AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT",
+    "audio.tts.azure.speech_output_format",
+    os.getenv(
+        "AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT", "audio-24khz-160kbitrate-mono-mp3"
+    ),
 )

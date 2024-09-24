@@ -5,7 +5,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { goto } from '$app/navigation';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
-	import { showSettings, activeUserCount, USAGE_POOL } from '$lib/stores';
+	import { showSettings, activeUserCount, USAGE_POOL, mobile, showSidebar } from '$lib/stores';
 	import { fade, slide } from 'svelte/transition';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
@@ -41,6 +41,10 @@
 				on:click={async () => {
 					await showSettings.set(true);
 					show = false;
+
+					if ($mobile) {
+						showSidebar.set(false);
+					}
 				}}
 			>
 				<div class=" self-center mr-3">
@@ -72,6 +76,10 @@
 				on:click={() => {
 					dispatch('show', 'archived-chat');
 					show = false;
+
+					if ($mobile) {
+						showSidebar.set(false);
+					}
 				}}
 			>
 				<div class=" self-center mr-3">
@@ -86,6 +94,10 @@
 					on:click={() => {
 						goto('/playground');
 						show = false;
+
+						if ($mobile) {
+							showSidebar.set(false);
+						}
 					}}
 				>
 					<div class=" self-center mr-3">
@@ -112,6 +124,10 @@
 					on:click={() => {
 						goto('/admin');
 						show = false;
+
+						if ($mobile) {
+							showSidebar.set(false);
+						}
 					}}
 				>
 					<div class=" self-center mr-3">
