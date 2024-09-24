@@ -59,10 +59,30 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
 
 ## How to Install 🚀
 
-> [!NOTE]  
-> Please note that for certain Docker environments, additional configurations might be needed. If you encounter any connection issues, our detailed guide on [Open WebUI Documentation](https://docs.openwebui.com/) is ready to assist you.
+### Installation via Python pip 🐍
+
+Open WebUI can be installed using pip, the Python package installer. Before proceeding, ensure you're using **Python 3.11** to avoid compatibility issues.
+
+1. **Install Open WebUI**:
+   Open your terminal and run the following command to install Open WebUI:
+
+   ```bash
+   pip install open-webui
+   ```
+
+2. **Running Open WebUI**:
+   After installation, you can start Open WebUI by executing:
+
+   ```bash
+   open-webui serve
+   ```
+
+This will start the Open WebUI server, which you can access at [http://localhost:8080](http://localhost:8080)
 
 ### Quick Start with Docker 🐳
+
+> [!NOTE]  
+> Please note that for certain Docker environments, additional configurations might be needed. If you encounter any connection issues, our detailed guide on [Open WebUI Documentation](https://docs.openwebui.com/) is ready to assist you.
 
 > [!WARNING]
 > When using Docker to install Open WebUI, make sure to include the `-v open-webui:/app/backend/data` in your Docker command. This step is crucial as it ensures your database is properly mounted and prevents any loss of data.
