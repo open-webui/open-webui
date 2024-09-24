@@ -17,8 +17,8 @@
 	class="flex items-start bg-[--info-bg] border border-[--info-border] text-[--info-text] rounded-lg px-3.5 py-3 text-xs"
 >
 	<div class="flex-1 font-medium">
-		{$i18n.t(`A new version (v{{VERSION_LATEST}}) is now available.`, {
-			VERSION_LATEST: version.latest
+		{$i18n.t(`A new version (v{{LATEST_VERSION}}) is now available.`, {
+			LATEST_VERSION: version.latest
 		})}
 
 		<a
