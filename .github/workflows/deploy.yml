@@ -1,13 +1,13 @@
-name: Deploy and Update Docker Container on Hetzner
+name: Deploy and Update OPENWEBUI on Hetzner with API
 
 on:
   push:
     branches:
-      - main  # Le déploiement se fait sur la branche main
+      - main
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu 24.04
 
     steps:
     - name: Checkout repository
@@ -24,17 +24,32 @@ jobs:
 
     - name: Push Docker image to server
       run: |
-        docker save your_docker_image_name:latest | bzip2 | ssh -o StrictHostKeyChecking=no root@IP_DU_SERVEUR_HETZNER 'bunzip2 | docker load'
+        docker save your_docker_image_name:latest | bzip2 | ssh -o StrictHostKeyChecking=no root@188.245.86.251 'bunzip2 | docker load'
 
-    - name: Update Docker container on server
+    - name: Update Docker container on server with volumes
       run: |
-        ssh -o StrictHostKeyChecking=no root@IP_DU_SERVEUR_HETZNER "
-        # Stop the old container
+        ssh -o StrictHostKeyChecking=no root@188.245.86.251 "
         docker stop your_container_name || true
-
-        # Remove the old container
         docker rm your_container_name || true
-
-        # Run the updated container with the new image
-        docker run -d --name your_container_name -p 80:80 your_docker_image_name:latest
+        docker run -d --name your_container_name \
+          -p 80:80 \
+          -v /path/on/server/database:/var/lib/mysql \
+          -v /path/on/server/files:/app/uploads \
+          your_docker_image_name:latest
         "
+
+    - name: Check Hetzner Server Info via API
+      run: |
+        curl -X GET "https://api.hetzner.cloud/v1/servers" \
+        -H "Authorization: Bearer ${{ secrets.HCLOUD_TOKEN }}" \
+        -H "Content-Type: application/json"
+        
+    - name: Restart Hetzner Server via API
+      run: |
+        SERVER_ID=$(curl -s \
+          -H "Authorization: Bearer ${{ secrets.HCLOUD_TOKEN }}" \
+          https://api.hetzner.cloud/v1/servers | jq -r '.servers[] | select(.name=="ubuntu-16gb-fsn1-1") | .id')
+
+        curl -X POST "https://api.hetzner.cloud/v1/servers/$SERVER_ID/actions/reboot" \
+        -H "Authorization: Bearer ${{ secrets.HCLOUD_TOKEN }}" \
+        -H "Content-Type: application/json"
