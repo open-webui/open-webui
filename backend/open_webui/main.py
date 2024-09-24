@@ -2329,10 +2329,11 @@ async def get_manifest_json():
     return {
         "name": WEBUI_NAME,
         "short_name": WEBUI_NAME,
+        "description": "User-friendly WebUI for LLMs (Formerly Ollama WebUI)",
         "start_url": "/",
         "display": "standalone",
-        "background_color": "#343541",
-        "orientation": "portrait-primary",
+        "background_color": "white",
+        "orientation": "any",
         "icons": [
             {
                 "src": "/static/logo.png",
