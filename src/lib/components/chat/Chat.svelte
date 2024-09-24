@@ -357,6 +357,7 @@
 
 		if ($page.url.searchParams.get('call') === 'true') {
 			showCallOverlay.set(true);
+			showControls.set(true);
 		}
 
 		selectedModels = selectedModels.map((modelId) =>
