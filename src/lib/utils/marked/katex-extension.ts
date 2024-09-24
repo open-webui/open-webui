@@ -55,7 +55,7 @@ const { inlineRule, blockRule } = generateRegexRules(DELIMITER_LIST);
 export default function (options = {}) {
 	return {
 		extensions: [
-			blockKatex(options),
+			blockKatex(options), // This should be on top to prevent conflict with inline delimiters.
 			inlineKatex(options),
 		]
 	};
