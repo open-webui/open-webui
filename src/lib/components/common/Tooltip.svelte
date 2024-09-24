@@ -13,6 +13,7 @@
 	export let className = 'flex';
 	export let theme = '';
 	export let allowHTML = true;
+	export let tippyOptions = {};
 
 	let tooltipElement;
 	let tooltipInstance;
@@ -28,7 +29,8 @@
 				touch: touch,
 				...(theme !== '' ? { theme } : { theme: 'dark' }),
 				arrow: false,
-				offset: [0, 4]
+				offset: [0, 4],
+				...tippyOptions
 			});
 		}
 	} else if (tooltipInstance && content === '') {

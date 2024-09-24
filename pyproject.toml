@@ -76,7 +76,7 @@ dependencies = [
     "faster-whisper==1.0.3",
 
     "PyJWT[crypto]==2.9.0",
-    "authlib==1.3.1",
+    "authlib==1.3.2",
 
     "black==24.8.0",
     "langfuse==2.44.0",

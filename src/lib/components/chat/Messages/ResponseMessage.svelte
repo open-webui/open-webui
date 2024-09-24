@@ -14,6 +14,7 @@
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
+		copyToClipboard as _copyToClipboard,
 		approximateToHumanReadable,
 		replaceTokens,
 		processResponseContent,
@@ -80,24 +81,29 @@
 		annotation?: { type: string; rating: number };
 	}
 
-	export let message: MessageType;
+	export let history;
+	export let messageId;
+
+	let message: MessageType = JSON.parse(JSON.stringify(history.messages[messageId]));
+	$: if (history.messages) {
+		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
+			message = JSON.parse(JSON.stringify(history.messages[messageId]));
+		}
+	}
+
 	export let siblings;
-
-	export let isLastMessage = true;
-
-	export let readOnly = false;
-
-	export let updateChatMessages: Function;
-	export let confirmEditResponseMessage: Function;
-	export let saveNewResponseMessage: Function = () => {};
 
 	export let showPreviousMessage: Function;
 	export let showNextMessage: Function;
+
+	export let editMessage: Function;
 	export let rateMessage: Function;
 
-	export let copyToClipboard: Function;
-	export let continueGeneration: Function;
+	export let continueResponse: Function;
 	export let regenerateResponse: Function;
+
+	export let isLastMessage = true;
+	export let readOnly = false;
 
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);
@@ -175,6 +181,13 @@
 			}
 		} catch (err) {
 			console.error('renderLatex 函数中的错误:', err);
+		}
+	};
+
+	const copyToClipboard = async (text) => {
+		const res = await _copyToClipboard(text);
+		if (res) {
+			toast.success($i18n.t('Copying to clipboard was successful!'));
 		}
 	};
 
@@ -327,11 +340,7 @@
 	};
 
 	const editMessageConfirmHandler = async () => {
-		if (editedContent === '') {
-			editedContent = ' ';
-		}
-
-		confirmEditResponseMessage(message.id, editedContent);
+		editMessage(message.id, editedContent ? editedContent : '', false);
 
 		edit = false;
 		editedContent = '';
@@ -339,8 +348,8 @@
 		await tick();
 	};
 
-	const saveNewMessageHandler = async () => {
-		saveNewResponseMessage(message, editedContent);
+	const saveAsCopyHandler = async () => {
+		editMessage(message.id, editedContent ? editedContent : '');
 
 		edit = false;
 		editedContent = '';
@@ -362,13 +371,13 @@
 		console.log(res);
 
 		if (res) {
-			message.files = res.map((image) => ({
+			const files = res.map((image) => ({
 				type: 'image',
 				status: 'processed',
 				url: `${image.url}`
 			}));
 
-			dispatch('save', message);
+			dispatch('save', { ...message, files: files });
 		}
 
 		generatingImage = false;
@@ -381,6 +390,8 @@
 	}
 
 	onMount(async () => {
+		console.log('ResponseMessage mounted');
+
 		await tick();
 	});
 </script>
@@ -496,7 +507,7 @@
 											id="save-new-message-button"
 											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
 											on:click={() => {
-												saveNewMessageHandler();
+												saveAsCopyHandler();
 											}}
 										>
 											{$i18n.t('Save As Copy')}
@@ -1048,7 +1059,7 @@
 													? 'visible'
 													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 												on:click={() => {
-													continueGeneration();
+													continueResponse();
 
 													(model?.actions ?? [])
 														.filter((action) => action?.__webui__ ?? false)
@@ -1163,12 +1174,17 @@
 
 					{#if message.done && showRateComment}
 						<RateComment
-							messageId={message.id}
-							bind:show={showRateComment}
 							bind:message
+							bind:show={showRateComment}
 							on:submit={(e) => {
-								updateChatMessages();
-
+								dispatch('save', {
+									...message,
+									annotation: {
+										...message.annotation,
+										comment: e.detail.comment,
+										reason: e.detail.reason
+									}
+								});
 								(model?.actions ?? [])
 									.filter((action) => action?.__webui__ ?? false)
 									.forEach((action) => {

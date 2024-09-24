@@ -9,7 +9,7 @@
 
 	import { goto } from '$app/navigation';
 
-	import { getModels as _getModels } from '$lib/apis';
+	import { getModels as _getModels, getVersionUpdates } from '$lib/apis';
 	import { getAllChatTags } from '$lib/apis/chats';
 
 	import { getPrompts } from '$lib/apis/prompts';
@@ -42,6 +42,10 @@
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import { getFunctions } from '$lib/apis/functions';
 	import { page } from '$app/stores';
+	import { WEBUI_VERSION } from '$lib/constants';
+	import { compareVersion } from '$lib/utils';
+
+	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -191,11 +195,34 @@
 				temporaryChatEnabled.set(true);
 			}
 
+			if ($user.role === 'admin') {
+				checkForVersionUpdates();
+			}
+
 			await tick();
 		}
 
 		loaded = true;
 	});
+
+	const checkForVersionUpdates = async () => {
+		const version = await getVersionUpdates(localStorage.token).catch((error) => {
+			return {
+				current: WEBUI_VERSION,
+				latest: WEBUI_VERSION
+			};
+		});
+
+		if (compareVersion(version.latest, version.current)) {
+			toast.custom(UpdateInfoToast, {
+				duration: Number.POSITIVE_INFINITY,
+				position: 'bottom-right',
+				componentProps: {
+					version
+				}
+			});
+		}
+	};
 </script>
 
 <SettingsModal bind:show={$showSettings} />
