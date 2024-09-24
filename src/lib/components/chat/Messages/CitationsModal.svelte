@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext, onMount, tick } from 'svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	const i18n = getContext('i18n');
 
 	export let show = false;
@@ -55,19 +56,28 @@
 						</div>
 
 						{#if document.source?.name}
-							<div class="text-sm dark:text-gray-400">
-								<a
-									href={document?.metadata?.file_id
-										? `/api/v1/files/${document?.metadata?.file_id}/content`
-										: document.source.name.includes('http')
-											? document.source.name
-											: `#`}
-									target="_blank"
-								>
-									{document?.metadata?.name ?? document.source.name}
-								</a>
-								{document?.metadata?.page ? `(page ${document.metadata.page + 1})` : ''}
-							</div>
+							<Tooltip
+								content={$i18n.t('Open file')}
+								placement="left"
+								tippyOptions={{ duration: [500, 0], animation: 'perspective' }}
+							>
+								<div class="text-sm dark:text-gray-400">
+									<a
+										class="hover:text-gray-500 hover:dark:text-gray-100 underline"
+										href={document?.metadata?.file_id
+											? `/api/v1/files/${document?.metadata?.file_id}/content${document?.metadata?.page !== undefined ? `#page=${document.metadata.page + 1}` : ''}`
+											: document.source.name.includes('http')
+												? document.source.name
+												: `#`}
+										target="_blank"
+									>
+										{document?.metadata?.name ?? document.source.name}
+									</a>
+									{document?.metadata?.page
+										? `(${$i18n.t('page')} ${document.metadata.page + 1})`
+										: ''}
+								</div>
+							</Tooltip>
 						{:else}
 							<div class="text-sm dark:text-gray-400">
 								{$i18n.t('No source available')}
