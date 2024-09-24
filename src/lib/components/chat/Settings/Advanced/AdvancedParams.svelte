@@ -45,7 +45,7 @@
 <div class=" space-y-1 text-xs pb-safe-bottom">
 	<div>
 		<div class=" py-0.5 flex w-full justify-between">
-			<div class=" self-center text-xs">
+			<div class=" self-center text-xs font-medium">
 				{$i18n.t('Stream Chat Response')}
 			</div>
 

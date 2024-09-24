@@ -952,7 +952,11 @@
 
 		await tick();
 
-		const stream = model?.info?.params?.stream_response ?? $settings?.streamResponse ?? true;
+		const stream =
+			model?.info?.params?.stream_response ??
+			$settings?.params?.stream_response ??
+			params?.stream_response ??
+			true;
 		const [res, controller] = await generateChatCompletion(localStorage.token, {
 			stream: stream,
 			model: model.id,
@@ -1248,7 +1252,12 @@
 		await tick();
 
 		try {
-			const stream = model?.info?.params?.stream_response ?? $settings?.streamResponse ?? true;
+			const stream =
+				model?.info?.params?.stream_response ??
+				$settings?.params?.stream_response ??
+				params?.stream_response ??
+				true;
+
 			const [res, controller] = await generateOpenAIChatCompletion(
 				localStorage.token,
 				{
