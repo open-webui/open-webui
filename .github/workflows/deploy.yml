@@ -1,0 +1,40 @@
+name: Deploy and Update Docker Container on Hetzner
+
+on:
+  push:
+    branches:
+      - main  # Le déploiement se fait sur la branche main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up SSH
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Build Docker image
+      run: |
+        docker build -t your_docker_image_name:latest .
+
+    - name: Push Docker image to server
+      run: |
+        docker save your_docker_image_name:latest | bzip2 | ssh -o StrictHostKeyChecking=no root@IP_DU_SERVEUR_HETZNER 'bunzip2 | docker load'
+
+    - name: Update Docker container on server
+      run: |
+        ssh -o StrictHostKeyChecking=no root@IP_DU_SERVEUR_HETZNER "
+        # Stop the old container
+        docker stop your_container_name || true
+
+        # Remove the old container
+        docker rm your_container_name || true
+
+        # Run the updated container with the new image
+        docker run -d --name your_container_name -p 80:80 your_docker_image_name:latest
+        "
