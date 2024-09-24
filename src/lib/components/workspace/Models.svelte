@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { marked } from 'marked';
+
 	import { toast } from 'svelte-sonner';
 	import Sortable from 'sortablejs';
 
@@ -389,9 +391,21 @@
 				<div
 					class=" flex-1 self-center {(model?.info?.meta?.hidden ?? false) ? 'text-gray-500' : ''}"
 				>
-					<div class="  font-semibold line-clamp-1">{model.name}</div>
-					<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
-						{!!model?.info?.meta?.description ? model?.info?.meta?.description : model.id}
+					<Tooltip
+						content={marked.parse(
+							model?.ollama?.digest
+								? `${model?.ollama?.digest} *(${model?.ollama?.modified_at})*`
+								: ''
+						)}
+						className=" w-fit"
+						placement="top-start"
+					>
+						<div class="  font-semibold line-clamp-1">{model.name}</div>
+					</Tooltip>
+					<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
+						{!!model?.info?.meta?.description
+							? model?.info?.meta?.description
+							: (model?.ollama?.digest ?? model.id)}
 					</div>
 				</div>
 			</a>

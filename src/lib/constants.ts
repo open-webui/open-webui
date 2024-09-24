@@ -31,7 +31,9 @@ export const SUPPORTED_FILE_TYPE = [
 	'application/x-javascript',
 	'text/markdown',
 	'audio/mpeg',
-	'audio/wav'
+	'audio/wav',
+	'audio/ogg',
+	'audio/x-m4a'
 ];
 
 export const SUPPORTED_FILE_EXTENSIONS = [

@@ -45,6 +45,7 @@
 
 	let params = {
 		// Advanced
+		stream_response: null,
 		seed: null,
 		temperature: null,
 		frequency_penalty: null,
@@ -327,6 +328,7 @@
 				saveSettings({
 					system: system !== '' ? system : undefined,
 					params: {
+						stream_response: params.stream_response !== null ? params.stream_response : undefined,
 						seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
 						stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,
 						temperature: params.temperature !== null ? params.temperature : undefined,

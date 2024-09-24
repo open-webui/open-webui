@@ -115,9 +115,9 @@
 		{/if}
 	{:else}
 		<!-- if $showControls -->
-		<PaneResizer class="relative flex w-2 items-center justify-center bg-background">
+		<PaneResizer class="relative flex w-2 items-center justify-center bg-background group">
 			<div class="z-10 flex h-7 w-5 items-center justify-center rounded-sm">
-				<EllipsisVertical />
+				<EllipsisVertical className="size-4 invisible group-hover:visible" />
 			</div>
 		</PaneResizer>
 		<Pane
@@ -128,7 +128,6 @@
 					: 30
 				: 0}
 			onResize={(size) => {
-				console.log(size);
 				if (size === 0) {
 					showControls.set(false);
 				} else {
@@ -164,6 +163,12 @@
 							<Overview
 								{history}
 								on:nodeclick={(e) => {
+									if (e.detail.node.data.message.favorite) {
+										history.messages[e.detail.node.data.message.id].favorite = true;
+									} else {
+										history.messages[e.detail.node.data.message.id].favorite = null;
+									}
+
 									showMessage(e.detail.node.data.message);
 								}}
 								on:close={() => {
