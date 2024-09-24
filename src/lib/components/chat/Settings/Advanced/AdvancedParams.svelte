@@ -10,7 +10,7 @@
 
 	export let params = {
 		// Advanced
-		stream_response: null,	// Set stream responses for this model individually
+		stream_response: null, // Set stream responses for this model individually
 		seed: null,
 		stop: null,
 		temperature: null,
@@ -52,8 +52,13 @@
 			<button
 				class="p-1 px-3 text-xs flex rounded transition"
 				on:click={() => {
-				params.stream_response = (params?.stream_response ?? null) === null ? true : (params.stream_response ? false : null);
-			}}
+					params.stream_response =
+						(params?.stream_response ?? null) === null
+							? true
+							: params.stream_response
+								? false
+								: null;
+				}}
 				type="button"
 			>
 				{#if params.stream_response === true}

@@ -465,6 +465,7 @@
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Hoppla! Es scheint, dass die URL ungültig ist. Bitte überprüfen Sie diese und versuchen Sie es erneut.",
 	"Oops! There was an error in the previous response. Please try again or contact admin.": "Hoppla! Es gab einen Fehler in der vorherigen Antwort. Bitte versuchen Sie es erneut oder kontaktieren Sie den Administrator.",
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Hoppla! Sie verwenden eine nicht unterstützte Methode (nur Frontend). Bitte stellen Sie die WebUI vom Backend bereit.",
+	"Open file": "Datei öffnen",
 	"Open new chat": "Neuen Chat öffnen",
 	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Die installierte Open-WebUI-Version (v{{OPEN_WEBUI_VERSION}}) ist niedriger als die erforderliche Version (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
@@ -476,6 +477,7 @@
 	"Other": "Andere",
 	"Output format": "",
 	"Overview": "",
+	"page": "Seite",
 	"Password": "Passwort",
 	"PDF document (.pdf)": "PDF-Dokument (.pdf)",
 	"PDF Extract Images (OCR)": "Text von Bildern aus PDFs extrahieren (OCR)",
@@ -754,7 +756,5 @@
 	"Your account status is currently pending activation.": "Ihr Kontostatus ist derzeit ausstehend und wartet auf Aktivierung.",
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "YouTube",
-	"Youtube Loader Settings": "YouTube-Ladeeinstellungen",
-	"page": "Seite",
-	"Open file": "Datei öffnen"
+	"Youtube Loader Settings": "YouTube-Ladeeinstellungen"
 }
