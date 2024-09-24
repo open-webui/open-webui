@@ -115,12 +115,6 @@ function katexTokenizer(src, tokens, displayMode: boolean) {
 			.filter((item) => item)
 			.find((item) => item.trim());
 
-		if (displayMode) {
-			console.log("block matched", match[0]);
-		} else {
-			console.log("inline matched", match[0]);
-		}
-
 		return {
 			type,
 			raw: match[0],
