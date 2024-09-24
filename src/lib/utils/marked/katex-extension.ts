@@ -109,8 +109,6 @@ function katexTokenizer(src, tokens, displayMode: boolean) {
 
 	const match = src.match(ruleReg);
 
-	console.log("searching:", src);
-
 	if (match) {
 		const text = match
 			.slice(2)
