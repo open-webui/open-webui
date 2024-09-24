@@ -1,14 +1,14 @@
 import katex from 'katex';
 
 const DELIMITER_LIST = [
+	{ left: '$$\n', right: '\n$$', display: true },
+	{ left: '$$', right: '$$', display: false }, // This should be on top to prevent conflict with $ delimiter
 	{ left: '$', right: '$', display: false },
-	{ left: '$$', right: '$$', display: true },
 	{ left: '\\pu{', right: '}', display: false },
 	{ left: '\\ce{', right: '}', display: false },
 	{ left: '\\(', right: '\\)', display: false },
-	{ left: '( ', right: ' )', display: false },
-	{ left: '\\[', right: '\\]', display: true },
-	{ left: '[ ', right: ' ]', display: true }
+	{ left: '\\[\n', right: '\n\\]', display: true },
+	{ left: '\\[', right: '\\]', display: false },
 ];
 
 // const DELIMITER_LIST = [
@@ -55,8 +55,8 @@ const { inlineRule, blockRule } = generateRegexRules(DELIMITER_LIST);
 export default function (options = {}) {
 	return {
 		extensions: [
-			inlineKatex(options),
 			blockKatex(options),
+			inlineKatex(options),
 		]
 	};
 }
