@@ -614,7 +614,7 @@
 	"Sign up": "注册",
 	"Signing in": "正在登录",
 	"Source": "来源",
-	"Speech Playback Speed": "",
+	"Speech Playback Speed": "语音播放速度",
 	"Speech recognition error: {{error}}": "语音识别错误：{{error}}",
 	"Speech-to-Text Engine": "语音转文本引擎",
 	"Stop Sequence": "停止序列 (Stop Sequence)",
