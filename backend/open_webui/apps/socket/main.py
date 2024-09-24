@@ -90,14 +90,9 @@ async def periodic_usage_pool_cleanup():
         await asyncio.sleep(TIMEOUT_DURATION)
 
 
-async def on_startup():
-    asyncio.create_task(periodic_usage_pool_cleanup())
-
-
 app = socketio.ASGIApp(
     sio,
     socketio_path="/ws/socket.io",
-    on_startup=on_startup(),
 )
 
 
