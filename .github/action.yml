@@ -1,0 +1,2 @@
+jobs:  build:    runs-on: Ubuntu-20.04    steps:      - uses: TimDaub/hetzner-cloud-deploy-server-action@v2        with:          server-name: "gh-actions-server"          
+server-image: "ubuntu-20.04"          server-type: "cx42"          ssh-key-name: "hacienda"          hcloud-token: ${{ secrets.HCLOUD_TOKEN }}
