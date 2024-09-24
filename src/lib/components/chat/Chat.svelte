@@ -1690,6 +1690,7 @@
 	) => {
 		const responseMessage = history.messages[responseMessageId];
 		const userMessage = history.messages[parentId];
+		const messages = createMessagesList(history.currentId);
 
 		responseMessage.statusHistory = [
 			{
