@@ -35,11 +35,11 @@ function generateRegexRules(delimiters) {
 
 		if (!display) {
 			inlinePatterns.push(
-				`${escapedLeft}((?:\\\\.|[^\\\\\\n])*?(?:\\\\.|[^\\\\\\n${escapedRight}]))${escapedRight}`
+				`${escapedLeft}((?:\\\\[^]|[^\\\\])+?)${escapedRight}`
 			);
 		} else {
 			blockPatterns.push(
-				`${escapedLeft}((?:\\\\.|[^\\\\\\n])*?(?:\\\\.|[^\\\\\\n${escapedRight}]))${escapedRight}`
+				`${escapedLeft}((?:\\\\[^]|[^\\\\])+?)${escapedRight}`
 			);
 		}
 	});
@@ -108,6 +108,8 @@ function katexTokenizer(src, tokens, displayMode: boolean) {
 	let type = displayMode ? 'blockKatex' : 'inlineKatex';
 
 	const match = src.match(ruleReg);
+
+	console.log("searching:", src);
 
 	if (match) {
 		const text = match
