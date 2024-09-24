@@ -304,12 +304,12 @@
 		console.log(res);
 
 		if (res) {
-			message.files = res.map((image) => ({
+			const files = res.map((image) => ({
 				type: 'image',
 				url: `${image.url}`
 			}));
 
-			dispatch('save', message);
+			dispatch('save', { ...message, files: files });
 		}
 
 		generatingImage = false;
