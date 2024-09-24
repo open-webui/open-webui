@@ -1035,11 +1035,17 @@
 
 					{#if message.done && showRateComment}
 						<RateComment
-							messageId={message.id}
-							bind:show={showRateComment}
 							bind:message
+							bind:show={showRateComment}
 							on:submit={(e) => {
-								dispatch('update');
+								dispatch('save', {
+									...message,
+									annotation: {
+										...message.annotation,
+										comment: e.detail.comment,
+										reason: e.detail.reason
+									}
+								});
 								(model?.actions ?? [])
 									.filter((action) => action?.__webui__ ?? false)
 									.forEach((action) => {
