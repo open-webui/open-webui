@@ -48,6 +48,8 @@ else:
     )
 
 
+app = socketio.ASGIApp(sio, socketio_path="/ws/socket.io")
+
 # Dictionary to maintain the user pool
 
 if WEBSOCKET_MANAGER == "redis":
@@ -90,11 +92,8 @@ async def periodic_usage_pool_cleanup():
         await asyncio.sleep(TIMEOUT_DURATION)
 
 
-app = socketio.ASGIApp(
-    sio,
-    socketio_path="/ws/socket.io",
-    on_startup=asyncio.create_task(periodic_usage_pool_cleanup()),
-)
+# Start the cleanup task when your app starts
+asyncio.create_task(periodic_usage_pool_cleanup())
 
 
 def get_models_in_use():

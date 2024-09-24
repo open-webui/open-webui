@@ -19,7 +19,7 @@
 </script>
 
 <!-- {JSON.stringify(tokens)} -->
-{#each tokens as token, tokenIdx (tokenIdx)}
+{#each tokens as token, tokenIdx}
 	{#if token.type === 'hr'}
 		<hr />
 	{:else if token.type === 'heading'}

@@ -40,9 +40,16 @@
 	let voiceInterruption = false;
 	let hapticFeedback = false;
 
+	let streamResponse = true;
+
 	const toggleSplitLargeChunks = async () => {
 		splitLargeChunks = !splitLargeChunks;
 		saveSettings({ splitLargeChunks: splitLargeChunks });
+	};
+
+	const toggleStreamResponse = async () => {
+		streamResponse = !streamResponse;
+		saveSettings({ streamResponse: streamResponse });
 	};
 
 	const togglesScrollOnBranchChange = async () => {
@@ -168,6 +175,7 @@
 		enableFileUpdateBase64 = $settings.enableFileUpdateBase64 ?? false;
 
 		hapticFeedback = $settings.hapticFeedback ?? false;
+		streamResponse = $settings?.streamResponse ?? true;
 
 		defaultModelId = $settings?.models?.at(0) ?? '';
 		if ($config?.default_models) {
@@ -329,6 +337,28 @@
 							<span class="ml-2 self-center">{$i18n.t('LTR')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('RTL')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">
+						{$i18n.t('Stream Chat Response')}
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleStreamResponse();
+						}}
+						type="button"
+					>
+						{#if streamResponse === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 						{/if}
 					</button>
 				</div>

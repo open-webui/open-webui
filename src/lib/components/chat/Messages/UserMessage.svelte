@@ -1,19 +1,11 @@
 <script lang="ts">
 	import dayjs from 'dayjs';
-	import { toast } from 'svelte-sonner';
-	import { tick, createEventDispatcher, getContext, onMount } from 'svelte';
 
-	import { models, settings } from '$lib/stores';
-	import { user as _user } from '$lib/stores';
-	import {
-		copyToClipboard as _copyToClipboard,
-		processResponseContent,
-		replaceTokens
-	} from '$lib/utils';
-
+	import { tick, createEventDispatcher, getContext } from 'svelte';
 	import Name from './Name.svelte';
 	import Image from '$lib/components/common/Image.svelte';
 	import ProfileImage from './ProfileImage.svelte';
+	import { models, settings } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { user as _user } from '$lib/stores';
 	import { getFileContentById } from '$lib/apis/files';
@@ -25,39 +17,21 @@
 	const i18n = getContext('i18n');
 
 	const dispatch = createEventDispatcher();
+
 	export let user;
-
-	export let history;
-	export let messageId;
-
+	export let message;
 	export let siblings;
-
-	export let showPreviousMessage: Function;
-	export let showNextMessage: Function;
-
-	export let editMessage: Function;
-
 	export let isFirstMessage: boolean;
 	export let readOnly: boolean;
+
+	export let confirmEditMessage: Function;
+	export let showPreviousMessage: Function;
+	export let showNextMessage: Function;
+	export let copyToClipboard: Function;
 
 	let edit = false;
 	let editedContent = '';
 	let messageEditTextAreaElement: HTMLTextAreaElement;
-
-	let message = JSON.parse(JSON.stringify(history.messages[messageId]));
-	$: if (history.messages) {
-		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
-			message = JSON.parse(JSON.stringify(history.messages[messageId]));
-		}
-	}
-
-	const copyToClipboard = async (text) => {
-		const res = await _copyToClipboard(text);
-		if (res) {
-			toast.success($i18n.t('Copying to clipboard was successful!'));
-		}
-	};
-
 	const editMessageHandler = async () => {
 		edit = true;
 		editedContent = message.content;
@@ -71,7 +45,7 @@
 	};
 
 	const editMessageConfirmHandler = async (submit = true) => {
-		editMessage(message.id, editedContent, submit);
+		confirmEditMessage(message.id, editedContent, submit);
 
 		edit = false;
 		editedContent = '';
@@ -85,10 +59,6 @@
 	const deleteMessageHandler = async () => {
 		dispatch('delete', message.id);
 	};
-
-	onMount(() => {
-		console.log('UserMessage mounted');
-	});
 </script>
 
 <div class=" flex w-full user-message" dir={$settings.chatDirection} id="message-{message.id}">

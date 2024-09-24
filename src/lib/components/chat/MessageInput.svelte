@@ -43,7 +43,6 @@
 	export let transparentBackground = false;
 
 	export let submitPrompt: Function;
-	export let createMessagePair: Function;
 	export let stopResponse: Function;
 
 	export let autoScroll = false;
@@ -64,13 +63,14 @@
 	let user = null;
 	let chatInputPlaceholder = '';
 
-	export let history;
-
-	export let prompt = '';
 	export let files = [];
+
 	export let availableToolIds = [];
 	export let selectedToolIds = [];
 	export let webSearchEnabled = false;
+
+	export let prompt = '';
+	export let messages = [];
 
 	let visionCapableModels = [];
 	$: visionCapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
@@ -147,8 +147,7 @@
 
 		files = [...files, fileItem];
 
-		// Check if the file is an audio file and transcribe/convert it to text file
-		if (['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'].includes(file['type'])) {
+		if (['audio/mpeg', 'audio/wav', 'audio/ogg'].includes(file['type'])) {
 			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
 				toast.error(error);
 				return null;
@@ -361,7 +360,7 @@
 	<div class=" -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
 		<div class="flex flex-col max-w-6xl px-2.5 md:px-6 w-full">
 			<div class="relative">
-				{#if autoScroll === false && history?.currentId}
+				{#if autoScroll === false && messages.length > 0}
 					<div
 						class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none"
 					>
@@ -660,12 +659,6 @@
 										const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 										const commandsContainerElement = document.getElementById('commands-container');
 
-										// Command/Ctrl + Shift + Enter to submit a message pair
-										if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
-											e.preventDefault();
-											createMessagePair(prompt);
-										}
-
 										// Check if Ctrl + R is pressed
 										if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
 											e.preventDefault();
@@ -804,7 +797,7 @@
 								/>
 
 								<div class="self-end mb-2 flex space-x-1 mr-1">
-									{#if !history?.currentId || history.messages[history.currentId]?.done == true}
+									{#if messages.length == 0 || messages.at(-1).done == true}
 										<Tooltip content={$i18n.t('Record voice')}>
 											<button
 												id="voice-input-button"
@@ -856,7 +849,7 @@
 							</div>
 						</div>
 						<div class="flex items-end w-10">
-							{#if !history.currentId || history.messages[history.currentId]?.done == true}
+							{#if messages.length == 0 || messages.at(-1).done == true}
 								{#if prompt === ''}
 									<div class=" flex items-center mb-1">
 										<Tooltip content={$i18n.t('Call')}>
