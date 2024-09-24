@@ -1,14 +1,14 @@
 import katex from 'katex';
 
 const DELIMITER_LIST = [
-	{ left: '$$\n', right: '\n$$', display: true },
-	{ left: '$$', right: '$$', display: false },
+	{ left: '$$', right: '$$', display: true },
 	{ left: '$', right: '$', display: false },
 	{ left: '\\pu{', right: '}', display: false },
 	{ left: '\\ce{', right: '}', display: false },
 	{ left: '\\(', right: '\\)', display: false },
-	{ left: '\\[\n', right: '\n\\]', display: true },
-	{ left: '\\[', right: '\\]', display: false },
+	// { left: '( ', right: ' )', display: false },
+	{ left: '\\[', right: '\\]', display: true },
+	// { left: '[ ', right: ' ]', display: true }
 ];
 
 // const DELIMITER_LIST = [
@@ -23,29 +23,29 @@ let inlinePatterns = [];
 let blockPatterns = [];
 
 function escapeRegex(string) {
-	return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+	return string.replace(/[-\/\\^$*+?.()|[\]{}（）]/g, '\\$&');
 }
 
 function generateRegexRules(delimiters) {
 	delimiters.forEach((delimiter) => {
-		const { left, right, display } = delimiter;
+		const { left, right } = delimiter;
 		// Ensure regex-safe delimiters
 		const escapedLeft = escapeRegex(left);
 		const escapedRight = escapeRegex(right);
 
-		if (!display) {
-			inlinePatterns.push(
-				`${escapedLeft}((?:\\\\[^]|[^\\\\])+?)${escapedRight}`
-			);
-		} else {
-			blockPatterns.push(
-				`${escapedLeft}((?:\\\\[^]|[^\\\\])+?)${escapedRight}`
-			);
-		}
+		// Inline pattern - Capture group $1, token content, followed by end delimiter and normal punctuation marks.
+		// Example: $text$
+		inlinePatterns.push(
+			`${escapedLeft}((?:\\\\.|[^\\\\\\n])*?(?:\\\\.|[^\\\\\\n${escapedRight}]))${escapedRight}`
+		);
+
+		// Block pattern - Starts and ends with the delimiter on new lines. Example:
+		// $$\ncontent here\n$$
+		blockPatterns.push(`${escapedLeft}\n((?:\\\\[^]|[^\\\\])+?)\n${escapedRight}`);
 	});
 
 	const inlineRule = new RegExp(`^(${inlinePatterns.join('|')})(?=[\\s?!.,:？！。，：]|$)`, 'u');
-	const blockRule = new RegExp(`^(${blockPatterns.join('|')})(?=[\\s?!.,:？！。，：]|$)`, 'u');
+	const blockRule = new RegExp(`^(${blockPatterns.join('|')})(?:\n|$)`, 'u');
 
 	return { inlineRule, blockRule };
 }
@@ -55,99 +55,85 @@ const { inlineRule, blockRule } = generateRegexRules(DELIMITER_LIST);
 export default function (options = {}) {
 	return {
 		extensions: [
-			blockKatex(options),
-			inlineKatex(options),
+			inlineKatex(options, createRenderer(options, false)),
+			blockKatex(options, createRenderer(options, true))
 		]
 	};
 }
 
-function katexStart(src, displayMode: boolean) {
-	let ruleReg = displayMode ? blockRule : inlineRule;
-
-	let indexSrc = src;
-
-	while (indexSrc) {
-		let index = -1;
-		let startIndex = -1;
-		let startDelimiter = '';
-		let endDelimiter = '';
-		for (let delimiter of DELIMITER_LIST) {
-			if (delimiter.display !== displayMode) {
-				continue;
-			}
-
-			startIndex = indexSrc.indexOf(delimiter.left);
-			if (startIndex === -1) {
-				continue;
-			}
-
-			index = startIndex;
-			startDelimiter = delimiter.left;
-			endDelimiter = delimiter.right;
-		}
-
-		if (index === -1) {
-			return;
-		}
-
-		const f = index === 0 || indexSrc.charAt(index - 1) === ' ';
-		if (f) {
-			const possibleKatex = indexSrc.substring(index);
-
-			if (possibleKatex.match(ruleReg)) {
-				return index;
-			}
-		}
-
-		indexSrc = indexSrc.substring(index + startDelimiter.length).replace(endDelimiter, '');
-	}
+function createRenderer(options, newlineAfter) {
+	return (token) =>
+		// katex.renderToString(token.text, { ...options, displayMode: token.displayMode }) +
+		// (newlineAfter ? '\n' : '');
+		katex.renderToString(token.text, { ...options, displayMode: token.displayMode });
 }
 
-function katexTokenizer(src, tokens, displayMode: boolean) {
-	let ruleReg = displayMode ? blockRule : inlineRule;
-	let type = displayMode ? 'blockKatex' : 'inlineKatex';
-
-	const match = src.match(ruleReg);
-
-	if (match) {
-		const text = match
-			.slice(2)
-			.filter((item) => item)
-			.find((item) => item.trim());
-
-		return {
-			type,
-			raw: match[0],
-			text: text,
-			displayMode,
-		};
-	}
-}
-
-
-
-function inlineKatex(options) {
+function inlineKatex(options, renderer) {
+	// const ruleReg = inlineRule;
 	return {
 		name: 'inlineKatex',
 		level: 'inline',
-		start(src) {
-			return katexStart(src, false);
+		// start(src) {
+		// 	let index;
+		// 	let indexSrc = src;
+
+		// 	while (indexSrc) {
+		// 		index = indexSrc.indexOf('$');
+		// 		if (index === -1) {
+		// 			return;
+		// 		}
+		// 		const f = index === 0 || indexSrc.charAt(index - 1) === ' ';
+		// 		if (f) {
+		// 			const possibleKatex = indexSrc.substring(index);
+
+		// 			if (possibleKatex.match(ruleReg)) {
+		// 				return index;
+		// 			}
+		// 		}
+
+		// 		indexSrc = indexSrc.substring(index + 1).replace(/^\$+/, '');
+		// 	}
+		// },
+		start(src: string) {
+			return src.indexOf('$')
 		},
 		tokenizer(src, tokens) {
-			return katexTokenizer(src, tokens, false);
+			const match = src.match(/^\$+([^$\n]+?)\$+/)
+
+			if (match) {
+				return {
+					type: 'inlineKatex',
+					raw: match[0],
+					text: match[1].trim(),
+					displayMode: match[0].startsWith('$$')
+				}
+			}
 		},
+		renderer
 	};
 }
 
-function blockKatex(options) {
+function blockKatex(options, renderer) {
 	return {
 		name: 'blockKatex',
 		level: 'block',
-		start(src) {
-			return katexStart(src, true);
-		},
 		tokenizer(src, tokens) {
-			return katexTokenizer(src, tokens, true);
+			const match = src.match(blockRule);
+
+			if (match) {
+				const text = match
+					.slice(2)
+					.filter((item) => item)
+					.find((item) => item.trim());
+
+				return {
+					type: 'blockKatex',
+					raw: match[0],
+					text: text,
+					displayMode: match[0].startsWith('$$') || match[0].startsWith('\\[')
+				};
+			}
 		},
+		renderer
 	};
 }
