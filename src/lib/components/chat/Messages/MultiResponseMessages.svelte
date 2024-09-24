@@ -143,8 +143,9 @@
 	const mergeResponsesHandler = async () => {
 		const responses = Object.keys(groupedMessageIds).map((modelIdx) => {
 			const { messageIds } = groupedMessageIds[modelIdx];
+			const messageId = messageIds[groupedMessageIdsIdx[modelIdx]];
 
-			return messages[groupedMessageIdsIdx[modelIdx]].content;
+			return history.messages[messageId].content;
 		});
 		mergeResponses(messageId, responses, chatId);
 	};
