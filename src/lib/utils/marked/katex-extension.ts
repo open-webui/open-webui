@@ -8,7 +8,7 @@ const DELIMITER_LIST = [
 	{ left: '\\ce{', right: '}', display: false },
 	{ left: '\\(', right: '\\)', display: false },
 	{ left: '\\[\n', right: '\n\\]', display: true },
-	{ left: '\\[', right: '\\]', display: false },
+	{ left: '\\[', right: '\\]', display: false }
 ];
 
 // const DELIMITER_LIST = [
@@ -34,13 +34,9 @@ function generateRegexRules(delimiters) {
 		const escapedRight = escapeRegex(right);
 
 		if (!display) {
-			inlinePatterns.push(
-				`${escapedLeft}((?:\\\\[^]|[^\\\\])+?)${escapedRight}`
-			);
+			inlinePatterns.push(`${escapedLeft}((?:\\\\[^]|[^\\\\])+?)${escapedRight}`);
 		} else {
-			blockPatterns.push(
-				`${escapedLeft}((?:\\\\[^]|[^\\\\])+?)${escapedRight}`
-			);
+			blockPatterns.push(`${escapedLeft}((?:\\\\[^]|[^\\\\])+?)${escapedRight}`);
 		}
 	});
 
@@ -56,7 +52,7 @@ export default function (options = {}) {
 	return {
 		extensions: [
 			blockKatex(options), // This should be on top to prevent conflict with inline delimiters.
-			inlineKatex(options),
+			inlineKatex(options)
 		]
 	};
 }
@@ -119,12 +115,10 @@ function katexTokenizer(src, tokens, displayMode: boolean) {
 			type,
 			raw: match[0],
 			text: text,
-			displayMode,
+			displayMode
 		};
 	}
 }
-
-
 
 function inlineKatex(options) {
 	return {
@@ -135,7 +129,7 @@ function inlineKatex(options) {
 		},
 		tokenizer(src, tokens) {
 			return katexTokenizer(src, tokens, false);
-		},
+		}
 	};
 }
 
@@ -148,6 +142,6 @@ function blockKatex(options) {
 		},
 		tokenizer(src, tokens) {
 			return katexTokenizer(src, tokens, true);
-		},
+		}
 	};
 }
