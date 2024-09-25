@@ -679,11 +679,19 @@ def generate_ollama_embeddings(
 
         data = r.json()
 
-        log.info(f"generate_ollama_embeddings {data}")
-
-        if "embedding" in data:
-            return data["embedding"]
+        if "embedding" in data and isinstance(data["embedding"], list):
+            embedding_vector = data["embedding"]
+            log.info(
+                f"generate_ollama_embeddings: ollama response: vector dim. {len(embedding_vector)}"
+            )
+            log.debug(
+                "generate_ollama_embeddings: ollama response: %s" % embedding_vector
+            )
+            return embedding_vector
         else:
+            log.warning(
+                f"generate_ollama_embeddings: ollama unexpected response: {data}"
+            )
             raise Exception("Something went wrong :/")
     except Exception as e:
         log.exception(e)
