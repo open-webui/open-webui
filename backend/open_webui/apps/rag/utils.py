@@ -14,6 +14,7 @@ from langchain_core.documents import Document
 from open_webui.apps.ollama.main import (
     GenerateEmbeddingsForm,
     generate_ollama_embeddings,
+    shorten_string,
 )
 from open_webui.apps.rag.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.misc import get_last_user_message
@@ -76,9 +77,22 @@ def query_doc(
             limit=k,
         )
 
-        print("result", result)
+        shortened_result = {}
+        for key, value in (dict(result) or {}).items():
+            match key:
+                case "documents":
+                    shortened_result[key] = [
+                        [shorten_string(doc, 80) for doc in value[0]]
+                    ]
+                case "metadatas":
+                    shortened_result[key] = [
+                        [shorten_string(metadata, 80) for metadata in value[0]]
+                    ]
+                case _:
+                    shortened_result[key] = value
+        log.info(f"query_doc:result {shortened_result}")
+        log.debug("query_doc:result %s" % result)
 
-        log.info(f"query_doc:result {result}")
         return result
     except Exception as e:
         print(e)
@@ -324,7 +338,9 @@ def get_rag_context(
         collection_names = (
             file["collection_names"]
             if file["type"] == "collection"
-            else [file["collection_name"]] if file["collection_name"] else []
+            else [file["collection_name"]]
+            if file["collection_name"]
+            else []
         )
 
         collection_names = set(collection_names).difference(extracted_collections)
