@@ -543,10 +543,18 @@ class GenerateEmbeddingsForm(BaseModel):
     keep_alive: Optional[Union[int, str]] = None
 
 
+class GenerateEmbedForm(BaseModel):
+    model: str
+    input: str
+    truncate: Optional[bool]
+    options: Optional[dict] = None
+    keep_alive: Optional[Union[int, str]] = None
+
+
 @app.post("/api/embed")
 @app.post("/api/embed/{url_idx}")
 async def generate_embeddings(
-    form_data: GenerateEmbeddingsForm,
+    form_data: GenerateEmbedForm,
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
