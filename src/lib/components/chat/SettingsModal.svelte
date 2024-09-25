@@ -96,8 +96,8 @@
 				<button
 					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 					'general'
-						? 'bg-gray-200 dark:bg-gray-800'
-						: ' hover:bg-gray-100 dark:hover:bg-gray-850'}"
+						? 'bg-gray-200 dark:bg-gray-900'
+						: ' hover:bg-gray-100 dark:hover:bg-gray-900'}"
 					on:click={() => {
 						selectedTab = 'general';
 					}}
@@ -122,8 +122,8 @@
 				<button
 					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 					'interface'
-						? 'bg-gray-200 dark:bg-gray-800'
-						: ' hover:bg-gray-100 dark:hover:bg-gray-850'}"
+						? 'bg-gray-200 dark:bg-gray-900'
+						: ' hover:bg-gray-100 dark:hover:bg-gray-900'}"
 					on:click={() => {
 						selectedTab = 'interface';
 					}}
@@ -148,8 +148,8 @@
 				<button
 					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 					'personalization'
-						? 'bg-gray-200 dark:bg-gray-800'
-						: ' hover:bg-gray-100 dark:hover:bg-gray-850'}"
+						? 'bg-gray-200 dark:bg-gray-900'
+						: ' hover:bg-gray-100 dark:hover:bg-gray-900'}"
 					on:click={() => {
 						selectedTab = 'personalization';
 					}}
@@ -163,8 +163,8 @@
 				<button
 					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 					'audio'
-						? 'bg-gray-200 dark:bg-gray-800'
-						: ' hover:bg-gray-100 dark:hover:bg-gray-850'}"
+						? 'bg-gray-200 dark:bg-gray-900'
+						: ' hover:bg-gray-100 dark:hover:bg-gray-900'}"
 					on:click={() => {
 						selectedTab = 'audio';
 					}}
@@ -190,8 +190,8 @@
 				<button
 					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 					'chats'
-						? 'bg-gray-200 dark:bg-gray-800'
-						: ' hover:bg-gray-100 dark:hover:bg-gray-850'}"
+						? 'bg-gray-200 dark:bg-gray-900'
+						: ' hover:bg-gray-100 dark:hover:bg-gray-900'}"
 					on:click={() => {
 						selectedTab = 'chats';
 					}}
@@ -216,8 +216,8 @@
 				<button
 					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 					'account'
-						? 'bg-gray-200 dark:bg-gray-800'
-						: ' hover:bg-gray-100 dark:hover:bg-gray-850'}"
+						? 'bg-gray-200 dark:bg-gray-900'
+						: ' hover:bg-gray-100 dark:hover:bg-gray-900'}"
 					on:click={() => {
 						selectedTab = 'account';
 					}}
@@ -243,8 +243,8 @@
 					<button
 						class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 						'admin'
-							? 'bg-gray-200 dark:bg-gray-800'
-							: ' hover:bg-gray-100 dark:hover:bg-gray-850'}"
+							? 'bg-gray-200 dark:bg-gray-900'
+							: ' hover:bg-gray-100 dark:hover:bg-gray-900'}"
 						on:click={async () => {
 							await goto('/admin/settings');
 							show = false;
@@ -271,8 +271,8 @@
 				<button
 					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 					'about'
-						? 'bg-gray-200 dark:bg-gray-800'
-						: ' hover:bg-gray-100 dark:hover:bg-gray-850'}"
+						? 'bg-gray-200 dark:bg-gray-900'
+						: ' hover:bg-gray-100 dark:hover:bg-gray-900'}"
 					on:click={() => {
 						selectedTab = 'about';
 					}}

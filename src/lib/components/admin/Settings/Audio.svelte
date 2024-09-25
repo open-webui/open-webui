@@ -287,14 +287,14 @@
 						<div class="flex w-full">
 							<div class="flex-1">
 								<select
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-white dark:bg-gray-850 outline-none"
 									bind:value={TTS_VOICE}
 								>
 									<option value="" selected={TTS_VOICE !== ''}>{$i18n.t('Default')}</option>
 									{#each voices as voice}
 										<option
 											value={voice.voiceURI}
-											class="bg-gray-100 dark:bg-gray-700"
+											class="bg-gray-100 dark:bg-gray-800"
 											selected={TTS_VOICE === voice.voiceURI}>{voice.name}</option
 										>
 									{/each}
@@ -310,7 +310,7 @@
 								<div class="flex-1">
 									<input
 										list="voice-list"
-										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-white dark:bg-gray-850 outline-none"
 										bind:value={TTS_VOICE}
 										placeholder="Select a voice"
 									/>
@@ -351,7 +351,7 @@
 								<div class="flex-1">
 									<input
 										list="voice-list"
-										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-white dark:bg-gray-850 outline-none"
 										bind:value={TTS_VOICE}
 										placeholder="Select a voice"
 									/>
@@ -392,7 +392,7 @@
 								<div class="flex-1">
 									<input
 										list="voice-list"
-										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-white dark:bg-gray-850 outline-none"
 										bind:value={TTS_VOICE}
 										placeholder="Select a voice"
 									/>

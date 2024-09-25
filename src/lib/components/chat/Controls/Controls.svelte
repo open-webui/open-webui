@@ -66,7 +66,7 @@
 			<div class=" mt-1.5" slot="content">
 				<textarea
 					bind:value={params.system}
-					class="w-full rounded-lg px-3.5 py-2.5 text-sm dark:text-gray-300 dark:bg-gray-850 border border-gray-100 dark:border-gray-800 outline-none resize-none"
+					class="w-full rounded-lg px-3.5 py-2.5 text-sm dark:text-gray-300 dark:bg-gray-900 border border-gray-100 dark:border-red-999 outline-none resize-none"
 					rows="4"
 					placeholder={$i18n.t('Enter system prompt')}
 				/>

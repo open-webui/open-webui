@@ -290,7 +290,7 @@
 				</div>
 
 				<button
-					class=" self-center text-xs p-1 px-3 bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg flex flex-row space-x-1 items-center {scanDirLoading
+					class=" self-center text-xs p-1 px-3 bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-white rounded-lg flex flex-row space-x-1 items-center {scanDirLoading
 						? ' cursor-not-allowed'
 						: ''}"
 					on:click={() => {
@@ -363,7 +363,7 @@
 			{#if embeddingEngine === 'openai'}
 				<div class="my-0.5 flex gap-2">
 					<input
-						class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+						class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-white dark:bg-gray-850 outline-none"
 						placeholder={$i18n.t('API Base URL')}
 						bind:value={OpenAIUrl}
 						required
@@ -444,7 +444,7 @@
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
 						<input
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-white dark:bg-gray-850 outline-none"
 							placeholder={$i18n.t('Set embedding model (e.g. {{model}})', {
 								model: embeddingModel.slice(-40)
 							})}
@@ -454,7 +454,7 @@
 
 					{#if embeddingEngine === ''}
 						<button
-							class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+							class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white rounded-lg transition"
 							on:click={() => {
 								embeddingModelUpdateHandler();
 							}}
@@ -531,7 +531,7 @@
 							/>
 						</div>
 						<button
-							class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+							class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white rounded-lg transition"
 							on:click={() => {
 								rerankingModelUpdateHandler();
 							}}
@@ -688,7 +688,7 @@
 
 					<div class="self-center p-3">
 						<input
-							class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-white dark:bg-gray-850 outline-none"
 							type="number"
 							placeholder={$i18n.t('Enter Top K')}
 							bind:value={querySettings.k}
@@ -739,7 +739,7 @@
 					<textarea
 						bind:value={querySettings.template}
 						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
-						class="w-full rounded-lg px-4 py-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+						class="w-full rounded-lg px-4 py-3 text-sm bg-gray-50 dark:text-white dark:bg-gray-850 outline-none resize-none"
 						rows="4"
 					/>
 				</Tooltip>
@@ -756,7 +756,7 @@
 					<div class="self-center text-xs font-medium min-w-fit mb-1">{$i18n.t('Chunk Size')}</div>
 					<div class="self-center">
 						<input
-							class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-white dark:bg-gray-850 outline-none"
 							type="number"
 							placeholder={$i18n.t('Enter Chunk Size')}
 							bind:value={chunkSize}
@@ -773,7 +773,7 @@
 
 					<div class="self-center">
 						<input
-							class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-white dark:bg-gray-850 outline-none"
 							type="number"
 							placeholder={$i18n.t('Enter Chunk Overlap')}
 							bind:value={chunkOverlap}

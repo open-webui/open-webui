@@ -219,7 +219,7 @@
 
 					<div class="flex-1">
 						<input
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-900 outline-none"
 							type="text"
 							bind:value={name}
 							required

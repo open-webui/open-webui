@@ -446,6 +446,16 @@ if frontend_favicon.exists():
 else:
     logging.warning(f"Frontend favicon not found at {frontend_favicon}")
 
+frontend_favicon_left = FRONTEND_BUILD_DIR / "static" / "favicon_left.png"
+
+if frontend_favicon_left.exists():
+    try:
+        shutil.copyfile(frontend_favicon_left, STATIC_DIR / "favicon_left.png")
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+else:
+    logging.warning(f"Frontend favicon not found at {frontend_favicon_left}")
+
 frontend_splash = FRONTEND_BUILD_DIR / "static" / "splash.png"
 
 if frontend_splash.exists():
@@ -455,6 +465,7 @@ if frontend_splash.exists():
         logging.error(f"An error occurred: {e}")
 else:
     logging.warning(f"Frontend splash not found at {frontend_splash}")
+
 
 
 ####################################
@@ -477,7 +488,7 @@ if CUSTOM_NAME:
 
                 r = requests.get(url, stream=True)
                 if r.status_code == 200:
-                    with open(f"{STATIC_DIR}/favicon.png", "wb") as f:
+                    with open(f"{STATIC_DIR}/favicon_left.png", "wb") as f:
                         r.raw.decode_content = True
                         shutil.copyfileobj(r.raw, f)
 

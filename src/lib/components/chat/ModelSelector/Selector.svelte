@@ -245,7 +245,7 @@
 	<DropdownMenu.Content
 		class=" z-40 {$mobile
 			? `w-full`
-			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-300/30 dark:border-gray-700/40  outline-none"
+			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-xl  bg-white dark:bg-white dark:text-white shadow-lg border border-red-999 dark:border-red-999  outline-none"
 		transition={flyAndScale}
 		side={$mobile ? 'bottom' : 'bottom-start'}
 		sideOffset={4}
@@ -281,7 +281,7 @@
 					/>
 				</div>
 
-				<hr class="border-gray-100 dark:border-gray-800" />
+				<hr class="border-red-999 dark:border-red-999" />
 			{/if}
 
 			<div class="px-3 my-2 max-h-64 overflow-y-auto scrollbar-hidden group">
@@ -521,11 +521,11 @@
 			</div>
 
 			{#if showTemporaryChatControl}
-				<hr class="border-gray-100 dark:border-gray-800" />
+				<hr class="border-red-999 dark:border-red-999" />
 
 				<div class="flex items-center mx-2 my-2">
 					<button
-						class="flex justify-between w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 px-3 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
+						class="flex justify-between w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 px-3 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
 						on:click={async () => {
 							temporaryChatEnabled.set(!$temporaryChatEnabled);
 							await goto('/');

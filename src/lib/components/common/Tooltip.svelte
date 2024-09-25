@@ -23,7 +23,7 @@
 				placement: placement,
 				allowHTML: true,
 				touch: touch,
-				...(theme !== '' ? { theme } : { theme: 'dark' }),
+				...(theme !== '' ? { theme } : { theme: 'light' }),
 				arrow: false,
 				offset: [0, 4]
 			});

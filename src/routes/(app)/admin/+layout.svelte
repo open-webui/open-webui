@@ -56,14 +56,14 @@
 			>
 				<a
 					class="min-w-fit rounded-lg p-1.5 px-3 {['/admin', '/admin/'].includes($page.url.pathname)
-						? 'bg-gray-50 dark:bg-gray-850'
+						? 'bg-gray-50 dark:bg-gray-900'
 						: ''} transition"
 					href="/admin">{$i18n.t('Dashboard')}</a
 				>
 
 				<a
 					class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/admin/settings')
-						? 'bg-gray-50 dark:bg-gray-850'
+						? 'bg-gray-50 dark:bg-gray-900'
 						: ''} transition"
 					href="/admin/settings">{$i18n.t('Settings')}</a
 				>

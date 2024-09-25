@@ -149,7 +149,7 @@
 				>
 					<div class="flex text-center text-sm font-medium rounded-xl bg-transparent/10 p-1 mb-2">
 						<button
-							class="w-full rounded-lg p-1.5 {tab === '' ? 'bg-gray-50 dark:bg-gray-850' : ''}"
+							class="w-full rounded-lg p-1.5 {tab === '' ? 'bg-gray-50 dark:bg-white' : ''}"
 							type="button"
 							on:click={() => {
 								tab = '';
@@ -157,7 +157,7 @@
 						>
 
 						<button
-							class="w-full rounded-lg p-1 {tab === 'import' ? 'bg-gray-50 dark:bg-gray-850' : ''}"
+							class="w-full rounded-lg p-1 {tab === 'import' ? 'bg-gray-50 dark:bg-white' : ''}"
 							type="button"
 							on:click={() => {
 								tab = 'import';
@@ -171,7 +171,7 @@
 
 								<div class="flex-1">
 									<select
-										class="w-full capitalize rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+										class="w-full capitalize rounded-lg py-2 px-4 text-sm dark:text-white dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
 										bind:value={_user.role}
 										placeholder={$i18n.t('Enter Your Role')}
 										required
@@ -205,7 +205,7 @@
 
 								<div class="flex-1">
 									<input
-										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+										class="w-full rounded-lg py-2 px-4 text-sm dark:text-white dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
 										type="email"
 										bind:value={_user.email}
 										placeholder={$i18n.t('Enter Your Email')}
@@ -220,7 +220,7 @@
 
 								<div class="flex-1">
 									<input
-										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+										class="w-full rounded-lg py-2 px-4 text-sm dark:text-white dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
 										type="password"
 										bind:value={_user.password}
 										placeholder={$i18n.t('Enter Your Password')}

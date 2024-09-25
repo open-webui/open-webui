@@ -572,7 +572,7 @@
 						<div class="flex gap-2">
 							<div class="flex-1 pb-1">
 								<select
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-white dark:bg-gray-850 outline-none"
 									bind:value={selectedOllamaUrlIdx}
 									placeholder={$i18n.t('Select an Ollama instance')}
 								>
@@ -755,7 +755,7 @@
 							<div class="flex w-full">
 								<div class="flex-1 mr-2">
 									<select
-										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-white dark:bg-gray-850 outline-none"
 										bind:value={deleteModelTag}
 										placeholder={$i18n.t('Select a model')}
 									>

@@ -64,7 +64,7 @@
 					/>
 				</div>
 
-				<hr class="border-gray-100 dark:border-gray-800" />
+				<hr class="border-red-999 dark:border-red-999" />
 			{/if}
 
 			<div class="px-3 my-2 max-h-80 overflow-y-auto">

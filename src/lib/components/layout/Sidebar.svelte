@@ -272,7 +272,7 @@
 			? ''
 			: 'invisible'}"
 	>
-		<div class="px-2.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
+		<div class="px-2.5 flex justify-between space-x-1 text-red-999 dark:text-red-999">
 			<a
 				id="sidebar-new-chat-button"
 				class="flex flex-1 justify-between rounded-xl px-2 h-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
@@ -293,12 +293,12 @@
 				<div class="self-center mx-1.5">
 					<img
 						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/favicon.png"
-						class=" size-6 -translate-x-1.5 rounded-full"
+						src="{WEBUI_BASE_URL}/static/favicon_left.png"
+						class=" size-6 -translate-x-1.5"
 						alt="logo"
 					/>
 				</div>
-				<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
+				<div class=" self-center font-medium text-sm text-red-999 dark:text-black font-primary">
 					{$i18n.t('New Chat')}
 				</div>
 				<div class="self-center ml-auto">

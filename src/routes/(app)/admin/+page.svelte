@@ -134,7 +134,7 @@
 			<div class="flex gap-0.5">
 				<Tooltip content={$i18n.t('Add User')}>
 					<button
-						class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition font-medium text-sm flex items-center space-x-1"
+						class=" px-2 py-2 rounded-xl border border-gray-200 dark:text-white dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition font-medium text-sm flex items-center space-x-1"
 						on:click={() => {
 							showAddUserModal = !showAddUserModal;
 						}}
@@ -156,7 +156,7 @@
 	</div>
 
 	<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
-		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full">
+		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-100 table-auto max-w-full">
 			<thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400">
 				<tr>
 					<th
@@ -256,9 +256,9 @@
 						<td class="px-3 py-2 min-w-[7rem] w-28">
 							<button
 								class=" flex items-center gap-2 text-xs px-3 py-0.5 rounded-lg {user.role ===
-									'admin' && 'text-sky-600 dark:text-sky-200 bg-sky-200/30'} {user.role ===
-									'user' && 'text-green-600 dark:text-green-200 bg-green-200/30'} {user.role ===
-									'pending' && 'text-gray-600 dark:text-gray-200 bg-gray-200/30'}"
+									'admin' && 'text-sky-600 dark:text-sky-600 bg-sky-600/30'} {user.role ===
+									'user' && 'text-green-600 dark:text-green-600 bg-green-600/30'} {user.role ===
+									'pending' && 'text-gray-600 dark:text-gray-600 bg-gray-600/30'}"
 								on:click={() => {
 									if (user.role === 'user') {
 										updateRoleHandler(user.id, 'admin');
@@ -278,7 +278,7 @@
 								{$i18n.t(user.role)}</button
 							>
 						</td>
-						<td class="px-3 py-2 font-medium text-gray-900 dark:text-white w-max">
+						<td class="px-3 py-2 font-medium text-gray-900 dark:text-black w-max">
 							<div class="flex flex-row w-max">
 								<img
 									class=" rounded-full w-6 h-6 object-cover mr-2.5"

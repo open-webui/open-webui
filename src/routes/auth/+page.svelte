@@ -111,7 +111,7 @@
 				<img
 					crossorigin="anonymous"
 					src="{WEBUI_BASE_URL}/static/favicon.png"
-					class=" w-8 rounded-full"
+					class=" w-10"
 					alt="logo"
 				/>
 			</div>
@@ -151,7 +151,7 @@
 					</div>
 				</div>
 			{:else}
-				<div class="  my-auto pb-10 w-full dark:text-gray-100">
+				<div class="  my-auto pb-10 w-full dark:text-red-999">
 					<form
 						class=" flex flex-col justify-center"
 						on:submit|preventDefault={() => {
@@ -223,7 +223,7 @@
 						{#if $config?.features.enable_login_form}
 							<div class="mt-5">
 								<button
-									class=" bg-gray-900 hover:bg-gray-800 w-full rounded-2xl text-white font-medium text-sm py-3 transition"
+									class=" bg-gray-200 hover:bg-gray-800 w-full rounded-2xl text-white font-medium text-sm py-3 transition"
 									type="submit"
 								>
 									{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
