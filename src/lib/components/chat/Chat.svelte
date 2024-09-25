@@ -357,6 +357,7 @@
 
 		if ($page.url.searchParams.get('call') === 'true') {
 			showCallOverlay.set(true);
+			showControls.set(true);
 		}
 
 		selectedModels = selectedModels.map((modelId) =>
@@ -482,11 +483,12 @@
 			}
 		}
 
+		await tick();
+
 		if ($chatId == chatId) {
 			if (!$temporaryChatEnabled) {
 				chat = await updateChatById(localStorage.token, chatId, {
 					models: selectedModels,
-					messages: messages,
 					history: history,
 					params: params,
 					files: chatFiles
@@ -1133,13 +1135,6 @@
 					}
 				}
 			}
-
-			await chatCompletedHandler(
-				_chatId,
-				model.id,
-				responseMessageId,
-				createMessagesList(responseMessageId)
-			);
 		} else {
 			if (res !== null) {
 				const error = await res.json();
@@ -1168,10 +1163,17 @@
 					(status) => status.action !== 'knowledge_search'
 				);
 			}
-
-			history.messages[responseMessageId] = responseMessage;
 		}
 		await saveChatHandler(_chatId);
+
+		history.messages[responseMessageId] = responseMessage;
+
+		await chatCompletedHandler(
+			_chatId,
+			model.id,
+			responseMessageId,
+			createMessagesList(responseMessageId)
+		);
 
 		stopResponseFlag = false;
 		await tick();
@@ -1429,13 +1431,6 @@
 					}
 				}
 
-				await chatCompletedHandler(
-					_chatId,
-					model.id,
-					responseMessageId,
-					createMessagesList(responseMessageId)
-				);
-
 				if ($settings.notificationEnabled && !document.hasFocus()) {
 					const notification = new Notification(`${model.id}`, {
 						body: responseMessage.content,
@@ -1462,6 +1457,13 @@
 		await saveChatHandler(_chatId);
 
 		history.messages[responseMessageId] = responseMessage;
+
+		await chatCompletedHandler(
+			_chatId,
+			model.id,
+			responseMessageId,
+			createMessagesList(responseMessageId)
+		);
 
 		stopResponseFlag = false;
 		await tick();
