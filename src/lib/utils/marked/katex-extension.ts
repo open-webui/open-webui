@@ -29,20 +29,24 @@ function escapeRegex(string) {
 
 function generateRegexRules(delimiters) {
 	delimiters.forEach((delimiter) => {
-		const { left, right, display } = delimiter;
+		const { left, right } = delimiter;
 		// Ensure regex-safe delimiters
 		const escapedLeft = escapeRegex(left);
 		const escapedRight = escapeRegex(right);
 
-		if (!display) {
-			inlinePatterns.push(`${escapedLeft}((?:\\\\[^]|[^\\\\])+?)${escapedRight}`);
-		} else {
-			blockPatterns.push(`${escapedLeft}((?:\\\\[^]|[^\\\\])+?)${escapedRight}`);
-		}
+		// Inline pattern - Capture group $1, token content, followed by end delimiter and normal punctuation marks.
+		// Example: $text$
+		inlinePatterns.push(
+			`${escapedLeft}((?:\\\\.|[^\\\\\\n])*?(?:\\\\.|[^\\\\\\n${escapedRight}]))${escapedRight}`
+		);
+
+		// Block pattern - Starts and ends with the delimiter on new lines. Example:
+		// $$\ncontent here\n$$
+		blockPatterns.push(`${escapedLeft}\n((?:\\\\[^]|[^\\\\])+?)\n${escapedRight}`);
 	});
 
 	const inlineRule = new RegExp(`^(${inlinePatterns.join('|')})(?=[\\s?!.,:？！。，：]|$)`, 'u');
-	const blockRule = new RegExp(`^(${blockPatterns.join('|')})(?=[\\s?!.,:？！。，：]|$)`, 'u');
+	const blockRule = new RegExp(`^(${blockPatterns.join('|')})(?:\n|$)`, 'u');
 
 	return { inlineRule, blockRule };
 }
@@ -52,8 +56,8 @@ const { inlineRule, blockRule } = generateRegexRules(DELIMITER_LIST);
 export default function (options = {}) {
 	return {
 		extensions: [
-			blockKatex(options), // This should be on top to prevent conflict with inline delimiters.
-			inlineKatex(options)
+			inlineKatex(options, createRenderer(options, false)),
+			blockKatex(options, createRenderer(options, true))
 		]
 	};
 }
@@ -110,7 +114,7 @@ function inlineKatex(options, renderer) {
 	};
 }
 
-function blockKatex(options) {
+function blockKatex(options, renderer) {
 	return {
 		name: 'blockKatex',
 		level: 'block',
@@ -131,8 +135,6 @@ function blockKatex(options) {
 				};
 			}
 		},
-		tokenizer(src, tokens) {
-			return katexTokenizer(src, tokens, true);
-		}
+		renderer
 	};
 }
