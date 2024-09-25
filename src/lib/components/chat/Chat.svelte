@@ -1618,14 +1618,9 @@
 		}
 	};
 
-	const getWebSearchResults = async (
-		model: string,
-		parentId: string,
-		responseMessageId: string
-	) => {
-		const responseMessage = history.messages[responseMessageId];
+	const getWebSearchResults = async (model: string, parentId: string, responseId: string) => {
+		const responseMessage = history.messages[responseId];
 		const userMessage = history.messages[parentId];
-		const messages = createMessagesList(history.currentId);
 
 		responseMessage.statusHistory = [
 			{
