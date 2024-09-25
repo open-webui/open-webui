@@ -29,24 +29,20 @@ function escapeRegex(string) {
 
 function generateRegexRules(delimiters) {
 	delimiters.forEach((delimiter) => {
-		const { left, right } = delimiter;
+		const { left, right, display } = delimiter;
 		// Ensure regex-safe delimiters
 		const escapedLeft = escapeRegex(left);
 		const escapedRight = escapeRegex(right);
 
-		// Inline pattern - Capture group $1, token content, followed by end delimiter and normal punctuation marks.
-		// Example: $text$
-		inlinePatterns.push(
-			`${escapedLeft}((?:\\\\.|[^\\\\\\n])*?(?:\\\\.|[^\\\\\\n${escapedRight}]))${escapedRight}`
-		);
-
-		// Block pattern - Starts and ends with the delimiter on new lines. Example:
-		// $$\ncontent here\n$$
-		blockPatterns.push(`${escapedLeft}\n((?:\\\\[^]|[^\\\\])+?)\n${escapedRight}`);
+		if (!display) {
+			inlinePatterns.push(`${escapedLeft}((?:\\\\[^]|[^\\\\])+?)${escapedRight}`);
+		} else {
+			blockPatterns.push(`${escapedLeft}((?:\\\\[^]|[^\\\\])+?)${escapedRight}`);
+		}
 	});
 
 	const inlineRule = new RegExp(`^(${inlinePatterns.join('|')})(?=[\\s?!.,:？！。，：]|$)`, 'u');
-	const blockRule = new RegExp(`^(${blockPatterns.join('|')})(?:\n|$)`, 'u');
+	const blockRule = new RegExp(`^(${blockPatterns.join('|')})(?=[\\s?!.,:？！。，：]|$)`, 'u');
 
 	return { inlineRule, blockRule };
 }
@@ -56,8 +52,8 @@ const { inlineRule, blockRule } = generateRegexRules(DELIMITER_LIST);
 export default function (options = {}) {
 	return {
 		extensions: [
-			inlineKatex(options, createRenderer(options, false)),
-			blockKatex(options, createRenderer(options, true))
+			blockKatex(options), // This should be on top to prevent conflict with inline delimiters.
+			inlineKatex(options)
 		]
 	};
 }
@@ -114,7 +110,7 @@ function inlineKatex(options, renderer) {
 	};
 }
 
-function blockKatex(options, renderer) {
+function blockKatex(options) {
 	return {
 		name: 'blockKatex',
 		level: 'block',
@@ -135,6 +131,8 @@ function blockKatex(options, renderer) {
 				};
 			}
 		},
-		renderer
+		tokenizer(src, tokens) {
+			return katexTokenizer(src, tokens, true);
+		}
 	};
 }

@@ -8,6 +8,8 @@ import shutil
 import sys
 import time
 import uuid
+import asyncio
+
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -30,7 +32,7 @@ from open_webui.apps.openai.main import generate_chat_completion as generate_ope
 from open_webui.apps.openai.main import get_all_models as get_openai_models
 from open_webui.apps.rag.main import app as rag_app
 from open_webui.apps.rag.utils import get_rag_context, rag_template
-from open_webui.apps.socket.main import app as socket_app
+from open_webui.apps.socket.main import app as socket_app, periodic_usage_pool_cleanup
 from open_webui.apps.socket.main import get_event_call, get_event_emitter
 from open_webui.apps.webui.internal.db import Session
 from open_webui.apps.webui.main import app as webui_app
@@ -181,6 +183,8 @@ https://github.com/open-webui/open-webui
 async def lifespan(app: FastAPI):
     run_migrations()
     await app_start()
+
+    asyncio.create_task(periodic_usage_pool_cleanup())
     yield
 
 
@@ -856,7 +860,6 @@ async def inspect_websocket(request: Request, call_next):
 
 
 app.mount("/ws", socket_app)
-
 app.mount("/ollama", ollama_app)
 app.mount("/openai", openai_app)
 
