@@ -43,7 +43,10 @@ function generateRegexRules(delimiters) {
 	});
 
 	// Math formulas can end in special characters
-	const inlineRule = new RegExp(`^(${inlinePatterns.join('|')})(?=[\\s?。，!-\/:-@[-\`{-~]|$)`, 'u');
+	const inlineRule = new RegExp(
+		`^(${inlinePatterns.join('|')})(?=[\\s?。，!-\/:-@[-\`{-~]|$)`,
+		'u'
+	);
 	const blockRule = new RegExp(`^(${blockPatterns.join('|')})(?=[\\s?。，!-\/:-@[-\`{-~]|$)`, 'u');
 
 	return { inlineRule, blockRule };
@@ -53,10 +56,7 @@ const { inlineRule, blockRule } = generateRegexRules(DELIMITER_LIST);
 
 export default function (options = {}) {
 	return {
-		extensions: [
-			inlineKatex(options),
-			blockKatex(options),
-		]
+		extensions: [inlineKatex(options), blockKatex(options)]
 	};
 }
 
