@@ -645,11 +645,25 @@ async def generate_embeddings(
         )
 
 
+def shorten_string(s, max_len=50) -> str:
+    """Shorten a string to a maximum length.
+
+    Used to avoid spamming the info logs with long strings.
+    """
+    if len(s) > max_len + 3:
+        return f"{s[:max_len]}... ({len(s) - max_len} more chars)"
+    return s
+
+
 def generate_ollama_embeddings(
     form_data: GenerateEmbeddingsForm,
     url_idx: Optional[int] = None,
 ):
-    log.info(f"generate_ollama_embeddings {form_data}")
+    form_data_short = form_data.dict().copy()
+    form_data_short["prompt"] = shorten_string(form_data_short["prompt"])
+
+    log.info(f"generate_ollama_embeddings: form data: {form_data_short}")
+    log.debug("generate_ollama_embeddings: %s" % form_data)
 
     if url_idx is None:
         model = form_data.model
