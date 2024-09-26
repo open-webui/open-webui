@@ -1,0 +1,22 @@
+# Base image with Python 3.11
+FROM python:3.11-slim
+
+# Install Node.js
+RUN apt-get update && apt-get install -y nodejs npm
+
+# Install additional dependencies
+RUN apt-get install -y ffmpeg uvicorn
+
+# Set up working directory
+WORKDIR /workspace
+
+# Install project dependencies for both frontend and backend
+COPY . .
+RUN pip install --upgrade pip && pip install -r backend/requirements.txt
+RUN npm install && npm run build
+
+# Expose necessary ports
+EXPOSE 3000 8080
+
+# Start backend
+CMD ["bash", "backend/start.sh"]

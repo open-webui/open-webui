@@ -1,0 +1,16 @@
+{
+    "name": "Open WebUI",
+    "dockerFile": "Dockerfile",
+    "forwardPorts": [3000, 8080],
+    "postCreateCommand": "pip install -r backend/requirements.txt && npm install && npm run build",
+    "customizations": {
+      "vscode": {
+        "extensions": [
+          "ms-python.python",
+          "ms-azuretools.vscode-docker",
+          "dbaeumer.vscode-eslint"
+        ]
+      }
+    }
+  }
+  
