@@ -2,7 +2,7 @@
 	import { SvelteFlowProvider } from '@xyflow/svelte';
 	import { slide } from 'svelte/transition';
 
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, tick } from 'svelte';
 	import { mobile, showControls, showCallOverlay, showOverview } from '$lib/stores';
 
 	import Modal from '../common/Modal.svelte';
@@ -35,11 +35,23 @@
 		// listen to resize 1024px
 		const mediaQuery = window.matchMedia('(min-width: 1024px)');
 
-		const handleMediaQuery = (e) => {
+		const handleMediaQuery = async (e) => {
 			if (e.matches) {
 				largeScreen = true;
+
+				if ($showCallOverlay) {
+					showCallOverlay.set(false);
+					await tick();
+					showCallOverlay.set(true);
+				}
 			} else {
 				largeScreen = false;
+
+				if ($showCallOverlay) {
+					showCallOverlay.set(false);
+					await tick();
+					showCallOverlay.set(true);
+				}
 				pane = null;
 			}
 		};
