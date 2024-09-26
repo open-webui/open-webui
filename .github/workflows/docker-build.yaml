@@ -18,6 +18,7 @@ env:
 
 jobs:
   build-main-image:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -59,7 +60,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=tag
-            type=sha,prefix=git-
+            type=sha,prefix={{branch}}-,suffix=-{{date 'YYMMDDHHmmss' tz='Asia/Dubai'}}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
           flavor: |
@@ -246,6 +247,7 @@ jobs:
   #         retention-days: 1
 
   merge-main-images:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     needs: [ build-main-image ]
     steps:
@@ -274,7 +276,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=tag
-            type=sha,prefix=git-
+            type=sha,prefix={{branch}}-,suffix=-{{date 'YYMMDDHHmmss' tz='Asia/Dubai'}}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
           flavor: |
