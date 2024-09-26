@@ -1112,13 +1112,17 @@ def store_docs_in_vector_db(
                 app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
             )
 
+            embedding_texts = embedding_function(
+                list(map(lambda x: x.replace("\n", " "), texts))
+            )
+
             VECTOR_DB_CLIENT.insert(
                 collection_name=collection_name,
                 items=[
                     {
                         "id": str(uuid.uuid4()),
                         "text": text,
-                        "vector": embedding_function(text.replace("\n", " ")),
+                        "vector": embedding_texts[idx],
                         "metadata": metadatas[idx],
                     }
                     for idx, text in enumerate(texts)

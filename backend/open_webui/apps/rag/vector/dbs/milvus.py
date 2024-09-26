@@ -16,8 +16,6 @@ class MilvusClient:
         self.client = Client(uri=MILVUS_URI)
 
     def _result_to_get_result(self, result) -> GetResult:
-        print(result)
-
         ids = []
         documents = []
         metadatas = []
@@ -45,8 +43,6 @@ class MilvusClient:
         )
 
     def _result_to_search_result(self, result) -> SearchResult:
-        print(result)
-
         ids = []
         distances = []
         documents = []
