@@ -269,9 +269,8 @@ jobs:
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
+            type=ref,event=branch,suffix=-{{sha}}-{{date 'YYMMDDHHmmss' tz='Asia/Dubai'}}
             type=ref,event=tag
-            type=sha,prefix={{branch}}-,suffix=-{{date 'YYMMDDHHmmss' tz='Asia/Dubai'}}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
           flavor: |
