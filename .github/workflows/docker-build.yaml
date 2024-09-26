@@ -61,6 +61,7 @@ jobs:
             type=ref,event=branch
             type=ref,event=branch,suffix=-{{sha}}-{{date 'YYMMDDHHmmss' tz='Asia/Dubai'}}
             type=ref,event=tag
+            type=ref,event=pr,suffix=-{{sha}}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
           flavor: |
@@ -76,19 +77,19 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Export digest
-        run: |
-          mkdir -p /tmp/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
+      # - name: Export digest
+      #   run: |
+      #     mkdir -p /tmp/digests
+      #     digest="${{ steps.build.outputs.digest }}"
+      #     touch "/tmp/digests/${digest#sha256:}"
 
-      - name: Upload digest
-        uses: actions/upload-artifact@v4
-        with:
-          name: digests-main-${{ env.PLATFORM_PAIR }}
-          path: /tmp/digests/*
-          if-no-files-found: error
-          retention-days: 1
+      # - name: Upload digest
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: digests-main-${{ env.PLATFORM_PAIR }}
+      #     path: /tmp/digests/*
+      #     if-no-files-found: error
+      #     retention-days: 1
 
   # build-cuda-image:
   #   runs-on: ubuntu-latest
