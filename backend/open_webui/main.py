@@ -8,6 +8,8 @@ import shutil
 import sys
 import time
 import uuid
+import asyncio
+
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -31,7 +33,7 @@ from open_webui.apps.openai.main import (
 from open_webui.apps.openai.main import get_all_models as get_openai_models
 from open_webui.apps.rag.main import app as rag_app
 from open_webui.apps.rag.utils import get_rag_context, rag_template
-from open_webui.apps.socket.main import app as socket_app
+from open_webui.apps.socket.main import app as socket_app, periodic_usage_pool_cleanup
 from open_webui.apps.socket.main import get_event_call, get_event_emitter
 from open_webui.apps.webui.internal.db import Session
 from open_webui.apps.webui.main import app as webui_app
@@ -77,6 +79,7 @@ from open_webui.config import (
     WEBUI_NAME,
     AppConfig,
     run_migrations,
+    reset_config,
 )
 from open_webui.constants import ERROR_MESSAGES, TASKS, WEBHOOK_MESSAGES
 from open_webui.env import (
@@ -90,6 +93,7 @@ from open_webui.env import (
     WEBUI_SESSION_COOKIE_SAME_SITE,
     WEBUI_SESSION_COOKIE_SECURE,
     WEBUI_URL,
+    RESET_CONFIG_ON_START,
 )
 from fastapi import (
     Depends,
@@ -184,6 +188,11 @@ https://github.com/open-webui/open-webui
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     run_migrations()
+
+    if RESET_CONFIG_ON_START:
+        reset_config()
+
+    asyncio.create_task(periodic_usage_pool_cleanup())
     yield
 
 
@@ -851,7 +860,6 @@ async def inspect_websocket(request: Request, call_next):
 
 
 app.mount("/ws", socket_app)
-
 app.mount("/ollama", ollama_app)
 app.mount("/openai", openai_app)
 
@@ -2329,10 +2337,11 @@ async def get_manifest_json():
     return {
         "name": WEBUI_NAME,
         "short_name": WEBUI_NAME,
+        "description": "Open WebUI is an open, extensible, user-friendly interface for AI that adapts to your workflow.",
         "start_url": "/",
         "display": "standalone",
         "background_color": "#343541",
-        "orientation": "portrait-primary",
+        "orientation": "any",
         "icons": [
             {
                 "src": "/static/logo.png",

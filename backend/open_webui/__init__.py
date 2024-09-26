@@ -52,6 +52,7 @@ def serve(
             )
             os.environ["USE_CUDA_DOCKER"] = "false"
             os.environ["LD_LIBRARY_PATH"] = ":".join(LD_LIBRARY_PATH)
+
     import open_webui.main  # we need set environment variables before importing main
 
     uvicorn.run(open_webui.main.app, host=host, port=port, forwarded_allow_ips="*")

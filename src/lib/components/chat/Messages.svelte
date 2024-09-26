@@ -7,31 +7,63 @@
 	import { getChatList, updateChatById } from '$lib/apis/chats';
 	import { copyToClipboard, findWordIndices } from '$lib/utils';
 
-	import UserMessage from './Messages/UserMessage.svelte';
-	import ResponseMessage from './Messages/ResponseMessage.svelte';
 	import Placeholder from './Messages/Placeholder.svelte';
-	import MultiResponseMessages from './Messages/MultiResponseMessages.svelte';
+	import Message from './Messages/Message.svelte';
+	import Loader from '../common/Loader.svelte';
+	import Spinner from '../common/Spinner.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let chatId = '';
-	export let readOnly = false;
+	export let user = $_user;
+
+	export let prompt;
+	export let history = {};
+	export let selectedModels;
+
+	let messages = [];
+
 	export let sendPrompt: Function;
-	export let continueGeneration: Function;
+	export let continueResponse: Function;
 	export let regenerateResponse: Function;
 	export let mergeResponses: Function;
 	export let chatActionHandler: Function;
 	export let showMessage: Function = () => {};
 
-	export let user = $_user;
-	export let prompt;
-	export let processing = '';
+	export let readOnly = false;
+
 	export let bottomPadding = false;
 	export let autoScroll;
-	export let history = {};
-	export let messages = [];
 
-	export let selectedModels;
+	let messagesCount = 20;
+	let messagesLoading = false;
+
+	const loadMoreMessages = async () => {
+		// scroll slightly down to disable continuous loading
+		const element = document.getElementById('messages-container');
+		element.scrollTop = element.scrollTop + 100;
+
+		messagesLoading = true;
+		messagesCount += 20;
+
+		await tick();
+
+		messagesLoading = false;
+	};
+
+	$: if (history.currentId) {
+		let _messages = [];
+
+		let message = history.messages[history.currentId];
+		while (message && _messages.length <= messagesCount) {
+			_messages.unshift({ ...message });
+			message = message.parentId !== null ? history.messages[message.parentId] : null;
+		}
+
+		messages = _messages;
+	} else {
+		messages = [];
+	}
 
 	$: if (autoScroll && bottomPadding) {
 		(async () => {
@@ -45,104 +77,14 @@
 		element.scrollTop = element.scrollHeight;
 	};
 
-	const copyToClipboardWithToast = async (text) => {
-		const res = await copyToClipboard(text);
-		if (res) {
-			toast.success($i18n.t('Copying to clipboard was successful!'));
-		}
-	};
-
-	const confirmEditMessage = async (messageId, content, submit = true) => {
-		if (submit) {
-			let userPrompt = content;
-			let userMessageId = uuidv4();
-
-			let userMessage = {
-				id: userMessageId,
-				parentId: history.messages[messageId].parentId,
-				childrenIds: [],
-				role: 'user',
-				content: userPrompt,
-				...(history.messages[messageId].files && { files: history.messages[messageId].files }),
-				models: selectedModels
-			};
-
-			let messageParentId = history.messages[messageId].parentId;
-
-			if (messageParentId !== null) {
-				history.messages[messageParentId].childrenIds = [
-					...history.messages[messageParentId].childrenIds,
-					userMessageId
-				];
-			}
-
-			history.messages[userMessageId] = userMessage;
-			history.currentId = userMessageId;
-
-			await tick();
-			await sendPrompt(userPrompt, userMessageId);
-		} else {
-			history.messages[messageId].content = content;
-			await tick();
-			await updateChatById(localStorage.token, chatId, {
-				messages: messages,
-				history: history
-			});
-		}
-	};
-
-	const updateChatMessages = async () => {
+	const updateChatHistory = async () => {
 		await tick();
 		await updateChatById(localStorage.token, chatId, {
-			messages: messages,
 			history: history
 		});
 
 		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-	};
-
-	const confirmEditResponseMessage = async (messageId, content) => {
-		history.messages[messageId].originalContent = history.messages[messageId].content;
-		history.messages[messageId].content = content;
-
-		await updateChatMessages();
-	};
-
-	const saveNewResponseMessage = async (message, content) => {
-		const responseMessageId = uuidv4();
-		const parentId = message.parentId;
-
-		const responseMessage = {
-			...message,
-			id: responseMessageId,
-			parentId: parentId,
-			childrenIds: [],
-			content: content,
-			timestamp: Math.floor(Date.now() / 1000) // Unix epoch
-		};
-
-		history.messages[responseMessageId] = responseMessage;
-		history.currentId = responseMessageId;
-
-		// Append messageId to childrenIds of parent message
-		if (parentId !== null) {
-			history.messages[parentId].childrenIds = [
-				...history.messages[parentId].childrenIds,
-				responseMessageId
-			];
-		}
-
-		await updateChatMessages();
-	};
-
-	const rateMessage = async (messageId, rating) => {
-		history.messages[messageId].annotation = {
-			...history.messages[messageId].annotation,
-			rating: rating
-		};
-
-		await updateChatMessages();
 	};
 
 	const showPreviousMessage = async (message) => {
@@ -243,7 +185,89 @@
 		}
 	};
 
-	const deleteMessageHandler = async (messageId) => {
+	const rateMessage = async (messageId, rating) => {
+		history.messages[messageId].annotation = {
+			...history.messages[messageId].annotation,
+			rating: rating
+		};
+
+		await updateChatHistory();
+	};
+
+	const editMessage = async (messageId, content, submit = true) => {
+		if (history.messages[messageId].role === 'user') {
+			if (submit) {
+				// New user message
+				let userPrompt = content;
+				let userMessageId = uuidv4();
+
+				let userMessage = {
+					id: userMessageId,
+					parentId: history.messages[messageId].parentId,
+					childrenIds: [],
+					role: 'user',
+					content: userPrompt,
+					...(history.messages[messageId].files && { files: history.messages[messageId].files }),
+					models: selectedModels
+				};
+
+				let messageParentId = history.messages[messageId].parentId;
+
+				if (messageParentId !== null) {
+					history.messages[messageParentId].childrenIds = [
+						...history.messages[messageParentId].childrenIds,
+						userMessageId
+					];
+				}
+
+				history.messages[userMessageId] = userMessage;
+				history.currentId = userMessageId;
+
+				await tick();
+				await sendPrompt(userPrompt, userMessageId);
+			} else {
+				// Edit user message
+				history.messages[messageId].content = content;
+				await updateChatHistory();
+			}
+		} else {
+			if (submit) {
+				// New response message
+				const responseMessageId = uuidv4();
+				const message = history.messages[messageId];
+				const parentId = message.parentId;
+
+				const responseMessage = {
+					...message,
+					id: responseMessageId,
+					parentId: parentId,
+					childrenIds: [],
+					content: content,
+					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+				};
+
+				history.messages[responseMessageId] = responseMessage;
+				history.currentId = responseMessageId;
+
+				// Append messageId to childrenIds of parent message
+				if (parentId !== null) {
+					history.messages[parentId].childrenIds = [
+						...history.messages[parentId].childrenIds,
+						responseMessageId
+					];
+				}
+
+				await updateChatHistory();
+			} else {
+				// Edit response message
+				history.messages[messageId].originalContent = history.messages[messageId].content;
+				history.messages[messageId].content = content;
+				await updateChatHistory();
+			}
+		}
+	};
+
+	const deleteMessage = async (messageId) => {
 		const messageToDelete = history.messages[messageId];
 		const parentMessageId = messageToDelete.parentId;
 		const childMessageIds = messageToDelete.childrenIds ?? [];
@@ -278,15 +302,12 @@
 		showMessage({ id: parentMessageId });
 
 		// Update the chat
-		await updateChatById(localStorage.token, chatId, {
-			messages: messages,
-			history: history
-		});
+		await updateChatHistory();
 	};
 </script>
 
 <div class="h-full flex">
-	{#if messages.length == 0}
+	{#if Object.keys(history?.messages ?? {}).length == 0}
 		<Placeholder
 			modelIds={selectedModels}
 			submitPrompt={async (p) => {
@@ -327,115 +348,55 @@
 	{:else}
 		<div class="w-full pt-2">
 			{#key chatId}
-				{#each messages as message, messageIdx (message.id)}
-					<div class=" w-full {messageIdx === messages.length - 1 ? ' pb-12' : ''}">
-						<div
-							class="flex flex-col justify-between px-5 mb-3 {($settings?.widescreenMode ?? null)
-								? 'max-w-full'
-								: 'max-w-5xl'} mx-auto rounded-lg group"
+				<div class="w-full">
+					{#if messages.at(0)?.parentId !== null}
+						<Loader
+							on:visible={(e) => {
+								console.log('visible');
+								if (!messagesLoading) {
+									loadMoreMessages();
+								}
+							}}
 						>
-							{#if message.role === 'user'}
-								<UserMessage
-									on:delete={() => deleteMessageHandler(message.id)}
-									{user}
-									{readOnly}
-									{message}
-									isFirstMessage={messageIdx === 0}
-									siblings={message.parentId !== null
-										? (history.messages[message.parentId]?.childrenIds ?? [])
-										: (Object.values(history.messages)
-												.filter((message) => message.parentId === null)
-												.map((message) => message.id) ?? [])}
-									{confirmEditMessage}
-									{showPreviousMessage}
-									{showNextMessage}
-									copyToClipboard={copyToClipboardWithToast}
-								/>
-							{:else if (history.messages[message.parentId]?.models?.length ?? 1) === 1}
-								{#key message.id}
-									<ResponseMessage
-										{message}
-										siblings={history.messages[message.parentId]?.childrenIds ?? []}
-										isLastMessage={messageIdx + 1 === messages.length}
-										{readOnly}
-										{updateChatMessages}
-										{confirmEditResponseMessage}
-										{saveNewResponseMessage}
-										{showPreviousMessage}
-										{showNextMessage}
-										{rateMessage}
-										copyToClipboard={copyToClipboardWithToast}
-										{continueGeneration}
-										{regenerateResponse}
-										on:action={async (e) => {
-											console.log('action', e);
-											if (typeof e.detail === 'string') {
-												await chatActionHandler(chatId, e.detail, message.model, message.id);
-											} else {
-												const { id, event } = e.detail;
-												await chatActionHandler(chatId, id, message.model, message.id, event);
-											}
-										}}
-										on:save={async (e) => {
-											console.log('save', e);
+							<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
+								<Spinner className=" size-4" />
+								<div class=" ">Loading...</div>
+							</div>
+						</Loader>
+					{/if}
 
-											const message = e.detail;
-											history.messages[message.id] = message;
-											await updateChatById(localStorage.token, chatId, {
-												messages: messages,
-												history: history
-											});
-										}}
-									/>
-								{/key}
-							{:else}
-								{#key message.parentId}
-									<MultiResponseMessages
-										bind:history
-										isLastMessage={messageIdx + 1 === messages.length}
-										{messages}
-										{readOnly}
-										{chatId}
-										parentMessage={history.messages[message.parentId]}
-										{messageIdx}
-										{updateChatMessages}
-										{confirmEditResponseMessage}
-										{rateMessage}
-										copyToClipboard={copyToClipboardWithToast}
-										{continueGeneration}
-										{mergeResponses}
-										{regenerateResponse}
-										on:action={async (e) => {
-											console.log('action', e);
-											if (typeof e.detail === 'string') {
-												await chatActionHandler(chatId, e.detail, message.model, message.id);
-											} else {
-												const { id, event } = e.detail;
-												await chatActionHandler(chatId, id, message.model, message.id, event);
-											}
-										}}
-										on:change={async () => {
-											await updateChatById(localStorage.token, chatId, {
-												messages: messages,
-												history: history
-											});
-
-											if (autoScroll) {
-												const element = document.getElementById('messages-container');
-												autoScroll =
-													element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-												setTimeout(() => {
-													scrollToBottom();
-												}, 100);
-											}
-										}}
-									/>
-								{/key}
-							{/if}
-						</div>
-					</div>
-				{/each}
-
+					{#each messages as message, messageIdx (message.id)}
+						<Message
+							{chatId}
+							bind:history
+							messageId={message.id}
+							idx={messageIdx}
+							{user}
+							{showPreviousMessage}
+							{showNextMessage}
+							{editMessage}
+							{deleteMessage}
+							{rateMessage}
+							{regenerateResponse}
+							{continueResponse}
+							{mergeResponses}
+							{updateChatHistory}
+							{chatActionHandler}
+							{readOnly}
+							on:scroll={() => {
+								if (autoScroll) {
+									const element = document.getElementById('messages-container');
+									autoScroll =
+										element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+									setTimeout(() => {
+										scrollToBottom();
+									}, 100);
+								}
+							}}
+						/>
+					{/each}
+				</div>
+				<div class="pb-12" />
 				{#if bottomPadding}
 					<div class="  pb-6" />
 				{/if}

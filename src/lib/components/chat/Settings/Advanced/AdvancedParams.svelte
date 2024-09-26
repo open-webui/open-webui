@@ -10,6 +10,7 @@
 
 	export let params = {
 		// Advanced
+		stream_response: null, // Set stream responses for this model individually
 		seed: null,
 		stop: null,
 		temperature: null,
@@ -42,6 +43,35 @@
 </script>
 
 <div class=" space-y-1 text-xs pb-safe-bottom">
+	<div>
+		<div class=" py-0.5 flex w-full justify-between">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Stream Chat Response')}
+			</div>
+
+			<button
+				class="p-1 px-3 text-xs flex rounded transition"
+				on:click={() => {
+					params.stream_response =
+						(params?.stream_response ?? null) === null
+							? true
+							: params.stream_response
+								? false
+								: null;
+				}}
+				type="button"
+			>
+				{#if params.stream_response === true}
+					<span class="ml-2 self-center">{$i18n.t('On')}</span>
+				{:else if params.stream_response === false}
+					<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+				{:else}
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+				{/if}
+			</button>
+		</div>
+	</div>
+
 	<div class=" py-0.5 w-full justify-between">
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">{$i18n.t('Seed')}</div>
@@ -734,7 +764,7 @@
 						id="steps-range"
 						type="range"
 						min="-2"
-						max="16000"
+						max="131072"
 						step="1"
 						bind:value={params.max_tokens}
 						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
@@ -746,7 +776,6 @@
 						type="number"
 						class=" bg-transparent text-center w-14"
 						min="-2"
-						max="16000"
 						step="1"
 					/>
 				</div>
