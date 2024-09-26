@@ -19,7 +19,9 @@ export const activeUserCount: Writable<null | number> = writable(null);
 export const USAGE_POOL: Writable<null | string[]> = writable(null);
 
 export const theme = writable('system');
+
 export const chatId = writable('');
+export const chatTitle = writable('');
 
 export const chats = writable([]);
 export const pinnedChats = writable([]);

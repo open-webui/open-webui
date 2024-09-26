@@ -1,14 +1,13 @@
 import katex from 'katex';
 
 const DELIMITER_LIST = [
-	{ left: '$$\n', right: '\n$$', display: true },
-	{ left: '$$', right: '$$', display: false }, // This should be on top to prevent conflict with $ delimiter
+	{ left: '$$', right: '$$', display: true },
 	{ left: '$', right: '$', display: false },
 	{ left: '\\pu{', right: '}', display: false },
 	{ left: '\\ce{', right: '}', display: false },
 	{ left: '\\(', right: '\\)', display: false },
-	{ left: '\\[\n', right: '\n\\]', display: true },
-	{ left: '\\[', right: '\\]', display: false }
+	{ left: '\\[', right: '\\]', display: true },
+	{ left: '\\begin{equation}', right: '\\end{equation}', display: true }
 ];
 
 // const DELIMITER_LIST = [
@@ -34,14 +33,21 @@ function generateRegexRules(delimiters) {
 		const escapedRight = escapeRegex(right);
 
 		if (!display) {
+			// For inline delimiters, we match everyting
 			inlinePatterns.push(`${escapedLeft}((?:\\\\[^]|[^\\\\])+?)${escapedRight}`);
 		} else {
-			blockPatterns.push(`${escapedLeft}((?:\\\\[^]|[^\\\\])+?)${escapedRight}`);
+			// Block delimiters doubles as inline delimiters when not followed by a newline
+			inlinePatterns.push(`${escapedLeft}(?!\\n)((?:\\\\[^]|[^\\\\])+?)(?!\\n)${escapedRight}`);
+			blockPatterns.push(`${escapedLeft}\\n((?:\\\\[^]|[^\\\\])+?)\\n${escapedRight}`);
 		}
 	});
 
-	const inlineRule = new RegExp(`^(${inlinePatterns.join('|')})(?=[\\s?!.,:？！。，：]|$)`, 'u');
-	const blockRule = new RegExp(`^(${blockPatterns.join('|')})(?=[\\s?!.,:？！。，：]|$)`, 'u');
+	// Math formulas can end in special characters
+	const inlineRule = new RegExp(
+		`^(${inlinePatterns.join('|')})(?=[\\s?。，!-\/:-@[-\`{-~]|$)`,
+		'u'
+	);
+	const blockRule = new RegExp(`^(${blockPatterns.join('|')})(?=[\\s?。，!-\/:-@[-\`{-~]|$)`, 'u');
 
 	return { inlineRule, blockRule };
 }
@@ -50,10 +56,7 @@ const { inlineRule, blockRule } = generateRegexRules(DELIMITER_LIST);
 
 export default function (options = {}) {
 	return {
-		extensions: [
-			blockKatex(options), // This should be on top to prevent conflict with inline delimiters.
-			inlineKatex(options)
-		]
+		extensions: [inlineKatex(options), blockKatex(options)]
 	};
 }
 
@@ -86,7 +89,9 @@ function katexStart(src, displayMode: boolean) {
 			return;
 		}
 
-		const f = index === 0 || indexSrc.charAt(index - 1) === ' ';
+		// Check if the delimiter is preceded by a special character.
+		// If it does, then it's potentially a math formula.
+		const f = index === 0 || indexSrc.charAt(index - 1).match(/[\s?。，!-\/:-@[-`{-~]/);
 		if (f) {
 			const possibleKatex = indexSrc.substring(index);
 

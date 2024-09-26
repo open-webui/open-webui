@@ -415,6 +415,9 @@ async def generate_chat_completion(
             payload["max_tokens"] = payload["max_completion_tokens"]
             del payload["max_completion_tokens"]
     else:
+        if payload["model"].lower().startswith("o1-") and "max_tokens" in payload:
+            payload["max_completion_tokens"] = payload["max_tokens"]
+            del payload["max_tokens"]
         if "max_tokens" in payload and "max_completion_tokens" in payload:
             del payload["max_tokens"]
 
