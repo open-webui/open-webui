@@ -7,6 +7,10 @@ on:
       - local_dev
     tags:
       - v*
+  pull_request:
+    branches:
+      - local_dev
+    
 
 env:
   REGISTRY: ghcr.io
@@ -55,8 +59,8 @@ jobs:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
+            type=ref,event=branch,suffix=-{{sha}}-{{date 'YYMMDDHHmmss' tz='Asia/Dubai'}}
             type=ref,event=tag
-            type=sha,prefix={{branch}}-,suffix=-{{date 'YYMMDDHHmmss' tz='Asia/Dubai'}}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
           flavor: |
@@ -69,10 +73,8 @@ jobs:
           context: .
           push: true
           platforms: ${{ matrix.platform }}
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Export digest
         run: |
@@ -242,49 +244,50 @@ jobs:
   #         if-no-files-found: error
   #         retention-days: 1
 
-  merge-main-images:
-    runs-on: ubuntu-latest
-    needs: [ build-main-image ]
-    steps:
-      - name: Download digests
-        uses: actions/download-artifact@v4
-        with:
-          pattern: digests-main-*
-          path: /tmp/digests
-          merge-multiple: true
+  # merge-main-images:
+  #   runs-on: ubuntu-latest
+  #   needs: [ build-main-image ]
+  #   steps:
+  #     - name: Download digests
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         pattern: digests-main-*
+  #         path: /tmp/digests
+  #         merge-multiple: true
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v3
 
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+  #     - name: Log in to the Container registry
+  #       uses: docker/login-action@v3
+  #       with:
+  #         registry: ${{ env.REGISTRY }}
+  #         username: ${{ secrets.DOCKER_USERNAME }}
+  #         password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Extract metadata for Docker images (default latest tag)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.FULL_IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch,suffix=-{{sha}}-{{date 'YYMMDDHHmmss' tz='Asia/Dubai'}}
-            type=ref,event=tag
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-          flavor: |
-            latest=${{ github.ref == 'refs/heads/main' }}
+  #     - name: Extract metadata for Docker images (default latest tag)
+  #       id: meta
+  #       uses: docker/metadata-action@v5
+  #       with:
+  #         images: ${{ env.FULL_IMAGE_NAME }}
+  #         tags: |
+  #           type=ref,event=branch,suffix=-{{sha}}-{{date 'YYMMDDHHmmss' tz='Asia/Dubai'}}
+  #           type=ref,event=tag
+  #           type=ref,event=pr,suffix=-{{sha}}
+  #           type=semver,pattern={{version}}
+  #           type=semver,pattern={{major}}.{{minor}}
+  #         flavor: |
+  #           latest=${{ github.ref == 'refs/heads/main' }}
 
-      - name: Create manifest list and push
-        working-directory: /tmp/digests
-        run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.FULL_IMAGE_NAME }}@sha256:%s ' *)
+  #     - name: Create manifest list and push
+  #       working-directory: /tmp/digests
+  #       run: |
+  #         docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+  #           $(printf '${{ env.FULL_IMAGE_NAME }}@sha256:%s ' *)
 
-      - name: Inspect image
-        run: |
-          docker buildx imagetools inspect ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+  #     - name: Inspect image
+  #       run: |
+  #         docker buildx imagetools inspect ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
 
 
   # merge-cuda-images:
