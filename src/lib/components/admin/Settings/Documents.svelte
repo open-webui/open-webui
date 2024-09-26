@@ -38,6 +38,7 @@
 
 	let embeddingEngine = '';
 	let embeddingModel = '';
+	let embeddingBatchSize = 1;
 	let rerankingModel = '';
 
 	let fileMaxSize = null;
@@ -53,7 +54,6 @@
 
 	let OpenAIKey = '';
 	let OpenAIUrl = '';
-	let OpenAIBatchSize = 1;
 
 	let querySettings = {
 		template: '',
@@ -100,12 +100,16 @@
 		const res = await updateEmbeddingConfig(localStorage.token, {
 			embedding_engine: embeddingEngine,
 			embedding_model: embeddingModel,
+			...(embeddingEngine === 'openai' || embeddingEngine === 'ollama'
+				? {
+						embedding_batch_size: embeddingBatchSize
+					}
+				: {}),
 			...(embeddingEngine === 'openai'
 				? {
 						openai_config: {
 							key: OpenAIKey,
-							url: OpenAIUrl,
-							batch_size: OpenAIBatchSize
+							url: OpenAIUrl
 						}
 					}
 				: {})
@@ -193,10 +197,10 @@
 		if (embeddingConfig) {
 			embeddingEngine = embeddingConfig.embedding_engine;
 			embeddingModel = embeddingConfig.embedding_model;
+			embeddingBatchSize = embeddingConfig.embedding_batch_size ?? 1;
 
 			OpenAIKey = embeddingConfig.openai_config.key;
 			OpenAIUrl = embeddingConfig.openai_config.url;
-			OpenAIBatchSize = embeddingConfig.openai_config.batch_size ?? 1;
 		}
 	};
 
@@ -309,6 +313,8 @@
 
 					<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={OpenAIKey} />
 				</div>
+			{/if}
+			{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai'}
 				<div class="flex mt-0.5 space-x-2">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Embedding Batch Size')}</div>
 					<div class=" flex-1">
@@ -318,13 +324,13 @@
 							min="1"
 							max="2048"
 							step="1"
-							bind:value={OpenAIBatchSize}
+							bind:value={embeddingBatchSize}
 							class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
 						/>
 					</div>
 					<div class="">
 						<input
-							bind:value={OpenAIBatchSize}
+							bind:value={embeddingBatchSize}
 							type="number"
 							class=" bg-transparent text-center w-14"
 							min="-2"
