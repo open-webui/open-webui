@@ -440,6 +440,7 @@ async def chat_completion_tools_handler(
         if not content:
             return body, {}
 
+        content = content[content.find("{") : content.rfind("}") + 1]
         result = json.loads(content)
 
         tool_function_name = result.get("name", None)
