@@ -31,7 +31,8 @@
 		currentChatPage,
 		temporaryChatEnabled,
 		mobile,
-		showOverview
+		showOverview,
+		chatTitle
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -102,7 +103,6 @@
 	let chat = null;
 	let tags = [];
 
-	let title = '';
 	let history = {
 		messages: {},
 		currentId: null
@@ -296,6 +296,8 @@
 
 		const chatInput = document.getElementById('chat-textarea');
 		chatInput?.focus();
+
+		chats.subscribe(() => {});
 	});
 
 	onDestroy(() => {
@@ -313,10 +315,11 @@
 			window.history.replaceState(history.state, '', `/`);
 		}
 
-		await chatId.set('');
 		autoScroll = true;
 
-		title = '';
+		await chatId.set('');
+		await chatTitle.set('');
+
 		history = {
 			messages: {},
 			currentId: null
@@ -398,7 +401,8 @@
 					(chatContent?.history ?? undefined) !== undefined
 						? chatContent.history
 						: convertMessagesToHistory(chatContent.messages);
-				title = chatContent.title;
+
+				chatTitle.set(chatContent.title);
 
 				const userSettings = await getUserSettings(localStorage.token);
 
@@ -1207,8 +1211,8 @@
 		const messages = createMessagesList(responseMessageId);
 		if (messages.length == 2 && messages.at(-1).content !== '' && selectedModels[0] === model.id) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-			const _title = await generateChatTitle(userPrompt);
-			await setChatTitle(_chatId, _title);
+			const title = await generateChatTitle(userPrompt);
+			await setChatTitle(_chatId, title);
 		}
 
 		return _response;
@@ -1497,8 +1501,8 @@
 		const messages = createMessagesList(responseMessageId);
 		if (messages.length == 2 && selectedModels[0] === model.id) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-			const _title = await generateChatTitle(userPrompt);
-			await setChatTitle(_chatId, _title);
+			const title = await generateChatTitle(userPrompt);
+			await setChatTitle(_chatId, title);
 		}
 
 		return _response;
@@ -1672,13 +1676,13 @@
 		}
 	};
 
-	const setChatTitle = async (_chatId, _title) => {
+	const setChatTitle = async (_chatId, title) => {
 		if (_chatId === $chatId) {
-			title = _title;
+			chatTitle.set(title);
 		}
 
 		if (!$temporaryChatEnabled) {
-			chat = await updateChatById(localStorage.token, _chatId, { title: _title });
+			chat = await updateChatById(localStorage.token, _chatId, { title: title });
 
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
@@ -1817,8 +1821,8 @@
 
 <svelte:head>
 	<title>
-		{title
-			? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} | ${$WEBUI_NAME}`
+		{$chatTitle
+			? `${$chatTitle.length > 30 ? `${$chatTitle.slice(0, 30)}...` : $chatTitle} | ${$WEBUI_NAME}`
 			: `${$WEBUI_NAME}`}
 	</title>
 </svelte:head>
@@ -1863,7 +1867,13 @@
 			/>
 		{/if}
 
-		<Navbar {chat} {title} bind:selectedModels shareEnabled={!!history.currentId} {initNewChat} />
+		<Navbar
+			{chat}
+			title={$chatTitle}
+			bind:selectedModels
+			shareEnabled={!!history.currentId}
+			{initNewChat}
+		/>
 
 		<PaneGroup direction="horizontal" class="w-full h-full">
 			<Pane defaultSize={50} class="h-full flex w-full relative">
