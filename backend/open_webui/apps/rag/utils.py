@@ -76,8 +76,6 @@ def query_doc(
             limit=k,
         )
 
-        print("result", result)
-
         log.info(f"query_doc:result {result}")
         return result
     except Exception as e:
