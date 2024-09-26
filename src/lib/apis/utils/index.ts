@@ -55,7 +55,7 @@ export const formatPythonCode = async (code: string) => {
 	return res;
 };
 
-export const downloadChatAsPDF = async (chat: object) => {
+export const downloadChatAsPDF = async (title: string, messages: object[]) => {
 	let error = null;
 
 	const blob = await fetch(`${WEBUI_API_BASE_URL}/utils/pdf`, {
@@ -64,8 +64,8 @@ export const downloadChatAsPDF = async (chat: object) => {
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify({
-			title: chat.title,
-			messages: chat.messages
+			title: title,
+			messages: messages
 		})
 	})
 		.then(async (res) => {
