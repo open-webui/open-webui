@@ -4,7 +4,12 @@ from open_webui.apps.rag.vector.dbs.milvus import MilvusClient
 
 from open_webui.config import VECTOR_DB
 
-if VECTOR_DB == "milvus":
-    VECTOR_DB_CLIENT = MilvusClient()
-else:
-    VECTOR_DB_CLIENT = ChromaClient()
+match VECTOR_DB:
+    case "chroma":
+        VECTOR_DB_CLIENT = ChromaClient()
+
+    case "milvus":
+        VECTOR_DB_CLIENT = MilvusClient()
+
+    case _:
+        VECTOR_DB_CLIENT = ChromaClient()
