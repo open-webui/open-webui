@@ -17,7 +17,7 @@
 		resetUploadDir,
 		getRAGConfig,
 		updateRAGConfig
-	} from '$lib/apis/rag';
+	} from '$lib/apis/retrieval';
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 

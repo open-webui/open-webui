@@ -9,7 +9,7 @@
 	import Models from './Commands/Models.svelte';
 
 	import { removeLastWordFromString } from '$lib/utils';
-	import { uploadWebToVectorDB, uploadYoutubeTranscriptionToVectorDB } from '$lib/apis/rag';
+	import { uploadWebToVectorDB, uploadYoutubeTranscriptionToVectorDB } from '$lib/apis/retrieval';
 
 	export let prompt = '';
 	export let files = [];
