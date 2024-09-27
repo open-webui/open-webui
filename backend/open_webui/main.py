@@ -761,10 +761,22 @@ class PipelineMiddleware(BaseHTTPMiddleware):
         # Parse string to JSON
         data = json.loads(body_str) if body_str else {}
 
-        user = get_current_user(
-            request,
-            get_http_authorization_cred(request.headers["Authorization"]),
-        )
+        try:
+            user = get_current_user(
+                request,
+                get_http_authorization_cred(request.headers["Authorization"]),
+            )
+        except KeyError as e:
+            if len(e.args) > 1:
+                return JSONResponse(
+                    status_code=e.args[0],
+                    content={"detail": e.args[1]},
+                )
+            else:
+                return JSONResponse(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    content={"detail": "Not authenticated"},
+                )
 
         try:
             data = filter_pipeline(data, user)
