@@ -20,18 +20,18 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, sta
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from open_webui.apps.rag.search.main import SearchResult
-from open_webui.apps.rag.search.brave import search_brave
-from open_webui.apps.rag.search.duckduckgo import search_duckduckgo
-from open_webui.apps.rag.search.google_pse import search_google_pse
-from open_webui.apps.rag.search.jina_search import search_jina
-from open_webui.apps.rag.search.searchapi import search_searchapi
-from open_webui.apps.rag.search.searxng import search_searxng
-from open_webui.apps.rag.search.serper import search_serper
-from open_webui.apps.rag.search.serply import search_serply
-from open_webui.apps.rag.search.serpstack import search_serpstack
-from open_webui.apps.rag.search.tavily import search_tavily
-from open_webui.apps.rag.utils import (
+from open_webui.apps.retrieval.search.main import SearchResult
+from open_webui.apps.retrieval.search.brave import search_brave
+from open_webui.apps.retrieval.search.duckduckgo import search_duckduckgo
+from open_webui.apps.retrieval.search.google_pse import search_google_pse
+from open_webui.apps.retrieval.search.jina_search import search_jina
+from open_webui.apps.retrieval.search.searchapi import search_searchapi
+from open_webui.apps.retrieval.search.searxng import search_searxng
+from open_webui.apps.retrieval.search.serper import search_serper
+from open_webui.apps.retrieval.search.serply import search_serply
+from open_webui.apps.retrieval.search.serpstack import search_serpstack
+from open_webui.apps.retrieval.search.tavily import search_tavily
+from open_webui.apps.retrieval.utils import (
     get_embedding_function,
     get_model_path,
     query_collection,
@@ -98,7 +98,7 @@ from open_webui.utils.misc import (
     sanitize_filename,
 )
 from open_webui.utils.utils import get_admin_user, get_verified_user
-from open_webui.apps.rag.vector.connector import VECTOR_DB_CLIENT
+from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import (
