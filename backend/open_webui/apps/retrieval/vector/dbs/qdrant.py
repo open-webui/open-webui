@@ -1,10 +1,9 @@
 from qdrant_client import QdrantClient as Client, models
 from qdrant_client.http.models import Distance, PointStruct, VectorParams
-import json
 
 from typing import Optional
 
-from open_webui.apps.rag.vector.main import VectorItem, SearchResult, GetResult
+from open_webui.apps.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import (
     QDRANT_API_KEY,
     QDRANT_URL,

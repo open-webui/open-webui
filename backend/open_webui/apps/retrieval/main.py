@@ -1061,7 +1061,7 @@ def store_data_in_vector_db(
 
     if len(docs) > 0:
         log.info(f"store_data_in_vector_db {docs}")
-        return store_docs_in_vector_db(docs, collection_name, metadata, overwrite), None
+        return store_docs_in_vector_db(docs, collection_name, metadata, overwrite)
     else:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
@@ -1377,6 +1377,7 @@ def process_doc(
             )
 
             if result:
+
                 return {
                     "status": True,
                     "collection_name": collection_name,
