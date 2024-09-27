@@ -2153,7 +2153,8 @@ async def get_app_changelog():
 @app.get("/api/version/updates")
 async def get_app_latest_release_version():
     try:
-        async with aiohttp.ClientSession(trust_env=True) as session:
+        timeout = aiohttp.ClientTimeout(total=1)
+        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(
                 "https://api.github.com/repos/open-webui/open-webui/releases/latest"
             ) as response:
@@ -2163,10 +2164,7 @@ async def get_app_latest_release_version():
 
                 return {"current": VERSION, "latest": latest_version[1:]}
     except aiohttp.ClientError:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
-        )
+        return {"current": VERSION, "latest": VERSION}
 
 
 ############################
