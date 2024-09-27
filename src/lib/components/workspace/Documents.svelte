@@ -8,7 +8,7 @@
 	import { createNewDoc, deleteDocByName, getDocs } from '$lib/apis/documents';
 
 	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS } from '$lib/constants';
-	import { processFile } from '$lib/apis/rag';
+	import { processFile } from '$lib/apis/retrieval';
 	import { blobToFile, transformFileName } from '$lib/utils';
 
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
