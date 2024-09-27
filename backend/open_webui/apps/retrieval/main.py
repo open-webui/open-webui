@@ -1340,14 +1340,14 @@ def store_doc(
             )
 
 
-class ProcessDocForm(BaseModel):
+class ProcessFileForm(BaseModel):
     file_id: str
     collection_name: Optional[str] = None
 
 
-@app.post("/process/doc")
-def process_doc(
-    form_data: ProcessDocForm,
+@app.post("/process/file")
+def process_file(
+    form_data: ProcessFileForm,
     user=Depends(get_verified_user),
 ):
     try:

@@ -924,7 +924,7 @@ QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
 
 ####################################
-# RAG
+# Information Retrieval (RAG)
 ####################################
 
 # RAG Content Extraction

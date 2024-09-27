@@ -170,10 +170,10 @@ export const updateQuerySettings = async (token: string, settings: QuerySettings
 	return res;
 };
 
-export const processDocToVectorDB = async (token: string, file_id: string) => {
+export const processFile = async (token: string, file_id: string) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/process/doc`, {
+	const res = await fetch(`${RAG_API_BASE_URL}/process/file`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',

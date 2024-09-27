@@ -1,4 +1,4 @@
-import { getRAGTemplate } from '$lib/apis/rag';
+import { getRAGTemplate } from '$lib/apis/retrieval';
 
 export const RAGTemplate = async (token: string, context: string, query: string) => {
 	let template = await getRAGTemplate(token).catch(() => {
