@@ -206,10 +206,10 @@
 					const now = new Date();
 
 					if (now - dismissedUpdateToast > 24 * 60 * 60 * 1000) {
-						await checkForVersionUpdates();
+						checkForVersionUpdates();
 					}
 				} else {
-					await checkForVersionUpdates();
+					checkForVersionUpdates();
 				}
 			}
 			await tick();
