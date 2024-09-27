@@ -405,7 +405,7 @@ async def generate_chat_completion(
 
     url = app.state.config.OPENAI_API_BASE_URLS[idx]
     key = app.state.config.OPENAI_API_KEYS[idx]
-    is_o1 = payload["model"].lower().startswith("o1-")
+    is_o1 = payload["model"].lower().startswith("o1")
 
     # Change max_completion_tokens to max_tokens (Backward compatible)
     if "api.openai.com" not in url and not is_o1:
