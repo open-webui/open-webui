@@ -170,284 +170,6 @@ export const updateQuerySettings = async (token: string, settings: QuerySettings
 	return res;
 };
 
-export const processFile = async (token: string, file_id: string) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/process/file`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			file_id: file_id
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const uploadDocToVectorDB = async (token: string, collection_name: string, file: File) => {
-	const data = new FormData();
-	data.append('file', file);
-	data.append('collection_name', collection_name);
-
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/doc`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: data
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const uploadWebToVectorDB = async (token: string, collection_name: string, url: string) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/web`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			url: url,
-			collection_name: collection_name
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const uploadYoutubeTranscriptionToVectorDB = async (token: string, url: string) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/youtube`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			url: url
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const queryDoc = async (
-	token: string,
-	collection_name: string,
-	query: string,
-	k: number | null = null
-) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/query/doc`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			collection_name: collection_name,
-			query: query,
-			k: k
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const queryCollection = async (
-	token: string,
-	collection_names: string,
-	query: string,
-	k: number | null = null
-) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/query/collection`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			collection_names: collection_names,
-			query: query,
-			k: k
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const scanDocs = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/scan`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const resetUploadDir = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/reset/uploads`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const resetVectorDB = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/reset/db`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
 export const getEmbeddingConfig = async (token: string) => {
 	let error = null;
 
@@ -578,14 +300,140 @@ export const updateRerankingConfig = async (token: string, payload: RerankingMod
 	return res;
 };
 
-export const runWebSearch = async (
+export interface SearchDocument {
+	status: boolean;
+	collection_name: string;
+	filenames: string[];
+}
+
+export const processFile = async (token: string, file_id: string) => {
+	let error = null;
+
+	const res = await fetch(`${RAG_API_BASE_URL}/process/file`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			file_id: file_id
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const processDocsDir = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${RAG_API_BASE_URL}/process/dir`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const processYoutubeVideo = async (token: string, url: string) => {
+	let error = null;
+
+	const res = await fetch(`${RAG_API_BASE_URL}/process/youtube`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			url: url
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const processWeb = async (token: string, collection_name: string, url: string) => {
+	let error = null;
+
+	const res = await fetch(`${RAG_API_BASE_URL}/process/web`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			url: url,
+			collection_name: collection_name
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const processWebSearch = async (
 	token: string,
 	query: string,
 	collection_name?: string
 ): Promise<SearchDocument | null> => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/web/search`, {
+	const res = await fetch(`${RAG_API_BASE_URL}/process/web/search`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -613,8 +461,128 @@ export const runWebSearch = async (
 	return res;
 };
 
-export interface SearchDocument {
-	status: boolean;
-	collection_name: string;
-	filenames: string[];
-}
+export const queryDoc = async (
+	token: string,
+	collection_name: string,
+	query: string,
+	k: number | null = null
+) => {
+	let error = null;
+
+	const res = await fetch(`${RAG_API_BASE_URL}/query/doc`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			collection_name: collection_name,
+			query: query,
+			k: k
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const queryCollection = async (
+	token: string,
+	collection_names: string,
+	query: string,
+	k: number | null = null
+) => {
+	let error = null;
+
+	const res = await fetch(`${RAG_API_BASE_URL}/query/collection`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			collection_names: collection_names,
+			query: query,
+			k: k
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const resetUploadDir = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${RAG_API_BASE_URL}/reset/uploads`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const resetVectorDB = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${RAG_API_BASE_URL}/reset/db`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
