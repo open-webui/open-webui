@@ -8,8 +8,6 @@
 	export let colorClassName = 'bg-white dark:bg-gray-800';
 	export let url: string | null = null;
 
-	export let clickHandler: Function | null = null;
-
 	export let dismissible = false;
 	export let status = 'processed';
 
@@ -17,7 +15,7 @@
 	export let type: string;
 	export let size: number;
 
-	function formatSize(size) {
+	const formatSize = (size) => {
 		if (size == null) return 'Unknown size';
 		if (typeof size !== 'number' || size < 0) return 'Invalid size';
 		if (size === 0) return '0 B';
@@ -29,7 +27,7 @@
 			unitIndex++;
 		}
 		return `${size.toFixed(1)} ${units[unitIndex]}`;
-	}
+	};
 </script>
 
 <div class="relative group">
@@ -37,17 +35,7 @@
 		class="h-14 {className} flex items-center space-x-3 {colorClassName} rounded-xl border border-gray-100 dark:border-gray-800 text-left"
 		type="button"
 		on:click={async () => {
-			if (clickHandler === null) {
-				if (url) {
-					if (type === 'file') {
-						window.open(`${url}/content`, '_blank').focus();
-					} else {
-						window.open(`${url}`, '_blank').focus();
-					}
-				}
-			} else {
-				clickHandler();
-			}
+			dispatch('click');
 		}}
 	>
 		<div class="p-4 py-[1.1rem] bg-red-400 text-white rounded-l-xl">

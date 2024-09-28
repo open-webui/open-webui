@@ -7,7 +7,7 @@
 	import { deleteAllFiles, deleteFileById } from '$lib/apis/files';
 	import {
 		getQuerySettings,
-		scanDocs,
+		processDocsDir,
 		updateQuerySettings,
 		resetVectorDB,
 		getEmbeddingConfig,
@@ -63,7 +63,7 @@
 
 	const scanHandler = async () => {
 		scanDirLoading = true;
-		const res = await scanDocs(localStorage.token);
+		const res = await processDocsDir(localStorage.token);
 		scanDirLoading = false;
 
 		if (res) {

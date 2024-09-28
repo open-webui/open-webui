@@ -9,7 +9,7 @@
 	import Models from './Commands/Models.svelte';
 
 	import { removeLastWordFromString } from '$lib/utils';
-	import { uploadWebToVectorDB, uploadYoutubeTranscriptionToVectorDB } from '$lib/apis/retrieval';
+	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
 
 	export let prompt = '';
 	export let files = [];
@@ -41,7 +41,7 @@
 
 		try {
 			files = [...files, doc];
-			const res = await uploadWebToVectorDB(localStorage.token, '', url);
+			const res = await processWeb(localStorage.token, '', url);
 
 			if (res) {
 				doc.status = 'processed';
@@ -69,7 +69,7 @@
 
 		try {
 			files = [...files, doc];
-			const res = await uploadYoutubeTranscriptionToVectorDB(localStorage.token, url);
+			const res = await processYoutubeVideo(localStorage.token, url);
 
 			if (res) {
 				doc.status = 'processed';
