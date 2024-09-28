@@ -725,7 +725,6 @@ def process_file(
             PDF_EXTRACT_IMAGES=app.state.config.PDF_EXTRACT_IMAGES,
         )
         docs = loader.load(file.filename, file.meta.get("content_type"), file_path)
-
         raw_content = " ".join([doc.page_content for doc in docs])
         print(raw_content)
 
@@ -872,7 +871,6 @@ def process_youtube_video(form_data: ProcessUrlForm, user=Depends(get_verified_u
             translation=app.state.YOUTUBE_LOADER_TRANSLATION,
         )
         docs = loader.load()
-
         save_docs_to_vector_db(docs, collection_name, overwrite=True)
 
         return {

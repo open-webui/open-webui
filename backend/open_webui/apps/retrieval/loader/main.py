@@ -1,5 +1,7 @@
 import requests
 import logging
+import ftfy
+
 
 from langchain_community.document_loaders import (
     BSHTMLLoader,
@@ -122,7 +124,14 @@ class Loader:
         self, filename: str, file_content_type: str, file_path: str
     ) -> list[Document]:
         loader = self._get_loader(filename, file_content_type, file_path)
-        return loader.load()
+        docs = loader.load()
+
+        return [
+            Document(
+                page_content=ftfy.fix_text(doc.page_content), metadata=doc.metadata
+            )
+            for doc in docs
+        ]
 
     def _get_loader(self, filename: str, file_content_type: str, file_path: str):
         file_ext = filename.split(".")[-1].lower()
