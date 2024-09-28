@@ -91,7 +91,7 @@ def doc_to_dict(docstring):
     param_idx = docstring.find(":param")
     if param_idx == -1:
         description = docstring
-    else :
+    else:
         description = description[0:param_idx]
 
     param_dict = {}
