@@ -2,7 +2,6 @@ import requests
 import logging
 import ftfy
 
-
 from langchain_community.document_loaders import (
     BSHTMLLoader,
     CSVLoader,
@@ -23,7 +22,6 @@ from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
-
 
 known_source_ext = [
     "go",

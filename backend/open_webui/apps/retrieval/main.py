@@ -725,8 +725,16 @@ def process_file(
             PDF_EXTRACT_IMAGES=app.state.config.PDF_EXTRACT_IMAGES,
         )
         docs = loader.load(file.filename, file.meta.get("content_type"), file_path)
-        raw_content = " ".join([doc.page_content for doc in docs])
-        print(raw_content)
+        raw_text_content = " ".join([doc.page_content for doc in docs])
+
+        Files.update_files_metadata_by_id(
+            form_data.file_id,
+            {
+                "content": {
+                    "text": raw_text_content,
+                }
+            },
+        )
 
         try:
             result = save_docs_to_vector_db(
