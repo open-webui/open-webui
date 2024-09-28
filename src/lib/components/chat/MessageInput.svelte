@@ -163,6 +163,8 @@
 			if (res) {
 				fileItem.status = 'processed';
 				fileItem.collection_name = res.collection_name;
+				fileItem.content = res.content;
+
 				files = files;
 			}
 		} catch (e) {
@@ -464,6 +466,7 @@
 											</div>
 										{:else}
 											<FileItem
+												{file}
 												name={file.name}
 												type={file.type}
 												size={file?.size}
@@ -472,6 +475,9 @@
 												on:dismiss={() => {
 													files.splice(fileIdx, 1);
 													files = files;
+												}}
+												on:click={() => {
+													console.log(file);
 												}}
 											/>
 										{/if}

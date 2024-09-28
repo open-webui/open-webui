@@ -725,13 +725,15 @@ def process_file(
             PDF_EXTRACT_IMAGES=app.state.config.PDF_EXTRACT_IMAGES,
         )
         docs = loader.load(file.filename, file.meta.get("content_type"), file_path)
-        raw_text_content = " ".join([doc.page_content for doc in docs])
+        text_content = " ".join([doc.page_content for doc in docs])
+
+        log.debug(f"text_content: {text_content}")
 
         Files.update_files_metadata_by_id(
             form_data.file_id,
             {
                 "content": {
-                    "text": raw_text_content,
+                    "text": text_content,
                 }
             },
         )
@@ -751,6 +753,7 @@ def process_file(
                     "status": True,
                     "collection_name": collection_name,
                     "filename": file.meta.get("name", file.filename),
+                    "content": text_content,
                 }
         except Exception as e:
             raise HTTPException(
