@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { createEventDispatcher, getContext } from 'svelte';
+	import { formatFileSize } from '$lib/utils';
+
+	import FileItemModal from './FileItemModal.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -11,30 +14,26 @@
 	export let dismissible = false;
 	export let status = 'processed';
 
+	export let file = null;
+	export let enableModal = true;
+
 	export let name: string;
 	export let type: string;
 	export let size: number;
 
-	const formatSize = (size) => {
-		if (size == null) return 'Unknown size';
-		if (typeof size !== 'number' || size < 0) return 'Invalid size';
-		if (size === 0) return '0 B';
-		const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-		let unitIndex = 0;
-
-		while (size >= 1024 && unitIndex < units.length - 1) {
-			size /= 1024;
-			unitIndex++;
-		}
-		return `${size.toFixed(1)} ${units[unitIndex]}`;
-	};
+	let showModal = false;
 </script>
+
+{#if file}
+	<FileItemModal bind:show={showModal} {file} />
+{/if}
 
 <div class="relative group">
 	<button
 		class="h-14 {className} flex items-center space-x-3 {colorClassName} rounded-xl border border-gray-100 dark:border-gray-800 text-left"
 		type="button"
 		on:click={async () => {
+			showModal = !showModal;
 			dispatch('click');
 		}}
 	>
@@ -111,7 +110,7 @@
 					<span class=" capitalize">{type}</span>
 				{/if}
 				{#if size}
-					<span class="capitalize">{formatSize(size)}</span>
+					<span class="capitalize">{formatFileSize(size)}</span>
 				{/if}
 			</div>
 		</div>
