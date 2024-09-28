@@ -787,6 +787,7 @@ async def generate_chat_completion(
 ):
     payload = {**form_data.model_dump(exclude_none=True)}
     log.debug(f"{payload = }")
+
     if "metadata" in payload:
         del payload["metadata"]
 

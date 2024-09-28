@@ -448,38 +448,44 @@ async def chat_completion_tools_handler(
         if not content:
             return body, {}
 
-        content = content[content.find("{") : content.rfind("}") + 1]
-        result = json.loads(content)
-
-        tool_function_name = result.get("name", None)
-        if tool_function_name not in tools:
-            return body, {}
-
-        tool_function_params = result.get("parameters", {})
-
         try:
-            tool_output = await tools[tool_function_name]["callable"](
-                **tool_function_params
-            )
+            content = content[content.find("{") : content.rfind("}") + 1]
+            if not content:
+                raise Exception("No JSON object found in the response")
+
+            result = json.loads(content)
+
+            tool_function_name = result.get("name", None)
+            if tool_function_name not in tools:
+                return body, {}
+
+            tool_function_params = result.get("parameters", {})
+
+            try:
+                tool_output = await tools[tool_function_name]["callable"](
+                    **tool_function_params
+                )
+            except Exception as e:
+                tool_output = str(e)
+
+            if tools[tool_function_name]["citation"]:
+                citations.append(
+                    {
+                        "source": {
+                            "name": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
+                        },
+                        "document": [tool_output],
+                        "metadata": [{"source": tool_function_name}],
+                    }
+                )
+            if tools[tool_function_name]["file_handler"]:
+                skip_files = True
+
+            if isinstance(tool_output, str):
+                contexts.append(tool_output)
         except Exception as e:
-            tool_output = str(e)
-
-        if tools[tool_function_name]["citation"]:
-            citations.append(
-                {
-                    "source": {
-                        "name": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
-                    },
-                    "document": [tool_output],
-                    "metadata": [{"source": tool_function_name}],
-                }
-            )
-        if tools[tool_function_name]["file_handler"]:
-            skip_files = True
-
-        if isinstance(tool_output, str):
-            contexts.append(tool_output)
-
+            log.exception(f"Error: {e}")
+            content = None
     except Exception as e:
         log.exception(f"Error: {e}")
         content = None
