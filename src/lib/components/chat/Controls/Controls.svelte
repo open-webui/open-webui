@@ -35,6 +35,7 @@
 					{#each chatFiles as file, fileIdx}
 						<FileItem
 							className="w-full"
+							{file}
 							url={`${file?.url}`}
 							name={file.name}
 							type={file.type}
