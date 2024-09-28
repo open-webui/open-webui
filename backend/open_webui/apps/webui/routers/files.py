@@ -171,6 +171,19 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
         )
 
 
+@router.get("/{id}/content/text")
+async def get_file_text_content_by_id(id: str, user=Depends(get_verified_user)):
+    file = Files.get_file_by_id(id)
+
+    if file and (file.user_id == user.id or user.role == "admin"):
+        return {"text": file.meta.get("content", {}).get("text", None)}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
 @router.get("/{id}/content/{file_name}", response_model=Optional[FileModel])
 async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)

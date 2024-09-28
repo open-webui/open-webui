@@ -15,7 +15,7 @@ from open_webui.apps.ollama.main import (
     GenerateEmbeddingsForm,
     generate_ollama_embeddings,
 )
-from open_webui.apps.rag.vector.connector import VECTOR_DB_CLIENT
+from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.misc import get_last_user_message
 
 from open_webui.env import SRC_LOG_LEVELS

@@ -4,7 +4,7 @@ import json
 
 from typing import Optional
 
-from open_webui.apps.rag.vector.main import VectorItem, SearchResult, GetResult
+from open_webui.apps.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import (
     MILVUS_URI,
 )
@@ -98,7 +98,10 @@ class MilvusClient:
 
         index_params = self.client.prepare_index_params()
         index_params.add_index(
-            field_name="vector", index_type="HNSW", metric_type="COSINE", params={}
+            field_name="vector",
+            index_type="HNSW",
+            metric_type="COSINE",
+            params={"M": 16, "efConstruction": 100},
         )
 
         self.client.create_collection(

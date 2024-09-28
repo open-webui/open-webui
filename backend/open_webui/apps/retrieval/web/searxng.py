@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 import requests
-from open_webui.apps.rag.search.main import SearchResult, get_filtered_results
+from open_webui.apps.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)

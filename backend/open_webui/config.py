@@ -921,7 +921,7 @@ CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
 
 ####################################
-# RAG
+# Information Retrieval (RAG)
 ####################################
 
 # RAG Content Extraction

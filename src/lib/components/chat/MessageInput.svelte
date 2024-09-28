@@ -17,7 +17,8 @@
 	import { blobToFile, findWordIndices } from '$lib/utils';
 
 	import { transcribeAudio } from '$lib/apis/audio';
-	import { processDocToVectorDB } from '$lib/apis/rag';
+
+	import { processFile } from '$lib/apis/retrieval';
 	import { uploadFile } from '$lib/apis/files';
 
 	import {
@@ -158,17 +159,14 @@
 
 	const processFileItem = async (fileItem) => {
 		try {
-			const res = await processDocToVectorDB(localStorage.token, fileItem.id);
-
+			const res = await processFile(localStorage.token, fileItem.id);
 			if (res) {
 				fileItem.status = 'processed';
 				fileItem.collection_name = res.collection_name;
 				files = files;
 			}
 		} catch (e) {
-			// Remove the failed doc from the files array
-			// files = files.filter((f) => f.id !== fileItem.id);
-			toast.error(e);
+			// We keep the file in the files list even if it fails to process
 			fileItem.status = 'processed';
 			files = files;
 		}

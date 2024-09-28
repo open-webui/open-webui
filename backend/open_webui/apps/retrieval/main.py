@@ -3,35 +3,40 @@ import logging
 import mimetypes
 import os
 import shutil
-import socket
-import urllib.parse
+
 import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Iterator, Optional, Sequence, Union
 
-
-import numpy as np
-import torch
-import requests
-import validators
-
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from open_webui.apps.rag.search.main import SearchResult
-from open_webui.apps.rag.search.brave import search_brave
-from open_webui.apps.rag.search.duckduckgo import search_duckduckgo
-from open_webui.apps.rag.search.google_pse import search_google_pse
-from open_webui.apps.rag.search.jina_search import search_jina
-from open_webui.apps.rag.search.searchapi import search_searchapi
-from open_webui.apps.rag.search.searxng import search_searxng
-from open_webui.apps.rag.search.serper import search_serper
-from open_webui.apps.rag.search.serply import search_serply
-from open_webui.apps.rag.search.serpstack import search_serpstack
-from open_webui.apps.rag.search.tavily import search_tavily
-from open_webui.apps.rag.utils import (
+from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
+
+# Information retrieval models
+from open_webui.apps.retrieval.model.colbert import ColBERT
+
+# Document loaders
+from open_webui.apps.retrieval.loader.main import Loader
+
+# Web search engines
+from open_webui.apps.retrieval.web.main import SearchResult
+from open_webui.apps.retrieval.web.utils import get_web_loader
+from open_webui.apps.retrieval.web.brave import search_brave
+from open_webui.apps.retrieval.web.duckduckgo import search_duckduckgo
+from open_webui.apps.retrieval.web.google_pse import search_google_pse
+from open_webui.apps.retrieval.web.jina_search import search_jina
+from open_webui.apps.retrieval.web.searchapi import search_searchapi
+from open_webui.apps.retrieval.web.searxng import search_searxng
+from open_webui.apps.retrieval.web.serper import search_serper
+from open_webui.apps.retrieval.web.serply import search_serply
+from open_webui.apps.retrieval.web.serpstack import search_serpstack
+from open_webui.apps.retrieval.web.tavily import search_tavily
+
+
+from open_webui.apps.retrieval.utils import (
     get_embedding_function,
     get_model_path,
     query_collection,
@@ -39,6 +44,7 @@ from open_webui.apps.rag.utils import (
     query_doc,
     query_doc_with_hybrid_search,
 )
+
 from open_webui.apps.webui.models.documents import DocumentForm, Documents
 from open_webui.apps.webui.models.files import Files
 from open_webui.config import (
@@ -98,28 +104,13 @@ from open_webui.utils.misc import (
     sanitize_filename,
 )
 from open_webui.utils.utils import get_admin_user, get_verified_user
-from open_webui.apps.rag.vector.connector import VECTOR_DB_CLIENT
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import (
-    BSHTMLLoader,
-    CSVLoader,
-    Docx2txtLoader,
-    OutlookMessageLoader,
-    PyPDFLoader,
-    TextLoader,
-    UnstructuredEPubLoader,
-    UnstructuredExcelLoader,
-    UnstructuredMarkdownLoader,
-    UnstructuredPowerPointLoader,
-    UnstructuredRSTLoader,
-    UnstructuredXMLLoader,
-    WebBaseLoader,
     YoutubeLoader,
 )
 from langchain_core.documents import Document
-from colbert.infra import ColBERTConfig
-from colbert.modeling.checkpoint import Checkpoint
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -200,83 +191,6 @@ def update_reranking_model(
 ):
     if reranking_model:
         if any(model in reranking_model for model in ["jinaai/jina-colbert-v2"]):
-
-            class ColBERT:
-                def __init__(self, name) -> None:
-                    print("ColBERT: Loading model", name)
-                    self.device = "cuda" if torch.cuda.is_available() else "cpu"
-
-                    if DOCKER:
-                        # This is a workaround for the issue with the docker container
-                        # where the torch extension is not loaded properly
-                        # and the following error is thrown:
-                        # /root/.cache/torch_extensions/py311_cpu/segmented_maxsim_cpp/segmented_maxsim_cpp.so: cannot open shared object file: No such file or directory
-
-                        lock_file = "/root/.cache/torch_extensions/py311_cpu/segmented_maxsim_cpp/lock"
-                        if os.path.exists(lock_file):
-                            os.remove(lock_file)
-
-                    self.ckpt = Checkpoint(
-                        name,
-                        colbert_config=ColBERTConfig(model_name=name),
-                    ).to(self.device)
-                    pass
-
-                def calculate_similarity_scores(
-                    self, query_embeddings, document_embeddings
-                ):
-
-                    query_embeddings = query_embeddings.to(self.device)
-                    document_embeddings = document_embeddings.to(self.device)
-
-                    # Validate dimensions to ensure compatibility
-                    if query_embeddings.dim() != 3:
-                        raise ValueError(
-                            f"Expected query embeddings to have 3 dimensions, but got {query_embeddings.dim()}."
-                        )
-                    if document_embeddings.dim() != 3:
-                        raise ValueError(
-                            f"Expected document embeddings to have 3 dimensions, but got {document_embeddings.dim()}."
-                        )
-                    if query_embeddings.size(0) not in [1, document_embeddings.size(0)]:
-                        raise ValueError(
-                            "There should be either one query or queries equal to the number of documents."
-                        )
-
-                    # Transpose the query embeddings to align for matrix multiplication
-                    transposed_query_embeddings = query_embeddings.permute(0, 2, 1)
-                    # Compute similarity scores using batch matrix multiplication
-                    computed_scores = torch.matmul(
-                        document_embeddings, transposed_query_embeddings
-                    )
-                    # Apply max pooling to extract the highest semantic similarity across each document's sequence
-                    maximum_scores = torch.max(computed_scores, dim=1).values
-
-                    # Sum up the maximum scores across features to get the overall document relevance scores
-                    final_scores = maximum_scores.sum(dim=1)
-
-                    normalized_scores = torch.softmax(final_scores, dim=0)
-
-                    return normalized_scores.detach().cpu().numpy().astype(np.float32)
-
-                def predict(self, sentences):
-
-                    query = sentences[0][0]
-                    docs = [i[1] for i in sentences]
-
-                    # Embedding the documents
-                    embedded_docs = self.ckpt.docFromText(docs, bsize=32)[0]
-                    # Embedding the queries
-                    embedded_queries = self.ckpt.queryFromText([query], bsize=32)
-                    embedded_query = embedded_queries[0]
-
-                    # Calculate retrieval scores for the query against all documents
-                    scores = self.calculate_similarity_scores(
-                        embedded_query.unsqueeze(0), embedded_docs
-                    )
-
-                    return scores
-
             try:
                 app.state.sentence_transformer_rf = ColBERT(
                     get_model_path(reranking_model, auto_update)
@@ -332,10 +246,10 @@ app.add_middleware(
 
 
 class CollectionNameForm(BaseModel):
-    collection_name: Optional[str] = "test"
+    collection_name: Optional[str] = None
 
 
-class UrlForm(CollectionNameForm):
+class ProcessUrlForm(CollectionNameForm):
     url: str
 
 
@@ -707,103 +621,266 @@ async def update_query_settings(
     }
 
 
-class QueryDocForm(BaseModel):
-    collection_name: str
-    query: str
-    k: Optional[int] = None
-    r: Optional[float] = None
-    hybrid: Optional[bool] = None
+####################################
+#
+# Document process and retrieval
+#
+####################################
 
 
-@app.post("/query/doc")
-def query_doc_handler(
-    form_data: QueryDocForm,
+def save_docs_to_vector_db(
+    docs,
+    collection_name,
+    metadata: Optional[dict] = None,
+    overwrite: bool = False,
+    split: bool = True,
+) -> bool:
+    log.info(f"save_docs_to_vector_db {docs} {collection_name}")
+
+    if split:
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=app.state.config.CHUNK_SIZE,
+            chunk_overlap=app.state.config.CHUNK_OVERLAP,
+            add_start_index=True,
+        )
+        docs = text_splitter.split_documents(docs)
+
+    if len(docs) == 0:
+        raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
+
+    texts = [doc.page_content for doc in docs]
+    metadatas = [{**doc.metadata, **(metadata if metadata else {})} for doc in docs]
+
+    # ChromaDB does not like datetime formats
+    # for meta-data so convert them to string.
+    for metadata in metadatas:
+        for key, value in metadata.items():
+            if isinstance(value, datetime):
+                metadata[key] = str(value)
+
+    try:
+        if overwrite:
+            if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+                log.info(f"deleting existing collection {collection_name}")
+                VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+
+        if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+            log.info(f"collection {collection_name} already exists")
+            return True
+        else:
+            embedding_function = get_embedding_function(
+                app.state.config.RAG_EMBEDDING_ENGINE,
+                app.state.config.RAG_EMBEDDING_MODEL,
+                app.state.sentence_transformer_ef,
+                app.state.config.OPENAI_API_KEY,
+                app.state.config.OPENAI_API_BASE_URL,
+                app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+            )
+
+            embeddings = embedding_function(
+                list(map(lambda x: x.replace("\n", " "), texts))
+            )
+
+            VECTOR_DB_CLIENT.insert(
+                collection_name=collection_name,
+                items=[
+                    {
+                        "id": str(uuid.uuid4()),
+                        "text": text,
+                        "vector": embeddings[idx],
+                        "metadata": metadatas[idx],
+                    }
+                    for idx, text in enumerate(texts)
+                ],
+            )
+
+            return True
+    except Exception as e:
+        log.exception(e)
+        return False
+
+
+class ProcessFileForm(BaseModel):
+    file_id: str
+    collection_name: Optional[str] = None
+
+
+@app.post("/process/file")
+def process_file(
+    form_data: ProcessFileForm,
     user=Depends(get_verified_user),
 ):
     try:
-        if app.state.config.ENABLE_RAG_HYBRID_SEARCH:
-            return query_doc_with_hybrid_search(
-                collection_name=form_data.collection_name,
-                query=form_data.query,
-                embedding_function=app.state.EMBEDDING_FUNCTION,
-                k=form_data.k if form_data.k else app.state.config.TOP_K,
-                reranking_function=app.state.sentence_transformer_rf,
-                r=(
-                    form_data.r if form_data.r else app.state.config.RELEVANCE_THRESHOLD
-                ),
+        file = Files.get_file_by_id(form_data.file_id)
+        file_path = file.meta.get("path", f"{UPLOAD_DIR}/{file.filename}")
+
+        collection_name = form_data.collection_name
+        if collection_name is None:
+            with open(file_path, "rb") as f:
+                collection_name = calculate_sha256(f)[:63]
+
+        loader = Loader(
+            engine=app.state.config.CONTENT_EXTRACTION_ENGINE,
+            TIKA_SERVER_URL=app.state.config.TIKA_SERVER_URL,
+            PDF_EXTRACT_IMAGES=app.state.config.PDF_EXTRACT_IMAGES,
+        )
+        docs = loader.load(file.filename, file.meta.get("content_type"), file_path)
+        raw_text_content = " ".join([doc.page_content for doc in docs])
+
+        Files.update_files_metadata_by_id(
+            form_data.file_id,
+            {
+                "content": {
+                    "text": raw_text_content,
+                }
+            },
+        )
+
+        try:
+            result = save_docs_to_vector_db(
+                docs,
+                collection_name,
+                {
+                    "file_id": form_data.file_id,
+                    "name": file.meta.get("name", file.filename),
+                },
             )
-        else:
-            return query_doc(
-                collection_name=form_data.collection_name,
-                query=form_data.query,
-                embedding_function=app.state.EMBEDDING_FUNCTION,
-                k=form_data.k if form_data.k else app.state.config.TOP_K,
+
+            if result:
+                return {
+                    "status": True,
+                    "collection_name": collection_name,
+                    "filename": file.meta.get("name", file.filename),
+                }
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=e,
             )
     except Exception as e:
         log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
-        )
+        if "No pandoc was found" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(e),
+            )
 
 
-class QueryCollectionsForm(BaseModel):
-    collection_names: list[str]
-    query: str
-    k: Optional[int] = None
-    r: Optional[float] = None
-    hybrid: Optional[bool] = None
+class ProcessTextForm(BaseModel):
+    name: str
+    content: str
+    collection_name: Optional[str] = None
 
 
-@app.post("/query/collection")
-def query_collection_handler(
-    form_data: QueryCollectionsForm,
+@app.post("/process/text")
+def process_text(
+    form_data: ProcessTextForm,
     user=Depends(get_verified_user),
 ):
-    try:
-        if app.state.config.ENABLE_RAG_HYBRID_SEARCH:
-            return query_collection_with_hybrid_search(
-                collection_names=form_data.collection_names,
-                query=form_data.query,
-                embedding_function=app.state.EMBEDDING_FUNCTION,
-                k=form_data.k if form_data.k else app.state.config.TOP_K,
-                reranking_function=app.state.sentence_transformer_rf,
-                r=(
-                    form_data.r if form_data.r else app.state.config.RELEVANCE_THRESHOLD
-                ),
-            )
-        else:
-            return query_collection(
-                collection_names=form_data.collection_names,
-                query=form_data.query,
-                embedding_function=app.state.EMBEDDING_FUNCTION,
-                k=form_data.k if form_data.k else app.state.config.TOP_K,
-            )
+    collection_name = form_data.collection_name
+    if collection_name is None:
+        collection_name = calculate_sha256_string(form_data.content)
 
-    except Exception as e:
-        log.exception(e)
+    docs = [
+        Document(
+            page_content=form_data.content,
+            metadata={"name": form_data.name, "created_by": user.id},
+        )
+    ]
+    result = save_docs_to_vector_db(docs, collection_name)
+
+    if result:
+        return {"status": True, "collection_name": collection_name}
+    else:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT(),
         )
 
 
-@app.post("/youtube")
-def store_youtube_video(form_data: UrlForm, user=Depends(get_verified_user)):
+@app.get("/process/dir")
+def process_docs_dir(user=Depends(get_admin_user)):
+    for path in Path(DOCS_DIR).rglob("./**/*"):
+        try:
+            if path.is_file() and not path.name.startswith("."):
+                tags = extract_folders_after_data_docs(path)
+                filename = path.name
+                file_content_type = mimetypes.guess_type(path)
+
+                with open(path, "rb") as f:
+                    collection_name = calculate_sha256(f)[:63]
+
+                loader = Loader(
+                    engine=app.state.config.CONTENT_EXTRACTION_ENGINE,
+                    TIKA_SERVER_URL=app.state.config.TIKA_SERVER_URL,
+                    PDF_EXTRACT_IMAGES=app.state.config.PDF_EXTRACT_IMAGES,
+                )
+                docs = loader.load(filename, file_content_type[0], str(path))
+
+                try:
+                    result = save_docs_to_vector_db(docs, collection_name)
+
+                    if result:
+                        sanitized_filename = sanitize_filename(filename)
+                        doc = Documents.get_doc_by_name(sanitized_filename)
+
+                        if doc is None:
+                            doc = Documents.insert_new_doc(
+                                user.id,
+                                DocumentForm(
+                                    **{
+                                        "name": sanitized_filename,
+                                        "title": filename,
+                                        "collection_name": collection_name,
+                                        "filename": filename,
+                                        "content": (
+                                            json.dumps(
+                                                {
+                                                    "tags": list(
+                                                        map(
+                                                            lambda name: {"name": name},
+                                                            tags,
+                                                        )
+                                                    )
+                                                }
+                                            )
+                                            if len(tags)
+                                            else "{}"
+                                        ),
+                                    }
+                                ),
+                            )
+                except Exception as e:
+                    log.exception(e)
+                    pass
+
+        except Exception as e:
+            log.exception(e)
+
+    return True
+
+
+@app.post("/process/youtube")
+def process_youtube_video(form_data: ProcessUrlForm, user=Depends(get_verified_user)):
     try:
+        collection_name = form_data.collection_name
+        if not collection_name:
+            collection_name = calculate_sha256_string(form_data.url)[:63]
+
         loader = YoutubeLoader.from_youtube_url(
             form_data.url,
             add_video_info=True,
             language=app.state.config.YOUTUBE_LOADER_LANGUAGE,
             translation=app.state.YOUTUBE_LOADER_TRANSLATION,
         )
-        data = loader.load()
+        docs = loader.load()
+        save_docs_to_vector_db(docs, collection_name, overwrite=True)
 
-        collection_name = form_data.collection_name
-        if collection_name == "":
-            collection_name = calculate_sha256_string(form_data.url)[:63]
-
-        store_data_in_vector_db(data, collection_name, overwrite=True)
         return {
             "status": True,
             "collection_name": collection_name,
@@ -817,21 +894,21 @@ def store_youtube_video(form_data: UrlForm, user=Depends(get_verified_user)):
         )
 
 
-@app.post("/web")
-def store_web(form_data: UrlForm, user=Depends(get_verified_user)):
-    # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
+@app.post("/process/web")
+def process_web(form_data: ProcessUrlForm, user=Depends(get_verified_user)):
     try:
+        collection_name = form_data.collection_name
+        if not collection_name:
+            collection_name = calculate_sha256_string(form_data.url)[:63]
+
         loader = get_web_loader(
             form_data.url,
             verify_ssl=app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            requests_per_second=app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
         )
-        data = loader.load()
+        docs = loader.load()
+        save_docs_to_vector_db(docs, collection_name, overwrite=True)
 
-        collection_name = form_data.collection_name
-        if collection_name == "":
-            collection_name = calculate_sha256_string(form_data.url)[:63]
-
-        store_data_in_vector_db(data, collection_name, overwrite=True)
         return {
             "status": True,
             "collection_name": collection_name,
@@ -843,53 +920,6 @@ def store_web(form_data: UrlForm, user=Depends(get_verified_user)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
-
-
-def get_web_loader(url: Union[str, Sequence[str]], verify_ssl: bool = True):
-    # Check if the URL is valid
-    if not validate_url(url):
-        raise ValueError(ERROR_MESSAGES.INVALID_URL)
-    return SafeWebBaseLoader(
-        url,
-        verify_ssl=verify_ssl,
-        requests_per_second=RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
-        continue_on_failure=True,
-    )
-
-
-def validate_url(url: Union[str, Sequence[str]]):
-    if isinstance(url, str):
-        if isinstance(validators.url(url), validators.ValidationError):
-            raise ValueError(ERROR_MESSAGES.INVALID_URL)
-        if not ENABLE_RAG_LOCAL_WEB_FETCH:
-            # Local web fetch is disabled, filter out any URLs that resolve to private IP addresses
-            parsed_url = urllib.parse.urlparse(url)
-            # Get IPv4 and IPv6 addresses
-            ipv4_addresses, ipv6_addresses = resolve_hostname(parsed_url.hostname)
-            # Check if any of the resolved addresses are private
-            # This is technically still vulnerable to DNS rebinding attacks, as we don't control WebBaseLoader
-            for ip in ipv4_addresses:
-                if validators.ipv4(ip, private=True):
-                    raise ValueError(ERROR_MESSAGES.INVALID_URL)
-            for ip in ipv6_addresses:
-                if validators.ipv6(ip, private=True):
-                    raise ValueError(ERROR_MESSAGES.INVALID_URL)
-        return True
-    elif isinstance(url, Sequence):
-        return all(validate_url(u) for u in url)
-    else:
-        return False
-
-
-def resolve_hostname(hostname):
-    # Get address information
-    addr_info = socket.getaddrinfo(hostname, None)
-
-    # Extract IP addresses from address information
-    ipv4_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET]
-    ipv6_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET6]
-
-    return ipv4_addresses, ipv6_addresses
 
 
 def search_web(engine: str, query: str) -> list[SearchResult]:
@@ -1007,8 +1037,8 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
         raise Exception("No search engine API key found in environment variables")
 
 
-@app.post("/web/search")
-def store_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
+@app.post("/process/web/search")
+def process_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
     try:
         logging.info(
             f"trying to web search with {app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query}"
@@ -1026,15 +1056,16 @@ def store_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
         )
 
     try:
-        urls = [result.link for result in web_results]
-        loader = get_web_loader(urls)
-        data = loader.load()
-
         collection_name = form_data.collection_name
         if collection_name == "":
             collection_name = calculate_sha256_string(form_data.query)[:63]
 
-        store_data_in_vector_db(data, collection_name, overwrite=True)
+        urls = [result.link for result in web_results]
+
+        loader = get_web_loader(urls)
+        docs = loader.load()
+        save_docs_to_vector_db(docs, collection_name, overwrite=True)
+
         return {
             "status": True,
             "collection_name": collection_name,
@@ -1048,449 +1079,92 @@ def store_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
         )
 
 
-def store_data_in_vector_db(
-    data, collection_name, metadata: Optional[dict] = None, overwrite: bool = False
-) -> bool:
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=app.state.config.CHUNK_SIZE,
-        chunk_overlap=app.state.config.CHUNK_OVERLAP,
-        add_start_index=True,
-    )
-
-    docs = text_splitter.split_documents(data)
-
-    if len(docs) > 0:
-        log.info(f"store_data_in_vector_db {docs}")
-        return store_docs_in_vector_db(docs, collection_name, metadata, overwrite), None
-    else:
-        raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
+class QueryDocForm(BaseModel):
+    collection_name: str
+    query: str
+    k: Optional[int] = None
+    r: Optional[float] = None
+    hybrid: Optional[bool] = None
 
 
-def store_text_in_vector_db(
-    text, metadata, collection_name, overwrite: bool = False
-) -> bool:
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=app.state.config.CHUNK_SIZE,
-        chunk_overlap=app.state.config.CHUNK_OVERLAP,
-        add_start_index=True,
-    )
-    docs = text_splitter.create_documents([text], metadatas=[metadata])
-    return store_docs_in_vector_db(docs, collection_name, overwrite=overwrite)
-
-
-def store_docs_in_vector_db(
-    docs, collection_name, metadata: Optional[dict] = None, overwrite: bool = False
-) -> bool:
-    log.info(f"store_docs_in_vector_db {docs} {collection_name}")
-
-    texts = [doc.page_content for doc in docs]
-    metadatas = [{**doc.metadata, **(metadata if metadata else {})} for doc in docs]
-
-    # ChromaDB does not like datetime formats
-    # for meta-data so convert them to string.
-    for metadata in metadatas:
-        for key, value in metadata.items():
-            if isinstance(value, datetime):
-                metadata[key] = str(value)
-
-    try:
-        if overwrite:
-            if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
-                log.info(f"deleting existing collection {collection_name}")
-                VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
-
-        if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
-            log.info(f"collection {collection_name} already exists")
-            return True
-        else:
-            embedding_function = get_embedding_function(
-                app.state.config.RAG_EMBEDDING_ENGINE,
-                app.state.config.RAG_EMBEDDING_MODEL,
-                app.state.sentence_transformer_ef,
-                app.state.config.OPENAI_API_KEY,
-                app.state.config.OPENAI_API_BASE_URL,
-                app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
-            )
-
-            embedding_texts = embedding_function(
-                list(map(lambda x: x.replace("\n", " "), texts))
-            )
-
-            VECTOR_DB_CLIENT.insert(
-                collection_name=collection_name,
-                items=[
-                    {
-                        "id": str(uuid.uuid4()),
-                        "text": text,
-                        "vector": embedding_texts[idx],
-                        "metadata": metadatas[idx],
-                    }
-                    for idx, text in enumerate(texts)
-                ],
-            )
-
-            return True
-    except Exception as e:
-        log.exception(e)
-        return False
-
-
-class TikaLoader:
-    def __init__(self, file_path, mime_type=None):
-        self.file_path = file_path
-        self.mime_type = mime_type
-
-    def load(self) -> list[Document]:
-        with open(self.file_path, "rb") as f:
-            data = f.read()
-
-        if self.mime_type is not None:
-            headers = {"Content-Type": self.mime_type}
-        else:
-            headers = {}
-
-        endpoint = app.state.config.TIKA_SERVER_URL
-        if not endpoint.endswith("/"):
-            endpoint += "/"
-        endpoint += "tika/text"
-
-        r = requests.put(endpoint, data=data, headers=headers)
-
-        if r.ok:
-            raw_metadata = r.json()
-            text = raw_metadata.get("X-TIKA:content", "<No text content found>")
-
-            if "Content-Type" in raw_metadata:
-                headers["Content-Type"] = raw_metadata["Content-Type"]
-
-            log.info("Tika extracted text: %s", text)
-
-            return [Document(page_content=text, metadata=headers)]
-        else:
-            raise Exception(f"Error calling Tika: {r.reason}")
-
-
-def get_loader(filename: str, file_content_type: str, file_path: str):
-    file_ext = filename.split(".")[-1].lower()
-    known_type = True
-
-    known_source_ext = [
-        "go",
-        "py",
-        "java",
-        "sh",
-        "bat",
-        "ps1",
-        "cmd",
-        "js",
-        "ts",
-        "css",
-        "cpp",
-        "hpp",
-        "h",
-        "c",
-        "cs",
-        "sql",
-        "log",
-        "ini",
-        "pl",
-        "pm",
-        "r",
-        "dart",
-        "dockerfile",
-        "env",
-        "php",
-        "hs",
-        "hsc",
-        "lua",
-        "nginxconf",
-        "conf",
-        "m",
-        "mm",
-        "plsql",
-        "perl",
-        "rb",
-        "rs",
-        "db2",
-        "scala",
-        "bash",
-        "swift",
-        "vue",
-        "svelte",
-        "msg",
-        "ex",
-        "exs",
-        "erl",
-        "tsx",
-        "jsx",
-        "hs",
-        "lhs",
-    ]
-
-    if (
-        app.state.config.CONTENT_EXTRACTION_ENGINE == "tika"
-        and app.state.config.TIKA_SERVER_URL
-    ):
-        if file_ext in known_source_ext or (
-            file_content_type and file_content_type.find("text/") >= 0
-        ):
-            loader = TextLoader(file_path, autodetect_encoding=True)
-        else:
-            loader = TikaLoader(file_path, file_content_type)
-    else:
-        if file_ext == "pdf":
-            loader = PyPDFLoader(
-                file_path, extract_images=app.state.config.PDF_EXTRACT_IMAGES
-            )
-        elif file_ext == "csv":
-            loader = CSVLoader(file_path)
-        elif file_ext == "rst":
-            loader = UnstructuredRSTLoader(file_path, mode="elements")
-        elif file_ext == "xml":
-            loader = UnstructuredXMLLoader(file_path)
-        elif file_ext in ["htm", "html"]:
-            loader = BSHTMLLoader(file_path, open_encoding="unicode_escape")
-        elif file_ext == "md":
-            loader = UnstructuredMarkdownLoader(file_path)
-        elif file_content_type == "application/epub+zip":
-            loader = UnstructuredEPubLoader(file_path)
-        elif (
-            file_content_type
-            == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            or file_ext == "docx"
-        ):
-            loader = Docx2txtLoader(file_path)
-        elif file_content_type in [
-            "application/vnd.ms-excel",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        ] or file_ext in ["xls", "xlsx"]:
-            loader = UnstructuredExcelLoader(file_path)
-        elif file_content_type in [
-            "application/vnd.ms-powerpoint",
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        ] or file_ext in ["ppt", "pptx"]:
-            loader = UnstructuredPowerPointLoader(file_path)
-        elif file_ext == "msg":
-            loader = OutlookMessageLoader(file_path)
-        elif file_ext in known_source_ext or (
-            file_content_type and file_content_type.find("text/") >= 0
-        ):
-            loader = TextLoader(file_path, autodetect_encoding=True)
-        else:
-            loader = TextLoader(file_path, autodetect_encoding=True)
-            known_type = False
-
-    return loader, known_type
-
-
-@app.post("/doc")
-def store_doc(
-    collection_name: Optional[str] = Form(None),
-    file: UploadFile = File(...),
-    user=Depends(get_verified_user),
-):
-    # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
-
-    log.info(f"file.content_type: {file.content_type}")
-    try:
-        unsanitized_filename = file.filename
-        filename = os.path.basename(unsanitized_filename)
-
-        file_path = f"{UPLOAD_DIR}/{filename}"
-
-        contents = file.file.read()
-        with open(file_path, "wb") as f:
-            f.write(contents)
-            f.close()
-
-        f = open(file_path, "rb")
-        if collection_name is None:
-            collection_name = calculate_sha256(f)[:63]
-        f.close()
-
-        loader, known_type = get_loader(filename, file.content_type, file_path)
-        data = loader.load()
-
-        try:
-            result = store_data_in_vector_db(data, collection_name)
-
-            if result:
-                return {
-                    "status": True,
-                    "collection_name": collection_name,
-                    "filename": filename,
-                    "known_type": known_type,
-                }
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=e,
-            )
-    except Exception as e:
-        log.exception(e)
-        if "No pandoc was found" in str(e):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(e),
-            )
-
-
-class ProcessDocForm(BaseModel):
-    file_id: str
-    collection_name: Optional[str] = None
-
-
-@app.post("/process/doc")
-def process_doc(
-    form_data: ProcessDocForm,
+@app.post("/query/doc")
+def query_doc_handler(
+    form_data: QueryDocForm,
     user=Depends(get_verified_user),
 ):
     try:
-        file = Files.get_file_by_id(form_data.file_id)
-        file_path = file.meta.get("path", f"{UPLOAD_DIR}/{file.filename}")
-
-        f = open(file_path, "rb")
-
-        collection_name = form_data.collection_name
-        if collection_name is None:
-            collection_name = calculate_sha256(f)[:63]
-        f.close()
-
-        loader, known_type = get_loader(
-            file.filename, file.meta.get("content_type"), file_path
-        )
-        data = loader.load()
-
-        try:
-            result = store_data_in_vector_db(
-                data,
-                collection_name,
-                {
-                    "file_id": form_data.file_id,
-                    "name": file.meta.get("name", file.filename),
-                },
+        if app.state.config.ENABLE_RAG_HYBRID_SEARCH:
+            return query_doc_with_hybrid_search(
+                collection_name=form_data.collection_name,
+                query=form_data.query,
+                embedding_function=app.state.EMBEDDING_FUNCTION,
+                k=form_data.k if form_data.k else app.state.config.TOP_K,
+                reranking_function=app.state.sentence_transformer_rf,
+                r=(
+                    form_data.r if form_data.r else app.state.config.RELEVANCE_THRESHOLD
+                ),
             )
-
-            if result:
-                return {
-                    "status": True,
-                    "collection_name": collection_name,
-                    "known_type": known_type,
-                    "filename": file.meta.get("name", file.filename),
-                }
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=e,
+        else:
+            return query_doc(
+                collection_name=form_data.collection_name,
+                query=form_data.query,
+                embedding_function=app.state.EMBEDDING_FUNCTION,
+                k=form_data.k if form_data.k else app.state.config.TOP_K,
             )
     except Exception as e:
         log.exception(e)
-        if "No pandoc was found" in str(e):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(e),
-            )
-
-
-class TextRAGForm(BaseModel):
-    name: str
-    content: str
-    collection_name: Optional[str] = None
-
-
-@app.post("/text")
-def store_text(
-    form_data: TextRAGForm,
-    user=Depends(get_verified_user),
-):
-    collection_name = form_data.collection_name
-    if collection_name is None:
-        collection_name = calculate_sha256_string(form_data.content)
-
-    result = store_text_in_vector_db(
-        form_data.content,
-        metadata={"name": form_data.name, "created_by": user.id},
-        collection_name=collection_name,
-    )
-
-    if result:
-        return {"status": True, "collection_name": collection_name}
-    else:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ERROR_MESSAGES.DEFAULT(),
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
         )
 
 
-@app.get("/scan")
-def scan_docs_dir(user=Depends(get_admin_user)):
-    for path in Path(DOCS_DIR).rglob("./**/*"):
-        try:
-            if path.is_file() and not path.name.startswith("."):
-                tags = extract_folders_after_data_docs(path)
-                filename = path.name
-                file_content_type = mimetypes.guess_type(path)
+class QueryCollectionsForm(BaseModel):
+    collection_names: list[str]
+    query: str
+    k: Optional[int] = None
+    r: Optional[float] = None
+    hybrid: Optional[bool] = None
 
-                f = open(path, "rb")
-                collection_name = calculate_sha256(f)[:63]
-                f.close()
 
-                loader, known_type = get_loader(
-                    filename, file_content_type[0], str(path)
-                )
-                data = loader.load()
+@app.post("/query/collection")
+def query_collection_handler(
+    form_data: QueryCollectionsForm,
+    user=Depends(get_verified_user),
+):
+    try:
+        if app.state.config.ENABLE_RAG_HYBRID_SEARCH:
+            return query_collection_with_hybrid_search(
+                collection_names=form_data.collection_names,
+                query=form_data.query,
+                embedding_function=app.state.EMBEDDING_FUNCTION,
+                k=form_data.k if form_data.k else app.state.config.TOP_K,
+                reranking_function=app.state.sentence_transformer_rf,
+                r=(
+                    form_data.r if form_data.r else app.state.config.RELEVANCE_THRESHOLD
+                ),
+            )
+        else:
+            return query_collection(
+                collection_names=form_data.collection_names,
+                query=form_data.query,
+                embedding_function=app.state.EMBEDDING_FUNCTION,
+                k=form_data.k if form_data.k else app.state.config.TOP_K,
+            )
 
-                try:
-                    result = store_data_in_vector_db(data, collection_name)
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
 
-                    if result:
-                        sanitized_filename = sanitize_filename(filename)
-                        doc = Documents.get_doc_by_name(sanitized_filename)
 
-                        if doc is None:
-                            doc = Documents.insert_new_doc(
-                                user.id,
-                                DocumentForm(
-                                    **{
-                                        "name": sanitized_filename,
-                                        "title": filename,
-                                        "collection_name": collection_name,
-                                        "filename": filename,
-                                        "content": (
-                                            json.dumps(
-                                                {
-                                                    "tags": list(
-                                                        map(
-                                                            lambda name: {"name": name},
-                                                            tags,
-                                                        )
-                                                    )
-                                                }
-                                            )
-                                            if len(tags)
-                                            else "{}"
-                                        ),
-                                    }
-                                ),
-                            )
-                except Exception as e:
-                    log.exception(e)
-                    pass
-
-        except Exception as e:
-            log.exception(e)
-
-    return True
+####################################
+#
+# Vector DB operations
+#
+####################################
 
 
 @app.post("/reset/db")
@@ -1541,33 +1215,6 @@ def reset(user=Depends(get_admin_user)) -> bool:
         log.exception(e)
 
     return True
-
-
-class SafeWebBaseLoader(WebBaseLoader):
-    """WebBaseLoader with enhanced error handling for URLs."""
-
-    def lazy_load(self) -> Iterator[Document]:
-        """Lazy load text from the url(s) in web_path with error handling."""
-        for path in self.web_paths:
-            try:
-                soup = self._scrape(path, bs_kwargs=self.bs_kwargs)
-                text = soup.get_text(**self.bs_get_text_kwargs)
-
-                # Build metadata
-                metadata = {"source": path}
-                if title := soup.find("title"):
-                    metadata["title"] = title.get_text()
-                if description := soup.find("meta", attrs={"name": "description"}):
-                    metadata["description"] = description.get(
-                        "content", "No description found."
-                    )
-                if html := soup.find("html"):
-                    metadata["language"] = html.get("lang", "No language found.")
-
-                yield Document(page_content=text, metadata=metadata)
-            except Exception as e:
-                # Log the error and continue with the next URL
-                log.error(f"Error loading {path}: {e}")
 
 
 if ENV == "dev":

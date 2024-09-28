@@ -7,7 +7,7 @@
 	import { deleteAllFiles, deleteFileById } from '$lib/apis/files';
 	import {
 		getQuerySettings,
-		scanDocs,
+		processDocsDir,
 		updateQuerySettings,
 		resetVectorDB,
 		getEmbeddingConfig,
@@ -17,7 +17,7 @@
 		resetUploadDir,
 		getRAGConfig,
 		updateRAGConfig
-	} from '$lib/apis/rag';
+	} from '$lib/apis/retrieval';
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
@@ -63,7 +63,7 @@
 
 	const scanHandler = async () => {
 		scanDirLoading = true;
-		const res = await scanDocs(localStorage.token);
+		const res = await processDocsDir(localStorage.token);
 		scanDirLoading = false;
 
 		if (res) {
