@@ -88,7 +88,12 @@ def get_tools(
 
 def doc_to_dict(docstring):
     lines = docstring.split("\n")
-    description = lines[1].strip()
+    param_idx = docstring.find(":param")
+    if param_idx == -1:
+        description = docstring
+    else :
+        description = description[0:param_idx]
+
     param_dict = {}
 
     for line in lines:
