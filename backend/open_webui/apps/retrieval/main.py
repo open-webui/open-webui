@@ -16,7 +16,7 @@ from pydantic import BaseModel
 from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 
 # Information retrieval models
-from open_webui.apps.retrieval.model.colbert import ColBERT
+from open_webui.apps.retrieval.models.colbert import ColBERT
 
 # Document loaders
 from open_webui.apps.retrieval.loader.main import Loader
