@@ -19,7 +19,7 @@ from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.apps.retrieval.models.colbert import ColBERT
 
 # Document loaders
-from open_webui.apps.retrieval.loader.main import Loader
+from open_webui.apps.retrieval.loaders.main import Loader
 
 # Web search engines
 from open_webui.apps.retrieval.web.main import SearchResult
