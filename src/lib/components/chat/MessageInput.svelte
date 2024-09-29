@@ -150,7 +150,10 @@
 			if (res) {
 				fileItem.status = 'processed';
 				fileItem.collection_name = res.collection_name;
-				fileItem.content = res.content;
+				fileItem.file = {
+					...fileItem.file,
+					content: res.content
+				};
 
 				files = files;
 			}
