@@ -17,7 +17,7 @@
 </script>
 
 <Modal bind:show size="md">
-	<div class="font-primary px-6 py-6 w-full flex flex-col justify-center dark:text-gray-400">
+	<div class="font-primary px-6 py-5 w-full flex flex-col justify-center dark:text-gray-400">
 		<div class="flex items-start justify-between pb-2">
 			<div>
 				<div class=" font-medium text-lg line-clamp-1 dark:text-gray-100">
