@@ -700,7 +700,7 @@
 				childrenIds: [],
 				role: 'user',
 				content: userPrompt,
-				files: _files.length > 0 ? _files : undefined,
+				files: chatFiles.length > 0 ? chatFiles : undefined,
 				timestamp: Math.floor(Date.now() / 1000), // Unix epoch
 				models: selectedModels
 			};
@@ -945,6 +945,12 @@
 				['doc', 'file', 'collection'].includes(item.type)
 			),
 			...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
+		);
+
+		// Remove duplicates
+		files = files.filter(
+			(item, index, array) =>
+				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
 		);
 
 		scrollToBottom();
@@ -1245,6 +1251,11 @@
 				['doc', 'file', 'collection'].includes(item.type)
 			),
 			...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
+		);
+		// Remove duplicates
+		files = files.filter(
+			(item, index, array) =>
+				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
 		);
 
 		scrollToBottom();

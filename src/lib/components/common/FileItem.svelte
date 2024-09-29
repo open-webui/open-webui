@@ -25,7 +25,7 @@
 </script>
 
 {#if file}
-	<FileItemModal bind:show={showModal} {file} />
+	<FileItemModal bind:show={showModal} bind:file />
 {/if}
 
 <div class="relative group">
