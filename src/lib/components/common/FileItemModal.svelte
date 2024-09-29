@@ -20,8 +20,14 @@
 	<div class="font-primary px-6 py-5 w-full flex flex-col justify-center dark:text-gray-400">
 		<div class="flex items-start justify-between pb-2">
 			<div>
-				<div class=" font-medium text-lg line-clamp-1 dark:text-gray-100">
-					{file?.name ?? 'File'}
+				<div class=" font-medium text-lg dark:text-gray-100">
+					<a
+						href={file.url ? (file.type === 'file' ? `${file.url}/content` : `${file.url}`) : '#'}
+						target="_blank"
+						class="hover:underline line-clamp-1"
+					>
+						{file?.name ?? 'File'}
+					</a>
 				</div>
 
 				<div>
