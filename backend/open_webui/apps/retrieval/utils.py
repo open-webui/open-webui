@@ -320,7 +320,7 @@ def get_rag_context(
         if file.get("context") == "full":
             context = {
                 "documents": [[file["content"]]],
-                "metadatas": [[{"file_id": file["id"], "name": file["name"]}]],
+                "metadatas": [[{"file_id": file.get("id"), "name": file.get("name")}]],
             }
         else:
             context = None
