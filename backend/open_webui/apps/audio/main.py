@@ -494,7 +494,7 @@ def transcription(
                     os.path.getsize(file_path) > MAX_FILE_SIZE
                 ):  # Still larger than 25MB after compression
                     chunks = split_on_silence(
-                        audio, min_silence_len=500, silence_thresh=-40
+                        audio, min_silence_len=1000, silence_thresh=-40
                     )
                     texts = []
                     for i, chunk in enumerate(chunks):
