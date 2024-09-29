@@ -90,6 +90,10 @@ class ERROR_MESSAGES(str, Enum):
         "The Ollama API is disabled. Please enable it to use this feature."
     )
 
+    FILE_TOO_LARGE = (
+        lambda size="": f"Oops! The file you're trying to upload is too large. Please upload a file that is less than {size}."
+    )
+
 
 class TASKS(str, Enum):
     def __str__(self) -> str:
