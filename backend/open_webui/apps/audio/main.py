@@ -493,18 +493,17 @@ def transcription(
                 if (
                     os.path.getsize(file_path) > MAX_FILE_SIZE
                 ):  # Still larger than 25MB after compression
-                    chunks = split_on_silence(
-                        audio, min_silence_len=1000, silence_thresh=-40
+                    log.debug(
+                        f"Compressed file size is still larger than {MAX_FILE_SIZE_MB}MB: {os.path.getsize(file_path)}"
                     )
-                    texts = []
-                    for i, chunk in enumerate(chunks):
-                        chunk_file_path = f"{file_dir}/{id}_chunk{i}.{ext}"
-                        chunk.export(chunk_file_path, format=ext)
-                        text = transcribe(chunk_file_path)
-                        texts.append(text)
-                    data = {"text": " ".join(texts)}
-                else:
-                    data = transcribe(file_path)
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=ERROR_MESSAGES.FILE_TOO_LARGE(
+                            size=f"{MAX_FILE_SIZE_MB}MB"
+                        ),
+                    )
+
+                data = transcribe(file_path)
             else:
                 data = transcribe(file_path)
 
