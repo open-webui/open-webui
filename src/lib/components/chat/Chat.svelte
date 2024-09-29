@@ -700,7 +700,7 @@
 				childrenIds: [],
 				role: 'user',
 				content: userPrompt,
-				files: chatFiles.length > 0 ? chatFiles : undefined,
+				files: _files.length > 0 ? _files : undefined,
 				timestamp: Math.floor(Date.now() / 1000), // Unix epoch
 				models: selectedModels
 			};
