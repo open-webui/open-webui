@@ -15,6 +15,12 @@
 	src: url('/assets/fonts/Mona-Sans.woff2');
 	font-display: swap;
 }
+@font-face {
+	font-family: 'SF';
+	src: url('/assets/fonts/SF-Pro-Text-Regular.otf');
+	font-display: swap;
+}
+
 
 html {
 	word-break: break-word;
