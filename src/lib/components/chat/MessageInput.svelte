@@ -133,21 +133,8 @@
 				fileItem.id = uploadedFile.id;
 				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
 
-				// TODO: Check if tools & functions have files support to skip this step to delegate file processing
-				// Default Upload to VectorDB
-				if (
-					SUPPORTED_FILE_TYPE.includes(file['type']) ||
-					SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
-				) {
-					processFileItem(fileItem);
-				} else {
-					toast.error(
-						$i18n.t(`Unknown file type '{{file_type}}'. Proceeding with the file upload anyway.`, {
-							file_type: file['type']
-						})
-					);
-					processFileItem(fileItem);
-				}
+				// Try to extract content of the file for retrieval, even non-supported file types
+				processFileItem(fileItem);
 			} else {
 				files = files.filter((item) => item.status !== null);
 			}
