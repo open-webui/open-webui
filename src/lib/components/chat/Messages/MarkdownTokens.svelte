@@ -2,7 +2,11 @@
 	import DOMPurify from 'dompurify';
 	import { onMount } from 'svelte';
 	import { marked, type Token } from 'marked';
-	import { revertSanitizedResponseContent, revertSanitizedCodeResponseContent, unescapeHtml } from '$lib/utils';
+	import {
+		revertSanitizedResponseContent,
+		revertSanitizedCodeResponseContent,
+		unescapeHtml
+	} from '$lib/utils';
 
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
 	import MarkdownInlineTokens from '$lib/components/chat/Messages/MarkdownInlineTokens.svelte';
@@ -34,12 +38,12 @@
 			code={revertSanitizedCodeResponseContent(token?.text ?? '')}
 		/>
 	{:else if token.type === 'table'}
-		<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
+		<div class="scrollbar-hidden relative whitespace-normal overflow-x-auto max-w-full">
 			<table class="w-full">
 				<thead>
 					<tr>
 						{#each token.header as header, headerIdx}
-							<th style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}>
+							<th style={`text-align: ${token.align[headerIdx] || 'left'}; min-width: 4rem;`}>
 								<MarkdownInlineTokens
 									id={`${id}-${tokenIdx}-header-${headerIdx}`}
 									tokens={header.tokens}
@@ -52,7 +56,11 @@
 					{#each token.rows as row, rowIdx}
 						<tr>
 							{#each row ?? [] as cell, cellIdx}
-								<td style={token.align[cellIdx] ? '' : `text-align: ${token.align[cellIdx]}`}>
+								<td
+									style={token.align[cellIdx]
+										? ''
+										: `text-align: ${token.align[cellIdx]}; min-width: 4rem;`}
+								>
 									<MarkdownInlineTokens
 										id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
 										tokens={cell.tokens}
