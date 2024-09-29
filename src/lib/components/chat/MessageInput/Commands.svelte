@@ -30,7 +30,7 @@
 	const uploadWeb = async (url) => {
 		console.log(url);
 
-		const doc = {
+		const fileItem = {
 			type: 'doc',
 			name: url,
 			collection_name: '',
@@ -40,12 +40,14 @@
 		};
 
 		try {
-			files = [...files, doc];
+			files = [...files, fileItem];
 			const res = await processWeb(localStorage.token, '', url);
 
 			if (res) {
-				doc.status = 'processed';
-				doc.collection_name = res.collection_name;
+				fileItem.status = 'processed';
+				fileItem.collection_name = res.collection_name;
+				fileItem.content = res.content;
+
 				files = files;
 			}
 		} catch (e) {
@@ -58,7 +60,7 @@
 	const uploadYoutubeTranscription = async (url) => {
 		console.log(url);
 
-		const doc = {
+		const fileItem = {
 			type: 'doc',
 			name: url,
 			collection_name: '',
@@ -68,12 +70,13 @@
 		};
 
 		try {
-			files = [...files, doc];
+			files = [...files, fileItem];
 			const res = await processYoutubeVideo(localStorage.token, url);
 
 			if (res) {
-				doc.status = 'processed';
-				doc.collection_name = res.collection_name;
+				fileItem.status = 'processed';
+				fileItem.collection_name = res.collection_name;
+				fileItem.content = res.content;
 				files = files;
 			}
 		} catch (e) {

@@ -726,7 +726,6 @@ def process_file(
         )
         docs = loader.load(file.filename, file.meta.get("content_type"), file_path)
         text_content = " ".join([doc.page_content for doc in docs])
-
         log.debug(f"text_content: {text_content}")
 
         Files.update_files_metadata_by_id(
@@ -795,77 +794,22 @@ def process_text(
             metadata={"name": form_data.name, "created_by": user.id},
         )
     ]
+    text_content = form_data.content
+    log.debug(f"text_content: {text_content}")
+
     result = save_docs_to_vector_db(docs, collection_name)
 
     if result:
-        return {"status": True, "collection_name": collection_name}
+        return {
+            "status": True,
+            "collection_name": collection_name,
+            "content": text_content,
+        }
     else:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ERROR_MESSAGES.DEFAULT(),
         )
-
-
-@app.get("/process/dir")
-def process_docs_dir(user=Depends(get_admin_user)):
-    for path in Path(DOCS_DIR).rglob("./**/*"):
-        try:
-            if path.is_file() and not path.name.startswith("."):
-                tags = extract_folders_after_data_docs(path)
-                filename = path.name
-                file_content_type = mimetypes.guess_type(path)
-
-                with open(path, "rb") as f:
-                    collection_name = calculate_sha256(f)[:63]
-
-                loader = Loader(
-                    engine=app.state.config.CONTENT_EXTRACTION_ENGINE,
-                    TIKA_SERVER_URL=app.state.config.TIKA_SERVER_URL,
-                    PDF_EXTRACT_IMAGES=app.state.config.PDF_EXTRACT_IMAGES,
-                )
-                docs = loader.load(filename, file_content_type[0], str(path))
-
-                try:
-                    result = save_docs_to_vector_db(docs, collection_name)
-
-                    if result:
-                        sanitized_filename = sanitize_filename(filename)
-                        doc = Documents.get_doc_by_name(sanitized_filename)
-
-                        if doc is None:
-                            doc = Documents.insert_new_doc(
-                                user.id,
-                                DocumentForm(
-                                    **{
-                                        "name": sanitized_filename,
-                                        "title": filename,
-                                        "collection_name": collection_name,
-                                        "filename": filename,
-                                        "content": (
-                                            json.dumps(
-                                                {
-                                                    "tags": list(
-                                                        map(
-                                                            lambda name: {"name": name},
-                                                            tags,
-                                                        )
-                                                    )
-                                                }
-                                            )
-                                            if len(tags)
-                                            else "{}"
-                                        ),
-                                    }
-                                ),
-                            )
-                except Exception as e:
-                    log.exception(e)
-                    pass
-
-        except Exception as e:
-            log.exception(e)
-
-    return True
 
 
 @app.post("/process/youtube")
@@ -882,12 +826,15 @@ def process_youtube_video(form_data: ProcessUrlForm, user=Depends(get_verified_u
             translation=app.state.YOUTUBE_LOADER_TRANSLATION,
         )
         docs = loader.load()
+        text_content = " ".join([doc.page_content for doc in docs])
+        log.debug(f"text_content: {text_content}")
         save_docs_to_vector_db(docs, collection_name, overwrite=True)
 
         return {
             "status": True,
             "collection_name": collection_name,
             "filename": form_data.url,
+            "content": text_content,
         }
     except Exception as e:
         log.exception(e)
@@ -910,12 +857,15 @@ def process_web(form_data: ProcessUrlForm, user=Depends(get_verified_user)):
             requests_per_second=app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
         )
         docs = loader.load()
+        text_content = " ".join([doc.page_content for doc in docs])
+        log.debug(f"text_content: {text_content}")
         save_docs_to_vector_db(docs, collection_name, overwrite=True)
 
         return {
             "status": True,
             "collection_name": collection_name,
             "filename": form_data.url,
+            "content": text_content,
         }
     except Exception as e:
         log.exception(e)
@@ -1067,6 +1017,7 @@ def process_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
 
         loader = get_web_loader(urls)
         docs = loader.load()
+
         save_docs_to_vector_db(docs, collection_name, overwrite=True)
 
         return {
@@ -1080,6 +1031,68 @@ def process_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
+
+
+@app.get("/process/dir")
+def process_docs_dir(user=Depends(get_admin_user)):
+    for path in Path(DOCS_DIR).rglob("./**/*"):
+        try:
+            if path.is_file() and not path.name.startswith("."):
+                tags = extract_folders_after_data_docs(path)
+                filename = path.name
+                file_content_type = mimetypes.guess_type(path)
+
+                with open(path, "rb") as f:
+                    collection_name = calculate_sha256(f)[:63]
+
+                loader = Loader(
+                    engine=app.state.config.CONTENT_EXTRACTION_ENGINE,
+                    TIKA_SERVER_URL=app.state.config.TIKA_SERVER_URL,
+                    PDF_EXTRACT_IMAGES=app.state.config.PDF_EXTRACT_IMAGES,
+                )
+                docs = loader.load(filename, file_content_type[0], str(path))
+
+                try:
+                    result = save_docs_to_vector_db(docs, collection_name)
+
+                    if result:
+                        sanitized_filename = sanitize_filename(filename)
+                        doc = Documents.get_doc_by_name(sanitized_filename)
+
+                        if doc is None:
+                            doc = Documents.insert_new_doc(
+                                user.id,
+                                DocumentForm(
+                                    **{
+                                        "name": sanitized_filename,
+                                        "title": filename,
+                                        "collection_name": collection_name,
+                                        "filename": filename,
+                                        "content": (
+                                            json.dumps(
+                                                {
+                                                    "tags": list(
+                                                        map(
+                                                            lambda name: {"name": name},
+                                                            tags,
+                                                        )
+                                                    )
+                                                }
+                                            )
+                                            if len(tags)
+                                            else "{}"
+                                        ),
+                                    }
+                                ),
+                            )
+                except Exception as e:
+                    log.exception(e)
+                    pass
+
+        except Exception as e:
+            log.exception(e)
+
+    return True
 
 
 class QueryDocForm(BaseModel):
