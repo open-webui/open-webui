@@ -46,14 +46,17 @@
 			if (res) {
 				fileItem.status = 'processed';
 				fileItem.collection_name = res.collection_name;
-				fileItem.content = res.content;
+				fileItem.file = {
+					content: res.content,
+					...fileItem.file
+				};
 
 				files = files;
 			}
 		} catch (e) {
 			// Remove the failed doc from the files array
 			files = files.filter((f) => f.name !== url);
-			toast.error(e);
+			toast.error(JSON.stringify(e));
 		}
 	};
 
@@ -76,7 +79,10 @@
 			if (res) {
 				fileItem.status = 'processed';
 				fileItem.collection_name = res.collection_name;
-				fileItem.content = res.content;
+				fileItem.file = {
+					content: res.content,
+					...fileItem.file
+				};
 				files = files;
 			}
 		} catch (e) {

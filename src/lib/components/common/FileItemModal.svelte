@@ -61,8 +61,10 @@
 							•
 						{/if}
 
-						{#if file.content}
-							<div class="capitalize shrink-0">{getLineCount(file.content)} extracted lines</div>
+						{#if file?.file?.content}
+							<div class="capitalize shrink-0">
+								{getLineCount(file?.file?.content ?? '')} extracted lines
+							</div>
 
 							<div class="flex items-center gap-1 shrink-0">
 								<Info />
@@ -100,7 +102,7 @@
 		</div>
 
 		<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
-			{file?.content ?? 'No content'}
+			{file?.file?.content ?? 'No content'}
 		</div>
 	</div>
 </Modal>

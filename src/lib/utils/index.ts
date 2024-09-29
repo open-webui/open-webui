@@ -889,5 +889,6 @@ export const formatFileSize = (size) => {
 };
 
 export const getLineCount = (text) => {
-	return text.split('\n').length;
+	console.log(typeof text);
+	return text ? text.split('\n').length : 0;
 };
