@@ -14,7 +14,7 @@ services:
       args:
         OLLAMA_BASE_URL: '/ollama'
       dockerfile: Dockerfile
-    image: https://github.com/jamon8888/Hacienda-Teams/pkgs/container/open-webui:${WEBUI_DOCKER_TAG-main}
+    image: https://github.com/jamon8888/hacienda/pkgs/container/open-webui:${WEBUI_DOCKER_TAG-main}
     container_name: Hacienda-Teams
     volumes:
       - open-webui:/app/backend/data
