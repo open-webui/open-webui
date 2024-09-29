@@ -43,7 +43,7 @@
 				<thead>
 					<tr>
 						{#each token.header as header, headerIdx}
-							<th style={`text-align: center; min-width: 4rem;`}>
+							<th style={`text-align: center; min-width: 4.5rem;`}>
 								<MarkdownInlineTokens
 									id={`${id}-${tokenIdx}-header-${headerIdx}`}
 									tokens={header.tokens}
@@ -58,7 +58,7 @@
 							{#each row ?? [] as cell, cellIdx}
 								<td
 									style={token.align[cellIdx]
-										? 'min-width: 4rem;'
+										? 'min-width: 4.5rem;'
 										: `text-align: ${token.align[cellIdx]}; min-width: 4rem;`}
 								>
 									<MarkdownInlineTokens
