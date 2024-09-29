@@ -36,6 +36,7 @@
 						<FileItem
 							className="w-full"
 							{file}
+							edit={true}
 							url={`${file?.url}`}
 							name={file.name}
 							type={file.type}

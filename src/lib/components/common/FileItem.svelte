@@ -15,7 +15,7 @@
 	export let status = 'processed';
 
 	export let file = null;
-	export let enableModal = true;
+	export let edit = false;
 
 	export let name: string;
 	export let type: string;
@@ -25,7 +25,7 @@
 </script>
 
 {#if file}
-	<FileItemModal bind:show={showModal} bind:file />
+	<FileItemModal bind:show={showModal} bind:file {edit} />
 {/if}
 
 <div class="relative group">

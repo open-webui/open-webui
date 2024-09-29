@@ -459,6 +459,7 @@
 												size={file?.size}
 												status={file.status}
 												dismissible={true}
+												edit={true}
 												on:dismiss={() => {
 													files.splice(fileIdx, 1);
 													files = files;
