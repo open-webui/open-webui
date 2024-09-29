@@ -80,7 +80,8 @@
 	const updateChatHistory = async () => {
 		await tick();
 		await updateChatById(localStorage.token, chatId, {
-			history: history
+			history: history,
+			messages: messages
 		});
 
 		currentChatPage.set(1);
@@ -380,9 +381,19 @@
 							{regenerateResponse}
 							{continueResponse}
 							{mergeResponses}
-							{updateChatHistory}
-							{chatActionHandler}
 							{readOnly}
+							on:action={async (e) => {
+								const message = history.messages[message.id];
+								if (typeof e.detail === 'string') {
+									await chatActionHandler(chatId, e.detail, message.model, message.id);
+								} else {
+									const { id, event } = e.detail;
+									await chatActionHandler(chatId, id, message.model, message.id, event);
+								}
+							}}
+							on:update={() => {
+								updateChatHistory();
+							}}
 							on:scroll={() => {
 								if (autoScroll) {
 									const element = document.getElementById('messages-container');

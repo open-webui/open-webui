@@ -860,3 +860,16 @@ export const getWeekday = () => {
 	const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 	return weekdays[date.getDay()];
 };
+
+export const createMessagesList = (history, messageId) => {
+	if (messageId === null) {
+		return [];
+	}
+
+	const message = history.messages[messageId];
+	if (message?.parentId) {
+		return [...createMessagesList(history, message.parentId), message];
+	} else {
+		return [message];
+	}
+};
