@@ -33,7 +33,16 @@
 		class="h-14 {className} flex items-center space-x-3 {colorClassName} rounded-xl border border-gray-100 dark:border-gray-800 text-left"
 		type="button"
 		on:click={async () => {
-			showModal = !showModal;
+			if (file.content) {
+				showModal = !showModal;
+			} else {
+				if (url) {
+					if (type === 'file') {
+						window.open(`${url}/content`, '_blank').focus();
+					}
+				}
+			}
+
 			dispatch('click');
 		}}
 	>
