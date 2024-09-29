@@ -78,14 +78,14 @@
 						<div>
 							<Tooltip
 								content={enableFullContent
-									? 'Inject the entire document as context for comprehensive processing.'
-									: 'Default to segmented retrieval for focused and relevant content extraction.'}
+									? 'Inject the entire document as context for comprehensive processing, this is recommended for complex queries.'
+									: 'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'}
 							>
 								<div class="flex items-center gap-1.5 text-xs">
 									{#if enableFullContent}
-										Use Entire Document
+										Using Entire Document
 									{:else}
-										Use Focused Retrieval
+										Using Focused Retrieval
 									{/if}
 									<Switch
 										bind:state={enableFullContent}
