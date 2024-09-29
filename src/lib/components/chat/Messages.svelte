@@ -383,7 +383,6 @@
 							{mergeResponses}
 							{readOnly}
 							on:action={async (e) => {
-								const message = history.messages[message.id];
 								if (typeof e.detail === 'string') {
 									await chatActionHandler(chatId, e.detail, message.model, message.id);
 								} else {
