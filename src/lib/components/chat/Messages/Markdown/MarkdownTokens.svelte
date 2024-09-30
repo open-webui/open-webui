@@ -8,6 +8,7 @@
 	import MarkdownInlineTokens from '$lib/components/chat/Messages/Markdown/MarkdownInlineTokens.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { stringify } from 'postcss';
 
 	export let id: string;
 	export let tokens: Token[];
@@ -94,6 +95,12 @@
 				{/each}
 			</ul>
 		{/if}
+	{:else if token.type === 'details'}
+		<details>
+			<summary>{token.summary}</summary>
+
+			<svelte:self id={`${id}-${tokenIdx}-d`} tokens={marked.lexer(token.text)} />
+		</details>
 	{:else if token.type === 'html'}
 		{@const html = DOMPurify.sanitize(token.text)}
 		{#if html && html.includes('<video')}
