@@ -356,7 +356,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 @app.post("/transcriptions")
 def transcribe(
     file: UploadFile = File(...),
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
     log.info(f"file.content_type: {file.content_type}")
 
