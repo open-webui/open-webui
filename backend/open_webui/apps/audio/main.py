@@ -5,8 +5,6 @@ import os
 import uuid
 from functools import lru_cache
 from pathlib import Path
-from pydub import AudioSegment
-from pydub.silence import split_on_silence
 
 import requests
 from open_webui.config import (
@@ -37,12 +35,11 @@ from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile, 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.utils.utils import get_admin_user, get_current_user, get_verified_user
 
-# Constants
-MAX_FILE_SIZE_MB = 25
-MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
-
+import requests
+from pydub import AudioSegment
+from pydub.utils import mediainfo
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["AUDIO"])
@@ -104,10 +101,6 @@ class STTConfigForm(BaseModel):
 class AudioConfigUpdateForm(BaseModel):
     tts: TTSConfigForm
     stt: STTConfigForm
-
-
-from pydub import AudioSegment
-from pydub.utils import mediainfo
 
 
 def is_mp4_audio(file_path):
@@ -360,103 +353,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             )
 
 
-def transcribe(file_path):
-    print("transcribe", file_path)
-    filename = os.path.basename(file_path)
-    file_dir = os.path.dirname(file_path)
-    id = filename.split(".")[0]
-
-    if app.state.config.STT_ENGINE == "":
-        from faster_whisper import WhisperModel
-
-        whisper_kwargs = {
-            "model_size_or_path": WHISPER_MODEL,
-            "device": whisper_device_type,
-            "compute_type": "int8",
-            "download_root": WHISPER_MODEL_DIR,
-            "local_files_only": not WHISPER_MODEL_AUTO_UPDATE,
-        }
-
-        log.debug(f"whisper_kwargs: {whisper_kwargs}")
-
-        try:
-            model = WhisperModel(**whisper_kwargs)
-        except Exception:
-            log.warning(
-                "WhisperModel initialization failed, attempting download with local_files_only=False"
-            )
-            whisper_kwargs["local_files_only"] = False
-            model = WhisperModel(**whisper_kwargs)
-
-        segments, info = model.transcribe(file_path, beam_size=5)
-        log.info(
-            "Detected language '%s' with probability %f"
-            % (info.language, info.language_probability)
-        )
-
-        transcript = "".join([segment.text for segment in list(segments)])
-
-        data = {"text": transcript.strip()}
-
-        # save the transcript to a json file
-        transcript_file = f"{file_dir}/{id}.json"
-        with open(transcript_file, "w") as f:
-            json.dump(data, f)
-
-        print(data)
-        return data
-    elif app.state.config.STT_ENGINE == "openai":
-        if is_mp4_audio(file_path):
-            print("is_mp4_audio")
-            os.rename(file_path, file_path.replace(".wav", ".mp4"))
-            # Convert MP4 audio file to WAV format
-            convert_mp4_to_wav(file_path.replace(".wav", ".mp4"), file_path)
-
-        headers = {"Authorization": f"Bearer {app.state.config.STT_OPENAI_API_KEY}"}
-
-        files = {"file": (filename, open(file_path, "rb"))}
-        data = {"model": app.state.config.STT_MODEL}
-
-        print(files, data)
-
-        r = None
-        try:
-            r = requests.post(
-                url=f"{app.state.config.STT_OPENAI_API_BASE_URL}/audio/transcriptions",
-                headers=headers,
-                files=files,
-                data=data,
-            )
-
-            r.raise_for_status()
-
-            data = r.json()
-
-            # save the transcript to a json file
-            transcript_file = f"{file_dir}/{id}.json"
-            with open(transcript_file, "w") as f:
-                json.dump(data, f)
-
-            print(data)
-            return data
-        except Exception as e:
-            log.exception(e)
-            error_detail = "Open WebUI: Server Connection Error"
-            if r is not None:
-                try:
-                    res = r.json()
-                    if "error" in res:
-                        error_detail = f"External: {res['error']['message']}"
-                except Exception:
-                    error_detail = f"External: {e}"
-
-            raise error_detail
-
-
 @app.post("/transcriptions")
-def transcription(
+def transcribe(
     file: UploadFile = File(...),
-    user=Depends(get_verified_user),
+    user=Depends(get_current_user),
 ):
     log.info(f"file.content_type: {file.content_type}")
 
@@ -468,52 +368,134 @@ def transcription(
 
     try:
         ext = file.filename.split(".")[-1]
-        id = uuid.uuid4()
 
+        id = uuid.uuid4()
         filename = f"{id}.{ext}"
-        contents = file.file.read()
 
         file_dir = f"{CACHE_DIR}/audio/transcriptions"
         os.makedirs(file_dir, exist_ok=True)
         file_path = f"{file_dir}/{filename}"
 
+        print(filename)
+
+        contents = file.file.read()
         with open(file_path, "wb") as f:
             f.write(contents)
+            f.close()
 
-        try:
-            if os.path.getsize(file_path) > MAX_FILE_SIZE:  # file is bigger than 25MB
-                log.debug(f"File size is larger than {MAX_FILE_SIZE_MB}MB")
-                audio = AudioSegment.from_file(file_path)
-                audio = audio.set_frame_rate(16000).set_channels(1)  # Compress audio
-                compressed_path = f"{file_dir}/{id}_compressed.opus"
-                audio.export(compressed_path, format="opus", bitrate="32k")
-                log.debug(f"Compressed audio to {compressed_path}")
-                file_path = compressed_path
+        # Load the audio file
+        audio = AudioSegment.from_file(file_path)
 
-                if (
-                    os.path.getsize(file_path) > MAX_FILE_SIZE
-                ):  # Still larger than 25MB after compression
-                    log.debug(
-                        f"Compressed file size is still larger than {MAX_FILE_SIZE_MB}MB: {os.path.getsize(file_path)}"
-                    )
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=ERROR_MESSAGES.FILE_TOO_LARGE(
-                            size=f"{MAX_FILE_SIZE_MB}MB"
-                        ),
-                    )
+        # Set chunk length in milliseconds (e.g., 5 minutes)
+        chunk_length_ms = 300 * 1000  # 5 minutes
 
-                data = transcribe(file_path)
+        # Split audio into chunks
+        chunks = [audio[i:i+chunk_length_ms] for i in range(0, len(audio), chunk_length_ms)]
+
+        transcripts = []
+
+        if app.state.config.STT_ENGINE == "":
+            # local WhisperModel
+            from faster_whisper import WhisperModel
+
+            whisper_kwargs = {
+                "model_size_or_path": WHISPER_MODEL,
+                "device": whisper_device_type,
+                "compute_type": "int8",
+                "download_root": WHISPER_MODEL_DIR,
+                "local_files_only": not WHISPER_MODEL_AUTO_UPDATE,
+            }
+
+            log.debug(f"whisper_kwargs: {whisper_kwargs}")
+
+            try:
+                model = WhisperModel(**whisper_kwargs)
+            except Exception:
+                log.warning(
+                    "WhisperModel initialization failed, attempting download with local_files_only=False"
+                )
+                whisper_kwargs["local_files_only"] = False
+                model = WhisperModel(**whisper_kwargs)
+
+        elif app.state.config.STT_ENGINE == "openai":
+            # Prepare headers
+            headers = {"Authorization": f"Bearer {app.state.config.STT_OPENAI_API_KEY}"}
+
+        for idx, chunk in enumerate(chunks):
+            chunk_filename = f"{file_dir}/{id}_chunk_{idx}.{ext}"
+            chunk.export(chunk_filename, format=ext)
+
+            if app.state.config.STT_ENGINE == "":
+                # local WhisperModel
+
+                segments, info = model.transcribe(chunk_filename, beam_size=5)
+                transcript = "".join([segment.text for segment in list(segments)])
+
+            elif app.state.config.STT_ENGINE == "openai":
+                # OpenAI API
+
+                # Check if chunk is mp4 audio
+                if is_mp4_audio(chunk_filename):
+                    print("is_mp4_audio")
+                    os.rename(chunk_filename, chunk_filename.replace(".wav", ".mp4"))
+                    # Convert MP4 audio file to WAV format
+                    convert_mp4_to_wav(chunk_filename.replace(".wav", ".mp4"), chunk_filename)
+
+                with open(chunk_filename, "rb") as f:
+                    files = {"file": (chunk_filename, f)}
+                    data = {"model": app.state.config.STT_MODEL}
+
+                    print(files, data)
+
+                    r = None
+                    try:
+                        r = requests.post(
+                            url=f"{app.state.config.STT_OPENAI_API_BASE_URL}/audio/transcriptions",
+                            headers=headers,
+                            files=files,
+                            data=data,
+                        )
+
+                        r.raise_for_status()
+
+                        data = r.json()
+                        transcript = data["text"]
+                    except Exception as e:
+                        log.exception(e)
+                        error_detail = "Open WebUI: Server Connection Error"
+                        if r is not None:
+                            try:
+                                res = r.json()
+                                if "error" in res:
+                                    error_detail = f"External: {res['error']['message']}"
+                            except Exception:
+                                error_detail = f"External: {e}"
+
+                        raise HTTPException(
+                            status_code=r.status_code if r != None else 500,
+                            detail=error_detail,
+                        )
             else:
-                data = transcribe(file_path)
+                # other engines
+                transcript = ""
 
-            return data
-        except Exception as e:
-            log.exception(e)
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(e),
-            )
+            transcripts.append(transcript)
+
+            # Optionally, delete the chunk file
+            os.remove(chunk_filename)
+
+        # Combine all transcripts
+        full_transcript = " ".join(transcripts)
+
+        data = {"text": full_transcript.strip()}
+
+        # save the transcript to a json file
+        transcript_file = f"{file_dir}/{id}.json"
+        with open(transcript_file, "w") as f:
+            json.dump(data, f)
+
+        print(data)
+        return data
 
     except Exception as e:
         log.exception(e)
