@@ -65,14 +65,13 @@ class VectorSearchRetriever(BaseRetriever):
 
 def query_doc(
     collection_name: str,
-    query: str,
-    embedding_function,
+    query_embedding: list[float],
     k: int,
 ):
     try:
         result = VECTOR_DB_CLIENT.search(
             collection_name=collection_name,
-            vectors=[embedding_function(query)],
+            vectors=[query_embedding],
             limit=k,
         )
 
@@ -182,15 +181,17 @@ def query_collection(
     embedding_function,
     k: int,
 ) -> dict:
+    
     results = []
+    query_embedding = embedding_function(query)
+
     for collection_name in collection_names:
         if collection_name:
             try:
                 result = query_doc(
                     collection_name=collection_name,
-                    query=query,
                     k=k,
-                    embedding_function=embedding_function,
+                    query_embedding=query_embedding,
                 )
                 results.append(result.model_dump())
             except Exception as e:
