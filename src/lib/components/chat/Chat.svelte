@@ -799,7 +799,7 @@
 
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
-					scrollToBottom();
+					await scrollToBottom();
 					if (webSearchEnabled) {
 						await getWebSearchResults(model.id, parentId, responseMessageId);
 					}
@@ -835,7 +835,7 @@
 		await tick();
 
 		// Scroll down
-		scrollToBottom();
+		await scrollToBottom();
 
 		const messagesBody = [
 			params?.system || $settings.system || (responseMessage?.userContext ?? null)
@@ -923,7 +923,7 @@
 		// Update the `files` with only unique entries
 		files = uniqueFiles;
 
-		scrollToBottom();
+		await scrollToBottom();
 
 		eventTarget.dispatchEvent(
 			new CustomEvent('chat:start', {
@@ -1107,7 +1107,7 @@
 					}
 
 					if (autoScroll) {
-						scrollToBottom();
+						await scrollToBottom();
 					}
 				}
 			}
@@ -1177,7 +1177,7 @@
 		);
 
 		if (autoScroll) {
-			scrollToBottom();
+			await scrollToBottom();
 		}
 
 		if (messages.length == 2 && messages.at(1).content !== '' && selectedModels[0] === model.id) {
@@ -1226,7 +1226,7 @@
 		// Update the `files` with only unique entries
 		files = uniqueFiles;
 
-		scrollToBottom();
+		await scrollToBottom();
 
 		eventTarget.dispatchEvent(
 			new CustomEvent('chat:start', {
@@ -1327,7 +1327,7 @@
 			// Wait until history/message have been updated
 			await tick();
 
-			scrollToBottom();
+			await scrollToBottom();
 
 			if (res && res.ok && res.body) {
 				if (!stream) {
@@ -1407,7 +1407,7 @@
 						}
 
 						if (autoScroll) {
-							scrollToBottom();
+							await scrollToBottom();
 						}
 					}
 				}
@@ -1472,7 +1472,7 @@
 		);
 
 		if (autoScroll) {
-			scrollToBottom();
+			await scrollToBottom();
 		}
 
 		if (messages.length == 2 && selectedModels[0] === model.id) {
@@ -1756,7 +1756,7 @@
 					}
 
 					if (autoScroll) {
-						scrollToBottom();
+						await scrollToBottom();
 					}
 				}
 
