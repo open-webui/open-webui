@@ -1,8 +1,10 @@
 <script>
 	import { marked } from 'marked';
-	import markedKatex from '$lib/utils/marked/katex-extension';
 	import { replaceTokens, processResponseContent } from '$lib/utils';
 	import { user } from '$lib/stores';
+
+	import markedExtension from '$lib/utils/marked/extension';
+	import markedKatexExtension from '$lib/utils/marked/katex-extension';
 
 	import MarkdownTokens from './Markdown/MarkdownTokens.svelte';
 
@@ -16,7 +18,8 @@
 		throwOnError: false
 	};
 
-	marked.use(markedKatex(options));
+	marked.use(markedKatexExtension(options));
+	marked.use(markedExtension(options));
 
 	$: (async () => {
 		if (content) {
