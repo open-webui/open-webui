@@ -605,7 +605,7 @@
 	"Select restricted message warning acceptance type": "選擇受限訊息警告接受類型",
 	"Selected model(s) do not support image inputs": "選取的模型不支援圖片輸入",
 	"Send": "傳送",
-	"Send a Message": "傳送訊息",
+	"Send a Message and Use @ to Select a Model": "傳送訊息",
 	"Send message": "傳送訊息",
 	"Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.": "在請求中傳送 `stream_options: { include_usage: true }`。\n支援的提供者會在設定時傳回回應中的 token 使用量資訊。",
 	"September": "9 月",

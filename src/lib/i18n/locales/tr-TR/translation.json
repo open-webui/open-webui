@@ -586,7 +586,7 @@
 	"Select only one model to call": "Arama için sadece bir model seç",
 	"Selected model(s) do not support image inputs": "Seçilen model(ler) görüntü girişlerini desteklemiyor",
 	"Send": "Gönder",
-	"Send a Message": "Bir Mesaj Gönder",
+	"Send a Message and Use @ to Select a Model": "Bir Mesaj Gönder",
 	"Send message": "Mesaj gönder",
 	"Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.": "İsteğe `stream_options: { include_usage: true }` gönderir.\nDesteklenen sağlayıcılar, ayarlandığında yanıtta token kullanım bilgilerini döndürecektir.",
 	"September": "Eylül",

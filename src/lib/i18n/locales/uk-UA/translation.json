@@ -581,7 +581,7 @@
 	"Select only one model to call": "Оберіть лише одну модель для виклику",
 	"Selected model(s) do not support image inputs": "Вибрані модель(і) не підтримують вхідні зображення",
 	"Send": "Надіслати",
-	"Send a Message": "Надіслати повідомлення",
+	"Send a Message and Use @ to Select a Model": "Надіслати повідомлення",
 	"Send message": "Надіслати повідомлення",
 	"Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.": "",
 	"September": "Вересень",

@@ -586,7 +586,7 @@
 	"Select only one model to call": "",
 	"Selected model(s) do not support image inputs": "דגמים נבחרים אינם תומכים בקלט תמונה",
 	"Send": "שלח",
-	"Send a Message": "שלח הודעה",
+	"Send a Message and Use @ to Select a Model": "שלח הודעה",
 	"Send message": "שלח הודעה",
 	"Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.": "",
 	"September": "ספטמבר",

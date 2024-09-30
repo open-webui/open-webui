@@ -586,7 +586,7 @@
 	"Select only one model to call": "Selecciona sólo un modelo para llamar",
 	"Selected model(s) do not support image inputs": "Los modelos seleccionados no admiten entradas de imagen",
 	"Send": "Enviar",
-	"Send a Message": "Enviar un Mensaje",
+	"Send a Message and Use @ to Select a Model": "Enviar un Mensaje",
 	"Send message": "Enviar Mensaje",
 	"Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.": "",
 	"September": "Septiembre",

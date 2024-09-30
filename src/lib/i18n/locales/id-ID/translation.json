@@ -585,7 +585,7 @@
 	"Select only one model to call": "Pilih hanya satu model untuk dipanggil",
 	"Selected model(s) do not support image inputs": "Model yang dipilih tidak mendukung input gambar",
 	"Send": "Kirim",
-	"Send a Message": "Kirim Pesan",
+	"Send a Message and Use @ to Select a Model": "Kirim Pesan",
 	"Send message": "Kirim pesan",
 	"Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.": "",
 	"September": "September",

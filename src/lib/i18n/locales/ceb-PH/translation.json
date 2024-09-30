@@ -585,7 +585,7 @@
 	"Select only one model to call": "",
 	"Selected model(s) do not support image inputs": "",
 	"Send": "",
-	"Send a Message": "Magpadala ug mensahe",
+	"Send a Message and Use @ to Select a Model": "Magpadala ug mensahe",
 	"Send message": "Magpadala ug mensahe",
 	"Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.": "",
 	"September": "",

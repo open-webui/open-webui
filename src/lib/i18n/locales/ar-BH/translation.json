@@ -592,7 +592,7 @@
 	"Select only one model to call": "",
 	"Selected model(s) do not support image inputs": "النموذج (النماذج) المحددة لا تدعم مدخلات الصور",
 	"Send": "تم",
-	"Send a Message": "يُرجى إدخال طلبك هنا",
+	"Send a Message and Use @ to Select a Model": "يُرجى إدخال طلبك هنا",
 	"Send message": "يُرجى إدخال طلبك هنا.",
 	"Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.": "",
 	"September": "سبتمبر",

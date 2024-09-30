@@ -579,7 +579,7 @@
 	"Select only one model to call": "Selectează doar un singur model pentru apel",
 	"Selected model(s) do not support image inputs": "Modelul(e) selectat(e) nu suportă intrări de imagine",
 	"Send": "Trimite",
-	"Send a Message": "Trimite un Mesaj",
+	"Send a Message and Use @ to Select a Model": "Trimite un Mesaj",
 	"Send message": "Trimite mesajul",
 	"Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.": "",
 	"September": "Septembrie",

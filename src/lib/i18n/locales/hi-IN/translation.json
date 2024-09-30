@@ -585,7 +585,7 @@
 	"Select only one model to call": "",
 	"Selected model(s) do not support image inputs": "चयनित मॉडल छवि इनपुट का समर्थन नहीं करते हैं",
 	"Send": "भेज",
-	"Send a Message": "एक संदेश भेजो",
+	"Send a Message and Use @ to Select a Model": "एक संदेश भेजो",
 	"Send message": "मेसेज भेजें",
 	"Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.": "",
 	"September": "सितंबर",

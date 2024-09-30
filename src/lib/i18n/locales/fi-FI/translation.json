@@ -584,7 +584,7 @@
 	"Select only one model to call": "",
 	"Selected model(s) do not support image inputs": "Valitut mallit eivät tue kuvasyötteitä",
 	"Send": "Lähetä",
-	"Send a Message": "Lähetä viesti",
+	"Send a Message and Use @ to Select a Model": "Lähetä viesti",
 	"Send message": "Lähetä viesti",
 	"Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.": "",
 	"September": "syyskuu",

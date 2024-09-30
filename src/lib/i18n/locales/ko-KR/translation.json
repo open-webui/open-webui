@@ -585,7 +585,7 @@
 	"Select only one model to call": "콜을 위해서는 모델을 하나만 선택해야 합니다.",
 	"Selected model(s) do not support image inputs": "선택한 모델은 이미지 입력을 지원하지 않습니다.",
 	"Send": "보내기",
-	"Send a Message": "메시지 보내기",
+	"Send a Message and Use @ to Select a Model": "메시지 보내기",
 	"Send message": "메시지 보내기",
 	"Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.": "",
 	"September": "9월",

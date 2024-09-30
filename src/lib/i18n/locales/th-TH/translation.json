@@ -578,7 +578,7 @@
 	"Select only one model to call": "เลือกเพียงโมเดลเดียวที่จะใช้",
 	"Selected model(s) do not support image inputs": "โมเดลที่เลือกไม่รองรับภาพ",
 	"Send": "ส่ง",
-	"Send a Message": "ส่งข้อความ",
+	"Send a Message and Use @ to Select a Model": "ส่งข้อความ",
 	"Send message": "ส่งข้อความ",
 	"Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.": "",
 	"September": "กันยายน",

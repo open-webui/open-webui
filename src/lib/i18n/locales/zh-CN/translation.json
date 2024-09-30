@@ -609,7 +609,7 @@
 	"Select restricted message warning acceptance type": "选择受限消息警告接受类型",
 	"Selected model(s) do not support image inputs": "已选择的模型不支持发送图像",
 	"Send": "发送",
-	"Send a Message": "输入消息",
+	"Send a Message and Use @ to Select a Model": "输入消息，使用 @ 选择模型",
 	"Send message": "发送消息",
 	"Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.": "在请求中发送 `stream_options: { include_usage: true }`。\n设置后支持的接口将在返回响应中包含令牌使用信息。",
 	"September": "九月",
