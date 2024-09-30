@@ -1139,12 +1139,6 @@
 													on:click={() => {
 														dispatch('action', {
 															id: action.id,
-															event: {
-																id: action.name,
-																data: {
-																	messageId: message.id
-																}
-															}
 														});
 													}}
 												>

@@ -336,7 +336,7 @@
 								? 'max-w-full'
 								: 'max-w-5xl'} mx-auto rounded-lg group"
 						>
-							{#if message.role === 'user'}
+							{#if message.role != 'admin'}
 								<UserMessage
 									on:delete={() => deleteMessageHandler(message.id)}
 									{user}
