@@ -136,47 +136,47 @@
 				replaceTokens(processResponseContent(message?.content), model?.name, $user?.name)
 			);
 		}
-		if (message?.done ?? false) {
-			await renderLatex();
-		}
+		// if (message?.done ?? false) {
+		// 	await renderLatex();
+		// }
 	})();
 
-	const renderLatex = async () => {
-		try {
-			await tick();
-			const chatMessageContainer = document.getElementById(`message-${message.id}`);
-			if (!chatMessageContainer) {
-				console.warn(`未找到 id 为 'message-${message.id}' 的元素。`);
-				return;
-			}
+	// const renderLatex = async () => {
+	// 	try {
+	// 		await tick();
+	// 		const chatMessageContainer = document.getElementById(`message-${message.id}`);
+	// 		if (!chatMessageContainer) {
+	// 			console.warn(`未找到 id 为 'message-${message.id}' 的元素。`);
+	// 			return;
+	// 		}
 
-			const chatMessageElements = chatMessageContainer.getElementsByClassName('chat-assistant');
-			if (!chatMessageElements || chatMessageElements.length === 0) {
-				console.warn(`在容器中未找到带有 'chat-assistant' 类的元素。`);
-				return;
-			}
+	// 		const chatMessageElements = chatMessageContainer.getElementsByClassName('chat-assistant');
+	// 		if (!chatMessageElements || chatMessageElements.length === 0) {
+	// 			console.warn(`在容器中未找到带有 'chat-assistant' 类的元素。`);
+	// 			return;
+	// 		}
 
-			for (const element of chatMessageElements) {
-				try {
-					auto_render(element, {
-						delimiters: [
-							{ left: '$$', right: '$$', display: true },
-							{ left: '$', right: '$', display: false },
-							{ left: '\\pu{', right: '}', display: false },
-							{ left: '\\ce{', right: '}', display: false },
-							{ left: '\\(', right: '\\)', display: false },
-							{ left: '\\[', right: '\\]', display: true }
-						],
-						throwOnError: false
-					});
-				} catch (err) {
-					console.error(`渲染 LaTeX 时出错，元素：`, element, err);
-				}
-			}
-		} catch (err) {
-			console.error('renderLatex 函数中的错误:', err);
-		}
-	};
+	// 		for (const element of chatMessageElements) {
+	// 			try {
+	// 				auto_render(element, {
+	// 					delimiters: [
+	// 						{ left: '$$', right: '$$', display: true },
+	// 						{ left: '$', right: '$', display: false },
+	// 						{ left: '\\pu{', right: '}', display: false },
+	// 						{ left: '\\ce{', right: '}', display: false },
+	// 						{ left: '\\(', right: '\\)', display: false },
+	// 						{ left: '\\[', right: '\\]', display: true }
+	// 					],
+	// 					throwOnError: false
+	// 				});
+	// 			} catch (err) {
+	// 				console.error(`渲染 LaTeX 时出错，元素：`, element, err);
+	// 			}
+	// 		}
+	// 	} catch (err) {
+	// 		console.error('renderLatex 函数中的错误:', err);
+	// 	}
+	// };
 
 	const playAudio = (idx: number) => {
 		return new Promise<void>((res) => {
@@ -496,7 +496,7 @@
 											id="save-new-message-button"
 											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
 											on:click={() => {
-												saveNewMessageHandler();
+												editMessageConfirmHandler();
 											}}
 										>
 											{$i18n.t('Save As Copy')}
@@ -1139,6 +1139,12 @@
 													on:click={() => {
 														dispatch('action', {
 															id: action.id,
+															event: {
+																id: action.name,
+																data: {
+																	messageId: message.id
+																}
+															}
 														});
 													}}
 												>

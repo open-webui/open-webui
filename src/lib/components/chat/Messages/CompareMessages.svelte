@@ -145,6 +145,9 @@
 									await tick();
 									groupedMessagesIdx[modelIdx] = groupedMessages[modelIdx].messages.length - 1;
 								}}
+								on:action={async (e) => {
+									dispatch('action', e.detail);
+								}}
 								on:save={async (e) => {
 									console.log('save', e);
 

@@ -510,6 +510,7 @@
 	};
 
 	const chatActionHandler = async (chatId, actionId, modelId, responseMessageId, event = null) => {
+		const messageId = event?.data?.messageId;
 		const res = await chatAction(localStorage.token, actionId, {
 			model: modelId,
 			messages: messages.map((m) => ({
@@ -522,7 +523,7 @@
 			...(event ? { event: event } : {}),
 			chat_id: chatId,
 			session_id: $socket?.id,
-			id: responseMessageId
+			id: messageId || responseMessageId
 		}).catch((error) => {
 			toast.error(error);
 			messages.at(-1).error = { content: error };
