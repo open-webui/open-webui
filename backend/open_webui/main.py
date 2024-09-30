@@ -2191,7 +2191,8 @@ async def get_app_latest_release_version():
                 latest_version = data["tag_name"]
 
                 return {"current": VERSION, "latest": latest_version[1:]}
-    except aiohttp.ClientError:
+    except Exception as e:
+        log.debug(e)
         return {"current": VERSION, "latest": VERSION}
 
 
