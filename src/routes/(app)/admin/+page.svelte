@@ -85,7 +85,8 @@
 		}
 		loaded = true;
 	});
-	let sortKey = 'created_at'; // default sort key
+
+	let sortKey = 'role'; // default sort key
 	let sortOrder = 'asc'; // default sort order
 
 	function setSortKey(key) {
@@ -285,7 +286,7 @@
 										'bg-sky-600 dark:bg-sky-300'} {user.role === 'user' &&
 										'bg-green-600 dark:bg-green-300'} {user.role === 'vip' &&
 										'bg-indigo-500 dark:bg-indigo-400'} {user.role === 'svip' &&
-										'bg-red-600 dark:bg-red-400'} {user.role === 'pending' &&
+										'bg-yellow-600 dark:bg-red-400'} {user.role === 'pending' &&
 										'bg-gray-600 dark:bg-gray-300'}"
 								/>
 								{$i18n.t(user.role)}</button
