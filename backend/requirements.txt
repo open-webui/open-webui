@@ -80,7 +80,7 @@ pytube==15.0.0
 
 extract_msg
 pydub
-duckduckgo-search~=6.2.11
+duckduckgo-search~=6.2.13
 
 ## Tests
 docker~=7.1.0
