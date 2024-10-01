@@ -654,6 +654,34 @@ except Exception:
 OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
 ####################################
+# GenericOpenAi API
+####################################
+
+GENERIC_OPEN_AI_BASE_PATH = PersistentConfig(
+    "GENERIC_OPEN_AI_BASE_PATH",
+    "generic_openai.base_path",
+    os.environ.get("GENERIC_OPEN_AI_BASE_PATH", ""),
+)
+
+GENERIC_OPEN_AI_API_KEY = PersistentConfig(
+    "GENERIC_OPEN_AI_API_KEY",
+    "generic_openai.api_key",
+    os.environ.get("GENERIC_OPEN_AI_API_KEY", ""),
+)
+
+GENERIC_OPEN_AI_MODEL_PREF = PersistentConfig(
+    "GENERIC_OPEN_AI_MODEL_PREF",
+    "generic_openai.model_pref",
+    os.environ.get("GENERIC_OPEN_AI_MODEL_PREF", ""),
+)
+
+GENERIC_OPEN_AI_MODEL_TOKEN_LIMIT = PersistentConfig(
+    "GENERIC_OPEN_AI_MODEL_TOKEN_LIMIT",
+    "generic_openai.model_token_limit",
+    os.environ.get("GENERIC_OPEN_AI_MODEL_TOKEN_LIMIT", ""),
+)
+
+####################################
 # WEBUI
 ####################################
 

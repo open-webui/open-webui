@@ -17,6 +17,10 @@ from open_webui.config import (
     MODEL_FILTER_LIST,
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
+    GENERIC_OPEN_AI_BASE_PATH,
+    GENERIC_OPEN_AI_API_KEY,
+    GENERIC_OPEN_AI_MODEL_PREF,
+    GENERIC_OPEN_AI_MODEL_TOKEN_LIMIT,
     AppConfig,
 )
 from open_webui.constants import ERROR_MESSAGES
@@ -56,6 +60,11 @@ app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
 app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
+
+app.state.config.GENERIC_OPEN_AI_BASE_PATH = GENERIC_OPEN_AI_BASE_PATH
+app.state.config.GENERIC_OPEN_AI_API_KEY = GENERIC_OPEN_AI_API_KEY
+app.state.config.GENERIC_OPEN_AI_MODEL_PREF = GENERIC_OPEN_AI_MODEL_PREF
+app.state.config.GENERIC_OPEN_AI_MODEL_TOKEN_LIMIT = GENERIC_OPEN_AI_MODEL_TOKEN_LIMIT
 
 app.state.MODELS = {}
 
@@ -365,7 +374,7 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
                     error_detail = f"External: {e}"
 
             raise HTTPException(
-                status_code=r.status_code if r else 500,
+                status_code=r.status if r else 500,
                 detail=error_detail,
             )
 
@@ -541,6 +550,87 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                     error_detail = f"External: {res['error']['message'] if 'message' in res['error'] else res['error']}"
             except Exception:
                 error_detail = f"External: {e}"
+        raise HTTPException(status_code=r.status if r else 500, detail=error_detail)
+    finally:
+        if not streaming and session:
+            if r:
+                r.close()
+            await session.close()
+
+
+@app.post("/generic_openai/chat/completions")
+async def generate_generic_openai_chat_completion(
+    form_data: dict,
+    user=Depends(get_verified_user),
+):
+    payload = {**form_data}
+
+    if "metadata" in payload:
+        del payload["metadata"]
+
+    model_id = form_data.get("model")
+    model_info = Models.get_model_by_id(model_id)
+
+    if model_info:
+        if model_info.base_model_id:
+            payload["model"] = model_info.base_model_id
+
+        params = model_info.params.model_dump()
+        payload = apply_model_params_to_body_openai(params, payload)
+        payload = apply_model_system_prompt_to_body(params, payload, user)
+
+    headers = {
+        "Authorization": f"Bearer {app.state.config.GENERIC_OPEN_AI_API_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    url = f"{app.state.config.GENERIC_OPEN_AI_BASE_PATH}/chat/completions"
+
+    r = None
+    session = None
+    streaming = False
+    response = None
+
+    try:
+        session = aiohttp.ClientSession(
+            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        )
+        r = await session.request(
+            method="POST",
+            url=url,
+            data=json.dumps(payload),
+            headers=headers,
+        )
+
+        # Check if response is SSE
+        if "text/event-stream" in r.headers.get("Content-Type", ""):
+            streaming = True
+            return StreamingResponse(
+                r.content,
+                status_code=r.status,
+                headers=dict(r.headers),
+                background=BackgroundTask(
+                    cleanup_response, response=r, session=session
+                ),
+            )
+        else:
+            try:
+                response = await r.json()
+            except Exception as e:
+                log.error(e)
+                response = await r.text()
+
+            r.raise_for_status()
+            return response
+    except Exception as e:
+        log.exception(e)
+        error_detail = "Open WebUI: Server Connection Error"
+        if isinstance(response, dict):
+            if "error" in response:
+                error_detail = f"{response['error']['message'] if 'message' in response['error'] else response['error']}"
+        elif isinstance(response, str):
+            error_detail = response
+
         raise HTTPException(status_code=r.status if r else 500, detail=error_detail)
     finally:
         if not streaming and session:
