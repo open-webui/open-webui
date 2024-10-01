@@ -266,8 +266,8 @@
 								class=" flex items-center gap-2 text-xs px-3 py-0.5 rounded-lg {user.role ===
 									'admin' && 'text-sky-600 dark:text-sky-200 bg-sky-200/30'} {user.role ===
 									'user' && 'text-green-600 dark:text-green-200 bg-green-200/30'} {user.role ===
-									'vip' && 'text-green-600 dark:text-green-200 bg-green-200/30'} {user.role ===
-									'svip' && 'text-green-600 dark:text-green-200 bg-green-200/30'} {user.role ===
+									'vip' && 'text-indigo-600 dark:text-indigo-300 bg-indigo-300/10'} {user.role ===
+									'svip' && 'text-yellow-700 dark:text-yellow-200 bg-yellow-500/20'} {user.role ===
 									'pending' && 'text-gray-600 dark:text-gray-200 bg-gray-200/30'}"
 								on:click={() => {
 									let newRole = '';
@@ -284,8 +284,8 @@
 									class="w-1 h-1 rounded-full {user.role === 'admin' &&
 										'bg-sky-600 dark:bg-sky-300'} {user.role === 'user' &&
 										'bg-green-600 dark:bg-green-300'} {user.role === 'vip' &&
-										'bg-green-600 dark:bg-green-300'} {user.role === 'svip' &&
-										'bg-green-600 dark:bg-green-300'} {user.role === 'pending' &&
+										'bg-indigo-500 dark:bg-indigo-400'} {user.role === 'svip' &&
+										'bg-red-600 dark:bg-red-400'} {user.role === 'pending' &&
 										'bg-gray-600 dark:bg-gray-300'}"
 								/>
 								{$i18n.t(user.role)}</button
