@@ -112,6 +112,17 @@ class FilesTable:
                 for file in db.query(File).filter_by(user_id=user_id).all()
             ]
 
+    def update_files_data_by_id(self, id: str, data: dict) -> Optional[FileModel]:
+        with get_db() as db:
+            try:
+                file = db.query(File).filter_by(id=id).first()
+                file.data = {**file.data, **data}
+                db.commit()
+
+                return FileModel.model_validate(file)
+            except Exception:
+                return None
+
     def update_files_metadata_by_id(self, id: str, meta: dict) -> Optional[FileModel]:
         with get_db() as db:
             try:
