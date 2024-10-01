@@ -77,6 +77,7 @@ class FilesTable:
                     **form_data.model_dump(),
                     "user_id": user_id,
                     "created_at": int(time.time()),
+                    "updated_at": int(time.time()),
                 }
             )
 
