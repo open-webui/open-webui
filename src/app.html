@@ -5,7 +5,8 @@
 		<meta charset="utf-8" />
 		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
 		<link rel="manifest" href="%sveltekit.assets%/manifest.json" crossorigin="use-credentials" />
-		<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+		<meta name="viewport"
+			content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
 		<meta name="robots" content="noindex,nofollow" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black">
 		<meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,12 +18,32 @@
 		<link rel="search" type="application/opensearchdescription+xml" title="Yubb Chat" href="/opensearch.xml" />
 
 		<script>
-			function resizeIframe(obj) {
-				obj.style.height = obj.contentWindow.document.documentElement.scrollHeight + 'px';
+			function copyLink() {
+				const input = document.createElement('input');
+				input.setAttribute('readonly', 'readonly');
+				input.setAttribute('value', window.location.href);
+				document.body.appendChild(input);
+				input.select();
+				if (document.execCommand('copy')) {
+					document.execCommand('copy');
+					alert('链接已复制，请在浏览器中粘贴打开。');
+				} else {
+					alert('无法复制链接，请手动复制。');
+				}
+				document.body.removeChild(input);
 			}
-		</script>
+			
+			function IsWeixinOrAlipay() {
+				var ua = window.navigator.userAgent.toLowerCase();
+				if (ua.match(/MicroMessenger/i) == 'micromessenger') {
+					return 13;
+				}
+				if (ua.match(/AlipayClient/i) == 'alipayclient') {
+					return 12;
+				}
+				return 0;
+			}
 
-		<script>
 			// On page load or when changing themes, best to add inline in `head` to avoid FOUC
 			(() => {
 				const metaThemeColorTag = document.querySelector('meta[name="theme-color"]');
@@ -68,6 +89,17 @@
 					}
 				});
 			})();
+
+			window.onload = function () {
+				var result = IsWeixinOrAlipay();
+				if (result === 13 || result === 12) {
+					document.getElementById('browser-warning').style.display = 'block';
+					document.getElementById('main-content').style.display = 'none';
+					document.getElementById('splash-screen').style.display = 'none';
+					document.body.style.overflow = 'hidden';
+				}
+			};
+			
 		</script>
 
 		<title>Yubb Chat</title>
@@ -76,7 +108,18 @@
 	</head>
 
 	<body data-sveltekit-preload-data="hover">
-		<div style="display: contents">%sveltekit.body%</div>
+
+		<div id="main-content" style="display: contents">%sveltekit.body%</div>
+
+		<div id="browser-warning">
+			<div class="content">
+				<img id="startLogo" src="/static/splash.png" alt="preview logo">
+				<p>
+					为了获得更好的体验，请您使用手机自带或其他浏览器打开此页面！
+				</p>
+				<button onclick="copyLink()">复制链接</button>
+			</div>
+		</div>
 
 		<div id="splash-screen" style="position: fixed; z-index: 100; top: 0; left: 0; width: 100%; height: 100%">
 			<style type="text/css" nonce="">
@@ -128,10 +171,6 @@
 						" class="bg-white"></div>
 				</div>
 			</div>
-
-			<!-- <span style="position: absolute; bottom: 32px; left: 50%; margin: -36px 0 0 -36px">
-				Footer content
-			</span> -->
 		</div>
 	</body>
 </html>
@@ -203,5 +242,74 @@
 
 	.animate-pulse-fast {
 		animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+	}
+
+	#browser-warning {
+		display: none;
+		position: fixed;
+		z-index: 9999;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: #fdf6e3;
+		color: #5c5753;
+		text-align: center;
+		box-sizing: border-box;
+		padding: 0 2rem;
+	}
+
+	#browser-warning .content {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%); 
+		text-align: center;
+		max-width: 300px;
+		width: 100%;
+	}
+
+	#browser-warning #startLogo {
+		display: block; 
+		margin: 0 auto 1rem; 
+		width: 8rem;
+		height: auto;
+		border-radius: 50%;
+		max-width: 80%;
+	}
+
+	#browser-warning p {
+		font-size: 1.1em;
+		line-height: 1.6;
+		margin-bottom: 2rem;
+		color: #4a4a4a;
+		font-weight: 500;
+		
+	}
+
+	#browser-warning button {
+		padding: 0.75rem 1rem;
+		font-size: 1.25rem;
+		color: #ffffff;
+		background-color: #b96c29e3;
+		border: none;
+		border-radius: 1.5rem;
+		cursor: pointer;
+		width: 100%;
+		max-width: 75%;
+		box-shadow: 0 2px 10px rgb(219 161 52 / 36%);
+		transition: all 0.3s ease;
+		font-weight: 500;
+	}
+
+	#browser-warning button:hover {
+		background-color: #b96c29c2;
+		box-shadow: 0 4px 15px rgb(219 117 52 / 60%);
+		transform: translateY(-2px);
+	}
+
+	#browser-warning button:active {
+		transform: translateY(1px);
+		box-shadow: 0 2px 8px rgb(186 121 33 / 40%);
 	}
 </style>
