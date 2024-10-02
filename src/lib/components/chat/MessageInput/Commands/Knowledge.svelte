@@ -14,6 +14,7 @@
 	const dispatch = createEventDispatcher();
 	let selectedIdx = 0;
 
+	let items = [];
 	let fuse = null;
 
 	let filteredItems = [];
@@ -22,7 +23,7 @@
 			? fuse.search(command).map((e) => {
 					return e.item;
 				})
-			: $knowledge;
+			: items;
 	}
 
 	$: if (command) {
@@ -71,7 +72,38 @@
 	};
 
 	onMount(() => {
-		fuse = new Fuse($knowledge, {
+		let legacy_documents = $knowledge.filter((item) => item?.meta?.document);
+		let legacy_collections =
+			legacy_documents.length > 0
+				? [
+						{
+							name: 'All Documents',
+							legacy: true,
+							type: 'collection',
+							description: 'Deprecated (legacy collection), please use the new knowledge base.',
+							title: $i18n.t('All Documents'),
+							collection_names: legacy_documents.map((item) => item.id)
+						},
+
+						...legacy_documents
+							.reduce((a, item) => {
+								return [...new Set([...a, ...(item?.meta?.tags ?? []).map((tag) => tag.name)])];
+							}, [])
+							.map((tag) => ({
+								name: tag,
+								legacy: true,
+								type: 'collection',
+								description: 'Deprecated (legacy collection), please use the new knowledge base.',
+								collection_names: legacy_documents
+									.filter((item) => (item?.meta?.tags ?? []).map((tag) => tag.name).includes(tag))
+									.map((item) => item.id)
+							}))
+					]
+				: [];
+
+		items = [...$knowledge, ...legacy_collections];
+
+		fuse = new Fuse(items, {
 			keys: ['name', 'description']
 		});
 	});
@@ -107,27 +139,33 @@
 							on:focus={() => {}}
 						>
 							<div class=" font-medium text-black dark:text-gray-100 flex items-center gap-1">
-								<div class="line-clamp-1">
-									{item.name}
-								</div>
-
-								{#if item?.meta?.document}
+								{#if item.legacy}
 									<div
-										class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded uppercase text-xs px-1"
+										class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded uppercase text-xs font-bold px-1"
+									>
+										Legacy
+									</div>
+								{:else if item?.meta?.document}
+									<div
+										class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded uppercase text-xs font-bold px-1"
 									>
 										Document
 									</div>
 								{:else}
 									<div
-										class="bg-green-500/20 text-green-700 dark:text-green-200 rounded uppercase text-xs px-1"
+										class="bg-green-500/20 text-green-700 dark:text-green-200 rounded uppercase text-xs font-bold px-1"
 									>
 										Collection
 									</div>
 								{/if}
+
+								<div class="line-clamp-1">
+									{item.name}
+								</div>
 							</div>
 
 							<div class=" text-xs text-gray-600 dark:text-gray-100 line-clamp-1">
-								{item.description}
+								{item?.description}
 							</div>
 						</button>
 					{/each}

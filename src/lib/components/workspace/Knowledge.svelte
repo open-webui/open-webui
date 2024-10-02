@@ -119,7 +119,11 @@
 			class=" flex space-x-4 cursor-pointer text-left w-full px-4 py-3 border border-gray-50 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 rounded-xl"
 			on:click={() => {
 				if (item?.meta?.document) {
-					toast.error($i18n.t('Only collections can be edited, create a new knowledge instead.'));
+					toast.error(
+						$i18n.t(
+							'Only collections can be edited, create a new knowledge base to edit/add documents.'
+						)
+					);
 				} else {
 					goto(`/workspace/knowledge/${item.id}`);
 				}
