@@ -5,7 +5,7 @@
 	const dispatch = createEventDispatcher();
 
 	import Prompts from './Commands/Prompts.svelte';
-	import Documents from './Commands/Documents.svelte';
+	import Projects from './Commands/Projects.svelte';
 	import Models from './Commands/Models.svelte';
 
 	import { removeLastWordFromString } from '$lib/utils';
@@ -97,7 +97,7 @@
 	{#if command?.charAt(0) === '/'}
 		<Prompts bind:this={commandElement} bind:prompt bind:files {command} />
 	{:else if command?.charAt(0) === '#'}
-		<Documents
+		<Projects
 			bind:this={commandElement}
 			bind:prompt
 			{command}
