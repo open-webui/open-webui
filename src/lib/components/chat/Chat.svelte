@@ -1393,7 +1393,7 @@
 						}
 
 						if (usage) {
-							responseMessage.info = { ...usage, openai: true };
+							responseMessage.info = { ...usage, openai: true, usage };
 						}
 
 						if (citations) {
