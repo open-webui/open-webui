@@ -1419,6 +1419,10 @@ async def generate_title(form_data: dict, user=Depends(get_verified_user)):
     elif chat_state.title_generated:
         # Title already generated. return the existing title
         return chat_state.chat_title
+    elif not chat_state.gift_request.has_title_fields():
+        # gift_request does not have minimal info. Do not generate title
+        return
+
 
     print("generate_title")
 
