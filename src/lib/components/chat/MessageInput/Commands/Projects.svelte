@@ -29,15 +29,6 @@
 		selectedIdx = 0;
 	}
 
-	type ObjectWithName = {
-		name: string;
-	};
-
-	const findByName = (obj: ObjectWithName, command: string) => {
-		const name = obj.name.toLowerCase();
-		return name.includes(command.toLowerCase().split(' ')?.at(0)?.substring(1) ?? '');
-	};
-
 	export const selectUp = () => {
 		selectedIdx = Math.max(0, selectedIdx - 1);
 	};

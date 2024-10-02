@@ -9,6 +9,8 @@ Create Date: 2024-10-01 14:02:35.241684
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.sql import table, column, select
+import json
+
 
 revision = "6a39f3d8e55c"
 down_revision = "c0fbf31ca0db"
@@ -39,6 +41,7 @@ def upgrade():
         column("user_id", sa.String()),
         column("name", sa.String()),
         column("title", sa.Text()),
+        column("content", sa.Text()),
         column("timestamp", sa.BigInteger()),
     )
 
@@ -49,6 +52,7 @@ def upgrade():
             document_table.c.user_id,
             document_table.c.name,
             document_table.c.title,
+            document_table.c.content,
             document_table.c.timestamp,
         )
     )
@@ -62,6 +66,7 @@ def upgrade():
                 description=doc.name,
                 meta={
                     "legacy": True,
+                    "tags": json.loads(doc.content or "{}").get("tags", []),
                 },
                 name=doc.title,
                 created_at=doc.timestamp,
