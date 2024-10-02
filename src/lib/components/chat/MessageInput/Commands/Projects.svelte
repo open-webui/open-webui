@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
-
-	import { documents } from '$lib/stores';
-	import { removeLastWordFromString, isValidHttpUrl } from '$lib/utils';
-	import { tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import Fuse from 'fuse.js';
+
+	import { createEventDispatcher, tick, getContext, onMount } from 'svelte';
+	import { removeLastWordFromString, isValidHttpUrl } from '$lib/utils';
+	import { projects } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -14,49 +14,19 @@
 	const dispatch = createEventDispatcher();
 	let selectedIdx = 0;
 
-	let filteredItems = [];
-	let filteredDocs = [];
+	let fuse = null;
 
-	let collections = [];
-
-	$: collections = [
-		...($documents.length > 0
-			? [
-					{
-						name: 'All Documents',
-						type: 'collection',
-						title: $i18n.t('All Documents'),
-						collection_names: $documents.map((doc) => doc.collection_name)
-					}
-				]
-			: []),
-		...$documents
-			.reduce((a, e, i, arr) => {
-				return [...new Set([...a, ...(e?.content?.tags ?? []).map((tag) => tag.name)])];
-			}, [])
-			.map((tag) => ({
-				name: tag,
-				type: 'collection',
-				collection_names: $documents
-					.filter((doc) => (doc?.content?.tags ?? []).map((tag) => tag.name).includes(tag))
-					.map((doc) => doc.collection_name)
-			}))
-	];
-
-	$: filteredCollections = collections
-		.filter((collection) => findByName(collection, command))
-		.sort((a, b) => a.name.localeCompare(b.name));
-
-	$: filteredDocs = $documents
-		.filter((doc) => findByName(doc, command))
-		.sort((a, b) => a.title.localeCompare(b.title));
-
-	$: filteredItems = [...filteredCollections, ...filteredDocs];
+	let filteredProjects = [];
+	$: if (fuse) {
+		filteredProjects = command.slice(1)
+			? fuse.search(command).map((e) => {
+					return e.item;
+				})
+			: $projects;
+	}
 
 	$: if (command) {
 		selectedIdx = 0;
-
-		console.log(filteredCollections);
 	}
 
 	type ObjectWithName = {
@@ -73,11 +43,11 @@
 	};
 
 	export const selectDown = () => {
-		selectedIdx = Math.min(selectedIdx + 1, filteredItems.length - 1);
+		selectedIdx = Math.min(selectedIdx + 1, filteredProjects.length - 1);
 	};
 
-	const confirmSelect = async (doc) => {
-		dispatch('select', doc);
+	const confirmSelect = async (item) => {
+		dispatch('select', item);
 
 		prompt = removeLastWordFromString(prompt, command);
 		const chatInputElement = document.getElementById('chat-textarea');
@@ -108,9 +78,15 @@
 		chatInputElement?.focus();
 		await tick();
 	};
+
+	onMount(() => {
+		fuse = new Fuse($projects, {
+			keys: ['name', 'description']
+		});
+	});
 </script>
 
-{#if filteredItems.length > 0 || prompt.split(' ')?.at(0)?.substring(1).startsWith('http')}
+{#if filteredProjects.length > 0 || prompt.split(' ')?.at(0)?.substring(1).startsWith('http')}
 	<div
 		id="commands-container"
 		class="pl-1 pr-12 mb-3 text-left w-full absolute bottom-0 left-0 right-0 z-10"
@@ -124,39 +100,44 @@
 				class="max-h-60 flex flex-col w-full rounded-r-xl bg-white dark:bg-gray-900 dark:text-gray-100"
 			>
 				<div class="m-1 overflow-y-auto p-1 rounded-r-xl space-y-0.5 scrollbar-hidden">
-					{#each filteredItems as doc, docIdx}
+					{#each filteredProjects as project, idx}
 						<button
-							class=" px-3 py-1.5 rounded-xl w-full text-left {docIdx === selectedIdx
+							class=" px-3 py-1.5 rounded-xl w-full text-left {idx === selectedIdx
 								? ' bg-gray-50 dark:bg-gray-850 dark:text-gray-100 selected-command-option-button'
 								: ''}"
 							type="button"
 							on:click={() => {
-								console.log(doc);
-
-								confirmSelect(doc);
+								console.log(project);
+								confirmSelect(project);
 							}}
 							on:mousemove={() => {
-								selectedIdx = docIdx;
+								selectedIdx = idx;
 							}}
 							on:focus={() => {}}
 						>
-							{#if doc.type === 'collection'}
-								<div class=" font-medium text-black dark:text-gray-100 line-clamp-1">
-									{doc?.title ?? `#${doc.name}`}
+							<div class=" font-medium text-black dark:text-gray-100 flex items-center gap-1">
+								<div class="line-clamp-1">
+									{project.name}
 								</div>
 
-								<div class=" text-xs text-gray-600 dark:text-gray-100 line-clamp-1">
-									{$i18n.t('Collection')}
-								</div>
-							{:else}
-								<div class=" font-medium text-black dark:text-gray-100 line-clamp-1">
-									#{doc.name} ({doc.filename})
-								</div>
+								{#if project?.meta?.legacy}
+									<div
+										class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded uppercase text-xs px-1"
+									>
+										Legacy Document
+									</div>
+								{:else}
+									<div
+										class="bg-green-500/20 text-green-700 dark:text-green-200 rounded uppercase text-xs px-1"
+									>
+										Project
+									</div>
+								{/if}
+							</div>
 
-								<div class=" text-xs text-gray-600 dark:text-gray-100 line-clamp-1">
-									{doc.title}
-								</div>
-							{/if}
+							<div class=" text-xs text-gray-600 dark:text-gray-100 line-clamp-1">
+								{project.description}
+							</div>
 						</button>
 					{/each}
 

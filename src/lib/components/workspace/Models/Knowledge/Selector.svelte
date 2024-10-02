@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
-
-	import { documents } from '$lib/stores';
+	import { onMount, getContext } from 'svelte';
 	import { flyAndScale } from '$lib/utils/transitions';
 
+	import { projects } from '$lib/stores';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
-	import { onMount, getContext } from 'svelte';
 
 	const i18n = getContext('i18n');
 
@@ -17,30 +16,20 @@
 
 	onMount(() => {
 		let collections = [
-			...($documents.length > 0
-				? [
-						{
-							name: 'All Documents',
-							type: 'collection',
-							title: $i18n.t('All Documents'),
-							collection_names: $documents.map((doc) => doc.collection_name)
-						}
-					]
-				: []),
-			...$documents
+			...$projects
 				.reduce((a, e, i, arr) => {
 					return [...new Set([...a, ...(e?.content?.tags ?? []).map((tag) => tag.name)])];
 				}, [])
 				.map((tag) => ({
 					name: tag,
 					type: 'collection',
-					collection_names: $documents
+					collection_names: $projects
 						.filter((doc) => (doc?.content?.tags ?? []).map((tag) => tag.name).includes(tag))
 						.map((doc) => doc.collection_name)
 				}))
 		];
 
-		items = [...collections, ...$documents];
+		items = [...collections, ...$projects];
 	});
 </script>
 

@@ -69,14 +69,12 @@
 				>
 
 				<a
-					class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes(
-						'/workspace/documents'
-					)
+					class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/projects')
 						? 'bg-gray-50 dark:bg-gray-850'
 						: ''} transition"
-					href="/workspace/documents"
+					href="/workspace/projects"
 				>
-					{$i18n.t('Documents')}
+					{$i18n.t('Projects')}
 				</a>
 
 				<a

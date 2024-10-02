@@ -10,7 +10,7 @@ from open_webui.apps.webui.routers import (
     auths,
     chats,
     configs,
-    documents,
+    projects,
     files,
     functions,
     memories,
@@ -111,7 +111,7 @@ app.include_router(auths.router, prefix="/auths", tags=["auths"])
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(chats.router, prefix="/chats", tags=["chats"])
 
-app.include_router(documents.router, prefix="/documents", tags=["documents"])
+app.include_router(projects.router, prefix="/projects", tags=["projects"])
 app.include_router(models.router, prefix="/models", tags=["models"])
 app.include_router(prompts.router, prefix="/prompts", tags=["prompts"])
 
