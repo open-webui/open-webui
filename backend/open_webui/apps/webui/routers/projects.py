@@ -46,21 +46,32 @@ async def get_projects(id: Optional[str] = None, user=Depends(get_verified_user)
 
 @router.post("/create", response_model=Optional[ProjectResponse])
 async def create_new_project(form_data: ProjectForm, user=Depends(get_admin_user)):
-    project = Projects.get_project_by_id(form_data.id)
-    if project is None:
-        project = Projects.insert_new_project(user.id, form_data)
+    project = Projects.insert_new_project(user.id, form_data)
 
-        if project:
-            return project
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.FILE_EXISTS,
-            )
+    if project:
+        return project
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.ID_TAKEN,
+            detail=ERROR_MESSAGES.FILE_EXISTS,
+        )
+
+
+############################
+# GetProjectById
+############################
+
+
+@router.get("/{id}", response_model=Optional[ProjectResponse])
+async def get_projects(id: str, user=Depends(get_verified_user)):
+    project = Projects.get_project_by_id(id=id)
+
+    if project:
+        return project
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
 
@@ -69,8 +80,9 @@ async def create_new_project(form_data: ProjectForm, user=Depends(get_admin_user
 ############################
 
 
-@router.post("/update", response_model=Optional[ProjectResponse])
+@router.post("/{id}/update", response_model=Optional[ProjectResponse])
 async def update_project_by_id(
+    id: str,
     form_data: ProjectForm,
     user=Depends(get_admin_user),
 ):
@@ -89,7 +101,7 @@ async def update_project_by_id(
 ############################
 
 
-@router.delete("/delete", response_model=bool)
+@router.delete("/{id}/delete", response_model=bool)
 async def delete_project_by_id(id: str, user=Depends(get_admin_user)):
     result = Projects.delete_project_by_id(id=id)
     return result

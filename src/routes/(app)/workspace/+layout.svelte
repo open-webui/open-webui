@@ -99,7 +99,7 @@
 			</div>
 		</div>
 
-		<hr class=" my-2 dark:border-gray-850" />
+		<hr class=" my-2 border-gray-100 dark:border-gray-850" />
 
 		<div class=" py-1 px-5 flex-1 max-h-full overflow-y-auto">
 			<slot />
