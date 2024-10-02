@@ -21,7 +21,8 @@
 							name: 'All Documents',
 							legacy: true,
 							type: 'collection',
-							description: 'Deprecated (legacy collection), please use the new knowledge base.',
+							description: 'Deprecated (legacy collection), please create a new knowledge base.',
+
 							title: $i18n.t('All Documents'),
 							collection_names: legacy_documents.map((item) => item.id)
 						},
@@ -34,7 +35,8 @@
 								name: tag,
 								legacy: true,
 								type: 'collection',
-								description: 'Deprecated (legacy collection), please use the new knowledge base.',
+								description: 'Deprecated (legacy collection), please create a new knowledge base.',
+
 								collection_names: legacy_documents
 									.filter((item) => (item?.meta?.tags ?? []).map((tag) => tag.name).includes(tag))
 									.map((item) => item.id)

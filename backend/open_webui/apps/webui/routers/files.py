@@ -10,7 +10,7 @@ from open_webui.config import UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.utils.utils import get_admin_user, get_verified_user
 
 log = logging.getLogger(__name__)
@@ -189,16 +189,32 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
-        file_path = Path(file.meta["path"])
+        file_path = file.meta.get("path")
+        if file_path:
+            file_path = Path(file_path)
 
-        # Check if the file already exists in the cache
-        if file_path.is_file():
-            print(f"file_path: {file_path}")
-            return FileResponse(file_path)
+            # Check if the file already exists in the cache
+            if file_path.is_file():
+                print(f"file_path: {file_path}")
+                return FileResponse(file_path)
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=ERROR_MESSAGES.NOT_FOUND,
+                )
         else:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=ERROR_MESSAGES.NOT_FOUND,
+            # File path doesn’t exist, return the content as .txt if possible
+            file_content = file.content.get("content", "")
+            file_name = file.filename
+
+            # Create a generator that encodes the file content
+            def generator():
+                yield file_content.encode("utf-8")
+
+            return StreamingResponse(
+                generator(),
+                media_type="text/plain",
+                headers={"Content-Disposition": f"attachment; filename={file_name}"},
             )
     else:
         raise HTTPException(
