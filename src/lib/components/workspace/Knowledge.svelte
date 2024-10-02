@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Fuse from 'fuse.js';
+
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	dayjs.extend(relativeTime);
@@ -24,8 +26,16 @@
 	let selectedItem = null;
 	let showDeleteConfirm = false;
 
-	let filteredItems;
-	$: filteredItems = $knowledge.filter((item) => query === '' || item.name.includes(query));
+	let fuse = null;
+
+	let filteredItems = [];
+	$: if (fuse) {
+		filteredItems = query
+			? fuse.search(query).map((e) => {
+					return e.item;
+				})
+			: $knowledge;
+	}
 
 	const deleteHandler = async (item) => {
 		const res = await deleteKnowledgeById(localStorage.token, item.id).catch((e) => {
@@ -40,6 +50,12 @@
 
 	onMount(async () => {
 		knowledge.set(await getKnowledgeItems(localStorage.token));
+
+		knowledge.subscribe((value) => {
+			fuse = new Fuse(value, {
+				keys: ['name', 'description']
+			});
+		});
 	});
 </script>
 
