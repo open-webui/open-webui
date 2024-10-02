@@ -10,7 +10,7 @@
 	import { page } from '$app/stores';
 	import { fade } from 'svelte/transition';
 
-	import { getProjects } from '$lib/apis/projects';
+	import { getKnowledgeItems } from '$lib/apis/knowledge';
 	import { getFunctions } from '$lib/apis/functions';
 	import { getModels as _getModels, getVersionUpdates } from '$lib/apis';
 	import { getAllChatTags } from '$lib/apis/chats';
@@ -28,7 +28,7 @@
 		settings,
 		models,
 		prompts,
-		projects,
+		knowledge,
 		tools,
 		functions,
 		tags,
@@ -105,7 +105,7 @@
 					prompts.set(await getPrompts(localStorage.token));
 				})(),
 				(async () => {
-					projects.set(await getProjects(localStorage.token));
+					knowledge.set(await getKnowledgeItems(localStorage.token));
 				})(),
 				(async () => {
 					tools.set(await getTools(localStorage.token));

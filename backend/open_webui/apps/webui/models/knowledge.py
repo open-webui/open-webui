@@ -14,12 +14,12 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 ####################
-# Projects DB Schema
+# Knowledge DB Schema
 ####################
 
 
-class Project(Base):
-    __tablename__ = "project"
+class Knowledge(Base):
+    __tablename__ = "knowledge"
 
     id = Column(Text, unique=True, primary_key=True)
     user_id = Column(Text)
@@ -34,7 +34,7 @@ class Project(Base):
     updated_at = Column(BigInteger)
 
 
-class ProjectModel(BaseModel):
+class KnowledgeModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -55,7 +55,7 @@ class ProjectModel(BaseModel):
 ####################
 
 
-class ProjectResponse(BaseModel):
+class KnowledgeResponse(BaseModel):
     id: str
     name: str
     description: str
@@ -65,18 +65,18 @@ class ProjectResponse(BaseModel):
     updated_at: int  # timestamp in epoch
 
 
-class ProjectForm(BaseModel):
+class KnowledgeForm(BaseModel):
     name: str
     description: str
     data: Optional[dict] = None
 
 
-class ProjectTable:
-    def insert_new_project(
-        self, user_id: str, form_data: ProjectForm
-    ) -> Optional[ProjectModel]:
+class KnowledgeTable:
+    def insert_new_knowledge(
+        self, user_id: str, form_data: KnowledgeForm
+    ) -> Optional[KnowledgeModel]:
         with get_db() as db:
-            project = ProjectModel(
+            knowledge = KnowledgeModel(
                 **{
                     **form_data.model_dump(),
                     "id": str(uuid.uuid4()),
@@ -87,59 +87,59 @@ class ProjectTable:
             )
 
             try:
-                result = Project(**project.model_dump())
+                result = Knowledge(**knowledge.model_dump())
                 db.add(result)
                 db.commit()
                 db.refresh(result)
                 if result:
-                    return ProjectModel.model_validate(result)
+                    return KnowledgeModel.model_validate(result)
                 else:
                     return None
             except Exception:
                 return None
 
-    def get_projects(self) -> list[ProjectModel]:
+    def get_knowledge_items(self) -> list[KnowledgeModel]:
         with get_db() as db:
             return [
-                ProjectModel.model_validate(project)
-                for project in db.query(Project)
-                .order_by(Project.updated_at.desc())
+                KnowledgeModel.model_validate(knowledge)
+                for knowledge in db.query(Knowledge)
+                .order_by(Knowledge.updated_at.desc())
                 .all()
             ]
 
-    def get_project_by_id(self, id: str) -> Optional[ProjectModel]:
+    def get_knowledge_by_id(self, id: str) -> Optional[KnowledgeModel]:
         try:
             with get_db() as db:
-                project = db.query(Project).filter_by(id=id).first()
-                return ProjectModel.model_validate(project) if project else None
+                knowledge = db.query(Knowledge).filter_by(id=id).first()
+                return KnowledgeModel.model_validate(knowledge) if knowledge else None
         except Exception:
             return None
 
-    def update_project_by_id(
-        self, id: str, form_data: ProjectForm
-    ) -> Optional[ProjectModel]:
+    def update_knowledge_by_id(
+        self, id: str, form_data: KnowledgeForm
+    ) -> Optional[KnowledgeModel]:
         try:
             with get_db() as db:
-                db.query(Project).filter_by(id=id).update(
+                db.query(Knowledge).filter_by(id=id).update(
                     {
                         "name": form_data.name,
                         "updated_id": int(time.time()),
                     }
                 )
                 db.commit()
-                return self.get_project_by_id(id=form_data.id)
+                return self.get_knowledge_by_id(id=form_data.id)
         except Exception as e:
             log.exception(e)
             return None
 
-    def delete_project_by_id(self, id: str) -> bool:
+    def delete_knowledge_by_id(self, id: str) -> bool:
         try:
             with get_db() as db:
-                db.query(Project).filter_by(id=id).delete()
+                db.query(Knowledge).filter_by(id=id).delete()
                 db.commit()
                 return True
         except Exception:
             return False
 
 
-Projects = ProjectTable()
+Knowledges = KnowledgeTable()

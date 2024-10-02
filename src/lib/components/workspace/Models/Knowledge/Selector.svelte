@@ -3,33 +3,33 @@
 	import { onMount, getContext } from 'svelte';
 	import { flyAndScale } from '$lib/utils/transitions';
 
-	import { projects } from '$lib/stores';
+	import { knowledge } from '$lib/stores';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let onClose: Function = () => {};
 
-	export let knowledge = [];
+	export let _knowledge = [];
 
 	let items = [];
 
 	onMount(() => {
 		let collections = [
-			...$projects
+			...$knowledge
 				.reduce((a, e, i, arr) => {
 					return [...new Set([...a, ...(e?.content?.tags ?? []).map((tag) => tag.name)])];
 				}, [])
 				.map((tag) => ({
 					name: tag,
 					type: 'collection',
-					collection_names: $projects
+					collection_names: $knowledge
 						.filter((doc) => (doc?.content?.tags ?? []).map((tag) => tag.name).includes(tag))
 						.map((doc) => doc.collection_name)
 				}))
 		];
 
-		items = [...collections, ...$projects];
+		items = [...collections, ...$knowledge];
 	});
 </script>
 
@@ -60,9 +60,9 @@
 						<DropdownMenu.Item
 							class="flex gap-2.5 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 							on:click={() => {
-								if (!knowledge.find((k) => k.name === item.name)) {
-									knowledge = [
-										...knowledge,
+								if (!_knowledge.find((k) => k.name === item.name)) {
+									_knowledge = [
+										..._knowledge,
 										{
 											...item,
 											type: item?.type ?? 'doc'

@@ -1,4 +1,4 @@
-"""Add project table
+"""Add knowledge table
 
 Revision ID: 6a39f3d8e55c
 Revises: c0fbf31ca0db
@@ -19,10 +19,10 @@ depends_on = None
 
 
 def upgrade():
-    # Creating the 'project' table
-    print("Creating project table")
-    project_table = op.create_table(
-        "project",
+    # Creating the 'knowledge' table
+    print("Creating knowledge table")
+    knowledge_table = op.create_table(
+        "knowledge",
         sa.Column("id", sa.Text(), primary_key=True),
         sa.Column("user_id", sa.Text(), nullable=False),
         sa.Column("name", sa.Text(), nullable=False),
@@ -33,7 +33,7 @@ def upgrade():
         sa.Column("updated_at", sa.BigInteger(), nullable=True),
     )
 
-    print("Migrating data from document table to project table")
+    print("Migrating data from document table to knowledge table")
     # Representation of the existing 'document' table
     document_table = table(
         "document",
@@ -57,10 +57,10 @@ def upgrade():
         )
     )
 
-    # Insert data into project table from document table
+    # Insert data into knowledge table from document table
     for doc in documents:
         op.get_bind().execute(
-            project_table.insert().values(
+            knowledge_table.insert().values(
                 id=doc.collection_name,
                 user_id=doc.user_id,
                 description=doc.name,
@@ -76,4 +76,4 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_table("project")
+    op.drop_table("knowledge")

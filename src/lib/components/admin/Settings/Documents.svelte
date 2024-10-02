@@ -19,8 +19,8 @@
 		updateRAGConfig
 	} from '$lib/apis/retrieval';
 
-	import { projects, models } from '$lib/stores';
-	import { getProjects } from '$lib/apis/projects';
+	import { knowledge, models } from '$lib/stores';
+	import { getKnowledgeItems } from '$lib/apis/knowledge';
 	import { deleteAllFiles, deleteFileById } from '$lib/apis/files';
 
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -69,7 +69,7 @@
 		scanDirLoading = false;
 
 		if (res) {
-			await projects.set(await getProjects(localStorage.token));
+			await knowledge.set(await getKnowledgeItems(localStorage.token));
 			toast.success($i18n.t('Scan complete!'));
 		}
 	};
