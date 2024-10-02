@@ -5,7 +5,7 @@
 	const dispatch = createEventDispatcher();
 
 	import Prompts from './Commands/Prompts.svelte';
-	import Projects from './Commands/Projects.svelte';
+	import Knowledge from './Commands/Knowledge.svelte';
 	import Models from './Commands/Models.svelte';
 
 	import { removeLastWordFromString } from '$lib/utils';
@@ -97,7 +97,7 @@
 	{#if command?.charAt(0) === '/'}
 		<Prompts bind:this={commandElement} bind:prompt bind:files {command} />
 	{:else if command?.charAt(0) === '#'}
-		<Projects
+		<Knowledge
 			bind:this={commandElement}
 			bind:prompt
 			{command}
@@ -114,7 +114,7 @@
 				files = [
 					...files,
 					{
-						type: e?.detail?.meta?.document ? 'file' : 'project',
+						type: e?.detail?.meta?.document ? 'file' : 'collection',
 						...e.detail,
 						status: 'processed'
 					}

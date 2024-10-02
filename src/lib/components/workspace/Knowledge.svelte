@@ -7,9 +7,9 @@
 	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, projects } from '$lib/stores';
+	import { WEBUI_NAME, knowledge } from '$lib/stores';
 
-	import { getProjects, deleteProjectById } from '$lib/apis/projects';
+	import { getKnowledgeItems, deleteKnowledgeById } from '$lib/apis/knowledge';
 
 	import { blobToFile, transformFileName } from '$lib/utils';
 
@@ -18,50 +18,50 @@
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Pencil from '../icons/Pencil.svelte';
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
-	import ProjectMenu from './Projects/ProjectMenu.svelte';
+	import ItemMenu from './Knowledge/ItemMenu.svelte';
 
 	let query = '';
-	let selectedProject = null;
+	let selectedItem = null;
 	let showDeleteConfirm = false;
 
-	let filteredProjects;
-	$: filteredProjects = $projects.filter((project) => query === '' || project.name.includes(query));
+	let filteredItems;
+	$: filteredItems = $knowledge.filter((item) => query === '' || item.name.includes(query));
 
-	const deleteHandler = async (project) => {
-		const res = await deleteProjectById(localStorage.token, project.id).catch((e) => {
+	const deleteHandler = async (item) => {
+		const res = await deleteKnowledgeById(localStorage.token, item.id).catch((e) => {
 			toast.error(e);
 		});
 
 		if (res) {
-			projects.set(await getProjects(localStorage.token));
-			toast.success($i18n.t('Project deleted successfully.'));
+			knowledge.set(await getKnowledgeItems(localStorage.token));
+			toast.success($i18n.t('Knowledge deleted successfully.'));
 		}
 	};
 
 	onMount(async () => {
-		projects.set(await getProjects(localStorage.token));
+		knowledge.set(await getKnowledgeItems(localStorage.token));
 	});
 </script>
 
 <svelte:head>
 	<title>
-		{$i18n.t('Projects')} | {$WEBUI_NAME}
+		{$i18n.t('Knowledge')} | {$WEBUI_NAME}
 	</title>
 </svelte:head>
 
 <DeleteConfirmDialog
 	bind:show={showDeleteConfirm}
 	on:confirm={() => {
-		deleteHandler(selectedProject);
+		deleteHandler(selectedItem);
 	}}
 />
 
 <div class="mb-3">
 	<div class="flex justify-between items-center">
 		<div class="flex md:self-center text-lg font-medium px-0.5">
-			{$i18n.t('Projects')}
+			{$i18n.t('Knowledge')}
 			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
-			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{$projects.length}</span>
+			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{$knowledge.length}</span>
 		</div>
 	</div>
 </div>
@@ -85,16 +85,16 @@
 		<input
 			class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
 			bind:value={query}
-			placeholder={$i18n.t('Search Projects')}
+			placeholder={$i18n.t('Search Knowledge')}
 		/>
 	</div>
 
 	<div>
 		<button
 			class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition font-medium text-sm flex items-center space-x-1"
-			aria-label={$i18n.t('Create Project')}
+			aria-label={$i18n.t('Create Knowledge')}
 			on:click={() => {
-				goto('/workspace/projects/create');
+				goto('/workspace/knowledge/create');
 			}}
 		>
 			<svg
@@ -114,25 +114,25 @@
 <hr class=" border-gray-50 dark:border-gray-850 my-2.5" />
 
 <div class="my-3 mb-5 grid lg:grid-cols-2 xl:grid-cols-3 gap-2">
-	{#each filteredProjects as project}
+	{#each filteredItems as item}
 		<button
 			class=" flex space-x-4 cursor-pointer text-left w-full px-4 py-3 border border-gray-50 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 rounded-xl"
 			on:click={() => {
-				if (project?.meta?.document) {
-					toast.error($i18n.t('Documents cannot be edited, please create a new project.'));
+				if (item?.meta?.document) {
+					toast.error($i18n.t('Only collections can be edited, create a new knowledge instead.'));
 				} else {
-					goto(`/workspace/projects/${project.id}`);
+					goto(`/workspace/knowledge/${item.id}`);
 				}
 			}}
 		>
 			<div class=" w-full">
 				<div class="flex items-center justify-between -mt-1">
-					<div class=" font-semibold line-clamp-1 h-fit">{project.name}</div>
+					<div class=" font-semibold line-clamp-1 h-fit">{item.name}</div>
 
 					<div class=" flex self-center">
-						<ProjectMenu
+						<ItemMenu
 							on:delete={() => {
-								selectedProject = project;
+								selectedItem = item;
 								showDeleteConfirm = true;
 							}}
 						/>
@@ -141,12 +141,12 @@
 
 				<div class=" self-center flex-1">
 					<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
-						{project.description}
+						{item.description}
 					</div>
 
 					<div class="mt-5 flex justify-between">
 						<div>
-							{#if project?.meta?.document}
+							{#if item?.meta?.document}
 								<div
 									class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded uppercase text-xs font-bold px-1"
 								>
@@ -156,12 +156,12 @@
 								<div
 									class="bg-green-500/20 text-green-700 dark:text-green-200 rounded uppercase text-xs font-bold px-1"
 								>
-									{$i18n.t('Project')}
+									{$i18n.t('Collection')}
 								</div>
 							{/if}
 						</div>
 						<div class=" text-xs text-gray-500">
-							Updated {dayjs(project.updated_at * 1000).fromNow()}
+							Updated {dayjs(item.updated_at * 1000).fromNow()}
 						</div>
 					</div>
 				</div>
@@ -171,5 +171,5 @@
 </div>
 
 <div class=" text-gray-500 text-xs mt-1 mb-2">
-	ⓘ {$i18n.t("Use '#' in the prompt input to load and select your projects.")}
+	ⓘ {$i18n.t("Use '#' in the prompt input to load and include your knowledge.")}
 </div>

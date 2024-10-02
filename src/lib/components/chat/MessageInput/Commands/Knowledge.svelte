@@ -4,7 +4,7 @@
 
 	import { createEventDispatcher, tick, getContext, onMount } from 'svelte';
 	import { removeLastWordFromString, isValidHttpUrl } from '$lib/utils';
-	import { projects } from '$lib/stores';
+	import { knowledge } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -16,13 +16,13 @@
 
 	let fuse = null;
 
-	let filteredProjects = [];
+	let filteredItems = [];
 	$: if (fuse) {
-		filteredProjects = command.slice(1)
+		filteredItems = command.slice(1)
 			? fuse.search(command).map((e) => {
 					return e.item;
 				})
-			: $projects;
+			: $knowledge;
 	}
 
 	$: if (command) {
@@ -34,7 +34,7 @@
 	};
 
 	export const selectDown = () => {
-		selectedIdx = Math.min(selectedIdx + 1, filteredProjects.length - 1);
+		selectedIdx = Math.min(selectedIdx + 1, filteredItems.length - 1);
 	};
 
 	const confirmSelect = async (item) => {
@@ -71,13 +71,13 @@
 	};
 
 	onMount(() => {
-		fuse = new Fuse($projects, {
+		fuse = new Fuse($knowledge, {
 			keys: ['name', 'description']
 		});
 	});
 </script>
 
-{#if filteredProjects.length > 0 || prompt.split(' ')?.at(0)?.substring(1).startsWith('http')}
+{#if filteredItems.length > 0 || prompt.split(' ')?.at(0)?.substring(1).startsWith('http')}
 	<div
 		id="commands-container"
 		class="pl-1 pr-12 mb-3 text-left w-full absolute bottom-0 left-0 right-0 z-10"
@@ -91,15 +91,15 @@
 				class="max-h-60 flex flex-col w-full rounded-r-xl bg-white dark:bg-gray-900 dark:text-gray-100"
 			>
 				<div class="m-1 overflow-y-auto p-1 rounded-r-xl space-y-0.5 scrollbar-hidden">
-					{#each filteredProjects as project, idx}
+					{#each filteredItems as item, idx}
 						<button
 							class=" px-3 py-1.5 rounded-xl w-full text-left {idx === selectedIdx
 								? ' bg-gray-50 dark:bg-gray-850 dark:text-gray-100 selected-command-option-button'
 								: ''}"
 							type="button"
 							on:click={() => {
-								console.log(project);
-								confirmSelect(project);
+								console.log(item);
+								confirmSelect(item);
 							}}
 							on:mousemove={() => {
 								selectedIdx = idx;
@@ -108,10 +108,10 @@
 						>
 							<div class=" font-medium text-black dark:text-gray-100 flex items-center gap-1">
 								<div class="line-clamp-1">
-									{project.name}
+									{item.name}
 								</div>
 
-								{#if project?.meta?.document}
+								{#if item?.meta?.document}
 									<div
 										class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded uppercase text-xs px-1"
 									>
@@ -121,13 +121,13 @@
 									<div
 										class="bg-green-500/20 text-green-700 dark:text-green-200 rounded uppercase text-xs px-1"
 									>
-										Project
+										Collection
 									</div>
 								{/if}
 							</div>
 
 							<div class=" text-xs text-gray-600 dark:text-gray-100 line-clamp-1">
-								{project.description}
+								{item.description}
 							</div>
 						</button>
 					{/each}

@@ -3,9 +3,9 @@
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { createNewProject, getProjects } from '$lib/apis/projects';
+	import { createNewKnowledge, getKnowledgeItems } from '$lib/apis/knowledge';
 	import { toast } from 'svelte-sonner';
-	import { projects } from '$lib/stores';
+	import { knowledge } from '$lib/stores';
 
 	let loading = false;
 
@@ -15,14 +15,14 @@
 	const submitHandler = async () => {
 		loading = true;
 
-		const res = await createNewProject(localStorage.token, name, description).catch((e) => {
+		const res = await createNewKnowledge(localStorage.token, name, description).catch((e) => {
 			toast.error(e);
 		});
 
 		if (res) {
-			toast.success($i18n.t('Project created successfully.'));
-			projects.set(await getProjects(localStorage.token));
-			goto(`/workspace/projects/${res.id}`);
+			toast.success($i18n.t('Knowledge created successfully.'));
+			knowledge.set(await getKnowledgeItems(localStorage.token));
+			goto(`/workspace/knowledge/${res.id}`);
 		}
 
 		loading = false;
@@ -33,7 +33,7 @@
 	<button
 		class="flex space-x-1"
 		on:click={() => {
-			goto('/workspace/projects');
+			goto('/workspace/knowledge');
 		}}
 	>
 		<div class=" self-center">
@@ -60,7 +60,7 @@
 		}}
 	>
 		<div class=" w-full flex flex-col justify-center">
-			<div class=" text-2xl font-medium font-primary mb-2.5">Create a project</div>
+			<div class=" text-2xl font-medium font-primary mb-2.5">Create a knowledge base</div>
 
 			<div class="w-full flex flex-col gap-2.5">
 				<div class="w-full">
@@ -71,7 +71,7 @@
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							type="text"
 							bind:value={name}
-							placeholder={`Name your project`}
+							placeholder={`Name your knowledge base`}
 							required
 						/>
 					</div>
@@ -85,7 +85,7 @@
 							class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							rows="4"
 							bind:value={description}
-							placeholder={`Describe your project, its goals, and objectives`}
+							placeholder={`Describe your knowledge base and objectives`}
 							required
 						/>
 					</div>
@@ -102,7 +102,7 @@
 					type="submit"
 					disabled={loading}
 				>
-					<div class=" self-center font-medium">{$i18n.t('Create Project')}</div>
+					<div class=" self-center font-medium">{$i18n.t('Create Knowledge')}</div>
 
 					{#if loading}
 						<div class="ml-1.5 self-center">

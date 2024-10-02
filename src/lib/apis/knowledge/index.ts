@@ -1,9 +1,9 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export const createNewProject = async (token: string, name: string, description: string) => {
+export const createNewKnowledge = async (token: string, name: string, description: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/projects/create`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/create`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -32,10 +32,10 @@ export const createNewProject = async (token: string, name: string, description:
 	return res;
 };
 
-export const getProjects = async (token: string = '') => {
+export const getKnowledgeItems = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/projects/`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -63,10 +63,10 @@ export const getProjects = async (token: string = '') => {
 	return res;
 };
 
-export const getProjectById = async (token: string, id: string) => {
+export const getKnowledgeById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/projects/${id}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -95,14 +95,16 @@ export const getProjectById = async (token: string, id: string) => {
 	return res;
 };
 
-type ProjectForm = {
+type KnowledgeForm = {
 	name: string;
+	description: string;
+	data: object;
 };
 
-export const updateProjectById = async (token: string, id: string, form: ProjectForm) => {
+export const updateKnowledgeById = async (token: string, id: string, form: KnowledgeForm) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/projects/${id}/update`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -110,7 +112,9 @@ export const updateProjectById = async (token: string, id: string, form: Project
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			name: form.name
+			name: form.name,
+			description: form.description,
+			data: form.data
 		})
 	})
 		.then(async (res) => {
@@ -134,10 +138,10 @@ export const updateProjectById = async (token: string, id: string, form: Project
 	return res;
 };
 
-export const deleteProjectById = async (token: string, id: string) => {
+export const deleteKnowledgeById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/projects/${id}/delete`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
