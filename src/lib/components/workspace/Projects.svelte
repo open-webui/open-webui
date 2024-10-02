@@ -115,7 +115,6 @@
 
 <div class="my-3 mb-5 grid md:grid-cols-2 gap-2">
 	{#each filteredProjects as project}
-		{JSON.stringify(project)}
 		<button
 			class=" flex space-x-4 cursor-pointer text-left w-full px-4 py-3 border border-gray-50 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 rounded-xl"
 		>
