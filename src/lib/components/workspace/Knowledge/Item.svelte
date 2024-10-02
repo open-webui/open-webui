@@ -5,21 +5,25 @@
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { mobile, showSidebar } from '$lib/stores';
+
 	import { getKnowledgeById } from '$lib/apis/knowledge';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EllipsisVertical from '$lib/components/icons/EllipsisVertical.svelte';
-	import { mobile } from '$lib/stores';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import BookOpen from '$lib/components/icons/BookOpen.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
+	import Files from './Files.svelte';
+	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
 
 	let id = null;
 	let knowledge = null;
 	let query = '';
 
 	let selectedFileId = null;
+	let dragged = false;
 
 	onMount(async () => {
 		id = $page.params.id;
@@ -35,6 +39,29 @@
 		}
 	});
 </script>
+
+{#if dragged}
+	<div
+		class="fixed {$showSidebar
+			? 'left-0 md:left-[260px] md:w-[calc(100%-260px)]'
+			: 'left-0'}  w-full h-full flex z-50 touch-none pointer-events-none"
+		id="dropzone"
+		role="region"
+		aria-label="Drag and Drop Container"
+	>
+		<div class="absolute w-full h-full backdrop-blur bg-gray-800/40 flex justify-center">
+			<div class="m-auto pt-64 flex flex-col justify-center">
+				<div class="max-w-md">
+					<AddFilesPlaceholder>
+						<div class=" mt-2 text-center text-sm dark:text-gray-200 w-full">
+							Drop any files here to add to my documents
+						</div>
+					</AddFilesPlaceholder>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <div class="flex flex-col w-full max-h-[100dvh] h-full">
 	<button
@@ -94,7 +121,7 @@
 				<div
 					class=" {!$mobile
 						? 'flex-shrink-0'
-						: 'flex-1'} p-2.5 w-80 rounded-2xl border dark:border-gray-850"
+						: 'flex-1'} p-2.5 w-80 rounded-2xl border border-gray-50 dark:border-gray-850"
 				>
 					<div class=" flex flex-col w-full space-x-2 rounded-lg h-full">
 						<div class="flex px-1">
@@ -119,7 +146,7 @@
 							/>
 
 							<div>
-								<Tooltip content={$i18n.t('Add File')}>
+								<Tooltip content={$i18n.t('Add Content')}>
 									<button
 										class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition font-medium text-sm flex items-center space-x-1"
 										on:click={() => {
@@ -140,10 +167,14 @@
 								</Tooltip>
 							</div>
 						</div>
-						<hr class="my-2 border-gray-200 dark:border-gray-850" />
+						<hr class="my-2 border-gray-50 dark:border-gray-850" />
 
-						<div>
-							{knowledge?.data?.file_ids ?? []}
+						<div class="w-full h-full flex">
+							{#if (knowledge?.data?.file_ids ?? []).length > 0}
+								<Files fileIds={knowledge.data.file_ids} />
+							{:else}
+								<div class="m-auto text-gray-500 text-xs">No content found</div>
+							{/if}
 						</div>
 					</div>
 				</div>
@@ -153,7 +184,13 @@
 						{#if selectedFileId}
 							<textarea />
 						{:else}
-							<div class="m-auto">Select a file to view or drag and drop a file to upload</div>
+							<div class="m-auto">
+								<AddFilesPlaceholder title={$i18n.t('Select/Add Files')}>
+									<div class=" mt-2 text-center text-sm dark:text-gray-200 w-full">
+										Select a file to view or drag and drop a file to upload
+									</div>
+								</AddFilesPlaceholder>
+							</div>
 						{/if}
 					</div>
 				{/if}
