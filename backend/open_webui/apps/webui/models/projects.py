@@ -102,7 +102,9 @@ class ProjectTable:
         with get_db() as db:
             return [
                 ProjectModel.model_validate(project)
-                for project in db.query(Project).all()
+                for project in db.query(Project)
+                .order_by(Project.updated_at.desc())
+                .all()
             ]
 
     def get_project_by_id(self, id: str) -> Optional[ProjectModel]:
