@@ -56,9 +56,6 @@ def run_migrations():
         print(f"Error: {e}")
 
 
-run_migrations()
-
-
 class Config(Base):
     __tablename__ = "config"
 

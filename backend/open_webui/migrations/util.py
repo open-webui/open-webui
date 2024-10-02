@@ -1,6 +1,5 @@
 from alembic import op
 from sqlalchemy import Inspector
-import uuid
 
 
 def get_existing_tables():
@@ -11,4 +10,6 @@ def get_existing_tables():
 
 
 def get_revision_id():
+    import uuid
+
     return str(uuid.uuid4()).replace("-", "")[:12]
