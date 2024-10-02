@@ -111,12 +111,13 @@
 	</div>
 </div>
 
-<hr class=" dark:border-gray-850 my-2.5" />
+<hr class=" border-gray-50 dark:border-gray-850 my-2.5" />
 
 <div class="my-3 mb-5 grid md:grid-cols-2 gap-2">
 	{#each filteredProjects as project}
+		{JSON.stringify(project)}
 		<button
-			class=" flex space-x-4 cursor-pointer text-left w-full px-4 py-3 border dark:border-gray-850 dark:hover:bg-gray-850 rounded-xl"
+			class=" flex space-x-4 cursor-pointer text-left w-full px-4 py-3 border border-gray-50 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 rounded-xl"
 		>
 			<div class=" w-full">
 				<div class="flex items-center justify-between -mt-1">
@@ -147,7 +148,7 @@
 								</div>
 							{:else}
 								<div
-									class="bg-green-500/20 text-green-700 dark:text-green-200 rounded uppercase text-xs px-1"
+									class="bg-green-500/20 text-green-700 dark:text-green-200 rounded uppercase text-xs font-bold px-1"
 								>
 									{$i18n.t('Project')}
 								</div>

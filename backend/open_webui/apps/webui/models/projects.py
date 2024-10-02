@@ -2,6 +2,7 @@ import json
 import logging
 import time
 from typing import Optional
+import uuid
 
 from open_webui.apps.webui.internal.db import Base, get_db
 from open_webui.env import SRC_LOG_LEVELS
@@ -65,7 +66,6 @@ class ProjectResponse(BaseModel):
 
 
 class ProjectForm(BaseModel):
-    id: str
     name: str
     description: str
     data: Optional[dict] = None
@@ -79,6 +79,7 @@ class ProjectTable:
             project = ProjectModel(
                 **{
                     **form_data.model_dump(),
+                    "id": str(uuid.uuid4()),
                     "user_id": user_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),

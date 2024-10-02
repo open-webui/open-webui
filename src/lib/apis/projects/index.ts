@@ -1,6 +1,6 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export const createNewProject = async (token: string, id: string, name: string) => {
+export const createNewProject = async (token: string, name: string, description: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/projects/create`, {
@@ -11,8 +11,8 @@ export const createNewProject = async (token: string, id: string, name: string) 
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			id: id,
-			name: name
+			name: name,
+			description: description
 		})
 	})
 		.then(async (res) => {
