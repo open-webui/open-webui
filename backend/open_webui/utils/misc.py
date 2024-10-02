@@ -167,6 +167,13 @@ def validate_email_format(email: str) -> bool:
     return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email))
 
 
+def validate_email_domain(email: str, domain_whitelist: list) -> bool:
+    for domain in domain_whitelist:
+        if email.endswith(f"@{domain}"):
+            return True
+    return False
+
+
 def sanitize_filename(file_name):
     # Convert to lowercase
     lower_case_file_name = file_name.lower()

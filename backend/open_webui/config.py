@@ -259,7 +259,6 @@ class AppConfig:
     def __getattr__(self, key):
         return self._state[key].value
 
-
 ####################################
 # WEBUI_AUTH (Required for security)
 ####################################
@@ -665,6 +664,10 @@ ENABLE_SIGNUP = PersistentConfig(
         if not WEBUI_AUTH
         else os.environ.get("ENABLE_SIGNUP", "True").lower() == "true"
     ),
+)
+
+WEBUI_EMAIL_DOMAIN_WHITELIST = PersistentConfig(
+    "WEBUI_EMAIL_DOMAIN_WHITELIST", "email_domain.whitelist", os.environ.get("WEBUI_EMAIL_DOMAIN_WHITELIST", None)
 )
 
 ENABLE_LOGIN_FORM = PersistentConfig(

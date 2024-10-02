@@ -40,6 +40,7 @@ from open_webui.config import (
     WEBHOOK_URL,
     WEBUI_AUTH,
     WEBUI_BANNERS,
+    WEBUI_EMAIL_DOMAIN_WHITELIST,
     AppConfig,
 )
 from open_webui.env import (
@@ -69,6 +70,7 @@ log = logging.getLogger(__name__)
 app.state.config = AppConfig()
 
 app.state.config.ENABLE_SIGNUP = ENABLE_SIGNUP
+app.state.config.WEBUI_EMAIL_DOMAIN_WHITELIST = WEBUI_EMAIL_DOMAIN_WHITELIST
 app.state.config.ENABLE_LOGIN_FORM = ENABLE_LOGIN_FORM
 app.state.config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
