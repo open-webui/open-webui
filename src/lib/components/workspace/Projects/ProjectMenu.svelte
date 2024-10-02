@@ -37,6 +37,10 @@
 			><button
 				class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 				type="button"
+				on:click={(e) => {
+					e.stopPropagation();
+					show = true;
+				}}
 			>
 				<EllipsisHorizontal className="size-5" />
 			</button>

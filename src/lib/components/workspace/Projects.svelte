@@ -113,10 +113,17 @@
 
 <hr class=" border-gray-50 dark:border-gray-850 my-2.5" />
 
-<div class="my-3 mb-5 grid md:grid-cols-2 gap-2">
+<div class="my-3 mb-5 grid lg:grid-cols-2 xl:grid-cols-3 gap-2">
 	{#each filteredProjects as project}
 		<button
 			class=" flex space-x-4 cursor-pointer text-left w-full px-4 py-3 border border-gray-50 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 rounded-xl"
+			on:click={() => {
+				if (project?.meta?.document) {
+					toast.error($i18n.t('Documents cannot be edited, please create a new project.'));
+				} else {
+					goto(`/workspace/projects/${project.id}`);
+				}
+			}}
 		>
 			<div class=" w-full">
 				<div class="flex items-center justify-between -mt-1">
@@ -139,11 +146,11 @@
 
 					<div class="mt-5 flex justify-between">
 						<div>
-							{#if project?.meta?.legacy}
+							{#if project?.meta?.document}
 								<div
 									class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded uppercase text-xs font-bold px-1"
 								>
-									{$i18n.t('Legacy Document')}
+									{$i18n.t('Document')}
 								</div>
 							{:else}
 								<div

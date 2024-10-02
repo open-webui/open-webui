@@ -65,7 +65,7 @@ def upgrade():
                 user_id=doc.user_id,
                 description=doc.name,
                 meta={
-                    "legacy": True,
+                    "document": True,
                     "tags": json.loads(doc.content or "{}").get("tags", []),
                 },
                 name=doc.title,

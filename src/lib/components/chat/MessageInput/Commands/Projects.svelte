@@ -111,11 +111,11 @@
 									{project.name}
 								</div>
 
-								{#if project?.meta?.legacy}
+								{#if project?.meta?.document}
 									<div
 										class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded uppercase text-xs px-1"
 									>
-										Legacy Document
+										Document
 									</div>
 								{:else}
 									<div
