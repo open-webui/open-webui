@@ -64,12 +64,20 @@
 		{#if id && knowledge}
 			<div class=" flex w-full mt-1 mb-3.5">
 				<div class="flex-1">
-					<div class="flex w-full px-0.5 mb-1">
-						<input
-							type="text"
-							class="w-full font-medium text-2xl font-primary bg-transparent outline-none"
-							bind:value={knowledge.name}
-						/>
+					<div class="flex items-center justify-between w-full px-0.5 mb-1">
+						<div>
+							<input
+								type="text"
+								class="w-full font-medium text-2xl font-primary bg-transparent outline-none"
+								bind:value={knowledge.name}
+							/>
+						</div>
+
+						<div class=" flex-shrink-0">
+							<div>
+								<Badge type="success" content="Collection" />
+							</div>
+						</div>
 					</div>
 
 					<div class="flex w-full px-1">
@@ -78,12 +86,6 @@
 							class="w-full font-medium text-gray-500 text-sm bg-transparent outline-none"
 							bind:value={knowledge.description}
 						/>
-					</div>
-				</div>
-
-				<div class=" flex-shrink-0">
-					<div>
-						<Badge type="success" content="Collection" />
 					</div>
 				</div>
 			</div>
