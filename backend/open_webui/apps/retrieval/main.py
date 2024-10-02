@@ -15,9 +15,6 @@ from pydantic import BaseModel
 
 from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 
-# Information retrieval models
-from open_webui.apps.retrieval.models.colbert import ColBERT
-
 # Document loaders
 from open_webui.apps.retrieval.loaders.main import Loader
 
@@ -192,6 +189,8 @@ def update_reranking_model(
     if reranking_model:
         if any(model in reranking_model for model in ["jinaai/jina-colbert-v2"]):
             try:
+                from open_webui.apps.retrieval.models.colbert import ColBERT
+
                 app.state.sentence_transformer_rf = ColBERT(
                     get_model_path(reranking_model, auto_update),
                     env="docker" if DOCKER else None,
