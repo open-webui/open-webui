@@ -114,7 +114,7 @@
 				files = [
 					...files,
 					{
-						type: e?.detail?.meta?.legacy ? 'file' : 'project',
+						type: e?.detail?.meta?.document ? 'file' : 'project',
 						...e.detail,
 						status: 'processed'
 					}
