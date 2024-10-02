@@ -18,6 +18,8 @@ type ResponseUsage = {
 	completion_tokens: number;
 	/** Sum of the above two fields */
 	total_tokens: number;
+	/** Any other fields that aren't part of the base OpenAI spec */
+	[other: string]: unknown;
 };
 
 // createOpenAITextStream takes a responseBody with a SSE response,
