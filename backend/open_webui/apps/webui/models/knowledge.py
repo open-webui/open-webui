@@ -71,6 +71,12 @@ class KnowledgeForm(BaseModel):
     data: Optional[dict] = None
 
 
+class KnowledgeUpdateForm(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    data: Optional[dict] = None
+
+
 class KnowledgeTable:
     def insert_new_knowledge(
         self, user_id: str, form_data: KnowledgeForm
@@ -116,18 +122,37 @@ class KnowledgeTable:
             return None
 
     def update_knowledge_by_id(
-        self, id: str, form_data: KnowledgeForm
+        self, id: str, form_data: KnowledgeUpdateForm, overwrite: bool = False
     ) -> Optional[KnowledgeModel]:
         try:
             with get_db() as db:
                 db.query(Knowledge).filter_by(id=id).update(
                     {
-                        "name": form_data.name,
-                        "updated_id": int(time.time()),
+                        **({"name": form_data.name} if form_data.name else {}),
+                        **(
+                            {"description": form_data.description}
+                            if form_data.description
+                            else {}
+                        ),
+                        **(
+                            {
+                                "data": (
+                                    form_data.data
+                                    if overwrite
+                                    else {
+                                        **(self.get_knowledge_by_id(id=id)).data,
+                                        **form_data.data,
+                                    }
+                                )
+                            }
+                            if form_data.data
+                            else {}
+                        ),
+                        "updated_at": int(time.time()),
                     }
                 )
                 db.commit()
-                return self.get_knowledge_by_id(id=form_data.id)
+                return self.get_knowledge_by_id(id=id)
         except Exception as e:
             log.exception(e)
             return None
