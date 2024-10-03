@@ -2249,7 +2249,7 @@ async def oauth_callback(provider: str, request: Request, response: Response):
         role = user.role
         if Users.get_num_users() == 1:
             role = "admin"
-        elif webui_app.state.config.ENABLE_OAUTH_ROLE_MAPPING.value:
+        elif webui_app.state.config.ENABLE_OAUTH_ROLE_MAPPING:
             oauth_roles = user_data.get(webui_app.state.config.OAUTH_ROLE_CLAIM)
             if oauth_roles:
                 for allowed_role in ["pending", "user", "admin"]:
