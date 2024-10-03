@@ -187,13 +187,32 @@ class MilvusClient:
             ],
         )
 
-    def delete(self, collection_name: str, ids: list[str]):
+    def delete(
+        self,
+        collection_name: str,
+        ids: Optional[list[str]] = None,
+        filter: Optional[dict] = None,
+    ):
         # Delete the items from the collection based on the ids.
 
-        return self.client.delete(
-            collection_name=f"{self.collection_prefix}_{collection_name}",
-            ids=ids,
-        )
+        if ids:
+            return self.client.delete(
+                collection_name=f"{self.collection_prefix}_{collection_name}",
+                ids=ids,
+            )
+        elif filter:
+            # Convert the filter dictionary to a string using JSON_CONTAINS.
+            filter_string = " && ".join(
+                [
+                    f"JSON_CONTAINS(metadata[{key}], '{[value] if isinstance(value, str) else value}')"
+                    for key, value in filter.items()
+                ]
+            )
+
+            return self.client.delete(
+                collection_name=f"{self.collection_prefix}_{collection_name}",
+                filter=filter_string,
+            )
 
     def reset(self):
         # Resets the database. This will delete all collections and item entries.

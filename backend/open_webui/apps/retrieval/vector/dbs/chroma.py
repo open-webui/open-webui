@@ -111,11 +111,19 @@ class ChromaClient:
             ids=ids, documents=documents, embeddings=embeddings, metadatas=metadatas
         )
 
-    def delete(self, collection_name: str, ids: list[str]):
+    def delete(
+        self,
+        collection_name: str,
+        ids: Optional[list[str]] = None,
+        filter: Optional[dict] = None,
+    ):
         # Delete the items from the collection based on the ids.
         collection = self.client.get_collection(name=collection_name)
         if collection:
-            collection.delete(ids=ids)
+            if ids:
+                collection.delete(ids=ids)
+            elif filter:
+                collection.delete(where=filter)
 
     def reset(self):
         # Resets the database. This will delete all collections and item entries.
