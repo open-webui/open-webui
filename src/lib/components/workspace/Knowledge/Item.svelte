@@ -16,6 +16,10 @@
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Files from './Files.svelte';
 	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
+	import AddContentModal from './AddContentModal.svelte';
+	import { transcribeAudio } from '$lib/apis/audio';
+	import { blobToFile } from '$lib/utils';
+	import { processFile } from '$lib/apis/retrieval';
 
 	let largeScreen = true;
 
@@ -60,6 +64,59 @@
 		}, 1000);
 	};
 
+	const uploadFileHandler = async (file) => {
+		console.log(file);
+
+		// Check if the file is an audio file and transcribe/convert it to text file
+		if (['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'].includes(file['type'])) {
+			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
+				toast.error(error);
+				return null;
+			});
+
+			if (res) {
+				console.log(res);
+				const blob = new Blob([res.text], { type: 'text/plain' });
+				file = blobToFile(blob, `${file.name}.txt`);
+			}
+		}
+
+		try {
+			const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
+				toast.error(e);
+			});
+
+			if (uploadedFile) {
+				const processedFile = await processFile(localStorage.token, uploadedFile.id, id).catch(
+					(e) => {
+						toast.error(e);
+					}
+				);
+
+				if (processedFile.status) {
+					knowledge.data.file_ids = [...(knowledge.data.file_ids ?? []), uploadedFile.id];
+
+					const updatedKnowledge = await updateKnowledgeById(localStorage.token, id, {
+						data: knowledge.data
+					}).catch((e) => {
+						toast.error(e);
+					});
+
+					if (updatedKnowledge) {
+						knowledge = updatedKnowledge;
+						toast.success($i18n.t('File added successfully.'));
+					}
+				} else {
+					toast.error($i18n.t('Failed to process file.'));
+				}
+			} else {
+				toast.error($i18n.t('Failed to upload file.'));
+			}
+		} catch (e) {
+			toast.error(e);
+		}
+	};
+
 	onMount(async () => {
 		// listen to resize 1024px
 		const mediaQuery = window.matchMedia('(min-width: 1024px)');
@@ -78,7 +135,8 @@
 		id = $page.params.id;
 
 		const res = await getKnowledgeById(localStorage.token, id).catch((e) => {
-			console.error(e);
+			toast.error(e);
+			return null;
 		});
 
 		if (res) {
@@ -102,19 +160,11 @@
 			e.preventDefault();
 
 			if (e.dataTransfer?.files) {
-				let reader = new FileReader();
 				const inputFiles = e.dataTransfer?.files;
 
 				if (inputFiles && inputFiles.length > 0) {
 					for (const file of inputFiles) {
-						console.log(file, file.name.split('.').at(-1));
-						const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
-							toast.error(e);
-						});
-
-						if (uploadedFile) {
-							knowledge.data.file_ids = [...(knowledge.data.file_ids ?? []), uploadedFile.id];
-						}
+						await uploadFileHandler(file);
 					}
 				} else {
 					toast.error($i18n.t(`File not found.`));
@@ -160,6 +210,13 @@
 		</div>
 	</div>
 {/if}
+
+<AddContentModal
+	bind:show={showAddContentModal}
+	on:add={(e) => {
+		console.log(e);
+	}}
+/>
 
 <div class="flex flex-col w-full max-h-[100dvh] h-full">
 	<button

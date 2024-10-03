@@ -20,7 +20,7 @@ class File(Base):
 
     id = Column(String, primary_key=True)
     user_id = Column(String)
-    hash = Column(String)
+    hash = Column(Text, nullable=True)
 
     filename = Column(Text)
     data = Column(JSON)
@@ -35,7 +35,7 @@ class FileModel(BaseModel):
 
     id: str
     user_id: str
-    hash: str
+    hash: Optional[str] = None
 
     filename: str
     data: dict
@@ -53,7 +53,7 @@ class FileModel(BaseModel):
 class FileModelResponse(BaseModel):
     id: str
     user_id: str
-    hash: str
+    hash: Optional[str] = None
 
     filename: str
     data: dict
@@ -65,6 +65,7 @@ class FileModelResponse(BaseModel):
 
 class FileForm(BaseModel):
     id: str
+    hash: Optional[str] = None
     filename: str
     meta: dict = {}
 
@@ -120,7 +121,18 @@ class FilesTable:
                 for file in db.query(File).filter_by(user_id=user_id).all()
             ]
 
-    def update_files_data_by_id(self, id: str, data: dict) -> Optional[FileModel]:
+    def update_file_hash_by_id(self, id: str, hash: str) -> Optional[FileModel]:
+        with get_db() as db:
+            try:
+                file = db.query(File).filter_by(id=id).first()
+                file.hash = hash
+                db.commit()
+
+                return FileModel.model_validate(file)
+            except Exception:
+                return None
+
+    def update_file_data_by_id(self, id: str, data: dict) -> Optional[FileModel]:
         with get_db() as db:
             try:
                 file = db.query(File).filter_by(id=id).first()
@@ -131,7 +143,7 @@ class FilesTable:
             except Exception:
                 return None
 
-    def update_files_metadata_by_id(self, id: str, meta: dict) -> Optional[FileModel]:
+    def update_file_metadata_by_id(self, id: str, meta: dict) -> Optional[FileModel]:
         with get_db() as db:
             try:
                 file = db.query(File).filter_by(id=id).first()
