@@ -2245,6 +2245,18 @@ async def oauth_callback(provider: str, request: Request, response: Response):
     # Check if the user exists
     user = Users.get_user_by_oauth_sub(provider_sub)
 
+    if user:
+        role = user.role
+        if Users.get_num_users() == 1:
+            role = "admin"
+        elif webui_app.state.config.ENABLE_OAUTH_ROLE_MAPPING:
+            oauth_roles = user_data.get(webui_app.state.config.OAUTH_ROLE_CLAIM)
+            if oauth_roles:
+                for allowed_role in ["pending", "user", "admin"]:
+                    role = allowed_role if allowed_role in oauth_roles else role
+        if role != user.role:
+            Users.update_user_role_by_id(user.id, role)
+
     if not user:
         # If the user does not exist, check if merging is enabled
         if OAUTH_MERGE_ACCOUNTS_BY_EMAIL.value:
@@ -2284,11 +2296,16 @@ async def oauth_callback(provider: str, request: Request, response: Response):
             if not picture_url:
                 picture_url = "/user.png"
             username_claim = webui_app.state.config.OAUTH_USERNAME_CLAIM
-            role = (
-                "admin"
-                if Users.get_num_users() == 0
-                else webui_app.state.config.DEFAULT_USER_ROLE
-            )
+
+            role = webui_app.state.config.DEFAULT_USER_ROLE
+            if Users.get_num_users() == 0:
+                role = "admin"
+            elif webui_app.state.config.ENABLE_OAUTH_ROLE_MAPPING:
+                oauth_roles = user_data.get(webui_app.state.config.OAUTH_ROLE_CLAIM)
+                if oauth_roles:
+                    for allowed_role in ["pending", "user", "admin"]:
+                        role = allowed_role if allowed_role in oauth_roles else role
+
             user = Auths.insert_new_auth(
                 email=email,
                 password=get_password_hash(
