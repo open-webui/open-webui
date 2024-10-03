@@ -278,18 +278,6 @@ ENABLE_OAUTH_SIGNUP = PersistentConfig(
     os.environ.get("ENABLE_OAUTH_SIGNUP", "False").lower() == "true",
 )
 
-ENABLE_OAUTH_ROLE_MAPPING = PersistentConfig(
-    "ENABLE_OAUTH_ROLE_MAPPING",
-    "oauth.enable_role_mapping",
-    os.environ.get("ENABLE_OAUTH_ROLE_MAPPING", "False").lower() == "true",
-)
-
-OAUTH_ROLES_CLAIM = PersistentConfig(
-    "OAUTH_ROLES_CLAIM",
-    "oauth.roles_claim",
-    os.environ.get("OAUTH_ROLES_CLAIM", "roles"),
-)
-
 OAUTH_MERGE_ACCOUNTS_BY_EMAIL = PersistentConfig(
     "OAUTH_MERGE_ACCOUNTS_BY_EMAIL",
     "oauth.merge_accounts_by_email",
@@ -395,7 +383,7 @@ OAUTH_USERNAME_CLAIM = PersistentConfig(
 )
 
 OAUTH_PICTURE_CLAIM = PersistentConfig(
-    "OAUTH_USERNAME_CLAIM",
+    "OAUTH_PICTURE_CLAIM",
     "oauth.oidc.avatar_claim",
     os.environ.get("OAUTH_PICTURE_CLAIM", "picture"),
 )
@@ -404,6 +392,18 @@ OAUTH_EMAIL_CLAIM = PersistentConfig(
     "OAUTH_EMAIL_CLAIM",
     "oauth.oidc.email_claim",
     os.environ.get("OAUTH_EMAIL_CLAIM", "email"),
+)
+
+ENABLE_OAUTH_ROLE_MAPPING = PersistentConfig(
+    "ENABLE_OAUTH_ROLE_MAPPING",
+    "oauth.enable_role_mapping",
+    os.environ.get("ENABLE_OAUTH_ROLE_MAPPING", "False").lower() == "true",
+)
+
+OAUTH_ROLES_CLAIM = PersistentConfig(
+    "OAUTH_ROLES_CLAIM",
+    "oauth.roles_claim",
+    os.environ.get("OAUTH_ROLES_CLAIM", "roles"),
 )
 
 
