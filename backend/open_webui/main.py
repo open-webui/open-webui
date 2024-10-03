@@ -2251,7 +2251,16 @@ async def oauth_callback(provider: str, request: Request, response: Response):
         if Users.get_num_users() == 1:
             role = "admin"
         elif webui_app.state.config.ENABLE_OAUTH_ROLE_MAPPING:
-            oauth_roles = user_data.get(webui_app.state.config.OAUTH_ROLES_CLAIM)
+            oauth_claim = webui_app.state.config.OAUTH_ROLES_CLAIM
+            oauth_roles = user_data.get(oauth_claim) # Works for simple claims with no nesting
+            if "." in oauth_claim:
+                # Implementation to handle nested claims of arbitrary depth
+                nested_claims = oauth_claim.split(".")
+                claim_data = user_data.get(nested_claims[0])
+                for nested_claim in nested_claims[1:]:
+                    claim_data = claim_data.get(nested_claim)
+                oauth_roles = claim_data
+
             log.info(f"User {user.name} has OAuth roles: {oauth_roles}")
             if oauth_roles:
                 for allowed_role in ["pending", "user", "admin"]:
