@@ -2253,7 +2253,7 @@ async def oauth_callback(provider: str, request: Request, response: Response):
         elif webui_app.state.config.ENABLE_OAUTH_ROLE_MAPPING:
             oauth_claim = webui_app.state.config.OAUTH_ROLES_CLAIM
             oauth_roles = user_data.get(oauth_claim) # Works for simple claims with no nesting
-            if "." in oauth_claim:
+            if oauth_roles and "." in oauth_claim:
                 # Implementation to handle nested claims of arbitrary depth
                 nested_claims = oauth_claim.split(".")
                 claim_data = user_data.get(nested_claims[0])
