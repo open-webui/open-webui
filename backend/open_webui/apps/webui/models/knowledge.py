@@ -126,28 +126,10 @@ class KnowledgeTable:
     ) -> Optional[KnowledgeModel]:
         try:
             with get_db() as db:
+                knowledge = self.get_knowledge_by_id(id=id)
                 db.query(Knowledge).filter_by(id=id).update(
                     {
-                        **({"name": form_data.name} if form_data.name else {}),
-                        **(
-                            {"description": form_data.description}
-                            if form_data.description
-                            else {}
-                        ),
-                        **(
-                            {
-                                "data": (
-                                    form_data.data
-                                    if overwrite
-                                    else {
-                                        **(self.get_knowledge_by_id(id=id)).data,
-                                        **form_data.data,
-                                    }
-                                )
-                            }
-                            if form_data.data
-                            else {}
-                        ),
+                        **form_data.model_dump(exclude_none=True),
                         "updated_at": int(time.time()),
                     }
                 )
