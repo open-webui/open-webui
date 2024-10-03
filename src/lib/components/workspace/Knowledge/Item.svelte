@@ -1,31 +1,80 @@
 <script lang="ts">
+	import { toast } from 'svelte-sonner';
+
 	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
-	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { mobile, showSidebar } from '$lib/stores';
 
-	import { getKnowledgeById } from '$lib/apis/knowledge';
+	import { uploadFile } from '$lib/apis/files';
+	import { getKnowledgeById, updateKnowledgeById } from '$lib/apis/knowledge';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import EllipsisVertical from '$lib/components/icons/EllipsisVertical.svelte';
-	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
-	import BookOpen from '$lib/components/icons/BookOpen.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Files from './Files.svelte';
 	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
 
+	let largeScreen = true;
+
+	type Knowledge = {
+		id: string;
+		name: string;
+		description: string;
+		data: {
+			file_ids: string[];
+		};
+		files: any[];
+	};
+
 	let id = null;
-	let knowledge = null;
+	let knowledge: Knowledge | null = null;
 	let query = '';
 
 	let selectedFileId = null;
+
+	let debounceTimeout = null;
 	let dragged = false;
 
+	let showAddContentModal = false;
+
+	const changeDebounceHandler = () => {
+		console.log('debounce');
+		if (debounceTimeout) {
+			clearTimeout(debounceTimeout);
+		}
+
+		debounceTimeout = setTimeout(async () => {
+			const res = await updateKnowledgeById(localStorage.token, id, {
+				name: knowledge.name,
+				description: knowledge.description
+			}).catch((e) => {
+				toast.error(e);
+			});
+
+			if (res) {
+				toast.success($i18n.t('Knowledge updated successfully'));
+			}
+		}, 1000);
+	};
+
 	onMount(async () => {
+		// listen to resize 1024px
+		const mediaQuery = window.matchMedia('(min-width: 1024px)');
+
+		const handleMediaQuery = async (e) => {
+			if (e.matches) {
+				largeScreen = true;
+			} else {
+				largeScreen = false;
+			}
+		};
+
+		mediaQuery.addEventListener('change', handleMediaQuery);
+		handleMediaQuery(mediaQuery);
+
 		id = $page.params.id;
 
 		const res = await getKnowledgeById(localStorage.token, id).catch((e) => {
@@ -37,6 +86,55 @@
 		} else {
 			goto('/workspace/knowledge');
 		}
+
+		const dropZone = document.querySelector('body');
+
+		const onDragOver = (e) => {
+			e.preventDefault();
+			dragged = true;
+		};
+
+		const onDragLeave = () => {
+			dragged = false;
+		};
+
+		const onDrop = async (e) => {
+			e.preventDefault();
+
+			if (e.dataTransfer?.files) {
+				let reader = new FileReader();
+				const inputFiles = e.dataTransfer?.files;
+
+				if (inputFiles && inputFiles.length > 0) {
+					for (const file of inputFiles) {
+						console.log(file, file.name.split('.').at(-1));
+						const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
+							toast.error(e);
+						});
+
+						if (uploadedFile) {
+							knowledge.data.file_ids = [...(knowledge.data.file_ids ?? []), uploadedFile.id];
+						}
+					}
+				} else {
+					toast.error($i18n.t(`File not found.`));
+				}
+			}
+
+			dragged = false;
+		};
+
+		dropZone?.addEventListener('dragover', onDragOver);
+		dropZone?.addEventListener('drop', onDrop);
+		dropZone?.addEventListener('dragleave', onDragLeave);
+
+		return () => {
+			mediaQuery.removeEventListener('change', handleMediaQuery);
+
+			dropZone?.removeEventListener('dragover', onDragOver);
+			dropZone?.removeEventListener('drop', onDrop);
+			dropZone?.removeEventListener('dragleave', onDragLeave);
+		};
 	});
 </script>
 
@@ -92,11 +190,14 @@
 			<div class=" flex w-full mt-1 mb-3.5">
 				<div class="flex-1">
 					<div class="flex items-center justify-between w-full px-0.5 mb-1">
-						<div>
+						<div class="w-full">
 							<input
 								type="text"
 								class="w-full font-medium text-2xl font-primary bg-transparent outline-none"
 								bind:value={knowledge.name}
+								on:input={() => {
+									changeDebounceHandler();
+								}}
 							/>
 						</div>
 
@@ -112,6 +213,9 @@
 							type="text"
 							class="w-full font-medium text-gray-500 text-sm bg-transparent outline-none"
 							bind:value={knowledge.description}
+							on:input={() => {
+								changeDebounceHandler();
+							}}
 						/>
 					</div>
 				</div>
@@ -119,7 +223,7 @@
 
 			<div class="flex flex-row h-0 flex-1 overflow-auto">
 				<div
-					class=" {!$mobile
+					class=" {largeScreen
 						? 'flex-shrink-0'
 						: 'flex-1'} p-2.5 w-80 rounded-2xl border border-gray-50 dark:border-gray-850"
 				>
@@ -148,9 +252,9 @@
 							<div>
 								<Tooltip content={$i18n.t('Add Content')}>
 									<button
-										class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition font-medium text-sm flex items-center space-x-1"
+										class=" px-2 py-2 rounded-xl border border-gray-100 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition font-medium text-sm flex items-center space-x-1"
 										on:click={() => {
-											goto('/workspace/knowledge/create');
+											showAddContentModal = true;
 										}}
 									>
 										<svg
@@ -171,7 +275,7 @@
 
 						<div class="w-full h-full flex">
 							{#if (knowledge?.data?.file_ids ?? []).length > 0}
-								<Files fileIds={knowledge.data.file_ids} />
+								<Files files={knowledge.files} />
 							{:else}
 								<div class="m-auto text-gray-500 text-xs">No content found</div>
 							{/if}
@@ -179,8 +283,8 @@
 					</div>
 				</div>
 
-				{#if !$mobile}
-					<div class="flex-1 p-1 flex justify-start h-full">
+				{#if largeScreen}
+					<div class="flex-1 p-2 flex justify-start h-full">
 						{#if selectedFileId}
 							<textarea />
 						{:else}

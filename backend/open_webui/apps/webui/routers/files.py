@@ -6,9 +6,12 @@ from pathlib import Path
 from typing import Optional
 
 from open_webui.apps.webui.models.files import FileForm, FileModel, Files
+from open_webui.apps.webui.models.knowledge import Knowledges
 from open_webui.config import UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
+
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.utils.utils import get_admin_user, get_verified_user

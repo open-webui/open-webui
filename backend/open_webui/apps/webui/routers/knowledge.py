@@ -6,10 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from open_webui.apps.webui.models.knowledge import (
     Knowledges,
-    KnowledgeModel,
+    KnowledgeUpdateForm,
     KnowledgeForm,
     KnowledgeResponse,
 )
+from open_webui.apps.webui.models.files import Files, FileModel
+
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.utils import get_admin_user, get_verified_user
 
@@ -66,12 +68,22 @@ async def create_new_knowledge(form_data: KnowledgeForm, user=Depends(get_admin_
 ############################
 
 
-@router.get("/{id}", response_model=Optional[KnowledgeResponse])
+class KnowledgeFilesResponse(KnowledgeResponse):
+    files: list[FileModel]
+
+
+@router.get("/{id}", response_model=Optional[KnowledgeFilesResponse])
 async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
 
     if knowledge:
-        return knowledge
+        file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
+        files = Files.get_files_by_ids(file_ids)
+
+        return KnowledgeFilesResponse(
+            **knowledge.model_dump(),
+            files=files,
+        )
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -87,7 +99,7 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 @router.post("/{id}/update", response_model=Optional[KnowledgeResponse])
 async def update_knowledge_by_id(
     id: str,
-    form_data: KnowledgeForm,
+    form_data: KnowledgeUpdateForm,
     user=Depends(get_admin_user),
 ):
     knowledge = Knowledges.update_knowledge_by_id(id=id, form_data=form_data)

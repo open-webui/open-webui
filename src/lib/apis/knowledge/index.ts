@@ -95,13 +95,13 @@ export const getKnowledgeById = async (token: string, id: string) => {
 	return res;
 };
 
-type KnowledgeForm = {
-	name: string;
-	description: string;
-	data: object;
+type KnowledgeUpdateForm = {
+	name?: string;
+	description?: string;
+	data?: object;
 };
 
-export const updateKnowledgeById = async (token: string, id: string, form: KnowledgeForm) => {
+export const updateKnowledgeById = async (token: string, id: string, form: KnowledgeUpdateForm) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/update`, {
@@ -112,9 +112,9 @@ export const updateKnowledgeById = async (token: string, id: string, form: Knowl
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			name: form.name,
-			description: form.description,
-			data: form.data
+			name: form?.name ? form.name : undefined,
+			description: form?.description ? form.description : undefined,
+			data: form?.data ? form.data : undefined
 		})
 	})
 		.then(async (res) => {
