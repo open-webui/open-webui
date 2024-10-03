@@ -23,7 +23,7 @@ class File(Base):
     hash = Column(Text, nullable=True)
 
     filename = Column(Text)
-    data = Column(JSON)
+    data = Column(JSON, nullable=True)
     meta = Column(JSONField)
 
     created_at = Column(BigInteger)
@@ -38,7 +38,7 @@ class FileModel(BaseModel):
     hash: Optional[str] = None
 
     filename: str
-    data: dict
+    data: Optional[dict] = None
     meta: dict
 
     created_at: int  # timestamp in epoch
@@ -56,7 +56,7 @@ class FileModelResponse(BaseModel):
     hash: Optional[str] = None
 
     filename: str
-    data: dict
+    data: Optional[dict] = None
     meta: dict
 
     created_at: int  # timestamp in epoch
@@ -67,6 +67,7 @@ class FileForm(BaseModel):
     id: str
     hash: Optional[str] = None
     filename: str
+    data: dict = {}
     meta: dict = {}
 
 
@@ -136,20 +137,19 @@ class FilesTable:
         with get_db() as db:
             try:
                 file = db.query(File).filter_by(id=id).first()
-                file.data = {**file.data, **data}
+                file.data = {**(file.data if file.data else {}), **data}
                 db.commit()
-
                 return FileModel.model_validate(file)
-            except Exception:
+            except Exception as e:
+
                 return None
 
     def update_file_metadata_by_id(self, id: str, meta: dict) -> Optional[FileModel]:
         with get_db() as db:
             try:
                 file = db.query(File).filter_by(id=id).first()
-                file.meta = {**file.meta, **meta}
+                file.meta = {**(file.meta if file.meta else {}), **meta}
                 db.commit()
-
                 return FileModel.model_validate(file)
             except Exception:
                 return None
