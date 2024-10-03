@@ -1,3 +1,5 @@
+# TODO: Merge this with the webui_app and make it a single app
+
 import json
 import logging
 import mimetypes
@@ -728,11 +730,13 @@ def process_file(
         docs = loader.load(file.filename, file.meta.get("content_type"), file_path)
         text_content = " ".join([doc.page_content for doc in docs])
         log.debug(f"text_content: {text_content}")
+        hash = calculate_sha256_string(text_content)
 
-        Files.update_files_data_by_id(
+        Files.update_file_data_by_id(
             form_data.file_id,
             {"content": text_content},
         )
+        Files.update_file_hash_by_id(form_data.file_id, hash)
 
         try:
             result = save_docs_to_vector_db(
