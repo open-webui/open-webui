@@ -468,7 +468,7 @@
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "אופס! אתה משתמש בשיטה לא נתמכת (רק חזית). אנא שרת את ממשק המשתמש האינטרנטי מהשרת האחורי.",
 	"Open file": "",
 	"Open new chat": "פתח צ'אט חדש",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "",
+	"Hacienda Teams version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "API של OpenAI",
 	"OpenAI API Config": "תצורת API של OpenAI",
@@ -758,7 +758,7 @@
 	"You're a helpful assistant.": "אתה עוזר מועיל.",
 	"You're now logged in.": "כעת אתה מחובר.",
 	"Your account status is currently pending activation.": "",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
+	"Your entire contribution will go directly to the plugin developer; Hacienda Teams does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "הגדרות Youtube Loader"
 }

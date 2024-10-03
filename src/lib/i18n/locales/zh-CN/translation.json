@@ -468,7 +468,7 @@
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "糟糕！你正在使用不被支持的方法（仅前端）。请从后端提供 WebUI 服务。",
 	"Open file": "",
 	"Open new chat": "打开新对话",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "当前 Open WebUI 版本 (v{{OPEN_WEBUI_VERSION}}) 低于所需的版本 (v{{REQUIRED_VERSION}})",
+	"Hacienda Teams version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "当前 Hacienda Teams 版本 (v{{OPEN_WEBUI_VERSION}}) 低于所需的版本 (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "OpenAI API 配置",
@@ -756,7 +756,7 @@
 	"You're a helpful assistant.": "你是一个有帮助的助手。",
 	"You're now logged in.": "已登录。",
 	"Your account status is currently pending activation.": "您的账号当前状态为待激活。",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "您的全部捐款将直接给到插件开发者，Open WebUI 不会收取任何比例。但众筹平台可能会有服务费、抽成。",
+	"Your entire contribution will go directly to the plugin developer; Hacienda Teams does not take any percentage. However, the chosen funding platform might have its own fees.": "您的全部捐款将直接给到插件开发者，Hacienda Teams 不会收取任何比例。但众筹平台可能会有服务费、抽成。",
 	"Youtube": "YouTube",
 	"Youtube Loader Settings": "YouTube 爬取设置"
 }

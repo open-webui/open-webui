@@ -468,7 +468,7 @@
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "ਓਹੋ! ਤੁਸੀਂ ਇੱਕ ਅਣਸਮਰਥਿਤ ਢੰਗ ਵਰਤ ਰਹੇ ਹੋ (ਸਿਰਫ਼ ਫਰੰਟਐਂਡ)। ਕਿਰਪਾ ਕਰਕੇ ਵੈਬਯੂਆਈ ਨੂੰ ਬੈਕਐਂਡ ਤੋਂ ਸਰਵ ਕਰੋ।",
 	"Open file": "",
 	"Open new chat": "ਨਵੀਂ ਗੱਲਬਾਤ ਖੋਲ੍ਹੋ",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "",
+	"Hacienda Teams version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "",
 	"OpenAI": "ਓਪਨਏਆਈ",
 	"OpenAI API": "ਓਪਨਏਆਈ API",
 	"OpenAI API Config": "ਓਪਨਏਆਈ API ਕਨਫਿਗ",
@@ -757,7 +757,7 @@
 	"You're a helpful assistant.": "ਤੁਸੀਂ ਇੱਕ ਮਦਦਗਾਰ ਸਹਾਇਕ ਹੋ।",
 	"You're now logged in.": "ਤੁਸੀਂ ਹੁਣ ਲੌਗ ਇਨ ਹੋ ਗਏ ਹੋ।",
 	"Your account status is currently pending activation.": "",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
+	"Your entire contribution will go directly to the plugin developer; Hacienda Teams does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "ਯੂਟਿਊਬ",
 	"Youtube Loader Settings": "ਯੂਟਿਊਬ ਲੋਡਰ ਸੈਟਿੰਗਾਂ"
 }

@@ -1,5 +1,5 @@
 {
-    "name": "Open WebUI",
+    "name": "Hacienda Teams",
     "dockerFile": "Dockerfile",
     "forwardPorts": [3000, 8080],
     "postCreateCommand": "pip install -r backend/requirements.txt && npm install && npm run build",
