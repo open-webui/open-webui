@@ -135,6 +135,25 @@ class MilvusClient:
 
         return self._result_to_search_result(result)
 
+    def query(
+        self, collection_name: str, filter: dict, limit: int = 1
+    ) -> Optional[SearchResult]:
+        # Query the items from the collection based on the filter.
+        filter_string = " && ".join(
+            [
+                f"JSON_CONTAINS(metadata[{key}], '{[value] if isinstance(value, str) else value}')"
+                for key, value in filter.items()
+            ]
+        )
+
+        result = self.client.query(
+            collection_name=f"{self.collection_prefix}_{collection_name}",
+            filter=filter_string,
+            limit=limit,
+        )
+
+        return self._result_to_search_result([result])
+
     def get(self, collection_name: str) -> Optional[GetResult]:
         # Get all the items in the collection.
         result = self.client.query(

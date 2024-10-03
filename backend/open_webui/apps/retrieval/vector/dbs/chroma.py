@@ -66,6 +66,27 @@ class ChromaClient:
             )
         return None
 
+    def query(
+        self, collection_name: str, filter: dict, limit: int = 1
+    ) -> Optional[SearchResult]:
+        # Query the items from the collection based on the filter.
+        collection = self.client.get_collection(name=collection_name)
+        if collection:
+            result = collection.query(
+                where=filter,
+                n_results=limit,
+            )
+
+            return SearchResult(
+                **{
+                    "ids": result["ids"],
+                    "distances": result["distances"],
+                    "documents": result["documents"],
+                    "metadatas": result["metadatas"],
+                }
+            )
+        return None
+
     def get(self, collection_name: str) -> Optional[GetResult]:
         # Get all the items in the collection.
         collection = self.client.get_collection(name=collection_name)
