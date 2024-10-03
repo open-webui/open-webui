@@ -2244,7 +2244,8 @@ async def oauth_callback(provider: str, request: Request, response: Response):
 
     # Check if the user exists
     user = Users.get_user_by_oauth_sub(provider_sub)
-
+    # print all user data content for debugging
+    log.info(f"User data: {user_data}")
     if user:
         role = user.role
         if Users.get_num_users() == 1:
