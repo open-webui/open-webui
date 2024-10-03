@@ -2250,10 +2250,16 @@ async def oauth_callback(provider: str, request: Request, response: Response):
         if Users.get_num_users() == 1:
             role = "admin"
         elif webui_app.state.config.ENABLE_OAUTH_ROLE_MAPPING:
-            oauth_roles = user_data.get(webui_app.state.config.OAUTH_ROLE_CLAIM)
+            oauth_roles = user_data.get(webui_app.state.config.OAUTH_ROLES_CLAIM)
+            log.info(f"User {user.name} has OAuth roles: {oauth_roles}")
             if oauth_roles:
                 for allowed_role in ["pending", "user", "admin"]:
                     role = allowed_role if allowed_role in oauth_roles else role
+                    log.info(f"Applied role: {role} to user {user.name}")
+            else:
+                # If role mapping is enabled, but no roles are provided, fall back to pending
+                role = "pending"
+
         if role != user.role:
             Users.update_user_role_by_id(user.id, role)
 
@@ -2305,6 +2311,9 @@ async def oauth_callback(provider: str, request: Request, response: Response):
                 if oauth_roles:
                     for allowed_role in ["pending", "user", "admin"]:
                         role = allowed_role if allowed_role in oauth_roles else role
+                else:
+                    # If role mapping is enabled, but no roles are provided, fall back to pending
+                    role = "pending"
 
             user = Auths.insert_new_auth(
                 email=email,
