@@ -101,7 +101,12 @@
 					]
 				: [];
 
-		items = [...$knowledge, ...legacy_collections];
+		items = [...$knowledge, ...legacy_collections].map((item) => {
+			return {
+				...item,
+				...{ legacy: item?.legacy ?? item?.meta?.document ?? undefined }
+			};
+		});
 
 		fuse = new Fuse(items, {
 			keys: ['name', 'description']

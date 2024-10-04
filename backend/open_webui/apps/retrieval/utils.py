@@ -334,7 +334,10 @@ def get_rag_context(
             elif file.get("collection_name"):
                 collection_names.append(file["collection_name"])
             elif file.get("id"):
-                collection_names.append(f"file-{file['id']}")
+                if file.get("legacy"):
+                    collection_names.append(f"{file['id']}")
+                else:
+                    collection_names.append(f"file-{file['id']}")
 
             collection_names = set(collection_names).difference(extracted_collections)
             if not collection_names:
