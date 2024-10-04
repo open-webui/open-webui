@@ -107,7 +107,7 @@
 
 	<div>
 		<button
-			class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition font-medium text-sm flex items-center space-x-1"
+			class=" px-2 py-2 rounded-xl border border-gray-50 dark:border-gray-800 dark:border-0 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition font-medium text-sm flex items-center space-x-1"
 			aria-label={$i18n.t('Create Knowledge')}
 			on:click={() => {
 				goto('/workspace/knowledge/create');
@@ -132,7 +132,7 @@
 <div class="my-3 mb-5 grid lg:grid-cols-2 xl:grid-cols-3 gap-2">
 	{#each filteredItems as item}
 		<button
-			class=" flex space-x-4 cursor-pointer text-left w-full px-4 py-3 border border-gray-50 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 rounded-xl"
+			class=" flex space-x-4 cursor-pointer text-left w-full px-4 py-3 border border-gray-50 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-xl"
 			on:click={() => {
 				if (item?.meta?.document) {
 					toast.error(
