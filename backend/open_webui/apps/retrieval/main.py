@@ -709,13 +709,7 @@ def save_docs_to_vector_db(
             }
             for idx, text in enumerate(texts)
         ]
-
-        if file_id:
-            VECTOR_DB_CLIENT.insert(
-                collection_name=f"file-{file_id}",
-                items=items,
-            )
-
+        
         VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
             items=items,
