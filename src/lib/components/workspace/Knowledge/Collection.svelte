@@ -182,6 +182,11 @@
 		}
 
 		debounceTimeout = setTimeout(async () => {
+			if (knowledge.name.trim() === '' || knowledge.description.trim() === '') {
+				toast.error($i18n.t('Please fill in all fields.'));
+				return;
+			}
+
 			const res = await updateKnowledgeById(localStorage.token, id, {
 				name: knowledge.name,
 				description: knowledge.description
