@@ -131,7 +131,7 @@
 			<button
 				class=" bg-gray-400 text-white border border-white rounded-full group-hover:visible invisible transition"
 				type="button"
-				on:click={() => {
+				on:click|stopPropagation={() => {
 					dispatch('dismiss');
 				}}
 			>
