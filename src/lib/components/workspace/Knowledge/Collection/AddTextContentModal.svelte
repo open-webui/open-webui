@@ -40,6 +40,13 @@
 				<form
 					class="flex flex-col w-full"
 					on:submit|preventDefault={() => {
+						if (name.trim() === '' || content.trim() === '') {
+							toast.error($i18n.t('Please fill in all fields.'));
+							name = '';
+							content = '';
+							return;
+						}
+
 						dispatch('submit', {
 							name,
 							content

@@ -15,6 +15,14 @@
 	const submitHandler = async () => {
 		loading = true;
 
+		if (name.trim() === '' || description.trim() === '') {
+			toast.error($i18n.t('Please fill in all fields.'));
+			name = '';
+			description = '';
+			loading = false;
+			return;
+		}
+
 		const res = await createNewKnowledge(localStorage.token, name, description).catch((e) => {
 			toast.error(e);
 		});
