@@ -56,6 +56,8 @@
 			file.data = file.data ?? { content: '' };
 			selectedFile = file;
 		}
+	} else {
+		selectedFile = null;
 	}
 
 	let debounceTimeout = null;
