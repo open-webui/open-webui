@@ -418,13 +418,11 @@
 									</div>
 
 									<div>
-										<Tooltip content="Save">
-											<button
-												class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
-											>
-												Save
-											</button>
-										</Tooltip>
+										<button
+											class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+										>
+											{$i18n.t('Save')}
+										</button>
 									</div>
 								</div>
 
