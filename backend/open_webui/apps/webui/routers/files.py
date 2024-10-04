@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Optional
 
 from open_webui.apps.webui.models.files import FileForm, FileModel, Files
-from open_webui.apps.webui.models.knowledge import Knowledges
+from open_webui.apps.retrieval.main import process_file, ProcessFileForm
+
 from open_webui.config import UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
@@ -60,6 +61,13 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
                 }
             ),
         )
+
+        try:
+            process_file(ProcessFileForm(file_id=id))
+            file = Files.get_file_by_id(id=id)
+        except Exception as e:
+            log.exception(e)
+            log.error(f"Error processing file: {file.id}")
 
         if file:
             return file

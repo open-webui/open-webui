@@ -10,7 +10,7 @@
 	import Switch from './Switch.svelte';
 	import Tooltip from './Tooltip.svelte';
 
-	export let file;
+	export let item;
 	export let show = false;
 
 	export let edit = false;
@@ -18,9 +18,9 @@
 	let enableFullContent = false;
 
 	onMount(() => {
-		console.log(file);
+		console.log(item);
 
-		if (file?.context === 'full') {
+		if (item?.context === 'full') {
 			enableFullContent = true;
 		}
 	});
@@ -33,11 +33,11 @@
 				<div>
 					<div class=" font-medium text-lg dark:text-gray-100">
 						<a
-							href={file.url ? (file.type === 'file' ? `${file.url}/content` : `${file.url}`) : '#'}
+							href={item.url ? (item.type === 'file' ? `${item.url}/content` : `${item.url}`) : '#'}
 							target="_blank"
 							class="hover:underline line-clamp-1"
 						>
-							{file?.name ?? 'File'}
+							{item?.name ?? 'File'}
 						</a>
 					</div>
 				</div>
@@ -56,14 +56,14 @@
 			<div>
 				<div class="flex flex-col items-center md:flex-row gap-1 justify-between w-full">
 					<div class=" flex flex-wrap text-sm gap-1 text-gray-500">
-						{#if file.size}
-							<div class="capitalize shrink-0">{formatFileSize(file.size)}</div>
+						{#if item.size}
+							<div class="capitalize shrink-0">{formatFileSize(item.size)}</div>
 							•
 						{/if}
 
-						{#if file?.file?.content}
+						{#if item?.file?.data?.content}
 							<div class="capitalize shrink-0">
-								{getLineCount(file?.file?.content ?? '')} extracted lines
+								{getLineCount(item?.file?.data?.content ?? '')} extracted lines
 							</div>
 
 							<div class="flex items-center gap-1 shrink-0">
@@ -90,7 +90,7 @@
 									<Switch
 										bind:state={enableFullContent}
 										on:change={(e) => {
-											file.context = e.detail ? 'full' : undefined;
+											item.context = e.detail ? 'full' : undefined;
 										}}
 									/>
 								</div>
@@ -102,7 +102,7 @@
 		</div>
 
 		<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
-			{file?.file?.content ?? 'No content'}
+			{item?.file?.data?.content ?? 'No content'}
 		</div>
 	</div>
 </Modal>

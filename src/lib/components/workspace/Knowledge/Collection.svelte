@@ -9,7 +9,12 @@
 	import { mobile, showSidebar } from '$lib/stores';
 
 	import { uploadFile } from '$lib/apis/files';
-	import { getKnowledgeById, updateKnowledgeById } from '$lib/apis/knowledge';
+	import {
+		addFileToKnowledgeById,
+		getKnowledgeById,
+		removeFileFromKnowledgeById,
+		updateKnowledgeById
+	} from '$lib/apis/knowledge';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -77,7 +82,7 @@
 
 			if (uploadedFile) {
 				console.log(uploadedFile);
-				processFileHandler(uploadedFile);
+				addFileHandler(uploadedFile.id);
 			} else {
 				toast.error($i18n.t('Failed to upload file.'));
 			}
@@ -86,34 +91,31 @@
 		}
 	};
 
-	const processFileHandler = async (uploadedFile) => {
-		const processedFile = await processFile(localStorage.token, uploadedFile.id, id).catch((e) => {
-			toast.error(e);
+	const addFileHandler = async (fileId) => {
+		const updatedKnowledge = await addFileToKnowledgeById(localStorage.token, id, fileId).catch(
+			(e) => {
+				console.error(e);
+			}
+		);
+
+		if (updatedKnowledge) {
+			knowledge = updatedKnowledge;
+			toast.success($i18n.t('File added successfully.'));
+		}
+	};
+
+	const deleteFileHandler = async (fileId) => {
+		const updatedKnowledge = await removeFileFromKnowledgeById(
+			localStorage.token,
+			id,
+			fileId
+		).catch((e) => {
+			console.error(e);
 		});
 
-		if (processedFile.status) {
-			console.log(processedFile);
-
-			if (!knowledge.data) {
-				knowledge.data = {};
-			}
-
-			knowledge.data.file_ids = [...(knowledge?.data?.file_ids ?? []), uploadedFile.id];
-
-			console.log(knowledge);
-
-			const updatedKnowledge = await updateKnowledgeById(localStorage.token, id, {
-				data: knowledge?.data ?? {}
-			}).catch((e) => {
-				console.error(e);
-			});
-
-			if (updatedKnowledge) {
-				knowledge = updatedKnowledge;
-				toast.success($i18n.t('File added successfully.'));
-			}
-		} else {
-			toast.error($i18n.t('Failed to process file.'));
+		if (updatedKnowledge) {
+			knowledge = updatedKnowledge;
+			toast.success($i18n.t('File removed successfully.'));
 		}
 	};
 
@@ -338,6 +340,8 @@
 										}}
 										on:delete={(e) => {
 											console.log(e.detail);
+
+											deleteFileHandler(e.detail);
 										}}
 									/>
 								</div>

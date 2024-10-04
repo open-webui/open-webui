@@ -15,7 +15,7 @@
 	export let dismissible = false;
 	export let status = 'processed';
 
-	export let file = null;
+	export let item = null;
 	export let edit = false;
 
 	export let name: string;
@@ -25,15 +25,15 @@
 	let showModal = false;
 </script>
 
-{#if file}
-	<FileItemModal bind:show={showModal} bind:file {edit} />
+{#if item}
+	<FileItemModal bind:show={showModal} bind:item {edit} />
 {/if}
 
 <button
 	class="relative group p-1.5 {className} flex items-center {colorClassName} rounded-2xl text-left"
 	type="button"
 	on:click={async () => {
-		if (file?.file?.content) {
+		if (item?.file?.data?.content) {
 			showModal = !showModal;
 		} else {
 			if (url) {
