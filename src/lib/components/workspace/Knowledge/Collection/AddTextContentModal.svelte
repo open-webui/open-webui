@@ -1,42 +1,19 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
+
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
-	import { knowledge } from '$lib/stores';
 	import Modal from '$lib/components/common/Modal.svelte';
-	import { uploadFile } from '$lib/apis/files';
-
 	export let show = false;
 
-	let fileInputElement: HTMLInputElement;
-	let inputFiles;
-
-	const submitHandler = async () => {
-		if (inputFiles && inputFiles.length > 0) {
-			for (const file of inputFiles) {
-				console.log(file, file.name.split('.').at(-1));
-
-				const uploadedFile = uploadFile(localStorage.token, file);
-
-				if (uploadedFile) {
-					dispatch('add', uploadedFile);
-				}
-			}
-
-			inputFiles = null;
-			fileInputElement.value = '';
-
-			show = false;
-		} else {
-			toast.error($i18n.t(`File not found.`));
-		}
-	};
+	let name = '';
+	let content = '';
 </script>
 
-<Modal size="sm" bind:show>
+<Modal size="md" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4">
 			<div class=" text-lg font-medium self-center">{$i18n.t('Add Content')}</div>
@@ -63,32 +40,45 @@
 				<form
 					class="flex flex-col w-full"
 					on:submit|preventDefault={() => {
-						submitHandler();
+						dispatch('submit', {
+							name,
+							content
+						});
+						show = false;
+						name = '';
+						content = '';
 					}}
 				>
 					<div class="mb-3 w-full">
-						<input
-							id="upload-doc-input"
-							bind:this={fileInputElement}
-							bind:files={inputFiles}
-							type="file"
-							multiple
-							hidden
-						/>
+						<div class="w-full flex flex-col gap-2.5">
+							<div class="w-full">
+								<div class=" text-sm mb-2">Title</div>
 
-						<button
-							class="w-full text-sm font-medium py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 text-center rounded-xl"
-							type="button"
-							on:click={() => {
-								fileInputElement.click();
-							}}
-						>
-							{#if inputFiles}
-								{inputFiles.length > 0 ? `${inputFiles.length}` : ''} document(s) selected.
-							{:else}
-								{$i18n.t('Click here to select files.')}
-							{/if}
-						</button>
+								<div class="w-full mt-1">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										type="text"
+										bind:value={name}
+										placeholder={`Name your content`}
+										required
+									/>
+								</div>
+							</div>
+
+							<div>
+								<div class="text-sm mb-2">Content</div>
+
+								<div class=" w-full mt-1">
+									<textarea
+										class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										rows="10"
+										bind:value={content}
+										placeholder={`Write your content here`}
+										required
+									/>
+								</div>
+							</div>
+						</div>
 					</div>
 
 					<div class="flex justify-end text-sm font-medium">
@@ -96,7 +86,7 @@
 							class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
 							type="submit"
 						>
-							{$i18n.t('Save')}
+							{$i18n.t('Add Content')}
 						</button>
 					</div>
 				</form>

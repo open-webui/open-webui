@@ -26,6 +26,7 @@
 	import { blobToFile } from '$lib/utils';
 	import { processFile } from '$lib/apis/retrieval';
 	import AddContentMenu from './Collection/AddContentMenu.svelte';
+	import AddTextContentModal from './Collection/AddTextContentModal.svelte';
 
 	let largeScreen = true;
 
@@ -43,6 +44,9 @@
 	let knowledge: Knowledge | null = null;
 	let query = '';
 
+	let showAddTextContentModal = false;
+	let inputFiles = null;
+
 	let selectedFile = null;
 	let selectedFileId = null;
 
@@ -57,6 +61,14 @@
 	let debounceTimeout = null;
 	let mediaQuery;
 	let dragged = false;
+
+	const createFileFromText = (name, content) => {
+		const blob = new Blob([content], { type: 'text/plain' });
+		const file = blobToFile(blob, `${name}.md`);
+
+		console.log(file);
+		return file;
+	};
 
 	const uploadFileHandler = async (file) => {
 		console.log(file);
@@ -232,6 +244,38 @@
 	</div>
 {/if}
 
+<AddTextContentModal
+	bind:show={showAddTextContentModal}
+	on:submit={(e) => {
+		const file = createFileFromText(e.detail.name, e.detail.content);
+		uploadFileHandler(file);
+	}}
+/>
+
+<input
+	id="files-input"
+	bind:files={inputFiles}
+	type="file"
+	multiple
+	hidden
+	on:change={() => {
+		if (inputFiles && inputFiles.length > 0) {
+			for (const file of inputFiles) {
+				uploadFileHandler(file);
+			}
+
+			inputFiles = null;
+			const fileInputElement = document.getElementById('files-input');
+
+			if (fileInputElement) {
+				fileInputElement.value = '';
+			}
+		} else {
+			toast.error($i18n.t(`File not found.`));
+		}
+	}}
+/>
+
 <div class="flex flex-col w-full max-h-[100dvh] h-full">
 	<button
 		class="flex space-x-1"
@@ -323,7 +367,14 @@
 									/>
 
 									<div>
-										<AddContentMenu />
+										<AddContentMenu
+											on:files={() => {
+												document.getElementById('files-input').click();
+											}}
+											on:text={() => {
+												showAddTextContentModal = true;
+											}}
+										/>
 									</div>
 								</div>
 
