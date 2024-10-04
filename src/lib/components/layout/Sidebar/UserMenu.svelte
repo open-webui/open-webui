@@ -88,7 +88,7 @@
 				<div class=" self-center font-medium">{$i18n.t('Archived Chats')}</div>
 			</button>
 
-			{#if role === 'admin'}
+			<!-- {#if role === 'admin'}
 				<button
 					class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 					on:click={() => {
@@ -148,7 +148,7 @@
 					</div>
 					<div class=" self-center font-medium">{$i18n.t('Admin Panel')}</div>
 				</button>
-			{/if}
+			{/if} -->
 
 			<hr class=" dark:border-gray-800 my-1.5 p-0" />
 

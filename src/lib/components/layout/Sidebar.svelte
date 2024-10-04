@@ -261,9 +261,9 @@
 <div
 	bind:this={navElement}
 	id="sidebar"
-	class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
+	class="h-screen max-h-[100dvh] min-h-screen select-none border-r-[0.1px] border-gray-850 {$showSidebar
 		? 'md:relative w-[260px]'
-		: '-translate-x-[260px] w-[0px]'} bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0
+		: '-translate-x-[260px] w-[0px]'} bg-white text-primary dark:bg-gray-950 dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0
         "
 	data-state={$showSidebar}
 >
@@ -298,7 +298,7 @@
 						alt="logo"
 					/>
 				</div>
-				<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
+				<div class=" self-center font-medium text-sm text-primary dark:text-white font-primary">
 					{$i18n.t('New Chat')}
 				</div>
 				<div class="self-center ml-auto">
@@ -344,7 +344,7 @@
 		</div>
 
 		{#if $user?.role === 'admin'}
-			<div class="px-2.5 flex justify-center text-gray-800 dark:text-gray-200">
+			<div class="px-2.5 flex justify-center text-primary dark:text-gray-200">
 				<a
 					class="flex-grow flex space-x-3 rounded-xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/workspace"
@@ -464,7 +464,7 @@
 			{#if !search && $pinnedChats.length > 0}
 				<div class="pl-2 py-2 flex flex-col space-y-1">
 					<div class="">
-						<div class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium pb-1.5">
+						<div class="w-full pl-2.5 text-xs text-secondary dark:text-gray-500 font-medium pb-1.5">
 							{$i18n.t('Pinned')}
 						</div>
 
@@ -497,7 +497,7 @@
 				{#each filteredChatList as chat, idx}
 					{#if idx === 0 || (idx > 0 && chat.time_range !== filteredChatList[idx - 1].time_range)}
 						<div
-							class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
+							class="w-full pl-2.5 text-xs text-secondary dark:text-gray-500 font-medium {idx === 0
 								? ''
 								: 'pt-5'} pb-0.5"
 						>
@@ -587,7 +587,7 @@
 									alt="User profile"
 								/>
 							</div>
-							<div class=" self-center font-medium">{$user.name}</div>
+							<div class="text-primary self-center font-medium">{$user.name}</div>
 						</button>
 					</UserMenu>
 				{/if}

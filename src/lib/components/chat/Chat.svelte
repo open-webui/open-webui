@@ -98,7 +98,7 @@
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 
 	let selectedToolIds = [];
-	let webSearchEnabled = false;
+	let webSearchEnabled = true;
 
 	let chat = null;
 	let tags = [];
@@ -341,7 +341,19 @@
 			selectedModels = [''];
 		}
 
+		// // Check if 'web-search' is present
+		if (!params.has('web-search')) {
+		   params.set('web-search', 'true');
+		//   window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+		}
+
 		if ($page.url.searchParams.get('web-search') === 'true') {
+			webSearchEnabled = true;
+		}
+
+		console.log($page.url.searchParams.get('web-search'));
+
+		if (!$page.url.searchParams.get('web-search')) {
 			webSearchEnabled = true;
 		}
 

@@ -78,21 +78,17 @@
 		{/if}
 
 		<div
-			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 font-medium text-left flex items-center gap-4 font-primary"
+			class=" mt-2 mb-4 text-3xl text-primary dark:text-gray-100 font-medium text-left flex items-center gap-4 font-primary"
 		>
 			<div>
 				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
-					{#if models[selectedModelIdx]?.info}
-						{models[selectedModelIdx]?.info?.name}
-					{:else}
-						{$i18n.t('Hello, {{name}}', { name: $user.name })}
-					{/if}
+					{$i18n.t('Hello, {{name}}', { name: $user.name })}
 				</div>
 
 				<div in:fade={{ duration: 200, delay: 200 }}>
 					{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
 						<div
-							class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-3 markdown"
+							class="mt-0.5 text-base font-normal text-primary dark:text-gray-400 line-clamp-3 markdown"
 						>
 							{@html marked.parse(
 								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description)
@@ -115,7 +111,7 @@
 							</div>
 						{/if}
 					{:else}
-						<div class=" font-medium text-gray-400 dark:text-gray-500 line-clamp-1 font-p">
+						<div class=" font-medium text-secondary dark:text-gray-500 line-clamp-1 font-p">
 							{$i18n.t('How can I help you today?')}
 						</div>
 					{/if}

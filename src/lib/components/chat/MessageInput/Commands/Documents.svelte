@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 
 	import { documents } from '$lib/stores';
 	import { removeLastWordFromString, isValidHttpUrl } from '$lib/utils';
@@ -8,7 +8,7 @@
 
 	const i18n = getContext('i18n');
 
-	export let prompt = '';
+	export let prompt = ''.toString() || undefined;
 	export let command = '';
 
 	const dispatch = createEventDispatcher();
@@ -51,17 +51,47 @@
 		.filter((doc) => findByName(doc, command))
 		.sort((a, b) => a.title.localeCompare(b.title));
 
+	$: {
+		// Set selectedIdx to the index of "All Documents" on initialization
+		const allDocsIndex = $documents.findIndex((doc) => doc.collection_name === 'All Documents');
+		if (allDocsIndex !== -1) {
+			selectedIdx = allDocsIndex; // Always select "All Documents" if it exists
+		}
+	}
+	onMount(() => {
+		// Select "All Documents" when the component mounts
+		showMenu(); // Open the menu when the component is mounted
+
+		// Find "All Documents" and set it as the default selected item
+		const allDocsIndex = filteredItems.findIndex((item) => item.name === 'All Documents');
+		if (allDocsIndex !== -1) {
+			selectedIdx = allDocsIndex;
+			confirmSelect(filteredItems[allDocsIndex]); // Automatically select "All Documents"
+		}
+	});
+
+	const showMenu = () => {
+		command = ''; // Clear the command to show the menu by default
+		filteredItems = [...filteredCollections, ...filteredDocs]; // Ensure filteredItems is set
+
+		// Reset selectedIdx to "All Documents"
+		selectedIdx = filteredItems.findIndex((item) => item.name === 'All Documents');
+		if (selectedIdx === -1) selectedIdx = 0; // Fallback to first item if not found
+	};
+
 	$: filteredItems = [...filteredCollections, ...filteredDocs];
 
-	$: if (command) {
-		selectedIdx = 0;
-
-		console.log(filteredCollections);
+	$: if (filteredItems.length > 0) {
+		// Ensure "All Documents" is selected in filteredItems
+		const allDocsIndex = filteredItems.findIndex((item) => item.name === 'All Documents');
+		selectedIdx = allDocsIndex !== -1 ? allDocsIndex : 0; // Set to "All Documents" or default to 0
 	}
 
 	type ObjectWithName = {
 		name: string;
 	};
+
+	console.log('command', command);
 
 	const findByName = (obj: ObjectWithName, command: string) => {
 		const name = obj.name.toLowerCase();
