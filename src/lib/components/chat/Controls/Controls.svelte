@@ -37,7 +37,7 @@
 							className="w-full"
 							item={file}
 							edit={true}
-							url={`${file?.url}`}
+							url={file?.url ? file.url : null}
 							name={file.name}
 							type={file.type}
 							size={file?.size}
