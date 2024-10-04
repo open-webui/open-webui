@@ -181,7 +181,7 @@ def query_collection(
     embedding_function,
     k: int,
 ) -> dict:
-    
+
     results = []
     query_embedding = embedding_function(query)
 
