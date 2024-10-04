@@ -137,7 +137,7 @@ class MilvusClient:
 
     def query(
         self, collection_name: str, filter: dict, limit: int = 1
-    ) -> Optional[SearchResult]:
+    ) -> Optional[GetResult]:
         # Query the items from the collection based on the filter.
         filter_string = " && ".join(
             [
@@ -152,7 +152,7 @@ class MilvusClient:
             limit=limit,
         )
 
-        return self._result_to_search_result([result])
+        return self._result_to_get_result([result])
 
     def get(self, collection_name: str) -> Optional[GetResult]:
         # Get all the items in the collection.
