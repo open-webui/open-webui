@@ -19,6 +19,7 @@
 				{file}
 				name={file.meta.name}
 				type="file"
+				size={file.meta?.size ?? ''}
 				dismissible
 				on:click={() => {
 					dispatch('click', file.id);
