@@ -2,7 +2,15 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { settings, user, config, models, tools, functions } from '$lib/stores';
+	import {
+		settings,
+		user,
+		config,
+		models,
+		tools,
+		functions,
+		knowledge as _knowledge
+	} from '$lib/stores';
 
 	import TurndownService from 'turndown';
 
@@ -629,7 +637,7 @@
 		</div>
 
 		<div class="my-2">
-			<Knowledge bind:knowledge />
+			<Knowledge bind:selectedKnowledge={knowledge} collections={$_knowledge} />
 		</div>
 
 		<div class="my-2">

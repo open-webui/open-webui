@@ -50,8 +50,6 @@
 				...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
 			};
 		});
-
-		console.log(items);
 	});
 </script>
 

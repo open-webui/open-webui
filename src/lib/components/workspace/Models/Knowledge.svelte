@@ -3,7 +3,9 @@
 	import Selector from './Knowledge/Selector.svelte';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 
-	export let knowledge = [];
+	export let selectedKnowledge = [];
+	export let collections = [];
+
 	const i18n = getContext('i18n');
 </script>
 
@@ -17,14 +19,18 @@
 	</div>
 
 	<div class="flex flex-col">
-		{#if knowledge?.length > 0}
-			<div class=" flex items-center gap-2 mt-2">
-				{#each knowledge as file, fileIdx}
+		{#if selectedKnowledge?.length > 0}
+			<div class=" flex flex-wrap items-center gap-2 mt-2">
+				{#each selectedKnowledge as file, fileIdx}
 					<FileItem
 						{file}
+						name={file.name}
+						type={file?.legacy
+							? `Legacy${file.type ? ` ${file.type}` : ''}`
+							: (file?.type ?? 'Collection')}
 						dismissible
 						on:dismiss={(e) => {
-							knowledge = knowledge.filter((_, idx) => idx !== fileIdx);
+							selectedKnowledge = selectedKnowledge.filter((_, idx) => idx !== fileIdx);
 						}}
 					/>
 				{/each}
@@ -33,16 +39,14 @@
 
 		<div class="flex flex-wrap text-sm font-medium gap-1.5 mt-2">
 			<Selector
-				bind:knowledge
 				on:select={(e) => {
 					const item = e.detail;
 
-					if (!knowledge.find((k) => k.name === item.name)) {
-						knowledge = [
-							...knowledge,
+					if (!selectedKnowledge.find((k) => k.id === item.id)) {
+						selectedKnowledge = [
+							...selectedKnowledge,
 							{
-								...item,
-								type: item?.type ?? 'doc'
+								...item
 							}
 						];
 					}
