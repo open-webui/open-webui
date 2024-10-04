@@ -94,7 +94,7 @@
 	const addFileHandler = async (fileId) => {
 		const updatedKnowledge = await addFileToKnowledgeById(localStorage.token, id, fileId).catch(
 			(e) => {
-				console.error(e);
+				toast.error(e);
 			}
 		);
 
@@ -110,7 +110,7 @@
 			id,
 			fileId
 		).catch((e) => {
-			console.error(e);
+			toast.error(e);
 		});
 
 		if (updatedKnowledge) {
@@ -341,6 +341,7 @@
 										on:delete={(e) => {
 											console.log(e.detail);
 
+											selectedFileId = null;
 											deleteFileHandler(e.detail);
 										}}
 									/>

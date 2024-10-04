@@ -94,7 +94,9 @@ class ERROR_MESSAGES(str, Enum):
         lambda size="": f"Oops! The file you're trying to upload is too large. Please upload a file that is less than {size}."
     )
 
-    DUPLICATE_CONTENT = "The content provided is a duplicate. Please ensure that the content is unique before proceeding."
+    DUPLICATE_CONTENT = (
+        "Duplicate content detected. Please provide unique content to proceed."
+    )
     FILE_NOT_PROCESSED = "Extracted content is not available for this file. Please ensure that the file is processed before proceeding."
 
 

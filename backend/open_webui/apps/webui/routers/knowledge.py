@@ -152,7 +152,13 @@ def add_file_to_knowledge_by_id(
         )
 
     # Add content to the vector database
-    process_file(ProcessFileForm(file_id=form_data.file_id, collection_name=id))
+    try:
+        process_file(ProcessFileForm(file_id=form_data.file_id, collection_name=id))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
     if knowledge:
         data = knowledge.data or {}
@@ -263,5 +269,6 @@ def remove_file_from_knowledge_by_id(
 
 @router.delete("/{id}/delete", response_model=bool)
 async def delete_knowledge_by_id(id: str, user=Depends(get_admin_user)):
+    VECTOR_DB_CLIENT.delete_collection(collection_name=id)
     result = Knowledges.delete_knowledge_by_id(id=id)
     return result

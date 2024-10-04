@@ -70,7 +70,7 @@ class ChromaClient:
             return None
 
     def query(
-        self, collection_name: str, filter: dict, limit: int = 1
+        self, collection_name: str, filter: dict, limit: int = 2
     ) -> Optional[GetResult]:
         # Query the items from the collection based on the filter.
 
@@ -82,15 +82,18 @@ class ChromaClient:
                     limit=limit,
                 )
 
+                print(result)
+
                 return GetResult(
                     **{
-                        "ids": result["ids"],
-                        "documents": result["documents"],
-                        "metadatas": result["metadatas"],
+                        "ids": [result["ids"]],
+                        "documents": [result["documents"]],
+                        "metadatas": [result["metadatas"]],
                     }
                 )
             return None
         except Exception as e:
+            print(e)
             return None
 
     def get(self, collection_name: str) -> Optional[GetResult]:

@@ -643,13 +643,16 @@ def save_docs_to_vector_db(
 
     # Check if entries with the same hash (metadata.hash) already exist
     if metadata and "hash" in metadata:
-        existing_docs = VECTOR_DB_CLIENT.query(
+        result = VECTOR_DB_CLIENT.query(
             collection_name=collection_name,
             filter={"hash": metadata["hash"]},
         )
-        if existing_docs:
-            log.info(f"Document with hash {metadata['hash']} already exists")
-            raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
+
+        if result:
+            existing_doc_ids = result.ids[0]
+            if existing_doc_ids:
+                log.info(f"Document with hash {metadata['hash']} already exists")
+                raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
         text_splitter = RecursiveCharacterTextSplitter(
