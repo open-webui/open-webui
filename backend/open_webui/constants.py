@@ -94,6 +94,8 @@ class ERROR_MESSAGES(str, Enum):
         lambda size="": f"Oops! The file you're trying to upload is too large. Please upload a file that is less than {size}."
     )
 
+    DUPLICATE_CONTENT = "The content provided is a duplicate. Please ensure that the content is unique before proceeding."
+
 
 class TASKS(str, Enum):
     def __str__(self) -> str:
