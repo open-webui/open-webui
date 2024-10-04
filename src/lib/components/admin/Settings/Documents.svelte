@@ -1,10 +1,10 @@
 <script lang="ts">
+	import { toast } from 'svelte-sonner';
+
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 
 	const dispatch = createEventDispatcher();
 
-	import { getDocs } from '$lib/apis/documents';
-	import { deleteAllFiles, deleteFileById } from '$lib/apis/files';
 	import {
 		getQuerySettings,
 		processDocsDir,
@@ -18,11 +18,13 @@
 		getRAGConfig,
 		updateRAGConfig
 	} from '$lib/apis/retrieval';
+
+	import { knowledge, models } from '$lib/stores';
+	import { getKnowledgeItems } from '$lib/apis/knowledge';
+	import { deleteAllFiles, deleteFileById } from '$lib/apis/files';
+
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-
-	import { documents, models } from '$lib/stores';
-	import { toast } from 'svelte-sonner';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
@@ -67,7 +69,7 @@
 		scanDirLoading = false;
 
 		if (res) {
-			await documents.set(await getDocs(localStorage.token));
+			await knowledge.set(await getKnowledgeItems(localStorage.token));
 			toast.success($i18n.t('Scan complete!'));
 		}
 	};

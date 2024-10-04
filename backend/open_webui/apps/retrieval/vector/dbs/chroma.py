@@ -49,22 +49,52 @@ class ChromaClient:
         self, collection_name: str, vectors: list[list[float | int]], limit: int
     ) -> Optional[SearchResult]:
         # Search for the nearest neighbor items based on the vectors and return 'limit' number of results.
-        collection = self.client.get_collection(name=collection_name)
-        if collection:
-            result = collection.query(
-                query_embeddings=vectors,
-                n_results=limit,
-            )
+        try:
+            collection = self.client.get_collection(name=collection_name)
+            if collection:
+                result = collection.query(
+                    query_embeddings=vectors,
+                    n_results=limit,
+                )
 
-            return SearchResult(
-                **{
-                    "ids": result["ids"],
-                    "distances": result["distances"],
-                    "documents": result["documents"],
-                    "metadatas": result["metadatas"],
-                }
-            )
-        return None
+                return SearchResult(
+                    **{
+                        "ids": result["ids"],
+                        "distances": result["distances"],
+                        "documents": result["documents"],
+                        "metadatas": result["metadatas"],
+                    }
+                )
+            return None
+        except Exception as e:
+            return None
+
+    def query(
+        self, collection_name: str, filter: dict, limit: int = 2
+    ) -> Optional[GetResult]:
+        # Query the items from the collection based on the filter.
+
+        try:
+            collection = self.client.get_collection(name=collection_name)
+            if collection:
+                result = collection.get(
+                    where=filter,
+                    limit=limit,
+                )
+
+                print(result)
+
+                return GetResult(
+                    **{
+                        "ids": [result["ids"]],
+                        "documents": [result["documents"]],
+                        "metadatas": [result["metadatas"]],
+                    }
+                )
+            return None
+        except Exception as e:
+            print(e)
+            return None
 
     def get(self, collection_name: str) -> Optional[GetResult]:
         # Get all the items in the collection.
@@ -111,11 +141,19 @@ class ChromaClient:
             ids=ids, documents=documents, embeddings=embeddings, metadatas=metadatas
         )
 
-    def delete(self, collection_name: str, ids: list[str]):
+    def delete(
+        self,
+        collection_name: str,
+        ids: Optional[list[str]] = None,
+        filter: Optional[dict] = None,
+    ):
         # Delete the items from the collection based on the ids.
         collection = self.client.get_collection(name=collection_name)
         if collection:
-            collection.delete(ids=ids)
+            if ids:
+                collection.delete(ids=ids)
+            elif filter:
+                collection.delete(where=filter)
 
     def reset(self):
         # Resets the database. This will delete all collections and item entries.

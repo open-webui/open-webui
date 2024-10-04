@@ -319,17 +319,25 @@ def get_rag_context(
     for file in files:
         if file.get("context") == "full":
             context = {
-                "documents": [[file.get("file").get("content")]],
+                "documents": [[file.get("file").get("data", {}).get("content")]],
                 "metadatas": [[{"file_id": file.get("id"), "name": file.get("name")}]],
             }
         else:
             context = None
 
-            collection_names = (
-                file["collection_names"]
-                if file["type"] == "collection"
-                else [file["collection_name"]] if file["collection_name"] else []
-            )
+            collection_names = []
+            if file.get("type") == "collection":
+                if file.get("legacy"):
+                    collection_names = file.get("collection_names", [])
+                else:
+                    collection_names.append(file["id"])
+            elif file.get("collection_name"):
+                collection_names.append(file["collection_name"])
+            elif file.get("id"):
+                if file.get("legacy"):
+                    collection_names.append(f"{file['id']}")
+                else:
+                    collection_names.append(f"file-{file['id']}")
 
             collection_names = set(collection_names).difference(extracted_collections)
             if not collection_names:

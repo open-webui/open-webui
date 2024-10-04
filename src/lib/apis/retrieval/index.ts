@@ -306,7 +306,11 @@ export interface SearchDocument {
 	filenames: string[];
 }
 
-export const processFile = async (token: string, file_id: string) => {
+export const processFile = async (
+	token: string,
+	file_id: string,
+	collection_name: string | null = null
+) => {
 	let error = null;
 
 	const res = await fetch(`${RAG_API_BASE_URL}/process/file`, {
@@ -317,7 +321,8 @@ export const processFile = async (token: string, file_id: string) => {
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			file_id: file_id
+			file_id: file_id,
+			collection_name: collection_name ? collection_name : undefined
 		})
 	})
 		.then(async (res) => {

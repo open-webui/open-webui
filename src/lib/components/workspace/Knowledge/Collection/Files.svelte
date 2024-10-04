@@ -1,0 +1,33 @@
+<script lang="ts">
+	import { createEventDispatcher } from 'svelte';
+	const dispatch = createEventDispatcher();
+
+	import FileItem from '$lib/components/common/FileItem.svelte';
+
+	export let selectedFileId = null;
+	export let files = [];
+</script>
+
+<div class=" max-h-full flex flex-col w-full">
+	{#each files as file (file.id)}
+		<div class="mt-2 px-2">
+			<FileItem
+				className="w-full"
+				colorClassName="{selectedFileId === file.id
+					? ' bg-gray-50 dark:bg-gray-850'
+					: 'bg-transparent'} hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+				{file}
+				name={file.meta.name}
+				type="file"
+				size={file.meta?.size ?? ''}
+				dismissible
+				on:click={() => {
+					dispatch('click', file.id);
+				}}
+				on:dismiss={() => {
+					dispatch('delete', file.id);
+				}}
+			/>
+		</div>
+	{/each}
+</div>

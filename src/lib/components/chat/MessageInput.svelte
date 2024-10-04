@@ -125,42 +125,23 @@
 		}
 
 		try {
+			// During the file upload, file content is automatically extracted.
 			const uploadedFile = await uploadFile(localStorage.token, file);
 
 			if (uploadedFile) {
-				fileItem.status = 'uploaded';
+				fileItem.status = 'processed';
 				fileItem.file = uploadedFile;
 				fileItem.id = uploadedFile.id;
+				fileItem.collection_name = uploadedFile?.meta?.collection_name;
 				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
 
-				// Try to extract content of the file for retrieval, even non-supported file types
-				processFileItem(fileItem);
+				files = files;
 			} else {
 				files = files.filter((item) => item.status !== null);
 			}
 		} catch (e) {
 			toast.error(e);
 			files = files.filter((item) => item.status !== null);
-		}
-	};
-
-	const processFileItem = async (fileItem) => {
-		try {
-			const res = await processFile(localStorage.token, fileItem.id);
-			if (res) {
-				fileItem.status = 'processed';
-				fileItem.collection_name = res.collection_name;
-				fileItem.file = {
-					...fileItem.file,
-					content: res.content
-				};
-
-				files = files;
-			}
-		} catch (e) {
-			// We keep the file in the files list even if it fails to process
-			fileItem.status = 'processed';
-			files = files;
 		}
 	};
 
@@ -456,7 +437,7 @@
 											</div>
 										{:else}
 											<FileItem
-												{file}
+												item={file}
 												name={file.name}
 												type={file.type}
 												size={file?.size}
