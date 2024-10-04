@@ -2252,25 +2252,23 @@ async def oauth_callback(provider: str, request: Request, response: Response):
             role = "admin"
         elif webui_app.state.config.ENABLE_OAUTH_ROLE_MAPPING:
             oauth_claim = webui_app.state.config.OAUTH_ROLES_CLAIM
-            oauth_roles = user_data.get(oauth_claim)  # Works for simple claims with no nesting
-            if oauth_roles and "." in oauth_claim:
-                # Implementation to handle nested claims of arbitrary depth
-                nested_claims = oauth_claim.split(".")
+            oauth_roles = None
+
+            if oauth_claim:
                 claim_data = user_data
+                nested_claims = oauth_claim.split(".")
                 for nested_claim in nested_claims:
-                    claim_data = claim_data.get(nested_claim)
-                    if claim_data is None:
-                        break
-                oauth_roles = claim_data
+                    claim_data = claim_data.get(nested_claim, {})
+                oauth_roles = claim_data if isinstance(claim_data, list) else None
 
             log.info(f"User {user.name} has OAuth roles: {oauth_roles}")
             if oauth_roles:
                 for allowed_role in ["pending", "user", "admin"]:
                     role = allowed_role if allowed_role in oauth_roles else role
-                    log.info(f"Applied role: {role} to user {user.name}")
             else:
                 # If role mapping is enabled, but no roles are provided, fall back to pending
                 role = "pending"
+            log.info(f"Applied role: {role} to user {user.name}")
 
         if role != user.role:
             Users.update_user_role_by_id(user.id, role)
