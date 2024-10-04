@@ -785,10 +785,7 @@ def process_file(
                     "content": text_content,
                 }
         except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=e,
-            )
+            raise e
     except Exception as e:
         log.exception(e)
         if "No pandoc was found" in str(e):
@@ -799,7 +796,7 @@ def process_file(
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(e),
+                detail=str(e),
             )
 
 

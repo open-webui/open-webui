@@ -1,5 +1,5 @@
 <script>
-	import CreateKnowledge from '$lib/components/workspace/Knowledge/CreateKnowledge.svelte';
+	import CreateCollection from '$lib/components/workspace/Knowledge/CreateCollection.svelte';
 </script>
 
-<CreateKnowledge />
+<CreateCollection />
