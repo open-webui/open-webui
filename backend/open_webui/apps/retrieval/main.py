@@ -700,17 +700,25 @@ def save_docs_to_vector_db(
             list(map(lambda x: x.replace("\n", " "), texts))
         )
 
+        items = [
+            {
+                "id": str(uuid.uuid4()),
+                "text": text,
+                "vector": embeddings[idx],
+                "metadata": metadatas[idx],
+            }
+            for idx, text in enumerate(texts)
+        ]
+
+        if file_id:
+            VECTOR_DB_CLIENT.insert(
+                collection_name=f"file-{file_id}",
+                items=items,
+            )
+
         VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
-            items=[
-                {
-                    "id": str(uuid.uuid4()),
-                    "text": text,
-                    "vector": embeddings[idx],
-                    "metadata": metadatas[idx],
-                }
-                for idx, text in enumerate(texts)
-            ],
+            items=items,
         )
 
         return True
@@ -721,6 +729,7 @@ def save_docs_to_vector_db(
 
 class ProcessFileForm(BaseModel):
     file_id: str
+    content: Optional[str] = None
     collection_name: Optional[str] = None
 
 
@@ -742,29 +751,58 @@ def process_file(
             PDF_EXTRACT_IMAGES=app.state.config.PDF_EXTRACT_IMAGES,
         )
 
-        file_path = file.meta.get("path", None)
-        if file_path:
-            docs = loader.load(file.filename, file.meta.get("content_type"), file_path)
-        else:
+        if form_data.content:
             docs = [
                 Document(
-                    page_content=file.data.get("content", ""),
+                    page_content=form_data.content,
                     metadata={
-                        "name": file.filename,
+                        "name": file.meta.get("name", file.filename),
                         "created_by": file.user_id,
                         **file.meta,
                     },
                 )
             ]
 
-        text_content = " ".join([doc.page_content for doc in docs])
-        log.debug(f"text_content: {text_content}")
-        hash = calculate_sha256_string(text_content)
+            text_content = form_data.content
+        elif file.data.get("content", None):
+            docs = [
+                Document(
+                    page_content=file.data.get("content", ""),
+                    metadata={
+                        "name": file.meta.get("name", file.filename),
+                        "created_by": file.user_id,
+                        **file.meta,
+                    },
+                )
+            ]
+            text_content = file.data.get("content", "")
+        else:
+            file_path = file.meta.get("path", None)
+            if file_path:
+                docs = loader.load(
+                    file.filename, file.meta.get("content_type"), file_path
+                )
+            else:
+                docs = [
+                    Document(
+                        page_content=file.data.get("content", ""),
+                        metadata={
+                            "name": file.filename,
+                            "created_by": file.user_id,
+                            **file.meta,
+                        },
+                    )
+                ]
 
+            text_content = " ".join([doc.page_content for doc in docs])
+
+        log.debug(f"text_content: {text_content}")
         Files.update_file_data_by_id(
             file.id,
             {"content": text_content},
         )
+
+        hash = calculate_sha256_string(text_content)
         Files.update_file_hash_by_id(file.id, hash)
 
         try:
@@ -772,7 +810,7 @@ def process_file(
                 docs=docs,
                 collection_name=collection_name,
                 metadata={
-                    "file_id": form_data.file_id,
+                    "file_id": file.id,
                     "name": file.meta.get("name", file.filename),
                     "hash": hash,
                 },
