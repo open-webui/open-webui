@@ -44,7 +44,14 @@
 					]
 				: [];
 
-		items = [...$knowledge, ...legacy_collections];
+		items = [...$knowledge, ...legacy_collections].map((item) => {
+			return {
+				...item,
+				...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
+			};
+		});
+
+		console.log(items);
 	});
 </script>
 
