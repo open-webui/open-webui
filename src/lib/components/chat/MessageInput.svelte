@@ -144,6 +144,7 @@
 			files = files.filter((item) => item.status !== null);
 		}
 	};
+
 	const inputFilesHandler = async (inputFiles) => {
 		inputFiles.forEach((file) => {
 			console.log(file, file.name.split('.').at(-1));
