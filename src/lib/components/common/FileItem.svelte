@@ -110,7 +110,7 @@
 			{name}
 		</div>
 
-		<div class=" flex justify-between text-gray-500 text-xs">
+		<div class=" flex justify-between text-gray-500 text-xs line-clamp-1">
 			{#if type === 'file'}
 				{$i18n.t('File')}
 			{:else if type === 'doc'}
@@ -118,7 +118,7 @@
 			{:else if type === 'collection'}
 				{$i18n.t('Collection')}
 			{:else}
-				<span class=" capitalize">{type}</span>
+				<span class=" capitalize line-clamp-1">{type}</span>
 			{/if}
 			{#if size}
 				<span class="capitalize">{formatFileSize(size)}</span>
