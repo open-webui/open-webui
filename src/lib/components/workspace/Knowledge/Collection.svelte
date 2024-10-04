@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Fuse from 'fuse.js';
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext, onDestroy } from 'svelte';
@@ -50,6 +51,21 @@
 	let showAddTextContentModal = false;
 	let inputFiles = null;
 
+	let filteredItems = [];
+	$: if (knowledge) {
+		fuse = new Fuse(knowledge.files, {
+			keys: ['meta.name', 'meta.description']
+		});
+	}
+
+	$: if (fuse) {
+		filteredItems = query
+			? fuse.search(query).map((e) => {
+					return e.item;
+				})
+			: (knowledge?.files ?? []);
+	}
+
 	let selectedFile = null;
 	let selectedFileId = null;
 
@@ -63,6 +79,7 @@
 		selectedFile = null;
 	}
 
+	let fuse = null;
 	let debounceTimeout = null;
 	let mediaQuery;
 	let dragged = false;
@@ -408,10 +425,10 @@
 								<hr class=" mt-2 mb-1 border-gray-50 dark:border-gray-850" />
 							</div>
 
-							{#if (knowledge?.files ?? []).length > 0}
+							{#if filteredItems.length > 0}
 								<div class=" flex overflow-y-auto h-full w-full scrollbar-hidden text-xs">
 									<Files
-										files={knowledge.files}
+										files={filteredItems}
 										{selectedFileId}
 										on:click={(e) => {
 											selectedFileId = e.detail;
