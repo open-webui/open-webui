@@ -48,7 +48,7 @@
 		dispatch('click');
 	}}
 >
-	<div class="p-3 bg-white/10 text-white rounded-xl">
+	<div class="p-3 bg-black/20 dark:bg-white/10 text-white rounded-xl">
 		{#if status === 'processed'}
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -105,7 +105,7 @@
 		{/if}
 	</div>
 
-	<div class="flex flex-col justify-center -space-y-0.5 px-2.5 w-full">
+	<div class="flex flex-col justify-center -space-y-0.5 ml-1 px-2.5 w-full">
 		<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1 mb-1">
 			{name}
 		</div>

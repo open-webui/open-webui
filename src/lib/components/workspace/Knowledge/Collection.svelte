@@ -27,6 +27,8 @@
 	import { processFile } from '$lib/apis/retrieval';
 	import AddContentMenu from './Collection/AddContentMenu.svelte';
 	import AddTextContentModal from './Collection/AddTextContentModal.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
+	import FloppyDisk from '$lib/components/icons/FloppyDisk.svelte';
 
 	let largeScreen = true;
 
@@ -410,9 +412,19 @@
 					<div class="flex-1 flex justify-start max-h-full overflow-hidden pl-3">
 						{#if selectedFile}
 							<div class=" flex flex-col w-full h-full">
-								<div class=" flex-shrink-0 mb-2">
-									<div class=" text-xl line-clamp-1">
+								<div class=" flex-shrink-0 mb-2 flex items-center">
+									<div class=" flex-1 text-xl line-clamp-1">
 										{selectedFile?.meta?.name}
+									</div>
+
+									<div>
+										<Tooltip content="Save">
+											<button
+												class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+											>
+												Save
+											</button>
+										</Tooltip>
 									</div>
 								</div>
 

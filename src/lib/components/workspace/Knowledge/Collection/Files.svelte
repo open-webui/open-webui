@@ -14,7 +14,7 @@
 			<FileItem
 				className="w-full"
 				colorClassName="{selectedFileId === file.id
-					? 'bg-gray-850'
+					? ' bg-gray-50 dark:bg-gray-850'
 					: 'bg-transparent'} hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 				{file}
 				name={file.meta.name}
