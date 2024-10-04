@@ -709,7 +709,7 @@ def save_docs_to_vector_db(
             }
             for idx, text in enumerate(texts)
         ]
-        
+
         VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
             items=items,

@@ -8,11 +8,12 @@
 	import { page } from '$app/stores';
 	import { mobile, showSidebar } from '$lib/stores';
 
-	import { uploadFile } from '$lib/apis/files';
+	import { updateFileDataContentById, uploadFile } from '$lib/apis/files';
 	import {
 		addFileToKnowledgeById,
 		getKnowledgeById,
 		removeFileFromKnowledgeById,
+		updateFileFromKnowledgeById,
 		updateKnowledgeById
 	} from '$lib/apis/knowledge';
 
@@ -132,6 +133,28 @@
 		if (updatedKnowledge) {
 			knowledge = updatedKnowledge;
 			toast.success($i18n.t('File removed successfully.'));
+		}
+	};
+
+	const updateFileContentHandler = async () => {
+		const fileId = selectedFile.id;
+		const content = selectedFile.data.content;
+
+		const res = updateFileDataContentById(localStorage.token, fileId, content).catch((e) => {
+			toast.error(e);
+		});
+
+		const updatedKnowledge = await updateFileFromKnowledgeById(
+			localStorage.token,
+			id,
+			fileId
+		).catch((e) => {
+			toast.error(e);
+		});
+
+		if (res && updatedKnowledge) {
+			knowledge = updatedKnowledge;
+			toast.success($i18n.t('File content updated successfully.'));
 		}
 	};
 
@@ -420,6 +443,9 @@
 									<div>
 										<button
 											class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+											on:click={() => {
+												updateFileContentHandler();
+											}}
 										>
 											{$i18n.t('Save')}
 										</button>

@@ -196,13 +196,54 @@ def add_file_to_knowledge_by_id(
         )
 
 
+@router.post("/{id}/file/update", response_model=Optional[KnowledgeFilesResponse])
+def update_file_from_knowledge_by_id(
+    id: str,
+    form_data: KnowledgeFileIdForm,
+    user=Depends(get_admin_user),
+):
+    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    file = Files.get_file_by_id(form_data.file_id)
+    if not file:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    # Remove content from the vector database
+    VECTOR_DB_CLIENT.delete(
+        collection_name=knowledge.id, filter={"file_id": form_data.file_id}
+    )
+
+    # Add content to the vector database
+    try:
+        process_file(ProcessFileForm(file_id=form_data.file_id, collection_name=id))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+    if knowledge:
+        data = knowledge.data or {}
+        file_ids = data.get("file_ids", [])
+
+        files = Files.get_files_by_ids(file_ids)
+
+        return KnowledgeFilesResponse(
+            **knowledge.model_dump(),
+            files=files,
+        )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
 ############################
 # RemoveFileFromKnowledge
 ############################
-
-
-class KnowledgeFileIdForm(BaseModel):
-    file_id: str
 
 
 @router.post("/{id}/file/remove", response_model=Optional[KnowledgeFilesResponse])
@@ -222,6 +263,11 @@ def remove_file_from_knowledge_by_id(
     # Remove content from the vector database
     VECTOR_DB_CLIENT.delete(
         collection_name=knowledge.id, filter={"file_id": form_data.file_id}
+    )
+
+    result = VECTOR_DB_CLIENT.query(
+        collection_name=knowledge.id,
+        filter={"file_id": form_data.file_id},
     )
 
     Files.delete_file_by_id(form_data.file_id)
