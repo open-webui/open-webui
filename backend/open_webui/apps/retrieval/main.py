@@ -649,7 +649,7 @@ def save_docs_to_vector_db(
         )
         if existing_docs:
             log.info(f"Document with hash {metadata['hash']} already exists")
-            return True
+            raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
         text_splitter = RecursiveCharacterTextSplitter(
