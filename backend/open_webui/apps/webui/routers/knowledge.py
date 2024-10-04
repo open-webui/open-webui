@@ -2,7 +2,7 @@ import json
 from typing import Optional, Union
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status
-
+import logging
 
 from open_webui.apps.webui.models.knowledge import (
     Knowledges,
@@ -17,7 +17,11 @@ from open_webui.apps.retrieval.main import process_file, ProcessFileForm
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.env import SRC_LOG_LEVELS
 
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
 
@@ -315,6 +319,10 @@ def remove_file_from_knowledge_by_id(
 
 @router.delete("/{id}/delete", response_model=bool)
 async def delete_knowledge_by_id(id: str, user=Depends(get_admin_user)):
-    VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+    try:
+        VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+    except Exception as e:
+        log.debug(e)
+        pass
     result = Knowledges.delete_knowledge_by_id(id=id)
     return result
