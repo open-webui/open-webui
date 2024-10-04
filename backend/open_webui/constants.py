@@ -95,6 +95,7 @@ class ERROR_MESSAGES(str, Enum):
     )
 
     DUPLICATE_CONTENT = "The content provided is a duplicate. Please ensure that the content is unique before proceeding."
+    FILE_NOT_PROCESSED = "Extracted content is not available for this file. Please ensure that the file is processed before proceeding."
 
 
 class TASKS(str, Enum):

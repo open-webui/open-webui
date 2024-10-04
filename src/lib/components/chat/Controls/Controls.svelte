@@ -35,7 +35,7 @@
 					{#each chatFiles as file, fileIdx}
 						<FileItem
 							className="w-full"
-							{file}
+							item={file}
 							edit={true}
 							url={`${file?.url}`}
 							name={file.name}

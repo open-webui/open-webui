@@ -127,7 +127,7 @@
 								<img src={file.url} alt="input" class=" max-h-96 rounded-lg" draggable="false" />
 							{:else}
 								<FileItem
-									{file}
+									item={file}
 									url={file.url}
 									name={file.name}
 									type={file.type}

@@ -731,7 +731,7 @@ def process_file(
 
         collection_name = form_data.collection_name
         if collection_name is None:
-            collection_name = file.id
+            collection_name = f"file-{file.id}"
 
         loader = Loader(
             engine=app.state.config.CONTENT_EXTRACTION_ENGINE,
@@ -758,12 +758,11 @@ def process_file(
         log.debug(f"text_content: {text_content}")
         hash = calculate_sha256_string(text_content)
 
-        res = Files.update_file_data_by_id(
+        Files.update_file_data_by_id(
             file.id,
             {"content": text_content},
         )
-        print(res)
-        Files.update_file_hash_by_id(form_data.file_id, hash)
+        Files.update_file_hash_by_id(file.id, hash)
 
         try:
             result = save_docs_to_vector_db(
@@ -778,6 +777,13 @@ def process_file(
             )
 
             if result:
+                Files.update_file_metadata_by_id(
+                    file.id,
+                    {
+                        "collection_name": collection_name,
+                    },
+                )
+
                 return {
                     "status": True,
                     "collection_name": collection_name,

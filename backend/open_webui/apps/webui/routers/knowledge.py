@@ -17,7 +17,6 @@ from open_webui.utils.utils import get_admin_user, get_verified_user
 
 from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 
-
 router = APIRouter()
 
 ############################
@@ -132,7 +131,7 @@ class KnowledgeFileIdForm(BaseModel):
 
 
 @router.post("/{id}/file/add", response_model=Optional[KnowledgeFilesResponse])
-async def add_file_to_knowledge_by_id(
+def add_file_to_knowledge_by_id(
     id: str,
     form_data: KnowledgeFileIdForm,
     user=Depends(get_admin_user),
@@ -143,6 +142,11 @@ async def add_file_to_knowledge_by_id(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+    if not file.data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
         )
 
     if knowledge:
@@ -191,7 +195,7 @@ class KnowledgeFileIdForm(BaseModel):
 
 
 @router.post("/{id}/file/remove", response_model=Optional[KnowledgeFilesResponse])
-async def remove_file_from_knowledge_by_id(
+def remove_file_from_knowledge_by_id(
     id: str,
     form_data: KnowledgeFileIdForm,
     user=Depends(get_admin_user),
