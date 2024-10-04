@@ -937,7 +937,26 @@
 					done: false
 				}
 			];
-			files.push(...model.info.meta.knowledge);
+			files.push(
+				...model.info.meta.knowledge.map((item) => {
+					if (item?.collection_name) {
+						return {
+							id: item.collection_name,
+							name: item.name,
+							legacy: true
+						};
+					} else if (item?.collection_names) {
+						return {
+							name: item.name,
+							type: 'collection',
+							collection_names: item.collection_names,
+							legacy: true
+						};
+					} else {
+						return item;
+					}
+				})
+			);
 			history.messages[responseMessageId] = responseMessage;
 		}
 		files.push(
@@ -1243,7 +1262,26 @@
 					done: false
 				}
 			];
-			files.push(...model.info.meta.knowledge);
+			files.push(
+				...model.info.meta.knowledge.map((item) => {
+					if (item?.collection_name) {
+						return {
+							id: item.collection_name,
+							name: item.name,
+							legacy: true
+						};
+					} else if (item?.collection_names) {
+						return {
+							name: item.name,
+							type: 'collection',
+							collection_names: item.collection_names,
+							legacy: true
+						};
+					} else {
+						return item;
+					}
+				})
+			);
 			history.messages[responseMessageId] = responseMessage;
 		}
 		files.push(
