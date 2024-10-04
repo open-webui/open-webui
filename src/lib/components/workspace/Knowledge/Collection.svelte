@@ -38,7 +38,16 @@
 	let knowledge: Knowledge | null = null;
 	let query = '';
 
+	let selectedFile = null;
 	let selectedFileId = null;
+
+	$: if (selectedFileId) {
+		const file = knowledge.files.find((file) => file.id === selectedFileId);
+		if (file) {
+			file.data = file.data ?? { content: '' };
+			selectedFile = file;
+		}
+	}
 
 	let debounceTimeout = null;
 	let mediaQuery;
@@ -271,7 +280,7 @@
 					<div class="flex w-full px-1">
 						<input
 							type="text"
-							class="w-full font-medium text-gray-500 text-sm bg-transparent outline-none"
+							class="w-full text-gray-500 text-sm bg-transparent outline-none"
 							bind:value={knowledge.description}
 							on:input={() => {
 								changeDebounceHandler();
@@ -321,7 +330,16 @@
 
 							{#if (knowledge?.files ?? []).length > 0}
 								<div class=" flex overflow-y-auto h-full w-full scrollbar-hidden text-xs">
-									<Files files={knowledge.files} />
+									<Files
+										files={knowledge.files}
+										{selectedFileId}
+										on:click={(e) => {
+											selectedFileId = e.detail;
+										}}
+										on:delete={(e) => {
+											console.log(e.detail);
+										}}
+									/>
 								</div>
 							{:else}
 								<div class="m-auto text-gray-500 text-xs">No content found</div>
@@ -331,9 +349,23 @@
 				</div>
 
 				{#if largeScreen}
-					<div class="flex-1 p-2 flex justify-start h-full">
-						{#if selectedFileId}
-							<textarea />
+					<div class="flex-1 flex justify-start max-h-full overflow-hidden pl-3">
+						{#if selectedFile}
+							<div class=" flex flex-col w-full h-full">
+								<div class=" flex-shrink-0 mb-2">
+									<div class=" text-xl line-clamp-1">
+										{selectedFile?.meta?.name}
+									</div>
+								</div>
+
+								<div class=" flex-grow">
+									<textarea
+										class=" w-full h-full resize-none rounded-xl py-4 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										bind:value={selectedFile.data.content}
+										placeholder={$i18n.t('Add content here')}
+									/>
+								</div>
+							</div>
 						{:else}
 							<div class="m-auto">
 								<AddFilesPlaceholder title={$i18n.t('Select/Add Files')}>
