@@ -104,7 +104,7 @@
 		items = [...$knowledge, ...legacy_collections].map((item) => {
 			return {
 				...item,
-				...{ legacy: item?.legacy ?? item?.meta?.document ?? undefined }
+				...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
 			};
 		});
 
