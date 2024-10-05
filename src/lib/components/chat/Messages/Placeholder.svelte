@@ -89,7 +89,7 @@
 </script>
 
 {#key mounted}
-	<div class="m-auto w-full max-w-6xl px-4 xl:px-20 translate-y-2 text-center">
+	<div class="m-auto w-full max-w-6xl px-2 xl:px-20 translate-y-2 text-center">
 		{#if $temporaryChatEnabled}
 			<Tooltip
 				content="This chat won't appear in history and your messages will not be saved."
@@ -107,13 +107,13 @@
 		>
 			<div class="w-full flex flex-col justify-center items-center">
 				<Tooltip
-					className="flex justify-center gap-3.5 w-fit"
+					className="flex flex-col md:flex-row justify-center gap-2 md:gap-3.5 w-fit"
 					content={marked.parse(
 						sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description ?? '')
 					)}
 					placement="top"
 				>
-					<div class="flex justify-center">
+					<div class="flex flex-shrink-0 justify-center">
 						<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 200 }}>
 							{#each models as model, modelIdx}
 								<button
@@ -136,7 +136,7 @@
 						</div>
 					</div>
 
-					<div class=" capitalize line-clamp-1 text-4xl" in:fade={{ duration: 200 }}>
+					<div class=" capitalize line-clamp-1 text-3xl md:text-4xl" in:fade={{ duration: 200 }}>
 						{#if models[selectedModelIdx]?.info}
 							{models[selectedModelIdx]?.info?.name}
 						{:else}
