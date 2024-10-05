@@ -149,6 +149,7 @@
 					localStorage.chatControlsSize = size;
 				}
 			}}
+			class="pt-8"
 		>
 			{#if $showControls}
 				<div class="pr-4 pb-8 flex max-h-full min-h-full">
