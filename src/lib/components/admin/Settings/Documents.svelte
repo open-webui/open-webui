@@ -7,7 +7,6 @@
 
 	import {
 		getQuerySettings,
-		processDocsDir,
 		updateQuerySettings,
 		resetVectorDB,
 		getEmbeddingConfig,
@@ -21,7 +20,7 @@
 
 	import { knowledge, models } from '$lib/stores';
 	import { getKnowledgeItems } from '$lib/apis/knowledge';
-	import { deleteAllFiles, deleteFileById } from '$lib/apis/files';
+	import { uploadDir, deleteAllFiles, deleteFileById } from '$lib/apis/files';
 
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -65,11 +64,10 @@
 
 	const scanHandler = async () => {
 		scanDirLoading = true;
-		const res = await processDocsDir(localStorage.token);
+		const res = await uploadDir(localStorage.token);
 		scanDirLoading = false;
 
 		if (res) {
-			await knowledge.set(await getKnowledgeItems(localStorage.token));
 			toast.success($i18n.t('Scan complete!'));
 		}
 	};

@@ -44,7 +44,6 @@ from open_webui.apps.retrieval.utils import (
     query_doc_with_hybrid_search,
 )
 
-from open_webui.apps.webui.models.documents import DocumentForm, Documents
 from open_webui.apps.webui.models.files import Files
 from open_webui.config import (
     BRAVE_SEARCH_API_KEY,
@@ -1098,68 +1097,6 @@ def process_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
-
-
-@app.get("/process/dir")
-def process_docs_dir(user=Depends(get_admin_user)):
-    for path in Path(DOCS_DIR).rglob("./**/*"):
-        try:
-            if path.is_file() and not path.name.startswith("."):
-                tags = extract_folders_after_data_docs(path)
-                filename = path.name
-                file_content_type = mimetypes.guess_type(path)
-
-                with open(path, "rb") as f:
-                    collection_name = calculate_sha256(f)[:63]
-
-                loader = Loader(
-                    engine=app.state.config.CONTENT_EXTRACTION_ENGINE,
-                    TIKA_SERVER_URL=app.state.config.TIKA_SERVER_URL,
-                    PDF_EXTRACT_IMAGES=app.state.config.PDF_EXTRACT_IMAGES,
-                )
-                docs = loader.load(filename, file_content_type[0], str(path))
-
-                try:
-                    result = save_docs_to_vector_db(docs, collection_name)
-
-                    if result:
-                        sanitized_filename = sanitize_filename(filename)
-                        doc = Documents.get_doc_by_name(sanitized_filename)
-
-                        if doc is None:
-                            doc = Documents.insert_new_doc(
-                                user.id,
-                                DocumentForm(
-                                    **{
-                                        "name": sanitized_filename,
-                                        "title": filename,
-                                        "collection_name": collection_name,
-                                        "filename": filename,
-                                        "content": (
-                                            json.dumps(
-                                                {
-                                                    "tags": list(
-                                                        map(
-                                                            lambda name: {"name": name},
-                                                            tags,
-                                                        )
-                                                    )
-                                                }
-                                            )
-                                            if len(tags)
-                                            else "{}"
-                                        ),
-                                    }
-                                ),
-                            )
-                except Exception as e:
-                    log.exception(e)
-                    pass
-
-        except Exception as e:
-            log.exception(e)
-
-    return True
 
 
 class QueryDocForm(BaseModel):

@@ -5,17 +5,21 @@ import uuid
 from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
+import mimetypes
+
 
 from open_webui.apps.webui.models.files import FileForm, FileModel, Files
 from open_webui.apps.retrieval.main import process_file, ProcessFileForm
 
-from open_webui.config import UPLOAD_DIR
-from open_webui.constants import ERROR_MESSAGES
+from open_webui.config import UPLOAD_DIR, DOCS_DIR
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.constants import ERROR_MESSAGES
 
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
+
+
 from open_webui.utils.utils import get_admin_user, get_verified_user
 
 log = logging.getLogger(__name__)
@@ -84,6 +88,51 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
+
+
+@router.post("/upload/dir")
+def upload_dir(user=Depends(get_admin_user)):
+    for path in Path(DOCS_DIR).rglob("./**/*"):
+        if path.is_file() and not path.name.startswith("."):
+            try:
+                log.debug(f"Processing file from path: {path}")
+
+                filename = path.name
+                file_content_type = mimetypes.guess_type(path)
+
+                # replace filename with uuid
+                id = str(uuid.uuid4())
+                name = filename
+
+                contents = path.read_bytes()
+                file_path = str(path)
+
+                file = Files.insert_new_file(
+                    user.id,
+                    FileForm(
+                        **{
+                            "id": id,
+                            "filename": filename,
+                            "meta": {
+                                "name": name,
+                                "content_type": file_content_type,
+                                "size": len(contents),
+                                "path": file_path,
+                            },
+                        }
+                    ),
+                )
+
+                try:
+                    process_file(ProcessFileForm(file_id=id))
+                    log.debug(f"File processed: {path}, {file.id}")
+                except Exception as e:
+                    log.exception(e)
+                    log.error(f"Error processing file: {file.id}")
+            except Exception as e:
+                log.exception(e)
+                pass
+    return True
 
 
 ############################
