@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Or specify any other version you want to use
+          node-version: '21' # Or specify any other version you want to use
 
       - name: Install Dependencies
         run: npm install
@@ -48,7 +48,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '21'
 
       - name: Install Dependencies
         run: npm ci
