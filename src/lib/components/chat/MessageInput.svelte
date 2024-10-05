@@ -266,13 +266,13 @@
 			<div class="w-full relative">
 				{#if atSelectedModel !== undefined}
 					<div
-						class="px-3 py-2.5 text-left w-full flex justify-between items-center absolute bottom-0.5 left-0 right-0 bg-gradient-to-t from-50% from-white dark:from-gray-900 z-10"
+						class="px-3 py-1 text-left w-full flex justify-between items-center absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10"
 					>
 						<div class="flex items-center gap-2 text-sm dark:text-gray-500">
 							<img
 								crossorigin="anonymous"
 								alt="model profile"
-								class="size-5 max-w-[28px] object-cover rounded-full"
+								class="size-4 max-w-[28px] object-cover rounded-full"
 								src={$models.find((model) => model.id === atSelectedModel.id)?.info?.meta
 									?.profile_image_url ??
 									($i18n.language === 'dg-DG'

@@ -175,7 +175,11 @@
 					</div>
 				</div>
 
-				<div class="text-base font-normal lg:translate-x-6 lg:max-w-3xl w-full py-3">
+				<div
+					class="text-base font-normal lg:translate-x-6 lg:max-w-3xl w-full py-3 {atSelectedModel
+						? 'mt-2'
+						: ''}"
+				>
 					<MessageInput
 						{history}
 						{selectedModels}
