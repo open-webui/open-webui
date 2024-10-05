@@ -14,6 +14,7 @@
 	export let id;
 	export let content;
 	export let model = null;
+	export let save = false;
 
 	let tokens = [];
 
@@ -37,6 +38,7 @@
 	<MarkdownTokens
 		{tokens}
 		{id}
+		{save}
 		on:update={(e) => {
 			dispatch('update', e.detail);
 		}}

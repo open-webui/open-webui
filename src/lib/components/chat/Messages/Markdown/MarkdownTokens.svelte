@@ -17,6 +17,8 @@
 	export let tokens: Token[];
 	export let top = true;
 
+	export let save = false;
+
 	const headerComponent = (depth: number) => {
 		return 'h' + depth;
 	};
@@ -36,6 +38,7 @@
 			{token}
 			lang={token?.lang ?? ''}
 			code={revertSanitizedResponseContent(token?.text ?? '')}
+			{save}
 			on:save={(e) => {
 				dispatch('update', {
 					oldContent: token.text,
