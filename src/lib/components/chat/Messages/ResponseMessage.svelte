@@ -481,11 +481,11 @@
 										save={true}
 										{model}
 										on:update={(e) => {
-											const { oldContent, newContent } = e.detail;
+											const { raw, oldContent, newContent } = e.detail;
 
 											history.messages[message.id].content = history.messages[
 												message.id
-											].content.replace(oldContent, newContent);
+											].content.replace(raw, raw.replace(oldContent, newContent));
 
 											dispatch('update');
 										}}
