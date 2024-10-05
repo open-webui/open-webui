@@ -308,7 +308,7 @@
 	};
 </script>
 
-<div class="h-full flex">
+<div class="h-full flex pt-8">
 	{#if Object.keys(history?.messages ?? {}).length == 0}
 		<Placeholder {selectedModels} bind:prompt />
 	{:else}
