@@ -14,6 +14,7 @@
 		addFileToKnowledgeById,
 		getKnowledgeById,
 		removeFileFromKnowledgeById,
+		resetKnowledgeById,
 		updateFileFromKnowledgeById,
 		updateKnowledgeById
 	} from '$lib/apis/knowledge';
@@ -70,10 +71,12 @@
 	let selectedFileId = null;
 
 	$: if (selectedFileId) {
-		const file = knowledge.files.find((file) => file.id === selectedFileId);
+		const file = (knowledge?.files ?? []).find((file) => file.id === selectedFileId);
 		if (file) {
 			file.data = file.data ?? { content: '' };
 			selectedFile = file;
+		} else {
+			selectedFile = null;
 		}
 	} else {
 		selectedFile = null;
@@ -129,6 +132,9 @@
 		try {
 			// Get directory handle through picker
 			const dirHandle = await window.showDirectoryPicker();
+
+			console.log(typeof dirHandle);
+			console.log(dirHandle);
 
 			let totalFiles = 0;
 			let uploadedFiles = 0;
@@ -196,8 +202,18 @@
 	};
 
 	// Helper function to maintain file paths within zip
-	const getRelativePath = (fullPath, basePath) => {
-		return fullPath.substring(basePath.length + 1);
+	const syncDirectoryHandler = async () => {
+		const res = await resetKnowledgeById(localStorage.token, id).catch((e) => {
+			toast.error(e);
+		});
+
+		if (res) {
+			knowledge = res;
+			toast.success($i18n.t('Knowledge reset successfully.'));
+
+			// Upload directory
+			uploadDirectoryHandler();
+		}
 	};
 
 	const addFileHandler = async (fileId) => {
@@ -500,6 +516,9 @@
 												} else {
 													document.getElementById('files-input').click();
 												}
+											}}
+											on:sync={(e) => {
+												syncDirectoryHandler();
 											}}
 										/>
 									</div>
