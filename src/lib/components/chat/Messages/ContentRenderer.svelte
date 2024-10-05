@@ -40,12 +40,14 @@
 	onMount(() => {
 		if (floatingButtons) {
 			contentContainerElement?.addEventListener('mouseup', updateButtonPosition);
+			document.addEventListener('mouseup', updateButtonPosition);
 		}
 	});
 
 	onDestroy(() => {
 		if (floatingButtons) {
 			contentContainerElement?.removeEventListener('mouseup', updateButtonPosition);
+			document.removeEventListener('mouseup', updateButtonPosition);
 		}
 	});
 </script>
