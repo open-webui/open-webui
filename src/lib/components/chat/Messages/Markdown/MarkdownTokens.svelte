@@ -41,6 +41,7 @@
 			{save}
 			on:save={(e) => {
 				dispatch('update', {
+					raw: token.raw,
 					oldContent: token.text,
 					newContent: e.detail
 				});
