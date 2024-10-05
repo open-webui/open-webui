@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Fuse from 'fuse.js';
+
 	import { DropdownMenu } from 'bits-ui';
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 	import { flyAndScale } from '$lib/utils/transitions';
@@ -10,7 +12,19 @@
 
 	export let onClose: Function = () => {};
 
+	let query = '';
+
 	let items = [];
+	let filteredItems = [];
+
+	let fuse = null;
+	$: if (fuse) {
+		filteredItems = query
+			? fuse.search(query).map((e) => {
+					return e.item;
+				})
+			: items;
+	}
 
 	onMount(() => {
 		let legacy_documents = $knowledge.filter((item) => item?.meta?.document);
@@ -50,6 +64,10 @@
 				...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
 			};
 		});
+
+		fuse = new Fuse(items, {
+			keys: ['name', 'description']
+		});
 	});
 </script>
 
@@ -57,6 +75,7 @@
 	on:change={(e) => {
 		if (e.detail === false) {
 			onClose();
+			query = '';
 		}
 	}}
 >
@@ -70,13 +89,39 @@
 			align="start"
 			transition={flyAndScale}
 		>
-			<div class="max-h-[10rem] overflow-y-scroll">
-				{#if items.length === 0}
+			<div class=" flex w-full space-x-2 py-0.5 px-2">
+				<div class="flex flex-1">
+					<div class=" self-center ml-1 mr-3">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</div>
+					<input
+						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
+						bind:value={query}
+						placeholder={$i18n.t('Search Knowledge')}
+					/>
+				</div>
+			</div>
+
+			<hr class=" border-gray-50 dark:border-gray-700 my-1.5" />
+
+			<div class="max-h-48 overflow-y-scroll">
+				{#if filteredItems.length === 0}
 					<div class="text-center text-sm text-gray-500 dark:text-gray-400">
 						{$i18n.t('No knowledge found')}
 					</div>
 				{:else}
-					{#each items as item}
+					{#each filteredItems as item}
 						<DropdownMenu.Item
 							class="flex gap-2.5 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 							on:click={() => {
