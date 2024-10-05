@@ -48,12 +48,11 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
         filename = f"{id}_{filename}"
         file_path = os.path.join(UPLOAD_DIR, filename)
 
-        # Save the file
-        with open(file_path, "wb") as f:
-            shutil.copyfileobj(file.file, f)
+        with file.file as source_file:  
+            contents = source_file.read()
 
-        # Close the file to release resources
-        file.file.close()
+        with open(file_path, "wb") as f:
+            f.write(contents)
 
         # Insert file record into the database
         file_record = Files.insert_new_file(
@@ -98,7 +97,9 @@ def save_file(file: UploadFile, directory: str) -> dict:
         filename = os.path.basename(file.filename)
         file_path = os.path.join(directory, filename)
 
-        contents = file.file.read()
+        with file.file as source_file:  
+            contents = source_file.read()
+
         with open(file_path, "wb") as f:
             f.write(contents)
 
