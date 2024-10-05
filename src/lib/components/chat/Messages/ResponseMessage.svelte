@@ -478,6 +478,7 @@
 									<ContentRenderer
 										id={message.id}
 										content={message.content}
+										save={true}
 										{model}
 										on:update={(e) => {
 											const { oldContent, newContent } = e.detail;

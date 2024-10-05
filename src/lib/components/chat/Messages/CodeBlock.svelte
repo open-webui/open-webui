@@ -17,6 +17,7 @@
 	const dispatch = createEventDispatcher();
 
 	export let id = '';
+	export let save = false;
 
 	export let token;
 	export let lang = '';
@@ -316,9 +317,11 @@ __builtins__.input = input`);
 					{/if}
 				{/if}
 
-				<button class="copy-code-button bg-none border-none p-1" on:click={saveCode}>
-					{saved ? $i18n.t('Saved') : $i18n.t('Save')}
-				</button>
+				{#if save}
+					<button class="copy-code-button bg-none border-none p-1" on:click={saveCode}>
+						{saved ? $i18n.t('Saved') : $i18n.t('Save')}
+					</button>
+				{/if}
 
 				<button class="copy-code-button bg-none border-none p-1" on:click={copyCode}
 					>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button

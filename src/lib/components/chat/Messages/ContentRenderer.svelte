@@ -9,6 +9,7 @@
 	export let content;
 	export let model = null;
 
+	export let save = false;
 	export let floatingButtons = true;
 
 	let contentContainerElement;
@@ -60,6 +61,7 @@
 		{id}
 		{content}
 		{model}
+		{save}
 		on:update={(e) => {
 			dispatch('update', e.detail);
 		}}
