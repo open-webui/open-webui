@@ -93,7 +93,7 @@
 			url: '',
 			name: file.name,
 			collection_name: '',
-			status: '',
+			status: 'uploading',
 			size: file.size,
 			error: ''
 		};
@@ -121,7 +121,7 @@
 			const uploadedFile = await uploadFile(localStorage.token, file);
 
 			if (uploadedFile) {
-				fileItem.status = 'processed';
+				fileItem.status = 'uploaded';
 				fileItem.file = uploadedFile;
 				fileItem.id = uploadedFile.id;
 				fileItem.collection_name = uploadedFile?.meta?.collection_name;
@@ -433,7 +433,7 @@
 												name={file.name}
 												type={file.type}
 												size={file?.size}
-												status={file.status}
+												loading={file.status === 'uploading'}
 												dismissible={true}
 												edit={true}
 												on:dismiss={() => {

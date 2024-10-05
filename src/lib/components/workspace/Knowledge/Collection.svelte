@@ -101,6 +101,19 @@
 	const uploadFileHandler = async (file) => {
 		console.log(file);
 
+		const fileItem = {
+			type: 'file',
+			file: '',
+			id: null,
+			url: '',
+			name: file.name,
+			size: file.size,
+			status: 'uploading',
+			error: ''
+		};
+
+		knowledge.files = [...(knowledge.files ?? []), fileItem];
+
 		// Check if the file is an audio file and transcribe/convert it to text file
 		if (['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'].includes(file['type'])) {
 			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
@@ -403,6 +416,7 @@
 
 	const onDrop = async (e) => {
 		e.preventDefault();
+		dragged = false;
 
 		if (e.dataTransfer?.files) {
 			const inputFiles = e.dataTransfer?.files;
@@ -415,8 +429,6 @@
 				toast.error($i18n.t(`File not found.`));
 			}
 		}
-
-		dragged = false;
 	};
 
 	onMount(async () => {
