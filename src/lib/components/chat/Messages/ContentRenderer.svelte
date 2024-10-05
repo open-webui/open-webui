@@ -27,12 +27,15 @@
 				// Adjust based on parent rect
 				const top = rect.bottom - parentRect.top;
 				const left = rect.left - parentRect.left;
-
-				buttonsContainerElement.style.display = 'block';
-				buttonsContainerElement.style.left = `${left}px`;
-				buttonsContainerElement.style.top = `${top + 5}px`; // +5 to add some spacing
+				if (buttonsContainerElement) {
+					buttonsContainerElement.style.display = 'block';
+					buttonsContainerElement.style.left = `${left}px`;
+					buttonsContainerElement.style.top = `${top + 5}px`; // +5 to add some spacing
+				}
 			} else {
-				buttonsContainerElement.style.display = 'none';
+				if (buttonsContainerElement) {
+					buttonsContainerElement.style.display = 'none';
+				}
 			}
 		}, 0);
 	};
