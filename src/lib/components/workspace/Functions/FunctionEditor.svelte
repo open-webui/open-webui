@@ -1,5 +1,5 @@
 <script>
-	import { getContext, createEventDispatcher, onMount } from 'svelte';
+	import { getContext, createEventDispatcher, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 
 	const dispatch = createEventDispatcher();
@@ -263,10 +263,14 @@ class Pipe:
 
 	const submitHandler = async () => {
 		if (codeEditor) {
+			content = _content;
+			await tick();
+
 			const res = await codeEditor.formatPythonCodeHandler();
 
 			if (res) {
 				console.log('Code formatted successfully');
+
 				saveHandler();
 			}
 		}
@@ -352,8 +356,7 @@ class Pipe:
 						on:change={(e) => {
 							_content = e.detail.value;
 						}}
-						on:save={() => {
-							content = _content;
+						on:save={async () => {
 							if (formElement) {
 								formElement.requestSubmit();
 							}

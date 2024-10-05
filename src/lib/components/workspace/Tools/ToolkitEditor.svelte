@@ -151,10 +151,14 @@ class Tools:
 
 	const submitHandler = async () => {
 		if (codeEditor) {
+			content = _content;
+			await tick();
+
 			const res = await codeEditor.formatPythonCodeHandler();
 
 			if (res) {
 				console.log('Code formatted successfully');
+
 				saveHandler();
 			}
 		}
@@ -241,7 +245,6 @@ class Tools:
 							_content = e.detail.value;
 						}}
 						on:save={() => {
-							content = _content;
 							if (formElement) {
 								formElement.requestSubmit();
 							}
