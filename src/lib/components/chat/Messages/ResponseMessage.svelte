@@ -479,6 +479,15 @@
 										id={message.id}
 										content={message.content}
 										{model}
+										on:update={(e) => {
+											const { oldContent, newContent } = e.detail;
+
+											history.messages[message.id].content = history.messages[
+												message.id
+											].content.replace(oldContent, newContent);
+
+											dispatch('update');
+										}}
 										on:explain={(e) => {
 											dispatch(
 												'submit',

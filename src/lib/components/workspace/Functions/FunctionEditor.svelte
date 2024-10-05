@@ -21,6 +21,15 @@
 		description: ''
 	};
 	export let content = '';
+	let _content = '';
+
+	$: if (content) {
+		updateContent();
+	}
+
+	const updateContent = () => {
+		_content = content;
+	};
 
 	$: if (name && !edit && !clone) {
 		id = name.replace(/\s+/g, '_').toLowerCase();
@@ -336,10 +345,14 @@ class Pipe:
 
 				<div class="mb-2 flex-1 overflow-auto h-0 rounded-lg">
 					<CodeEditor
-						bind:value={content}
 						bind:this={codeEditor}
+						value={content}
 						{boilerplate}
+						on:change={(e) => {
+							_content = e.detail.value;
+						}}
 						on:save={() => {
+							content = _content;
 							if (formElement) {
 								formElement.requestSubmit();
 							}
