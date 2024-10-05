@@ -4,12 +4,13 @@ import shutil
 import uuid
 from pathlib import Path
 from typing import Optional
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import FileResponse
 
 from open_webui.apps.webui.models.files import Files, FileForm, FileModel
-from open_webui.config import UPLOAD_DIR, MODEL_IMAGES_DIR, BACKGROUND_IMAGES_DIR, USER_IMAGES_DIR
+from open_webui.config import UPLOAD_DIR, MODEL_IMAGES_DIR, BACKGROUND_IMAGES_DIR, USER_IMAGES_DIR, RAG_FILE_MAX_SIZE, AppConfig
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.utils.utils import get_verified_user, get_admin_user
@@ -18,32 +19,47 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
+config = AppConfig()
+config.FILE_MAX_SIZE = RAG_FILE_MAX_SIZE
 
 
 ############################
 # Upload File
 ############################
 
-
 @router.post("/")
 def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
     log.info(f"file.content_type: {file.content_type}")
     try:
+        # Check file size without reading into memory
+        file_size = os.fstat(file.file.fileno()).st_size
+        if file_size > config.FILE_MAX_SIZE * 1024 * 1024:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=ERROR_MESSAGES.DEFAULT("Uploaded file is too large."),
+            )
+
         unsanitized_filename = file.filename
         filename = os.path.basename(unsanitized_filename)
 
-        # replace filename with uuid
+        # Further sanitize the filename
+        filename = re.sub(r'[^a-zA-Z0-9_.-]', '_', filename)
+
+        # Replace filename with UUID
         id = str(uuid.uuid4())
         name = filename
         filename = f"{id}_{filename}"
-        file_path = f"{UPLOAD_DIR}/{filename}"
+        file_path = os.path.join(UPLOAD_DIR, filename)
 
-        contents = file.file.read()
+        # Save the file
         with open(file_path, "wb") as f:
-            f.write(contents)
-            f.close()
+            shutil.copyfileobj(file.file, f)
 
-        file = Files.insert_new_file(
+        # Close the file to release resources
+        file.file.close()
+
+        # Insert file record into the database
+        file_record = Files.insert_new_file(
             user.id,
             FileForm(
                 **{
@@ -52,26 +68,29 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
                     "meta": {
                         "name": name,
                         "content_type": file.content_type,
-                        "size": len(contents),
+                        "size": file_size,
                         "path": file_path,
                     },
                 }
             ),
         )
 
-        if file:
-            return file
+        if file_record:
+            return file_record
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("Error uploading file"),
+                detail=ERROR_MESSAGES.DEFAULT("Error uploading file."),
             )
 
+    except HTTPException as http_exc:
+        log.error(f"HTTP error during file upload: {http_exc.detail}")
+        raise http_exc
     except Exception as e:
-        log.exception(e)
+        log.exception(f"Unexpected error during file upload for user {user.id}: {e}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT("An unexpected error occurred."),
         )
 
 

@@ -173,7 +173,8 @@ type Config = {
 	model_status: string;
 	lobeChat_url: string;
 	midjourney_url: string;
-	turnstile_check: boolean;
+	turnstile_login_check: boolean;
+	turnstile_signup_check: boolean;
 	turnstile_site_key: string;
 	random_image_url: string;
 	default_locale: string;

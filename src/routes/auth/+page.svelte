@@ -39,7 +39,7 @@
 	};
 
 	const signInHandler = async () => {
-		if ($config?.turnstile_check && !turnstileVerify) {
+		if ($config?.turnstile_login_check && !turnstileVerify) {
 			toast.error('Please complete the CAPTCHA verification to proceed!');
 		}
 		const sessionUser = await userSignIn(email, password, turnstileToken).catch((error) => {
@@ -52,7 +52,7 @@
 	};
 
 	const signUpHandler = async () => {
-		if ($config?.turnstile_check && !turnstileVerify) {
+		if ($config?.turnstile_signup_check && !turnstileVerify) {
 			toast.error('Please complete the CAPTCHA verification to proceed!');
 		}
 		const sessionUser = await userSignUp(name, email, password, '/user.png', turnstileToken).catch(
@@ -217,7 +217,11 @@
 									/>
 								</div>
 
-								<div class={$config?.turnstile_check ? 'mb-8' : ''}>
+								<div
+									class={$config?.turnstile_login_check || $config?.turnstile_signup_check
+										? 'mb-8'
+										: ''}
+								>
 									<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Password')}</div>
 
 									<input
@@ -230,7 +234,7 @@
 									/>
 								</div>
 
-								{#if $config?.turnstile_check}
+								{#if (mode === 'signup' && $config?.turnstile_signup_check) || (mode === 'signin' && $config?.turnstile_login_check)}
 									<Turnstile
 										bind:reset
 										siteKey={$config?.turnstile_site_key}

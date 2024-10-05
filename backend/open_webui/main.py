@@ -73,7 +73,7 @@ from open_webui.config import (
     WEBHOOK_URL,
     WEBUI_AUTH,
     AppConfig,
-    run_migrations, BACKGROUND_RANDOM_IMAGE_URL, MODEL_STATUS, LOBECHAT_URL, MIDJOURNEY_URL, TURNSTILE_CHECK,
+    run_migrations, BACKGROUND_RANDOM_IMAGE_URL, MODEL_STATUS, LOBECHAT_URL, MIDJOURNEY_URL, TURNSTILE_SIGNUP_CHECK, TURNSTILE_LOGIN_CHECK,
     TURNSTILE_SITE_KEY
 )
 from open_webui.constants import ERROR_MESSAGES, TASKS, WEBHOOK_MESSAGES
@@ -2069,7 +2069,8 @@ async def get_app_config(request: Request):
         "lobeChat_url": LOBECHAT_URL,
         "midjourney_url": MIDJOURNEY_URL,
         "random_image_url": app.state.config.BACKGROUND_RANDOM_IMAGE_URL,
-        "turnstile_check": TURNSTILE_CHECK,
+        "turnstile_login_check": TURNSTILE_LOGIN_CHECK,
+        "turnstile_signup_check": TURNSTILE_SIGNUP_CHECK,
         "turnstile_site_key": TURNSTILE_SITE_KEY,
         "version": VERSION,
         "default_locale": str(DEFAULT_LOCALE),

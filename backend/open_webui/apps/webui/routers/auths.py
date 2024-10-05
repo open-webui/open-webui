@@ -18,7 +18,7 @@ from open_webui.apps.webui.models.auths import (
     UserResponse,
 )
 from open_webui.apps.webui.models.users import Users
-from open_webui.config import WEBUI_AUTH, REGISTERED_EMAIL_SUFFIX, TURNSTILE_CHECK, TURNSTILE_SECRET_KEY, \
+from open_webui.config import WEBUI_AUTH, REGISTERED_EMAIL_SUFFIX, TURNSTILE_SIGNUP_CHECK, TURNSTILE_LOGIN_CHECK, TURNSTILE_SECRET_KEY, \
     ENABLE_WECHAT_NOTICE
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import WEBUI_AUTH_TRUSTED_EMAIL_HEADER, WEBUI_AUTH_TRUSTED_NAME_HEADER
@@ -155,7 +155,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
             user = Auths.authenticate_user(admin_email.lower(), admin_password)
     else:
-        if TURNSTILE_CHECK and TURNSTILE_SECRET_KEY:
+        if TURNSTILE_LOGIN_CHECK and TURNSTILE_SECRET_KEY:
             res = await validate_token(form_data.turnstileToken, TURNSTILE_SECRET_KEY)
             if not res.get("success", False):
                 raise HTTPException(
@@ -209,7 +209,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
             )
 
-    if TURNSTILE_CHECK and TURNSTILE_SECRET_KEY:
+    if TURNSTILE_SIGNUP_CHECK and TURNSTILE_SECRET_KEY:
         res = await validate_token(form_data.turnstileToken, TURNSTILE_SECRET_KEY)
         if not res.get("success", False):
             raise HTTPException(
