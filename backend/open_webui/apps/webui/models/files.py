@@ -112,7 +112,10 @@ class FilesTable:
         with get_db() as db:
             return [
                 FileModel.model_validate(file)
-                for file in db.query(File).filter(File.id.in_(ids)).all()
+                for file in db.query(File)
+                .filter(File.id.in_(ids))
+                .order_by(File.updated_at.desc())
+                .all()
             ]
 
     def get_files_by_user_id(self, user_id: str) -> list[FileModel]:
