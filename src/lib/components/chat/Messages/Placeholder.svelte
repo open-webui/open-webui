@@ -114,7 +114,7 @@
 					placement="top"
 				>
 					<div class="flex flex-shrink-0 justify-center">
-						<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 200 }}>
+						<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
 							{#each models as model, modelIdx}
 								<button
 									on:click={() => {
@@ -136,7 +136,7 @@
 						</div>
 					</div>
 
-					<div class=" capitalize line-clamp-1 text-3xl md:text-4xl" in:fade={{ duration: 200 }}>
+					<div class=" capitalize line-clamp-1 text-3xl md:text-4xl" in:fade={{ duration: 100 }}>
 						{#if models[selectedModelIdx]?.info}
 							{models[selectedModelIdx]?.info?.name}
 						{:else}
@@ -146,7 +146,7 @@
 				</Tooltip>
 
 				<div class="flex mt-0.5 mb-2">
-					<div in:fade={{ duration: 200, delay: 200 }}>
+					<div in:fade={{ duration: 100, delay: 50 }}>
 						{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
 							<div
 								class="mt-0.5 text-sm font-normal text-gray-500 dark:text-gray-400 line-clamp-3 markdown"
@@ -197,7 +197,7 @@
 				</div>
 			</div>
 		</div>
-		<div class="mx-auto max-w-2xl font-primary" in:fade={{ duration: 200, delay: 300 }}>
+		<div class="mx-auto max-w-2xl font-primary" in:fade={{ duration: 200, delay: 200 }}>
 			<div class="mx-4">
 				<Suggestions
 					suggestionPrompts={models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
