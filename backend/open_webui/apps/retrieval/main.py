@@ -733,14 +733,9 @@ def process_file(
         file = Files.get_file_by_id(form_data.file_id)
 
         collection_name = form_data.collection_name
+
         if collection_name is None:
             collection_name = f"file-{file.id}"
-
-        loader = Loader(
-            engine=app.state.config.CONTENT_EXTRACTION_ENGINE,
-            TIKA_SERVER_URL=app.state.config.TIKA_SERVER_URL,
-            PDF_EXTRACT_IMAGES=app.state.config.PDF_EXTRACT_IMAGES,
-        )
 
         if form_data.content:
             docs = [
@@ -755,21 +750,41 @@ def process_file(
             ]
 
             text_content = form_data.content
-        elif file.data.get("content", None):
-            docs = [
-                Document(
-                    page_content=file.data.get("content", ""),
-                    metadata={
-                        "name": file.meta.get("name", file.filename),
-                        "created_by": file.user_id,
-                        **file.meta,
-                    },
-                )
-            ]
+        elif form_data.collection_name:
+            result = VECTOR_DB_CLIENT.query(
+                collection_name=f"file-{file.id}", filter={"file_id": file.id}
+            )
+
+            if result:
+                docs = [
+                    Document(
+                        page_content=result.documents[0][idx],
+                        metadata=result.metadatas[0][idx],
+                    )
+                    for idx, id in enumerate(result.ids[0])
+                ]
+            else:
+                docs = [
+                    Document(
+                        page_content=file.data.get("content", ""),
+                        metadata={
+                            "name": file.meta.get("name", file.filename),
+                            "created_by": file.user_id,
+                            **file.meta,
+                        },
+                    )
+                ]
+
             text_content = file.data.get("content", "")
         else:
             file_path = file.meta.get("path", None)
             if file_path:
+                loader = Loader(
+                    engine=app.state.config.CONTENT_EXTRACTION_ENGINE,
+                    TIKA_SERVER_URL=app.state.config.TIKA_SERVER_URL,
+                    PDF_EXTRACT_IMAGES=app.state.config.PDF_EXTRACT_IMAGES,
+                )
+
                 docs = loader.load(
                     file.filename, file.meta.get("content_type"), file_path
                 )

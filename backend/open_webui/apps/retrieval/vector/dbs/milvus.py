@@ -135,10 +135,8 @@ class MilvusClient:
 
         return self._result_to_search_result(result)
 
-    def query(
-        self, collection_name: str, filter: dict, limit: int = 1
-    ) -> Optional[GetResult]:
-        # Query the items from the collection based on the filter.
+    def query(self, collection_name: str, filter: dict, limit: Optional[int] = None):
+        # Construct the filter string for querying
         filter_string = " && ".join(
             [
                 f"JSON_CONTAINS(metadata[{key}], '{[value] if isinstance(value, str) else value}')"
@@ -146,13 +144,45 @@ class MilvusClient:
             ]
         )
 
-        result = self.client.query(
-            collection_name=f"{self.collection_prefix}_{collection_name}",
-            filter=filter_string,
-            limit=limit,
-        )
+        max_limit = 16383  # The maximum number of records per request
+        all_results = []
 
-        return self._result_to_get_result([result])
+        if limit is None:
+            limit = float("inf")  # Use infinity as a placeholder for no limit
+
+        # Initialize offset and remaining to handle pagination
+        offset = 0
+        remaining = limit
+
+        # Loop until there are no more items to fetch or the desired limit is reached
+        while remaining > 0:
+            current_fetch = min(
+                max_limit, remaining
+            )  # Determine how many items to fetch in this iteration
+
+            results = self.client.query(
+                collection_name=f"{self.collection_prefix}_{collection_name}",
+                filter=filter_string,
+                output_fields=["*"],
+                limit=current_fetch,
+                offset=offset,
+            )
+
+            if not results:
+                break
+
+            all_results.extend(results)
+            results_count = len(results)
+            remaining -= (
+                results_count  # Decrease remaining by the number of items fetched
+            )
+            offset += results_count
+
+            # Break the loop if the results returned are less than the requested fetch count
+            if results_count < current_fetch:
+                break
+
+        return self._result_to_get_result(all_results)
 
     def get(self, collection_name: str) -> Optional[GetResult]:
         # Get all the items in the collection.
