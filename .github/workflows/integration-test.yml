@@ -54,8 +54,8 @@ jobs:
         uses: cypress-io/github-action@v6
         with:
           browser: chrome
-          wait-on: 'http://localhost:3000'
-          config: baseUrl=http://localhost:3000
+          wait-on: 'http://[::1]:3000'
+          config: baseUrl=http://[::1]:3000
 
       - uses: actions/upload-artifact@v4
         if: always()
