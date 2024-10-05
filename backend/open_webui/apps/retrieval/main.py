@@ -738,12 +738,18 @@ def process_file(
             collection_name = f"file-{file.id}"
 
         if form_data.content:
+            VECTOR_DB_CLIENT.delete(
+                collection_name=f"file-{file.id}",
+                filter={"file_id": file.id},
+            )
+
             docs = [
                 Document(
                     page_content=form_data.content,
                     metadata={
                         "name": file.meta.get("name", file.filename),
                         "created_by": file.user_id,
+                        "file_id": file.id,
                         **file.meta,
                     },
                 )
@@ -755,7 +761,7 @@ def process_file(
                 collection_name=f"file-{file.id}", filter={"file_id": file.id}
             )
 
-            if result:
+            if len(result.ids[0]) > 0:
                 docs = [
                     Document(
                         page_content=result.documents[0][idx],
@@ -770,6 +776,7 @@ def process_file(
                         metadata={
                             "name": file.meta.get("name", file.filename),
                             "created_by": file.user_id,
+                            "file_id": file.id,
                             **file.meta,
                         },
                     )
@@ -795,6 +802,7 @@ def process_file(
                         metadata={
                             "name": file.filename,
                             "created_by": file.user_id,
+                            "file_id": file.id,
                             **file.meta,
                         },
                     )
