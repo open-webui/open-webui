@@ -738,6 +738,9 @@ def process_file(
             collection_name = f"file-{file.id}"
 
         if form_data.content:
+            # Update the content in the file
+            # Usage: /files/{file_id}/data/content/update
+
             VECTOR_DB_CLIENT.delete(
                 collection_name=f"file-{file.id}",
                 filter={"file_id": file.id},
@@ -757,6 +760,9 @@ def process_file(
 
             text_content = form_data.content
         elif form_data.collection_name:
+            # Check if the file has already been processed and save the content
+            # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
+
             result = VECTOR_DB_CLIENT.query(
                 collection_name=f"file-{file.id}", filter={"file_id": file.id}
             )
@@ -784,6 +790,9 @@ def process_file(
 
             text_content = file.data.get("content", "")
         else:
+            # Process the file and save the content
+            # Usage: /files/
+
             file_path = file.meta.get("path", None)
             if file_path:
                 loader = Loader(
