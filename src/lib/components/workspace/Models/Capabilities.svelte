@@ -10,12 +10,14 @@
 		vision: $i18n.t('Model accepts image inputs'),
 		usage: $i18n.t(
 			'Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.'
-		)
+		),
+		base64: $i18n.t('Accepts base64 encoded File objects')
 	};
 
 	export let capabilities: {
 		vision?: boolean;
 		usage?: boolean;
+		base64?: boolean;
 	} = {};
 </script>
 

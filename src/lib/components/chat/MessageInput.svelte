@@ -73,8 +73,14 @@
 	export let messages = [];
 
 	let visionCapableModels = [];
+	let notBase64CapableModels = [];
+
 	$: visionCapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
 		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
+	);
+
+	$: notBase64CapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
+		(model) => !($models.find((m) => m.id === model)?.info?.meta?.capabilities?.base64 ?? false)
 	);
 
 	$: if (prompt) {
@@ -286,7 +292,9 @@
 			if (isImage) {
 				await uploadImageHandler(file);
 			} else {
-				await uploadFileHandler(file, dataURL, $settings?.enableFileUpdateBase64 ?? false);
+				const shouldUpdateBase64 = $settings?.enableFileUpdateBase64 ?? false;
+				const modelsUpdateBase64 = shouldUpdateBase64 && notBase64CapableModels.length === 0;
+				await uploadFileHandler(file, dataURL, modelsUpdateBase64);
 			}
 		} catch (error) {
 			console.error('Error reading file:', error);
