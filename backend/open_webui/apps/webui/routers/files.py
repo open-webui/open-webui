@@ -92,6 +92,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
 
 @router.post("/upload/dir")
 def upload_dir(user=Depends(get_admin_user)):
+    file_ids = []
     for path in Path(DOCS_DIR).rglob("./**/*"):
         if path.is_file() and not path.name.startswith("."):
             try:
@@ -126,13 +127,14 @@ def upload_dir(user=Depends(get_admin_user)):
                 try:
                     process_file(ProcessFileForm(file_id=id))
                     log.debug(f"File processed: {path}, {file.id}")
+                    file_ids.append(file.id)
                 except Exception as e:
                     log.exception(e)
                     log.error(f"Error processing file: {file.id}")
             except Exception as e:
                 log.exception(e)
                 pass
-    return True
+    return file_ids
 
 
 ############################
