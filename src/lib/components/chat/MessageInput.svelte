@@ -12,21 +12,14 @@
 		config,
 		showCallOverlay,
 		tools,
-		user as _user
+		user as _user,
+		showControls
 	} from '$lib/stores';
 	import { blobToFile, findWordIndices } from '$lib/utils';
-
 	import { transcribeAudio } from '$lib/apis/audio';
-
-	import { processFile } from '$lib/apis/retrieval';
 	import { uploadFile } from '$lib/apis/files';
 
-	import {
-		SUPPORTED_FILE_TYPE,
-		SUPPORTED_FILE_EXTENSIONS,
-		WEBUI_BASE_URL,
-		WEBUI_API_BASE_URL
-	} from '$lib/constants';
+	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import Tooltip from '../common/Tooltip.svelte';
 	import InputMenu from './MessageInput/InputMenu.svelte';
@@ -41,7 +34,6 @@
 
 	export let transparentBackground = false;
 
-	export let submitPrompt: Function;
 	export let createMessagePair: Function;
 	export let stopResponse: Function;
 
@@ -49,6 +41,14 @@
 
 	export let atSelectedModel: Model | undefined;
 	export let selectedModels: [''];
+
+	export let history;
+
+	export let prompt = '';
+	export let files = [];
+	export let availableToolIds = [];
+	export let selectedToolIds = [];
+	export let webSearchEnabled = false;
 
 	let recording = false;
 
@@ -61,15 +61,7 @@
 	let dragged = false;
 
 	let user = null;
-	let chatInputPlaceholder = '';
-
-	export let history;
-
-	export let prompt = '';
-	export let files = [];
-	export let availableToolIds = [];
-	export let selectedToolIds = [];
-	export let webSearchEnabled = false;
+	export let placeholder = '';
 
 	let visionCapableModels = [];
 	$: visionCapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
@@ -241,7 +233,7 @@
 
 <div class="w-full font-primary">
 	<div class=" -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
-		<div class="flex flex-col max-w-6xl px-2.5 md:px-6 w-full">
+		<div class="flex flex-col max-w-6xl w-full">
 			<div class="relative">
 				{#if autoScroll === false && history?.currentId}
 					<div
@@ -324,7 +316,7 @@
 
 	<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-gray-900'} ">
 		<div class="max-w-6xl px-2.5 md:px-6 mx-auto inset-x-0 pb-safe-bottom">
-			<div class=" pb-2">
+			<div class="">
 				<input
 					bind:this={filesInputElement}
 					bind:files={inputFiles}
@@ -362,7 +354,7 @@
 							document.getElementById('chat-textarea')?.focus();
 
 							if ($settings?.speechAutoSend ?? false) {
-								submitPrompt(prompt);
+								dispatch('submit', prompt);
 							}
 						}}
 					/>
@@ -371,7 +363,7 @@
 						class="w-full flex gap-1.5"
 						on:submit|preventDefault={() => {
 							// check if selectedModels support image input
-							submitPrompt(prompt);
+							dispatch('submit', prompt);
 						}}
 					>
 						<div
@@ -503,9 +495,7 @@
 									id="chat-textarea"
 									bind:this={chatTextAreaElement}
 									class="scrollbar-hidden bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-3 px-1 rounded-xl resize-none h-[48px]"
-									placeholder={chatInputPlaceholder !== ''
-										? chatInputPlaceholder
-										: $i18n.t('Send a Message')}
+									placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 									bind:value={prompt}
 									on:keypress={(e) => {
 										if (
@@ -523,7 +513,7 @@
 
 											// Submit the prompt when Enter key is pressed
 											if (prompt !== '' && e.key === 'Enter' && !e.shiftKey) {
-												submitPrompt(prompt);
+												dispatch('submit', prompt);
 											}
 										}
 									}}
@@ -760,7 +750,7 @@
 														stream = null;
 
 														showCallOverlay.set(true);
-														dispatch('call');
+														showControls.set(true);
 													} catch (err) {
 														// If the user denies the permission or an error occurs, show an error message
 														toast.error($i18n.t('Permission denied when accessing media devices'));
@@ -825,10 +815,6 @@
 						</div>
 					</form>
 				{/if}
-
-				<div class="mt-1.5 text-xs text-gray-500 text-center line-clamp-1">
-					{$i18n.t('LLMs can make mistakes. Verify important information.')}
-				</div>
 			</div>
 		</div>
 	</div>
