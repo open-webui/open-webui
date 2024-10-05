@@ -347,6 +347,7 @@ class Pipe:
 					<CodeEditor
 						bind:this={codeEditor}
 						value={content}
+						lang="python"
 						{boilerplate}
 						on:change={(e) => {
 							_content = e.detail.value;
