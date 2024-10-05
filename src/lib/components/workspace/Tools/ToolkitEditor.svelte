@@ -236,6 +236,7 @@ class Tools:
 						bind:this={codeEditor}
 						value={content}
 						{boilerplate}
+						lang="python"
 						on:change={(e) => {
 							_content = e.detail.value;
 						}}
