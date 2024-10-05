@@ -310,43 +310,7 @@
 
 <div class="h-full flex">
 	{#if Object.keys(history?.messages ?? {}).length == 0}
-		<Placeholder
-			modelIds={selectedModels}
-			submitPrompt={async (p) => {
-				let text = p;
-
-				if (p.includes('{{CLIPBOARD}}')) {
-					const clipboardText = await navigator.clipboard.readText().catch((err) => {
-						toast.error($i18n.t('Failed to read clipboard contents'));
-						return '{{CLIPBOARD}}';
-					});
-
-					text = p.replaceAll('{{CLIPBOARD}}', clipboardText);
-				}
-
-				prompt = text;
-
-				await tick();
-
-				const chatInputElement = document.getElementById('chat-textarea');
-				if (chatInputElement) {
-					prompt = p;
-
-					chatInputElement.style.height = '';
-					chatInputElement.style.height = Math.min(chatInputElement.scrollHeight, 200) + 'px';
-					chatInputElement.focus();
-
-					const words = findWordIndices(prompt);
-
-					if (words.length > 0) {
-						const word = words.at(0);
-						chatInputElement.setSelectionRange(word?.startIndex, word.endIndex + 1);
-					}
-				}
-
-				await tick();
-			}}
-		/>
+		<Placeholder {selectedModels} bind:prompt />
 	{:else}
 		<div class="w-full pt-2">
 			{#key chatId}
