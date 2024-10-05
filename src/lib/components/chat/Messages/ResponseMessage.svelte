@@ -491,13 +491,14 @@
 											dispatch('update');
 										}}
 										on:explain={(e) => {
-											dispatch(
-												'submit',
-												`Can you explain this section to me in more detail?\n\n` +
+											dispatch('submit', {
+												parentId: message.id,
+												prompt:
+													`Can you explain this section to me in more detail?\n\n` +
 													'```\n' +
 													e.detail +
 													'\n```'
-											);
+											});
 										}}
 									/>
 								{/if}
