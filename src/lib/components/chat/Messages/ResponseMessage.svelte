@@ -478,6 +478,7 @@
 									<ContentRenderer
 										id={message.id}
 										content={message.content}
+										floatingButtons={message?.done}
 										save={true}
 										{model}
 										on:update={(e) => {
