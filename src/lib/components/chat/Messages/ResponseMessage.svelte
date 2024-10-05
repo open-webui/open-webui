@@ -482,7 +482,10 @@
 										on:explain={(e) => {
 											dispatch(
 												'submit',
-												`Can you explain this section to me in more detail?\n\n${e.detail}`
+												`Can you explain this section to me in more detail?\n\n` +
+													'```\n' +
+													e.detail +
+													'\n```'
 											);
 										}}
 									/>
