@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
 	import { chats, config, settings, user as _user, mobile, currentChatPage } from '$lib/stores';
-	import { tick, getContext, onMount } from 'svelte';
+	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
+	const dispatch = createEventDispatcher();
 
 	import { toast } from 'svelte-sonner';
 	import { getChatList, updateChatById } from '$lib/apis/chats';
@@ -382,6 +383,9 @@
 							{continueResponse}
 							{mergeResponses}
 							{readOnly}
+							on:submit={async (e) => {
+								dispatch('submit', e.detail);
+							}}
 							on:action={async (e) => {
 								if (typeof e.detail === 'string') {
 									await chatActionHandler(chatId, e.detail, message.model, message.id);

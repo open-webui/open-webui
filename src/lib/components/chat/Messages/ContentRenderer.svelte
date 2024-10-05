@@ -1,0 +1,79 @@
+<script>
+	import { onDestroy, onMount, tick, createEventDispatcher } from 'svelte';
+	const dispatch = createEventDispatcher();
+
+	import Markdown from './Markdown.svelte';
+	import LightBlub from '$lib/components/icons/LightBlub.svelte';
+
+	export let id;
+	export let content;
+	export let model = null;
+
+	export let floatingButtons = true;
+
+	let contentContainerElement;
+	let buttonsContainerElement;
+
+	const updateButtonPosition = () => {
+		setTimeout(async () => {
+			await tick();
+			let selection = window.getSelection();
+
+			if (selection.toString().trim().length > 0) {
+				const range = selection.getRangeAt(0);
+				const rect = range.getBoundingClientRect();
+				const parentRect = contentContainerElement.getBoundingClientRect();
+
+				// Adjust based on parent rect
+				const top = rect.bottom - parentRect.top;
+				const left = rect.left - parentRect.left;
+
+				buttonsContainerElement.style.display = 'block';
+				buttonsContainerElement.style.left = `${left}px`;
+				buttonsContainerElement.style.top = `${top + 5}px`; // +5 to add some spacing
+			} else {
+				buttonsContainerElement.style.display = 'none';
+			}
+		}, 0);
+	};
+
+	onMount(() => {
+		if (floatingButtons) {
+			contentContainerElement?.addEventListener('mouseup', updateButtonPosition);
+		}
+	});
+
+	onDestroy(() => {
+		if (floatingButtons) {
+			contentContainerElement?.removeEventListener('mouseup', updateButtonPosition);
+		}
+	});
+</script>
+
+<div bind:this={contentContainerElement}>
+	<Markdown {id} {content} {model} />
+</div>
+
+{#if floatingButtons}
+	<div
+		bind:this={buttonsContainerElement}
+		class="absolute rounded-lg mt-1 p-1 bg-white dark:bg-gray-850 text-xs text-medium shadow-lg"
+		style="display: none"
+	>
+		<button
+			class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded flex items-center gap-0.5"
+			on:click={() => {
+				const selection = window.getSelection();
+				dispatch('explain', selection.toString());
+
+				// Clear selection
+				selection.removeAllRanges();
+				buttonsContainerElement.style.display = 'none';
+			}}
+		>
+			<LightBlub className="size-3" />
+
+			<div>Explain</div>
+		</button>
+	</div>
+{/if}

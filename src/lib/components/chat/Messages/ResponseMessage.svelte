@@ -38,6 +38,7 @@
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import ContentRenderer from './ContentRenderer.svelte';
 
 	interface MessageType {
 		id: string;
@@ -468,13 +469,23 @@
 								</div>
 							</div>
 						{:else}
-							<div class="w-full flex flex-col">
+							<div class="w-full flex flex-col relative" id="response-content-container">
 								{#if message.content === '' && !message.error}
 									<Skeleton />
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
-									<Markdown id={message.id} content={message.content} {model} />
+									<ContentRenderer
+										id={message.id}
+										content={message.content}
+										{model}
+										on:explain={(e) => {
+											dispatch(
+												'submit',
+												`Can you explain this section to me in more detail?\n\n${e.detail}`
+											);
+										}}
+									/>
 								{/if}
 
 								{#if message.error}
