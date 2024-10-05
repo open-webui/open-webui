@@ -2,17 +2,18 @@
 	import Fuse from 'fuse.js';
 	import { toast } from 'svelte-sonner';
 
-	import { onMount, getContext, onDestroy } from 'svelte';
+	import { onMount, getContext, onDestroy, tick } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { mobile, showSidebar } from '$lib/stores';
+	import { mobile, showSidebar, knowledge as _knowledge } from '$lib/stores';
 
 	import { updateFileDataContentById, uploadFile } from '$lib/apis/files';
 	import {
 		addFileToKnowledgeById,
 		getKnowledgeById,
+		getKnowledgeItems,
 		removeFileFromKnowledgeById,
 		resetKnowledgeById,
 		updateFileFromKnowledgeById,
@@ -376,6 +377,7 @@
 
 			if (res) {
 				toast.success($i18n.t('Knowledge updated successfully'));
+				_knowledge.set(await getKnowledgeItems(localStorage.token));
 			}
 		}, 1000);
 	};
