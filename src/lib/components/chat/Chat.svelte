@@ -1978,6 +1978,11 @@
 								{mergeResponses}
 								{chatActionHandler}
 								bottomPadding={files.length > 0}
+								on:submit={(e) => {
+									if (e.detail) {
+										submitPrompt(e.detail);
+									}
+								}}
 							/>
 						</div>
 					</div>
