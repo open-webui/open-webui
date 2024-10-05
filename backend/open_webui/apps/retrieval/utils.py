@@ -347,7 +347,7 @@ def get_rag_context(
 
             try:
                 context = None
-                if file["type"] == "text":
+                if file.get("type") == "text":
                     context = file["content"]
                 else:
                     if hybrid_search:
