@@ -314,6 +314,25 @@ def remove_file_from_knowledge_by_id(
 
 
 ############################
+# ResetKnowledgeById
+############################
+
+
+@router.post("/{id}/reset", response_model=Optional[KnowledgeResponse])
+async def reset_knowledge_by_id(id: str, user=Depends(get_admin_user)):
+    try:
+        VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+    except Exception as e:
+        log.debug(e)
+        pass
+
+    knowledge = Knowledges.update_knowledge_by_id(
+        id=id, form_data=KnowledgeUpdateForm(data={"file_ids": []})
+    )
+    return knowledge
+
+
+############################
 # DeleteKnowledgeById
 ############################
 
