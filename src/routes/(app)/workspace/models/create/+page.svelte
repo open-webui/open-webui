@@ -61,7 +61,8 @@
 	let params = {};
 	let capabilities = {
 		vision: true,
-		usage: undefined
+		usage: undefined,
+		base64: undefined
 	};
 
 	let toolIds = [];
@@ -82,8 +83,10 @@
 		if (baseModel) {
 			if (baseModel.owned_by === 'openai') {
 				capabilities.usage = baseModel.info?.meta?.capabilities?.usage ?? false;
+				capabilities.base64 = baseModel.info?.meta?.capabilities?.base64 ?? false;
 			} else {
 				delete capabilities.usage;
+				delete capabilities.base64;
 			}
 			capabilities = capabilities;
 		}
