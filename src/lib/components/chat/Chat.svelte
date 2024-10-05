@@ -1926,7 +1926,7 @@
 			{initNewChat}
 		/>
 
-		<PaneGroup direction="horizontal" class="w-full h-ful pt-2">
+		<PaneGroup direction="horizontal" class="w-full h-full">
 			<Pane defaultSize={50} class="h-full flex w-full relative">
 				{#if $banners.length > 0 && !history.currentId && !$chatId && selectedModels.length <= 1}
 					<div class="absolute top-3 left-0 right-0 w-full z-20">
