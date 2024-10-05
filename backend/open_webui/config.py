@@ -518,15 +518,6 @@ Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 CACHE_DIR = f"{DATA_DIR}/cache"
 Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
 
-
-####################################
-# Docs DIR
-####################################
-
-DOCS_DIR = os.getenv("DOCS_DIR", f"{DATA_DIR}/docs")
-Path(DOCS_DIR).mkdir(parents=True, exist_ok=True)
-
-
 ####################################
 # Tools DIR
 ####################################
