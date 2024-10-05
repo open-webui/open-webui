@@ -56,7 +56,14 @@
 </script>
 
 <div bind:this={contentContainerElement}>
-	<Markdown {id} {content} {model} />
+	<Markdown
+		{id}
+		{content}
+		{model}
+		on:update={(e) => {
+			dispatch('update', e.detail);
+		}}
+	/>
 </div>
 
 {#if floatingButtons}

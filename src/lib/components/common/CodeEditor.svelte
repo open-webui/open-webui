@@ -8,6 +8,8 @@
 
 	import { indentUnit } from '@codemirror/language';
 	import { python } from '@codemirror/lang-python';
+	import { javascript } from '@codemirror/lang-javascript';
+
 	import { oneDark } from '@codemirror/theme-one-dark';
 
 	import { onMount, createEventDispatcher, getContext } from 'svelte';
@@ -19,15 +21,41 @@
 
 	export let boilerplate = '';
 	export let value = '';
+	let _value = '';
+
+	$: if (value) {
+		updateValue();
+	}
+
+	const updateValue = () => {
+		_value = value;
+		if (codeEditor) {
+			codeEditor.dispatch({
+				changes: [{ from: 0, to: codeEditor.state.doc.length, insert: _value }]
+			});
+		}
+	};
+
+	export let id = '';
+	export let lang = '';
 
 	let codeEditor;
 
 	let isDarkMode = false;
 	let editorTheme = new Compartment();
 
+	const getLang = () => {
+		if (lang === 'python') {
+			return python();
+		} else if (lang === 'javascript') {
+			return javascript();
+		}
+		return python();
+	};
+
 	export const formatPythonCodeHandler = async () => {
 		if (codeEditor) {
-			const res = await formatPythonCode(value).catch((error) => {
+			const res = await formatPythonCode(_value).catch((error) => {
 				toast.error(error);
 				return null;
 			});
@@ -49,12 +77,13 @@
 	let extensions = [
 		basicSetup,
 		keymap.of([{ key: 'Tab', run: acceptCompletion }, indentWithTab]),
-		python(),
+		getLang(),
 		indentUnit.of('    '),
 		placeholder('Enter your code here...'),
 		EditorView.updateListener.of((e) => {
 			if (e.docChanged) {
-				value = e.state.doc.toString();
+				_value = e.state.doc.toString();
+				dispatch('change', { value: _value });
 			}
 		}),
 		editorTheme.of([])
@@ -66,16 +95,18 @@
 			value = boilerplate;
 		}
 
+		_value = value;
+
 		// Check if html class has dark mode
 		isDarkMode = document.documentElement.classList.contains('dark');
 
 		// python code editor, highlight python code
 		codeEditor = new EditorView({
 			state: EditorState.create({
-				doc: value,
+				doc: _value,
 				extensions: extensions
 			}),
-			parent: document.getElementById('code-textarea')
+			parent: document.getElementById(`code-textarea-${id}`)
 		});
 
 		if (isDarkMode) {
@@ -133,4 +164,4 @@
 	});
 </script>
 
-<div id="code-textarea" class="h-full w-full" />
+<div id="code-textarea-{id}" class="h-full w-full" />
