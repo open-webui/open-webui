@@ -31,8 +31,8 @@
 	import { processFile } from '$lib/apis/retrieval';
 	import AddContentMenu from './Collection/AddContentMenu.svelte';
 	import AddTextContentModal from './Collection/AddTextContentModal.svelte';
-	import Check from '$lib/components/icons/Check.svelte';
-	import FloppyDisk from '$lib/components/icons/FloppyDisk.svelte';
+
+	import SyncConfirmDialog from '../../common/ConfirmDialog.svelte';
 
 	let largeScreen = true;
 
@@ -51,6 +51,8 @@
 	let query = '';
 
 	let showAddTextContentModal = false;
+	let showSyncConfirmModal = false;
+
 	let inputFiles = null;
 
 	let filteredItems = [];
@@ -475,6 +477,16 @@
 	</div>
 {/if}
 
+<SyncConfirmDialog
+	bind:show={showSyncConfirmModal}
+	message={$i18n.t(
+		'This will reset the knowledge base and sync all files. Do you wish to continue?'
+	)}
+	on:confirm={() => {
+		syncDirectoryHandler();
+	}}
+/>
+
 <AddTextContentModal
 	bind:show={showAddTextContentModal}
 	on:submit={(e) => {
@@ -609,7 +621,7 @@
 												}
 											}}
 											on:sync={(e) => {
-												syncDirectoryHandler();
+												showSyncConfirmModal = true;
 											}}
 										/>
 									</div>
