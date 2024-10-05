@@ -7,12 +7,15 @@
 	import { indentWithTab } from '@codemirror/commands';
 
 	import { indentUnit } from '@codemirror/language';
-	import { python } from '@codemirror/lang-python';
-	import { javascript } from '@codemirror/lang-javascript';
+	import { languages } from '@codemirror/language-data';
+
+	// import { python } from '@codemirror/lang-python';
+	// import { javascript } from '@codemirror/lang-javascript';
 
 	import { oneDark } from '@codemirror/theme-one-dark';
 
 	import { onMount, createEventDispatcher, getContext } from 'svelte';
+
 	import { formatPythonCode } from '$lib/apis/utils';
 	import { toast } from 'svelte-sonner';
 
@@ -43,14 +46,14 @@
 
 	let isDarkMode = false;
 	let editorTheme = new Compartment();
+	let editorLanguage = new Compartment();
 
-	const getLang = () => {
-		if (lang === 'python') {
-			return python();
-		} else if (lang === 'javascript') {
-			return javascript();
-		}
-		return python();
+	const getLang = async () => {
+		console.log(languages);
+
+		const language = languages.find((l) => l.alias.includes(lang));
+
+		return await language?.load();
 	};
 
 	export const formatPythonCodeHandler = async () => {
@@ -77,7 +80,6 @@
 	let extensions = [
 		basicSetup,
 		keymap.of([{ key: 'Tab', run: acceptCompletion }, indentWithTab]),
-		getLang(),
 		indentUnit.of('    '),
 		placeholder('Enter your code here...'),
 		EditorView.updateListener.of((e) => {
@@ -86,8 +88,22 @@
 				dispatch('change', { value: _value });
 			}
 		}),
-		editorTheme.of([])
+		editorTheme.of([]),
+		editorLanguage.of([])
 	];
+
+	$: if (lang) {
+		setLanguage();
+	}
+
+	const setLanguage = async () => {
+		const language = await getLang();
+		if (language) {
+			codeEditor.dispatch({
+				effects: editorLanguage.reconfigure(language)
+			});
+		}
+	};
 
 	onMount(() => {
 		console.log(value);
