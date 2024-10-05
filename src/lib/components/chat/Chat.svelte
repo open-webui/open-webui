@@ -654,7 +654,7 @@
 			);
 		} else if (
 			files.length > 0 &&
-			files.filter((file) => file.type !== 'image' && file.status !== 'processed').length > 0
+			files.filter((file) => file.type !== 'image' && file.status === 'uploading').length > 0
 		) {
 			// Upload not done
 			toast.error(
