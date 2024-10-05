@@ -342,32 +342,6 @@ export const processFile = async (
 	return res;
 };
 
-export const processDocsDir = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/dir`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
 export const processYoutubeVideo = async (token: string, url: string) => {
 	let error = null;
 
