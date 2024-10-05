@@ -180,6 +180,7 @@
 
 				if (model?.owned_by === 'openai') {
 					capabilities.usage = false;
+					capabilities.base64 = false;
 				}
 
 				if (model?.info?.meta?.capabilities) {
