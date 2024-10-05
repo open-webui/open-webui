@@ -9,7 +9,7 @@
 </script>
 
 <div class=" max-h-full flex flex-col w-full">
-	{#each files as file (file.id)}
+	{#each files as file}
 		<div class="mt-2 px-2">
 			<FileItem
 				className="w-full"
