@@ -42,9 +42,6 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
         unsanitized_filename = file.filename
         filename = os.path.basename(unsanitized_filename)
 
-        # Further sanitize the filename
-        filename = re.sub(r'[^a-zA-Z0-9_.-]', '_', filename)
-
         # Replace filename with UUID
         id = str(uuid.uuid4())
         name = filename
