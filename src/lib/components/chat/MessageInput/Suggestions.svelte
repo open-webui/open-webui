@@ -15,7 +15,7 @@
 </script>
 
 {#if prompts.length > 0}
-	<div class="mb-2 flex gap-1 text-sm font-medium items-center text-gray-400 dark:text-gray-600">
+	<div class="mb-1 flex gap-1 text-sm font-medium items-center text-gray-400 dark:text-gray-600">
 		<Bolt />
 		{$i18n.t('Suggested')}
 	</div>
