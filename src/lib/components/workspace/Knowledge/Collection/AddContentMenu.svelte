@@ -16,6 +16,7 @@
 	import ArrowUpCircle from '$lib/components/icons/ArrowUpCircle.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import BarsArrowUp from '$lib/components/icons/BarsArrowUp.svelte';
+	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -65,7 +66,7 @@
 			<DropdownMenu.Item
 				class="flex  gap-2  items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
-					dispatch('files');
+					dispatch('upload', { type: 'files' });
 				}}
 			>
 				<ArrowUpCircle strokeWidth="2" />
@@ -75,7 +76,17 @@
 			<DropdownMenu.Item
 				class="flex  gap-2  items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
-					dispatch('text');
+					dispatch('upload', { type: 'directory' });
+				}}
+			>
+				<FolderOpen strokeWidth="2" />
+				<div class="flex items-center">{$i18n.t('Upload directory')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex  gap-2  items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				on:click={() => {
+					dispatch('upload', { type: 'text' });
 				}}
 			>
 				<BarsArrowUp strokeWidth="2" />

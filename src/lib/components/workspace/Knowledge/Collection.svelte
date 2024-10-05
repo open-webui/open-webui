@@ -125,6 +125,81 @@
 		}
 	};
 
+	const uploadDirectoryHandler = async () => {
+		try {
+			// Get directory handle through picker
+			const dirHandle = await window.showDirectoryPicker();
+
+			let totalFiles = 0;
+			let uploadedFiles = 0;
+
+			// Function to update the UI with the progress
+			const updateProgress = () => {
+				const percentage = (uploadedFiles / totalFiles) * 100;
+				toast.info(`Upload Progress: ${uploadedFiles}/${totalFiles} (${percentage.toFixed(2)}%)`);
+			};
+
+			// Recursive function to count all files excluding hidden ones
+			async function countFiles(dirHandle) {
+				for await (const entry of dirHandle.values()) {
+					if (entry.name.startsWith('.')) continue; // Skip hidden files and directories
+
+					if (entry.kind === 'file') {
+						totalFiles++;
+					} else if (entry.kind === 'directory') {
+						await countFiles(entry);
+					}
+				}
+			}
+
+			// Recursive function to process directories excluding hidden files
+			async function processDirectory(dirHandle, path = '') {
+				for await (const entry of dirHandle.values()) {
+					if (entry.name.startsWith('.')) continue; // Skip hidden files and directories
+
+					const entryPath = path ? `${path}/${entry.name}` : entry.name;
+
+					if (entry.kind === 'file') {
+						// Get file from handle
+						const file = await entry.getFile();
+						// Create a new file with the path information
+						const fileWithPath = new File([file], entryPath, { type: file.type });
+
+						await uploadFileHandler(fileWithPath);
+						uploadedFiles++;
+						updateProgress();
+					} else if (entry.kind === 'directory') {
+						// Recursively process subdirectories
+						await processDirectory(entry, entryPath);
+					}
+				}
+			}
+
+			// First count all files excluding hidden ones
+			await countFiles(dirHandle);
+			updateProgress();
+
+			// Start processing from root directory
+			if (totalFiles > 0) {
+				await processDirectory(dirHandle);
+			} else {
+				console.log('No files to upload.');
+			}
+		} catch (error) {
+			if (error.name === 'AbortError') {
+				toast.info('Directory selection was cancelled');
+			} else {
+				toast.error('Error accessing directory');
+				console.error('Directory access error:', error);
+			}
+		}
+	};
+
+	// Helper function to maintain file paths within zip
+	const getRelativePath = (fullPath, basePath) => {
+		return fullPath.substring(basePath.length + 1);
+	};
+
 	const addFileHandler = async (fileId) => {
 		const updatedKnowledge = await addFileToKnowledgeById(localStorage.token, id, fileId).catch(
 			(e) => {
@@ -417,11 +492,14 @@
 
 									<div>
 										<AddContentMenu
-											on:files={() => {
-												document.getElementById('files-input').click();
-											}}
-											on:text={() => {
-												showAddTextContentModal = true;
+											on:upload={(e) => {
+												if (e.detail.type === 'directory') {
+													uploadDirectoryHandler();
+												} else if (e.detail.type === 'text') {
+													showAddTextContentModal = true;
+												} else {
+													document.getElementById('files-input').click();
+												}
 											}}
 										/>
 									</div>

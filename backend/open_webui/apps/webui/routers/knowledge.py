@@ -160,6 +160,10 @@ def add_file_to_knowledge_by_id(
         process_file(ProcessFileForm(file_id=form_data.file_id, collection_name=id))
     except Exception as e:
         log.debug(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
     if knowledge:
         data = knowledge.data or {}
