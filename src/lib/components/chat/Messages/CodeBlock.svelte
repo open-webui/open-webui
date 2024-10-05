@@ -288,7 +288,7 @@ __builtins__.input = input`);
 	});
 </script>
 
-<div class="my-2" dir="ltr">
+<div class="my-2 relative overflow-visible" dir="ltr">
 	{#if lang === 'mermaid'}
 		{#if mermaidHtml}
 			{@html `${mermaidHtml}`}
@@ -297,11 +297,11 @@ __builtins__.input = input`);
 		{/if}
 	{:else}
 		<div
-			class="flex justify-between bg-[#202123] text-white text-xs px-4 pt-1 pb-0.5 rounded-t-lg overflow-x-auto"
+			class="flex justify-between bg-[#202123] text-white text-xs px-4 pt-1 pb-0.5 rounded-t-lg relative overflow-x-auto"
 		>
 			<div class="p-1">{lang}</div>
 
-			<div class="flex items-center">
+			<div class="flex items-center sticky top-0">
 				{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
 					{#if executing}
 						<div class="copy-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
