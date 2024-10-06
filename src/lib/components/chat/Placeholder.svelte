@@ -106,32 +106,33 @@
 			class="w-full text-3xl text-gray-800 dark:text-gray-100 font-medium text-center flex items-center gap-4 font-primary"
 		>
 			<div class="w-full flex flex-col justify-center items-center">
-				<Tooltip
-					className="flex flex-col md:flex-row justify-center gap-2 md:gap-3.5 w-fit"
-					content={(models[selectedModelIdx]?.info?.meta?.tags ?? [])
-						.map((tag) => tag.name.toUpperCase())
-						.join(', ')}
-					placement="top"
-				>
+				<div class="flex flex-col md:flex-row justify-center gap-2 md:gap-3.5 w-fit">
 					<div class="flex flex-shrink-0 justify-center">
 						<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
 							{#each models as model, modelIdx}
-								<button
-									on:click={() => {
-										selectedModelIdx = modelIdx;
-									}}
+								<Tooltip
+									content={(models[modelIdx]?.info?.meta?.tags ?? [])
+										.map((tag) => tag.name.toUpperCase())
+										.join(', ')}
+									placement="top"
 								>
-									<img
-										crossorigin="anonymous"
-										src={model?.info?.meta?.profile_image_url ??
-											($i18n.language === 'dg-DG'
-												? `/doge.png`
-												: `${WEBUI_BASE_URL}/static/favicon.png`)}
-										class=" size-[2.5rem] rounded-full border-[1px] border-gray-200 dark:border-none"
-										alt="logo"
-										draggable="false"
-									/>
-								</button>
+									<button
+										on:click={() => {
+											selectedModelIdx = modelIdx;
+										}}
+									>
+										<img
+											crossorigin="anonymous"
+											src={model?.info?.meta?.profile_image_url ??
+												($i18n.language === 'dg-DG'
+													? `/doge.png`
+													: `${WEBUI_BASE_URL}/static/favicon.png`)}
+											class=" size-[2.5rem] rounded-full border-[1px] border-gray-200 dark:border-none"
+											alt="logo"
+											draggable="false"
+										/>
+									</button>
+								</Tooltip>
 							{/each}
 						</div>
 					</div>
@@ -143,7 +144,7 @@
 							{$i18n.t('Hello, {{name}}', { name: $user.name })}
 						{/if}
 					</div>
-				</Tooltip>
+				</div>
 
 				<div class="flex mt-1 mb-2">
 					<div in:fade={{ duration: 100, delay: 50 }}>
