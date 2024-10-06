@@ -456,10 +456,10 @@ async def handle_nonstreaming_response(request: Request, response: Response, too
 
         # Make another request to the model with the updated context
         update_body_request(request, body)
-        next_response = await call_next(request)
-        response_dict = json.loads(next_response)
+        response = await call_next(request)
+        response_dict = json.loads(response)
 
-    return response_dict
+    return response
         
 
 async def chat_completion_tools_handler(
