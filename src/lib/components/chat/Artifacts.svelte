@@ -26,7 +26,7 @@
 		getContents();
 	}
 
-	function getContents() {
+	const getContents = () => {
 		contents = [];
 		messages.forEach((message) => {
 			if (message.content) {
@@ -101,12 +101,8 @@
 			}
 		});
 
-		if (messages.length === 0 || (messages.at(-1)?.done && contents.length === 0)) {
-			showArtifacts.set(false);
-			showControls.set(false);
-		}
 		selectedContentIdx = contents ? contents.length - 1 : 0;
-	}
+	};
 
 	function navigateContent(direction: 'prev' | 'next') {
 		console.log(selectedContentIdx);
@@ -149,6 +145,8 @@
 			});
 		});
 	};
+
+	onMount(() => {});
 </script>
 
 <div class=" w-full h-full relative flex flex-col bg-gray-50 dark:bg-gray-850">
@@ -157,18 +155,16 @@
 			<div class=" absolute top-0 left-0 right-0 bottom-0 z-10"></div>
 		{/if}
 
-		<div
-			class=" absolute pointer-events-none z-50 w-full flex items-center justify-end p-4 dark:text-gray-100"
-		>
+		<div class=" absolute pointer-events-none z-50 w-full flex items-center justify-end p-4">
 			<button
-				class="self-center pointer-events-auto"
+				class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
 				on:click={() => {
 					dispatch('close');
 					showControls.set(false);
 					showArtifacts.set(false);
 				}}
 			>
-				<XMark className="size-4" />
+				<XMark className="size-3 text-gray-900 dark:text-white" />
 			</button>
 		</div>
 
@@ -186,7 +182,9 @@
 						></iframe>
 					</div>
 				{:else}
-					<div class="m-auto text-xs">{$i18n.t('No HTML, CSS, or JavaScript content found.')}</div>
+					<div class="m-auto font-medium text-xs text-gray-900 dark:text-white">
+						{$i18n.t('No HTML, CSS, or JavaScript content found.')}
+					</div>
 				{/if}
 			</div>
 		</div>

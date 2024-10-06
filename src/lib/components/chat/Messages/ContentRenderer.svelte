@@ -4,7 +4,7 @@
 
 	import Markdown from './Markdown.svelte';
 	import LightBlub from '$lib/components/icons/LightBlub.svelte';
-	import { showArtifacts, showControls, showOverview } from '$lib/stores';
+	import { mobile, showArtifacts, showControls, showOverview } from '$lib/stores';
 
 	export let id;
 	export let content;
@@ -73,7 +73,7 @@
 		on:code={(e) => {
 			const { lang } = e.detail;
 			console.log('code', lang);
-			if (['html', 'svg'].includes(lang)) {
+			if (['html', 'svg'].includes(lang) && !$mobile) {
 				showArtifacts.set(true);
 				showControls.set(true);
 			}
