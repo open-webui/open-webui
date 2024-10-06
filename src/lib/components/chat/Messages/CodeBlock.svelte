@@ -288,88 +288,89 @@ __builtins__.input = input`);
 	});
 </script>
 
-<div class="my-2 relative overflow-visible" dir="ltr">
-	{#if lang === 'mermaid'}
-		{#if mermaidHtml}
-			{@html `${mermaidHtml}`}
+<div>
+	<div class="relative my-2 flex flex-col rounded-lg" dir="ltr">
+		{#if lang === 'mermaid'}
+			{#if mermaidHtml}
+				{@html `${mermaidHtml}`}
+			{:else}
+				<pre class="mermaid">{code}</pre>
+			{/if}
 		{:else}
-			<pre class="mermaid">{code}</pre>
-		{/if}
-	{:else}
-		<div
-			class="flex justify-between bg-black/5 dark:bg-[#202123] dark:text-white text-xs px-4 pt-1 pb-0.5 rounded-t-lg relative"
-		>
-			<div class="p-1 font-medium">{lang}</div>
-
-			<div class="flex items-center sticky top-0">
-				{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
-					{#if executing}
-						<div class="copy-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
-					{:else}
-						<button
-							class="copy-code-button bg-none border-none p-1"
-							on:click={async () => {
-								code = _code;
-								await tick();
-								executePython(code);
-							}}>{$i18n.t('Run')}</button
-						>
-					{/if}
-				{/if}
-
-				{#if save}
-					<button class="copy-code-button bg-none border-none p-1" on:click={saveCode}>
-						{saved ? $i18n.t('Saved') : $i18n.t('Save')}
-					</button>
-				{/if}
-
-				<button class="copy-code-button bg-none border-none p-1" on:click={copyCode}
-					>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
-				>
-			</div>
-		</div>
-
-		<div
-			class="language-{lang} rounded-t-none {executing || stdout || stderr || result
-				? ''
-				: 'rounded-b-lg'} overflow-hidden"
-		>
-			<CodeEditor
-				value={code}
-				{id}
+			<div class="text-text-300 absolute pl-4 py-1.5 text-xs font-medium dark:text-white">
 				{lang}
-				on:save={() => {
-					saveCode();
-				}}
-				on:change={(e) => {
-					_code = e.detail.value;
-				}}
+			</div>
+
+			<div
+				class="sticky top-8 mb-1 py-1 pr-2.5 flex items-center justify-end z-10 text-xs text-black dark:text-white"
+			>
+				<div class="flex items-center gap-0.5 translate-y-[1px]">
+					{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
+						{#if executing}
+							<div class="copy-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
+						{:else}
+							<button
+								class="copy-code-button bg-none border-none p-1"
+								on:click={async () => {
+									code = _code;
+									await tick();
+									executePython(code);
+								}}>{$i18n.t('Run')}</button
+							>
+						{/if}
+					{/if}
+
+					{#if save}
+						<button
+							class="copy-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+							on:click={saveCode}
+						>
+							{saved ? $i18n.t('Saved') : $i18n.t('Save')}
+						</button>
+					{/if}
+
+					<button
+						class="copy-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+						on:click={copyCode}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
+					>
+				</div>
+			</div>
+
+			<div
+				class="language-{lang} rounded-t-lg -mt-8 {executing || stdout || stderr || result
+					? ''
+					: 'rounded-b-lg'} overflow-hidden"
+			>
+				<div class=" pt-7 bg-gray-50 dark:bg-gray-850"></div>
+				<CodeEditor
+					value={code}
+					{id}
+					{lang}
+					on:save={() => {
+						saveCode();
+					}}
+					on:change={(e) => {
+						_code = e.detail.value;
+					}}
+				/>
+			</div>
+
+			<div
+				id="plt-canvas-{id}"
+				class="bg-[#202123] text-white max-w-full overflow-x-auto scrollbar-hidden"
 			/>
-		</div>
 
-		<!-- <pre
-			class=" hljs p-4 px-5 overflow-x-auto"
-			style="border-top-left-radius: 0px; border-top-right-radius: 0px; {(executing ||
-				stdout ||
-				stderr ||
-				result) &&
-				'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code></code></pre> -->
-
-		<div
-			id="plt-canvas-{id}"
-			class="bg-[#202123] text-white max-w-full overflow-x-auto scrollbar-hidden"
-		/>
-
-		{#if executing}
-			<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-				<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
-				<div class="text-sm">Running...</div>
-			</div>
-		{:else if stdout || stderr || result}
-			<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-				<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
-				<div class="text-sm">{stdout || stderr || result}</div>
-			</div>
+			{#if executing}
+				<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
+					<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
+					<div class="text-sm">Running...</div>
+				</div>
+			{:else if stdout || stderr || result}
+				<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
+					<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
+					<div class="text-sm">{stdout || stderr || result}</div>
+				</div>
+			{/if}
 		{/if}
-	{/if}
+	</div>
 </div>
