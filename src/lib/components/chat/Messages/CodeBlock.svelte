@@ -271,19 +271,13 @@ __builtins__.input = input`);
 		render();
 	}
 
-	$: if (lang) {
-		dispatchCode();
-	}
-
-	const dispatchCode = () => {
-		dispatch('code', { lang, code });
-	};
+	$: dispatch('code', { lang, code });
 
 	onMount(async () => {
 		console.log('codeblock', lang, code);
 
 		if (lang) {
-			dispatchCode();
+			dispatch('code', { lang, code });
 		}
 		if (document.documentElement.classList.contains('dark')) {
 			mermaid.initialize({
