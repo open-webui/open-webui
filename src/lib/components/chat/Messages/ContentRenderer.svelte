@@ -75,7 +75,7 @@
 		style="display: none"
 	>
 		<button
-			class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded flex items-center gap-0.5"
+			class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded flex items-center gap-0.5 min-w-fit"
 			on:click={() => {
 				const selection = window.getSelection();
 				dispatch('explain', selection.toString());
@@ -85,9 +85,9 @@
 				buttonsContainerElement.style.display = 'none';
 			}}
 		>
-			<LightBlub className="size-3" />
+			<LightBlub className="size-3 shrink-0" />
 
-			<div>Explain</div>
+			<div class="shrink-0">Explain</div>
 		</button>
 	</div>
 {/if}
