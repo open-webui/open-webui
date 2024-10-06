@@ -989,7 +989,7 @@ RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
 RAG_EMBEDDING_BATCH_SIZE = PersistentConfig(
     "RAG_EMBEDDING_BATCH_SIZE",
     "rag.embedding_batch_size",
-    int(os.environ.get("RAG_EMBEDDING_BATCH_SIZE", "1")),
+    int(os.environ.get("RAG_EMBEDDING_BATCH_SIZE") or os.environ.get("RAG_EMBEDDING_OPENAI_BATCH_SIZE", "1"))
 )
 
 RAG_RERANKING_MODEL = PersistentConfig(
