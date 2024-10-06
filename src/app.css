@@ -62,6 +62,12 @@ li p {
 	border-width: 1px;
 }
 
+/* Dark theme scrollbar styles */
+.dark ::-webkit-scrollbar-thumb {
+	background-color: rgba(69, 69, 74, 0.8); /* Darker color for dark theme */
+	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
+}
+
 ::-webkit-scrollbar {
 	height: 0.4rem;
 	width: 0.4rem;
