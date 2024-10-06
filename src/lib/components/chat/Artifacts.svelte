@@ -151,7 +151,7 @@
 	};
 </script>
 
-<div class=" w-full h-full relative flex flex-col bg-gray-850">
+<div class=" w-full h-full relative flex flex-col bg-gray-50 dark:bg-gray-850">
 	<div class="w-full h-full flex-1 relative">
 		{#if overlay}
 			<div class=" absolute top-0 left-0 right-0 bottom-0 z-10"></div>
@@ -191,9 +191,9 @@
 	</div>
 
 	{#if contents.length > 0}
-		<div class="flex justify-between items-center p-2.5 font-primary">
+		<div class="flex justify-between items-center p-2.5 font-primar text-gray-900 dark:text-white">
 			<div class="flex items-center space-x-2">
-				<div class="flex self-center min-w-fit" dir="ltr">
+				<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
 					<button
 						class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition disabled:cursor-not-allowed"
 						on:click={() => navigateContent('prev')}
@@ -241,7 +241,7 @@
 				</div>
 			</div>
 
-			<div>
+			<div class="flex items-center">
 				<button
 					class="copy-code-button bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
 					on:click={() => {
