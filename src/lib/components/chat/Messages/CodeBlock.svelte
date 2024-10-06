@@ -276,6 +276,10 @@ __builtins__.input = input`);
 
 	onMount(async () => {
 		console.log('codeblock', lang, code);
+
+		if (lang) {
+			dispatch('code', { lang });
+		}
 		if (document.documentElement.classList.contains('dark')) {
 			mermaid.initialize({
 				startOnLoad: true,
