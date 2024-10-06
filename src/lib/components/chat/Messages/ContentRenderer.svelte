@@ -48,7 +48,9 @@
 			} else {
 				if (buttonsContainerElement) {
 					buttonsContainerElement.style.display = 'none';
+					selectedText = '';
 					floatingInput = false;
+					floatingInputValue = '';
 				}
 			}
 		}, 0);
