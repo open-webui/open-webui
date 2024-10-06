@@ -80,6 +80,7 @@
 
 	const updateChatHistory = async () => {
 		await tick();
+		history = history;
 		await updateChatById(localStorage.token, chatId, {
 			history: history,
 			messages: messages
