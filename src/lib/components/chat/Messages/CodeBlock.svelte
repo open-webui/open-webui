@@ -270,6 +270,10 @@ __builtins__.input = input`);
 		render();
 	}
 
+	$: if (lang) {
+		dispatch('code', { lang });
+	}
+
 	onMount(async () => {
 		console.log('codeblock', lang, code);
 		if (document.documentElement.classList.contains('dark')) {
