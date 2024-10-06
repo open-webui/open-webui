@@ -85,7 +85,13 @@
 	});
 
 	$: if (!chatId) {
+		showControls.set(false);
 		showOverview.set(false);
+		showArtifacts.set(false);
+
+		if ($showCallOverlay) {
+			showCallOverlay.set(false);
+		}
 	}
 </script>
 
