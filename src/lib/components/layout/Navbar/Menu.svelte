@@ -137,6 +137,8 @@
 					id="chat-controls-button"
 					on:click={async () => {
 						await showControls.set(true);
+						await showOverview.set(false);
+						await showArtifacts.set(false);
 					}}
 				>
 					<AdjustmentsHorizontal className=" size-4" strokeWidth="0.5" />
@@ -150,6 +152,7 @@
 				on:click={async () => {
 					await showControls.set(true);
 					await showOverview.set(true);
+					await showArtifacts.set(false);
 				}}
 			>
 				<Map className=" size-4" strokeWidth="1.5" />
@@ -162,6 +165,7 @@
 				on:click={async () => {
 					await showControls.set(true);
 					await showArtifacts.set(true);
+					await showOverview.set(false);
 				}}
 			>
 				<Cube className=" size-4" strokeWidth="1.5" />
