@@ -49,7 +49,7 @@
 				}}
 			/>
 		{:else}
-			{unescapeHtml(token.text)}
+			{token.text}
 		{/if}
 	{:else if token.type === 'table'}
 		<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
