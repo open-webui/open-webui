@@ -443,7 +443,8 @@ async def chat_completion_tools_handler(
         content = await get_content_from_response(response)
         log.debug(f"{content=}")
 
-        if not content:
+        # Llama3.1:70b return 'None' and Qwen2.5:32b return '""' when no tools match the query.
+        if not content or content == '""' or content == 'None':
             return body, {}
 
         try:
