@@ -1,6 +1,10 @@
 import re
+from typing import Annotated
 import uuid
 
+from aiohttp.hdrs import USER_AGENT
+
+from open_webui.utils.logger import AuditLogger
 from open_webui.apps.webui.models.auths import (
     AddUserForm,
     ApiKey,
@@ -14,12 +18,12 @@ from open_webui.apps.webui.models.auths import (
 )
 from open_webui.apps.webui.models.users import Users
 from open_webui.config import WEBUI_AUTH
-from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
+from open_webui.constants import AUDIT_EVENT, ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
 )
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Header, Request, status
 from fastapi.responses import Response
 from pydantic import BaseModel
 from open_webui.utils.misc import parse_duration, validate_email_format
@@ -27,6 +31,7 @@ from open_webui.utils.utils import (
     create_api_key,
     create_token,
     get_admin_user,
+    get_audit_logger,
     get_current_user,
     get_password_hash,
 )
@@ -270,7 +275,15 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
 
 @router.post("/add", response_model=SigninResponse)
-async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
+async def add_user(
+    request: Request,
+    response: Response,
+    form_data: AddUserForm,
+    user=Depends(get_admin_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+    user_agent: Annotated[str | None, Header()] = None,
+):
+    admin_user = user
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
@@ -290,8 +303,19 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
             form_data.role,
         )
 
+        source_ip = request.client.host if request.client else None
         if user:
             token = create_token(data={"id": user.id})
+            audit_logger.write(
+                AUDIT_EVENT.ENTITY_CREATED,
+                user,
+                object_type="USER",
+                event_user_id=admin_user.id,
+                source_ip=source_ip,
+                request_uri=str(request.url),
+                user_agent=user_agent,
+                extra={"admin_action": True},
+            )
             return {
                 "token": token,
                 "token_type": "Bearer",

@@ -110,3 +110,13 @@ class TASKS(str, Enum):
     QUERY_GENERATION = "query_generation"
     FUNCTION_CALLING = "function_calling"
     MOA_RESPONSE_GENERATION = "moa_response_generation"
+
+
+class AUDIT_EVENT(str, Enum):
+    def __str__(self) -> str:
+        return super().__str__()
+
+    USER_REGISTERED = "USER_REGISTERED"
+    ENTITY_CREATED = "ENTITY_CREATED"
+    ENTITY_UPDATED = "ENTITY_UPDATED"
+    ENTITY_DELETED = "ENTITY_DELETED"

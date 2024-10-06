@@ -148,6 +148,7 @@ from open_webui.utils.utils import (
     get_verified_user,
 )
 from open_webui.utils.webhook import post_webhook
+from open_webui.utils.logger import start_logger
 
 from open_webui.utils.payload import convert_payload_openai_to_ollama
 from open_webui.utils.response import (
@@ -195,6 +196,9 @@ https://github.com/open-webui/open-webui
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    start_logger()
+    run_migrations()
+
     if RESET_CONFIG_ON_START:
         reset_config()
 
