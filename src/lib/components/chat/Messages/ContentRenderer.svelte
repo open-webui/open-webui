@@ -4,6 +4,7 @@
 
 	import Markdown from './Markdown.svelte';
 	import LightBlub from '$lib/components/icons/LightBlub.svelte';
+	import { showArtifacts, showControls, showOverview } from '$lib/stores';
 
 	export let id;
 	export let content;
@@ -68,6 +69,13 @@
 		{save}
 		on:update={(e) => {
 			dispatch('update', e.detail);
+		}}
+		on:code={(e) => {
+			const { lang } = e.detail;
+			if (lang === 'html') {
+				showArtifacts.set(true);
+				showControls.set(true);
+			}
 		}}
 	/>
 </div>

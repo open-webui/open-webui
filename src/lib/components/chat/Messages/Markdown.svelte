@@ -42,5 +42,8 @@
 		on:update={(e) => {
 			dispatch('update', e.detail);
 		}}
+		on:code={(e) => {
+			dispatch('code', e.detail);
+		}}
 	/>
 {/key}
