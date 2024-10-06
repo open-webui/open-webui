@@ -267,6 +267,10 @@ class Pipe:
 			await tick();
 
 			const res = await codeEditor.formatPythonCodeHandler();
+			await tick();
+
+			content = _content;
+			await tick();
 
 			if (res) {
 				console.log('Code formatted successfully');
