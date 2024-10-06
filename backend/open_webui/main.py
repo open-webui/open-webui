@@ -432,18 +432,33 @@ def update_body_request(request: Request,
         ]
     return None
 
-async def handle_nonstreaming_response(request : Request,
-                         response : Response,
-                         tools : dict) -> Response:
-
+async def handle_nonstreaming_response(request: Request, response: Response, tools: dict) -> Response:
     response_dict = json.loads(response)
     body = json.loads(request._body)
-    # body["messages"]
+
     while response_dict["choices"][0]["finish_reason"] == "tool_calls":
         for tool_call in response_dict["choices"][0]["tool_calls"]:
+            tool_function_name = tool_call["function"]["name"]
+            tool_function_params = json.loads(tool_call["function"]["arguments"])
 
+            try:
+                tool_output = await tools[tool_function_name]["callable"](**tool_function_params)
+            except Exception as e:
+                tool_output = str(e)
 
-    return response
+            # Append the tool output to the messages
+            body["messages"].append({
+                "role": "tool",
+                "name": tool_function_name,
+                "content": tool_output
+            })
+
+        # Make another request to the model with the updated context
+        update_body_request(request, body)
+        next_response = await call_next(request)
+        response_dict = json.loads(next_response)
+
+    return response_dict
         
 
 async def chat_completion_tools_handler(
