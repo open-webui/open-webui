@@ -33,6 +33,11 @@
 			<MarkdownInlineTokens id={`${id}-${tokenIdx}-h`} tokens={token.tokens} />
 		</svelte:element>
 	{:else if token.type === 'code'}
+		{#if token.lang === 'html'}
+			{dispatch('code', {
+				lang: token.lang
+			})}
+		{/if}
 		{#if token.raw.includes('```')}
 			<CodeBlock
 				id={`${id}-${tokenIdx}`}
