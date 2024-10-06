@@ -432,8 +432,6 @@ def update_body_request(request: Request,
         ]
     return None
 
-from starlette.middleware import Middleware
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 async def handle_nonstreaming_response(request: Request, response: Response, tools: dict) -> Response:
     response_dict = json.loads(response)
