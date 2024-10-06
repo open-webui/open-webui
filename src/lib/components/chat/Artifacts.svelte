@@ -61,12 +61,16 @@
 								body {
 									background-color: white; /* Ensure the iframe has a white background */
 								}
+
+								${cssContent}
 							</${''}style>
-							${cssContent}
                         </head>
                         <body>
                             ${htmlContent}
-                            ${jsContent}
+
+							<${''}script>
+                            	${jsContent}
+							</${''}script>
                         </body>
                         </html>
                     `;
