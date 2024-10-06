@@ -32,7 +32,8 @@
 		temporaryChatEnabled,
 		mobile,
 		showOverview,
-		chatTitle
+		chatTitle,
+		showArtifacts
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -312,6 +313,11 @@
 	//////////////////////////
 
 	const initNewChat = async () => {
+		await showControls.set(false);
+		await showCallOverlay.set(false);
+		await showOverview.set(false);
+		await showArtifacts.set(false);
+
 		if ($page.url.pathname.includes('/c/')) {
 			window.history.replaceState(history.state, '', `/`);
 		}

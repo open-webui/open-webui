@@ -5,7 +5,7 @@
 
 	import Markdown from './Markdown.svelte';
 	import LightBlub from '$lib/components/icons/LightBlub.svelte';
-	import { mobile, showArtifacts, showControls, showOverview } from '$lib/stores';
+	import { chatId, mobile, showArtifacts, showControls, showOverview } from '$lib/stores';
 	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
 
 	export let id;
@@ -113,7 +113,8 @@
 
 			if (
 				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
-				!$mobile
+				!$mobile &&
+				$chatId
 			) {
 				showArtifacts.set(true);
 				showControls.set(true);
