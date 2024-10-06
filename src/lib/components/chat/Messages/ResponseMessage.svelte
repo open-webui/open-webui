@@ -494,7 +494,7 @@
 											dispatch('submit', {
 												parentId: message.id,
 												prompt:
-													`Can you explain this section to me in more detail?\n\n` +
+													`Explain this section to me in more detail\n\n` +
 													'```\n' +
 													e.detail +
 													'\n```'
