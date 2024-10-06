@@ -115,7 +115,11 @@
 			}
 		});
 
-		showSidebar.set(window.innerWidth > BREAKPOINT);
+		showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
+		showSidebar.subscribe((value) => {
+			localStorage.sidebar = value;
+		});
+
 		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		await enablePagination();
 
