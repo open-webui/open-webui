@@ -157,9 +157,11 @@
 			<div class=" absolute top-0 left-0 right-0 bottom-0 z-10"></div>
 		{/if}
 
-		<div class=" absolute z-50 w-full flex items-center justify-end p-4 dark:text-gray-100">
+		<div
+			class=" absolute pointer-events-none z-50 w-full flex items-center justify-end p-4 dark:text-gray-100"
+		>
 			<button
-				class="self-center"
+				class="self-center pointer-events-auto"
 				on:click={() => {
 					dispatch('close');
 					showControls.set(false);
