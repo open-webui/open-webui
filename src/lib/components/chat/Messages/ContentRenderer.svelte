@@ -21,7 +21,7 @@
 			await tick();
 
 			// Check if the event target is within the content container
-			if (!contentContainerElement.contains(event.target)) return;
+			if (!contentContainerElement?.contains(event.target)) return;
 
 			let selection = window.getSelection();
 
@@ -72,6 +72,7 @@
 		}}
 		on:code={(e) => {
 			const { lang } = e.detail;
+			console.log('code', lang);
 			if (lang === 'html') {
 				showArtifacts.set(true);
 				showControls.set(true);
