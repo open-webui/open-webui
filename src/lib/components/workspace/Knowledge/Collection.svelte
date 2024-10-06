@@ -537,7 +537,7 @@
 
 <div class="flex flex-col w-full max-h-[100dvh] h-full">
 	<button
-		class="flex space-x-1"
+		class="flex space-x-1 w-fit"
 		on:click={() => {
 			goto('/workspace/knowledge');
 		}}
