@@ -432,6 +432,9 @@ def update_body_request(request: Request,
         ]
     return None
 
+from starlette.middleware import Middleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+
 async def handle_nonstreaming_response(request: Request, response: Response, tools: dict) -> Response:
     response_dict = json.loads(response)
     body = json.loads(request._body)
@@ -721,14 +724,14 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
         update_body_request(request, body)
         first_response = await call_next(request)
         if not isinstance(first_response, StreamingResponse):
-            response = await handle_nonstreaming_response(request, response, tools)
+            response = await handle_nonstreaming_response(request, first_response, tools)
             return response
 
         content_type = first_response.headers["Content-Type"]
         is_openai = "text/event-stream" in content_type
         is_ollama = "application/x-ndjson" in content_type
         if not is_openai and not is_ollama:
-            return response
+            return first_response
 
         def wrap_item(item):
             return f"data: {item}\n\n" if is_openai else f"{item}\n"
