@@ -15,9 +15,13 @@
 	let contentContainerElement;
 	let buttonsContainerElement;
 
-	const updateButtonPosition = () => {
+	const updateButtonPosition = (event) => {
 		setTimeout(async () => {
 			await tick();
+
+			// Check if the event target is within the content container
+			if (!contentContainerElement.contains(event.target)) return;
+
 			let selection = window.getSelection();
 
 			if (selection.toString().trim().length > 0) {
