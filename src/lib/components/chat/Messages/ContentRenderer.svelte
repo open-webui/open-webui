@@ -72,8 +72,6 @@
 		}}
 		on:code={(e) => {
 			const { lang, code } = e.detail;
-			console.log('lang', lang);
-			console.log('code', code);
 
 			if (
 				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
