@@ -294,10 +294,6 @@
 						if ($mobile) {
 							showSidebar.set(false);
 						}
-
-						showControls.set(false);
-						showArtifacts.set(false);
-						showOverview.set(false);
 					}, 0);
 				}}
 			>
