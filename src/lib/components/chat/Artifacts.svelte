@@ -46,9 +46,24 @@
 				const inlineCss = message.content.match(/<style>[\s\S]*?<\/style>/gi);
 				const inlineJs = message.content.match(/<script>[\s\S]*?<\/script>/gi);
 
-				if (inlineHtml) htmlContent += inlineHtml.join('\n');
-				if (inlineCss) cssContent += inlineCss.join('\n');
-				if (inlineJs) jsContent += inlineJs.join('\n');
+				if (inlineHtml) {
+					inlineHtml.forEach((block) => {
+						const content = block.replace(/<\/?html>/gi, ''); // Remove <html> tags
+						htmlContent += content + '\n';
+					});
+				}
+				if (inlineCss) {
+					inlineCss.forEach((block) => {
+						const content = block.replace(/<\/?style>/gi, ''); // Remove <style> tags
+						cssContent += content + '\n';
+					});
+				}
+				if (inlineJs) {
+					inlineJs.forEach((block) => {
+						const content = block.replace(/<\/?script>/gi, ''); // Remove <script> tags
+						jsContent += content + '\n';
+					});
+				}
 
 				if (htmlContent || cssContent || jsContent) {
 					const renderedContent = `
