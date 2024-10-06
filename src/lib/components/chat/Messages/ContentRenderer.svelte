@@ -128,7 +128,7 @@
 	>
 		{#if !floatingInput}
 			<div
-				class="flex flex-row gap-0.5 shrink-0 p-1 bg-white dark:bg-gray-850 text-medium shadow-xl"
+				class="flex flex-row gap-0.5 shrink-0 p-1 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium shadow-xl"
 			>
 				<button
 					class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded flex items-center gap-1 min-w-fit"
