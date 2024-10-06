@@ -297,9 +297,9 @@ __builtins__.input = input`);
 		{/if}
 	{:else}
 		<div
-			class="flex justify-between bg-[#202123] text-white text-xs px-4 pt-1 pb-0.5 rounded-t-lg relative overflow-x-auto"
+			class="flex justify-between bg-black/5 dark:bg-[#202123] dark:text-white text-xs px-4 pt-1 pb-0.5 rounded-t-lg relative"
 		>
-			<div class="p-1">{lang}</div>
+			<div class="p-1 font-medium">{lang}</div>
 
 			<div class="flex items-center sticky top-0">
 				{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
