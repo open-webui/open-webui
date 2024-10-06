@@ -6,7 +6,7 @@
 
 	import { showArtifacts, showControls } from '$lib/stores';
 	import XMark from '../icons/XMark.svelte';
-	import { createMessagesList } from '$lib/utils';
+	import { copyToClipboard, createMessagesList } from '$lib/utils';
 
 	export let overlay = false;
 	export let history;
@@ -15,6 +15,7 @@
 	let contents: Array<{ content: string }> = [];
 	let selectedContentIdx = 0;
 
+	let copied = false;
 	let iframeElement: HTMLIFrameElement;
 
 	$: if (history) {
@@ -238,6 +239,20 @@
 						</svg>
 					</button>
 				</div>
+			</div>
+
+			<div>
+				<button
+					class="copy-code-button bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+					on:click={() => {
+						copyToClipboard(contents[selectedContentIdx].content);
+						copied = true;
+
+						setTimeout(() => {
+							copied = false;
+						}, 2000);
+					}}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
+				>
 			</div>
 		</div>
 	{/if}
