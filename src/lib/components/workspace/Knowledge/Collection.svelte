@@ -135,7 +135,7 @@
 
 			if (uploadedFile) {
 				console.log(uploadedFile);
-				addFileHandler(uploadedFile.id);
+				await addFileHandler(uploadedFile.id);
 			} else {
 				toast.error($i18n.t('Failed to upload file.'));
 			}
