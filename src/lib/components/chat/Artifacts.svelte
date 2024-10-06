@@ -289,14 +289,16 @@
 					}}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
 				>
 
-				<Tooltip content={$i18n.t('Open in full screen')}>
-					<button
-						class=" bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md p-0.5"
-						on:click={showFullScreen}
-					>
-						<ArrowsPointingOut className="size-3.5" />
-					</button>
-				</Tooltip>
+				{#if contents[selectedContentIdx].type === 'iframe'}
+					<Tooltip content={$i18n.t('Open in full screen')}>
+						<button
+							class=" bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md p-0.5"
+							on:click={showFullScreen}
+						>
+							<ArrowsPointingOut className="size-3.5" />
+						</button>
+					</Tooltip>
+				{/if}
 			</div>
 		</div>
 	{/if}
