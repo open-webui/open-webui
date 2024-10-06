@@ -12,6 +12,7 @@
 
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
+	import SvgPanZoom from '$lib/components/common/SVGPanZoom.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -271,14 +272,18 @@ __builtins__.input = input`);
 	}
 
 	$: if (lang) {
-		dispatch('code', { lang });
+		dispatchCode();
 	}
+
+	const dispatchCode = () => {
+		dispatch('code', { lang, code });
+	};
 
 	onMount(async () => {
 		console.log('codeblock', lang, code);
 
 		if (lang) {
-			dispatch('code', { lang });
+			dispatchCode();
 		}
 		if (document.documentElement.classList.contains('dark')) {
 			mermaid.initialize({
@@ -300,7 +305,10 @@ __builtins__.input = input`);
 	<div class="relative my-2 flex flex-col rounded-lg" dir="ltr">
 		{#if lang === 'mermaid'}
 			{#if mermaidHtml}
-				{@html `${mermaidHtml}`}
+				<SvgPanZoom
+					className=" border border-gray-50 dark:border-gray-850 rounded-lg max-h-fit overflow-hidden"
+					svg={mermaidHtml}
+				/>
 			{:else}
 				<pre class="mermaid">{code}</pre>
 			{/if}

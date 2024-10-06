@@ -71,9 +71,14 @@
 			dispatch('update', e.detail);
 		}}
 		on:code={(e) => {
-			const { lang } = e.detail;
-			console.log('code', lang);
-			if (['html', 'svg'].includes(lang) && !$mobile) {
+			const { lang, code } = e.detail;
+			console.log('lang', lang);
+			console.log('code', code);
+
+			if (
+				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
+				!$mobile
+			) {
 				showArtifacts.set(true);
 				showControls.set(true);
 			}
