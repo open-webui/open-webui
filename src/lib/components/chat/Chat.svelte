@@ -70,7 +70,7 @@
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
-	import Placeholder from './Messages/Placeholder.svelte';
+	import Placeholder from './Placeholder.svelte';
 
 	export let chatIdProp = '';
 
@@ -1954,7 +1954,7 @@
 				{/if}
 
 				<div class="flex flex-col flex-auto z-10 w-full">
-					{#if history.currentId}
+					{#if $settings?.landingPageMode === 'chat' || createMessagesList(history.currentId).length > 0}
 						<div
 							class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
 							id="messages-container"

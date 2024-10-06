@@ -11,10 +11,10 @@
 	import { sanitizeResponseContent, findWordIndices } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
-	import Suggestions from '../MessageInput/Suggestions.svelte';
+	import Suggestions from './Suggestions.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
-	import MessageInput from '../MessageInput.svelte';
+	import MessageInput from './MessageInput.svelte';
 
 	const i18n = getContext('i18n');
 

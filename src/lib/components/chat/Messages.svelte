@@ -8,10 +8,11 @@
 	import { getChatList, updateChatById } from '$lib/apis/chats';
 	import { copyToClipboard, findWordIndices } from '$lib/utils';
 
-	import Placeholder from './Messages/Placeholder.svelte';
 	import Message from './Messages/Message.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
+
+	import ChatPlaceholder from './ChatPlaceholder.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -311,7 +312,43 @@
 
 <div class="h-full flex pt-8">
 	{#if Object.keys(history?.messages ?? {}).length == 0}
-		<Placeholder {selectedModels} bind:prompt />
+		<ChatPlaceholder
+			modelIds={selectedModels}
+			submitPrompt={async (p) => {
+				let text = p;
+
+				if (p.includes('{{CLIPBOARD}}')) {
+					const clipboardText = await navigator.clipboard.readText().catch((err) => {
+						toast.error($i18n.t('Failed to read clipboard contents'));
+						return '{{CLIPBOARD}}';
+					});
+
+					text = p.replaceAll('{{CLIPBOARD}}', clipboardText);
+				}
+
+				prompt = text;
+
+				await tick();
+
+				const chatInputElement = document.getElementById('chat-textarea');
+				if (chatInputElement) {
+					prompt = p;
+
+					chatInputElement.style.height = '';
+					chatInputElement.style.height = Math.min(chatInputElement.scrollHeight, 200) + 'px';
+					chatInputElement.focus();
+
+					const words = findWordIndices(prompt);
+
+					if (words.length > 0) {
+						const word = words.at(0);
+						chatInputElement.setSelectionRange(word?.startIndex, word.endIndex + 1);
+					}
+				}
+
+				await tick();
+			}}
+		/>
 	{:else}
 		<div class="w-full pt-2">
 			{#key chatId}

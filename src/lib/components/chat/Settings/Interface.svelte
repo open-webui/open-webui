@@ -29,6 +29,7 @@
 	let defaultModelId = '';
 	let showUsername = false;
 
+	let landingPageMode = '';
 	let chatBubble = true;
 	let chatDirection: 'LTR' | 'RTL' = 'LTR';
 
@@ -54,6 +55,11 @@
 	const toggleChatBubble = async () => {
 		chatBubble = !chatBubble;
 		saveSettings({ chatBubble: chatBubble });
+	};
+
+	const toggleLandingPageMode = async () => {
+		landingPageMode = landingPageMode === '' ? 'chat' : '';
+		saveSettings({ landingPageMode: landingPageMode });
 	};
 
 	const toggleShowUsername = async () => {
@@ -150,6 +156,7 @@
 		showEmojiInCall = $settings.showEmojiInCall ?? false;
 		voiceInterruption = $settings.voiceInterruption ?? false;
 
+		landingPageMode = $settings.landingPageMode ?? '';
 		chatBubble = $settings.chatBubble ?? true;
 		widescreenMode = $settings.widescreenMode ?? false;
 		splitLargeChunks = $settings.splitLargeChunks ?? false;
@@ -228,6 +235,26 @@
 
 		<div>
 			<div class=" mb-1.5 text-sm font-medium">{$i18n.t('UI')}</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('Landing Page Mode')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleLandingPageMode();
+						}}
+						type="button"
+					>
+						{#if landingPageMode === ''}
+							<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Chat')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">

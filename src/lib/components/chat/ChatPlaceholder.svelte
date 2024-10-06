@@ -7,7 +7,7 @@
 
 	import { blur, fade } from 'svelte/transition';
 
-	import Suggestions from '../MessageInput/Suggestions.svelte';
+	import Suggestions from './Suggestions.svelte';
 	import { sanitizeResponseContent } from '$lib/utils';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
@@ -128,7 +128,9 @@
 				suggestionPrompts={models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
 					$config?.default_prompt_suggestions ??
 					[]}
-				{submitPrompt}
+				on:select={(e) => {
+					submitPrompt(e.detail);
+				}}
 			/>
 		</div>
 	</div>
