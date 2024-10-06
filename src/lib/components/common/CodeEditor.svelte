@@ -14,7 +14,7 @@
 
 	import { oneDark } from '@codemirror/theme-one-dark';
 
-	import { onMount, createEventDispatcher, getContext } from 'svelte';
+	import { onMount, createEventDispatcher, getContext, tick } from 'svelte';
 
 	import { formatPythonCode } from '$lib/apis/utils';
 	import { toast } from 'svelte-sonner';
@@ -65,6 +65,10 @@
 				codeEditor.dispatch({
 					changes: [{ from: 0, to: codeEditor.state.doc.length, insert: formattedCode }]
 				});
+
+				_value = formattedCode;
+				dispatch('change', { value: _value });
+				await tick();
 
 				toast.success($i18n.t('Code formatted successfully'));
 				return true;
