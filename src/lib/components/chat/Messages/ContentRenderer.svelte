@@ -73,7 +73,7 @@
 		on:code={(e) => {
 			const { lang } = e.detail;
 			console.log('code', lang);
-			if (lang === 'html') {
+			if (['html', 'svg'].includes(lang)) {
 				showArtifacts.set(true);
 				showControls.set(true);
 			}
