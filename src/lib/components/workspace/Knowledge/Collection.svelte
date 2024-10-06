@@ -308,15 +308,19 @@
 
 	// Helper function to maintain file paths within zip
 	const syncDirectoryHandler = async () => {
-		const res = await resetKnowledgeById(localStorage.token, id).catch((e) => {
-			toast.error(e);
-		});
+		if ((knowledge?.files ?? []).length > 0) {
+			const res = await resetKnowledgeById(localStorage.token, id).catch((e) => {
+				toast.error(e);
+			});
 
-		if (res) {
-			knowledge = res;
-			toast.success($i18n.t('Knowledge reset successfully.'));
+			if (res) {
+				knowledge = res;
+				toast.success($i18n.t('Knowledge reset successfully.'));
 
-			// Upload directory
+				// Upload directory
+				uploadDirectoryHandler();
+			}
+		} else {
 			uploadDirectoryHandler();
 		}
 	};
