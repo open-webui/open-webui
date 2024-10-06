@@ -17,8 +17,11 @@
 
 	let iframeElement: HTMLIFrameElement;
 
-	$: if (history.currentId) {
+	$: if (history) {
 		messages = createMessagesList(history, history.currentId);
+		getContents();
+	} else {
+		messages = [];
 		getContents();
 	}
 
@@ -97,6 +100,10 @@
 			}
 		});
 
+		if (messages.length === 0 || (messages.at(-1)?.done && contents.length === 0)) {
+			showArtifacts.set(false);
+			showControls.set(false);
+		}
 		selectedContentIdx = contents ? contents.length - 1 : 0;
 	}
 
