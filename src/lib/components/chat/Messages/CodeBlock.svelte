@@ -307,10 +307,10 @@ __builtins__.input = input`);
 				<div class="flex items-center gap-0.5 translate-y-[1px]">
 					{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
 						{#if executing}
-							<div class="copy-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
+							<div class="run-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
 						{:else}
 							<button
-								class="copy-code-button bg-none border-none p-1"
+								class="run-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
 								on:click={async () => {
 									code = _code;
 									await tick();
@@ -322,7 +322,7 @@ __builtins__.input = input`);
 
 					{#if save}
 						<button
-							class="copy-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+							class="save-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
 							on:click={saveCode}
 						>
 							{saved ? $i18n.t('Saved') : $i18n.t('Save')}
