@@ -95,21 +95,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fi && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy Python backend requirements
-COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
-
-# Install Python dependencies in one layer (with CUDA option)
-RUN pip3 install uv && \
-    if [ "$USE_CUDA" = "true" ]; then \
-    pip3 install torch torchvision torchaudio \
-    --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER; \
-    else \
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; \
-    fi && \
-    pip install --no-cache-dir -r requirements.txt && \
-    python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('$RAG_EMBEDDING_MODEL')" && \
-    python -c "from faster_whisper import WhisperModel; WhisperModel('$WHISPER_MODEL', compute_type='int8', download_root='$WHISPER_MODEL_DIR')" && \
-    chown -R $UID:$GID /app/backend/data/
+# Install Python dependencies directly (replace with actual packages you need)
+RUN pip install --upgrade pip && \
+    pip install \
+    uv \
+    torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu && \
+    pip install \
+    sentence-transformers faster-whisper
 
 # Copy built frontend files from the build stage
 COPY --chown=$UID:$GID --from=build /app/build /app/build
