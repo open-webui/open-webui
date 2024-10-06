@@ -2071,33 +2071,9 @@
 							{createMessagePair}
 							on:submit={async (e) => {
 								if (e.detail) {
-									// New user message
-									let userPrompt = e.detail.prompt;
-									let userMessageId = uuidv4();
-
-									let userMessage = {
-										id: userMessageId,
-										parentId: e.detail.parentId,
-										childrenIds: [],
-										role: 'user',
-										content: userPrompt,
-										models: selectedModels
-									};
-
-									let messageParentId = e.detail.parentId;
-
-									if (messageParentId !== null) {
-										history.messages[messageParentId].childrenIds = [
-											...history.messages[messageParentId].childrenIds,
-											userMessageId
-										];
-									}
-
-									history.messages[userMessageId] = userMessage;
-									history.currentId = userMessageId;
-
+									prompt = '';
 									await tick();
-									await sendPrompt(userPrompt, userMessageId);
+									submitPrompt(e.detail);
 								}
 							}}
 						/>
