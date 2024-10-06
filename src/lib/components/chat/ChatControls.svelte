@@ -18,7 +18,6 @@
 	export let models = [];
 
 	export let chatId = null;
-	export let messages = [];
 
 	export let chatFiles = [];
 	export let params = {};
@@ -126,7 +125,7 @@
 							/>
 						</div>
 					{:else if $showArtifacts}
-						<Artifacts {messages} />
+						<Artifacts {history} />
 					{:else if $showOverview}
 						<Overview
 							{history}
@@ -201,7 +200,7 @@
 								/>
 							</div>
 						{:else if $showArtifacts}
-							<Artifacts {messages} overlay={dragged} />
+							<Artifacts {history} overlay={dragged} />
 						{:else if $showOverview}
 							<Overview
 								{history}

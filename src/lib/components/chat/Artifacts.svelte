@@ -6,16 +6,19 @@
 
 	import { showArtifacts, showControls } from '$lib/stores';
 	import XMark from '../icons/XMark.svelte';
+	import { createMessagesList } from '$lib/utils';
 
-	export let messages;
 	export let overlay = false;
+	export let history;
+	let messages = [];
 
 	let contents: Array<{ content: string }> = [];
 	let selectedContentIdx = 0;
 
 	let iframeElement: HTMLIFrameElement;
 
-	$: if (messages) {
+	$: if (history.currentId) {
+		messages = createMessagesList(history, history.currentId);
 		getContents();
 	}
 
