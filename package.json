@@ -74,6 +74,7 @@
 		"marked": "^9.1.0",
 		"mermaid": "^10.9.1",
 		"paneforge": "^0.0.6",
+		"panzoom": "^9.4.3",
 		"pyodide": "^0.26.1",
 		"socket.io-client": "^4.2.0",
 		"sortablejs": "^1.15.2",

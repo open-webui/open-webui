@@ -9,12 +9,13 @@
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 	import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import SvgPanZoom from '../common/SVGPanZoom.svelte';
 
 	export let overlay = false;
 	export let history;
 	let messages = [];
 
-	let contents: Array<{ content: string }> = [];
+	let contents: Array<{ type: string; content: string }> = [];
 	let selectedContentIdx = 0;
 
 	let copied = false;
@@ -32,24 +33,32 @@
 		contents = [];
 		messages.forEach((message) => {
 			if (message.content) {
+				const codeBlockContents = message.content.match(/```[\s\S]*?```/g);
+				let codeBlocks = [];
+
+				if (codeBlockContents) {
+					codeBlockContents.forEach((block) => {
+						const lang = block.split('\n')[0].replace('```', '').trim().toLowerCase();
+						const code = block.replace(/```[\s\S]*?\n/, '').replace(/```$/, '');
+						codeBlocks.push({ lang, code });
+					});
+				}
+
 				let htmlContent = '';
 				let cssContent = '';
 				let jsContent = '';
 
-				const codeBlocks = message.content.match(/```[\s\S]*?```/g);
-				if (codeBlocks) {
-					codeBlocks.forEach((block) => {
-						const lang = block.split('\n')[0].replace('```', '').trim().toLowerCase();
-						const code = block.replace(/```[\s\S]*?\n/, '').replace(/```$/, '');
-						if (lang === 'html') {
-							htmlContent += code + '\n';
-						} else if (lang === 'css') {
-							cssContent += code + '\n';
-						} else if (lang === 'javascript' || lang === 'js') {
-							jsContent += code + '\n';
-						}
-					});
-				}
+				codeBlocks.forEach((block) => {
+					const { lang, code } = block;
+
+					if (lang === 'html') {
+						htmlContent += code + '\n';
+					} else if (lang === 'css') {
+						cssContent += code + '\n';
+					} else if (lang === 'javascript' || lang === 'js') {
+						jsContent += code + '\n';
+					}
+				});
 
 				const inlineHtml = message.content.match(/<html>[\s\S]*?<\/html>/gi);
 				const inlineCss = message.content.match(/<style>[\s\S]*?<\/style>/gi);
@@ -98,7 +107,14 @@
                         </body>
                         </html>
                     `;
-					contents = [...contents, { content: renderedContent }];
+					contents = [...contents, { type: 'iframe', content: renderedContent }];
+				} else {
+					// Check for SVG content
+					for (const block of codeBlocks) {
+						if (block.lang === 'svg' || (block.lang === 'xml' && block.code.includes('<svg'))) {
+							contents = [...contents, { type: 'svg', content: block.code }];
+						}
+					}
 				}
 			}
 		});
@@ -184,14 +200,21 @@
 			<div class=" h-full flex flex-col">
 				{#if contents.length > 0}
 					<div class="max-w-full w-full h-full">
-						<iframe
-							bind:this={iframeElement}
-							title="Content"
-							srcdoc={contents[selectedContentIdx].content}
-							class="w-full border-0 h-full rounded-none"
-							sandbox="allow-scripts allow-forms allow-same-origin"
-							on:load={iframeLoadHandler}
-						></iframe>
+						{#if contents[selectedContentIdx].type === 'iframe'}
+							<iframe
+								bind:this={iframeElement}
+								title="Content"
+								srcdoc={contents[selectedContentIdx].content}
+								class="w-full border-0 h-full rounded-none"
+								sandbox="allow-scripts allow-forms allow-same-origin"
+								on:load={iframeLoadHandler}
+							></iframe>
+						{:else if contents[selectedContentIdx].type === 'svg'}
+							<SvgPanZoom
+								className=" w-full h-full max-h-full overflow-hidden"
+								svg={contents[selectedContentIdx].content}
+							/>
+						{/if}
 					</div>
 				{:else}
 					<div class="m-auto font-medium text-xs text-gray-900 dark:text-white">
