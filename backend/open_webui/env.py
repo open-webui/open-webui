@@ -258,6 +258,45 @@ DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
 if "postgres://" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")
 
+DATABASE_POOL_SIZE = os.environ.get("DATABASE_POOL_SIZE", 0)
+
+if DATABASE_POOL_SIZE == "":
+    DATABASE_POOL_SIZE = 0
+else:
+    try:
+        DATABASE_POOL_SIZE = int(DATABASE_POOL_SIZE)
+    except Exception:
+        DATABASE_POOL_SIZE = 0
+
+DATABASE_POOL_MAX_OVERFLOW = os.environ.get("DATABASE_POOL_MAX_OVERFLOW", 0)
+
+if DATABASE_POOL_MAX_OVERFLOW == "":
+    DATABASE_POOL_MAX_OVERFLOW = 0
+else:
+    try:
+        DATABASE_POOL_MAX_OVERFLOW = int(DATABASE_POOL_MAX_OVERFLOW)
+    except Exception:
+        DATABASE_POOL_MAX_OVERFLOW = 0
+
+DATABASE_POOL_TIMEOUT = os.environ.get("DATABASE_POOL_TIMEOUT", 30)
+
+if DATABASE_POOL_TIMEOUT == "":
+    DATABASE_POOL_TIMEOUT = 30
+else:
+    try:
+        DATABASE_POOL_TIMEOUT = int(DATABASE_POOL_TIMEOUT)
+    except Exception:
+        DATABASE_POOL_TIMEOUT = 30
+
+DATABASE_POOL_RECYCLE = os.environ.get("DATABASE_POOL_RECYCLE", 3600)
+
+if DATABASE_POOL_RECYCLE == "":
+    DATABASE_POOL_RECYCLE = 3600
+else:
+    try:
+        DATABASE_POOL_RECYCLE = int(DATABASE_POOL_RECYCLE)
+    except Exception:
+        DATABASE_POOL_RECYCLE = 3600
 
 RESET_CONFIG_ON_START = (
     os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"

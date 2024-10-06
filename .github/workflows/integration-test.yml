@@ -182,6 +182,9 @@ jobs:
           WEBUI_SECRET_KEY: secret-key
           GLOBAL_LOG_LEVEL: debug
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+          DATABASE_POOL_SIZE: 10
+          DATABASE_POOL_MAX_OVERFLOW: 10
+          DATABASE_POOL_TIMEOUT: 30
         run: |
           cd backend
           uvicorn open_webui.main:app --port "8081" --forwarded-allow-ips '*' &
