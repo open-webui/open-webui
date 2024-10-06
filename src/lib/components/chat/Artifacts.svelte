@@ -173,7 +173,7 @@
 						></iframe>
 					</div>
 				{:else}
-					<div class="m-auto text-xs">No HTML, CSS, or JavaScript content found.</div>
+					<div class="m-auto text-xs">{$i18n.t('No HTML, CSS, or JavaScript content found.')}</div>
 				{/if}
 			</div>
 		</div>
@@ -205,7 +205,10 @@
 					</button>
 
 					<div class="text-xs self-center dark:text-gray-100 min-w-fit">
-						Version {selectedContentIdx + 1} of {contents.length}
+						{$i18n.t('Version {{selectedVersion}} of {{totalVersions}}', {
+							selectedVersion: selectedContentIdx + 1,
+							totalVersions: contents.length
+						})}
 					</div>
 
 					<button
