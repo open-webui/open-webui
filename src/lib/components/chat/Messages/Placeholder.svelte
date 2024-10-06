@@ -108,9 +108,9 @@
 			<div class="w-full flex flex-col justify-center items-center">
 				<Tooltip
 					className="flex flex-col md:flex-row justify-center gap-2 md:gap-3.5 w-fit"
-					content={marked.parse(
-						sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description ?? '')
-					)}
+					content={(models[selectedModelIdx]?.info?.meta?.tags ?? [])
+						.map((tag) => tag.name.toUpperCase())
+						.join(', ')}
 					placement="top"
 				>
 					<div class="flex flex-shrink-0 justify-center">
@@ -145,16 +145,25 @@
 					</div>
 				</Tooltip>
 
-				<div class="flex mt-0.5 mb-2">
+				<div class="flex mt-1 mb-2">
 					<div in:fade={{ duration: 100, delay: 50 }}>
 						{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
-							<div
-								class="mt-0.5 text-sm font-normal text-gray-500 dark:text-gray-400 line-clamp-3 markdown"
-							>
-								{@html marked.parse(
-									sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description)
+							<Tooltip
+								className=" w-fit"
+								content={marked.parse(
+									sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description ?? '')
 								)}
-							</div>
+								placement="top"
+							>
+								<div
+									class="mt-0.5 text-sm font-normal text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xl markdown"
+								>
+									{@html marked.parse(
+										sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description)
+									)}
+								</div>
+							</Tooltip>
+
 							{#if models[selectedModelIdx]?.info?.meta?.user}
 								<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
 									By
