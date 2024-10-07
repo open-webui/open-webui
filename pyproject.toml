@@ -8,7 +8,7 @@ license = { file = "LICENSE" }
 dependencies = [
     "fastapi==0.111.0",
     "uvicorn[standard]==0.30.6",
-    "pydantic==2.8.2",
+    "pydantic==2.9.2",
     "python-multipart==0.0.9",
     "Flask==3.0.3",
     "Flask-Cors==5.0.0",
@@ -16,7 +16,8 @@ dependencies = [
     "python-jose==3.3.0",
     "passlib[bcrypt]==1.7.4",
     "requests==2.32.3",
-    "aiohttp==3.10.5",
+    "aiohttp==3.10.8",
+
     "sqlalchemy==2.0.32",
     "alembic==1.13.2",
     "peewee==3.17.6",
@@ -35,7 +36,8 @@ dependencies = [
     "tiktoken",
     "langchain==0.2.15",
     "langchain-community==0.2.12",
-    "langchain-chroma==0.1.2",
+    "langchain-chroma==0.1.4",
+
     "fake-useragent==1.5.1",
     "chromadb==0.5.9",
     "pymilvus==2.4.7",
@@ -53,7 +55,7 @@ dependencies = [
     "nltk==3.9.1",
     "Markdown==3.7",
     "pypandoc==1.13",
-    "pandas==2.2.2",
+    "pandas==2.2.3",
     "openpyxl==3.1.5",
     "pyxlsb==1.0.10",
     "xlrd==2.0.1",
@@ -72,10 +74,11 @@ dependencies = [
     "pytube==15.0.0",
     "extract_msg",
     "pydub",
-    "duckduckgo-search~=6.2.11",
+    "duckduckgo-search~=6.2.13",
+
     "docker~=7.1.0",
-    "pytest~=8.2.2",
-    "pytest-docker~=3.1.1",
+    "pytest~=8.3.2",
+    "pytest-docker~=3.1.1"
     "qdrant-client>=1.11.3",
 ]
 readme = "README.md"
