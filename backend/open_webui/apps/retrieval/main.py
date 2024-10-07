@@ -923,15 +923,22 @@ def process_youtube_video(form_data: ProcessUrlForm, user=Depends(get_verified_u
             translation=app.state.YOUTUBE_LOADER_TRANSLATION,
         )
         docs = loader.load()
-        text_content = " ".join([doc.page_content for doc in docs])
-        log.debug(f"text_content: {text_content}")
+        content = " ".join([doc.page_content for doc in docs])
+        log.debug(f"text_content: {content}")
         save_docs_to_vector_db(docs, collection_name, overwrite=True)
 
         return {
             "status": True,
             "collection_name": collection_name,
             "filename": form_data.url,
-            "content": text_content,
+            "file": {
+                "data": {
+                    "content": content,
+                },
+                "meta": {
+                    "name": form_data.url,
+                },
+            },
         }
     except Exception as e:
         log.exception(e)
@@ -954,15 +961,22 @@ def process_web(form_data: ProcessUrlForm, user=Depends(get_verified_user)):
             requests_per_second=app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
         )
         docs = loader.load()
-        text_content = " ".join([doc.page_content for doc in docs])
-        log.debug(f"text_content: {text_content}")
+        content = " ".join([doc.page_content for doc in docs])
+        log.debug(f"text_content: {content}")
         save_docs_to_vector_db(docs, collection_name, overwrite=True)
 
         return {
             "status": True,
             "collection_name": collection_name,
             "filename": form_data.url,
-            "content": text_content,
+            "file": {
+                "data": {
+                    "content": content,
+                },
+                "meta": {
+                    "name": form_data.url,
+                },
+            },
         }
     except Exception as e:
         log.exception(e)
