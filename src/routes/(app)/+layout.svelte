@@ -229,7 +229,13 @@
 
 {#if version && compareVersion(version.latest, version.current)}
 	<div class=" absolute bottom-8 right-8 z-50" in:fade={{ duration: 100 }}>
-		<UpdateInfoToast {version} />
+		<UpdateInfoToast
+			{version}
+			on:close={() => {
+				localStorage.setItem('dismissedUpdateToast', Date.now().toString());
+				version = null;
+			}}
+		/>
 	</div>
 {/if}
 
