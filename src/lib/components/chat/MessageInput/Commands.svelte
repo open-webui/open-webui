@@ -34,7 +34,7 @@
 			type: 'doc',
 			name: url,
 			collection_name: '',
-			status: false,
+			status: 'uploading',
 			url: url,
 			error: ''
 		};
@@ -44,10 +44,10 @@
 			const res = await processWeb(localStorage.token, '', url);
 
 			if (res) {
-				fileItem.status = 'processed';
+				fileItem.status = 'uploaded';
 				fileItem.collection_name = res.collection_name;
 				fileItem.file = {
-					content: res.content,
+					...res.file,
 					...fileItem.file
 				};
 
@@ -67,7 +67,7 @@
 			type: 'doc',
 			name: url,
 			collection_name: '',
-			status: false,
+			status: 'uploading',
 			url: url,
 			error: ''
 		};
@@ -77,10 +77,10 @@
 			const res = await processYoutubeVideo(localStorage.token, url);
 
 			if (res) {
-				fileItem.status = 'processed';
+				fileItem.status = 'uploaded';
 				fileItem.collection_name = res.collection_name;
 				fileItem.file = {
-					content: res.content,
+					...res.file,
 					...fileItem.file
 				};
 				files = files;
