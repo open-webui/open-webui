@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🔍 SVG Pan/Zoom**: Enhanced interaction with SVG images, including Mermaid diagrams, via new pan and zoom capabilities.
 - **🔍 Text Select Quick Actions**: New floating buttons appear when text is highlighted in LLM responses, offering deeper interactions like "Ask a Question" or "Explain".
 - **🗃️ Database Pool Configuration**: Enhanced database handling to support scalable user growth.
-- **🔊 Experimental Compress Audio**: Compress audio files to navigate around the 25MB limit for OpenAI's speech-to-text processing.
+- **🔊 Experimental Audio Compression**: Compress audio files to navigate around the 25MB limit for OpenAI's speech-to-text processing.
 - **🔍 Query Embedding**: Adjusted embedding behavior to enhance system performance by not repeating query embedding.
 - **💾 Lazy Load Optimizations**: Implemented lazy loading of large dependencies to minimize initial memory usage, boosting performance.
 - **🍏 Apple Touch Icon Support**: Optimizes the display of icons for web bookmarks on Apple mobile devices.
