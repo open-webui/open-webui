@@ -2,6 +2,7 @@
 	import { getContext, onMount, tick } from 'svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+
 	const i18n = getContext('i18n');
 
 	export let show = false;
@@ -9,14 +10,32 @@
 
 	let mergedDocuments = [];
 
+	function calculatePercentage(distance) {
+		return Math.max(0, Math.min(100, (1 - distance / 2) * 100));
+	}
+
+	function getRelevanceColor(percentage) {
+		if (percentage >= 80)
+			return 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200';
+		if (percentage >= 60)
+			return 'bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200';
+		if (percentage >= 40)
+			return 'bg-orange-200 dark:bg-orange-800 text-orange-800 dark:text-orange-200';
+		return 'bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200';
+	}
+
 	$: if (citation) {
 		mergedDocuments = citation.document?.map((c, i) => {
 			return {
 				source: citation.source,
 				document: c,
-				metadata: citation.metadata?.[i]
+				metadata: citation.metadata?.[i],
+				distance: citation.distances?.[i]
 			};
 		});
+		if (mergedDocuments.every((doc) => doc.distance !== undefined)) {
+			mergedDocuments.sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
+		}
 	}
 </script>
 
@@ -61,9 +80,9 @@
 								placement="left"
 								tippyOptions={{ duration: [500, 0], animation: 'perspective' }}
 							>
-								<div class="text-sm dark:text-gray-400">
+								<div class="text-sm dark:text-gray-400 flex items-center gap-2">
 									<a
-										class="hover:text-gray-500 hover:dark:text-gray-100 underline"
+										class="hover:text-gray-500 hover:dark:text-gray-100 underline flex-grow"
 										href={document?.metadata?.file_id
 											? `/api/v1/files/${document?.metadata?.file_id}/content${document?.metadata?.page !== undefined ? `#page=${document.metadata.page + 1}` : ''}`
 											: document.source.name.includes('http')
@@ -73,11 +92,28 @@
 									>
 										{document?.metadata?.name ?? document.source.name}
 									</a>
-									{document?.metadata?.page
-										? `(${$i18n.t('page')} ${document.metadata.page + 1})`
-										: ''}
+									{#if document?.metadata?.page}
+										<span class="text-xs text-gray-500 dark:text-gray-400">
+											({$i18n.t('page')}
+											{document.metadata.page + 1})
+										</span>
+									{/if}
 								</div>
 							</Tooltip>
+							{#if document.distance !== undefined}
+								<div class="text-sm font-medium dark:text-gray-300 mt-2">
+									{$i18n.t('Relevance')}
+								</div>
+								{@const percentage = calculatePercentage(document.distance)}
+								<div class="text-sm my-1 dark:text-gray-400 flex items-center gap-2">
+									<span class={`px-1 rounded font-medium ${getRelevanceColor(percentage)}`}>
+										{percentage.toFixed(0)}%
+									</span>
+									<span class="text-gray-500 dark:text-gray-500"
+										>({document.distance.toFixed(4)})</span
+									>
+								</div>
+							{/if}
 						{:else}
 							<div class="text-sm dark:text-gray-400">
 								{$i18n.t('No source available')}
