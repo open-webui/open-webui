@@ -23,14 +23,18 @@
 	let floatingInputValue = '';
 
 	const updateButtonPosition = (event) => {
+		if (
+			!contentContainerElement?.contains(event.target) &&
+			!buttonsContainerElement?.contains(event.target)
+		) {
+			closeFloatingButtons();
+			return;
+		}
+
 		setTimeout(async () => {
 			await tick();
 
-			// Check if the event target is within the content container
-			if (!contentContainerElement?.contains(event.target)) {
-				closeFloatingButtons();
-				return;
-			}
+			if (!contentContainerElement?.contains(event.target)) return;
 
 			let selection = window.getSelection();
 
@@ -51,8 +55,9 @@
 					// Calculate space available on the right
 					const spaceOnRight = parentRect.width - (left + buttonsContainerElement.offsetWidth);
 
-					if (spaceOnRight < 0) {
-						// Not enough space on the right, position using 'right'
+					let thirdScreenWidth = window.innerWidth / 3;
+
+					if (spaceOnRight < thirdScreenWidth) {
 						const right = parentRect.right - rect.right;
 						buttonsContainerElement.style.right = `${right}px`;
 						buttonsContainerElement.style.left = 'auto'; // Reset left
