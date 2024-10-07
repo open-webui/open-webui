@@ -23,6 +23,11 @@
 
 html {
 	word-break: break-word;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	-webkit-font-smoothing: auto;
+	-moz-osx-font-smoothing: auto;
+
 }
 
 code {
@@ -48,7 +53,7 @@ math {
 }
 
 .font-primary {
-	font-family: 'Archivo', sans-serif;
+	font-family: 'SF', sans-serif;
 }
 
 iframe {
