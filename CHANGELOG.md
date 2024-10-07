@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.31] - 2024-10-06
+
+### Added
+
+- **📚 Knowledge Feature**: Reimagined documents feature, now more performant with a better UI for enhanced organization; includes streamlined API integration for Retrieval-Augmented Generation (RAG). Detailed documentation forthcoming: https://docs.openwebui.com/
+- **🌐 New Landing Page**: Freshly designed landing page; toggle between the new UI and the classic chat UI from Settings > Interface for a personalized experience.
+- **📄 Extracted File Content Display**: View extracted content directly by clicking on the file item, simplifying file analysis.
+- **🔍 Full Document Mode for Files**: Toggle whole document mode on file items, enhancing document handling flexibility.
+- **🎨 Artifacts Feature**: Render web content and SVGs directly in the interface, supporting quick iterations and live changes.
+- **🖊️ Editable Code Blocks**: Supercharged code blocks now allow live editing directly in the LLM response, with live reloads supported by artifacts.
+- **🔧 Code Block Enhancements**: Introduced a floating copy button in code blocks to facilitate easier code copying without scrolling.
+- **🔍 SVG Pan/Zoom**: Enhanced interaction with SVG images, including Mermaid diagrams, via new pan and zoom capabilities.
+- **🔍 Text Select Quick Actions**: New floating buttons appear when text is highlighted in LLM responses, offering deeper interactions like "Ask a Question" or "Explain".
+- **🗃️ Database Pool Configuration**: Enhanced database handling to support scalable user growth.
+- **🔊 Experimental Compress Audio**: Compress audio files to navigate around the 25MB limit for OpenAI's speech-to-text processing.
+- **🔍 Query Embedding**: Adjusted embedding behavior to enhance system performance by not repeating query embedding.
+- **💾 Lazy Load Optimizations**: Implemented lazy loading of large dependencies to minimize initial memory usage, boosting performance.
+- **🍏 Apple Touch Icon Support**: Optimizes the display of icons for web bookmarks on Apple mobile devices.
+
+### Fixed
+
+- **🔘 Action Button Issue**: Resolved a bug where action buttons were not functioning, enhancing UI reliability.
+- **🔄 Multi-Model Chat Loop**: Fixed an infinite loop issue in multi-model chat environments, ensuring smoother chat operations.
+- **🔊 Call to Text-to-Speech Issues**: Rectified problems with text-to-speech functions to improve audio interactions.
+
+### Changed
+
+- **⚙️ Endpoint Renaming**: Renamed 'rag' endpoints to 'retrieval' for clearer function description.
+- **🎨 Styling and Interface Updates**: Multiple refinements across the platform to enhance visual appeal and user interaction.
+
+### Removed
+
+- **🗑️ Deprecated 'DOCS_DIR'**: Removed the outdated 'docs_dir' variable in favor of more direct file management solutions, with direct file directory syncing and API uploads for a more integrated experience.
+
 ## [0.3.30] - 2024-09-26
 
 ### Fixed
