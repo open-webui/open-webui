@@ -393,14 +393,14 @@ def get_rag_context(
                 )
 
                 if "metadatas" in context:
-                    citations.append(
-                        {
-                            "source": context["file"],
-                            "document": context["documents"][0],
-                            "metadata": context["metadatas"][0],
-                            "distances": context["distances"][0]
-                        }
-                    )
+                    citation = {
+                        "source": context["file"],
+                        "document": context["documents"][0],
+                        "metadata": context["metadatas"][0],
+                    }
+                    if "distances" in context and context["distances"]:
+                        citation["distances"] = context["distances"][0]
+                    citations.append(citation)
         except Exception as e:
             log.exception(e)
 
