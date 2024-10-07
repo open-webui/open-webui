@@ -534,10 +534,10 @@
 	type="file"
 	multiple
 	hidden
-	on:change={() => {
+	on:change={async () => {
 		if (inputFiles && inputFiles.length > 0) {
 			for (const file of inputFiles) {
-				uploadFileHandler(file);
+				await uploadFileHandler(file);
 			}
 
 			inputFiles = null;
