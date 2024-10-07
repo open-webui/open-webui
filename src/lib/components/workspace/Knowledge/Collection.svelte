@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Fuse from 'fuse.js';
 	import { toast } from 'svelte-sonner';
+	import { v4 as uuidv4 } from 'uuid';
 
 	import { onMount, getContext, onDestroy, tick } from 'svelte';
 	const i18n = getContext('i18n');
@@ -101,6 +102,7 @@
 	const uploadFileHandler = async (file) => {
 		console.log(file);
 
+		const tempItemId = uuidv4();
 		const fileItem = {
 			type: 'file',
 			file: '',
@@ -109,7 +111,8 @@
 			name: file.name,
 			size: file.size,
 			status: 'uploading',
-			error: ''
+			error: '',
+			itemId: tempItemId
 		};
 
 		knowledge.files = [...(knowledge.files ?? []), fileItem];
@@ -131,10 +134,20 @@
 		try {
 			const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
 				toast.error(e);
+				return null;
 			});
 
 			if (uploadedFile) {
 				console.log(uploadedFile);
+				knowledge.files = knowledge.files.map((item) => {
+					if (item.itemId === tempItemId) {
+						item.id = uploadedFile.id;
+					}
+
+					// Remove temporary item id
+					delete item.itemId;
+					return item;
+				});
 				await addFileHandler(uploadedFile.id);
 			} else {
 				toast.error($i18n.t('Failed to upload file.'));
@@ -329,12 +342,16 @@
 		const updatedKnowledge = await addFileToKnowledgeById(localStorage.token, id, fileId).catch(
 			(e) => {
 				toast.error(e);
+				return null;
 			}
 		);
 
 		if (updatedKnowledge) {
 			knowledge = updatedKnowledge;
 			toast.success($i18n.t('File added successfully.'));
+		} else {
+			toast.error($i18n.t('Failed to add file.'));
+			knowledge.files = knowledge.files.filter((file) => file.id !== fileId);
 		}
 	};
 
