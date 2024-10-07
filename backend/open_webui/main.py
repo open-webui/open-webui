@@ -188,9 +188,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(
-    docs_url="/docs" if ENV == "dev" else None, redoc_url=None, lifespan=lifespan
-)
+app = FastAPI(docs_url=None, redoc_url=None, lifespan=lifespan)
 
 app.state.config = AppConfig()
 
