@@ -62,14 +62,18 @@
 					buttonsContainerElement.style.top = `${top + 5}px`; // +5 to add some spacing
 				}
 			} else {
-				if (buttonsContainerElement) {
-					buttonsContainerElement.style.display = 'none';
-					selectedText = '';
-					floatingInput = false;
-					floatingInputValue = '';
-				}
+				closeFloatingButtons();
 			}
 		}, 0);
+	};
+
+	const closeFloatingButtons = () => {
+		if (buttonsContainerElement) {
+			buttonsContainerElement.style.display = 'none';
+			selectedText = '';
+			floatingInput = false;
+			floatingInputValue = '';
+		}
 	};
 
 	const selectAskHandler = () => {
@@ -88,10 +92,17 @@
 		buttonsContainerElement.style.display = 'none';
 	};
 
+	const keydownHandler = (e) => {
+		if (e.key === 'Escape') {
+			closeFloatingButtons();
+		}
+	};
+
 	onMount(() => {
 		if (floatingButtons) {
 			contentContainerElement?.addEventListener('mouseup', updateButtonPosition);
 			document.addEventListener('mouseup', updateButtonPosition);
+			document.addEventListener('keydown', keydownHandler);
 		}
 	});
 
@@ -99,20 +110,9 @@
 		if (floatingButtons) {
 			contentContainerElement?.removeEventListener('mouseup', updateButtonPosition);
 			document.removeEventListener('mouseup', updateButtonPosition);
+			document.removeEventListener('keydown', keydownHandler);
 		}
 	});
-
-	// $: if (floatingButtons) {
-	// 	if (buttonsContainerElement) {
-	// 		document.body.appendChild(buttonsContainerElement);
-	// 	}
-	// }
-
-	// onDestroy(() => {
-	// 	if (buttonsContainerElement) {
-	// 		document.body.removeChild(buttonsContainerElement);
-	// 	}
-	// });
 </script>
 
 <div bind:this={contentContainerElement}>
