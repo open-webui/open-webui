@@ -98,7 +98,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Python dependencies directly (replace with actual packages you need)
 RUN pip install --upgrade pip && \
     pip install \
-    uv \
+    uvicorn \  # Install Uvicorn instead of uv
     torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu && \
     pip install \
     sentence-transformers faster-whisper
