@@ -1935,7 +1935,17 @@
 		{/if}
 
 		<Navbar
-			{chat}
+			chat={{
+				id: $chatId,
+				chat: {
+					title: $chatTitle,
+					models: selectedModels,
+					system: $settings.system ?? undefined,
+					params: params,
+					history: history,
+					timestamp: Date.now()
+				}
+			}}
 			title={$chatTitle}
 			bind:selectedModels
 			shareEnabled={!!history.currentId}
