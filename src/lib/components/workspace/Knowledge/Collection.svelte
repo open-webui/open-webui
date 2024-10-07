@@ -689,7 +689,7 @@
 								</div>
 							</div>
 						{:else}
-							<div class="m-auto pb-24">
+							<div class="m-auto pb-32">
 								<div>
 									<div class=" flex w-full mt-1 mb-3.5">
 										<div class="flex-1">
@@ -720,7 +720,7 @@
 									</div>
 								</div>
 
-								<div class=" mt-2 text-center text-sm dark:text-gray-700 w-full">
+								<div class=" mt-2 text-center text-sm text-gray-200 dark:text-gray-700 w-full">
 									Select a file to view or drag and drop a file to upload
 								</div>
 							</div>
