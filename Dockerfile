@@ -42,7 +42,7 @@ ARG UID
 ARG GID
 
 ## Basis ##
-ENV ENV=prod \
+ENV ENV=dev \
     PORT=8080 \
     # pass build args to the build
     USE_OLLAMA_DOCKER=${USE_OLLAMA} \
