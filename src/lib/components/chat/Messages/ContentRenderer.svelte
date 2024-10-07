@@ -27,7 +27,10 @@
 			await tick();
 
 			// Check if the event target is within the content container
-			if (!contentContainerElement?.contains(event.target)) return;
+			if (!contentContainerElement?.contains(event.target)) {
+				closeFloatingButtons();
+				return;
+			}
 
 			let selection = window.getSelection();
 
