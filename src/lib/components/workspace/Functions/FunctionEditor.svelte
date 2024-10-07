@@ -1,5 +1,5 @@
 <script>
-	import { getContext, createEventDispatcher, onMount } from 'svelte';
+	import { getContext, createEventDispatcher, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 
 	const dispatch = createEventDispatcher();
@@ -21,6 +21,15 @@
 		description: ''
 	};
 	export let content = '';
+	let _content = '';
+
+	$: if (content) {
+		updateContent();
+	}
+
+	const updateContent = () => {
+		_content = content;
+	};
 
 	$: if (name && !edit && !clone) {
 		id = name.replace(/\s+/g, '_').toLowerCase();
@@ -254,10 +263,18 @@ class Pipe:
 
 	const submitHandler = async () => {
 		if (codeEditor) {
+			content = _content;
+			await tick();
+
 			const res = await codeEditor.formatPythonCodeHandler();
+			await tick();
+
+			content = _content;
+			await tick();
 
 			if (res) {
 				console.log('Code formatted successfully');
+
 				saveHandler();
 			}
 		}
@@ -336,10 +353,14 @@ class Pipe:
 
 				<div class="mb-2 flex-1 overflow-auto h-0 rounded-lg">
 					<CodeEditor
-						bind:value={content}
 						bind:this={codeEditor}
+						value={content}
+						lang="python"
 						{boilerplate}
-						on:save={() => {
+						on:change={(e) => {
+							_content = e.detail.value;
+						}}
+						on:save={async () => {
 							if (formElement) {
 								formElement.requestSubmit();
 							}

@@ -39,8 +39,13 @@
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
-<nav id="nav" class=" sticky py-2.5 top-0 flex flex-row justify-center z-10">
-	<div class=" flex max-w-full w-full mx-auto px-5 pt-0.5 md:px-[1rem]">
+
+<div class="sticky top-0 z-30 w-full px-1 py-2 -mb-8 flex items-center">
+	<div
+		class=" bg-gradient-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1] blur"
+	></div>
+
+	<div class=" flex max-w-full w-full mx-auto px-5 pt-0.5 md:px-[1rem] bg-transparen">
 		<div class="flex items-center w-full max-w-full">
 			<div
 				class="{$showSidebar
@@ -178,4 +183,4 @@
 			</div>
 		</div>
 	</div>
-</nav>
+</div>

@@ -29,7 +29,7 @@ export const tags = writable([]);
 
 export const models: Writable<Model[]> = writable([]);
 export const prompts: Writable<Prompt[]> = writable([]);
-export const documents: Writable<Document[]> = writable([]);
+export const knowledge: Writable<Document[]> = writable([]);
 
 export const tools = writable([]);
 export const functions = writable([]);
@@ -45,6 +45,7 @@ export const showChangelog = writable(false);
 
 export const showControls = writable(false);
 export const showOverview = writable(false);
+export const showArtifacts = writable(false);
 export const showCallOverlay = writable(false);
 
 export const temporaryChatEnabled = writable(false);
