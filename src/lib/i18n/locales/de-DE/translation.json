@@ -485,7 +485,7 @@
 	"Open file": "Datei öffnen",
 	"Open in full screen": "",
 	"Open new chat": "Neuen Chat öffnen",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Die installierte Open-WebUI-Version (v{{OPEN_WEBUI_VERSION}}) ist niedriger als die erforderliche Version (v{{REQUIRED_VERSION}})",
+	"Hacienda Teams version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Die installierte Open-WebUI-Version (v{{OPEN_WEBUI_VERSION}}) ist niedriger als die erforderliche Version (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI-API",
 	"OpenAI API Config": "OpenAI-API-Konfiguration",
@@ -782,7 +782,7 @@
 	"You're a helpful assistant.": "Du bist ein hilfreicher Assistent.",
 	"You're now logged in.": "Sie sind jetzt eingeloggt.",
 	"Your account status is currently pending activation.": "Ihr Kontostatus ist derzeit ausstehend und wartet auf Aktivierung.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
+	"Your entire contribution will go directly to the plugin developer; Hacienda Teams does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "YouTube",
 	"Youtube Loader Settings": "YouTube-Ladeeinstellungen"
 }

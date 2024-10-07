@@ -485,7 +485,7 @@
 	"Open file": "",
 	"Open in full screen": "",
 	"Open new chat": "Åpne ny chat",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Open WebUI-versjon (v{{OPEN_WEBUI_VERSION}}) er lavere enn nødvendig versjon (v{{REQUIRED_VERSION}})",
+	"Hacienda Teams version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Hacienda Teams-versjon (v{{OPEN_WEBUI_VERSION}}) er lavere enn nødvendig versjon (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "OpenAI API-konfigurasjon",
@@ -782,7 +782,7 @@
 	"You're a helpful assistant.": "Du er en hjelpsom assistent.",
 	"You're now logged in.": "Du er nå logget inn.",
 	"Your account status is currently pending activation.": "Din konto venter for øyeblikket på aktivering.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Hele beløpet du gir går uavkortet til utvikleren av tillegget; Open WebUI tar ikke noe av dette. Den valgte finansieringsplattformen kan derimot ha egne gebyrer.",
+	"Your entire contribution will go directly to the plugin developer; Hacienda Teams does not take any percentage. However, the chosen funding platform might have its own fees.": "Hele beløpet du gir går uavkortet til utvikleren av tillegget; Hacienda Teams tar ikke noe av dette. Den valgte finansieringsplattformen kan derimot ha egne gebyrer.",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Innstillinger for YouTube-laster"
 }

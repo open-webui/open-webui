@@ -355,9 +355,8 @@
 <style>
 	.font-mona {
 		font-family:
-			'Mona Sans',
 			-apple-system,
-			'Inter',
+			'SF',
 			ui-sans-serif,
 			system-ui,
 			'Segoe UI',
