@@ -36,24 +36,44 @@
 				const range = selection.getRangeAt(0);
 				const rect = range.getBoundingClientRect();
 
-				// Calculate position relative to the viewport (now that it's in document.body)
-				const top = rect.bottom + window.scrollY;
-				const left = rect.left + window.scrollX;
+				const parentRect = contentContainerElement.getBoundingClientRect();
+
+				// Adjust based on parent rect
+				const top = rect.bottom - parentRect.top;
+				const left = rect.left - parentRect.left;
 
 				if (buttonsContainerElement) {
 					buttonsContainerElement.style.display = 'block';
-					buttonsContainerElement.style.left = `${left}px`;
+
+					// Calculate space available on the right
+					const spaceOnRight = parentRect.width - (left + buttonsContainerElement.offsetWidth);
+
+					if (spaceOnRight < 0) {
+						// Not enough space on the right, position using 'right'
+						const right = parentRect.right - rect.right;
+						buttonsContainerElement.style.right = `${right}px`;
+						buttonsContainerElement.style.left = 'auto'; // Reset left
+					} else {
+						// Enough space, position using 'left'
+						buttonsContainerElement.style.left = `${left}px`;
+						buttonsContainerElement.style.right = 'auto'; // Reset right
+					}
+
 					buttonsContainerElement.style.top = `${top + 5}px`; // +5 to add some spacing
 				}
 			} else {
-				if (buttonsContainerElement) {
-					buttonsContainerElement.style.display = 'none';
-					selectedText = '';
-					floatingInput = false;
-					floatingInputValue = '';
-				}
+				closeFloatingButtons();
 			}
 		}, 0);
+	};
+
+	const closeFloatingButtons = () => {
+		if (buttonsContainerElement) {
+			buttonsContainerElement.style.display = 'none';
+			selectedText = '';
+			floatingInput = false;
+			floatingInputValue = '';
+		}
 	};
 
 	const selectAskHandler = () => {
@@ -72,10 +92,17 @@
 		buttonsContainerElement.style.display = 'none';
 	};
 
+	const keydownHandler = (e) => {
+		if (e.key === 'Escape') {
+			closeFloatingButtons();
+		}
+	};
+
 	onMount(() => {
 		if (floatingButtons) {
 			contentContainerElement?.addEventListener('mouseup', updateButtonPosition);
 			document.addEventListener('mouseup', updateButtonPosition);
+			document.addEventListener('keydown', keydownHandler);
 		}
 	});
 
@@ -83,18 +110,7 @@
 		if (floatingButtons) {
 			contentContainerElement?.removeEventListener('mouseup', updateButtonPosition);
 			document.removeEventListener('mouseup', updateButtonPosition);
-		}
-	});
-
-	$: if (floatingButtons) {
-		if (buttonsContainerElement) {
-			document.body.appendChild(buttonsContainerElement);
-		}
-	}
-
-	onDestroy(() => {
-		if (buttonsContainerElement) {
-			document.body.removeChild(buttonsContainerElement);
+			document.removeEventListener('keydown', keydownHandler);
 		}
 	});
 </script>
