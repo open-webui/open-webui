@@ -691,7 +691,7 @@
 	"Title Generation Prompt": "Prompt de génération de titre",
 	"To access the available model names for downloading,": "Pour accéder aux noms des modèles disponibles,",
 	"To access the GGUF models available for downloading,": "Pour accéder aux modèles GGUF disponibles,",
-	"To access the WebUI, please reach out to the administrator. Admins can manage user statuses from the Admin Panel.": "Pour accéder à l'interface Web, veuillez contacter l'administrateur. Les administrateurs peuvent gérer les statuts des utilisateurs depuis le panneau d'administration.",
+	"To access the WebUI, please reach out to the administrator. Admins can manage user statuses from the Admin Panel.": "Pour accéder à l'interface Web, veuillez contacter l'administrateur. Les administrateurs peuvent gérer les statuts des utilisateurs depuis le Hacienda Teams d'administration.",
 	"To attach knowledge base here, add them to the \"Knowledge\" workspace first.": "",
 	"to chat input.": "Vers la zone de chat.",
 	"To select actions here, add them to the \"Functions\" workspace first.": "Pour sélectionner des actions ici, ajoutez-les d'abord à l'espace de travail « Fonctions ».",
