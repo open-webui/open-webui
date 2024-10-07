@@ -294,7 +294,15 @@
 	}}
 />
 
-<div class=" text-lg font-semibold mb-3">{$i18n.t('Models')}</div>
+<div class="mb-3">
+	<div class="flex justify-between items-center">
+		<div class="flex md:self-center text-lg font-medium px-0.5">
+			{$i18n.t('Models')}
+			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
+			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{$models.length}</span>
+		</div>
+	</div>
+</div>
 
 <div class=" flex w-full space-x-2">
 	<div class="flex flex-1">
@@ -337,9 +345,10 @@
 		</a>
 	</div>
 </div>
-<hr class=" dark:border-gray-850 my-2.5" />
 
-<a class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2" href="/workspace/models/create">
+<hr class=" border-gray-50 dark:border-gray-850 my-2.5" />
+
+<a class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-1" href="/workspace/models/create">
 	<div class=" self-center w-10 flex-shrink-0">
 		<div
 			class="w-full h-10 flex justify-center rounded-full bg-transparent dark:bg-gray-700 border border-dashed border-gray-200"
@@ -360,7 +369,7 @@
 	</div>
 </a>
 
-<hr class=" dark:border-gray-850" />
+<hr class=" border-gray-50 dark:border-gray-850 my-2.5" />
 
 <div class=" my-2 mb-5" id="model-list">
 	{#each _models.filter((m) => searchValue === '' || m.name
