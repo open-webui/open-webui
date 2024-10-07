@@ -196,6 +196,12 @@ CHANGELOG = changelog_json
 SAFE_MODE = os.environ.get("SAFE_MODE", "false").lower() == "true"
 
 ####################################
+# OFFLINE_MODE
+####################################
+
+OFFLINE_MODE = os.environ.get("OFFLINE_MODE", "false").lower() == "true"
+
+####################################
 # WEBUI_BUILD_HASH
 ####################################
 
