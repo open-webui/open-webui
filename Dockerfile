@@ -17,7 +17,7 @@ ARG UID=0
 ARG GID=0
 
 ######## WebUI frontend ########
-FROM --platform=$BUILDPLATFORM node:18-alpine AS build as build
+FROM --platform=$BUILDPLATFORM node:18-alpine AS build
 ARG BUILD_HASH
 
 WORKDIR /app
