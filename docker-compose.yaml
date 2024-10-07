@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   ollama:
     volumes:
@@ -9,19 +11,14 @@ services:
     image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
 
   open-webui:
-    build:
-      context: .
-      args:
-        OLLAMA_BASE_URL: '/ollama'
-      dockerfile: Dockerfile
-    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
+    image: ixinjulu/teams:latest  # UPDATED: Use your Docker Hub image
     container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
     depends_on:
       - ollama
     ports:
-      - ${OPEN_WEBUI_PORT-3000}:8080
+      - ${OPEN_WEBUI_PORT-3000}:8080  # Adjusted host port to 3000 or use your desired value
     environment:
       - 'OLLAMA_BASE_URL=http://ollama:11434'
       - 'WEBUI_SECRET_KEY='
