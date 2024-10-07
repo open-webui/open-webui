@@ -83,7 +83,7 @@
 		document.removeEventListener('mouseup', onMouseUp);
 	});
 
-	$: if (!chatId) {
+	const closeHandler = () => {
 		showControls.set(false);
 		showOverview.set(false);
 		showArtifacts.set(false);
@@ -91,6 +91,10 @@
 		if ($showCallOverlay) {
 			showCallOverlay.set(false);
 		}
+	};
+
+	$: if (!chatId) {
+		closeHandler();
 	}
 </script>
 
