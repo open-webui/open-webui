@@ -398,6 +398,7 @@ def get_rag_context(
                             "source": context["file"],
                             "document": context["documents"][0],
                             "metadata": context["metadatas"][0],
+                            "distances": context["distances"][0]
                         }
                     )
         except Exception as e:
