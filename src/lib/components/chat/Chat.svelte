@@ -72,6 +72,7 @@
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
+	import Artifacts from './Artifacts.svelte';
 
 	export let chatIdProp = '';
 
@@ -1971,100 +1972,111 @@
 
 				<div class="flex flex-col flex-auto z-10 w-full">
 					{#if $settings?.landingPageMode === 'chat' || createMessagesList(history.currentId).length > 0}
-						<div
-							class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
-							id="messages-container"
-							bind:this={messagesContainerElement}
-							on:scroll={(e) => {
-								autoScroll =
-									messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
-									messagesContainerElement.clientHeight + 5;
-							}}
-						>
-							<div class=" h-full w-full flex flex-col">
-								<Messages
-									chatId={$chatId}
-									bind:history
-									bind:autoScroll
-									bind:prompt
+					<div class="flex flex-row w-full h-full">
+						<div class="flex flex-col flex-auto z-10 w-full">
+							<div
+									class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
+									id="messages-container"
+									bind:this={messagesContainerElement}
+									on:scroll={(e) => {
+										autoScroll =
+											messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
+											messagesContainerElement.clientHeight + 5;
+									}}
+								>
+									<div class=" h-full w-full flex flex-col">
+										<Messages
+											chatId={$chatId}
+											bind:history
+											bind:autoScroll
+											bind:prompt
+											{selectedModels}
+											{sendPrompt}
+											{showMessage}
+											{continueResponse}
+											{regenerateResponse}
+											{mergeResponses}
+											{chatActionHandler}
+											bottomPadding={files.length > 0}
+											on:submit={async (e) => {
+												if (e.detail) {
+													// New user message
+													let userPrompt = e.detail.prompt;
+													let userMessageId = uuidv4();
+
+													let userMessage = {
+														id: userMessageId,
+														parentId: e.detail.parentId,
+														childrenIds: [],
+														role: 'user',
+														content: userPrompt,
+														models: selectedModels
+													};
+
+													let messageParentId = e.detail.parentId;
+
+													if (messageParentId !== null) {
+														history.messages[messageParentId].childrenIds = [
+															...history.messages[messageParentId].childrenIds,
+															userMessageId
+														];
+													}
+
+													history.messages[userMessageId] = userMessage;
+													history.currentId = userMessageId;
+
+													await tick();
+													await sendPrompt(userPrompt, userMessageId);
+												}
+											}}
+										/>
+									</div>
+							</div>
+
+							<div class=" pb-[1.6rem]">
+								<MessageInput
+									{history}
 									{selectedModels}
-									{sendPrompt}
-									{showMessage}
-									{continueResponse}
-									{regenerateResponse}
-									{mergeResponses}
-									{chatActionHandler}
-									bottomPadding={files.length > 0}
+									bind:files
+									bind:prompt
+									bind:autoScroll
+									bind:selectedToolIds
+									bind:webSearchEnabled
+									bind:atSelectedModel
+									availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
+										const model = $models.find((m) => m.id === e);
+										if (model?.info?.meta?.toolIds ?? false) {
+											return [...new Set([...a, ...model.info.meta.toolIds])];
+										}
+										return a;
+									}, [])}
+									transparentBackground={$settings?.backgroundImageUrl ?? false}
+									{stopResponse}
+									{createMessagePair}
 									on:submit={async (e) => {
 										if (e.detail) {
-											// New user message
-											let userPrompt = e.detail.prompt;
-											let userMessageId = uuidv4();
-
-											let userMessage = {
-												id: userMessageId,
-												parentId: e.detail.parentId,
-												childrenIds: [],
-												role: 'user',
-												content: userPrompt,
-												models: selectedModels
-											};
-
-											let messageParentId = e.detail.parentId;
-
-											if (messageParentId !== null) {
-												history.messages[messageParentId].childrenIds = [
-													...history.messages[messageParentId].childrenIds,
-													userMessageId
-												];
-											}
-
-											history.messages[userMessageId] = userMessage;
-											history.currentId = userMessageId;
-
+											prompt = '';
 											await tick();
-											await sendPrompt(userPrompt, userMessageId);
+											submitPrompt(e.detail);
 										}
 									}}
 								/>
+
+								<div
+									class="absolute bottom-1.5 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
+								>
+									{$i18n.t('LLMs can make mistakes. Verify important information.')}
+								</div>
 							</div>
 						</div>
-
-						<div class=" pb-[1.6rem]">
-							<MessageInput
-								{history}
-								{selectedModels}
-								bind:files
-								bind:prompt
-								bind:autoScroll
-								bind:selectedToolIds
-								bind:webSearchEnabled
-								bind:atSelectedModel
-								availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
-									const model = $models.find((m) => m.id === e);
-									if (model?.info?.meta?.toolIds ?? false) {
-										return [...new Set([...a, ...model.info.meta.toolIds])];
-									}
-									return a;
-								}, [])}
-								transparentBackground={$settings?.backgroundImageUrl ?? false}
-								{stopResponse}
-								{createMessagePair}
-								on:submit={async (e) => {
-									if (e.detail) {
-										prompt = '';
-										await tick();
-										submitPrompt(e.detail);
-									}
-								}}
-							/>
-
-							<div
-								class="absolute bottom-1.5 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
-							>
-								{$i18n.t('LLMs can make mistakes. Verify important information.')}
-							</div>
-						</div>
+						
+						{#if $showArtifacts}
+						<div class="h-full w-full p-8">
+								<Artifacts {history} />
+						</div>	
+						{/if}
+						
+					</div>
 					{:else}
 						<Placeholder
 							{history}

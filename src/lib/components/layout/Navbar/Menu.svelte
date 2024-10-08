@@ -152,7 +152,6 @@
 				on:click={async () => {
 					await showControls.set(true);
 					await showOverview.set(true);
-					await showArtifacts.set(false);
 				}}
 			>
 				<Map className=" size-4" strokeWidth="1.5" />
@@ -161,9 +160,9 @@
 
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-				id="chat-overview-button"
+				id="chat-artifacts-button"
 				on:click={async () => {
-					await showControls.set(true);
+					await showControls.set(false);
 					await showArtifacts.set(true);
 					await showOverview.set(false);
 				}}

@@ -3,7 +3,7 @@
 	import { slide } from 'svelte/transition';
 
 	import { onDestroy, onMount, tick } from 'svelte';
-	import { mobile, showControls, showCallOverlay, showOverview, showArtifacts } from '$lib/stores';
+	import { mobile, showControls, showCallOverlay, showOverview } from '$lib/stores';
 
 	import Modal from '../common/Modal.svelte';
 	import Controls from './Controls/Controls.svelte';
@@ -12,7 +12,6 @@
 	import Overview from './Overview.svelte';
 	import { Pane, PaneResizer } from 'paneforge';
 	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
-	import Artifacts from './Artifacts.svelte';
 
 	export let history;
 	export let models = [];
@@ -108,7 +107,7 @@
 				}}
 			>
 				<div
-					class=" {$showCallOverlay || $showOverview || $showArtifacts
+					class=" {$showCallOverlay || $showOverview 
 						? ' h-screen  w-screen'
 						: 'px-6 py-4'} h-full"
 				>
@@ -128,8 +127,6 @@
 								}}
 							/>
 						</div>
-					{:else if $showArtifacts}
-						<Artifacts {history} />
 					{:else if $showOverview}
 						<Overview
 							{history}
@@ -140,7 +137,7 @@
 								showControls.set(false);
 							}}
 						/>
-					{:else}
+					{:else if $showControls}
 						<Controls
 							on:close={() => {
 								showControls.set(false);
@@ -185,7 +182,7 @@
 			{#if $showControls}
 				<div class="pr-4 pb-8 flex max-h-full min-h-full">
 					<div
-						class="w-full {($showOverview || $showArtifacts) && !$showCallOverlay
+						class="w-full {$showOverview && !$showCallOverlay
 							? ' '
 							: 'px-5 py-4 bg-white dark:shadow-lg dark:bg-gray-850  border border-gray-50 dark:border-gray-800'}  rounded-lg z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
 					>
@@ -203,8 +200,6 @@
 									}}
 								/>
 							</div>
-						{:else if $showArtifacts}
-							<Artifacts {history} overlay={dragged} />
 						{:else if $showOverview}
 							<Overview
 								{history}
@@ -221,7 +216,7 @@
 									showControls.set(false);
 								}}
 							/>
-						{:else}
+						{:else if $showControls}
 							<Controls
 								on:close={() => {
 									showControls.set(false);

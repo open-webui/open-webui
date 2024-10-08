@@ -4,7 +4,7 @@
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
-	import { chatId, showArtifacts, showControls } from '$lib/stores';
+	import { chatId, showArtifacts } from '$lib/stores';
 	import XMark from '../icons/XMark.svelte';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 	import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
@@ -177,24 +177,24 @@
 	onMount(() => {});
 </script>
 
-<div class=" w-full h-full relative flex flex-col bg-gray-50 dark:bg-gray-850">
+<div class="w-full h-full relative flex flex-col bg-gray-50 dark:bg-gray-850 shadow rounded-lg">
+	
+	<div class="pointer-events-none z-50 w-full flex items-center justify-end p-4 rounded-t-lg">
+		<button
+			class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
+			on:click={() => {
+				dispatch('close');
+				showArtifacts.set(false);
+			}}
+		>
+			<XMark className="size-3 text-gray-900 dark:text-white" />
+		</button>
+	</div>
+
 	<div class="w-full h-full flex-1 relative">
 		{#if overlay}
 			<div class=" absolute top-0 left-0 right-0 bottom-0 z-10"></div>
 		{/if}
-
-		<div class=" absolute pointer-events-none z-50 w-full flex items-center justify-end p-4">
-			<button
-				class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
-				on:click={() => {
-					dispatch('close');
-					showControls.set(false);
-					showArtifacts.set(false);
-				}}
-			>
-				<XMark className="size-3 text-gray-900 dark:text-white" />
-			</button>
-		</div>
 
 		<div class="flex-1 w-full h-full">
 			<div class=" h-full flex flex-col">
