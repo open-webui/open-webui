@@ -824,6 +824,32 @@ class PipelineMiddleware(BaseHTTPMiddleware):
 app.add_middleware(PipelineMiddleware)
 
 
+from urllib.parse import urlencode, parse_qs, urlparse
+
+
+class RedirectMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Check if the request is a GET request
+        if request.method == "GET":
+            path = request.url.path
+            query_params = dict(parse_qs(urlparse(str(request.url)).query))
+
+            # Check for the specific watch path and the presence of 'v' parameter
+            if path.endswith("/watch") and "v" in query_params:
+                video_id = query_params["v"][0]  # Extract the first 'v' parameter
+                encoded_video_id = urlencode({"youtube": video_id})
+                redirect_url = f"/?{encoded_video_id}"
+                return RedirectResponse(url=redirect_url)
+
+        # Proceed with the normal flow of other requests
+        response = await call_next(request)
+        return response
+
+
+# Add the middleware to the app
+app.add_middleware(RedirectMiddleware)
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ALLOW_ORIGIN,
@@ -2415,6 +2441,7 @@ async def healthcheck_with_db():
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/cache", StaticFiles(directory=CACHE_DIR), name="cache")
+
 
 if os.path.exists(FRONTEND_BUILD_DIR):
     mimetypes.add_type("text/javascript", ".js")

@@ -204,6 +204,9 @@
 						{stopResponse}
 						{createMessagePair}
 						placeholder={$i18n.t('How can I help you today?')}
+						on:upload={(e) => {
+							dispatch('upload', e.detail);
+						}}
 						on:submit={(e) => {
 							dispatch('submit', e.detail);
 						}}

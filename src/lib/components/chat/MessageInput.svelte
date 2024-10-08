@@ -300,6 +300,9 @@
 					bind:this={commandsElement}
 					bind:prompt
 					bind:files
+					on:upload={(e) => {
+						dispatch('upload', e.detail);
+					}}
 					on:select={(e) => {
 						const data = e.detail;
 

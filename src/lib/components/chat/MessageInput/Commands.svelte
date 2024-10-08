@@ -26,71 +26,6 @@
 
 	let command = '';
 	$: command = (prompt?.trim() ?? '').split(' ')?.at(-1) ?? '';
-
-	const uploadWeb = async (url) => {
-		console.log(url);
-
-		const fileItem = {
-			type: 'doc',
-			name: url,
-			collection_name: '',
-			status: 'uploading',
-			url: url,
-			error: ''
-		};
-
-		try {
-			files = [...files, fileItem];
-			const res = await processWeb(localStorage.token, '', url);
-
-			if (res) {
-				fileItem.status = 'uploaded';
-				fileItem.collection_name = res.collection_name;
-				fileItem.file = {
-					...res.file,
-					...fileItem.file
-				};
-
-				files = files;
-			}
-		} catch (e) {
-			// Remove the failed doc from the files array
-			files = files.filter((f) => f.name !== url);
-			toast.error(JSON.stringify(e));
-		}
-	};
-
-	const uploadYoutubeTranscription = async (url) => {
-		console.log(url);
-
-		const fileItem = {
-			type: 'doc',
-			name: url,
-			collection_name: '',
-			status: 'uploading',
-			url: url,
-			error: ''
-		};
-
-		try {
-			files = [...files, fileItem];
-			const res = await processYoutubeVideo(localStorage.token, url);
-
-			if (res) {
-				fileItem.status = 'uploaded';
-				fileItem.collection_name = res.collection_name;
-				fileItem.file = {
-					...res.file,
-					...fileItem.file
-				};
-				files = files;
-			}
-		} catch (e) {
-			// Remove the failed doc from the files array
-			files = files.filter((f) => f.name !== url);
-			toast.error(e);
-		}
-	};
 </script>
 
 {#if ['/', '#', '@'].includes(command?.charAt(0))}
@@ -103,11 +38,17 @@
 			{command}
 			on:youtube={(e) => {
 				console.log(e);
-				uploadYoutubeTranscription(e.detail);
+				dispatch('upload', {
+					type: 'youtube',
+					data: e.detail
+				});
 			}}
 			on:url={(e) => {
 				console.log(e);
-				uploadWeb(e.detail);
+				dispatch('upload', {
+					type: 'web',
+					data: e.detail
+				});
 			}}
 			on:select={(e) => {
 				console.log(e);

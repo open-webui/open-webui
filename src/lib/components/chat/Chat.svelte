@@ -53,7 +53,7 @@
 		updateChatById
 	} from '$lib/apis/chats';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
-	import { processWebSearch } from '$lib/apis/retrieval';
+	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
@@ -308,6 +308,74 @@
 		$socket?.off('chat-events');
 	});
 
+	// File upload functions
+
+	const uploadWeb = async (url) => {
+		console.log(url);
+
+		const fileItem = {
+			type: 'doc',
+			name: url,
+			collection_name: '',
+			status: 'uploading',
+			url: url,
+			error: ''
+		};
+
+		try {
+			files = [...files, fileItem];
+			const res = await processWeb(localStorage.token, '', url);
+
+			if (res) {
+				fileItem.status = 'uploaded';
+				fileItem.collection_name = res.collection_name;
+				fileItem.file = {
+					...res.file,
+					...fileItem.file
+				};
+
+				files = files;
+			}
+		} catch (e) {
+			// Remove the failed doc from the files array
+			files = files.filter((f) => f.name !== url);
+			toast.error(JSON.stringify(e));
+		}
+	};
+
+	const uploadYoutubeTranscription = async (url) => {
+		console.log(url);
+
+		const fileItem = {
+			type: 'doc',
+			name: url,
+			collection_name: '',
+			status: 'uploading',
+			context: 'full',
+			url: url,
+			error: ''
+		};
+
+		try {
+			files = [...files, fileItem];
+			const res = await processYoutubeVideo(localStorage.token, url);
+
+			if (res) {
+				fileItem.status = 'uploaded';
+				fileItem.collection_name = res.collection_name;
+				fileItem.file = {
+					...res.file,
+					...fileItem.file
+				};
+				files = files;
+			}
+		} catch (e) {
+			// Remove the failed doc from the files array
+			files = files.filter((f) => f.name !== url);
+			toast.error(e);
+		}
+	};
+
 	//////////////////////////
 	// Web functions
 	//////////////////////////
@@ -348,6 +416,10 @@
 			selectedModels = [''];
 		}
 
+		if ($page.url.searchParams.get('youtube')) {
+			uploadYoutubeTranscription(`https://www.youtube.com/watch?v=NqxUExCZJ5Y`);
+		}
+
 		if ($page.url.searchParams.get('web-search') === 'true') {
 			webSearchEnabled = true;
 		}
@@ -366,6 +438,11 @@
 				.filter((id) => id);
 		}
 
+		if ($page.url.searchParams.get('call') === 'true') {
+			showCallOverlay.set(true);
+			showControls.set(true);
+		}
+
 		if ($page.url.searchParams.get('q')) {
 			prompt = $page.url.searchParams.get('q') ?? '';
 
@@ -373,11 +450,6 @@
 				await tick();
 				submitPrompt(prompt);
 			}
-		}
-
-		if ($page.url.searchParams.get('call') === 'true') {
-			showCallOverlay.set(true);
-			showControls.set(true);
 		}
 
 		selectedModels = selectedModels.map((modelId) =>
@@ -2060,6 +2132,15 @@
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								{stopResponse}
 								{createMessagePair}
+								on:upload={async (e) => {
+									const { type, data } = e.detail;
+
+									if (type === 'web') {
+										await uploadWeb(data);
+									} else if (type === 'youtube') {
+										await uploadYoutubeTranscription(data);
+									}
+								}}
 								on:submit={async (e) => {
 									if (e.detail) {
 										prompt = '';
@@ -2095,6 +2176,15 @@
 							transparentBackground={$settings?.backgroundImageUrl ?? false}
 							{stopResponse}
 							{createMessagePair}
+							on:upload={async (e) => {
+								const { type, data } = e.detail;
+
+								if (type === 'web') {
+									await uploadWeb(data);
+								} else if (type === 'youtube') {
+									await uploadYoutubeTranscription(data);
+								}
+							}}
 							on:submit={async (e) => {
 								if (e.detail) {
 									prompt = '';
