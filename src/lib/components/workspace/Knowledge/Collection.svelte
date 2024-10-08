@@ -613,6 +613,9 @@
 										class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
 										bind:value={query}
 										placeholder={$i18n.t('Search Collection')}
+										on:focus={() => {
+											selectedFileId = null;
+										}}
 									/>
 
 									<div>
