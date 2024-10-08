@@ -181,7 +181,8 @@
 							{/if}
 						</div>
 						<div class=" text-xs text-gray-500">
-							Updated {dayjs(item.updated_at * 1000).fromNow()}
+							{$i18n.t('Updated')}
+							{dayjs(item.updated_at * 1000).fromNow()}
 						</div>
 					</div>
 				</div>
