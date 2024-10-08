@@ -752,7 +752,7 @@
 	"variable": "变量",
 	"variable to have them replaced with clipboard content.": "变量将被剪贴板内容替换。",
 	"Version": "版本",
-	"Version {{selectedVersion}} of {{totalVersions}}": "版本 {{totalVersions}} 中的版本 {{selectedVersion}}",
+	"Version {{selectedVersion}} of {{totalVersions}}": "版本 {{selectedVersion}}/{{totalVersions}}",
 	"Voice": "语音",
 	"Warning": "警告",
 	"Warning:": "警告：",
