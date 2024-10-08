@@ -417,7 +417,9 @@
 		}
 
 		if ($page.url.searchParams.get('youtube')) {
-			uploadYoutubeTranscription(`https://www.youtube.com/watch?v=NqxUExCZJ5Y`);
+			uploadYoutubeTranscription(
+				`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`
+			);
 		}
 
 		if ($page.url.searchParams.get('web-search') === 'true') {
