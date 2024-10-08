@@ -199,6 +199,13 @@
 
 				eventConfirmationTitle = data.title;
 				eventConfirmationMessage = data.message;
+			} else if (type === 'execute') {
+				try {
+					// Use Function constructor to evaluate code in a safer way
+					new Function(data.code)();
+				} catch (error) {
+					console.error('Error executing code:', error);
+				}
 			} else if (type === 'input') {
 				eventCallback = cb;
 
