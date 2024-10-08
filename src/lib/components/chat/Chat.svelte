@@ -2173,42 +2173,44 @@
 							</div>
 						</div>
 					{:else}
-						<Placeholder
-							{history}
-							{selectedModels}
-							bind:files
-							bind:prompt
-							bind:autoScroll
-							bind:selectedToolIds
-							bind:webSearchEnabled
-							bind:atSelectedModel
-							availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
-								const model = $models.find((m) => m.id === e);
-								if (model?.info?.meta?.toolIds ?? false) {
-									return [...new Set([...a, ...model.info.meta.toolIds])];
-								}
-								return a;
-							}, [])}
-							transparentBackground={$settings?.backgroundImageUrl ?? false}
-							{stopResponse}
-							{createMessagePair}
-							on:upload={async (e) => {
-								const { type, data } = e.detail;
+						<div class="overflow-auto w-full h-full flex items-center">
+							<Placeholder
+								{history}
+								{selectedModels}
+								bind:files
+								bind:prompt
+								bind:autoScroll
+								bind:selectedToolIds
+								bind:webSearchEnabled
+								bind:atSelectedModel
+								availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
+									const model = $models.find((m) => m.id === e);
+									if (model?.info?.meta?.toolIds ?? false) {
+										return [...new Set([...a, ...model.info.meta.toolIds])];
+									}
+									return a;
+								}, [])}
+								transparentBackground={$settings?.backgroundImageUrl ?? false}
+								{stopResponse}
+								{createMessagePair}
+								on:upload={async (e) => {
+									const { type, data } = e.detail;
 
-								if (type === 'web') {
-									await uploadWeb(data);
-								} else if (type === 'youtube') {
-									await uploadYoutubeTranscription(data);
-								}
-							}}
-							on:submit={async (e) => {
-								if (e.detail) {
-									prompt = '';
-									await tick();
-									submitPrompt(e.detail);
-								}
-							}}
-						/>
+									if (type === 'web') {
+										await uploadWeb(data);
+									} else if (type === 'youtube') {
+										await uploadYoutubeTranscription(data);
+									}
+								}}
+								on:submit={async (e) => {
+									if (e.detail) {
+										prompt = '';
+										await tick();
+										submitPrompt(e.detail);
+									}
+								}}
+							/>
+						</div>
 					{/if}
 				</div>
 			</Pane>
