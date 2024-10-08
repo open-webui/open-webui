@@ -656,7 +656,7 @@
 									/>
 								</div>
 							{:else}
-								<div class="m-auto text-gray-500 text-xs">No content found</div>
+								<div class="m-auto text-gray-500 text-xs">{$i18n.t('No content found')}</div>
 							{/if}
 						</div>
 					</div>
@@ -724,7 +724,7 @@
 								</div>
 
 								<div class=" mt-2 text-center text-sm text-gray-200 dark:text-gray-700 w-full">
-									Select a file to view or drag and drop a file to upload
+									{$i18n.t('Select a file to view or drag and drop a file to upload')}
 								</div>
 							</div>
 						{/if}
