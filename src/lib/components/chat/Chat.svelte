@@ -200,9 +200,16 @@
 				eventConfirmationTitle = data.title;
 				eventConfirmationMessage = data.message;
 			} else if (type === 'execute') {
+				eventCallback = cb;
+
 				try {
 					// Use Function constructor to evaluate code in a safer way
-					new Function(data.code)();
+					const asyncFunction = new Function(`return (async () => { ${data.code} })()`);
+					const result = await asyncFunction(); // Await the result of the async function
+
+					if (cb) {
+						cb(result);
+					}
 				} catch (error) {
 					console.error('Error executing code:', error);
 				}
