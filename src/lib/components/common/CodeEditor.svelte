@@ -31,11 +31,13 @@
 	}
 
 	const updateValue = () => {
-		_value = value;
-		if (codeEditor) {
-			codeEditor.dispatch({
-				changes: [{ from: 0, to: codeEditor.state.doc.length, insert: _value }]
-			});
+		if (_value !== value) {
+			_value = value;
+			if (codeEditor) {
+				codeEditor.dispatch({
+					changes: [{ from: 0, to: codeEditor.state.doc.length, insert: _value }]
+				});
+			}
 		}
 	};
 

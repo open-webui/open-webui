@@ -7,98 +7,138 @@
 	const dispatch = createEventDispatcher();
 
 	import Modal from '$lib/components/common/Modal.svelte';
+	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
+	import Mic from '$lib/components/icons/Mic.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import VoiceRecording from '$lib/components/chat/MessageInput/VoiceRecording.svelte';
 	export let show = false;
 
-	let name = '';
+	let name = 'Untitled';
 	let content = '';
+
+	let voiceInput = false;
 </script>
 
-<Modal size="md" bind:show>
-	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Add Content')}</div>
-			<button
-				class="self-center"
-				on:click={() => {
-					show = false;
-				}}
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-5 h-5"
-				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
-			</button>
-		</div>
-		<div class="flex flex-col md:flex-row w-full px-5 py-4 md:space-x-4 dark:text-gray-200">
-			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
-				<form
-					class="flex flex-col w-full"
-					on:submit|preventDefault={() => {
-						if (name.trim() === '' || content.trim() === '') {
-							toast.error($i18n.t('Please fill in all fields.'));
-							name = '';
-							content = '';
-							return;
-						}
+<Modal size="full" className="h-full bg-white dark:bg-gray-900" bind:show>
+	<div class="absolute top-0 right-0 p-5">
+		<button
+			class="self-center dark:text-white"
+			type="button"
+			on:click={() => {
+				show = false;
+			}}
+		>
+			<XMark className="size-3.5" />
+		</button>
+	</div>
+	<div class="flex flex-col md:flex-row w-full h-full md:space-x-4 dark:text-gray-200">
+		<form
+			class="flex flex-col w-full h-full"
+			on:submit|preventDefault={() => {
+				if (name.trim() === '' || content.trim() === '') {
+					toast.error($i18n.t('Please fill in all fields.'));
+					name = name.trim();
+					content = content.trim();
+					return;
+				}
 
-						dispatch('submit', {
-							name,
-							content
-						});
-						show = false;
-						name = '';
-						content = '';
-					}}
-				>
-					<div class="mb-3 w-full">
-						<div class="w-full flex flex-col gap-2.5">
-							<div class="w-full">
-								<div class=" text-sm mb-2">Title</div>
-
-								<div class="w-full mt-1">
-									<input
-										class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:text-gray-300 dark:bg-gray-850 outline-none"
-										type="text"
-										bind:value={name}
-										placeholder={`Name your content`}
-										required
-									/>
-								</div>
-							</div>
-
-							<div>
-								<div class="text-sm mb-2">Content</div>
-
-								<div class=" w-full mt-1">
-									<textarea
-										class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-whites dark:text-gray-300 dark:bg-gray-850 outline-none"
-										rows="10"
-										bind:value={content}
-										placeholder={`Write your content here`}
-										required
-									/>
-								</div>
-							</div>
+				dispatch('submit', {
+					name,
+					content
+				});
+				show = false;
+				name = '';
+				content = '';
+			}}
+		>
+			<div class=" flex-1 w-full h-full flex justify-center overflow-auto px-5 py-4">
+				<div class=" max-w-3xl py-2 md:py-10 w-full flex flex-col gap-2">
+					<div class="flex-shrink-0 w-full flex justify-between items-center">
+						<div class="w-full">
+							<input
+								class="w-full text-3xl font-semibold bg-transparent outline-none"
+								type="text"
+								bind:value={name}
+								placeholder={$i18n.t('Title')}
+								required
+							/>
 						</div>
 					</div>
 
-					<div class="flex justify-end text-sm font-medium">
+					<div class=" flex-1 w-full h-full">
+						<RichTextInput bind:value={content} placeholder={$i18n.t('Write something...')} />
+					</div>
+				</div>
+			</div>
+
+			<div
+				class="flex flex-row items-center justify-end text-sm font-medium flex-shrink-0 mt-1 p-4 gap-1.5"
+			>
+				<div class="">
+					{#if voiceInput}
+						<div class=" max-w-full w-64">
+							<VoiceRecording
+								bind:recording={voiceInput}
+								className="p-1"
+								on:cancel={() => {
+									voiceInput = false;
+								}}
+								on:confirm={(e) => {
+									const response = e.detail;
+									content = `${content}${response} `;
+
+									voiceInput = false;
+								}}
+							/>
+						</div>
+					{:else}
+						<Tooltip content={$i18n.t('Voice Input')}>
+							<button
+								class=" p-2 bg-gray-50 text-gray-700 dark:bg-gray-700 dark:text-white transition rounded-full"
+								type="button"
+								on:click={async () => {
+									try {
+										let stream = await navigator.mediaDevices
+											.getUserMedia({ audio: true })
+											.catch(function (err) {
+												toast.error(
+													$i18n.t(`Permission denied when accessing microphone: {{error}}`, {
+														error: err
+													})
+												);
+												return null;
+											});
+
+										if (stream) {
+											voiceInput = true;
+											const tracks = stream.getTracks();
+											tracks.forEach((track) => track.stop());
+										}
+										stream = null;
+									} catch {
+										toast.error($i18n.t('Permission denied when accessing microphone'));
+									}
+								}}
+							>
+								<Mic className="size-5" />
+							</button>
+						</Tooltip>
+					{/if}
+				</div>
+
+				<div class=" flex-shrink-0">
+					<Tooltip content={$i18n.t('Save')}>
 						<button
-							class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
+							class=" px-3.5 py-2 bg-black text-white dark:bg-white dark:text-black transition rounded-full"
 							type="submit"
 						>
-							{$i18n.t('Add Content')}
+							{$i18n.t('Save')}
 						</button>
-					</div>
-				</form>
+					</Tooltip>
+				</div>
 			</div>
-		</div>
+		</form>
 	</div>
 </Modal>
 

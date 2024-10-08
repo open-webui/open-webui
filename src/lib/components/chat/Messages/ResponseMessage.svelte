@@ -35,10 +35,13 @@
 	import Markdown from './Markdown.svelte';
 	import Error from './Error.svelte';
 	import Citations from './Citations.svelte';
+	import CodeExecutions from './CodeExecutions.svelte';
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import ContentRenderer from './ContentRenderer.svelte';
+	import { createNewFeedback, getFeedbackById, updateFeedbackById } from '$lib/apis/evaluations';
+	import { getChatById } from '$lib/apis/chats';
 
 	interface MessageType {
 		id: string;
@@ -64,6 +67,17 @@
 		done: boolean;
 		error?: boolean | { content: string };
 		citations?: string[];
+		code_executions?: {
+			uuid: string;
+			name: string;
+			code: string;
+			language?: string;
+			result?: {
+				error?: string;
+				output?: string;
+				files?: { name: string; url: string }[];
+			};
+		}[];
 		info?: {
 			openai?: boolean;
 			prompt_tokens?: number;
@@ -80,6 +94,7 @@
 		annotation?: { type: string; rating: number };
 	}
 
+	export let chatId = '';
 	export let history;
 	export let messageId;
 
@@ -318,6 +333,81 @@
 		generatingImage = false;
 	};
 
+	const feedbackHandler = async (
+		rating: number | null = null,
+		annotation: object | null = null
+	) => {
+		console.log('Feedback', rating, annotation);
+
+		const updatedMessage = {
+			...message,
+			annotation: {
+				...(message?.annotation ?? {}),
+				...(rating !== null ? { rating: rating } : {}),
+				...(annotation ? annotation : {})
+			}
+		};
+
+		const chat = await getChatById(localStorage.token, chatId).catch((error) => {
+			toast.error(error);
+		});
+		if (!chat) {
+			return;
+		}
+
+		let feedbackItem = {
+			type: 'rating',
+			data: {
+				...(updatedMessage?.annotation ? updatedMessage.annotation : {}),
+				model_id: message?.selectedModelId ?? message.model,
+				...(history.messages[message.parentId].childrenIds.length > 1
+					? {
+							sibling_model_ids: history.messages[message.parentId].childrenIds
+								.filter((id) => id !== message.id)
+								.map((id) => history.messages[id]?.selectedModelId ?? history.messages[id].model)
+						}
+					: {})
+			},
+			meta: {
+				arena: message ? message.arena : false,
+				model_id: message.model,
+				message_id: message.id,
+				chat_id: chatId
+			},
+			snapshot: {
+				chat: chat
+			}
+		};
+
+		let feedback = null;
+		if (message?.feedbackId) {
+			feedback = await updateFeedbackById(
+				localStorage.token,
+				message.feedbackId,
+				feedbackItem
+			).catch((error) => {
+				toast.error(error);
+			});
+		} else {
+			feedback = await createNewFeedback(localStorage.token, feedbackItem).catch((error) => {
+				toast.error(error);
+			});
+
+			if (feedback) {
+				updatedMessage.feedbackId = feedback.id;
+			}
+		}
+
+		console.log(updatedMessage);
+		dispatch('save', updatedMessage);
+
+		await tick();
+
+		if (!annotation) {
+			showRateComment = true;
+		}
+	};
+
 	$: if (!edit) {
 		(async () => {
 			await tick();
@@ -479,7 +569,7 @@
 										id={message.id}
 										content={message.content}
 										floatingButtons={message?.done}
-										save={true}
+										save={!readOnly}
 										{model}
 										on:update={(e) => {
 											const { raw, oldContent, newContent } = e.detail;
@@ -490,15 +580,21 @@
 
 											dispatch('update');
 										}}
-										on:explain={(e) => {
-											dispatch('submit', {
-												parentId: message.id,
-												prompt:
-													`Explain this section to me in more detail\n\n` +
-													'```\n' +
-													e.detail +
-													'\n```'
-											});
+										on:select={(e) => {
+											const { type, content } = e.detail;
+
+											if (type === 'explain') {
+												dispatch('submit', {
+													parentId: message.id,
+													prompt: `Explain this section to me in more detail\n\n\`\`\`\n${content}\n\`\`\``
+												});
+											} else if (type === 'ask') {
+												const input = e.detail?.input ?? '';
+												dispatch('submit', {
+													parentId: message.id,
+													prompt: `\`\`\`\n${content}\n\`\`\`\n${input}`
+												});
+											}
 										}}
 									/>
 								{/if}
@@ -509,6 +605,10 @@
 
 								{#if message.citations}
 									<Citations citations={message.citations} />
+								{/if}
+
+								{#if message.code_executions}
+									<CodeExecutions codeExecutions={message.code_executions} />
 								{/if}
 							</div>
 						{/if}
@@ -858,12 +958,13 @@
 											<button
 												class="{isLastMessage
 													? 'visible'
-													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(message
-													?.annotation?.rating ?? null) === 1
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(
+													message?.annotation?.rating ?? ''
+												).toString() === '1'
 													? 'bg-gray-100 dark:bg-gray-800'
 													: ''} dark:hover:text-white hover:text-black transition"
 												on:click={async () => {
-													await rateMessage(message.id, 1);
+													await feedbackHandler(1);
 
 													(model?.actions ?? [])
 														.filter((action) => action?.__webui__ ?? false)
@@ -879,7 +980,6 @@
 															});
 														});
 
-													showRateComment = true;
 													window.setTimeout(() => {
 														document
 															.getElementById(`message-feedback-${message.id}`)
@@ -908,12 +1008,13 @@
 											<button
 												class="{isLastMessage
 													? 'visible'
-													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(message
-													?.annotation?.rating ?? null) === -1
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(
+													message?.annotation?.rating ?? ''
+												).toString() === '-1'
 													? 'bg-gray-100 dark:bg-gray-800'
 													: ''} dark:hover:text-white hover:text-black transition"
 												on:click={async () => {
-													await rateMessage(message.id, -1);
+													await feedbackHandler(-1);
 
 													(model?.actions ?? [])
 														.filter((action) => action?.__webui__ ?? false)
@@ -929,7 +1030,6 @@
 															});
 														});
 
-													showRateComment = true;
 													window.setTimeout(() => {
 														document
 															.getElementById(`message-feedback-${message.id}`)
@@ -1081,15 +1181,12 @@
 						<RateComment
 							bind:message
 							bind:show={showRateComment}
-							on:submit={(e) => {
-								dispatch('save', {
-									...message,
-									annotation: {
-										...message.annotation,
-										comment: e.detail.comment,
-										reason: e.detail.reason
-									}
+							on:save={async (e) => {
+								await feedbackHandler(null, {
+									comment: e.detail.comment,
+									reason: e.detail.reason
 								});
+
 								(model?.actions ?? [])
 									.filter((action) => action?.__webui__ ?? false)
 									.forEach((action) => {

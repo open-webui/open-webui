@@ -29,7 +29,7 @@
 >
 	<Tooltip content={$i18n.t('Add Content')}>
 		<button
-			class=" px-2 py-2 rounded-xl border border-gray-50 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition font-medium text-sm flex items-center space-x-1"
+			class=" p-1.5 rounded-xl hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition font-medium text-sm flex items-center space-x-1"
 			on:click={(e) => {
 				e.stopPropagation();
 				show = true;

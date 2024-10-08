@@ -19,6 +19,8 @@
 
 	// Addons
 	let titleAutoGenerate = true;
+	let autoTags = true;
+
 	let responseAutoCopy = false;
 	let widescreenMode = false;
 	let splitLargeChunks = false;
@@ -32,6 +34,7 @@
 	let landingPageMode = '';
 	let chatBubble = true;
 	let chatDirection: 'LTR' | 'RTL' = 'LTR';
+	let showUpdateToast = true;
 
 	let showEmojiInCall = false;
 	let voiceInterruption = false;
@@ -47,7 +50,7 @@
 		saveSettings({ scrollOnBranchChange: scrollOnBranchChange });
 	};
 
-	const togglewidescreenMode = async () => {
+	const toggleWidescreenMode = async () => {
 		widescreenMode = !widescreenMode;
 		saveSettings({ widescreenMode: widescreenMode });
 	};
@@ -60,6 +63,11 @@
 	const toggleLandingPageMode = async () => {
 		landingPageMode = landingPageMode === '' ? 'chat' : '';
 		saveSettings({ landingPageMode: landingPageMode });
+	};
+
+	const toggleShowUpdateToast = async () => {
+		showUpdateToast = !showUpdateToast;
+		saveSettings({ showUpdateToast: showUpdateToast });
 	};
 
 	const toggleShowUsername = async () => {
@@ -112,6 +120,11 @@
 		});
 	};
 
+	const toggleAutoTags = async () => {
+		autoTags = !autoTags;
+		saveSettings({ autoTags });
+	};
+
 	const toggleResponseAutoCopy = async () => {
 		const permission = await navigator.clipboard
 			.readText()
@@ -149,9 +162,12 @@
 
 	onMount(async () => {
 		titleAutoGenerate = $settings?.title?.auto ?? true;
+		autoTags = $settings.autoTags ?? true;
 
 		responseAutoCopy = $settings.responseAutoCopy ?? false;
+
 		showUsername = $settings.showUsername ?? false;
+		showUpdateToast = $settings.showUpdateToast ?? true;
 
 		showEmojiInCall = $settings.showEmojiInCall ?? false;
 		voiceInterruption = $settings.voiceInterruption ?? false;
@@ -307,7 +323,7 @@
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
-							togglewidescreenMode();
+							toggleWidescreenMode();
 						}}
 						type="button"
 					>
@@ -337,6 +353,30 @@
 					</button>
 				</div>
 			</div>
+
+			{#if $user.role === 'admin'}
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" self-center text-xs">
+							{$i18n.t('Toast notifications for new updates')}
+						</div>
+
+						<button
+							class="p-1 px-3 text-xs flex rounded transition"
+							on:click={() => {
+								toggleShowUpdateToast();
+							}}
+							type="button"
+						>
+							{#if showUpdateToast === true}
+								<span class="ml-2 self-center">{$i18n.t('On')}</span>
+							{:else}
+								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+							{/if}
+						</button>
+					</div>
+				</div>
+			{/if}
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -423,6 +463,26 @@
 						type="button"
 					>
 						{#if titleAutoGenerate === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('Chat Tags Auto-Generation')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleAutoTags();
+						}}
+						type="button"
+					>
+						{#if autoTags === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
@@ -539,7 +599,7 @@
 
 	<div class="flex justify-end text-sm font-medium">
 		<button
-			class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}

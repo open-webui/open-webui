@@ -1,10 +1,7 @@
-import time
 import logging
 from datetime import UTC, datetime, timedelta
 from typing import Optional
 import uuid
-import os
-
 
 from open_webui.constants import AUDIT_EVENT
 from open_webui.apps.webui.internal.db import Base, JSONField, get_db
@@ -24,11 +21,11 @@ class AuditLog(Base):
     log_level = Column(String, nullable=False)
     event = Column(String, nullable=False)
     extra = Column(JSONField, nullable=True)
-    event_user_id = Column(String, nullable=True)
     source_ip = Column(String, nullable=True)
     object_id = Column(String, nullable=True)
     object_type = Column(String, nullable=True)
-    user_api_key = Column(String, nullable=True)
+    admin_id = Column(String, nullable=True)
+    admin_api_key = Column(String, nullable=True)
     request_uri = Column(String, nullable=True)
     entry_expiration_timestamp = Column(BigInteger, nullable=True)
     user_agent = Column(String, nullable=True)
@@ -52,11 +49,11 @@ class AuditLogModel(BaseModel):
     log_level: str
     event: AUDIT_EVENT
     extra: Optional[dict] = None
-    event_user_id: Optional[str] = None
+    admin_id: Optional[str] = None
     source_ip: Optional[str] = None
     object_id: Optional[str] = None
     object_type: Optional[str] = None
-    user_api_key: Optional[str] = None
+    admin_api_key: Optional[str] = None
     request_uri: Optional[str] = None
     entry_expiration_timestamp: Optional[int] = None
     user_agent: Optional[str] = None
@@ -97,18 +94,17 @@ class AuditLogsTable:
         self,
         log_level: str,
         event: AUDIT_EVENT,
-        event_user_id: Optional[str] = None,
+        admin_id: Optional[str] = None,
         source_ip: Optional[str] = None,
         object_id: Optional[str] = None,
         object_type: Optional[str] = None,
-        user_api_key: Optional[str] = None,
+        admin_api_key: Optional[str] = None,
         request_uri: Optional[str] = None,
         user_agent: Optional[str] = None,
         request_info: Optional[RequestInfo] = None,
         response_info: Optional[ResponseInfo] = None,
         extra: Optional[dict] = None,
     ) -> Optional[AuditLogModel]:
-
         expiration_datetime = datetime.now(UTC) + self.retention_period
         entry_expiration_timestamp = int(expiration_datetime.timestamp())
         current_time = int(datetime.now(UTC).timestamp())
@@ -119,11 +115,11 @@ class AuditLogsTable:
             log_level=log_level,
             event=event,
             extra=extra,
-            event_user_id=event_user_id,
+            admin_id=admin_id,
             source_ip=source_ip,
             object_id=object_id,
             object_type=object_type,
-            user_api_key=user_api_key,
+            admin_api_key=admin_api_key,
             request_uri=request_uri,
             entry_expiration_timestamp=entry_expiration_timestamp,
             user_agent=user_agent,
@@ -150,14 +146,14 @@ class AuditLogsTable:
                 log.exception(e)
                 return []
 
-    def get_logs_by_event_user_id(
-        self, event_user_id: str, skip: int = 0, limit: int = 100
+    def get_logs_by_admin_id(
+        self, admin_id: str, skip: int = 0, limit: int = 100
     ) -> list[AuditLogModel]:
         with get_db() as db:
             try:
                 logs = (
                     db.query(AuditLog)
-                    .filter_by(event_user_id=event_user_id)
+                    .filter_by(admin_id=admin_id)
                     .offset(skip)
                     .limit(limit)
                     .all()

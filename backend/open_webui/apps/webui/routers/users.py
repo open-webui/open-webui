@@ -257,9 +257,9 @@ async def delete_user_by_id(
         if result:
             audit_logger.write(
                 AUDIT_EVENT.ENTITY_DELETED,
-                user,
+                user_id,
                 object_type="USER",
-                event_user_id=user.id,
+                admin=user,
             )
             return True
 

@@ -1,12 +1,14 @@
-from datetime import timedelta
 import json
-from typing import Literal, Optional, TYPE_CHECKING, Protocol
 import logging
 import sys
+from datetime import timedelta
+from typing import Any, Optional, Protocol, TYPE_CHECKING, Union
 
 from loguru import logger
 from pydantic import TypeAdapter
+from pydantic.json import pydantic_encoder
 
+from open_webui.apps.webui.models.users import UserModel
 from open_webui.apps.webui.models.audits import (
     AuditLogs,
     AuditLogsTable,
@@ -69,51 +71,53 @@ class DatabaseAuditLogHandler:
 
     def __call__(self, message: "Message") -> None:
         record = message.record
-        print(record["extra"])
-        record["extra"].pop("auditable", None)
-
+        # Make a copy of 'extra' instead of modifying it in place
         extra = record["extra"].copy()
+        extra.pop("auditable", None)
+
         log_level = record["level"].name
 
-        event_user_id = extra.pop("event_user_id", None)
-        source_ip = extra.pop("source_ip", None)
-        object_id = extra.pop("object_id", None)
-        object_type = extra.pop("object_type", None)
-        user_api_key = extra.pop("user_api_key", None)
-        request_uri = extra.pop("request_uri", None)
-        user_agent = extra.pop("user_agent", None)
-        request_info_data = extra.pop("request_info", None)
-        response_info_data = extra.pop("response_info", None)
+        fields = [
+            "admin_id",
+            "source_ip",
+            "object_id",
+            "object_type",
+            "admin_api_key",
+            "request_uri",
+            "user_agent",
+            "request_info",
+            "response_info",
+        ]
+        extracted = {field: extra.pop(field, None) for field in fields}
 
-        request_info = (
-            RequestInfo(**request_info_data)
-            if isinstance(request_info_data, dict)
-            else request_info_data
-        )
-        response_info = (
-            ResponseInfo(**response_info_data)
-            if isinstance(response_info_data, dict)
-            else response_info_data
-        )
+        for key in ["request_info", "response_info"]:
+            data = extracted[key]
+            if isinstance(data, dict):
+                try:
+                    extracted[key] = (
+                        RequestInfo(**data)
+                        if key == "request_info"
+                        else ResponseInfo(**data)
+                    )
+                except Exception as e:
+                    logger.exception(f"Failed to parse {key}: {e}")
+                    extracted[key] = None
 
         event_message = record["message"]
-        if isinstance(event_message, AUDIT_EVENT):
-            event = event_message
-        else:
-            event = AUDIT_EVENT(event_message)
+        try:
+            event = (
+                AUDIT_EVENT(event_message)
+                if not isinstance(event_message, AUDIT_EVENT)
+                else event_message
+            )
+        except ValueError:
+            logger.error(f"Invalid audit event: {event_message}")
+            return
 
         self.audit_log_table.create_log(
             log_level=log_level,
             event=event,
-            event_user_id=event_user_id,
-            source_ip=source_ip,
-            object_id=object_id,
-            object_type=object_type,
-            user_api_key=user_api_key,
-            request_uri=request_uri,
-            user_agent=user_agent,
-            request_info=request_info,
-            response_info=response_info,
+            **extracted,
             extra=extra,
         )
 
@@ -123,100 +127,102 @@ class Identifiable(Protocol):
 
 
 class AuditLogger:
-    def __init__(
-        self,
-        logger: "Logger",
-        *,
-        event_user_id: Optional[str] = None,
-        user_api_key: Optional[str] = None,
-    ):
+    def __init__(self, logger: "Logger", *, admin: Optional[UserModel] = None):
         self.logger = logger.bind(auditable=True)
-        self.event_user_id = event_user_id
-        self.user_api_key = user_api_key
+        self.admin = admin
 
     def __call__(
         self,
         event: AUDIT_EVENT,
         *,
         level: str = "INFO",
-        event_user_id: Optional[str] = None,
+        admin: Optional[UserModel] = None,
         source_ip: Optional[str] = None,
         object_id: Optional[str] = None,
         object_type: Optional[str] = None,
-        user_api_key: Optional[str] = None,
         request_uri: Optional[str] = None,
         user_agent: Optional[str] = None,
         request_info: Optional[RequestInfo] = None,
         response_info: Optional[ResponseInfo] = None,
         extra: Optional[dict] = None,
-        **kwargs,
     ):
-        if event_user_id is None:
-            event_user_id = self.event_user_id
-        if user_api_key is None:
-            user_api_key = self.user_api_key
+        admin = admin or self.admin
 
         log_extra = {
-            "event_user_id": event_user_id,
+            "admin_id": admin.id if admin else None,
+            "admin_api_key": admin.api_key if admin else None,
             "source_ip": source_ip,
             "object_id": object_id,
             "object_type": object_type,
-            "user_api_key": user_api_key,
             "request_uri": request_uri,
             "user_agent": user_agent,
-            "request_info": (
-                request_info.model_dump()
-                if isinstance(request_info, RequestInfo)
-                else request_info
-            ),
-            "response_info": (
-                response_info.model_dump()
-                if isinstance(response_info, ResponseInfo)
-                else response_info
-            ),
+            "request_info": request_info,
+            "response_info": response_info,
         }
-        # making sure all values in log_extra are JSON serializable
-        for key, value in log_extra.items():
-            if isinstance(value, (RequestInfo, ResponseInfo)):
-                log_extra[key] = value.model_dump()
-            elif not isinstance(value, (str, int, float, bool, type(None), dict, list)):
-                log_extra[key] = str(value)
+
+        log_extra = json.loads(json.dumps(log_extra, default=pydantic_encoder))
+
         if extra:
             log_extra.update(extra)
+
+        if admin:
+            log_extra["admin_action"] = True
 
         self.logger.log(
             level,
             event.value,
             **log_extra,
-            **kwargs,
         )
 
     def write(
         self,
-        action: Literal[
-            AUDIT_EVENT.ENTITY_CREATED,
-            AUDIT_EVENT.ENTITY_UPDATED,
-            AUDIT_EVENT.ENTITY_DELETED,
-        ],
-        obj: Identifiable,
-        *,
+        action: AUDIT_EVENT,
+        obj: Union[str, Any, None] = None,
         object_type: Optional[str] = None,
-        event_user_id: Optional[str] = None,
+        admin: Optional[UserModel] = None,
         **kwargs,
     ) -> None:
-        if event_user_id is None:
-            event_user_id = self.event_user_id
+        if admin is None:
+            admin = self.admin
+
+        if isinstance(obj, str) or obj is None:
+            object_id = obj
+        elif hasattr(obj, "id") and isinstance(obj.id, str):
+            object_id = obj.id
+        else:
+            raise TypeError(f"Unsupported type for obj: {type(obj)}")
 
         self(
             action,
-            object_id=obj.id,
+            object_id=object_id,
             object_type=object_type,
-            event_user_id=event_user_id,
+            admin=admin,
             **kwargs,
         )
 
 
-def start_logger():
+def file_format(record):
+    audit_data = {
+        "timestamp": int(record["time"].timestamp()),
+        "log_level": record["level"].name,
+        "event": record["message"],
+        "extra": record["extra"].get("extra", {}),
+        "source_ip": record["extra"].get("source_ip"),
+        "object_id": record["extra"].get("object_id"),
+        "object_type": record["extra"].get("object_type"),
+        "admin_id": record["extra"].get("admin_id"),
+        "admin_api_key": record["extra"].get("admin_api_key"),
+        "request_uri": record["extra"].get("request_uri"),
+        "user_agent": record["extra"].get("user_agent"),
+        "request_info": record["extra"].get("request_info"),
+        "response_info": record["extra"].get("response_info"),
+    }
+
+    record["extra"]["file_extra"] = json.dumps(audit_data, default=str)
+    return "{extra[file_extra]}\n"
+
+
+def start_logger(enable_audit_logging: bool):
     logger.remove()
 
     logger.add(
@@ -226,29 +232,30 @@ def start_logger():
         filter=lambda record: "auditable" not in record["extra"],
     )
 
-    logger.add(
-        DatabaseAuditLogHandler(AuditLogs),
-        level=GLOBAL_LOG_LEVEL,
-        filter=lambda r: r["extra"].get("auditable") is True,
-    )
-    retention_period_str = AUDIT_LOG_RETENTION_PERIOD
-    timedelta_adapter = TypeAdapter(timedelta)
+    if enable_audit_logging:
+        logger.add(
+            DatabaseAuditLogHandler(AuditLogs),
+            level=GLOBAL_LOG_LEVEL,
+            filter=lambda r: r["extra"].get("auditable") is True,
+        )
+        retention_period_str = AUDIT_LOG_RETENTION_PERIOD
+        timedelta_adapter = TypeAdapter(timedelta)
 
-    try:
-        retention_period = timedelta_adapter.validate_python(retention_period_str)
-    except Exception:
-        logger.exception(f"Invalid retention period format: {retention_period_str}")
-        retention_period = timedelta(days=30)
+        try:
+            retention_period = timedelta_adapter.validate_python(retention_period_str)
+        except Exception:
+            logger.exception(f"Invalid retention period format: {retention_period_str}")
+            retention_period = timedelta(days=30)
 
-    logger.add(
-        AUDIT_LOGS_FILE_PATH,
-        level=GLOBAL_LOG_LEVEL,
-        rotation=AUDIT_LOG_FILE_ROTATION_SIZE,
-        retention=retention_period,
-        compression="zip",
-        serialize=True,
-        filter=lambda record: record["extra"].get("auditable") is True,
-    )
+        logger.add(
+            AUDIT_LOGS_FILE_PATH,
+            level=GLOBAL_LOG_LEVEL,
+            rotation=AUDIT_LOG_FILE_ROTATION_SIZE,
+            retention=retention_period,
+            compression="zip",
+            format=file_format,
+            filter=lambda record: record["extra"].get("auditable") is True,
+        )
 
     logging.basicConfig(
         handlers=[InterceptHandler()], level=GLOBAL_LOG_LEVEL, force=True

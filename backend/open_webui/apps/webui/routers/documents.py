@@ -1,16 +1,17 @@
 import json
 from typing import Optional
 
+from open_webui.utils.logger import AuditLogger
 from open_webui.apps.webui.models.documents import (
     DocumentForm,
     DocumentResponse,
     Documents,
     DocumentUpdateForm,
 )
-from open_webui.constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, status
+from open_webui.constants import ERROR_MESSAGES, AUDIT_EVENT
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel
-from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.utils.utils import get_admin_user, get_verified_user, get_audit_logger
 
 router = APIRouter()
 
@@ -39,12 +40,19 @@ async def get_documents(user=Depends(get_verified_user)):
 
 
 @router.post("/create", response_model=Optional[DocumentResponse])
-async def create_new_doc(form_data: DocumentForm, user=Depends(get_admin_user)):
+async def create_new_doc(
+    form_data: DocumentForm,
+    user=Depends(get_admin_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+):
     doc = Documents.get_doc_by_name(form_data.name)
     if doc is None:
         doc = Documents.insert_new_doc(user.id, form_data)
 
         if doc:
+            audit_logger.write(
+                AUDIT_EVENT.ENTITY_CREATED, doc, admin=user, object_type="DOCUMENT"
+            )
             return DocumentResponse(
                 **{
                     **doc.model_dump(),
@@ -128,9 +136,13 @@ async def update_doc_by_name(
     name: str,
     form_data: DocumentUpdateForm,
     user=Depends(get_admin_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
 ):
     doc = Documents.update_doc_by_name(name, form_data)
     if doc:
+        audit_logger.write(
+            AUDIT_EVENT.ENTITY_UPDATED, doc, object_type="DOCUMENT", admin=user
+        )
         return DocumentResponse(
             **{
                 **doc.model_dump(),
@@ -150,6 +162,18 @@ async def update_doc_by_name(
 
 
 @router.delete("/doc/delete", response_model=bool)
-async def delete_doc_by_name(name: str, user=Depends(get_admin_user)):
+async def delete_doc_by_name(
+    request: Request,
+    name: str,
+    user=Depends(get_admin_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+):
     result = Documents.delete_doc_by_name(name)
+    audit_logger.write(
+        AUDIT_EVENT.ENTITY_DELETED,
+        object_type="DOCUMENT",
+        admin=user,
+        request_uri=str(request.url),
+        extra={"document_name": name, "success": result},
+    )
     return result

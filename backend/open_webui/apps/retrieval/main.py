@@ -11,10 +11,23 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterator, Optional, Sequence, Union
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+
+from open_webui.storage.provider import Storage
+from open_webui.apps.webui.models.knowledge import Knowledges
+from open_webui.utils.logger import AuditLogger
 from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 
 # Document loaders
@@ -47,6 +60,8 @@ from open_webui.apps.retrieval.utils import (
 from open_webui.apps.webui.models.files import Files
 from open_webui.config import (
     BRAVE_SEARCH_API_KEY,
+    TIKTOKEN_ENCODING_NAME,
+    RAG_TEXT_SPLITTER,
     CHUNK_OVERLAP,
     CHUNK_SIZE,
     CONTENT_EXTRACTION_ENGINE,
@@ -63,7 +78,7 @@ from open_webui.config import (
     RAG_EMBEDDING_MODEL,
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
-    RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+    RAG_EMBEDDING_BATCH_SIZE,
     RAG_FILE_MAX_COUNT,
     RAG_FILE_MAX_SIZE,
     RAG_OPENAI_API_BASE_URL,
@@ -92,7 +107,7 @@ from open_webui.config import (
     YOUTUBE_LOADER_LANGUAGE,
     AppConfig,
 )
-from open_webui.constants import ERROR_MESSAGES
+from open_webui.constants import AUDIT_EVENT, ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS, DEVICE_TYPE, DOCKER
 from open_webui.utils.misc import (
     calculate_sha256,
@@ -100,9 +115,9 @@ from open_webui.utils.misc import (
     extract_folders_after_data_docs,
     sanitize_filename,
 )
-from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.utils.utils import get_admin_user, get_audit_logger, get_verified_user
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from langchain_community.document_loaders import (
     YoutubeLoader,
 )
@@ -129,12 +144,15 @@ app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
 app.state.config.CONTENT_EXTRACTION_ENGINE = CONTENT_EXTRACTION_ENGINE
 app.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL
 
+app.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER
+app.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME
+
 app.state.config.CHUNK_SIZE = CHUNK_SIZE
 app.state.config.CHUNK_OVERLAP = CHUNK_OVERLAP
 
 app.state.config.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE
 app.state.config.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
-app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE = RAG_EMBEDDING_OPENAI_BATCH_SIZE
+app.state.config.RAG_EMBEDDING_BATCH_SIZE = RAG_EMBEDDING_BATCH_SIZE
 app.state.config.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
 app.state.config.RAG_TEMPLATE = RAG_TEMPLATE
 
@@ -171,9 +189,9 @@ def update_embedding_model(
     auto_update: bool = False,
 ):
     if embedding_model and app.state.config.RAG_EMBEDDING_ENGINE == "":
-        import sentence_transformers
+        from sentence_transformers import SentenceTransformer
 
-        app.state.sentence_transformer_ef = sentence_transformers.SentenceTransformer(
+        app.state.sentence_transformer_ef = SentenceTransformer(
             get_model_path(embedding_model, auto_update),
             device=DEVICE_TYPE,
             trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
@@ -233,7 +251,7 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.sentence_transformer_ef,
     app.state.config.OPENAI_API_KEY,
     app.state.config.OPENAI_API_BASE_URL,
-    app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+    app.state.config.RAG_EMBEDDING_BATCH_SIZE,
 )
 
 app.add_middleware(
@@ -267,7 +285,7 @@ async def get_status():
         "embedding_engine": app.state.config.RAG_EMBEDDING_ENGINE,
         "embedding_model": app.state.config.RAG_EMBEDDING_MODEL,
         "reranking_model": app.state.config.RAG_RERANKING_MODEL,
-        "openai_batch_size": app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+        "embedding_batch_size": app.state.config.RAG_EMBEDDING_BATCH_SIZE,
     }
 
 
@@ -277,10 +295,10 @@ async def get_embedding_config(user=Depends(get_admin_user)):
         "status": True,
         "embedding_engine": app.state.config.RAG_EMBEDDING_ENGINE,
         "embedding_model": app.state.config.RAG_EMBEDDING_MODEL,
+        "embedding_batch_size": app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         "openai_config": {
             "url": app.state.config.OPENAI_API_BASE_URL,
             "key": app.state.config.OPENAI_API_KEY,
-            "batch_size": app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
         },
     }
 
@@ -296,13 +314,13 @@ async def get_reraanking_config(user=Depends(get_admin_user)):
 class OpenAIConfigForm(BaseModel):
     url: str
     key: str
-    batch_size: Optional[int] = None
 
 
 class EmbeddingModelUpdateForm(BaseModel):
     openai_config: Optional[OpenAIConfigForm] = None
     embedding_engine: str
     embedding_model: str
+    embedding_batch_size: Optional[int] = 1
 
 
 @app.post("/embedding/update")
@@ -320,11 +338,7 @@ async def update_embedding_config(
             if form_data.openai_config is not None:
                 app.state.config.OPENAI_API_BASE_URL = form_data.openai_config.url
                 app.state.config.OPENAI_API_KEY = form_data.openai_config.key
-                app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE = (
-                    form_data.openai_config.batch_size
-                    if form_data.openai_config.batch_size
-                    else 1
-                )
+            app.state.config.RAG_EMBEDDING_BATCH_SIZE = form_data.embedding_batch_size
 
         update_embedding_model(app.state.config.RAG_EMBEDDING_MODEL)
 
@@ -334,17 +348,17 @@ async def update_embedding_config(
             app.state.sentence_transformer_ef,
             app.state.config.OPENAI_API_KEY,
             app.state.config.OPENAI_API_BASE_URL,
-            app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+            app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
 
         return {
             "status": True,
             "embedding_engine": app.state.config.RAG_EMBEDDING_ENGINE,
             "embedding_model": app.state.config.RAG_EMBEDDING_MODEL,
+            "embedding_batch_size": app.state.config.RAG_EMBEDDING_BATCH_SIZE,
             "openai_config": {
                 "url": app.state.config.OPENAI_API_BASE_URL,
                 "key": app.state.config.OPENAI_API_KEY,
-                "batch_size": app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
             },
         }
     except Exception as e:
@@ -388,17 +402,18 @@ async def get_rag_config(user=Depends(get_admin_user)):
     return {
         "status": True,
         "pdf_extract_images": app.state.config.PDF_EXTRACT_IMAGES,
-        "file": {
-            "max_size": app.state.config.FILE_MAX_SIZE,
-            "max_count": app.state.config.FILE_MAX_COUNT,
-        },
         "content_extraction": {
             "engine": app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": app.state.config.TIKA_SERVER_URL,
         },
         "chunk": {
+            "text_splitter": app.state.config.TEXT_SPLITTER,
             "chunk_size": app.state.config.CHUNK_SIZE,
             "chunk_overlap": app.state.config.CHUNK_OVERLAP,
+        },
+        "file": {
+            "max_size": app.state.config.FILE_MAX_SIZE,
+            "max_count": app.state.config.FILE_MAX_COUNT,
         },
         "youtube": {
             "language": app.state.config.YOUTUBE_LOADER_LANGUAGE,
@@ -438,6 +453,7 @@ class ContentExtractionConfig(BaseModel):
 
 
 class ChunkParamUpdateForm(BaseModel):
+    text_splitter: Optional[str] = None
     chunk_size: int
     chunk_overlap: int
 
@@ -480,7 +496,11 @@ class ConfigUpdateForm(BaseModel):
 
 
 @app.post("/config/update")
-async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_user)):
+async def update_rag_config(
+    form_data: ConfigUpdateForm,
+    user=Depends(get_admin_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+):
     app.state.config.PDF_EXTRACT_IMAGES = (
         form_data.pdf_extract_images
         if form_data.pdf_extract_images is not None
@@ -497,6 +517,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
         app.state.config.TIKA_SERVER_URL = form_data.content_extraction.tika_server_url
 
     if form_data.chunk is not None:
+        app.state.config.TEXT_SPLITTER = form_data.chunk.text_splitter
         app.state.config.CHUNK_SIZE = form_data.chunk.chunk_size
         app.state.config.CHUNK_OVERLAP = form_data.chunk.chunk_overlap
 
@@ -531,7 +552,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
             form_data.web.search.concurrent_requests
         )
 
-    return {
+    updated_config = {
         "status": True,
         "pdf_extract_images": app.state.config.PDF_EXTRACT_IMAGES,
         "file": {
@@ -543,6 +564,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
             "tika_server_url": app.state.config.TIKA_SERVER_URL,
         },
         "chunk": {
+            "text_splitter": app.state.config.TEXT_SPLITTER,
             "chunk_size": app.state.config.CHUNK_SIZE,
             "chunk_overlap": app.state.config.CHUNK_OVERLAP,
         },
@@ -571,6 +593,11 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
             },
         },
     }
+
+    audit_logger.write(
+        AUDIT_EVENT.CONFIG_UPDATED, admin=user, extra={"updated_config": updated_config}
+    )
+    return updated_config
 
 
 @app.get("/template")
@@ -603,11 +630,10 @@ class QuerySettingsForm(BaseModel):
 async def update_query_settings(
     form_data: QuerySettingsForm, user=Depends(get_admin_user)
 ):
-    app.state.config.RAG_TEMPLATE = (
-        form_data.template if form_data.template != "" else DEFAULT_RAG_TEMPLATE
-    )
+    app.state.config.RAG_TEMPLATE = form_data.template
     app.state.config.TOP_K = form_data.k if form_data.k else 4
     app.state.config.RELEVANCE_THRESHOLD = form_data.r if form_data.r else 0.0
+
     app.state.config.ENABLE_RAG_HYBRID_SEARCH = (
         form_data.hybrid if form_data.hybrid else False
     )
@@ -645,25 +671,48 @@ def save_docs_to_vector_db(
             filter={"hash": metadata["hash"]},
         )
 
-        if result:
+        if result is not None:
             existing_doc_ids = result.ids[0]
             if existing_doc_ids:
                 log.info(f"Document with hash {metadata['hash']} already exists")
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=app.state.config.CHUNK_SIZE,
-            chunk_overlap=app.state.config.CHUNK_OVERLAP,
-            add_start_index=True,
-        )
+        if app.state.config.TEXT_SPLITTER in ["", "character"]:
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=app.state.config.CHUNK_SIZE,
+                chunk_overlap=app.state.config.CHUNK_OVERLAP,
+                add_start_index=True,
+            )
+        elif app.state.config.TEXT_SPLITTER == "token":
+            text_splitter = TokenTextSplitter(
+                encoding_name=app.state.config.TIKTOKEN_ENCODING_NAME,
+                chunk_size=app.state.config.CHUNK_SIZE,
+                chunk_overlap=app.state.config.CHUNK_OVERLAP,
+                add_start_index=True,
+            )
+        else:
+            raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
+
         docs = text_splitter.split_documents(docs)
 
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
     texts = [doc.page_content for doc in docs]
-    metadatas = [{**doc.metadata, **(metadata if metadata else {})} for doc in docs]
+    metadatas = [
+        {
+            **doc.metadata,
+            **(metadata if metadata else {}),
+            "embedding_config": json.dumps(
+                {
+                    "engine": app.state.config.RAG_EMBEDDING_ENGINE,
+                    "model": app.state.config.RAG_EMBEDDING_MODEL,
+                }
+            ),
+        }
+        for doc in docs
+    ]
 
     # ChromaDB does not like datetime formats
     # for meta-data so convert them to string.
@@ -679,8 +728,10 @@ def save_docs_to_vector_db(
             if overwrite:
                 VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
                 log.info(f"deleting existing collection {collection_name}")
-
-            if add is False:
+            elif add is False:
+                log.info(
+                    f"collection {collection_name} already exists, overwrite is False and add is False"
+                )
                 return True
 
         log.info(f"adding to collection {collection_name}")
@@ -690,7 +741,7 @@ def save_docs_to_vector_db(
             app.state.sentence_transformer_ef,
             app.state.config.OPENAI_API_KEY,
             app.state.config.OPENAI_API_BASE_URL,
-            app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+            app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
 
         embeddings = embedding_function(
@@ -767,7 +818,7 @@ def process_file(
                 collection_name=f"file-{file.id}", filter={"file_id": file.id}
             )
 
-            if len(result.ids[0]) > 0:
+            if result is not None and len(result.ids[0]) > 0:
                 docs = [
                     Document(
                         page_content=result.documents[0][idx],
@@ -792,15 +843,14 @@ def process_file(
         else:
             # Process the file and save the content
             # Usage: /files/
-
-            file_path = file.meta.get("path", None)
+            file_path = file.path
             if file_path:
+                file_path = Storage.get_file(file_path)
                 loader = Loader(
                     engine=app.state.config.CONTENT_EXTRACTION_ENGINE,
                     TIKA_SERVER_URL=app.state.config.TIKA_SERVER_URL,
                     PDF_EXTRACT_IMAGES=app.state.config.PDF_EXTRACT_IMAGES,
                 )
-
                 docs = loader.load(
                     file.filename, file.meta.get("content_type"), file_path
                 )
@@ -816,7 +866,6 @@ def process_file(
                         },
                     )
                 ]
-
             text_content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {text_content}")
@@ -923,15 +972,22 @@ def process_youtube_video(form_data: ProcessUrlForm, user=Depends(get_verified_u
             translation=app.state.YOUTUBE_LOADER_TRANSLATION,
         )
         docs = loader.load()
-        text_content = " ".join([doc.page_content for doc in docs])
-        log.debug(f"text_content: {text_content}")
+        content = " ".join([doc.page_content for doc in docs])
+        log.debug(f"text_content: {content}")
         save_docs_to_vector_db(docs, collection_name, overwrite=True)
 
         return {
             "status": True,
             "collection_name": collection_name,
             "filename": form_data.url,
-            "content": text_content,
+            "file": {
+                "data": {
+                    "content": content,
+                },
+                "meta": {
+                    "name": form_data.url,
+                },
+            },
         }
     except Exception as e:
         log.exception(e)
@@ -954,15 +1010,22 @@ def process_web(form_data: ProcessUrlForm, user=Depends(get_verified_user)):
             requests_per_second=app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
         )
         docs = loader.load()
-        text_content = " ".join([doc.page_content for doc in docs])
-        log.debug(f"text_content: {text_content}")
+        content = " ".join([doc.page_content for doc in docs])
+        log.debug(f"text_content: {content}")
         save_docs_to_vector_db(docs, collection_name, overwrite=True)
 
         return {
             "status": True,
             "collection_name": collection_name,
             "filename": form_data.url,
-            "content": text_content,
+            "file": {
+                "data": {
+                    "content": content,
+                },
+                "meta": {
+                    "name": form_data.url,
+                },
+            },
         }
     except Exception as e:
         log.exception(e)
@@ -1243,12 +1306,24 @@ def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin
 
 
 @app.post("/reset/db")
-def reset_vector_db(user=Depends(get_admin_user)):
+def reset_vector_db(
+    request: Request,
+    user=Depends(get_admin_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+):
     VECTOR_DB_CLIENT.reset()
+    Knowledges.delete_all_knowledge()
+    audit_logger.write(
+        AUDIT_EVENT.ENTITY_RESET, admin=user, request_uri=str(request.url)
+    )
 
 
 @app.post("/reset/uploads")
-def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
+def reset_upload_dir(
+    request: Request,
+    user=Depends(get_admin_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+) -> bool:
     folder = f"{UPLOAD_DIR}"
     try:
         # Check if the directory exists
@@ -1286,6 +1361,38 @@ def reset(user=Depends(get_admin_user)) -> bool:
 
     try:
         VECTOR_DB_CLIENT.reset()
+    except Exception as e:
+        log.exception(e)
+
+
+    audit_logger.write(
+        AUDIT_EVENT.ENTITY_RESET, admin=user, request_uri=str(request.url)
+    )
+    return True
+
+
+@app.post("/reset")
+def reset(
+    request: Request,
+    user=Depends(get_admin_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+) -> bool:
+    folder = f"{UPLOAD_DIR}"
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            log.error("Failed to delete %s. Reason: %s" % (file_path, e))
+
+    try:
+        VECTOR_DB_CLIENT.reset()
+        audit_logger.write(
+            AUDIT_EVENT.ENTITY_RESET, admin=user, request_uri=str(request.url)
+        )
     except Exception as e:
         log.exception(e)
 
