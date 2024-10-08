@@ -2071,7 +2071,7 @@
 						</div>
 						
 						{#if $showArtifacts}
-						<div class="h-full w-full p-8">
+						<div class="h-full w-full p-8 hidden lg:block">
 								<Artifacts {history} />
 						</div>	
 						{/if}
