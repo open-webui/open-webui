@@ -146,6 +146,20 @@
 									groupedMessagesIdx[modelIdx] = groupedMessages[modelIdx].messages.length - 1;
 								}}
 								on:action={async (e) => {
+									if (currentMessageId != message.id) {
+										currentMessageId = message.id;
+										let messageId = message.id;
+										console.log(messageId);
+										//
+										let messageChildrenIds = history.messages[messageId].childrenIds;
+										while (messageChildrenIds.length !== 0) {
+											messageId = messageChildrenIds.at(-1);
+											messageChildrenIds = history.messages[messageId].childrenIds;
+										}
+										history.currentId = messageId;
+										dispatch('change');
+									}
+									await tick();
 									dispatch('action', e.detail);
 								}}
 								on:save={async (e) => {
