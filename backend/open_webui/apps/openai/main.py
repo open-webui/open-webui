@@ -14,6 +14,8 @@ from pydantic import BaseModel
 from starlette.background import BackgroundTask
 
 from open_webui.apps.filter.main import process_user_usage
+
+from open_webui.apps.openai.utils.streaming import convert_from_stream_headers, convert_to_stream_data
 from open_webui.apps.webui.models.models import Models
 from open_webui.config import (
     AIOHTTP_CLIENT_TIMEOUT,
@@ -24,6 +26,7 @@ from open_webui.config import (
     MODEL_FILTER_LIST,
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
+    OPENAI_API_NOSTREAM_MODELS,
     AppConfig,
 )
 from open_webui.constants import ERROR_MESSAGES
@@ -374,12 +377,11 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
 @app.post("/chat/completions")
 @app.post("/chat/completions/{url_idx}")
 async def generate_chat_completion(
-        form_data: dict,
-        url_idx: Optional[int] = None,
-        user=Depends(get_verified_user),
+    form_data: dict,
+    url_idx: Optional[int] = None,
+    user=Depends(get_verified_user),
 ):
     idx = 0
-    error = False
     payload = {**form_data}
 
     if "metadata" in payload:
@@ -407,23 +409,24 @@ async def generate_chat_completion(
             "role": user.role,
         }
 
-    url = app.state.config.OPENAI_API_BASE_URLS[idx]
-    key = app.state.config.OPENAI_API_KEYS[idx]
+    # handle special cases for certain models
+    stream_requested = payload.get("stream", False)
+    if model_id in OPENAI_API_NOSTREAM_MODELS:
+        log.info("Model does not support streaming; patching request")
+        # patch max_tokens -> max_completion_tokens and stream if 🍓
+        if "max_tokens" in payload:
+            payload["max_completion_tokens"] = payload.pop("max_tokens")
 
-    # Change max_completion_tokens to max_tokens (Backward compatible)
-    if "api.openai.com" not in url and not payload["model"].lower().startswith("o1-"):
-        if "max_completion_tokens" in payload:
-            # Remove "max_completion_tokens" from the payload
-            payload["max_tokens"] = payload["max_completion_tokens"]
-            del payload["max_completion_tokens"]
-    else:
-        if "max_tokens" in payload and "max_completion_tokens" in payload:
-            del payload["max_tokens"]
+        # hard-code stream=False regardless of upstream in svelte/etc.
+        payload["stream"] = False
 
     # Convert the modified body back to JSON
     payload = json.dumps(payload)
 
     log.debug(payload)
+
+    url = app.state.config.OPENAI_API_BASE_URLS[idx]
+    key = app.state.config.OPENAI_API_KEYS[idx]
 
     headers = {}
     headers["Authorization"] = f"Bearer {key}"
@@ -434,12 +437,13 @@ async def generate_chat_completion(
 
     r = None
     session = None
-    streaming = False
-    response = None
+    error = None
 
     try:
+        # NOTE: have seen better OAI performance with httpx/http2 than aiohttp/http1.1
         session = aiohttp.ClientSession(
-            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
         )
         r = await session.request(
             method="POST",
@@ -448,9 +452,16 @@ async def generate_chat_completion(
             headers=headers,
         )
 
+        # check for non-200 status and log the response if it's not a 200
+        if r.status != 200:
+            log.error(f"Non-200 status code: {r.status}")
+            log.error(f"Request: {payload}")
+            log.error(f"Response: {await r.text()}")
+        r.raise_for_status()
+
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
-            streaming = True
+            log.info("Streaming response from original event stream")
             return StreamingResponse(
                 r.content,
                 status_code=r.status,
@@ -460,30 +471,61 @@ async def generate_chat_completion(
                 ),
             )
         else:
-            try:
-                response = await r.json()
-            except Exception as e:
-                log.error(e)
-                response = await r.text()
+            response_data = await r.json()
+            log.info("Received non-streaming response from upstream")
 
-            r.raise_for_status()
-            return response
+            if stream_requested:
+                log.info("Streaming response from non-streaming response")
+
+                # Setup async generator for Starlette
+                async def content_generator():
+                    try:
+                        for line in convert_to_stream_data(response_data):
+                            log.info(f"Yielding line: {line}")
+                            yield line + b"\n\n"
+                    except Exception as e:
+                        log.error(f"Error in content_generator: {e}")
+                        raise
+
+                headers = convert_from_stream_headers(r.headers)
+
+                # Ensure no conflicting Content-Length headers are present
+                if "content-length" in headers:
+                    log.warning("Removing Content-Length for streaming response")
+                    del headers["content-length"]
+                
+                # Set Transfer-Encoding: chunked for streaming
+                headers["transfer-encoding"] = "chunked"
+
+                return StreamingResponse(
+                    content_generator(),
+                    status_code=r.status,
+                    headers=headers,
+                    background=BackgroundTask(cleanup_response, response=r, session=session),
+                )
+            else:
+                log.info("Returning non-streaming response to client")
+                # close the session
+                return response_data
     except Exception as e:
         log.exception(e)
-        error = True
+        error = e
         error_detail = "Open WebUI: Server Connection Error"
-        if isinstance(response, dict):
-            if "error" in response:
-                error_detail = f"{response['error']['message'] if 'message' in response['error'] else response['error']}"
-        elif isinstance(response, str):
-            error_detail = response
-
+        if r is not None:
+            try:
+                res = await r.json()
+                print(res)
+                if "error" in res:
+                    error_detail = f"External: {res['error']['message'] if 'message' in res['error'] else res['error']}"
+            except Exception:
+                error_detail = f"External: {e}"
         raise HTTPException(status_code=r.status if r else 500, detail=error_detail)
     finally:
-        if not streaming and session:
+        if not stream_requested:
             if r:
                 r.close()
-            await session.close()
+            if session:
+                await session.close()
         if not error:
             await process_user_usage(model, user)
 

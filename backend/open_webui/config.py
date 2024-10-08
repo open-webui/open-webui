@@ -652,6 +652,13 @@ OPENAI_API_BASE_URLS = PersistentConfig(
     "OPENAI_API_BASE_URLS", "openai.api_base_urls", OPENAI_API_BASE_URLS
 )
 
+OPENAI_API_NOSTREAM_MODEL_LIST = os.environ.get("OPENAI_API_NOSTREAM_MODELS", "")
+OPENAI_API_NOSTREAM_MODELS = (
+    OPENAI_API_NOSTREAM_MODEL_LIST.split(",")
+    if OPENAI_API_NOSTREAM_MODEL_LIST != ""
+    else ["o1-mini", "o1-preview", "o1-mini-2024-09-12", "o1-preview-2024-09-12"]
+)
+
 OPENAI_API_KEY = ""
 
 try:
