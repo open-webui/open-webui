@@ -141,7 +141,6 @@
 				$chatId
 			) {
 				showArtifacts.set(true);
-				showControls.set(true);
 			}
 		}}
 	/>
