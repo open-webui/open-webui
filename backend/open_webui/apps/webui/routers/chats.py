@@ -108,6 +108,29 @@ async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
 ############################
 
 
+@router.get("/search", response_model=list[ChatTitleIdResponse])
+async def search_user_chats(
+    text: str, page: Optional[int] = None, user=Depends(get_verified_user)
+):
+    if page is None:
+        page = 1
+
+    limit = 60
+    skip = (page - 1) * limit
+
+    return [
+        ChatTitleIdResponse(**chat.model_dump())
+        for chat in Chats.get_chats_by_user_id_and_search_text(
+            user.id, text, skip=skip, limit=limit
+        )
+    ]
+
+
+############################
+# GetChats
+############################
+
+
 @router.get("/all", response_model=list[ChatResponse])
 async def get_user_chats(user=Depends(get_verified_user)):
     return [

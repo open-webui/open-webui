@@ -32,7 +32,8 @@
 		updateChatById,
 		getAllChatTags,
 		archiveChatById,
-		cloneChatById
+		cloneChatById,
+		getChatListBySearchText
 	} from '$lib/apis/chats';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -58,33 +59,11 @@
 
 	let selectedTagName = null;
 
-	let filteredChatList = [];
-
 	// Pagination variables
 	let chatListLoading = false;
 	let allChatsLoaded = false;
 
-	$: filteredChatList = $chats.filter((chat) => {
-		if (search === '') {
-			return true;
-		} else {
-			let title = chat.title.toLowerCase();
-			const query = search.toLowerCase();
-
-			let contentMatches = false;
-			// Access the messages within chat.chat.messages
-			if (chat.chat && chat.chat.messages && Array.isArray(chat.chat.messages)) {
-				contentMatches = chat.chat.messages.some((message) => {
-					// Check if message.content exists and includes the search query
-					return message.content && message.content.toLowerCase().includes(query);
-				});
-			}
-
-			return title.includes(query) || contentMatches;
-		}
-	});
-
-	const enablePagination = async () => {
+	const initChatList = async () => {
 		// Reset pagination variables
 		currentChatPage.set(1);
 		allChatsLoaded = false;
@@ -98,13 +77,42 @@
 		chatListLoading = true;
 
 		currentChatPage.set($currentChatPage + 1);
-		const newChatList = await getChatList(localStorage.token, $currentChatPage);
+
+		let newChatList = [];
+
+		if (search) {
+			newChatList = await getChatListBySearchText(localStorage.token, search, $currentChatPage);
+		} else {
+			newChatList = await getChatList(localStorage.token, $currentChatPage);
+		}
 
 		// once the bottom of the list has been reached (no results) there is no need to continue querying
 		allChatsLoaded = newChatList.length === 0;
 		await chats.set([...$chats, ...newChatList]);
 
 		chatListLoading = false;
+	};
+
+	let searchDebounceTimeout;
+
+	const searchDebounceHandler = async () => {
+		console.log('search', search);
+		chats.set(null);
+		selectedTagName = null;
+
+		if (searchDebounceTimeout) {
+			clearTimeout(searchDebounceTimeout);
+		}
+
+		if (search === '') {
+			await initChatList();
+			return;
+		} else {
+			searchDebounceTimeout = setTimeout(async () => {
+				currentChatPage.set(1);
+				await chats.set(await getChatListBySearchText(localStorage.token, search));
+			}, 1000);
+		}
 	};
 
 	onMount(async () => {
@@ -124,7 +132,7 @@
 		});
 
 		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
-		await enablePagination();
+		await initChatList();
 
 		let touchstart;
 		let touchend;
@@ -191,27 +199,6 @@
 			window.removeEventListener('blur', onBlur);
 		};
 	});
-
-	// Helper function to fetch and add chat content to each chat
-	const enrichChatsWithContent = async (chatList) => {
-		const enrichedChats = await Promise.all(
-			chatList.map(async (chat) => {
-				const chatDetails = await getChatById(localStorage.token, chat.id).catch((error) => null); // Handle error or non-existent chat gracefully
-				if (chatDetails) {
-					chat.chat = chatDetails.chat; // Assuming chatDetails.chat contains the chat content
-				}
-				return chat;
-			})
-		);
-
-		await chats.set(enrichedChats);
-	};
-
-	const saveSettings = async (updated) => {
-		await settings.set({ ...$settings, ...updated });
-		await updateUserSettings(localStorage.token, { ui: $settings });
-		location.href = '/';
-	};
 
 	const deleteChatHandler = async (id) => {
 		const res = await deleteChatById(localStorage.token, id).catch((error) => {
@@ -419,11 +406,8 @@
 						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm bg-transparent dark:text-gray-300 outline-none"
 						placeholder={$i18n.t('Search')}
 						bind:value={search}
-						on:focus={async () => {
-							// TODO: migrate backend for more scalable search mechanism
-							scrollPaginationEnabled.set(false);
-							await chats.set(await getChatList(localStorage.token)); // when searching, load all chats
-							enrichChatsWithContent($chats);
+						on:input={() => {
+							searchDebounceHandler();
 						}}
 					/>
 				</div>
@@ -437,7 +421,7 @@
 							: ' '} rounded-md font-medium"
 						on:click={async () => {
 							selectedTagName = null;
-							await enablePagination();
+							await initChatList();
 						}}
 					>
 						{$i18n.t('all')}
@@ -455,10 +439,9 @@
 									await tags.set(await getAllChatTags(localStorage.token));
 
 									// if the tag we deleted is no longer a valid tag, return to main chat list view
-									await enablePagination();
+									await initChatList();
 								}
 								await chats.set(chatIds);
-
 								chatListLoading = false;
 							}}
 						>
@@ -501,15 +484,16 @@
 			{/if}
 
 			<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden">
-				{#each filteredChatList as chat, idx}
-					{#if idx === 0 || (idx > 0 && chat.time_range !== filteredChatList[idx - 1].time_range)}
-						<div
-							class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
-								? ''
-								: 'pt-5'} pb-0.5"
-						>
-							{$i18n.t(chat.time_range)}
-							<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
+				{#if $chats}
+					{#each $chats as chat, idx}
+						{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
+							<div
+								class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
+									? ''
+									: 'pt-5'} pb-0.5"
+							>
+								{$i18n.t(chat.time_range)}
+								<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
 							{$i18n.t('Today')}
 							{$i18n.t('Yesterday')}
 							{$i18n.t('Previous 7 days')}
@@ -527,43 +511,49 @@
 							{$i18n.t('November')}
 							{$i18n.t('December')}
 							-->
-						</div>
+							</div>
+						{/if}
+
+						<ChatItem
+							{chat}
+							{shiftKey}
+							selected={selectedChatId === chat.id}
+							on:select={() => {
+								selectedChatId = chat.id;
+							}}
+							on:unselect={() => {
+								selectedChatId = null;
+							}}
+							on:delete={(e) => {
+								if ((e?.detail ?? '') === 'shift') {
+									deleteChatHandler(chat.id);
+								} else {
+									deleteChat = chat;
+									showDeleteConfirm = true;
+								}
+							}}
+						/>
+					{/each}
+
+					{#if $scrollPaginationEnabled && !allChatsLoaded}
+						<Loader
+							on:visible={(e) => {
+								if (!chatListLoading) {
+									loadMoreChats();
+								}
+							}}
+						>
+							<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
+								<Spinner className=" size-4" />
+								<div class=" ">Loading...</div>
+							</div>
+						</Loader>
 					{/if}
-
-					<ChatItem
-						{chat}
-						{shiftKey}
-						selected={selectedChatId === chat.id}
-						on:select={() => {
-							selectedChatId = chat.id;
-						}}
-						on:unselect={() => {
-							selectedChatId = null;
-						}}
-						on:delete={(e) => {
-							if ((e?.detail ?? '') === 'shift') {
-								deleteChatHandler(chat.id);
-							} else {
-								deleteChat = chat;
-								showDeleteConfirm = true;
-							}
-						}}
-					/>
-				{/each}
-
-				{#if $scrollPaginationEnabled && !allChatsLoaded}
-					<Loader
-						on:visible={(e) => {
-							if (!chatListLoading) {
-								loadMoreChats();
-							}
-						}}
-					>
-						<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
-							<Spinner className=" size-4" />
-							<div class=" ">Loading...</div>
-						</div>
-					</Loader>
+				{:else}
+					<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
+						<Spinner className=" size-4" />
+						<div class=" ">Loading...</div>
+					</div>
 				{/if}
 			</div>
 		</div>
