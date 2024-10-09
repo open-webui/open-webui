@@ -59,6 +59,8 @@ class QdrantClient:
             self, collection_name: str, vectors: list[list[float | int]], limit: int
     ) -> Optional[SearchResult]:
         # Search for the nearest neighbor items based on the vectors and return 'limit' number of results.
+        if limit is None:
+            limit=10000000 # otherwise qdrant would set limit to 10!
 
         query_response = self.client.query_points(
             collection_name=f"{self.collection_prefix}_{collection_name}",
@@ -78,6 +80,8 @@ class QdrantClient:
         if not self.has_collection(collection_name):
             return None
         try:
+            if limit is None:
+                limit=10000000 # otherwise qdrant would set limit to 10!
 
             field_conditions = []
             for key, value in filter.items():
