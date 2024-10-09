@@ -414,7 +414,9 @@
 					<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
 						{!!model?.info?.meta?.description
 							? model?.info?.meta?.description
-							: (model?.ollama?.digest ?? model.id)}
+							: model?.ollama?.digest
+								? `${model.id} (${model?.ollama?.digest})`
+								: model.id}
 					</div>
 				</div>
 			</a>
