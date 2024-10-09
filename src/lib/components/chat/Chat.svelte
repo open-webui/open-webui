@@ -1943,6 +1943,7 @@
 				system: $settings.system ?? undefined,
 				params: params,
 				history: history,
+				messages: createMessagesList(history.currentId),
 				tags: [],
 				timestamp: Date.now()
 			});
