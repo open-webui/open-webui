@@ -427,7 +427,11 @@
 			console.log($config?.default_models.split(',') ?? '');
 			selectedModels = $config?.default_models.split(',');
 		} else {
-			selectedModels = [''];
+			if ($models.length > 0) {
+				selectedModels = [$models[0].id];
+			} else {
+				selectedModels = [''];
+			}
 		}
 
 		if ($page.url.searchParams.get('youtube')) {
