@@ -49,6 +49,19 @@ class QdrantClient:
                 collection_name=collection_name, dimension=dimension
             )
 
+    def _create_points(self, items: list[VectorItem]):
+        return [
+            PointStruct(
+                id=item["id"],
+                vector=item["vector"],
+                payload={
+                    "text": item["text"],
+                    "metadata": item["metadata"]
+                },
+            )
+            for item in items
+        ]
+
     def has_collection(self, collection_name: str) -> bool:
         return self.client.collection_exists(f"{self.collection_prefix}_{collection_name}")
 
@@ -109,13 +122,13 @@ class QdrantClient:
     def insert(self, collection_name: str, items: list[VectorItem]):
         # Insert the items into the collection, if the collection does not exist, it will be created.
         self._create_collection_if_not_exists(collection_name, len(items[0]["vector"]))
-        points = self.create_points(items)
+        points = self._create_points(items)
         self.client.upload_points(f"{self.collection_prefix}_{collection_name}", points)
 
     def upsert(self, collection_name: str, items: list[VectorItem]):
         # Update the items in the collection, if the items are not present, insert them. If the collection does not exist, it will be created.
         self._create_collection_if_not_exists(collection_name, len(items[0]["vector"]))
-        points = self.create_points(items)
+        points = self._create_points(items)
         return self.client.upsert(f"{self.collection_prefix}_{collection_name}", points)
 
     def delete(
@@ -159,18 +172,3 @@ class QdrantClient:
         for collection_name in collection_names:
             if collection_name.name.startswith(self.collection_prefix):
                 self.client.delete_collection(collection_name=collection_name.name)
-
-    def create_points(self, items: list[VectorItem]):
-        points = []
-        for idx, item in enumerate(items):
-            points.append(
-                PointStruct(
-                    id=item["id"],
-                    vector=item["vector"],
-                    payload={
-                        "text": item["text"],
-                        "metadata": item["metadata"]
-                    },
-                )
-            )
-        return points
