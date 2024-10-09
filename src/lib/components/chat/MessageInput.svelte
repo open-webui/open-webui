@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
+	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import {
@@ -175,56 +175,59 @@
 		});
 	};
 
+	const handleKeyDown = (event: KeyboardEvent) => {
+		if (event.key === 'Escape') {
+			console.log('Escape');
+			dragged = false;
+		}
+	};
+
+	const onDragOver = (e) => {
+		e.preventDefault();
+		dragged = true;
+	};
+
+	const onDragLeave = () => {
+		dragged = false;
+	};
+
+	const onDrop = async (e) => {
+		e.preventDefault();
+		console.log(e);
+
+		if (e.dataTransfer?.files) {
+			const inputFiles = Array.from(e.dataTransfer?.files);
+			if (inputFiles && inputFiles.length > 0) {
+				console.log(inputFiles);
+				inputFilesHandler(inputFiles);
+			} else {
+				toast.error($i18n.t(`File not found.`));
+			}
+		}
+
+		dragged = false;
+	};
+
 	onMount(() => {
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
-		const dropZone = document.getElementById('chat-container');
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') {
-				console.log('Escape');
-				dragged = false;
-			}
-		};
-
-		const onDragOver = (e) => {
-			e.preventDefault();
-			dragged = true;
-		};
-
-		const onDragLeave = () => {
-			dragged = false;
-		};
-
-		const onDrop = async (e) => {
-			e.preventDefault();
-			console.log(e);
-
-			if (e.dataTransfer?.files) {
-				const inputFiles = Array.from(e.dataTransfer?.files);
-				if (inputFiles && inputFiles.length > 0) {
-					console.log(inputFiles);
-					inputFilesHandler(inputFiles);
-				} else {
-					toast.error($i18n.t(`File not found.`));
-				}
-			}
-
-			dragged = false;
-		};
-
 		window.addEventListener('keydown', handleKeyDown);
+
+		const dropZone = document.getElementById('chat-container');
 
 		dropZone?.addEventListener('dragover', onDragOver);
 		dropZone?.addEventListener('drop', onDrop);
 		dropZone?.addEventListener('dragleave', onDragLeave);
+	});
 
-		return () => {
-			window.removeEventListener('keydown', handleKeyDown);
+	onDestroy(() => {
+		window.removeEventListener('keydown', handleKeyDown);
 
-			dropZone?.removeEventListener('dragover', onDragOver);
-			dropZone?.removeEventListener('drop', onDrop);
-			dropZone?.removeEventListener('dragleave', onDragLeave);
-		};
+		const dropZone = document.getElementById('chat-container');
+
+		dropZone?.removeEventListener('dragover', onDragOver);
+		dropZone?.removeEventListener('drop', onDrop);
+		dropZone?.removeEventListener('dragleave', onDragLeave);
 	});
 </script>
 
