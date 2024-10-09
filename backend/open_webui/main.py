@@ -1527,9 +1527,7 @@ Prompt: {{prompt:middletruncate:8000}}"""
     if "chat_id" in payload:
         del payload["chat_id"]
 
-    title_data = await generate_chat_completions(form_data=payload, user=user)
-    log.info(f"Generated title with model {model_id}: {title_data}")
-    return title_data
+    return await generate_chat_completions(form_data=payload, user=user)
 
 
 @app.post("/api/task/query/completions")
