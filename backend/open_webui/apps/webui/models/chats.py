@@ -5,7 +5,7 @@ from typing import Optional
 
 from open_webui.apps.webui.internal.db import Base, get_db
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Boolean, Column, String, Text
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
 
 ####################
 # Chat DB Schema
@@ -18,7 +18,7 @@ class Chat(Base):
     id = Column(String, primary_key=True)
     user_id = Column(String)
     title = Column(Text)
-    chat = Column(Text)  # Save Chat JSON as Text
+    chat = Column(JSON)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -33,7 +33,7 @@ class ChatModel(BaseModel):
     id: str
     user_id: str
     title: str
-    chat: str
+    chat: dict
 
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
@@ -86,7 +86,7 @@ class ChatTable:
                         if "title" in form_data.chat
                         else "New Chat"
                     ),
-                    "chat": json.dumps(form_data.chat),
+                    "chat": form_data.chat,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
@@ -101,14 +101,14 @@ class ChatTable:
     def update_chat_by_id(self, id: str, chat: dict) -> Optional[ChatModel]:
         try:
             with get_db() as db:
-                chat_obj = db.get(Chat, id)
-                chat_obj.chat = json.dumps(chat)
-                chat_obj.title = chat["title"] if "title" in chat else "New Chat"
-                chat_obj.updated_at = int(time.time())
+                chat_item = db.get(Chat, id)
+                chat_item.chat = chat
+                chat_item.title = chat["title"] if "title" in chat else "New Chat"
+                chat_item.updated_at = int(time.time())
                 db.commit()
-                db.refresh(chat_obj)
+                db.refresh(chat_item)
 
-                return ChatModel.model_validate(chat_obj)
+                return ChatModel.model_validate(chat_item)
         except Exception:
             return None
 
