@@ -71,7 +71,7 @@ def query_doc(
     try:
         result = VECTOR_DB_CLIENT.search(
             collection_name=collection_name,
-            vectors=query_embedding,
+            vectors=[query_embedding],
             limit=k,
         )
 
