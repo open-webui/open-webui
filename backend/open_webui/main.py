@@ -2385,6 +2385,8 @@ async def oauth_callback(provider: str, request: Request, response: Response):
         key="token",
         value=jwt_token,
         httponly=True,  # Ensures the cookie is not accessible via JavaScript
+        samesite=WEBUI_SESSION_COOKIE_SAME_SITE, 
+        secure=WEBUI_SESSION_COOKIE_SECURE,
     )
 
     # Redirect back to the frontend with the JWT token
