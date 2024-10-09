@@ -186,7 +186,7 @@
 				</div>
 
 				<div
-					class="text-base font-normal xl:translate-x-6 lg:max-w-3xl w-full py-3 {atSelectedModel
+					class="text-base font-normal xl:translate-x-6 md:max-w-3xl w-full py-3 {atSelectedModel
 						? 'mt-2'
 						: ''}"
 				>
