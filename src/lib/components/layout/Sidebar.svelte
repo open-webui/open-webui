@@ -19,7 +19,7 @@
 		showOverview,
 		showControls
 	} from '$lib/stores';
-	import { onMount, getContext, tick } from 'svelte';
+	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
 	const i18n = getContext('i18n');
 
@@ -33,7 +33,8 @@
 		getAllChatTags,
 		archiveChatById,
 		cloneChatById,
-		getChatListBySearchText
+		getChatListBySearchText,
+		createNewChat
 	} from '$lib/apis/chats';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -43,6 +44,8 @@
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
+	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
+	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -115,91 +118,6 @@
 		}
 	};
 
-	onMount(async () => {
-		mobile.subscribe((e) => {
-			if ($showSidebar && e) {
-				showSidebar.set(false);
-			}
-
-			if (!$showSidebar && !e) {
-				showSidebar.set(true);
-			}
-		});
-
-		showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
-		showSidebar.subscribe((value) => {
-			localStorage.sidebar = value;
-		});
-
-		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
-		await initChatList();
-
-		let touchstart;
-		let touchend;
-
-		function checkDirection() {
-			const screenWidth = window.innerWidth;
-			const swipeDistance = Math.abs(touchend.screenX - touchstart.screenX);
-			if (touchstart.clientX < 40 && swipeDistance >= screenWidth / 8) {
-				if (touchend.screenX < touchstart.screenX) {
-					showSidebar.set(false);
-				}
-				if (touchend.screenX > touchstart.screenX) {
-					showSidebar.set(true);
-				}
-			}
-		}
-
-		const onTouchStart = (e) => {
-			touchstart = e.changedTouches[0];
-			console.log(touchstart.clientX);
-		};
-
-		const onTouchEnd = (e) => {
-			touchend = e.changedTouches[0];
-			checkDirection();
-		};
-
-		const onKeyDown = (e) => {
-			if (e.key === 'Shift') {
-				shiftKey = true;
-			}
-		};
-
-		const onKeyUp = (e) => {
-			if (e.key === 'Shift') {
-				shiftKey = false;
-			}
-		};
-
-		const onFocus = () => {};
-
-		const onBlur = () => {
-			shiftKey = false;
-			selectedChatId = null;
-		};
-
-		window.addEventListener('keydown', onKeyDown);
-		window.addEventListener('keyup', onKeyUp);
-
-		window.addEventListener('touchstart', onTouchStart);
-		window.addEventListener('touchend', onTouchEnd);
-
-		window.addEventListener('focus', onFocus);
-		window.addEventListener('blur', onBlur);
-
-		return () => {
-			window.removeEventListener('keydown', onKeyDown);
-			window.removeEventListener('keyup', onKeyUp);
-
-			window.removeEventListener('touchstart', onTouchStart);
-			window.removeEventListener('touchend', onTouchEnd);
-
-			window.removeEventListener('focus', onFocus);
-			window.removeEventListener('blur', onBlur);
-		};
-	});
-
 	const deleteChatHandler = async (id) => {
 		const res = await deleteChatById(localStorage.token, id).catch((error) => {
 			toast.error(error);
@@ -220,6 +138,158 @@
 			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}
 	};
+
+	const inputFilesHandler = async (files) => {
+		console.log(files);
+
+		for (const file of files) {
+			const reader = new FileReader();
+			reader.onload = async (e) => {
+				const content = e.target.result;
+
+				try {
+					const items = JSON.parse(content);
+
+					for (const item of items) {
+						if (item.chat) {
+							await createNewChat(localStorage.token, item.chat);
+						}
+					}
+				} catch {
+					toast.error($i18n.t(`Invalid file format.`));
+				}
+
+				initChatList();
+			};
+
+			reader.readAsText(file);
+		}
+	};
+
+	let dragged = false;
+
+	const onDragOver = (e) => {
+		e.preventDefault();
+		dragged = true;
+	};
+
+	const onDragLeave = () => {
+		dragged = false;
+	};
+
+	const onDrop = async (e) => {
+		e.preventDefault();
+		console.log(e);
+
+		if (e.dataTransfer?.files) {
+			const inputFiles = Array.from(e.dataTransfer?.files);
+			if (inputFiles && inputFiles.length > 0) {
+				console.log(inputFiles);
+				inputFilesHandler(inputFiles);
+			} else {
+				toast.error($i18n.t(`File not found.`));
+			}
+		}
+
+		dragged = false;
+	};
+
+	let touchstart;
+	let touchend;
+
+	function checkDirection() {
+		const screenWidth = window.innerWidth;
+		const swipeDistance = Math.abs(touchend.screenX - touchstart.screenX);
+		if (touchstart.clientX < 40 && swipeDistance >= screenWidth / 8) {
+			if (touchend.screenX < touchstart.screenX) {
+				showSidebar.set(false);
+			}
+			if (touchend.screenX > touchstart.screenX) {
+				showSidebar.set(true);
+			}
+		}
+	}
+
+	const onTouchStart = (e) => {
+		touchstart = e.changedTouches[0];
+		console.log(touchstart.clientX);
+	};
+
+	const onTouchEnd = (e) => {
+		touchend = e.changedTouches[0];
+		checkDirection();
+	};
+
+	const onKeyDown = (e) => {
+		if (e.key === 'Shift') {
+			shiftKey = true;
+		}
+	};
+
+	const onKeyUp = (e) => {
+		if (e.key === 'Shift') {
+			shiftKey = false;
+		}
+	};
+
+	const onFocus = () => {};
+
+	const onBlur = () => {
+		shiftKey = false;
+		selectedChatId = null;
+	};
+
+	onMount(async () => {
+		mobile.subscribe((e) => {
+			if ($showSidebar && e) {
+				showSidebar.set(false);
+			}
+
+			if (!$showSidebar && !e) {
+				showSidebar.set(true);
+			}
+		});
+
+		showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
+		showSidebar.subscribe((value) => {
+			localStorage.sidebar = value;
+		});
+
+		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
+		await initChatList();
+
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('keyup', onKeyUp);
+
+		window.addEventListener('touchstart', onTouchStart);
+		window.addEventListener('touchend', onTouchEnd);
+
+		window.addEventListener('focus', onFocus);
+		window.addEventListener('blur', onBlur);
+
+		const dropZone = document.getElementById('sidebar');
+
+		dropZone?.addEventListener('dragover', onDragOver);
+		dropZone?.addEventListener('drop', onDrop);
+		dropZone?.addEventListener('dragleave', onDragLeave);
+	});
+
+	onDestroy(() => {
+		window.removeEventListener('keydown', onKeyDown);
+		window.removeEventListener('keyup', onKeyUp);
+
+		window.removeEventListener('touchstart', onTouchStart);
+		window.removeEventListener('touchend', onTouchEnd);
+
+		window.removeEventListener('focus', onFocus);
+		window.removeEventListener('blur', onBlur);
+
+		const dropZone = document.getElementById('sidebar');
+
+		dropZone?.removeEventListener('dragover', onDragOver);
+		dropZone?.removeEventListener('drop', onDrop);
+		dropZone?.removeEventListener('dragleave', onDragLeave);
+	});
 </script>
 
 <ArchivedChatsModal
@@ -261,6 +331,18 @@
         "
 	data-state={$showSidebar}
 >
+	{#if dragged}
+		<div
+			class="absolute w-full h-full max-h-full backdrop-blur bg-gray-800/40 flex justify-center z-[999] touch-none pointer-events-none"
+		>
+			<div class="m-auto pt-64 flex flex-col justify-center">
+				<AddFilesPlaceholder
+					title={$i18n.t('Drop Chat Export')}
+					content={$i18n.t('Drop a chat export file here to import it.')}
+				/>
+			</div>
+		</div>
+	{/if}
 	<div
 		class="py-2.5 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] z-50 {$showSidebar
 			? ''
