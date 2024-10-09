@@ -178,8 +178,7 @@
 	onMount(() => {
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
-		const dropZone = document.querySelector('body');
-
+		const dropZone = document.getElementById('chat-container');
 		const handleKeyDown = (event: KeyboardEvent) => {
 			if (event.key === 'Escape') {
 				console.log('Escape');
