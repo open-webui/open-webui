@@ -223,7 +223,10 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
         # Check if the file already exists in the cache
         if file_path.is_file():
             print(f"file_path: {file_path}")
-            return FileResponse(file_path)
+            headers = {
+                "Content-Disposition": f'attachment; filename="{file.meta.get("name", file.filename)}"'
+            }
+            return FileResponse(file_path, headers=headers)
         else:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
