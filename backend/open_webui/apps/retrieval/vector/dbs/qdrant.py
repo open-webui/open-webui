@@ -7,6 +7,8 @@ from qdrant_client.models import models
 from open_webui.apps.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import QDRANT_URI
 
+NO_LIMIT = 999999999
+
 class QdrantClient:
     def __init__(self):
         self.collection_prefix = "open-webui"
@@ -73,7 +75,7 @@ class QdrantClient:
     ) -> Optional[SearchResult]:
         # Search for the nearest neighbor items based on the vectors and return 'limit' number of results.
         if limit is None:
-            limit=10000000 # otherwise qdrant would set limit to 10!
+            limit = NO_LIMIT  # otherwise qdrant would set limit to 10!
 
         query_response = self.client.query_points(
             collection_name=f"{self.collection_prefix}_{collection_name}",
@@ -94,7 +96,7 @@ class QdrantClient:
             return None
         try:
             if limit is None:
-                limit=10000000 # otherwise qdrant would set limit to 10!
+                limit = NO_LIMIT  # otherwise qdrant would set limit to 10!
 
             field_conditions = []
             for key, value in filter.items():
@@ -115,7 +117,7 @@ class QdrantClient:
         # Get all the items in the collection.
         points = self.client.query_points(
             collection_name=f"{self.collection_prefix}_{collection_name}",
-            limit=10000000  # default is 10
+            limit=NO_LIMIT  # otherwise qdrant would set limit to 10!
         )
         return self._result_to_get_result(points.points)
 
