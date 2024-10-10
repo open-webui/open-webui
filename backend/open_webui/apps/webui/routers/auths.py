@@ -27,6 +27,7 @@ from open_webui.utils.utils import (
     create_api_key,
     create_token,
     get_admin_user,
+    get_verified_user,
     get_current_user,
     get_password_hash,
 )
@@ -71,7 +72,7 @@ async def get_session_user(
 
 @router.post("/update/profile", response_model=UserResponse)
 async def update_profile(
-    form_data: UpdateProfileForm, session_user=Depends(get_current_user)
+    form_data: UpdateProfileForm, session_user=Depends(get_verified_user)
 ):
     if session_user:
         user = Users.update_user_by_id(
