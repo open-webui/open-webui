@@ -416,7 +416,10 @@ async def generate_chat_completion(
         # patch max_tokens -> max_completion_tokens and stream if 🍓
         if "max_tokens" in payload:
             payload["max_completion_tokens"] = payload.pop("max_tokens")
-
+        if "messages" in payload:
+            for msg in payload["messages"]:
+                if msg["role"] == "system":
+                    msg["role"] = "user"
         # hard-code stream=False regardless of upstream in svelte/etc.
         payload["stream"] = False
 
