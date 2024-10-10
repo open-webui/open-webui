@@ -30,7 +30,15 @@
 
 {#if ['/', '#', '@'].includes(command?.charAt(0))}
 	{#if command?.charAt(0) === '/'}
-		<Prompts bind:this={commandElement} bind:prompt bind:files {command} />
+		<Prompts
+			bind:this={commandElement}
+			bind:prompt
+			bind:files
+			{command}
+			on:select={(e) => {
+				dispatch('select', { type: 'prompt', prompt: e.detail });
+			}}
+		/>
 	{:else if command?.charAt(0) === '#'}
 		<Knowledge
 			bind:this={commandElement}

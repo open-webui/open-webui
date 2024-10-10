@@ -18,6 +18,7 @@
 	let title = '';
 	let command = '';
 	let content = '';
+	let attached = false;
 
 	$: command = title !== '' ? `${title.replace(/\s+/g, '-').toLowerCase()}` : '';
 
@@ -25,13 +26,17 @@
 		loading = true;
 
 		if (validateCommandString(command)) {
-			const prompt = await createNewPrompt(localStorage.token, command, title, content).catch(
-				(error) => {
-					toast.error(error);
+			const prompt = await createNewPrompt(
+				localStorage.token,
+				command,
+				title,
+				content,
+				attached
+			).catch((error) => {
+				toast.error(error);
 
-					return null;
-				}
-			);
+				return null;
+			});
 
 			if (prompt) {
 				await prompts.set(await getPrompts(localStorage.token));
@@ -194,6 +199,33 @@
 						{` {{CLIPBOARD}}`}</span
 					>
 					{$i18n.t('variable to have them replaced with clipboard content.')}
+				</div>
+			</div>
+		</div>
+
+		<div class="my-2">
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt attached')}*</div>
+			</div>
+
+			<div class="mt-2">
+				<div>
+					<input
+						class="w-4 h-4 border border-gray-300 rounded-md checked:bg-gray-500 checked:border-gray-500 focus:outline-none transition duration-200 mt-1 align-top bg-no-repeat bg-center bg-contain float-left mr-2 cursor-pointer"
+						type="checkbox"
+						bind:checked={attached}
+					/>
+				</div>
+
+				<div class="text-xs text-gray-400 dark:text-gray-500">
+					ⓘ {$i18n.t(
+						'Fixed commands will be displayed as a reference at the top of the prompt using their title:'
+					)}
+					<span class="text-gray-600 dark:text-gray-300 font-medium">[Prompt Title]</span>
+				</div>
+
+				<div class="text-xs text-gray-400 dark:text-gray-500">
+					{$i18n.t('These commands will not be directly inserted into the prompt content.')}
 				</div>
 			</div>
 		</div>

@@ -9,9 +9,10 @@
 		getUserTimezone,
 		getWeekday
 	} from '$lib/utils';
-	import { tick, getContext } from 'svelte';
+	import { tick, getContext, createEventDispatcher } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
+	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
 	export let files;
@@ -39,6 +40,7 @@
 	};
 
 	const confirmPrompt = async (command) => {
+		let attached = command.attached;
 		let text = command.content;
 
 		if (command.content.includes('{{CLIPBOARD}}')) {
@@ -108,7 +110,15 @@
 			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
 		}
 
-		prompt = text;
+		if (attached) {
+			dispatch('select', command);
+
+			if (prompt.startsWith('/')) {
+				prompt = prompt.substring(1);
+			}
+		} else {
+			prompt = text;
+		}
 
 		const chatInputElement = document.getElementById('chat-textarea');
 

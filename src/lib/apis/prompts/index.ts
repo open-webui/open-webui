@@ -4,7 +4,8 @@ export const createNewPrompt = async (
 	token: string,
 	command: string,
 	title: string,
-	content: string
+	content: string,
+	attached: boolean
 ) => {
 	let error = null;
 
@@ -18,7 +19,8 @@ export const createNewPrompt = async (
 		body: JSON.stringify({
 			command: `/${command}`,
 			title: title,
-			content: content
+			content: content,
+			attached: attached
 		})
 	})
 		.then(async (res) => {
@@ -105,7 +107,8 @@ export const updatePromptByCommand = async (
 	token: string,
 	command: string,
 	title: string,
-	content: string
+	content: string,
+	attached: boolean
 ) => {
 	let error = null;
 
@@ -119,7 +122,8 @@ export const updatePromptByCommand = async (
 		body: JSON.stringify({
 			command: `/${command}`,
 			title: title,
-			content: content
+			content: content,
+			attached: attached
 		})
 	})
 		.then(async (res) => {

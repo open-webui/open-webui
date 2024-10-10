@@ -147,11 +147,12 @@ type TitleSettings = {
 	prompt?: string;
 };
 
-type Prompt = {
+export type Prompt = {
 	command: string;
 	user_id: string;
 	title: string;
 	content: string;
+	attached: boolean;
 	timestamp: number;
 };
 

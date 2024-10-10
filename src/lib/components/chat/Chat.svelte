@@ -33,7 +33,8 @@
 		mobile,
 		showOverview,
 		chatTitle,
-		showArtifacts
+		showArtifacts,
+		type Prompt
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -95,6 +96,7 @@
 	let chatIdUnsubscriber: Unsubscriber | undefined;
 
 	let selectedModels = [''];
+	let atSelectedPrompt: Prompt | undefined;
 	let atSelectedModel: Model | undefined;
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
@@ -741,6 +743,7 @@
 
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
 		let _responses = [];
+		console.log('atSelectedPrompt', atSelectedPrompt);
 		console.log('submitPrompt', $chatId);
 		const messages = createMessagesList(history.currentId);
 
@@ -2144,6 +2147,7 @@
 								bind:selectedToolIds
 								bind:webSearchEnabled
 								bind:atSelectedModel
+								bind:atSelectedPrompt
 								availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
 									const model = $models.find((m) => m.id === e);
 									if (model?.info?.meta?.toolIds ?? false) {
@@ -2166,8 +2170,9 @@
 								on:submit={async (e) => {
 									if (e.detail) {
 										prompt = '';
+										atSelectedPrompt = e.detail.selectedPromptCommand;
 										await tick();
-										submitPrompt(e.detail);
+										submitPrompt(e.detail.prompt);
 									}
 								}}
 							/>
@@ -2212,7 +2217,7 @@
 									if (e.detail) {
 										prompt = '';
 										await tick();
-										submitPrompt(e.detail);
+										submitPrompt(e.detail.prompt);
 									}
 								}}
 							/>
