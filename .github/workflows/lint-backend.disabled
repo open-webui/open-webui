@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Use Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
       - name: Use Bun
         uses: oven-sh/setup-bun@v1
       - name: Install dependencies

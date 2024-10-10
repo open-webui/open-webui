@@ -11,7 +11,7 @@ export const OLLAMA_API_BASE_URL = `${WEBUI_BASE_URL}/ollama`;
 export const OPENAI_API_BASE_URL = `${WEBUI_BASE_URL}/openai`;
 export const AUDIO_API_BASE_URL = `${WEBUI_BASE_URL}/audio/api/v1`;
 export const IMAGES_API_BASE_URL = `${WEBUI_BASE_URL}/images/api/v1`;
-export const RAG_API_BASE_URL = `${WEBUI_BASE_URL}/rag/api/v1`;
+export const RETRIEVAL_API_BASE_URL = `${WEBUI_BASE_URL}/retrieval/api/v1`;
 
 export const WEBUI_VERSION = APP_VERSION;
 export const WEBUI_BUILD_HASH = APP_BUILD_HASH;
@@ -31,7 +31,9 @@ export const SUPPORTED_FILE_TYPE = [
 	'application/x-javascript',
 	'text/markdown',
 	'audio/mpeg',
-	'audio/wav'
+	'audio/wav',
+	'audio/ogg',
+	'audio/x-m4a'
 ];
 
 export const SUPPORTED_FILE_EXTENSIONS = [

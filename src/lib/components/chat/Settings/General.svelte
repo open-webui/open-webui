@@ -17,7 +17,7 @@
 	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light', 'oled-dark'];
 	let selectedTheme = 'system';
 
-	let languages = [];
+	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
 	let lang = $i18n.language;
 	let notificationEnabled = false;
 	let system = '';
@@ -41,10 +41,11 @@
 
 	// Advanced
 	let requestFormat = '';
-	let keepAlive = null;
+	let keepAlive: string | null = null;
 
 	let params = {
 		// Advanced
+		stream_response: null,
 		seed: null,
 		temperature: null,
 		frequency_penalty: null,
@@ -59,7 +60,8 @@
 		num_ctx: null,
 		num_batch: null,
 		num_keep: null,
-		max_tokens: null
+		max_tokens: null,
+		num_gpu: null
 	};
 
 	const toggleRequestFormat = async () => {
@@ -112,6 +114,29 @@
 		themeToApply.split(' ').forEach((e) => {
 			document.documentElement.classList.add(e);
 		});
+
+		const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+		if (metaThemeColor) {
+			if (_theme.includes('system')) {
+				const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+					? 'dark'
+					: 'light';
+				console.log('Setting system meta theme color: ' + systemTheme);
+				metaThemeColor.setAttribute('content', systemTheme === 'light' ? '#ffffff' : '#171717');
+			} else {
+				console.log('Setting meta theme color: ' + _theme);
+				metaThemeColor.setAttribute(
+					'content',
+					_theme === 'dark'
+						? '#171717'
+						: _theme === 'oled-dark'
+							? '#000000'
+							: _theme === 'her'
+								? '#983724'
+								: '#ffffff'
+				);
+			}
+		}
 
 		console.log(_theme);
 	};
@@ -303,6 +328,7 @@
 				saveSettings({
 					system: system !== '' ? system : undefined,
 					params: {
+						stream_response: params.stream_response !== null ? params.stream_response : undefined,
 						seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
 						stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,
 						temperature: params.temperature !== null ? params.temperature : undefined,
@@ -321,7 +347,8 @@
 						max_tokens: params.max_tokens !== null ? params.max_tokens : undefined,
 						use_mmap: params.use_mmap !== null ? params.use_mmap : undefined,
 						use_mlock: params.use_mlock !== null ? params.use_mlock : undefined,
-						num_thread: params.num_thread !== null ? params.num_thread : undefined
+						num_thread: params.num_thread !== null ? params.num_thread : undefined,
+						num_gpu: params.num_gpu !== null ? params.num_gpu : undefined
 					},
 					keepAlive: keepAlive ? (isNaN(keepAlive) ? keepAlive : parseInt(keepAlive)) : undefined
 				});

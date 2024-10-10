@@ -1,16 +1,41 @@
 <script lang="ts">
-	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { copyToClipboard } from '$lib/utils';
 	import hljs from 'highlight.js';
-	import 'highlight.js/styles/github-dark.min.css';
 	import { loadPyodide } from 'pyodide';
-	import { onMount, tick } from 'svelte';
+	import mermaid from 'mermaid';
+
+	import { v4 as uuidv4 } from 'uuid';
+
+	import { getContext, getAllContexts, onMount, tick, createEventDispatcher } from 'svelte';
+	import { copyToClipboard } from '$lib/utils';
+
+	import 'highlight.js/styles/github-dark.min.css';
+
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
+	import SvgPanZoom from '$lib/components/common/SVGPanZoom.svelte';
+
+	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
 	export let id = '';
+	export let save = false;
 
+	export let token;
 	export let lang = '';
 	export let code = '';
+
+	let _code = '';
+	$: if (code) {
+		updateCode();
+	}
+
+	const updateCode = () => {
+		_code = code;
+	};
+
+	let _token = null;
+
+	let mermaidHtml = null;
 
 	let highlightedCode = null;
 	let executing = false;
@@ -20,6 +45,18 @@
 	let result = null;
 
 	let copied = false;
+	let saved = false;
+
+	const saveCode = () => {
+		saved = true;
+
+		code = _code;
+		dispatch('save', code);
+
+		setTimeout(() => {
+			saved = false;
+		}, 1000);
+	};
 
 	const copyCode = async () => {
 		copied = true;
@@ -204,70 +241,146 @@ __builtins__.input = input`);
 	};
 
 	let debounceTimeout;
-	$: if (code) {
-		// Function to perform the code highlighting
-		const highlightCode = () => {
-			highlightedCode = hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value || code;
-		};
 
-		// Clear the previous timeout if it exists
-		clearTimeout(debounceTimeout);
+	const drawMermaidDiagram = async () => {
+		try {
+			if (await mermaid.parse(code)) {
+				const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
+				mermaidHtml = svg;
+			}
+		} catch (error) {
+			console.log('Error:', error);
+		}
+	};
 
-		// Set a new timeout to debounce the code highlighting
-		debounceTimeout = setTimeout(highlightCode, 10);
+	const render = async () => {
+		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
+			(async () => {
+				await drawMermaidDiagram();
+			})();
+		}
+	};
+
+	$: if (token) {
+		if (JSON.stringify(token) !== JSON.stringify(_token)) {
+			_token = token;
+		}
 	}
+
+	$: if (_token) {
+		render();
+	}
+
+	$: dispatch('code', { lang, code });
+
+	onMount(async () => {
+		console.log('codeblock', lang, code);
+
+		if (lang) {
+			dispatch('code', { lang, code });
+		}
+		if (document.documentElement.classList.contains('dark')) {
+			mermaid.initialize({
+				startOnLoad: true,
+				theme: 'dark',
+				securityLevel: 'loose'
+			});
+		} else {
+			mermaid.initialize({
+				startOnLoad: true,
+				theme: 'default',
+				securityLevel: 'loose'
+			});
+		}
+	});
 </script>
 
-<div class="mb-4" dir="ltr">
-	<div
-		class="flex justify-between bg-[#202123] text-white text-xs px-4 pt-1 pb-0.5 rounded-t-lg overflow-x-auto"
-	>
-		<div class="p-1">{@html lang}</div>
-
-		<div class="flex items-center">
-			{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
-				{#if executing}
-					<div class="copy-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
-				{:else}
-					<button
-						class="copy-code-button bg-none border-none p-1"
-						on:click={() => {
-							executePython(code);
-						}}>Run</button
-					>
-				{/if}
+<div>
+	<div class="relative my-2 flex flex-col rounded-lg" dir="ltr">
+		{#if lang === 'mermaid'}
+			{#if mermaidHtml}
+				<SvgPanZoom
+					className=" border border-gray-50 dark:border-gray-850 rounded-lg max-h-fit overflow-hidden"
+					svg={mermaidHtml}
+				/>
+			{:else}
+				<pre class="mermaid">{code}</pre>
 			{/if}
-			<button class="copy-code-button bg-none border-none p-1" on:click={copyCode}
-				>{copied ? 'Copied' : 'Copy Code'}</button
+		{:else}
+			<div class="text-text-300 absolute pl-4 py-1.5 text-xs font-medium dark:text-white">
+				{lang}
+			</div>
+
+			<div
+				class="sticky top-8 mb-1 py-1 pr-2.5 flex items-center justify-end z-10 text-xs text-black dark:text-white"
 			>
-		</div>
+				<div class="flex items-center gap-0.5 translate-y-[1px]">
+					{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
+						{#if executing}
+							<div class="run-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
+						{:else}
+							<button
+								class="run-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+								on:click={async () => {
+									code = _code;
+									await tick();
+									executePython(code);
+								}}>{$i18n.t('Run')}</button
+							>
+						{/if}
+					{/if}
+
+					{#if save}
+						<button
+							class="save-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+							on:click={saveCode}
+						>
+							{saved ? $i18n.t('Saved') : $i18n.t('Save')}
+						</button>
+					{/if}
+
+					<button
+						class="copy-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+						on:click={copyCode}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
+					>
+				</div>
+			</div>
+
+			<div
+				class="language-{lang} rounded-t-lg -mt-8 {executing || stdout || stderr || result
+					? ''
+					: 'rounded-b-lg'} overflow-hidden"
+			>
+				<div class=" pt-7 bg-gray-50 dark:bg-gray-850"></div>
+				<CodeEditor
+					value={code}
+					{id}
+					{lang}
+					on:save={() => {
+						saveCode();
+					}}
+					on:change={(e) => {
+						_code = e.detail.value;
+					}}
+				/>
+			</div>
+
+			<div
+				id="plt-canvas-{id}"
+				class="bg-[#202123] text-white max-w-full overflow-x-auto scrollbar-hidden"
+			/>
+
+			{#if executing}
+				<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
+					<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
+					<div class="text-sm">Running...</div>
+				</div>
+			{:else if stdout || stderr || result}
+				<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
+					<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
+					<div class="text-sm">{stdout || stderr || result}</div>
+				</div>
+			{/if}
+		{/if}
 	</div>
-
-	<pre
-		class=" hljs p-4 px-5 overflow-x-auto"
-		style="border-top-left-radius: 0px; border-top-right-radius: 0px; {(executing ||
-			stdout ||
-			stderr ||
-			result) &&
-			'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
-			class="language-{lang} rounded-t-none whitespace-pre"
-			>{#if highlightedCode}{@html highlightedCode}{:else}{code}{/if}</code
-		></pre>
-
-	<div
-		id="plt-canvas-{id}"
-		class="bg-[#202123] text-white max-w-full overflow-x-auto scrollbar-hidden"
-	/>
-
-	{#if executing}
-		<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-			<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
-			<div class="text-sm">Running...</div>
-		</div>
-	{:else if stdout || stderr || result}
-		<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-			<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
-			<div class="text-sm">{stdout || stderr || result}</div>
-		</div>
-	{/if}
 </div>

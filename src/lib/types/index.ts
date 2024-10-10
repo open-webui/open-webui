@@ -7,3 +7,9 @@ export type Banner = {
 	dismissible?: boolean;
 	timestamp: number;
 };
+
+export enum TTS_RESPONSE_SPLIT {
+	PUNCTUATION = 'punctuation',
+	PARAGRAPHS = 'paragraphs',
+	NONE = 'none'
+}

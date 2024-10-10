@@ -31,7 +31,7 @@
 	let ollamaEnabled = null;
 
 	let OLLAMA_URLS = [];
-	let selectedOllamaUrlIdx: string | null = null;
+	let selectedOllamaUrlIdx: number | null = null;
 
 	let updateModelId = null;
 	let updateProgress = null;

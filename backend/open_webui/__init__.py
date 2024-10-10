@@ -9,8 +9,6 @@ import uvicorn
 app = typer.Typer()
 
 KEY_FILE = Path.cwd() / ".webui_secret_key"
-if (frontend_build_dir := Path(__file__).parent / "frontend").exists():
-    os.environ["FRONTEND_BUILD_DIR"] = str(frontend_build_dir)
 
 
 @app.command()
@@ -18,6 +16,7 @@ def serve(
     host: str = "0.0.0.0",
     port: int = 8080,
 ):
+    os.environ["FROM_INIT_PY"] = "true"
     if os.getenv("WEBUI_SECRET_KEY") is None:
         typer.echo(
             "Loading WEBUI_SECRET_KEY from file, not provided as an environment variable."
@@ -40,9 +39,23 @@ def serve(
                 "/usr/local/lib/python3.11/site-packages/nvidia/cudnn/lib",
             ]
         )
-    import main  # we need set environment variables before importing main
+        try:
+            import torch
 
-    uvicorn.run(main.app, host=host, port=port, forwarded_allow_ips="*")
+            assert torch.cuda.is_available(), "CUDA not available"
+            typer.echo("CUDA seems to be working")
+        except Exception as e:
+            typer.echo(
+                "Error when testing CUDA but USE_CUDA_DOCKER is true. "
+                "Resetting USE_CUDA_DOCKER to false and removing "
+                f"LD_LIBRARY_PATH modifications: {e}"
+            )
+            os.environ["USE_CUDA_DOCKER"] = "false"
+            os.environ["LD_LIBRARY_PATH"] = ":".join(LD_LIBRARY_PATH)
+
+    import open_webui.main  # we need set environment variables before importing main
+
+    uvicorn.run(open_webui.main.app, host=host, port=port, forwarded_allow_ips="*")
 
 
 @app.command()
@@ -52,7 +65,11 @@ def dev(
     reload: bool = True,
 ):
     uvicorn.run(
-        "main:app", host=host, port=port, reload=reload, forwarded_allow_ips="*"
+        "open_webui.main:app",
+        host=host,
+        port=port,
+        reload=reload,
+        forwarded_allow_ips="*",
     )
 
 

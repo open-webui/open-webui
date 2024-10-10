@@ -64,8 +64,14 @@
 	</title>
 </svelte:head>
 
-<div class="mb-3 flex justify-between items-center">
-	<div class=" text-lg font-semibold self-center">{$i18n.t('Prompts')}</div>
+<div class="mb-3">
+	<div class="flex justify-between items-center">
+		<div class="flex md:self-center text-lg font-medium px-0.5">
+			{$i18n.t('Prompts')}
+			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
+			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{$prompts.length}</span>
+		</div>
+	</div>
 </div>
 
 <div class=" flex w-full space-x-2">
@@ -109,7 +115,8 @@
 		</a>
 	</div>
 </div>
-<hr class=" dark:border-gray-850 my-2.5" />
+
+<hr class=" border-gray-50 dark:border-gray-850 my-2.5" />
 
 <div class="my-3 mb-5">
 	{#each $prompts.filter((p) => query === '' || p.command.includes(query)) as prompt}

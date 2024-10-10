@@ -1,9 +1,12 @@
 <script lang="ts">
-	import { getDocs } from '$lib/apis/documents';
-	import { deleteAllFiles, deleteFileById } from '$lib/apis/files';
+	import { toast } from 'svelte-sonner';
+
+	import { onMount, getContext, createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher();
+
 	import {
 		getQuerySettings,
-		scanDocs,
 		updateQuerySettings,
 		resetVectorDB,
 		getEmbeddingConfig,
@@ -13,18 +16,18 @@
 		resetUploadDir,
 		getRAGConfig,
 		updateRAGConfig
-	} from '$lib/apis/rag';
+	} from '$lib/apis/retrieval';
+
+	import { knowledge, models } from '$lib/stores';
+	import { getKnowledgeItems } from '$lib/apis/knowledge';
+	import { uploadDir, deleteAllFiles, deleteFileById } from '$lib/apis/files';
+
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-
-	import { documents, models } from '$lib/stores';
-	import { onMount, getContext } from 'svelte';
-	import { toast } from 'svelte-sonner';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
-
-	export let saveHandler: Function;
 
 	let scanDirLoading = false;
 	let updateEmbeddingModelLoading = false;
@@ -36,6 +39,9 @@
 	let embeddingEngine = '';
 	let embeddingModel = '';
 	let rerankingModel = '';
+
+	let fileMaxSize = null;
+	let fileMaxCount = null;
 
 	let contentExtractionEngine = 'default';
 	let tikaServerUrl = '';
@@ -54,17 +60,6 @@
 		r: 0.0,
 		k: 4,
 		hybrid: false
-	};
-
-	const scanHandler = async () => {
-		scanDirLoading = true;
-		const res = await scanDocs(localStorage.token);
-		scanDirLoading = false;
-
-		if (res) {
-			await documents.set(await getDocs(localStorage.token));
-			toast.success($i18n.t('Scan complete!'));
-		}
 	};
 
 	const embeddingModelUpdateHandler = async () => {
@@ -112,7 +107,7 @@
 							url: OpenAIUrl,
 							batch_size: OpenAIBatchSize
 						}
-				  }
+					}
 				: {})
 		}).catch(async (error) => {
 			toast.error(error);
@@ -161,19 +156,22 @@
 	};
 
 	const submitHandler = async () => {
-		embeddingModelUpdateHandler();
+		await embeddingModelUpdateHandler();
 
 		if (querySettings.hybrid) {
-			rerankingModelUpdateHandler();
+			await rerankingModelUpdateHandler();
 		}
 
 		if (contentExtractionEngine === 'tika' && tikaServerUrl === '') {
 			toast.error($i18n.t('Tika Server URL required.'));
 			return;
 		}
-
 		const res = await updateRAGConfig(localStorage.token, {
 			pdf_extract_images: pdfExtractImages,
+			file: {
+				max_size: fileMaxSize === '' ? null : fileMaxSize,
+				max_count: fileMaxCount === '' ? null : fileMaxCount
+			},
 			chunk: {
 				chunk_overlap: chunkOverlap,
 				chunk_size: chunkSize
@@ -185,6 +183,8 @@
 		});
 
 		await updateQuerySettings(localStorage.token, querySettings);
+
+		dispatch('save');
 	};
 
 	const setEmbeddingConfig = async () => {
@@ -218,7 +218,6 @@
 		await setRerankingConfig();
 
 		querySettings = await getQuerySettings(localStorage.token);
-
 		const res = await getRAGConfig(localStorage.token);
 
 		if (res) {
@@ -230,6 +229,9 @@
 			contentExtractionEngine = res.content_extraction.engine;
 			tikaServerUrl = res.content_extraction.tika_server_url;
 			showTikaServerUrl = contentExtractionEngine === 'tika';
+
+			fileMaxSize = res?.file.max_size ?? '';
+			fileMaxCount = res?.file.max_count ?? '';
 		}
 	});
 </script>
@@ -266,64 +268,11 @@
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={() => {
 		submitHandler();
-		saveHandler();
 	}}
 >
-	<div class=" space-y-2.5 overflow-y-scroll scrollbar-hidden h-full">
+	<div class=" space-y-2.5 overflow-y-scroll scrollbar-hidden h-full pr-1.5">
 		<div class="flex flex-col gap-0.5">
 			<div class=" mb-0.5 text-sm font-medium">{$i18n.t('General Settings')}</div>
-
-			<div class="  flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
-					{$i18n.t('Scan for documents from {{path}}', { path: 'DOCS_DIR (/data/docs)' })}
-				</div>
-
-				<button
-					class=" self-center text-xs p-1 px-3 bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg flex flex-row space-x-1 items-center {scanDirLoading
-						? ' cursor-not-allowed'
-						: ''}"
-					on:click={() => {
-						scanHandler();
-						console.log('check');
-					}}
-					type="button"
-					disabled={scanDirLoading}
-				>
-					<div class="self-center font-medium">{$i18n.t('Scan')}</div>
-
-					{#if scanDirLoading}
-						<div class="ml-3 self-center">
-							<svg
-								class=" w-3 h-3"
-								viewBox="0 0 24 24"
-								fill="currentColor"
-								xmlns="http://www.w3.org/2000/svg"
-							>
-								<style>
-									.spinner_ajPY {
-										transform-origin: center;
-										animation: spinner_AtaB 0.75s infinite linear;
-									}
-
-									@keyframes spinner_AtaB {
-										100% {
-											transform: rotate(360deg);
-										}
-									}
-								</style>
-								<path
-									d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-									opacity=".25"
-								/>
-								<path
-									d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-									class="spinner_ajPY"
-								/>
-							</svg>
-						</div>
-					{/if}
-				</button>
-			</div>
 
 			<div class=" flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Embedding Model Engine')}</div>
@@ -610,12 +559,68 @@
 				</div>
 			{/if}
 		</div>
+
+		<hr class=" dark:border-gray-850" />
+
+		<div class="">
+			<div class="text-sm font-medium">{$i18n.t('Files')}</div>
+
+			<div class=" my-2 flex gap-1.5">
+				<div class="w-full">
+					<div class=" self-center text-xs font-medium min-w-fit mb-1">
+						{$i18n.t('Max Upload Size')}
+					</div>
+
+					<div class="self-center">
+						<Tooltip
+							content={$i18n.t(
+								'The maximum file size in MB. If the file size exceeds this limit, the file will not be uploaded.'
+							)}
+							placement="top-start"
+						>
+							<input
+								class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								type="number"
+								placeholder={$i18n.t('Leave empty for unlimited')}
+								bind:value={fileMaxSize}
+								autocomplete="off"
+								min="0"
+							/>
+						</Tooltip>
+					</div>
+				</div>
+
+				<div class="  w-full">
+					<div class="self-center text-xs font-medium min-w-fit mb-1">
+						{$i18n.t('Max Upload Count')}
+					</div>
+					<div class="self-center">
+						<Tooltip
+							content={$i18n.t(
+								'The maximum number of files that can be used at once in chat. If the number of files exceeds this limit, the files will not be uploaded.'
+							)}
+							placement="top-start"
+						>
+							<input
+								class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								type="number"
+								placeholder={$i18n.t('Leave empty for unlimited')}
+								bind:value={fileMaxCount}
+								autocomplete="off"
+								min="0"
+							/>
+						</Tooltip>
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<hr class=" dark:border-gray-850" />
 
 		<div class=" ">
 			<div class=" text-sm font-medium">{$i18n.t('Query Params')}</div>
 
-			<div class=" flex">
+			<div class=" flex gap-1">
 				<div class="  flex w-full justify-between">
 					<div class="self-center text-xs font-medium min-w-fit">{$i18n.t('Top K')}</div>
 
@@ -632,7 +637,7 @@
 				</div>
 
 				{#if querySettings.hybrid === true}
-					<div class="flex w-full">
+					<div class="  flex w-full justify-between">
 						<div class=" self-center text-xs font-medium min-w-fit">
 							{$i18n.t('Minimum Score')}
 						</div>
@@ -665,11 +670,17 @@
 
 			<div>
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('RAG Template')}</div>
-				<textarea
-					bind:value={querySettings.template}
-					class="w-full rounded-lg px-4 py-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
-					rows="4"
-				/>
+				<Tooltip
+					content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+					placement="top-start"
+				>
+					<textarea
+						bind:value={querySettings.template}
+						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+						class="w-full rounded-lg px-4 py-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+						rows="4"
+					/>
+				</Tooltip>
 			</div>
 		</div>
 

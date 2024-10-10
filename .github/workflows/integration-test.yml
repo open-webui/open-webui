@@ -15,6 +15,13 @@ jobs:
     name: Run Cypress Integration Tests
     runs-on: ubuntu-latest
     steps:
+      - name: Maximize build space
+        uses: AdityaGarg8/remove-unwanted-software@v4.1
+        with:
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+
       - name: Checkout Repository
         uses: actions/checkout@v4
 
@@ -26,6 +33,10 @@ jobs:
             --file docker-compose.a1111-test.yaml \
             up --detach --build
 
+      - name: Delete Docker build cache
+        run: |
+          docker builder prune --all --force
+
       - name: Wait for Ollama to be up
         timeout-minutes: 5
         run: |
@@ -34,10 +45,6 @@ jobs:
             sleep 1
           done
           echo "Service is up!"
-
-      - name: Delete Docker build cache
-        run: |
-          docker builder prune --all --force
 
       - name: Preload Ollama model
         run: |
@@ -78,7 +85,7 @@ jobs:
   #     - uses: actions/checkout@v4
 
   #     - name: Set up Python
-  #       uses: actions/setup-python@v4
+  #       uses: actions/setup-python@v5
   #       with:
   #         python-version: ${{ matrix.python-version }}
 
@@ -150,7 +157,7 @@ jobs:
           GLOBAL_LOG_LEVEL: debug
         run: |
           cd backend
-          uvicorn main:app --port "8080" --forwarded-allow-ips '*' &
+          uvicorn open_webui.main:app --port "8080" --forwarded-allow-ips '*' &
           UVICORN_PID=$!
           # Wait up to 40 seconds for the server to start
           for i in {1..40}; do
@@ -175,9 +182,12 @@ jobs:
           WEBUI_SECRET_KEY: secret-key
           GLOBAL_LOG_LEVEL: debug
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+          DATABASE_POOL_SIZE: 10
+          DATABASE_POOL_MAX_OVERFLOW: 10
+          DATABASE_POOL_TIMEOUT: 30
         run: |
           cd backend
-          uvicorn main:app --port "8081" --forwarded-allow-ips '*' &
+          uvicorn open_webui.main:app --port "8081" --forwarded-allow-ips '*' &
           UVICORN_PID=$!
           # Wait up to 20 seconds for the server to start
           for i in {1..20}; do
@@ -223,7 +233,7 @@ jobs:
 #          DATABASE_URL: mysql://root:mysql@localhost:3306/mysql
 #        run: |
 #          cd backend
-#          uvicorn main:app --port "8083" --forwarded-allow-ips '*' &
+#          uvicorn open_webui.main:app --port "8083" --forwarded-allow-ips '*' &
 #          UVICORN_PID=$!
 #          # Wait up to 20 seconds for the server to start
 #          for i in {1..20}; do

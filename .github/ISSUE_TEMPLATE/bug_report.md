@@ -8,29 +8,21 @@ assignees: ''
 
 # Bug Report
 
-## Description
+**Important: Before submitting a bug report, please check whether a similar issue or feature request has already been posted in the Issues or Discussions section. It's likely we're already tracking it. In case of uncertainty, initiate a discussion post first. This helps us all to efficiently focus on improving the project.**
 
-**Bug Summary:**
-[Provide a brief but clear summary of the bug]
+**Let's collaborate respectfully. If you bring negativity, please understand our capacity to engage may be limited. If you're open to learning and communicating constructively, we're more than happy to assist you. Remember, Open WebUI is a volunteer-driven project maintained by a single maintainer, supported by our amazing contributors who also manage full-time jobs. We respect your time; please respect ours. If you have an issue, We highly encourage you to submit a pull request or to fork the project. We actively work to prevent contributor burnout to preserve the quality and continuity of Open WebUI.**
 
-**Steps to Reproduce:**
-[Outline the steps to reproduce the bug. Be as detailed as possible.]
+## Installation Method
 
-**Expected Behavior:**
-[Describe what you expected to happen.]
-
-**Actual Behavior:**
-[Describe what actually happened.]
+[Describe the method you used to install the project, e.g., git clone, Docker, pip, etc.]
 
 ## Environment
 
-- **Open WebUI Version:** [e.g., 0.1.120]
-- **Ollama (if applicable):** [e.g., 0.1.30, 0.1.32-rc1]
+- **Open WebUI Version:** [e.g., v0.3.11]
+- **Ollama (if applicable):** [e.g., v0.2.0, v0.1.32-rc1]
 
 - **Operating System:** [e.g., Windows 10, macOS Big Sur, Ubuntu 20.04]
 - **Browser (if applicable):** [e.g., Chrome 100.0, Firefox 98.0]
-
-## Reproduction Details
 
 **Confirmation:**
 
@@ -38,6 +30,25 @@ assignees: ''
 - [ ] I am on the latest version of both Open WebUI and Ollama.
 - [ ] I have included the browser console logs.
 - [ ] I have included the Docker container logs.
+- [ ] I have provided the exact steps to reproduce the bug in the "Steps to Reproduce" section below.
+
+## Expected Behavior:
+
+[Describe what you expected to happen.]
+
+## Actual Behavior:
+
+[Describe what actually happened.]
+
+## Description
+
+**Bug Summary:**
+[Provide a brief but clear summary of the bug]
+
+## Reproduction Details
+
+**Steps to Reproduce:**
+[Outline the steps to reproduce the bug. Be as detailed as possible.]
 
 ## Logs and Screenshots
 
@@ -47,12 +58,8 @@ assignees: ''
 **Docker Container Logs:**
 [Include relevant Docker container logs, if applicable]
 
-**Screenshots (if applicable):**
+**Screenshots/Screen Recordings (if applicable):**
 [Attach any relevant screenshots to help illustrate the issue]
-
-## Installation Method
-
-[Describe the method you used to install the project, e.g., manual installation, Docker, package manager, etc.]
 
 ## Additional Information
 

@@ -8,6 +8,7 @@
 	import { toast } from 'svelte-sonner';
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
 	import { page } from '$app/stores';
+	import { getBackendConfig } from '$lib/apis';
 
 	const i18n = getContext('i18n');
 
@@ -28,6 +29,7 @@
 
 			$socket.emit('user-join', { auth: { token: sessionUser.token } });
 			await user.set(sessionUser);
+			await config.set(await getBackendConfig());
 			goto('/');
 		}
 	};
@@ -138,9 +140,7 @@
 						class="flex items-center justify-center gap-3 text-xl sm:text-2xl text-center font-semibold dark:text-gray-200"
 					>
 						<div>
-							{$i18n.t('Signing in')}
-							{$i18n.t('to')}
-							{$WEBUI_NAME}
+							{$i18n.t('Signing in to {{WEBUI_NAME}}', { WEBUI_NAME: $WEBUI_NAME })}
 						</div>
 
 						<div>
@@ -158,9 +158,11 @@
 					>
 						<div class="mb-1">
 							<div class=" text-2xl font-medium">
-								{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Sign up')}
-								{$i18n.t('to')}
-								{$WEBUI_NAME}
+								{#if mode === 'signin'}
+									{$i18n.t(`Sign in to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
+								{:else}
+									{$i18n.t(`Sign up to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
+								{/if}
 							</div>
 
 							{#if mode === 'signup'}
@@ -173,88 +175,94 @@
 							{/if}
 						</div>
 
-						<div class="flex flex-col mt-4">
-							{#if mode === 'signup'}
-								<div>
-									<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Name')}</div>
+						{#if $config?.features.enable_login_form}
+							<div class="flex flex-col mt-4">
+								{#if mode === 'signup'}
+									<div>
+										<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Name')}</div>
+										<input
+											bind:value={name}
+											type="text"
+											class=" px-5 py-3 rounded-2xl w-full text-sm outline-none border dark:border-none dark:bg-gray-900"
+											autocomplete="name"
+											placeholder={$i18n.t('Enter Your Full Name')}
+											required
+										/>
+									</div>
+
+									<hr class=" my-3 dark:border-gray-900" />
+								{/if}
+
+								<div class="mb-2">
+									<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Email')}</div>
 									<input
-										bind:value={name}
-										type="text"
+										bind:value={email}
+										type="email"
 										class=" px-5 py-3 rounded-2xl w-full text-sm outline-none border dark:border-none dark:bg-gray-900"
-										autocomplete="name"
-										placeholder={$i18n.t('Enter Your Full Name')}
+										autocomplete="email"
+										placeholder={$i18n.t('Enter Your Email')}
 										required
 									/>
 								</div>
 
-								<hr class=" my-3 dark:border-gray-900" />
-							{/if}
+								<div>
+									<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Password')}</div>
 
-							<div class="mb-2">
-								<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Email')}</div>
-								<input
-									bind:value={email}
-									type="email"
-									class=" px-5 py-3 rounded-2xl w-full text-sm outline-none border dark:border-none dark:bg-gray-900"
-									autocomplete="email"
-									placeholder={$i18n.t('Enter Your Email')}
-									required
-								/>
-							</div>
-
-							<div>
-								<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Password')}</div>
-
-								<input
-									bind:value={password}
-									type="password"
-									class=" px-5 py-3 rounded-2xl w-full text-sm outline-none border dark:border-none dark:bg-gray-900"
-									placeholder={$i18n.t('Enter Your Password')}
-									autocomplete="current-password"
-									required
-								/>
-							</div>
-						</div>
-
-						<div class="mt-5">
-							<button
-								class=" bg-gray-900 hover:bg-gray-800 w-full rounded-2xl text-white font-medium text-sm py-3 transition"
-								type="submit"
-							>
-								{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
-							</button>
-
-							{#if $config?.features.enable_signup}
-								<div class=" mt-4 text-sm text-center">
-									{mode === 'signin'
-										? $i18n.t("Don't have an account?")
-										: $i18n.t('Already have an account?')}
-
-									<button
-										class=" font-medium underline"
-										type="button"
-										on:click={() => {
-											if (mode === 'signin') {
-												mode = 'signup';
-											} else {
-												mode = 'signin';
-											}
-										}}
-									>
-										{mode === 'signin' ? $i18n.t('Sign up') : $i18n.t('Sign in')}
-									</button>
+									<input
+										bind:value={password}
+										type="password"
+										class=" px-5 py-3 rounded-2xl w-full text-sm outline-none border dark:border-none dark:bg-gray-900"
+										placeholder={$i18n.t('Enter Your Password')}
+										autocomplete="current-password"
+										required
+									/>
 								</div>
-							{/if}
-						</div>
+							</div>
+						{/if}
+
+						{#if $config?.features.enable_login_form}
+							<div class="mt-5">
+								<button
+									class=" bg-gray-900 hover:bg-gray-800 w-full rounded-2xl text-white font-medium text-sm py-3 transition"
+									type="submit"
+								>
+									{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
+								</button>
+
+								{#if $config?.features.enable_signup}
+									<div class=" mt-4 text-sm text-center">
+										{mode === 'signin'
+											? $i18n.t("Don't have an account?")
+											: $i18n.t('Already have an account?')}
+
+										<button
+											class=" font-medium underline"
+											type="button"
+											on:click={() => {
+												if (mode === 'signin') {
+													mode = 'signup';
+												} else {
+													mode = 'signin';
+												}
+											}}
+										>
+											{mode === 'signin' ? $i18n.t('Sign up') : $i18n.t('Sign in')}
+										</button>
+									</div>
+								{/if}
+							</div>
+						{/if}
 					</form>
 
 					{#if Object.keys($config?.oauth?.providers ?? {}).length > 0}
 						<div class="inline-flex items-center justify-center w-full">
 							<hr class="w-64 h-px my-8 bg-gray-200 border-0 dark:bg-gray-700" />
-							<span
-								class="absolute px-3 font-medium text-gray-900 -translate-x-1/2 bg-white left-1/2 dark:text-white dark:bg-gray-950"
-								>{$i18n.t('or')}</span
-							>
+							{#if $config?.features.enable_login_form}
+								<span
+									class="absolute px-3 font-medium text-gray-900 -translate-x-1/2 bg-white left-1/2 dark:text-white dark:bg-gray-950"
+									>{$i18n.t('or')}</span
+								>
+							{/if}
 						</div>
 						<div class="flex flex-col space-y-2">
 							{#if $config?.oauth?.providers?.google}
@@ -346,8 +354,23 @@
 
 <style>
 	.font-mona {
-		font-family: 'Mona Sans', -apple-system, 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto,
-			Ubuntu, Cantarell, 'Noto Sans', sans-serif, 'Helvetica Neue', Arial, 'Apple Color Emoji',
-			'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+		font-family:
+			'Mona Sans',
+			-apple-system,
+			'Inter',
+			ui-sans-serif,
+			system-ui,
+			'Segoe UI',
+			Roboto,
+			Ubuntu,
+			Cantarell,
+			'Noto Sans',
+			sans-serif,
+			'Helvetica Neue',
+			Arial,
+			'Apple Color Emoji',
+			'Segoe UI Emoji',
+			'Segoe UI Symbol',
+			'Noto Color Emoji';
 	}
 </style>

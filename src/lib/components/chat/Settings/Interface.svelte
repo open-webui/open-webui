@@ -22,21 +22,29 @@
 	let responseAutoCopy = false;
 	let widescreenMode = false;
 	let splitLargeChunks = false;
+	let scrollOnBranchChange = true;
 	let userLocation = false;
 
 	// Interface
 	let defaultModelId = '';
 	let showUsername = false;
 
+	let landingPageMode = '';
 	let chatBubble = true;
 	let chatDirection: 'LTR' | 'RTL' = 'LTR';
 
 	let showEmojiInCall = false;
 	let voiceInterruption = false;
+	let hapticFeedback = false;
 
 	const toggleSplitLargeChunks = async () => {
 		splitLargeChunks = !splitLargeChunks;
 		saveSettings({ splitLargeChunks: splitLargeChunks });
+	};
+
+	const togglesScrollOnBranchChange = async () => {
+		scrollOnBranchChange = !scrollOnBranchChange;
+		saveSettings({ scrollOnBranchChange: scrollOnBranchChange });
 	};
 
 	const togglewidescreenMode = async () => {
@@ -47,6 +55,11 @@
 	const toggleChatBubble = async () => {
 		chatBubble = !chatBubble;
 		saveSettings({ chatBubble: chatBubble });
+	};
+
+	const toggleLandingPageMode = async () => {
+		landingPageMode = landingPageMode === '' ? 'chat' : '';
+		saveSettings({ landingPageMode: landingPageMode });
 	};
 
 	const toggleShowUsername = async () => {
@@ -62,6 +75,11 @@
 	const toggleVoiceInterruption = async () => {
 		voiceInterruption = !voiceInterruption;
 		saveSettings({ voiceInterruption: voiceInterruption });
+	};
+
+	const toggleHapticFeedback = async () => {
+		hapticFeedback = !hapticFeedback;
+		saveSettings({ hapticFeedback: hapticFeedback });
 	};
 
 	const toggleUserLocation = async () => {
@@ -138,11 +156,15 @@
 		showEmojiInCall = $settings.showEmojiInCall ?? false;
 		voiceInterruption = $settings.voiceInterruption ?? false;
 
+		landingPageMode = $settings.landingPageMode ?? '';
 		chatBubble = $settings.chatBubble ?? true;
 		widescreenMode = $settings.widescreenMode ?? false;
 		splitLargeChunks = $settings.splitLargeChunks ?? false;
+		scrollOnBranchChange = $settings.scrollOnBranchChange ?? true;
 		chatDirection = $settings.chatDirection ?? 'LTR';
 		userLocation = $settings.userLocation ?? false;
+
+		hapticFeedback = $settings.hapticFeedback ?? false;
 
 		defaultModelId = $settings?.models?.at(0) ?? '';
 		if ($config?.default_models) {
@@ -213,6 +235,26 @@
 
 		<div>
 			<div class=" mb-1.5 text-sm font-medium">{$i18n.t('UI')}</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('Landing Page Mode')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleLandingPageMode();
+						}}
+						type="button"
+					>
+						{#if landingPageMode === ''}
+							<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Chat')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -321,6 +363,28 @@
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs">
+						{$i18n.t('Scroll to bottom when switching between branches')}
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							togglesScrollOnBranchChange();
+						}}
+						type="button"
+					>
+						{#if scrollOnBranchChange === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">
 						{$i18n.t('Chat Background Image')}
 					</div>
 
@@ -401,6 +465,26 @@
 						type="button"
 					>
 						{#if userLocation === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('Haptic Feedback')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleHapticFeedback();
+						}}
+						type="button"
+					>
+						{#if hapticFeedback === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>

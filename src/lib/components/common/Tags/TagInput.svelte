@@ -27,7 +27,7 @@
 		<div class="flex items-center">
 			<input
 				bind:value={tagName}
-				class=" px-2 cursor-pointer self-center text-xs h-fit bg-transparent outline-none line-clamp-1 w-[5.5rem]"
+				class=" px-2 cursor-pointer self-center text-xs h-fit bg-transparent outline-none line-clamp-1 w-[6.5rem]"
 				placeholder={$i18n.t('Add a tag')}
 				list="tagOptions"
 				on:keydown={(event) => {
@@ -42,7 +42,7 @@
 				{/each}
 			</datalist>
 
-			<button type="button" on:click={addTagHandler}>
+			<button type="button" aria-label={$i18n.t('Save Tag')} on:click={addTagHandler}>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 16 16"
@@ -63,6 +63,7 @@
 	<button
 		class=" cursor-pointer self-center p-0.5 flex h-fit items-center dark:hover:bg-gray-700 rounded-full transition border dark:border-gray-600 border-dashed"
 		type="button"
+		aria-label={$i18n.t('Add Tag')}
 		on:click={() => {
 			showTagInput = !showTagInput;
 		}}

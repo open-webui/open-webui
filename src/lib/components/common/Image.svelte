@@ -5,19 +5,21 @@
 	export let src = '';
 	export let alt = '';
 
-	let _src = '';
+	export let className = ' w-full';
 
+	let _src = '';
 	$: _src = src.startsWith('/') ? `${WEBUI_BASE_URL}${src}` : src;
 
 	let showImagePreview = false;
 </script>
 
-<ImagePreview bind:show={showImagePreview} src={_src} {alt} />
 <button
+	class={className}
 	on:click={() => {
-		console.log('image preview');
 		showImagePreview = true;
 	}}
 >
-	<img src={_src} {alt} class=" max-h-96 rounded-lg" draggable="false" data-cy="image" />
+	<img src={_src} {alt} class=" rounded-lg cursor-pointer" draggable="false" data-cy="image" />
 </button>
+
+<ImagePreview bind:show={showImagePreview} src={_src} {alt} />

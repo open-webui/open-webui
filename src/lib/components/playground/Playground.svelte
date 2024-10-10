@@ -121,7 +121,7 @@
 						? {
 								role: 'system',
 								content: system
-						  }
+							}
 						: undefined,
 					...messages
 				].filter((message) => message)

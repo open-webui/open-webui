@@ -155,7 +155,7 @@
 							bind:autoScroll
 							bottomPadding={files.length > 0}
 							sendPrompt={() => {}}
-							continueGeneration={() => {}}
+							continueResponse={() => {}}
 							regenerateResponse={() => {}}
 						/>
 					</div>

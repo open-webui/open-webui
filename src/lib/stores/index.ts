@@ -19,7 +19,9 @@ export const activeUserCount: Writable<null | number> = writable(null);
 export const USAGE_POOL: Writable<null | string[]> = writable(null);
 
 export const theme = writable('system');
+
 export const chatId = writable('');
+export const chatTitle = writable('');
 
 export const chats = writable([]);
 export const pinnedChats = writable([]);
@@ -27,7 +29,7 @@ export const tags = writable([]);
 
 export const models: Writable<Model[]> = writable([]);
 export const prompts: Writable<Prompt[]> = writable([]);
-export const documents: Writable<Document[]> = writable([]);
+export const knowledge: Writable<Document[]> = writable([]);
 
 export const tools = writable([]);
 export const functions = writable([]);
@@ -40,7 +42,15 @@ export const showSidebar = writable(false);
 export const showSettings = writable(false);
 export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
+
+export const showControls = writable(false);
+export const showOverview = writable(false);
+export const showArtifacts = writable(false);
 export const showCallOverlay = writable(false);
+
+export const temporaryChatEnabled = writable(false);
+export const scrollPaginationEnabled = writable(false);
+export const currentChatPage = writable(1);
 
 export type Model = OpenAIModel | OllamaModel;
 
@@ -48,20 +58,39 @@ type BaseModel = {
 	id: string;
 	name: string;
 	info?: ModelConfig;
+	owned_by: 'ollama' | 'openai';
 };
 
 export interface OpenAIModel extends BaseModel {
+	owned_by: 'openai';
 	external: boolean;
 	source?: string;
 }
 
 export interface OllamaModel extends BaseModel {
+	owned_by: 'ollama';
 	details: OllamaModelDetails;
 	size: number;
 	description: string;
 	model: string;
 	modified_at: string;
 	digest: string;
+	ollama?: {
+		name?: string;
+		model?: string;
+		modified_at: string;
+		size?: number;
+		digest?: string;
+		details?: {
+			parent_model?: string;
+			format?: string;
+			family?: string;
+			families?: string[];
+			parameter_size?: string;
+			quantization_level?: string;
+		};
+		urls?: number[];
+	};
 }
 
 type OllamaModelDetails = {
@@ -80,7 +109,6 @@ type Settings = {
 	responseAutoPlayback?: boolean;
 	audio?: AudioSettings;
 	showUsername?: boolean;
-	saveChatHistory?: boolean;
 	notificationEnabled?: boolean;
 	title?: TitleSettings;
 	splitLargeDeltas?: boolean;
@@ -145,9 +173,11 @@ type Config = {
 		auth: boolean;
 		auth_trusted_header: boolean;
 		enable_signup: boolean;
+		enable_login_form: boolean;
 		enable_web_search?: boolean;
 		enable_image_generation: boolean;
 		enable_admin_export: boolean;
+		enable_admin_chat_access: boolean;
 		enable_community_sharing: boolean;
 	};
 	oauth: {
