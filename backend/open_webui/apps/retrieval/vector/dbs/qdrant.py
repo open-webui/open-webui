@@ -24,7 +24,7 @@ class QdrantClient:
 
         # Iterate over the tuple of records
         for record in result[0]:
-            ids.append([record.id])            
+            ids.append([record.id])
             documents.append([record.payload["text"]])
             metadatas.append([record.payload["metadata"]])
 
@@ -59,15 +59,11 @@ class QdrantClient:
 
     def has_collection(self, collection_name: str) -> bool:
         # Check if the collection exists based on the collection name.
-        return self.client.collection_exists(
-            collection_name=collection_name
-        )
+        return self.client.collection_exists(collection_name=collection_name)
 
     def delete_collection(self, collection_name: str):
         # Delete the collection based on the collection name.
-        return self.client.delete_collection(
-            collection_name=collection_name
-        )
+        return self.client.delete_collection(collection_name=collection_name)
 
     def search(
         self, collection_name: str, vectors: list[list[float | int]], limit: int
@@ -77,7 +73,7 @@ class QdrantClient:
             collection_name=collection_name,
             query=vectors,
             limit=limit,
-            with_payload=True
+            with_payload=True,
         )
 
         return self._result_to_search_result(result)
@@ -95,7 +91,7 @@ class QdrantClient:
             )
 
             return self._result_to_get_result(result)
- 
+
         return None
 
     def insert(self, collection_name: str, items: list[VectorItem]):
@@ -103,30 +99,27 @@ class QdrantClient:
 
     def upsert(self, collection_name: str, items: list[VectorItem]):
         # Update the items in the collection, if the items are not present, insert them. If the collection does not exist, it will be created.
-        if not self.client.collection_exists(
-            collection_name=collection_name
-        ):
+        if not self.client.collection_exists(collection_name=collection_name):
             self.client.create_collection(
-                collection_name=collection_name, 
+                collection_name=collection_name,
                 vectors_config=VectorParams(
                     size=len(items[0]["vector"]),
-                    distance=Distance.COSINE, 
+                    distance=Distance.COSINE,
                     multivector_config=models.MultiVectorConfig(
-                        comparator=models.MultiVectorComparator.MAX_SIM))
+                        comparator=models.MultiVectorComparator.MAX_SIM
+                    ),
+                ),
             )
 
         points = [
-                PointStruct(
-                    id=item["id"],
-                    vector=item["vector"],
-                    payload={
-                        "text": item["text"],
-                        "metadata": item["metadata"]
-                    }
-                )
-                for item in items
-            ]
-        
+            PointStruct(
+                id=item["id"],
+                vector=item["vector"],
+                payload={"text": item["text"], "metadata": item["metadata"]},
+            )
+            for item in items
+        ]
+
         return self.client.upsert(
             collection_name=collection_name,
             points=points,

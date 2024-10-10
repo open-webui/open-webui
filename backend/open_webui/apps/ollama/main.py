@@ -32,9 +32,7 @@ from pydantic import BaseModel, ConfigDict
 from starlette.background import BackgroundTask
 
 
-from open_webui.utils.misc import (
-    calculate_sha256,
-)
+from open_webui.utils.misc import calculate_sha256
 from open_webui.utils.payload import (
     apply_model_params_to_body_ollama,
     apply_model_params_to_body_openai,

@@ -103,9 +103,7 @@ from open_webui.utils.misc import (
 from open_webui.utils.utils import get_admin_user, get_verified_user
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import (
-    YoutubeLoader,
-)
+from langchain_community.document_loaders import YoutubeLoader
 from langchain_core.documents import Document
 
 
