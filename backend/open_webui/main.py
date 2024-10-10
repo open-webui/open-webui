@@ -437,7 +437,6 @@ async def handle_streaming_response(request: Request, response: Response,
                                     tools: dict,
                                     data_items: list,
                                     call_next) -> StreamingResponse:
-    log.debug(f"smonux 21 {response.headers}")
 
     """content_type = response.headers["Content-Type"]
     is_openai = "text/event-stream" in content_type
@@ -460,10 +459,11 @@ async def handle_streaming_response(request: Request, response: Response,
                 yield data
             log.debug(f"smonux 24 {full_response}")
 
-            full_response_dict = json.loads(full_response[full_response.find("{"): full_response.rfind("}") + 1])
+            full_response_dict = json.loads(full_response)
             if full_response_dict["choices"][0]["finish_reason"] != "tool_calls":
                 break
             
+            body["messages"].append(response_dict["choices"][0]["message"])
             for tool_call in full_response_dict["choices"][0].get("tool_calls", []):
                 tool_function_name = tool_call["function"]["name"]
                 tool_function_params = json.loads(tool_call["function"]["arguments"])
@@ -477,9 +477,9 @@ async def handle_streaming_response(request: Request, response: Response,
                 # Append the tool output to the messages
                 body["messages"].append({
                     "role": "tool",
+                    "tool_call_id" : tool_call["id"],
                     "name": tool_function_name,
-                    "content": tool_output,
-                    "tool_call_id" : tool_call["id"]
+                    "content": tool_output
                 })
                 update_body_request(request, body)
             response = await call_next(request)
@@ -490,8 +490,7 @@ async def handle_streaming_response(request: Request, response: Response,
             headers=dict(response.headers),
         )
 
-async def handle_nonstreaming_response(request: Request, response: Response, tools: dict, user: UserModel) -> Response:
-
+async def handle_nonstreaming_response(request: Request, response: Response, tools: dict, user: UserModel) -> JSONResponse:
     # It only should be one response
     async for data in response.body_iterator:
         content = data
@@ -499,36 +498,30 @@ async def handle_nonstreaming_response(request: Request, response: Response, too
     body = json.loads(request._body)
 
     while response_dict["choices"][0]["finish_reason"] == "tool_calls":
-        for tool_call in response_dict["choices"][0]["message"].get("tool_calls", []):
-            log.debug(f"smonux 12 {tool_call}")
+        body["messages"].append(response_dict["choices"][0]["message"])
+        tool_calls = response_dict["choices"][0]["message"].get("tool_calls", [])
+        for tool_call in tool_calls:
             tool_function_name = tool_call["function"]["name"]
             tool_function_params = json.loads(tool_call["function"]["arguments"])
 
-            log.debug(f"smonux 13 {tool_function_params=}")
-
             try:
                 tool_output = await tools[tool_function_name]["callable"](**tool_function_params)
-                log.debug(f"smonux 14 {tool_output=}")
             except Exception as e:
                 tool_output = str(e)
 
             # Append the tool output to the messages
             body["messages"].append({
                 "role": "tool",
+                "tool_call_id" : tool_call["id"],
                 "name": tool_function_name,
                 "content": tool_output
             })
 
         # Make another request to the model with the updated context
         update_body_request(request, body)
-        response = await generate_chat_completions(form_data = body, user = user )
-#        response = await call_next(request)
-        async for data in response.body_iterator:
-            content = data
-        response_dict = json.loads(content)
-        import time; time.sleep(0.5)
+        response_dict = await generate_chat_completions(form_data = body, user = user )
 
-    return response
+    return JSONResponse(content = response_dict)
 
 async def chat_completion_tools_handler(
     body: dict, user: UserModel, extra_params: dict
@@ -742,7 +735,6 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
         }
         body["metadata"] = metadata
 
-        log.debug("smonux 00")
         body, tools = get_tools_body(body, user, extra_params)
 
         try:
