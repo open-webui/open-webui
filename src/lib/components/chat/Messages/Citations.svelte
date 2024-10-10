@@ -49,15 +49,6 @@
 		});
 		return acc;
 	}, []);
-
-	$: if (_citations.every((citation) => citation.distances !== undefined)) {
-		// Sort citations by distance (relevance)
-		_citations = _citations.sort((a, b) => {
-			const aMinDistance = Math.min(...(a.distances ?? []));
-			const bMinDistance = Math.min(...(b.distances ?? []));
-			return aMinDistance - bMinDistance;
-		});
-	}
 </script>
 
 <CitationsModal bind:show={showCitationModal} citation={selectedCitation} />
