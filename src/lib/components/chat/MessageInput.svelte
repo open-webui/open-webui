@@ -76,11 +76,17 @@
 	let notBase64CapableModels = [];
 
 	$: visionCapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
-		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
+		(model) =>
+			$models.find((m) => (atSelectedModel ? m.id === model.id : m.id === model))?.info?.meta
+				?.capabilities?.vision ?? false
 	);
 
 	$: notBase64CapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
-		(model) => !($models.find((m) => m.id === model)?.info?.meta?.capabilities?.base64 ?? false)
+		(model) =>
+			!(
+				$models.find((m) => (atSelectedModel ? m.id === model.id : m.id === model))?.info?.meta
+					?.capabilities?.base64 ?? false
+			)
 	);
 
 	$: if (prompt) {
