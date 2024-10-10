@@ -10,6 +10,7 @@
 		showArchivedChats,
 		showControls,
 		showSidebar,
+		temporaryChatEnabled,
 		user
 	} from '$lib/stores';
 
@@ -23,6 +24,7 @@
 	import MenuLines from '../icons/MenuLines.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
 	import Map from '../icons/Map.svelte';
+	import { stringify } from 'postcss';
 
 	const i18n = getContext('i18n');
 
@@ -74,8 +76,7 @@
 
 			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
 				<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
-
-				{#if shareEnabled && chat && chat.id}
+				{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
 					<Menu
 						{chat}
 						{shareEnabled}

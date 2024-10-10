@@ -53,7 +53,7 @@
 		updateChatById
 	} from '$lib/apis/chats';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
-	import { processWebSearch } from '$lib/apis/retrieval';
+	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
@@ -199,6 +199,20 @@
 
 				eventConfirmationTitle = data.title;
 				eventConfirmationMessage = data.message;
+			} else if (type === 'execute') {
+				eventCallback = cb;
+
+				try {
+					// Use Function constructor to evaluate code in a safer way
+					const asyncFunction = new Function(`return (async () => { ${data.code} })()`);
+					const result = await asyncFunction(); // Await the result of the async function
+
+					if (cb) {
+						cb(result);
+					}
+				} catch (error) {
+					console.error('Error executing code:', error);
+				}
 			} else if (type === 'input') {
 				eventCallback = cb;
 
@@ -308,6 +322,74 @@
 		$socket?.off('chat-events');
 	});
 
+	// File upload functions
+
+	const uploadWeb = async (url) => {
+		console.log(url);
+
+		const fileItem = {
+			type: 'doc',
+			name: url,
+			collection_name: '',
+			status: 'uploading',
+			url: url,
+			error: ''
+		};
+
+		try {
+			files = [...files, fileItem];
+			const res = await processWeb(localStorage.token, '', url);
+
+			if (res) {
+				fileItem.status = 'uploaded';
+				fileItem.collection_name = res.collection_name;
+				fileItem.file = {
+					...res.file,
+					...fileItem.file
+				};
+
+				files = files;
+			}
+		} catch (e) {
+			// Remove the failed doc from the files array
+			files = files.filter((f) => f.name !== url);
+			toast.error(JSON.stringify(e));
+		}
+	};
+
+	const uploadYoutubeTranscription = async (url) => {
+		console.log(url);
+
+		const fileItem = {
+			type: 'doc',
+			name: url,
+			collection_name: '',
+			status: 'uploading',
+			context: 'full',
+			url: url,
+			error: ''
+		};
+
+		try {
+			files = [...files, fileItem];
+			const res = await processYoutubeVideo(localStorage.token, url);
+
+			if (res) {
+				fileItem.status = 'uploaded';
+				fileItem.collection_name = res.collection_name;
+				fileItem.file = {
+					...res.file,
+					...fileItem.file
+				};
+				files = files;
+			}
+		} catch (e) {
+			// Remove the failed doc from the files array
+			files = files.filter((f) => f.name !== url);
+			toast.error(e);
+		}
+	};
+
 	//////////////////////////
 	// Web functions
 	//////////////////////////
@@ -345,7 +427,17 @@
 			console.log($config?.default_models.split(',') ?? '');
 			selectedModels = $config?.default_models.split(',');
 		} else {
-			selectedModels = [''];
+			if ($models.length > 0) {
+				selectedModels = [$models[0].id];
+			} else {
+				selectedModels = [''];
+			}
+		}
+
+		if ($page.url.searchParams.get('youtube')) {
+			uploadYoutubeTranscription(
+				`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`
+			);
 		}
 
 		if ($page.url.searchParams.get('web-search') === 'true') {
@@ -366,6 +458,11 @@
 				.filter((id) => id);
 		}
 
+		if ($page.url.searchParams.get('call') === 'true') {
+			showCallOverlay.set(true);
+			showControls.set(true);
+		}
+
 		if ($page.url.searchParams.get('q')) {
 			prompt = $page.url.searchParams.get('q') ?? '';
 
@@ -373,11 +470,6 @@
 				await tick();
 				submitPrompt(prompt);
 			}
-		}
-
-		if ($page.url.searchParams.get('call') === 'true') {
-			showCallOverlay.set(true);
-			showControls.set(true);
 		}
 
 		selectedModels = selectedModels.map((modelId) =>
@@ -1855,6 +1947,7 @@
 				system: $settings.system ?? undefined,
 				params: params,
 				history: history,
+				messages: createMessagesList(history.currentId),
 				tags: [],
 				timestamp: Date.now()
 			});
@@ -1920,6 +2013,7 @@
 		class="h-screen max-h-[100dvh] {$showSidebar
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''} w-full max-w-full flex flex-col"
+		id="chat-container"
 	>
 		{#if $settings?.backgroundImageUrl ?? null}
 			<div
@@ -1935,7 +2029,17 @@
 		{/if}
 
 		<Navbar
-			{chat}
+			chat={{
+				id: $chatId,
+				chat: {
+					title: $chatTitle,
+					models: selectedModels,
+					system: $settings.system ?? undefined,
+					params: params,
+					history: history,
+					timestamp: Date.now()
+				}
+			}}
 			title={$chatTitle}
 			bind:selectedModels
 			shareEnabled={!!history.currentId}
@@ -2050,6 +2154,15 @@
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								{stopResponse}
 								{createMessagePair}
+								on:upload={async (e) => {
+									const { type, data } = e.detail;
+
+									if (type === 'web') {
+										await uploadWeb(data);
+									} else if (type === 'youtube') {
+										await uploadYoutubeTranscription(data);
+									}
+								}}
 								on:submit={async (e) => {
 									if (e.detail) {
 										prompt = '';
@@ -2066,33 +2179,44 @@
 							</div>
 						</div>
 					{:else}
-						<Placeholder
-							{history}
-							{selectedModels}
-							bind:files
-							bind:prompt
-							bind:autoScroll
-							bind:selectedToolIds
-							bind:webSearchEnabled
-							bind:atSelectedModel
-							availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
-								const model = $models.find((m) => m.id === e);
-								if (model?.info?.meta?.toolIds ?? false) {
-									return [...new Set([...a, ...model.info.meta.toolIds])];
-								}
-								return a;
-							}, [])}
-							transparentBackground={$settings?.backgroundImageUrl ?? false}
-							{stopResponse}
-							{createMessagePair}
-							on:submit={async (e) => {
-								if (e.detail) {
-									prompt = '';
-									await tick();
-									submitPrompt(e.detail);
-								}
-							}}
-						/>
+						<div class="overflow-auto w-full h-full flex items-center">
+							<Placeholder
+								{history}
+								{selectedModels}
+								bind:files
+								bind:prompt
+								bind:autoScroll
+								bind:selectedToolIds
+								bind:webSearchEnabled
+								bind:atSelectedModel
+								availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
+									const model = $models.find((m) => m.id === e);
+									if (model?.info?.meta?.toolIds ?? false) {
+										return [...new Set([...a, ...model.info.meta.toolIds])];
+									}
+									return a;
+								}, [])}
+								transparentBackground={$settings?.backgroundImageUrl ?? false}
+								{stopResponse}
+								{createMessagePair}
+								on:upload={async (e) => {
+									const { type, data } = e.detail;
+
+									if (type === 'web') {
+										await uploadWeb(data);
+									} else if (type === 'youtube') {
+										await uploadYoutubeTranscription(data);
+									}
+								}}
+								on:submit={async (e) => {
+									if (e.detail) {
+										prompt = '';
+										await tick();
+										submitPrompt(e.detail);
+									}
+								}}
+							/>
+						</div>
 					{/if}
 				</div>
 			</Pane>

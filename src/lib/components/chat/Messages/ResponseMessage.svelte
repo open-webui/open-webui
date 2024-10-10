@@ -479,7 +479,7 @@
 										id={message.id}
 										content={message.content}
 										floatingButtons={message?.done}
-										save={true}
+										save={!readOnly}
 										{model}
 										on:update={(e) => {
 											const { raw, oldContent, newContent } = e.detail;

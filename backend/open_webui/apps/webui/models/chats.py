@@ -5,7 +5,9 @@ from typing import Optional
 
 from open_webui.apps.webui.internal.db import Base, get_db
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Boolean, Column, String, Text
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
+from sqlalchemy import or_, func, select
+
 
 ####################
 # Chat DB Schema
@@ -18,7 +20,7 @@ class Chat(Base):
     id = Column(String, primary_key=True)
     user_id = Column(String)
     title = Column(Text)
-    chat = Column(Text)  # Save Chat JSON as Text
+    chat = Column(JSON)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -33,7 +35,7 @@ class ChatModel(BaseModel):
     id: str
     user_id: str
     title: str
-    chat: str
+    chat: dict
 
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
@@ -86,7 +88,7 @@ class ChatTable:
                         if "title" in form_data.chat
                         else "New Chat"
                     ),
-                    "chat": json.dumps(form_data.chat),
+                    "chat": form_data.chat,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
@@ -101,14 +103,14 @@ class ChatTable:
     def update_chat_by_id(self, id: str, chat: dict) -> Optional[ChatModel]:
         try:
             with get_db() as db:
-                chat_obj = db.get(Chat, id)
-                chat_obj.chat = json.dumps(chat)
-                chat_obj.title = chat["title"] if "title" in chat else "New Chat"
-                chat_obj.updated_at = int(time.time())
+                chat_item = db.get(Chat, id)
+                chat_item.chat = chat
+                chat_item.title = chat["title"] if "title" in chat else "New Chat"
+                chat_item.updated_at = int(time.time())
                 db.commit()
-                db.refresh(chat_obj)
+                db.refresh(chat_item)
 
-                return ChatModel.model_validate(chat_obj)
+                return ChatModel.model_validate(chat_item)
         except Exception:
             return None
 
@@ -249,10 +251,10 @@ class ChatTable:
                 Chat.id, Chat.title, Chat.updated_at, Chat.created_at
             )
 
-            if limit:
-                query = query.limit(limit)
             if skip:
                 query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
 
             all_chats = query.all()
 
@@ -336,6 +338,50 @@ class ChatTable:
                 .order_by(Chat.updated_at.desc())
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
+
+    def get_chats_by_user_id_and_search_text(
+        self,
+        user_id: str,
+        search_text: str,
+        include_archived: bool = False,
+        skip: int = 0,
+        limit: int = 60,
+    ) -> list[ChatModel]:
+        """
+        Filters chats based on a search query using Python, allowing pagination using skip and limit.
+        """
+        search_text = search_text.lower().strip()
+        if not search_text:
+            return self.get_chat_list_by_user_id(user_id, include_archived, skip, limit)
+
+        with get_db() as db:
+            query = db.query(Chat).filter(Chat.user_id == user_id)
+
+            if not include_archived:
+                query = query.filter(Chat.archived == False)
+
+            # Fetch all potentially relevant chats
+            all_chats = query.all()
+
+        # Filter chats using Python
+        filtered_chats = []
+        for chat in all_chats:
+            # Check chat title
+            title_matches = search_text in chat.title.lower()
+
+            # Check chat content in chat JSON
+            content_matches = any(
+                search_text in message.get("content", "").lower()
+                for message in chat.chat.get("messages", [])
+                if "content" in message
+            )
+
+            if title_matches or content_matches:
+                filtered_chats.append(chat)
+
+        # Implementing pagination manually
+        paginated_chats = filtered_chats[skip : skip + limit]
+        return [ChatModel.model_validate(chat) for chat in paginated_chats]
 
     def delete_chat_by_id(self, id: str) -> bool:
         try:

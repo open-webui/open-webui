@@ -167,6 +167,41 @@ export const getAllChats = async (token: string) => {
 	return res;
 };
 
+export const getChatListBySearchText = async (token: string, text: string, page: number = 1) => {
+	let error = null;
+
+	const searchParams = new URLSearchParams();
+	searchParams.append('text', text);
+	searchParams.append('page', `${page}`);
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/search?${searchParams.toString()}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getAllArchivedChats = async (token: string) => {
 	let error = null;
 

@@ -18,6 +18,8 @@ from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
+    WEBUI_SESSION_COOKIE_SAME_SITE,
+    WEBUI_SESSION_COOKIE_SECURE,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import Response
@@ -54,6 +56,8 @@ async def get_session_user(
         key="token",
         value=token,
         httponly=True,  # Ensures the cookie is not accessible via JavaScript
+        samesite=WEBUI_SESSION_COOKIE_SAME_SITE, 
+        secure=WEBUI_SESSION_COOKIE_SECURE,        
     )
 
     return {
@@ -167,6 +171,8 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             key="token",
             value=token,
             httponly=True,  # Ensures the cookie is not accessible via JavaScript
+            samesite=WEBUI_SESSION_COOKIE_SAME_SITE, 
+            secure=WEBUI_SESSION_COOKIE_SECURE,            
         )
 
         return {
@@ -237,6 +243,8 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 key="token",
                 value=token,
                 httponly=True,  # Ensures the cookie is not accessible via JavaScript
+                samesite=WEBUI_SESSION_COOKIE_SAME_SITE, 
+                secure=WEBUI_SESSION_COOKIE_SECURE,                
             )
 
             if request.app.state.config.WEBHOOK_URL:
