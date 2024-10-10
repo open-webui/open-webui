@@ -58,7 +58,7 @@
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						fill="none"
-						viewBox="0 0 24 24"
+						viewBox="0 0 20 24"
 						stroke-width="1.5"
 						stroke="currentColor"
 						class="w-5 h-5"
@@ -170,7 +170,7 @@
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
-							viewBox="0 0 17.2 16.5"
+							viewBox="1 0 16 16"
 							stroke-width="1"
 							stroke="currentColor"
 							class="w-5 h-5"
@@ -217,7 +217,7 @@
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
-							viewBox="0 0 24 24"
+							viewBox="0 0 22 24"
 							stroke-width="1.5"
 							stroke="currentColor"
 							class="size-5"
@@ -247,7 +247,7 @@
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
-							viewBox="0 0 24 24"
+							viewBox="0 0 22 24"
 							stroke-width="1.5"
 							stroke="currentColor"
 							class="w-5 h-5"
@@ -276,7 +276,7 @@
 				<div class=" self-center mr-3">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
+						viewBox="0 0 18 20"
 						fill="currentColor"
 						class="w-5 h-5"
 					>
