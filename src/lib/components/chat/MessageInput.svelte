@@ -20,7 +20,7 @@
 
 	import { blobToFile, findWordIndices } from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
-	import { uploadFile } from '$lib/apis/files';
+	import { uploadFile, base64ToFile } from '$lib/apis/files';
 
 	import {
 		SUPPORTED_FILE_TYPE,
@@ -104,8 +104,56 @@
 		});
 	};
 
+	const compressImage = (file) => {
+		return new Promise((resolve, reject) => {
+			const img = new Image();
+			const originalImageUrl = URL.createObjectURL(file);
+			img.src = originalImageUrl;
+
+			img.onload = () => {
+				const canvas = document.createElement('canvas');
+				const ctx = canvas.getContext('2d');
+
+				canvas.width = img.width;
+				canvas.height = img.height;
+
+				ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+				const maxFileSize = 2 * 1024 * 1024;
+				const originalFileSize = file.size;
+				let compressionRatio = 1.0;
+
+				// 如果原始大小大于目标大小，计算出初步猜测的压缩比率
+				if (originalFileSize > maxFileSize) {
+					compressionRatio = maxFileSize / originalFileSize;
+
+					// 初步把压缩率限制为 0.1 - 1.0 之间
+					compressionRatio = Math.max(0.1, Math.min(1.0, compressionRatio));
+				}
+
+				let base64 = canvas.toDataURL('image/jpeg', compressionRatio);
+				let compressedFile = base64ToFile(base64, `${uuidv4()}.jpg`);
+				let compressedFileSize = compressedFile.size;
+
+				if (compressedFileSize > maxFileSize) {
+					compressionRatio *= maxFileSize / compressedFileSize;
+					base64 = canvas.toDataURL('image/jpeg', compressionRatio);
+					compressedFile = base64ToFile(base64, `${uuidv4()}.jpg`);
+					compressedFileSize = compressedFile.size;
+				}
+
+				console.log(`Final quality: ${compressionRatio}`);
+				console.log(`Final file size: ${(compressedFileSize / 1024 / 1024).toFixed(2)} MB`);
+
+				resolve(compressedFile);
+			};
+
+			img.onerror = (e) => reject(new Error('Image could not be loaded.'));
+		});
+	};
+
 	const uploadImageHandler = async (file) => {
-		console.log(file);
+		console.log(`Original file size: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
 
 		const imageItem = {
 			id: null,
@@ -119,9 +167,20 @@
 
 		files = [...files, imageItem];
 
+		let compressedFile;
+		try {
+			compressedFile = await compressImage(file);
+		} catch (error) {
+			console.log('Image compression failed:', error.message);
+			return;
+		}
+
+		imageItem.name = compressedFile.name;
+		imageItem.size = compressedFile.size;
+
 		try {
 			let uploadedFile = null;
-			uploadedFile = await uploadFile(localStorage.token, file);
+			uploadedFile = await uploadFile(localStorage.token, compressedFile);
 			if (uploadedFile) {
 				const image_url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}/preview`;
 				imageItem.id = uploadFile.id;
