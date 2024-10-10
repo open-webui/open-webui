@@ -172,7 +172,7 @@
 			compressedFile = await compressImage(file);
 		} catch (error) {
 			console.log('Image compression failed:', error.message);
-			return;
+			compressedFile = file;
 		}
 
 		imageItem.name = compressedFile.name;
