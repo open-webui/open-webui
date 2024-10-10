@@ -16,6 +16,10 @@ from typing import Optional
 import aiohttp
 import requests
 
+
+from open_webui.apps.audio.main import app as audio_app
+from open_webui.apps.images.main import app as images_app
+from open_webui.apps.ollama.main import app as ollama_app
 from open_webui.apps.ollama.main import (
     app as ollama_app,
     get_all_models as get_ollama_models,
@@ -53,8 +57,6 @@ from open_webui.apps.webui.models.users import UserModel, Users
 
 from open_webui.apps.webui.utils import load_function_module_by_id
 
-from open_webui.apps.audio.main import app as audio_app
-from open_webui.apps.images.main import app as images_app
 
 from authlib.integrations.starlette_client import OAuth
 from authlib.oidc.core import UserInfo
@@ -154,6 +156,8 @@ from open_webui.utils.response import (
     convert_response_ollama_to_openai,
     convert_streaming_response_ollama_to_openai,
 )
+
+from commons.ChatState import ChatState
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -1440,6 +1444,19 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
 
 @app.post("/api/task/title/completions")
 async def generate_title(form_data: dict, user=Depends(get_verified_user)):
+    # Check if gift_request is ready for title generation
+    chat_state = ChatState.load(form_data["chat_id"])
+    if not chat_state.gift_request:
+        # gift_request not ready. Do not generate title
+        return
+    elif chat_state.title_generated:
+        # Title already generated. return the existing title
+        return chat_state.chat_title
+    elif not chat_state.gift_request.has_title_fields():
+        # gift_request does not have minimal info. Do not generate title
+        return
+
+
     print("generate_title")
 
     model_id = form_data["model"]
@@ -1454,26 +1471,26 @@ async def generate_title(form_data: dict, user=Depends(get_verified_user)):
     task_model_id = get_task_model_id(model_id)
     print(task_model_id)
 
+    gift_request_desc = chat_state.gift_request.describe()
     model = app.state.MODELS[task_model_id]
 
     if app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE != "":
         template = app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE
     else:
-        template = """Create a concise, 3-5 word title with an emoji as a title for the prompt in the given language. Suitable Emojis for the summary can be used to enhance understanding but avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
+        template = """Create a concise, 3-5 word title for the prompt in the given language for 
+        gift-giving-situation. Avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
 
-Examples of titles:
-📉 Stock Market Trends
-🍪 Perfect Chocolate Chip Recipe
-Evolution of Music Streaming
-Remote Work Productivity Tips
-Artificial Intelligence in Healthcare
-🎮 Video Game Development Insights
+        Examples of titles:
+        Annie's Birthday
+        Housewarming at the Smiths
+        Graduation Sarah
+        Friend's Wedding
 
-Prompt: {{prompt:middletruncate:8000}}"""
+        Prompt: {{prompt:middletruncate:8000}}"""
 
     content = title_generation_template(
         template,
-        form_data["prompt"],
+        gift_request_desc,
         {
             "name": user.name,
             "location": user.info.get("location") if user.info else None,
@@ -1513,7 +1530,9 @@ Prompt: {{prompt:middletruncate:8000}}"""
     if "chat_id" in payload:
         del payload["chat_id"]
 
-    return await generate_chat_completions(form_data=payload, user=user)
+    chat_title = await generate_chat_completions(form_data=payload, user=user)
+    ChatState.update(form_data["chat_id"], title_generated=True, chat_title=chat_title)
+    return chat_title
 
 
 @app.post("/api/task/query/completions")
