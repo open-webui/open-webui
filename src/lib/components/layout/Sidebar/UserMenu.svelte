@@ -78,6 +78,34 @@
 				<div class=" self-center font-medium">{$i18n.t('Settings')}</div>
 			</button>
 
+			{#if $config?.instructions_url}
+				<button
+					class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+					on:click={() => {
+						window.open($config?.instructions_url, '_blank');
+						showDropdown = false;
+					}}
+				>
+					<div class=" self-center mr-3">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 20 20"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-5"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
+								clip-rule="evenodd"
+							></path>
+						</svg>
+					</div>
+					<div class=" self-center font-medium">{$i18n.t('Instructions')}</div>
+				</button>
+			{/if}
+
 			{#if $config?.model_status}
 				<button
 					class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"

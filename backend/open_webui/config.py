@@ -499,6 +499,8 @@ CUSTOM_NAME = os.environ.get("CUSTOM_NAME", "")
 
 MODEL_STATUS = os.environ.get("MODEL_STATUS", "")
 
+INSTRUCTIONS_URL = os.environ.get("INSTRUCTIONS_URL", "")
+
 LOBECHAT_URL = os.environ.get("LOBECHAT_URL", "")
 
 MIDJOURNEY_URL = os.environ.get("MIDJOURNEY_URL", "")

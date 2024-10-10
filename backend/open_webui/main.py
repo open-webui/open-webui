@@ -73,7 +73,7 @@ from open_webui.config import (
     WEBHOOK_URL,
     WEBUI_AUTH,
     AppConfig,
-    run_migrations, BACKGROUND_RANDOM_IMAGE_URL, MODEL_STATUS, LOBECHAT_URL, MIDJOURNEY_URL, TURNSTILE_SIGNUP_CHECK, TURNSTILE_LOGIN_CHECK,
+    run_migrations, BACKGROUND_RANDOM_IMAGE_URL, MODEL_STATUS, INSTRUCTIONS_URL, LOBECHAT_URL, MIDJOURNEY_URL, TURNSTILE_SIGNUP_CHECK, TURNSTILE_LOGIN_CHECK,
     TURNSTILE_SITE_KEY,
     OPENAI_API_NOSTREAM_MODELS,
 )
@@ -2080,6 +2080,7 @@ async def get_app_config(request: Request):
         "status": True,
         "name": WEBUI_NAME,
         "model_status": MODEL_STATUS,
+        "instructions_url": INSTRUCTIONS_URL,
         "lobeChat_url": LOBECHAT_URL,
         "midjourney_url": MIDJOURNEY_URL,
         "random_image_url": app.state.config.BACKGROUND_RANDOM_IMAGE_URL,

@@ -781,6 +781,7 @@
 	"Write a prompt suggestion (e.g. Who are you?)": "写一个提示词建议（例如：你是谁？）",
 	"Write a summary in 50 words that summarizes [topic or keyword].": "用 50 个字写一个总结 [主题或关键词]",
 	"Model Status": "模型状态",
+	"Instructions": "使用说明",
 	"Yesterday": "昨天",
 	"You": "你",
 	"You can only chat with a maximum of {{maxCount}} file(s) at a time.": "每次对话最多仅能附上 {{maxCount}} 个文件",

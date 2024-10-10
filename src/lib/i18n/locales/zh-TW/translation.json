@@ -784,6 +784,7 @@
 	"You're a helpful assistant.": "您是一位樂於助人的助手。",
 	"You're now logged in.": "您已登入。",
 	"Model Status": "模型狀態",
+	"Instructions": "使用說明",
 	"Your account status is currently pending activation.": "您的帳號目前正在等待啟用。",
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "您的所有貢獻將會直接交給外掛開發者；Open WebUI 不會收取任何百分比。然而，所選擇的贊助平臺可能有其自身的費用。",
 	"Youtube": "YouTube",
