@@ -2,8 +2,8 @@
 	import { SvelteFlowProvider } from '@xyflow/svelte';
 	import { slide } from 'svelte/transition';
 
-	import { onDestroy, onMount } from 'svelte';
-	import { mobile, showControls, showCallOverlay, showOverview } from '$lib/stores';
+	import { onDestroy, onMount, tick } from 'svelte';
+	import { mobile, showControls, showCallOverlay, showOverview, showArtifacts } from '$lib/stores';
 
 	import Modal from '../common/Modal.svelte';
 	import Controls from './Controls/Controls.svelte';
@@ -12,12 +12,13 @@
 	import Overview from './Overview.svelte';
 	import { Pane, PaneResizer } from 'paneforge';
 	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
-	import { get } from 'svelte/store';
+	import Artifacts from './Artifacts.svelte';
 
 	export let history;
 	export let models = [];
 
 	export let chatId = null;
+
 	export let chatFiles = [];
 	export let params = {};
 
@@ -29,36 +30,71 @@
 	export let modelId;
 
 	export let pane;
+
+	let mediaQuery;
 	let largeScreen = false;
+	let dragged = false;
+
+	const handleMediaQuery = async (e) => {
+		if (e.matches) {
+			largeScreen = true;
+
+			if ($showCallOverlay) {
+				showCallOverlay.set(false);
+				await tick();
+				showCallOverlay.set(true);
+			}
+		} else {
+			largeScreen = false;
+
+			if ($showCallOverlay) {
+				showCallOverlay.set(false);
+				await tick();
+				showCallOverlay.set(true);
+			}
+			pane = null;
+		}
+	};
+
+	const onMouseDown = (event) => {
+		dragged = true;
+	};
+
+	const onMouseUp = (event) => {
+		dragged = false;
+	};
 
 	onMount(() => {
 		// listen to resize 1024px
-		const mediaQuery = window.matchMedia('(min-width: 1024px)');
-
-		const handleMediaQuery = (e) => {
-			if (e.matches) {
-				largeScreen = true;
-			} else {
-				largeScreen = false;
-				pane = null;
-			}
-		};
+		mediaQuery = window.matchMedia('(min-width: 1024px)');
 
 		mediaQuery.addEventListener('change', handleMediaQuery);
-
 		handleMediaQuery(mediaQuery);
 
-		return () => {
-			mediaQuery.removeEventListener('change', handleMediaQuery);
-		};
+		document.addEventListener('mousedown', onMouseDown);
+		document.addEventListener('mouseup', onMouseUp);
 	});
 
 	onDestroy(() => {
 		showControls.set(false);
+
+		mediaQuery.removeEventListener('change', handleMediaQuery);
+		document.removeEventListener('mousedown', onMouseDown);
+		document.removeEventListener('mouseup', onMouseUp);
 	});
 
-	$: if (!chatId) {
+	const closeHandler = () => {
+		showControls.set(false);
 		showOverview.set(false);
+		showArtifacts.set(false);
+
+		if ($showCallOverlay) {
+			showCallOverlay.set(false);
+		}
+	};
+
+	$: if (!chatId) {
+		closeHandler();
 	}
 </script>
 
@@ -72,7 +108,9 @@
 				}}
 			>
 				<div
-					class=" {$showCallOverlay || $showOverview ? ' h-screen  w-screen' : 'px-6 py-4'} h-full"
+					class=" {$showCallOverlay || $showOverview || $showArtifacts
+						? ' h-screen  w-screen'
+						: 'px-6 py-4'} h-full"
 				>
 					{#if $showCallOverlay}
 						<div
@@ -90,6 +128,8 @@
 								}}
 							/>
 						</div>
+					{:else if $showArtifacts}
+						<Artifacts {history} />
 					{:else if $showOverview}
 						<Overview
 							{history}
@@ -115,11 +155,14 @@
 		{/if}
 	{:else}
 		<!-- if $showControls -->
-		<PaneResizer class="relative flex w-2 items-center justify-center bg-background group">
-			<div class="z-10 flex h-7 w-5 items-center justify-center rounded-sm">
-				<EllipsisVertical className="size-4 invisible group-hover:visible" />
-			</div>
-		</PaneResizer>
+
+		{#if $showControls}
+			<PaneResizer class="relative flex w-2 items-center justify-center bg-background group">
+				<div class="z-10 flex h-7 w-5 items-center justify-center rounded-sm">
+					<EllipsisVertical className="size-4 invisible group-hover:visible" />
+				</div>
+			</PaneResizer>
+		{/if}
 		<Pane
 			bind:pane
 			defaultSize={$showControls
@@ -137,13 +180,14 @@
 					localStorage.chatControlsSize = size;
 				}
 			}}
+			class="pt-8"
 		>
 			{#if $showControls}
 				<div class="pr-4 pb-8 flex max-h-full min-h-full">
 					<div
-						class="w-full {$showOverview && !$showCallOverlay
+						class="w-full {($showOverview || $showArtifacts) && !$showCallOverlay
 							? ' '
-							: 'px-5 py-4 bg-white dark:shadow-lg dark:bg-gray-850  border border-gray-50 dark:border-gray-800'}  rounded-lg z-50 pointer-events-auto overflow-y-auto scrollbar-hidden"
+							: 'px-5 py-4 bg-white dark:shadow-lg dark:bg-gray-850  border border-gray-50 dark:border-gray-800'}  rounded-lg z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
 					>
 						{#if $showCallOverlay}
 							<div class="w-full h-full flex justify-center">
@@ -159,6 +203,8 @@
 									}}
 								/>
 							</div>
+						{:else if $showArtifacts}
+							<Artifacts {history} overlay={dragged} />
 						{:else if $showOverview}
 							<Overview
 								{history}

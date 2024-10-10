@@ -1,13 +1,12 @@
 <script lang="ts">
+	import { toast } from 'svelte-sonner';
+
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 
 	const dispatch = createEventDispatcher();
 
-	import { getDocs } from '$lib/apis/documents';
-	import { deleteAllFiles, deleteFileById } from '$lib/apis/files';
 	import {
 		getQuerySettings,
-		scanDocs,
 		updateQuerySettings,
 		resetVectorDB,
 		getEmbeddingConfig,
@@ -17,12 +16,14 @@
 		resetUploadDir,
 		getRAGConfig,
 		updateRAGConfig
-	} from '$lib/apis/rag';
+	} from '$lib/apis/retrieval';
+
+	import { knowledge, models } from '$lib/stores';
+	import { getKnowledgeItems } from '$lib/apis/knowledge';
+	import { uploadDir, deleteAllFiles, deleteFileById } from '$lib/apis/files';
+
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-
-	import { documents, models } from '$lib/stores';
-	import { toast } from 'svelte-sonner';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
@@ -59,17 +60,6 @@
 		r: 0.0,
 		k: 4,
 		hybrid: false
-	};
-
-	const scanHandler = async () => {
-		scanDirLoading = true;
-		const res = await scanDocs(localStorage.token);
-		scanDirLoading = false;
-
-		if (res) {
-			await documents.set(await getDocs(localStorage.token));
-			toast.success($i18n.t('Scan complete!'));
-		}
 	};
 
 	const embeddingModelUpdateHandler = async () => {
@@ -283,58 +273,6 @@
 	<div class=" space-y-2.5 overflow-y-scroll scrollbar-hidden h-full pr-1.5">
 		<div class="flex flex-col gap-0.5">
 			<div class=" mb-0.5 text-sm font-medium">{$i18n.t('General Settings')}</div>
-
-			<div class="  flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
-					{$i18n.t('Scan for documents from {{path}}', { path: 'DOCS_DIR (/data/docs)' })}
-				</div>
-
-				<button
-					class=" self-center text-xs p-1 px-3 bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg flex flex-row space-x-1 items-center {scanDirLoading
-						? ' cursor-not-allowed'
-						: ''}"
-					on:click={() => {
-						scanHandler();
-						console.log('check');
-					}}
-					type="button"
-					disabled={scanDirLoading}
-				>
-					<div class="self-center font-medium">{$i18n.t('Scan')}</div>
-
-					{#if scanDirLoading}
-						<div class="ml-3 self-center">
-							<svg
-								class=" w-3 h-3"
-								viewBox="0 0 24 24"
-								fill="currentColor"
-								xmlns="http://www.w3.org/2000/svg"
-							>
-								<style>
-									.spinner_ajPY {
-										transform-origin: center;
-										animation: spinner_AtaB 0.75s infinite linear;
-									}
-
-									@keyframes spinner_AtaB {
-										100% {
-											transform: rotate(360deg);
-										}
-									}
-								</style>
-								<path
-									d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-									opacity=".25"
-								/>
-								<path
-									d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-									class="spinner_ajPY"
-								/>
-							</svg>
-						</div>
-					{/if}
-				</button>
-			</div>
 
 			<div class=" flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Embedding Model Engine')}</div>

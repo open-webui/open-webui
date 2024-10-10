@@ -860,3 +860,35 @@ export const getWeekday = () => {
 	const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 	return weekdays[date.getDay()];
 };
+
+export const createMessagesList = (history, messageId) => {
+	if (messageId === null) {
+		return [];
+	}
+
+	const message = history.messages[messageId];
+	if (message?.parentId) {
+		return [...createMessagesList(history, message.parentId), message];
+	} else {
+		return [message];
+	}
+};
+
+export const formatFileSize = (size) => {
+	if (size == null) return 'Unknown size';
+	if (typeof size !== 'number' || size < 0) return 'Invalid size';
+	if (size === 0) return '0 B';
+	const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+	let unitIndex = 0;
+
+	while (size >= 1024 && unitIndex < units.length - 1) {
+		size /= 1024;
+		unitIndex++;
+	}
+	return `${size.toFixed(1)} ${units[unitIndex]}`;
+};
+
+export const getLineCount = (text) => {
+	console.log(typeof text);
+	return text ? text.split('\n').length : 0;
+};

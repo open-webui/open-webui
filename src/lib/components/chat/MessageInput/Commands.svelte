@@ -5,11 +5,11 @@
 	const dispatch = createEventDispatcher();
 
 	import Prompts from './Commands/Prompts.svelte';
-	import Documents from './Commands/Documents.svelte';
+	import Knowledge from './Commands/Knowledge.svelte';
 	import Models from './Commands/Models.svelte';
 
 	import { removeLastWordFromString } from '$lib/utils';
-	import { uploadWebToVectorDB, uploadYoutubeTranscriptionToVectorDB } from '$lib/apis/rag';
+	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
 
 	export let prompt = '';
 	export let files = [];
@@ -30,50 +30,59 @@
 	const uploadWeb = async (url) => {
 		console.log(url);
 
-		const doc = {
+		const fileItem = {
 			type: 'doc',
 			name: url,
 			collection_name: '',
-			status: false,
+			status: 'uploading',
 			url: url,
 			error: ''
 		};
 
 		try {
-			files = [...files, doc];
-			const res = await uploadWebToVectorDB(localStorage.token, '', url);
+			files = [...files, fileItem];
+			const res = await processWeb(localStorage.token, '', url);
 
 			if (res) {
-				doc.status = 'processed';
-				doc.collection_name = res.collection_name;
+				fileItem.status = 'uploaded';
+				fileItem.collection_name = res.collection_name;
+				fileItem.file = {
+					...res.file,
+					...fileItem.file
+				};
+
 				files = files;
 			}
 		} catch (e) {
 			// Remove the failed doc from the files array
 			files = files.filter((f) => f.name !== url);
-			toast.error(e);
+			toast.error(JSON.stringify(e));
 		}
 	};
 
 	const uploadYoutubeTranscription = async (url) => {
 		console.log(url);
 
-		const doc = {
+		const fileItem = {
 			type: 'doc',
 			name: url,
 			collection_name: '',
-			status: false,
+			status: 'uploading',
 			url: url,
 			error: ''
 		};
 
 		try {
-			files = [...files, doc];
-			const res = await uploadYoutubeTranscriptionToVectorDB(localStorage.token, url);
+			files = [...files, fileItem];
+			const res = await processYoutubeVideo(localStorage.token, url);
 
 			if (res) {
-				doc.status = 'processed';
-				doc.collection_name = res.collection_name;
+				fileItem.status = 'uploaded';
+				fileItem.collection_name = res.collection_name;
+				fileItem.file = {
+					...res.file,
+					...fileItem.file
+				};
 				files = files;
 			}
 		} catch (e) {
@@ -88,7 +97,7 @@
 	{#if command?.charAt(0) === '/'}
 		<Prompts bind:this={commandElement} bind:prompt bind:files {command} />
 	{:else if command?.charAt(0) === '#'}
-		<Documents
+		<Knowledge
 			bind:this={commandElement}
 			bind:prompt
 			{command}
@@ -105,7 +114,7 @@
 				files = [
 					...files,
 					{
-						type: e?.detail?.type ?? 'file',
+						type: e?.detail?.meta?.document ? 'file' : 'collection',
 						...e.detail,
 						status: 'processed'
 					}

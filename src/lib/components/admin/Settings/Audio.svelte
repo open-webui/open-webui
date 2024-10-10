@@ -66,6 +66,7 @@
 				// do your loop
 				if (voices.length > 0) {
 					clearInterval(getVoicesLoop);
+					voices.sort((a, b) => a.name.localeCompare(b.name, $i18n.resolvedLanguage));
 				}
 			}, 100);
 		} else {
@@ -76,6 +77,7 @@
 			if (res) {
 				console.log(res);
 				voices = res.voices;
+				voices.sort((a, b) => a.name.localeCompare(b.name, $i18n.resolvedLanguage));
 			}
 		}
 	};
@@ -295,7 +297,8 @@
 										<option
 											value={voice.voiceURI}
 											class="bg-gray-100 dark:bg-gray-700"
-											selected={TTS_VOICE === voice.voiceURI}>{voice.name}</option
+											selected={TTS_VOICE === voice.voiceURI}
+											>{voice.name.replace('+', ', ')}</option
 										>
 									{/each}
 								</select>

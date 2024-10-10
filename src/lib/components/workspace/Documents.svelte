@@ -8,7 +8,7 @@
 	import { createNewDoc, deleteDocByName, getDocs } from '$lib/apis/documents';
 
 	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS } from '$lib/constants';
-	import { processDocToVectorDB, uploadDocToVectorDB } from '$lib/apis/rag';
+	import { processFile } from '$lib/apis/retrieval';
 	import { blobToFile, transformFileName } from '$lib/utils';
 
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
@@ -74,7 +74,7 @@
 			return null;
 		});
 
-		const res = await processDocToVectorDB(localStorage.token, uploadedFile.id).catch((error) => {
+		const res = await processFile(localStorage.token, uploadedFile.id).catch((error) => {
 			toast.error(error);
 			return null;
 		});

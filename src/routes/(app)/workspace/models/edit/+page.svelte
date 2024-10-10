@@ -5,7 +5,15 @@
 
 	import { onMount, getContext } from 'svelte';
 	import { page } from '$app/stores';
-	import { settings, user, config, models, tools, functions } from '$lib/stores';
+	import {
+		settings,
+		user,
+		config,
+		models,
+		tools,
+		functions,
+		knowledge as _knowledge
+	} from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 
 	import { getModelInfos, updateModelById } from '$lib/apis/models';
@@ -161,7 +169,25 @@
 					: null;
 
 				if (model?.info?.meta?.knowledge) {
-					knowledge = [...model?.info?.meta?.knowledge];
+					console.log(model?.info?.meta?.knowledge);
+					knowledge = [...model?.info?.meta?.knowledge].map((item) => {
+						if (item?.collection_name) {
+							return {
+								id: item.collection_name,
+								name: item.name,
+								legacy: true
+							};
+						} else if (item?.collection_names) {
+							return {
+								name: item.name,
+								type: 'collection',
+								collection_names: item.collection_names,
+								legacy: true
+							};
+						} else {
+							return item;
+						}
+					});
 				}
 
 				if (model?.info?.meta?.toolIds) {
@@ -558,7 +584,7 @@
 			</div>
 
 			<div class="my-2">
-				<Knowledge bind:knowledge />
+				<Knowledge bind:selectedKnowledge={knowledge} collections={$_knowledge} />
 			</div>
 
 			<div class="my-2">

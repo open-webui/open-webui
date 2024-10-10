@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.3.30",
+	"version": "0.3.32",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
@@ -28,7 +28,7 @@
 		"@typescript-eslint/eslint-plugin": "^6.17.0",
 		"@typescript-eslint/parser": "^6.17.0",
 		"autoprefixer": "^10.4.16",
-		"cypress": "^13.8.1",
+		"cypress": "^13.15.0",
 		"eslint": "^8.56.0",
 		"eslint-config-prettier": "^9.1.0",
 		"eslint-plugin-cypress": "^3.4.0",
@@ -50,6 +50,7 @@
 	"dependencies": {
 		"@codemirror/lang-javascript": "^6.2.2",
 		"@codemirror/lang-python": "^6.1.6",
+		"@codemirror/language-data": "^6.5.1",
 		"@codemirror/theme-one-dark": "^6.1.2",
 		"@pyscript/core": "^0.4.32",
 		"@sveltejs/adapter-node": "^2.0.0",
@@ -73,6 +74,7 @@
 		"marked": "^9.1.0",
 		"mermaid": "^10.9.1",
 		"paneforge": "^0.0.6",
+		"panzoom": "^9.4.3",
 		"pyodide": "^0.26.1",
 		"socket.io-client": "^4.2.0",
 		"sortablejs": "^1.15.2",
@@ -82,7 +84,7 @@
 		"uuid": "^9.0.1"
 	},
 	"engines": {
-		"node": ">=18.13.0 <=21.x.x",
+		"node": ">=18.13.0 <=22.x.x",
 		"npm": ">=6.0.0"
 	}
 }

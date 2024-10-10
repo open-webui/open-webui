@@ -38,13 +38,16 @@
 
 	$: if (history && history.currentId) {
 		focusNode();
-		selectedMessageId = null;
 	}
 
 	const focusNode = async () => {
 		if (selectedMessageId === null) {
 			await fitView({ nodes: [{ id: history.currentId }] });
+		} else {
+			await fitView({ nodes: [{ id: selectedMessageId }] });
 		}
+
+		selectedMessageId = null;
 	};
 
 	const drawFlow = async () => {

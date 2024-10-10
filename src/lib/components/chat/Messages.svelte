@@ -1,16 +1,18 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
 	import { chats, config, settings, user as _user, mobile, currentChatPage } from '$lib/stores';
-	import { tick, getContext, onMount } from 'svelte';
+	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
+	const dispatch = createEventDispatcher();
 
 	import { toast } from 'svelte-sonner';
 	import { getChatList, updateChatById } from '$lib/apis/chats';
 	import { copyToClipboard, findWordIndices } from '$lib/utils';
 
-	import Placeholder from './Messages/Placeholder.svelte';
 	import Message from './Messages/Message.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
+
+	import ChatPlaceholder from './ChatPlaceholder.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -79,8 +81,10 @@
 
 	const updateChatHistory = async () => {
 		await tick();
+		history = history;
 		await updateChatById(localStorage.token, chatId, {
-			history: history
+			history: history,
+			messages: messages
 		});
 
 		currentChatPage.set(1);
@@ -306,9 +310,9 @@
 	};
 </script>
 
-<div class="h-full flex">
+<div class="h-full flex pt-8">
 	{#if Object.keys(history?.messages ?? {}).length == 0}
-		<Placeholder
+		<ChatPlaceholder
 			modelIds={selectedModels}
 			submitPrompt={async (p) => {
 				let text = p;
@@ -380,9 +384,21 @@
 							{regenerateResponse}
 							{continueResponse}
 							{mergeResponses}
-							{updateChatHistory}
-							{chatActionHandler}
 							{readOnly}
+							on:submit={async (e) => {
+								dispatch('submit', e.detail);
+							}}
+							on:action={async (e) => {
+								if (typeof e.detail === 'string') {
+									await chatActionHandler(chatId, e.detail, message.model, message.id);
+								} else {
+									const { id, event } = e.detail;
+									await chatActionHandler(chatId, id, message.model, message.id, event);
+								}
+							}}
+							on:update={() => {
+								updateChatHistory();
+							}}
 							on:scroll={() => {
 								if (autoScroll) {
 									const element = document.getElementById('messages-container');

@@ -11,7 +11,6 @@
 	import MultiResponseMessages from './MultiResponseMessages.svelte';
 	import ResponseMessage from './ResponseMessage.svelte';
 	import UserMessage from './UserMessage.svelte';
-	import { updateChatById } from '$lib/apis/chats';
 
 	export let chatId;
 	export let idx = 0;
@@ -20,9 +19,6 @@
 	export let messageId;
 
 	export let user;
-
-	export let updateChatHistory;
-	export let chatActionHandler;
 
 	export let showPreviousMessage;
 	export let showNextMessage;
@@ -80,19 +76,14 @@
 				{rateMessage}
 				{continueResponse}
 				{regenerateResponse}
+				on:submit={async (e) => {
+					dispatch('submit', e.detail);
+				}}
 				on:action={async (e) => {
-					console.log('action', e);
-					const message = history.messages[messageId];
-					if (typeof e.detail === 'string') {
-						await chatActionHandler(chatId, e.detail, message.model, message.id);
-					} else {
-						const { id, event } = e.detail;
-						await chatActionHandler(chatId, id, message.model, message.id, event);
-					}
+					dispatch('action', e.detail);
 				}}
 				on:update={async (e) => {
-					console.log('update', e);
-					updateChatHistory();
+					dispatch('update');
 				}}
 				on:save={async (e) => {
 					console.log('save', e);
@@ -100,13 +91,9 @@
 					const message = e.detail;
 					if (message) {
 						history.messages[message.id] = message;
-						await updateChatById(localStorage.token, chatId, {
-							history: history
-						});
+						dispatch('update');
 					} else {
-						await updateChatById(localStorage.token, chatId, {
-							history: history
-						});
+						dispatch('update');
 					}
 				}}
 				{readOnly}
@@ -122,41 +109,28 @@
 				{continueResponse}
 				{regenerateResponse}
 				{mergeResponses}
+				on:submit={async (e) => {
+					dispatch('submit', e.detail);
+				}}
 				on:action={async (e) => {
-					console.log('action', e);
-					const message = history.messages[messageId];
-					if (typeof e.detail === 'string') {
-						await chatActionHandler(chatId, e.detail, message.model, message.id);
-					} else {
-						const { id, event } = e.detail;
-						await chatActionHandler(chatId, id, message.model, message.id, event);
-					}
+					dispatch('action', e.detail);
 				}}
 				on:update={async (e) => {
-					console.log('update', e);
-					updateChatHistory();
+					dispatch('update');
 				}}
 				on:save={async (e) => {
 					console.log('save', e);
-
 					const message = e.detail;
 					if (message) {
 						history.messages[message.id] = message;
-						await updateChatById(localStorage.token, chatId, {
-							history: history
-						});
+						dispatch('update');
 					} else {
-						await updateChatById(localStorage.token, chatId, {
-							history: history
-						});
+						dispatch('update');
 					}
 				}}
 				on:change={async () => {
 					await tick();
-					await updateChatById(localStorage.token, chatId, {
-						history: history
-					});
-
+					dispatch('update');
 					dispatch('scroll');
 				}}
 				{readOnly}

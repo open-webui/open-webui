@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { toast } from 'svelte-sonner';
 	import { DropdownMenu } from 'bits-ui';
 	import { getContext } from 'svelte';
 
@@ -6,18 +7,17 @@
 	const { saveAs } = fileSaver;
 
 	import { downloadChatAsPDF } from '$lib/apis/utils';
-	import { copyToClipboard } from '$lib/utils';
+	import { copyToClipboard, createMessagesList } from '$lib/utils';
 
-	import { showOverview, showControls, mobile } from '$lib/stores';
+	import { showOverview, showControls, showArtifacts, mobile } from '$lib/stores';
 	import { flyAndScale } from '$lib/utils/transitions';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Tags from '$lib/components/chat/Tags.svelte';
 	import Map from '$lib/components/icons/Map.svelte';
-	import { get } from 'svelte/store';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
-	import { toast } from 'svelte-sonner';
 	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
+	import Cube from '$lib/components/icons/Cube.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -32,7 +32,9 @@
 
 	const getChatAsText = async () => {
 		const _chat = chat.chat;
-		const chatText = _chat.messages.reduce((a, message, i, arr) => {
+
+		const messages = createMessagesList(_chat.history, _chat.history.currentId);
+		const chatText = messages.reduce((a, message, i, arr) => {
 			return `${a}### ${message.role.toUpperCase()}\n${message.content}\n\n`;
 		}, '');
 
@@ -51,9 +53,11 @@
 
 	const downloadPdf = async () => {
 		const _chat = chat.chat;
+		const messages = createMessagesList(_chat.history, _chat.history.currentId);
+
 		console.log('download', chat);
 
-		const blob = await downloadChatAsPDF(_chat);
+		const blob = await downloadChatAsPDF(_chat.title, messages);
 
 		// Create a URL for the blob
 		const url = window.URL.createObjectURL(blob);
@@ -133,6 +137,8 @@
 					id="chat-controls-button"
 					on:click={async () => {
 						await showControls.set(true);
+						await showOverview.set(false);
+						await showArtifacts.set(false);
 					}}
 				>
 					<AdjustmentsHorizontal className=" size-4" strokeWidth="0.5" />
@@ -146,10 +152,24 @@
 				on:click={async () => {
 					await showControls.set(true);
 					await showOverview.set(true);
+					await showArtifacts.set(false);
 				}}
 			>
 				<Map className=" size-4" strokeWidth="1.5" />
 				<div class="flex items-center">{$i18n.t('Overview')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				id="chat-overview-button"
+				on:click={async () => {
+					await showControls.set(true);
+					await showArtifacts.set(true);
+					await showOverview.set(false);
+				}}
+			>
+				<Cube className=" size-4" strokeWidth="1.5" />
+				<div class="flex items-center">{$i18n.t('Artifacts')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item

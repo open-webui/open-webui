@@ -186,12 +186,13 @@
 								}`} transition-all p-5 rounded-2xl"
 						on:click={() => {
 							if (messageId != _messageId) {
-								let messageChildrenIds = history.messages[_messageId].childrenIds;
+								let currentMessageId = _messageId;
+								let messageChildrenIds = history.messages[currentMessageId].childrenIds;
 								while (messageChildrenIds.length !== 0) {
-									messageId = messageChildrenIds.at(-1);
-									messageChildrenIds = history.messages[_messageId].childrenIds;
+									currentMessageId = messageChildrenIds.at(-1);
+									messageChildrenIds = history.messages[currentMessageId].childrenIds;
 								}
-								history.currentId = _messageId;
+								history.currentId = currentMessageId;
 								dispatch('change');
 							}
 						}}
@@ -213,6 +214,9 @@
 										await tick();
 										groupedMessageIdsIdx[modelIdx] =
 											groupedMessageIds[modelIdx].messageIds.length - 1;
+									}}
+									on:submit={async (e) => {
+										dispatch('submit', e.detail);
 									}}
 									on:action={async (e) => {
 										dispatch('action', e.detail);
