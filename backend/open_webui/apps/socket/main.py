@@ -49,9 +49,10 @@ else:
 
 
 # Dictionary to maintain the user pool
-
 if WEBSOCKET_MANAGER == "redis":
-    SESSION_POOL = RedisDict("open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL)
+    SESSION_POOL = RedisDict(
+        "open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL
+    )
     USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL)
     USAGE_POOL = RedisDict("open-webui:usage_pool", redis_url=WEBSOCKET_REDIS_URL)
 else:
@@ -134,24 +135,26 @@ async def connect(sid, environ, auth):
                 USER_POOL[user.id] = [sid]
 
             # print(f"user {user.name}({user.id}) connected with session ID {sid}")
-            await sio.emit("user-count", {"count": len(USER_POOL.items())})
+            await sio.emit("user-count", {"count": len(USER_POOL)})
             await sio.emit("usage", {"models": get_models_in_use()})
 
 
 @sio.on("user-join")
 async def user_join(sid, data):
-    # print("user-join", sid, data)
-
-    auth = data["auth"] if "auth" in data else None
-    if not auth or "token" not in auth:
+    auth = data.get("auth", {})
+    token = auth.get("token")
+    if not token:
+        log.warning(f"No token provided by client {sid}")
         return
 
-    data = decode_token(auth["token"])
-    if data is None or "id" not in data:
+    decoded_data = decode_token(token)
+    if not decoded_data or "id" not in decoded_data:
+        log.warning(f"Invalid token provided by client {sid}")
         return
 
-    user = Users.get_user_by_id(data["id"])
+    user = Users.get_user_by_id(decoded_data["id"])
     if not user:
+        log.warning(f"User not found for ID {decoded_data['id']}")
         return
 
     SESSION_POOL[sid] = user.id
@@ -160,32 +163,32 @@ async def user_join(sid, data):
     else:
         USER_POOL[user.id] = [sid]
 
-    # print(f"user {user.name}({user.id}) connected with session ID {sid}")
+    log.debug(f"User {user.name}({user.id}) connected with session ID {sid}")
 
-    await sio.emit("user-count", {"count": len(USER_POOL.items())})
-
+    await sio.emit("user-count", {"count": len(USER_POOL)})
 
 @sio.on("user-count")
 async def user_count(sid):
-    await sio.emit("user-count", {"count": len(USER_POOL.items())})
-
+    await sio.emit("user-count", {"count": len(USER_POOL)})
 
 @sio.event
 async def disconnect(sid):
-    if sid in SESSION_POOL:
-        user_id = SESSION_POOL[sid]
+    user_id = SESSION_POOL.get(sid)
+    if user_id:
         del SESSION_POOL[sid]
 
-        USER_POOL[user_id] = [_sid for _sid in USER_POOL[user_id] if _sid != sid]
+        sids = USER_POOL.get(user_id, [])
+        if sid in sids:
+            sids.remove(sid)
+            if sids:
+                USER_POOL[user_id] = sids
+            else:
+                del USER_POOL[user_id]
 
-        if len(USER_POOL[user_id]) == 0:
-            del USER_POOL[user_id]
-
+        log.debug(f"User {user_id} disconnected from session ID {sid}")
         await sio.emit("user-count", {"count": len(USER_POOL)})
     else:
-        pass
-        # print(f"Unknown session ID {sid} disconnected")
-
+        log.debug(f"Unknown session ID {sid} disconnected")
 
 def get_event_emitter(request_info):
     async def __event_emitter__(event_data):
@@ -214,5 +217,3 @@ def get_event_call(request_info):
             to=request_info["session_id"],
         )
         return response
-
-    return __event_call__
