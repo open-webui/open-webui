@@ -199,7 +199,10 @@ export const getChatListBySearchText = async (token: string, text: string, page:
 		throw error;
 	}
 
-	return res;
+	return res.map((chat) => ({
+		...chat,
+		time_range: getTimeRange(chat.updated_at)
+	}));
 };
 
 export const getAllArchivedChats = async (token: string) => {

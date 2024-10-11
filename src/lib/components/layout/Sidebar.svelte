@@ -111,6 +111,7 @@
 
 		if (search === '') {
 			await initChatList();
+			allChatsLoaded = false;
 			return;
 		} else {
 			searchDebounceTimeout = setTimeout(async () => {
@@ -512,7 +513,7 @@
 			</div>
 
 			{#if $tags.length > 0}
-				<div class="px-3.5 mb-1 flex gap-0.5 flex-wrap">
+				<div class="px-3.5 mb-2.5 flex gap-0.5 flex-wrap">
 					<button
 						class="px-2.5 py-[1px] text-xs transition {selectedTagName === null
 							? 'bg-gray-100 dark:bg-gray-900'
@@ -551,7 +552,7 @@
 			{/if}
 
 			{#if !search && $pinnedChats.length > 0}
-				<div class="pl-2 py-2 flex flex-col space-y-1">
+				<div class="pl-2 pb-2 flex flex-col space-y-1">
 					<div class="">
 						<div class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium pb-1.5">
 							{$i18n.t('Pinned')}
@@ -586,7 +587,7 @@
 				</div>
 			{/if}
 
-			<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden">
+			<div class="pl-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden">
 				{#if $chats}
 					{#each $chats as chat, idx}
 						{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
