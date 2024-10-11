@@ -47,6 +47,7 @@
 	import Loader from '../common/Loader.svelte';
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
+	import { select } from 'd3-selection';
 
 	const BREAKPOINT = 768;
 
@@ -164,6 +165,20 @@
 			};
 
 			reader.readAsText(file);
+		}
+	};
+
+	const tagEventHandler = async (type, tagName, chatId) => {
+		console.log(type, tagName, chatId);
+		if (type === 'delete') {
+			if (selectedTagName === tagName) {
+				if ($tags.map((t) => t.name).includes(tagName)) {
+					await chats.set(await getChatListByTagName(localStorage.token, tagName));
+				} else {
+					selectedTagName = null;
+					await initChatList();
+				}
+			}
 		}
 	};
 
@@ -561,6 +576,10 @@
 										showDeleteConfirm = true;
 									}
 								}}
+								on:tag={(e) => {
+									const { type, name } = e.detail;
+									tagEventHandler(type, name, chat.id);
+								}}
 							/>
 						{/each}
 					</div>
@@ -615,6 +634,10 @@
 									deleteChat = chat;
 									showDeleteConfirm = true;
 								}
+							}}
+							on:tag={(e) => {
+								const { type, name } = e.detail;
+								tagEventHandler(type, name, chat.id);
 							}}
 						/>
 					{/each}

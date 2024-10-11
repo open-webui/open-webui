@@ -259,6 +259,9 @@
 					on:change={async () => {
 						await pinnedChats.set(await getPinnedChatList(localStorage.token));
 					}}
+					on:tag={(e) => {
+						dispatch('tag', e.detail);
+					}}
 				>
 					<button
 						aria-label="Chat Menu"

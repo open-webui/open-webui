@@ -36,6 +36,7 @@
 		await updateChatById(localStorage.token, chatId, {
 			tags: tags
 		});
+
 		_tags.set(await getAllChatTags(localStorage.token));
 	};
 
@@ -47,18 +48,9 @@
 		});
 
 		await _tags.set(await getAllChatTags(localStorage.token));
-		if ($_tags.map((t) => t.name).includes(tagName)) {
-			await chats.set(await getChatListByTagName(localStorage.token, tagName));
-
-			if ($chats.find((chat) => chat.id === chatId)) {
-				dispatch('close');
-			}
-		} else {
-			// if the tag we deleted is no longer a valid tag, return to main chat list view
-			currentChatPage.set(1);
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			await scrollPaginationEnabled.set(true);
-		}
+		dispatch('delete', {
+			name: tagName
+		});
 	};
 
 	onMount(async () => {
