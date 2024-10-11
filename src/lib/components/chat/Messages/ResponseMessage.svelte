@@ -2,6 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 	import { marked } from 'marked';
+	import { throttle } from 'lodash';
 
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, tick, getContext } from 'svelte';
@@ -130,53 +131,16 @@
 
 	marked.use(markedKatex(options));
 
-	$: (async () => {
+	let processedContent;
+
+	const processContentThrottled = throttle(() => {
 		if (message?.content) {
-			tokens = marked.lexer(
-				replaceTokens(processResponseContent(message?.content), model?.name, $user?.name)
-			);
+			processedContent = processResponseContent(message.content);
+			tokens = marked.lexer(replaceTokens(processedContent, model?.name, $user?.name));
 		}
-		// if (message?.done ?? false) {
-		// 	await renderLatex();
-		// }
-	})();
+	}, 80);
 
-	// const renderLatex = async () => {
-	// 	try {
-	// 		await tick();
-	// 		const chatMessageContainer = document.getElementById(`message-${message.id}`);
-	// 		if (!chatMessageContainer) {
-	// 			console.warn(`未找到 id 为 'message-${message.id}' 的元素。`);
-	// 			return;
-	// 		}
-
-	// 		const chatMessageElements = chatMessageContainer.getElementsByClassName('chat-assistant');
-	// 		if (!chatMessageElements || chatMessageElements.length === 0) {
-	// 			console.warn(`在容器中未找到带有 'chat-assistant' 类的元素。`);
-	// 			return;
-	// 		}
-
-	// 		for (const element of chatMessageElements) {
-	// 			try {
-	// 				auto_render(element, {
-	// 					delimiters: [
-	// 						{ left: '$$', right: '$$', display: true },
-	// 						{ left: '$', right: '$', display: false },
-	// 						{ left: '\\pu{', right: '}', display: false },
-	// 						{ left: '\\ce{', right: '}', display: false },
-	// 						{ left: '\\(', right: '\\)', display: false },
-	// 						{ left: '\\[', right: '\\]', display: true }
-	// 					],
-	// 					throwOnError: false
-	// 				});
-	// 			} catch (err) {
-	// 				console.error(`渲染 LaTeX 时出错，元素：`, element, err);
-	// 			}
-	// 		}
-	// 	} catch (err) {
-	// 		console.error('renderLatex 函数中的错误:', err);
-	// 	}
-	// };
+	$: processContentThrottled();
 
 	const playAudio = (idx: number) => {
 		return new Promise<void>((res) => {

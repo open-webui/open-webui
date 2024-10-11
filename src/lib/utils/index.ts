@@ -7,26 +7,6 @@ import { TTS_RESPONSE_SPLIT } from '$lib/types';
 //////////////////////////
 // Helper functions
 //////////////////////////
-
-function escapeBrackets(text: string) {
-	let cleanSquareBracket = '';
-	let cleanRoundBracket = '';
-
-	const pattern = /(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\((.*?)\\\)/g;
-	return text.replace(pattern, (match, codeBlock, squareBracket, roundBracket) => {
-		if (codeBlock) {
-			return codeBlock;
-		} else if (squareBracket) {
-			cleanSquareBracket = squareBracket.replace(/\s*\n\s*/g, ' ').trim();
-			return `$$ ${cleanSquareBracket} $$`;
-		} else if (roundBracket) {
-			cleanRoundBracket = roundBracket.replace(/\s*\n\s*/g, ' ').trim();
-			return `$ ${cleanRoundBracket} $`;
-		}
-		return match.replace(/\s*\n\s*/g, ' ').trim();
-	});
-}
-
 export const replaceTokens = (content, char, user) => {
 	const charToken = /{{char}}/gi;
 	const userToken = /{{user}}/gi;
@@ -70,8 +50,22 @@ export const sanitizeResponseContent = (content: string) => {
 };
 
 export const processResponseContent = (content: string) => {
-	content = escapeBrackets(content);
-	return content.trim();
+	let cleanSquareBracket = '';
+	let cleanRoundBracket = '';
+
+	const pattern = /(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\((.*?)\\\)/g;
+	return content.replace(pattern, (match, codeBlock, squareBracket, roundBracket) => {
+		if (codeBlock) {
+			return codeBlock;
+		} else if (squareBracket) {
+			cleanSquareBracket = squareBracket.replace(/\s*\n\s*/g, ' ').trim();
+			return `$$ ${cleanSquareBracket} $$`;
+		} else if (roundBracket) {
+			cleanRoundBracket = roundBracket.replace(/\s*\n\s*/g, ' ').trim();
+			return `$ ${cleanRoundBracket} $`;
+		}
+		return match.replace(/\s*\n\s*/g, ' ').trim();
+	});
 };
 
 export const revertSanitizedResponseContent = (content: string) => {
