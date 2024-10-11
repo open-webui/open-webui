@@ -15,6 +15,7 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, sta
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from open_webui.storage.provider import StorageProvider
 from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 
 # Document loaders
@@ -113,6 +114,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 app = FastAPI()
+storage = StorageProvider()
 
 app.state.config = AppConfig()
 
@@ -726,7 +728,7 @@ def process_file(
     user=Depends(get_verified_user),
 ):
     try:
-        file = Files.get_file_by_id(form_data.file_id)
+        file = storage.get_file_by_id(form_data.file_id)
 
         collection_name = form_data.collection_name
 
@@ -816,13 +818,13 @@ def process_file(
             text_content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {text_content}")
-        Files.update_file_data_by_id(
+        storage.update_file_data_by_id(
             file.id,
             {"content": text_content},
         )
 
         hash = calculate_sha256_string(text_content)
-        Files.update_file_hash_by_id(file.id, hash)
+        storage.update_file_hash_by_id(file.id, hash)
 
         try:
             result = save_docs_to_vector_db(
@@ -837,7 +839,7 @@ def process_file(
             )
 
             if result:
-                Files.update_file_metadata_by_id(
+                storage.update_file_metadata_by_id(
                     file.id,
                     {
                         "collection_name": collection_name,
@@ -1237,7 +1239,7 @@ class DeleteForm(BaseModel):
 def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin_user)):
     try:
         if VECTOR_DB_CLIENT.has_collection(collection_name=form_data.collection_name):
-            file = Files.get_file_by_id(form_data.file_id)
+            file = storage.get_file_by_id(form_data.file_id)
             hash = file.hash
 
             VECTOR_DB_CLIENT.delete(

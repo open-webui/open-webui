@@ -19,7 +19,7 @@ from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
 
-
+from open_webui.storage.provider import StorageProvider
 from open_webui.utils.utils import get_admin_user, get_verified_user
 
 log = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
 router = APIRouter()
-
+storage = StorageProvider()
 ############################
 # Upload File
 ############################
@@ -46,11 +46,11 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
         filename = f"{id}_{filename}"
         file_path = f"{UPLOAD_DIR}/{filename}"
 
-        contents = file.file.read()
-        with open(file_path, "wb") as f:
-            f.write(contents)
-            f.close()
-
+        # contents = file.file.read()
+        # with open(file_path, "wb") as f:
+        #     f.write(contents)
+        #     f.close()
+        storage.upload_file(file.file, file_path) 
         file = Files.insert_new_file(
             user.id,
             FileForm(
@@ -60,8 +60,10 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
                     "meta": {
                         "name": name,
                         "content_type": file.content_type,
-                        "size": len(contents),
+                        "size": file.size,
                         "path": file_path,
+                        "StorageProvider": storage.get_storage_type(),
+                        "BUCKET_NAME": storage._get_bucket(),
                     },
                 }
             ),
@@ -116,24 +118,24 @@ async def delete_all_files(user=Depends(get_admin_user)):
     if result:
         folder = f"{UPLOAD_DIR}"
         try:
-            # Check if the directory exists
-            if os.path.exists(folder):
-                # Iterate over all the files and directories in the specified directory
-                for filename in os.listdir(folder):
-                    file_path = os.path.join(folder, filename)
-                    try:
-                        if os.path.isfile(file_path) or os.path.islink(file_path):
-                            os.unlink(file_path)  # Remove the file or link
-                        elif os.path.isdir(file_path):
-                            shutil.rmtree(file_path)  # Remove the directory
-                    except Exception as e:
-                        print(f"Failed to delete {file_path}. Reason: {e}")
-            else:
-                print(f"The directory {folder} does not exist")
+        #     # Check if the directory exists
+        #     if os.path.exists(folder):
+        #         # Iterate over all the files and directories in the specified directory
+        #         for filename in os.listdir(folder):
+        #             file_path = os.path.join(folder, filename)
+        #             try:
+        #                 if os.path.isfile(file_path) or os.path.islink(file_path):
+        #                     os.unlink(file_path)  # Remove the file or link
+        #                 elif os.path.isdir(file_path):
+        #                     shutil.rmtree(file_path)  # Remove the directory
+        #             except Exception as e:
+        #                 print(f"Failed to delete {file_path}. Reason: {e}")
+        #     else:
+        #         print(f"The directory {folder} does not exist")
+            storage.delete_all_files()
+            return {"message": "All files deleted successfully"}
         except Exception as e:
-            print(f"Failed to process the directory {folder}. Reason: {e}")
-
-        return {"message": "All files deleted successfully"}
+            print(f"Failed to process the directory {folder}. Reason: {e}")    
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -148,7 +150,7 @@ async def delete_all_files(user=Depends(get_admin_user)):
 
 @router.get("/{id}", response_model=Optional[FileModel])
 async def get_file_by_id(id: str, user=Depends(get_verified_user)):
-    file = Files.get_file_by_id(id)
+    file = storage.get_file(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
         return file
@@ -166,7 +168,7 @@ async def get_file_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.get("/{id}/data/content")
 async def get_file_data_content_by_id(id: str, user=Depends(get_verified_user)):
-    file = Files.get_file_by_id(id)
+    file = storage.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
         return {"content": file.data.get("content", "")}
@@ -190,12 +192,12 @@ class ContentForm(BaseModel):
 async def update_file_data_content_by_id(
     id: str, form_data: ContentForm, user=Depends(get_verified_user)
 ):
-    file = Files.get_file_by_id(id)
+    file = storage.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
         try:
             process_file(ProcessFileForm(file_id=id, content=form_data.content))
-            file = Files.get_file_by_id(id=id)
+            file = storage.get_file_by_id(id=id)
         except Exception as e:
             log.exception(e)
             log.error(f"Error processing file: {file.id}")
@@ -215,7 +217,7 @@ async def update_file_data_content_by_id(
 
 @router.get("/{id}/content", response_model=Optional[FileModel])
 async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
-    file = Files.get_file_by_id(id)
+    file = storage.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
         file_path = Path(file.meta["path"])
@@ -241,7 +243,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.get("/{id}/content/{file_name}", response_model=Optional[FileModel])
 async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
-    file = Files.get_file_by_id(id)
+    file = storage.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
         file_path = file.meta.get("path")
@@ -285,9 +287,9 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.delete("/{id}")
 async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
-    file = Files.get_file_by_id(id)
+    file = storage.get_file_by_id(id)
     if file and (file.user_id == user.id or user.role == "admin"):
-        result = Files.delete_file_by_id(id)
+        result = storage.delete_file_by_id(id)
         if result:
             return {"message": "File deleted successfully"}
         else:
