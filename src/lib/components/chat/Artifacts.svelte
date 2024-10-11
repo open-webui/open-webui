@@ -191,7 +191,7 @@
 					showArtifacts.set(false);
 				}}
 			>
-				<ArrowLeft className="size-3.5" />
+				<ArrowLeft className="size-3.5  text-gray-900 dark:text-white" />
 			</button>
 		</div>
 
