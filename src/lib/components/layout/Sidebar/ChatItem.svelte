@@ -12,6 +12,7 @@
 		deleteChatById,
 		getChatList,
 		getChatListByTagName,
+		getPinnedChatList,
 		updateChatById
 	} from '$lib/apis/chats';
 	import {
@@ -55,7 +56,7 @@
 
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
+			await pinnedChats.set(await getPinnedChatList(localStorage.token));
 		}
 	};
 
@@ -70,7 +71,7 @@
 
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
+			await pinnedChats.set(await getPinnedChatList(localStorage.token));
 		}
 	};
 
@@ -79,7 +80,7 @@
 
 		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
+		await pinnedChats.set(await getPinnedChatList(localStorage.token));
 	};
 
 	const focusEdit = async (node: HTMLInputElement) => {
@@ -256,7 +257,7 @@
 						dispatch('unselect');
 					}}
 					on:change={async () => {
-						await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
+						await pinnedChats.set(await getPinnedChatList(localStorage.token));
 					}}
 				>
 					<button

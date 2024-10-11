@@ -34,7 +34,8 @@
 		archiveChatById,
 		cloneChatById,
 		getChatListBySearchText,
-		createNewChat
+		createNewChat,
+		getPinnedChatList
 	} from '$lib/apis/chats';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -135,7 +136,7 @@
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 
-			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
+			await pinnedChats.set(await getPinnedChatList(localStorage.token));
 		}
 	};
 
@@ -255,7 +256,7 @@
 			localStorage.sidebar = value;
 		});
 
-		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
+		await pinnedChats.set(await getPinnedChatList(localStorage.token));
 		await initChatList();
 
 		window.addEventListener('keydown', onKeyDown);
@@ -495,7 +496,7 @@
 				</div>
 			</div>
 
-			{#if $tags.filter((t) => t.name !== 'pinned').length > 0}
+			{#if $tags.length > 0}
 				<div class="px-3.5 mb-1 flex gap-0.5 flex-wrap">
 					<button
 						class="px-2.5 py-[1px] text-xs transition {selectedTagName === null
@@ -508,7 +509,7 @@
 					>
 						{$i18n.t('all')}
 					</button>
-					{#each $tags.filter((t) => t.name !== 'pinned') as tag}
+					{#each $tags as tag}
 						<button
 							class="px-2.5 py-[1px] text-xs transition {selectedTagName === tag.name
 								? 'bg-gray-100 dark:bg-gray-900'
@@ -516,14 +517,15 @@
 							on:click={async () => {
 								selectedTagName = tag.name;
 								scrollPaginationEnabled.set(false);
-								let chatIds = await getChatListByTagName(localStorage.token, tag.name);
-								if (chatIds.length === 0) {
-									await tags.set(await getAllChatTags(localStorage.token));
 
+								let taggedChatList = await getChatListByTagName(localStorage.token, tag.name);
+								if (taggedChatList.length === 0) {
+									await tags.set(await getAllChatTags(localStorage.token));
 									// if the tag we deleted is no longer a valid tag, return to main chat list view
 									await initChatList();
+								} else {
+									await chats.set(taggedChatList);
 								}
-								await chats.set(chatIds);
 								chatListLoading = false;
 							}}
 						>

@@ -15,7 +15,13 @@
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import Bookmark from '$lib/components/icons/Bookmark.svelte';
 	import BookmarkSlash from '$lib/components/icons/BookmarkSlash.svelte';
-	import { addTagById, deleteTagById, getTagsById } from '$lib/apis/chats';
+	import {
+		addTagById,
+		deleteTagById,
+		getChatPinnedStatusById,
+		getTagsById,
+		toggleChatPinnedStatusById
+	} from '$lib/apis/chats';
 
 	const i18n = getContext('i18n');
 
@@ -32,20 +38,12 @@
 	let pinned = false;
 
 	const pinHandler = async () => {
-		if (pinned) {
-			await deleteTagById(localStorage.token, chatId, 'pinned');
-		} else {
-			await addTagById(localStorage.token, chatId, 'pinned');
-		}
+		await toggleChatPinnedStatusById(localStorage.token, chatId);
 		dispatch('change');
 	};
 
 	const checkPinned = async () => {
-		pinned = (
-			await getTagsById(localStorage.token, chatId).catch(async (error) => {
-				return [];
-			})
-		).find((tag) => tag.name === 'pinned');
+		pinned = await getChatPinnedStatusById(localStorage.token, chatId);
 	};
 
 	$: if (show) {
