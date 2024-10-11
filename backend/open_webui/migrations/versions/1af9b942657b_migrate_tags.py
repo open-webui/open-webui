@@ -9,6 +9,7 @@ Create Date: 2024-10-09 21:02:35.241684
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.sql import table, select, update, column
+from sqlalchemy.engine.reflection import Inspector
 
 import json
 
@@ -19,13 +20,38 @@ depends_on = None
 
 
 def upgrade():
+    # Setup an inspection on the existing table to avoid issues
+    conn = op.get_bind()
+    inspector = Inspector.from_engine(conn)
+
+    # Check if the 'tag' table exists
+    tables = inspector.get_table_names()
+
     # Step 1: Modify Tag table using batch mode for SQLite support
-    with op.batch_alter_table("tag", schema=None) as batch_op:
-        batch_op.create_unique_constraint(
-            "uq_id_user_id", ["id", "user_id"]
-        )  # Ensure unique (id, user_id)
-        batch_op.drop_column("data")
-        batch_op.add_column(sa.Column("meta", sa.JSON(), nullable=True))
+    if "tag" in tables:
+        # Get the current columns in the 'tag' table
+        columns = [col["name"] for col in inspector.get_columns("tag")]
+
+        # Get any existing unique constraints on the 'tag' table
+        current_constraints = inspector.get_unique_constraints("tag")
+
+        with op.batch_alter_table("tag", schema=None) as batch_op:
+            # Check if the unique constraint already exists
+            if not any(
+                constraint["name"] == "uq_id_user_id"
+                for constraint in current_constraints
+            ):
+                # Create unique constraint if it doesn't exist
+                batch_op.create_unique_constraint("uq_id_user_id", ["id", "user_id"])
+
+            # Check if the 'data' column exists before trying to drop it
+            if "data" in columns:
+                batch_op.drop_column("data")
+
+            # Check if the 'meta' column needs to be created
+            if "meta" not in columns:
+                # Add the 'meta' column if it doesn't already exist
+                batch_op.add_column(sa.Column("meta", sa.JSON(), nullable=True))
 
     tag = table(
         "tag",
