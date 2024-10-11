@@ -90,7 +90,7 @@ from open_webui.config import (
     TIKA_SERVER_URL,
     UPLOAD_DIR,
     YOUTUBE_LOADER_LANGUAGE,
-    AppConfig,
+    AppConfig, VECTOR_DB,
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS, DEVICE_TYPE, DOCKER
@@ -627,6 +627,17 @@ async def update_query_settings(
 #
 ####################################
 
+def store_file_in_collection(collection_name, result):
+    items: list[dict] = []
+    for idx, _id in enumerate(result.ids[0]):
+        items.append({
+            "id": _id,
+            "text": result.documents[0][idx],
+            "vector": result.vectors[idx],
+            "metadata": result.metadatas[0][idx]
+        })
+    VECTOR_DB_CLIENT.insert(collection_name, items)
+
 
 def save_docs_to_vector_db(
     docs,
@@ -763,9 +774,30 @@ def process_file(
             # Check if the file has already been processed and save the content
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
-            result = VECTOR_DB_CLIENT.query(
-                collection_name=f"file-{file.id}", filter={"file_id": file.id}
-            )
+            if VECTOR_DB=="qdrant": # Todo implement for other connectors
+                result = VECTOR_DB_CLIENT.query(collection_name=f"file-{file.id}",
+                                                filter={"file_id": file.id},
+                                                with_vectors=True)
+                if len(result.ids[0]) > 0 and result.vectors:
+                    store_file_in_collection(collection_name, result)
+                    text_content = " ".join([doc for doc in result.documents[0]])
+                    Files.update_file_metadata_by_id(
+                        file.id,
+                        {
+                            "collection_name": collection_name,
+                        },
+                    )
+
+                    return {
+                        "status": True,
+                        "collection_name": collection_name,
+                        "filename": file.meta.get("name", file.filename),
+                        "content": text_content,
+                    }
+            else:
+                result = VECTOR_DB_CLIENT.query(
+                    collection_name=f"file-{file.id}", filter={"file_id": file.id}
+                )
 
             if len(result.ids[0]) > 0:
                 docs = [
