@@ -43,6 +43,7 @@ class PromptForm(BaseModel):
     content: str
     attached: bool
 
+
 class PromptsTable:
     def insert_new_prompt(
         self, user_id: str, form_data: PromptForm
