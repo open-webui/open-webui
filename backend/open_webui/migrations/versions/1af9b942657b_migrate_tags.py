@@ -24,6 +24,9 @@ def upgrade():
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
 
+    # Clean up potential leftover temp table from previous failures
+    conn.execute(sa.text("DROP TABLE IF EXISTS _alembic_tmp_tag"))
+
     # Check if the 'tag' table exists
     tables = inspector.get_table_names()
 
