@@ -51,9 +51,22 @@ def upgrade():
             delete_stmt = sa.delete(tag).where(tag.c.id == tag_id)
             conn.execute(delete_stmt)
         else:
-            update_stmt = sa.update(tag).where(tag.c.id == tag_id)
-            update_stmt = update_stmt.values(id=new_tag_id)
-            conn.execute(update_stmt)
+            # Check if the new_tag_id already exists in the database
+            existing_tag_query = sa.select(tag.c.id).where(tag.c.id == new_tag_id)
+            existing_tag_result = conn.execute(existing_tag_query).fetchone()
+
+            if existing_tag_result:
+                # Handle duplicate case: the new_tag_id already exists
+                print(
+                    f"Tag {new_tag_id} already exists. Removing current tag with ID {tag_id} to avoid duplicates."
+                )
+                # Option 1: Delete the current tag if an update to new_tag_id would cause duplication
+                delete_stmt = sa.delete(tag).where(tag.c.id == tag_id)
+                conn.execute(delete_stmt)
+            else:
+                update_stmt = sa.update(tag).where(tag.c.id == tag_id)
+                update_stmt = update_stmt.values(id=new_tag_id)
+                conn.execute(update_stmt)
 
     # Add columns `pinned` and `meta` to 'chat'
     op.add_column("chat", sa.Column("pinned", sa.Boolean(), nullable=True))
