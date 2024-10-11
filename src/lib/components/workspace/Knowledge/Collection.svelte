@@ -501,7 +501,7 @@
 				<div class="max-w-md">
 					<AddFilesPlaceholder>
 						<div class=" mt-2 text-center text-sm dark:text-gray-200 w-full">
-							Drop any files here to add to my documents
+							{$i18n.t('Drop any files here to add to my documents')}
 						</div>
 					</AddFilesPlaceholder>
 				</div>
