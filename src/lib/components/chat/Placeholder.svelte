@@ -89,7 +89,7 @@
 </script>
 
 {#key mounted}
-	<div class="m-auto w-full max-w-6xl px-2 xl:px-20 translate-y-6 text-center">
+	<div class="m-auto w-full max-w-6xl px-2 xl:px-20 translate-y-6 py-24 text-center">
 		{#if $temporaryChatEnabled}
 			<Tooltip
 				content="This chat won't appear in history and your messages will not be saved."
@@ -186,7 +186,7 @@
 				</div>
 
 				<div
-					class="text-base font-normal xl:translate-x-6 lg:max-w-3xl w-full py-3 {atSelectedModel
+					class="text-base font-normal xl:translate-x-6 md:max-w-3xl w-full py-3 {atSelectedModel
 						? 'mt-2'
 						: ''}"
 				>
@@ -204,6 +204,9 @@
 						{stopResponse}
 						{createMessagePair}
 						placeholder={$i18n.t('How can I help you today?')}
+						on:upload={(e) => {
+							dispatch('upload', e.detail);
+						}}
 						on:submit={(e) => {
 							dispatch('submit', e.detail);
 						}}

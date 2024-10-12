@@ -73,50 +73,6 @@ Cypress.Commands.add('register', (name, email, password) => register(name, email
 Cypress.Commands.add('registerAdmin', () => registerAdmin());
 Cypress.Commands.add('loginAdmin', () => loginAdmin());
 
-Cypress.Commands.add('uploadTestDocument', (suffix: any) => {
-	// Login as admin
-	cy.loginAdmin();
-	// upload example document
-	cy.visit('/workspace/documents');
-	// Create a document
-	cy.get("button[aria-label='Add Docs']").click();
-	cy.readFile('cypress/data/example-doc.txt').then((text) => {
-		// select file
-		cy.get('#upload-doc-input').selectFile(
-			{
-				contents: Cypress.Buffer.from(text + Date.now()),
-				fileName: `document-test-initial-${suffix}.txt`,
-				mimeType: 'text/plain',
-				lastModified: Date.now()
-			},
-			{
-				force: true
-			}
-		);
-		// open tag input
-		cy.get("button[aria-label='Add Tag']").click();
-		cy.get("input[placeholder='Add a tag']").type('cypress-test');
-		cy.get("button[aria-label='Save Tag']").click();
-
-		// submit to upload
-		cy.get("button[type='submit']").click();
-
-		// wait for upload to finish
-		cy.get('button').contains('#cypress-test').should('exist');
-		cy.get('div').contains(`document-test-initial-${suffix}.txt`).should('exist');
-	});
-});
-
-Cypress.Commands.add('deleteTestDocument', (suffix: any) => {
-	cy.loginAdmin();
-	cy.visit('/workspace/documents');
-	// clean up uploaded documents
-	cy.get('div')
-		.contains(`document-test-initial-${suffix}.txt`)
-		.find("button[aria-label='Delete Doc']")
-		.click();
-});
-
 before(() => {
 	cy.registerAdmin();
 });

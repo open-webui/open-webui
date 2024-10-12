@@ -302,6 +302,7 @@ __builtins__.input = input`);
 				<SvgPanZoom
 					className=" border border-gray-50 dark:border-gray-850 rounded-lg max-h-fit overflow-hidden"
 					svg={mermaidHtml}
+					content={_token.text}
 				/>
 			{:else}
 				<pre class="mermaid">{code}</pre>
