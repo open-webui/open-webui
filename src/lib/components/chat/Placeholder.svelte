@@ -7,7 +7,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, user, models as _models, temporaryChatEnabled } from '$lib/stores';
+	import { config, user, models as _models, temporaryChatEnabled, type Prompt } from '$lib/stores';
 	import { sanitizeResponseContent, findWordIndices } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -26,6 +26,7 @@
 	export let autoScroll = false;
 
 	export let atSelectedModel: Model | undefined;
+	export let atSelectedPrompt: Prompt | undefined;
 	export let selectedModels: [''];
 
 	export let history;
@@ -199,6 +200,7 @@
 						bind:selectedToolIds
 						bind:webSearchEnabled
 						bind:atSelectedModel
+						bind:atSelectedPrompt
 						{availableToolIds}
 						{transparentBackground}
 						{stopResponse}

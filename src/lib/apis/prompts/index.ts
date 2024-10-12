@@ -5,7 +5,7 @@ export const createNewPrompt = async (
 	command: string,
 	title: string,
 	content: string,
-	attached: boolean
+	behavior: string
 ) => {
 	let error = null;
 
@@ -20,7 +20,7 @@ export const createNewPrompt = async (
 			command: `/${command}`,
 			title: title,
 			content: content,
-			attached: attached
+			behavior: behavior
 		})
 	})
 		.then(async (res) => {
@@ -108,7 +108,7 @@ export const updatePromptByCommand = async (
 	command: string,
 	title: string,
 	content: string,
-	attached: boolean
+	behavior: string
 ) => {
 	let error = null;
 
@@ -123,7 +123,7 @@ export const updatePromptByCommand = async (
 			command: `/${command}`,
 			title: title,
 			content: content,
-			attached: attached
+			behavior: behavior
 		})
 	})
 		.then(async (res) => {

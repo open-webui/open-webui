@@ -214,10 +214,11 @@
 	const handleSubmit = () => {
 		let inputPrompt = prompt;
 		if (atSelectedPrompt) {
-			inputPrompt = `${atSelectedPrompt.content}
-			${prompt}`;
+			inputPrompt = [atSelectedPrompt.content, prompt].join('\n');
 
-			atSelectedPrompt = undefined;
+			if (atSelectedPrompt.behavior === 'once-pinned') {
+				atSelectedPrompt = undefined;
+			}
 		}
 
 		dispatch('submit', {

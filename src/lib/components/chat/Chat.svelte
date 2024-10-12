@@ -2193,6 +2193,7 @@
 								bind:selectedToolIds
 								bind:webSearchEnabled
 								bind:atSelectedModel
+								bind:atSelectedPrompt
 								availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
 									const model = $models.find((m) => m.id === e);
 									if (model?.info?.meta?.toolIds ?? false) {

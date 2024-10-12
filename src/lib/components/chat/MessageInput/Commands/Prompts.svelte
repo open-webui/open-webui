@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { prompts } from '$lib/stores';
+	import { prompts, type Prompt } from '$lib/stores';
 	import {
 		findWordIndices,
 		getUserPosition,
@@ -39,8 +39,8 @@
 		selectedPromptIdx = Math.min(selectedPromptIdx + 1, filteredPrompts.length - 1);
 	};
 
-	const confirmPrompt = async (command) => {
-		let attached = command.attached;
+	const confirmPrompt = async (command: Prompt) => {
+		let behavior = command.behavior;
 		let text = command.content;
 
 		if (command.content.includes('{{CLIPBOARD}}')) {
@@ -110,7 +110,7 @@
 			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
 		}
 
-		if (attached) {
+		if (behavior !== 'inline') {
 			dispatch('select', command);
 
 			if (prompt.startsWith('/')) {

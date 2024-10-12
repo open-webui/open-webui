@@ -147,12 +147,14 @@ type TitleSettings = {
 	prompt?: string;
 };
 
+export type PromptBehavior = 'inline' | 'once-pinned' | 'sticky';
+
 export type Prompt = {
 	command: string;
 	user_id: string;
 	title: string;
 	content: string;
-	attached: boolean;
+	behavior: PromptBehavior;
 	timestamp: number;
 };
 
