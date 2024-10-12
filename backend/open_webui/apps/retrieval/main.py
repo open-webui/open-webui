@@ -15,7 +15,7 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, sta
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from open_webui.storage.provider import StorageProvider
+from open_webui.storage.provider import storage
 from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 
 # Document loaders
@@ -114,7 +114,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 app = FastAPI()
-storage = StorageProvider()
+#storage = StorageProvider()
 
 app.state.config = AppConfig()
 

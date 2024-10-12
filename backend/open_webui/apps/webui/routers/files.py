@@ -19,7 +19,7 @@ from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
 
-from open_webui.storage.provider import StorageProvider
+from open_webui.storage.provider import storage
 from open_webui.utils.utils import get_admin_user, get_verified_user
 
 log = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
 router = APIRouter()
-storage = StorageProvider()
+#storage = StorageProvider()
 ############################
 # Upload File
 ############################

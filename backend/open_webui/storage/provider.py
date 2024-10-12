@@ -12,15 +12,7 @@ from open_webui.apps.webui.models.files import (
 )
 from typing import Optional
 LOCAL_UPLOAD_DIR = UPLOAD_DIR
-app = FastAPI()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-app.state.config = AppConfig()
+
 class StorageProvider:
     def __init__(self):
         if STORAGE_PROVIDER == None:
@@ -123,3 +115,4 @@ class StorageProvider:
         return Files.update_file_data_by_id(id,hash)
     def update_file_metadata_by_id(self, id: str, meta: dict) -> Optional[FileModel]:
         return Files.update_file_metadata_by_id(id,meta)
+storage = StorageProvider()
