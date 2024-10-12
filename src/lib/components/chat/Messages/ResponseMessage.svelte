@@ -35,6 +35,7 @@
 	import Markdown from './Markdown.svelte';
 	import Error from './Error.svelte';
 	import Citations from './Citations.svelte';
+	import CodeExecutions from './CodeExecutions.svelte';
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -64,6 +65,17 @@
 		done: boolean;
 		error?: boolean | { content: string };
 		citations?: string[];
+		code_executions?: {
+			uuid: string;
+			name: string;
+			code: string;
+			language?: string;
+			result?: {
+				error?: string;
+				output?: string;
+				files?: { name: string; url: string }[];
+			};
+		}[];
 		info?: {
 			openai?: boolean;
 			prompt_tokens?: number;
@@ -515,6 +527,9 @@
 
 								{#if message.citations}
 									<Citations citations={message.citations} />
+								{/if}
+								{#if message.code_executions}
+									<CodeExecutions code_executions={message.code_executions} />
 								{/if}
 							</div>
 						{/if}

@@ -23,6 +23,7 @@
 	export let token;
 	export let lang = '';
 	export let code = '';
+	export let allow_execution = true;
 
 	let _code = '';
 	$: if (code) {
@@ -319,7 +320,7 @@ __builtins__.input = input`);
 					{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
 						{#if executing}
 							<div class="run-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
-						{:else}
+						{:else if allow_execution}
 							<button
 								class="run-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
 								on:click={async () => {
