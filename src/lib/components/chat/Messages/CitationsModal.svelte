@@ -11,18 +11,19 @@
 	let mergedDocuments = [];
 
 	function calculatePercentage(distance) {
-		return Math.max(0, Math.min(100, (1 - distance / 2) * 100));
+		if (distance < 0) return 100;
+		if (distance > 1) return 0;
+		return Math.round((1 - distance) * 100);
 	}
 
-	function getRelevanceColor(percentage) {
-		if (percentage >= 80)
-			return 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200';
-		if (percentage >= 60)
-			return 'bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200';
-		if (percentage >= 40)
-			return 'bg-orange-200 dark:bg-orange-800 text-orange-800 dark:text-orange-200';
-		return 'bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200';
+	function shouldShowPercentage(documents) {
+		const validDistances = documents.filter(
+			(d) => d.distance !== undefined && d.distance >= 0 && d.distance <= 1
+		);
+		return validDistances.length >= 2;
 	}
+
+	$: showPercentage = shouldShowPercentage(mergedDocuments);
 
 	$: if (citation) {
 		mergedDocuments = citation.document?.map((c, i) => {
@@ -104,15 +105,23 @@
 								<div class="text-sm font-medium dark:text-gray-300 mt-2">
 									{$i18n.t('Relevance')}
 								</div>
-								{@const percentage = calculatePercentage(document.distance)}
-								<div class="text-sm my-1 dark:text-gray-400 flex items-center gap-2">
-									<span class={`px-1 rounded font-medium ${getRelevanceColor(percentage)}`}>
-										{percentage.toFixed(0)}%
-									</span>
-									<span class="text-gray-500 dark:text-gray-500"
-										>({document.distance.toFixed(4)})</span
-									>
-								</div>
+								{#if showPercentage}
+									{@const percentage = calculatePercentage(document.distance)}
+									<div class="text-sm my-1 dark:text-gray-400 flex items-center gap-2">
+										<span class={`px-1 rounded font-medium ${getRelevanceColor(percentage)}`}>
+											{percentage}%
+										</span>
+										<span class="text-gray-500 dark:text-gray-500"
+											>({document.distance.toFixed(4)})</span
+										>
+									</div>
+								{:else}
+									<div class="text-sm my-1 dark:text-gray-400 flex items-center gap-2">
+										<span class="text-gray-500 dark:text-gray-500">
+											{document.distance.toFixed(4)}
+										</span>
+									</div>
+								{/if}
 							{/if}
 						{:else}
 							<div class="text-sm dark:text-gray-400">
