@@ -55,7 +55,6 @@
 				files = [
 					...files,
 					{
-						type: e?.detail?.meta?.document ? 'file' : 'collection',
 						...e.detail,
 						status: 'processed'
 					}
