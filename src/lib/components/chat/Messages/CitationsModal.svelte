@@ -7,23 +7,25 @@
 
 	export let show = false;
 	export let citation;
+	export let showPercentage = false;
 
 	let mergedDocuments = [];
 
-	function calculatePercentage(distance) {
+	function calculatePercentage(distance: number) {
 		if (distance < 0) return 100;
 		if (distance > 1) return 0;
-		return Math.round((1 - distance) * 100);
+		return Math.round((1 - distance) * 10000) / 100;
 	}
 
-	function shouldShowPercentage(documents) {
-		const validDistances = documents.filter(
-			(d) => d.distance !== undefined && d.distance >= 0 && d.distance <= 1
-		);
-		return validDistances.length >= 2;
+	function getRelevanceColor(percentage: number) {
+		if (percentage >= 80)
+			return 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200';
+		if (percentage >= 60)
+			return 'bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200';
+		if (percentage >= 40)
+			return 'bg-orange-200 dark:bg-orange-800 text-orange-800 dark:text-orange-200';
+		return 'bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200';
 	}
-
-	$: showPercentage = shouldShowPercentage(mergedDocuments);
 
 	$: if (citation) {
 		mergedDocuments = citation.document?.map((c, i) => {
@@ -79,7 +81,7 @@
 							<Tooltip
 								content={$i18n.t('Open file')}
 								placement="left"
-								tippyOptions={{ duration: [500, 0], animation: 'perspective' }}
+								tippyOptions={{ duration: [500, 0] }}
 							>
 								<div class="text-sm dark:text-gray-400 flex items-center gap-2">
 									<a
@@ -105,23 +107,31 @@
 								<div class="text-sm font-medium dark:text-gray-300 mt-2">
 									{$i18n.t('Relevance')}
 								</div>
-								{#if showPercentage}
-									{@const percentage = calculatePercentage(document.distance)}
+								<Tooltip
+									content={$i18n.t('Semantic distance to query from vector store')}
+									placement="left"
+									tippyOptions={{ duration: [500, 0] }}
+								>
 									<div class="text-sm my-1 dark:text-gray-400 flex items-center gap-2">
-										<span class={`px-1 rounded font-medium ${getRelevanceColor(percentage)}`}>
-											{percentage}%
-										</span>
-										<span class="text-gray-500 dark:text-gray-500"
-											>({document.distance.toFixed(4)})</span
-										>
+										{#if showPercentage}
+											{@const percentage = calculatePercentage(document.distance)}
+											<span class={`px-1 rounded font-medium ${getRelevanceColor(percentage)}`}>
+												{percentage.toFixed(2)}%
+											</span>
+											<span class="text-gray-500 dark:text-gray-500">
+												({document.distance.toFixed(4)})
+											</span>
+										{:else}
+											<span class="text-gray-500 dark:text-gray-500">
+												{document.distance.toFixed(4)}
+											</span>
+										{/if}
 									</div>
-								{:else}
-									<div class="text-sm my-1 dark:text-gray-400 flex items-center gap-2">
-										<span class="text-gray-500 dark:text-gray-500">
-											{document.distance.toFixed(4)}
-										</span>
-									</div>
-								{/if}
+								</Tooltip>
+							{:else}
+								<div class="text-sm dark:text-gray-400">
+									{$i18n.t('No source available')}
+								</div>
 							{/if}
 						{:else}
 							<div class="text-sm dark:text-gray-400">
