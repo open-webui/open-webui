@@ -743,7 +743,6 @@
 
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
 		let _responses = [];
-		console.log('atSelectedPrompt', atSelectedPrompt);
 		console.log('submitPrompt', $chatId);
 		const messages = createMessagesList(history.currentId);
 

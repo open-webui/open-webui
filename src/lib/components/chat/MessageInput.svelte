@@ -220,7 +220,6 @@
 			atSelectedPrompt = undefined;
 		}
 
-		console.log('submit-item', inputPrompt);
 		dispatch('submit', {
 			prompt: inputPrompt,
 			selectedPromptCommand: atSelectedPrompt
