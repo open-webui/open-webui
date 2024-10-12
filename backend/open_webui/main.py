@@ -470,7 +470,7 @@ async def handle_streaming_response(request: Request, response: Response,
         try:
             while True:
                 peek = await generator.__anext__()
-                if peek in (b'\n', b'data: [DONE]'):
+                if peek in (b'\n', b'data: [DONE]\n'):
                     yield peek
                     continue
                 peek_json = extract_json(peek)
@@ -486,7 +486,6 @@ async def handle_streaming_response(request: Request, response: Response,
                 fill_with_delta(tool_calls[current_index], peek_json)
 
                 async for data in generator:
-                    log.debug(f"smonux 24 {data=}")
                     if data in (b'\n', b'data: [DONE]\n'):
                         continue
                     delta = extract_json(data)
@@ -530,6 +529,8 @@ async def handle_streaming_response(request: Request, response: Response,
                 response = await generate_chat_completions(form_data = body, user = user )
                 generator = response.body_iterator.__aiter__()
 
+        except StopAsyncIteration as sie:
+            pass
         except Exception as e:
             log.exception(f"Error: {e}")
 
@@ -828,7 +829,6 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
         if len(citations) > 0:
             data_items.append({"citations": citations})
 
-        log.debug("smonux 10")
         update_body_request(request, body)
         first_response = await call_next(request)
 
