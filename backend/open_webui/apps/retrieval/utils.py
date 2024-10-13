@@ -388,8 +388,21 @@ def get_rag_context(
     for context in relevant_contexts:
         try:
             if "documents" in context:
+                file_names = list(
+                    set(
+                        [
+                            metadata["name"]
+                            for metadata in context["metadatas"][0]
+                            if metadata is not None and "name" in metadata
+                        ]
+                    )
+                )
+
                 contexts.append(
-                    "\n\n".join(
+                    (", ".join(file_names) + ":\n\n")
+                    if file_names
+                    else ""
+                    + "\n\n".join(
                         [text for text in context["documents"][0] if text is not None]
                     )
                 )
@@ -405,6 +418,7 @@ def get_rag_context(
         except Exception as e:
             log.exception(e)
 
+    print(contexts, citations)
     return contexts, citations
 
 
