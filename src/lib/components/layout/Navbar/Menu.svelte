@@ -24,6 +24,7 @@
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
+	import { getChatById } from '$lib/apis/chats';
 
 	const i18n = getContext('i18n');
 
@@ -81,6 +82,9 @@
 	};
 
 	const downloadJSONExport = async () => {
+		if (chat.id) {
+			chat = await getChatById(localStorage.token, chat.id);
+		}
 		let blob = new Blob([JSON.stringify([chat])], {
 			type: 'application/json'
 		});

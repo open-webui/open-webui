@@ -34,7 +34,8 @@
 		archiveChatById,
 		cloneChatById,
 		getChatListBySearchText,
-		createNewChat
+		createNewChat,
+		getPinnedChatList
 	} from '$lib/apis/chats';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -46,6 +47,7 @@
 	import Loader from '../common/Loader.svelte';
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
+	import { select } from 'd3-selection';
 
 	const BREAKPOINT = 768;
 
@@ -135,7 +137,7 @@
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 
-			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
+			await pinnedChats.set(await getPinnedChatList(localStorage.token));
 		}
 	};
 
@@ -163,6 +165,20 @@
 			};
 
 			reader.readAsText(file);
+		}
+	};
+
+	const tagEventHandler = async (type, tagName, chatId) => {
+		console.log(type, tagName, chatId);
+		if (type === 'delete') {
+			if (selectedTagName === tagName) {
+				if ($tags.map((t) => t.name).includes(tagName)) {
+					await chats.set(await getChatListByTagName(localStorage.token, tagName));
+				} else {
+					selectedTagName = null;
+					await initChatList();
+				}
+			}
 		}
 	};
 
@@ -255,7 +271,7 @@
 			localStorage.sidebar = value;
 		});
 
-		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
+		await pinnedChats.set(await getPinnedChatList(localStorage.token));
 		await initChatList();
 
 		window.addEventListener('keydown', onKeyDown);
@@ -495,8 +511,8 @@
 				</div>
 			</div>
 
-			{#if $tags.filter((t) => t.name !== 'pinned').length > 0}
-				<div class="px-3.5 mb-1 flex gap-0.5 flex-wrap">
+			{#if $tags.length > 0}
+				<div class="px-3.5 mb-2.5 flex gap-0.5 flex-wrap">
 					<button
 						class="px-2.5 py-[1px] text-xs transition {selectedTagName === null
 							? 'bg-gray-100 dark:bg-gray-900'
@@ -508,7 +524,7 @@
 					>
 						{$i18n.t('all')}
 					</button>
-					{#each $tags.filter((t) => t.name !== 'pinned') as tag}
+					{#each $tags as tag}
 						<button
 							class="px-2.5 py-[1px] text-xs transition {selectedTagName === tag.name
 								? 'bg-gray-100 dark:bg-gray-900'
@@ -516,14 +532,15 @@
 							on:click={async () => {
 								selectedTagName = tag.name;
 								scrollPaginationEnabled.set(false);
-								let chatIds = await getChatListByTagName(localStorage.token, tag.name);
-								if (chatIds.length === 0) {
-									await tags.set(await getAllChatTags(localStorage.token));
 
+								let taggedChatList = await getChatListByTagName(localStorage.token, tag.name);
+								if (taggedChatList.length === 0) {
+									await tags.set(await getAllChatTags(localStorage.token));
 									// if the tag we deleted is no longer a valid tag, return to main chat list view
 									await initChatList();
+								} else {
+									await chats.set(taggedChatList);
 								}
-								await chats.set(chatIds);
 								chatListLoading = false;
 							}}
 						>
@@ -534,7 +551,7 @@
 			{/if}
 
 			{#if !search && $pinnedChats.length > 0}
-				<div class="pl-2 py-2 flex flex-col space-y-1">
+				<div class="pl-2 pb-2 flex flex-col space-y-1">
 					<div class="">
 						<div class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium pb-1.5">
 							{$i18n.t('Pinned')}
@@ -559,13 +576,17 @@
 										showDeleteConfirm = true;
 									}
 								}}
+								on:tag={(e) => {
+									const { type, name } = e.detail;
+									tagEventHandler(type, name, chat.id);
+								}}
 							/>
 						{/each}
 					</div>
 				</div>
 			{/if}
 
-			<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden">
+			<div class="pl-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden">
 				{#if $chats}
 					{#each $chats as chat, idx}
 						{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
@@ -613,6 +634,10 @@
 									deleteChat = chat;
 									showDeleteConfirm = true;
 								}
+							}}
+							on:tag={(e) => {
+								const { type, name } = e.detail;
+								tagEventHandler(type, name, chat.id);
 							}}
 						/>
 					{/each}

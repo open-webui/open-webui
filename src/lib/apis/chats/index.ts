@@ -199,7 +199,10 @@ export const getChatListBySearchText = async (token: string, text: string, page:
 		throw error;
 	}
 
-	return res;
+	return res.map((chat) => ({
+		...chat,
+		time_range: getTimeRange(chat.updated_at)
+	}));
 };
 
 export const getAllArchivedChats = async (token: string) => {
@@ -267,7 +270,7 @@ export const getAllUserChats = async (token: string) => {
 export const getAllChatTags = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/tags/all`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/all/tags`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -293,6 +296,40 @@ export const getAllChatTags = async (token: string) => {
 	}
 
 	return res;
+};
+
+export const getPinnedChatList = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/pinned`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res.map((chat) => ({
+		...chat,
+		time_range: getTimeRange(chat.updated_at)
+	}));
 };
 
 export const getChatListByTagName = async (token: string = '', tagName: string) => {
@@ -396,11 +433,87 @@ export const getChatByShareId = async (token: string, share_id: string) => {
 	return res;
 };
 
+export const getChatPinnedStatusById = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/pinned`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const toggleChatPinnedStatusById = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/pin`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const cloneChatById = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/clone`, {
-		method: 'GET',
+		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
@@ -470,7 +583,7 @@ export const archiveChatById = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/archive`, {
-		method: 'GET',
+		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
@@ -640,8 +753,7 @@ export const addTagById = async (token: string, id: string, tagName: string) => 
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			tag_name: tagName,
-			chat_id: id
+			name: tagName
 		})
 	})
 		.then(async (res) => {
@@ -676,8 +788,7 @@ export const deleteTagById = async (token: string, id: string, tagName: string) 
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			tag_name: tagName,
-			chat_id: id
+			name: tagName
 		})
 	})
 		.then(async (res) => {
