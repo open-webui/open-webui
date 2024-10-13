@@ -507,8 +507,23 @@ if CUSTOM_NAME:
 
 
 ####################################
+# STORAGE PROVIDER
+####################################
+
+STORAGE_PROVIDER = os.environ.get("STORAGE_PROVIDER", "local")   #local or s3
+
+STORAGE_SECRET_ID = os.environ.get("STORAGE_SECRET_ID", None)
+STORAGE_SECRET_KEY = os.environ.get("STORAGE_SECRET_KEY", None)
+STORAGE_REGION = os.environ.get("STORAGE_REGION", None)
+STORAGE_BUCKET_NAME = os.environ.get("STORAGE_BUCKET_NAME", None)
+STORAGE_ENDPOINT = os.environ.get("STORAGE_ENDPOINT", None)
+
+
+
+####################################
 # File Upload DIR
 ####################################
+
 
 UPLOAD_DIR = f"{DATA_DIR}/uploads"
 Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
