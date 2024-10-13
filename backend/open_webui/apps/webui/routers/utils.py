@@ -56,8 +56,17 @@ class ChatForm(BaseModel):
 async def download_chat_as_pdf(
     form_data: ChatTitleMessagesForm,
 ):
-    response = PDFGenerator(form_data).generate_chat_pdf()
-    return response
+    try:
+        pdf_bytes = PDFGenerator(form_data).generate_chat_pdf()
+
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment;filename=chat.pdf"},
+        )
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/db/download")
