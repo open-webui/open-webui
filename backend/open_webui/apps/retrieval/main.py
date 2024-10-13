@@ -171,9 +171,9 @@ def update_embedding_model(
     auto_update: bool = False,
 ):
     if embedding_model and app.state.config.RAG_EMBEDDING_ENGINE == "":
-        import sentence_transformers
+        from sentence_transformers import SentenceTransformer
 
-        app.state.sentence_transformer_ef = sentence_transformers.SentenceTransformer(
+        app.state.sentence_transformer_ef = SentenceTransformer(
             get_model_path(embedding_model, auto_update),
             device=DEVICE_TYPE,
             trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,

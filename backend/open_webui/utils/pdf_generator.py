@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Dict, Any, List
 
 from markdown import markdown
-from xhtml2pdf import pisa
 
 import site
 from fpdf import FPDF
@@ -17,12 +16,7 @@ class PDFGenerator:
     """
     Description:
     The `PDFGenerator` class is designed to create PDF documents from chat messages.
-    The process involves transforming markdown content into HTML and then into a PDF format,
-    which can be easily returned as a response to the routes.
-
-    It depends on xhtml2pdf for converting HTML to PDF (more details at https://github.com/xhtml2pdf/xhtml2pdf).
-    I found xhtml2pdf issues when rendering list html tag, see https://github.com/xhtml2pdf/xhtml2pdf/issues/550
-    and https://github.com/xhtml2pdf/xhtml2pdf/issues/756.
+    The process involves transforming markdown content into HTML and then into a PDF format
 
     Attributes:
     - `form_data`: An instance of `ChatTitleMessagesForm` containing title and messages.
@@ -75,25 +69,6 @@ class PDFGenerator:
           """
         return html_message
 
-    def _fetch_resources(self, uri: str, rel: str) -> str:
-
-        print(str(STATIC_DIR / uri))
-        return str(STATIC_DIR / uri)
-
-    def _create_pdf_from_html(self) -> bytes:
-        """Convert HTML content to PDF and return the bytes."""
-        pdf_buffer = BytesIO()
-        pisa_status = pisa.CreatePDF(
-            src=self.html_body.encode("UTF-8"),
-            dest=pdf_buffer,
-            encoding="UTF-8",
-            link_callback=self._fetch_resources,
-        )
-        if pisa_status.err:
-            raise RuntimeError("Error generating PDF")
-
-        return pdf_buffer.getvalue()
-
     def _generate_html_body(self) -> str:
         """Generate the full HTML body for the PDF."""
         return f"""
@@ -101,9 +76,6 @@ class PDFGenerator:
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style type="text/css">
-                    {self.css}
-                </style>
             </head>
             <body>
                 <div class="container"> 
@@ -148,22 +120,16 @@ class PDFGenerator:
 
             pdf.set_auto_page_break(auto=True, margin=15)
 
-            # Adjust the effective page width for multi_cell
-            effective_page_width = (
-                pdf.w - 2 * pdf.l_margin - 10
-            )  # Subtracted an additional 10 for extra padding
+            # Build HTML messages
+            messages_html_list: List[str] = [
+                self._build_html_message(msg) for msg in self.form_data.messages
+            ]
+            self.messages_html = "<div>" + "".join(messages_html_list) + "</div>"
 
-            # Add chat messages
-            for message in self.form_data.messages:
-                role = message["role"]
-                content = message["content"]
-                pdf.set_font("NotoSans", "B", size=14)  # Bold for the role
-                pdf.multi_cell(effective_page_width, 10, f"{role.upper()}", 0, "L")
-                pdf.ln(1)  # Extra space between messages
+            # Generate full HTML body
+            self.html_body = self._generate_html_body()
 
-                pdf.set_font("NotoSans", size=10)  # Regular for content
-                pdf.multi_cell(effective_page_width, 6, content, 0, "L")
-                pdf.ln(1.5)  # Extra space between messages
+            pdf.write_html(self.html_body)
 
             # Save the pdf with name .pdf
             pdf_bytes = pdf.output()
