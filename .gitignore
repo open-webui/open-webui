@@ -307,3 +307,5 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
+
+npm_rebuild.sh
