@@ -698,7 +698,13 @@ def save_docs_to_vector_db(
                 "id": str(uuid.uuid4()),
                 "text": text,
                 "vector": embeddings[idx],
-                "metadata": metadatas[idx],
+                "metadata": {
+                    **metadatas[idx],
+                    "embedding": {
+                        "engine": app.state.config.RAG_EMBEDDING_ENGINE,
+                        "model": app.state.config.RAG_EMBEDDING_MODEL,
+                    },
+                },
             }
             for idx, text in enumerate(texts)
         ]
