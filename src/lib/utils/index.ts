@@ -1,33 +1,43 @@
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
-import { getOllamaModels } from '$lib/apis/ollama';
-import { getOpenAIModels } from '$lib/apis/openai';
-import { getLiteLLMModels } from '$lib/apis/litellm';
 
-export const getModels = async (token: string) => {
-	let models = await Promise.all([
-		getOllamaModels(token).catch((error) => {
-			console.log(error);
-			return null;
-		}),
-		getOpenAIModels(token).catch((error) => {
-			console.log(error);
-			return null;
-		}),
-		getLiteLLMModels(token).catch((error) => {
-			console.log(error);
-			return null;
-		})
-	]);
-
-	models = models.filter((models) => models).reduce((a, e, i, arr) => a.concat(e), []);
-
-	return models;
-};
+import { WEBUI_BASE_URL } from '$lib/constants';
+import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
 //////////////////////////
 // Helper functions
 //////////////////////////
+
+export const replaceTokens = (content, char, user) => {
+	const charToken = /{{char}}/gi;
+	const userToken = /{{user}}/gi;
+	const videoIdToken = /{{VIDEO_FILE_ID_([a-f0-9-]+)}}/gi; // Regex to capture the video ID
+	const htmlIdToken = /{{HTML_FILE_ID_([a-f0-9-]+)}}/gi; // Regex to capture the HTML ID
+
+	// Replace {{char}} if char is provided
+	if (char !== undefined && char !== null) {
+		content = content.replace(charToken, char);
+	}
+
+	// Replace {{user}} if user is provided
+	if (user !== undefined && user !== null) {
+		content = content.replace(userToken, user);
+	}
+
+	// Replace video ID tags with corresponding <video> elements
+	content = content.replace(videoIdToken, (match, fileId) => {
+		const videoUrl = `${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`;
+		return `<video src="${videoUrl}" controls></video>`;
+	});
+
+	// Replace HTML ID tags with corresponding HTML content
+	content = content.replace(htmlIdToken, (match, fileId) => {
+		const htmlUrl = `${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`;
+		return `<iframe src="${htmlUrl}" width="100%" frameborder="0" onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"></iframe>`;
+	});
+
+	return content;
+};
 
 export const sanitizeResponseContent = (content: string) => {
 	return content
@@ -36,12 +46,22 @@ export const sanitizeResponseContent = (content: string) => {
 		.replace(/<$/, '')
 		.replaceAll(/<\|[a-z]+\|>/g, ' ')
 		.replaceAll('<', '&lt;')
+		.replaceAll('>', '&gt;')
 		.trim();
 };
 
-export const revertSanitizedResponseContent = (content: string) => {
-	return content.replaceAll('&lt;', '<');
+export const processResponseContent = (content: string) => {
+	return content.trim();
 };
+
+export const revertSanitizedResponseContent = (content: string) => {
+	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>');
+};
+
+export function unescapeHtml(html: string) {
+	const doc = new DOMParser().parseFromString(html, 'text/html');
+	return doc.documentElement.textContent;
+}
 
 export const capitalizeFirstLetter = (string) => {
 	return string.charAt(0).toUpperCase() + string.slice(1);
@@ -174,7 +194,7 @@ export const generateInitialsImage = (name) => {
 	const initials =
 		sanitizedName.length > 0
 			? sanitizedName[0] +
-			  (sanitizedName.split(' ').length > 1
+				(sanitizedName.split(' ').length > 1
 					? sanitizedName[sanitizedName.lastIndexOf(' ') + 1]
 					: '')
 			: '';
@@ -233,7 +253,7 @@ export const compareVersion = (latest, current) => {
 				numeric: true,
 				sensitivity: 'case',
 				caseFirst: 'upper'
-		  }) < 0;
+			}) < 0;
 };
 
 export const findWordIndices = (text) => {
@@ -250,6 +270,23 @@ export const findWordIndices = (text) => {
 	}
 
 	return matches;
+};
+
+export const removeLastWordFromString = (inputString, wordString) => {
+	// Split the string into an array of words
+	const words = inputString.split(' ');
+
+	if (words.at(-1) === wordString) {
+		words.pop();
+	}
+
+	// Join the remaining words back into a string
+	let resultString = words.join(' ');
+	if (resultString !== '') {
+		resultString += ' ';
+	}
+
+	return resultString;
 };
 
 export const removeFirstHashWord = (inputString) => {
@@ -325,6 +362,29 @@ export const getImportOrigin = (_chats) => {
 	return 'webui';
 };
 
+export const getUserPosition = async (raw = false) => {
+	// Get the user's location using the Geolocation API
+	const position = await new Promise((resolve, reject) => {
+		navigator.geolocation.getCurrentPosition(resolve, reject);
+	}).catch((error) => {
+		console.error('Error getting user location:', error);
+		throw error;
+	});
+
+	if (!position) {
+		return 'Location not available';
+	}
+
+	// Extract the latitude and longitude from the position
+	const { latitude, longitude } = position.coords;
+
+	if (raw) {
+		return { latitude, longitude };
+	} else {
+		return `${latitude.toFixed(3)}, ${longitude.toFixed(3)} (lat, long)`;
+	}
+};
+
 const convertOpenAIMessages = (convo) => {
 	// Parse OpenAI chat messages and create chat dictionary for creating new chats
 	const mapping = convo['mapping'];
@@ -332,7 +392,7 @@ const convertOpenAIMessages = (convo) => {
 	let currentId = '';
 	let lastId = null;
 
-	for (let message_id in mapping) {
+	for (const message_id in mapping) {
 		const message = mapping[message_id];
 		currentId = message_id;
 		try {
@@ -366,7 +426,7 @@ const convertOpenAIMessages = (convo) => {
 		}
 	}
 
-	let history = {};
+	const history: Record<PropertyKey, (typeof messages)[number]> = {};
 	messages.forEach((obj) => (history[obj.id] = obj));
 
 	const chat = {
@@ -405,7 +465,7 @@ const validateChat = (chat) => {
 	}
 
 	// Every message's content should be a string
-	for (let message of messages) {
+	for (const message of messages) {
 		if (typeof message.content !== 'string') {
 			return false;
 		}
@@ -418,7 +478,7 @@ export const convertOpenAIChats = (_chats) => {
 	// Create a list of dictionaries with each conversation from import
 	const chats = [];
 	let failed = 0;
-	for (let convo of _chats) {
+	for (const convo of _chats) {
 		const chat = convertOpenAIMessages(convo);
 
 		if (validateChat(chat)) {
@@ -437,7 +497,7 @@ export const convertOpenAIChats = (_chats) => {
 	return chats;
 };
 
-export const isValidHttpUrl = (string) => {
+export const isValidHttpUrl = (string: string) => {
 	let url;
 
 	try {
@@ -449,7 +509,7 @@ export const isValidHttpUrl = (string) => {
 	return url.protocol === 'http:' || url.protocol === 'https:';
 };
 
-export const removeEmojis = (str) => {
+export const removeEmojis = (str: string) => {
 	// Regular expression to match emojis
 	const emojiRegex = /[\uD800-\uDBFF][\uDC00-\uDFFF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDE4F]/g;
 
@@ -457,19 +517,173 @@ export const removeEmojis = (str) => {
 	return str.replace(emojiRegex, '');
 };
 
-export const extractSentences = (text) => {
-	// Split the paragraph into sentences based on common punctuation marks
-	const sentences = text.split(/(?<=[.!?])/);
+export const removeFormattings = (str: string) => {
+	return str.replace(/(\*)(.*?)\1/g, '').replace(/(```)(.*?)\1/gs, '');
+};
 
-	return sentences
-		.map((sentence) => removeEmojis(sentence.trim()))
-		.filter((sentence) => sentence !== '');
+export const cleanText = (content: string) => {
+	return removeFormattings(removeEmojis(content.trim()));
+};
+
+// This regular expression matches code blocks marked by triple backticks
+const codeBlockRegex = /```[\s\S]*?```/g;
+
+export const extractSentences = (text: string) => {
+	const codeBlocks: string[] = [];
+	let index = 0;
+
+	// Temporarily replace code blocks with placeholders and store the blocks separately
+	text = text.replace(codeBlockRegex, (match) => {
+		const placeholder = `\u0000${index}\u0000`; // Use a unique placeholder
+		codeBlocks[index++] = match;
+		return placeholder;
+	});
+
+	// Split the modified text into sentences based on common punctuation marks, avoiding these blocks
+	let sentences = text.split(/(?<=[.!?])\s+/);
+
+	// Restore code blocks and process sentences
+	sentences = sentences.map((sentence) => {
+		// Check if the sentence includes a placeholder for a code block
+		return sentence.replace(/\u0000(\d+)\u0000/g, (_, idx) => codeBlocks[idx]);
+	});
+
+	return sentences.map(cleanText).filter(Boolean);
+};
+
+export const extractParagraphsForAudio = (text: string) => {
+	const codeBlocks: string[] = [];
+	let index = 0;
+
+	// Temporarily replace code blocks with placeholders and store the blocks separately
+	text = text.replace(codeBlockRegex, (match) => {
+		const placeholder = `\u0000${index}\u0000`; // Use a unique placeholder
+		codeBlocks[index++] = match;
+		return placeholder;
+	});
+
+	// Split the modified text into paragraphs based on newlines, avoiding these blocks
+	let paragraphs = text.split(/\n+/);
+
+	// Restore code blocks and process paragraphs
+	paragraphs = paragraphs.map((paragraph) => {
+		// Check if the paragraph includes a placeholder for a code block
+		return paragraph.replace(/\u0000(\d+)\u0000/g, (_, idx) => codeBlocks[idx]);
+	});
+
+	return paragraphs.map(cleanText).filter(Boolean);
+};
+
+export const extractSentencesForAudio = (text: string) => {
+	return extractSentences(text).reduce((mergedTexts, currentText) => {
+		const lastIndex = mergedTexts.length - 1;
+		if (lastIndex >= 0) {
+			const previousText = mergedTexts[lastIndex];
+			const wordCount = previousText.split(/\s+/).length;
+			const charCount = previousText.length;
+			if (wordCount < 4 || charCount < 50) {
+				mergedTexts[lastIndex] = previousText + ' ' + currentText;
+			} else {
+				mergedTexts.push(currentText);
+			}
+		} else {
+			mergedTexts.push(currentText);
+		}
+		return mergedTexts;
+	}, [] as string[]);
+};
+
+export const getMessageContentParts = (content: string, split_on: string = 'punctuation') => {
+	const messageContentParts: string[] = [];
+
+	switch (split_on) {
+		default:
+		case TTS_RESPONSE_SPLIT.PUNCTUATION:
+			messageContentParts.push(...extractSentencesForAudio(content));
+			break;
+		case TTS_RESPONSE_SPLIT.PARAGRAPHS:
+			messageContentParts.push(...extractParagraphsForAudio(content));
+			break;
+		case TTS_RESPONSE_SPLIT.NONE:
+			messageContentParts.push(cleanText(content));
+			break;
+	}
+
+	return messageContentParts;
 };
 
 export const blobToFile = (blob, fileName) => {
 	// Create a new File object from the Blob
 	const file = new File([blob], fileName, { type: blob.type });
 	return file;
+};
+
+/**
+ * @param {string} template - The template string containing placeholders.
+ * @returns {string} The template string with the placeholders replaced by the prompt.
+ */
+export const promptTemplate = (
+	template: string,
+	user_name?: string,
+	user_location?: string
+): string => {
+	// Get the current date
+	const currentDate = new Date();
+
+	// Format the date to YYYY-MM-DD
+	const formattedDate =
+		currentDate.getFullYear() +
+		'-' +
+		String(currentDate.getMonth() + 1).padStart(2, '0') +
+		'-' +
+		String(currentDate.getDate()).padStart(2, '0');
+
+	// Format the time to HH:MM:SS AM/PM
+	const currentTime = currentDate.toLocaleTimeString('en-US', {
+		hour: 'numeric',
+		minute: 'numeric',
+		second: 'numeric',
+		hour12: true
+	});
+
+	// Get the current weekday
+	const currentWeekday = getWeekday();
+
+	// Get the user's timezone
+	const currentTimezone = getUserTimezone();
+
+	// Get the user's language
+	const userLanguage = localStorage.getItem('locale') || 'en-US';
+
+	// Replace {{CURRENT_DATETIME}} in the template with the formatted datetime
+	template = template.replace('{{CURRENT_DATETIME}}', `${formattedDate} ${currentTime}`);
+
+	// Replace {{CURRENT_DATE}} in the template with the formatted date
+	template = template.replace('{{CURRENT_DATE}}', formattedDate);
+
+	// Replace {{CURRENT_TIME}} in the template with the formatted time
+	template = template.replace('{{CURRENT_TIME}}', currentTime);
+
+	// Replace {{CURRENT_WEEKDAY}} in the template with the current weekday
+	template = template.replace('{{CURRENT_WEEKDAY}}', currentWeekday);
+
+	// Replace {{CURRENT_TIMEZONE}} in the template with the user's timezone
+	template = template.replace('{{CURRENT_TIMEZONE}}', currentTimezone);
+
+	// Replace {{USER_LANGUAGE}} in the template with the user's language
+	template = template.replace('{{USER_LANGUAGE}}', userLanguage);
+
+	if (user_name) {
+		// Replace {{USER_NAME}} in the template with the user's name
+		template = template.replace('{{USER_NAME}}', user_name);
+	}
+
+	if (user_location) {
+		// Replace {{USER_LOCATION}} in the template with the current location
+		template = template.replace('{{USER_LOCATION}}', user_location);
+	}
+
+	return template;
 };
 
 /**
@@ -484,8 +698,8 @@ export const blobToFile = (blob, fileName) => {
  * @param {string} prompt - The string to replace the placeholders with.
  * @returns {string} The template string with the placeholders replaced by the prompt.
  */
-export const promptTemplate = (template: string, prompt: string): string => {
-	return template.replace(
+export const titleGenerationTemplate = (template: string, prompt: string): string => {
+	template = template.replace(
 		/{{prompt}}|{{prompt:start:(\d+)}}|{{prompt:end:(\d+)}}|{{prompt:middletruncate:(\d+)}}/g,
 		(match, startLength, endLength, middleLength) => {
 			if (match === '{{prompt}}') {
@@ -505,6 +719,10 @@ export const promptTemplate = (template: string, prompt: string): string => {
 			return '';
 		}
 	);
+
+	template = promptTemplate(template);
+
+	return template;
 };
 
 export const approximateToHumanReadable = (nanoseconds: number) => {
@@ -558,4 +776,119 @@ export const getTimeRange = (timestamp) => {
 	} else {
 		return date.getFullYear().toString();
 	}
+};
+
+/**
+ * Extract frontmatter as a dictionary from the specified content string.
+ * @param content {string} - The content string with potential frontmatter.
+ * @returns {Object} - The extracted frontmatter as a dictionary.
+ */
+export const extractFrontmatter = (content) => {
+	const frontmatter = {};
+	let frontmatterStarted = false;
+	let frontmatterEnded = false;
+	const frontmatterPattern = /^\s*([a-z_]+):\s*(.*)\s*$/i;
+
+	// Split content into lines
+	const lines = content.split('\n');
+
+	// Check if the content starts with triple quotes
+	if (lines[0].trim() !== '"""') {
+		return {};
+	}
+
+	frontmatterStarted = true;
+
+	for (let i = 1; i < lines.length; i++) {
+		const line = lines[i];
+
+		if (line.includes('"""')) {
+			if (frontmatterStarted) {
+				frontmatterEnded = true;
+				break;
+			}
+		}
+
+		if (frontmatterStarted && !frontmatterEnded) {
+			const match = frontmatterPattern.exec(line);
+			if (match) {
+				const [, key, value] = match;
+				frontmatter[key.trim()] = value.trim();
+			}
+		}
+	}
+
+	return frontmatter;
+};
+
+// Function to determine the best matching language
+export const bestMatchingLanguage = (supportedLanguages, preferredLanguages, defaultLocale) => {
+	const languages = supportedLanguages.map((lang) => lang.code);
+
+	const match = preferredLanguages
+		.map((prefLang) => languages.find((lang) => lang.startsWith(prefLang)))
+		.find(Boolean);
+
+	return match || defaultLocale;
+};
+
+// Get the date in the format YYYY-MM-DD
+export const getFormattedDate = () => {
+	const date = new Date();
+	return date.toISOString().split('T')[0];
+};
+
+// Get the time in the format HH:MM:SS
+export const getFormattedTime = () => {
+	const date = new Date();
+	return date.toTimeString().split(' ')[0];
+};
+
+// Get the current date and time in the format YYYY-MM-DD HH:MM:SS
+export const getCurrentDateTime = () => {
+	return `${getFormattedDate()} ${getFormattedTime()}`;
+};
+
+// Get the user's timezone
+export const getUserTimezone = () => {
+	return Intl.DateTimeFormat().resolvedOptions().timeZone;
+};
+
+// Get the weekday
+export const getWeekday = () => {
+	const date = new Date();
+	const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+	return weekdays[date.getDay()];
+};
+
+export const createMessagesList = (history, messageId) => {
+	if (messageId === null) {
+		return [];
+	}
+
+	const message = history.messages[messageId];
+	if (message?.parentId) {
+		return [...createMessagesList(history, message.parentId), message];
+	} else {
+		return [message];
+	}
+};
+
+export const formatFileSize = (size) => {
+	if (size == null) return 'Unknown size';
+	if (typeof size !== 'number' || size < 0) return 'Invalid size';
+	if (size === 0) return '0 B';
+	const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+	let unitIndex = 0;
+
+	while (size >= 1024 && unitIndex < units.length - 1) {
+		size /= 1024;
+		unitIndex++;
+	}
+	return `${size.toFixed(1)} ${units[unitIndex]}`;
+};
+
+export const getLineCount = (text) => {
+	console.log(typeof text);
+	return text ? text.split('\n').length : 0;
 };

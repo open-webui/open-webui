@@ -11,7 +11,7 @@
 	export let addTag: Function;
 </script>
 
-<div class="flex flex-row flex-wrap gap-0.5 line-clamp-1">
+<div class="flex flex-row flex-wrap gap-1 line-clamp-1">
 	<TagList
 		{tags}
 		on:delete={(e) => {

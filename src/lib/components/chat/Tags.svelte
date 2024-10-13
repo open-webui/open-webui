@@ -8,7 +8,13 @@
 		getTagsById,
 		updateChatById
 	} from '$lib/apis/chats';
-	import { tags as _tags, chats } from '$lib/stores';
+	import {
+		tags as _tags,
+		chats,
+		pinnedChats,
+		currentChatPage,
+		scrollPaginationEnabled
+	} from '$lib/stores';
 	import { createEventDispatcher, onMount } from 'svelte';
 
 	const dispatch = createEventDispatcher();
@@ -19,9 +25,11 @@
 	let tags = [];
 
 	const getTags = async () => {
-		return await getTagsById(localStorage.token, chatId).catch(async (error) => {
-			return [];
-		});
+		return (
+			await getTagsById(localStorage.token, chatId).catch(async (error) => {
+				return [];
+			})
+		).filter((tag) => tag.name !== 'pinned');
 	};
 
 	const addTag = async (tagName) => {
@@ -33,6 +41,7 @@
 		});
 
 		_tags.set(await getAllChatTags(localStorage.token));
+		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 	};
 
 	const deleteTag = async (tagName) => {
@@ -43,20 +52,23 @@
 			tags: tags
 		});
 
-		console.log($_tags);
-
 		await _tags.set(await getAllChatTags(localStorage.token));
-
-		console.log($_tags);
-
 		if ($_tags.map((t) => t.name).includes(tagName)) {
-			await chats.set(await getChatListByTagName(localStorage.token, tagName));
+			if (tagName === 'pinned') {
+				await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
+			} else {
+				await chats.set(await getChatListByTagName(localStorage.token, tagName));
+			}
 
 			if ($chats.find((chat) => chat.id === chatId)) {
 				dispatch('close');
 			}
 		} else {
-			await chats.set(await getChatList(localStorage.token));
+			// if the tag we deleted is no longer a valid tag, return to main chat list view
+			currentChatPage.set(1);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
+			await scrollPaginationEnabled.set(true);
 		}
 	};
 

@@ -28,6 +28,7 @@ Examples of unacceptable behavior include:
 - Public or private harassment
 - Publishing others' private information, such as a physical or email address, without their explicit permission
 - **Spamming of any kind**
+- Aggressive sales tactics targeting our community members are strictly prohibited. You can mention your product if it's relevant to the discussion, but under no circumstances should you push it forcefully
 - Other conduct which could reasonably be considered inappropriate in a professional setting
 
 ## Enforcement Responsibilities
@@ -59,6 +60,7 @@ Community leaders will follow these Community Impact Guidelines in determining t
 **Community Impact**: Repeated or severe violations of community standards, including sustained inappropriate behavior, harassment of an individual, or aggression toward or disparagement of classes of individuals.
 
 **Consequence**: A permanent ban from any sort of public interaction within the community.
+
 ## Attribution
 
 This Code of Conduct is adapted from the [Contributor Covenant][homepage],

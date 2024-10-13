@@ -1,0 +1,31 @@
+# This is an overlay that spins up stable-diffusion-webui for integration testing
+# This is not designed to be used in production
+services:
+  stable-diffusion-webui:
+    # Not built for ARM64
+    platform: linux/amd64
+    image: ghcr.io/neggles/sd-webui-docker:latest
+    restart: unless-stopped
+    environment:
+      CLI_ARGS: "--api --use-cpu all --precision full --no-half --skip-torch-cuda-test --ckpt /empty.pt --do-not-download-clip --disable-nan-check --disable-opt-split-attention"
+      PYTHONUNBUFFERED: "1"
+      TERM: "vt100"
+      SD_WEBUI_VARIANT: "default"
+    # Hack to get container working on Apple Silicon
+    # Rosetta creates a conflict ${HOME}/.cache folder
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        export HOME=/root-home
+        rm -rf $${HOME}/.cache
+        /docker/entrypoint.sh python -u webui.py --listen --port $${WEBUI_PORT} --skip-version-check $${CLI_ARGS}
+    volumes:
+      - ./test/test_files/image_gen/sd-empty.pt:/empty.pt
+
+  open-webui:
+    environment:
+      ENABLE_IMAGE_GENERATION: "true"
+      AUTOMATIC1111_BASE_URL: http://stable-diffusion-webui:7860
+      IMAGE_SIZE: "64x64"
+      IMAGE_STEPS: "3"

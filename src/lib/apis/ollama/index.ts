@@ -1,5 +1,71 @@
 import { OLLAMA_API_BASE_URL } from '$lib/constants';
-import { promptTemplate } from '$lib/utils';
+
+export const getOllamaConfig = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/config`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = 'Server connection failed';
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateOllamaConfig = async (token: string = '', enable_ollama_api: boolean) => {
+	let error = null;
+
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/config/update`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			enable_ollama_api: enable_ollama_api
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = 'Server connection failed';
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
 
 export const getOllamaUrls = async (token: string = '') => {
 	let error = null;
@@ -68,10 +134,10 @@ export const updateOllamaUrls = async (token: string = '', urls: string[]) => {
 	return res.OLLAMA_BASE_URLS;
 };
 
-export const getOllamaVersion = async (token: string = '') => {
+export const getOllamaVersion = async (token: string, urlIdx?: number) => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/version`, {
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/version${urlIdx ? `/${urlIdx}` : ''}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -97,7 +163,7 @@ export const getOllamaVersion = async (token: string = '') => {
 		throw error;
 	}
 
-	return res?.version ?? '';
+	return res?.version ?? false;
 };
 
 export const getOllamaModels = async (token: string = '') => {
@@ -134,55 +200,6 @@ export const getOllamaModels = async (token: string = '') => {
 		.sort((a, b) => {
 			return a.name.localeCompare(b.name);
 		});
-};
-
-// TODO: migrate to backend
-export const generateTitle = async (
-	token: string = '',
-	template: string,
-	model: string,
-	prompt: string
-) => {
-	let error = null;
-
-	template = promptTemplate(template, prompt);
-
-	console.log(template);
-
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/generate`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			model: model,
-			prompt: template,
-			stream: false,
-			options: {
-				// Restrict the number of tokens generated to 50
-				num_predict: 50
-			}
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			if ('detail' in err) {
-				error = err.detail;
-			}
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res?.response.replace(/["']/g, '') ?? 'New Chat';
 };
 
 export const generatePrompt = async (token: string = '', model: string, conversation: string) => {
@@ -302,42 +319,29 @@ export const generateChatCompletion = async (token: string = '', body: object) =
 	return [res, controller];
 };
 
-export const cancelOllamaRequest = async (token: string = '', requestId: string) => {
+export const createModel = async (
+	token: string,
+	tagName: string,
+	content: string,
+	urlIdx: string | null = null
+) => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/cancel/${requestId}`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'text/event-stream',
-			Authorization: `Bearer ${token}`
+	const res = await fetch(
+		`${OLLAMA_API_BASE_URL}/api/create${urlIdx !== null ? `/${urlIdx}` : ''}`,
+		{
+			method: 'POST',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			},
+			body: JSON.stringify({
+				name: tagName,
+				modelfile: content
+			})
 		}
-	}).catch((err) => {
-		error = err;
-		return null;
-	});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const createModel = async (token: string, tagName: string, content: string) => {
-	let error = null;
-
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/create`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			name: tagName,
-			modelfile: content
-		})
-	}).catch((err) => {
+	).catch((err) => {
 		error = err;
 		return null;
 	});
@@ -392,10 +396,12 @@ export const deleteModel = async (token: string, tagName: string, urlIdx: string
 	return res;
 };
 
-export const pullModel = async (token: string, tagName: string, urlIdx: string | null = null) => {
+export const pullModel = async (token: string, tagName: string, urlIdx: number | null = null) => {
 	let error = null;
+	const controller = new AbortController();
 
 	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/pull${urlIdx !== null ? `/${urlIdx}` : ''}`, {
+		signal: controller.signal,
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -418,7 +424,7 @@ export const pullModel = async (token: string, tagName: string, urlIdx: string |
 	if (error) {
 		throw error;
 	}
-	return res;
+	return [res, controller];
 };
 
 export const downloadModel = async (

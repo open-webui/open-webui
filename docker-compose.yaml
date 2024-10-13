@@ -5,12 +5,15 @@ services:
       dockerfile: Dockerfile
     container_name: open-webui
     environment:
-      - OPENAI_API_KEY=your_openai_api_key
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_SHEET_CREDENTIALS=${GOOGLE_SHEET_CREDENTIALS}
     ports:
       - "3000:8080"
     volumes:
       - open-webui-data:/app/backend/data
     restart: always
+    env_file:
+      - .env
 
 volumes:
   open-webui-data:
