@@ -287,17 +287,20 @@ async def generate_function_chat_completion(form_data, user):
     __event_emitter__ = None
     __event_call__ = None
     __task__ = None
+    __task_body__ = None
 
     if metadata:
         if all(k in metadata for k in ("session_id", "chat_id", "message_id")):
             __event_emitter__ = get_event_emitter(metadata)
             __event_call__ = get_event_call(metadata)
         __task__ = metadata.get("task", None)
+        __task_body__ = metadata.get("task_body", None)
 
     extra_params = {
         "__event_emitter__": __event_emitter__,
         "__event_call__": __event_call__,
         "__task__": __task__,
+        "__task_body__": __task_body__,
         "__files__": files,
         "__user__": {
             "id": user.id,

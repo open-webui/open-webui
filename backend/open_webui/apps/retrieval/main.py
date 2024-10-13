@@ -51,7 +51,6 @@ from open_webui.config import (
     CHUNK_SIZE,
     CONTENT_EXTRACTION_ENGINE,
     CORS_ALLOW_ORIGIN,
-    DOCS_DIR,
     ENABLE_RAG_HYBRID_SEARCH,
     ENABLE_RAG_LOCAL_WEB_FETCH,
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
@@ -64,7 +63,7 @@ from open_webui.config import (
     RAG_EMBEDDING_MODEL,
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
-    RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+    RAG_EMBEDDING_BATCH_SIZE,
     RAG_FILE_MAX_COUNT,
     RAG_FILE_MAX_SIZE,
     RAG_OPENAI_API_BASE_URL,
@@ -135,7 +134,7 @@ app.state.config.CHUNK_OVERLAP = CHUNK_OVERLAP
 
 app.state.config.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE
 app.state.config.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
-app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE = RAG_EMBEDDING_OPENAI_BATCH_SIZE
+app.state.config.RAG_EMBEDDING_BATCH_SIZE = RAG_EMBEDDING_BATCH_SIZE
 app.state.config.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
 app.state.config.RAG_TEMPLATE = RAG_TEMPLATE
 
@@ -172,9 +171,9 @@ def update_embedding_model(
     auto_update: bool = False,
 ):
     if embedding_model and app.state.config.RAG_EMBEDDING_ENGINE == "":
-        import sentence_transformers
+        from sentence_transformers import SentenceTransformer
 
-        app.state.sentence_transformer_ef = sentence_transformers.SentenceTransformer(
+        app.state.sentence_transformer_ef = SentenceTransformer(
             get_model_path(embedding_model, auto_update),
             device=DEVICE_TYPE,
             trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
@@ -234,7 +233,7 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.sentence_transformer_ef,
     app.state.config.OPENAI_API_KEY,
     app.state.config.OPENAI_API_BASE_URL,
-    app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+    app.state.config.RAG_EMBEDDING_BATCH_SIZE,
 )
 
 app.add_middleware(
@@ -268,7 +267,7 @@ async def get_status():
         "embedding_engine": app.state.config.RAG_EMBEDDING_ENGINE,
         "embedding_model": app.state.config.RAG_EMBEDDING_MODEL,
         "reranking_model": app.state.config.RAG_RERANKING_MODEL,
-        "openai_batch_size": app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+        "embedding_batch_size": app.state.config.RAG_EMBEDDING_BATCH_SIZE,
     }
 
 
@@ -278,10 +277,10 @@ async def get_embedding_config(user=Depends(get_admin_user)):
         "status": True,
         "embedding_engine": app.state.config.RAG_EMBEDDING_ENGINE,
         "embedding_model": app.state.config.RAG_EMBEDDING_MODEL,
+        "embedding_batch_size": app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         "openai_config": {
             "url": app.state.config.OPENAI_API_BASE_URL,
             "key": app.state.config.OPENAI_API_KEY,
-            "batch_size": app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
         },
     }
 
@@ -297,13 +296,13 @@ async def get_reraanking_config(user=Depends(get_admin_user)):
 class OpenAIConfigForm(BaseModel):
     url: str
     key: str
-    batch_size: Optional[int] = None
 
 
 class EmbeddingModelUpdateForm(BaseModel):
     openai_config: Optional[OpenAIConfigForm] = None
     embedding_engine: str
     embedding_model: str
+    embedding_batch_size: Optional[int] = 1
 
 
 @app.post("/embedding/update")
@@ -321,11 +320,7 @@ async def update_embedding_config(
             if form_data.openai_config is not None:
                 app.state.config.OPENAI_API_BASE_URL = form_data.openai_config.url
                 app.state.config.OPENAI_API_KEY = form_data.openai_config.key
-                app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE = (
-                    form_data.openai_config.batch_size
-                    if form_data.openai_config.batch_size
-                    else 1
-                )
+            app.state.config.RAG_EMBEDDING_BATCH_SIZE = form_data.embedding_batch_size
 
         update_embedding_model(app.state.config.RAG_EMBEDDING_MODEL)
 
@@ -335,17 +330,17 @@ async def update_embedding_config(
             app.state.sentence_transformer_ef,
             app.state.config.OPENAI_API_KEY,
             app.state.config.OPENAI_API_BASE_URL,
-            app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+            app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
 
         return {
             "status": True,
             "embedding_engine": app.state.config.RAG_EMBEDDING_ENGINE,
             "embedding_model": app.state.config.RAG_EMBEDDING_MODEL,
+            "embedding_batch_size": app.state.config.RAG_EMBEDDING_BATCH_SIZE,
             "openai_config": {
                 "url": app.state.config.OPENAI_API_BASE_URL,
                 "key": app.state.config.OPENAI_API_KEY,
-                "batch_size": app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
             },
         }
     except Exception as e:
@@ -646,7 +641,7 @@ def save_docs_to_vector_db(
             filter={"hash": metadata["hash"]},
         )
 
-        if result:
+        if result is not None:
             existing_doc_ids = result.ids[0]
             if existing_doc_ids:
                 log.info(f"Document with hash {metadata['hash']} already exists")
@@ -691,7 +686,7 @@ def save_docs_to_vector_db(
             app.state.sentence_transformer_ef,
             app.state.config.OPENAI_API_KEY,
             app.state.config.OPENAI_API_BASE_URL,
-            app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+            app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
 
         embeddings = embedding_function(
@@ -703,7 +698,13 @@ def save_docs_to_vector_db(
                 "id": str(uuid.uuid4()),
                 "text": text,
                 "vector": embeddings[idx],
-                "metadata": metadatas[idx],
+                "metadata": {
+                    **metadatas[idx],
+                    "embedding": {
+                        "engine": app.state.config.RAG_EMBEDDING_ENGINE,
+                        "model": app.state.config.RAG_EMBEDDING_MODEL,
+                    },
+                },
             }
             for idx, text in enumerate(texts)
         ]
@@ -734,43 +735,74 @@ def process_file(
         file = Files.get_file_by_id(form_data.file_id)
 
         collection_name = form_data.collection_name
+
         if collection_name is None:
             collection_name = f"file-{file.id}"
 
-        loader = Loader(
-            engine=app.state.config.CONTENT_EXTRACTION_ENGINE,
-            TIKA_SERVER_URL=app.state.config.TIKA_SERVER_URL,
-            PDF_EXTRACT_IMAGES=app.state.config.PDF_EXTRACT_IMAGES,
-        )
-
         if form_data.content:
+            # Update the content in the file
+            # Usage: /files/{file_id}/data/content/update
+
+            VECTOR_DB_CLIENT.delete(
+                collection_name=f"file-{file.id}",
+                filter={"file_id": file.id},
+            )
+
             docs = [
                 Document(
                     page_content=form_data.content,
                     metadata={
                         "name": file.meta.get("name", file.filename),
                         "created_by": file.user_id,
+                        "file_id": file.id,
                         **file.meta,
                     },
                 )
             ]
 
             text_content = form_data.content
-        elif file.data.get("content", None):
-            docs = [
-                Document(
-                    page_content=file.data.get("content", ""),
-                    metadata={
-                        "name": file.meta.get("name", file.filename),
-                        "created_by": file.user_id,
-                        **file.meta,
-                    },
-                )
-            ]
+        elif form_data.collection_name:
+            # Check if the file has already been processed and save the content
+            # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
+
+            result = VECTOR_DB_CLIENT.query(
+                collection_name=f"file-{file.id}", filter={"file_id": file.id}
+            )
+
+            if result is not None and len(result.ids[0]) > 0:
+                docs = [
+                    Document(
+                        page_content=result.documents[0][idx],
+                        metadata=result.metadatas[0][idx],
+                    )
+                    for idx, id in enumerate(result.ids[0])
+                ]
+            else:
+                docs = [
+                    Document(
+                        page_content=file.data.get("content", ""),
+                        metadata={
+                            "name": file.meta.get("name", file.filename),
+                            "created_by": file.user_id,
+                            "file_id": file.id,
+                            **file.meta,
+                        },
+                    )
+                ]
+
             text_content = file.data.get("content", "")
         else:
+            # Process the file and save the content
+            # Usage: /files/
+
             file_path = file.meta.get("path", None)
             if file_path:
+                loader = Loader(
+                    engine=app.state.config.CONTENT_EXTRACTION_ENGINE,
+                    TIKA_SERVER_URL=app.state.config.TIKA_SERVER_URL,
+                    PDF_EXTRACT_IMAGES=app.state.config.PDF_EXTRACT_IMAGES,
+                )
+
                 docs = loader.load(
                     file.filename, file.meta.get("content_type"), file_path
                 )
@@ -781,6 +813,7 @@ def process_file(
                         metadata={
                             "name": file.filename,
                             "created_by": file.user_id,
+                            "file_id": file.id,
                             **file.meta,
                         },
                     )
@@ -892,15 +925,22 @@ def process_youtube_video(form_data: ProcessUrlForm, user=Depends(get_verified_u
             translation=app.state.YOUTUBE_LOADER_TRANSLATION,
         )
         docs = loader.load()
-        text_content = " ".join([doc.page_content for doc in docs])
-        log.debug(f"text_content: {text_content}")
+        content = " ".join([doc.page_content for doc in docs])
+        log.debug(f"text_content: {content}")
         save_docs_to_vector_db(docs, collection_name, overwrite=True)
 
         return {
             "status": True,
             "collection_name": collection_name,
             "filename": form_data.url,
-            "content": text_content,
+            "file": {
+                "data": {
+                    "content": content,
+                },
+                "meta": {
+                    "name": form_data.url,
+                },
+            },
         }
     except Exception as e:
         log.exception(e)
@@ -923,15 +963,22 @@ def process_web(form_data: ProcessUrlForm, user=Depends(get_verified_user)):
             requests_per_second=app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
         )
         docs = loader.load()
-        text_content = " ".join([doc.page_content for doc in docs])
-        log.debug(f"text_content: {text_content}")
+        content = " ".join([doc.page_content for doc in docs])
+        log.debug(f"text_content: {content}")
         save_docs_to_vector_db(docs, collection_name, overwrite=True)
 
         return {
             "status": True,
             "collection_name": collection_name,
             "filename": form_data.url,
-            "content": text_content,
+            "file": {
+                "data": {
+                    "content": content,
+                },
+                "meta": {
+                    "name": form_data.url,
+                },
+            },
         }
     except Exception as e:
         log.exception(e)

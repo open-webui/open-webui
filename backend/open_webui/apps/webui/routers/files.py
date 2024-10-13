@@ -11,7 +11,7 @@ import mimetypes
 from open_webui.apps.webui.models.files import FileForm, FileModel, Files
 from open_webui.apps.retrieval.main import process_file, ProcessFileForm
 
-from open_webui.config import UPLOAD_DIR, DOCS_DIR
+from open_webui.config import UPLOAD_DIR
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.constants import ERROR_MESSAGES
 
@@ -88,53 +88,6 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
-
-
-@router.post("/upload/dir")
-def upload_dir(user=Depends(get_admin_user)):
-    file_ids = []
-    for path in Path(DOCS_DIR).rglob("./**/*"):
-        if path.is_file() and not path.name.startswith("."):
-            try:
-                log.debug(f"Processing file from path: {path}")
-
-                filename = path.name
-                file_content_type = mimetypes.guess_type(path)
-
-                # replace filename with uuid
-                id = str(uuid.uuid4())
-                name = filename
-
-                contents = path.read_bytes()
-                file_path = str(path)
-
-                file = Files.insert_new_file(
-                    user.id,
-                    FileForm(
-                        **{
-                            "id": id,
-                            "filename": filename,
-                            "meta": {
-                                "name": name,
-                                "content_type": file_content_type,
-                                "size": len(contents),
-                                "path": file_path,
-                            },
-                        }
-                    ),
-                )
-
-                try:
-                    process_file(ProcessFileForm(file_id=id))
-                    log.debug(f"File processed: {path}, {file.id}")
-                    file_ids.append(file.id)
-                except Exception as e:
-                    log.exception(e)
-                    log.error(f"Error processing file: {file.id}")
-            except Exception as e:
-                log.exception(e)
-                pass
-    return file_ids
 
 
 ############################
@@ -260,7 +213,7 @@ async def update_file_data_content_by_id(
 ############################
 
 
-@router.get("/{id}/content", response_model=Optional[FileModel])
+@router.get("/{id}/content")
 async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
 
@@ -270,7 +223,10 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
         # Check if the file already exists in the cache
         if file_path.is_file():
             print(f"file_path: {file_path}")
-            return FileResponse(file_path)
+            headers = {
+                "Content-Disposition": f'attachment; filename="{file.meta.get("name", file.filename)}"'
+            }
+            return FileResponse(file_path, headers=headers)
         else:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -283,7 +239,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
         )
 
 
-@router.get("/{id}/content/{file_name}", response_model=Optional[FileModel])
+@router.get("/{id}/content/{file_name}")
 async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
 
@@ -295,7 +251,10 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
             # Check if the file already exists in the cache
             if file_path.is_file():
                 print(f"file_path: {file_path}")
-                return FileResponse(file_path)
+                headers = {
+                    "Content-Disposition": f'attachment; filename="{file.meta.get("name", file.filename)}"'
+                }
+                return FileResponse(file_path, headers=headers)
             else:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,

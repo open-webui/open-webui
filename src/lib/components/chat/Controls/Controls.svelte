@@ -16,7 +16,7 @@
 </script>
 
 <div class=" dark:text-white">
-	<div class=" flex justify-between dark:text-gray-100 mb-2">
+	<div class=" flex items-center justify-between dark:text-gray-100 mb-2">
 		<div class=" text-lg font-medium self-center font-primary">{$i18n.t('Chat Controls')}</div>
 		<button
 			class="self-center"
@@ -24,11 +24,11 @@
 				dispatch('close');
 			}}
 		>
-			<XMark className="size-4" />
+			<XMark className="size-3.5" />
 		</button>
 	</div>
 
-	<div class=" dark:text-gray-200 text-sm font-primary py-0.5">
+	<div class=" dark:text-gray-200 text-sm font-primary py-0.5 px-0.5">
 		{#if chatFiles.length > 0}
 			<Collapsible title={$i18n.t('Files')} open={true}>
 				<div class="flex flex-col gap-1 mt-1.5" slot="content">

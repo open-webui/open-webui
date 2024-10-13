@@ -56,6 +56,9 @@ def run_migrations():
         print(f"Error: {e}")
 
 
+run_migrations()
+
+
 class Config(Base):
     __tablename__ = "config"
 
@@ -518,15 +521,6 @@ Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 CACHE_DIR = f"{DATA_DIR}/cache"
 Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
 
-
-####################################
-# Docs DIR
-####################################
-
-DOCS_DIR = os.getenv("DOCS_DIR", f"{DATA_DIR}/docs")
-Path(DOCS_DIR).mkdir(parents=True, exist_ok=True)
-
-
 ####################################
 # Tools DIR
 ####################################
@@ -907,6 +901,9 @@ CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 
 MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
 
+# Qdrant
+QDRANT_URI = os.environ.get("QDRANT_URI", None)
+
 ####################################
 # Information Retrieval (RAG)
 ####################################
@@ -992,10 +989,13 @@ RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get("RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
 )
 
-RAG_EMBEDDING_OPENAI_BATCH_SIZE = PersistentConfig(
-    "RAG_EMBEDDING_OPENAI_BATCH_SIZE",
-    "rag.embedding_openai_batch_size",
-    int(os.environ.get("RAG_EMBEDDING_OPENAI_BATCH_SIZE", "1")),
+RAG_EMBEDDING_BATCH_SIZE = PersistentConfig(
+    "RAG_EMBEDDING_BATCH_SIZE",
+    "rag.embedding_batch_size",
+    int(
+        os.environ.get("RAG_EMBEDDING_BATCH_SIZE")
+        or os.environ.get("RAG_EMBEDDING_OPENAI_BATCH_SIZE", "1")
+    ),
 )
 
 RAG_RERANKING_MODEL = PersistentConfig(

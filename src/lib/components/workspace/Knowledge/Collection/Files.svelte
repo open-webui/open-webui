@@ -9,7 +9,7 @@
 </script>
 
 <div class=" max-h-full flex flex-col w-full">
-	{#each files as file (file.id)}
+	{#each files as file}
 		<div class="mt-2 px-2">
 			<FileItem
 				className="w-full"
@@ -17,9 +17,10 @@
 					? ' bg-gray-50 dark:bg-gray-850'
 					: 'bg-transparent'} hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 				{file}
-				name={file.meta.name}
+				name={file?.name ?? file?.meta?.name}
 				type="file"
-				size={file.meta?.size ?? ''}
+				size={file?.size ?? file?.meta?.size ?? ''}
+				loading={file.status === 'uploading'}
 				dismissible
 				on:click={() => {
 					dispatch('click', file.id);

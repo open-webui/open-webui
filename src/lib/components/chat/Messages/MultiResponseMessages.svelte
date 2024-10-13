@@ -215,6 +215,9 @@
 										groupedMessageIdsIdx[modelIdx] =
 											groupedMessageIds[modelIdx].messageIds.length - 1;
 									}}
+									on:submit={async (e) => {
+										dispatch('submit', e.detail);
+									}}
 									on:action={async (e) => {
 										dispatch('action', e.detail);
 									}}

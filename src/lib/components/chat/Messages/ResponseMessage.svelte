@@ -38,6 +38,7 @@
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import ContentRenderer from './ContentRenderer.svelte';
 
 	interface MessageType {
 		id: string;
@@ -341,7 +342,7 @@
 				($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
 		/>
 
-		<div class="w-full overflow-hidden pl-1">
+		<div class="flex-auto w-0 pl-1">
 			<Name>
 				{model?.name ?? message.model}
 
@@ -468,13 +469,44 @@
 								</div>
 							</div>
 						{:else}
-							<div class="w-full flex flex-col">
+							<div class="w-full flex flex-col relative" id="response-content-container">
 								{#if message.content === '' && !message.error}
 									<Skeleton />
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
-									<Markdown id={message.id} content={message.content} {model} />
+									<ContentRenderer
+										id={message.id}
+										content={message.content}
+										floatingButtons={message?.done}
+										save={!readOnly}
+										{model}
+										on:update={(e) => {
+											const { raw, oldContent, newContent } = e.detail;
+
+											history.messages[message.id].content = history.messages[
+												message.id
+											].content.replace(raw, raw.replace(oldContent, newContent));
+
+											dispatch('update');
+										}}
+										on:select={(e) => {
+											const { type, content } = e.detail;
+
+											if (type === 'explain') {
+												dispatch('submit', {
+													parentId: message.id,
+													prompt: `Explain this section to me in more detail\n\n\`\`\`\n${content}\n\`\`\``
+												});
+											} else if (type === 'ask') {
+												const input = e.detail?.input ?? '';
+												dispatch('submit', {
+													parentId: message.id,
+													prompt: `\`\`\`\n${content}\n\`\`\`\n${input}`
+												});
+											}
+										}}
+									/>
 								{/if}
 
 								{#if message.error}

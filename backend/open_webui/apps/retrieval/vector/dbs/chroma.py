@@ -70,10 +70,9 @@ class ChromaClient:
             return None
 
     def query(
-        self, collection_name: str, filter: dict, limit: int = 2
+        self, collection_name: str, filter: dict, limit: Optional[int] = None
     ) -> Optional[GetResult]:
         # Query the items from the collection based on the filter.
-
         try:
             collection = self.client.get_collection(name=collection_name)
             if collection:
@@ -81,8 +80,6 @@ class ChromaClient:
                     where=filter,
                     limit=limit,
                 )
-
-                print(result)
 
                 return GetResult(
                     **{

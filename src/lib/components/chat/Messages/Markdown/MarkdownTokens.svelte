@@ -1,19 +1,23 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
-	import { onMount } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 	import { marked, type Token } from 'marked';
 	import { revertSanitizedResponseContent, unescapeHtml } from '$lib/utils';
+
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
 	import MarkdownInlineTokens from '$lib/components/chat/Messages/Markdown/MarkdownInlineTokens.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
-	import { WEBUI_BASE_URL } from '$lib/constants';
-	import { stringify } from 'postcss';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
+
+	const dispatch = createEventDispatcher();
 
 	export let id: string;
 	export let tokens: Token[];
 	export let top = true;
+
+	export let save = false;
 
 	const headerComponent = (depth: number) => {
 		return 'h' + depth;
@@ -29,12 +33,27 @@
 			<MarkdownInlineTokens id={`${id}-${tokenIdx}-h`} tokens={token.tokens} />
 		</svelte:element>
 	{:else if token.type === 'code'}
-		<CodeBlock
-			id={`${id}-${tokenIdx}`}
-			{token}
-			lang={token?.lang ?? ''}
-			code={revertSanitizedResponseContent(token?.text ?? '')}
-		/>
+		{#if token.raw.includes('```')}
+			<CodeBlock
+				id={`${id}-${tokenIdx}`}
+				{token}
+				lang={token?.lang ?? ''}
+				code={revertSanitizedResponseContent(token?.text ?? '')}
+				{save}
+				on:code={(e) => {
+					dispatch('code', e.detail);
+				}}
+				on:save={(e) => {
+					dispatch('update', {
+						raw: token.raw,
+						oldContent: token.text,
+						newContent: e.detail
+					});
+				}}
+			/>
+		{:else}
+			{token.text}
+		{/if}
 	{:else if token.type === 'table'}
 		<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
 			<table class="w-full">

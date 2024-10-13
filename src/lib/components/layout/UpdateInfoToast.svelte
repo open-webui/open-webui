@@ -21,22 +21,16 @@
 			LATEST_VERSION: version.latest
 		})}
 
-		<a
-			href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
-			target="_blank"
-			class="underline"
-		>
+		<a href="https://github.com/open-webui/open-webui/releases" target="_blank" class="underline">
 			{$i18n.t('Update for the latest features and improvements.')}</a
 		>
 	</div>
 
-	<div class=" flex-shrink-0 pl-2">
+	<div class=" flex-shrink-0 pr-1">
 		<button
 			class=" hover:text-blue-900 dark:hover:text-blue-300 transition"
 			on:click={() => {
-				console.log('closeToast');
-				localStorage.setItem('dismissedUpdateToast', Date.now().toString());
-				dispatch('closeToast');
+				dispatch('close');
 			}}
 		>
 			<XMark />

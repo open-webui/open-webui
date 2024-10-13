@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
+	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import {
@@ -12,21 +12,14 @@
 		config,
 		showCallOverlay,
 		tools,
-		user as _user
+		user as _user,
+		showControls
 	} from '$lib/stores';
 	import { blobToFile, findWordIndices } from '$lib/utils';
-
 	import { transcribeAudio } from '$lib/apis/audio';
-
-	import { processFile } from '$lib/apis/retrieval';
 	import { uploadFile } from '$lib/apis/files';
 
-	import {
-		SUPPORTED_FILE_TYPE,
-		SUPPORTED_FILE_EXTENSIONS,
-		WEBUI_BASE_URL,
-		WEBUI_API_BASE_URL
-	} from '$lib/constants';
+	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import Tooltip from '../common/Tooltip.svelte';
 	import InputMenu from './MessageInput/InputMenu.svelte';
@@ -41,7 +34,6 @@
 
 	export let transparentBackground = false;
 
-	export let submitPrompt: Function;
 	export let createMessagePair: Function;
 	export let stopResponse: Function;
 
@@ -49,6 +41,14 @@
 
 	export let atSelectedModel: Model | undefined;
 	export let selectedModels: [''];
+
+	export let history;
+
+	export let prompt = '';
+	export let files = [];
+	export let availableToolIds = [];
+	export let selectedToolIds = [];
+	export let webSearchEnabled = false;
 
 	let recording = false;
 
@@ -61,15 +61,7 @@
 	let dragged = false;
 
 	let user = null;
-	let chatInputPlaceholder = '';
-
-	export let history;
-
-	export let prompt = '';
-	export let files = [];
-	export let availableToolIds = [];
-	export let selectedToolIds = [];
-	export let webSearchEnabled = false;
+	export let placeholder = '';
 
 	let visionCapableModels = [];
 	$: visionCapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
@@ -101,7 +93,7 @@
 			url: '',
 			name: file.name,
 			collection_name: '',
-			status: '',
+			status: 'uploading',
 			size: file.size,
 			error: ''
 		};
@@ -129,7 +121,7 @@
 			const uploadedFile = await uploadFile(localStorage.token, file);
 
 			if (uploadedFile) {
-				fileItem.status = 'processed';
+				fileItem.status = 'uploaded';
 				fileItem.file = uploadedFile;
 				fileItem.id = uploadedFile.id;
 				fileItem.collection_name = uploadedFile?.meta?.collection_name;
@@ -183,57 +175,59 @@
 		});
 	};
 
+	const handleKeyDown = (event: KeyboardEvent) => {
+		if (event.key === 'Escape') {
+			console.log('Escape');
+			dragged = false;
+		}
+	};
+
+	const onDragOver = (e) => {
+		e.preventDefault();
+		dragged = true;
+	};
+
+	const onDragLeave = () => {
+		dragged = false;
+	};
+
+	const onDrop = async (e) => {
+		e.preventDefault();
+		console.log(e);
+
+		if (e.dataTransfer?.files) {
+			const inputFiles = Array.from(e.dataTransfer?.files);
+			if (inputFiles && inputFiles.length > 0) {
+				console.log(inputFiles);
+				inputFilesHandler(inputFiles);
+			} else {
+				toast.error($i18n.t(`File not found.`));
+			}
+		}
+
+		dragged = false;
+	};
+
 	onMount(() => {
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
-		const dropZone = document.querySelector('body');
-
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') {
-				console.log('Escape');
-				dragged = false;
-			}
-		};
-
-		const onDragOver = (e) => {
-			e.preventDefault();
-			dragged = true;
-		};
-
-		const onDragLeave = () => {
-			dragged = false;
-		};
-
-		const onDrop = async (e) => {
-			e.preventDefault();
-			console.log(e);
-
-			if (e.dataTransfer?.files) {
-				const inputFiles = Array.from(e.dataTransfer?.files);
-				if (inputFiles && inputFiles.length > 0) {
-					console.log(inputFiles);
-					inputFilesHandler(inputFiles);
-				} else {
-					toast.error($i18n.t(`File not found.`));
-				}
-			}
-
-			dragged = false;
-		};
-
 		window.addEventListener('keydown', handleKeyDown);
+
+		const dropZone = document.getElementById('chat-container');
 
 		dropZone?.addEventListener('dragover', onDragOver);
 		dropZone?.addEventListener('drop', onDrop);
 		dropZone?.addEventListener('dragleave', onDragLeave);
+	});
 
-		return () => {
-			window.removeEventListener('keydown', handleKeyDown);
+	onDestroy(() => {
+		window.removeEventListener('keydown', handleKeyDown);
 
-			dropZone?.removeEventListener('dragover', onDragOver);
-			dropZone?.removeEventListener('drop', onDrop);
-			dropZone?.removeEventListener('dragleave', onDragLeave);
-		};
+		const dropZone = document.getElementById('chat-container');
+
+		dropZone?.removeEventListener('dragover', onDragOver);
+		dropZone?.removeEventListener('drop', onDrop);
+		dropZone?.removeEventListener('dragleave', onDragLeave);
 	});
 </script>
 
@@ -241,7 +235,7 @@
 
 <div class="w-full font-primary">
 	<div class=" -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
-		<div class="flex flex-col max-w-6xl px-2.5 md:px-6 w-full">
+		<div class="flex flex-col px-2.5 max-w-6xl w-full">
 			<div class="relative">
 				{#if autoScroll === false && history?.currentId}
 					<div
@@ -274,13 +268,13 @@
 			<div class="w-full relative">
 				{#if atSelectedModel !== undefined}
 					<div
-						class="px-3 py-2.5 text-left w-full flex justify-between items-center absolute bottom-0.5 left-0 right-0 bg-gradient-to-t from-50% from-white dark:from-gray-900 z-10"
+						class="px-3 py-1 text-left w-full flex justify-between items-center absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10"
 					>
 						<div class="flex items-center gap-2 text-sm dark:text-gray-500">
 							<img
 								crossorigin="anonymous"
 								alt="model profile"
-								class="size-5 max-w-[28px] object-cover rounded-full"
+								class="size-4 max-w-[28px] object-cover rounded-full"
 								src={$models.find((model) => model.id === atSelectedModel.id)?.info?.meta
 									?.profile_image_url ??
 									($i18n.language === 'dg-DG'
@@ -308,6 +302,9 @@
 					bind:this={commandsElement}
 					bind:prompt
 					bind:files
+					on:upload={(e) => {
+						dispatch('upload', e.detail);
+					}}
 					on:select={(e) => {
 						const data = e.detail;
 
@@ -323,8 +320,8 @@
 	</div>
 
 	<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-gray-900'} ">
-		<div class="max-w-6xl px-2.5 md:px-6 mx-auto inset-x-0 pb-safe-bottom">
-			<div class=" pb-2">
+		<div class="max-w-6xl px-4 mx-auto inset-x-0">
+			<div class="">
 				<input
 					bind:this={filesInputElement}
 					bind:files={inputFiles}
@@ -362,7 +359,7 @@
 							document.getElementById('chat-textarea')?.focus();
 
 							if ($settings?.speechAutoSend ?? false) {
-								submitPrompt(prompt);
+								dispatch('submit', prompt);
 							}
 						}}
 					/>
@@ -371,7 +368,7 @@
 						class="w-full flex gap-1.5"
 						on:submit|preventDefault={() => {
 							// check if selectedModels support image input
-							submitPrompt(prompt);
+							dispatch('submit', prompt);
 						}}
 					>
 						<div
@@ -441,7 +438,7 @@
 												name={file.name}
 												type={file.type}
 												size={file?.size}
-												status={file.status}
+												loading={file.status === 'uploading'}
 												dismissible={true}
 												edit={true}
 												on:dismiss={() => {
@@ -503,9 +500,7 @@
 									id="chat-textarea"
 									bind:this={chatTextAreaElement}
 									class="scrollbar-hidden bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-3 px-1 rounded-xl resize-none h-[48px]"
-									placeholder={chatInputPlaceholder !== ''
-										? chatInputPlaceholder
-										: $i18n.t('Send a Message')}
+									placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 									bind:value={prompt}
 									on:keypress={(e) => {
 										if (
@@ -523,7 +518,7 @@
 
 											// Submit the prompt when Enter key is pressed
 											if (prompt !== '' && e.key === 'Enter' && !e.shiftKey) {
-												submitPrompt(prompt);
+												dispatch('submit', prompt);
 											}
 										}
 									}}
@@ -760,7 +755,7 @@
 														stream = null;
 
 														showCallOverlay.set(true);
-														dispatch('call');
+														showControls.set(true);
 													} catch (err) {
 														// If the user denies the permission or an error occurs, show an error message
 														toast.error($i18n.t('Permission denied when accessing media devices'));
@@ -801,46 +796,33 @@
 								{/if}
 							{:else}
 								<div class=" flex items-center mb-1.5">
-									<button
-										class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
-										on:click={() => {
-											stopResponse();
-										}}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 24 24"
-											fill="currentColor"
-											class="size-6"
+									<Tooltip content={$i18n.t('Stop')}>
+										<button
+											class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+											on:click={() => {
+												stopResponse();
+											}}
 										>
-											<path
-												fill-rule="evenodd"
-												d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-									</button>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 24 24"
+												fill="currentColor"
+												class="size-6"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
+													clip-rule="evenodd"
+												/>
+											</svg>
+										</button>
+									</Tooltip>
 								</div>
 							{/if}
 						</div>
 					</form>
 				{/if}
-
-				<div class="mt-1.5 text-xs text-gray-500 text-center line-clamp-1">
-					{$i18n.t('LLMs can make mistakes. Verify important information.')}
-				</div>
 			</div>
 		</div>
 	</div>
 </div>
-
-<style>
-	.scrollbar-hidden:active::-webkit-scrollbar-thumb,
-	.scrollbar-hidden:focus::-webkit-scrollbar-thumb,
-	.scrollbar-hidden:hover::-webkit-scrollbar-thumb {
-		visibility: visible;
-	}
-	.scrollbar-hidden::-webkit-scrollbar-thumb {
-		visibility: hidden;
-	}
-</style>

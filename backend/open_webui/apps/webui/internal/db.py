@@ -4,11 +4,20 @@ from contextlib import contextmanager
 from typing import Any, Optional
 
 from open_webui.apps.webui.internal.wrappers import register_connection
-from open_webui.env import OPEN_WEBUI_DIR, DATABASE_URL, SRC_LOG_LEVELS
+from open_webui.env import (
+    OPEN_WEBUI_DIR,
+    DATABASE_URL,
+    SRC_LOG_LEVELS,
+    DATABASE_POOL_MAX_OVERFLOW,
+    DATABASE_POOL_RECYCLE,
+    DATABASE_POOL_SIZE,
+    DATABASE_POOL_TIMEOUT,
+)
 from peewee_migrate import Router
 from sqlalchemy import Dialect, create_engine, types
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.pool import QueuePool, NullPool
 from sqlalchemy.sql.type_api import _T
 from typing_extensions import Self
 
@@ -71,7 +80,20 @@ if "sqlite" in SQLALCHEMY_DATABASE_URL:
         SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
     )
 else:
-    engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
+    if DATABASE_POOL_SIZE > 0:
+        engine = create_engine(
+            SQLALCHEMY_DATABASE_URL,
+            pool_size=DATABASE_POOL_SIZE,
+            max_overflow=DATABASE_POOL_MAX_OVERFLOW,
+            pool_timeout=DATABASE_POOL_TIMEOUT,
+            pool_recycle=DATABASE_POOL_RECYCLE,
+            pool_pre_ping=True,
+            poolclass=QueuePool,
+        )
+    else:
+        engine = create_engine(
+            SQLALCHEMY_DATABASE_URL, pool_pre_ping=True, poolclass=NullPool
+        )
 
 
 SessionLocal = sessionmaker(

@@ -32,7 +32,8 @@
 		temporaryChatEnabled,
 		mobile,
 		showOverview,
-		chatTitle
+		chatTitle,
+		showArtifacts
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -52,7 +53,7 @@
 		updateChatById
 	} from '$lib/apis/chats';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
-	import { processWebSearch } from '$lib/apis/retrieval';
+	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
@@ -70,12 +71,14 @@
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
+	import Placeholder from './Placeholder.svelte';
 
 	export let chatIdProp = '';
 
 	let loaded = false;
 	const eventTarget = new EventTarget();
 	let controlPane;
+	let controlPaneComponent;
 
 	let stopResponseFlag = false;
 	let autoScroll = true;
@@ -197,6 +200,20 @@
 
 				eventConfirmationTitle = data.title;
 				eventConfirmationMessage = data.message;
+			} else if (type === 'execute') {
+				eventCallback = cb;
+
+				try {
+					// Use Function constructor to evaluate code in a safer way
+					const asyncFunction = new Function(`return (async () => { ${data.code} })()`);
+					const result = await asyncFunction(); // Await the result of the async function
+
+					if (cb) {
+						cb(result);
+					}
+				} catch (error) {
+					console.error('Error executing code:', error);
+				}
 			} else if (type === 'input') {
 				eventCallback = cb;
 
@@ -274,14 +291,9 @@
 			if (controlPane && !$mobile) {
 				try {
 					if (value) {
-						const currentSize = controlPane.getSize();
-
-						if (currentSize === 0) {
-							const size = parseInt(localStorage?.chatControlsSize ?? '30');
-							controlPane.resize(size ? size : 30);
-						}
+						controlPaneComponent.openPane();
 					} else {
-						controlPane.resize(0);
+						controlPane.collapse();
 					}
 				} catch (e) {
 					// ignore
@@ -291,6 +303,7 @@
 			if (!value) {
 				showCallOverlay.set(false);
 				showOverview.set(false);
+				showArtifacts.set(false);
 			}
 		});
 
@@ -306,11 +319,84 @@
 		$socket?.off('chat-events');
 	});
 
+	// File upload functions
+
+	const uploadWeb = async (url) => {
+		console.log(url);
+
+		const fileItem = {
+			type: 'doc',
+			name: url,
+			collection_name: '',
+			status: 'uploading',
+			url: url,
+			error: ''
+		};
+
+		try {
+			files = [...files, fileItem];
+			const res = await processWeb(localStorage.token, '', url);
+
+			if (res) {
+				fileItem.status = 'uploaded';
+				fileItem.collection_name = res.collection_name;
+				fileItem.file = {
+					...res.file,
+					...fileItem.file
+				};
+
+				files = files;
+			}
+		} catch (e) {
+			// Remove the failed doc from the files array
+			files = files.filter((f) => f.name !== url);
+			toast.error(JSON.stringify(e));
+		}
+	};
+
+	const uploadYoutubeTranscription = async (url) => {
+		console.log(url);
+
+		const fileItem = {
+			type: 'doc',
+			name: url,
+			collection_name: '',
+			status: 'uploading',
+			context: 'full',
+			url: url,
+			error: ''
+		};
+
+		try {
+			files = [...files, fileItem];
+			const res = await processYoutubeVideo(localStorage.token, url);
+
+			if (res) {
+				fileItem.status = 'uploaded';
+				fileItem.collection_name = res.collection_name;
+				fileItem.file = {
+					...res.file,
+					...fileItem.file
+				};
+				files = files;
+			}
+		} catch (e) {
+			// Remove the failed doc from the files array
+			files = files.filter((f) => f.name !== url);
+			toast.error(e);
+		}
+	};
+
 	//////////////////////////
 	// Web functions
 	//////////////////////////
 
 	const initNewChat = async () => {
+		await showControls.set(false);
+		await showCallOverlay.set(false);
+		await showOverview.set(false);
+		await showArtifacts.set(false);
+
 		if ($page.url.pathname.includes('/c/')) {
 			window.history.replaceState(history.state, '', `/`);
 		}
@@ -338,29 +424,49 @@
 			console.log($config?.default_models.split(',') ?? '');
 			selectedModels = $config?.default_models.split(',');
 		} else {
-			selectedModels = [''];
+			if ($models.length > 0) {
+				selectedModels = [$models[0].id];
+			} else {
+				selectedModels = [''];
+			}
+		}
+
+		if ($page.url.searchParams.get('youtube')) {
+			uploadYoutubeTranscription(
+				`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`
+			);
 		}
 
 		if ($page.url.searchParams.get('web-search') === 'true') {
 			webSearchEnabled = true;
 		}
 
-		if ($page.url.searchParams.get('q')) {
-			prompt = $page.url.searchParams.get('q') ?? '';
-			selectedToolIds = ($page.url.searchParams.get('tool_ids') ?? '')
-				.split(',')
+		if ($page.url.searchParams.get('tools')) {
+			selectedToolIds = $page.url.searchParams
+				.get('tools')
+				?.split(',')
 				.map((id) => id.trim())
 				.filter((id) => id);
-
-			if (prompt) {
-				await tick();
-				submitPrompt(prompt);
-			}
+		} else if ($page.url.searchParams.get('tool-ids')) {
+			selectedToolIds = $page.url.searchParams
+				.get('tool-ids')
+				?.split(',')
+				.map((id) => id.trim())
+				.filter((id) => id);
 		}
 
 		if ($page.url.searchParams.get('call') === 'true') {
 			showCallOverlay.set(true);
 			showControls.set(true);
+		}
+
+		if ($page.url.searchParams.get('q')) {
+			prompt = $page.url.searchParams.get('q') ?? '';
+
+			if (prompt) {
+				await tick();
+				submitPrompt(prompt);
+			}
 		}
 
 		selectedModels = selectedModels.map((modelId) =>
@@ -653,7 +759,7 @@
 			);
 		} else if (
 			files.length > 0 &&
-			files.filter((file) => file.type !== 'image' && file.status !== 'processed').length > 0
+			files.filter((file) => file.type !== 'image' && file.status === 'uploading').length > 0
 		) {
 			// Upload not done
 			toast.error(
@@ -689,7 +795,6 @@
 			);
 
 			files = [];
-
 			prompt = '';
 
 			// Create user message
@@ -1839,6 +1944,7 @@
 				system: $settings.system ?? undefined,
 				params: params,
 				history: history,
+				messages: createMessagesList(history.currentId),
 				tags: [],
 				timestamp: Date.now()
 			});
@@ -1904,6 +2010,7 @@
 		class="h-screen max-h-[100dvh] {$showSidebar
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''} w-full max-w-full flex flex-col"
+		id="chat-container"
 	>
 		{#if $settings?.backgroundImageUrl ?? null}
 			<div
@@ -1919,7 +2026,17 @@
 		{/if}
 
 		<Navbar
-			{chat}
+			chat={{
+				id: $chatId,
+				chat: {
+					title: $chatTitle,
+					models: selectedModels,
+					system: $settings.system ?? undefined,
+					params: params,
+					history: history,
+					timestamp: Date.now()
+				}
+			}}
 			title={$chatTitle}
 			bind:selectedModels
 			shareEnabled={!!history.currentId}
@@ -1929,7 +2046,7 @@
 		<PaneGroup direction="horizontal" class="w-full h-full">
 			<Pane defaultSize={50} class="h-full flex w-full relative">
 				{#if $banners.length > 0 && !history.currentId && !$chatId && selectedModels.length <= 1}
-					<div class="absolute top-3 left-0 right-0 w-full z-20">
+					<div class="absolute top-12 left-0 right-0 w-full z-30">
 						<div class=" flex flex-col gap-1 w-full">
 							{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
 								<Banner
@@ -1954,64 +2071,155 @@
 				{/if}
 
 				<div class="flex flex-col flex-auto z-10 w-full">
-					<div
-						class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
-						id="messages-container"
-						bind:this={messagesContainerElement}
-						on:scroll={(e) => {
-							autoScroll =
-								messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
-								messagesContainerElement.clientHeight + 5;
-						}}
-					>
-						<div class=" h-full w-full flex flex-col {chatIdProp ? 'py-4' : 'pt-2 pb-4'}">
-							<Messages
-								chatId={$chatId}
-								bind:history
-								bind:autoScroll
-								bind:prompt
+					{#if $settings?.landingPageMode === 'chat' || createMessagesList(history.currentId).length > 0}
+						<div
+							class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
+							id="messages-container"
+							bind:this={messagesContainerElement}
+							on:scroll={(e) => {
+								autoScroll =
+									messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
+									messagesContainerElement.clientHeight + 5;
+							}}
+						>
+							<div class=" h-full w-full flex flex-col">
+								<Messages
+									chatId={$chatId}
+									bind:history
+									bind:autoScroll
+									bind:prompt
+									{selectedModels}
+									{sendPrompt}
+									{showMessage}
+									{continueResponse}
+									{regenerateResponse}
+									{mergeResponses}
+									{chatActionHandler}
+									bottomPadding={files.length > 0}
+									on:submit={async (e) => {
+										if (e.detail) {
+											// New user message
+											let userPrompt = e.detail.prompt;
+											let userMessageId = uuidv4();
+
+											let userMessage = {
+												id: userMessageId,
+												parentId: e.detail.parentId,
+												childrenIds: [],
+												role: 'user',
+												content: userPrompt,
+												models: selectedModels
+											};
+
+											let messageParentId = e.detail.parentId;
+
+											if (messageParentId !== null) {
+												history.messages[messageParentId].childrenIds = [
+													...history.messages[messageParentId].childrenIds,
+													userMessageId
+												];
+											}
+
+											history.messages[userMessageId] = userMessage;
+											history.currentId = userMessageId;
+
+											await tick();
+											await sendPrompt(userPrompt, userMessageId);
+										}
+									}}
+								/>
+							</div>
+						</div>
+
+						<div class=" pb-[1.6rem]">
+							<MessageInput
+								{history}
 								{selectedModels}
-								{sendPrompt}
-								{showMessage}
-								{continueResponse}
-								{regenerateResponse}
-								{mergeResponses}
-								{chatActionHandler}
-								bottomPadding={files.length > 0}
+								bind:files
+								bind:prompt
+								bind:autoScroll
+								bind:selectedToolIds
+								bind:webSearchEnabled
+								bind:atSelectedModel
+								availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
+									const model = $models.find((m) => m.id === e);
+									if (model?.info?.meta?.toolIds ?? false) {
+										return [...new Set([...a, ...model.info.meta.toolIds])];
+									}
+									return a;
+								}, [])}
+								transparentBackground={$settings?.backgroundImageUrl ?? false}
+								{stopResponse}
+								{createMessagePair}
+								on:upload={async (e) => {
+									const { type, data } = e.detail;
+
+									if (type === 'web') {
+										await uploadWeb(data);
+									} else if (type === 'youtube') {
+										await uploadYoutubeTranscription(data);
+									}
+								}}
+								on:submit={async (e) => {
+									if (e.detail) {
+										prompt = '';
+										await tick();
+										submitPrompt(e.detail);
+									}
+								}}
+							/>
+
+							<div
+								class="absolute bottom-1.5 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
+							>
+								{$i18n.t('LLMs can make mistakes. Verify important information.')}
+							</div>
+						</div>
+					{:else}
+						<div class="overflow-auto w-full h-full flex items-center">
+							<Placeholder
+								{history}
+								{selectedModels}
+								bind:files
+								bind:prompt
+								bind:autoScroll
+								bind:selectedToolIds
+								bind:webSearchEnabled
+								bind:atSelectedModel
+								availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
+									const model = $models.find((m) => m.id === e);
+									if (model?.info?.meta?.toolIds ?? false) {
+										return [...new Set([...a, ...model.info.meta.toolIds])];
+									}
+									return a;
+								}, [])}
+								transparentBackground={$settings?.backgroundImageUrl ?? false}
+								{stopResponse}
+								{createMessagePair}
+								on:upload={async (e) => {
+									const { type, data } = e.detail;
+
+									if (type === 'web') {
+										await uploadWeb(data);
+									} else if (type === 'youtube') {
+										await uploadYoutubeTranscription(data);
+									}
+								}}
+								on:submit={async (e) => {
+									if (e.detail) {
+										prompt = '';
+										await tick();
+										submitPrompt(e.detail);
+									}
+								}}
 							/>
 						</div>
-					</div>
-
-					<div class="">
-						<MessageInput
-							{history}
-							bind:files
-							bind:prompt
-							bind:autoScroll
-							bind:selectedToolIds
-							bind:webSearchEnabled
-							bind:atSelectedModel
-							{selectedModels}
-							availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
-								const model = $models.find((m) => m.id === e);
-								if (model?.info?.meta?.toolIds ?? false) {
-									return [...new Set([...a, ...model.info.meta.toolIds])];
-								}
-								return a;
-							}, [])}
-							transparentBackground={$settings?.backgroundImageUrl ?? false}
-							{submitPrompt}
-							{stopResponse}
-							{createMessagePair}
-							on:call={async () => {
-								await showControls.set(true);
-							}}
-						/>
-					</div>
+					{/if}
 				</div>
 			</Pane>
 
 			<ChatControls
+				bind:this={controlPaneComponent}
 				bind:history
 				bind:chatFiles
 				bind:params
