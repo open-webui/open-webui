@@ -44,7 +44,7 @@ chromadb==0.5.9
 pymilvus==2.4.7
 qdrant-client~=1.12.0
 
-sentence-transformers==3.0.1
+sentence-transformers==3.2.0
 colbert-ai==0.2.21
 einops==0.8.0
 
