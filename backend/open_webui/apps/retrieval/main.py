@@ -392,17 +392,18 @@ async def get_rag_config(user=Depends(get_admin_user)):
     return {
         "status": True,
         "pdf_extract_images": app.state.config.PDF_EXTRACT_IMAGES,
-        "file": {
-            "max_size": app.state.config.FILE_MAX_SIZE,
-            "max_count": app.state.config.FILE_MAX_COUNT,
-        },
         "content_extraction": {
             "engine": app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": app.state.config.TIKA_SERVER_URL,
         },
         "chunk": {
+            "text_splitter": app.state.config.TEXT_SPLITTER,
             "chunk_size": app.state.config.CHUNK_SIZE,
             "chunk_overlap": app.state.config.CHUNK_OVERLAP,
+        },
+        "file": {
+            "max_size": app.state.config.FILE_MAX_SIZE,
+            "max_count": app.state.config.FILE_MAX_COUNT,
         },
         "youtube": {
             "language": app.state.config.YOUTUBE_LOADER_LANGUAGE,
@@ -442,6 +443,7 @@ class ContentExtractionConfig(BaseModel):
 
 
 class ChunkParamUpdateForm(BaseModel):
+    text_splitter: Optional[str] = None
     chunk_size: int
     chunk_overlap: int
 
@@ -501,6 +503,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
         app.state.config.TIKA_SERVER_URL = form_data.content_extraction.tika_server_url
 
     if form_data.chunk is not None:
+        app.state.config.TEXT_SPLITTER = form_data.chunk.text_splitter
         app.state.config.CHUNK_SIZE = form_data.chunk.chunk_size
         app.state.config.CHUNK_OVERLAP = form_data.chunk.chunk_overlap
 
@@ -547,6 +550,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
             "tika_server_url": app.state.config.TIKA_SERVER_URL,
         },
         "chunk": {
+            "text_splitter": app.state.config.TEXT_SPLITTER,
             "chunk_size": app.state.config.CHUNK_SIZE,
             "chunk_overlap": app.state.config.CHUNK_OVERLAP,
         },
@@ -607,11 +611,10 @@ class QuerySettingsForm(BaseModel):
 async def update_query_settings(
     form_data: QuerySettingsForm, user=Depends(get_admin_user)
 ):
-    app.state.config.RAG_TEMPLATE = (
-        form_data.template if form_data.template != "" else DEFAULT_RAG_TEMPLATE
-    )
+    app.state.config.RAG_TEMPLATE = form_data.template
     app.state.config.TOP_K = form_data.k if form_data.k else 4
     app.state.config.RELEVANCE_THRESHOLD = form_data.r if form_data.r else 0.0
+
     app.state.config.ENABLE_RAG_HYBRID_SEARCH = (
         form_data.hybrid if form_data.hybrid else False
     )

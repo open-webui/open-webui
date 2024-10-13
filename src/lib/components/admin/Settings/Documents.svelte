@@ -27,6 +27,7 @@
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
+	import { text } from '@sveltejs/kit';
 
 	const i18n = getContext('i18n');
 
@@ -49,6 +50,7 @@
 	let tikaServerUrl = '';
 	let showTikaServerUrl = false;
 
+	let textSplitter = '';
 	let chunkSize = 0;
 	let chunkOverlap = 0;
 	let pdfExtractImages = true;
@@ -178,6 +180,7 @@
 				max_count: fileMaxCount === '' ? null : fileMaxCount
 			},
 			chunk: {
+				text_splitter: textSplitter,
 				chunk_overlap: chunkOverlap,
 				chunk_size: chunkSize
 			},
@@ -223,11 +226,13 @@
 		await setRerankingConfig();
 
 		querySettings = await getQuerySettings(localStorage.token);
+
 		const res = await getRAGConfig(localStorage.token);
 
 		if (res) {
 			pdfExtractImages = res.pdf_extract_images;
 
+			textSplitter = res.chunk.text_splitter;
 			chunkSize = res.chunk.chunk_size;
 			chunkOverlap = res.chunk.chunk_overlap;
 
@@ -638,6 +643,19 @@
 
 		<div class=" ">
 			<div class="mb-1 text-sm font-medium">{$i18n.t('Chunk Params')}</div>
+
+			<div class="flex w-full justify-between mb-1.5">
+				<div class="self-center text-xs font-medium">{$i18n.t('Text Splitter')}</div>
+				<div class="flex items-center relative">
+					<select
+						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 text-xs bg-transparent outline-none text-right"
+						bind:value={textSplitter}
+					>
+						<option value="">{$i18n.t('Default (Character)')} </option>
+						<option value="token">{$i18n.t('Token (Tiktoken)')}</option>
+					</select>
+				</div>
+			</div>
 
 			<div class=" flex gap-1.5">
 				<div class="  w-full justify-between">

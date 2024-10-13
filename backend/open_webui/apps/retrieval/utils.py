@@ -19,6 +19,7 @@ from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.misc import get_last_user_message
 
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.config import DEFAULT_RAG_TEMPLATE
 
 
 log = logging.getLogger(__name__)
@@ -239,6 +240,9 @@ def query_collection_with_hybrid_search(
 
 
 def rag_template(template: str, context: str, query: str):
+    if template == "":
+        template = DEFAULT_RAG_TEMPLATE
+
     if "[context]" not in template and "{{CONTEXT}}" not in template:
         log.debug(
             "WARNING: The RAG template does not contain the '[context]' or '{{CONTEXT}}' placeholder."
