@@ -678,7 +678,19 @@ def save_docs_to_vector_db(
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
     texts = [doc.page_content for doc in docs]
-    metadatas = [{**doc.metadata, **(metadata if metadata else {})} for doc in docs]
+    metadatas = [
+        {
+            **doc.metadata,
+            **(metadata if metadata else {}),
+            "embedding_config": json.dumps(
+                {
+                    "engine": app.state.config.RAG_EMBEDDING_ENGINE,
+                    "model": app.state.config.RAG_EMBEDDING_MODEL,
+                }
+            ),
+        }
+        for doc in docs
+    ]
 
     # ChromaDB does not like datetime formats
     # for meta-data so convert them to string.
@@ -717,13 +729,7 @@ def save_docs_to_vector_db(
                 "id": str(uuid.uuid4()),
                 "text": text,
                 "vector": embeddings[idx],
-                "metadata": {
-                    **metadatas[idx],
-                    "embedding": {
-                        "engine": app.state.config.RAG_EMBEDDING_ENGINE,
-                        "model": app.state.config.RAG_EMBEDDING_MODEL,
-                    },
-                },
+                "metadata": metadatas[idx],
             }
             for idx, text in enumerate(texts)
         ]
