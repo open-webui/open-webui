@@ -47,6 +47,8 @@ from open_webui.apps.retrieval.utils import (
 from open_webui.apps.webui.models.files import Files
 from open_webui.config import (
     BRAVE_SEARCH_API_KEY,
+    TIKTOKEN_ENCODING_NAME,
+    RAG_TEXT_SPLITTER,
     CHUNK_OVERLAP,
     CHUNK_SIZE,
     CONTENT_EXTRACTION_ENGINE,
@@ -102,7 +104,7 @@ from open_webui.utils.misc import (
 )
 from open_webui.utils.utils import get_admin_user, get_verified_user
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from langchain_community.document_loaders import (
     YoutubeLoader,
 )
@@ -128,6 +130,9 @@ app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
 
 app.state.config.CONTENT_EXTRACTION_ENGINE = CONTENT_EXTRACTION_ENGINE
 app.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL
+
+app.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER
+app.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME
 
 app.state.config.CHUNK_SIZE = CHUNK_SIZE
 app.state.config.CHUNK_OVERLAP = CHUNK_OVERLAP
@@ -648,11 +653,22 @@ def save_docs_to_vector_db(
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=app.state.config.CHUNK_SIZE,
-            chunk_overlap=app.state.config.CHUNK_OVERLAP,
-            add_start_index=True,
-        )
+        if app.state.config.TEXT_SPLITTER in ["", "character"]:
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=app.state.config.CHUNK_SIZE,
+                chunk_overlap=app.state.config.CHUNK_OVERLAP,
+                add_start_index=True,
+            )
+        elif app.state.config.TEXT_SPLITTER == "token":
+            text_splitter = TokenTextSplitter(
+                encoding_name=app.state.config.TIKTOKEN_ENCODING_NAME,
+                chunk_size=app.state.config.CHUNK_SIZE,
+                chunk_overlap=app.state.config.CHUNK_OVERLAP,
+                add_start_index=True,
+            )
+        else:
+            raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
+
         docs = text_splitter.split_documents(docs)
 
     if len(docs) == 0:
