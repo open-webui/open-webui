@@ -15,6 +15,9 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, sta
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+
+from open_webui.apps.webui.models.knowledge import Knowledges
+
 from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 
 # Document loaders
@@ -1277,6 +1280,7 @@ def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin
 @app.post("/reset/db")
 def reset_vector_db(user=Depends(get_admin_user)):
     VECTOR_DB_CLIENT.reset()
+    Knowledges.delete_all_knowledge()
 
 
 @app.post("/reset/uploads")
@@ -1299,28 +1303,6 @@ def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
             print(f"The directory {folder} does not exist")
     except Exception as e:
         print(f"Failed to process the directory {folder}. Reason: {e}")
-
-    return True
-
-
-@app.post("/reset")
-def reset(user=Depends(get_admin_user)) -> bool:
-    folder = f"{UPLOAD_DIR}"
-    for filename in os.listdir(folder):
-        file_path = os.path.join(folder, filename)
-        try:
-            if os.path.isfile(file_path) or os.path.islink(file_path):
-                os.unlink(file_path)
-            elif os.path.isdir(file_path):
-                shutil.rmtree(file_path)
-        except Exception as e:
-            log.error("Failed to delete %s. Reason: %s" % (file_path, e))
-
-    try:
-        VECTOR_DB_CLIENT.reset()
-    except Exception as e:
-        log.exception(e)
-
     return True
 
 
