@@ -375,7 +375,7 @@ else:
             AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST
         )
     except Exception:
-        AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = None
+        AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = 3
 
 ####################################
 # OFFLINE_MODE

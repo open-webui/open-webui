@@ -990,10 +990,12 @@ async def get_all_models():
                     owned_by = model["owned_by"]
                     if "pipe" in model:
                         pipe = model["pipe"]
-
-                    if "info" in model and "meta" in model["info"]:
-                        action_ids.extend(model["info"]["meta"].get("actionIds", []))
                     break
+
+            if custom_model.meta:
+                meta = custom_model.meta.model_dump()
+                if "actionIds" in meta:
+                    action_ids.extend(meta["actionIds"])
 
             models.append(
                 {
@@ -2385,7 +2387,7 @@ async def oauth_callback(provider: str, request: Request, response: Response):
         key="token",
         value=jwt_token,
         httponly=True,  # Ensures the cookie is not accessible via JavaScript
-        samesite=WEBUI_SESSION_COOKIE_SAME_SITE, 
+        samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
         secure=WEBUI_SESSION_COOKIE_SECURE,
     )
 
