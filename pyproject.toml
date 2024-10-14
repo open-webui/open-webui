@@ -50,13 +50,15 @@ dependencies = [
     "chromadb==0.5.9",
     "pymilvus==2.4.7",
 
-    "sentence-transformers==3.0.1",
+    "sentence-transformers==3.2.0",
     "colbert-ai==0.2.21",
     "einops==0.8.0",
     
 
     "ftfy==6.2.3",
     "pypdf==4.3.1",
+    "xhtml2pdf==0.2.16",
+    "pymdown-extensions==10.11.2",
     "docx2txt==0.8",
     "python-pptx==1.0.0",
     "unstructured==0.15.9",

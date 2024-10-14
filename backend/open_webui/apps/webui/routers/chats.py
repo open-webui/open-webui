@@ -465,7 +465,7 @@ async def get_chat_tags_by_id(id: str, user=Depends(get_verified_user)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
         tags = chat.meta.get("tags", [])
-        return Tags.get_tags_by_ids(tags)
+        return Tags.get_tags_by_ids_and_user_id(tags, user.id)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
@@ -494,7 +494,7 @@ async def add_tag_by_id_and_tag_name(
 
         chat = Chats.get_chat_by_id_and_user_id(id, user.id)
         tags = chat.meta.get("tags", [])
-        return Tags.get_tags_by_ids(tags)
+        return Tags.get_tags_by_ids_and_user_id(tags, user.id)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
@@ -519,7 +519,7 @@ async def delete_tag_by_id_and_tag_name(
 
         chat = Chats.get_chat_by_id_and_user_id(id, user.id)
         tags = chat.meta.get("tags", [])
-        return Tags.get_tags_by_ids(tags)
+        return Tags.get_tags_by_ids_and_user_id(tags, user.id)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
@@ -543,7 +543,7 @@ async def delete_all_chat_tags_by_id(id: str, user=Depends(get_verified_user)):
 
         chat = Chats.get_chat_by_id_and_user_id(id, user.id)
         tags = chat.meta.get("tags", [])
-        return Tags.get_tags_by_ids(tags)
+        return Tags.get_tags_by_ids_and_user_id(tags, user.id)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND

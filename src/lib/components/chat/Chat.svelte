@@ -175,10 +175,30 @@
 					message.statusHistory = [data];
 				}
 			} else if (type === 'citation') {
-				if (message?.citations) {
-					message.citations.push(data);
+				if (data?.type === 'code_execution') {
+					// Code execution; update existing code execution by ID, or add new one.
+					if (!message?.code_executions) {
+						message.code_executions = [];
+					}
+
+					const existingCodeExecutionIndex = message.code_executions.findIndex(
+						(execution) => execution.id === data.id
+					);
+
+					if (existingCodeExecutionIndex !== -1) {
+						message.code_executions[existingCodeExecutionIndex] = data;
+					} else {
+						message.code_executions.push(data);
+					}
+
+					message.code_executions = message.code_executions;
 				} else {
-					message.citations = [data];
+					// Regular citation.
+					if (message?.citations) {
+						message.citations.push(data);
+					} else {
+						message.citations = [data];
+					}
 				}
 			} else if (type === 'message') {
 				message.content += data.content;
