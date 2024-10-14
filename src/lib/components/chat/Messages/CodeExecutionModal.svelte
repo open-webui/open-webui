@@ -57,7 +57,7 @@
 					</div>
 
 					<CodeBlock
-						id="codeexec-{code_execution?.uuid}-code"
+						id="codeexec-{code_execution?.id}-code"
 						lang={code_execution?.language}
 						code={code_execution?.code}
 						allow_execution={false}
@@ -71,7 +71,7 @@
 						</div>
 
 						<CodeBlock
-							id="codeexec-{code_execution?.uuid}-error"
+							id="codeexec-{code_execution?.id}-error"
 							lang=""
 							code={code_execution?.error}
 							allow_execution={false}
@@ -86,7 +86,7 @@
 						</div>
 
 						<CodeBlock
-							id="codeexec-{code_execution?.uuid}-output"
+							id="codeexec-{code_execution?.id}-output"
 							lang=""
 							code={code_execution?.output}
 							allow_execution={false}

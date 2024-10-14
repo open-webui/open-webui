@@ -176,14 +176,14 @@
 				}
 			} else if (type === 'citation') {
 				if (data?.type === 'code_execution') {
-					// Code execution; update existing code execution by UUID,
+					// Code execution; update existing code execution by ID,
 					// otherwise append.
 					if (!message?.code_executions) {
 						message.code_executions = [];
 					}
 					let is_update = false;
 					for (let i = 0; i < message.code_executions.length; i++) {
-						if (message.code_executions[i].uuid === data.uuid) {
+						if (message.code_executions[i].id === data.id) {
 							message.code_executions[i] = data;
 							is_update = true;
 							break;

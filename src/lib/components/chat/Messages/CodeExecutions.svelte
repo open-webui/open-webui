@@ -11,6 +11,7 @@
 		let output = null;
 		let files = [];
 		let status = 'PENDING';
+
 		if (code_execution.result) {
 			output = code_execution.result.output;
 			if (code_execution.result.error) {
@@ -23,8 +24,9 @@
 				files = code_execution.result.files;
 			}
 		}
+
 		acc.push({
-			uuid: code_execution.uuid,
+			id: code_execution.id,
 			name: code_execution.name,
 			code: code_execution.code,
 			language: code_execution.language || '',
