@@ -5,24 +5,25 @@
 	const i18n = getContext('i18n');
 
 	export let show = false;
-	export let code_execution = null;
+	export let codeExecution = null;
 </script>
 
 <Modal size="lg" bind:show>
 	<div>
 		<div class="flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
 			<div class="text-lg font-medium self-center capitalize">
-				{#if code_execution?.status == 'OK'}
+				{#if codeExecution?.status == 'OK'}
 					&#x2705; <!-- Checkmark -->
-				{:else if code_execution?.status == 'ERROR'}
+				{:else if codeExecution?.status == 'ERROR'}
 					&#x274C; <!-- X mark -->
-				{:else if code_execution?.status == 'PENDING'}
+				{:else if codeExecution?.status == 'PENDING'}
 					&#x23F3; <!-- Hourglass -->
 				{:else}
 					&#x2049;&#xFE0F; <!-- Interrobang -->
 				{/if}
-				{#if code_execution?.name}
-					{$i18n.t('Code execution')}: {code_execution?.name}
+
+				{#if codeExecution?.name}
+					{$i18n.t('Code execution')}: {codeExecution?.name}
 				{:else}
 					{$i18n.t('Code execution')}
 				{/if}
@@ -31,7 +32,7 @@
 				class="self-center"
 				on:click={() => {
 					show = false;
-					code_execution = null;
+					codeExecution = null;
 				}}
 			>
 				<svg
@@ -57,13 +58,13 @@
 					</div>
 
 					<CodeBlock
-						id="codeexec-{code_execution?.id}-code"
-						lang={code_execution?.language}
-						code={code_execution?.code}
+						id="codeexec-{codeExecution?.id}-code"
+						lang={codeExecution?.language}
+						code={codeExecution?.code}
 						allow_execution={false}
 					/>
 				</div>
-				{#if code_execution?.error}
+				{#if codeExecution?.error}
 					<div class="flex flex-col w-full">
 						<hr class=" dark:border-gray-850 my-3" />
 						<div class="text-sm dark:text-gray-400">
@@ -71,14 +72,14 @@
 						</div>
 
 						<CodeBlock
-							id="codeexec-{code_execution?.id}-error"
+							id="codeexec-{codeExecution?.id}-error"
 							lang=""
-							code={code_execution?.error}
+							code={codeExecution?.error}
 							allow_execution={false}
 						/>
 					</div>
 				{/if}
-				{#if code_execution?.output}
+				{#if codeExecution?.output}
 					<div class="flex flex-col w-full">
 						<hr class=" dark:border-gray-850 my-3" />
 						<div class="text-sm dark:text-gray-400">
@@ -86,21 +87,21 @@
 						</div>
 
 						<CodeBlock
-							id="codeexec-{code_execution?.id}-output"
+							id="codeexec-{codeExecution?.id}-output"
 							lang=""
-							code={code_execution?.output}
+							code={codeExecution?.output}
 							allow_execution={false}
 						/>
 					</div>
 				{/if}
-				{#if code_execution?.files && code_execution?.files.length > 0}
+				{#if codeExecution?.files && codeExecution?.files.length > 0}
 					<div class="flex flex-col w-full">
 						<hr class=" dark:border-gray-850 my-3" />
 						<div class=" text-sm font-medium dark:text-gray-300">
 							{$i18n.t('Files')}
 						</div>
 						<ul class="mt-1 list-disc pl-4 text-xs">
-							{#each code_execution?.files as file}
+							{#each codeExecution?.files as file}
 								<li>
 									&#x1F4BE; <!-- Floppy disk -->
 									<a href={file.url} target="_blank">{file.name}</a>
