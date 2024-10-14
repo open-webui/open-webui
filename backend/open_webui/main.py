@@ -515,8 +515,13 @@ async def handle_streaming_response(request: Request, response: Response,
                 for tool_call in tool_calls:
                     tool_function_name = tool_call["function"]["name"]
                     tool_function_params = extract_json(tool_call["function"]["arguments"])
-                    tool_function_params = {} if tool_function_params is None else tool_function_params 
 
+                    if not tool_call["function"]["arguments"]:
+                        tool_function_params = {}
+                    else: 
+                        tool_function_params = json.loads(tool_call["function"]["arguments"]) 
+
+                    log.debug(f"calling {tool_function_name} with params {tool_function_params}")
                     try:
                         tool_output = await tools[tool_function_name]["callable"](**tool_function_params)
                     except Exception as e:
@@ -552,7 +557,6 @@ async def handle_streaming_response(request: Request, response: Response,
         except StopAsyncIteration:
             pass
         except Exception as e:
-            import pdb; pdb.set_trace()
             log.exception(f"Error: {e}")
 
     return StreamingResponse(
@@ -578,9 +582,10 @@ async def handle_nonstreaming_response(request: Request, response: Response,
         tool_calls = response_dict["choices"][0]["message"].get("tool_calls", [])
         for tool_call in tool_calls:
             tool_function_name = tool_call["function"]["name"]
-            tool_function_params = extract_json(tool_call["function"]["arguments"]) 
-
-            tool_function_params = {} if tool_function_params is None else tool_function_params 
+            if not tool_call["function"]["arguments"]:
+                tool_function_params = {}
+            else: 
+                tool_function_params = json.loads(tool_call["function"]["arguments"]) 
 
             try:
                 tool_output = await tools[tool_function_name]["callable"](**tool_function_params)
@@ -609,8 +614,9 @@ async def handle_nonstreaming_response(request: Request, response: Response,
         response_dict = await generate_chat_completions(form_data = body, user = user )
 
 
-    #FIXME: handle citations and data_items (Streaming Response)
+    #FIXME: is it possible to handle citations?
     return JSONResponse(content = response_dict)
+
 
 async def chat_completion_tools_handler(
     body: dict, user: UserModel, extra_params: dict
