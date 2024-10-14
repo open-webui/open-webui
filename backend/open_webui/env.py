@@ -363,6 +363,20 @@ else:
     except Exception:
         AIOHTTP_CLIENT_TIMEOUT = 300
 
+AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = os.environ.get(
+    "AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST", "3"
+)
+
+if AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST == "":
+    AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = None
+else:
+    try:
+        AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = int(
+            AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST
+        )
+    except Exception:
+        AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = None
+
 ####################################
 # OFFLINE_MODE
 ####################################
