@@ -103,10 +103,10 @@
 									{/if}
 								</div>
 							</Tooltip>
+							<div class="text-sm font-medium dark:text-gray-300 mt-2">
+								{$i18n.t('Relevance')}
+							</div>
 							{#if document.distance !== undefined}
-								<div class="text-sm font-medium dark:text-gray-300 mt-2">
-									{$i18n.t('Relevance')}
-								</div>
 								<Tooltip
 									content={$i18n.t('Semantic distance to query from vector store')}
 									placement="left"
@@ -130,7 +130,7 @@
 								</Tooltip>
 							{:else}
 								<div class="text-sm dark:text-gray-400">
-									{$i18n.t('No source available')}
+									{$i18n.t('No distance available')}
 								</div>
 							{/if}
 						{:else}
@@ -140,7 +140,7 @@
 						{/if}
 					</div>
 					<div class="flex flex-col w-full">
-						<div class=" text-sm font-medium dark:text-gray-300">
+						<div class=" text-sm font-medium dark:text-gray-300 mt-2">
 							{$i18n.t('Content')}
 						</div>
 						<pre class="text-sm dark:text-gray-400 whitespace-pre-line">

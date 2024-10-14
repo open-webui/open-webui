@@ -83,7 +83,7 @@
 								{idx + 1}
 							</div>
 						{/if}
-						<div class="flex-1 mx-2 line-clamp-1">
+						<div class="flex-1 mx-2 line-clamp-1 truncate">
 							{citation.source.name}
 						</div>
 					</button>
@@ -94,37 +94,67 @@
 				<div
 					class="flex items-center gap-1 text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition cursor-pointer"
 				>
-					<div class="flex-grow flex flex-wrap items-center gap-1">
+					<div class="flex-grow flex items-center gap-1 overflow-hidden">
 						<span class="whitespace-nowrap hidden sm:inline">{$i18n.t('References from')}</span>
-						<div class="flex flex-wrap items-center">
-							{#each _citations.slice(0, 2) as citation, idx}
-								<div class="flex items-center">
-									<button
-										class="no-toggle flex dark:text-gray-300 py-1 px-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-xl max-w-96 text-xs font-semibold"
-										on:click={() => {
-											showCitationModal = true;
-											selectedCitation = citation;
-										}}
-									>
-										{#if _citations.every((c) => c.distances !== undefined)}
-											<div class="bg-white dark:bg-gray-700 rounded-full size-4">
-												{idx + 1}
+						<div class="flex items-center">
+							{#if _citations.length > 1 && _citations
+									.slice(0, 2)
+									.reduce((acc, citation) => acc + citation.source.name.length, 0) <= 50}
+								{#each _citations.slice(0, 2) as citation, idx}
+									<div class="flex items-center">
+										<button
+											class="no-toggle flex dark:text-gray-300 py-1 px-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-xl max-w-96 text-xs font-semibold"
+											on:click={() => {
+												showCitationModal = true;
+												selectedCitation = citation;
+											}}
+										>
+											{#if _citations.every((c) => c.distances !== undefined)}
+												<div class="bg-white dark:bg-gray-700 rounded-full size-4">
+													{idx + 1}
+												</div>
+											{/if}
+											<div class="flex-1 mx-2 line-clamp-1">
+												{citation.source.name}
 											</div>
+										</button>
+										{#if idx === 0}<span class="mr-1">,</span>
 										{/if}
-										<div class="flex-1 mx-2 line-clamp-1">
-											{citation.source.name}
-										</div>
-									</button>
-									{#if idx === 0}
-										<span class="mr-1">,</span>
-									{/if}
-								</div>
-							{/each}
+									</div>
+								{/each}
+							{:else}
+								{#each _citations.slice(0, 1) as citation, idx}
+									<div class="flex items-center">
+										<button
+											class="no-toggle flex dark:text-gray-300 py-1 px-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-xl max-w-96 text-xs font-semibold"
+											on:click={() => {
+												showCitationModal = true;
+												selectedCitation = citation;
+											}}
+										>
+											{#if _citations.every((c) => c.distances !== undefined)}
+												<div class="bg-white dark:bg-gray-700 rounded-full size-4">
+													{idx + 1}
+												</div>
+											{/if}
+											<div class="flex-1 mx-2 line-clamp-1">
+												{citation.source.name}
+											</div>
+										</button>
+									</div>
+								{/each}
+							{/if}
 						</div>
 						<div class="flex items-center gap-1 whitespace-nowrap">
 							<span class="hidden sm:inline">{$i18n.t('and')}</span>
 							<span class="text-gray-600 dark:text-gray-400">
-								{_citations.length - 2}
+								{_citations.length -
+									(_citations.length > 1 &&
+									_citations
+										.slice(0, 2)
+										.reduce((acc, citation) => acc + citation.source.name.length, 0) <= 50
+										? 2
+										: 1)}
 							</span>
 							<span>{$i18n.t('more')}</span>
 						</div>
