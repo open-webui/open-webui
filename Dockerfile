@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Initialize device type args
-# use build args in the docker build commmand with --build-arg="BUILDARG=true"
+# use build args in the docker build command with --build-arg="BUILDARG=true"
 ARG USE_CUDA=false
 ARG USE_OLLAMA=false
 # Tested with cu117 for CUDA 11 and cu121 for CUDA 12 (default)

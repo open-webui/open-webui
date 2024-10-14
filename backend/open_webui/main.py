@@ -578,7 +578,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
         }
 
         # Initialize data_items to store additional data to be sent to the client
-        # Initalize contexts and citation
+        # Initialize contexts and citation
         data_items = []
         contexts = []
         citations = []
@@ -2279,7 +2279,7 @@ async def oauth_login(provider: str, request: Request):
 # 2. If OAUTH_MERGE_ACCOUNTS_BY_EMAIL is true, find a user with the email address provided via OAuth
 #    - This is considered insecure in general, as OAuth providers do not always verify email addresses
 # 3. If there is no user, and ENABLE_OAUTH_SIGNUP is true, create a user
-#    - Email addresses are considered unique, so we fail registration if the email address is alreayd taken
+#    - Email addresses are considered unique, so we fail registration if the email address is already taken
 @app.get("/oauth/{provider}/callback")
 async def oauth_callback(provider: str, request: Request, response: Response):
     if provider not in OAUTH_PROVIDERS:

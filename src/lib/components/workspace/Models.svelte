@@ -198,7 +198,7 @@
 		saveAs(blob, `${model.id}-${Date.now()}.json`);
 	};
 
-	const positionChangeHanlder = async () => {
+	const positionChangeHandler = async () => {
 		// Get the new order of the models
 		const modelIds = Array.from(document.getElementById('model-list').children).map((child) =>
 			child.id.replace('model-item-', '')
@@ -248,7 +248,7 @@
 				animation: 150,
 				onUpdate: async (event) => {
 					console.log(event);
-					positionChangeHanlder();
+					positionChangeHandler();
 				}
 			});
 		}

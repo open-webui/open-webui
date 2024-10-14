@@ -132,7 +132,7 @@
 					}
 				},
 				stderr: (text) => {
-					console.log('An error occured:', text);
+					console.log('An error occurred:', text);
 					if (stderr) {
 						stderr += `${text}\n`;
 					} else {
