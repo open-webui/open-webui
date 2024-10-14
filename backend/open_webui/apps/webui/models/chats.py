@@ -61,9 +61,11 @@ class ChatModel(BaseModel):
 class ChatForm(BaseModel):
     chat: dict
 
+
 class ChatTitleMessagesForm(BaseModel):
     title: str
     messages: list[dict]
+
 
 class ChatTitleForm(BaseModel):
     title: str
@@ -361,7 +363,7 @@ class ChatTable:
         with get_db() as db:
             all_chats = (
                 db.query(Chat)
-                .filter_by(user_id=user_id, pinned=True)
+                .filter_by(user_id=user_id, pinned=True, archived=False)
                 .order_by(Chat.updated_at.desc())
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]

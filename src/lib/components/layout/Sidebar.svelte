@@ -311,6 +311,7 @@
 <ArchivedChatsModal
 	bind:show={$showArchivedChats}
 	on:change={async () => {
+		await pinnedChats.set(await getPinnedChatList(localStorage.token));
 		await chats.set(await getChatList(localStorage.token));
 	}}
 />
