@@ -443,12 +443,12 @@ def fill_with_delta(fcall_dict:dict, delta:dict) -> None:
         return
     j = delta['choices'][0]['delta']['tool_calls'][0]
     if 'id' in j:
-        fcall_dict["id"] += j["id"]
+        fcall_dict["id"] += j["id"] or ''
     if 'function' in j:
         if 'name' in j['function']:
-            fcall_dict['function']['name'] += j['function']['name']
+            fcall_dict['function']['name'] += j['function']['name'] or ''
         if 'arguments' in j['function']:
-            fcall_dict['function']['arguments'] += j['function']['arguments']
+            fcall_dict['function']['arguments'] += j['function']['arguments'] or ''
 
 async def handle_streaming_response(request: Request, response: Response, 
                                     tools: dict,
