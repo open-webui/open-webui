@@ -11,18 +11,34 @@
 
 	let _citations = [];
 	let showPercentage = false;
+	let showRelevance = true;
 
 	let showCitationModal = false;
 	let selectedCitation: any = null;
 	let isCollapsibleOpen = false;
 
+	function calculateShowRelevance(citations: any[]) {
+		const distances = citations.flatMap((citation) => citation.distances ?? []);
+		const inRange = distances.filter((d) => d !== undefined && d >= -1 && d <= 1).length;
+		const outOfRange = distances.filter((d) => d !== undefined && (d < -1 || d > 1)).length;
+
+		if (distances.length === 0) {
+			return false;
+		}
+
+		if (
+			(inRange === distances.length - 1 && outOfRange === 1) ||
+			(outOfRange === distances.length - 1 && inRange === 1)
+		) {
+			return false;
+		}
+
+		return true;
+	}
+
 	function shouldShowPercentage(citations: any[]) {
-		return citations.every(
-			(citation) =>
-				citation.distances &&
-				citation.distances.length > 0 &&
-				citation.distances.every((d: number) => d !== undefined && d >= -1 && d <= 1)
-		);
+		const distances = citations.flatMap((citation) => citation.distances ?? []);
+		return distances.every((d) => d !== undefined && d >= -1 && d <= 1);
 	}
 
 	$: {
@@ -60,11 +76,17 @@
 			return acc;
 		}, []);
 
+		showRelevance = calculateShowRelevance(_citations);
 		showPercentage = shouldShowPercentage(_citations);
 	}
 </script>
 
-<CitationsModal bind:show={showCitationModal} citation={selectedCitation} {showPercentage} />
+<CitationsModal
+	bind:show={showCitationModal}
+	citation={selectedCitation}
+	{showPercentage}
+	{showRelevance}
+/>
 
 {#if _citations.length > 0}
 	<div class="mt-1 mb-2 w-full flex gap-1 items-center flex-wrap">

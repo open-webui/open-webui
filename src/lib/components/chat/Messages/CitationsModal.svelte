@@ -8,6 +8,7 @@
 	export let show = false;
 	export let citation;
 	export let showPercentage = false;
+	export let showRelevance = true;
 
 	let mergedDocuments = [];
 
@@ -103,35 +104,37 @@
 									{/if}
 								</div>
 							</Tooltip>
-							<div class="text-sm font-medium dark:text-gray-300 mt-2">
-								{$i18n.t('Relevance')}
-							</div>
-							{#if document.distance !== undefined}
-								<Tooltip
-									content={$i18n.t('Semantic distance to query from vector store')}
-									placement="left"
-									tippyOptions={{ duration: [500, 0] }}
-								>
-									<div class="text-sm my-1 dark:text-gray-400 flex items-center gap-2">
-										{#if showPercentage}
-											{@const percentage = calculatePercentage(document.distance)}
-											<span class={`px-1 rounded font-medium ${getRelevanceColor(percentage)}`}>
-												{percentage.toFixed(2)}%
-											</span>
-											<span class="text-gray-500 dark:text-gray-500">
-												({document.distance.toFixed(4)})
-											</span>
-										{:else}
-											<span class="text-gray-500 dark:text-gray-500">
-												{document.distance.toFixed(4)}
-											</span>
-										{/if}
-									</div>
-								</Tooltip>
-							{:else}
-								<div class="text-sm dark:text-gray-400">
-									{$i18n.t('No distance available')}
+							{#if showRelevance}
+								<div class="text-sm font-medium dark:text-gray-300 mt-2">
+									{$i18n.t('Relevance')}
 								</div>
+								{#if document.distance !== undefined}
+									<Tooltip
+										content={$i18n.t('Semantic distance to query from vector store')}
+										placement="left"
+										tippyOptions={{ duration: [500, 0] }}
+									>
+										<div class="text-sm my-1 dark:text-gray-400 flex items-center gap-2">
+											{#if showPercentage}
+												{@const percentage = calculatePercentage(document.distance)}
+												<span class={`px-1 rounded font-medium ${getRelevanceColor(percentage)}`}>
+													{percentage.toFixed(2)}%
+												</span>
+												<span class="text-gray-500 dark:text-gray-500">
+													({document.distance.toFixed(4)})
+												</span>
+											{:else}
+												<span class="text-gray-500 dark:text-gray-500">
+													{document.distance.toFixed(4)}
+												</span>
+											{/if}
+										</div>
+									</Tooltip>
+								{:else}
+									<div class="text-sm dark:text-gray-400">
+										{$i18n.t('No distance available')}
+									</div>
+								{/if}
 							{/if}
 						{:else}
 							<div class="text-sm dark:text-gray-400">
