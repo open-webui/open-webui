@@ -2,6 +2,8 @@
 	import { getContext } from 'svelte';
 	import CodeBlock from './CodeBlock.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Badge from '$lib/components/common/Badge.svelte';
 	const i18n = getContext('i18n');
 
 	export let show = false;
@@ -11,22 +13,34 @@
 <Modal size="lg" bind:show>
 	<div>
 		<div class="flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
-			<div class="text-lg font-medium self-center capitalize">
-				{#if codeExecution?.status == 'OK'}
-					&#x2705; <!-- Checkmark -->
-				{:else if codeExecution?.status == 'ERROR'}
-					&#x274C; <!-- X mark -->
-				{:else if codeExecution?.status == 'PENDING'}
-					&#x23F3; <!-- Hourglass -->
-				{:else}
-					&#x2049;&#xFE0F; <!-- Interrobang -->
+			<div class="text-lg font-medium self-center flex flex-col gap-0.5 capitalize">
+				{#if codeExecution?.result}
+					<div>
+						{#if codeExecution.result?.error}
+							<Badge type="error" content="error" />
+						{:else if codeExecution.result?.output}
+							<Badge type="success" content="success" />
+						{:else}
+							<Badge type="warning" content="incomplete" />
+						{/if}
+					</div>
 				{/if}
 
-				{#if codeExecution?.name}
-					{$i18n.t('Code execution')}: {codeExecution?.name}
-				{:else}
-					{$i18n.t('Code execution')}
-				{/if}
+				<div class="flex gap-2 items-center">
+					{#if !codeExecution?.result}
+						<div>
+							<Spinner className="size-4" />
+						</div>
+					{/if}
+
+					<div>
+						{#if codeExecution?.name}
+							{$i18n.t('Code execution')}: {codeExecution?.name}
+						{:else}
+							{$i18n.t('Code execution')}
+						{/if}
+					</div>
+				</div>
 			</div>
 			<button
 				class="self-center"
@@ -48,62 +62,50 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-6 pb-5 md:space-x-4">
+		<div class="flex flex-col md:flex-row w-full px-4 pb-5">
 			<div
 				class="flex flex-col w-full dark:text-gray-200 overflow-y-scroll max-h-[22rem] scrollbar-hidden"
 			>
 				<div class="flex flex-col w-full">
-					<div class="text-sm font-medium dark:text-gray-300">
-						{$i18n.t('Code')}
-					</div>
-
 					<CodeBlock
-						id="codeexec-{codeExecution?.id}-code"
-						lang={codeExecution?.language}
-						code={codeExecution?.code}
-						allow_execution={false}
+						id="code-exec-{codeExecution?.id}-code"
+						lang={codeExecution?.language ?? ''}
+						code={codeExecution?.code ?? ''}
+						className=""
+						editorClassName={codeExecution?.result &&
+						(codeExecution?.result?.error || codeExecution?.result?.output)
+							? 'rounded-b-none'
+							: ''}
+						stickyButtonsClassName="top-0"
+						run={false}
 					/>
 				</div>
-				{#if codeExecution?.error}
-					<div class="flex flex-col w-full">
-						<hr class=" dark:border-gray-850 my-3" />
-						<div class="text-sm dark:text-gray-400">
-							{$i18n.t('Error')}
-						</div>
 
-						<CodeBlock
-							id="codeexec-{codeExecution?.id}-error"
-							lang=""
-							code={codeExecution?.error}
-							allow_execution={false}
-						/>
+				{#if codeExecution?.result && (codeExecution?.result?.error || codeExecution?.result?.output)}
+					<div class="dark:bg-[#202123] dark:text-white px-4 py-4 rounded-b-lg flex flex-col gap-3">
+						{#if codeExecution?.result?.error}
+							<div>
+								<div class=" text-gray-500 text-xs mb-1">{$i18n.t('ERROR')}</div>
+								<div class="text-sm">{codeExecution?.result?.error}</div>
+							</div>
+						{/if}
+						{#if codeExecution?.result?.output}
+							<div>
+								<div class=" text-gray-500 text-xs mb-1">{$i18n.t('OUTPUT')}</div>
+								<div class="text-sm">{codeExecution?.result?.output}</div>
+							</div>
+						{/if}
 					</div>
 				{/if}
-				{#if codeExecution?.output}
+				{#if codeExecution?.result?.files && codeExecution?.result?.files.length > 0}
 					<div class="flex flex-col w-full">
-						<hr class=" dark:border-gray-850 my-3" />
-						<div class="text-sm dark:text-gray-400">
-							{$i18n.t('Output')}
-						</div>
-
-						<CodeBlock
-							id="codeexec-{codeExecution?.id}-output"
-							lang=""
-							code={codeExecution?.output}
-							allow_execution={false}
-						/>
-					</div>
-				{/if}
-				{#if codeExecution?.files && codeExecution?.files.length > 0}
-					<div class="flex flex-col w-full">
-						<hr class=" dark:border-gray-850 my-3" />
+						<hr class=" dark:border-gray-850 my-2" />
 						<div class=" text-sm font-medium dark:text-gray-300">
 							{$i18n.t('Files')}
 						</div>
 						<ul class="mt-1 list-disc pl-4 text-xs">
-							{#each codeExecution?.files as file}
+							{#each codeExecution?.result?.files as file}
 								<li>
-									&#x1F4BE; <!-- Floppy disk -->
 									<a href={file.url} target="_blank">{file.name}</a>
 								</li>
 							{/each}
