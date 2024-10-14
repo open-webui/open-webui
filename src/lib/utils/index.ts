@@ -444,7 +444,7 @@ const convertOpenAIMessages = (convo) => {
 };
 
 const validateChat = (chat) => {
-	// Because ChatGPT sometimes has features we can't use like DALL-E or migh have corrupted messages, need to validate
+	// Because ChatGPT sometimes has features we can't use like DALL-E or might have corrupted messages, need to validate
 	const messages = chat.messages;
 
 	// Check if messages array is empty
