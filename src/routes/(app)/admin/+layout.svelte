@@ -50,7 +50,7 @@
 
 				<div class=" flex w-full">
 					<div
-						class="flex scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent/10 p-1"
+						class="flex scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full shadow-2xl bg-transparent/10 p-1"
 					>
 						<a
 							class="min-w-fit rounded-full p-1.5 px-3 {['/admin', '/admin/'].includes(
