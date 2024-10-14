@@ -176,22 +176,22 @@
 				}
 			} else if (type === 'citation') {
 				if (data?.type === 'code_execution') {
-					// Code execution; update existing code execution by ID,
-					// otherwise append.
+					// Code execution; update existing code execution by ID, or add new one.
 					if (!message?.code_executions) {
 						message.code_executions = [];
 					}
-					let is_update = false;
-					for (let i = 0; i < message.code_executions.length; i++) {
-						if (message.code_executions[i].id === data.id) {
-							message.code_executions[i] = data;
-							is_update = true;
-							break;
-						}
-					}
-					if (!is_update) {
+
+					const existingCodeExecutionIndex = message.code_executions.findIndex(
+						(execution) => execution.id === data.id
+					);
+
+					if (existingCodeExecutionIndex !== -1) {
+						message.code_executions[existingCodeExecutionIndex] = data;
+					} else {
 						message.code_executions.push(data);
 					}
+
+					message.code_executions = message.code_executions;
 				} else {
 					// Regular citation.
 					if (message?.citations) {
