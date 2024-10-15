@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
-	import { onMount, getContext, createEventDispatcher, tick } from 'svelte';
+	import { onMount, getContext, createEventDispatcher, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
 	const dispatch = createEventDispatcher();
@@ -32,6 +32,7 @@
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
+	import DragGhost from '$lib/components/common/DragGhost.svelte';
 
 	export let chat;
 	export let selected = false;
@@ -89,11 +90,70 @@
 	const focusEdit = async (node: HTMLInputElement) => {
 		node.focus();
 	};
+
+	let itemElement;
+
+	let drag = false;
+	let x = 0;
+	let y = 0;
+
+	const dragImage = new Image();
+	dragImage.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=';
+
+	const onDragStart = (event) => {
+		console.log('Dragging started:', event.target);
+		event.dataTransfer.setDragImage(dragImage, 0, 0);
+
+		drag = true;
+		itemElement.style.opacity = '0.5'; // Optional: Visual cue to show it's being dragged
+	};
+
+	const onDrag = (event) => {
+		x = event.clientX;
+		y = event.clientY;
+	};
+
+	const onDragEnd = (event) => {
+		console.log('Dragging ended:', event.target);
+		drag = false;
+		itemElement.style.opacity = '1'; // Reset visual cue after drag
+	};
+
+	onMount(() => {
+		if (itemElement) {
+			// Event listener for when dragging starts
+			itemElement.addEventListener('dragstart', onDragStart);
+			// Event listener for when dragging occurs (optional)
+			itemElement.addEventListener('drag', onDrag);
+			// Event listener for when dragging ends
+			itemElement.addEventListener('dragend', onDragEnd);
+		}
+	});
+
+	onDestroy(() => {
+		if (itemElement) {
+			itemElement.removeEventListener('dragstart', onDragStart);
+			itemElement.removeEventListener('drag', onDrag);
+			itemElement.removeEventListener('dragend', onDragEnd);
+		}
+	});
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={chat.id} />
 
-<div class=" w-full pr-2 relative group" draggable="true">
+{#if drag && x && y}
+	<DragGhost {x} {y}>
+		<div class=" bg-black/50 backdrop-blur-2xl px-2 py-1 rounded-lg">
+			<div>
+				<div class=" text-xs text-gray-500">
+					{chat.title}
+				</div>
+			</div>
+		</div>
+	</DragGhost>
+{/if}
+
+<div bind:this={itemElement} class=" w-full pr-2 relative group" draggable="true">
 	{#if confirmEdit}
 		<div
 			class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId || confirmEdit
