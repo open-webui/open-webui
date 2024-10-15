@@ -267,7 +267,7 @@ export const getAllUserChats = async (token: string) => {
 	return res;
 };
 
-export const getAllChatTags = async (token: string) => {
+export const getAllTags = async (token: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/all/tags`, {

@@ -114,12 +114,23 @@ async def search_user_chats(
     limit = 60
     skip = (page - 1) * limit
 
-    return [
+    chat_list = [
         ChatTitleIdResponse(**chat.model_dump())
         for chat in Chats.get_chats_by_user_id_and_search_text(
             user.id, text, skip=skip, limit=limit
         )
     ]
+
+    # Delete tag if no chat is found
+    words = text.strip().split(" ")
+    if page == 1 and len(words) == 1 and words[0].startswith("tag:"):
+        tag_id = words[0].replace("tag:", "")
+        if len(chat_list) == 0:
+            if Tags.get_tag_by_name_and_user_id(tag_id, user.id):
+                log.debug(f"deleting tag: {tag_id}")
+                Tags.delete_tag_by_name_and_user_id(tag_id, user.id)
+
+    return chat_list
 
 
 ############################
@@ -315,7 +326,13 @@ async def update_chat_by_id(
 @router.delete("/{id}", response_model=bool)
 async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified_user)):
     if user.role == "admin":
+        chat = Chats.get_chat_by_id(id)
+        for tag in chat.meta.get("tags", []):
+            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 0:
+                Tags.delete_tag_by_name_and_user_id(tag, user.id)
+
         result = Chats.delete_chat_by_id(id)
+
         return result
     else:
         if not request.app.state.config.USER_PERMISSIONS.get("chat", {}).get(
@@ -325,6 +342,11 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
+
+        chat = Chats.get_chat_by_id(id)
+        for tag in chat.meta.get("tags", []):
+            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 0:
+                Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
         result = Chats.delete_chat_by_id_and_user_id(id, user.id)
         return result
@@ -397,6 +419,20 @@ async def archive_chat_by_id(id: str, user=Depends(get_verified_user)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
         chat = Chats.toggle_chat_archive_by_id(id)
+
+        # Delete tags if chat is archived
+        if chat.archived:
+            for tag_id in chat.meta.get("tags", []):
+                if Chats.count_chats_by_tag_name_and_user_id(tag_id, user.id) == 0:
+                    log.debug(f"deleting tag: {tag_id}")
+                    Tags.delete_tag_by_name_and_user_id(tag_id, user.id)
+        else:
+            for tag_id in chat.meta.get("tags", []):
+                tag = Tags.get_tag_by_name_and_user_id(tag_id, user.id)
+                if tag is None:
+                    log.debug(f"inserting tag: {tag_id}")
+                    tag = Tags.insert_new_tag(tag_id, user.id)
+
         return ChatResponse(**chat.model_dump())
     else:
         raise HTTPException(

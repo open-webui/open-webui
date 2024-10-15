@@ -401,10 +401,11 @@ class ChatTable:
 
         # search_text might contain 'tag:tag_name' format so we need to extract the tag_name, split the search_text and remove the tags
         tag_ids = [
-            tag_name.replace("tag:", "").replace(" ", "_").lower()
-            for tag_name in search_text_words
-            if tag_name.startswith("tag:")
+            word.replace("tag:", "").replace(" ", "_").lower()
+            for word in search_text_words
+            if word.startswith("tag:")
         ]
+
         search_text_words = [
             word for word in search_text_words if not word.startswith("tag:")
         ]
@@ -450,11 +451,11 @@ class ChatTable:
                                     EXISTS (
                                         SELECT 1
                                         FROM json_each(Chat.meta, '$.tags') AS tag
-                                        WHERE tag.value = :tag_id
+                                        WHERE tag.value = :tag_id_{tag_idx}
                                     )
                                     """
-                                ).params(tag_id=tag_id)
-                                for tag_id in tag_ids
+                                ).params(**{f"tag_id_{tag_idx}": tag_id})
+                                for tag_idx, tag_id in enumerate(tag_ids)
                             ]
                         )
                     )
@@ -488,11 +489,11 @@ class ChatTable:
                                     EXISTS (
                                         SELECT 1
                                         FROM json_array_elements_text(Chat.meta->'tags') AS tag
-                                        WHERE tag = :tag_id
+                                        WHERE tag = :tag_id_{tag_idx}
                                     )
                                     """
-                                ).params(tag_id=tag_id)
-                                for tag_id in tag_ids
+                                ).params(**{f"tag_id_{tag_idx}": tag_id})
+                                for tag_idx, tag_id in enumerate(tag_ids)
                             ]
                         )
                     )
@@ -571,7 +572,7 @@ class ChatTable:
 
     def count_chats_by_tag_name_and_user_id(self, tag_name: str, user_id: str) -> int:
         with get_db() as db:  # Assuming `get_db()` returns a session object
-            query = db.query(Chat).filter_by(user_id=user_id)
+            query = db.query(Chat).filter_by(user_id=user_id, archived=False)
 
             # Normalize the tag_name for consistency
             tag_id = tag_name.replace(" ", "_").lower()

@@ -10,6 +10,7 @@
 		archiveChatById,
 		cloneChatById,
 		deleteChatById,
+		getAllTags,
 		getChatList,
 		getChatListByTagName,
 		getPinnedChatList,
@@ -22,7 +23,8 @@
 		mobile,
 		pinnedChats,
 		showSidebar,
-		currentChatPage
+		currentChatPage,
+		tags
 	} from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
@@ -77,6 +79,7 @@
 
 	const archiveChatHandler = async (id) => {
 		await archiveChatById(localStorage.token, id);
+		tags.set(await getAllTags(localStorage.token));
 
 		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));

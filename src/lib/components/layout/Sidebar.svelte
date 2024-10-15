@@ -30,7 +30,7 @@
 		getChatById,
 		getChatListByTagName,
 		updateChatById,
-		getAllChatTags,
+		getAllTags,
 		archiveChatById,
 		cloneChatById,
 		getChatListBySearchText,
@@ -77,6 +77,8 @@
 
 	const initChatList = async () => {
 		// Reset pagination variables
+		tags.set(await getAllTags(localStorage.token));
+
 		currentChatPage.set(1);
 		allChatsLoaded = false;
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
@@ -123,6 +125,10 @@
 			searchDebounceTimeout = setTimeout(async () => {
 				currentChatPage.set(1);
 				await chats.set(await getChatListBySearchText(localStorage.token, search));
+
+				if ($chats.length === 0) {
+					tags.set(await getAllTags(localStorage.token));
+				}
 			}, 1000);
 		}
 	};
@@ -134,6 +140,8 @@
 		});
 
 		if (res) {
+			tags.set(await getAllTags(localStorage.token));
+
 			if ($chatId === id) {
 				await chatId.set('');
 				await tick();
@@ -143,7 +151,6 @@
 			allChatsLoaded = false;
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-
 			await pinnedChats.set(await getPinnedChatList(localStorage.token));
 		}
 	};
@@ -324,7 +331,7 @@
 	bind:show={$showArchivedChats}
 	on:change={async () => {
 		await pinnedChats.set(await getPinnedChatList(localStorage.token));
-		await chats.set(await getChatList(localStorage.token));
+		await initChatList();
 	}}
 />
 
