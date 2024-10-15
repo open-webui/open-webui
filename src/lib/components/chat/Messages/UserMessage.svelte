@@ -1,32 +1,58 @@
 <script lang="ts">
 	import dayjs from 'dayjs';
+	import { toast } from 'svelte-sonner';
+	import { tick, createEventDispatcher, getContext, onMount } from 'svelte';
 
-	import { tick, createEventDispatcher, getContext } from 'svelte';
+	import { models, settings } from '$lib/stores';
+	import { user as _user } from '$lib/stores';
+	import {
+		copyToClipboard as _copyToClipboard,
+		processResponseContent,
+		replaceTokens
+	} from '$lib/utils';
+
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
-	import { modelfiles, settings } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-
-	import { user as _user } from '$lib/stores';
+	import FileItem from '$lib/components/common/FileItem.svelte';
+	import Markdown from './Markdown.svelte';
 
 	const i18n = getContext('i18n');
 
 	const dispatch = createEventDispatcher();
-
 	export let user;
-	export let message;
-	export let siblings;
-	export let isFirstMessage: boolean;
-	export let readOnly: boolean;
 
-	export let confirmEditMessage: Function;
+	export let history;
+	export let messageId;
+
+	export let siblings;
+
 	export let showPreviousMessage: Function;
 	export let showNextMessage: Function;
-	export let copyToClipboard: Function;
+
+	export let editMessage: Function;
+
+	export let isFirstMessage: boolean;
+	export let readOnly: boolean;
 
 	let edit = false;
 	let editedContent = '';
 	let messageEditTextAreaElement: HTMLTextAreaElement;
+
+	let message = JSON.parse(JSON.stringify(history.messages[messageId]));
+	$: if (history.messages) {
+		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
+			message = JSON.parse(JSON.stringify(history.messages[messageId]));
+		}
+	}
+
+	const copyToClipboard = async (text) => {
+		const res = await _copyToClipboard(text);
+		if (res) {
+			toast.success($i18n.t('Copying to clipboard was successful!'));
+		}
+	};
+
 	const editMessageHandler = async () => {
 		edit = true;
 		editedContent = message.content;
@@ -39,8 +65,8 @@
 		messageEditTextAreaElement?.focus();
 	};
 
-	const editMessageConfirmHandler = async () => {
-		confirmEditMessage(message.id, editedContent);
+	const editMessageConfirmHandler = async (submit = true) => {
+		editMessage(message.id, editedContent, submit);
 
 		edit = false;
 		editedContent = '';
@@ -54,28 +80,27 @@
 	const deleteMessageHandler = async () => {
 		dispatch('delete', message.id);
 	};
+
+	onMount(() => {
+		console.log('UserMessage mounted');
+	});
 </script>
 
-<div class=" flex w-full user-message" dir={$settings.chatDirection}>
+<div class=" flex w-full user-message" dir={$settings.chatDirection} id="message-{message.id}">
 	{#if !($settings?.chatBubble ?? true)}
 		<ProfileImage
 			src={message.user
-				? $modelfiles.find((modelfile) => modelfile.tagName === message.user)?.imageUrl ??
-				  '/user.png'
-				: user?.profile_image_url ?? '/user.png'}
+				? ($models.find((m) => m.id === message.user)?.info?.meta?.profile_image_url ?? '/user.png')
+				: (user?.profile_image_url ?? '/user.png')}
 		/>
 	{/if}
-	<div class="w-full overflow-hidden pl-1">
+	<div class="w-full w-0 pl-1">
 		{#if !($settings?.chatBubble ?? true)}
 			<div>
 				<Name>
 					{#if message.user}
-						{#if $modelfiles.map((modelfile) => modelfile.tagName).includes(message.user)}
-							{$modelfiles.find((modelfile) => modelfile.tagName === message.user)?.title}
-						{:else}
-							{$i18n.t('You')}
-							<span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
-						{/if}
+						{$i18n.t('You')}
+						<span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
 					{:else if $settings.showUsername || $_user.name !== user.name}
 						{user.name}
 					{:else}
@@ -84,7 +109,7 @@
 
 					{#if message.timestamp}
 						<span
-							class=" invisible group-hover:visible text-gray-400 text-xs font-medium uppercase"
+							class=" invisible group-hover:visible text-gray-400 text-xs font-medium uppercase ml-0.5 -mt-0.5"
 						>
 							{dayjs(message.timestamp * 1000).format($i18n.t('h:mm a'))}
 						</span>
@@ -93,80 +118,22 @@
 			</div>
 		{/if}
 
-		<div
-			class="prose chat-{message.role} w-full max-w-full flex flex-col justify-end dark:prose-invert prose-headings:my-0 prose-p:my-0 prose-p:-mb-4 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-6 prose-li:-mb-4 whitespace-pre-line"
-		>
+		<div class="chat-{message.role} w-full min-w-full markdown-prose">
 			{#if message.files}
 				<div class="mt-2.5 mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap">
 					{#each message.files as file}
-						<div class={$settings?.chatBubble ?? true ? 'self-end' : ''}>
+						<div class={($settings?.chatBubble ?? true) ? 'self-end' : ''}>
 							{#if file.type === 'image'}
 								<img src={file.url} alt="input" class=" max-h-96 rounded-lg" draggable="false" />
-							{:else if file.type === 'doc'}
-								<button
-									class="h-16 w-72 flex items-center space-x-3 px-2.5 dark:bg-gray-850 rounded-xl border border-gray-200 dark:border-none text-left"
-									type="button"
-									on:click={() => {
-										if (file?.url) {
-											window.open(file?.url, '_blank').focus();
-										}
-									}}
-								>
-									<div class="p-2.5 bg-red-400 text-white rounded-lg">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 24 24"
-											fill="currentColor"
-											class="w-6 h-6"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0 0 16.5 9h-1.875a1.875 1.875 0 0 1-1.875-1.875V5.25A3.75 3.75 0 0 0 9 1.5H5.625ZM7.5 15a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 7.5 15Zm.75 2.25a.75.75 0 0 0 0 1.5H12a.75.75 0 0 0 0-1.5H8.25Z"
-												clip-rule="evenodd"
-											/>
-											<path
-												d="M12.971 1.816A5.23 5.23 0 0 1 14.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 0 1 3.434 1.279 9.768 9.768 0 0 0-6.963-6.963Z"
-											/>
-										</svg>
-									</div>
-
-									<div class="flex flex-col justify-center -space-y-0.5">
-										<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1">
-											{file.name}
-										</div>
-
-										<div class=" text-gray-500 text-sm">{$i18n.t('Document')}</div>
-									</div>
-								</button>
-							{:else if file.type === 'collection'}
-								<button
-									class="h-16 w-72 flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none text-left"
-									type="button"
-								>
-									<div class="p-2.5 bg-red-400 text-white rounded-lg">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 24 24"
-											fill="currentColor"
-											class="w-6 h-6"
-										>
-											<path
-												d="M7.5 3.375c0-1.036.84-1.875 1.875-1.875h.375a3.75 3.75 0 0 1 3.75 3.75v1.875C13.5 8.161 14.34 9 15.375 9h1.875A3.75 3.75 0 0 1 21 12.75v3.375C21 17.16 20.16 18 19.125 18h-9.75A1.875 1.875 0 0 1 7.5 16.125V3.375Z"
-											/>
-											<path
-												d="M15 5.25a5.23 5.23 0 0 0-1.279-3.434 9.768 9.768 0 0 1 6.963 6.963A5.23 5.23 0 0 0 17.25 7.5h-1.875A.375.375 0 0 1 15 7.125V5.25ZM4.875 6H6v10.125A3.375 3.375 0 0 0 9.375 19.5H16.5v1.125c0 1.035-.84 1.875-1.875 1.875h-9.75A1.875 1.875 0 0 1 3 20.625V7.875C3 6.839 3.84 6 4.875 6Z"
-											/>
-										</svg>
-									</div>
-
-									<div class="flex flex-col justify-center -space-y-0.5">
-										<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1">
-											{file?.title ?? `#${file.name}`}
-										</div>
-
-										<div class=" text-gray-500 text-sm">{$i18n.t('Collection')}</div>
-									</div>
-								</button>
+							{:else}
+								<FileItem
+									item={file}
+									url={file.url}
+									name={file.name}
+									type={file.type}
+									size={file?.size}
+									colorClassName="bg-white dark:bg-gray-850 "
+								/>
 							{/if}
 						</div>
 					{/each}
@@ -193,49 +160,65 @@
 							const isEnterPressed = e.key === 'Enter';
 
 							if (isCmdOrCtrlPressed && isEnterPressed) {
-								document.getElementById('save-edit-message-button')?.click();
+								document.getElementById('confirm-edit-message-button')?.click();
 							}
 						}}
 					/>
 
-					<div class=" mt-2 mb-1 flex justify-end space-x-1.5 text-sm font-medium">
-						<button
-							id="close-edit-message-button"
-							class=" px-4 py-2 bg-gray-900 hover:bg-gray-850 text-gray-100 transition rounded-3xl"
-							on:click={() => {
-								cancelEditMessage();
-							}}
-						>
-							{$i18n.t('Cancel')}
-						</button>
+					<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
+						<div>
+							<button
+								id="save-edit-message-button"
+								class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
+								on:click={() => {
+									editMessageConfirmHandler(false);
+								}}
+							>
+								{$i18n.t('Save')}
+							</button>
+						</div>
 
-						<button
-							id="save-edit-message-button"
-							class="px-4 py-2 bg-white hover:bg-gray-100 text-gray-800 transition rounded-3xl"
-							on:click={() => {
-								editMessageConfirmHandler();
-							}}
-						>
-							{$i18n.t('Send')}
-						</button>
+						<div class="flex space-x-1.5">
+							<button
+								id="close-edit-message-button"
+								class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
+								on:click={() => {
+									cancelEditMessage();
+								}}
+							>
+								{$i18n.t('Cancel')}
+							</button>
+
+							<button
+								id="confirm-edit-message-button"
+								class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+								on:click={() => {
+									editMessageConfirmHandler();
+								}}
+							>
+								{$i18n.t('Send')}
+							</button>
+						</div>
 					</div>
 				</div>
 			{:else}
 				<div class="w-full">
-					<div class="flex {$settings?.chatBubble ?? true ? 'justify-end' : ''} mb-2">
+					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
 						<div
-							class="rounded-3xl {$settings?.chatBubble ?? true
+							class="rounded-3xl {($settings?.chatBubble ?? true)
 								? `max-w-[90%] px-5 py-2  bg-gray-50 dark:bg-gray-850 ${
 										message.files ? 'rounded-tr-lg' : ''
-								  }`
-								: ''}  "
+									}`
+								: ' w-full'}"
 						>
-							<pre id="user-message">{message.content}</pre>
+							{#if message.content}
+								<Markdown id={message.id} content={message.content} />
+							{/if}
 						</div>
 					</div>
 
 					<div
-						class=" flex {$settings?.chatBubble ?? true
+						class=" flex {($settings?.chatBubble ?? true)
 							? 'justify-end'
 							: ''}  text-gray-600 dark:text-gray-500"
 					>

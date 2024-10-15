@@ -109,7 +109,7 @@
 
 							<div class="flex flex-1">
 								<div
-									class="bg-gray-200 dark:bg-gray-800 font-bold px-3 py-0.5 border border-r-0 dark:border-gray-800 rounded-l-xl flex items-center"
+									class="bg-gray-200 dark:bg-gray-800 font-semibold px-3 py-0.5 border border-r-0 dark:border-gray-800 rounded-l-xl flex items-center"
 								>
 									#
 								</div>

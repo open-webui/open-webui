@@ -8,9 +8,5 @@ _test
 Pipfile
 !/data
 /data/*
-!/data/litellm
-/data/litellm/*
-!data/litellm/config.yaml
-
-!data/config.json
+/open_webui/data/*
 .webui_secret_key

@@ -10,9 +10,11 @@
 
 <DropdownMenu.Root
 	bind:open={show}
+	closeFocus={false}
 	onOpenChange={(state) => {
 		dispatch('change', state);
 	}}
+	typeahead={false}
 >
 	<DropdownMenu.Trigger>
 		<slot />

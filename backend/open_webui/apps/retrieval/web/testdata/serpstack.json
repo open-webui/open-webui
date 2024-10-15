@@ -1,0 +1,276 @@
+{
+	"request": {
+		"success": true,
+		"total_time_taken": 3.4,
+		"processed_timestamp": 1714968442,
+		"search_url": "http://www.google.com/search?q=mcdonalds\u0026gl=us\u0026hl=en\u0026safe=0\u0026num=10"
+	},
+	"search_parameters": {
+		"engine": "google",
+		"type": "web",
+		"device": "desktop",
+		"auto_location": "1",
+		"google_domain": "google.com",
+		"gl": "us",
+		"hl": "en",
+		"safe": "0",
+		"news_type": "all",
+		"exclude_autocorrected_results": "0",
+		"images_color": "any",
+		"page": "1",
+		"num": "10",
+		"output": "json",
+		"csv_fields": "search_parameters.query,organic_results.position,organic_results.title,organic_results.url,organic_results.domain",
+		"query": "mcdonalds",
+		"action": "search",
+		"access_key": "aac48e007e15c532bb94ffb34532a4b2",
+		"error": {}
+	},
+	"search_information": {
+		"total_results": 1170000000,
+		"time_taken_displayed": 0.49,
+		"detected_location": {},
+		"did_you_mean": {},
+		"no_results_for_original_query": false,
+		"showing_results_for": {}
+	},
+	"organic_results": [
+		{
+			"position": 1,
+			"title": "Our Full McDonald\u0027s Food Menu",
+			"snippet": "",
+			"prerender": false,
+			"cached_page_url": {},
+			"related_pages_url": {},
+			"url": "https://www.mcdonalds.com/us/en-us/full-menu.html",
+			"domain": "www.mcdonalds.com",
+			"displayed_url": "https://www.mcdonalds.com \u203a en-us \u203a full-menu"
+		},
+		{
+			"position": 2,
+			"title": "McDonald\u0027s",
+			"snippet": "McDonald\u0027s is the world\u0027s largest fast food restaurant chain, serving over 69 million customers daily in over 100 countries in more than 40,000 outlets as of\u00a0...",
+			"prerender": false,
+			"cached_page_url": {},
+			"related_pages_url": {},
+			"url": "https://en.wikipedia.org/wiki/McDonald%27s",
+			"domain": "en.wikipedia.org",
+			"displayed_url": "https://en.wikipedia.org \u203a wiki \u203a McDonald\u0027s"
+		},
+		{
+			"position": 3,
+			"title": "Restaurants Near Me: Nearby McDonald\u0027s Locations",
+			"snippet": "",
+			"prerender": false,
+			"cached_page_url": {},
+			"related_pages_url": {},
+			"url": "https://www.mcdonalds.com/us/en-us/restaurant-locator.html",
+			"domain": "www.mcdonalds.com",
+			"displayed_url": "https://www.mcdonalds.com \u203a en-us \u203a restaurant-locator"
+		},
+		{
+			"position": 4,
+			"title": "Download the McDonald\u0027s App: Deals, Promotions \u0026 ...",
+			"snippet": "Download the McDonald\u0027s app for Mobile Order \u0026 Pay, exclusive deals and coupons, menu information and special promotions.",
+			"prerender": false,
+			"cached_page_url": {},
+			"related_pages_url": {},
+			"url": "https://www.mcdonalds.com/us/en-us/download-app.html",
+			"domain": "www.mcdonalds.com",
+			"displayed_url": "https://www.mcdonalds.com \u203a en-us \u203a download-app"
+		},
+		{
+			"position": 5,
+			"title": "McDonald\u0027s Restaurant Careers in the US",
+			"snippet": "McDonald\u0027s restaurant jobs are one-of-a-kind \u2013 just like you. Restaurants are hiring across all levels, from Crew team to Management. Apply today!",
+			"prerender": false,
+			"cached_page_url": {},
+			"related_pages_url": {},
+			"url": "https://jobs.mchire.com/",
+			"domain": "jobs.mchire.com",
+			"displayed_url": "https://jobs.mchire.com"
+		}
+	],
+	"inline_images": [
+		{
+			"image_url": "https://serpstack-assets.apilayer.net/2418910010831954152.png",
+			"title": ""
+		}
+	],
+	"local_results": [
+		{
+			"position": 1,
+			"title": "McDonald\u0027s",
+			"coordinates": {
+				"latitude": 0,
+				"longitude": 0
+			},
+			"address": "",
+			"rating": 0,
+			"reviews": 0,
+			"type": "",
+			"price": {},
+			"url": 0
+		},
+		{
+			"position": 2,
+			"title": "McDonald\u0027s",
+			"coordinates": {
+				"latitude": 0,
+				"longitude": 0
+			},
+			"address": "",
+			"rating": 0,
+			"reviews": 0,
+			"type": "",
+			"price": {},
+			"url": 0
+		},
+		{
+			"position": 3,
+			"title": "McDonald\u0027s",
+			"coordinates": {
+				"latitude": 0,
+				"longitude": 0
+			},
+			"address": "",
+			"rating": 0,
+			"reviews": 0,
+			"type": "",
+			"price": {},
+			"url": 0
+		}
+	],
+	"top_stories": [
+		{
+			"block_position": 1,
+			"title": "Menu nutrition",
+			"url": "/search?safe=0\u0026sca_esv=c9c7fd42856085e2\u0026sca_upv=1\u0026gl=us\u0026hl=en\u0026q=mcdonald%27s+double+quarter+pounder+with+cheese\u0026stick=H4sIAAAAAAAAAONgFuLUz9U3ME-vLDBX4tVP1zc0TCsuNE0ytjTTUs5OttJPy89P0c9NzSuNLyjKL8tMSS2yAvNS80qKMlOLF7Hq5ian5Ocl5qSoFyuk5Jcm5aQqFJYmFpWkFikU5JfmATUolGeWZCgkZ6SmFqcCAM4ilJtxAAAA\u0026sa=X\u0026ved=2ahUKEwjF55alk_iFAxXlamwGHbqgAs4Qri56BAh0EAM",
+			"source": "",
+			"uploaded": "",
+			"uploaded_utc": "2024-05-06T04:07:22.082Z"
+		},
+		{
+			"block_position": 2,
+			"title": "Profiles",
+			"url": "https://www.instagram.com/McDonalds",
+			"source": "",
+			"uploaded": "",
+			"uploaded_utc": "2024-05-06T04:07:22.082Z"
+		},
+		{
+			"block_position": 3,
+			"title": "People also search for",
+			"url": "/search?safe=0\u0026sca_esv=c9c7fd42856085e2\u0026sca_upv=1\u0026gl=us\u0026hl=en\u0026si=ACC90nzx_D3_zUKRnpAjmO0UBLNxnt7EyN4YYdru6U3bxLI-L5Wg8IL2sxPFxxcDEhVbocy-LJPZIvZySijw0ho2hfZ-KtV-sSEEJ9lw7JuEkXHDnRK5y4Dm8aqbiLwugbLbslwjG3hO_gpDTFZK2VoUGZPy2nrmOBCy0G3PoOfoiEtct2GSZlUz0uufG-xP8emtNzQKQpvjkAm5Zmi57iVZueiD62upz7-x2N3dAbwtm6FkInAPRw1yR91zuT7F3lEaPblTW3LaRwCDC0bvaRCh9x4N9zHgY1OOQa_rzts2jf5WpXcuw4Y%3D\u0026q=Burger+King\u0026sa=X\u0026ved=2ahUKEwjF55alk_iFAxXlamwGHbqgAs4Qs9oBKAB6BAhzEAI",
+			"source": "",
+			"uploaded": "",
+			"uploaded_utc": "2024-05-06T04:07:22.082Z"
+		}
+	],
+	"related_questions": [
+		{
+			"question": "What\u0027s a number 7 at McDonald\u0027s?What\u0027s a number 7 at McDonald\u0027s?What\u0027s a number 7 at McDonald\u0027s?",
+			"answer": "",
+			"title": "",
+			"displayed_url": ""
+		},
+		{
+			"question": "Why is McDonald\u0027s changing their name?Why is McDonald\u0027s changing their name?Why is McDonald\u0027s changing their name?",
+			"answer": "",
+			"title": "",
+			"displayed_url": ""
+		},
+		{
+			"question": "What is the oldest still running Mcdonalds?What is the oldest still running Mcdonalds?What is the oldest still running Mcdonalds?",
+			"answer": "",
+			"title": "",
+			"displayed_url": ""
+		},
+		{
+			"question": "Why is McDonald\u0027s now WcDonald\u0027s?Why is McDonald\u0027s now WcDonald\u0027s?Why is McDonald\u0027s now WcDonald\u0027s?",
+			"answer": "",
+			"title": "",
+			"displayed_url": ""
+		}
+	],
+	"knowledge_graph": {
+		"title": "",
+		"type": "Fast-food restaurant company",
+		"image_urls": ["https://serpstack-assets.apilayer.net/2418910010831954152.png"],
+		"description": "McDonald\u0027s Corporation is an American multinational fast food chain, founded in 1940 as a restaurant operated by Richard and Maurice McDonald, in San Bernardino, California, United States.",
+		"source": {
+			"name": "Wikipedia",
+			"url": "https://en.wikipedia.org/wiki/McDonald\u0027s"
+		},
+		"people_also_search_for": [],
+		"known_attributes": [
+			{
+				"attribute": "kc:/business/business_operation:founder",
+				"link": "http://www.google.com/search?safe=0\u0026sca_esv=c9c7fd42856085e2\u0026sca_upv=1\u0026gl=us\u0026hl=en\u0026q=Ray+Kroc\u0026si=ACC90nzx_D3_zUKRnpAjmO0UBLNxnt7EyN4YYdru6U3bxLI-LxARWRdbk5SkoY2sDn5Qq7yOmqYGei6qZ7sfJhsjZXBPgjMlLbS7824rpJOm69GzqVWMdoNIZiFX2T4A2td14sZOn4a1BexZLtZXHU7NZdF6VsWbGMVuiSYtXdev7uaUjEJKumiwlqTAATTebOriYTEBuSzC\u0026sa=X\u0026ved=2ahUKEwjF55alk_iFAxXlamwGHbqgAs4QmxMoAHoECHgQAg",
+				"name": "Founder: ",
+				"value": "Ray Kroc"
+			},
+			{
+				"attribute": "kc:/organization/organization:ceo",
+				"link": "http://www.google.com/search?safe=0\u0026sca_esv=c9c7fd42856085e2\u0026sca_upv=1\u0026gl=us\u0026hl=en\u0026q=Chris+Kempczinski\u0026si=ACC90nwLLwns5sISZcdzuISy7t-NHozt8Cbt6G3WNQfC9ekAgKFbjdEFCDgxLbt57EDZGosYDGiZuq1AcBhA6IhTOSZxfVSySuGQ3VDwmmTA7Z93n3K3596jAuZH9VVv5h8PyvKJSuGuSsQWviJTl3eKj2UL1ZIWuDgkjyVMnC47rN7j0G9PlHRCCLdQF7VDQ1gubTiC4onXqLRBTbwAj6a--PD6Jv_NoA%3D%3D\u0026sa=X\u0026ved=2ahUKEwjF55alk_iFAxXlamwGHbqgAs4QmxMoAHoECHUQAg",
+				"name": "CEO: ",
+				"value": "Chris Kempczinski (Nov 1, 2019\u2013)"
+			},
+			{
+				"attribute": "kc:/business/employer:revenue",
+				"link": "",
+				"name": "Revenue: ",
+				"value": "25.49\u00a0billion USD (2023)"
+			},
+			{
+				"attribute": "kc:/organization/organization:founded",
+				"link": "http://www.google.com/search?safe=0\u0026sca_esv=c9c7fd42856085e2\u0026sca_upv=1\u0026gl=us\u0026hl=en\u0026q=Des+Plaines\u0026si=ACC90nyvvWro6QmnyY1IfSdgk5wwjB1r8BGd_IWRjXqmKPQqm_yqLtI_DBi5PXGOtg_Z3qrzzEP6mcih1nN7h5A7v6OefnEJiC7a8dBR-v9LxlRubfyR6vlMr3fZ3TmVKWwz9FRpvZb1eYNt-RM7KIDKQlwGEIgINvzhxjUrv6uxSmceduzxd8W7Pkz71XGwxF0F8OlSzHlx\u0026sa=X\u0026ved=2ahUKEwjF55alk_iFAxXlamwGHbqgAs4QmxMoAHoECG4QAg",
+				"name": "Founded: ",
+				"value": "April 15, 1955, Des Plaines, IL"
+			},
+			{
+				"attribute": "kc:/organization/organization:headquarters",
+				"link": "http://www.google.com/search?safe=0\u0026sca_esv=c9c7fd42856085e2\u0026sca_upv=1\u0026gl=us\u0026hl=en\u0026q=Chicago\u0026si=ACC90nyvvWro6QmnyY1IfSdgk5wwjB1r8BGd_IWRjXqmKPQqm-46AEJ_kJbUIEvsvEEZqteiYJvXVXs2ScRNDvFFpjfeAaW3dxtpTGCgcsf5RMdi6IdzOdtjJMN3ZaFwqZOmdi7tC6r0Mh1O9bnP3HrVDB9hH02m7aA6f70dCAfTdpOFnGxDU6wVMAI5MxWBE3wTugtUDOK-\u0026sa=X\u0026ved=2ahUKEwjF55alk_iFAxXlamwGHbqgAs4QmxMoAHoECHYQAg",
+				"name": "Headquarters: ",
+				"value": "Chicago, IL"
+			},
+			{
+				"attribute": "kc:/organization/organization:president",
+				"link": "http://www.google.com/search?safe=0\u0026sca_esv=c9c7fd42856085e2\u0026sca_upv=1\u0026gl=us\u0026hl=en\u0026q=Chris+Kempczinski\u0026si=ACC90nwLLwns5sISZcdzuISy7t-NHozt8Cbt6G3WNQfC9ekAgKFbjdEFCDgxLbt57EDZGosYDGiZuq1AcBhA6IhTOSZxfVSySuGQ3VDwmmTA7Z93n3K3596jAuZH9VVv5h8PyvKJSuGuSsQWviJTl3eKj2UL1ZIWuDgkjyVMnC47rN7j0G9PlHRCCLdQF7VDQ1gubTiC4onXqLRBTbwAj6a--PD6Jv_NoA%3D%3D\u0026sa=X\u0026ved=2ahUKEwjF55alk_iFAxXlamwGHbqgAs4QmxMoAHoECHEQAg",
+				"name": "President: ",
+				"value": "Chris Kempczinski"
+			}
+		],
+		"website": "https://www.mcdonalds.com/us/en-us.html",
+		"profiles": [
+			{
+				"name": "Instagram",
+				"url": "https://www.instagram.com/McDonalds"
+			},
+			{
+				"name": "X (Twitter)",
+				"url": "https://twitter.com/McDonalds"
+			},
+			{
+				"name": "Facebook",
+				"url": "https://www.facebook.com/McDonaldsUS"
+			},
+			{
+				"name": "YouTube",
+				"url": "https://www.youtube.com/user/McDonaldsUS"
+			},
+			{
+				"name": "Pinterest",
+				"url": "https://www.pinterest.com/mcdonalds"
+			}
+		],
+		"founded": "April 15, 1955, Des Plaines, IL",
+		"headquarters": "Chicago, IL",
+		"founders": [
+			{
+				"name": "Ray Kroc",
+				"link": "http://www.google.com/search?safe=0\u0026sca_esv=c9c7fd42856085e2\u0026sca_upv=1\u0026gl=us\u0026hl=en\u0026q=Ray+Kroc\u0026si=ACC90nzx_D3_zUKRnpAjmO0UBLNxnt7EyN4YYdru6U3bxLI-LxARWRdbk5SkoY2sDn5Qq7yOmqYGei6qZ7sfJhsjZXBPgjMlLbS7824rpJOm69GzqVWMdoNIZiFX2T4A2td14sZOn4a1BexZLtZXHU7NZdF6VsWbGMVuiSYtXdev7uaUjEJKumiwlqTAATTebOriYTEBuSzC\u0026sa=X\u0026ved=2ahUKEwjF55alk_iFAxXlamwGHbqgAs4QmxMoAHoECHgQAg"
+			}
+		]
+	}
+}

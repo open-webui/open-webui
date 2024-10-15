@@ -57,13 +57,9 @@
 	onMount(async () => {
 		window.addEventListener('message', async (event) => {
 			if (
-				![
-					'https://ollamahub.com',
-					'https://www.ollamahub.com',
-					'https://openwebui.com',
-					'https://www.openwebui.com',
-					'http://localhost:5173'
-				].includes(event.origin)
+				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:5173'].includes(
+					event.origin
+				)
 			)
 				return;
 			const prompt = JSON.parse(event.data);
@@ -141,7 +137,7 @@
 
 			<div class="flex items-center mb-1">
 				<div
-					class="bg-gray-200 dark:bg-gray-600 font-bold px-3 py-1 border border-r-0 dark:border-gray-600 rounded-l-lg"
+					class="bg-gray-200 dark:bg-gray-600 font-semibold px-3 py-1 border border-r-0 dark:border-gray-600 rounded-l-lg"
 				>
 					/
 				</div>

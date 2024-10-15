@@ -1,0 +1,357 @@
+{
+	"search_metadata": {
+		"id": "search_VW19X7MebbAtdMwoQe68NbDz",
+		"status": "Success",
+		"created_at": "2024-08-27T13:43:20Z",
+		"request_time_taken": 0.6,
+		"parsing_time_taken": 0.72,
+		"total_time_taken": 1.32,
+		"request_url": "https://www.google.com/search?q=chatgpt&oq=chatgpt&gl=us&hl=en&ie=UTF-8",
+		"html_url": "https://www.searchapi.io/api/v1/searches/search_VW19X7MebbAtdMwoQe68NbDz.html",
+		"json_url": "https://www.searchapi.io/api/v1/searches/search_VW19X7MebbAtdMwoQe68NbDz"
+	},
+	"search_parameters": {
+		"engine": "google",
+		"q": "chatgpt",
+		"device": "desktop",
+		"google_domain": "google.com",
+		"hl": "en",
+		"gl": "us"
+	},
+	"search_information": {
+		"query_displayed": "chatgpt",
+		"total_results": 1010000000,
+		"time_taken_displayed": 0.37,
+		"detected_location": "United States"
+	},
+	"knowledge_graph": {
+		"kgmid": "/g/11khcfz0y2",
+		"knowledge_graph_type": "Kp3 verticals",
+		"title": "ChatGPT",
+		"type": "Software",
+		"description": "ChatGPT is a chatbot and virtual assistant developed by OpenAI and launched on November 30, 2022. Based on large language models, it enables users to refine and steer a conversation towards a desired length, format, style, level of detail, and language.",
+		"source": {
+			"name": "Wikipedia",
+			"link": "https://en.wikipedia.org/wiki/ChatGPT"
+		},
+		"developer": "OpenAI, Microsoft",
+		"developer_links": [
+			{
+				"text": "OpenAI",
+				"link": "https://www.google.com/search?sca_esv=acb05f42373aaad6&gl=us&hl=en&q=OpenAI&si=ACC90nwLLwns5sISZcdzuISy7t-NHozt8Cbt6G3WNQfC9ekAgItjbuK5dmA2L3ta2Ero3Ypd_sib6W4Pr5sCi7O_W3yzdqxwyrjzsYeYOtNg2ogL1xVq9TKwgD48tL7rygfkRfNyy4k-R5yQgywoFukoCUths6NdRX69gl50cvd6dpZcMzVelCxT7mxXlRchl6XkueG326znDiZL-ODNOysdnCc4XoeAQUFtbaVjja6Vc7WkQF4X8rUdbDKPVU9WyLOV765d8Y777kMI7-nXGGyD7xXJX5E3HA%3D%3D&sa=X&ved=2ahUKEwi17_rnppWIAxX2rokEHfAoEzYQmxMoAHoECD0QAg"
+			},
+			{
+				"text": "Microsoft",
+				"link": "https://www.google.com/search?sca_esv=acb05f42373aaad6&gl=us&hl=en&q=Microsoft&si=ACC90nyvvWro6QmnyY1IfSdgk5wwjB1r8BGd_IWRjXqmKPQqm-SdjhIP74XAMBYys4zy1Z9yzXEom04F9Qy-tMOt2d-L6jIC5cXse6I528G870-4sF-DZYAPj0F1HoGTUOqpWuP7jbEPm3w_-mCH0wVgBHBGCgxRrCaUn8_k2-aga9V9JD6hkq2kM8zVmERCqCM8rqo3bNfbPdJ-baTq4w8Pkxdan3K--CfOtXX--lTjJtO6BnfG2RdpY_jBfy3uZZ7DeAE4-P4rvKuty6UL6le4dqqDt-kLQA%3D%3D&sa=X&ved=2ahUKEwi17_rnppWIAxX2rokEHfAoEzYQmxMoAXoECD0QAw"
+			}
+		],
+		"initial_release_date": "November 30, 2022",
+		"programming_language": "Python",
+		"programming_language_links": [
+			{
+				"text": "Python",
+				"link": "https://www.google.com/search?sca_esv=acb05f42373aaad6&gl=us&hl=en&q=Python&si=ACC90nyvvWro6QmnyY1IfSdgk5wwjB1r8BGd_IWRjXqmKPQqmwbtPHPEcZi5JOYKaqe_iu1m4TVPotntrDVKbuXCkoFhx-K-Dp6PbewOILPFWjhDofHha-WRuSQCgY7LnBkzXtVH7pxiRdHONv3wpVsflGBg_EdTHCxOnyWt1nDgBmCjsfchXU7DKtJq159-V0-seE_cp7VV&sa=X&ved=2ahUKEwi17_rnppWIAxX2rokEHfAoEzYQmxMoAHoECDYQAg"
+			}
+		],
+		"engine": "GPT-4; GPT-4o; GPT-4o mini",
+		"engine_links": [
+			{
+				"text": "GPT-4",
+				"link": "https://www.google.com/search?sca_esv=acb05f42373aaad6&gl=us&hl=en&q=GPT-4&stick=H4sIAAAAAAAAAONgVuLVT9c3NMy2TI_PNUtOX8TK6h4QomsCAKiBOxkZAAAA&sa=X&ved=2ahUKEwi17_rnppWIAxX2rokEHfAoEzYQmxMoAHoECDUQAg"
+			},
+			{
+				"text": "GPT-4o",
+				"link": "https://www.google.com/search?sca_esv=acb05f42373aaad6&gl=us&hl=en&q=GPT-4o&stick=H4sIAAAAAAAAAONgVuLVT9c3NCyryEg3rMooWMTK5h4QomuSDwC3NAfvGgAAAA&sa=X&ved=2ahUKEwi17_rnppWIAxX2rokEHfAoEzYQmxMoAXoECDUQAw"
+			},
+			{
+				"text": "GPT-4o",
+				"link": "https://www.google.com/search?sca_esv=acb05f42373aaad6&gl=us&hl=en&q=GPT-4o&stick=H4sIAAAAAAAAAONgVuLVT9c3NCyryEg3rMooWMTK5h4QomuSDwC3NAfvGgAAAA&sa=X&ved=2ahUKEwi17_rnppWIAxX2rokEHfAoEzYQmxMoAnoECDUQBA"
+			}
+		],
+		"license": "Proprietary",
+		"platform": "Cloud computing platforms",
+		"platform_links": [
+			{
+				"text": "Cloud computing",
+				"link": "https://www.google.com/search?sca_esv=acb05f42373aaad6&gl=us&hl=en&q=Cloud+computing&stick=H4sIAAAAAAAAAONgVuLSz9U3MKqMt8w1XsTK75yTX5qikJyfW1BakpmXDgB-4JvxIAAAAA&sa=X&ved=2ahUKEwi17_rnppWIAxX2rokEHfAoEzYQmxMoAHoECDcQAg"
+			}
+		],
+		"stable_release": "July 18, 2024; 40 days ago",
+		"image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALoAAAC6CAMAAAAu0KfDAAAAaVBMVEX///8AAAD7+/uysrJ5eXmoqKiYmJhZWVn4+PiVlZXw8PDj4+P09PTr6+vNzc2vr6/V1dWMjIxmZmY7OzvExMSCgoIgICBMTEygoKBUVFQUFBQxMTG4uLhDQ0O+vr7b29snJydubm4LCwtts+PWAAAPGElEQVR4nM1d6YKiMAxWBKlcIocoooDv/5CrjjpNmrTlcNz82x2Oz5KmX46mi8VMIoI42ZbZ+VRfl9e6891108aRM9fjPyVOmHhZvVSl2hVp8G10Gom3uyMB+yldf0i+jZCRcOdfeeAPOfUr8W2YqoTZ3oD7IfXJ+zZSKE7Y2+B+SvMfKX24oWYmL8fL/2JvPM3cpKV2w2+DvkvgmiYnJefLt3EvFsl5BPC77L6tNNuRwG/Sf1VpxFqHrd53WoN5TL+HPNgxoPb9ZnspiiRJiqLx2CU2/9rqGpUkoNMhDQN50RRxeMlo7MV/hHxfxszlTUUY/y5ZOEIEaXJZeQfvkrRRJD4/fR0CuX/QUZTEPamfyCsr+D9VuUrC6KPQ1RlaHUxvTGgVUxWp9JLP8bQVft11Z2HsxKWioBJy6g8fMp6J8u0LOx0NXEvsd/SfAB/76DVH+3sLa+y3ydPOPmk38A373YB720HUoZx53Urg4+uD/diEh2EEedkdOHM7SpCia00iFM92mkriz7hwHeCj7bWlPY0hyMvrYS7kYQce7Frf14/B/ZBqJqWB60pmqS3hwcrvZqSbZbamwEKcW6ubxErnBea+65al2x9VpvDGPodbBTS9totNJBmr5P4hScM4iKIoiOMwLdbMb9xPxx4CG5HZ3OL0DPBrVqjBSEc0NPpmKvQLGAqL6RN4NO668thpEmwoIzrRSArgNJjtIjeEy2ylXceiA+YaN5nmVQXgWUZenTChjvxi/F7hocN3WdoEUkTRy49aGy4PSsZkrK04oULyltk4++6EG0ScrnoAYsvQlcyazB7wrSOiN6L1VMK3061GIs1p4Mchsy3BDxlqZsRlp+jdTXSWNmV8ObMXCKXFSjMsTHxxyS9f8ZMm2jFDbqfksmCFt6ZMNwl9hnyU7C0rxpuo4hFOTwCnem2tMoKLcN1oOn2Hw0VQzyOXlBg+z7ezMk7BfPibnOgFomWU/LweHZ5I4bhbsfdooyGqZ+rXxx41n+/e64TVZNEAGGeL+aIuCbJQQYAtt+on0zx7+CW3xutTveuukkbnzKxBxeRQFvyEpnFoDK67Qr1C+rpuMxX3TVLwSIOR2Zr8MUxgBKle+1Kv5CIpisTCZoCg2Vl7qRJTvEsuT3XsH12o35oZDGJR3u6qs8aoUS14um6iFoS25KtQ/u14sihU6WY/Ddnd+MUs697kNjtgfdH4CQrrufu1An62FbpHjVrvDHxDDoRdS8PcAwFaPsSphgXz9f3JzgDoe8OqJwq8Aug/EXg3sxzeVqIeI3db9XY99MzgwCdEsNq/6FTek/0tbkXFtGX/CipaQz+t9EMebshFt3Y13mcsKzFD/VL0wNN7AG2hl4almnBbXu/SzA/Z+NKenoOMnEQZ7KD7BrpC2ABJui2nNXJQhE65IuZ3lp5kBd3XmgonNGZkzikNPpYvohZUlCU6yl9mOvRwbRM03dFWXr6EoGARHJQKPGQy9ANill1PY89JlZdnyFp9C0xSofjqROgpZjl+G4XMjM0JjZBVuVS88wgm85H5nARdyQzsf/jNhQkznRWtkXlVr3wWmODq0V+10F9ZPRp6jIOm53fuLMKhqffIIlMla8RRsY7gk17xLxsNXQ2abmRYbUlHJrstANhKf8rx0gHsjwJutMIkuFg2Q2bZKRhf0pdVXvZlThg6sOmVok7jRl30yCB2BFcRDY29Pv5i1EF3ALNQF6wx0APM4zsuPlzSwYRl+RpCHXTgjqpzeAR0pRTj5PI0oaUDhMvTU+Vl6FjXZWRXRdNHQFcKYPQRMMEUWi2zh8rL5g9lUkHcRbU+g6EHO8Vkn3Z6Nhxvaa2p7x9Lng4Z1IlCfhPFiIdB90i6YkpXxkzgr96BehAXrqbyhNpTDGgAdKEW+7wfbSiOCo+0ytfyyrUBxgAEdU/UQ+2hc5mB55AZUnErbcTwIZA5xvIcwRxgEPRgg7yJHP3bqPIen3L/EcgL25z90xDomRo03cQxqltaVoaYZ6gvzkMhAUC9SBfRCnqHE83VwwSHyn8b/MBWVxDhQ7MOqDr5NCvoGOGbhTQYPFuJ+hRNNQeyf3JBdzUT9Fyu3IoPSOX3nh58wGXTsCMh20Y6TzYYOnYyUxzi8Q1WXrnhR5Cqg4AkHRMfCL1ScxlOgrTm6usDpXTmGMUchS6MOwI6lyVUUg6uQeWJSD9iMKKX/ka/dgD0nM/mC6zBV6PKK8QGUhgAnaCNg6AzkZSnqCqvDZTejJ/CKEF9wowKczSVcIsE2T1TbkBZ0sDrAXR64ttBr7cWFQwRrjjpDMn/Ffa8JZVx5B9GB4GtoB8tSy8ivOBc9dsicS5UJoiyXSfZlyX9skOOAic/t2oTrDjXIvm4cnApnwDdMjHtUMxWO71TuCacfq+dicNMgr7M1xp9Q+5L+f5GgDnSWYPPQ79nLPl74Fyt33QA6BJp2D8DPeuRsTnz2xxgru3toAIviax4/Qz0w6JBH+DKlqA4cG16aTvgX93fQV8TdPjMqTysoXgbQjmOXFOeL4COVXIKdMKh85nEK4wDvtYlMIHJxU1+Ps7TT4N+3w2BwNOVnAGw7i9yHsgqV1E3AiZxhgvIVOg3dotTBCQdATa8e/1vaboPjQzYNDQd+iJeo5GnWCCwJvUrhglKSciEMNqQfFr/XjQDdCX0pCQA7gJSO2+yBSg9GZRVUkLvgZkF+kIUQGuoWDwIi/gvSwRcADWr8bgRs/6unRP6AuUYqTvJ8hJYWM9UbihB8J+GBrNBl5WStHNAr99TsgeYmAILsUamIL/vDZ0NuqyTtP8h6/XbB4YFJRmHot0gn+W4fa8VfwAdxHVfhgKVCLA7GhwcQqyzF5I/gC57Fr/7NxLA4qiE0ku4BPkfQJfTu9c3YxHQsOq6FERY5f8MOigv+bXhqOK60nlcLRUR/AvoMs+UaCAq+tOWXFMJ8sFu9QjovXSJbMJRlEy/j0k0OD4yOJgxArqs1XJCDK5LN+Ohmat3wRHBoSGkEdDlS0BZqrLfb6MPZ6Y4QT4scDcCumwdXRB9VFJQuAgEI1G4wZBw6UToPRimQAms6kon7xLjEGLObxXDQeo5R/2GRN3uuTdkC2Ncv2idGhgBXWZoJRojKneWM6WTL2l9BMomITMOuuxoohwEk+A3dYHwsJU3psFGQpe/sCaZJwtdOvkrMa7G0CcfR0OXlQIpMp/lPhqMvFITokn5jocu3w790FBXGXE0JcgtE+3H10o2HHokPwdVC+jrIkwd6mzKG26+ycsCD4cu76rP4UgyhXtv6UzZQlNRSb4JpjBHeZaimIu5/ZtvUHl9Kc/DUk2ALisFtI2OzHuZuVUbVF5TQHX6YTjjoYPtVdA2Br30p/Vix2zGMyXI6bK196o8Hrr8RU/QwAAK09xLJ+lS//3WlCAnigXfC8No6LFsBXy40IAdwQ/bw5ZO6hPkBXZeS8mSjYa+krUAhcdC2R78GMJ4S6uuLkEe4sZwR/BDx0IH6ow5Xii/8mXDudLJPbexfY3LKVAHgbHQQaKxQwSPhM6XTi6JnUTigoDvXXzRSOgBMHl43BjoCyXT9hIfd4lL0NyoCTdrJHS45mA7AXatgEWfVXmwraLF+zd9aivsOOhwX4MSOAE+EhouMmp0k/PmpcnOQUkJ0anvUdB78GTlW4I5rKz43Eb35y7DAq8BXH/AUdChI5Gpm5NkekPsBW6Y6sNzGCmNRfiCujHQYS8EakuGzFCpYk2FGb5HGNmVo6ZJxAjo6IO7RKgKzGLyvUzpJJS9vqXKYOgx9APIXcqAr9PeqDD0dri/NtRv3xwKPUBvJNdCQFg5Zu6smM04P2LqH/w7Kyyh442Ge/Kx5vKShxDM8CVnQ62uXM1gB11JojD+gsxXzpr4RULvJOo2eu81Xsk4bKBHa/wizgDI5rPWRezEheAGpq0YiEJbQE975R0c24blJdrZFmAfvDO0VIlxbyUjdLFRFPPIf1bZDLGtEp7ilNLHrA3tfoju4QboolF9tFwTQQQv2JgSW+mr8Kwz7GEIGmJi4x8LtgCEK2L163SDCUqs9sY+Rk5zV999aWqpQvmJSn9M0AaCsmGGrpTgt/Idvt4S31vU6HNIbUl650rzU9NC3Zma8oCr52gOTbfJIJ5t6JHQmdqHCWBH66m4BdOJuj6rX0q/i01jW14C03hDmk6r4mCH742DYhnaE0ZseutCyjCpX2u7o0NQdNSVa4rwuINo2kAIdEjy0d3ShOLwPYXpTYVjCZJUls1LUa+148jzdpQI2FPOXAM2ZkPcTewbjqMsYTXi7AKHyGL+AGeD3IIxMB2xTZ0X9JDhPU9D5rSTfMcPA+3CdO6wjooxut++XepDxIEZcm0Ok8qonDaWJxn8Cm65pq3rwVIwRk6fOY5UffEbvadIiqp3hjzMryiVnE+p2VZHP9Ki6ysvGNdPUe3o2FspPKfkp9I010A82Z3SBjJV8xKG7N1N4gsdprma3Cc8vaadf0Zwj8zTBylW3Kpv7h8IjVpvsegPxH71efDCo07ouYtnMYYpKCSbfLIDnf/NCketGIkKrrv9tbfSWvC9LDiiETvTqivzkjaMgyASURCHbeIxinLvbm9HPiBtmuOcQh0h8nu3LMs+04XxjpYnPcJt1KY+A3aSakN0Btnbnh6EdnFOcxHeEms76mnF/uQgqG/dXEfHOLtxR6ic7L86WrlnPJGTa2+lk8r+/bhtN73hdaTESsTSIPWAI7IE/qozH5FH9RvlxVRoJYuDI8amAxgGi5MOOQ/U3hOPlO13sx7v9JSwN/XL+RXXjj4JpROzLho6Cfwa5+lYqWyOj01VNZx8WgwrUeGVloa+NE23eK0+abZDqWj0YbJ10eJflUTzpdzVffwIdwS9y0zLqE4cEUVtUjTbbXNJQiGEs0gIVaorjryGZGGW2trzb4Q5VqEvwhgU9wdhwkTztEekfFTY/sHHndc8Tmu9f6cNe2qVJkLzcUm1J93tO/0huQMOA/yAcGEMGzGf3fBZUXepWMqgCNWHpBl1mPW3TAuUdvgR4gMI8mdFXIYd3F4bqgr+VJQEvE76EQHRj8q6s1Kb/cDg95+I2Bopcu3bHF/8FUnWuDeyLP6u+YRTMZfE6aWkjGXXr5L/dcB/RURxu1q7WV5fl9f6VPW7bRIHs/Gsf2zY1viSH96vAAAAAElFTkSuQmCC"
+	},
+	"organic_results": [
+		{
+			"position": 1,
+			"title": "ChatGPT | OpenAI",
+			"link": "https://openai.com/chatgpt/",
+			"source": "OpenAI",
+			"domain": "openai.com",
+			"displayed_link": "https://openai.com › chatgpt",
+			"snippet": "ChatGPT helps you get answers, find inspiration and be more productive. It is free to use and easy to try. Just ask and ChatGPT can help with writing, ...",
+			"snippet_highlighted_words": ["ChatGPT", "ChatGPT"],
+			"sitelinks": {
+				"expanded": [
+					{
+						"title": "Introducing ChatGPT",
+						"link": "https://openai.com/index/chatgpt/",
+						"snippet": "We've trained a model called ChatGPT which interacts in a ..."
+					},
+					{
+						"title": "Download ChatGPT",
+						"link": "https://openai.com/chatgpt/download/",
+						"snippet": "Download ChatGPT Use ChatGPT your way. Talk to type or have a ..."
+					},
+					{
+						"title": "Pricing",
+						"link": "https://openai.com/chatgpt/pricing/",
+						"snippet": "Pricing · $25per user / month billed annually · $30per user / month ..."
+					},
+					{
+						"title": "“What is ChatGPT?” article",
+						"link": "https://help.openai.com/en/articles/6783457-what-is-chatgpt",
+						"snippet": "How does ChatGPT work? ChatGPT is fine-tuned from ..."
+					},
+					{
+						"title": "For Teams",
+						"link": "https://openai.com/chatgpt/team/",
+						"snippet": "ChatGPT simplifies lead qualification and forecasting ..."
+					}
+				]
+			},
+			"favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAAAAABWESUoAAABQElEQVR4Ac3PIYyDMBiG4VefPDtxEj0xM39qZl40mcPhMzONOjWNrqxA4UgmqklweBQKVfFdGhbSZZvfY5qmb35++DAbO4XQF7xjpN42s1oyXtlr2gN4SRpynnTaANtesy1tkOOR8aoAJ12J6ngmGkknCqn5gv0y8Jv03eYy+PEAu07jCQ66sDqqpohBCVb2PMtvSbeoxRJcLlIFVFKVBuOwBDdNxkzjEbKbVDwHvgZw8j+Qq2fVhhjkxB2g7JwqKJMRhUqo5Lol8OTxMbSsehXw45e9ao+J92EkGaFbBscxLqnbPRhYOVXr/53L+wTVaUDmNZ+tLNyDWgdWl3gxo7otHMYY5DYdwLc6gB18tVLBSVJD6qr6fsoBVt7wyCm4PxfiRyBTx5N8kCQP8DtrzysZrebG9ZLhnaILYbIbPss/4c/row+G/FAAAAAASUVORK5CYII="
+		},
+		{
+			"position": 2,
+			"title": "ChatGPT",
+			"link": "https://chatgpt.com/",
+			"source": "ChatGPT",
+			"domain": "chatgpt.com",
+			"displayed_link": "https://chatgpt.com",
+			"snippet": "ChatGPT helps you get answers, find inspiration and be more productive. It is free to use and easy to try. Just ask and ChatGPT can help with writing, learning,",
+			"snippet_highlighted_words": ["ChatGPT", "ChatGPT"],
+			"favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAAAAABXZoBIAAABGElEQVR4Aa3SIWzCUBSF4d8rDA6LnMfiMPjU18xiJjHPCxzBVePqaqsrK6sqK5qgnmjybzShzQKb4tjv3mvuwX/yHhya9i8cDgCXlziwKm99TnIM5RN+rlQvkO5Z97+wP1FpAbkadwwzWgAOW4L2rcppxoZLjc2i1xMEzZYzblMrbBILzpaQV0wYqUfcbNNk3+kZPibsaEek1oqjxj3DA6W8Y5uobs7kuggTphvNOKWq6/HQlQl70sF4oNaS2NNaMzxQ4Krt9rBPliMW82akubKqDFSuR9x9TiiF8QsybfnBLtDNePhQm3ifSOyAyhlvpKoZy0pzsuiM2kKSwlWNhKd/FiHsFsXtVrB5XbAAEHyN2jTv7+1TvgE1rn+XcUk3JAAAAABJRU5ErkJggg=="
+		},
+		{
+			"position": 3,
+			"title": "OpenAI",
+			"link": "https://openai.com/",
+			"source": "OpenAI",
+			"domain": "openai.com",
+			"displayed_link": "https://openai.com",
+			"snippet": "ChatGPT on your desktop. Chat about email, screenshots, files, and anything on your screen. Chat about email, screenshots, files ...",
+			"snippet_highlighted_words": ["ChatGPT"],
+			"sitelinks": {
+				"inline": [
+					{
+						"title": "ChatGPT",
+						"link": "https://openai.com/chatgpt/"
+					},
+					{
+						"title": "Introducing ChatGPT",
+						"link": "https://openai.com/index/chatgpt/"
+					},
+					{
+						"title": "Download ChatGPT",
+						"link": "https://openai.com/chatgpt/download/"
+					},
+					{
+						"title": "ChatGPT for teams",
+						"link": "https://openai.com/chatgpt/team/"
+					}
+				]
+			},
+			"favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAAAAABWESUoAAABQElEQVR4Ac3PIYyDMBiG4VefPDtxEj0xM39qZl40mcPhMzONOjWNrqxA4UgmqklweBQKVfFdGhbSZZvfY5qmb35++DAbO4XQF7xjpN42s1oyXtlr2gN4SRpynnTaANtesy1tkOOR8aoAJ12J6ngmGkknCqn5gv0y8Jv03eYy+PEAu07jCQ66sDqqpohBCVb2PMtvSbeoxRJcLlIFVFKVBuOwBDdNxkzjEbKbVDwHvgZw8j+Qq2fVhhjkxB2g7JwqKJMRhUqo5Lol8OTxMbSsehXw45e9ao+J92EkGaFbBscxLqnbPRhYOVXr/53L+wTVaUDmNZ+tLNyDWgdWl3gxo7otHMYY5DYdwLc6gB18tVLBSVJD6qr6fsoBVt7wyCm4PxfiRyBTx5N8kCQP8DtrzysZrebG9ZLhnaILYbIbPss/4c/row+G/FAAAAAASUVORK5CYII="
+		},
+		{
+			"position": 4,
+			"title": "ChatGPT - Apps on Google Play",
+			"link": "https://play.google.com/store/apps/details?id=com.openai.chatgpt&hl=en_US",
+			"source": "Google Play",
+			"domain": "play.google.com",
+			"displayed_link": "https://play.google.com › store › apps › details › id=com...",
+			"snippet": "With the official ChatGPT app, get instant answers and inspiration wherever you are. This app is free and brings you the newest model improvements from ...",
+			"snippet_highlighted_words": ["ChatGPT"],
+			"rich_snippet": {
+				"detected_extensions": {
+					"rating": 4.8,
+					"reviews": 3113820
+				},
+				"extensions": ["Rating: 4.8", "3,113,820 votes", "Free", "Android", "Business/Productivity"]
+			},
+			"favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAADNklEQVR4AcXUA4wdURiG4VPbtu32mmvUtm3bts2gnNq2bbtBbSzn3n79M8nZrvdcZZO8yUTzPUMGIFmLOlBJTXhtqcPUUaoDxRwp16aObORuHcNpxmwnUjM5/uICam0PyKza2miJSmoGOlH0HlIGjwPUm9tOqrXdD6qt9RANEb39VEGPAXym/5YMK9ehxu5ahKgbH4I3m0rjdoDfBEj+EwDDyrUiiO9UR7ffAd8pMvzHAyJ3Ivr74R7AtD8SIRATURO1ttWBakuCCN4BqrDLAApRiAmAcflm1NilJUSwCAJqqcm8nBs7pRu4y+gCIAoRqdwJ07LtdCfUSSLUlEZqjBQbevwctVvX1QUA7zd8pkYIIfh41o2d0Xh7ICJOpAFOsic0ZHYBIIZQKynjaLQtCPLJVKCrRyQhaAjUYaqIMCBxxA5CqAgRRIjmUMapzBu7oHG0cZmPx2welU4AkARi6T7U3KWHanuAgshCV952hy/sJ1MmNs77Q5mcAHBEuIKwLD6Mmrv1yCS1QMftfsApJjLO+0A1cxjAEb5TwxRE/uX30PmkFrjAgJPRn7lQklMAXwL4TAtB8UVA927PIA8sBNxikC+mhHzMgwA+7j0tFEWXAN1GXkGksSzkMpXxdWBZ/L3LYLvMRBHfqLbCAD7uNT0MJRYDfYedQ4S5FOymonjvbcD7Slb86Fsa9psM9itJIuxUsPhLGG282BJg8ODjgL4QbKbieO+nxyc/NT55a/CughXfu5dLCrGGyir2GcYzPoTGYSiESFNJGtfhk69aSUH4qPG+YoKIc1Q58R+R+Hj8iJ5lYbuUArazKd/QkL9Tv2Lfqb9hpfGiSYzHh3hXxjv05/Di/e23GB8TB/Bxy4xw5YUbMfAwjRdJajw6Yun7KpaM37uWY/YbBDjpIICP023HxH47AV0ehJtLi4wfp0pR7H01M6OvwnGA/9Rf0v/xHTSeF2GWMviQ+PhzykoxJVcA1eZBKh5jvGxi47+oHnzULYCacyFN7is0Po9KRzG3Am7XbzopxFoeoZZyCY0foIrwIbcDZFPxzN+9qy2JZ/whZeADngJEP0k76gB1kOooOuwKIFn7B3LHHIJtp64TAAAAAElFTkSuQmCC",
+			"thumbnail": "data:image/jpeg;base64,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"
+		},
+		{
+			"position": 5,
+			"title": "ChatGPT on the App Store - Apple",
+			"link": "https://apps.apple.com/us/app/chatgpt/id6448311069",
+			"source": "Apple",
+			"domain": "apps.apple.com",
+			"displayed_link": "https://apps.apple.com › app › chatgpt",
+			"snippet": "This official app is free, syncs your history across devices, and brings you the newest model improvements from OpenAI. With ChatGPT in your pocket ...",
+			"snippet_highlighted_words": ["ChatGPT"],
+			"rich_snippet": {
+				"detected_extensions": {
+					"rating": 4.9,
+					"reviews": 1026513
+				},
+				"extensions": ["Rating: 4.9", "1,026,513 reviews", "Free", "iOS", "Business/Productivity"]
+			},
+			"favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAC5UlEQVR4Aa1XQ3hkQRjc+ynX2OZtbfu+tm3b1nlt27a9O4qNS5xxbdd+cTKvXydT31fJoPuvmvf6/ejw86dBlX6CwwQXCq6t5cLaz/xV4+ld6F8r9NdgsCAjIwf5+UUoLCwBydf8jN+JNQbBddzjDQM+gocErRSyWm2QgWu4lntq9/q01UAfwYKCgmK43W6ognu4lzEE+6oamCboLC0tR3vBGIwlOF2vgZm5uQWoqamBXrhcLpw5cxZ79uxFKxCxrGBMxpYZ6Eu33KAXNDp+/AQEBgbzv8Y6Kxi7+e1ofuAKVS/7zp27KE7i6dNnem5HAbVaM3CYh0YF/PWRkdEUpxHoQe3BPNTcQJCgTc9pT0tLh8VigdPpBLFv3368evVKBC7A16/fkJmZKX06qCXo39jAej67Wnjx4iVGjBiJ0NBwBAeHYsCAgTh48BCuXLmCKVOmIioqBrwS4eGRGDduPMxmMzyBWtRsbMCglWSePXuOkJAwCuhmnz79YLVaPSUrGjDWGQhgCvWEyspKdOrURUk8JiYO799/0Exg1KQ2DQxjHveEO3fuKomTPBcyUJPaNLCQxcQTNm3arGzAYDBABmoK7UU0sE7rAC5dukxJPCgoRPy6DMhATWpLDWzbtl35Cty//0DBgOQW3LhxU9nAsGEj4HA4dN0CySHkwvy6bKfECRMmISsrS34IZY8hMXnyFAZV5rFjx6WPoa5E9PnzZ2XxpKQUlJaWaiUik1IqXrBgkZKB06fPwBOKiv4fwA3Ni5FdK3NVVFSgd+++usRnzJilXIzII7JynJOTAxaa7t17Yt68+bh37z6+fPmKCxcuYvToMejVqzdWrVrNMi0rx4cVGxIFKDQkCi2ZAhRaMklTavWqeF6epCltxuneasvLyurb8lmqg0lfLw4m/dozmh0RtBUV6R/NuJZ7avf6eGs4ZeIwMoVmZrYcTvkZv+MarlUZTlUZIDi8diRfX8uFtZ8FqMb7Bx+2VJbBTrlcAAAAAElFTkSuQmCC"
+		},
+		{
+			"position": 6,
+			"title": "What is ChatGPT and why does it matter? Here's what you ...",
+			"link": "https://www.zdnet.com/article/what-is-chatgpt-and-why-does-it-matter-heres-everything-you-need-to-know/",
+			"source": "ZDNET",
+			"domain": "www.zdnet.com",
+			"displayed_link": "https://www.zdnet.com › ... › Artificial Intelligence",
+			"snippet": "ChatGPT is an AI chatbot with natural language processing (NLP) that allows you to have human-like conversations to complete various tasks. The ...",
+			"snippet_highlighted_words": ["ChatGPT"],
+			"date": "Jun 17, 2024",
+			"favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y+mAAAAMFBMVEXQ/0rQ/0vM+0oDAxDV/0yixjxlfCpTZiV/nDK75USTtTg7SR/F8Uiu1UAfJhhyjC65DF56AAAAAXRSTlP3Yz+/2QAAANRJREFUKJHdkkGSxCAIRaOAAore/7YDJNPVSVfPAeYtdPEK5FMex1/U8pV/JutMatwVH9JaouTH1ok3SWsEjWGNBXve5JQ5qS+XJLJB8V3iZK8AZhBEAb5JBVjNEFPaU65tIibR1saiZ2XgbzpDH1H2ZtWttB316SSpZ5TeWymNtSfK501X2wFWo23mVR7DE49f2VYrkdPONVaEXmq9JHVIGUQSl/ia1jxFyOYT2YeUletTIyJ5SEIf4WoLfJNCE73EhJKoJHv9hHjFyQNzeefp8jvHD3ZbC4DWezICAAAAAElFTkSuQmCC"
+		}
+	],
+	"inline_images": {
+		"images": [
+			{
+				"title": "upload.wikimedia.org/wikipedia/commons/e/ef/ChatGP...",
+				"source": {
+					"name": "en.wikipedia.org",
+					"link": "https://en.wikipedia.org/wiki/ChatGPT"
+				},
+				"original": {
+					"link": "https://upload.wikimedia.org/wikipedia/commons/e/ef/ChatGPT-Logo.svg",
+					"height": 800,
+					"width": 800,
+					"size": "1KB"
+				},
+				"thumbnail": "data:image/png;base64,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"
+			},
+			{
+				"title": "Introducing ChatGPT | OpenAI",
+				"source": {
+					"name": "OpenAI",
+					"link": "https://openai.com/index/chatgpt/"
+				},
+				"original": {
+					"link": "https://images.ctfassets.net/kftzwdyauwt9/40in10B8KtAGrQvwRv5cop/8241bb17c283dced48ea034a41d7464a/chatgpt_diagram_light.png?w=3840&q=90&fm=webp",
+					"height": 1153,
+					"width": 1940,
+					"size": "93KB"
+				},
+				"thumbnail": "data:image/png;base64,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"
+			},
+			{
+				"title": "What Is ChatGPT? Everything You Need to Know | TechTarget",
+				"source": {
+					"name": "TechTarget",
+					"link": "https://www.techtarget.com/whatis/definition/ChatGPT"
+				},
+				"original": {
+					"link": "https://cdn.ttgtmedia.com/rms/onlineimages/chatgpt_screenshot-f_mobile.jpg",
+					"height": 252,
+					"width": 559,
+					"size": "12KB"
+				},
+				"thumbnail": "data:image/jpeg;base64,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"
+			},
+			{
+				"title": "ChatGPT Tutorial - A Crash Course on Chat GPT for Beginners",
+				"source": {
+					"name": "YouTube",
+					"link": "https://m.youtube.com/watch?v=JTxsNm9IdYU"
+				},
+				"original": {
+					"link": "https://i.ytimg.com/vi/JTxsNm9IdYU/maxresdefault.jpg",
+					"height": 720,
+					"width": 1280,
+					"size": "134KB"
+				},
+				"thumbnail": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRIDD6PSH-o5_a4uY4vMZypbGD47mIWLL6VsTXNuADpOw&s"
+			},
+			{
+				"title": "Introducing ChatGPT and Whisper APIs | OpenAI",
+				"source": {
+					"name": "OpenAI",
+					"link": "https://openai.com/index/introducing-chatgpt-and-whisper-apis/"
+				},
+				"original": {
+					"link": "https://images.ctfassets.net/kftzwdyauwt9/44fefabe-41f8-4dbf-d80656c1f876/8dec20d14a894ae52ae07449452a89c5/introducing-chatgpt-and-whisper-apis.jpg?w=3840&q=90&fm=webp",
+					"height": 2048,
+					"width": 2048,
+					"size": "93KB"
+				},
+				"thumbnail": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ_IQLO0924Gl1jYnj0yWaeKwSWj8tbTbk0Jc6cAvQv6A&s"
+			}
+		]
+	},
+	"inline_videos": [
+		{
+			"position": 1,
+			"title": "2 MINUTES AGO: OpenAI Just Released the Most Powerful ...",
+			"link": "https://www.youtube.com/watch?v=7idowVzHZ9g",
+			"source": "YouTube",
+			"channel": "AI Uncovered",
+			"date": "1 day ago",
+			"image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5OjcBCgoKDQwNGg8PGjclHyU3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N//AABEIAFMAlAMBIgACEQEDEQH/xAAbAAABBQEBAAAAAAAAAAAAAAAAAgMEBQYHAf/EADgQAAEDAgQEAwYFBAIDAAAAAAECAwQAEQUGEiETMUFRFCKRBzJSYXGBFiNCobEVwdHwYsIzcpL/xAAZAQADAQEBAAAAAAAAAAAAAAAAAQIDBAX/xAAkEQACAQMEAgIDAAAAAAAAAAAAAQIDERIEFCExQVEyUhMi8P/aAAwDAQACEQMRAD8A4hatfh0cQsneIt+ZNdUb90pNgPpe9ZK1b7GUpZyhggQk6lRUkC3cmrghNmGWfOSefWrPBITsyU220nU4s2HyqHIirYcSh4WVbUodq6N7PILDbfiVutF5z9OoXSKmbxRcVdmsy9lmPEZYWHEeLadQ5ckcwb2+lbDEcNYxXDXI0+CH2lo82koIHzBJqHChx1XdWVKIOrTq2va3L6Vo4jbQQOGAFWt9rk/3NTTlKxFVPLo4U1HeyvjsjBJQUWffjqXbds/4rF5qiJjYw7oACHPMK7D7ZMMUIcHFkjzRpAbWQP0L2/kiuVZqPHahyD7xBSa18CTuZu1FhS7V5ppFCKLUu1FqAG6LVYYThMrFpRYiBsFKdS3HXAhDabgXJPzIHck1rMTyFHjQnHhNfiFh7hKemMlTT3TiflhRaRflr5gg/KkBgrUGpEyK7ClvxJKdD7DimnE3vZSSQR6imKAE2ry1LtXhFIBs0V6edFADlq6zliO3jDGFYVOUlbsRJWCAf/Gi10knqL27WFcq03BHeuhZYmON4iiY2gFC4irrH6VFCwR63/f7VdpoaipQk/KMnmV0KxaQ5YFOvl/anYmHScQjeJRhxaQlN0rYQbk/QG/3t0NTsHjxpmKOonpCm1kix610nL2VsEhJ48dpSjzCFLNqzqSSfJpTi2uCg9mmMTfGjCZTjq9Q1ILir+Ujoe24NXftBxjEIuIogwn5qefkiAhSu+43pgltjPMF5ASHF3SQkAWFdDxHL0PGwhcgLStN9LrStKhfmL9qxU/CNZU18mcMxjHYy8NmwJQnmWWtSHVylqBIIO4OxFUmJL4mFM9w8f4NdazrkXDYOXcZmcZ+TKEVS0LeXq0afNYdq488rVhbXzdP8VvTfZhUK/TRal2pIUg7BSfWtDMTavLU62W9aC4RwyoX35jrWjcdyih2MpuM+pPHCXkOKc0qbsvzAhQOq5QLf8b9TQBGyXLjRcQlNzC1wpEUoSh5zhtqcSpK0BS/07p2PK9r7XrqOJ4uP6a/ILr8JbkNLwmLUXYsY2IToUkFJUoqAIbvq0m4AukczjO5W8JEEqOpuVpWX1qLpa1EHSLBVykG3Ig8ue9lrdym9FRHaW83dbxSTxVcG5c0KUNVjtwvdHRV6kZTZilR5+PYhMhpUGH5C3EahYm5uTbpc3Nul7VWkVqVOZRD7auG4I916kK4vFH5t03OrSRw9tt786J7uTlQJpgNSG5BQkx+KpZso2JSPNbbcEnnsR1FO4jKkV5anPKQSFCw570m6SbBQ9aAGiN6KcKd6KAJATWkyxP4ALDly2pKuXMG19vrVAE1Mgu8BwLtyJP7H/NUibnSM25djYXlmHLw0hxyyH+MOuqx/g03lXGy80QsgHqO1Ly8XsdyO0yErddgFUc6VAHQmykEi4vsSLC/u1jIji4GIutFZa1AlJIvY1nWjdXNKErNlw5GzJiGb+PhkY2bXqQ4SAlKQN73+9dxwkYgzhpVibjKpJUb8H3bdK4DgmISXpC+Ni05p5J8vBZuL9q6rluVOEUlzEVSo36eOyULH71y85HdJJU73K/2sY0uLlp+I0fzpygzf/gd1ftcfeuNSUcOJGa+qj+1bPPuKJxbHUx2llTUYlPy19fSw/esfiBCpFh7qEgCu5RsjznK/JZZAjMSs74IxKbS4yuWnUhYuFWBIB+4FTcbzJmnEyYWMKeELxSboVBS0kEL2GoIB/eq1nCXWsD/AKwh9xp9EkJabQhSV7AHWFdLX5j1vXuIZmx7EovhcQxiZJY1JVw3XCRcG4P2NSuehvjs6NIw/BEe0DNL7GLLdxAwZeuCYJSlv8oXs5qsbbdOtVfs3gt4LlV7Hp0Rh9jEZAiv8ZaUlqELh1xIO58xFwOib1lGW8VfQ7jjeJOmTKSUSFg/mELcDVib7hW//wA2pUjBZk6W1hkueVIgsjhiQkaWWiTewCiAAdI576vlV/ikYvU0le76EJexfImap8GBK4TzTvh1rLSF8RrUFJPmBG40m471Z+1nGsRmZpxLCZD6VQIUq8dkNIToOgdQLn3jzNUU9udMxxqLPmLdl3aYLrhuUGwGn56SbfanJECTPdenYrPUh9xpLzjklPmUpWqyTdQN7I6A/TuKDY3WgvJq8oSX8KyTBk4fIdgmXizzc2XHgJlOBKWroTpIO17epNTnGcUi5rxGevNjjHDwVmW7OXhDalllShZHCuACL3vz6VlMKGOYP4ZvBsYmRfGrQHEtakJBKAvVa5CrJ5nY7WqLMexFx/GXsQxqUuRwgh9RBX4loqSEgkq2SSUm1qX45Aq9N9P+6LjN2bWnxgb+F4orEMXw9x1xeJrw5EfZVtKOHuDbfnUjPWa8bfy5gEdcxJaxTCuJMSGGxxVcQi99O2wHK1Y7FMLXhojFxSjx29YBQBbl2Ub8/lUaRKkSW47ch9x1EZvhspUbhtF76R2FzSxsXGakrogqTvRTpG9FMZKCaUBagKR8Q9a91I+JPrTuSarDJMqB7PsTlwnVtOR57B1oNj5goH/p6VSz8YRinEXKCI8xl0J8SE+RwG+6kjkduY2+laRDkKFk6RgUh1BkyQZMgJWDoUQNCfqEpST8ya5vIbdYWWyUqSuytuRHT6VMmOJ1PJ2cWMJU23MYRu4ga0eZCwVDe49auM953bdirZwIfmqA1vkW0BVx5e58tcnixvCJZlNJIeT5hrKVJ325W++/7VdsxC/lSRjC30lbs9KeFsNKUoI1fcqT6VMUkVKWXJDgWSpxw7htBJJ6kmoqSOMlaxcagVD7082tKYjoCk3UpI59N6Z1J+JPrWhJuH5MdmGHw07LugLLigG0aCCT1KieXasJptT/AImVYNeJVwdGyL7W5elN3T3HrUQp4dl1KmdhPmta5ta1r16tS1qKlrUokWJUq5tXupPcetF09x61pczEWN73N73vQsrWSVrUonmVG96Xt3HrXm3cUXAQVLUEhS1kJFkgqJsOwpNj3PID7U5t3FFh8qLgIVqUEpUtRCRZIJuEj5Ugop2vDSGMFO9FOkb0UcAWwy5F7D0pwZdhgXUAB8xVO5jcsYopDDyXGS6EoSEixF+htepuaMQiKirhNuqL4WNQCdtuhP8AjtXbudPZ2gLF+ycMuQ+iU+lLGXInwj0qtyliDq1Ox5LwLTbadF7DTbaw/wB6VF/EU2JPkFRQ+2XCEpJ8oSD+m3y60bqhZPAMX7L38NxPgHpXv4aiXvoTf6UziuML/orUiEoMyHSk6SQVJTvew/3aoUDNS3ElmWhCDwyEvpvsq3Mj69qb1ND6CxZPcyvFUbpVoPyFM/h0Mq8yEOt9wLEVFy5mFDDLzeJuurULrStR1bW9369qaxnMAnwGjFU5FdS9uhLm5FtjcVD1FFq6hyPFlzDyjPkKKDhz4cYKhJQU2KEb6fryGwvXv4bifCn0qEvM6WUwklhtwuNpU6pKvcv2+fWokrHkRsdXLZU5IZU0EBsnSBy5fz9zRHUU49xuLFlwctRPhT6V5+GYnwj0qnnY6nEXIrjJei8F7zDXcKTtvtbfblTsPNYTPkeMKlRN+EEI8wsdvUd6vc0b/AMWWYyzE+FPpQcsRLck+lZ5OY5cfEX3m3i8yteyHL2032sOhtT+OZi8ayz4B2RH0qPERfSTysbj70t3Qt8B4P2XH4YifCn0rw5Yi/Cn0qtjZpkCE+X20KeSkFoi4B3A3/mohzDNkty9UgMktAtpTtZQKb2PzGo091Q+gsZF0csR+gTSDlljsKoVZhnKVHUXCCz71iQHf/YU/NzC/KhAIcLD6XQfyyRqTY/36UbnTc/oPGXsthldk9vWiq05slAJDbSOQvqvuaKe40n1DGRnlc6DubkkmiivKND0gWrznz3oooAdC1kC61GwsLnpSLUUVohBbY0miipGKVva9JtRRSYhaORpCqKKb6GAFOJSNNeUU4gB3NulJIsdq9opMBFza19qORoopAKtfnRRRQB//9k="
+		},
+		{
+			"position": 2,
+			"title": "OpenAI Secretly Released a NEW ChatGPT Model and It’s ...",
+			"link": "https://www.youtube.com/watch?v=uh4baKXL6K4",
+			"source": "YouTube",
+			"channel": "Unveiling AI News",
+			"date": "21 hours ago",
+			"image": "data:image/jpeg;base64,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"
+		},
+		{
+			"position": 3,
+			"title": "OpenAI's ChatGPT Does Research… And Breaks Itself!",
+			"link": "https://www.youtube.com/watch?v=iC-wRBsAhEs",
+			"source": "YouTube",
+			"channel": "Two Minute Papers",
+			"date": "2 days ago",
+			"image": "data:image/jpeg;base64,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"
+		}
+	],
+	"inline_videos_more_link": "https://www.google.com/search?sca_esv=acb05f42373aaad6&gl=us&hl=en&tbm=vid&q=chatgpt&sa=X&ved=2ahUKEwi17_rnppWIAxX2rokEHfAoEzYQ8ccDegQIIhAH",
+	"related_searches": [
+		{
+			"query": "ChatGPT login",
+			"link": "https://www.google.com/search?sca_esv=acb05f42373aaad6&gl=us&hl=en&q=ChatGPT+login&sa=X&ved=2ahUKEwi17_rnppWIAxX2rokEHfAoEzYQ1QJ6BAhUEAE"
+		},
+		{
+			"query": "ChatGPT free",
+			"link": "https://www.google.com/search?sca_esv=acb05f42373aaad6&gl=us&hl=en&q=ChatGPT+free&sa=X&ved=2ahUKEwi17_rnppWIAxX2rokEHfAoEzYQ1QJ6BAhXEAE"
+		},
+		{
+			"query": "ChatGPT 4",
+			"link": "https://www.google.com/search?sca_esv=acb05f42373aaad6&gl=us&hl=en&q=ChatGPT+4&sa=X&ved=2ahUKEwi17_rnppWIAxX2rokEHfAoEzYQ1QJ6BAhREAE"
+		},
+		{
+			"query": "ChatGPT app",
+			"link": "https://www.google.com/search?sca_esv=acb05f42373aaad6&gl=us&hl=en&q=ChatGPT+app&sa=X&ved=2ahUKEwi17_rnppWIAxX2rokEHfAoEzYQ1QJ6BAhQEAE"
+		},
+		{
+			"query": "ChatGPT download",
+			"link": "https://www.google.com/search?sca_esv=acb05f42373aaad6&gl=us&hl=en&q=ChatGPT+download&sa=X&ved=2ahUKEwi17_rnppWIAxX2rokEHfAoEzYQ1QJ6BAhPEAE"
+		},
+		{
+			"query": "ChatGPT OpenAI",
+			"link": "https://www.google.com/search?sca_esv=acb05f42373aaad6&gl=us&hl=en&q=ChatGPT+OpenAI&sa=X&ved=2ahUKEwi17_rnppWIAxX2rokEHfAoEzYQ1QJ6BAhOEAE"
+		},
+		{
+			"query": "ChatGPT website",
+			"link": "https://www.google.com/search?sca_esv=acb05f42373aaad6&gl=us&hl=en&q=ChatGPT+website&sa=X&ved=2ahUKEwi17_rnppWIAxX2rokEHfAoEzYQ1QJ6BAhVEAE"
+		},
+		{
+			"query": "ChatGPT free online",
+			"link": "https://www.google.com/search?sca_esv=acb05f42373aaad6&gl=us&hl=en&q=ChatGPT+free+online&sa=X&ved=2ahUKEwi17_rnppWIAxX2rokEHfAoEzYQ1QJ6BAhWEAE"
+		}
+	],
+	"pagination": {
+		"current": 1,
+		"next": "https://www.google.com/search?q=chatgpt&oq=chatgpt&gl=us&hl=en&start=10&ie=UTF-8"
+	}
+}

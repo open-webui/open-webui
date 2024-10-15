@@ -4,65 +4,56 @@
 	import { openDB, deleteDB } from 'idb';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
+	import mermaid from 'mermaid';
 
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { fade } from 'svelte/transition';
 
-	import { getModels as _getModels } from '$lib/utils';
-	import { getOllamaVersion } from '$lib/apis/ollama';
-	import { getModelfiles } from '$lib/apis/modelfiles';
-	import { getPrompts } from '$lib/apis/prompts';
-
-	import { getDocs } from '$lib/apis/documents';
+	import { getKnowledgeItems } from '$lib/apis/knowledge';
+	import { getFunctions } from '$lib/apis/functions';
+	import { getModels as _getModels, getVersionUpdates } from '$lib/apis';
 	import { getAllChatTags } from '$lib/apis/chats';
+	import { getPrompts } from '$lib/apis/prompts';
+	import { getTools } from '$lib/apis/tools';
+	import { getBanners } from '$lib/apis/configs';
+	import { getUserSettings } from '$lib/apis/users';
 
-	import {
-		user,
-		showSettings,
-		settings,
-		models,
-		modelfiles,
-		prompts,
-		documents,
-		tags,
-		showChangelog,
-		config
-	} from '$lib/stores';
-	import { REQUIRED_OLLAMA_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
+	import { WEBUI_VERSION } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
 
-	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
+	import {
+		config,
+		user,
+		settings,
+		models,
+		prompts,
+		knowledge,
+		tools,
+		functions,
+		tags,
+		banners,
+		showSettings,
+		showChangelog,
+		temporaryChatEnabled
+	} from '$lib/stores';
+
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
-	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
+	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
+	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 
 	const i18n = getContext('i18n');
 
-	let ollamaVersion = '';
 	let loaded = false;
-	let showShortcutsButtonElement: HTMLButtonElement;
 	let DB = null;
 	let localDBChats = [];
 
-	let showShortcuts = false;
+	let version;
 
 	const getModels = async () => {
 		return _getModels(localStorage.token);
-	};
-
-	const setOllamaVersion = async (version: string = '') => {
-		if (version === '') {
-			version = await getOllamaVersion(localStorage.token).catch((error) => {
-				return '';
-			});
-		}
-
-		ollamaVersion = version;
-
-		console.log(ollamaVersion);
-		if (compareVersion(REQUIRED_OLLAMA_VERSION, ollamaVersion)) {
-			toast.error(`Ollama Version: ${ollamaVersion !== '' ? ollamaVersion : 'Not Detected'}`);
-		}
 	};
 
 	onMount(async () => {
@@ -87,18 +78,48 @@
 				// IndexedDB Not Found
 			}
 
-			await models.set(await getModels());
-			await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
-
-			await modelfiles.set(await getModelfiles(localStorage.token));
-			await prompts.set(await getPrompts(localStorage.token));
-			await documents.set(await getDocs(localStorage.token));
-			await tags.set(await getAllChatTags(localStorage.token));
-
-			modelfiles.subscribe(async () => {
-				// should fetch models
-				await models.set(await getModels());
+			const userSettings = await getUserSettings(localStorage.token).catch((error) => {
+				console.error(error);
+				return null;
 			});
+
+			if (userSettings) {
+				settings.set(userSettings.ui);
+			} else {
+				let localStorageSettings = {} as Parameters<(typeof settings)['set']>[0];
+
+				try {
+					localStorageSettings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+				} catch (e: unknown) {
+					console.error('Failed to parse settings from localStorage', e);
+				}
+
+				settings.set(localStorageSettings);
+			}
+
+			await Promise.all([
+				(async () => {
+					models.set(await getModels());
+				})(),
+				(async () => {
+					prompts.set(await getPrompts(localStorage.token));
+				})(),
+				(async () => {
+					knowledge.set(await getKnowledgeItems(localStorage.token));
+				})(),
+				(async () => {
+					tools.set(await getTools(localStorage.token));
+				})(),
+				(async () => {
+					functions.set(await getFunctions(localStorage.token));
+				})(),
+				(async () => {
+					banners.set(await getBanners(localStorage.token));
+				})(),
+				(async () => {
+					tags.set(await getAllChatTags(localStorage.token));
+				})()
+			]);
 
 			document.addEventListener('keydown', function (event) {
 				const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
@@ -161,7 +182,7 @@
 				if (isCtrlPressed && event.key === '/') {
 					event.preventDefault();
 					console.log('showShortcuts');
-					showShortcutsButtonElement.click();
+					document.getElementById('show-shortcuts-button')?.click();
 				}
 			});
 
@@ -169,76 +190,62 @@
 				showChangelog.set(localStorage.version !== $config.version);
 			}
 
+			if ($page.url.searchParams.get('temporary-chat') === 'true') {
+				temporaryChatEnabled.set(true);
+			}
+
+			// Check for version updates
+			if ($user.role === 'admin') {
+				// Check if the user has dismissed the update toast in the last 24 hours
+				if (localStorage.dismissedUpdateToast) {
+					const dismissedUpdateToast = new Date(Number(localStorage.dismissedUpdateToast));
+					const now = new Date();
+
+					if (now - dismissedUpdateToast > 24 * 60 * 60 * 1000) {
+						checkForVersionUpdates();
+					}
+				} else {
+					checkForVersionUpdates();
+				}
+			}
 			await tick();
 		}
 
 		loaded = true;
 	});
+
+	const checkForVersionUpdates = async () => {
+		version = await getVersionUpdates(localStorage.token).catch((error) => {
+			return {
+				current: WEBUI_VERSION,
+				latest: WEBUI_VERSION
+			};
+		});
+	};
 </script>
 
-<div class=" hidden lg:flex fixed bottom-0 right-0 px-3 py-3 z-10">
-	<Tooltip content={$i18n.t('Help')} placement="left">
-		<button
-			id="show-shortcuts-button"
-			bind:this={showShortcutsButtonElement}
-			class="text-gray-600 dark:text-gray-300 bg-gray-300/20 w-6 h-6 flex items-center justify-center text-xs rounded-full"
-			on:click={() => {
-				showShortcuts = !showShortcuts;
-			}}
-		>
-			?
-		</button>
-	</Tooltip>
-</div>
-
-<ShortcutsModal bind:show={showShortcuts} />
 <SettingsModal bind:show={$showSettings} />
 <ChangelogModal bind:show={$showChangelog} />
 
+{#if version && compareVersion(version.latest, version.current)}
+	<div class=" absolute bottom-8 right-8 z-50" in:fade={{ duration: 100 }}>
+		<UpdateInfoToast
+			{version}
+			on:close={() => {
+				localStorage.setItem('dismissedUpdateToast', Date.now().toString());
+				version = null;
+			}}
+		/>
+	</div>
+{/if}
+
 <div class="app relative">
 	<div
-		class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 min-h-screen overflow-auto flex flex-row"
+		class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row"
 	>
 		{#if loaded}
 			{#if !['user', 'admin'].includes($user.role)}
-				<div class="fixed w-full h-full flex z-[999]">
-					<div
-						class="absolute w-full h-full backdrop-blur-lg bg-white/10 dark:bg-gray-900/50 flex justify-center"
-					>
-						<div class="m-auto pb-10 flex flex-col justify-center">
-							<div class="max-w-md">
-								<div class="text-center dark:text-white text-2xl font-medium z-50">
-									Account Activation Pending<br /> Contact Admin for WebUI Access
-								</div>
-
-								<div class=" mt-4 text-center text-sm dark:text-gray-200 w-full">
-									Your account status is currently pending activation. To access the WebUI, please
-									reach out to the administrator. Admins can manage user statuses from the Admin
-									Panel.
-								</div>
-
-								<div class=" mt-6 mx-auto relative group w-fit">
-									<button
-										class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-gray-100 dark:border-none hover:bg-gray-100 text-gray-700 transition font-medium text-sm"
-										on:click={async () => {
-											location.href = '/';
-										}}
-									>
-										{$i18n.t('Check Again')}
-									</button>
-
-									<button
-										class="text-xs text-center w-full mt-2 text-gray-400 underline"
-										on:click={async () => {
-											localStorage.removeItem('token');
-											location.href = '/auth';
-										}}>{$i18n.t('Sign Out')}</button
-									>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
+				<AccountPending />
 			{:else if localDBChats.length > 0}
 				<div class="fixed w-full h-full flex z-50">
 					<div

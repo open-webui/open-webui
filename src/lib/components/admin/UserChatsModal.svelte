@@ -31,6 +31,17 @@
 			}
 		})();
 	}
+
+	let sortKey = 'updated_at'; // default sort key
+	let sortOrder = 'desc'; // default sort order
+	function setSortKey(key) {
+		if (sortKey === key) {
+			sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+		} else {
+			sortKey = key;
+			sortOrder = 'asc';
+		}
+	}
 </script>
 
 <Modal size="lg" bind:show>
@@ -69,18 +80,56 @@
 									class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 dark:border-gray-800"
 								>
 									<tr>
-										<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
-										<th scope="col" class="px-3 py-2 hidden md:flex"> {$i18n.t('Created at')} </th>
+										<th
+											scope="col"
+											class="px-3 py-2 cursor-pointer select-none"
+											on:click={() => setSortKey('title')}
+										>
+											{$i18n.t('Title')}
+											{#if sortKey === 'title'}
+												{sortOrder === 'asc' ? '▲' : '▼'}
+											{:else}
+												<span class="invisible">▲</span>
+											{/if}
+										</th>
+										<th
+											scope="col"
+											class="px-3 py-2 cursor-pointer select-none"
+											on:click={() => setSortKey('created_at')}
+										>
+											{$i18n.t('Created at')}
+											{#if sortKey === 'created_at'}
+												{sortOrder === 'asc' ? '▲' : '▼'}
+											{:else}
+												<span class="invisible">▲</span>
+											{/if}
+										</th>
+										<th
+											scope="col"
+											class="px-3 py-2 hidden md:flex cursor-pointer select-none"
+											on:click={() => setSortKey('updated_at')}
+										>
+											{$i18n.t('Updated at')}
+											{#if sortKey === 'updated_at'}
+												{sortOrder === 'asc' ? '▲' : '▼'}
+											{:else}
+												<span class="invisible">▲</span>
+											{/if}
+										</th>
 										<th scope="col" class="px-3 py-2 text-right" />
 									</tr>
 								</thead>
 								<tbody>
-									{#each chats as chat, idx}
+									{#each chats.sort((a, b) => {
+										if (a[sortKey] < b[sortKey]) return sortOrder === 'asc' ? -1 : 1;
+										if (a[sortKey] > b[sortKey]) return sortOrder === 'asc' ? 1 : -1;
+										return 0;
+									}) as chat, idx}
 										<tr
 											class="bg-transparent {idx !== chats.length - 1 &&
 												'border-b'} dark:bg-gray-900 dark:border-gray-850 text-xs"
 										>
-											<td class="px-3 py-1 w-2/3">
+											<td class="px-3 py-1">
 												<a href="/s/{chat.id}" target="_blank">
 													<div class=" underline line-clamp-1">
 														{chat.title}
@@ -88,9 +137,14 @@
 												</a>
 											</td>
 
-											<td class=" px-3 py-1 hidden md:flex h-[2.5rem]">
+											<td class=" px-3 py-1 h-[2.5rem]">
 												<div class="my-auto">
 													{dayjs(chat.created_at * 1000).format($i18n.t('MMMM DD, YYYY HH:mm'))}
+												</div>
+											</td>
+											<td class=" px-3 py-1 hidden md:flex h-[2.5rem]">
+												<div class="my-auto">
+													{dayjs(chat.updated_at * 1000).format($i18n.t('MMMM DD, YYYY HH:mm'))}
 												</div>
 											</td>
 

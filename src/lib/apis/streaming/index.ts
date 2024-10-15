@@ -8,6 +8,18 @@ type TextStreamUpdate = {
 	citations?: any;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	error?: any;
+	usage?: ResponseUsage;
+};
+
+type ResponseUsage = {
+	/** Including images and tools if any */
+	prompt_tokens: number;
+	/** The tokens generated */
+	completion_tokens: number;
+	/** Sum of the above two fields */
+	total_tokens: number;
+	/** Any other fields that aren't part of the base OpenAI spec */
+	[other: string]: unknown;
 };
 
 // createOpenAITextStream takes a responseBody with a SSE response,
@@ -59,7 +71,11 @@ async function* openAIStreamToIterator(
 				continue;
 			}
 
-			yield { done: false, value: parsedData.choices?.[0]?.delta?.content ?? '' };
+			yield {
+				done: false,
+				value: parsedData.choices?.[0]?.delta?.content ?? '',
+				usage: parsedData.usage
+			};
 		} catch (e) {
 			console.error('Error extracting delta from SSE event:', e);
 		}
