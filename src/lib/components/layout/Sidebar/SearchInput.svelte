@@ -157,7 +157,7 @@
 									? 'bg-gray-100 dark:bg-gray-900'
 									: ''}"
 								id="search-tag-{tagIdx}"
-								on:click={async () => {
+								on:click|stopPropagation={async () => {
 									const words = value.split(' ');
 
 									words.pop();
@@ -187,7 +187,7 @@
 									? 'bg-gray-100 dark:bg-gray-900'
 									: ''}"
 								id="search-option-{optionIdx}"
-								on:click={async () => {
+								on:click|stopPropagation={async () => {
 									const words = value.split(' ');
 
 									words.pop();
