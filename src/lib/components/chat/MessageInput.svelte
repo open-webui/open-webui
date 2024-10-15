@@ -400,7 +400,7 @@
 							dir={$settings?.chatDirection ?? 'LTR'}
 						>
 							{#if atSelectedPrompt}
-								<div class="flex bg-gray-100 dark:bg-gray-900 rounded-t-[1.5rem] px-1.5">
+								<div class="flex bg-gray-100 dark:bg-black rounded-t-[1.5rem] px-1.5">
 									<div class="px-3 py-2 text-left w-full flex justify-between items-center">
 										<div class="flex items-center gap-2 text-sm">
 											<Terminal />
