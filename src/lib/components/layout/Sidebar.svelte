@@ -14,25 +14,16 @@
 		pinnedChats,
 		scrollPaginationEnabled,
 		currentChatPage,
-		temporaryChatEnabled,
-		showArtifacts,
-		showOverview,
-		showControls
+		temporaryChatEnabled
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
 	const i18n = getContext('i18n');
 
-	import { updateUserSettings } from '$lib/apis/users';
 	import {
 		deleteChatById,
 		getChatList,
-		getChatById,
-		getChatListByTagName,
-		updateChatById,
 		getAllTags,
-		archiveChatById,
-		cloneChatById,
 		getChatListBySearchText,
 		createNewChat,
 		getPinnedChatList,
