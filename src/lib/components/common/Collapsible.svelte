@@ -1,4 +1,9 @@
 <script lang="ts">
+	import { getContext, createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher();
+	$: dispatch('change', open);
+
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 

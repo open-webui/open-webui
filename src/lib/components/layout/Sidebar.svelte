@@ -53,6 +53,7 @@
 	import ChevronUp from '../icons/ChevronUp.svelte';
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Collapsible from '../common/Collapsible.svelte';
+	import Folder from '../common/Folder.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -517,61 +518,42 @@
 
 			{#if !search && $pinnedChats.length > 0}
 				<div class=" pb-2 flex flex-col space-y-1">
-					<div class="">
-						<Collapsible className="w-full" buttonClassName="w-full">
-							<div class="px-2 w-full">
-								<button
-									class="w-full py-1 px-1.5 rounded-md flex items-center gap-1 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-									on:click={() => {
-										showPinnedChat = !showPinnedChat;
-										localStorage.setItem('showPinnedChat', showPinnedChat);
+					<Folder
+						bind:open={showPinnedChat}
+						on:change={(e) => {
+							localStorage.setItem('showPinnedChat', e.detail);
+							console.log(e.detail);
+						}}
+						name={$i18n.t('Pinned')}
+					>
+						<div class="pl-2 mt-1 flex flex-col overflow-y-auto scrollbar-hidden">
+							{#each $pinnedChats as chat, idx}
+								<ChatItem
+									{chat}
+									{shiftKey}
+									selected={selectedChatId === chat.id}
+									on:select={() => {
+										selectedChatId = chat.id;
 									}}
-								>
-									<div class="text-gray-300">
-										{#if showPinnedChat}
-											<ChevronDown className=" size-3" strokeWidth="2.5" />
-										{:else}
-											<ChevronRight className=" text-gra size-3" strokeWidth="2.5" />
-										{/if}
-									</div>
-
-									<div class=" translate-y-[0.5px]">
-										{$i18n.t('Pinned')}
-									</div>
-								</button>
-							</div>
-
-							<div slot="content">
-								<div class="pl-2 mt-1 flex flex-col overflow-y-auto scrollbar-hidden">
-									{#each $pinnedChats as chat, idx}
-										<ChatItem
-											{chat}
-											{shiftKey}
-											selected={selectedChatId === chat.id}
-											on:select={() => {
-												selectedChatId = chat.id;
-											}}
-											on:unselect={() => {
-												selectedChatId = null;
-											}}
-											on:delete={(e) => {
-												if ((e?.detail ?? '') === 'shift') {
-													deleteChatHandler(chat.id);
-												} else {
-													deleteChat = chat;
-													showDeleteConfirm = true;
-												}
-											}}
-											on:tag={(e) => {
-												const { type, name } = e.detail;
-												tagEventHandler(type, name, chat.id);
-											}}
-										/>
-									{/each}
-								</div>
-							</div>
-						</Collapsible>
-					</div>
+									on:unselect={() => {
+										selectedChatId = null;
+									}}
+									on:delete={(e) => {
+										if ((e?.detail ?? '') === 'shift') {
+											deleteChatHandler(chat.id);
+										} else {
+											deleteChat = chat;
+											showDeleteConfirm = true;
+										}
+									}}
+									on:tag={(e) => {
+										const { type, name } = e.detail;
+										tagEventHandler(type, name, chat.id);
+									}}
+								/>
+							{/each}
+						</div>
+					</Folder>
 				</div>
 			{/if}
 

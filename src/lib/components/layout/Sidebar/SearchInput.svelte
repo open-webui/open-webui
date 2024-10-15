@@ -51,10 +51,6 @@
 		const chatSearch = document.getElementById('chat-search');
 
 		if (!searchContainer.contains(e.target) && !chatSearch.contains(e.target)) {
-			console.log(
-				e.target.id,
-				e.target.id.startsWith('search-tag-') || e.target.id.startsWith('search-option-')
-			);
 			if (e.target.id.startsWith('search-tag-') || e.target.id.startsWith('search-option-')) {
 				return;
 			}

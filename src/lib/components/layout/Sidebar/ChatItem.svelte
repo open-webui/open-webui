@@ -98,10 +98,10 @@
 	let y = 0;
 
 	const dragImage = new Image();
-	dragImage.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=';
+	dragImage.src =
+		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
 	const onDragStart = (event) => {
-		console.log('Dragging started:', event.target);
 		event.dataTransfer.setDragImage(dragImage, 0, 0);
 
 		drag = true;
@@ -114,7 +114,6 @@
 	};
 
 	const onDragEnd = (event) => {
-		console.log('Dragging ended:', event.target);
 		drag = false;
 		itemElement.style.opacity = '1'; // Reset visual cue after drag
 	};
@@ -143,9 +142,9 @@
 
 {#if drag && x && y}
 	<DragGhost {x} {y}>
-		<div class=" bg-black/50 backdrop-blur-2xl px-2 py-1 rounded-lg">
+		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg">
 			<div>
-				<div class=" text-xs text-gray-500">
+				<div class=" text-xs text-white">
 					{chat.title}
 				</div>
 			</div>
