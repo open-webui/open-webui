@@ -389,8 +389,21 @@ class ChatTable:
         Filters chats based on a search query using Python, allowing pagination using skip and limit.
         """
         search_text = search_text.lower().strip()
+
         if not search_text:
             return self.get_chat_list_by_user_id(user_id, include_archived, skip, limit)
+
+        search_text_words = search_text.split(" ")
+
+        # search_text might contain 'tag:tag_name' format so we need to extract the tag_name, split the search_text and remove the tags
+        tag_ids = []
+        for word in search_text_words:
+            if word.startswith("tag:"):
+                tag_id = word[4:]
+                tag_ids.append(tag_id)
+                search_text_words.remove(word)
+
+        search_text = " ".join(search_text_words)
 
         with get_db() as db:
             query = db.query(Chat).filter(Chat.user_id == user_id)
@@ -420,6 +433,26 @@ class ChatTable:
                         )
                     ).params(search_text=search_text)
                 )
+
+                # Check if there are any tags to filter, it should have all the tags
+                if tag_ids:
+                    query = query.filter(
+                        and_(
+                            *[
+                                text(
+                                    f"""
+                                    EXISTS (
+                                        SELECT 1
+                                        FROM json_each(Chat.meta, '$.tags') AS tag
+                                        WHERE tag.value = :tag_id
+                                    )
+                                    """
+                                ).params(tag_id=tag_id)
+                                for tag_id in tag_ids
+                            ]
+                        )
+                    )
+
             elif dialect_name == "postgresql":
                 # PostgreSQL relies on proper JSON query for search
                 query = query.filter(
@@ -438,6 +471,25 @@ class ChatTable:
                         )
                     ).params(search_text=search_text)
                 )
+
+                # Check if there are any tags to filter, it should have all the tags
+                if tag_ids:
+                    query = query.filter(
+                        and_(
+                            *[
+                                text(
+                                    f"""
+                                    EXISTS (
+                                        SELECT 1
+                                        FROM json_array_elements_text(Chat.meta->'tags') AS tag
+                                        WHERE tag = :tag_id
+                                    )
+                                    """
+                                ).params(tag_id=tag_id)
+                                for tag_id in tag_ids
+                            ]
+                        )
+                    )
             else:
                 raise NotImplementedError(
                     f"Unsupported dialect: {db.bind.dialect.name}"

@@ -48,6 +48,7 @@
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
 	import { select } from 'd3-selection';
+	import SearchInput from './Sidebar/SearchInput.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -93,7 +94,7 @@
 
 		// once the bottom of the list has been reached (no results) there is no need to continue querying
 		allChatsLoaded = newChatList.length === 0;
-		await chats.set([...$chats, ...newChatList]);
+		await chats.set([...($chats ? $chats : []), ...newChatList]);
 
 		chatListLoading = false;
 	};
@@ -484,35 +485,13 @@
 				<div class="absolute z-40 w-full h-full flex justify-center"></div>
 			{/if}
 
-			<div class="px-2 mt-0.5 mb-2 flex justify-center space-x-2">
-				<div class="flex w-full rounded-xl" id="chat-search">
-					<div class="self-center pl-3 py-2 rounded-l-xl bg-transparent">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</div>
+			<SearchInput
+				bind:value={search}
+				on:input={searchDebounceHandler}
+				placeholder={$i18n.t('Search')}
+			/>
 
-					<input
-						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm bg-transparent dark:text-gray-300 outline-none"
-						placeholder={$i18n.t('Search')}
-						bind:value={search}
-						on:input={() => {
-							searchDebounceHandler();
-						}}
-					/>
-				</div>
-			</div>
-
-			{#if $tags.length > 0}
+			<!-- {#if $tags.length > 0}
 				<div class="px-3.5 mb-2.5 flex gap-0.5 flex-wrap">
 					<button
 						class="px-2.5 py-[1px] text-xs transition {selectedTagName === null
@@ -549,7 +528,7 @@
 						</button>
 					{/each}
 				</div>
-			{/if}
+			{/if} -->
 
 			{#if !search && $pinnedChats.length > 0}
 				<div class="pl-2 pb-2 flex flex-col space-y-1">
