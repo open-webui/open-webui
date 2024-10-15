@@ -179,7 +179,10 @@
 		console.log(type, tagName, chatId);
 		if (type === 'delete') {
 			currentChatPage.set(1);
-			await chats.set(await getChatListBySearchText(localStorage.token, search));
+			await chats.set(await getChatListBySearchText(localStorage.token, search, $currentChatPage));
+		} else if (type === 'add') {
+			currentChatPage.set(1);
+			await chats.set(await getChatListBySearchText(localStorage.token, search, $currentChatPage));
 		}
 	};
 

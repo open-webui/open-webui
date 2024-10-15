@@ -37,7 +37,10 @@
 			tags: tags
 		});
 
-		_tags.set(await getAllChatTags(localStorage.token));
+		await _tags.set(await getAllChatTags(localStorage.token));
+		dispatch('add', {
+			name: tagName
+		});
 	};
 
 	const deleteTag = async (tagName) => {

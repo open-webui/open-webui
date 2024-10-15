@@ -257,11 +257,15 @@ class ChatTable:
             query = db.query(Chat).filter_by(user_id=user_id)
             if not include_archived:
                 query = query.filter_by(archived=False)
-            all_chats = (
-                query.order_by(Chat.updated_at.desc())
-                # .limit(limit).offset(skip)
-                .all()
-            )
+
+            query = query.order_by(Chat.updated_at.desc())
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
+            all_chats = query.all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chat_title_id_list_by_user_id(
@@ -499,6 +503,8 @@ class ChatTable:
 
             # Perform pagination at the SQL level
             all_chats = query.offset(skip).limit(limit).all()
+
+            print(len(all_chats))
 
             # Validate and return chats
             return [ChatModel.model_validate(chat) for chat in all_chats]

@@ -141,6 +141,13 @@
 			<div class="flex p-1">
 				<Tags
 					{chatId}
+					on:add={(e) => {
+						dispatch('tag', {
+							type: 'add',
+							name: e.detail.name
+						});
+						show = false;
+					}}
 					on:delete={(e) => {
 						dispatch('tag', {
 							type: 'delete',
