@@ -163,7 +163,7 @@
 <div bind:this={itemElement} class=" w-full pr-2 relative group" draggable="true">
 	{#if confirmEdit}
 		<div
-			class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId || confirmEdit
+			class=" w-full flex justify-between rounded-xl px-2.5 py-2 {chat.id === $chatId || confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950'
@@ -177,7 +177,7 @@
 		</div>
 	{:else}
 		<a
-			class=" w-full flex justify-between rounded-lg px-3 py-2 {chat.id === $chatId || confirmEdit
+			class=" w-full flex justify-between rounded-lg px-2.5 py-2 {chat.id === $chatId || confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950'

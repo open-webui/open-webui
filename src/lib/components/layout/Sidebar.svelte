@@ -533,7 +533,7 @@
 						}}
 						name={$i18n.t('Pinned')}
 					>
-						<div class="pl-2 mt-1 flex flex-col overflow-y-auto scrollbar-hidden">
+						<div class="pl-2 mt-0.5 flex flex-col overflow-y-auto scrollbar-hidden">
 							{#each $pinnedChats as chat, idx}
 								<ChatItem
 									{chat}
@@ -590,7 +590,7 @@
 										class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
 										0
 											? ''
-											: 'pt-5'} pb-0.5"
+											: 'pt-5'} pb-1.5"
 									>
 										{$i18n.t(chat.time_range)}
 										<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):

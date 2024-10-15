@@ -76,7 +76,7 @@
 			<!-- svelte-ignore a11y-no-static-element-interactions -->
 			<div class="mx-2 w-full">
 				<button
-					class="w-full py-1 px-1.5 rounded-md flex items-center gap-1 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					class="w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 				>
 					<div class="text-gray-300 dark:text-gray-600">
 						{#if open}
@@ -92,7 +92,7 @@
 				</button>
 			</div>
 
-			<div slot="content">
+			<div slot="content" class=" pl-2">
 				<slot></slot>
 			</div>
 		</Collapsible>
