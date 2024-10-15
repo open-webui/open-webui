@@ -509,7 +509,7 @@
 					<div class="">
 						<div class="px-2">
 							<button
-								class="w-full py-0.5 px-1.5 rounded flex items-center gap-1 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								class="w-full py-1 px-1.5 rounded-md flex items-center gap-1 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 								on:click={() => {
 									showPinnedChat = !showPinnedChat;
 									localStorage.setItem('showPinnedChat', showPinnedChat);
