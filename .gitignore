@@ -4,7 +4,6 @@ node_modules
 /.svelte-kit
 /package
 .env
-.env.*
 !.env.example
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
@@ -134,6 +133,8 @@ celerybeat.pid
 
 # Environments
 .env
+.env.openwebui
+.env.litellm
 .venv
 env/
 venv/

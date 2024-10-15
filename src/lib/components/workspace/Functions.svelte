@@ -461,7 +461,7 @@
 	</div>
 </div>
 
-<div class=" my-16">
+<!-- <div class=" my-16">
 	<div class=" text-lg font-semibold mb-3 line-clamp-1">
 		{$i18n.t('Made by OpenWebUI Community')}
 	</div>
@@ -492,7 +492,7 @@
 			</div>
 		</div>
 	</a>
-</div>
+</div> -->
 
 <DeleteConfirmDialog
 	bind:show={showDeleteConfirm}

@@ -1,0 +1,25 @@
+model_list:
+#  - model_name: azure/Meta-Llama-3.1-70B-Instruct
+#    litellm_params:
+#      model: azure_ai/Meta-Llama-3.1-70B-Instruct
+#      api_base: os.environ/AZURE_API_BASE # runs os.getenv("AZURE_API_BASE")
+#      api_key: os.environ/AZURE_API_KEY # runs os.getenv("AZURE_API_KEY")
+  - model_name: Meta-Llama-3.1-70B-Instruct
+    litellm_params:
+      model: bedrock/meta.llama3-1-70b-instruct-v1:0
+      aws_access_key_id: os.environ/CUSTOM_AWS_ACCESS_KEY_ID
+      aws_secret_access_key: os.environ/CUSTOM_AWS_SECRET_ACCESS_KEY
+      aws_region_name: os.environ/CUSTOM_AWS_REGION_NAME
+#  - model_name: text-embedding-3-large
+#    litellm_params:
+#      model: openai/text-embedding-3-large
+#  - model_name: gpt-4o
+#    litellm_params:
+#      model: openai/gpt-4o                         # The `openai/` prefix will call openai.chat.completions.create
+#      api_key: os.environ/OPENAI_API_KEY
+
+general_settings:
+  disable_spend_logs: true
+  disable_master_key_return: true
+  disable_retry_on_max_parallel_request_limit_error: boolean  # turn off retries when max parallel request limit is reached
+  disable_reset_budget: true  # turn off reset budget scheduled task
