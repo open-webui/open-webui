@@ -276,7 +276,7 @@ class ChatTable:
         limit: Optional[int] = None,
     ) -> list[ChatTitleIdResponse]:
         with get_db() as db:
-            query = db.query(Chat).filter_by(user_id=user_id)
+            query = db.query(Chat).filter_by(user_id=user_id, pinned=False)
             if not include_archived:
                 query = query.filter_by(archived=False)
 
