@@ -64,8 +64,10 @@ async def get_session_user(
         expires_delta=expires_delta,
     )
 
-    datetime_expires_at = datetime.datetime.fromtimestamp(
-        expires_at, datetime.timezone.utc
+    datetime_expires_at = (
+        datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
+        if expires_at
+        else None
     )
 
     # Set the cookie token
@@ -193,8 +195,10 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             expires_delta=expires_delta,
         )
 
-        datetime_expires_at = datetime.datetime.fromtimestamp(
-            expires_at, datetime.timezone.utc
+        datetime_expires_at = (
+            datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
+            if expires_at
+            else None
         )
 
         # Set the cookie token
@@ -276,8 +280,10 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 expires_delta=expires_delta,
             )
 
-            datetime_expires_at = datetime.datetime.fromtimestamp(
-                expires_at, datetime.timezone.utc
+            datetime_expires_at = (
+                datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
+                if expires_at
+                else None
             )
 
             # Set the cookie token

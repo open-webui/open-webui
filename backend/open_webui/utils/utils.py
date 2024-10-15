@@ -104,7 +104,7 @@ def get_current_user(
             Users.update_user_last_active_by_id(user.id)
         return user
     else:
-        response.delete_cookie("token")
+        response.set_cookie("token", "", expires=0)
 
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
