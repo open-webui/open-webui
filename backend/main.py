@@ -2186,6 +2186,11 @@ async def oauth_callback(provider: str, request: Request, response: Response):
             existing_user = Users.get_user_by_email(user_data.get("email", "").lower())
             if existing_user:
                 raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
+            
+            # Check if the email ends with "@canvas8.com"
+            if not user_data.get("email", "").lower().endswith("@canvas8.com"):
+                log.warning(f"OAuth callback failed, email domain not allowed: {email}")
+                raise HTTPException(403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
             picture_claim = webui_app.state.config.OAUTH_PICTURE_CLAIM
             picture_url = user_data.get(picture_claim, "")
