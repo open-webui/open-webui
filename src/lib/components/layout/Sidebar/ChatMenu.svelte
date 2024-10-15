@@ -146,6 +146,7 @@
 							type: 'delete',
 							name: e.detail.name
 						});
+						show = false;
 					}}
 					on:close={() => {
 						show = false;
