@@ -1103,7 +1103,7 @@
 						<RateComment
 							bind:message
 							bind:show={showRateComment}
-							on:submit={(e) => {
+							on:save={(e) => {
 								dispatch('save', {
 									...message,
 									annotation: {
