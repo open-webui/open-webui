@@ -35,7 +35,9 @@
 		cloneChatById,
 		getChatListBySearchText,
 		createNewChat,
-		getPinnedChatList
+		getPinnedChatList,
+		toggleChatPinnedStatusById,
+		getChatPinnedStatusById
 	} from '$lib/apis/chats';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -363,8 +365,8 @@
 	bind:this={navElement}
 	id="sidebar"
 	class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
-		? 'md:relative w-[260px]'
-		: '-translate-x-[260px] w-[0px]'} bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0
+		? 'md:relative w-[260px] max-w-[260px]'
+		: '-translate-x-[260px] w-[0px]'} bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0 overflow-x-hidden
         "
 	data-state={$showSidebar}
 >
@@ -381,7 +383,7 @@
 		</div>
 	{/if}
 	<div
-		class="py-2.5 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] z-50 {$showSidebar
+		class="py-2.5 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
 			? ''
 			: 'invisible'}"
 	>
@@ -517,12 +519,26 @@
 			{/if}
 
 			{#if !search && $pinnedChats.length > 0}
-				<div class=" pb-2 flex flex-col space-y-1">
+				<div class=" flex flex-col space-y-1">
 					<Folder
 						bind:open={showPinnedChat}
 						on:change={(e) => {
 							localStorage.setItem('showPinnedChat', e.detail);
 							console.log(e.detail);
+						}}
+						on:drop={async (e) => {
+							const { id } = e.detail;
+
+							const status = await getChatPinnedStatusById(localStorage.token, id);
+
+							if (!status) {
+								const res = await toggleChatPinnedStatusById(localStorage.token, id);
+
+								if (res) {
+									await pinnedChats.set(await getPinnedChatList(localStorage.token));
+									initChatList();
+								}
+							}
 						}}
 						name={$i18n.t('Pinned')}
 					>
@@ -557,17 +573,36 @@
 				</div>
 			{/if}
 
-			<div class="pl-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden">
-				{#if $chats}
-					{#each $chats as chat, idx}
-						{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
-							<div
-								class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
-									? ''
-									: 'pt-5'} pb-0.5"
-							>
-								{$i18n.t(chat.time_range)}
-								<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
+			<div class="flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden">
+				<Folder
+					collapsible={false}
+					on:drop={async (e) => {
+						const { id } = e.detail;
+
+						const status = await getChatPinnedStatusById(localStorage.token, id);
+
+						if (status) {
+							const res = await toggleChatPinnedStatusById(localStorage.token, id);
+
+							if (res) {
+								await pinnedChats.set(await getPinnedChatList(localStorage.token));
+								initChatList();
+							}
+						}
+					}}
+				>
+					<div class="pt-2 pl-2">
+						{#if $chats}
+							{#each $chats as chat, idx}
+								{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
+									<div
+										class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
+										0
+											? ''
+											: 'pt-5'} pb-0.5"
+									>
+										{$i18n.t(chat.time_range)}
+										<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
 							{$i18n.t('Today')}
 							{$i18n.t('Yesterday')}
 							{$i18n.t('Previous 7 days')}
@@ -585,54 +620,58 @@
 							{$i18n.t('November')}
 							{$i18n.t('December')}
 							-->
-							</div>
-						{/if}
+									</div>
+								{/if}
 
-						<ChatItem
-							{chat}
-							{shiftKey}
-							selected={selectedChatId === chat.id}
-							on:select={() => {
-								selectedChatId = chat.id;
-							}}
-							on:unselect={() => {
-								selectedChatId = null;
-							}}
-							on:delete={(e) => {
-								if ((e?.detail ?? '') === 'shift') {
-									deleteChatHandler(chat.id);
-								} else {
-									deleteChat = chat;
-									showDeleteConfirm = true;
-								}
-							}}
-							on:tag={(e) => {
-								const { type, name } = e.detail;
-								tagEventHandler(type, name, chat.id);
-							}}
-						/>
-					{/each}
+								<ChatItem
+									{chat}
+									{shiftKey}
+									selected={selectedChatId === chat.id}
+									on:select={() => {
+										selectedChatId = chat.id;
+									}}
+									on:unselect={() => {
+										selectedChatId = null;
+									}}
+									on:delete={(e) => {
+										if ((e?.detail ?? '') === 'shift') {
+											deleteChatHandler(chat.id);
+										} else {
+											deleteChat = chat;
+											showDeleteConfirm = true;
+										}
+									}}
+									on:tag={(e) => {
+										const { type, name } = e.detail;
+										tagEventHandler(type, name, chat.id);
+									}}
+								/>
+							{/each}
 
-					{#if $scrollPaginationEnabled && !allChatsLoaded}
-						<Loader
-							on:visible={(e) => {
-								if (!chatListLoading) {
-									loadMoreChats();
-								}
-							}}
-						>
+							{#if $scrollPaginationEnabled && !allChatsLoaded}
+								<Loader
+									on:visible={(e) => {
+										if (!chatListLoading) {
+											loadMoreChats();
+										}
+									}}
+								>
+									<div
+										class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
+									>
+										<Spinner className=" size-4" />
+										<div class=" ">Loading...</div>
+									</div>
+								</Loader>
+							{/if}
+						{:else}
 							<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
 								<Spinner className=" size-4" />
 								<div class=" ">Loading...</div>
 							</div>
-						</Loader>
-					{/if}
-				{:else}
-					<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
-						<Spinner className=" size-4" />
-						<div class=" ">Loading...</div>
+						{/if}
 					</div>
-				{/if}
+				</Folder>
 			</div>
 		</div>
 

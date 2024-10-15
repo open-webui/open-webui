@@ -104,6 +104,14 @@
 	const onDragStart = (event) => {
 		event.dataTransfer.setDragImage(dragImage, 0, 0);
 
+		// Set the data to be transferred
+		event.dataTransfer.setData(
+			'text/plain',
+			JSON.stringify({
+				id: chat.id
+			})
+		);
+
 		drag = true;
 		itemElement.style.opacity = '0.5'; // Optional: Visual cue to show it's being dragged
 	};
@@ -114,8 +122,8 @@
 	};
 
 	const onDragEnd = (event) => {
-		drag = false;
 		itemElement.style.opacity = '1'; // Reset visual cue after drag
+		drag = false;
 	};
 
 	onMount(() => {
@@ -142,9 +150,9 @@
 
 {#if drag && x && y}
 	<DragGhost {x} {y}>
-		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg">
+		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-44">
 			<div>
-				<div class=" text-xs text-white">
+				<div class=" text-xs text-white line-clamp-1">
 					{chat.title}
 				</div>
 			</div>
@@ -169,7 +177,7 @@
 		</div>
 	{:else}
 		<a
-			class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId || confirmEdit
+			class=" w-full flex justify-between rounded-lg px-3 py-2 {chat.id === $chatId || confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950'
