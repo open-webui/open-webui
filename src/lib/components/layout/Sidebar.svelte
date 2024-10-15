@@ -49,6 +49,9 @@
 	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
 	import { select } from 'd3-selection';
 	import SearchInput from './Sidebar/SearchInput.svelte';
+	import ChevronDown from '../icons/ChevronDown.svelte';
+	import ChevronUp from '../icons/ChevronUp.svelte';
+	import ChevronRight from '../icons/ChevronRight.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -64,6 +67,8 @@
 	let showDropdown = false;
 
 	let selectedTagName = null;
+
+	let showPinnedChat = true;
 
 	// Pagination variables
 	let chatListLoading = false;
@@ -257,6 +262,8 @@
 	};
 
 	onMount(async () => {
+		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
+
 		mobile.subscribe((e) => {
 			if ($showSidebar && e) {
 				showSidebar.set(false);
@@ -476,11 +483,7 @@
 			</div>
 		{/if}
 
-		<div
-			class="relative flex flex-col flex-1 overflow-y-auto {$temporaryChatEnabled
-				? 'opacity-20'
-				: ''}"
-		>
+		<div class="relative {$temporaryChatEnabled ? 'opacity-20' : ''}">
 			{#if $temporaryChatEnabled}
 				<div class="absolute z-40 w-full h-full flex justify-center"></div>
 			{/if}
@@ -490,78 +493,71 @@
 				on:input={searchDebounceHandler}
 				placeholder={$i18n.t('Search')}
 			/>
+		</div>
 
-			<!-- {#if $tags.length > 0}
-				<div class="px-3.5 mb-2.5 flex gap-0.5 flex-wrap">
-					<button
-						class="px-2.5 py-[1px] text-xs transition {selectedTagName === null
-							? 'bg-gray-100 dark:bg-gray-900'
-							: ' '} rounded-md font-medium"
-						on:click={async () => {
-							selectedTagName = null;
-							await initChatList();
-						}}
-					>
-						{$i18n.t('all')}
-					</button>
-					{#each $tags as tag}
-						<button
-							class="px-2.5 py-[1px] text-xs transition {selectedTagName === tag.name
-								? 'bg-gray-100 dark:bg-gray-900'
-								: ''}  rounded-md font-medium"
-							on:click={async () => {
-								selectedTagName = tag.name;
-								scrollPaginationEnabled.set(false);
-
-								let taggedChatList = await getChatListByTagName(localStorage.token, tag.name);
-								if (taggedChatList.length === 0) {
-									await tags.set(await getAllChatTags(localStorage.token));
-									// if the tag we deleted is no longer a valid tag, return to main chat list view
-									await initChatList();
-								} else {
-									await chats.set(taggedChatList);
-								}
-								chatListLoading = false;
-							}}
-						>
-							{tag.name}
-						</button>
-					{/each}
-				</div>
-			{/if} -->
+		<div
+			class="relative flex flex-col flex-1 overflow-y-auto {$temporaryChatEnabled
+				? 'opacity-20'
+				: ''}"
+		>
+			{#if $temporaryChatEnabled}
+				<div class="absolute z-40 w-full h-full flex justify-center"></div>
+			{/if}
 
 			{#if !search && $pinnedChats.length > 0}
-				<div class="pl-2 pb-2 flex flex-col space-y-1">
+				<div class=" pb-2 flex flex-col space-y-1">
 					<div class="">
-						<div class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium pb-1.5">
-							{$i18n.t('Pinned')}
+						<div class="px-2">
+							<button
+								class="w-full py-0.5 px-1.5 rounded flex items-center gap-1 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								on:click={() => {
+									showPinnedChat = !showPinnedChat;
+									localStorage.setItem('showPinnedChat', showPinnedChat);
+								}}
+							>
+								<div class="text-gray-300">
+									{#if showPinnedChat}
+										<ChevronDown className=" size-3" strokeWidth="2.5" />
+									{:else}
+										<ChevronRight className=" text-gra size-3" strokeWidth="2.5" />
+									{/if}
+								</div>
+
+								<div class=" translate-y-[0.5px]">
+									{$i18n.t('Pinned')}
+								</div>
+							</button>
 						</div>
 
-						{#each $pinnedChats as chat, idx}
-							<ChatItem
-								{chat}
-								{shiftKey}
-								selected={selectedChatId === chat.id}
-								on:select={() => {
-									selectedChatId = chat.id;
-								}}
-								on:unselect={() => {
-									selectedChatId = null;
-								}}
-								on:delete={(e) => {
-									if ((e?.detail ?? '') === 'shift') {
-										deleteChatHandler(chat.id);
-									} else {
-										deleteChat = chat;
-										showDeleteConfirm = true;
-									}
-								}}
-								on:tag={(e) => {
-									const { type, name } = e.detail;
-									tagEventHandler(type, name, chat.id);
-								}}
-							/>
-						{/each}
+						{#if showPinnedChat}
+							<div class="pl-2 mt-1 flex flex-col overflow-y-auto scrollbar-hidden">
+								{#each $pinnedChats as chat, idx}
+									<ChatItem
+										{chat}
+										{shiftKey}
+										selected={selectedChatId === chat.id}
+										on:select={() => {
+											selectedChatId = chat.id;
+										}}
+										on:unselect={() => {
+											selectedChatId = null;
+										}}
+										on:delete={(e) => {
+											if ((e?.detail ?? '') === 'shift') {
+												deleteChatHandler(chat.id);
+											} else {
+												deleteChat = chat;
+												showDeleteConfirm = true;
+											}
+										}}
+										on:tag={(e) => {
+											const { type, name } = e.detail;
+											tagEventHandler(type, name, chat.id);
+										}}
+									/>
+								{/each}
+							</div>
+						{/if}
 					</div>
 				</div>
 			{/if}

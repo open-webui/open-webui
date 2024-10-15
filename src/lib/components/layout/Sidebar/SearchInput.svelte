@@ -71,7 +71,7 @@
 	});
 </script>
 
-<div class="px-2 mt-0.5 mb-2 flex justify-center space-x-2 relative" id="search-container">
+<div class="px-2 mb-1 flex justify-center space-x-2 relative z-10" id="search-container">
 	<div class="flex w-full rounded-xl" id="chat-search">
 		<div class="self-center pl-3 py-2 rounded-l-xl bg-transparent">
 			<svg
@@ -89,7 +89,6 @@
 		</div>
 
 		<input
-			id="search-input"
 			class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm bg-transparent dark:text-gray-300 outline-none"
 			placeholder={placeholder ? placeholder : $i18n.t('Search')}
 			bind:value
