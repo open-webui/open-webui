@@ -561,7 +561,7 @@ class ChatTable:
                 if tag_id not in chat.meta.get("tags", []):
                     chat.meta = {
                         **chat.meta,
-                        "tags": chat.meta.get("tags", []) + [tag_id],
+                        "tags": list(set(chat.meta.get("tags", []) + [tag_id])),
                     }
 
                 db.commit()
@@ -618,7 +618,7 @@ class ChatTable:
                 tags = [tag for tag in tags if tag != tag_id]
                 chat.meta = {
                     **chat.meta,
-                    "tags": tags,
+                    "tags": list(set(tags)),
                 }
                 db.commit()
                 return True
