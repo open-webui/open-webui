@@ -2161,6 +2161,12 @@ async def oauth_callback(provider: str, request: Request, response: Response):
         log.warning(f"OAuth callback failed, email is missing: {user_data}")
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
+    # Check if the email ends with "@canvas8.com"
+    if not email.lower().endswith("@canvas8.com"):
+        log.warning(f"OAuth callback failed, email domain not allowed: {email}")
+        raise HTTPException(403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
+
     # Check if the user exists
     user = Users.get_user_by_oauth_sub(provider_sub)
 
