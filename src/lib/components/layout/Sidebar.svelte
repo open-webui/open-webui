@@ -177,14 +177,8 @@
 	const tagEventHandler = async (type, tagName, chatId) => {
 		console.log(type, tagName, chatId);
 		if (type === 'delete') {
-			if (selectedTagName === tagName) {
-				if ($tags.map((t) => t.name).includes(tagName)) {
-					await chats.set(await getChatListByTagName(localStorage.token, tagName));
-				} else {
-					selectedTagName = null;
-					await initChatList();
-				}
-			}
+			currentChatPage.set(1);
+			await chats.set(await getChatListBySearchText(localStorage.token, search));
 		}
 	};
 
@@ -192,7 +186,13 @@
 
 	const onDragOver = (e) => {
 		e.preventDefault();
-		dragged = true;
+
+		// Check if a file is being dragged.
+		if (e.dataTransfer?.types?.includes('Files')) {
+			dragged = true;
+		} else {
+			dragged = false;
+		}
 	};
 
 	const onDragLeave = () => {
@@ -201,19 +201,19 @@
 
 	const onDrop = async (e) => {
 		e.preventDefault();
-		console.log(e);
+		console.log(e); // Log the drop event
 
+		// Perform file drop check and handle it accordingly
 		if (e.dataTransfer?.files) {
 			const inputFiles = Array.from(e.dataTransfer?.files);
+
 			if (inputFiles && inputFiles.length > 0) {
-				console.log(inputFiles);
-				inputFilesHandler(inputFiles);
-			} else {
-				toast.error($i18n.t(`File not found.`));
+				console.log(inputFiles); // Log the dropped files
+				inputFilesHandler(inputFiles); // Handle the dropped files
 			}
 		}
 
-		dragged = false;
+		dragged = false; // Reset dragged status after drop
 	};
 
 	let touchstart;
