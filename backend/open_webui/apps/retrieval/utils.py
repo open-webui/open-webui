@@ -403,9 +403,7 @@ def get_rag_context(
                 )
 
                 contexts.append(
-                    (", ".join(file_names) + ":\n\n")
-                    if file_names
-                    else ""
+                    ((", ".join(file_names) + ":\n\n") if file_names else "")
                     + "\n\n".join(
                         [text for text in context["documents"][0] if text is not None]
                     )
@@ -422,7 +420,9 @@ def get_rag_context(
         except Exception as e:
             log.exception(e)
 
-    print(contexts, citations)
+    print("contexts", contexts)
+    print("citations", citations)
+
     return contexts, citations
 
 
