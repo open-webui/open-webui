@@ -396,12 +396,14 @@ class ChatTable:
         search_text_words = search_text.split(" ")
 
         # search_text might contain 'tag:tag_name' format so we need to extract the tag_name, split the search_text and remove the tags
-        tag_ids = []
-        for word in search_text_words:
-            if word.startswith("tag:"):
-                tag_id = word[4:]
-                tag_ids.append(tag_id)
-                search_text_words.remove(word)
+        tag_ids = [
+            tag_name.replace("tag:", "").replace(" ", "_").lower()
+            for tag_name in search_text_words
+            if tag_name.startswith("tag:")
+        ]
+        search_text_words = [
+            word for word in search_text_words if not word.startswith("tag:")
+        ]
 
         search_text = " ".join(search_text_words)
 
