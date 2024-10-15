@@ -1,4 +1,9 @@
 <script lang="ts">
+	import { getContext, createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher();
+	$: dispatch('change', open);
+
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 
@@ -7,12 +12,13 @@
 
 	export let open = false;
 	export let className = '';
+	export let buttonClassName = 'w-fit';
 	export let title = null;
 </script>
 
 <div class={className}>
 	{#if title !== null}
-		<button class="w-fit" on:click={() => (open = !open)}>
+		<button class={buttonClassName} on:click={() => (open = !open)}>
 			<div class=" w-fit font-medium transition flex items-center justify-between gap-2">
 				<div>
 					{title}
@@ -28,7 +34,7 @@
 			</div>
 		</button>
 	{:else}
-		<button on:click={() => (open = !open)}>
+		<button class={buttonClassName} on:click={() => (open = !open)}>
 			<div
 				class="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
 			>

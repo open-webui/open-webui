@@ -154,5 +154,15 @@ class KnowledgeTable:
         except Exception:
             return False
 
+    def delete_all_knowledge(self) -> bool:
+        with get_db() as db:
+            try:
+                db.query(Knowledge).delete()
+                db.commit()
+
+                return True
+            except Exception:
+                return False
+
 
 Knowledges = KnowledgeTable()

@@ -50,15 +50,15 @@
 		loadReasons();
 	});
 
-	const submitHandler = () => {
-		console.log('submitHandler');
+	const saveHandler = () => {
+		console.log('saveHandler');
 
 		if (!selectedReason) {
 			toast.error($i18n.t('Please select a reason'));
 			return;
 		}
 
-		dispatch('submit', {
+		dispatch('save', {
 			reason: selectedReason,
 			comment: comment
 		});
@@ -124,10 +124,10 @@
 		<button
 			class=" bg-emerald-700 text-white text-sm font-medium rounded-lg px-3.5 py-1.5"
 			on:click={() => {
-				submitHandler();
+				saveHandler();
 			}}
 		>
-			{$i18n.t('Submit')}
+			{$i18n.t('Save')}
 		</button>
 	</div>
 </div>

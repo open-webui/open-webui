@@ -230,6 +230,8 @@ if FROM_INIT_PY:
     DATA_DIR = Path(os.getenv("DATA_DIR", OPEN_WEBUI_DIR / "data"))
 
 
+STATIC_DIR = Path(os.getenv("STATIC_DIR", OPEN_WEBUI_DIR / "static"))
+
 FONTS_DIR = Path(os.getenv("FONTS_DIR", OPEN_WEBUI_DIR / "static" / "fonts"))
 
 FRONTEND_BUILD_DIR = Path(os.getenv("FRONTEND_BUILD_DIR", BASE_DIR / "build")).resolve()
@@ -360,6 +362,20 @@ else:
         AIOHTTP_CLIENT_TIMEOUT = int(AIOHTTP_CLIENT_TIMEOUT)
     except Exception:
         AIOHTTP_CLIENT_TIMEOUT = 300
+
+AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = os.environ.get(
+    "AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST", "3"
+)
+
+if AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST == "":
+    AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = None
+else:
+    try:
+        AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = int(
+            AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST
+        )
+    except Exception:
+        AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = 3
 
 ####################################
 # OFFLINE_MODE

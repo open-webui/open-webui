@@ -57,6 +57,8 @@ dependencies = [
 
     "ftfy==6.2.3",
     "pypdf==4.3.1",
+    "xhtml2pdf==0.2.16",
+    "pymdown-extensions==10.11.2",
     "docx2txt==0.8",
     "python-pptx==1.0.0",
     "unstructured==0.15.9",

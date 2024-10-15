@@ -553,37 +553,7 @@
 />
 
 <div class="flex flex-col w-full max-h-[100dvh] h-full">
-	<div class="flex items-center justify-between">
-		<button
-			class="flex space-x-1 w-fit"
-			on:click={() => {
-				goto('/workspace/knowledge');
-			}}
-		>
-			<div class=" self-center">
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-4 h-4"
-				>
-					<path
-						fill-rule="evenodd"
-						d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
-						clip-rule="evenodd"
-					/>
-				</svg>
-			</div>
-			<div class=" self-center font-medium text-sm">{$i18n.t('Back')}</div>
-		</button>
-
-		<div class=" flex-shrink-0">
-			<div>
-				<Badge type="success" content="Collection" />
-			</div>
-		</div>
-	</div>
-	<div class="flex flex-col my-2 flex-1 overflow-auto h-0">
+	<div class="flex flex-col mb-2 flex-1 overflow-auto h-0">
 		{#if id && knowledge}
 			<div class="flex flex-row h-0 flex-1 overflow-auto">
 				<div

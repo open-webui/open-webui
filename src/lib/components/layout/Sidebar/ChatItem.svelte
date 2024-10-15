@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
-	import { onMount, getContext, createEventDispatcher, tick } from 'svelte';
+	import { onMount, getContext, createEventDispatcher, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
 	const dispatch = createEventDispatcher();
@@ -10,6 +10,7 @@
 		archiveChatById,
 		cloneChatById,
 		deleteChatById,
+		getAllTags,
 		getChatList,
 		getChatListByTagName,
 		getPinnedChatList,
@@ -22,7 +23,8 @@
 		mobile,
 		pinnedChats,
 		showSidebar,
-		currentChatPage
+		currentChatPage,
+		tags
 	} from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
@@ -30,6 +32,7 @@
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
+	import DragGhost from '$lib/components/common/DragGhost.svelte';
 
 	export let chat;
 	export let selected = false;
@@ -77,6 +80,7 @@
 
 	const archiveChatHandler = async (id) => {
 		await archiveChatById(localStorage.token, id);
+		tags.set(await getAllTags(localStorage.token));
 
 		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
@@ -86,14 +90,80 @@
 	const focusEdit = async (node: HTMLInputElement) => {
 		node.focus();
 	};
+
+	let itemElement;
+
+	let drag = false;
+	let x = 0;
+	let y = 0;
+
+	const dragImage = new Image();
+	dragImage.src =
+		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+	const onDragStart = (event) => {
+		event.dataTransfer.setDragImage(dragImage, 0, 0);
+
+		// Set the data to be transferred
+		event.dataTransfer.setData(
+			'text/plain',
+			JSON.stringify({
+				id: chat.id
+			})
+		);
+
+		drag = true;
+		itemElement.style.opacity = '0.5'; // Optional: Visual cue to show it's being dragged
+	};
+
+	const onDrag = (event) => {
+		x = event.clientX;
+		y = event.clientY;
+	};
+
+	const onDragEnd = (event) => {
+		itemElement.style.opacity = '1'; // Reset visual cue after drag
+		drag = false;
+	};
+
+	onMount(() => {
+		if (itemElement) {
+			// Event listener for when dragging starts
+			itemElement.addEventListener('dragstart', onDragStart);
+			// Event listener for when dragging occurs (optional)
+			itemElement.addEventListener('drag', onDrag);
+			// Event listener for when dragging ends
+			itemElement.addEventListener('dragend', onDragEnd);
+		}
+	});
+
+	onDestroy(() => {
+		if (itemElement) {
+			itemElement.removeEventListener('dragstart', onDragStart);
+			itemElement.removeEventListener('drag', onDrag);
+			itemElement.removeEventListener('dragend', onDragEnd);
+		}
+	});
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={chat.id} />
 
-<div class=" w-full pr-2 relative group">
+{#if drag && x && y}
+	<DragGhost {x} {y}>
+		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-44">
+			<div>
+				<div class=" text-xs text-white line-clamp-1">
+					{chat.title}
+				</div>
+			</div>
+		</div>
+	</DragGhost>
+{/if}
+
+<div bind:this={itemElement} class=" w-full pr-2 relative group" draggable="true">
 	{#if confirmEdit}
 		<div
-			class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId || confirmEdit
+			class=" w-full flex justify-between rounded-xl px-2.5 py-2 {chat.id === $chatId || confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950'
@@ -107,7 +177,7 @@
 		</div>
 	{:else}
 		<a
-			class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId || confirmEdit
+			class=" w-full flex justify-between rounded-lg px-2.5 py-2 {chat.id === $chatId || confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950'

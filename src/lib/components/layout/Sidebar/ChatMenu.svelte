@@ -15,13 +15,8 @@
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import Bookmark from '$lib/components/icons/Bookmark.svelte';
 	import BookmarkSlash from '$lib/components/icons/BookmarkSlash.svelte';
-	import {
-		addTagById,
-		deleteTagById,
-		getChatPinnedStatusById,
-		getTagsById,
-		toggleChatPinnedStatusById
-	} from '$lib/apis/chats';
+	import { getChatPinnedStatusById, toggleChatPinnedStatusById } from '$lib/apis/chats';
+	import { chats } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -141,11 +136,20 @@
 			<div class="flex p-1">
 				<Tags
 					{chatId}
+					on:add={(e) => {
+						dispatch('tag', {
+							type: 'add',
+							name: e.detail.name
+						});
+
+						show = false;
+					}}
 					on:delete={(e) => {
 						dispatch('tag', {
 							type: 'delete',
 							name: e.detail.name
 						});
+
 						show = false;
 					}}
 					on:close={() => {
