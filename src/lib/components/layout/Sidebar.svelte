@@ -675,7 +675,7 @@
 			</div>
 		</div>
 
-		<div class="px-2.5 pb-safe-bottom">
+		<div class="px-2 pb-safe-bottom">
 			<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
 
 			<div class="flex flex-col font-primary">
@@ -689,7 +689,7 @@
 						}}
 					>
 						<button
-							class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 							on:click={() => {
 								showDropdown = !showDropdown;
 							}}

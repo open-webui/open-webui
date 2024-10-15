@@ -7,7 +7,7 @@ import jwt
 from open_webui.apps.webui.models.users import Users
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import WEBUI_SECRET_KEY
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
 
@@ -73,6 +73,7 @@ def get_http_authorization_cred(auth_header: str):
 
 def get_current_user(
     request: Request,
+    response: Response,
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
 ):
     token = None
@@ -103,6 +104,8 @@ def get_current_user(
             Users.update_user_last_active_by_id(user.id)
         return user
     else:
+        response.delete_cookie("token")
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
