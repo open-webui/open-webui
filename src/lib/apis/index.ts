@@ -951,6 +951,7 @@ export interface ModelMeta {
 	description?: string;
 	capabilities?: object;
 	profile_image_url?: string;
+	hidden?: boolean;
 }
 
 export interface ModelParams {}

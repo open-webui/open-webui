@@ -201,7 +201,7 @@
 							placeholder="Select a model"
 						>
 							<option value="" disabled selected>{$i18n.t('Select a model')}</option>
-							{#each $models.filter((model) => model.id) as model}
+							{#each $models.filter((model) => model.id && !model?.info?.meta?.hidden) as model}
 								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">{model.name}</option>
 							{/each}
 						</select>
