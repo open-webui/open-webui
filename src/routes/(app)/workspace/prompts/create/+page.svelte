@@ -220,7 +220,6 @@
 					>
 						<option value="inline">{$i18n.t('Inline')}</option>
 						<option value="once-pinned">{$i18n.t('Once Pinned')}</option>
-						<option value="sticky">{$i18n.t('Sticky')}</option>
 					</select>
 				</div>
 
@@ -229,10 +228,6 @@
 					{#if behavior === 'once-pinned'}
 						{$i18n.t(
 							'The "prompt" will be temporarily pinned above the chat input area, displaying it\'s title. It will remain anchored there until the prompt is sent, after which it will be automatically removed.'
-						)}
-					{:else if behavior === 'sticky'}
-						{$i18n.t(
-							'The "prompt" will be pinned above the chat input area, displaying it\'s title. It will remain anchored there until manually removed by the user.'
 						)}
 					{:else}
 						{$i18n.t(

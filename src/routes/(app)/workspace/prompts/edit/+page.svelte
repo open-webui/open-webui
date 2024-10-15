@@ -218,10 +218,6 @@
 						{$i18n.t(
 							'The "prompt" will be temporarily pinned above the chat input area, displaying it\'s title. It will remain anchored there until the prompt is sent, after which it will be automatically removed.'
 						)}
-					{:else if behavior === 'sticky'}
-						{$i18n.t(
-							'The "prompt" will be pinned above the chat input area, displaying it\'s title. It will remain anchored there until manually removed by the user.'
-						)}
 					{:else}
 						{$i18n.t(
 							'The "prompt content" will be automatically inserted into the chat input when the command is used.'

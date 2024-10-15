@@ -147,7 +147,7 @@ type TitleSettings = {
 	prompt?: string;
 };
 
-export type PromptBehavior = 'inline' | 'once-pinned' | 'sticky';
+export type PromptBehavior = 'inline' | 'once-pinned';
 
 export type Prompt = {
 	command: string;

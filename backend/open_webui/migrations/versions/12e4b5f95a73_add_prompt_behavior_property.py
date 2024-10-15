@@ -22,16 +22,16 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Create the enum type
-    prompt_behavior_enum = postgresql.ENUM('inline', 'once-pinned', 'sticky', name='promptbehavior')
+    prompt_behavior_enum = postgresql.ENUM('inline', 'once-pinned', name='promptbehavior')
     prompt_behavior_enum.create(op.get_bind())
 
     # Add the column using the created enum type
-    op.add_column("prompt", sa.Column("behavior", sa.Enum('inline', 'once-pinned', 'sticky', name='promptbehavior'), nullable=False, server_default='inline'))
+    op.add_column("prompt", sa.Column("behavior", sa.Enum('inline', 'once-pinned', name='promptbehavior'), nullable=False, server_default='inline'))
 
 def downgrade() -> None:
     # Drop the column
     op.drop_column("prompt", "behavior")
 
     # Drop the enum type
-    prompt_behavior_enum = postgresql.ENUM('inline', 'once-pinned', 'sticky', name='promptbehavior')
+    prompt_behavior_enum = postgresql.ENUM('inline', 'once-pinned', name='promptbehavior')
     prompt_behavior_enum.drop(op.get_bind())
