@@ -115,11 +115,9 @@ export const userSignIn = async (email: string, password: string) => {
 
 	const domain: string = "@canvas8.com";
 
-  if (email.toLowerCase().slice(-domain.length) === domain){
-    console.log("The email is from the canvas8.com domain.");
-  }
-	else {
-		console.log("The email is not from the canvas8 domain")
+	if (email.toLowerCase().slice(-domain.length) !== domain) {
+		console.log("The email is not from the canvas8.com domain");
+		throw "Only @canvas8.com email addresses are allowed";
 	}
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signin`, {
