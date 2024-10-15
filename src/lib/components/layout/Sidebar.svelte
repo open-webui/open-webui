@@ -675,9 +675,7 @@
 			</div>
 		</div>
 
-		<div class="px-2 pb-safe-bottom">
-			<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
-
+		<div class="px-2">
 			<div class="flex flex-col font-primary">
 				{#if $user !== undefined}
 					<UserMenu
