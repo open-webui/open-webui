@@ -328,7 +328,7 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
     if user.role == "admin":
         chat = Chats.get_chat_by_id(id)
         for tag in chat.meta.get("tags", []):
-            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 0:
+            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 1:
                 Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
         result = Chats.delete_chat_by_id(id)
@@ -345,7 +345,7 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
 
         chat = Chats.get_chat_by_id(id)
         for tag in chat.meta.get("tags", []):
-            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 0:
+            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 1:
                 Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
         result = Chats.delete_chat_by_id_and_user_id(id, user.id)
