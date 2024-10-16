@@ -1,4 +1,3 @@
-import inspect
 import asyncio
 import inspect
 import json
@@ -13,12 +12,32 @@ from typing import Optional
 
 import aiohttp
 import requests
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from sqlalchemy import text
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.sessions import SessionMiddleware
+from starlette.responses import Response, StreamingResponse
 
+from open_webui.apps.audio.main import app as audio_app
+from open_webui.apps.images.main import app as images_app
 from open_webui.apps.ollama.main import (
     app as ollama_app,
     get_all_models as get_ollama_models,
     generate_chat_completion as generate_ollama_chat_completion,
-    generate_openai_chat_completion as generate_ollama_openai_chat_completion,
     GenerateChatCompletionForm,
 )
 from open_webui.apps.openai.main import (
@@ -26,38 +45,24 @@ from open_webui.apps.openai.main import (
     generate_chat_completion as generate_openai_chat_completion,
     get_all_models as get_openai_models,
 )
-
 from open_webui.apps.retrieval.main import app as retrieval_app
 from open_webui.apps.retrieval.utils import get_rag_context, rag_template
-
 from open_webui.apps.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
     get_event_call,
     get_event_emitter,
 )
-
+from open_webui.apps.webui.internal.db import Session
 from open_webui.apps.webui.main import (
     app as webui_app,
     generate_function_chat_completion,
     get_pipe_models,
 )
-from open_webui.apps.webui.internal.db import Session
-
-from open_webui.apps.webui.models.auths import Auths
 from open_webui.apps.webui.models.functions import Functions
 from open_webui.apps.webui.models.models import Models
 from open_webui.apps.webui.models.users import UserModel, Users
-
 from open_webui.apps.webui.utils import load_function_module_by_id
-
-from open_webui.apps.audio.main import app as audio_app
-from open_webui.apps.images.main import app as images_app
-
-from authlib.integrations.starlette_client import OAuth
-from authlib.oidc.core import UserInfo
-
-
 from open_webui.config import (
     CACHE_DIR,
     CORS_ALLOW_ORIGIN,
@@ -82,10 +87,9 @@ from open_webui.config import (
     WEBUI_AUTH,
     WEBUI_NAME,
     AppConfig,
-    run_migrations,
     reset_config,
 )
-from open_webui.constants import ERROR_MESSAGES, TASKS
+from open_webui.constants import TASKS
 from open_webui.env import (
     CHANGELOG,
     GLOBAL_LOG_LEVEL,
