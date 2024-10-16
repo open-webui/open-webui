@@ -18,9 +18,9 @@ depends_on = None
 def upgrade():
     op.create_table(
         "folder",
-        sa.Column("id", sa.Text(), primary_key=True, nullable=False),
+        sa.Column("id", sa.Text(), nullable=False),
         sa.Column("parent_id", sa.Text(), nullable=True),
-        sa.Column("user_id", sa.Text(), nullable=True),
+        sa.Column("user_id", sa.Text(), nullable=False),
         sa.Column("name", sa.Text(), nullable=False),
         sa.Column("items", sa.JSON(), nullable=True),
         sa.Column("meta", sa.JSON(), nullable=True),
@@ -34,6 +34,7 @@ def upgrade():
             server_default=sa.func.now(),
             onupdate=sa.func.now(),
         ),
+        sa.PrimaryKeyConstraint("id", "user_id")
     )
 
 
