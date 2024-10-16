@@ -1,0 +1,24 @@
+name: SSH to EC2
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  ssh:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: 35.178.57.6
+          port: 22
+          username: ec2-user
+          key: ${{ secrets.DEV_SSH_KEY }}
+          script: |
+            cd /mnt/openwebui
+            sudo docker-compose up -d open-webui
