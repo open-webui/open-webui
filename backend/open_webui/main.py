@@ -1,4 +1,5 @@
-import base64
+import inspect
+import asyncio
 import inspect
 import json
 import logging
@@ -7,89 +8,11 @@ import os
 import shutil
 import sys
 import time
-import uuid
-import asyncio
-
 from contextlib import asynccontextmanager
 from typing import Optional
 
 import aiohttp
 import requests
-
-from open_webui.apps.audio.main import app as audio_app
-from open_webui.apps.images.main import app as images_app
-from open_webui.apps.ollama.main import app as ollama_app
-from open_webui.apps.ollama.main import (
-    GenerateChatCompletionForm,
-    generate_chat_completion as generate_ollama_chat_completion,
-    generate_openai_chat_completion as generate_ollama_openai_chat_completion,
-)
-from open_webui.apps.ollama.main import get_all_models as get_ollama_models
-from open_webui.apps.openai.main import app as openai_app
-from open_webui.apps.openai.main import (
-    generate_chat_completion as generate_openai_chat_completion,
-)
-from open_webui.apps.openai.main import get_all_models as get_openai_models
-from open_webui.apps.rag.main import app as rag_app
-from open_webui.apps.rag.utils import get_rag_context, rag_template
-from open_webui.apps.socket.main import app as socket_app, periodic_usage_pool_cleanup
-from open_webui.apps.socket.main import get_event_call, get_event_emitter
-from open_webui.apps.webui.internal.db import Session
-from open_webui.apps.webui.main import app as webui_app
-from open_webui.apps.webui.main import (
-    generate_function_chat_completion,
-    get_pipe_models,
-)
-from open_webui.apps.webui.models.auths import Auths
-from open_webui.apps.webui.models.functions import Functions
-from open_webui.apps.webui.models.models import Models
-from open_webui.apps.webui.models.users import UserModel, Users
-from open_webui.apps.webui.utils import load_function_module_by_id
-
-
-from open_webui.config import (
-    CACHE_DIR,
-    CORS_ALLOW_ORIGIN,
-    DEFAULT_LOCALE,
-    ENABLE_ADMIN_CHAT_ACCESS,
-    ENABLE_ADMIN_EXPORT,
-    ENABLE_MODEL_FILTER,
-    ENABLE_OAUTH_SIGNUP,
-    ENABLE_OLLAMA_API,
-    ENABLE_OPENAI_API,
-    ENV,
-    FRONTEND_BUILD_DIR,
-    MODEL_FILTER_LIST,
-    OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
-    OAUTH_PROVIDERS,
-    ENABLE_SEARCH_QUERY,
-    SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
-    STATIC_DIR,
-    TASK_MODEL,
-    TASK_MODEL_EXTERNAL,
-    TITLE_GENERATION_PROMPT_TEMPLATE,
-    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
-    WEBHOOK_URL,
-    WEBUI_AUTH,
-    WEBUI_NAME,
-    AppConfig,
-    run_migrations,
-    reset_config,
-)
-from open_webui.constants import ERROR_MESSAGES, TASKS, WEBHOOK_MESSAGES
-from open_webui.env import (
-    CHANGELOG,
-    GLOBAL_LOG_LEVEL,
-    SAFE_MODE,
-    SRC_LOG_LEVELS,
-    VERSION,
-    WEBUI_BUILD_HASH,
-    WEBUI_SECRET_KEY,
-    WEBUI_SESSION_COOKIE_SAME_SITE,
-    WEBUI_SESSION_COOKIE_SECURE,
-    WEBUI_URL,
-    RESET_CONFIG_ON_START,
-)
 from fastapi import (
     Depends,
     FastAPI,
@@ -108,16 +31,88 @@ from sqlalchemy import text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import RedirectResponse, Response, StreamingResponse
+from starlette.responses import Response, StreamingResponse
 
-from open_webui.utils.security_headers import SecurityHeadersMiddleware
-
+from open_webui.apps.audio.main import app as audio_app
+from open_webui.apps.images.main import app as images_app
+from open_webui.apps.ollama.main import (
+    GenerateChatCompletionForm,
+    generate_chat_completion as generate_ollama_chat_completion,
+)
+from open_webui.apps.ollama.main import app as ollama_app
+from open_webui.apps.ollama.main import get_all_models as get_ollama_models
+from open_webui.apps.openai.main import app as openai_app
+from open_webui.apps.openai.main import (
+    generate_chat_completion as generate_openai_chat_completion,
+)
+from open_webui.apps.openai.main import get_all_models as get_openai_models
+from open_webui.apps.rag.main import app as rag_app
+from open_webui.apps.rag.utils import get_rag_context, rag_template
+from open_webui.apps.socket.main import app as socket_app, periodic_usage_pool_cleanup
+from open_webui.apps.socket.main import get_event_call, get_event_emitter
+from open_webui.apps.webui.internal.db import Session
+from open_webui.apps.webui.main import app as webui_app
+from open_webui.apps.webui.main import (
+    generate_function_chat_completion,
+    get_pipe_models,
+)
+from open_webui.apps.webui.models.functions import Functions
+from open_webui.apps.webui.models.models import Models
+from open_webui.apps.webui.models.users import UserModel, Users
+from open_webui.apps.webui.utils import load_function_module_by_id
+from open_webui.config import (
+    CACHE_DIR,
+    CORS_ALLOW_ORIGIN,
+    DEFAULT_LOCALE,
+    ENABLE_ADMIN_CHAT_ACCESS,
+    ENABLE_ADMIN_EXPORT,
+    ENABLE_MODEL_FILTER,
+    ENABLE_OLLAMA_API,
+    ENABLE_OPENAI_API,
+    ENV,
+    FRONTEND_BUILD_DIR,
+    MODEL_FILTER_LIST,
+    OAUTH_PROVIDERS,
+    ENABLE_SEARCH_QUERY,
+    SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
+    STATIC_DIR,
+    TASK_MODEL,
+    TASK_MODEL_EXTERNAL,
+    TITLE_GENERATION_PROMPT_TEMPLATE,
+    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+    WEBHOOK_URL,
+    WEBUI_AUTH,
+    WEBUI_NAME,
+    AppConfig,
+    run_migrations,
+    reset_config,
+)
+from open_webui.constants import ERROR_MESSAGES, TASKS
+from open_webui.env import (
+    CHANGELOG,
+    GLOBAL_LOG_LEVEL,
+    SAFE_MODE,
+    SRC_LOG_LEVELS,
+    VERSION,
+    WEBUI_BUILD_HASH,
+    WEBUI_SECRET_KEY,
+    WEBUI_SESSION_COOKIE_SAME_SITE,
+    WEBUI_SESSION_COOKIE_SECURE,
+    WEBUI_URL,
+    RESET_CONFIG_ON_START,
+)
 from open_webui.utils.misc import (
     add_or_update_system_message,
     get_last_user_message,
-    parse_duration,
     prepend_to_first_user_message_content,
 )
+from open_webui.utils.oauth import oauth_manager
+from open_webui.utils.payload import convert_payload_openai_to_ollama
+from open_webui.utils.response import (
+    convert_response_ollama_to_openai,
+    convert_streaming_response_ollama_to_openai,
+)
+from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.task import (
     moa_response_generation_template,
     search_query_generation_template,
@@ -126,23 +121,12 @@ from open_webui.utils.task import (
 )
 from open_webui.utils.tools import get_tools
 from open_webui.utils.utils import (
-    create_token,
     decode_token,
     get_admin_user,
     get_current_user,
     get_http_authorization_cred,
-    get_password_hash,
     get_verified_user,
 )
-from open_webui.utils.webhook import post_webhook
-
-from open_webui.utils.payload import convert_payload_openai_to_ollama
-from open_webui.utils.response import (
-    convert_response_ollama_to_openai,
-    convert_streaming_response_ollama_to_openai,
-)
-
-from open_webui.utils.oauth import oauth_manager
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -218,6 +202,8 @@ app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
 )
 
 app.state.MODELS = {}
+
+
 
 
 ##################################
@@ -2181,7 +2167,7 @@ if len(OAUTH_PROVIDERS) > 0:
 
 @app.get("/oauth/{provider}/login")
 async def oauth_login(provider: str, request: Request):
-    return oauth_manager.handle_login(provider, request)
+    return await oauth_manager.handle_login(provider, request)
 
 
 # OAuth login logic is as follows:
@@ -2192,7 +2178,7 @@ async def oauth_login(provider: str, request: Request):
 #    - Email addresses are considered unique, so we fail registration if the email address is alreayd taken
 @app.get("/oauth/{provider}/callback")
 async def oauth_callback(provider: str, request: Request, response: Response):
-    return oauth_manager.handle_callback(provider, request, response)
+    return await oauth_manager.handle_callback(provider, request, response)
 
 
 @app.get("/manifest.json")
