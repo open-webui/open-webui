@@ -38,15 +38,11 @@
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
-	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
-	import { select } from 'd3-selection';
 	import SearchInput from './Sidebar/SearchInput.svelte';
-	import ChevronDown from '../icons/ChevronDown.svelte';
-	import ChevronUp from '../icons/ChevronUp.svelte';
-	import ChevronRight from '../icons/ChevronRight.svelte';
-	import Collapsible from '../common/Collapsible.svelte';
 	import Folder from '../common/Folder.svelte';
+	import Plus from '../icons/Plus.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -381,7 +377,7 @@
 		<div class="px-2.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
 			<a
 				id="sidebar-new-chat-button"
-				class="flex flex-1 justify-between rounded-xl px-2 h-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class="flex flex-1 justify-between rounded-lg px-2 h-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 				href="/"
 				draggable="false"
 				on:click={async () => {
@@ -425,7 +421,7 @@
 			</a>
 
 			<button
-				class=" cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class=" cursor-pointer px-2 py-2 flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
 				}}
@@ -452,7 +448,7 @@
 		{#if $user?.role === 'admin'}
 			<div class="px-2.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
-					class="flex-grow flex space-x-3 rounded-xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					class="flex-grow flex space-x-3 rounded-lg px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/workspace"
 					on:click={() => {
 						selectedChatId = null;
@@ -492,6 +488,14 @@
 			{#if $temporaryChatEnabled}
 				<div class="absolute z-40 w-full h-full flex justify-center"></div>
 			{/if}
+
+			<div class="absolute z-40 right-4 top-1">
+				<Tooltip content={$i18n.t('New folder')}>
+					<button class="p-1 rounded-lg hover:bg-white/5 transition">
+						<Plus />
+					</button>
+				</Tooltip>
+			</div>
 
 			<SearchInput
 				bind:value={search}
