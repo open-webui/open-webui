@@ -383,7 +383,7 @@ OAUTH_USERNAME_CLAIM = PersistentConfig(
 )
 
 OAUTH_PICTURE_CLAIM = PersistentConfig(
-    "OAUTH_USERNAME_CLAIM",
+    "OAUTH_PICTURE_CLAIM",
     "oauth.oidc.avatar_claim",
     os.environ.get("OAUTH_PICTURE_CLAIM", "picture"),
 )
@@ -394,6 +394,29 @@ OAUTH_EMAIL_CLAIM = PersistentConfig(
     os.environ.get("OAUTH_EMAIL_CLAIM", "email"),
 )
 
+ENABLE_OAUTH_ROLE_MANAGEMENT = PersistentConfig(
+    "ENABLE_OAUTH_ROLE_MANAGEMENT",
+    "oauth.enable_role_mapping",
+    os.environ.get("ENABLE_OAUTH_ROLE_MANAGEMENT", "False").lower() == "true",
+)
+
+OAUTH_ROLES_CLAIM = PersistentConfig(
+    "OAUTH_ROLES_CLAIM",
+    "oauth.roles_claim",
+    os.environ.get("OAUTH_ROLES_CLAIM", "roles"),
+)
+
+OAUTH_ALLOWED_ROLES = PersistentConfig(
+    "OAUTH_ALLOWED_ROLES",
+    "oauth.allowed_roles",
+    [role.strip() for role in os.environ.get("OAUTH_ALLOWED_ROLES", "pending,user,admin").split(",")],
+)
+
+OAUTH_ADMIN_ROLES = PersistentConfig(
+    "OAUTH_ADMIN_ROLES",
+    "oauth.admin_roles",
+    [role.strip() for role in os.environ.get("OAUTH_ADMIN_ROLES", "admin").split(",")],
+)
 
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
