@@ -409,7 +409,7 @@ OAUTH_ROLES_CLAIM = PersistentConfig(
 OAUTH_ALLOWED_ROLES = PersistentConfig(
     "OAUTH_ALLOWED_ROLES",
     "oauth.allowed_roles",
-    [role.strip() for role in os.environ.get("OAUTH_ALLOWED_ROLES", "pending,user,admin").split(",")],
+    [role.strip() for role in os.environ.get("OAUTH_ALLOWED_ROLES", "user,admin").split(",")],
 )
 
 OAUTH_ADMIN_ROLES = PersistentConfig(
