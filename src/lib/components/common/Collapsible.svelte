@@ -16,13 +16,21 @@
 	export let title = null;
 
 	export let disabled = false;
+	export let hide = false;
 </script>
 
 <div class={className}>
 	{#if title !== null}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
-		<div class={buttonClassName} on:pointerup={() => (open = !open)}>
+		<div
+			class={buttonClassName}
+			on:pointerup={() => {
+				if (!disabled) {
+					open = !open;
+				}
+			}}
+		>
 			<div class=" w-fit font-medium transition flex items-center justify-between gap-2">
 				<div>
 					{title}
@@ -40,7 +48,14 @@
 	{:else}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
-		<div class={buttonClassName} on:pointerup={() => (open = !open)}>
+		<div
+			class={buttonClassName}
+			on:pointerup={() => {
+				if (!disabled) {
+					open = !open;
+				}
+			}}
+		>
 			<div
 				class="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
 			>
@@ -49,7 +64,7 @@
 		</div>
 	{/if}
 
-	{#if open && !disabled}
+	{#if open && !hide}
 		<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
 			<slot name="content" />
 		</div>

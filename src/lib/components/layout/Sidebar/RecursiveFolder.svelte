@@ -281,7 +281,7 @@
 		bind:open
 		className="w-full"
 		buttonClassName="w-full"
-		disabled={(folders[folderId]?.childrenIds ?? []).length === 0 &&
+		hide={(folders[folderId]?.childrenIds ?? []).length === 0 &&
 			(folders[folderId].items?.chats ?? []).length === 0}
 		on:change={(e) => {
 			dispatch('open', e.detail);
@@ -334,8 +334,11 @@
 					{/if}
 				</div>
 
-				<div
-					class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300 touch-auto pointer-events-auto"
+				<button
+					class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+					on:pointerup={(e) => {
+						e.stopPropagation();
+					}}
 				>
 					<FolderMenu
 						on:rename={() => {
@@ -345,11 +348,11 @@
 							deleteHandler();
 						}}
 					>
-						<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg" on:click={(e) => {}}>
+						<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto" on:click={(e) => {}}>
 							<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
 						</button>
 					</FolderMenu>
-				</div>
+				</button>
 			</button>
 		</div>
 
