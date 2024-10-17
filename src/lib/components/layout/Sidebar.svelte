@@ -28,7 +28,9 @@
 		createNewChat,
 		getPinnedChatList,
 		toggleChatPinnedStatusById,
-		getChatPinnedStatusById
+		getChatPinnedStatusById,
+		getChatById,
+		updateChatFolderIdById
 	} from '$lib/apis/chats';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -38,15 +40,13 @@
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
-	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
-	import { select } from 'd3-selection';
 	import SearchInput from './Sidebar/SearchInput.svelte';
-	import ChevronDown from '../icons/ChevronDown.svelte';
-	import ChevronUp from '../icons/ChevronUp.svelte';
-	import ChevronRight from '../icons/ChevronRight.svelte';
-	import Collapsible from '../common/Collapsible.svelte';
 	import Folder from '../common/Folder.svelte';
+	import Plus from '../icons/Plus.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
+	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
+	import Folders from './Sidebar/Folders.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -68,6 +68,72 @@
 	// Pagination variables
 	let chatListLoading = false;
 	let allChatsLoaded = false;
+
+	let folders = {};
+
+	const initFolders = async () => {
+		const folderList = await getFolders(localStorage.token).catch((error) => {
+			toast.error(error);
+			return [];
+		});
+
+		folders = {};
+
+		// First pass: Initialize all folder entries
+		for (const folder of folderList) {
+			// Ensure folder is added to folders with its data
+			folders[folder.id] = { ...(folders[folder.id] || {}), ...folder };
+		}
+
+		// Second pass: Tie child folders to their parents
+		for (const folder of folderList) {
+			if (folder.parent_id) {
+				// Ensure the parent folder is initialized if it doesn't exist
+				if (!folders[folder.parent_id]) {
+					folders[folder.parent_id] = {}; // Create a placeholder if not already present
+				}
+
+				// Initialize childrenIds array if it doesn't exist and add the current folder id
+				folders[folder.parent_id].childrenIds = folders[folder.parent_id].childrenIds
+					? [...folders[folder.parent_id].childrenIds, folder.id]
+					: [folder.id];
+
+				// Sort the children by updated_at field
+				folders[folder.parent_id].childrenIds.sort((a, b) => {
+					return folders[b].updated_at - folders[a].updated_at;
+				});
+			}
+		}
+	};
+
+	const createFolder = async (name = 'Untitled') => {
+		if (name === '') {
+			toast.error($i18n.t('Folder name cannot be empty.'));
+			return;
+		}
+
+		const rootFolders = Object.values(folders).filter((folder) => folder.parent_id === null);
+		if (rootFolders.find((folder) => folder.name.toLowerCase() === name.toLowerCase())) {
+			// If a folder with the same name already exists, append a number to the name
+			let i = 1;
+			while (
+				rootFolders.find((folder) => folder.name.toLowerCase() === `${name} ${i}`.toLowerCase())
+			) {
+				i++;
+			}
+
+			name = `${name} ${i}`;
+		}
+
+		const res = await createNewFolder(localStorage.token, name).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res) {
+			await initFolders();
+		}
+	};
 
 	const initChatList = async () => {
 		// Reset pagination variables
@@ -284,6 +350,7 @@
 			localStorage.sidebar = value;
 		});
 
+		await initFolders();
 		await pinnedChats.set(await getPinnedChatList(localStorage.token));
 		await initChatList();
 
@@ -381,7 +448,7 @@
 		<div class="px-2.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
 			<a
 				id="sidebar-new-chat-button"
-				class="flex flex-1 justify-between rounded-xl px-2 h-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class="flex flex-1 justify-between rounded-lg px-2 h-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 				href="/"
 				draggable="false"
 				on:click={async () => {
@@ -425,7 +492,7 @@
 			</a>
 
 			<button
-				class=" cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class=" cursor-pointer px-2 py-2 flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
 				}}
@@ -452,7 +519,7 @@
 		{#if $user?.role === 'admin'}
 			<div class="px-2.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
-					class="flex-grow flex space-x-3 rounded-xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					class="flex-grow flex space-x-3 rounded-lg px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/workspace"
 					on:click={() => {
 						selectedChatId = null;
@@ -493,6 +560,19 @@
 				<div class="absolute z-40 w-full h-full flex justify-center"></div>
 			{/if}
 
+			<div class="absolute z-40 right-4 top-1">
+				<Tooltip content={$i18n.t('New folder')}>
+					<button
+						class="p-1 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-gray-950 dark:hover:bg-gray-900 transition"
+						on:click={() => {
+							createFolder();
+						}}
+					>
+						<Plus />
+					</button>
+				</Tooltip>
+			</div>
+
 			<SearchInput
 				bind:value={search}
 				on:input={searchDebounceHandler}
@@ -510,33 +590,60 @@
 			{/if}
 
 			{#if !search && $pinnedChats.length > 0}
-				<div class=" flex flex-col space-y-1">
+				<div class="flex flex-col space-y-1 rounded-xl">
 					<Folder
+						className="px-2"
 						bind:open={showPinnedChat}
 						on:change={(e) => {
 							localStorage.setItem('showPinnedChat', e.detail);
 							console.log(e.detail);
 						}}
 						on:drop={async (e) => {
-							const { id } = e.detail;
+							const { type, id } = e.detail;
 
-							const status = await getChatPinnedStatusById(localStorage.token, id);
+							if (type === 'chat') {
+								const chat = await getChatById(localStorage.token, id);
 
-							if (!status) {
-								const res = await toggleChatPinnedStatusById(localStorage.token, id);
+								if (chat) {
+									console.log(chat);
+									if (chat.folder_id) {
+										const res = await updateChatFolderIdById(
+											localStorage.token,
+											chat.id,
+											null
+										).catch((error) => {
+											toast.error(error);
+											return null;
+										});
 
-								if (res) {
-									await pinnedChats.set(await getPinnedChatList(localStorage.token));
-									initChatList();
+										if (res) {
+											initChatList();
+											await initFolders();
+										}
+									}
+
+									if (!chat.pinned) {
+										const res = await toggleChatPinnedStatusById(localStorage.token, id);
+
+										if (res) {
+											await pinnedChats.set(await getPinnedChatList(localStorage.token));
+											initChatList();
+											await initFolders();
+										}
+									}
 								}
 							}
 						}}
 						name={$i18n.t('Pinned')}
 					>
-						<div class="pl-2 mt-0.5 flex flex-col overflow-y-auto scrollbar-hidden">
+						<div
+							class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s dark:border-gray-850"
+						>
 							{#each $pinnedChats as chat, idx}
 								<ChatItem
-									{chat}
+									className=""
+									id={chat.id}
+									title={chat.title}
 									{shiftKey}
 									selected={selectedChatId === chat.id}
 									on:select={() => {
@@ -553,6 +660,10 @@
 											showDeleteConfirm = true;
 										}
 									}}
+									on:change={async () => {
+										await pinnedChats.set(await getPinnedChatList(localStorage.token));
+										initChatList();
+									}}
 									on:tag={(e) => {
 										const { type, name } = e.detail;
 										tagEventHandler(type, name, chat.id);
@@ -564,25 +675,72 @@
 				</div>
 			{/if}
 
-			<div class="flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden">
+			<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
+				{#if !search && folders}
+					<Folders
+						{folders}
+						on:update={async (e) => {
+							initChatList();
+							await initFolders();
+						}}
+					/>
+				{/if}
+
 				<Folder
-					collapsible={false}
+					collapsible={!search}
+					className="px-2"
+					name={$i18n.t('All chats')}
 					on:drop={async (e) => {
-						const { id } = e.detail;
+						const { type, id } = e.detail;
 
-						const status = await getChatPinnedStatusById(localStorage.token, id);
+						if (type === 'chat') {
+							const chat = await getChatById(localStorage.token, id);
 
-						if (status) {
-							const res = await toggleChatPinnedStatusById(localStorage.token, id);
+							if (chat) {
+								console.log(chat);
+								if (chat.folder_id) {
+									const res = await updateChatFolderIdById(localStorage.token, chat.id, null).catch(
+										(error) => {
+											toast.error(error);
+											return null;
+										}
+									);
+
+									if (res) {
+										initChatList();
+										await initFolders();
+									}
+								}
+
+								if (chat.pinned) {
+									const res = await toggleChatPinnedStatusById(localStorage.token, id);
+
+									if (res) {
+										await pinnedChats.set(await getPinnedChatList(localStorage.token));
+										initChatList();
+										await initFolders();
+									}
+								}
+							}
+						} else if (type === 'folder') {
+							if (folders[id].parent_id === null) {
+								return;
+							}
+
+							const res = await updateFolderParentIdById(localStorage.token, id, null).catch(
+								(error) => {
+									toast.error(error);
+									return null;
+								}
+							);
 
 							if (res) {
-								await pinnedChats.set(await getPinnedChatList(localStorage.token));
-								initChatList();
+								await initFolders();
 							}
 						}
 					}}
 				>
-					<div class="pt-2 pl-2">
+					<div class="pt-1.5">
 						{#if $chats}
 							{#each $chats as chat, idx}
 								{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
@@ -615,7 +773,9 @@
 								{/if}
 
 								<ChatItem
-									{chat}
+									className=""
+									id={chat.id}
+									title={chat.title}
 									{shiftKey}
 									selected={selectedChatId === chat.id}
 									on:select={() => {
@@ -631,6 +791,10 @@
 											deleteChat = chat;
 											showDeleteConfirm = true;
 										}
+									}}
+									on:change={async () => {
+										await pinnedChats.set(await getPinnedChatList(localStorage.token));
+										initChatList();
 									}}
 									on:tag={(e) => {
 										const { type, name } = e.detail;

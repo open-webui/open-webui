@@ -492,6 +492,31 @@ async def delete_shared_chat_by_id(id: str, user=Depends(get_verified_user)):
 
 
 ############################
+# UpdateChatFolderIdById
+############################
+
+
+class ChatFolderIdForm(BaseModel):
+    folder_id: Optional[str] = None
+
+
+@router.post("/{id}/folder", response_model=Optional[ChatResponse])
+async def update_chat_folder_id_by_id(
+    id: str, form_data: ChatFolderIdForm, user=Depends(get_verified_user)
+):
+    chat = Chats.get_chat_by_id_and_user_id(id, user.id)
+    if chat:
+        chat = Chats.update_chat_folder_id_by_id_and_user_id(
+            id, user.id, form_data.folder_id
+        )
+        return ChatResponse(**chat.model_dump())
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+############################
 # GetChatTagsById
 ############################
 

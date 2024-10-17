@@ -60,14 +60,14 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[180px] rounded-xl px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow"
+			class="w-full max-w-[160px] rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-xl"
 			sideOffset={-2}
 			side="bottom"
 			align="start"
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					pinHandler();
 				}}
@@ -82,7 +82,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					renameHandler();
 				}}
@@ -92,7 +92,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					cloneChatHandler();
 				}}
@@ -102,7 +102,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					archiveChatHandler();
 				}}
@@ -112,7 +112,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-md"
+				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-md"
 				on:click={() => {
 					shareHandler();
 				}}
@@ -122,7 +122,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex  gap-2  items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					deleteHandler();
 				}}
@@ -131,7 +131,7 @@
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
 			</DropdownMenu.Item>
 
-			<hr class="border-gray-100 dark:border-gray-800 mt-2.5 mb-1.5" />
+			<hr class="border-gray-100 dark:border-gray-800 mt-1 mb-1" />
 
 			<div class="flex p-1">
 				<Tags
