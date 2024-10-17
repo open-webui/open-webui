@@ -109,6 +109,8 @@
 		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
 	const onDragStart = (event) => {
+		event.stopPropagation();
+
 		event.dataTransfer.setDragImage(dragImage, 0, 0);
 
 		// Set the data to be transferred
@@ -125,11 +127,15 @@
 	};
 
 	const onDrag = (event) => {
+		event.stopPropagation();
+
 		x = event.clientX;
 		y = event.clientY;
 	};
 
 	const onDragEnd = (event) => {
+		event.stopPropagation();
+
 		itemElement.style.opacity = '1'; // Reset visual cue after drag
 		dragged = false;
 	};

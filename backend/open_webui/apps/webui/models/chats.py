@@ -84,6 +84,7 @@ class ChatResponse(BaseModel):
     archived: bool
     pinned: Optional[bool] = False
     meta: dict = {}
+    folder_id: Optional[str] = None
 
 
 class ChatTitleIdResponse(BaseModel):
@@ -256,7 +257,7 @@ class ChatTable:
         limit: int = 50,
     ) -> list[ChatModel]:
         with get_db() as db:
-            query = db.query(Chat).filter_by(user_id=user_id).filter_by(parent_id=None)
+            query = db.query(Chat).filter_by(user_id=user_id).filter_by(folder_id=None)
             if not include_archived:
                 query = query.filter_by(archived=False)
 
@@ -278,7 +279,7 @@ class ChatTable:
         limit: Optional[int] = None,
     ) -> list[ChatTitleIdResponse]:
         with get_db() as db:
-            query = db.query(Chat).filter_by(user_id=user_id)
+            query = db.query(Chat).filter_by(user_id=user_id).filter_by(folder_id=None)
             query = query.filter(or_(Chat.pinned == False, Chat.pinned == None))
 
             if not include_archived:

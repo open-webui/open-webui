@@ -17,6 +17,8 @@
 		updateFolderParentIdById
 	} from '$lib/apis/folders';
 	import { toast } from 'svelte-sonner';
+	import { updateChatFolderIdById } from '$lib/apis/chats';
+	import ChatItem from './ChatItem.svelte';
 
 	export let open = true;
 
@@ -80,7 +82,16 @@
 					}
 				} else if (type === 'chat') {
 					// Move the chat
-					console.log('Move the chat');
+					const res = await updateChatFolderIdById(localStorage.token, id, folderId).catch(
+						(error) => {
+							toast.error(error);
+							return null;
+						}
+					);
+
+					if (res) {
+						dispatch('update');
+					}
 				}
 			} catch (error) {
 				console.error(error);
@@ -272,8 +283,8 @@
 							type="text"
 							bind:value={name}
 							on:blur={() => {
-								edit = false;
 								nameUpdateHandler();
+								edit = false;
 							}}
 							on:click={(e) => {
 								// Prevent accidental collapse toggling when clicking inside input
@@ -282,6 +293,11 @@
 							on:mousedown={(e) => {
 								// Prevent accidental collapse toggling when clicking inside input
 								e.stopPropagation();
+							}}
+							on:keydown={(e) => {
+								if (e.key === 'Enter') {
+									edit = false;
+								}
 							}}
 							class="w-full h-full bg-transparent text-gray-500 dark:text-gray-500 outline-none"
 						/>
@@ -304,15 +320,24 @@
 		</div>
 
 		<div slot="content" class="w-full">
-			{#if folders[folderId].childrenIds || folders[folderId].items?.chat_ids}
+			{#if folders[folderId].childrenIds || folders[folderId].items?.chats}
 				<div
-					class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s dark:border-gray-850"
+					class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
 				>
 					{#if folders[folderId]?.childrenIds}
-						{#each folders[folderId]?.childrenIds as childId (`${folderId}-${childId}`)}
+						{@const children = folders[folderId]?.childrenIds
+							.map((id) => folders[id])
+							.sort((a, b) =>
+								a.name.localeCompare(b.name, undefined, {
+									numeric: true,
+									sensitivity: 'base'
+								})
+							)}
+
+						{#each children as childFolder (`${folderId}-${childFolder.id}`)}
 							<svelte:self
 								{folders}
-								folderId={childId}
+								folderId={childFolder.id}
 								parentDragged={dragged}
 								on:update={(e) => {
 									dispatch('update', e.detail);
@@ -321,9 +346,9 @@
 						{/each}
 					{/if}
 
-					{#if folders[folderId].items?.chat_ids}
-						{#each folder.items.chat_ids as chatId (chatId)}
-							{chatId}
+					{#if folders[folderId].items?.chats}
+						{#each folders[folderId].items.chats as chat (chat.id)}
+							<ChatItem id={chat.id} title={chat.title} />
 						{/each}
 					{/if}
 				</div>

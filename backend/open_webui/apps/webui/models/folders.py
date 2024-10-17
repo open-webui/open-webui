@@ -19,13 +19,6 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 ####################
 
 
-class FolderItems(BaseModel):
-    chat_ids: Optional[list[str]] = None
-    file_ids: Optional[list[str]] = None
-
-    model_config = ConfigDict(extra="allow")
-
-
 class Folder(Base):
     __tablename__ = "folder"
     id = Column(Text, primary_key=True)
@@ -44,7 +37,7 @@ class FolderModel(BaseModel):
     parent_id: Optional[str] = None
     user_id: str
     name: str
-    items: Optional[FolderItems] = None
+    items: Optional[dict] = None
     meta: Optional[dict] = None
     is_expanded: bool = False
     created_at: int
@@ -60,11 +53,6 @@ class FolderModel(BaseModel):
 
 class FolderForm(BaseModel):
     name: str
-    model_config = ConfigDict(extra="allow")
-
-
-class FolderItemsUpdateForm(BaseModel):
-    items: FolderItems
     model_config = ConfigDict(extra="allow")
 
 
@@ -213,26 +201,6 @@ class FolderTable:
                     return None
 
                 folder.is_expanded = is_expanded
-                folder.updated_at = int(time.time())
-
-                db.commit()
-
-                return FolderModel.model_validate(folder)
-        except Exception as e:
-            log.error(f"update_folder: {e}")
-            return
-
-    def update_folder_items_by_id_and_user_id(
-        self, id: str, user_id: str, items: FolderItems
-    ) -> Optional[FolderModel]:
-        try:
-            with get_db() as db:
-                folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
-
-                if not folder:
-                    return None
-
-                folder.items = items.model_dump()
                 folder.updated_at = int(time.time())
 
                 db.commit()

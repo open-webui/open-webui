@@ -28,7 +28,9 @@
 		createNewChat,
 		getPinnedChatList,
 		toggleChatPinnedStatusById,
-		getChatPinnedStatusById
+		getChatPinnedStatusById,
+		getChatById,
+		updateChatFolderIdById
 	} from '$lib/apis/chats';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -110,13 +112,12 @@
 			return;
 		}
 
-		if (Object.values(folders).find((folder) => folder.name.toLowerCase() === name.toLowerCase())) {
+		const rootFolders = Object.values(folders).filter((folder) => folder.parent_id === null);
+		if (rootFolders.find((folder) => folder.name.toLowerCase() === name.toLowerCase())) {
 			// If a folder with the same name already exists, append a number to the name
 			let i = 1;
 			while (
-				Object.values(folders).find(
-					(folder) => folder.name.toLowerCase() === `${name} ${i}`.toLowerCase()
-				)
+				rootFolders.find((folder) => folder.name.toLowerCase() === `${name} ${i}`.toLowerCase())
 			) {
 				i++;
 			}
@@ -601,14 +602,33 @@
 							const { type, id } = e.detail;
 
 							if (type === 'chat') {
-								const status = await getChatPinnedStatusById(localStorage.token, id);
+								const chat = await getChatById(localStorage.token, id);
 
-								if (!status) {
-									const res = await toggleChatPinnedStatusById(localStorage.token, id);
+								if (chat) {
+									console.log(chat);
+									if (chat.folder_id) {
+										const res = await updateChatFolderIdById(
+											localStorage.token,
+											chat.id,
+											null
+										).catch((error) => {
+											toast.error(error);
+											return null;
+										});
 
-									if (res) {
-										await pinnedChats.set(await getPinnedChatList(localStorage.token));
-										initChatList();
+										if (res) {
+											await initFolders();
+											initChatList();
+										}
+									}
+
+									if (chat.pinned) {
+										const res = await toggleChatPinnedStatusById(localStorage.token, id);
+
+										if (res) {
+											await pinnedChats.set(await getPinnedChatList(localStorage.token));
+											initChatList();
+										}
 									}
 								}
 							}
@@ -672,14 +692,31 @@
 						const { type, id } = e.detail;
 
 						if (type === 'chat') {
-							const status = await getChatPinnedStatusById(localStorage.token, id);
+							const chat = await getChatById(localStorage.token, id);
 
-							if (status) {
-								const res = await toggleChatPinnedStatusById(localStorage.token, id);
+							if (chat) {
+								console.log(chat);
+								if (chat.folder_id) {
+									const res = await updateChatFolderIdById(localStorage.token, chat.id, null).catch(
+										(error) => {
+											toast.error(error);
+											return null;
+										}
+									);
 
-								if (res) {
-									await pinnedChats.set(await getPinnedChatList(localStorage.token));
-									initChatList();
+									if (res) {
+										await initFolders();
+										initChatList();
+									}
+								}
+
+								if (chat.pinned) {
+									const res = await toggleChatPinnedStatusById(localStorage.token, id);
+
+									if (res) {
+										await pinnedChats.set(await getPinnedChatList(localStorage.token));
+										initChatList();
+									}
 								}
 							}
 						} else if (type === 'folder') {

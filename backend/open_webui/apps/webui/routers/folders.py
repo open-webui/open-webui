@@ -10,7 +10,6 @@ import mimetypes
 
 from open_webui.apps.webui.models.folders import (
     FolderForm,
-    FolderItemsUpdateForm,
     FolderModel,
     Folders,
 )
@@ -42,7 +41,21 @@ router = APIRouter()
 @router.get("/", response_model=list[FolderModel])
 async def get_folders(user=Depends(get_verified_user)):
     folders = Folders.get_folders_by_user_id(user.id)
-    return folders
+
+    return [
+        {
+            **folder.model_dump(),
+            "items": {
+                "chats": [
+                    {"title": chat.title, "id": chat.id}
+                    for chat in Chats.get_chats_by_folder_id_and_user_id(
+                        folder.id, user.id
+                    )
+                ]
+            },
+        }
+        for folder in folders
+    ]
 
 
 ############################
@@ -193,36 +206,6 @@ async def update_folder_is_expanded_by_id(
         try:
             folder = Folders.update_folder_is_expanded_by_id_and_user_id(
                 id, user.id, form_data.is_expanded
-            )
-            return folder
-        except Exception as e:
-            log.exception(e)
-            log.error(f"Error updating folder: {id}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("Error updating folder"),
-            )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-
-############################
-# Update Folder Items By Id
-############################
-
-
-@router.post("/{id}/update/items")
-async def update_folder_items_by_id(
-    id: str, form_data: FolderItemsUpdateForm, user=Depends(get_verified_user)
-):
-    folder = Folders.get_folder_by_id_and_user_id(id, user.id)
-    if folder:
-        try:
-            folder = Folders.update_folder_items_by_id_and_user_id(
-                id, user.id, form_data.items
             )
             return folder
         except Exception as e:
