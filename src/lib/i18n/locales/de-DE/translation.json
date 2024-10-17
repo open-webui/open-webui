@@ -441,6 +441,7 @@
 	"Modelfile Content": "Modelfile-Inhalt",
 	"Models": "Modelle",
 	"More": "Mehr",
+	"more": "mehr",
 	"Move to Top": "",
 	"Name": "Name",
 	"Name your model": "Benennen Sie Ihr Modell",
@@ -788,5 +789,6 @@
 	"Your account status is currently pending activation.": "Ihr Kontostatus ist derzeit ausstehend und wartet auf Aktivierung.",
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "YouTube",
-	"Youtube Loader Settings": "YouTube-Ladeeinstellungen"
+	"Youtube Loader Settings": "YouTube-Ladeeinstellungen",
+	"References from": "Referenzen aus"
 }

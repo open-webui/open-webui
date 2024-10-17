@@ -38,9 +38,9 @@
 
 				<div>
 					{#if open}
-						<ChevronUp strokeWidth="3.5" className="size-3.5 " />
+						<ChevronUp strokeWidth="3.5" className="size-3.5" />
 					{:else}
-						<ChevronDown strokeWidth="3.5" className="size-3.5 " />
+						<ChevronDown strokeWidth="3.5" className="size-3.5" />
 					{/if}
 				</div>
 			</div>
@@ -68,5 +68,5 @@
 		<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
 			<slot name="content" />
 		</div>
-	{/if}
+	</div>
 </div>
