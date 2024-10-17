@@ -11,7 +11,11 @@
 
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
-	import { updateFolderIsExpandedById, updateFolderNameById } from '$lib/apis/folders';
+	import {
+		updateFolderIsExpandedById,
+		updateFolderNameById,
+		updateFolderParentIdById
+	} from '$lib/apis/folders';
 	import { toast } from 'svelte-sonner';
 
 	export let open = true;
@@ -41,7 +45,7 @@
 		draggedOver = true;
 	};
 
-	const onDrop = (e) => {
+	const onDrop = async (e) => {
 		e.preventDefault();
 		e.stopPropagation();
 		if (dragged || parentDragged) {
@@ -56,7 +60,28 @@
 				const dataTransfer = e.dataTransfer.getData('text/plain');
 				const data = JSON.parse(dataTransfer);
 				console.log(data);
-				dispatch('drop', data);
+
+				const { type, id } = data;
+
+				if (type === 'folder') {
+					if (id === folderId) {
+						return;
+					}
+					// Move the folder
+					const res = await updateFolderParentIdById(localStorage.token, id, folderId).catch(
+						(error) => {
+							toast.error(error);
+							return null;
+						}
+					);
+
+					if (res) {
+						dispatch('update');
+					}
+				} else if (type === 'chat') {
+					// Move the chat
+					console.log('Move the chat');
+				}
 			} catch (error) {
 				console.error(error);
 			}
@@ -285,7 +310,14 @@
 				>
 					{#if folders[folderId]?.childrenIds}
 						{#each folders[folderId]?.childrenIds as childId (`${folderId}-${childId}`)}
-							<svelte:self {folders} folderId={childId} parentDragged={dragged} />
+							<svelte:self
+								{folders}
+								folderId={childId}
+								parentDragged={dragged}
+								on:update={(e) => {
+									dispatch('update', e.detail);
+								}}
+							/>
 						{/each}
 					{/if}
 

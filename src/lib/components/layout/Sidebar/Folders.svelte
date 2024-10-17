@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher();
 	import RecursiveFolder from './RecursiveFolder.svelte';
 	export let folders = {};
 
@@ -15,5 +18,12 @@
 </script>
 
 {#each folderList as folderId (folderId)}
-	<RecursiveFolder className="px-2" {folders} {folderId} />
+	<RecursiveFolder
+		className="px-2"
+		{folders}
+		{folderId}
+		on:update={(e) => {
+			dispatch('update', e.detail);
+		}}
+	/>
 {/each}

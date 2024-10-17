@@ -137,7 +137,7 @@ async def update_folder_name_by_id(
 
 
 class FolderParentIdForm(BaseModel):
-    parent_id: str
+    parent_id: Optional[str] = None
 
 
 @router.post("/{id}/update/parent")

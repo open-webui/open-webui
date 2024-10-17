@@ -43,7 +43,7 @@
 	import Folder from '../common/Folder.svelte';
 	import Plus from '../icons/Plus.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
-	import { createNewFolder, getFolders } from '$lib/apis/folders';
+	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
 	import Folders from './Sidebar/Folders.svelte';
 
 	const BREAKPOINT = 768;
@@ -656,7 +656,12 @@
 
 			<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
 				{#if !search && folders}
-					<Folders {folders} />
+					<Folders
+						{folders}
+						on:update={async (e) => {
+							await initFolders();
+						}}
+					/>
 				{/if}
 
 				<Folder
@@ -676,6 +681,21 @@
 									await pinnedChats.set(await getPinnedChatList(localStorage.token));
 									initChatList();
 								}
+							}
+						} else if (type === 'folder') {
+							if (folders[id].parent_id === null) {
+								return;
+							}
+
+							const res = await updateFolderParentIdById(localStorage.token, id, null).catch(
+								(error) => {
+									toast.error(error);
+									return null;
+								}
+							);
+
+							if (res) {
+								await initFolders();
 							}
 						}
 					}}
