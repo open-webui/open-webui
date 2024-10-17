@@ -8,7 +8,7 @@ from open_webui.apps.webui.internal.db import Base, get_db
 
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, Text, JSON, PrimaryKeyConstraint
+from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -34,6 +34,7 @@ class Folder(Base):
     name = Column(Text)
     items = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
+    is_expanded = Column(Boolean, default=False)
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
 
@@ -45,6 +46,7 @@ class FolderModel(BaseModel):
     name: str
     items: Optional[FolderItems] = None
     meta: Optional[dict] = None
+    is_expanded: bool = False
     created_at: int
     updated_at: int
 
@@ -121,9 +123,11 @@ class FolderTable:
     ) -> Optional[FolderModel]:
         try:
             with get_db() as db:
+                # Check if folder exists
                 folder = (
                     db.query(Folder)
-                    .filter_by(parent_id=parent_id, user_id=user_id, name=name.lower())
+                    .filter_by(parent_id=parent_id, user_id=user_id)
+                    .filter(Folder.name.ilike(name))
                     .first()
                 )
 
@@ -189,6 +193,26 @@ class FolderTable:
                     return None
 
                 folder.name = name
+                folder.updated_at = int(time.time())
+
+                db.commit()
+
+                return FolderModel.model_validate(folder)
+        except Exception as e:
+            log.error(f"update_folder: {e}")
+            return
+
+    def update_folder_is_expanded_by_id_and_user_id(
+        self, id: str, user_id: str, is_expanded: bool
+    ) -> Optional[FolderModel]:
+        try:
+            with get_db() as db:
+                folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
+
+                if not folder:
+                    return None
+
+                folder.is_expanded = is_expanded
                 folder.updated_at = int(time.time())
 
                 db.commit()

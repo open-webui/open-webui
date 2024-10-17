@@ -115,6 +115,7 @@ async def update_folder_name_by_id(
             folder = Folders.update_folder_name_by_id_and_user_id(
                 id, user.id, form_data.name
             )
+
             return folder
         except Exception as e:
             log.exception(e)
@@ -131,7 +132,7 @@ async def update_folder_name_by_id(
 
 
 ############################
-# Update Folder Name By Id
+# Update Folder Parent Id By Id
 ############################
 
 
@@ -158,6 +159,40 @@ async def update_folder_parent_id_by_id(
         try:
             folder = Folders.update_folder_parent_id_by_id_and_user_id(
                 id, user.id, form_data.parent_id
+            )
+            return folder
+        except Exception as e:
+            log.exception(e)
+            log.error(f"Error updating folder: {id}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error updating folder"),
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
+# Update Folder Is Expanded By Id
+############################
+
+
+class FolderIsExpandedForm(BaseModel):
+    is_expanded: bool
+
+
+@router.post("/{id}/update/expanded")
+async def update_folder_is_expanded_by_id(
+    id: str, form_data: FolderIsExpandedForm, user=Depends(get_verified_user)
+):
+    folder = Folders.get_folder_by_id_and_user_id(id, user.id)
+    if folder:
+        try:
+            folder = Folders.update_folder_is_expanded_by_id_and_user_id(
+                id, user.id, form_data.is_expanded
             )
             return folder
         except Exception as e:

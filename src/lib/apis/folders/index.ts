@@ -126,6 +126,44 @@ export const updateFolderNameById = async (token: string, id: string, name: stri
 	return res;
 };
 
+export const updateFolderIsExpandedById = async (
+	token: string,
+	id: string,
+	isExpanded: boolean
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}/update/expanded`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			is_expanded: isExpanded
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 type FolderItems = {
 	chat_ids: string[];
 	file_ids: string[];

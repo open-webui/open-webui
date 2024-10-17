@@ -11,7 +11,7 @@
 
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
-	import { updateFolderNameById } from '$lib/apis/folders';
+	import { updateFolderIsExpandedById, updateFolderNameById } from '$lib/apis/folders';
 	import { toast } from 'svelte-sonner';
 
 	export let open = true;
@@ -113,6 +113,7 @@
 	};
 
 	onMount(() => {
+		open = folders[folderId].is_expanded;
 		if (folderElement) {
 			folderElement.addEventListener('dragover', onDragOver);
 			folderElement.addEventListener('drop', onDrop);
@@ -166,6 +167,26 @@
 			folders[folderId].name = name;
 		}
 	};
+
+	const isExpandedUpdateHandler = async () => {
+		const res = await updateFolderIsExpandedById(localStorage.token, folderId, open).catch(
+			(error) => {
+				toast.error(error);
+				return null;
+			}
+		);
+	};
+
+	let isExpandedUpdateTimeout;
+
+	const isExpandedUpdateDebounceHandler = (open) => {
+		clearTimeout(isExpandedUpdateTimeout);
+		isExpandedUpdateTimeout = setTimeout(() => {
+			isExpandedUpdateHandler();
+		}, 500);
+	};
+
+	$: isExpandedUpdateDebounceHandler(open);
 </script>
 
 {#if dragged && x && y}
