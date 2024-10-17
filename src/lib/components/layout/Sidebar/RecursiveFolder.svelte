@@ -20,7 +20,7 @@
 	import { updateChatFolderIdById } from '$lib/apis/chats';
 	import ChatItem from './ChatItem.svelte';
 
-	export let open = true;
+	export let open = false;
 
 	export let folders;
 	export let folderId;
@@ -66,6 +66,7 @@
 				const { type, id } = data;
 
 				if (type === 'folder') {
+					open = true;
 					if (id === folderId) {
 						return;
 					}
@@ -81,6 +82,8 @@
 						dispatch('update');
 					}
 				} else if (type === 'chat') {
+					open = true;
+
 					// Move the chat
 					const res = await updateChatFolderIdById(localStorage.token, id, folderId).catch(
 						(error) => {

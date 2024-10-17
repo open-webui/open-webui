@@ -617,8 +617,8 @@
 										});
 
 										if (res) {
-											await initFolders();
 											initChatList();
+											await initFolders();
 										}
 									}
 
@@ -628,6 +628,7 @@
 										if (res) {
 											await pinnedChats.set(await getPinnedChatList(localStorage.token));
 											initChatList();
+											await initFolders();
 										}
 									}
 								}
@@ -679,6 +680,7 @@
 					<Folders
 						{folders}
 						on:update={async (e) => {
+							initChatList();
 							await initFolders();
 						}}
 					/>
@@ -705,8 +707,8 @@
 									);
 
 									if (res) {
-										await initFolders();
 										initChatList();
+										await initFolders();
 									}
 								}
 
@@ -716,6 +718,7 @@
 									if (res) {
 										await pinnedChats.set(await getPinnedChatList(localStorage.token));
 										initChatList();
+										await initFolders();
 									}
 								}
 							}
