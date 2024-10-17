@@ -33,6 +33,7 @@ class Chat(Base):
     pinned = Column(Boolean, default=False, nullable=True)
 
     meta = Column(JSON, server_default="{}")
+    folder_id = Column(Text, nullable=True)
 
 
 class ChatModel(BaseModel):
@@ -51,6 +52,7 @@ class ChatModel(BaseModel):
     pinned: Optional[bool] = False
 
     meta: dict = {}
+    folder_id: Optional[str] = None
 
 
 ####################
@@ -511,6 +513,29 @@ class ChatTable:
 
             # Validate and return chats
             return [ChatModel.model_validate(chat) for chat in all_chats]
+
+    def get_chats_by_folder_id_and_user_id(
+        self, folder_id: str, user_id: str
+    ) -> list[ChatModel]:
+        with get_db() as db:
+            all_chats = (
+                db.query(Chat).filter_by(folder_id=folder_id, user_id=user_id).all()
+            )
+            return [ChatModel.model_validate(chat) for chat in all_chats]
+
+    def update_chat_folder_id_by_id_and_user_id(
+        self, id: str, user_id: str, folder_id: str
+    ) -> Optional[ChatModel]:
+        try:
+            with get_db() as db:
+                chat = db.get(Chat, id)
+                chat.folder_id = folder_id
+                chat.updated_at = int(time.time())
+                db.commit()
+                db.refresh(chat)
+                return ChatModel.model_validate(chat)
+        except Exception:
+            return None
 
     def get_chat_tags_by_id_and_user_id(self, id: str, user_id: str) -> list[TagModel]:
         with get_db() as db:

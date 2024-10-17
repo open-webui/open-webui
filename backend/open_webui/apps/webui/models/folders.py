@@ -22,7 +22,6 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 class FolderItems(BaseModel):
     chat_ids: Optional[list[str]] = None
     file_ids: Optional[list[str]] = None
-    folder_ids: Optional[list[str]] = None
 
     model_config = ConfigDict(extra="allow")
 
@@ -50,6 +49,21 @@ class FolderModel(BaseModel):
     updated_at: int
 
     model_config = ConfigDict(from_attributes=True)
+
+
+####################
+# Forms
+####################
+
+
+class FolderForm(BaseModel):
+    name: str
+    model_config = ConfigDict(extra="allow")
+
+
+class FolderItemsUpdateForm(BaseModel):
+    items: FolderItems
+    model_config = ConfigDict(extra="allow")
 
 
 class FolderTable:
@@ -96,7 +110,59 @@ class FolderTable:
                 for folder in db.query(Folder).filter_by(user_id=user_id).all()
             ]
 
-    def update_folder_by_name_and_user_id(
+    def get_folders_by_parent_id_and_user_id(self, parent_id: str, user_id: str):
+        with get_db() as db:
+            return [
+                FolderModel.model_validate(folder)
+                for folder in db.query(Folder)
+                .filter_by(parent_id=parent_id, user_id=user_id)
+                .all()
+            ]
+
+    def update_folder_parent_id_by_id_and_user_id(
+        self,
+        id: str,
+        user_id: str,
+        parent_id: str,
+    ) -> Optional[FolderModel]:
+        try:
+            with get_db() as db:
+                folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
+                folder.parent_id = parent_id
+                folder.updated_at = int(time.time())
+
+                db.commit()
+
+                return FolderModel.model_validate(folder)
+        except Exception as e:
+            log.error(f"update_folder: {e}")
+            return
+
+    def update_folder_name_by_name_and_user_id(
+        self, name: str, user_id: str, new_name: str
+    ) -> Optional[FolderModel]:
+        try:
+            id = name.lower()
+            new_id = new_name.lower()
+            with get_db() as db:
+                # Check if new folder name already exists
+                folder = db.query(Folder).filter_by(id=new_id, user_id=user_id).first()
+                if folder:
+                    return None
+
+                folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
+                folder.id = new_id
+                folder.name = new_name
+                folder.updated_at = int(time.time())
+
+                db.commit()
+
+                return FolderModel.model_validate(folder)
+        except Exception as e:
+            log.error(f"update_folder: {e}")
+            return
+
+    def update_folder_items_by_name_and_user_id(
         self, name: str, user_id: str, items: FolderItems
     ) -> Optional[FolderModel]:
         try:

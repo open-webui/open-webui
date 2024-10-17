@@ -34,9 +34,16 @@ def upgrade():
             server_default=sa.func.now(),
             onupdate=sa.func.now(),
         ),
-        sa.PrimaryKeyConstraint("id", "user_id")
+        sa.PrimaryKeyConstraint("id", "user_id"),
+    )
+
+    op.add_column(
+        "chat",
+        sa.Column("folder_id", sa.Text(), nullable=True),
     )
 
 
 def downgrade():
+    op.drop_column("chat", "folder_id")
+
     op.drop_table("folder")

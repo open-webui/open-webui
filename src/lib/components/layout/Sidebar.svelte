@@ -43,6 +43,8 @@
 	import Folder from '../common/Folder.svelte';
 	import Plus from '../icons/Plus.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import { createNewFolder, getFolders } from '$lib/apis/folders';
+	import Folders from './Sidebar/Folders.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -64,6 +66,55 @@
 	// Pagination variables
 	let chatListLoading = false;
 	let allChatsLoaded = false;
+
+	let folders = {};
+
+	const initFolders = async () => {
+		const folderList = await getFolders(localStorage.token).catch((error) => {
+			toast.error(error);
+			return [];
+		});
+
+		for (const folder of folderList) {
+			folders[folder.id] = { ...(folders[folder.id] ? folders[folder.id] : {}), ...folder };
+
+			if (folders[folder.id].parent_id) {
+				folders[folders[folder.id].parent_id].childrenIds = folders[folders[folder.id].parent_id]
+					.childrenIds
+					? [...folders[folders[folder.id].parent_id].childrenIds, folder.id]
+					: [folder.id];
+
+				folders[folders[folder.id].parent_id].childrenIds.sort((a, b) => {
+					return folders[b].updated_at - folders[a].updated_at;
+				});
+			}
+		}
+	};
+
+	const createFolder = async (name = 'Untitled') => {
+		if (name === '') {
+			toast.error($i18n.t('Folder name cannot be empty.'));
+			return;
+		}
+
+		if (name.toLowerCase() in folders) {
+			// If a folder with the same name already exists, append a number to the name
+			let i = 1;
+			while (name.toLowerCase() + ` ${i}` in folders) {
+				i++;
+			}
+			name = name + ` ${i}`;
+		}
+
+		const res = await createNewFolder(localStorage.token, name).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res) {
+			await initFolders();
+		}
+	};
 
 	const initChatList = async () => {
 		// Reset pagination variables
@@ -280,6 +331,7 @@
 			localStorage.sidebar = value;
 		});
 
+		await initFolders();
 		await pinnedChats.set(await getPinnedChatList(localStorage.token));
 		await initChatList();
 
@@ -491,7 +543,12 @@
 
 			<div class="absolute z-40 right-4 top-1">
 				<Tooltip content={$i18n.t('New folder')}>
-					<button class="p-1 rounded-lg hover:bg-white/5 transition">
+					<button
+						class="p-1 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-gray-950 dark:hover:bg-gray-900 transition"
+						on:click={() => {
+							createFolder();
+						}}
+					>
 						<Plus />
 					</button>
 				</Tooltip>
@@ -514,33 +571,40 @@
 			{/if}
 
 			{#if !search && $pinnedChats.length > 0}
-				<div class=" flex flex-col space-y-1">
+				<div class="flex flex-col space-y-1 rounded-xl">
 					<Folder
+						className="px-2"
 						bind:open={showPinnedChat}
 						on:change={(e) => {
 							localStorage.setItem('showPinnedChat', e.detail);
 							console.log(e.detail);
 						}}
 						on:drop={async (e) => {
-							const { id } = e.detail;
+							const { type, id } = e.detail;
 
-							const status = await getChatPinnedStatusById(localStorage.token, id);
+							if (type === 'chat') {
+								const status = await getChatPinnedStatusById(localStorage.token, id);
 
-							if (!status) {
-								const res = await toggleChatPinnedStatusById(localStorage.token, id);
+								if (!status) {
+									const res = await toggleChatPinnedStatusById(localStorage.token, id);
 
-								if (res) {
-									await pinnedChats.set(await getPinnedChatList(localStorage.token));
-									initChatList();
+									if (res) {
+										await pinnedChats.set(await getPinnedChatList(localStorage.token));
+										initChatList();
+									}
 								}
 							}
 						}}
 						name={$i18n.t('Pinned')}
 					>
-						<div class="pl-2 mt-0.5 flex flex-col overflow-y-auto scrollbar-hidden">
+						<div
+							class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s dark:border-gray-850"
+						>
 							{#each $pinnedChats as chat, idx}
 								<ChatItem
-									{chat}
+									className=""
+									id={chat.id}
+									title={chat.title}
 									{shiftKey}
 									selected={selectedChatId === chat.id}
 									on:select={() => {
@@ -557,6 +621,10 @@
 											showDeleteConfirm = true;
 										}
 									}}
+									on:change={async () => {
+										await pinnedChats.set(await getPinnedChatList(localStorage.token));
+										initChatList();
+									}}
 									on:tag={(e) => {
 										const { type, name } = e.detail;
 										tagEventHandler(type, name, chat.id);
@@ -568,20 +636,28 @@
 				</div>
 			{/if}
 
+			{#if folders}
+				<div class=" flex flex-col">
+					<Folders {folders} />
+				</div>
+			{/if}
+
 			<div class="flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden">
 				<Folder
 					collapsible={false}
 					on:drop={async (e) => {
-						const { id } = e.detail;
+						const { type, id } = e.detail;
 
-						const status = await getChatPinnedStatusById(localStorage.token, id);
+						if (type === 'chat') {
+							const status = await getChatPinnedStatusById(localStorage.token, id);
 
-						if (status) {
-							const res = await toggleChatPinnedStatusById(localStorage.token, id);
+							if (status) {
+								const res = await toggleChatPinnedStatusById(localStorage.token, id);
 
-							if (res) {
-								await pinnedChats.set(await getPinnedChatList(localStorage.token));
-								initChatList();
+								if (res) {
+									await pinnedChats.set(await getPinnedChatList(localStorage.token));
+									initChatList();
+								}
 							}
 						}
 					}}
@@ -619,7 +695,8 @@
 								{/if}
 
 								<ChatItem
-									{chat}
+									id={chat.id}
+									title={chat.title}
 									{shiftKey}
 									selected={selectedChatId === chat.id}
 									on:select={() => {
@@ -635,6 +712,10 @@
 											deleteChat = chat;
 											showDeleteConfirm = true;
 										}
+									}}
+									on:change={async () => {
+										await pinnedChats.set(await getPinnedChatList(localStorage.token));
+										initChatList();
 									}}
 									on:tag={(e) => {
 										const { type, name } = e.detail;
