@@ -306,7 +306,7 @@
 					{/if}
 				</div>
 
-				<div class="translate-y-[0.5px] flex-1 justify-start text-start">
+				<div class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1">
 					{#if edit}
 						<input
 							id="folder-{folderId}-input"
