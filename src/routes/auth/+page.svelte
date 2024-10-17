@@ -1,6 +1,6 @@
 <script>
 	import { goto } from '$app/navigation';
-	import { getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
+	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
@@ -19,6 +19,13 @@
 	let email = '';
 	let password = '';
 
+	let ldapUsername = '';
+	let ldapPassword = '';
+
+	$: showSwitchButtonForSignInForm =  ($config?.features.enable_ldap_form && mode !== 'ldap') || ($config?.features.enable_login_form && mode === 'ldap');
+
+	$: showOtherSignInMethods = Object.keys($config?.oauth?.providers ?? {}).length > 0 ||  showSwitchButtonForSignInForm;
+
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
 			console.log(sessionUser);
@@ -32,6 +39,15 @@
 			await config.set(await getBackendConfig());
 			goto('/');
 		}
+	};
+
+	const ldapSignInHandler = async () => {
+		const sessionUser = await ldapUserSignIn(ldapUsername, ldapPassword).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		await setSessionUser(sessionUser);
 	};
 
 	const signInHandler = async () => {
@@ -55,7 +71,10 @@
 	};
 
 	const submitHandler = async () => {
-		if (mode === 'signin') {
+		if (mode === 'ldap'){
+			await ldapSignInHandler();
+		}
+		else if (mode === 'signin') {
 			await signInHandler();
 		} else {
 			await signUpHandler();
@@ -160,6 +179,8 @@
 							<div class=" text-2xl font-medium">
 								{#if mode === 'signin'}
 									{$i18n.t(`Sign in to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
+								{:else if mode === 'ldap'}
+									{$i18n.t(`Sign in to {{WEBUI_NAME}} with LDAP`, { WEBUI_NAME: $WEBUI_NAME })}
 								{:else}
 									{$i18n.t(`Sign up to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
 								{/if}
@@ -175,7 +196,46 @@
 							{/if}
 						</div>
 
-						{#if $config?.features.enable_login_form}
+						{#if $config?.features.enable_ldap_form && mode === 'ldap'}
+						<div class="flex flex-col mt-4">
+							<div class="mb-2">
+								<div class=" text-sm font-medium text-left mb-1">
+									{$i18n.t('Username')}
+								</div>
+								<input
+									bind:value={ldapUsername}
+									type="text"
+									class=" px-5 py-3 rounded-2xl w-full text-sm outline-none border dark:border-none dark:bg-gray-900"
+									autocomplete="username"
+									placeholder={$i18n.t('Enter Your Username')}
+									required
+								/>
+							</div>
+
+							<div>
+								<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Password')}</div>
+								<input
+									bind:value={ldapPassword}
+									type="password"
+									class=" px-5 py-3 rounded-2xl w-full text-sm outline-none border dark:border-none dark:bg-gray-900"
+									placeholder={$i18n.t('Enter Your Password')}
+									autocomplete="current-password"
+									required
+								/>
+							</div>
+
+							<div class="mt-5">
+								<button
+									class=" bg-gray-900 hover:bg-gray-800 w-full rounded-2xl text-white font-medium text-sm py-3 transition"
+									type="submit"
+								>
+									{$i18n.t('Authenticate')}
+								</button>
+							</div>
+						</div>
+						{/if}
+
+						{#if $config?.features.enable_login_form && mode !== 'ldap'}
 							<div class="flex flex-col mt-4">
 								{#if mode === 'signup'}
 									<div>
@@ -194,7 +254,9 @@
 								{/if}
 
 								<div class="mb-2">
-									<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Email')}</div>
+									<div class=" text-sm font-medium text-left mb-1">
+										{$i18n.t('Email')}
+									</div>
 									<input
 										bind:value={email}
 										type="email"
@@ -220,7 +282,7 @@
 							</div>
 						{/if}
 
-						{#if $config?.features.enable_login_form}
+						{#if $config?.features.enable_login_form && mode !== 'ldap'}
 							<div class="mt-5">
 								<button
 									class=" bg-gray-900 hover:bg-gray-800 w-full rounded-2xl text-white font-medium text-sm py-3 transition"
@@ -254,7 +316,7 @@
 						{/if}
 					</form>
 
-					{#if Object.keys($config?.oauth?.providers ?? {}).length > 0}
+					{#if showOtherSignInMethods}
 						<div class="inline-flex items-center justify-center w-full">
 							<hr class="w-64 h-px my-8 bg-gray-200 border-0 dark:bg-gray-700" />
 							{#if $config?.features.enable_login_form}
@@ -342,6 +404,50 @@
 											provider: $config?.oauth?.providers?.oidc ?? 'SSO'
 										})}</span
 									>
+								</button>
+							{/if}
+							{#if showSwitchButtonForSignInForm}
+								<button
+								class="flex items-center px-6 border-2 dark:border-gray-800 duration-300 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 w-full rounded-2xl dark:text-white text-sm py-3 transition"
+								on:click={() => {
+									if(mode === 'ldap') mode = 'signin';
+									else mode = 'ldap';
+								}}
+								>
+									{#if mode === 'ldap'}
+										<svg 
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 24 24" 
+											fill="none" 
+											stroke-width="1.5"
+											stroke="currentColor"
+											class="size-6 mr-3"
+										>
+											<path 
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M4 7.00005L10.2 11.65C11.2667 12.45 12.7333 12.45 13.8 11.65L20 7" stroke="#000000" 
+												stroke-width="2"
+											/>
+											<rect x="3" y="5" width="18" height="14" rx="2" stroke="#000000" stroke-width="2" stroke-linecap="round"/>
+										</svg>
+									{:else}
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke-width="1.5"
+											stroke="currentColor"
+											class="size-6 mr-3"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z"
+											/>
+										</svg>
+									{/if}
+									<span>{mode === 'ldap' ? $i18n.t('Continue with Email') : $i18n.t('Continue with LDAP')}</span>
 								</button>
 							{/if}
 						</div>
