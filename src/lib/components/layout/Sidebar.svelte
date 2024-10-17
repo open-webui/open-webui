@@ -622,7 +622,7 @@
 										}
 									}
 
-									if (chat.pinned) {
+									if (!chat.pinned) {
 										const res = await toggleChatPinnedStatusById(localStorage.token, id);
 
 										if (res) {

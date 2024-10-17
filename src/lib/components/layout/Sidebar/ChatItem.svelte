@@ -37,7 +37,7 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Document from '$lib/components/icons/Document.svelte';
 
-	export let className = 'pr-2';
+	export let className = '';
 
 	export let id;
 	export let title;

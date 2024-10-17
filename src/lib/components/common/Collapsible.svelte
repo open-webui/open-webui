@@ -14,6 +14,8 @@
 	export let className = '';
 	export let buttonClassName = 'w-fit';
 	export let title = null;
+
+	export let disabled = false;
 </script>
 
 <div class={className}>
@@ -47,7 +49,7 @@
 		</div>
 	{/if}
 
-	{#if open}
+	{#if open && !disabled}
 		<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
 			<slot name="content" />
 		</div>

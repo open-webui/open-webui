@@ -1,5 +1,5 @@
 <script>
-	import { getContext, createEventDispatcher, onMount, onDestroy } from 'svelte';
+	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -12,6 +12,7 @@
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import {
+		deleteFolderById,
 		updateFolderIsExpandedById,
 		updateFolderNameById,
 		updateFolderParentIdById
@@ -19,6 +20,7 @@
 	import { toast } from 'svelte-sonner';
 	import { updateChatFolderIdById } from '$lib/apis/chats';
 	import ChatItem from './ChatItem.svelte';
+	import FolderMenu from './Folders/FolderMenu.svelte';
 
 	export let open = false;
 
@@ -179,6 +181,18 @@
 		}
 	});
 
+	const deleteHandler = async () => {
+		const res = await deleteFolderById(localStorage.token, folderId).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res) {
+			toast.success('Folder deleted successfully');
+			dispatch('update');
+		}
+	};
+
 	const nameUpdateHandler = async () => {
 		if (name === '') {
 			toast.error("Folder name can't be empty");
@@ -226,6 +240,21 @@
 	};
 
 	$: isExpandedUpdateDebounceHandler(open);
+
+	const editHandler = async () => {
+		console.log('Edit');
+		await tick();
+		name = folders[folderId].name;
+		edit = true;
+
+		await tick();
+
+		// focus on the input
+		setTimeout(() => {
+			const input = document.getElementById(`folder-${folderId}-input`);
+			input.focus();
+		}, 100);
+	};
 </script>
 
 {#if dragged && x && y}
@@ -252,6 +281,8 @@
 		bind:open
 		className="w-full"
 		buttonClassName="w-full"
+		disabled={(folders[folderId]?.childrenIds ?? []).length === 0 &&
+			(folders[folderId].items?.chats ?? []).length === 0}
 		on:change={(e) => {
 			dispatch('open', e.detail);
 		}}
@@ -259,16 +290,10 @@
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div class="w-full group">
 			<button
-				class="w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				id="folder-{folderId}-button"
+				class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 				on:dblclick={() => {
-					name = folders[folderId].name;
-					edit = true;
-
-					// focus on the input
-					setTimeout(() => {
-						const input = document.getElementById(`folder-${folderId}-input`);
-						input.focus();
-					}, 0);
+					editHandler();
 				}}
 			>
 				<div class="text-gray-300 dark:text-gray-600">
@@ -309,21 +334,27 @@
 					{/if}
 				</div>
 
-				<div class=" hidden group-hover:flex dark:text-gray-300">
-					<button
-						on:click={(e) => {
-							e.stopPropagation();
-							console.log('clicked');
+				<div
+					class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300 touch-auto pointer-events-auto"
+				>
+					<FolderMenu
+						on:rename={() => {
+							editHandler();
+						}}
+						on:delete={() => {
+							deleteHandler();
 						}}
 					>
-						<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
-					</button>
+						<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg" on:click={(e) => {}}>
+							<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
+						</button>
+					</FolderMenu>
 				</div>
 			</button>
 		</div>
 
 		<div slot="content" class="w-full">
-			{#if folders[folderId].childrenIds || folders[folderId].items?.chats}
+			{#if (folders[folderId]?.childrenIds ?? []).length > 0 || (folders[folderId].items?.chats ?? []).length > 0}
 				<div
 					class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
 				>
