@@ -99,13 +99,18 @@
 			return;
 		}
 
-		if (name.toLowerCase() in folders) {
+		if (Object.values(folders).find((folder) => folder.name.toLowerCase() === name.toLowerCase())) {
 			// If a folder with the same name already exists, append a number to the name
 			let i = 1;
-			while (name.toLowerCase() + ` ${i}` in folders) {
+			while (
+				Object.values(folders).find(
+					(folder) => folder.name.toLowerCase() === `${name} ${i}`.toLowerCase()
+				)
+			) {
 				i++;
 			}
-			name = name + ` ${i}`;
+
+			name = `${name} ${i}`;
 		}
 
 		const res = await createNewFolder(localStorage.token, name).catch((error) => {
