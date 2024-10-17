@@ -5,6 +5,7 @@
 
 	import {
 		type Model,
+		type Prompt,
 		mobile,
 		settings,
 		showSidebar,
@@ -29,6 +30,7 @@
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import Commands from './MessageInput/Commands.svelte';
 	import XMark from '../icons/XMark.svelte';
+	import Terminal from '../icons/Terminal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -39,6 +41,7 @@
 
 	export let autoScroll = false;
 
+	export let atSelectedPrompt: Prompt | undefined;
 	export let atSelectedModel: Model | undefined;
 	export let selectedModels: [''];
 
@@ -212,6 +215,22 @@
 		dragged = false;
 	};
 
+	const handleSubmit = () => {
+		let inputPrompt = prompt;
+		if (atSelectedPrompt) {
+			inputPrompt = [atSelectedPrompt.content, prompt].join('\n');
+
+			if (atSelectedPrompt.behavior === 'once-pinned') {
+				atSelectedPrompt = undefined;
+			}
+		}
+
+		dispatch('submit', {
+			prompt: inputPrompt,
+			selectedPromptCommand: atSelectedPrompt
+		});
+	};
+
 	onMount(() => {
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
@@ -314,6 +333,8 @@
 
 						if (data?.type === 'model') {
 							atSelectedModel = data.data;
+						} else if (data?.type === 'prompt') {
+							atSelectedPrompt = data.prompt;
 						}
 
 						chatTextAreaElement?.focus();
@@ -371,16 +392,34 @@
 					<form
 						class="w-full flex gap-1.5"
 						on:submit|preventDefault={() => {
-							// check if selectedModels support image input
-							dispatch('submit', prompt);
+							handleSubmit();
 						}}
 					>
 						<div
-							class="flex-1 flex flex-col relative w-full rounded-3xl px-1.5 bg-gray-50 dark:bg-gray-850 dark:text-gray-100"
+							class="flex-1 flex flex-col w-full rounded-3xl bg-gray-50 dark:bg-gray-850 dark:text-gray-100"
 							dir={$settings?.chatDirection ?? 'LTR'}
 						>
+							{#if atSelectedPrompt}
+								<div class="flex bg-gray-100 dark:bg-black rounded-t-[1.5rem] px-1.5">
+									<div class="px-3 py-2 text-left w-full flex justify-between items-center">
+										<div class="flex items-center gap-2 text-sm">
+											<Terminal />
+											{atSelectedPrompt.title}
+										</div>
+										<button
+											class="flex items-center"
+											on:click={() => {
+												atSelectedPrompt = undefined;
+											}}
+										>
+											<XMark />
+										</button>
+									</div>
+								</div>
+							{/if}
+
 							{#if files.length > 0}
-								<div class="mx-1 mt-2.5 mb-1 flex flex-wrap gap-2">
+								<div class="mx-1 mt-2.5 mb-1 flex flex-wrap gap-2 px-1.5">
 									{#each files as file, fileIdx}
 										{#if file.type === 'image'}
 											<div class=" relative group">
@@ -458,7 +497,7 @@
 								</div>
 							{/if}
 
-							<div class=" flex">
+							<div class="flex px-1.5">
 								<div class=" ml-0.5 self-end mb-1.5 flex space-x-1">
 									<InputMenu
 										bind:webSearchEnabled
@@ -522,7 +561,7 @@
 
 											// Submit the prompt when Enter key is pressed
 											if (prompt !== '' && e.key === 'Enter' && !e.shiftKey) {
-												dispatch('submit', prompt);
+												handleSubmit();
 											}
 										}
 									}}

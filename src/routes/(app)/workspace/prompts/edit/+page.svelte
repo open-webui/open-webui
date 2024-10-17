@@ -19,17 +19,22 @@
 	let title = '';
 	let command = '';
 	let content = '';
+	let behavior = 'inline';
 
 	const updateHandler = async () => {
 		loading = true;
 
 		if (validateCommandString(command)) {
-			const prompt = await updatePromptByCommand(localStorage.token, command, title, content).catch(
-				(error) => {
-					toast.error(error);
-					return null;
-				}
-			);
+			const prompt = await updatePromptByCommand(
+				localStorage.token,
+				command,
+				title,
+				content,
+				behavior
+			).catch((error) => {
+				toast.error(error);
+				return null;
+			});
 
 			if (prompt) {
 				await prompts.set(await getPrompts(localStorage.token));
@@ -66,6 +71,7 @@
 				await tick();
 				command = prompt.command.slice(1);
 				content = prompt.content;
+				behavior = prompt.behavior;
 			} else {
 				goto('/workspace/prompts');
 			}
@@ -185,6 +191,41 @@
 			</div>
 		</div>
 
+		<div class="my-2">
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt behavior')}*</div>
+			</div>
+
+			<div class="mt-2">
+				<div>
+					<select
+						class="w-full px-3 py-1.5 text-sm rounded-lg border dark:border-gray-600
+						bg-transparent dark:bg-gray-800 text-gray-900 dark:text-gray-100
+						focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400
+						hover:border-gray-400 dark:hover:border-gray-500
+						appearance-none"
+						bind:value={behavior}
+					>
+						<option value="inline">{$i18n.t('Inline')}</option>
+						<option value="once-pinned">{$i18n.t('Once Pinned')}</option>
+						<option value="sticky">{$i18n.t('Sticky')}</option>
+					</select>
+				</div>
+
+				<div class="text-xs text-gray-400 dark:text-gray-500 mt-2">
+					ⓘ
+					{#if behavior === 'once-pinned'}
+						{$i18n.t(
+							'The "prompt" will be temporarily pinned above the chat input area, displaying it\'s title. It will remain anchored there until the prompt is sent, after which it will be automatically removed.'
+						)}
+					{:else}
+						{$i18n.t(
+							'The "prompt content" will be automatically inserted into the chat input when the command is used.'
+						)}
+					{/if}
+				</div>
+			</div>
+		</div>
 		<div class="my-2 flex justify-end">
 			<button
 				class=" text-sm px-3 py-2 transition rounded-xl {loading

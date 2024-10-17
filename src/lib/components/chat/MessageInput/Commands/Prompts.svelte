@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { prompts } from '$lib/stores';
+	import { prompts, type Prompt } from '$lib/stores';
 	import {
 		findWordIndices,
 		getUserPosition,
@@ -9,9 +9,10 @@
 		getUserTimezone,
 		getWeekday
 	} from '$lib/utils';
-	import { tick, getContext } from 'svelte';
+	import { tick, getContext, createEventDispatcher } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
+	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
 	export let files;
@@ -38,7 +39,8 @@
 		selectedPromptIdx = Math.min(selectedPromptIdx + 1, filteredPrompts.length - 1);
 	};
 
-	const confirmPrompt = async (command) => {
+	const confirmPrompt = async (command: Prompt) => {
+		let behavior = command.behavior;
 		let text = command.content;
 
 		if (command.content.includes('{{CLIPBOARD}}')) {
@@ -108,7 +110,15 @@
 			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
 		}
 
-		prompt = text;
+		if (behavior !== 'inline') {
+			dispatch('select', command);
+
+			if (prompt.startsWith('/')) {
+				prompt = prompt.substring(1);
+			}
+		} else {
+			prompt = text;
+		}
 
 		const chatInputElement = document.getElementById('chat-textarea');
 
