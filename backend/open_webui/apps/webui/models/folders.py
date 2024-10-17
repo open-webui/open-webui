@@ -101,6 +101,10 @@ class FolderTable:
         try:
             with get_db() as db:
                 folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
+
+                if not folder:
+                    return None
+
                 return FolderModel.model_validate(folder)
         except Exception:
             return None
@@ -119,12 +123,16 @@ class FolderTable:
             with get_db() as db:
                 folder = (
                     db.query(Folder)
-                    .filter_by(parent_id=parent_id, user_id=user_id, name=name)
+                    .filter_by(parent_id=parent_id, user_id=user_id, name=name.lower())
                     .first()
                 )
+
+                if not folder:
+                    return None
+
                 return FolderModel.model_validate(folder)
         except Exception as e:
-            log.error(f"get_folder_by_name_and_user_id: {e}")
+            log.error(f"get_folder_by_parent_id_and_user_id_and_name: {e}")
             return None
 
     def get_folders_by_parent_id_and_user_id(
@@ -147,6 +155,10 @@ class FolderTable:
         try:
             with get_db() as db:
                 folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
+
+                if not folder:
+                    return None
+
                 folder.parent_id = parent_id
                 folder.updated_at = int(time.time())
 
@@ -163,6 +175,9 @@ class FolderTable:
         try:
             with get_db() as db:
                 folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
+
+                if not folder:
+                    return None
 
                 existing_folder = (
                     db.query(Folder)
@@ -189,6 +204,9 @@ class FolderTable:
         try:
             with get_db() as db:
                 folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
+
+                if not folder:
+                    return None
 
                 folder.items = items.model_dump()
                 folder.updated_at = int(time.time())

@@ -11,6 +11,8 @@
 
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import { updateFolderNameById } from '$lib/apis/folders';
+	import { toast } from 'svelte-sonner';
 
 	export let open = true;
 
@@ -136,6 +138,29 @@
 			folderElement.removeEventListener('dragend', onDragEnd);
 		}
 	});
+
+	const nameUpdateHandler = async () => {
+		name = name.trim();
+
+		if (name === '') {
+			toast.error("Folder name can't be empty");
+			return;
+		}
+
+		if (name === folders[folderId].name) {
+			edit = false;
+			return;
+		}
+
+		const res = await updateFolderNameById(localStorage.token, folderId, name).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res) {
+			folders[folderId].name = name;
+		}
+	};
 </script>
 
 {#if dragged && x && y}
@@ -194,17 +219,18 @@
 						<input
 							id="folder-{folderId}-input"
 							type="text"
-							bind:value={folders[folderId].name}
-							on:input={(e) => {
-								folders[folderId].name = e.target.value;
-							}}
+							bind:value={name}
 							on:blur={() => {
 								edit = false;
+								nameUpdateHandler();
 							}}
-							on:keydown={(e) => {
-								if (e.key === 'Enter') {
-									edit = false;
-								}
+							on:click={(e) => {
+								// Prevent accidental collapse toggling when clicking inside input
+								e.stopPropagation();
+							}}
+							on:mousedown={(e) => {
+								// Prevent accidental collapse toggling when clicking inside input
+								e.stopPropagation();
 							}}
 							class="w-full h-full bg-transparent text-gray-500 dark:text-gray-500 outline-none"
 						/>
@@ -213,14 +239,14 @@
 					{/if}
 				</div>
 
-				<div class=" hidden group-hover:flex">
+				<div class=" hidden group-hover:flex dark:text-gray-300">
 					<button
 						on:click={(e) => {
 							e.stopPropagation();
 							console.log('clicked');
 						}}
 					>
-						<EllipsisHorizontal className="size-3.5" strokeWidth="2.5" />
+						<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
 					</button>
 				</div>
 			</button>
