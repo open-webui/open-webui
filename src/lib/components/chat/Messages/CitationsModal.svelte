@@ -110,7 +110,7 @@
 								</div>
 								{#if document.distance !== undefined}
 									<Tooltip
-										content={$i18n.t('Semantic distance to query from vector store')}
+										content={$i18n.t('Semantic distance to query')}
 										placement="left"
 										tippyOptions={{ duration: [500, 0] }}
 									>
