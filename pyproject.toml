@@ -95,7 +95,7 @@ dependencies = [
     "pytest~=8.3.2",
     "pytest-docker~=3.1.1",
 
-    "googleapis-common-protos=1.63.2"
+    "googleapis-common-protos==1.63.2"
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.12.0a1"
