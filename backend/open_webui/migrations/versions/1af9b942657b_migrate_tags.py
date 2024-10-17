@@ -135,7 +135,7 @@ def upgrade():
                 tags = chat_updates[chat_id]["meta"].get("tags", [])
                 tags.append(tag_name)
 
-                chat_updates[chat_id]["meta"]["tags"] = tags
+                chat_updates[chat_id]["meta"]["tags"] = list(set(tags))
 
     # Update chats based on accumulated changes
     for chat_id, updates in chat_updates.items():

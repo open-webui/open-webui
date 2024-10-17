@@ -21,6 +21,9 @@
 	let showDeleteConfirm = false;
 	let deletePrompt = null;
 
+	let filteredItems = [];
+	$: filteredItems = $prompts.filter((p) => query === '' || p.command.includes(query));
+
 	const shareHandler = async (prompt) => {
 		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
 
@@ -64,17 +67,7 @@
 	</title>
 </svelte:head>
 
-<div class="mb-3">
-	<div class="flex justify-between items-center">
-		<div class="flex md:self-center text-lg font-medium px-0.5">
-			{$i18n.t('Prompts')}
-			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
-			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{$prompts.length}</span>
-		</div>
-	</div>
-</div>
-
-<div class=" flex w-full space-x-2">
+<div class=" flex w-full space-x-2 mb-2.5">
 	<div class="flex flex-1">
 		<div class=" self-center ml-1 mr-3">
 			<svg
@@ -116,10 +109,20 @@
 	</div>
 </div>
 
-<hr class=" border-gray-50 dark:border-gray-850 my-2.5" />
+<div class="mb-3.5">
+	<div class="flex justify-between items-center">
+		<div class="flex md:self-center text-base font-medium px-0.5">
+			{$i18n.t('Prompts')}
+			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
+			<span class="text-base font-medium text-gray-500 dark:text-gray-300"
+				>{filteredItems.length}</span
+			>
+		</div>
+	</div>
+</div>
 
 <div class="my-3 mb-5">
-	{#each $prompts.filter((p) => query === '' || p.command.includes(query)) as prompt}
+	{#each filteredItems as prompt}
 		<div
 			class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
 		>

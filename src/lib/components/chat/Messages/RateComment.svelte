@@ -2,6 +2,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { config } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -50,15 +51,15 @@
 		loadReasons();
 	});
 
-	const submitHandler = () => {
-		console.log('submitHandler');
+	const saveHandler = () => {
+		console.log('saveHandler');
 
 		if (!selectedReason) {
 			toast.error($i18n.t('Please select a reason'));
 			return;
 		}
 
-		dispatch('submit', {
+		dispatch('save', {
 			reason: selectedReason,
 			comment: comment
 		});
@@ -69,7 +70,7 @@
 </script>
 
 <div
-	class=" my-2.5 rounded-xl px-4 py-3 border dark:border-gray-850"
+	class=" my-2.5 rounded-xl px-4 py-3 border border-gray-50 dark:border-gray-850"
 	id="message-feedback-{message.id}"
 >
 	<div class="flex justify-between items-center">
@@ -97,7 +98,7 @@
 		<div class="flex flex-wrap gap-2 text-sm mt-2.5">
 			{#each reasons as reason}
 				<button
-					class="px-3.5 py-1 border dark:border-gray-850 hover:bg-gray-100 dark:hover:bg-gray-850 {selectedReason ===
+					class="px-3.5 py-1 border border-gray-50 dark:border-gray-850 hover:bg-gray-100 dark:hover:bg-gray-850 {selectedReason ===
 					reason
 						? 'bg-gray-200 dark:bg-gray-800'
 						: ''} transition rounded-lg"
@@ -120,14 +121,26 @@
 		/>
 	</div>
 
-	<div class="mt-2 flex justify-end">
+	<div class="mt-2 gap-1.5 flex justify-end">
+		{#if $config?.features.enable_community_sharing}
+			<button
+				class=" self-center px-3.5 py-2 rounded-xl text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition"
+				type="button"
+				on:click={() => {
+					show = false;
+				}}
+			>
+				{$i18n.t('Share to OpenWebUI Community')}
+			</button>
+		{/if}
+
 		<button
-			class=" bg-emerald-700 text-white text-sm font-medium rounded-lg px-3.5 py-1.5"
+			class=" bg-emerald-700 hover:bg-emerald-800 transition text-white text-sm font-medium rounded-xl px-3.5 py-1.5"
 			on:click={() => {
-				submitHandler();
+				saveHandler();
 			}}
 		>
-			{$i18n.t('Submit')}
+			{$i18n.t('Save')}
 		</button>
 	</div>
 </div>

@@ -13,7 +13,7 @@
 	import { getKnowledgeItems } from '$lib/apis/knowledge';
 	import { getFunctions } from '$lib/apis/functions';
 	import { getModels as _getModels, getVersionUpdates } from '$lib/apis';
-	import { getAllChatTags } from '$lib/apis/chats';
+	import { getAllTags } from '$lib/apis/chats';
 	import { getPrompts } from '$lib/apis/prompts';
 	import { getTools } from '$lib/apis/tools';
 	import { getBanners } from '$lib/apis/configs';
@@ -117,7 +117,7 @@
 					banners.set(await getBanners(localStorage.token));
 				})(),
 				(async () => {
-					tags.set(await getAllChatTags(localStorage.token));
+					tags.set(await getAllTags(localStorage.token));
 				})()
 			]);
 

@@ -2,7 +2,7 @@
 	import {
 		addTagById,
 		deleteTagById,
-		getAllChatTags,
+		getAllTags,
 		getChatList,
 		getChatListByTagName,
 		getTagsById,
@@ -37,7 +37,10 @@
 			tags: tags
 		});
 
-		_tags.set(await getAllChatTags(localStorage.token));
+		await _tags.set(await getAllTags(localStorage.token));
+		dispatch('add', {
+			name: tagName
+		});
 	};
 
 	const deleteTag = async (tagName) => {
@@ -47,7 +50,7 @@
 			tags: tags
 		});
 
-		await _tags.set(await getAllChatTags(localStorage.token));
+		await _tags.set(await getAllTags(localStorage.token));
 		dispatch('delete', {
 			name: tagName
 		});

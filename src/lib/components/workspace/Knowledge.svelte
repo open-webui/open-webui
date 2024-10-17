@@ -72,17 +72,7 @@
 	}}
 />
 
-<div class="mb-3">
-	<div class="flex justify-between items-center">
-		<div class="flex md:self-center text-lg font-medium px-0.5">
-			{$i18n.t('Knowledge')}
-			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
-			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{$knowledge.length}</span>
-		</div>
-	</div>
-</div>
-
-<div class=" flex w-full space-x-2">
+<div class=" flex w-full space-x-2 mb-2.5">
 	<div class="flex flex-1">
 		<div class=" self-center ml-1 mr-3">
 			<svg
@@ -127,12 +117,22 @@
 	</div>
 </div>
 
-<hr class=" border-gray-50 dark:border-gray-850 my-2.5" />
+<div class="mb-3.5">
+	<div class="flex justify-between items-center">
+		<div class="flex md:self-center text-base font-medium px-0.5">
+			{$i18n.t('Knowledge')}
+			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
+			<span class="text-base font-medium text-gray-500 dark:text-gray-300"
+				>{filteredItems.length}</span
+			>
+		</div>
+	</div>
+</div>
 
-<div class="my-3 mb-5 grid lg:grid-cols-2 xl:grid-cols-3 gap-2">
+<div class="my-3 mb-5 grid md:grid-cols-2 lg:grid-cols-3 gap-2">
 	{#each filteredItems as item}
 		<button
-			class=" flex space-x-4 cursor-pointer text-left w-full px-4 py-3 border border-gray-50 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-xl"
+			class=" flex space-x-4 cursor-pointer text-left w-full px-4 py-3 border border-gray-50 dark:border-gray-850 dark:hover:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-xl"
 			on:click={() => {
 				if (item?.meta?.document) {
 					toast.error(

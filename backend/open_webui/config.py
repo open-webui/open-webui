@@ -1042,7 +1042,7 @@ CHUNK_OVERLAP = PersistentConfig(
 DEFAULT_RAG_TEMPLATE = """You are given a user query, some textual context and rules, all inside xml tags. You have to answer the query based on the context while respecting the rules.
 
 <context>
-[context]
+{{CONTEXT}}
 </context>
 
 <rules>
@@ -1055,7 +1055,7 @@ DEFAULT_RAG_TEMPLATE = """You are given a user query, some textual context and r
 </rules>
 
 <user_query>
-[query]
+{{QUERY}}
 </user_query>
 """
 

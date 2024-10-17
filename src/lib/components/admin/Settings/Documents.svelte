@@ -651,8 +651,8 @@
 						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 text-xs bg-transparent outline-none text-right"
 						bind:value={textSplitter}
 					>
-						<option value="">{$i18n.t('Default (Character)')} </option>
-						<option value="token">{$i18n.t('Token (Tiktoken)')}</option>
+						<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
+						<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
 					</select>
 				</div>
 			</div>

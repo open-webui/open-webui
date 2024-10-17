@@ -184,7 +184,13 @@
 
 	const onDragOver = (e) => {
 		e.preventDefault();
-		dragged = true;
+
+		// Check if a file is being dragged.
+		if (e.dataTransfer?.types?.includes('Files')) {
+			dragged = true;
+		} else {
+			dragged = false;
+		}
 	};
 
 	const onDragLeave = () => {
@@ -200,8 +206,6 @@
 			if (inputFiles && inputFiles.length > 0) {
 				console.log(inputFiles);
 				inputFilesHandler(inputFiles);
-			} else {
-				toast.error($i18n.t(`File not found.`));
 			}
 		}
 

@@ -1,4 +1,9 @@
 <script lang="ts">
+	import { getContext, createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher();
+	$: dispatch('change', open);
+
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 
@@ -7,26 +12,26 @@
 
 	export let open = false;
 	export let className = '';
+	export let buttonClassName = 'w-fit';
 	export let title = null;
 
-	let contentHeight = 0;
-	let contentElement: HTMLElement;
-
-	function handleClick(event) {
-		if (!event.target.closest('.no-toggle')) {
-			open = !open;
-		}
-	}
-
-	$: if (contentElement) {
-		contentHeight = open ? contentElement.scrollHeight : 0;
-	}
+	export let disabled = false;
+	export let hide = false;
 </script>
 
 <div class={className}>
 	{#if title !== null}
-		<button class="w-full" on:click={handleClick}>
-			<div class="w-full font-medium transition flex items-center justify-between gap-2">
+		<!-- svelte-ignore a11y-no-static-element-interactions -->
+		<!-- svelte-ignore a11y-click-events-have-key-events -->
+		<div
+			class={buttonClassName}
+			on:pointerup={() => {
+				if (!disabled) {
+					open = !open;
+				}
+			}}
+		>
+			<div class=" w-fit font-medium transition flex items-center justify-between gap-2">
 				<div>
 					{title}
 				</div>
@@ -39,23 +44,28 @@
 					{/if}
 				</div>
 			</div>
-		</button>
+		</div>
 	{:else}
-		<button
-			type="button"
-			on:click={handleClick}
-			class="flex w-full items-center gap-2 text-left text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+		<!-- svelte-ignore a11y-no-static-element-interactions -->
+		<!-- svelte-ignore a11y-click-events-have-key-events -->
+		<div
+			class={buttonClassName}
+			on:pointerup={() => {
+				if (!disabled) {
+					open = !open;
+				}
+			}}
 		>
-			<slot />
-		</button>
+			<div
+				class="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+			>
+				<slot />
+			</div>
+		</div>
 	{/if}
 
-	<div
-		bind:this={contentElement}
-		class="overflow-hidden transition-all duration-300 ease-in-out"
-		style="max-height: {contentHeight}px;"
-	>
-		<div>
+	{#if open && !hide}
+		<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
 			<slot name="content" />
 		</div>
 	</div>

@@ -267,7 +267,7 @@ export const getAllUserChats = async (token: string) => {
 	return res;
 };
 
-export const getAllChatTags = async (token: string) => {
+export const getAllTags = async (token: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/all/tags`, {
@@ -557,6 +557,41 @@ export const shareChatById = async (token: string, id: string) => {
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
 		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateChatFolderIdById = async (token: string, id: string, folderId?: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/folder`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			folder_id: folderId
+		})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
