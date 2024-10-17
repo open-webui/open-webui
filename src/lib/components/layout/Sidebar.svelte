@@ -75,6 +75,8 @@
 			return [];
 		});
 
+		folders = {};
+
 		for (const folder of folderList) {
 			folders[folder.id] = { ...(folders[folder.id] ? folders[folder.id] : {}), ...folder };
 
@@ -636,15 +638,15 @@
 				</div>
 			{/if}
 
-			{#if folders}
-				<div class=" flex flex-col">
+			<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
+				{#if !search && folders}
 					<Folders {folders} />
-				</div>
-			{/if}
+				{/if}
 
-			<div class="flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden">
 				<Folder
-					collapsible={false}
+					collapsible={!search}
+					className="px-2"
+					name={$i18n.t('All chats')}
 					on:drop={async (e) => {
 						const { type, id } = e.detail;
 
@@ -662,7 +664,7 @@
 						}
 					}}
 				>
-					<div class="pt-2 pl-2">
+					<div class="pt-1.5">
 						{#if $chats}
 							{#each $chats as chat, idx}
 								{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
@@ -695,6 +697,7 @@
 								{/if}
 
 								<ChatItem
+									className=""
 									id={chat.id}
 									title={chat.title}
 									{shiftKey}

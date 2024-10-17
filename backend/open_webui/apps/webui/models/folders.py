@@ -67,14 +67,17 @@ class FolderItemsUpdateForm(BaseModel):
 
 
 class FolderTable:
-    def insert_new_folder(self, name: str, user_id: str) -> Optional[FolderModel]:
+    def insert_new_folder(
+        self, user_id: str, name: str, parent_id: Optional[str] = None
+    ) -> Optional[FolderModel]:
         with get_db() as db:
-            id = name.lower()
+            id = str(uuid.uuid4())
             folder = FolderModel(
                 **{
                     "id": id,
                     "user_id": user_id,
                     "name": name,
+                    "parent_id": parent_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
@@ -92,11 +95,10 @@ class FolderTable:
                 print(e)
                 return None
 
-    def get_folder_by_name_and_user_id(
-        self, name: str, user_id: str
+    def get_folder_by_id_and_user_id(
+        self, id: str, user_id: str
     ) -> Optional[FolderModel]:
         try:
-            id = name.lower()
             with get_db() as db:
                 folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
                 return FolderModel.model_validate(folder)
@@ -110,7 +112,24 @@ class FolderTable:
                 for folder in db.query(Folder).filter_by(user_id=user_id).all()
             ]
 
-    def get_folders_by_parent_id_and_user_id(self, parent_id: str, user_id: str):
+    def get_folder_by_parent_id_and_user_id_and_name(
+        self, parent_id: Optional[str], user_id: str, name: str
+    ) -> Optional[FolderModel]:
+        try:
+            with get_db() as db:
+                folder = (
+                    db.query(Folder)
+                    .filter_by(parent_id=parent_id, user_id=user_id, name=name)
+                    .first()
+                )
+                return FolderModel.model_validate(folder)
+        except Exception as e:
+            log.error(f"get_folder_by_name_and_user_id: {e}")
+            return None
+
+    def get_folders_by_parent_id_and_user_id(
+        self, parent_id: Optional[str], user_id: str
+    ) -> list[FolderModel]:
         with get_db() as db:
             return [
                 FolderModel.model_validate(folder)
@@ -138,21 +157,23 @@ class FolderTable:
             log.error(f"update_folder: {e}")
             return
 
-    def update_folder_name_by_name_and_user_id(
-        self, name: str, user_id: str, new_name: str
+    def update_folder_name_by_id_and_user_id(
+        self, id: str, user_id: str, name: str
     ) -> Optional[FolderModel]:
         try:
-            id = name.lower()
-            new_id = new_name.lower()
             with get_db() as db:
-                # Check if new folder name already exists
-                folder = db.query(Folder).filter_by(id=new_id, user_id=user_id).first()
-                if folder:
+                folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
+
+                existing_folder = (
+                    db.query(Folder)
+                    .filter_by(name=name, parent_id=folder.parent_id, user_id=user_id)
+                    .first()
+                )
+
+                if existing_folder:
                     return None
 
-                folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
-                folder.id = new_id
-                folder.name = new_name
+                folder.name = name
                 folder.updated_at = int(time.time())
 
                 db.commit()
@@ -162,11 +183,10 @@ class FolderTable:
             log.error(f"update_folder: {e}")
             return
 
-    def update_folder_items_by_name_and_user_id(
-        self, name: str, user_id: str, items: FolderItems
+    def update_folder_items_by_id_and_user_id(
+        self, id: str, user_id: str, items: FolderItems
     ) -> Optional[FolderModel]:
         try:
-            id = name.lower()
             with get_db() as db:
                 folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
 
@@ -180,14 +200,11 @@ class FolderTable:
             log.error(f"update_folder: {e}")
             return
 
-    def delete_folder_by_name_and_user_id(self, name: str, user_id: str) -> bool:
+    def delete_folder_by_id_and_user_id(self, id: str, user_id: str) -> bool:
         try:
             with get_db() as db:
-                id = name.lower()
-
                 folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
                 db.delete(folder)
-
                 db.commit()
                 return True
         except Exception as e:

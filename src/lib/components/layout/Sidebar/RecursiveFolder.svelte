@@ -10,13 +10,14 @@
 	import DragGhost from '$lib/components/common/DragGhost.svelte';
 
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
+	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 
 	export let open = true;
 
 	export let folders;
 	export let folderId;
 
-	export let className;
+	export let className = '';
 
 	let folderElement;
 
@@ -67,6 +68,7 @@
 	let y;
 
 	const onDragStart = (event) => {
+		event.stopPropagation();
 		event.dataTransfer.setDragImage(dragImage, 0, 0);
 
 		// Set the data to be transferred
@@ -83,11 +85,15 @@
 	};
 
 	const onDrag = (event) => {
+		event.stopPropagation();
+
 		x = event.clientX;
 		y = event.clientY;
 	};
 
 	const onDragEnd = (event) => {
+		event.stopPropagation();
+
 		folderElement.style.opacity = '1'; // Reset visual cue after drag
 		dragged = false;
 	};
@@ -122,7 +128,7 @@
 
 {#if dragged && x && y}
 	<DragGhost {x} {y}>
-		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-40">
+		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
 			<div class="flex items-center gap-1">
 				<FolderOpen className="size-3.5" strokeWidth="2" />
 				<div class=" text-xs text-white line-clamp-1">
@@ -149,7 +155,7 @@
 		}}
 	>
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
-		<div class="w-full">
+		<div class="w-full group">
 			<button
 				class="w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 				on:dblclick={() => {
@@ -194,6 +200,17 @@
 						{folders[folderId].name}
 					{/if}
 				</div>
+
+				<div class=" hidden group-hover:flex">
+					<button
+						on:click={(e) => {
+							e.stopPropagation();
+							console.log('clicked');
+						}}
+					>
+						<EllipsisHorizontal className="size-3.5" strokeWidth="2.5" />
+					</button>
+				</div>
 			</button>
 		</div>
 
@@ -203,8 +220,8 @@
 					class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s dark:border-gray-850"
 				>
 					{#if folders[folderId]?.childrenIds}
-						{#each folders[folderId]?.childrenIds as folderId (folderId)}
-							<svelte:self {folders} {folderId} />
+						{#each folders[folderId]?.childrenIds as childId (`${folderId}-${childId}`)}
+							<svelte:self {folders} folderId={childId} />
 						{/each}
 					{/if}
 

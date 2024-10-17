@@ -6,7 +6,12 @@
 	// Get the list of folders that have no parent, sorted by name alphabetically
 	$: folderList = Object.keys(folders)
 		.filter((key) => folders[key].parent_id === null)
-		.sort((a, b) => folders[a].name.localeCompare(folders[b].name));
+		.sort((a, b) =>
+			folders[a].name.localeCompare(folders[b].name, undefined, {
+				numeric: true,
+				sensitivity: 'base'
+			})
+		);
 </script>
 
 {#each folderList as folderId (folderId)}

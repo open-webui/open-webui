@@ -52,7 +52,10 @@ async def get_folders(user=Depends(get_verified_user)):
 
 @router.post("/")
 def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
-    folder = Folders.get_folder_by_name_and_user_id(form_data.name, user.id)
+    folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
+        None, user.id, form_data.name
+    )
+
     if folder:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -60,11 +63,11 @@ def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
         )
 
     try:
-        folder = Folders.insert_new_folder(form_data.name, user.id)
+        folder = Folders.insert_new_folder(user.id, form_data.name)
         return folder
     except Exception as e:
         log.exception(e)
-        log.error(f"Error creating folder: {form_data.name}")
+        log.error("Error creating folder")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT("Error creating folder"),
@@ -78,7 +81,7 @@ def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
 
 @router.get("/{id}", response_model=Optional[FolderModel])
 async def get_folder_by_id(id: str, user=Depends(get_verified_user)):
-    folder = Folders.get_folder_by_name_and_user_id(id, user.id)
+    folder = Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
         return folder
     else:
@@ -97,35 +100,65 @@ async def get_folder_by_id(id: str, user=Depends(get_verified_user)):
 async def update_folder_name_by_id(
     id: str, form_data: FolderForm, user=Depends(get_verified_user)
 ):
-    new_id = form_data.name.lower()
-    folder = Folders.get_folder_by_name_and_user_id(new_id, user.id)
+    folder = Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT("Folder already exists"),
+        existing_folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
+            folder.parent_id, user.id, form_data.name
         )
-
-    folder = Folders.get_folder_by_name_and_user_id(id, user.id)
-    if folder:
-        try:
-            folder = Folders.update_folder_name_by_name_and_user_id(
-                id, user.id, form_data.name
+        if existing_folder:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Folder already exists"),
             )
 
-            # Update children folders parent_id
-            children_folders = Folders.get_folders_by_parent_id_and_user_id(id, user.id)
-            for child in children_folders:
-                Folders.update_folder_parent_id_by_id_and_user_id(
-                    child.id, user.id, folder.id
-                )
+        try:
+            folder = Folders.update_folder_name_by_id_and_user_id(
+                id, user.id, form_data.name
+            )
+            return folder
+        except Exception as e:
+            log.exception(e)
+            log.error(f"Error updating folder: {id}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error updating folder"),
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
 
-            # Update children items parent_id
-            chats = Chats.get_chats_by_folder_id_and_user_id(id, user.id)
-            for chat in chats:
-                Chats.update_chat_folder_id_by_id_and_user_id(
-                    chat.id, user.id, folder.id
-                )
 
+############################
+# Update Folder Name By Id
+############################
+
+
+class FolderParentIdForm(BaseModel):
+    parent_id: str
+
+
+@router.post("/{id}/update/parent")
+async def update_folder_parent_id_by_id(
+    id: str, form_data: FolderParentIdForm, user=Depends(get_verified_user)
+):
+    folder = Folders.get_folder_by_id_and_user_id(id, user.id)
+    if folder:
+        existing_folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
+            form_data.parent_id, user.id, folder.name
+        )
+
+        if existing_folder:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Folder already exists"),
+            )
+
+        try:
+            folder = Folders.update_folder_parent_id_by_id_and_user_id(
+                id, user.id, form_data.parent_id
+            )
             return folder
         except Exception as e:
             log.exception(e)
@@ -150,10 +183,10 @@ async def update_folder_name_by_id(
 async def update_folder_items_by_id(
     id: str, form_data: FolderItemsUpdateForm, user=Depends(get_verified_user)
 ):
-    folder = Folders.get_folder_by_name_and_user_id(id, user.id)
+    folder = Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
         try:
-            folder = Folders.update_folder_by_name_and_user_id(
+            folder = Folders.update_folder_items_by_id_and_user_id(
                 id, user.id, form_data.items
             )
             return folder
@@ -178,10 +211,10 @@ async def update_folder_items_by_id(
 
 @router.delete("/{id}")
 async def delete_folder_by_id(id: str, user=Depends(get_verified_user)):
-    folder = Folders.get_folder_by_name_and_user_id(id, user.id)
+    folder = Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
         try:
-            result = Folders.delete_folder_by_name_and_user_id(id, user.id)
+            result = Folders.delete_folder_by_id_and_user_id(id, user.id)
             return result
         except Exception as e:
             log.exception(e)
