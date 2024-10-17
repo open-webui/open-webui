@@ -351,7 +351,20 @@ ENABLE_WEBSOCKET_SUPPORT = (
 
 WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
 
+
+WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", "redis://localhost:6379/0")
+
+####################################
+# AUDIT LOGGING
+####################################
+ENABLE_AUDIT_LOGS = os.getenv("ENABLE_AUDIT_LOGS", "false").lower() == "true"
+AUDIT_LOG_RETENTION_PERIOD = os.getenv("AUDIT_LOG_RETENTION_PERIOD", "P30D")
+AUDIT_LOGS_FILE_PATH = f"{DATA_DIR}/audit.log"
+AUDIT_LOG_FILE_ROTATION_SIZE = os.getenv("AUDIT_LOG_FILE_ROTATION_SIZE", "10MB")
+
+
 WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", REDIS_URL)
+
 
 AIOHTTP_CLIENT_TIMEOUT = os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "")
 

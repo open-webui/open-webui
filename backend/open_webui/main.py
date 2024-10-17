@@ -92,6 +92,7 @@ from open_webui.config import (
 from open_webui.constants import ERROR_MESSAGES, TASKS, WEBHOOK_MESSAGES
 from open_webui.env import (
     CHANGELOG,
+    ENABLE_AUDIT_LOGS,
     GLOBAL_LOG_LEVEL,
     SAFE_MODE,
     SRC_LOG_LEVELS,
@@ -149,6 +150,7 @@ from open_webui.utils.utils import (
     get_verified_user,
 )
 from open_webui.utils.webhook import post_webhook
+from open_webui.utils.logger import start_logger
 
 from open_webui.utils.payload import convert_payload_openai_to_ollama
 from open_webui.utils.response import (
@@ -196,6 +198,8 @@ https://github.com/open-webui/open-webui
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    start_logger(ENABLE_AUDIT_LOGS)
+
     if RESET_CONFIG_ON_START:
         reset_config()
 
