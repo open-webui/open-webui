@@ -140,8 +140,6 @@
 	});
 
 	const nameUpdateHandler = async () => {
-		name = name.trim();
-
 		if (name === '') {
 			toast.error("Folder name can't be empty");
 			return;
@@ -152,8 +150,15 @@
 			return;
 		}
 
+		const currentName = folders[folderId].name;
+
+		name = name.trim();
+		folders[folderId].name = name;
+
 		const res = await updateFolderNameById(localStorage.token, folderId, name).catch((error) => {
 			toast.error(error);
+
+			folders[folderId].name = currentName;
 			return null;
 		});
 
