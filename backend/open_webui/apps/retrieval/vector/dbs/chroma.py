@@ -1,5 +1,6 @@
 import chromadb
-from chromadb import Settings
+from chromadb import Settings, Include
+from chromadb.api.types import IncludeEnum
 from chromadb.utils.batch_utils import create_batches
 
 from typing import Optional
@@ -63,6 +64,7 @@ class ChromaClient:
                         "distances": result["distances"],
                         "documents": result["documents"],
                         "metadatas": result["metadatas"],
+                        "vectors": None,
                     }
                 )
             return None
@@ -70,15 +72,19 @@ class ChromaClient:
             return None
 
     def query(
-        self, collection_name: str, filter: dict, limit: Optional[int] = None
+        self, collection_name: str, filter: dict, limit: Optional[int] = None, with_vectors: bool = False
     ) -> Optional[GetResult]:
         # Query the items from the collection based on the filter.
         try:
             collection = self.client.get_collection(name=collection_name)
+            include = [IncludeEnum.metadatas, IncludeEnum.documents]
+            if with_vectors:
+                include.append(IncludeEnum.embeddings)
             if collection:
                 result = collection.get(
                     where=filter,
                     limit=limit,
+                    include=include
                 )
 
                 return GetResult(
@@ -86,6 +92,7 @@ class ChromaClient:
                         "ids": [result["ids"]],
                         "documents": [result["documents"]],
                         "metadatas": [result["metadatas"]],
+                        "vectors": [result["embeddings"]],
                     }
                 )
             return None
