@@ -77,16 +77,27 @@
 
 		folders = {};
 
+		// First pass: Initialize all folder entries
 		for (const folder of folderList) {
-			folders[folder.id] = { ...(folders[folder.id] ? folders[folder.id] : {}), ...folder };
+			// Ensure folder is added to folders with its data
+			folders[folder.id] = { ...(folders[folder.id] || {}), ...folder };
+		}
 
-			if (folders[folder.id].parent_id) {
-				folders[folders[folder.id].parent_id].childrenIds = folders[folders[folder.id].parent_id]
-					.childrenIds
-					? [...folders[folders[folder.id].parent_id].childrenIds, folder.id]
+		// Second pass: Tie child folders to their parents
+		for (const folder of folderList) {
+			if (folder.parent_id) {
+				// Ensure the parent folder is initialized if it doesn't exist
+				if (!folders[folder.parent_id]) {
+					folders[folder.parent_id] = {}; // Create a placeholder if not already present
+				}
+
+				// Initialize childrenIds array if it doesn't exist and add the current folder id
+				folders[folder.parent_id].childrenIds = folders[folder.parent_id].childrenIds
+					? [...folders[folder.parent_id].childrenIds, folder.id]
 					: [folder.id];
 
-				folders[folders[folder.id].parent_id].childrenIds.sort((a, b) => {
+				// Sort the children by updated_at field
+				folders[folder.parent_id].childrenIds.sort((a, b) => {
 					return folders[b].updated_at - folders[a].updated_at;
 				});
 			}

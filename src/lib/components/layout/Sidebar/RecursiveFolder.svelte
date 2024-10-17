@@ -19,6 +19,8 @@
 
 	export let className = '';
 
+	export let parentDragged = false;
+
 	let folderElement;
 
 	let edit = false;
@@ -31,12 +33,18 @@
 	const onDragOver = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
+		if (dragged || parentDragged) {
+			return;
+		}
 		draggedOver = true;
 	};
 
 	const onDrop = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
+		if (dragged || parentDragged) {
+			return;
+		}
 
 		if (folderElement.contains(e.target)) {
 			console.log('Dropped on the Button');
@@ -57,6 +65,10 @@
 
 	const onDragLeave = (e) => {
 		e.preventDefault();
+		if (dragged || parentDragged) {
+			return;
+		}
+
 		draggedOver = false;
 	};
 
@@ -221,7 +233,7 @@
 				>
 					{#if folders[folderId]?.childrenIds}
 						{#each folders[folderId]?.childrenIds as childId (`${folderId}-${childId}`)}
-							<svelte:self {folders} folderId={childId} />
+							<svelte:self {folders} folderId={childId} parentDragged={dragged} />
 						{/each}
 					{/if}
 
