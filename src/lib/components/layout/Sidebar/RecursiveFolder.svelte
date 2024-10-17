@@ -188,14 +188,14 @@
 		});
 
 		if (res) {
-			toast.success('Folder deleted successfully');
+			toast.success($i18n.t('Folder deleted successfully'));
 			dispatch('update');
 		}
 	};
 
 	const nameUpdateHandler = async () => {
 		if (name === '') {
-			toast.error("Folder name can't be empty");
+			toast.error($i18n.t('Folder name cannot be empty'));
 			return;
 		}
 
@@ -218,6 +218,8 @@
 
 		if (res) {
 			folders[folderId].name = name;
+			toast.success($i18n.t('Folder name updated successfully'));
+			dispatch('update');
 		}
 	};
 
