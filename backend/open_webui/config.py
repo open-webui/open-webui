@@ -901,6 +901,15 @@ CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 
 MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
 
+# Azure AI Search
+
+AZURE_SEARCH_ENDPOINT = os.environ.get("AZURE_SEARCH_ENDPOINT", "")
+AZURE_SEARCH_API_KEY = os.environ.get("AZURE_SEARCH_API_KEY", "")
+AZURE_SEARCH_INDEX_NAME = os.environ.get("AZURE_SEARCH_INDEX_NAME", "open-webui-vector-index")
+AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT", "")
+AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY", "")
+AZURE_OPENAI_API_VERSION = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-05-01-preview")
+
 ####################################
 # Information Retrieval (RAG)
 ####################################

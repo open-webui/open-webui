@@ -2,6 +2,7 @@ import logging
 import os
 import uuid
 from typing import Optional, Union
+from collections import defaultdict
 
 import requests
 
@@ -16,6 +17,7 @@ from open_webui.apps.ollama.main import (
     generate_ollama_embeddings,
 )
 from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.config import VECTOR_DB
 from open_webui.utils.misc import get_last_user_message
 
 from open_webui.env import SRC_LOG_LEVELS
@@ -302,7 +304,7 @@ def get_embedding_function(
         return lambda query: generate_multiple(query, func)
 
 
-def get_rag_context(
+def extract_relevant_contexts_single_collection(
     files,
     messages,
     embedding_function,
@@ -311,7 +313,61 @@ def get_rag_context(
     r,
     hybrid_search,
 ):
-    log.debug(f"files: {files} {messages} {embedding_function} {reranking_function}")
+    collections = []
+    file_ids = []
+    relevant_contexts = []
+    files_mapping = {}
+
+    for file in files:
+        try:
+            if file.get("context") == "full":
+                context = {
+                    "documents": [[file.get("file").get("data", {}).get("content")]],
+                    "metadatas": [[{"file_id": file.get("id"), "name": file.get("name")}]],
+                }
+                relevant_contexts.append(context)
+            else:
+
+                collections.append(file["id"])
+                file_ids.extend([file_id for file_id in file["data"]["file_ids"]])
+
+            files_mapping.update({
+                file_id: file
+                for file_id in file["data"]["file_ids"]
+            })
+
+        except Exception as e:
+            log.exception(e)
+
+    try:
+        rewritten_queries = VECTOR_DB_CLIENT.rewrite_query(messages)
+        search_results = VECTOR_DB_CLIENT.compute_rrf(
+            rewritten_queries,
+            collections,
+            file_ids,
+            k
+        )
+
+    except Exception as e:
+        log.exception(e)
+
+    relevant_contexts = [
+        {**context.model_dump(), "file": files_mapping[collection]}
+        for collection, context in search_results.items()
+    ]
+
+    return relevant_contexts
+
+
+def extract_relevant_contexts_multiple_collections(
+    files,
+    messages,
+    embedding_function,
+    k,
+    reranking_function,
+    r,
+    hybrid_search,
+):
     query = get_last_user_message(messages)
 
     extracted_collections = []
@@ -380,6 +436,60 @@ def get_rag_context(
 
         if context:
             relevant_contexts.append({**context, "file": file})
+    
+    return relevant_contexts
+
+
+def extract_relevant_contexts(
+    files,
+    messages,
+    embedding_function,
+    k,
+    reranking_function,
+    r,
+    hybrid_search,
+):
+    extract_relevant_contexts_method = None
+    if VECTOR_DB in ['chroma', 'milvus']:
+        extract_relevant_contexts_method = extract_relevant_contexts_multiple_collections
+    elif VECTOR_DB == 'azure-search':
+        extract_relevant_contexts_method = extract_relevant_contexts_single_collection
+    else:
+        raise ValueError(f"Unsupported VECTOR_DB: {VECTOR_DB}")
+    
+    return extract_relevant_contexts_method(
+        files,
+        messages,
+        embedding_function,
+        k,
+        reranking_function,
+        r,
+        hybrid_search,
+    )
+
+
+
+def get_rag_context(
+    files,
+    messages,
+    embedding_function,
+    k,
+    reranking_function,
+    r,
+    hybrid_search,
+):
+    log.debug(f"files: {files} {messages} {embedding_function} {reranking_function}")
+    query = get_last_user_message(messages)
+
+    relevant_contexts = extract_relevant_contexts(
+        files,
+        messages,
+        embedding_function,
+        k,
+        reranking_function,
+        r,
+        hybrid_search
+    )
 
     contexts = []
     citations = []
