@@ -50,12 +50,7 @@
 		pinned = await getChatPinnedStatusById(localStorage.token, chatId);
 	};
 
-	const getChatAsText = async () => {
-		const chat = await getChatById(localStorage.token, chatId);
-		if (!chat) {
-			return;
-		}
-
+	const getChatAsText = async (chat) => {
 		const history = chat.chat.history;
 		const messages = createMessagesList(history, history.currentId);
 		const chatText = messages.reduce((a, message, i, arr) => {
@@ -66,8 +61,12 @@
 	};
 
 	const downloadTxt = async () => {
-		const chatText = await getChatAsText();
+		const chat = await getChatById(localStorage.token, chatId);
+		if (!chat) {
+			return;
+		}
 
+		const chatText = await getChatAsText(chat);
 		let blob = new Blob([chatText], {
 			type: 'text/plain'
 		});
