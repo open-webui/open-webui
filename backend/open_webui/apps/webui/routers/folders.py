@@ -236,10 +236,7 @@ async def delete_folder_by_id(id: str, user=Depends(get_verified_user)):
             if result:
                 return result
             else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT("Error deleting folder"),
-                )
+                raise Exception("Error deleting folder")
         except Exception as e:
             log.exception(e)
             log.error(f"Error deleting folder: {id}")

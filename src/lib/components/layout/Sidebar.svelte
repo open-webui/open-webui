@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
+	import { v4 as uuidv4 } from 'uuid';
+
 	import { goto } from '$app/navigation';
 	import {
 		user,
@@ -124,6 +126,18 @@
 
 			name = `${name} ${i}`;
 		}
+
+		// Add a dummy folder to the list to show the user that the folder is being created
+		const tempId = uuidv4();
+		folders = {
+			...folders,
+			tempId: {
+				id: tempId,
+				name: name,
+				created_at: Date.now(),
+				updated_at: Date.now()
+			}
+		};
 
 		const res = await createNewFolder(localStorage.token, name).catch((error) => {
 			toast.error(error);

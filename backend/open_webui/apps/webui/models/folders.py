@@ -230,7 +230,9 @@ class FolderTable:
                             user_id, folder_child.id
                         )
                         delete_children(folder_child)
-                        db.delete(folder_child)
+
+                        folder = db.query(Folder).filter_by(id=folder_child.id).first()
+                        db.delete(folder)
                         db.commit()
 
                 delete_children(folder)
