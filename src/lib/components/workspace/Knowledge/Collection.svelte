@@ -21,20 +21,19 @@
 		updateKnowledgeById
 	} from '$lib/apis/knowledge';
 
-	import Spinner from '$lib/components/common/Spinner.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Badge from '$lib/components/common/Badge.svelte';
-	import Files from './Collection/Files.svelte';
-	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
-	import AddContentModal from './Collection/AddTextContentModal.svelte';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import { blobToFile } from '$lib/utils';
 	import { processFile } from '$lib/apis/retrieval';
+
+	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Files from './Collection/Files.svelte';
+	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
+
 	import AddContentMenu from './Collection/AddContentMenu.svelte';
 	import AddTextContentModal from './Collection/AddTextContentModal.svelte';
 
 	import SyncConfirmDialog from '../../common/ConfirmDialog.svelte';
-
+	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
 	let largeScreen = true;
 
 	type Knowledge = {
@@ -552,157 +551,159 @@
 	}}
 />
 
-<div class="flex flex-col w-full max-h-[100dvh] h-full">
-	<div class="flex flex-col mb-2 flex-1 overflow-auto h-0">
-		{#if id && knowledge}
-			<div class="flex flex-row h-0 flex-1 overflow-auto">
-				<div
-					class=" {largeScreen
-						? 'flex-shrink-0'
-						: 'flex-1'} flex py-2.5 w-80 rounded-2xl border border-gray-50 dark:border-gray-850"
-				>
-					<div class=" flex flex-col w-full space-x-2 rounded-lg h-full">
-						<div class="w-full h-full flex flex-col">
-							<div class=" px-3">
-								<div class="flex">
-									<div class=" self-center ml-1 mr-3">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-									</div>
-									<input
-										class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
-										bind:value={query}
-										placeholder={$i18n.t('Search Collection')}
-										on:focus={() => {
-											selectedFileId = null;
+<div class="flex flex-col w-full h-full max-h-[100dvh]">
+	{#if id && knowledge}
+		<div class="flex flex-row flex-1 h-full max-h-full pb-2.5">
+			<div
+				class=" {largeScreen
+					? 'flex-shrink-0'
+					: 'flex-1'} flex py-2.5 w-80 rounded-2xl border border-gray-50 dark:border-gray-850"
+			>
+				<div class=" flex flex-col w-full space-x-2 rounded-lg h-full">
+					<div class="w-full h-full flex flex-col">
+						<div class=" px-3">
+							<div class="flex">
+								<div class=" self-center ml-1 mr-3">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 20 20"
+										fill="currentColor"
+										class="w-4 h-4"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								</div>
+								<input
+									class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
+									bind:value={query}
+									placeholder={$i18n.t('Search Collection')}
+									on:focus={() => {
+										selectedFileId = null;
+									}}
+								/>
+
+								<div>
+									<AddContentMenu
+										on:upload={(e) => {
+											if (e.detail.type === 'directory') {
+												uploadDirectoryHandler();
+											} else if (e.detail.type === 'text') {
+												showAddTextContentModal = true;
+											} else {
+												document.getElementById('files-input').click();
+											}
+										}}
+										on:sync={(e) => {
+											showSyncConfirmModal = true;
 										}}
 									/>
-
-									<div>
-										<AddContentMenu
-											on:upload={(e) => {
-												if (e.detail.type === 'directory') {
-													uploadDirectoryHandler();
-												} else if (e.detail.type === 'text') {
-													showAddTextContentModal = true;
-												} else {
-													document.getElementById('files-input').click();
-												}
-											}}
-											on:sync={(e) => {
-												showSyncConfirmModal = true;
-											}}
-										/>
-									</div>
 								</div>
-
-								<hr class=" mt-2 mb-1 border-gray-50 dark:border-gray-850" />
 							</div>
 
-							{#if filteredItems.length > 0}
-								<div class=" flex overflow-y-auto h-full w-full scrollbar-hidden text-xs">
-									<Files
-										files={filteredItems}
-										{selectedFileId}
-										on:click={(e) => {
-											selectedFileId = selectedFileId === e.detail ? null : e.detail;
-										}}
-										on:delete={(e) => {
-											console.log(e.detail);
-
-											selectedFileId = null;
-											deleteFileHandler(e.detail);
-										}}
-									/>
-								</div>
-							{:else}
-								<div class="m-auto text-gray-500 text-xs">{$i18n.t('No content found')}</div>
-							{/if}
+							<hr class=" mt-2 mb-1 border-gray-50 dark:border-gray-850" />
 						</div>
+
+						{#if filteredItems.length > 0}
+							<div class=" flex overflow-y-auto h-full w-full scrollbar-hidden text-xs">
+								<Files
+									files={filteredItems}
+									{selectedFileId}
+									on:click={(e) => {
+										selectedFileId = selectedFileId === e.detail ? null : e.detail;
+									}}
+									on:delete={(e) => {
+										console.log(e.detail);
+
+										selectedFileId = null;
+										deleteFileHandler(e.detail);
+									}}
+								/>
+							</div>
+						{:else}
+							<div class="m-auto text-gray-500 text-xs">{$i18n.t('No content found')}</div>
+						{/if}
 					</div>
 				</div>
+			</div>
 
-				{#if largeScreen}
-					<div class="flex-1 flex justify-start max-h-full overflow-hidden pl-3">
-						{#if selectedFile}
-							<div class=" flex flex-col w-full h-full">
-								<div class=" flex-shrink-0 mb-2 flex items-center">
-									<div class=" flex-1 text-xl line-clamp-1">
-										{selectedFile?.meta?.name}
-									</div>
-
-									<div>
-										<button
-											class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
-											on:click={() => {
-												updateFileContentHandler();
-											}}
-										>
-											{$i18n.t('Save')}
-										</button>
-									</div>
+			{#if largeScreen}
+				<div class="flex-1 flex justify-start h-full max-h-full pl-3">
+					{#if selectedFile}
+						<div class=" flex flex-col w-full h-full max-h-full">
+							<div class="flex-shrink-0 mb-2 flex items-center">
+								<div class=" flex-1 text-xl line-clamp-1">
+									{selectedFile?.meta?.name}
 								</div>
 
-								<div class=" flex-grow">
-									<textarea
-										class=" w-full h-full resize-none rounded-xl py-4 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								<div>
+									<button
+										class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+										on:click={() => {
+											updateFileContentHandler();
+										}}
+									>
+										{$i18n.t('Save')}
+									</button>
+								</div>
+							</div>
+
+							<div
+								class=" flex-1 w-full h-full max-h-full py-2.5 px-3.5 rounded-xl text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none overflow-y-auto scrollbar-hidden"
+							>
+								{#key selectedFile.id}
+									<RichTextInput
+										className="input-prose-sm"
 										bind:value={selectedFile.data.content}
 										placeholder={$i18n.t('Add content here')}
 									/>
-								</div>
+								{/key}
 							</div>
-						{:else}
-							<div class="m-auto pb-32">
-								<div>
-									<div class=" flex w-full mt-1 mb-3.5">
-										<div class="flex-1">
-											<div class="flex items-center justify-between w-full px-0.5 mb-1">
-												<div class="w-full">
-													<input
-														type="text"
-														class="text-center w-full font-medium text-3xl font-primary bg-transparent outline-none"
-														bind:value={knowledge.name}
-														on:input={() => {
-															changeDebounceHandler();
-														}}
-													/>
-												</div>
-											</div>
-
-											<div class="flex w-full px-1">
+						</div>
+					{:else}
+						<div class="m-auto pb-32">
+							<div>
+								<div class=" flex w-full mt-1 mb-3.5">
+									<div class="flex-1">
+										<div class="flex items-center justify-between w-full px-0.5 mb-1">
+											<div class="w-full">
 												<input
 													type="text"
-													class="text-center w-full text-gray-500 bg-transparent outline-none"
-													bind:value={knowledge.description}
+													class="text-center w-full font-medium text-3xl font-primary bg-transparent outline-none"
+													bind:value={knowledge.name}
 													on:input={() => {
 														changeDebounceHandler();
 													}}
 												/>
 											</div>
 										</div>
+
+										<div class="flex w-full px-1">
+											<input
+												type="text"
+												class="text-center w-full text-gray-500 bg-transparent outline-none"
+												bind:value={knowledge.description}
+												on:input={() => {
+													changeDebounceHandler();
+												}}
+											/>
+										</div>
 									</div>
 								</div>
-
-								<div class=" mt-2 text-center text-sm text-gray-200 dark:text-gray-700 w-full">
-									{$i18n.t('Select a file to view or drag and drop a file to upload')}
-								</div>
 							</div>
-						{/if}
-					</div>
-				{/if}
-			</div>
-		{:else}
-			<Spinner />
-		{/if}
-	</div>
+
+							<div class=" mt-2 text-center text-sm text-gray-200 dark:text-gray-700 w-full">
+								{$i18n.t('Select a file to view or drag and drop a file to upload')}
+							</div>
+						</div>
+					{/if}
+				</div>
+			{/if}
+		</div>
+	{:else}
+		<Spinner />
+	{/if}
 </div>
