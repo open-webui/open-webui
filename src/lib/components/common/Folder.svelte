@@ -22,11 +22,13 @@
 
 	const onDragOver = (e) => {
 		e.preventDefault();
+		e.stopPropagation();
 		draggedOver = true;
 	};
 
 	const onDrop = (e) => {
 		e.preventDefault();
+		e.stopPropagation();
 
 		if (folderElement.contains(e.target)) {
 			console.log('Dropped on the Button');
@@ -47,6 +49,8 @@
 
 	const onDragLeave = (e) => {
 		e.preventDefault();
+		e.stopPropagation();
+
 		draggedOver = false;
 	};
 

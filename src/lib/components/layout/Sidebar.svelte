@@ -246,21 +246,21 @@
 		}
 	};
 
-	let dragged = false;
+	let draggedOver = false;
 
 	const onDragOver = (e) => {
 		e.preventDefault();
 
-		// Check if a file is being dragged.
+		// Check if a file is being draggedOver.
 		if (e.dataTransfer?.types?.includes('Files')) {
-			dragged = true;
+			draggedOver = true;
 		} else {
-			dragged = false;
+			draggedOver = false;
 		}
 	};
 
 	const onDragLeave = () => {
-		dragged = false;
+		draggedOver = false;
 	};
 
 	const onDrop = async (e) => {
@@ -277,7 +277,7 @@
 			}
 		}
 
-		dragged = false; // Reset dragged status after drop
+		draggedOver = false; // Reset draggedOver status after drop
 	};
 
 	let touchstart;
@@ -406,17 +406,10 @@
         "
 	data-state={$showSidebar}
 >
-	{#if dragged}
+	{#if draggedOver}
 		<div
-			class="absolute w-full h-full max-h-full backdrop-blur bg-gray-800/40 flex justify-center z-[999] touch-none pointer-events-none"
-		>
-			<div class="m-auto pt-64 flex flex-col justify-center">
-				<AddFilesPlaceholder
-					title={$i18n.t('Drop Chat Export')}
-					content={$i18n.t('Drop a chat export file here to import it.')}
-				/>
-			</div>
-		</div>
+			class="absolute top-0 left-0 w-full h-full rounded-sm bg-[hsla(258,88%,66%,0.1)] bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"
+		></div>
 	{/if}
 	<div
 		class="py-2.5 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
