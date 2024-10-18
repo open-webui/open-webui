@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 
+from open_webui.utils.logger import AuditLogger
 from open_webui.apps.webui.models.auths import Auths
 from open_webui.apps.webui.models.chats import Chats
 from open_webui.apps.webui.models.users import (
@@ -10,11 +11,16 @@ from open_webui.apps.webui.models.users import (
     UserSettings,
     UserUpdateForm,
 )
-from open_webui.constants import ERROR_MESSAGES
+from open_webui.constants import AUDIT_EVENT, ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
-from open_webui.utils.utils import get_admin_user, get_password_hash, get_verified_user
+from open_webui.utils.utils import (
+    get_admin_user,
+    get_audit_logger,
+    get_password_hash,
+    get_verified_user,
+)
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -240,11 +246,21 @@ async def update_user_by_id(
 
 
 @router.delete("/{user_id}", response_model=bool)
-async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
+async def delete_user_by_id(
+    user_id: str,
+    user=Depends(get_admin_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+):
     if user.id != user_id:
         result = Auths.delete_auth_by_id(user_id)
 
         if result:
+            audit_logger.write(
+                AUDIT_EVENT.ENTITY_DELETED,
+                user_id,
+                object_type="USER",
+                admin=user,
+            )
             return True
 
         raise HTTPException(

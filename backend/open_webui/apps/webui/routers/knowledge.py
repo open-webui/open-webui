@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status
 import logging
 
+from open_webui.utils.logger import AuditLogger
 from open_webui.apps.webui.models.knowledge import (
     Knowledges,
     KnowledgeUpdateForm,
@@ -15,8 +16,8 @@ from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.apps.retrieval.main import process_file, ProcessFileForm
 
 
-from open_webui.constants import ERROR_MESSAGES
-from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.constants import AUDIT_EVENT, ERROR_MESSAGES
+from open_webui.utils.utils import get_admin_user, get_audit_logger, get_verified_user
 from open_webui.env import SRC_LOG_LEVELS
 
 
@@ -64,10 +65,20 @@ async def get_knowledge_items(
 
 
 @router.post("/create", response_model=Optional[KnowledgeResponse])
-async def create_new_knowledge(form_data: KnowledgeForm, user=Depends(get_admin_user)):
+async def create_new_knowledge(
+    form_data: KnowledgeForm,
+    user=Depends(get_admin_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+):
     knowledge = Knowledges.insert_new_knowledge(user.id, form_data)
 
     if knowledge:
+        audit_logger.write(
+            AUDIT_EVENT.ENTITY_CREATED,
+            knowledge,
+            object_type="KNOWLEDGE",
+            admin=user,
+        )
         return knowledge
     else:
         raise HTTPException(
@@ -114,6 +125,7 @@ async def update_knowledge_by_id(
     id: str,
     form_data: KnowledgeUpdateForm,
     user=Depends(get_admin_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
 ):
     knowledge = Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
 
@@ -121,6 +133,12 @@ async def update_knowledge_by_id(
         file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
         files = Files.get_files_by_ids(file_ids)
 
+        audit_logger.write(
+            AUDIT_EVENT.ENTITY_UPDATED,
+            knowledge,
+            object_type="KNOWLDEGE",
+            admin=user,
+        )
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
             files=files,
@@ -146,6 +164,7 @@ def add_file_to_knowledge_by_id(
     id: str,
     form_data: KnowledgeFileIdForm,
     user=Depends(get_admin_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
 ):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     file = Files.get_file_by_id(form_data.file_id)
@@ -185,6 +204,13 @@ def add_file_to_knowledge_by_id(
             if knowledge:
                 files = Files.get_files_by_ids(file_ids)
 
+                audit_logger.write(
+                    AUDIT_EVENT.ENTITY_UPDATED,
+                    knowledge,
+                    object_type="KNOWLEDGE",
+                    admin=user,
+                    extra={"new_files_ids": [file.id for file in files]},
+                )
                 return KnowledgeFilesResponse(
                     **knowledge.model_dump(),
                     files=files,
@@ -211,6 +237,7 @@ def update_file_from_knowledge_by_id(
     id: str,
     form_data: KnowledgeFileIdForm,
     user=Depends(get_admin_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
 ):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     file = Files.get_file_by_id(form_data.file_id)
@@ -239,6 +266,12 @@ def update_file_from_knowledge_by_id(
         file_ids = data.get("file_ids", [])
 
         files = Files.get_files_by_ids(file_ids)
+        audit_logger.write(
+            AUDIT_EVENT.ENTITY_DELETED,
+            knowledge,
+            object_type="KNOWLEDGE",
+            extra={"updated_file": id},
+        )
 
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
@@ -261,6 +294,7 @@ def remove_file_from_knowledge_by_id(
     id: str,
     form_data: KnowledgeFileIdForm,
     user=Depends(get_admin_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
 ):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     file = Files.get_file_by_id(form_data.file_id)
@@ -296,6 +330,12 @@ def remove_file_from_knowledge_by_id(
 
             if knowledge:
                 files = Files.get_files_by_ids(file_ids)
+                audit_logger.write(
+                    AUDIT_EVENT.ENTITY_UPDATED,
+                    knowledge,
+                    admin=user,
+                    extra={"deleted_file_id": id},
+                )
 
                 return KnowledgeFilesResponse(
                     **knowledge.model_dump(),
@@ -324,7 +364,11 @@ def remove_file_from_knowledge_by_id(
 
 
 @router.post("/{id}/reset", response_model=Optional[KnowledgeResponse])
-async def reset_knowledge_by_id(id: str, user=Depends(get_admin_user)):
+async def reset_knowledge_by_id(
+    id: str,
+    user=Depends(get_admin_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+):
     try:
         VECTOR_DB_CLIENT.delete_collection(collection_name=id)
     except Exception as e:
@@ -333,6 +377,9 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_admin_user)):
 
     knowledge = Knowledges.update_knowledge_by_id(
         id=id, form_data=KnowledgeUpdateForm(data={"file_ids": []})
+    )
+    audit_logger.write(
+        AUDIT_EVENT.ENTITY_RESET, knowledge, object_type="KNOWLDEGE", admin=user
     )
     return knowledge
 
@@ -343,11 +390,16 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_admin_user)):
 
 
 @router.delete("/{id}/delete", response_model=bool)
-async def delete_knowledge_by_id(id: str, user=Depends(get_admin_user)):
+async def delete_knowledge_by_id(
+    id: str,
+    user=Depends(get_admin_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+):
     try:
         VECTOR_DB_CLIENT.delete_collection(collection_name=id)
     except Exception as e:
         log.debug(e)
         pass
     result = Knowledges.delete_knowledge_by_id(id=id)
+    audit_logger.write(AUDIT_EVENT.ENTITY_DELETED, admin=user, object_type="KNOWLEDGE")
     return result

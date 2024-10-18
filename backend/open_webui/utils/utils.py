@@ -4,7 +4,9 @@ from datetime import UTC, datetime, timedelta
 from typing import Optional, Union
 
 import jwt
-from open_webui.apps.webui.models.users import Users
+from loguru import logger
+from open_webui.utils.logger import AuditLogger
+from open_webui.apps.webui.models.users import UserModel, Users
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import WEBUI_SECRET_KEY
 from fastapi import Depends, HTTPException, Request, Response, status
@@ -139,3 +141,7 @@ def get_admin_user(user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
     return user
+
+
+def get_audit_logger(user: UserModel = Depends(get_admin_user)):
+    return AuditLogger(logger, admin=user)

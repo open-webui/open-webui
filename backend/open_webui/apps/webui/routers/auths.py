@@ -1,8 +1,12 @@
 import re
+from typing import Annotated
 import uuid
 import time
 import datetime
 
+from aiohttp.hdrs import USER_AGENT
+
+from open_webui.utils.logger import AuditLogger
 from open_webui.apps.webui.models.auths import (
     AddUserForm,
     ApiKey,
@@ -17,14 +21,14 @@ from open_webui.apps.webui.models.auths import (
 )
 from open_webui.apps.webui.models.users import Users
 from open_webui.config import WEBUI_AUTH
-from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
+from open_webui.constants import AUDIT_EVENT, ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
     WEBUI_SESSION_COOKIE_SAME_SITE,
     WEBUI_SESSION_COOKIE_SECURE,
 )
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Header, Request, status
 from fastapi.responses import Response
 from pydantic import BaseModel
 from open_webui.utils.misc import parse_duration, validate_email_format
@@ -32,6 +36,7 @@ from open_webui.utils.utils import (
     create_api_key,
     create_token,
     get_admin_user,
+    get_audit_logger,
     get_verified_user,
     get_current_user,
     get_password_hash,
@@ -99,6 +104,10 @@ async def get_session_user(
 
 @router.post("/update/profile", response_model=UserResponse)
 async def update_profile(
+    request: Request,
+    form_data: UpdateProfileForm,
+    session_user=Depends(get_current_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
     form_data: UpdateProfileForm, session_user=Depends(get_verified_user)
 ):
     if session_user:
@@ -107,6 +116,9 @@ async def update_profile(
             {"profile_image_url": form_data.profile_image_url, "name": form_data.name},
         )
         if user:
+            audit_logger.write(
+                AUDIT_EVENT.USER_UPDATED, user, request_uri=str(request.url)
+            )
             return user
         else:
             raise HTTPException(400, detail=ERROR_MESSAGES.DEFAULT())
@@ -121,7 +133,10 @@ async def update_profile(
 
 @router.post("/update/password", response_model=bool)
 async def update_password(
-    form_data: UpdatePasswordForm, session_user=Depends(get_current_user)
+    request: Request,
+    form_data: UpdatePasswordForm,
+    session_user=Depends(get_current_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
 ):
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         raise HTTPException(400, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
@@ -129,6 +144,9 @@ async def update_password(
         user = Auths.authenticate_user(session_user.email, form_data.password)
 
         if user:
+            audit_logger.write(
+                AUDIT_EVENT.USER_PASSWORD_CHANGED, user, request_uri=str(request.url)
+            )
             hashed = get_password_hash(form_data.new_password)
             return Auths.update_user_password_by_id(user.id, hashed)
         else:
@@ -329,7 +347,14 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
 
 @router.post("/add", response_model=SigninResponse)
-async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
+async def add_user(
+    request: Request,
+    form_data: AddUserForm,
+    user=Depends(get_admin_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+    user_agent: Annotated[str | None, Header()] = None,
+):
+    admin_user = user
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
@@ -339,7 +364,6 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
     try:
-        print(form_data)
         hashed = get_password_hash(form_data.password)
         user = Auths.insert_new_auth(
             form_data.email.lower(),
@@ -349,8 +373,18 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
             form_data.role,
         )
 
+        source_ip = request.client.host if request.client else None
         if user:
             token = create_token(data={"id": user.id})
+            audit_logger.write(
+                AUDIT_EVENT.ENTITY_CREATED,
+                user,
+                object_type="USER",
+                admin=user,
+                source_ip=source_ip,
+                request_uri=str(request.url),
+                user_agent=user_agent,
+            )
             return {
                 "token": token,
                 "token_type": "Bearer",
@@ -425,7 +459,10 @@ class AdminConfig(BaseModel):
 
 @router.post("/admin/config")
 async def update_admin_config(
-    request: Request, form_data: AdminConfig, user=Depends(get_admin_user)
+    request: Request,
+    form_data: AdminConfig,
+    user=Depends(get_admin_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
 ):
     request.app.state.config.SHOW_ADMIN_DETAILS = form_data.SHOW_ADMIN_DETAILS
     request.app.state.config.ENABLE_SIGNUP = form_data.ENABLE_SIGNUP
@@ -444,7 +481,7 @@ async def update_admin_config(
     )
     request.app.state.config.ENABLE_MESSAGE_RATING = form_data.ENABLE_MESSAGE_RATING
 
-    return {
+    updated_admin_config = {
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
         "ENABLE_SIGNUP": request.app.state.config.ENABLE_SIGNUP,
         "DEFAULT_USER_ROLE": request.app.state.config.DEFAULT_USER_ROLE,
@@ -452,6 +489,12 @@ async def update_admin_config(
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
     }
+    audit_logger.write(
+        AUDIT_EVENT.CONFIG_UPDATED,
+        admin=user,
+        extra={"updated_config": update_admin_config},
+    )
+    return updated_admin_config
 
 
 ############################
@@ -461,10 +504,17 @@ async def update_admin_config(
 
 # create api key
 @router.post("/api_key", response_model=ApiKey)
-async def create_api_key_(user=Depends(get_current_user)):
+async def create_api_key_(
+    request: Request,
+    user=Depends(get_current_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+):
     api_key = create_api_key()
     success = Users.update_user_api_key_by_id(user.id, api_key)
     if success:
+        audit_logger.write(
+            AUDIT_EVENT.USER_CREATED_API_KEY, user, request_uri=str(request.url)
+        )
         return {
             "api_key": api_key,
         }
@@ -474,8 +524,15 @@ async def create_api_key_(user=Depends(get_current_user)):
 
 # delete api key
 @router.delete("/api_key", response_model=bool)
-async def delete_api_key(user=Depends(get_current_user)):
+async def delete_api_key(
+    request: Request,
+    user=Depends(get_current_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+):
     success = Users.update_user_api_key_by_id(user.id, None)
+    audit_logger.write(
+        AUDIT_EVENT.USER_DELETED_API_KEY, user, request_uri=str(request.url)
+    )
     return success
 
 
