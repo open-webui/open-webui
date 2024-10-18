@@ -33,14 +33,42 @@
 		if (folderElement.contains(e.target)) {
 			console.log('Dropped on the Button');
 
-			try {
-				// get data from the drag event
-				const dataTransfer = e.dataTransfer.getData('text/plain');
-				const data = JSON.parse(dataTransfer);
-				console.log(data);
-				dispatch('drop', data);
-			} catch (error) {
-				console.error(error);
+			if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+				// Iterate over all items in the DataTransferItemList use functional programming
+				for (const item of Array.from(e.dataTransfer.items)) {
+					// If dropped items aren't files, reject them
+					if (item.kind === 'file') {
+						const file = item.getAsFile();
+						if (file && file.type === 'application/json') {
+							console.log('Dropped file is a JSON file!');
+
+							// Read the JSON file with FileReader
+							const reader = new FileReader();
+							reader.onload = async function (event) {
+								try {
+									const fileContent = JSON.parse(event.target.result);
+									console.log('Parsed JSON Content: ', fileContent);
+									dispatch('import', fileContent);
+								} catch (error) {
+									console.error('Error parsing JSON file:', error);
+								}
+							};
+
+							// Start reading the file
+							reader.readAsText(file);
+						} else {
+							console.error('Only JSON file types are supported.');
+						}
+
+						console.log(file);
+					} else {
+						// Handle the drag-and-drop data for folders or chats (same as before)
+						const dataTransfer = e.dataTransfer.getData('text/plain');
+						const data = JSON.parse(dataTransfer);
+						console.log(data);
+						dispatch('drop', data);
+					}
+				}
 			}
 
 			draggedOver = false;

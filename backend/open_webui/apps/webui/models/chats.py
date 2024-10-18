@@ -64,6 +64,11 @@ class ChatForm(BaseModel):
     chat: dict
 
 
+class ChatImportForm(ChatForm):
+    pinned: Optional[bool] = False
+    folder_id: Optional[str] = None
+
+
 class ChatTitleMessagesForm(BaseModel):
     title: str
     messages: list[dict]
@@ -108,6 +113,34 @@ class ChatTable:
                         else "New Chat"
                     ),
                     "chat": form_data.chat,
+                    "created_at": int(time.time()),
+                    "updated_at": int(time.time()),
+                }
+            )
+
+            result = Chat(**chat.model_dump())
+            db.add(result)
+            db.commit()
+            db.refresh(result)
+            return ChatModel.model_validate(result) if result else None
+
+    def import_chat(
+        self, user_id: str, form_data: ChatImportForm
+    ) -> Optional[ChatModel]:
+        with get_db() as db:
+            id = str(uuid.uuid4())
+            chat = ChatModel(
+                **{
+                    "id": id,
+                    "user_id": user_id,
+                    "title": (
+                        form_data.chat["title"]
+                        if "title" in form_data.chat
+                        else "New Chat"
+                    ),
+                    "chat": form_data.chat,
+                    "pinned": form_data.pinned,
+                    "folder_id": form_data.folder_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }

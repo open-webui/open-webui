@@ -4,6 +4,7 @@ from typing import Optional
 
 from open_webui.apps.webui.models.chats import (
     ChatForm,
+    ChatImportForm,
     ChatResponse,
     Chats,
     ChatTitleIdResponse,
@@ -91,6 +92,23 @@ async def get_user_chat_list_by_user_id(
 async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
     try:
         chat = Chats.insert_new_chat(user.id, form_data)
+        return ChatResponse(**chat.model_dump())
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+############################
+# ImportChat
+############################
+
+
+@router.post("/import", response_model=Optional[ChatResponse])
+async def import_chat(form_data: ChatImportForm, user=Depends(get_verified_user)):
+    try:
+        chat = Chats.import_chat(user.id, form_data)
         return ChatResponse(**chat.model_dump())
     except Exception as e:
         log.exception(e)

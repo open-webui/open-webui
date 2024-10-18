@@ -32,7 +32,8 @@
 		toggleChatPinnedStatusById,
 		getChatPinnedStatusById,
 		getChatById,
-		updateChatFolderIdById
+		updateChatFolderIdById,
+		importChat
 	} from '$lib/apis/chats';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -208,6 +209,17 @@
 		}
 	};
 
+	const importChatHandler = async (items, pinned = false, folderId = null) => {
+		console.log('importChatHandler', items, pinned, folderId);
+		for (const item of items) {
+			if (item.chat) {
+				await importChat(localStorage.token, item.chat, pinned, folderId);
+			}
+		}
+
+		initChatList();
+	};
+
 	const inputFilesHandler = async (files) => {
 		console.log(files);
 
@@ -217,18 +229,11 @@
 				const content = e.target.result;
 
 				try {
-					const items = JSON.parse(content);
-
-					for (const item of items) {
-						if (item.chat) {
-							await createNewChat(localStorage.token, item.chat);
-						}
-					}
+					const chatItems = JSON.parse(content);
+					importChatHandler(chatItems);
 				} catch {
 					toast.error($i18n.t(`Invalid file format.`));
 				}
-
-				initChatList();
 			};
 
 			reader.readAsText(file);
@@ -564,6 +569,9 @@
 							localStorage.setItem('showPinnedChat', e.detail);
 							console.log(e.detail);
 						}}
+						on:import={(e) => {
+							importChatHandler(e.detail, true);
+						}}
 						on:drop={async (e) => {
 							const { type, id } = e.detail;
 
@@ -633,6 +641,10 @@
 				{#if !search && folders}
 					<Folders
 						{folders}
+						on:import={(e) => {
+							const { folderId, items } = e.detail;
+							importChatHandler(items, false, folderId);
+						}}
 						on:update={async (e) => {
 							initChatList();
 						}}
@@ -646,6 +658,9 @@
 					collapsible={!search}
 					className="px-2"
 					name={$i18n.t('All chats')}
+					on:import={(e) => {
+						importChatHandler(e.detail);
+					}}
 					on:drop={async (e) => {
 						const { type, id } = e.detail;
 

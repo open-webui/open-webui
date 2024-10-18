@@ -22,6 +22,9 @@
 		className="px-2"
 		{folders}
 		{folderId}
+		on:import={(e) => {
+			dispatch('import', e.detail);
+		}}
 		on:update={(e) => {
 			dispatch('update', e.detail);
 		}}

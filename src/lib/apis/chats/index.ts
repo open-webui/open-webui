@@ -32,6 +32,44 @@ export const createNewChat = async (token: string, chat: object) => {
 	return res;
 };
 
+export const importChat = async (
+	token: string,
+	chat: object,
+	pinned?: boolean,
+	folderId?: string | null
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/import`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			chat: chat,
+			pinned: pinned,
+			folder_id: folderId
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getChatList = async (token: string = '', page: number | null = null) => {
 	let error = null;
 	const searchParams = new URLSearchParams();
