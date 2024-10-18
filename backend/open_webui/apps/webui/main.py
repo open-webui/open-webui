@@ -41,6 +41,18 @@ from open_webui.config import (
     WEBHOOK_URL,
     WEBUI_AUTH,
     WEBUI_BANNERS,
+    ENABLE_LDAP,
+    LDAP_SERVER_LABEL,
+    LDAP_SERVER_HOST,
+    LDAP_SERVER_PORT,
+    LDAP_ATTRIBUTE_FOR_USERNAME,
+    LDAP_SEARCH_FILTERS,
+    LDAP_SEARCH_BASE,
+    LDAP_APP_DN,
+    LDAP_APP_PASSWORD,
+    USE_SSL,
+    CA_CERT_FILE,
+    LDAP_CIPHERS,
     AppConfig,
 )
 from open_webui.env import (
@@ -93,6 +105,19 @@ app.state.config.ENABLE_MESSAGE_RATING = ENABLE_MESSAGE_RATING
 app.state.config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
 app.state.config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
 app.state.config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM
+
+app.state.config.ENABLE_LDAP = ENABLE_LDAP
+app.state.config.LDAP_SERVER_LABEL = LDAP_SERVER_LABEL
+app.state.config.LDAP_SERVER_HOST = LDAP_SERVER_HOST
+app.state.config.LDAP_SERVER_PORT = LDAP_SERVER_PORT
+app.state.config.LDAP_ATTRIBUTE_FOR_USERNAME = LDAP_ATTRIBUTE_FOR_USERNAME
+app.state.config.LDAP_APP_DN = LDAP_APP_DN
+app.state.config.LDAP_APP_PASSWORD = LDAP_APP_PASSWORD
+app.state.config.LDAP_SEARCH_BASE = LDAP_SEARCH_BASE
+app.state.config.LDAP_SEARCH_FILTERS = LDAP_SEARCH_FILTERS
+app.state.config.USE_SSL = USE_SSL
+app.state.config.CA_CERT_FILE = CA_CERT_FILE
+app.state.config.LDAP_CIPHERS = LDAP_CIPHERS
 
 app.state.MODELS = {}
 app.state.TOOLS = {}
