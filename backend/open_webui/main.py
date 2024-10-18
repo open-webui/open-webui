@@ -1,4 +1,4 @@
-import base64
+import asyncio
 import inspect
 import json
 import logging
@@ -7,103 +7,11 @@ import os
 import shutil
 import sys
 import time
-import uuid
-import asyncio
-
 from contextlib import asynccontextmanager
 from typing import Optional
 
 import aiohttp
 import requests
-
-from open_webui.apps.ollama.main import (
-    app as ollama_app,
-    get_all_models as get_ollama_models,
-    generate_chat_completion as generate_ollama_chat_completion,
-    generate_openai_chat_completion as generate_ollama_openai_chat_completion,
-    GenerateChatCompletionForm,
-)
-from open_webui.apps.openai.main import (
-    app as openai_app,
-    generate_chat_completion as generate_openai_chat_completion,
-    get_all_models as get_openai_models,
-)
-
-from open_webui.apps.retrieval.main import app as retrieval_app
-from open_webui.apps.retrieval.utils import get_rag_context, rag_template
-
-from open_webui.apps.socket.main import (
-    app as socket_app,
-    periodic_usage_pool_cleanup,
-    get_event_call,
-    get_event_emitter,
-)
-
-from open_webui.apps.webui.main import (
-    app as webui_app,
-    generate_function_chat_completion,
-    get_pipe_models,
-)
-from open_webui.apps.webui.internal.db import Session
-
-from open_webui.apps.webui.models.auths import Auths
-from open_webui.apps.webui.models.functions import Functions
-from open_webui.apps.webui.models.models import Models
-from open_webui.apps.webui.models.users import UserModel, Users
-
-from open_webui.apps.webui.utils import load_function_module_by_id
-
-from open_webui.apps.audio.main import app as audio_app
-from open_webui.apps.images.main import app as images_app
-
-from authlib.integrations.starlette_client import OAuth
-from authlib.oidc.core import UserInfo
-
-
-from open_webui.config import (
-    CACHE_DIR,
-    CORS_ALLOW_ORIGIN,
-    DEFAULT_LOCALE,
-    ENABLE_ADMIN_CHAT_ACCESS,
-    ENABLE_ADMIN_EXPORT,
-    ENABLE_MODEL_FILTER,
-    ENABLE_OAUTH_SIGNUP,
-    ENABLE_OLLAMA_API,
-    ENABLE_OPENAI_API,
-    ENV,
-    FRONTEND_BUILD_DIR,
-    MODEL_FILTER_LIST,
-    OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
-    OAUTH_PROVIDERS,
-    ENABLE_SEARCH_QUERY,
-    SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
-    STATIC_DIR,
-    TASK_MODEL,
-    TASK_MODEL_EXTERNAL,
-    TITLE_GENERATION_PROMPT_TEMPLATE,
-    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
-    WEBHOOK_URL,
-    WEBUI_AUTH,
-    WEBUI_NAME,
-    AppConfig,
-    run_migrations,
-    reset_config,
-)
-from open_webui.constants import ERROR_MESSAGES, TASKS, WEBHOOK_MESSAGES
-from open_webui.env import (
-    CHANGELOG,
-    GLOBAL_LOG_LEVEL,
-    SAFE_MODE,
-    SRC_LOG_LEVELS,
-    VERSION,
-    WEBUI_BUILD_HASH,
-    WEBUI_SECRET_KEY,
-    WEBUI_SESSION_COOKIE_SAME_SITE,
-    WEBUI_SESSION_COOKIE_SECURE,
-    WEBUI_URL,
-    RESET_CONFIG_ON_START,
-    OFFLINE_MODE,
-)
 from fastapi import (
     Depends,
     FastAPI,
@@ -122,16 +30,92 @@ from sqlalchemy import text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import RedirectResponse, Response, StreamingResponse
+from starlette.responses import Response, StreamingResponse
 
-from open_webui.utils.security_headers import SecurityHeadersMiddleware
-
+from open_webui.apps.audio.main import app as audio_app
+from open_webui.apps.images.main import app as images_app
+from open_webui.apps.ollama.main import (
+    app as ollama_app,
+    get_all_models as get_ollama_models,
+    generate_chat_completion as generate_ollama_chat_completion,
+    GenerateChatCompletionForm,
+)
+from open_webui.apps.openai.main import (
+    app as openai_app,
+    generate_chat_completion as generate_openai_chat_completion,
+    get_all_models as get_openai_models,
+)
+from open_webui.apps.retrieval.main import app as retrieval_app
+from open_webui.apps.retrieval.utils import get_rag_context, rag_template
+from open_webui.apps.socket.main import (
+    app as socket_app,
+    periodic_usage_pool_cleanup,
+    get_event_call,
+    get_event_emitter,
+)
+from open_webui.apps.webui.internal.db import Session
+from open_webui.apps.webui.main import (
+    app as webui_app,
+    generate_function_chat_completion,
+    get_pipe_models,
+)
+from open_webui.apps.webui.models.functions import Functions
+from open_webui.apps.webui.models.models import Models
+from open_webui.apps.webui.models.users import UserModel, Users
+from open_webui.apps.webui.utils import load_function_module_by_id
+from open_webui.config import (
+    CACHE_DIR,
+    CORS_ALLOW_ORIGIN,
+    DEFAULT_LOCALE,
+    ENABLE_ADMIN_CHAT_ACCESS,
+    ENABLE_ADMIN_EXPORT,
+    ENABLE_MODEL_FILTER,
+    ENABLE_OLLAMA_API,
+    ENABLE_OPENAI_API,
+    ENV,
+    FRONTEND_BUILD_DIR,
+    MODEL_FILTER_LIST,
+    OAUTH_PROVIDERS,
+    ENABLE_SEARCH_QUERY,
+    SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
+    STATIC_DIR,
+    TASK_MODEL,
+    TASK_MODEL_EXTERNAL,
+    TITLE_GENERATION_PROMPT_TEMPLATE,
+    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+    WEBHOOK_URL,
+    WEBUI_AUTH,
+    WEBUI_NAME,
+    AppConfig,
+    reset_config,
+)
+from open_webui.constants import TASKS
+from open_webui.env import (
+    CHANGELOG,
+    GLOBAL_LOG_LEVEL,
+    SAFE_MODE,
+    SRC_LOG_LEVELS,
+    VERSION,
+    WEBUI_BUILD_HASH,
+    WEBUI_SECRET_KEY,
+    WEBUI_SESSION_COOKIE_SAME_SITE,
+    WEBUI_SESSION_COOKIE_SECURE,
+    WEBUI_URL,
+    RESET_CONFIG_ON_START,
+    OFFLINE_MODE,
+)
 from open_webui.utils.misc import (
     add_or_update_system_message,
     get_last_user_message,
-    parse_duration,
     prepend_to_first_user_message_content,
 )
+from open_webui.utils.oauth import oauth_manager
+from open_webui.utils.payload import convert_payload_openai_to_ollama
+from open_webui.utils.response import (
+    convert_response_ollama_to_openai,
+    convert_streaming_response_ollama_to_openai,
+)
+from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.task import (
     moa_response_generation_template,
     search_query_generation_template,
@@ -140,26 +124,16 @@ from open_webui.utils.task import (
 )
 from open_webui.utils.tools import get_tools
 from open_webui.utils.utils import (
-    create_token,
     decode_token,
     get_admin_user,
     get_current_user,
     get_http_authorization_cred,
-    get_password_hash,
     get_verified_user,
-)
-from open_webui.utils.webhook import post_webhook
-
-from open_webui.utils.payload import convert_payload_openai_to_ollama
-from open_webui.utils.response import (
-    convert_response_ollama_to_openai,
-    convert_streaming_response_ollama_to_openai,
 )
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
     Functions.deactivate_all_functions()
-
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -217,7 +191,6 @@ app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
 
-
 app.state.config.TASK_MODEL = TASK_MODEL
 app.state.config.TASK_MODEL_EXTERNAL = TASK_MODEL_EXTERNAL
 app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE
@@ -230,6 +203,8 @@ app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
 )
 
 app.state.MODELS = {}
+
+
 
 
 ##################################
@@ -245,14 +220,14 @@ def get_task_model_id(default_model_id):
     # Check if the user has a custom task model and use that model
     if app.state.MODELS[task_model_id]["owned_by"] == "ollama":
         if (
-            app.state.config.TASK_MODEL
-            and app.state.config.TASK_MODEL in app.state.MODELS
+                app.state.config.TASK_MODEL
+                and app.state.config.TASK_MODEL in app.state.MODELS
         ):
             task_model_id = app.state.config.TASK_MODEL
     else:
         if (
-            app.state.config.TASK_MODEL_EXTERNAL
-            and app.state.config.TASK_MODEL_EXTERNAL in app.state.MODELS
+                app.state.config.TASK_MODEL_EXTERNAL
+                and app.state.config.TASK_MODEL_EXTERNAL in app.state.MODELS
         ):
             task_model_id = app.state.config.TASK_MODEL_EXTERNAL
 
@@ -389,7 +364,7 @@ async def get_content_from_response(response) -> Optional[str]:
 
 
 async def chat_completion_tools_handler(
-    body: dict, user: UserModel, extra_params: dict
+        body: dict, user: UserModel, extra_params: dict
 ) -> tuple[dict, dict]:
     # If tool_ids field is present, call the functions
     metadata = body.get("metadata", {})
@@ -690,6 +665,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(ChatCompletionMiddleware)
 
+
 ##################################
 #
 # Pipeline Middleware
@@ -702,15 +678,15 @@ def get_sorted_filters(model_id):
         model
         for model in app.state.MODELS.values()
         if "pipeline" in model
-        and "type" in model["pipeline"]
-        and model["pipeline"]["type"] == "filter"
-        and (
-            model["pipeline"]["pipelines"] == ["*"]
-            or any(
-                model_id == target_model_id
-                for target_model_id in model["pipeline"]["pipelines"]
-            )
-        )
+           and "type" in model["pipeline"]
+           and model["pipeline"]["type"] == "filter"
+           and (
+                   model["pipeline"]["pipelines"] == ["*"]
+                   or any(
+               model_id == target_model_id
+               for target_model_id in model["pipeline"]["pipelines"]
+           )
+           )
     ]
     sorted_filters = sorted(filters, key=lambda x: x["pipeline"]["priority"])
     return sorted_filters
@@ -896,8 +872,8 @@ async def update_embedding_function(request: Request, call_next):
 @app.middleware("http")
 async def inspect_websocket(request: Request, call_next):
     if (
-        "/ws/socket.io" in request.url.path
-        and request.query_params.get("transport") == "websocket"
+            "/ws/socket.io" in request.url.path
+            and request.query_params.get("transport") == "websocket"
     ):
         upgrade = (request.headers.get("Upgrade") or "").lower()
         connection = (request.headers.get("Connection") or "").lower().split(",")
@@ -966,8 +942,8 @@ async def get_all_models():
         if custom_model.base_model_id is None:
             for model in models:
                 if (
-                    custom_model.id == model["id"]
-                    or custom_model.id == model["id"].split(":")[0]
+                        custom_model.id == model["id"]
+                        or custom_model.id == model["id"].split(":")[0]
                 ):
                     model["name"] = custom_model.name
                     model["info"] = custom_model.model_dump()
@@ -984,8 +960,8 @@ async def get_all_models():
 
             for model in models:
                 if (
-                    custom_model.base_model_id == model["id"]
-                    or custom_model.base_model_id == model["id"].split(":")[0]
+                        custom_model.base_model_id == model["id"]
+                        or custom_model.base_model_id == model["id"].split(":")[0]
                 ):
                     owned_by = model["owned_by"]
                     if "pipe" in model:
@@ -1785,7 +1761,7 @@ async def get_pipelines_list(user=Depends(get_admin_user)):
 
 @app.post("/api/pipelines/upload")
 async def upload_pipeline(
-    urlIdx: int = Form(...), file: UploadFile = File(...), user=Depends(get_admin_user)
+        urlIdx: int = Form(...), file: UploadFile = File(...), user=Depends(get_admin_user)
 ):
     print("upload_pipeline", urlIdx, file.filename)
     # Check if the uploaded file is a python file
@@ -1962,9 +1938,9 @@ async def get_pipelines(urlIdx: Optional[int] = None, user=Depends(get_admin_use
 
 @app.get("/api/pipelines/{pipeline_id}/valves")
 async def get_pipeline_valves(
-    urlIdx: Optional[int],
-    pipeline_id: str,
-    user=Depends(get_admin_user),
+        urlIdx: Optional[int],
+        pipeline_id: str,
+        user=Depends(get_admin_user),
 ):
     r = None
     try:
@@ -2000,9 +1976,9 @@ async def get_pipeline_valves(
 
 @app.get("/api/pipelines/{pipeline_id}/valves/spec")
 async def get_pipeline_valves_spec(
-    urlIdx: Optional[int],
-    pipeline_id: str,
-    user=Depends(get_admin_user),
+        urlIdx: Optional[int],
+        pipeline_id: str,
+        user=Depends(get_admin_user),
 ):
     r = None
     try:
@@ -2037,10 +2013,10 @@ async def get_pipeline_valves_spec(
 
 @app.post("/api/pipelines/{pipeline_id}/valves/update")
 async def update_pipeline_valves(
-    urlIdx: Optional[int],
-    pipeline_id: str,
-    form_data: dict,
-    user=Depends(get_admin_user),
+        urlIdx: Optional[int],
+        pipeline_id: str,
+        form_data: dict,
+        user=Depends(get_admin_user),
 ):
     r = None
     try:
@@ -2164,7 +2140,7 @@ class ModelFilterConfigForm(BaseModel):
 
 @app.post("/api/config/model/filter")
 async def update_model_filter_config(
-    form_data: ModelFilterConfigForm, user=Depends(get_admin_user)
+        form_data: ModelFilterConfigForm, user=Depends(get_admin_user)
 ):
     app.state.config.ENABLE_MODEL_FILTER = form_data.enabled
     app.state.config.MODEL_FILTER_LIST = form_data.models
@@ -2219,7 +2195,7 @@ async def get_app_latest_release_version():
         timeout = aiohttp.ClientTimeout(total=1)
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(
-                "https://api.github.com/repos/open-webui/open-webui/releases/latest"
+                    "https://api.github.com/repos/open-webui/open-webui/releases/latest"
             ) as response:
                 response.raise_for_status()
                 data = await response.json()
@@ -2235,20 +2211,6 @@ async def get_app_latest_release_version():
 # OAuth Login & Callback
 ############################
 
-oauth = OAuth()
-
-for provider_name, provider_config in OAUTH_PROVIDERS.items():
-    oauth.register(
-        name=provider_name,
-        client_id=provider_config["client_id"],
-        client_secret=provider_config["client_secret"],
-        server_metadata_url=provider_config["server_metadata_url"],
-        client_kwargs={
-            "scope": provider_config["scope"],
-        },
-        redirect_uri=provider_config["redirect_uri"],
-    )
-
 # SessionMiddleware is used by authlib for oauth
 if len(OAUTH_PROVIDERS) > 0:
     app.add_middleware(
@@ -2262,16 +2224,7 @@ if len(OAUTH_PROVIDERS) > 0:
 
 @app.get("/oauth/{provider}/login")
 async def oauth_login(provider: str, request: Request):
-    if provider not in OAUTH_PROVIDERS:
-        raise HTTPException(404)
-    # If the provider has a custom redirect URL, use that, otherwise automatically generate one
-    redirect_uri = OAUTH_PROVIDERS[provider].get("redirect_uri") or request.url_for(
-        "oauth_callback", provider=provider
-    )
-    client = oauth.create_client(provider)
-    if client is None:
-        raise HTTPException(404)
-    return await client.authorize_redirect(request, redirect_uri)
+    return await oauth_manager.handle_login(provider, request)
 
 
 # OAuth login logic is as follows:
@@ -2282,118 +2235,7 @@ async def oauth_login(provider: str, request: Request):
 #    - Email addresses are considered unique, so we fail registration if the email address is already taken
 @app.get("/oauth/{provider}/callback")
 async def oauth_callback(provider: str, request: Request, response: Response):
-    if provider not in OAUTH_PROVIDERS:
-        raise HTTPException(404)
-    client = oauth.create_client(provider)
-    try:
-        token = await client.authorize_access_token(request)
-    except Exception as e:
-        log.warning(f"OAuth callback error: {e}")
-        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
-    user_data: UserInfo = token["userinfo"]
-
-    sub = user_data.get("sub")
-    if not sub:
-        log.warning(f"OAuth callback failed, sub is missing: {user_data}")
-        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
-    provider_sub = f"{provider}@{sub}"
-    email_claim = webui_app.state.config.OAUTH_EMAIL_CLAIM
-    email = user_data.get(email_claim, "").lower()
-    # We currently mandate that email addresses are provided
-    if not email:
-        log.warning(f"OAuth callback failed, email is missing: {user_data}")
-        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
-
-    # Check if the user exists
-    user = Users.get_user_by_oauth_sub(provider_sub)
-
-    if not user:
-        # If the user does not exist, check if merging is enabled
-        if OAUTH_MERGE_ACCOUNTS_BY_EMAIL.value:
-            # Check if the user exists by email
-            user = Users.get_user_by_email(email)
-            if user:
-                # Update the user with the new oauth sub
-                Users.update_user_oauth_sub_by_id(user.id, provider_sub)
-
-    if not user:
-        # If the user does not exist, check if signups are enabled
-        if ENABLE_OAUTH_SIGNUP.value:
-            # Check if an existing user with the same email already exists
-            existing_user = Users.get_user_by_email(user_data.get("email", "").lower())
-            if existing_user:
-                raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
-
-            picture_claim = webui_app.state.config.OAUTH_PICTURE_CLAIM
-            picture_url = user_data.get(picture_claim, "")
-            if picture_url:
-                # Download the profile image into a base64 string
-                try:
-                    async with aiohttp.ClientSession() as session:
-                        async with session.get(picture_url) as resp:
-                            picture = await resp.read()
-                            base64_encoded_picture = base64.b64encode(picture).decode(
-                                "utf-8"
-                            )
-                            guessed_mime_type = mimetypes.guess_type(picture_url)[0]
-                            if guessed_mime_type is None:
-                                # assume JPG, browsers are tolerant enough of image formats
-                                guessed_mime_type = "image/jpeg"
-                            picture_url = f"data:{guessed_mime_type};base64,{base64_encoded_picture}"
-                except Exception as e:
-                    log.error(f"Error downloading profile image '{picture_url}': {e}")
-                    picture_url = ""
-            if not picture_url:
-                picture_url = "/user.png"
-            username_claim = webui_app.state.config.OAUTH_USERNAME_CLAIM
-            role = (
-                "admin"
-                if Users.get_num_users() == 0
-                else webui_app.state.config.DEFAULT_USER_ROLE
-            )
-            user = Auths.insert_new_auth(
-                email=email,
-                password=get_password_hash(
-                    str(uuid.uuid4())
-                ),  # Random password, not used
-                name=user_data.get(username_claim, "User"),
-                profile_image_url=picture_url,
-                role=role,
-                oauth_sub=provider_sub,
-            )
-
-            if webui_app.state.config.WEBHOOK_URL:
-                post_webhook(
-                    webui_app.state.config.WEBHOOK_URL,
-                    WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
-                    {
-                        "action": "signup",
-                        "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
-                        "user": user.model_dump_json(exclude_none=True),
-                    },
-                )
-        else:
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
-            )
-
-    jwt_token = create_token(
-        data={"id": user.id},
-        expires_delta=parse_duration(webui_app.state.config.JWT_EXPIRES_IN),
-    )
-
-    # Set the cookie token
-    response.set_cookie(
-        key="token",
-        value=jwt_token,
-        httponly=True,  # Ensures the cookie is not accessible via JavaScript
-        samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
-        secure=WEBUI_SESSION_COOKIE_SECURE,
-    )
-
-    # Redirect back to the frontend with the JWT token
-    redirect_url = f"{request.base_url}auth#token={jwt_token}"
-    return RedirectResponse(url=redirect_url)
+    return await oauth_manager.handle_callback(provider, request, response)
 
 
 @app.get("/manifest.json")
