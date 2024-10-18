@@ -406,7 +406,6 @@ class ChatTable:
             all_chats = (
                 db.query(Chat)
                 .filter_by(user_id=user_id, pinned=True, archived=False)
-                .filter(Chat.folder_id == None)
                 .order_by(Chat.updated_at.desc())
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
@@ -554,6 +553,7 @@ class ChatTable:
     ) -> list[ChatModel]:
         with get_db() as db:
             query = db.query(Chat).filter_by(folder_id=folder_id, user_id=user_id)
+            query = query.filter(or_(Chat.pinned == False, Chat.pinned == None))
             query = query.filter_by(archived=False)
 
             query = query.order_by(Chat.updated_at.desc())
@@ -569,6 +569,7 @@ class ChatTable:
                 chat = db.get(Chat, id)
                 chat.folder_id = folder_id
                 chat.updated_at = int(time.time())
+                chat.pinned = False
                 db.commit()
                 db.refresh(chat)
                 return ChatModel.model_validate(chat)
