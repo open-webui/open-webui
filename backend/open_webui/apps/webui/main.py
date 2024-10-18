@@ -335,7 +335,7 @@ async def generate_function_chat_completion(form_data, user):
     pipe = function_module.pipe
     params = get_function_params(function_module, form_data, user, extra_params)
 
-    if form_data["stream"]:
+    if form_data.get("stream", False):
 
         async def stream_content():
             try:
