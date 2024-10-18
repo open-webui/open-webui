@@ -1,5 +1,6 @@
 <script>
 	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
+	import DOMPurify from 'dompurify';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -21,6 +22,7 @@
 	import { updateChatFolderIdById } from '$lib/apis/chats';
 	import ChatItem from './ChatItem.svelte';
 	import FolderMenu from './Folders/FolderMenu.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	export let open = false;
 
@@ -181,6 +183,8 @@
 		}
 	});
 
+	let showDeleteConfirm = false;
+
 	const deleteHandler = async () => {
 		const res = await deleteFolderById(localStorage.token, folderId).catch((error) => {
 			toast.error(error);
@@ -258,6 +262,22 @@
 		}, 100);
 	};
 </script>
+
+<DeleteConfirmDialog
+	bind:show={showDeleteConfirm}
+	title={$i18n.t('Delete folder?')}
+	on:confirm={() => {
+		deleteHandler();
+	}}
+>
+	<div class=" text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3">
+		{@html DOMPurify.sanitize(
+			$i18n.t('This will delete <strong>{{NAME}}</strong> and <strong>all its contents</strong>.', {
+				NAME: folders[folderId].name
+			})
+		)}
+	</div>
+</DeleteConfirmDialog>
 
 {#if dragged && x && y}
 	<DragGhost {x} {y}>
@@ -347,7 +367,7 @@
 							editHandler();
 						}}
 						on:delete={() => {
-							deleteHandler();
+							showDeleteConfirm = true;
 						}}
 					>
 						<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto" on:click={(e) => {}}>
