@@ -656,7 +656,7 @@
 
 				<Folder
 					collapsible={!search}
-					className="px-2"
+					className="px-2 mt-0.5"
 					name={$i18n.t('All chats')}
 					on:import={(e) => {
 						importChatHandler(e.detail);

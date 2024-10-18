@@ -75,6 +75,7 @@
 							reader.onload = async function (event) {
 								try {
 									const fileContent = JSON.parse(event.target.result);
+									open = true;
 									dispatch('import', {
 										folderId: folderId,
 										items: fileContent
@@ -325,7 +326,7 @@
 <div bind:this={folderElement} class="relative {className}" draggable="true">
 	{#if draggedOver}
 		<div
-			class="absolute top-0 left-0 w-full h-full rounded-sm bg-[hsla(258,88%,66%,0.1)] bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"
+			class="absolute top-0 left-0 w-full h-full rounded-sm bg-[hsla(260,85%,65%,0.1)] bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"
 		></div>
 	{/if}
 

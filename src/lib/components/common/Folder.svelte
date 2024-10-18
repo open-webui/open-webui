@@ -48,6 +48,7 @@
 								try {
 									const fileContent = JSON.parse(event.target.result);
 									console.log('Parsed JSON Content: ', fileContent);
+									open = true;
 									dispatch('import', fileContent);
 								} catch (error) {
 									console.error('Error parsing JSON file:', error);
@@ -59,12 +60,12 @@
 						} else {
 							console.error('Only JSON file types are supported.');
 						}
-
-						console.log(file);
 					} else {
-						// Handle the drag-and-drop data for folders or chats (same as before)
+						open = true;
+
 						const dataTransfer = e.dataTransfer.getData('text/plain');
 						const data = JSON.parse(dataTransfer);
+
 						console.log(data);
 						dispatch('drop', data);
 					}
@@ -98,7 +99,7 @@
 <div bind:this={folderElement} class="relative {className}">
 	{#if draggedOver}
 		<div
-			class="absolute top-0 left-0 w-full h-full rounded-sm bg-[hsla(258,88%,66%,0.1)] bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"
+			class="absolute top-0 left-0 w-full h-full rounded-sm bg-[hsla(260,85%,65%,0.1)] bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"
 		></div>
 	{/if}
 
