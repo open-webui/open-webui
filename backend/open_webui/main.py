@@ -102,6 +102,7 @@ from open_webui.env import (
     WEBUI_SESSION_COOKIE_SECURE,
     WEBUI_URL,
     RESET_CONFIG_ON_START,
+    OFFLINE_MODE,
 )
 from fastapi import (
     Depends,
@@ -178,14 +179,14 @@ class SPAStaticFiles(StaticFiles):
 
 print(
     rf"""
-  ___                    __        __   _     _   _ ___ 
+  ___                    __        __   _     _   _ ___
  / _ \ _ __   ___ _ __   \ \      / /__| |__ | | | |_ _|
-| | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || | 
-| |_| | |_) |  __/ | | |   \ V  V /  __/ |_) | |_| || | 
+| | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || |
+| |_| | |_) |  __/ | | |   \ V  V /  __/ |_) | |_| || |
  \___/| .__/ \___|_| |_|    \_/\_/ \___|_.__/ \___/|___|
-      |_|                                               
+      |_|
 
-      
+
 v{VERSION} - building the best open-source AI user interface.
 {f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
 https://github.com/open-webui/open-webui
@@ -577,7 +578,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
         }
 
         # Initialize data_items to store additional data to be sent to the client
-        # Initalize contexts and citation
+        # Initialize contexts and citation
         data_items = []
         contexts = []
         citations = []
@@ -824,6 +825,32 @@ class PipelineMiddleware(BaseHTTPMiddleware):
 app.add_middleware(PipelineMiddleware)
 
 
+from urllib.parse import urlencode, parse_qs, urlparse
+
+
+class RedirectMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Check if the request is a GET request
+        if request.method == "GET":
+            path = request.url.path
+            query_params = dict(parse_qs(urlparse(str(request.url)).query))
+
+            # Check for the specific watch path and the presence of 'v' parameter
+            if path.endswith("/watch") and "v" in query_params:
+                video_id = query_params["v"][0]  # Extract the first 'v' parameter
+                encoded_video_id = urlencode({"youtube": video_id})
+                redirect_url = f"/?{encoded_video_id}"
+                return RedirectResponse(url=redirect_url)
+
+        # Proceed with the normal flow of other requests
+        response = await call_next(request)
+        return response
+
+
+# Add the middleware to the app
+app.add_middleware(RedirectMiddleware)
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ALLOW_ORIGIN,
@@ -963,10 +990,12 @@ async def get_all_models():
                     owned_by = model["owned_by"]
                     if "pipe" in model:
                         pipe = model["pipe"]
-
-                    if "info" in model and "meta" in model["info"]:
-                        action_ids.extend(model["info"]["meta"].get("actionIds", []))
                     break
+
+            if custom_model.meta:
+                meta = custom_model.meta.model_dump()
+                if "actionIds" in meta:
+                    action_ids.extend(meta["actionIds"])
 
             models.append(
                 {
@@ -2181,6 +2210,11 @@ async def get_app_changelog():
 
 @app.get("/api/version/updates")
 async def get_app_latest_release_version():
+    if OFFLINE_MODE:
+        log.debug(
+            f"Offline mode is enabled, returning current version as latest version"
+        )
+        return {"current": VERSION, "latest": VERSION}
     try:
         timeout = aiohttp.ClientTimeout(total=1)
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
@@ -2245,7 +2279,7 @@ async def oauth_login(provider: str, request: Request):
 # 2. If OAUTH_MERGE_ACCOUNTS_BY_EMAIL is true, find a user with the email address provided via OAuth
 #    - This is considered insecure in general, as OAuth providers do not always verify email addresses
 # 3. If there is no user, and ENABLE_OAUTH_SIGNUP is true, create a user
-#    - Email addresses are considered unique, so we fail registration if the email address is alreayd taken
+#    - Email addresses are considered unique, so we fail registration if the email address is already taken
 @app.get("/oauth/{provider}/callback")
 async def oauth_callback(provider: str, request: Request, response: Response):
     if provider not in OAUTH_PROVIDERS:
@@ -2353,6 +2387,8 @@ async def oauth_callback(provider: str, request: Request, response: Response):
         key="token",
         value=jwt_token,
         httponly=True,  # Ensures the cookie is not accessible via JavaScript
+        samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
+        secure=WEBUI_SESSION_COOKIE_SECURE,
     )
 
     # Redirect back to the frontend with the JWT token
@@ -2415,6 +2451,7 @@ async def healthcheck_with_db():
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/cache", StaticFiles(directory=CACHE_DIR), name="cache")
+
 
 if os.path.exists(FRONTEND_BUILD_DIR):
     mimetypes.add_type("text/javascript", ".js")

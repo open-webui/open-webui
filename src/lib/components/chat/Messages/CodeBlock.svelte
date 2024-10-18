@@ -18,11 +18,17 @@
 	const dispatch = createEventDispatcher();
 
 	export let id = '';
+
 	export let save = false;
+	export let run = true;
 
 	export let token;
 	export let lang = '';
 	export let code = '';
+
+	export let className = 'my-2';
+	export let editorClassName = '';
+	export let stickyButtonsClassName = 'top-8';
 
 	let _code = '';
 	$: if (code) {
@@ -126,7 +132,7 @@
 					}
 				},
 				stderr: (text) => {
-					console.log('An error occured:', text);
+					console.log('An error occurred:', text);
 					if (stderr) {
 						stderr += `${text}\n`;
 					} else {
@@ -296,12 +302,13 @@ __builtins__.input = input`);
 </script>
 
 <div>
-	<div class="relative my-2 flex flex-col rounded-lg" dir="ltr">
+	<div class="relative {className} flex flex-col rounded-lg" dir="ltr">
 		{#if lang === 'mermaid'}
 			{#if mermaidHtml}
 				<SvgPanZoom
 					className=" border border-gray-50 dark:border-gray-850 rounded-lg max-h-fit overflow-hidden"
 					svg={mermaidHtml}
+					content={_token.text}
 				/>
 			{:else}
 				<pre class="mermaid">{code}</pre>
@@ -312,13 +319,13 @@ __builtins__.input = input`);
 			</div>
 
 			<div
-				class="sticky top-8 mb-1 py-1 pr-2.5 flex items-center justify-end z-10 text-xs text-black dark:text-white"
+				class="sticky {stickyButtonsClassName} mb-1 py-1 pr-2.5 flex items-center justify-end z-10 text-xs text-black dark:text-white"
 			>
 				<div class="flex items-center gap-0.5 translate-y-[1px]">
 					{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
 						{#if executing}
 							<div class="run-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
-						{:else}
+						{:else if run}
 							<button
 								class="run-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
 								on:click={async () => {
@@ -347,9 +354,11 @@ __builtins__.input = input`);
 			</div>
 
 			<div
-				class="language-{lang} rounded-t-lg -mt-8 {executing || stdout || stderr || result
-					? ''
-					: 'rounded-b-lg'} overflow-hidden"
+				class="language-{lang} rounded-t-lg -mt-8 {editorClassName
+					? editorClassName
+					: executing || stdout || stderr || result
+						? ''
+						: 'rounded-b-lg'} overflow-hidden"
 			>
 				<div class=" pt-7 bg-gray-50 dark:bg-gray-850"></div>
 				<CodeEditor

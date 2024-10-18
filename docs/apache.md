@@ -118,7 +118,7 @@ Navigate to the apache sites-available directory:
 
 `nano models.server.city.conf` # match this with your ollama server domain
 
-Add the folloing virtualhost containing this example (modify as needed):
+Add the following virtualhost containing this example (modify as needed):
 
 ```
 

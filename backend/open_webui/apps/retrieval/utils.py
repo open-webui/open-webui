@@ -12,13 +12,14 @@ from langchain_core.documents import Document
 
 
 from open_webui.apps.ollama.main import (
-    GenerateEmbeddingsForm,
-    generate_ollama_embeddings,
+    GenerateEmbedForm,
+    generate_ollama_batch_embeddings,
 )
 from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.misc import get_last_user_message
 
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.config import DEFAULT_RAG_TEMPLATE
 
 
 log = logging.getLogger(__name__)
@@ -193,7 +194,8 @@ def query_collection(
                     k=k,
                     query_embedding=query_embedding,
                 )
-                results.append(result.model_dump())
+                if result is not None:
+                    results.append(result.model_dump())
             except Exception as e:
                 log.exception(f"Error when querying the collection: {e}")
         else:
@@ -238,8 +240,13 @@ def query_collection_with_hybrid_search(
 
 
 def rag_template(template: str, context: str, query: str):
-    count = template.count("[context]")
-    assert "[context]" in template, "RAG template does not contain '[context]'"
+    if template == "":
+        template = DEFAULT_RAG_TEMPLATE
+
+    if "[context]" not in template and "{{CONTEXT}}" not in template:
+        log.debug(
+            "WARNING: The RAG template does not contain the '[context]' or '{{CONTEXT}}' placeholder."
+        )
 
     if "<context>" in context and "</context>" in context:
         log.debug(
@@ -248,14 +255,25 @@ def rag_template(template: str, context: str, query: str):
             "nothing, or the user might be trying to hack something."
         )
 
+    query_placeholders = []
     if "[query]" in context:
-        query_placeholder = f"[query-{str(uuid.uuid4())}]"
+        query_placeholder = "{{QUERY" + str(uuid.uuid4()) + "}}"
         template = template.replace("[query]", query_placeholder)
-        template = template.replace("[context]", context)
+        query_placeholders.append(query_placeholder)
+
+    if "{{QUERY}}" in context:
+        query_placeholder = "{{QUERY" + str(uuid.uuid4()) + "}}"
+        template = template.replace("{{QUERY}}", query_placeholder)
+        query_placeholders.append(query_placeholder)
+
+    template = template.replace("[context]", context)
+    template = template.replace("{{CONTEXT}}", context)
+    template = template.replace("[query]", query)
+    template = template.replace("{{QUERY}}", query)
+
+    for query_placeholder in query_placeholders:
         template = template.replace(query_placeholder, query)
-    else:
-        template = template.replace("[context]", context)
-        template = template.replace("[query]", query)
+
     return template
 
 
@@ -265,39 +283,27 @@ def get_embedding_function(
     embedding_function,
     openai_key,
     openai_url,
-    batch_size,
+    embedding_batch_size,
 ):
     if embedding_engine == "":
         return lambda query: embedding_function.encode(query).tolist()
     elif embedding_engine in ["ollama", "openai"]:
-        if embedding_engine == "ollama":
-            func = lambda query: generate_ollama_embeddings(
-                GenerateEmbeddingsForm(
-                    **{
-                        "model": embedding_model,
-                        "prompt": query,
-                    }
-                )
-            )
-        elif embedding_engine == "openai":
-            func = lambda query: generate_openai_embeddings(
-                model=embedding_model,
-                text=query,
-                key=openai_key,
-                url=openai_url,
-            )
+        func = lambda query: generate_embeddings(
+            engine=embedding_engine,
+            model=embedding_model,
+            text=query,
+            key=openai_key if embedding_engine == "openai" else "",
+            url=openai_url if embedding_engine == "openai" else "",
+        )
 
-        def generate_multiple(query, f):
+        def generate_multiple(query, func):
             if isinstance(query, list):
-                if embedding_engine == "openai":
-                    embeddings = []
-                    for i in range(0, len(query), batch_size):
-                        embeddings.extend(f(query[i : i + batch_size]))
-                    return embeddings
-                else:
-                    return [f(q) for q in query]
+                embeddings = []
+                for i in range(0, len(query), embedding_batch_size):
+                    embeddings.extend(func(query[i : i + embedding_batch_size]))
+                return embeddings
             else:
-                return f(query)
+                return func(query)
 
         return lambda query: generate_multiple(query, func)
 
@@ -379,6 +385,8 @@ def get_rag_context(
             extracted_collections.extend(collection_names)
 
         if context:
+            if "data" in file:
+                del file["data"]
             relevant_contexts.append({**context, "file": file})
 
     contexts = []
@@ -386,22 +394,36 @@ def get_rag_context(
     for context in relevant_contexts:
         try:
             if "documents" in context:
+                file_names = list(
+                    set(
+                        [
+                            metadata["name"]
+                            for metadata in context["metadatas"][0]
+                            if metadata is not None and "name" in metadata
+                        ]
+                    )
+                )
                 contexts.append(
-                    "\n\n".join(
+                    ((", ".join(file_names) + ":\n\n") if file_names else "")
+                    + "\n\n".join(
                         [text for text in context["documents"][0] if text is not None]
                     )
                 )
 
                 if "metadatas" in context:
-                    citations.append(
-                        {
-                            "source": context["file"],
-                            "document": context["documents"][0],
-                            "metadata": context["metadatas"][0],
-                        }
-                    )
+                    citation = {
+                        "source": context["file"],
+                        "document": context["documents"][0],
+                        "metadata": context["metadatas"][0],
+                    }
+                    if "distances" in context and context["distances"]:
+                        citation["distances"] = context["distances"][0]
+                    citations.append(citation)
         except Exception as e:
             log.exception(e)
+
+    print("contexts", contexts)
+    print("citations", citations)
 
     return contexts, citations
 
@@ -444,20 +466,6 @@ def get_model_path(model: str, update_model: bool = False):
         return model
 
 
-def generate_openai_embeddings(
-    model: str,
-    text: Union[str, list[str]],
-    key: str,
-    url: str = "https://api.openai.com/v1",
-):
-    if isinstance(text, list):
-        embeddings = generate_openai_batch_embeddings(model, text, key, url)
-    else:
-        embeddings = generate_openai_batch_embeddings(model, [text], key, url)
-
-    return embeddings[0] if isinstance(text, str) else embeddings
-
-
 def generate_openai_batch_embeddings(
     model: str, texts: list[str], key: str, url: str = "https://api.openai.com/v1"
 ) -> Optional[list[list[float]]]:
@@ -479,6 +487,33 @@ def generate_openai_batch_embeddings(
     except Exception as e:
         print(e)
         return None
+
+
+def generate_embeddings(engine: str, model: str, text: Union[str, list[str]], **kwargs):
+    if engine == "ollama":
+        if isinstance(text, list):
+            embeddings = generate_ollama_batch_embeddings(
+                GenerateEmbedForm(**{"model": model, "input": text})
+            )
+        else:
+            embeddings = generate_ollama_batch_embeddings(
+                GenerateEmbedForm(**{"model": model, "input": [text]})
+            )
+        return (
+            embeddings["embeddings"][0]
+            if isinstance(text, str)
+            else embeddings["embeddings"]
+        )
+    elif engine == "openai":
+        key = kwargs.get("key", "")
+        url = kwargs.get("url", "https://api.openai.com/v1")
+
+        if isinstance(text, list):
+            embeddings = generate_openai_batch_embeddings(model, text, key, url)
+        else:
+            embeddings = generate_openai_batch_embeddings(model, [text], key, url)
+
+        return embeddings[0] if isinstance(text, str) else embeddings
 
 
 import operator

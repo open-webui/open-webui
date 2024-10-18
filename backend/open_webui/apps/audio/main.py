@@ -450,7 +450,7 @@ def transcribe(file_path):
                 except Exception:
                     error_detail = f"External: {e}"
 
-            raise error_detail
+            raise Exception(error_detail)
 
 
 @app.post("/transcriptions")

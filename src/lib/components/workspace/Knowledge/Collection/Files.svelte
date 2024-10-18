@@ -23,9 +23,17 @@
 				loading={file.status === 'uploading'}
 				dismissible
 				on:click={() => {
+					if (file.status === 'uploading') {
+						return;
+					}
+
 					dispatch('click', file.id);
 				}}
 				on:dismiss={() => {
+					if (file.status === 'uploading') {
+						return;
+					}
+
 					dispatch('delete', file.id);
 				}}
 			/>

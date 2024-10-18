@@ -9,6 +9,7 @@ from open_webui.apps.webui.models.models import Models
 from open_webui.apps.webui.routers import (
     auths,
     chats,
+    folders,
     configs,
     files,
     functions,
@@ -110,6 +111,7 @@ app.include_router(configs.router, prefix="/configs", tags=["configs"])
 app.include_router(auths.router, prefix="/auths", tags=["auths"])
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(chats.router, prefix="/chats", tags=["chats"])
+app.include_router(folders.router, prefix="/folders", tags=["folders"])
 
 app.include_router(models.router, prefix="/models", tags=["models"])
 app.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])

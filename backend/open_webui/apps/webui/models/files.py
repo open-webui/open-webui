@@ -50,6 +50,14 @@ class FileModel(BaseModel):
 ####################
 
 
+class FileMeta(BaseModel):
+    name: Optional[str] = None
+    content_type: Optional[str] = None
+    size: Optional[int] = None
+
+    model_config = ConfigDict(extra="allow")
+
+
 class FileModelResponse(BaseModel):
     id: str
     user_id: str
@@ -57,8 +65,15 @@ class FileModelResponse(BaseModel):
 
     filename: str
     data: Optional[dict] = None
-    meta: dict
+    meta: FileMeta
 
+    created_at: int  # timestamp in epoch
+    updated_at: int  # timestamp in epoch
+
+
+class FileMetadataResponse(BaseModel):
+    id: str
+    meta: dict
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
 
@@ -104,6 +119,19 @@ class FilesTable:
             except Exception:
                 return None
 
+    def get_file_metadata_by_id(self, id: str) -> Optional[FileMetadataResponse]:
+        with get_db() as db:
+            try:
+                file = db.get(File, id)
+                return FileMetadataResponse(
+                    id=file.id,
+                    meta=file.meta,
+                    created_at=file.created_at,
+                    updated_at=file.updated_at,
+                )
+            except Exception:
+                return None
+
     def get_files(self) -> list[FileModel]:
         with get_db() as db:
             return [FileModel.model_validate(file) for file in db.query(File).all()]
@@ -112,6 +140,21 @@ class FilesTable:
         with get_db() as db:
             return [
                 FileModel.model_validate(file)
+                for file in db.query(File)
+                .filter(File.id.in_(ids))
+                .order_by(File.updated_at.desc())
+                .all()
+            ]
+
+    def get_file_metadatas_by_ids(self, ids: list[str]) -> list[FileMetadataResponse]:
+        with get_db() as db:
+            return [
+                FileMetadataResponse(
+                    id=file.id,
+                    meta=file.meta,
+                    created_at=file.created_at,
+                    updated_at=file.updated_at,
+                )
                 for file in db.query(File)
                 .filter(File.id.in_(ids))
                 .order_by(File.updated_at.desc())
