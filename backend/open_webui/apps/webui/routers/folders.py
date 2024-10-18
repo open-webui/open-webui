@@ -234,11 +234,6 @@ async def delete_folder_by_id(id: str, user=Depends(get_verified_user)):
         try:
             result = Folders.delete_folder_by_id_and_user_id(id, user.id)
             if result:
-                # Delete all chats in the folder
-                chats = Chats.get_chats_by_folder_id_and_user_id(id, user.id)
-                for chat in chats:
-                    Chats.delete_chat_by_id(chat.id, user.id)
-
                 return result
             else:
                 raise HTTPException(

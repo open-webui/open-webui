@@ -699,6 +699,18 @@ class ChatTable:
         except Exception:
             return False
 
+    def delete_chats_by_user_id_and_folder_id(
+        self, user_id: str, folder_id: str
+    ) -> bool:
+        try:
+            with get_db() as db:
+                db.query(Chat).filter_by(user_id=user_id, folder_id=folder_id).delete()
+                db.commit()
+
+                return True
+        except Exception:
+            return False
+
     def delete_shared_chats_by_user_id(self, user_id: str) -> bool:
         try:
             with get_db() as db:

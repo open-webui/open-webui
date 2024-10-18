@@ -4,7 +4,7 @@ import uuid
 from typing import Optional
 
 from open_webui.apps.webui.internal.db import Base, get_db
-
+from open_webui.apps.webui.models.chats import Chats
 
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
@@ -214,6 +214,26 @@ class FolderTable:
         try:
             with get_db() as db:
                 folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
+                if not folder:
+                    return False
+
+                # Delete all chats in the folder
+                Chats.delete_chats_by_user_id_and_folder_id(user_id, folder.id)
+
+                # Delete all children folders
+                def delete_children(folder):
+                    folder_children = self.get_folders_by_parent_id_and_user_id(
+                        folder.id, user_id
+                    )
+                    for folder_child in folder_children:
+                        Chats.delete_chats_by_user_id_and_folder_id(
+                            user_id, folder_child.id
+                        )
+                        delete_children(folder_child)
+                        db.delete(folder_child)
+                        db.commit()
+
+                delete_children(folder)
                 db.delete(folder)
                 db.commit()
                 return True
