@@ -406,11 +406,6 @@
         "
 	data-state={$showSidebar}
 >
-	{#if draggedOver}
-		<div
-			class="absolute top-0 left-0 w-full h-full rounded-sm bg-[hsla(258,88%,66%,0.1)] bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"
-		></div>
-	{/if}
 	<div
 		class="py-2.5 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
 			? ''
