@@ -381,13 +381,22 @@
 								on:update={(e) => {
 									dispatch('update', e.detail);
 								}}
+								on:change={(e) => {
+									dispatch('change', e.detail);
+								}}
 							/>
 						{/each}
 					{/if}
 
 					{#if folders[folderId].items?.chats}
 						{#each folders[folderId].items.chats as chat (chat.id)}
-							<ChatItem id={chat.id} title={chat.title} />
+							<ChatItem
+								id={chat.id}
+								title={chat.title}
+								on:change={(e) => {
+									dispatch('change', e.detail);
+								}}
+							/>
 						{/each}
 					{/if}
 				</div>

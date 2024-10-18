@@ -28,6 +28,7 @@
 	} from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ShareChatModal from '$lib/components/chat/ShareChatModal.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -85,13 +86,27 @@
 		}
 	};
 
+	const deleteChatHandler = async (id) => {
+		const res = await deleteChatById(localStorage.token, id).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res) {
+			tags.set(await getAllTags(localStorage.token));
+			if ($chatId === id) {
+				await chatId.set('');
+				await tick();
+				goto('/');
+			}
+
+			dispatch('change');
+		}
+	};
+
 	const archiveChatHandler = async (id) => {
 		await archiveChatById(localStorage.token, id);
-		tags.set(await getAllTags(localStorage.token));
-
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		await pinnedChats.set(await getPinnedChatList(localStorage.token));
+		dispatch('change');
 	};
 
 	const focusEdit = async (node: HTMLInputElement) => {
@@ -158,9 +173,23 @@
 			itemElement.removeEventListener('dragend', onDragEnd);
 		}
 	});
+
+	let showDeleteConfirm = false;
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={id} />
+
+<DeleteConfirmDialog
+	bind:show={showDeleteConfirm}
+	title={$i18n.t('Delete chat?')}
+	on:confirm={() => {
+		deleteChatHandler(id);
+	}}
+>
+	<div class=" text-sm text-gray-500 flex-1 line-clamp-3">
+		{$i18n.t('This will delete')} <span class="  font-semibold">{title}</span>.
+	</div>
+</DeleteConfirmDialog>
 
 {#if dragged && x && y}
 	<DragGhost {x} {y}>
@@ -295,7 +324,7 @@
 					<button
 						class=" self-center dark:hover:text-white transition"
 						on:click={() => {
-							dispatch('delete', 'shift');
+							deleteChatHandler(id);
 						}}
 						type="button"
 					>
@@ -322,7 +351,7 @@
 						confirmEdit = true;
 					}}
 					deleteHandler={() => {
-						dispatch('delete');
+						showDeleteConfirm = true;
 					}}
 					onClose={() => {
 						dispatch('unselect');

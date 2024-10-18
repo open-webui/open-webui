@@ -39,7 +39,6 @@
 	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import ChatItem from './Sidebar/ChatItem.svelte';
-	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
 	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
@@ -152,6 +151,8 @@
 	const initChatList = async () => {
 		// Reset pagination variables
 		tags.set(await getAllTags(localStorage.token));
+		pinnedChats.set(await getPinnedChatList(localStorage.token));
+		initFolders();
 
 		currentChatPage.set(1);
 		allChatsLoaded = false;
@@ -204,28 +205,6 @@
 					tags.set(await getAllTags(localStorage.token));
 				}
 			}, 1000);
-		}
-	};
-
-	const deleteChatHandler = async (id) => {
-		const res = await deleteChatById(localStorage.token, id).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-
-		if (res) {
-			tags.set(await getAllTags(localStorage.token));
-
-			if ($chatId === id) {
-				await chatId.set('');
-				await tick();
-				goto('/');
-			}
-
-			allChatsLoaded = false;
-			currentChatPage.set(1);
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			await pinnedChats.set(await getPinnedChatList(localStorage.token));
 		}
 	};
 
@@ -364,8 +343,6 @@
 			localStorage.sidebar = value;
 		});
 
-		await initFolders();
-		await pinnedChats.set(await getPinnedChatList(localStorage.token));
 		await initChatList();
 
 		window.addEventListener('keydown', onKeyDown);
@@ -405,22 +382,9 @@
 <ArchivedChatsModal
 	bind:show={$showArchivedChats}
 	on:change={async () => {
-		await pinnedChats.set(await getPinnedChatList(localStorage.token));
 		await initChatList();
 	}}
 />
-
-<DeleteConfirmDialog
-	bind:show={showDeleteConfirm}
-	title={$i18n.t('Delete chat?')}
-	on:confirm={() => {
-		deleteChatHandler(deleteChat.id);
-	}}
->
-	<div class=" text-sm text-gray-500 flex-1 line-clamp-3">
-		{$i18n.t('This will delete')} <span class="  font-semibold">{deleteChat.title}</span>.
-	</div>
-</DeleteConfirmDialog>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 
@@ -632,7 +596,6 @@
 
 										if (res) {
 											initChatList();
-											await initFolders();
 										}
 									}
 
@@ -640,9 +603,7 @@
 										const res = await toggleChatPinnedStatusById(localStorage.token, id);
 
 										if (res) {
-											await pinnedChats.set(await getPinnedChatList(localStorage.token));
 											initChatList();
-											await initFolders();
 										}
 									}
 								}
@@ -666,16 +627,7 @@
 									on:unselect={() => {
 										selectedChatId = null;
 									}}
-									on:delete={(e) => {
-										if ((e?.detail ?? '') === 'shift') {
-											deleteChatHandler(chat.id);
-										} else {
-											deleteChat = chat;
-											showDeleteConfirm = true;
-										}
-									}}
 									on:change={async () => {
-										await pinnedChats.set(await getPinnedChatList(localStorage.token));
 										initChatList();
 									}}
 									on:tag={(e) => {
@@ -695,7 +647,9 @@
 						{folders}
 						on:update={async (e) => {
 							initChatList();
-							await initFolders();
+						}}
+						on:change={async () => {
+							initChatList();
 						}}
 					/>
 				{/if}
@@ -722,7 +676,6 @@
 
 									if (res) {
 										initChatList();
-										await initFolders();
 									}
 								}
 
@@ -730,9 +683,7 @@
 									const res = await toggleChatPinnedStatusById(localStorage.token, id);
 
 									if (res) {
-										await pinnedChats.set(await getPinnedChatList(localStorage.token));
 										initChatList();
-										await initFolders();
 									}
 								}
 							}
@@ -798,16 +749,7 @@
 									on:unselect={() => {
 										selectedChatId = null;
 									}}
-									on:delete={(e) => {
-										if ((e?.detail ?? '') === 'shift') {
-											deleteChatHandler(chat.id);
-										} else {
-											deleteChat = chat;
-											showDeleteConfirm = true;
-										}
-									}}
 									on:change={async () => {
-										await pinnedChats.set(await getPinnedChatList(localStorage.token));
 										initChatList();
 									}}
 									on:tag={(e) => {

@@ -25,5 +25,8 @@
 		on:update={(e) => {
 			dispatch('update', e.detail);
 		}}
+		on:change={(e) => {
+			dispatch('change', e.detail);
+		}}
 	/>
 {/each}
