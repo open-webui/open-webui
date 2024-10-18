@@ -47,6 +47,12 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
         file_path = f"{UPLOAD_DIR}/{filename}"
 
         contents = file.file.read()
+        if len(contents) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.EMPTY_CONTENT,
+            )
+
         with open(file_path, "wb") as f:
             f.write(contents)
             f.close()
