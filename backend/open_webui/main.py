@@ -566,16 +566,13 @@ async def handle_streaming_response(request: Request, response: Response,
 
 async def handle_nonstreaming_response(request: Request, response: Response,
                                        tools: dict, user: UserModel, data_items: list) -> JSONResponse:
-    # It only should be one response ince we are in the non streaming scenario
+    # It only should be one response since we are in the non streaming scenario
     async for data in response.body_iterator:
         content = data
     citations = []
     response_dict = json.loads(content)
     body = json.loads(request._body)
 
-    content_type = response.headers["Content-Type"]
-    is_openai = "text/event-stream" in content_type
-    is_ollama = "application/x-ndjson" in content_type
 
     while response_dict["choices"][0]["finish_reason"] == "tool_calls":
         body["messages"].append(response_dict["choices"][0]["message"])
