@@ -2256,7 +2256,7 @@ async def oauth_callback(provider: str, request: Request, response: Response):
     except Exception as e:
         log.warning(f"OAuth callback error: {e}")
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
-    user_data: UserInfo = token["userinfo"]
+    user_data: UserInfo = await client.userinfo(token=token)
 
     sub = user_data.get("sub")
     if not sub:
