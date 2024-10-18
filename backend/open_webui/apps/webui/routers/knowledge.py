@@ -48,7 +48,12 @@ async def get_knowledge_items(
             )
     else:
         return [
-            KnowledgeResponse(**knowledge.model_dump())
+            KnowledgeResponse(
+                **knowledge.model_dump(),
+                files=Files.get_file_metadatas_by_ids(
+                    knowledge.data.get("file_ids", []) if knowledge.data else []
+                ),
+            )
             for knowledge in Knowledges.get_knowledge_items()
         ]
 

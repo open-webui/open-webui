@@ -59,7 +59,7 @@
 					<div class="mb-3 w-full">
 						<div class="w-full flex flex-col gap-2.5">
 							<div class="w-full">
-								<div class=" text-sm mb-2">Title</div>
+								<div class=" text-sm mb-2">{$i18n.t('Title')}</div>
 
 								<div class="w-full mt-1">
 									<input
@@ -73,7 +73,7 @@
 							</div>
 
 							<div>
-								<div class="text-sm mb-2">Content</div>
+								<div class="text-sm mb-2">{$i18n.t('Content')}</div>
 
 								<div class=" w-full mt-1">
 									<textarea

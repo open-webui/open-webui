@@ -901,6 +901,9 @@ CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 
 MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
 
+# Qdrant
+QDRANT_URI = os.environ.get("QDRANT_URI", None)
+
 ####################################
 # Information Retrieval (RAG)
 ####################################
@@ -986,10 +989,13 @@ RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get("RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
 )
 
-RAG_EMBEDDING_OPENAI_BATCH_SIZE = PersistentConfig(
-    "RAG_EMBEDDING_OPENAI_BATCH_SIZE",
-    "rag.embedding_openai_batch_size",
-    int(os.environ.get("RAG_EMBEDDING_OPENAI_BATCH_SIZE", "1")),
+RAG_EMBEDDING_BATCH_SIZE = PersistentConfig(
+    "RAG_EMBEDDING_BATCH_SIZE",
+    "rag.embedding_batch_size",
+    int(
+        os.environ.get("RAG_EMBEDDING_BATCH_SIZE")
+        or os.environ.get("RAG_EMBEDDING_OPENAI_BATCH_SIZE", "1")
+    ),
 )
 
 RAG_RERANKING_MODEL = PersistentConfig(
@@ -1008,6 +1014,22 @@ RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get("RAG_RERANKING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
 )
 
+
+RAG_TEXT_SPLITTER = PersistentConfig(
+    "RAG_TEXT_SPLITTER",
+    "rag.text_splitter",
+    os.environ.get("RAG_TEXT_SPLITTER", ""),
+)
+
+
+TIKTOKEN_CACHE_DIR = os.environ.get("TIKTOKEN_CACHE_DIR", f"{CACHE_DIR}/tiktoken")
+TIKTOKEN_ENCODING_NAME = PersistentConfig(
+    "TIKTOKEN_ENCODING_NAME",
+    "rag.tiktoken_encoding_name",
+    os.environ.get("TIKTOKEN_ENCODING_NAME", "cl100k_base"),
+)
+
+
 CHUNK_SIZE = PersistentConfig(
     "CHUNK_SIZE", "rag.chunk_size", int(os.environ.get("CHUNK_SIZE", "1000"))
 )
@@ -1020,7 +1042,7 @@ CHUNK_OVERLAP = PersistentConfig(
 DEFAULT_RAG_TEMPLATE = """You are given a user query, some textual context and rules, all inside xml tags. You have to answer the query based on the context while respecting the rules.
 
 <context>
-[context]
+{{CONTEXT}}
 </context>
 
 <rules>
@@ -1033,7 +1055,7 @@ DEFAULT_RAG_TEMPLATE = """You are given a user query, some textual context and r
 </rules>
 
 <user_query>
-[query]
+{{QUERY}}
 </user_query>
 """
 

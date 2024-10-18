@@ -47,6 +47,14 @@
 
 	let showDeleteConfirm = false;
 
+	let filteredItems = [];
+	$: filteredItems = $functions.filter(
+		(f) =>
+			query === '' ||
+			f.name.toLowerCase().includes(query.toLowerCase()) ||
+			f.id.toLowerCase().includes(query.toLowerCase())
+	);
+
 	const shareHandler = async (func) => {
 		const item = await getFunctionById(localStorage.token, func.id).catch((error) => {
 			toast.error(error);
@@ -174,17 +182,7 @@
 	</title>
 </svelte:head>
 
-<div class="mb-3">
-	<div class="flex justify-between items-center">
-		<div class="flex md:self-center text-lg font-medium px-0.5">
-			{$i18n.t('Functions')}
-			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
-			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{$functions.length}</span>
-		</div>
-	</div>
-</div>
-
-<div class=" flex w-full space-x-2">
+<div class=" flex w-full space-x-2 mb-2.5">
 	<div class="flex flex-1">
 		<div class=" self-center ml-1 mr-3">
 			<svg
@@ -225,12 +223,21 @@
 		</a>
 	</div>
 </div>
-<hr class=" border-gray-50 dark:border-gray-850 my-2.5" />
+
+<div class="mb-3.5">
+	<div class="flex justify-between items-center">
+		<div class="flex md:self-center text-base font-medium px-0.5">
+			{$i18n.t('Functions')}
+			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
+			<span class="text-base font-medium text-gray-500 dark:text-gray-300"
+				>{filteredItems.length}</span
+			>
+		</div>
+	</div>
+</div>
 
 <div class="my-3 mb-5">
-	{#each $functions.filter((f) => query === '' || f.name
-				.toLowerCase()
-				.includes(query.toLowerCase()) || f.id.toLowerCase().includes(query.toLowerCase())) as func}
+	{#each filteredItems as func}
 		<div
 			class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
 		>

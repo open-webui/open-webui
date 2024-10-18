@@ -269,6 +269,13 @@
 			await mediaRecorder.stop();
 		}
 		clearInterval(durationCounter);
+
+		if (stream) {
+			const tracks = stream.getTracks();
+			tracks.forEach((track) => track.stop());
+		}
+
+		stream = null;
 	};
 </script>
 

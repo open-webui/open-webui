@@ -125,22 +125,34 @@ async def comfyui_generate_image(
                     workflow[node_id]["inputs"][node.key] = model
             elif node.type == "prompt":
                 for node_id in node.node_ids:
-                    workflow[node_id]["inputs"]["text"] = payload.prompt
+                    workflow[node_id]["inputs"][
+                        node.key if node.key else "text"
+                    ] = payload.prompt
             elif node.type == "negative_prompt":
                 for node_id in node.node_ids:
-                    workflow[node_id]["inputs"]["text"] = payload.negative_prompt
+                    workflow[node_id]["inputs"][
+                        node.key if node.key else "text"
+                    ] = payload.negative_prompt
             elif node.type == "width":
                 for node_id in node.node_ids:
-                    workflow[node_id]["inputs"]["width"] = payload.width
+                    workflow[node_id]["inputs"][
+                        node.key if node.key else "width"
+                    ] = payload.width
             elif node.type == "height":
                 for node_id in node.node_ids:
-                    workflow[node_id]["inputs"]["height"] = payload.height
+                    workflow[node_id]["inputs"][
+                        node.key if node.key else "height"
+                    ] = payload.height
             elif node.type == "n":
                 for node_id in node.node_ids:
-                    workflow[node_id]["inputs"]["batch_size"] = payload.n
+                    workflow[node_id]["inputs"][
+                        node.key if node.key else "batch_size"
+                    ] = payload.n
             elif node.type == "steps":
                 for node_id in node.node_ids:
-                    workflow[node_id]["inputs"]["steps"] = payload.steps
+                    workflow[node_id]["inputs"][
+                        node.key if node.key else "steps"
+                    ] = payload.steps
             elif node.type == "seed":
                 seed = (
                     payload.seed
