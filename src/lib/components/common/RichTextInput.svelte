@@ -186,21 +186,52 @@
 					'Mod-z': undo,
 					'Mod-y': redo,
 					Space: handleSpace,
-					Enter: chainCommands(
-						(state, dispatch, view) => {
-							if (isEmptyListItem(state)) {
-								return exitList(state, dispatch);
-							}
-							return false;
-						},
-						(state, dispatch, view) => {
-							if (isInList(state)) {
-								return splitListItem(schema.nodes.list_item)(state, dispatch);
-							}
-							return false;
-						},
-						baseKeymap.Enter
-					),
+
+					Enter: (state, dispatch, view) => {
+						if (shiftEnter) {
+							eventDispatch('submit');
+							return true;
+						}
+						return chainCommands(
+							(state, dispatch, view) => {
+								if (isEmptyListItem(state)) {
+									return exitList(state, dispatch);
+								}
+								return false;
+							},
+							(state, dispatch, view) => {
+								if (isInList(state)) {
+									return splitListItem(schema.nodes.list_item)(state, dispatch);
+								}
+								return false;
+							},
+							baseKeymap.Enter
+						)(state, dispatch, view);
+					},
+
+					'Shift-Enter': (state, dispatch, view) => {
+						if (shiftEnter) {
+							return chainCommands(
+								(state, dispatch, view) => {
+									if (isEmptyListItem(state)) {
+										return exitList(state, dispatch);
+									}
+									return false;
+								},
+								(state, dispatch, view) => {
+									if (isInList(state)) {
+										return splitListItem(schema.nodes.list_item)(state, dispatch);
+									}
+									return false;
+								},
+								baseKeymap.Enter
+							)(state, dispatch, view);
+						} else {
+							return baseKeymap.Enter(state, dispatch, view);
+						}
+						return false;
+					},
+
 					// Prevent default tab navigation and provide indent/outdent behavior inside lists:
 					Tab: (state, dispatch, view) => {
 						const { $from } = state.selection;

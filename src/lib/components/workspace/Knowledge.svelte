@@ -21,6 +21,7 @@
 	import Pencil from '../icons/Pencil.svelte';
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
 	import ItemMenu from './Knowledge/ItemMenu.svelte';
+	import Badge from '../common/Badge.svelte';
 
 	let query = '';
 	let selectedItem = null;
@@ -167,20 +168,12 @@
 					<div class="mt-5 flex justify-between">
 						<div>
 							{#if item?.meta?.document}
-								<div
-									class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded uppercase text-xs font-bold px-1"
-								>
-									{$i18n.t('Document')}
-								</div>
+								<Badge type="mute" content={$i18n.t('Document')} />
 							{:else}
-								<div
-									class="bg-green-500/20 text-green-700 dark:text-green-200 rounded uppercase text-xs font-bold px-1"
-								>
-									{$i18n.t('Collection')}
-								</div>
+								<Badge type="success" content={$i18n.t('Collection')} />
 							{/if}
 						</div>
-						<div class=" text-xs text-gray-500">
+						<div class=" text-xs text-gray-500 line-clamp-1">
 							{$i18n.t('Updated')}
 							{dayjs(item.updated_at * 1000).fromNow()}
 						</div>
