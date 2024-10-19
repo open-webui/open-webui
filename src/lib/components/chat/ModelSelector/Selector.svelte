@@ -479,10 +479,16 @@
 							</div>
 
 							<div class="flex flex-col self-start">
-								<div class="line-clamp-1">
-									Downloading "{model}" {'pullProgress' in $MODEL_DOWNLOAD_POOL[model]
-										? `(${$MODEL_DOWNLOAD_POOL[model].pullProgress}%)`
-										: ''}
+								<div class="flex gap-1">
+									<div class="line-clamp-1">
+										Downloading "{model}"
+									</div>
+
+									<div class="flex-shrink-0">
+										{'pullProgress' in $MODEL_DOWNLOAD_POOL[model]
+											? `(${$MODEL_DOWNLOAD_POOL[model].pullProgress}%)`
+											: ''}
+									</div>
 								</div>
 
 								{#if 'digest' in $MODEL_DOWNLOAD_POOL[model] && $MODEL_DOWNLOAD_POOL[model].digest}
@@ -493,7 +499,7 @@
 							</div>
 						</div>
 
-						<div class="mr-2 translate-y-0.5">
+						<div class="mr-2 ml-1 translate-y-0.5">
 							<Tooltip content={$i18n.t('Cancel')}>
 								<button
 									class="text-gray-800 dark:text-gray-100"
