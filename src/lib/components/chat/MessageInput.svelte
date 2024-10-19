@@ -53,8 +53,9 @@
 
 	let recording = false;
 
-	let chatTextAreaElement: HTMLTextAreaElement;
 	let chatInputContainerElement;
+	let chatInputElement;
+
 	let filesInputElement;
 	let commandsElement;
 
@@ -70,9 +71,10 @@
 	);
 
 	$: if (prompt) {
-		if (chatTextAreaElement) {
-			chatTextAreaElement.style.height = '';
-			chatTextAreaElement.style.height = Math.min(chatTextAreaElement.scrollHeight, 200) + 'px';
+		if (chatInputContainerElement) {
+			chatInputContainerElement.style.height = '';
+			chatInputContainerElement.style.height =
+				Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
 		}
 	}
 
@@ -320,7 +322,8 @@
 							atSelectedModel = data.data;
 						}
 
-						chatTextAreaElement?.focus();
+						const chatInputElement = document.getElementById('chat-input');
+						chatInputElement?.focus();
 					}}
 				/>
 			</div>
@@ -482,7 +485,9 @@
 										}}
 										onClose={async () => {
 											await tick();
-											chatTextAreaElement?.focus();
+
+											const chatInput = document.getElementById('chat-input');
+											chatInput?.focus();
 										}}
 									>
 										<button
@@ -506,9 +511,11 @@
 
 								<div
 									bind:this={chatInputContainerElement}
+									id="chat-input-container"
 									class="scrollbar-hidden text-left bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-3 px-1 rounded-xl resize-none h-[48px] overflow-auto"
 								>
 									<RichTextInput
+										bind:this={chatInputElement}
 										id="chat-input"
 										placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 										bind:value={prompt}
@@ -634,26 +641,6 @@
 												]?.at(-1);
 
 												commandOptionButton?.click();
-											} else if (e.key === 'Tab') {
-												const words = findWordIndices(prompt);
-
-												if (words.length > 0) {
-													const word = words.at(0);
-													const fullPrompt = prompt;
-
-													prompt = prompt.substring(0, word?.endIndex + 1);
-													await tick();
-
-													e.target.scrollTop = e.target.scrollHeight;
-													prompt = fullPrompt;
-													await tick();
-
-													e.preventDefault();
-													e.target.setSelectionRange(word?.startIndex, word.endIndex + 1);
-												}
-
-												e.target.style.height = '';
-												e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
 											}
 
 											if (e.key === 'Escape') {

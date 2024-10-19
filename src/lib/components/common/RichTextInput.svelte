@@ -164,6 +164,60 @@
 		return liftListItem(schema.nodes.list_item)(state, dispatch);
 	}
 
+	function findNextTemplate(doc, from = 0) {
+		const patterns = [
+			{ start: '[', end: ']' },
+			{ start: '{{', end: '}}' }
+		];
+
+		let result = null;
+
+		doc.nodesBetween(from, doc.content.size, (node, pos) => {
+			if (result) return false; // Stop if we've found a match
+			if (node.isText) {
+				const text = node.text;
+				let index = Math.max(0, from - pos);
+				while (index < text.length) {
+					for (const pattern of patterns) {
+						if (text.startsWith(pattern.start, index)) {
+							const endIndex = text.indexOf(pattern.end, index + pattern.start.length);
+							if (endIndex !== -1) {
+								result = {
+									from: pos + index,
+									to: pos + endIndex + pattern.end.length
+								};
+								return false; // Stop searching
+							}
+						}
+					}
+					index++;
+				}
+			}
+		});
+
+		return result;
+	}
+
+	function selectNextTemplate(state, dispatch) {
+		const { doc, selection } = state;
+		const from = selection.to;
+		let template = findNextTemplate(doc, from);
+
+		if (!template) {
+			// If not found, search from the beginning
+			template = findNextTemplate(doc, 0);
+		}
+
+		if (template) {
+			if (dispatch) {
+				const tr = state.tr.setSelection(TextSelection.create(doc, template.from, template.to));
+				dispatch(tr);
+			}
+			return true;
+		}
+		return true;
+	}
+
 	onMount(() => {
 		const initialDoc = markdownToProseMirrorDoc(value || ''); // Convert the initial content
 
@@ -234,14 +288,16 @@
 					},
 
 					// Prevent default tab navigation and provide indent/outdent behavior inside lists:
-					Tab: (state, dispatch, view) => {
+					Tab: chainCommands((state, dispatch, view) => {
 						const { $from } = state.selection;
 						console.log('Tab key pressed', $from.parent, $from.parent.type);
 						if (isInList(state)) {
 							return sinkListItem(schema.nodes.list_item)(state, dispatch);
+						} else {
+							return selectNextTemplate(state, dispatch);
 						}
 						return true; // Prevent Tab from moving the focus
-					},
+					}),
 					'Shift-Tab': (state, dispatch, view) => {
 						const { $from } = state.selection;
 						console.log('Shift-Tab key pressed', $from.parent, $from.parent.type);
@@ -327,6 +383,16 @@
 			selection: TextSelection.atEnd(newDoc) // This sets the cursor at the end
 		});
 		view.updateState(newState);
+
+		// After updating the state, try to find and select the next template
+		setTimeout(() => {
+			const templateFound = selectNextTemplate(view.state, view.dispatch);
+			if (!templateFound) {
+				// If no template found, set cursor at the end
+				const endPos = view.state.doc.content.size;
+				view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, endPos)));
+			}
+		}, 0);
 	}
 
 	// Destroy ProseMirror instance on unmount
