@@ -57,7 +57,7 @@
 		console.log(prompt);
 		await tick();
 
-		const chatInputElement = document.getElementById('chat-textarea');
+		const chatInputElement = document.getElementById('chat-input');
 		if (chatInputElement) {
 			chatInputElement.style.height = '';
 			chatInputElement.style.height = Math.min(chatInputElement.scrollHeight, 200) + 'px';

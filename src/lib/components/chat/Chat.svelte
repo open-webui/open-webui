@@ -125,7 +125,7 @@
 				loaded = true;
 
 				window.setTimeout(() => scrollToBottom(), 0);
-				const chatInput = document.getElementById('chat-textarea');
+				const chatInput = document.getElementById('chat-input');
 				chatInput?.focus();
 			} else {
 				await goto('/');
@@ -264,7 +264,7 @@
 		if (event.data.type === 'input:prompt') {
 			console.debug(event.data.text);
 
-			const inputElement = document.getElementById('chat-textarea');
+			const inputElement = document.getElementById('chat-input');
 
 			if (inputElement) {
 				prompt = event.data.text;
@@ -327,7 +327,7 @@
 			}
 		});
 
-		const chatInput = document.getElementById('chat-textarea');
+		const chatInput = document.getElementById('chat-input');
 		chatInput?.focus();
 
 		chats.subscribe(() => {});
@@ -501,7 +501,7 @@
 			settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 		}
 
-		const chatInput = document.getElementById('chat-textarea');
+		const chatInput = document.getElementById('chat-input');
 		setTimeout(() => chatInput?.focus(), 0);
 	};
 
@@ -799,7 +799,7 @@
 			);
 		} else {
 			// Reset chat input textarea
-			const chatTextAreaElement = document.getElementById('chat-textarea');
+			const chatTextAreaElement = document.getElementById('chat-input');
 
 			if (chatTextAreaElement) {
 				chatTextAreaElement.value = '';
@@ -841,6 +841,11 @@
 
 			// Wait until history/message have been updated
 			await tick();
+
+			// focus on chat input
+			const chatInput = document.getElementById('chat-input');
+			chatInput?.focus();
+
 			_responses = await sendPrompt(userPrompt, userMessageId, { newChat: true });
 		}
 

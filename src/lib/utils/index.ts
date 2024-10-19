@@ -276,7 +276,8 @@ export const removeLastWordFromString = (inputString, wordString) => {
 	// Split the string into an array of words
 	const words = inputString.split(' ');
 
-	if (words.at(-1) === wordString) {
+	console.log(words.at(-1), wordString);
+	if (words.at(-1) === wordString || (wordString === '' && words.at(-1) === '\\#')) {
 		words.pop();
 	}
 

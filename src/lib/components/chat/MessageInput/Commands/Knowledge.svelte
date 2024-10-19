@@ -46,7 +46,7 @@
 		dispatch('select', item);
 
 		prompt = removeLastWordFromString(prompt, command);
-		const chatInputElement = document.getElementById('chat-textarea');
+		const chatInputElement = document.getElementById('chat-input');
 
 		await tick();
 		chatInputElement?.focus();
@@ -57,7 +57,7 @@
 		dispatch('url', url);
 
 		prompt = removeLastWordFromString(prompt, command);
-		const chatInputElement = document.getElementById('chat-textarea');
+		const chatInputElement = document.getElementById('chat-input');
 
 		await tick();
 		chatInputElement?.focus();
@@ -68,7 +68,7 @@
 		dispatch('youtube', url);
 
 		prompt = removeLastWordFromString(prompt, command);
-		const chatInputElement = document.getElementById('chat-textarea');
+		const chatInputElement = document.getElementById('chat-input');
 
 		await tick();
 		chatInputElement?.focus();

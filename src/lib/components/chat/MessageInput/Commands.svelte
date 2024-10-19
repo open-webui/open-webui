@@ -28,14 +28,14 @@
 	$: command = (prompt?.trim() ?? '').split(' ')?.at(-1) ?? '';
 </script>
 
-{#if ['/', '#', '@'].includes(command?.charAt(0))}
+{#if ['/', '#', '@'].includes(command?.charAt(0)) || '\\#' === command.slice(0, 2)}
 	{#if command?.charAt(0) === '/'}
 		<Prompts bind:this={commandElement} bind:prompt bind:files {command} />
-	{:else if command?.charAt(0) === '#'}
+	{:else if command?.charAt(0) === '#' || '\\#' === command.slice(0, 2)}
 		<Knowledge
 			bind:this={commandElement}
 			bind:prompt
-			{command}
+			command={command.includes('\\#') ? command.slice(2) : command}
 			on:youtube={(e) => {
 				console.log(e);
 				dispatch('upload', {

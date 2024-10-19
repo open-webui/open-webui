@@ -330,7 +330,7 @@
 
 				await tick();
 
-				const chatInputElement = document.getElementById('chat-textarea');
+				const chatInputElement = document.getElementById('chat-input');
 				if (chatInputElement) {
 					prompt = p;
 

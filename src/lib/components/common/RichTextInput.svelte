@@ -3,7 +3,7 @@
 	import { createEventDispatcher } from 'svelte';
 	const eventDispatch = createEventDispatcher();
 
-	import { EditorState, Plugin } from 'prosemirror-state';
+	import { EditorState, Plugin, TextSelection } from 'prosemirror-state';
 	import { EditorView, Decoration, DecorationSet } from 'prosemirror-view';
 	import { undo, redo, history } from 'prosemirror-history';
 	import { schema, defaultMarkdownParser, defaultMarkdownSerializer } from 'prosemirror-markdown';
@@ -24,6 +24,7 @@
 	export let className = 'input-prose';
 	export let shiftEnter = false;
 
+	export let id = '';
 	export let value = '';
 	export let placeholder = 'Type here...';
 
@@ -189,7 +190,7 @@
 
 					Enter: (state, dispatch, view) => {
 						if (shiftEnter) {
-							eventDispatch('submit');
+							eventDispatch('enter');
 							return true;
 						}
 						return chainCommands(
@@ -279,10 +280,40 @@
 					return false;
 				},
 				paste: (view, event) => {
-					eventDispatch('paste', { event });
+					console.log(event);
+					if (event.clipboardData) {
+						// Check if the pasted content contains image files
+						const hasImageFile = Array.from(event.clipboardData.files).some((file) =>
+							file.type.startsWith('image/')
+						);
+
+						// Check for image in dataTransfer items (for cases where files are not available)
+						const hasImageItem = Array.from(event.clipboardData.items).some((item) =>
+							item.type.startsWith('image/')
+						);
+
+						console.log('Has image file:', hasImageFile, 'Has image item:', hasImageItem);
+
+						if (hasImageFile) {
+							// If there's an image, dispatch the event to the parent
+							eventDispatch('paste', { event });
+							event.preventDefault();
+							return true;
+						}
+
+						if (hasImageItem) {
+							// If there's an image item, dispatch the event to the parent
+							eventDispatch('paste', { event });
+							event.preventDefault();
+							return true;
+						}
+					}
+
+					// For all other cases (text, formatted text, etc.), let ProseMirror handle it
 					return false;
 				}
-			}
+			},
+			attributes: { id }
 		});
 	});
 
@@ -292,7 +323,8 @@
 		const newState = EditorState.create({
 			doc: newDoc,
 			schema,
-			plugins: view.state.plugins
+			plugins: view.state.plugins,
+			selection: TextSelection.atEnd(newDoc) // This sets the cursor at the end
 		});
 		view.updateState(newState);
 	}
