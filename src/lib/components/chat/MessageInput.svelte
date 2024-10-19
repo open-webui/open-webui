@@ -512,7 +512,7 @@
 								<div
 									bind:this={chatInputContainerElement}
 									id="chat-input-container"
-									class="scrollbar-hidden text-left bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-3 px-1 rounded-xl resize-none h-[48px] overflow-auto"
+									class="scrollbar-hidden text-left bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-2.5 px-1 rounded-xl resize-none h-[48px] overflow-auto"
 								>
 									<RichTextInput
 										bind:this={chatInputElement}

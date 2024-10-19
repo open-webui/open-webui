@@ -823,11 +823,11 @@
 			);
 		} else {
 			// Reset chat input textarea
-			const chatTextAreaElement = document.getElementById('chat-input');
+			const chatInputContainer = document.getElementById('chat-input-container');
 
-			if (chatTextAreaElement) {
-				chatTextAreaElement.value = '';
-				chatTextAreaElement.style.height = '';
+			if (chatInputContainer) {
+				chatInputContainer.value = '';
+				chatInputContainer.style.height = '';
 			}
 
 			const _files = JSON.parse(JSON.stringify(files));

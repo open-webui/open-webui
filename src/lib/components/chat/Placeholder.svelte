@@ -57,18 +57,14 @@
 		console.log(prompt);
 		await tick();
 
-		const chatInputElement = document.getElementById('chat-input');
-		if (chatInputElement) {
-			chatInputElement.style.height = '';
-			chatInputElement.style.height = Math.min(chatInputElement.scrollHeight, 200) + 'px';
-			chatInputElement.focus();
+		const chatInputContainerElement = document.getElementById('chat-input-container');
+		if (chatInputContainerElement) {
+			chatInputContainerElement.style.height = '';
+			chatInputContainerElement.style.height =
+				Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
 
-			const words = findWordIndices(prompt);
-
-			if (words.length > 0) {
-				const word = words.at(0);
-				chatInputElement.setSelectionRange(word?.startIndex, word.endIndex + 1);
-			}
+			const chatInputElement = document.getElementById('chat-input');
+			chatInputElement?.focus();
 		}
 
 		await tick();

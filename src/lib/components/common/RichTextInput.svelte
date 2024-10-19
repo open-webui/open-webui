@@ -226,7 +226,7 @@
 			}
 			return true;
 		}
-		return true;
+		return false;
 	}
 
 	onMount(() => {
@@ -412,4 +412,4 @@
 	});
 </script>
 
-<div bind:this={element} class="relative w-full h-full {className}"></div>
+<div bind:this={element} class="relative w-full h-full min-h-fit {className}"></div>

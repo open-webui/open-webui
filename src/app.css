@@ -189,7 +189,7 @@ input[type='number'] {
 }
 
 .ProseMirror {
-	@apply h-full -translate-y-[1px];
+	@apply h-full  min-h-fit max-h-full;
 }
 
 .ProseMirror:focus {
