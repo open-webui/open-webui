@@ -165,7 +165,11 @@
 				}
 
 				// Check if Ctrl + Shift + Backspace is pressed
-				if (isCtrlPressed && isShiftPressed && event.key === 'Backspace') {
+				if (
+					isCtrlPressed &&
+					isShiftPressed &&
+					(event.key === 'Backspace' || event.key === 'Delete')
+				) {
 					event.preventDefault();
 					console.log('deleteChat');
 					document.getElementById('delete-chat-button')?.click();

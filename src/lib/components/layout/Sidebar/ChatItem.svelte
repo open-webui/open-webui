@@ -389,7 +389,7 @@
 						id="delete-chat-button"
 						class="hidden"
 						on:click={() => {
-							dispatch('delete');
+							showDeleteConfirm = true;
 						}}
 					>
 						<svg

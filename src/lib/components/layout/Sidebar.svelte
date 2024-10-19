@@ -58,13 +58,7 @@
 	let shiftKey = false;
 
 	let selectedChatId = null;
-	let deleteChat = null;
-
-	let showDeleteConfirm = false;
 	let showDropdown = false;
-
-	let selectedTagName = null;
-
 	let showPinnedChat = true;
 
 	// Pagination variables
