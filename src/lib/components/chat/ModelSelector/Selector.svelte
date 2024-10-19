@@ -286,7 +286,7 @@
 					/>
 				</div>
 
-				<hr class="border-gray-50 dark:border-gray-850" />
+				<hr class="border-gray-50 dark:border-gray-800" />
 			{/if}
 
 			<div class="px-3 my-2 max-h-64 overflow-y-auto scrollbar-hidden group">
@@ -532,7 +532,7 @@
 			</div>
 
 			{#if showTemporaryChatControl}
-				<hr class="border-gray-50 dark:border-gray-850" />
+				<hr class="border-gray-50 dark:border-gray-800" />
 
 				<div class="flex items-center mx-2 my-2">
 					<button
