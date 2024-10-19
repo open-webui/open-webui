@@ -80,11 +80,12 @@
 
 						{#if document.source?.name}
 							<Tooltip
+								className="w-fit"
 								content={$i18n.t('Open file')}
-								placement="left"
+								placement="top-start"
 								tippyOptions={{ duration: [500, 0] }}
 							>
-								<div class="text-sm dark:text-gray-400 flex items-center gap-2">
+								<div class="text-sm dark:text-gray-400 flex items-center gap-2 w-fit">
 									<a
 										class="hover:text-gray-500 hover:dark:text-gray-100 underline flex-grow"
 										href={document?.metadata?.file_id
@@ -110,11 +111,12 @@
 								</div>
 								{#if document.distance !== undefined}
 									<Tooltip
+										className="w-fit"
 										content={$i18n.t('Semantic distance to query')}
-										placement="left"
+										placement="top-start"
 										tippyOptions={{ duration: [500, 0] }}
 									>
-										<div class="text-sm my-1 dark:text-gray-400 flex items-center gap-2">
+										<div class="text-sm my-1 dark:text-gray-400 flex items-center gap-2 w-fit">
 											{#if showPercentage}
 												{@const percentage = calculatePercentage(document.distance)}
 												<span class={`px-1 rounded font-medium ${getRelevanceColor(percentage)}`}>
