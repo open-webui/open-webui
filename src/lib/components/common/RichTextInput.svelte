@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
+	const eventDispatch = createEventDispatcher();
 
 	import { EditorState, Plugin } from 'prosemirror-state';
 	import { EditorView, Decoration, DecorationSet } from 'prosemirror-view';
@@ -13,7 +15,6 @@
 		InputRule
 	} from 'prosemirror-inputrules'; // Import input rules
 	import { splitListItem, liftListItem, sinkListItem } from 'prosemirror-schema-list'; // Import from prosemirror-schema-list
-
 	import { keymap } from 'prosemirror-keymap';
 	import { baseKeymap, chainCommands } from 'prosemirror-commands';
 	import { DOMParser, DOMSerializer, Schema } from 'prosemirror-model';
@@ -21,6 +22,7 @@
 	import { marked } from 'marked'; // Import marked for markdown parsing
 
 	export let className = 'input-prose';
+	export let shiftEnter = false;
 
 	export let value = '';
 	export let placeholder = 'Type here...';
@@ -103,7 +105,6 @@
 	}
 
 	// Initialize Editor State and View
-
 	function handleSpace(state, dispatch) {
 		let { from, to, empty } = state.selection;
 		console.log('Space key pressed', from, to, empty);
@@ -231,6 +232,25 @@
 				view.updateState(newState);
 
 				value = serializeEditorContent(newState.doc); // Convert ProseMirror content to markdown text
+				eventDispatch('input', { value });
+			},
+			handleDOMEvents: {
+				focus: (view, event) => {
+					eventDispatch('focus', { event });
+					return false;
+				},
+				keypress: (view, event) => {
+					eventDispatch('keypress', { event });
+					return false;
+				},
+				keydown: (view, event) => {
+					eventDispatch('keydown', { event });
+					return false;
+				},
+				paste: (view, event) => {
+					eventDispatch('paste', { event });
+					return false;
+				}
 			}
 		});
 	});
