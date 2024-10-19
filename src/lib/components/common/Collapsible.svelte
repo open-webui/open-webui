@@ -24,7 +24,7 @@
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
 		<div
-			class={buttonClassName}
+			class="{buttonClassName} cursor-pointer"
 			on:pointerup={() => {
 				if (!disabled) {
 					open = !open;
@@ -49,7 +49,7 @@
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
 		<div
-			class={buttonClassName}
+			class="{buttonClassName} cursor-pointer"
 			on:pointerup={() => {
 				if (!disabled) {
 					open = !open;
