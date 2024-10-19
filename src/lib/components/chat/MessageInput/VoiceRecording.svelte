@@ -213,7 +213,7 @@
 					transcription = `${transcription}${transcript}`;
 
 					await tick();
-					document.getElementById('chat-textarea')?.focus();
+					document.getElementById('chat-input')?.focus();
 
 					// Restart the inactivity timeout
 					timeoutId = setTimeout(() => {

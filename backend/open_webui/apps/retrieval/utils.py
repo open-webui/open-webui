@@ -385,6 +385,8 @@ def get_rag_context(
             extracted_collections.extend(collection_names)
 
         if context:
+            if "data" in file:
+                del file["data"]
             relevant_contexts.append({**context, "file": file})
 
     contexts = []
@@ -401,7 +403,6 @@ def get_rag_context(
                         ]
                     )
                 )
-
                 contexts.append(
                     ((", ".join(file_names) + ":\n\n") if file_names else "")
                     + "\n\n".join(
@@ -410,13 +411,14 @@ def get_rag_context(
                 )
 
                 if "metadatas" in context:
-                    citations.append(
-                        {
-                            "source": context["file"],
-                            "document": context["documents"][0],
-                            "metadata": context["metadatas"][0],
-                        }
-                    )
+                    citation = {
+                        "source": context["file"],
+                        "document": context["documents"][0],
+                        "metadata": context["metadatas"][0],
+                    }
+                    if "distances" in context and context["distances"]:
+                        citation["distances"] = context["distances"][0]
+                    citations.append(citation)
         except Exception as e:
             log.exception(e)
 

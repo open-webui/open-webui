@@ -86,6 +86,8 @@
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
 
+	let navbarElement;
+
 	let showEventConfirmation = false;
 	let eventConfirmationTitle = '';
 	let eventConfirmationMessage = '';
@@ -127,7 +129,7 @@
 				loaded = true;
 
 				window.setTimeout(() => scrollToBottom(), 0);
-				const chatInput = document.getElementById('chat-textarea');
+				const chatInput = document.getElementById('chat-input');
 				chatInput?.focus();
 			} else {
 				await goto('/');
@@ -266,7 +268,7 @@
 		if (event.data.type === 'input:prompt') {
 			console.debug(event.data.text);
 
-			const inputElement = document.getElementById('chat-textarea');
+			const inputElement = document.getElementById('chat-input');
 
 			if (inputElement) {
 				prompt = event.data.text;
@@ -329,7 +331,7 @@
 			}
 		});
 
-		const chatInput = document.getElementById('chat-textarea');
+		const chatInput = document.getElementById('chat-input');
 		chatInput?.focus();
 
 		chats.subscribe(() => {});
@@ -439,7 +441,29 @@
 		if ($page.url.searchParams.get('models')) {
 			selectedModels = $page.url.searchParams.get('models')?.split(',');
 		} else if ($page.url.searchParams.get('model')) {
-			selectedModels = $page.url.searchParams.get('model')?.split(',');
+			const urlModels = $page.url.searchParams.get('model')?.split(',');
+
+			if (urlModels.length === 1) {
+				const m = $models.find((m) => m.id === urlModels[0]);
+				if (!m) {
+					const modelSelectorButton = document.getElementById('model-selector-0-button');
+					if (modelSelectorButton) {
+						modelSelectorButton.click();
+						await tick();
+
+						const modelSelectorInput = document.getElementById('model-search-input');
+						if (modelSelectorInput) {
+							modelSelectorInput.focus();
+							modelSelectorInput.value = urlModels[0];
+							modelSelectorInput.dispatchEvent(new Event('input'));
+						}
+					}
+				} else {
+					selectedModels = urlModels;
+				}
+			} else {
+				selectedModels = urlModels;
+			}
 		} else if ($settings?.models) {
 			selectedModels = $settings?.models;
 		} else if ($config?.default_models) {
@@ -503,7 +527,7 @@
 			settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 		}
 
-		const chatInput = document.getElementById('chat-textarea');
+		const chatInput = document.getElementById('chat-input');
 		setTimeout(() => chatInput?.focus(), 0);
 	};
 
@@ -801,11 +825,11 @@
 			);
 		} else {
 			// Reset chat input textarea
-			const chatTextAreaElement = document.getElementById('chat-textarea');
+			const chatInputContainer = document.getElementById('chat-input-container');
 
-			if (chatTextAreaElement) {
-				chatTextAreaElement.value = '';
-				chatTextAreaElement.style.height = '';
+			if (chatInputContainer) {
+				chatInputContainer.value = '';
+				chatInputContainer.style.height = '';
 			}
 
 			const _files = JSON.parse(JSON.stringify(files));
@@ -843,6 +867,11 @@
 
 			// Wait until history/message have been updated
 			await tick();
+
+			// focus on chat input
+			const chatInput = document.getElementById('chat-input');
+			chatInput?.focus();
+
 			_responses = await sendPrompt(userPrompt, userMessageId, { newChat: true });
 		}
 
@@ -2048,6 +2077,7 @@
 		{/if}
 
 		<Navbar
+			bind:this={navbarElement}
 			chat={{
 				id: $chatId,
 				chat: {

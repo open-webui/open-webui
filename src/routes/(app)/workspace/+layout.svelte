@@ -51,7 +51,7 @@
 
 				<div class="">
 					<div
-						class="flex scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent/10 backdrop-blur-2xl p-1 shadow-2xl touch-auto pointer-events-auto"
+						class="flex scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent/10 backdrop-blur-2xl p-1 touch-auto pointer-events-auto"
 					>
 						<a
 							class="min-w-fit rounded-full p-1.5 px-3 {$page.url.pathname.includes(

@@ -53,7 +53,6 @@ dependencies = [
     "sentence-transformers==3.2.0",
     "colbert-ai==0.2.21",
     "einops==0.8.0",
-    
 
     "ftfy==6.2.3",
     "pypdf==4.3.1",
@@ -94,7 +93,9 @@ dependencies = [
 
     "docker~=7.1.0",
     "pytest~=8.3.2",
-    "pytest-docker~=3.1.1"
+    "pytest-docker~=3.1.1",
+
+    "googleapis-common-protos==1.63.2"
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.12.0a1"

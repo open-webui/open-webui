@@ -25,10 +25,10 @@
 	};
 
 	let command = '';
-	$: command = (prompt?.trim() ?? '').split(' ')?.at(-1) ?? '';
+	$: command = prompt?.split('\n').pop()?.split(' ')?.pop() ?? '';
 </script>
 
-{#if ['/', '#', '@'].includes(command?.charAt(0))}
+{#if ['/', '#', '@'].includes(command?.charAt(0)) || '\\#' === command.slice(0, 2)}
 	{#if command?.charAt(0) === '/'}
 		<Prompts
 			bind:this={commandElement}
@@ -39,11 +39,11 @@
 				dispatch('select', { type: 'prompt', prompt: e.detail });
 			}}
 		/>
-	{:else if command?.charAt(0) === '#'}
+	{:else if (command?.charAt(0) === '#' && command.startsWith('#') && !command.includes('# ')) || ('\\#' === command.slice(0, 2) && command.startsWith('#') && !command.includes('# '))}
 		<Knowledge
 			bind:this={commandElement}
 			bind:prompt
-			{command}
+			command={command.includes('\\#') ? command.slice(2) : command}
 			on:youtube={(e) => {
 				console.log(e);
 				dispatch('upload', {

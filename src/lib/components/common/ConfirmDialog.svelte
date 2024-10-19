@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
-	import { fade } from 'svelte/transition';
 	const i18n = getContext('i18n');
-
-	import { flyAndScale } from '$lib/utils/transitions';
-
 	const dispatch = createEventDispatcher();
+
+	import { fade } from 'svelte/transition';
+	import { flyAndScale } from '$lib/utils/transitions';
 
 	export let title = '';
 	export let message = '';
@@ -26,6 +25,12 @@
 		if (event.key === 'Escape') {
 			console.log('Escape');
 			show = false;
+		}
+
+		if (event.key === 'Enter') {
+			console.log('Enter');
+			show = false;
+			dispatch('confirm', inputValue);
 		}
 	};
 
@@ -56,7 +61,7 @@
 		}}
 	>
 		<div
-			class=" m-auto rounded-2xl max-w-full w-[32rem] mx-2 bg-gray-50 dark:bg-gray-950 max-h-[100dvh] shadow-3xl border border-gray-850"
+			class=" m-auto rounded-2xl max-w-full w-[32rem] mx-2 bg-gray-50 dark:bg-gray-950 max-h-[100dvh] shadow-3xl"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();

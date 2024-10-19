@@ -4,11 +4,13 @@ from typing import Optional
 
 from open_webui.apps.webui.models.chats import (
     ChatForm,
+    ChatImportForm,
     ChatResponse,
     Chats,
     ChatTitleIdResponse,
 )
 from open_webui.apps.webui.models.tags import TagModel, Tags
+from open_webui.apps.webui.models.folders import Folders
 
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
@@ -100,6 +102,23 @@ async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
 
 
 ############################
+# ImportChat
+############################
+
+
+@router.post("/import", response_model=Optional[ChatResponse])
+async def import_chat(form_data: ChatImportForm, user=Depends(get_verified_user)):
+    try:
+        chat = Chats.import_chat(user.id, form_data)
+        return ChatResponse(**chat.model_dump())
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+############################
 # GetChats
 ############################
 
@@ -131,6 +150,26 @@ async def search_user_chats(
                 Tags.delete_tag_by_name_and_user_id(tag_id, user.id)
 
     return chat_list
+
+
+############################
+# GetChatsByFolderId
+############################
+
+
+@router.get("/folder/{folder_id}", response_model=list[ChatResponse])
+async def get_chats_by_folder_id(folder_id: str, user=Depends(get_verified_user)):
+    folder_ids = [folder_id]
+    children_folders = Folders.get_children_folders_by_id_and_user_id(
+        folder_id, user.id
+    )
+    if children_folders:
+        folder_ids.extend([folder.id for folder in children_folders])
+
+    return [
+        ChatResponse(**chat.model_dump())
+        for chat in Chats.get_chats_by_folder_ids_and_user_id(folder_ids, user.id)
+    ]
 
 
 ############################
@@ -488,6 +527,31 @@ async def delete_shared_chat_by_id(id: str, user=Depends(get_verified_user)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+
+############################
+# UpdateChatFolderIdById
+############################
+
+
+class ChatFolderIdForm(BaseModel):
+    folder_id: Optional[str] = None
+
+
+@router.post("/{id}/folder", response_model=Optional[ChatResponse])
+async def update_chat_folder_id_by_id(
+    id: str, form_data: ChatFolderIdForm, user=Depends(get_verified_user)
+):
+    chat = Chats.get_chat_by_id_and_user_id(id, user.id)
+    if chat:
+        chat = Chats.update_chat_folder_id_by_id_and_user_id(
+            id, user.id, form_data.folder_id
+        )
+        return ChatResponse(**chat.model_dump())
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
         )
 
 
