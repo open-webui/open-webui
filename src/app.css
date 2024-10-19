@@ -203,5 +203,5 @@ input[type='number'] {
 
 	float: left;
 
-	@apply absolute inset-0 z-0 text-gray-700 dark:text-gray-500;
+	@apply absolute inset-0 z-0 text-gray-500;
 }
