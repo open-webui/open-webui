@@ -243,11 +243,9 @@
 	const tagEventHandler = async (type, tagName, chatId) => {
 		console.log(type, tagName, chatId);
 		if (type === 'delete') {
-			currentChatPage.set(1);
-			await chats.set(await getChatListBySearchText(localStorage.token, search, $currentChatPage));
+			initChatList();
 		} else if (type === 'add') {
-			currentChatPage.set(1);
-			await chats.set(await getChatListBySearchText(localStorage.token, search, $currentChatPage));
+			initChatList();
 		}
 	};
 
