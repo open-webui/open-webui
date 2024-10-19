@@ -25,13 +25,13 @@
 	};
 
 	let command = '';
-	$: command = (prompt?.trim() ?? '').split(' ')?.at(-1) ?? '';
+	$: command = prompt.split(' ')?.at(-1) ?? '';
 </script>
 
 {#if ['/', '#', '@'].includes(command?.charAt(0)) || '\\#' === command.slice(0, 2)}
 	{#if command?.charAt(0) === '/'}
 		<Prompts bind:this={commandElement} bind:prompt bind:files {command} />
-	{:else if command?.charAt(0) === '#' || '\\#' === command.slice(0, 2)}
+	{:else if (command?.charAt(0) === '#' && command.startsWith('#') && !command.includes('# ')) || ('\\#' === command.slice(0, 2) && command.startsWith('#') && !command.includes('# '))}
 		<Knowledge
 			bind:this={commandElement}
 			bind:prompt
