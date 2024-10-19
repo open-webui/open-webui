@@ -17,7 +17,7 @@
 	import { splitListItem, liftListItem, sinkListItem } from 'prosemirror-schema-list'; // Import from prosemirror-schema-list
 	import { keymap } from 'prosemirror-keymap';
 	import { baseKeymap, chainCommands } from 'prosemirror-commands';
-	import { DOMParser, DOMSerializer, Schema } from 'prosemirror-model';
+	import { DOMParser, DOMSerializer, Schema, Fragment } from 'prosemirror-model';
 
 	import { marked } from 'marked'; // Import marked for markdown parsing
 	import { dev } from '$app/environment';
@@ -69,7 +69,10 @@
 
 	// Method to convert markdown content to ProseMirror-compatible document
 	function markdownToProseMirrorDoc(markdown: string) {
-		return defaultMarkdownParser.parse(value || '');
+		console.log('Markdown:', markdown);
+		// Parse the Markdown content into a ProseMirror document
+		let doc = defaultMarkdownParser.parse(markdown || '');
+		return doc;
 	}
 
 	// Utility function to convert ProseMirror content back to markdown text
@@ -399,6 +402,7 @@
 	// Reinitialize the editor if the value is externally changed (i.e. when `value` is updated)
 	$: if (view && value !== serializeEditorContent(view.state.doc)) {
 		const newDoc = markdownToProseMirrorDoc(value || '');
+
 		const newState = EditorState.create({
 			doc: newDoc,
 			schema,
@@ -407,15 +411,17 @@
 		});
 		view.updateState(newState);
 
-		// After updating the state, try to find and select the next template
-		setTimeout(() => {
-			const templateFound = selectNextTemplate(view.state, view.dispatch);
-			if (!templateFound) {
-				// If no template found, set cursor at the end
-				const endPos = view.state.doc.content.size;
-				view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, endPos)));
-			}
-		}, 0);
+		if (value !== '') {
+			// After updating the state, try to find and select the next template
+			setTimeout(() => {
+				const templateFound = selectNextTemplate(view.state, view.dispatch);
+				if (!templateFound) {
+					// If no template found, set cursor at the end
+					const endPos = view.state.doc.content.size;
+					view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, endPos)));
+				}
+			}, 0);
+		}
 	}
 
 	// Destroy ProseMirror instance on unmount

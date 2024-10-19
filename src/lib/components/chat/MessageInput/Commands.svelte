@@ -25,7 +25,7 @@
 	};
 
 	let command = '';
-	$: command = prompt.split(' ')?.at(-1) ?? '';
+	$: command = prompt?.split('\n').pop()?.split(' ')?.pop() ?? '';
 </script>
 
 {#if ['/', '#', '@'].includes(command?.charAt(0)) || '\\#' === command.slice(0, 2)}

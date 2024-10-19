@@ -273,19 +273,34 @@ export const findWordIndices = (text) => {
 };
 
 export const removeLastWordFromString = (inputString, wordString) => {
-	// Split the string into an array of words
-	const words = inputString.split(' ');
+	console.log('inputString', inputString);
+	// Split the string by newline characters to handle lines separately
+	const lines = inputString.split('\n');
 
-	console.log(words.at(-1), wordString);
+	// Take the last line to operate only on it
+	const lastLine = lines.pop();
+
+	// Split the last line into an array of words
+	const words = lastLine.split(' ');
+
+	// Conditional to check for the last word removal
 	if (words.at(-1) === wordString || (wordString === '' && words.at(-1) === '\\#')) {
-		words.pop();
+		words.pop(); // Remove last word if condition is satisfied
 	}
 
-	// Join the remaining words back into a string
-	let resultString = words.join(' ');
-	if (resultString !== '') {
-		resultString += ' ';
+	// Join the remaining words back into a string and handle space correctly
+	let updatedLastLine = words.join(' ');
+
+	// Add a trailing space to the updated last line if there are still words
+	if (updatedLastLine !== '') {
+		updatedLastLine += ' ';
 	}
+
+	// Combine the lines together again, placing the updated last line back in
+	const resultString = [...lines, updatedLastLine].join('\n');
+
+	// Return the final string
+	console.log('resultString', resultString);
 
 	return resultString;
 };
