@@ -20,6 +20,7 @@
 	import { DOMParser, DOMSerializer, Schema } from 'prosemirror-model';
 
 	import { marked } from 'marked'; // Import marked for markdown parsing
+	import { dev } from '$app/environment';
 
 	export let className = 'input-prose';
 	export let shiftEnter = false;
@@ -117,33 +118,34 @@
 	}
 
 	// Initialize Editor State and View
-	function handleSpace(state, dispatch) {
+	function afterSpacePress(state, dispatch) {
+		// Get the position right after the space was naturally inserted by the browser.
 		let { from, to, empty } = state.selection;
-		console.log('Space key pressed', from, to, empty);
-		if (dispatch) {
-			let tr = state.tr.insertText(' ', state.selection.from, state.selection.to);
 
-			// // After inserting space, check for any active marks at `from + 1`
+		if (dispatch && empty) {
+			let tr = state.tr;
+
+			// Check for any active marks at `from - 1` (the space we just inserted)
 			const storedMarks = state.storedMarks || state.selection.$from.marks();
 
 			const hasBold = storedMarks.some((mark) => mark.type === state.schema.marks.strong);
 			const hasItalic = storedMarks.some((mark) => mark.type === state.schema.marks.em);
 
-			console.log('Stored marks:', storedMarks, hasBold, hasItalic);
+			console.log('Stored marks after space:', storedMarks, hasBold, hasItalic);
 
-			// Step 2: Remove marks only for the space character inserted
+			// Remove marks from the space character (marks applied to the space character will be marked as false)
 			if (hasBold) {
-				tr = tr.removeMark(from, from + 1, state.schema.marks.strong);
+				tr = tr.removeMark(from - 1, from, state.schema.marks.strong);
 			}
 			if (hasItalic) {
-				tr = tr.removeMark(from, from + 1, state.schema.marks.em);
+				tr = tr.removeMark(from - 1, from, state.schema.marks.em);
 			}
 
-			// Final step: Dispatch the transaction
+			// Dispatch the resulting transaction to update the editor state
 			dispatch(tr);
 		}
 
-		return false;
+		return true;
 	}
 
 	function toggleMark(markType) {
@@ -251,8 +253,6 @@
 					...baseKeymap,
 					'Mod-z': undo,
 					'Mod-y': redo,
-					Space: handleSpace,
-
 					Enter: (state, dispatch, view) => {
 						if (shiftEnter) {
 							eventDispatch('enter');
@@ -331,6 +331,10 @@
 				view.updateState(newState);
 
 				value = serializeEditorContent(newState.doc); // Convert ProseMirror content to markdown text
+
+				if (dev) {
+					console.log(value);
+				}
 				eventDispatch('input', { value });
 			},
 			handleDOMEvents: {
@@ -377,6 +381,14 @@
 					}
 
 					// For all other cases (text, formatted text, etc.), let ProseMirror handle it
+					return false;
+				},
+				// Handle space input after browser has completed it
+				keyup: (view, event) => {
+					console.log('Keyup event:', event);
+					if (event.key === ' ' && event.code === 'Space') {
+						afterSpacePress(view.state, view.dispatch);
+					}
 					return false;
 				}
 			},
