@@ -182,7 +182,6 @@
 	const searchDebounceHandler = async () => {
 		console.log('search', search);
 		chats.set(null);
-		selectedTagName = null;
 
 		if (searchDebounceTimeout) {
 			clearTimeout(searchDebounceTimeout);
