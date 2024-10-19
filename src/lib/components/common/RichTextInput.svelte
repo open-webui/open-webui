@@ -56,6 +56,16 @@
 		});
 	}
 
+	function unescapeMarkdown(text: string): string {
+		return text
+			.replace(/\\([\\`*{}[\]()#+\-.!_>])/g, '$1') // unescape backslashed characters
+			.replace(/&amp;/g, '&')
+			.replace(/</g, '<')
+			.replace(/>/g, '>')
+			.replace(/&quot;/g, '"')
+			.replace(/&#39;/g, "'");
+	}
+
 	// Method to convert markdown content to ProseMirror-compatible document
 	function markdownToProseMirrorDoc(markdown: string) {
 		return defaultMarkdownParser.parse(value || '');
@@ -63,7 +73,8 @@
 
 	// Utility function to convert ProseMirror content back to markdown text
 	function serializeEditorContent(doc) {
-		return defaultMarkdownSerializer.serialize(doc);
+		const markdown = defaultMarkdownSerializer.serialize(doc);
+		return unescapeMarkdown(markdown);
 	}
 
 	// ---- Input Rules ----
