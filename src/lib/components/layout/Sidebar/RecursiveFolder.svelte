@@ -1,9 +1,12 @@
 <script>
 	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
-	import DOMPurify from 'dompurify';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
+
+	import DOMPurify from 'dompurify';
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
 
 	import ChevronDown from '../../icons/ChevronDown.svelte';
 	import ChevronRight from '../../icons/ChevronRight.svelte';
@@ -19,7 +22,7 @@
 		updateFolderParentIdById
 	} from '$lib/apis/folders';
 	import { toast } from 'svelte-sonner';
-	import { updateChatFolderIdById } from '$lib/apis/chats';
+	import { getChatsByFolderId, updateChatFolderIdById } from '$lib/apis/chats';
 	import ChatItem from './ChatItem.svelte';
 	import FolderMenu from './Folders/FolderMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -292,6 +295,22 @@
 			input.focus();
 		}, 100);
 	};
+
+	const exportHandler = async () => {
+		const chats = await getChatsByFolderId(localStorage.token, folderId).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+		if (!chats) {
+			return;
+		}
+
+		const blob = new Blob([JSON.stringify(chats)], {
+			type: 'application/json'
+		});
+
+		saveAs(blob, `folder-${folders[folderId].name}-export-${Date.now()}.json`);
+	};
 </script>
 
 <DeleteConfirmDialog
@@ -399,6 +418,9 @@
 						}}
 						on:delete={() => {
 							showDeleteConfirm = true;
+						}}
+						on:export={() => {
+							exportHandler();
 						}}
 					>
 						<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto" on:click={(e) => {}}>

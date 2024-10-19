@@ -10,6 +10,7 @@ from open_webui.apps.webui.models.chats import (
     ChatTitleIdResponse,
 )
 from open_webui.apps.webui.models.tags import TagModel, Tags
+from open_webui.apps.webui.models.folders import Folders
 
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
@@ -149,6 +150,26 @@ async def search_user_chats(
                 Tags.delete_tag_by_name_and_user_id(tag_id, user.id)
 
     return chat_list
+
+
+############################
+# GetChatsByFolderId
+############################
+
+
+@router.get("/folder/{folder_id}", response_model=list[ChatResponse])
+async def get_chats_by_folder_id(folder_id: str, user=Depends(get_verified_user)):
+    folder_ids = [folder_id]
+    children_folders = Folders.get_children_folders_by_id_and_user_id(
+        folder_id, user.id
+    )
+    if children_folders:
+        folder_ids.extend([folder.id for folder in children_folders])
+
+    return [
+        ChatResponse(**chat.model_dump())
+        for chat in Chats.get_chats_by_folder_ids_and_user_id(folder_ids, user.id)
+    ]
 
 
 ############################

@@ -99,6 +99,30 @@ class FolderTable:
         except Exception:
             return None
 
+    def get_children_folders_by_id_and_user_id(
+        self, id: str, user_id: str
+    ) -> Optional[FolderModel]:
+        try:
+            with get_db() as db:
+                folders = []
+
+                def get_children(folder):
+                    children = self.get_folders_by_parent_id_and_user_id(
+                        folder.id, user_id
+                    )
+                    for child in children:
+                        get_children(child)
+                        folders.append(child)
+
+                folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
+                if not folder:
+                    return None
+
+                get_children(folder)
+                return folders
+        except Exception:
+            return None
+
     def get_folders_by_user_id(self, user_id: str) -> list[FolderModel]:
         with get_db() as db:
             return [

@@ -561,6 +561,21 @@ class ChatTable:
             all_chats = query.all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
+    def get_chats_by_folder_ids_and_user_id(
+        self, folder_ids: list[str], user_id: str
+    ) -> list[ChatModel]:
+        with get_db() as db:
+            query = db.query(Chat).filter(
+                Chat.folder_id.in_(folder_ids), Chat.user_id == user_id
+            )
+            query = query.filter(or_(Chat.pinned == False, Chat.pinned == None))
+            query = query.filter_by(archived=False)
+
+            query = query.order_by(Chat.updated_at.desc())
+
+            all_chats = query.all()
+            return [ChatModel.model_validate(chat) for chat in all_chats]
+
     def update_chat_folder_id_by_id_and_user_id(
         self, id: str, user_id: str, folder_id: str
     ) -> Optional[ChatModel]:
