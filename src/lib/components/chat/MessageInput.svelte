@@ -546,11 +546,9 @@
 										}}
 										on:keypress={(e) => {
 											e = e.detail.event;
-											console.log(e);
 										}}
 										on:keydown={async (e) => {
 											e = e.detail.event;
-											console.log(e);
 
 											if (chatInputContainerElement) {
 												chatInputContainerElement.style.height = '';
@@ -677,39 +675,6 @@
 										}}
 									/>
 								</div>
-
-								<!-- <textarea
-									id="chat-input"
-									bind:this={chatTextAreaElement}
-									class="scrollbar-hidden bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-3 px-1 rounded-xl resize-none h-[48px]"
-									placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
-									bind:value={prompt}
-									on:keypress={(e) => {
-										if (
-											!$mobile ||
-											!(
-												'ontouchstart' in window ||
-												navigator.maxTouchPoints > 0 ||
-												navigator.msMaxTouchPoints > 0
-											)
-										) {
-											// Prevent Enter key from creating a new line
-											if (e.key === 'Enter' && !e.shiftKey) {
-												e.preventDefault();
-											}
-
-											// Submit the prompt when Enter key is pressed
-											if (prompt !== '' && e.key === 'Enter' && !e.shiftKey) {
-												dispatch('submit', prompt);
-											}
-										}
-									}}
-									
-									rows="1"
-									
-									
-									
-								/> -->
 
 								<div class="self-end mb-2 flex space-x-1 mr-1">
 									{#if !history?.currentId || history.messages[history.currentId]?.done == true}
