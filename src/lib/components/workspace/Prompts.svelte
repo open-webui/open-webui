@@ -128,7 +128,7 @@
 		>
 			<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 				<a href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}>
-					<div class=" flex-1 self-center pl-5">
+					<div class=" flex-1 self-center pl-1.5">
 						<div class=" font-semibold line-clamp-1">{prompt.command}</div>
 						<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
 							{prompt.title}
