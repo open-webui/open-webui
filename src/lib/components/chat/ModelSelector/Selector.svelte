@@ -25,6 +25,7 @@
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
+	export let id = '';
 	export let value = '';
 	export let placeholder = 'Select a model';
 	export let searchEnabled = true;
@@ -229,7 +230,11 @@
 	}}
 	closeFocus={false}
 >
-	<DropdownMenu.Trigger class="relative w-full font-primary" aria-label={placeholder}>
+	<DropdownMenu.Trigger
+		class="relative w-full font-primary"
+		aria-label={placeholder}
+		id="model-selector-{id}-button"
+	>
 		<div
 			class="flex w-full text-left px-0.5 outline-none bg-transparent truncate text-lg font-medium placeholder-gray-400 focus:outline-none"
 		>

@@ -85,6 +85,8 @@
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
 
+	let navbarElement;
+
 	let showEventConfirmation = false;
 	let eventConfirmationTitle = '';
 	let eventConfirmationMessage = '';
@@ -437,7 +439,29 @@
 		if ($page.url.searchParams.get('models')) {
 			selectedModels = $page.url.searchParams.get('models')?.split(',');
 		} else if ($page.url.searchParams.get('model')) {
-			selectedModels = $page.url.searchParams.get('model')?.split(',');
+			const urlModels = $page.url.searchParams.get('model')?.split(',');
+
+			if (urlModels.length === 1) {
+				const m = $models.find((m) => m.id === urlModels[0]);
+				if (!m) {
+					const modelSelectorButton = document.getElementById('model-selector-0-button');
+					if (modelSelectorButton) {
+						modelSelectorButton.click();
+						await tick();
+
+						const modelSelectorInput = document.getElementById('model-search-input');
+						if (modelSelectorInput) {
+							modelSelectorInput.focus();
+							modelSelectorInput.value = urlModels[0];
+							modelSelectorInput.dispatchEvent(new Event('input'));
+						}
+					}
+				} else {
+					selectedModels = urlModels;
+				}
+			} else {
+				selectedModels = urlModels;
+			}
 		} else if ($settings?.models) {
 			selectedModels = $settings?.models;
 		} else if ($config?.default_models) {
@@ -2051,6 +2075,7 @@
 		{/if}
 
 		<Navbar
+			bind:this={navbarElement}
 			chat={{
 				id: $chatId,
 				chat: {
