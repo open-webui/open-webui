@@ -818,7 +818,7 @@
 								</div>
 
 								<div
-									class=" flex-1 w-full h-full max-h-full py-2.5 px-3.5 rounded-xl text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none overflow-y-auto scrollbar-hidden"
+									class=" flex-1 w-full h-full max-h-full py-2.5 px-3.5 rounded-lg text-sm bg-transparent overflow-y-auto scrollbar-hidden"
 								>
 									{#key selectedFile.id}
 										<RichTextInput
