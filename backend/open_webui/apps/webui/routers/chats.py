@@ -586,6 +586,12 @@ async def add_tag_by_id_and_tag_name(
         tags = chat.meta.get("tags", [])
         tag_id = form_data.name.replace(" ", "_").lower()
 
+        if tag_id == "none":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Tag name cannot be 'None'"),
+            )
+
         print(tags, tag_id)
         if tag_id not in tags:
             Chats.add_chat_tag_by_id_and_user_id_and_tag_name(
