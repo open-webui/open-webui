@@ -480,7 +480,18 @@ class ChatTable:
                 )
 
                 # Check if there are any tags to filter, it should have all the tags
-                if tag_ids:
+                if "none" in tag_ids:
+                    query = query.filter(
+                        text(
+                            """
+                            NOT EXISTS (
+                                SELECT 1
+                                FROM json_each(Chat.meta, '$.tags') AS tag
+                            )
+                            """
+                        )
+                    )
+                elif tag_ids:
                     query = query.filter(
                         and_(
                             *[
@@ -518,7 +529,18 @@ class ChatTable:
                 )
 
                 # Check if there are any tags to filter, it should have all the tags
-                if tag_ids:
+                if "none" in tag_ids:
+                    query = query.filter(
+                        text(
+                            """
+                            NOT EXISTS (
+                                SELECT 1
+                                FROM json_array_elements_text(Chat.meta->'tags') AS tag
+                            )
+                            """
+                        )
+                    )
+                elif tag_ids:
                     query = query.filter(
                         and_(
                             *[

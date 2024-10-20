@@ -30,7 +30,13 @@
 
 	let filteredTags = [];
 	$: filteredTags = lastWord.startsWith('tag:')
-		? $tags.filter((tag) => {
+		? [
+				...$tags,
+				{
+					id: 'none',
+					name: $i18n.t('Untagged')
+				}
+			].filter((tag) => {
 				const tagName = lastWord.slice(4);
 				if (tagName) {
 					const tagId = tagName.replace(' ', '_').toLowerCase();

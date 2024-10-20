@@ -197,6 +197,7 @@
 			return;
 		} else {
 			searchDebounceTimeout = setTimeout(async () => {
+				allChatsLoaded = false;
 				currentChatPage.set(1);
 				await chats.set(await getChatListBySearchText(localStorage.token, search));
 
