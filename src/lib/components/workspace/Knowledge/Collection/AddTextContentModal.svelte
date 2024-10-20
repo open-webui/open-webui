@@ -24,7 +24,7 @@
 				show = false;
 			}}
 		>
-			<XMark className="size-4" />
+			<XMark className="size-3.5" />
 		</button>
 	</div>
 	<div class="flex flex-col md:flex-row w-full h-full md:space-x-4 dark:text-gray-200">
@@ -48,7 +48,7 @@
 			}}
 		>
 			<div class=" flex-1 w-full h-full flex justify-center overflow-auto px-5 py-4">
-				<div class=" max-w-3xl py-2 md:py-14 w-full flex flex-col gap-2">
+				<div class=" max-w-3xl py-2 md:py-10 w-full flex flex-col gap-2">
 					<div class="flex-shrink-0 w-full flex justify-between items-center">
 						<div class="w-full">
 							<input
@@ -67,7 +67,7 @@
 				</div>
 			</div>
 
-			<div class="flex justify-end text-sm font-medium flex-shrink-0 mt-1 py-3 px-3">
+			<div class="flex justify-end text-sm font-medium flex-shrink-0 mt-1 p-4">
 				<button
 					class=" px-3.5 py-2 bg-black text-white dark:bg-white dark:text-black transition rounded-full"
 					type="submit"
