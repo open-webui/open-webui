@@ -482,6 +482,12 @@
 				const percentage = (300 / width) * 100;
 				// set the minSize to the percentage, must be an integer
 				minSize = !largeScreen ? 100 : Math.floor(percentage);
+
+				if (showSidepanel) {
+					if (pane && pane.isExpanded() && pane.getSize() < minSize) {
+						pane.resize(minSize);
+					}
+				}
 			}
 		});
 
