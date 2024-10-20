@@ -7,98 +7,75 @@
 	const dispatch = createEventDispatcher();
 
 	import Modal from '$lib/components/common/Modal.svelte';
+	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 	export let show = false;
 
-	let name = '';
+	let name = 'Untitled';
 	let content = '';
 </script>
 
-<Modal size="md" bind:show>
-	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Add Content')}</div>
-			<button
-				class="self-center"
-				on:click={() => {
-					show = false;
-				}}
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-5 h-5"
-				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
-			</button>
-		</div>
-		<div class="flex flex-col md:flex-row w-full px-5 py-4 md:space-x-4 dark:text-gray-200">
-			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
-				<form
-					class="flex flex-col w-full"
-					on:submit|preventDefault={() => {
-						if (name.trim() === '' || content.trim() === '') {
-							toast.error($i18n.t('Please fill in all fields.'));
-							name = '';
-							content = '';
-							return;
-						}
+<Modal size="full" className="h-full bg-white dark:bg-gray-900" bind:show>
+	<div class="absolute top-0 right-0 p-5">
+		<button
+			class="self-center dark:text-white"
+			type="button"
+			on:click={() => {
+				show = false;
+			}}
+		>
+			<XMark className="size-4" />
+		</button>
+	</div>
+	<div class="flex flex-col md:flex-row w-full h-full md:space-x-4 dark:text-gray-200">
+		<form
+			class="flex flex-col w-full h-full"
+			on:submit|preventDefault={() => {
+				if (name.trim() === '' || content.trim() === '') {
+					toast.error($i18n.t('Please fill in all fields.'));
+					name = name.trim();
+					content = content.trim();
+					return;
+				}
 
-						dispatch('submit', {
-							name,
-							content
-						});
-						show = false;
-						name = '';
-						content = '';
-					}}
-				>
-					<div class="mb-3 w-full">
-						<div class="w-full flex flex-col gap-2.5">
-							<div class="w-full">
-								<div class=" text-sm mb-2">{$i18n.t('Title')}</div>
-
-								<div class="w-full mt-1">
-									<input
-										class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:text-gray-300 dark:bg-gray-850 outline-none"
-										type="text"
-										bind:value={name}
-										placeholder={`Name your content`}
-										required
-									/>
-								</div>
-							</div>
-
-							<div>
-								<div class="text-sm mb-2">{$i18n.t('Content')}</div>
-
-								<div class=" w-full mt-1">
-									<textarea
-										class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-whites dark:text-gray-300 dark:bg-gray-850 outline-none"
-										rows="10"
-										bind:value={content}
-										placeholder={`Write your content here`}
-										required
-									/>
-								</div>
-							</div>
+				dispatch('submit', {
+					name,
+					content
+				});
+				show = false;
+				name = '';
+				content = '';
+			}}
+		>
+			<div class=" flex-1 w-full h-full flex justify-center overflow-auto px-5 py-4">
+				<div class=" max-w-3xl py-2 md:py-14 w-full flex flex-col gap-2">
+					<div class="flex-shrink-0 w-full flex justify-between items-center">
+						<div class="w-full">
+							<input
+								class="w-full text-3xl font-semibold rounded-lg bg-transparent outline-none"
+								type="text"
+								bind:value={name}
+								placeholder={$i18n.t('Title')}
+								required
+							/>
 						</div>
 					</div>
 
-					<div class="flex justify-end text-sm font-medium">
-						<button
-							class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
-							type="submit"
-						>
-							{$i18n.t('Add Content')}
-						</button>
+					<div class=" flex-1 w-full h-full">
+						<RichTextInput bind:value={content} placeholder={$i18n.t('Content')} />
 					</div>
-				</form>
+				</div>
 			</div>
-		</div>
+
+			<div class="flex justify-end text-sm font-medium flex-shrink-0 mt-1 py-3 px-3">
+				<button
+					class=" px-3.5 py-2 bg-black text-white dark:bg-white dark:text-black transition rounded-full"
+					type="submit"
+				>
+					{$i18n.t('Save')}
+				</button>
+			</div>
+		</form>
 	</div>
 </Modal>
 
