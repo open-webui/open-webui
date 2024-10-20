@@ -300,7 +300,9 @@ export const generateSearchQuery = async (
 	prompt: string
 ) => {
 	let error = null;
-
+	
+	prompt = `Take the following string and write it as an optimized search string for a search engine such as Google search. ${prompt}`;
+	
 	const res = await fetch(`${WEBUI_BASE_URL}/api/task/query/completions`, {
 		method: 'POST',
 		headers: {
