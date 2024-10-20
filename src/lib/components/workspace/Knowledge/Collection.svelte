@@ -698,7 +698,7 @@
 					<Pane>
 						<div class="flex-1 flex justify-start h-full max-h-full">
 							{#if selectedFile}
-								<div class=" flex flex-col w-full h-full max-h-full ml-2">
+								<div class=" flex flex-col w-full h-full max-h-full ml-2.5">
 									<div class="flex-shrink-0 mb-2 flex items-center">
 										{#if !showSidepanel}
 											<div class="-translate-x-2">
