@@ -14,6 +14,7 @@
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -125,10 +126,8 @@
 					content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 					placement="top-start"
 				>
-					<textarea
+					<Textarea
 						bind:value={taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE}
-						class="w-full rounded-lg py-3 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize"
-						rows="1"
 						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 					/>
 				</Tooltip>
@@ -141,10 +140,8 @@
 					content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 					placement="top-start"
 				>
-					<textarea
+					<Textarea
 						bind:value={taskConfig.TAG_GENERATION_PROMPT_TEMPLATE}
-						class="w-full rounded-lg py-3 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize"
-						rows="1"
 						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 					/>
 				</Tooltip>
@@ -168,10 +165,8 @@
 						content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 						placement="top-start"
 					>
-						<textarea
+						<Textarea
 							bind:value={taskConfig.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE}
-							class="w-full rounded-lg py-3 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-							rows="1"
 							placeholder={$i18n.t(
 								'Leave empty to use the default prompt, or enter a custom prompt'
 							)}
