@@ -168,7 +168,7 @@
 					<div class="mt-5 flex justify-between">
 						<div>
 							{#if item?.meta?.document}
-								<Badge type="mute" content={$i18n.t('Document')} />
+								<Badge type="muted" content={$i18n.t('Document')} />
 							{:else}
 								<Badge type="success" content={$i18n.t('Collection')} />
 							{/if}

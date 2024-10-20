@@ -134,7 +134,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[180px] rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-xl"
+			class="w-full max-w-[200px] rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-xl"
 			sideOffset={-2}
 			side="bottom"
 			align="start"
@@ -245,7 +245,7 @@
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
 			</DropdownMenu.Item>
 
-			<hr class="border-gray-100 dark:border-gray-800 mt-1 mb-1" />
+			<hr class="border-gray-50 dark:border-gray-850 my-0.5" />
 
 			<div class="flex p-1">
 				<Tags

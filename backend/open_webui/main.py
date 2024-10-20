@@ -1570,12 +1570,15 @@ async def generate_chat_tags(form_data: dict, user=Depends(get_verified_user)):
     task_model_id = get_task_model_id(model_id)
     print(task_model_id)
 
-    template = """### Task:
-Generate 1-3 broad tags categorizing the main themes of the chat history.
+    if app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE != "":
+        template = app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE
+    else:
+        template = """### Task:
+Generate 1-3 broad tags categorizing the main themes of the chat history, along with 1-3 more specific subtopic tags.
 
 ### Guidelines:
 - Start with high-level domains (e.g. Science, Technology, Philosophy, Arts, Politics, Business, Health, Sports, Entertainment, Education)
-- Only add more specific subdomains if they are strongly represented throughout the conversation
+- Consider including relevant subfields/subdomains if they are strongly represented throughout the conversation
 - If content is too short (less than 3 messages) or too diverse, use only ["General"]
 - Use the chat's primary language; default to English if multilingual
 - Prioritize accuracy over specificity
