@@ -102,7 +102,7 @@
 
 	const createFileFromText = (name, content) => {
 		const blob = new Blob([content], { type: 'text/plain' });
-		const file = blobToFile(blob, `${name}.md`);
+		const file = blobToFile(blob, `${name}.txt`);
 
 		console.log(file);
 		return file;
@@ -784,7 +784,7 @@
 					>
 						<div class="flex flex-col justify-start h-full max-h-full p-2">
 							<div class=" flex flex-col w-full h-full max-h-full">
-								<div class="flex-shrink-0 mb-2 flex items-center">
+								<div class="flex-shrink-0 mt-1 mb-2 flex items-center">
 									<div class="mr-2">
 										<button
 											class="w-full text-left text-sm p-1.5 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"

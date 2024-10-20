@@ -52,7 +52,7 @@
 					<div class="flex-shrink-0 w-full flex justify-between items-center">
 						<div class="w-full">
 							<input
-								class="w-full text-3xl font-semibold rounded-lg bg-transparent outline-none"
+								class="w-full text-3xl font-semibold bg-transparent outline-none"
 								type="text"
 								bind:value={name}
 								placeholder={$i18n.t('Title')}
