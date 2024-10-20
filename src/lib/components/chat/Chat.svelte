@@ -10,7 +10,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
-	import type { Unsubscriber, Writable } from 'svelte/store';
+	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -20,6 +20,7 @@
 		config,
 		type Model,
 		models,
+		tags as allTags,
 		settings,
 		showSidebar,
 		WEBUI_NAME,
@@ -46,7 +47,9 @@
 
 	import { generateChatCompletion } from '$lib/apis/ollama';
 	import {
+		addTagById,
 		createNewChat,
+		getAllTags,
 		getChatById,
 		getChatList,
 		getTagsById,
@@ -62,7 +65,8 @@
 		generateTitle,
 		generateSearchQuery,
 		chatAction,
-		generateMoACompletion
+		generateMoACompletion,
+		generateTags
 	} from '$lib/apis';
 
 	import Banner from '../common/Banner.svelte';
@@ -537,7 +541,10 @@
 		});
 
 		if (chat) {
-			tags = await getTags();
+			tags = await getTagsById(localStorage.token, $chatId).catch(async (error) => {
+				return [];
+			});
+
 			const chatContent = chat.chat;
 
 			if (chatContent) {
@@ -1393,6 +1400,10 @@
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
 			const title = await generateChatTitle(userPrompt);
 			await setChatTitle(_chatId, title);
+
+			if ($settings?.autoTags ?? true) {
+				await setChatTags(messages);
+			}
 		}
 
 		return _response;
@@ -1707,6 +1718,10 @@
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
 			const title = await generateChatTitle(userPrompt);
 			await setChatTitle(_chatId, title);
+
+			if ($settings?.autoTags ?? true) {
+				await setChatTags(messages);
+			}
 		}
 
 		return _response;
@@ -1893,6 +1908,33 @@
 		}
 	};
 
+	const setChatTags = async (messages) => {
+		if (!$temporaryChatEnabled) {
+			let generatedTags = await generateTags(
+				localStorage.token,
+				selectedModels[0],
+				messages,
+				$chatId
+			).catch((error) => {
+				console.error(error);
+				return [];
+			});
+
+			const currentTags = await getTagsById(localStorage.token, $chatId);
+			generatedTags = generatedTags.filter(
+				(tag) => !currentTags.find((t) => t.id === tag.replaceAll(' ', '_').toLowerCase())
+			);
+			console.log(generatedTags);
+
+			for (const tag of generatedTags) {
+				await addTagById(localStorage.token, $chatId, tag);
+			}
+
+			chat = await getChatById(localStorage.token, $chatId);
+			allTags.set(await getAllTags(localStorage.token));
+		}
+	};
+
 	const getWebSearchResults = async (
 		model: string,
 		parentId: string,
@@ -1976,12 +2018,6 @@
 			});
 			history.messages[responseMessageId] = responseMessage;
 		}
-	};
-
-	const getTags = async () => {
-		return await getTagsById(localStorage.token, $chatId).catch(async (error) => {
-			return [];
-		});
 	};
 
 	const initChatHandler = async () => {

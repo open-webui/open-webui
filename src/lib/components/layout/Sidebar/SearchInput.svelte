@@ -144,7 +144,7 @@
 				{#if filteredTags.length > 0}
 					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">Tags</div>
 
-					<div class="">
+					<div class="max-h-60 overflow-auto">
 						{#each filteredTags as tag, tagIdx}
 							<button
 								class=" px-1.5 py-0.5 flex gap-1 hover:bg-gray-100 dark:hover:bg-gray-900 w-full rounded {selectedIdx ===
@@ -174,7 +174,7 @@
 				{:else if filteredOptions.length > 0}
 					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">Search options</div>
 
-					<div class="">
+					<div class=" max-h-60 overflow-auto">
 						{#each filteredOptions as option, optionIdx}
 							<button
 								class=" px-1.5 py-0.5 flex gap-1 hover:bg-gray-100 dark:hover:bg-gray-900 w-full rounded {selectedIdx ===
