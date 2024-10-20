@@ -2295,7 +2295,7 @@
 									if (e.detail) {
 										prompt = '';
 										await tick();
-										submitPrompt(e.detail);
+										submitPrompt(e.detail.replaceAll('\n\n', '\n'));
 									}
 								}}
 							/>

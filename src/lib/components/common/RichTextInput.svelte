@@ -24,8 +24,6 @@
 	import { baseKeymap, chainCommands } from 'prosemirror-commands';
 	import { DOMParser, DOMSerializer, Schema, Fragment } from 'prosemirror-model';
 
-	import { dev } from '$app/environment';
-
 	export let className = 'input-prose';
 	export let shiftEnter = false;
 
@@ -185,8 +183,6 @@
 
 			const hasBold = storedMarks.some((mark) => mark.type === state.schema.marks.strong);
 			const hasItalic = storedMarks.some((mark) => mark.type === state.schema.marks.em);
-
-			console.log('Stored marks after space:', storedMarks, hasBold, hasItalic);
 
 			// Remove marks from the space character (marks applied to the space character will be marked as false)
 			if (hasBold) {
@@ -356,7 +352,6 @@
 					// Prevent default tab navigation and provide indent/outdent behavior inside lists:
 					Tab: chainCommands((state, dispatch, view) => {
 						const { $from } = state.selection;
-						console.log('Tab key pressed', $from.parent, $from.parent.type);
 						if (isInList(state)) {
 							return sinkListItem(schema.nodes.list_item)(state, dispatch);
 						} else {
@@ -366,7 +361,6 @@
 					}),
 					'Shift-Tab': (state, dispatch, view) => {
 						const { $from } = state.selection;
-						console.log('Shift-Tab key pressed', $from.parent, $from.parent.type);
 						if (isInList(state)) {
 							return liftListItem(schema.nodes.list_item)(state, dispatch);
 						}
@@ -386,10 +380,6 @@
 				view.updateState(newState);
 
 				value = serializeEditorContent(newState.doc); // Convert ProseMirror content to markdown text
-
-				if (dev) {
-					console.log(value);
-				}
 				eventDispatch('input', { value });
 			},
 			handleDOMEvents: {
@@ -406,7 +396,6 @@
 					return false;
 				},
 				paste: (view, event) => {
-					console.log(event);
 					if (event.clipboardData) {
 						// Check if the pasted content contains image files
 						const hasImageFile = Array.from(event.clipboardData.files).some((file) =>
@@ -417,9 +406,6 @@
 						const hasImageItem = Array.from(event.clipboardData.items).some((item) =>
 							item.type.startsWith('image/')
 						);
-
-						console.log('Has image file:', hasImageFile, 'Has image item:', hasImageItem);
-
 						if (hasImageFile) {
 							// If there's an image, dispatch the event to the parent
 							eventDispatch('paste', { event });
@@ -440,7 +426,6 @@
 				},
 				// Handle space input after browser has completed it
 				keyup: (view, event) => {
-					console.log('Keyup event:', event);
 					if (event.key === ' ' && event.code === 'Space') {
 						afterSpacePress(view.state, view.dispatch);
 					}

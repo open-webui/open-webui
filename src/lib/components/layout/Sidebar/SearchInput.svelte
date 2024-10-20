@@ -163,7 +163,11 @@
 									dispatch('input');
 								}}
 							>
-								<div class="dark:text-gray-300 text-gray-700 font-medium">{tag.name}</div>
+								<div
+									class="dark:text-gray-300 text-gray-700 font-medium line-clamp-1 flex-shrink-0"
+								>
+									{tag.name}
+								</div>
 
 								<div class=" text-gray-500 line-clamp-1">
 									{tag.id}
