@@ -6,7 +6,12 @@
 	import { EditorState, Plugin, TextSelection } from 'prosemirror-state';
 	import { EditorView, Decoration, DecorationSet } from 'prosemirror-view';
 	import { undo, redo, history } from 'prosemirror-history';
-	import { schema, defaultMarkdownParser, defaultMarkdownSerializer } from 'prosemirror-markdown';
+	import {
+		schema,
+		defaultMarkdownParser,
+		MarkdownParser,
+		defaultMarkdownSerializer
+	} from 'prosemirror-markdown';
 
 	import {
 		inputRules,
@@ -19,7 +24,6 @@
 	import { baseKeymap, chainCommands } from 'prosemirror-commands';
 	import { DOMParser, DOMSerializer, Schema, Fragment } from 'prosemirror-model';
 
-	import { marked } from 'marked'; // Import marked for markdown parsing
 	import { dev } from '$app/environment';
 
 	export let className = 'input-prose';
@@ -67,14 +71,31 @@
 			.replace(/&#39;/g, "'");
 	}
 
-	// Method to convert markdown content to ProseMirror-compatible document
+	// Custom parsing rule that creates proper paragraphs for newlines and empty lines
 	function markdownToProseMirrorDoc(markdown: string) {
-		console.log('Markdown:', markdown);
+		// Split the markdown into lines
+		const lines = markdown.split('\n\n');
 
-		// Parse the Markdown content into a ProseMirror document
-		let doc = defaultMarkdownParser.parse(markdown || '');
+		// Create an array to hold our paragraph nodes
+		const paragraphs = [];
 
-		return doc;
+		// Process each line
+		lines.forEach((line) => {
+			if (line.trim() === '') {
+				// For empty lines, create an empty paragraph
+				paragraphs.push(schema.nodes.paragraph.create());
+			} else {
+				// For non-empty lines, parse as usual
+				const doc = defaultMarkdownParser.parse(line);
+				// Extract the content of the parsed document
+				doc.content.forEach((node) => {
+					paragraphs.push(node);
+				});
+			}
+		});
+
+		// Create a new document with these paragraphs
+		return schema.node('doc', null, paragraphs);
 	}
 
 	// Create a custom serializer for paragraphs
@@ -84,7 +105,7 @@
 
 		// If the paragraph is empty, just add an empty line.
 		if (content === '') {
-			state.write('\n');
+			state.write('\n\n');
 		} else {
 			state.renderInline(node);
 			state.closeBlock(node);
