@@ -151,7 +151,12 @@
 
 		currentChatPage.set(1);
 		allChatsLoaded = false;
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+
+		if (search) {
+			await chats.set(await getChatListBySearchText(localStorage.token, search, $currentChatPage));
+		} else {
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		}
 
 		// Enable pagination
 		scrollPaginationEnabled.set(true);
