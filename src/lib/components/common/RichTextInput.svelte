@@ -70,14 +70,45 @@
 	// Method to convert markdown content to ProseMirror-compatible document
 	function markdownToProseMirrorDoc(markdown: string) {
 		console.log('Markdown:', markdown);
+
 		// Parse the Markdown content into a ProseMirror document
 		let doc = defaultMarkdownParser.parse(markdown || '');
+
 		return doc;
 	}
 
+	// Create a custom serializer for paragraphs
+	// Custom paragraph serializer to preserve newlines for empty paragraphs (empty block).
+	function serializeParagraph(state, node: Node) {
+		const content = node.textContent.trim();
+
+		// If the paragraph is empty, just add an empty line.
+		if (content === '') {
+			state.write('\n');
+		} else {
+			state.renderInline(node);
+			state.closeBlock(node);
+		}
+	}
+
+	const customMarkdownSerializer = new defaultMarkdownSerializer.constructor(
+		{
+			...defaultMarkdownSerializer.nodes,
+
+			paragraph: (state, node) => {
+				serializeParagraph(state, node); // Use custom paragraph serialization
+			}
+
+			// Customize other block formats if needed
+		},
+
+		// Copy marks directly from the original serializer (or customize them if necessary)
+		defaultMarkdownSerializer.marks
+	);
+
 	// Utility function to convert ProseMirror content back to markdown text
 	function serializeEditorContent(doc) {
-		const markdown = defaultMarkdownSerializer.serialize(doc);
+		const markdown = customMarkdownSerializer.serialize(doc);
 		return unescapeMarkdown(markdown);
 	}
 
