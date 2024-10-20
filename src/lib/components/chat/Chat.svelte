@@ -829,6 +829,8 @@
 				})
 			);
 		} else {
+			prompt = '';
+
 			// Reset chat input textarea
 			const chatInputContainer = document.getElementById('chat-input-container');
 
@@ -2248,7 +2250,6 @@
 								}}
 								on:submit={async (e) => {
 									if (e.detail) {
-										prompt = '';
 										await tick();
 										submitPrompt(e.detail.replaceAll('\n\n', '\n'));
 									}
@@ -2293,7 +2294,6 @@
 								}}
 								on:submit={async (e) => {
 									if (e.detail) {
-										prompt = '';
 										await tick();
 										submitPrompt(e.detail.replaceAll('\n\n', '\n'));
 									}
