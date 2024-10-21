@@ -125,7 +125,7 @@
 		};
 
 		if (fileItem.size == 0) {
-			toast.error($i18n.t('File must have content to be uploaded'));
+			toast.error($i18n.t('You cannot upload an empty file.'));
 			return null;
 		}
 
