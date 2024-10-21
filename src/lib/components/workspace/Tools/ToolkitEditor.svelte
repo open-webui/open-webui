@@ -191,7 +191,7 @@ class Tools:
 						<div class=" flex-shrink-0 mr-2">
 							<Tooltip content={$i18n.t('Back')}>
 								<button
-									class="w-full text-left text-sm py-1.5 px-0.5 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
+									class="w-full text-left text-sm py-1.5 px-1 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
 									on:click={() => {
 										goto('/workspace/tools');
 									}}
@@ -274,7 +274,7 @@ class Tools:
 					</div>
 
 					<button
-						class="px-3 py-1.5 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-gray-50 transition rounded-lg"
+						class="px-3 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 						type="submit"
 					>
 						{$i18n.t('Save')}
