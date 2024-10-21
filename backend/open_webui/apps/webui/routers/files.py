@@ -47,6 +47,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
         file_path = f"{UPLOAD_DIR}/{filename}"
 
         Storage.upload_file(file.file, file_path)
+
         file = Files.insert_new_file(
             user.id,
             FileForm(
@@ -109,7 +110,6 @@ async def list_files(user=Depends(get_verified_user)):
 @router.delete("/all")
 async def delete_all_files(user=Depends(get_admin_user)):
     result = Files.delete_all_files()
-
     if result:
         folder = f"{UPLOAD_DIR}"
         try:
@@ -131,7 +131,7 @@ async def delete_all_files(user=Depends(get_admin_user)):
 
 @router.get("/{id}", response_model=Optional[FileModel])
 async def get_file_by_id(id: str, user=Depends(get_verified_user)):
-    file = Storage.get_file_by_id(id)
+    file = Files.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
         return file
@@ -149,7 +149,7 @@ async def get_file_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.get("/{id}/data/content")
 async def get_file_data_content_by_id(id: str, user=Depends(get_verified_user)):
-    file = Storage.get_file_by_id(id)
+    file = Files.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
         return {"content": file.data.get("content", "")}
@@ -173,12 +173,12 @@ class ContentForm(BaseModel):
 async def update_file_data_content_by_id(
     id: str, form_data: ContentForm, user=Depends(get_verified_user)
 ):
-    file = Storage.get_file_by_id(id)
+    file = Files.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
         try:
             process_file(ProcessFileForm(file_id=id, content=form_data.content))
-            file = Storage.get_file_by_id(id=id)
+            file = Files.get_file_by_id(id)
         except Exception as e:
             log.exception(e)
             log.error(f"Error processing file: {file.id}")
@@ -198,7 +198,7 @@ async def update_file_data_content_by_id(
 
 @router.get("/{id}/content")
 async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
-    file = Storage.get_file_by_id(id)
+    file = Files.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
         file_path = Path(file.path)
@@ -224,7 +224,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.get("/{id}/content/{file_name}")
 async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
-    file = Storage.get_file_by_id(id)
+    file = Files.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
         file_path = file.path
@@ -271,10 +271,11 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.delete("/{id}")
 async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
-    file = Storage.get_file_by_id(id)
+    file = Files.get_file_by_id(id)
     if file and (file.user_id == user.id or user.role == "admin"):
-        result = Storage.delete_file_by_id(id)
+        result = Files.delete_file_by_id(id)
         if result:
+            Storage.delete_file(file.filename)
             return {"message": "File deleted successfully"}
         else:
             raise HTTPException(

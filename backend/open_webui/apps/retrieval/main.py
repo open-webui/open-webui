@@ -760,8 +760,7 @@ def process_file(
     user=Depends(get_verified_user),
 ):
     try:
-        file = Storage.get_file_by_id(form_data.file_id)
-
+        file = Files.get_file_by_id(form_data.file_id)
         collection_name = form_data.collection_name
 
         if collection_name is None:
@@ -850,13 +849,13 @@ def process_file(
             text_content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {text_content}")
-        Storage.update_file_data_by_id(
+        Files.update_file_data_by_id(
             file.id,
             {"content": text_content},
         )
 
         hash = calculate_sha256_string(text_content)
-        Storage.update_file_hash_by_id(file.id, hash)
+        Files.update_file_hash_by_id(file.id, hash)
 
         try:
             result = save_docs_to_vector_db(
@@ -871,7 +870,7 @@ def process_file(
             )
 
             if result:
-                Storage.update_file_metadata_by_id(
+                Files.update_file_metadata_by_id(
                     file.id,
                     {
                         "collection_name": collection_name,
@@ -1271,7 +1270,7 @@ class DeleteForm(BaseModel):
 def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin_user)):
     try:
         if VECTOR_DB_CLIENT.has_collection(collection_name=form_data.collection_name):
-            file = Storage.get_file_by_id(form_data.file_id)
+            file = File.get_file_by_id(form_data.file_id)
             hash = file.hash
 
             VECTOR_DB_CLIENT.delete(
