@@ -19,25 +19,30 @@ class MilvusClient:
         ids = []
         documents = []
         metadatas = []
+        vectors = []
 
         for match in result:
             _ids = []
             _documents = []
             _metadatas = []
+            _vectors = []
             for item in match:
                 _ids.append(item.get("id"))
                 _documents.append(item.get("data", {}).get("text"))
                 _metadatas.append(item.get("metadata"))
+                _vectors.append(item.get("vector"))
 
             ids.append(_ids)
             documents.append(_documents)
             metadatas.append(_metadatas)
+            vectors.append(_vectors)
 
         return GetResult(
             **{
                 "ids": ids,
                 "documents": documents,
                 "metadatas": metadatas,
+                "vectors": vectors,
             }
         )
 
@@ -70,6 +75,7 @@ class MilvusClient:
                 "distances": distances,
                 "documents": documents,
                 "metadatas": metadatas,
+                "vectors": None,
             }
         )
 
@@ -137,7 +143,7 @@ class MilvusClient:
 
         return self._result_to_search_result(result)
 
-    def query(self, collection_name: str, filter: dict, limit: Optional[int] = None):
+    def query(self, collection_name: str, filter: dict, limit: Optional[int] = None, with_vectors: bool = False):
         # Construct the filter string for querying
         collection_name = collection_name.replace("-", "_")
         if not self.has_collection(collection_name):
@@ -189,6 +195,17 @@ class MilvusClient:
                 # Break the loop if the results returned are less than the requested fetch count
                 if results_count < current_fetch:
                     break
+
+            if with_vectors:
+                ids = [item["id"] for item in all_results]
+                extra = self.client.get(
+                    collection_name=f"{self.collection_prefix}_{collection_name}",
+                    output_fields=["vector"],
+                    ids=ids
+                )
+                for idx, result in enumerate(all_results):
+                    result["vector"] = extra[idx]["vector"]
+
 
             print(all_results)
             return self._result_to_get_result([all_results])

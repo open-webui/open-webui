@@ -20,18 +20,22 @@ class QdrantClient:
         ids = []
         documents = []
         metadatas = []
+        vectors = []
 
         for point in points:
             payload = point.payload
             ids.append(point.id)
             documents.append(payload["text"])
             metadatas.append(payload["metadata"])
+            if point.vector is not None:
+                vectors.append(point.vector)
 
         return GetResult(
             **{
                 "ids": [ids],
                 "documents": [documents],
                 "metadatas": [metadatas],
+                "vectors": [vectors],
             }
         )
 
@@ -89,10 +93,11 @@ class QdrantClient:
             ids=get_result.ids,
             documents=get_result.documents,
             metadatas=get_result.metadatas,
+            vectors=get_result.vectors,
             distances=[[point.score for point in query_response.points]],
         )
 
-    def query(self, collection_name: str, filter: dict, limit: Optional[int] = None):
+    def query(self, collection_name: str, filter: dict, limit: Optional[int] = None, with_vectors: bool = False):
         # Construct the filter string for querying
         if not self.has_collection(collection_name):
             return None
@@ -112,6 +117,7 @@ class QdrantClient:
                 collection_name=f"{self.collection_prefix}_{collection_name}",
                 query_filter=models.Filter(should=field_conditions),
                 limit=limit,
+                with_vectors=with_vectors
             )
             return self._result_to_get_result(points.points)
         except Exception as e:
