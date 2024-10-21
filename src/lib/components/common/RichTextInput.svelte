@@ -30,6 +30,7 @@
 	export let id = '';
 	export let value = '';
 	export let placeholder = 'Type here...';
+	export let trim = false;
 
 	let element: HTMLElement; // Element where ProseMirror will attach
 	let state;
@@ -128,7 +129,11 @@
 	// Utility function to convert ProseMirror content back to markdown text
 	function serializeEditorContent(doc) {
 		const markdown = customMarkdownSerializer.serialize(doc);
-		return unescapeMarkdown(markdown);
+		if (trim) {
+			return unescapeMarkdown(markdown).trim();
+		} else {
+			return unescapeMarkdown(markdown);
+		}
 	}
 
 	// ---- Input Rules ----
@@ -381,6 +386,8 @@
 
 				value = serializeEditorContent(newState.doc); // Convert ProseMirror content to markdown text
 				eventDispatch('input', { value });
+
+				console.log('Editor content:', value);
 			},
 			handleDOMEvents: {
 				focus: (view, event) => {

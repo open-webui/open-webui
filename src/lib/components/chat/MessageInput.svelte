@@ -517,6 +517,7 @@
 									<RichTextInput
 										bind:this={chatInputElement}
 										id="chat-input"
+										trim={true}
 										placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 										bind:value={prompt}
 										shiftEnter={!$mobile ||

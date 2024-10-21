@@ -790,99 +790,105 @@
 	//////////////////////////
 
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
-		let _responses = [];
-		console.log('submitPrompt', $chatId);
-		const messages = createMessagesList(history.currentId);
+		console.log('submitPrompt', userPrompt, $chatId);
 
+		const messages = createMessagesList(history.currentId);
 		selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
 
+		if (userPrompt === '') {
+			toast.error($i18n.t('Please enter a prompt'));
+			return;
+		}
 		if (selectedModels.includes('')) {
 			toast.error($i18n.t('Model not selected'));
-		} else if (messages.length != 0 && messages.at(-1).done != true) {
+			return;
+		}
+
+		if (messages.length != 0 && messages.at(-1).done != true) {
 			// Response not done
-			console.log('wait');
-		} else if (messages.length != 0 && messages.at(-1).error) {
+			return;
+		}
+		if (messages.length != 0 && messages.at(-1).error) {
 			// Error in response
-			toast.error(
-				$i18n.t(
-					`Oops! There was an error in the previous response. Please try again or contact admin.`
-				)
-			);
-		} else if (
+			toast.error($i18n.t(`Oops! There was an error in the previous response.`));
+			return;
+		}
+		if (
 			files.length > 0 &&
 			files.filter((file) => file.type !== 'image' && file.status === 'uploading').length > 0
 		) {
-			// Upload not done
 			toast.error(
-				$i18n.t(
-					`Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.`
-				)
+				$i18n.t(`Oops! There are files still uploading. Please wait for the upload to complete.`)
 			);
-		} else if (
+			return;
+		}
+		if (
 			($config?.file?.max_count ?? null) !== null &&
 			files.length + chatFiles.length > $config?.file?.max_count
 		) {
-			console.log(chatFiles.length, files.length);
 			toast.error(
 				$i18n.t(`You can only chat with a maximum of {{maxCount}} file(s) at a time.`, {
 					maxCount: $config?.file?.max_count
 				})
 			);
-		} else {
-			prompt = '';
-
-			// Reset chat input textarea
-			const chatInputContainer = document.getElementById('chat-input-container');
-
-			if (chatInputContainer) {
-				chatInputContainer.value = '';
-				chatInputContainer.style.height = '';
-			}
-
-			const _files = JSON.parse(JSON.stringify(files));
-			chatFiles.push(..._files.filter((item) => ['doc', 'file', 'collection'].includes(item.type)));
-			chatFiles = chatFiles.filter(
-				// Remove duplicates
-				(item, index, array) =>
-					array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
-			);
-
-			files = [];
-			prompt = '';
-
-			// Create user message
-			let userMessageId = uuidv4();
-			let userMessage = {
-				id: userMessageId,
-				parentId: messages.length !== 0 ? messages.at(-1).id : null,
-				childrenIds: [],
-				role: 'user',
-				content: userPrompt,
-				files: _files.length > 0 ? _files : undefined,
-				timestamp: Math.floor(Date.now() / 1000), // Unix epoch
-				models: selectedModels
-			};
-
-			// Add message to history and Set currentId to messageId
-			history.messages[userMessageId] = userMessage;
-			history.currentId = userMessageId;
-
-			// Append messageId to childrenIds of parent message
-			if (messages.length !== 0) {
-				history.messages[messages.at(-1).id].childrenIds.push(userMessageId);
-			}
-
-			// Wait until history/message have been updated
-			await tick();
-
-			// focus on chat input
-			const chatInput = document.getElementById('chat-input');
-			chatInput?.focus();
-
-			_responses = await sendPrompt(userPrompt, userMessageId, { newChat: true });
+			return;
 		}
+
+		let _responses = [];
+		prompt = '';
+		await tick();
+
+		// Reset chat input textarea
+		const chatInputContainer = document.getElementById('chat-input-container');
+
+		if (chatInputContainer) {
+			chatInputContainer.value = '';
+			chatInputContainer.style.height = '';
+		}
+
+		const _files = JSON.parse(JSON.stringify(files));
+		chatFiles.push(..._files.filter((item) => ['doc', 'file', 'collection'].includes(item.type)));
+		chatFiles = chatFiles.filter(
+			// Remove duplicates
+			(item, index, array) =>
+				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
+		);
+
+		files = [];
+		prompt = '';
+
+		// Create user message
+		let userMessageId = uuidv4();
+		let userMessage = {
+			id: userMessageId,
+			parentId: messages.length !== 0 ? messages.at(-1).id : null,
+			childrenIds: [],
+			role: 'user',
+			content: userPrompt,
+			files: _files.length > 0 ? _files : undefined,
+			timestamp: Math.floor(Date.now() / 1000), // Unix epoch
+			models: selectedModels
+		};
+
+		// Add message to history and Set currentId to messageId
+		history.messages[userMessageId] = userMessage;
+		history.currentId = userMessageId;
+
+		// Append messageId to childrenIds of parent message
+		if (messages.length !== 0) {
+			history.messages[messages.at(-1).id].childrenIds.push(userMessageId);
+		}
+
+		// Wait until history/message have been updated
+		await tick();
+
+		// focus on chat input
+		const chatInput = document.getElementById('chat-input');
+		chatInput?.focus();
+
+		_responses = await sendPrompt(userPrompt, userMessageId, { newChat: true });
 
 		return _responses;
 	};
