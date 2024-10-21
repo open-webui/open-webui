@@ -3,7 +3,7 @@ from typing import Optional
 
 from open_webui.apps.webui.internal.db import Base, get_db
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, Column, String, Text, Enum
 
 ####################
 # Prompts DB Schema
@@ -17,6 +17,7 @@ class Prompt(Base):
     user_id = Column(String)
     title = Column(Text)
     content = Column(Text)
+    behavior = Column(String, nullable=True)
     timestamp = Column(BigInteger)
 
 
@@ -25,6 +26,7 @@ class PromptModel(BaseModel):
     user_id: str
     title: str
     content: str
+    behavior: Optional[str]
     timestamp: int  # timestamp in epoch
 
     model_config = ConfigDict(from_attributes=True)
@@ -39,6 +41,7 @@ class PromptForm(BaseModel):
     command: str
     title: str
     content: str
+    behavior: Optional[str]
 
 
 class PromptsTable:
@@ -51,6 +54,7 @@ class PromptsTable:
                 "command": form_data.command,
                 "title": form_data.title,
                 "content": form_data.content,
+                "behavior": form_data.behavior,
                 "timestamp": int(time.time()),
             }
         )
@@ -90,6 +94,7 @@ class PromptsTable:
                 prompt = db.query(Prompt).filter_by(command=command).first()
                 prompt.title = form_data.title
                 prompt.content = form_data.content
+                prompt.behavior = form_data.behavior
                 prompt.timestamp = int(time.time())
                 db.commit()
                 return PromptModel.model_validate(prompt)
