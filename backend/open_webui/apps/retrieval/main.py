@@ -117,8 +117,6 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 app = FastAPI()
-# storage = StorageProvider()
-
 app.state.config = AppConfig()
 
 app.state.config.TOP_K = RAG_TOP_K
