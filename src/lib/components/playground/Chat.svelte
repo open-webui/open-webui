@@ -15,10 +15,9 @@
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 
 	import { splitStream } from '$lib/utils';
-	import Selector from '$lib/components/chat/ModelSelector/Selector.svelte';
 	import Collapsible from '../common/Collapsible.svelte';
 
-	import Messages from './chat/Messages.svelte';
+	import Messages from '$lib/components/playground/Chat/Messages.svelte';
 	import ChevronUp from '../icons/ChevronUp.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Pencil from '../icons/Pencil.svelte';
