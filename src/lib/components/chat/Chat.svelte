@@ -49,6 +49,8 @@
 	import {
 		addTagById,
 		createNewChat,
+		deleteTagById,
+		deleteTagsById,
 		getAllTags,
 		getChatById,
 		getChatList,
@@ -1912,6 +1914,14 @@
 
 	const setChatTags = async (messages) => {
 		if (!$temporaryChatEnabled) {
+			const currentTags = await getTagsById(localStorage.token, $chatId);
+			if (currentTags.length > 0) {
+				const res = await deleteTagsById(localStorage.token, $chatId);
+				if (res) {
+					allTags.set(await getAllTags(localStorage.token));
+				}
+			}
+
 			let generatedTags = await generateTags(
 				localStorage.token,
 				selectedModels[0],
@@ -1922,7 +1932,6 @@
 				return [];
 			});
 
-			const currentTags = await getTagsById(localStorage.token, $chatId);
 			generatedTags = generatedTags.filter(
 				(tag) => !currentTags.find((t) => t.id === tag.replaceAll(' ', '_').toLowerCase())
 			);

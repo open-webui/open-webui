@@ -644,12 +644,12 @@ async def delete_tag_by_id_and_tag_name(
 
 
 ############################
-# DeleteAllChatTagsById
+# DeleteAllTagsById
 ############################
 
 
 @router.delete("/{id}/tags/all", response_model=Optional[bool])
-async def delete_all_chat_tags_by_id(id: str, user=Depends(get_verified_user)):
+async def delete_all_tags_by_id(id: str, user=Depends(get_verified_user)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
         Chats.delete_all_tags_by_id_and_user_id(id, user.id)
@@ -658,9 +658,7 @@ async def delete_all_chat_tags_by_id(id: str, user=Depends(get_verified_user)):
             if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 0:
                 Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
-        chat = Chats.get_chat_by_id_and_user_id(id, user.id)
-        tags = chat.meta.get("tags", [])
-        return Tags.get_tags_by_ids_and_user_id(tags, user.id)
+        return True
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
