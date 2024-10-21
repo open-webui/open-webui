@@ -4,6 +4,9 @@
 	export let value = '';
 	export let placeholder = '';
 
+	export let rows = 1;
+	export let required = false;
+
 	export let className =
 		'w-full rounded-lg px-3 py-2 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none h-full';
 
@@ -12,7 +15,7 @@
 	onMount(async () => {
 		await tick();
 		if (textareaElement) {
-			setInterval(adjustHeight, 0);
+			setTimeout(adjustHeight, 0);
 		}
 	});
 
@@ -28,10 +31,8 @@
 	bind:this={textareaElement}
 	bind:value
 	{placeholder}
+	on:input={adjustHeight}
 	class={className}
-	on:input={(e) => {
-		e.target.style.height = '';
-		e.target.style.height = `${e.target.scrollHeight}px`;
-	}}
-	rows="1"
+	{rows}
+	{required}
 />
