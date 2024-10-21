@@ -218,7 +218,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
-        file_path = Path(file.meta["path"])
+        file_path = Path(file.path)
 
         # Check if the file already exists in the cache
         if file_path.is_file():
