@@ -90,6 +90,25 @@
 			sortOrder = 'asc';
 		}
 	}
+
+	let filteredUsers;
+
+	$: filteredUsers = users
+		.filter((user) => {
+			if (search === '') {
+				return true;
+			} else {
+				let name = user.name.toLowerCase();
+				const query = search.toLowerCase();
+				return name.includes(query);
+			}
+		})
+		.sort((a, b) => {
+			if (a[sortKey] < b[sortKey]) return sortOrder === 'asc' ? -1 : 1;
+			if (a[sortKey] > b[sortKey]) return sortOrder === 'asc' ? 1 : -1;
+			return 0;
+		})
+		.slice((page - 1) * 20, page * 20);
 </script>
 
 <ConfirmDialog
@@ -255,22 +274,7 @@
 				</tr>
 			</thead>
 			<tbody class="">
-				{#each users
-					.filter((user) => {
-						if (search === '') {
-							return true;
-						} else {
-							let name = user.name.toLowerCase();
-							const query = search.toLowerCase();
-							return name.includes(query);
-						}
-					})
-					.sort((a, b) => {
-						if (a[sortKey] < b[sortKey]) return sortOrder === 'asc' ? -1 : 1;
-						if (a[sortKey] > b[sortKey]) return sortOrder === 'asc' ? 1 : -1;
-						return 0;
-					})
-					.slice((page - 1) * 20, page * 20) as user, userIdx}
+				{#each filteredUsers as user, userIdx}
 					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
 						<td class="px-3 py-1 min-w-[7rem] w-28">
 							<button
