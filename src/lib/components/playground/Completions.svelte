@@ -78,8 +78,7 @@
 
 					for (const line of lines) {
 						if (line !== '') {
-							if (line === 'data: [DONE]') {
-								// responseMessage.done = true;
+							if (line.includes('[DONE]')) {
 								console.log('done');
 							} else {
 								let data = JSON.parse(line.replace(/^data: /, ''));
