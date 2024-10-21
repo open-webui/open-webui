@@ -30,7 +30,13 @@
 
 	let filteredTags = [];
 	$: filteredTags = lastWord.startsWith('tag:')
-		? $tags.filter((tag) => {
+		? [
+				...$tags,
+				{
+					id: 'none',
+					name: $i18n.t('Untagged')
+				}
+			].filter((tag) => {
 				const tagName = lastWord.slice(4);
 				if (tagName) {
 					const tagId = tagName.replace(' ', '_').toLowerCase();
@@ -144,7 +150,7 @@
 				{#if filteredTags.length > 0}
 					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">Tags</div>
 
-					<div class="">
+					<div class="max-h-60 overflow-auto">
 						{#each filteredTags as tag, tagIdx}
 							<button
 								class=" px-1.5 py-0.5 flex gap-1 hover:bg-gray-100 dark:hover:bg-gray-900 w-full rounded {selectedIdx ===
@@ -163,7 +169,11 @@
 									dispatch('input');
 								}}
 							>
-								<div class="dark:text-gray-300 text-gray-700 font-medium">{tag.name}</div>
+								<div
+									class="dark:text-gray-300 text-gray-700 font-medium line-clamp-1 flex-shrink-0"
+								>
+									{tag.name}
+								</div>
 
 								<div class=" text-gray-500 line-clamp-1">
 									{tag.id}
@@ -174,7 +184,7 @@
 				{:else if filteredOptions.length > 0}
 					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">Search options</div>
 
-					<div class="">
+					<div class=" max-h-60 overflow-auto">
 						{#each filteredOptions as option, optionIdx}
 							<button
 								class=" px-1.5 py-0.5 flex gap-1 hover:bg-gray-100 dark:hover:bg-gray-900 w-full rounded {selectedIdx ===

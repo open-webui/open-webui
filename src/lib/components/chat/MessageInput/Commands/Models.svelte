@@ -58,7 +58,7 @@
 
 	onMount(async () => {
 		await tick();
-		const chatInputElement = document.getElementById('chat-textarea');
+		const chatInputElement = document.getElementById('chat-input');
 		await tick();
 		chatInputElement?.focus();
 		await tick();

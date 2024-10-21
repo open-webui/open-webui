@@ -28,13 +28,21 @@
 	} from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ShareChatModal from '$lib/components/chat/ShareChatModal.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import DragGhost from '$lib/components/common/DragGhost.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
+	import Document from '$lib/components/icons/Document.svelte';
 
-	export let chat;
+	export let className = '';
+
+	export let id;
+	export let title;
+
 	export let selected = false;
 	export let shiftKey = false;
 
@@ -43,7 +51,7 @@
 	let showShareChatModal = false;
 	let confirmEdit = false;
 
-	let chatTitle = chat.title;
+	let chatTitle = title;
 
 	const editChatTitle = async (id, title) => {
 		if (title === '') {
@@ -78,13 +86,27 @@
 		}
 	};
 
+	const deleteChatHandler = async (id) => {
+		const res = await deleteChatById(localStorage.token, id).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res) {
+			tags.set(await getAllTags(localStorage.token));
+			if ($chatId === id) {
+				await chatId.set('');
+				await tick();
+				goto('/');
+			}
+
+			dispatch('change');
+		}
+	};
+
 	const archiveChatHandler = async (id) => {
 		await archiveChatById(localStorage.token, id);
-		tags.set(await getAllTags(localStorage.token));
-
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		await pinnedChats.set(await getPinnedChatList(localStorage.token));
+		dispatch('change');
 	};
 
 	const focusEdit = async (node: HTMLInputElement) => {
@@ -93,7 +115,7 @@
 
 	let itemElement;
 
-	let drag = false;
+	let dragged = false;
 	let x = 0;
 	let y = 0;
 
@@ -102,28 +124,35 @@
 		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
 	const onDragStart = (event) => {
+		event.stopPropagation();
+
 		event.dataTransfer.setDragImage(dragImage, 0, 0);
 
 		// Set the data to be transferred
 		event.dataTransfer.setData(
 			'text/plain',
 			JSON.stringify({
-				id: chat.id
+				type: 'chat',
+				id: id
 			})
 		);
 
-		drag = true;
+		dragged = true;
 		itemElement.style.opacity = '0.5'; // Optional: Visual cue to show it's being dragged
 	};
 
 	const onDrag = (event) => {
+		event.stopPropagation();
+
 		x = event.clientX;
 		y = event.clientY;
 	};
 
 	const onDragEnd = (event) => {
+		event.stopPropagation();
+
 		itemElement.style.opacity = '1'; // Reset visual cue after drag
-		drag = false;
+		dragged = false;
 	};
 
 	onMount(() => {
@@ -144,26 +173,42 @@
 			itemElement.removeEventListener('dragend', onDragEnd);
 		}
 	});
+
+	let showDeleteConfirm = false;
 </script>
 
-<ShareChatModal bind:show={showShareChatModal} chatId={chat.id} />
+<ShareChatModal bind:show={showShareChatModal} chatId={id} />
 
-{#if drag && x && y}
+<DeleteConfirmDialog
+	bind:show={showDeleteConfirm}
+	title={$i18n.t('Delete chat?')}
+	on:confirm={() => {
+		deleteChatHandler(id);
+	}}
+>
+	<div class=" text-sm text-gray-500 flex-1 line-clamp-3">
+		{$i18n.t('This will delete')} <span class="  font-semibold">{title}</span>.
+	</div>
+</DeleteConfirmDialog>
+
+{#if dragged && x && y}
 	<DragGhost {x} {y}>
-		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-44">
-			<div>
+		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
+			<div class="flex items-center gap-1">
+				<Document className=" size-[18px]" strokeWidth="2" />
 				<div class=" text-xs text-white line-clamp-1">
-					{chat.title}
+					{title}
 				</div>
 			</div>
 		</div>
 	</DragGhost>
 {/if}
 
-<div bind:this={itemElement} class=" w-full pr-2 relative group" draggable="true">
+<div bind:this={itemElement} class=" w-full {className} relative group" draggable="true">
 	{#if confirmEdit}
 		<div
-			class=" w-full flex justify-between rounded-xl px-2.5 py-2 {chat.id === $chatId || confirmEdit
+			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
+			confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950'
@@ -177,12 +222,13 @@
 		</div>
 	{:else}
 		<a
-			class=" w-full flex justify-between rounded-lg px-2.5 py-2 {chat.id === $chatId || confirmEdit
+			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
+			confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950'
 					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
-			href="/c/{chat.id}"
+			href="/c/{id}"
 			on:click={() => {
 				dispatch('select');
 
@@ -191,7 +237,7 @@
 				}
 			}}
 			on:dblclick={() => {
-				chatTitle = chat.title;
+				chatTitle = title;
 				confirmEdit = true;
 			}}
 			on:mouseenter={(e) => {
@@ -205,7 +251,7 @@
 		>
 			<div class=" flex self-center flex-1 w-full">
 				<div class=" text-left self-center overflow-hidden w-full h-[20px]">
-					{chat.title}
+					{title}
 				</div>
 			</div>
 		</a>
@@ -214,12 +260,14 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		class="
-        {chat.id === $chatId || confirmEdit
+        {id === $chatId || confirmEdit
 			? 'from-gray-200 dark:from-gray-900'
 			: selected
 				? 'from-gray-100 dark:from-gray-950'
 				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
-            absolute right-[10px] top-[6px] py-1 pr-2 pl-5 bg-gradient-to-l from-80%
+            absolute {className === 'pr-2'
+			? 'right-[8px]'
+			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-gradient-to-l from-80%
 
               to-transparent"
 		on:mouseenter={(e) => {
@@ -230,28 +278,19 @@
 		}}
 	>
 		{#if confirmEdit}
-			<div class="flex self-center space-x-1.5 z-10">
+			<div
+				class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px]"
+			>
 				<Tooltip content={$i18n.t('Confirm')}>
 					<button
 						class=" self-center dark:hover:text-white transition"
 						on:click={() => {
-							editChatTitle(chat.id, chatTitle);
+							editChatTitle(id, chatTitle);
 							confirmEdit = false;
 							chatTitle = '';
 						}}
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-								clip-rule="evenodd"
-							/>
-						</svg>
+						<Check className=" size-3.5" strokeWidth="2.5" />
 					</button>
 				</Tooltip>
 
@@ -263,16 +302,7 @@
 							chatTitle = '';
 						}}
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-							/>
-						</svg>
+						<XMark strokeWidth="2.5" />
 					</button>
 				</Tooltip>
 			</div>
@@ -282,7 +312,7 @@
 					<button
 						class=" self-center dark:hover:text-white transition"
 						on:click={() => {
-							archiveChatHandler(chat.id);
+							archiveChatHandler(id);
 						}}
 						type="button"
 					>
@@ -294,7 +324,7 @@
 					<button
 						class=" self-center dark:hover:text-white transition"
 						on:click={() => {
-							dispatch('delete', 'shift');
+							deleteChatHandler(id);
 						}}
 						type="button"
 					>
@@ -305,29 +335,29 @@
 		{:else}
 			<div class="flex self-center space-x-1 z-10">
 				<ChatMenu
-					chatId={chat.id}
+					chatId={id}
 					cloneChatHandler={() => {
-						cloneChatHandler(chat.id);
+						cloneChatHandler(id);
 					}}
 					shareHandler={() => {
 						showShareChatModal = true;
 					}}
 					archiveChatHandler={() => {
-						archiveChatHandler(chat.id);
+						archiveChatHandler(id);
 					}}
 					renameHandler={() => {
-						chatTitle = chat.title;
+						chatTitle = title;
 
 						confirmEdit = true;
 					}}
 					deleteHandler={() => {
-						dispatch('delete');
+						showDeleteConfirm = true;
 					}}
 					onClose={() => {
 						dispatch('unselect');
 					}}
 					on:change={async () => {
-						await pinnedChats.set(await getPinnedChatList(localStorage.token));
+						dispatch('change');
 					}}
 					on:tag={(e) => {
 						dispatch('tag', e.detail);
@@ -353,13 +383,13 @@
 					</button>
 				</ChatMenu>
 
-				{#if chat.id === $chatId}
+				{#if id === $chatId}
 					<!-- Shortcut support using "delete-chat-button" id -->
 					<button
 						id="delete-chat-button"
 						class="hidden"
 						on:click={() => {
-							dispatch('delete');
+							showDeleteConfirm = true;
 						}}
 					>
 						<svg

@@ -9,6 +9,7 @@ from open_webui.apps.webui.models.models import Models
 from open_webui.apps.webui.routers import (
     auths,
     chats,
+    folders,
     configs,
     files,
     functions,
@@ -119,6 +120,7 @@ app.include_router(configs.router, prefix="/configs", tags=["configs"])
 app.include_router(auths.router, prefix="/auths", tags=["auths"])
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(chats.router, prefix="/chats", tags=["chats"])
+app.include_router(folders.router, prefix="/folders", tags=["folders"])
 
 app.include_router(models.router, prefix="/models", tags=["models"])
 app.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])
@@ -344,7 +346,7 @@ async def generate_function_chat_completion(form_data, user):
     pipe = function_module.pipe
     params = get_function_params(function_module, form_data, user, extra_params)
 
-    if form_data["stream"]:
+    if form_data.get("stream", False):
 
         async def stream_content():
             try:

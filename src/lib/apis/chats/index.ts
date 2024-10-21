@@ -32,6 +32,46 @@ export const createNewChat = async (token: string, chat: object) => {
 	return res;
 };
 
+export const importChat = async (
+	token: string,
+	chat: object,
+	meta: object | null,
+	pinned?: boolean,
+	folderId?: string | null
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/import`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			chat: chat,
+			meta: meta ?? {},
+			pinned: pinned,
+			folder_id: folderId
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getChatList = async (token: string = '', page: number | null = null) => {
 	let error = null;
 	const searchParams = new URLSearchParams();
@@ -203,6 +243,37 @@ export const getChatListBySearchText = async (token: string, text: string, page:
 		...chat,
 		time_range: getTimeRange(chat.updated_at)
 	}));
+};
+
+export const getChatsByFolderId = async (token: string, folderId: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/folder/${folderId}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
 };
 
 export const getAllArchivedChats = async (token: string) => {
@@ -579,6 +650,41 @@ export const shareChatById = async (token: string, id: string) => {
 	return res;
 };
 
+export const updateChatFolderIdById = async (token: string, id: string, folderId?: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/folder`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			folder_id: folderId
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const archiveChatById = async (token: string, id: string) => {
 	let error = null;
 
@@ -764,8 +870,7 @@ export const addTagById = async (token: string, id: string, tagName: string) => 
 			return json;
 		})
 		.catch((err) => {
-			error = err;
-
+			error = err.detail;
 			console.log(err);
 			return null;
 		});

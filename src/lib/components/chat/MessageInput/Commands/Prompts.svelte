@@ -110,21 +110,17 @@
 
 		prompt = text;
 
-		const chatInputElement = document.getElementById('chat-textarea');
+		const chatInputContainerElement = document.getElementById('chat-input-container');
+		const chatInputElement = document.getElementById('chat-input');
 
 		await tick();
 
-		chatInputElement.style.height = '';
-		chatInputElement.style.height = Math.min(chatInputElement.scrollHeight, 200) + 'px';
+		if (chatInputContainerElement) {
+			chatInputContainerElement.style.height = '';
+			chatInputContainerElement.style.height =
+				Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
 
-		chatInputElement?.focus();
-
-		await tick();
-
-		const words = findWordIndices(prompt);
-		if (words.length > 0) {
-			const word = words.at(0);
-			chatInputElement.setSelectionRange(word?.startIndex, word.endIndex + 1);
+			chatInputElement?.focus();
 		}
 	};
 </script>
