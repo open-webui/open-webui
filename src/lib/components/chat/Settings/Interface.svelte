@@ -34,6 +34,7 @@
 	let landingPageMode = '';
 	let chatBubble = true;
 	let chatDirection: 'LTR' | 'RTL' = 'LTR';
+	let showUpdateToast = true;
 
 	let showEmojiInCall = false;
 	let voiceInterruption = false;
@@ -49,7 +50,7 @@
 		saveSettings({ scrollOnBranchChange: scrollOnBranchChange });
 	};
 
-	const togglewidescreenMode = async () => {
+	const toggleWidescreenMode = async () => {
 		widescreenMode = !widescreenMode;
 		saveSettings({ widescreenMode: widescreenMode });
 	};
@@ -62,6 +63,11 @@
 	const toggleLandingPageMode = async () => {
 		landingPageMode = landingPageMode === '' ? 'chat' : '';
 		saveSettings({ landingPageMode: landingPageMode });
+	};
+
+	const toggleShowUpdateToast = async () => {
+		showUpdateToast = !showUpdateToast;
+		saveSettings({ showUpdateToast: showUpdateToast });
 	};
 
 	const toggleShowUsername = async () => {
@@ -159,7 +165,9 @@
 		autoTags = $settings.autoTags ?? true;
 
 		responseAutoCopy = $settings.responseAutoCopy ?? false;
+
 		showUsername = $settings.showUsername ?? false;
+		showUpdateToast = $settings.showUpdateToast ?? true;
 
 		showEmojiInCall = $settings.showEmojiInCall ?? false;
 		voiceInterruption = $settings.voiceInterruption ?? false;
@@ -315,7 +323,7 @@
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
-							togglewidescreenMode();
+							toggleWidescreenMode();
 						}}
 						type="button"
 					>
@@ -345,6 +353,30 @@
 					</button>
 				</div>
 			</div>
+
+			{#if $user.role === 'admin'}
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" self-center text-xs">
+							{$i18n.t('Toast notifications for new updates')}
+						</div>
+
+						<button
+							class="p-1 px-3 text-xs flex rounded transition"
+							on:click={() => {
+								toggleShowUpdateToast();
+							}}
+							type="button"
+						>
+							{#if showUpdateToast === true}
+								<span class="ml-2 self-center">{$i18n.t('On')}</span>
+							{:else}
+								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+							{/if}
+						</button>
+					</div>
+				</div>
+			{/if}
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
