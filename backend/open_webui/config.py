@@ -654,6 +654,14 @@ ENABLE_LOGIN_FORM = PersistentConfig(
     os.environ.get("ENABLE_LOGIN_FORM", "True").lower() == "true",
 )
 
+
+ENABLE_SUI_LOGIN = PersistentConfig(
+    "ENABLE_SUI_LOGIN",
+    "ui.ENABLE_SUI_LOGIN",
+    os.environ.get("ENABLE_SUI_LOGIN", "True").lower() == "true",
+)
+
+
 DEFAULT_LOCALE = PersistentConfig(
     "DEFAULT_LOCALE",
     "ui.default_locale",

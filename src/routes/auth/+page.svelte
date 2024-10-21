@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { goto } from '$app/navigation';
 	import { getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -9,6 +9,7 @@
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
 	import { page } from '$app/stores';
 	import { getBackendConfig } from '$lib/apis';
+	import { renderSuiConnectButton } from '$lib/apis/atoma/react';
 
 	const i18n = getContext('i18n');
 
@@ -86,6 +87,61 @@
 		await setSessionUser(sessionUser);
 	};
 
+	let reactRootRef: HTMLElement;
+
+	let suiCurrentWallet = null;
+	let suiConnectionStatus = 'disconnected';
+	let suiSignPersonalMessage = null;
+	let suiSignAndExecuteTransaction = null;
+
+	const walletCallback = (
+		currentWallet: import('@mysten/wallet-standard').WalletWithRequiredFeatures,
+		connectionStatus: 'connecting' | 'disconnected' | 'connected',
+		signPersonalMessage: any,
+		signAndExecuteTransaction: any
+	) => {
+		suiCurrentWallet = currentWallet;
+		suiConnectionStatus = connectionStatus;
+		suiSignPersonalMessage = signPersonalMessage;
+		suiSignAndExecuteTransaction = signAndExecuteTransaction;
+		if (suiSignPersonalMessage && currentWallet?.accounts?.length > 0) {
+			suiSignPersonalMessage(
+				{ message: new TextEncoder().encode('Welcome to Atoma') },
+				{
+					onSuccess: async (result: any) => {
+						let name = 'Atoma User ' + currentWallet.accounts[0].address;
+						let email = result.signature + '@atoma.user';
+						let password = result.signature;
+						let sessionUser: any;
+						try {
+							sessionUser = await userSignIn(email, password);
+							if (sessionUser === null) {
+								sessionUser = await userSignUp(name, email, password, generateInitialsImage(name));
+							}
+						} catch (error) {
+							try {
+								sessionUser = await userSignUp(name, email, password, generateInitialsImage(name));
+							} catch (error) {
+								console.error(error);
+								return;
+							}
+						}
+						setSessionUser(sessionUser);
+					}
+				}
+			);
+		}
+	};
+
+	const initSui = () => {
+		renderSuiConnectButton(
+			reactRootRef,
+			false,
+			walletCallback,
+			$i18n.t('Continue with {{provider}}', { provider: 'Sui' })
+		);
+	};
+
 	onMount(async () => {
 		if ($user !== undefined) {
 			await goto('/');
@@ -95,6 +151,7 @@
 		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
 			await signInHandler();
 		}
+		setTimeout(initSui, 0);
 	});
 </script>
 
@@ -253,6 +310,10 @@
 							</div>
 						{/if}
 					</form>
+
+					{#if $config?.features.enable_sui_login}
+						<div id="react-root" bind:this={reactRootRef} />
+					{/if}
 
 					{#if Object.keys($config?.oauth?.providers ?? {}).length > 0}
 						<div class="inline-flex items-center justify-center w-full">

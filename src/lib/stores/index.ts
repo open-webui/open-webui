@@ -174,6 +174,7 @@ type Config = {
 		auth_trusted_header: boolean;
 		enable_signup: boolean;
 		enable_login_form: boolean;
+		enable_sui_login: boolean;
 		enable_web_search?: boolean;
 		enable_image_generation: boolean;
 		enable_admin_export: boolean;

@@ -73,6 +73,8 @@
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
 
+	import { renderSuiConnectButton } from '$lib/apis/atoma/react';
+
 	export let chatIdProp = '';
 
 	let loaded = false;
@@ -256,6 +258,29 @@
 		}
 	};
 
+	let reactRootRef: HTMLElement;
+	let suiCurrentWallet = null;
+	let suiConnectionStatus = 'disconnected';
+	let suiSignPersonalMessage = null;
+	let suiSignAndExecuteTransaction = null;
+
+	const walletCallback = (
+		currentWallet: import('@mysten/wallet-standard').WalletWithRequiredFeatures,
+		connectionStatus: 'connecting' | 'disconnected' | 'connected',
+		signPersonalMessage: any,
+		signAndExecuteTransaction: any
+	) => {
+		suiCurrentWallet = currentWallet;
+		suiConnectionStatus = connectionStatus;
+		suiSignPersonalMessage = signPersonalMessage;
+		suiSignAndExecuteTransaction = signAndExecuteTransaction;
+	};
+
+	const initSui = () => {
+		console.log('initSui');
+		renderSuiConnectButton(reactRootRef, true, walletCallback, "");
+	}
+
 	onMount(async () => {
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
@@ -300,6 +325,7 @@
 		chatInput?.focus();
 
 		chats.subscribe(() => {});
+		setTimeout(initSui, 0);
 	});
 
 	onDestroy(() => {
@@ -1895,6 +1921,7 @@
 </svelte:head>
 
 <audio id="audioElement" src="" style="display: none;" />
+<div id="react-root" bind:this={reactRootRef} style="display:none;"/>
 
 <EventConfirmDialog
 	bind:show={showEventConfirmation}
