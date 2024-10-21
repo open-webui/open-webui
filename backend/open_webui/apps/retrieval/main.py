@@ -1270,7 +1270,7 @@ class DeleteForm(BaseModel):
 def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin_user)):
     try:
         if VECTOR_DB_CLIENT.has_collection(collection_name=form_data.collection_name):
-            file = File.get_file_by_id(form_data.file_id)
+            file = Files.get_file_by_id(form_data.file_id)
             hash = file.hash
 
             VECTOR_DB_CLIENT.delete(
