@@ -17,12 +17,11 @@
 	{#each messages as message, idx}
 		<div class="flex gap-2 group">
 			<div class="flex items-start pt-1">
-				<button
-					class="px-2 py-1 text-sm font-semibold uppercase min-w-[6rem] text-left dark:group-hover:bg-gray-800 rounded-lg transition"
-					on:click={() => {
-						message.role = message.role === 'user' ? 'assistant' : 'user';
-					}}>{$i18n.t(message.role)}</button
+				<div
+					class="px-2 py-1 text-sm font-semibold uppercase min-w-[6rem] text-left rounded-lg transition"
 				>
+					{$i18n.t(message.role)}
+				</div>
 			</div>
 
 			<div class="flex-1">

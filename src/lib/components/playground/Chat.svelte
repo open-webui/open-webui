@@ -155,7 +155,6 @@
 			});
 			messages = messages;
 			message = '';
-			role = role === 'user' ? 'assistant' : 'user';
 			await tick();
 			scrollToBottom();
 		}
@@ -163,6 +162,8 @@
 
 	const submitHandler = async () => {
 		if (selectedModelId) {
+			await addHandler();
+
 			loading = true;
 			await chatCompletionHandler();
 
@@ -338,6 +339,7 @@
 									class="px-3.5 py-1.5 text-sm font-medium disabled:bg-gray-50 dark:disabled:hover:bg-gray-850 disabled:cursor-not-allowed bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
 									on:click={() => {
 										addHandler();
+										role = role === 'user' ? 'assistant' : 'user';
 									}}
 								>
 									{$i18n.t('Add')}
