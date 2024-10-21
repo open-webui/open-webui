@@ -549,24 +549,8 @@ CACHE_DIR = f"{DATA_DIR}/cache"
 Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
 
 ####################################
-# Tools DIR
-####################################
-
-TOOLS_DIR = os.getenv("TOOLS_DIR", f"{DATA_DIR}/tools")
-Path(TOOLS_DIR).mkdir(parents=True, exist_ok=True)
-
-
-####################################
-# Functions DIR
-####################################
-
-FUNCTIONS_DIR = os.getenv("FUNCTIONS_DIR", f"{DATA_DIR}/functions")
-Path(FUNCTIONS_DIR).mkdir(parents=True, exist_ok=True)
-
-####################################
 # OLLAMA_BASE_URL
 ####################################
-
 
 ENABLE_OLLAMA_API = PersistentConfig(
     "ENABLE_OLLAMA_API",
@@ -1224,17 +1208,6 @@ RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
 
 
 ####################################
-# Transcribe
-####################################
-
-WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")
-WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models")
-WHISPER_MODEL_AUTO_UPDATE = (
-    os.environ.get("WHISPER_MODEL_AUTO_UPDATE", "").lower() == "true"
-)
-
-
-####################################
 # Images
 ####################################
 
@@ -1449,6 +1422,19 @@ IMAGE_GENERATION_MODEL = PersistentConfig(
 # Audio
 ####################################
 
+# Transcription
+WHISPER_MODEL = PersistentConfig(
+    "WHISPER_MODEL",
+    "audio.stt.whisper_model",
+    os.getenv("WHISPER_MODEL", "base"),
+)
+
+WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models")
+WHISPER_MODEL_AUTO_UPDATE = (
+    os.environ.get("WHISPER_MODEL_AUTO_UPDATE", "").lower() == "true"
+)
+
+
 AUDIO_STT_OPENAI_API_BASE_URL = PersistentConfig(
     "AUDIO_STT_OPENAI_API_BASE_URL",
     "audio.stt.openai.api_base_url",
@@ -1470,7 +1456,7 @@ AUDIO_STT_ENGINE = PersistentConfig(
 AUDIO_STT_MODEL = PersistentConfig(
     "AUDIO_STT_MODEL",
     "audio.stt.model",
-    os.getenv("AUDIO_STT_MODEL", "whisper-1"),
+    os.getenv("AUDIO_STT_MODEL", ""),
 )
 
 AUDIO_TTS_OPENAI_API_BASE_URL = PersistentConfig(
