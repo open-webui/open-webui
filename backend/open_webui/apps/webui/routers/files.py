@@ -131,7 +131,7 @@ async def delete_all_files(user=Depends(get_admin_user)):
 
 @router.get("/{id}", response_model=Optional[FileModel])
 async def get_file_by_id(id: str, user=Depends(get_verified_user)):
-    file = Storage.get_file(id)
+    file = Storage.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
         return file
