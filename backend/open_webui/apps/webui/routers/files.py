@@ -1,14 +1,19 @@
 import logging
 import os
-import shutil
 import uuid
 from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
 import mimetypes
 
+from open_webui.storage.provider import Storage
 
-from open_webui.apps.webui.models.files import FileForm, FileModel, Files
+from open_webui.apps.webui.models.files import (
+    FileForm,
+    FileModel,
+    FileModelResponse,
+    Files,
+)
 from open_webui.apps.retrieval.main import process_file, ProcessFileForm
 
 from open_webui.config import UPLOAD_DIR
@@ -44,18 +49,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
         id = str(uuid.uuid4())
         name = filename
         filename = f"{id}_{filename}"
-        file_path = f"{UPLOAD_DIR}/{filename}"
-
-        contents = file.file.read()
-        if len(contents) == 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.EMPTY_CONTENT,
-            )
-
-        with open(file_path, "wb") as f:
-            f.write(contents)
-            f.close()
+        contents, file_path = Storage.upload_file(file.file, filename)
 
         file = Files.insert_new_file(
             user.id,
@@ -101,7 +95,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
 ############################
 
 
-@router.get("/", response_model=list[FileModel])
+@router.get("/", response_model=list[FileModelResponse])
 async def list_files(user=Depends(get_verified_user)):
     if user.role == "admin":
         files = Files.get_files()
@@ -118,27 +112,16 @@ async def list_files(user=Depends(get_verified_user)):
 @router.delete("/all")
 async def delete_all_files(user=Depends(get_admin_user)):
     result = Files.delete_all_files()
-
     if result:
-        folder = f"{UPLOAD_DIR}"
         try:
-            # Check if the directory exists
-            if os.path.exists(folder):
-                # Iterate over all the files and directories in the specified directory
-                for filename in os.listdir(folder):
-                    file_path = os.path.join(folder, filename)
-                    try:
-                        if os.path.isfile(file_path) or os.path.islink(file_path):
-                            os.unlink(file_path)  # Remove the file or link
-                        elif os.path.isdir(file_path):
-                            shutil.rmtree(file_path)  # Remove the directory
-                    except Exception as e:
-                        print(f"Failed to delete {file_path}. Reason: {e}")
-            else:
-                print(f"The directory {folder} does not exist")
+            Storage.delete_all_files()
         except Exception as e:
-            print(f"Failed to process the directory {folder}. Reason: {e}")
-
+            log.exception(e)
+            log.error(f"Error deleting files")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),
+            )
         return {"message": "All files deleted successfully"}
     else:
         raise HTTPException(
@@ -222,21 +205,29 @@ async def update_file_data_content_by_id(
 @router.get("/{id}/content")
 async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
-
     if file and (file.user_id == user.id or user.role == "admin"):
-        file_path = Path(file.path)
+        try:
+            file_path = Storage.get_file(file.path)
+            file_path = Path(file_path)
 
-        # Check if the file already exists in the cache
-        if file_path.is_file():
-            print(f"file_path: {file_path}")
-            headers = {
-                "Content-Disposition": f'attachment; filename="{file.meta.get("name", file.filename)}"'
-            }
-            return FileResponse(file_path, headers=headers)
-        else:
+            # Check if the file already exists in the cache
+            if file_path.is_file():
+                print(f"file_path: {file_path}")
+                headers = {
+                    "Content-Disposition": f'attachment; filename="{file.meta.get("name", file.filename)}"'
+                }
+                return FileResponse(file_path, headers=headers)
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=ERROR_MESSAGES.NOT_FOUND,
+                )
+        except Exception as e:
+            log.exception(e)
+            log.error(f"Error getting file content")
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=ERROR_MESSAGES.NOT_FOUND,
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error getting file content"),
             )
     else:
         raise HTTPException(
@@ -252,6 +243,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
     if file and (file.user_id == user.id or user.role == "admin"):
         file_path = file.path
         if file_path:
+            file_path = Storage.get_file(file_path)
             file_path = Path(file_path)
 
             # Check if the file already exists in the cache
@@ -298,6 +290,15 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
     if file and (file.user_id == user.id or user.role == "admin"):
         result = Files.delete_file_by_id(id)
         if result:
+            try:
+                Storage.delete_file(file.filename)
+            except Exception as e:
+                log.exception(e)
+                log.error(f"Error deleting files")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),
+                )
             return {"message": "File deleted successfully"}
         else:
             raise HTTPException(
