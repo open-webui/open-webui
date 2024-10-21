@@ -28,6 +28,7 @@
 	import FiltersSelector from '$lib/components/workspace/Models/FiltersSelector.svelte';
 	import ActionsSelector from '$lib/components/workspace/Models/ActionsSelector.svelte';
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -501,10 +502,10 @@
 				<div class="my-1">
 					<div class=" text-xs font-semibold mb-2">{$i18n.t('System Prompt')}</div>
 					<div>
-						<textarea
-							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg -mb-1"
+						<Textarea
+							className="px-3 py-2 text-sm w-full bg-transparent border dark:border-gray-600 outline-none resize-none overflow-y-hidden rounded-lg "
 							placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
-							rows="4"
+							rows={4}
 							bind:value={info.params.system}
 						/>
 					</div>
