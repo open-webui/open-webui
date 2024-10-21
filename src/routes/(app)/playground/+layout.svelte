@@ -64,7 +64,7 @@
 		</div>
 	</div>
 
-	<div class=" pb-1 px-[18px] flex-1 max-h-full overflow-y-auto">
+	<div class=" flex-1 max-h-full overflow-y-auto">
 		<slot />
 	</div>
 </div>

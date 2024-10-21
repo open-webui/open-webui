@@ -6,12 +6,9 @@
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, models, settings, showSidebar } from '$lib/stores';
-
-	import { generateChatCompletion } from '$lib/apis/ollama';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 
 	import { splitStream } from '$lib/utils';
-	import ChatCompletion from '$lib/components/playground/ChatCompletion.svelte';
 	import Selector from '$lib/components/chat/ModelSelector/Selector.svelte';
 	import MenuLines from '../icons/MenuLines.svelte';
 
@@ -125,7 +122,7 @@
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full">
-		<div class=" flex flex-col h-full">
+		<div class=" flex flex-col h-full px-4">
 			<div class="flex flex-col justify-between mb-1 gap-1">
 				<div class="flex flex-col gap-1 w-full">
 					<div class="flex w-full">
@@ -147,15 +144,15 @@
 			</div>
 
 			<div
-				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
+				class=" pt-0.5 pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
 				id="messages-container"
 			>
 				<div class=" h-full w-full flex flex-col">
-					<div class="flex-1 p-1">
+					<div class="flex-1">
 						<textarea
 							id="text-completion-textarea"
 							bind:this={textCompletionAreaElement}
-							class="w-full h-full p-3 bg-transparent outline outline-1 outline-gray-200 dark:outline-gray-800 resize-none rounded-lg text-sm"
+							class="w-full h-full p-3 bg-transparent border border-gray-50 dark:border-gray-850 outline-none resize-none rounded-lg text-sm"
 							bind:value={text}
 							placeholder={$i18n.t("You're a helpful assistant.")}
 						/>
@@ -171,7 +168,7 @@
 							submitHandler();
 						}}
 					>
-						{$i18n.t('Submit')}
+						{$i18n.t('Run')}
 					</button>
 				{:else}
 					<button

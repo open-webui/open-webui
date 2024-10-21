@@ -10,13 +10,21 @@
 		WEBUI_API_BASE_URL,
 		WEBUI_BASE_URL
 	} from '$lib/constants';
-	import { WEBUI_NAME, config, user, models, settings, showSidebar } from '$lib/stores';
+	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
 
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 
 	import { splitStream } from '$lib/utils';
-	import ChatCompletion from '$lib/components/playground/ChatCompletion.svelte';
 	import Selector from '$lib/components/chat/ModelSelector/Selector.svelte';
+	import Collapsible from '../common/Collapsible.svelte';
+
+	import Messages from './chat/Messages.svelte';
+	import ChevronUp from '../icons/ChevronUp.svelte';
+	import ChevronDown from '../icons/ChevronDown.svelte';
+	import Pencil from '../icons/Pencil.svelte';
+	import Cog6 from '../icons/Cog6.svelte';
+	import Sidebar from '../common/Sidebar.svelte';
+	import ArrowRight from '../icons/ArrowRight.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -28,13 +36,15 @@
 
 	let messagesContainerElement: HTMLDivElement;
 
+	let showSystem = false;
+	let showSettings = false;
+
 	let system = '';
-	let messages = [
-		{
-			role: 'user',
-			content: ''
-		}
-	];
+
+	let role = 'user';
+	let message = '';
+
+	let messages = [];
 
 	const scrollToBottom = () => {
 		const element = messagesContainerElement;
@@ -137,6 +147,20 @@
 		}
 	};
 
+	const addHandler = async () => {
+		if (message) {
+			messages.push({
+				role: role,
+				content: message
+			});
+			messages = messages;
+			message = '';
+			role = role === 'user' ? 'assistant' : 'user';
+			await tick();
+			scrollToBottom();
+		}
+	};
+
 	const submitHandler = async () => {
 		if (selectedModelId) {
 			loading = true;
@@ -164,40 +188,95 @@
 </script>
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
-	<div class="mx-auto w-full md:px-0 h-full">
-		<div class=" flex flex-col h-full">
-			<div class="flex flex-col justify-between mb-1 gap-1">
-				<div class="flex flex-col gap-1 w-full">
-					<div class="flex w-full">
-						<div class="overflow-hidden w-full">
-							<div class="max-w-full">
-								<Selector
-									placeholder={$i18n.t('Select a model')}
-									items={$models.map((model) => ({
-										value: model.id,
-										label: model.name,
-										model: model
-									}))}
-									bind:value={selectedModelId}
-								/>
-							</div>
+	<div class="mx-auto w-full md:px-0 h-full relative">
+		<Sidebar bind:show={showSettings} className=" dark:bg-gray-900" width="250px">
+			<div class="flex flex-col px-5 py-3 text-sm">
+				<div class="flex justify-between items-center mb-2">
+					<div class=" font-medium text-base">Settings</div>
+
+					<div>
+						<button class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg">
+							<ArrowRight strokeWidth="2.5" />
+						</button>
+					</div>
+				</div>
+
+				<div>
+					<div>
+						<div class=" text-xs font-medium mb-1">Model</div>
+
+						<div class="w-full">
+							<Selector
+								triggerClassName="text-sm"
+								placeholder={$i18n.t('Select a model')}
+								items={$models.map((model) => ({
+									value: model.id,
+									label: model.name,
+									model: model
+								}))}
+								bind:value={selectedModelId}
+							/>
 						</div>
 					</div>
 				</div>
 			</div>
+		</Sidebar>
 
-			<div class="p-1">
-				<div class="p-3 outline outline-1 outline-gray-200 dark:outline-gray-800 rounded-lg">
-					<div class=" text-sm font-medium">{$i18n.t('System')}</div>
-					<textarea
-						id="system-textarea"
-						class="w-full h-full bg-transparent resize-none outline-none text-sm"
-						bind:value={system}
-						placeholder={$i18n.t("You're a helpful assistant.")}
-						rows="4"
-					/>
+		<div class=" flex flex-col h-full px-4 py-1">
+			<div class="flex w-full items-start gap-1.5">
+				<Collapsible
+					className="w-full flex-1"
+					bind:open={showSystem}
+					buttonClassName="w-full rounded-lg text-sm border border-gray-50 dark:border-gray-850 w-full py-1 px-1.5"
+					grow={true}
+				>
+					<div class="flex gap-2 justify-between items-center">
+						<div class=" flex-shrink-0 font-medium ml-1.5">
+							{$i18n.t('System Instructions')}
+						</div>
+
+						{#if !showSystem}
+							<div class=" flex-1 text-gray-500 line-clamp-1">
+								{system}
+							</div>
+						{/if}
+
+						<div class="flex-shrink-0">
+							<button class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg">
+								{#if showSystem}
+									<ChevronUp className="size-3.5" />
+								{:else}
+									<Pencil className="size-3.5" />
+								{/if}
+							</button>
+						</div>
+					</div>
+
+					<div slot="content">
+						<div class="pt-1 px-1.5">
+							<textarea
+								id="system-textarea"
+								class="w-full h-full bg-transparent resize-none outline-none text-sm"
+								bind:value={system}
+								placeholder={$i18n.t("You're a helpful assistant.")}
+								rows="4"
+							/>
+						</div>
+					</div>
+				</Collapsible>
+
+				<div class="translate-y-1">
+					<button
+						class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
+						on:click={() => {
+							showSettings = !showSettings;
+						}}
+					>
+						<Cog6 />
+					</button>
 				</div>
 			</div>
+
 			<div
 				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
 				id="messages-container"
@@ -205,43 +284,84 @@
 			>
 				<div class=" h-full w-full flex flex-col">
 					<div class="flex-1 p-1">
-						<ChatCompletion bind:messages />
+						<Messages bind:messages />
 					</div>
 				</div>
 			</div>
 
-			<div class="pb-3 flex justify-end">
-				{#if !loading}
-					<button
-						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-						on:click={() => {
-							submitHandler();
-						}}
-					>
-						{$i18n.t('Submit')}
-					</button>
-				{:else}
-					<button
-						class="px-3 py-1.5 text-sm font-medium bg-gray-300 text-black transition rounded-full"
-						on:click={() => {
-							stopResponse();
-						}}
-					>
-						{$i18n.t('Cancel')}
-					</button>
-				{/if}
+			<div class="pb-3">
+				<div class="border border-gray-50 dark:border-gray-850 w-full px-3 py-2.5 rounded-xl">
+					<div class="py-0.5">
+						<!-- $i18n.t('a user') -->
+						<!-- $i18n.t('an assistant') -->
+						<textarea
+							bind:value={message}
+							class=" w-full h-full bg-transparent resize-none outline-none text-sm"
+							placeholder={$i18n.t(`Enter {{role}} message here`, {
+								role: role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
+							})}
+							on:input={(e) => {
+								e.target.style.height = '';
+								e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+							}}
+							on:focus={(e) => {
+								e.target.style.height = '';
+								e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+							}}
+							rows="2"
+						/>
+					</div>
+
+					<div class="flex justify-between">
+						<div>
+							<button
+								class="px-3.5 py-1.5 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
+								on:click={() => {
+									role = role === 'user' ? 'assistant' : 'user';
+								}}
+							>
+								{#if role === 'user'}
+									{$i18n.t('User')}
+								{:else}
+									{$i18n.t('Assistant')}
+								{/if}
+							</button>
+						</div>
+
+						<div>
+							{#if !loading}
+								<button
+									disabled={message === ''}
+									class="px-3.5 py-1.5 text-sm font-medium disabled:bg-gray-50 dark:disabled:hover:bg-gray-850 disabled:cursor-not-allowed bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
+									on:click={() => {
+										addHandler();
+									}}
+								>
+									{$i18n.t('Add')}
+								</button>
+
+								<button
+									class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
+									on:click={() => {
+										submitHandler();
+									}}
+								>
+									{$i18n.t('Run')}
+								</button>
+							{:else}
+								<button
+									class="px-3 py-1.5 text-sm font-medium bg-gray-300 text-black transition rounded-lg"
+									on:click={() => {
+										stopResponse();
+									}}
+								>
+									{$i18n.t('Cancel')}
+								</button>
+							{/if}
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
 </div>
-
-<style>
-	.scrollbar-hidden::-webkit-scrollbar {
-		display: none; /* for Chrome, Safari and Opera */
-	}
-
-	.scrollbar-hidden {
-		-ms-overflow-style: none; /* IE and Edge */
-		scrollbar-width: none; /* Firefox */
-	}
-</style>

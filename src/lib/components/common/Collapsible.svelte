@@ -15,6 +15,8 @@
 	export let buttonClassName = 'w-fit';
 	export let title = null;
 
+	export let grow = false;
+
 	export let disabled = false;
 	export let hide = false;
 </script>
@@ -60,13 +62,28 @@
 		>
 			<div>
 				<slot />
+
+				{#if grow}
+					{#if open && !hide}
+						<div
+							transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}
+							on:pointerup={(e) => {
+								e.stopPropagation();
+							}}
+						>
+							<slot name="content" />
+						</div>
+					{/if}
+				{/if}
 			</div>
 		</div>
 	{/if}
 
-	{#if open && !hide}
-		<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
-			<slot name="content" />
-		</div>
+	{#if !grow}
+		{#if open && !hide}
+			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
+				<slot name="content" />
+			</div>
+		{/if}
 	{/if}
 </div>
