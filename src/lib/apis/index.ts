@@ -208,7 +208,7 @@ export const updateTaskConfig = async (token: string, config: object) => {
 export const generateTitle = async (
 	token: string = '',
 	model: string,
-	prompt: string,
+	messages: string[],
 	chat_id?: string
 ) => {
 	let error = null;
@@ -222,7 +222,7 @@ export const generateTitle = async (
 		},
 		body: JSON.stringify({
 			model: model,
-			prompt: prompt,
+			messages: messages,
 			...(chat_id && { chat_id: chat_id })
 		})
 	})

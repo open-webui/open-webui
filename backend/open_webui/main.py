@@ -1472,7 +1472,7 @@ async def generate_title(form_data: dict, user=Depends(get_verified_user)):
     if app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE != "":
         template = app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE
     else:
-        template = """Create a concise, 3-5 word title with an emoji as a title for the prompt in the given language. Suitable Emojis for the summary can be used to enhance understanding but avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
+        template = """Create a concise, 3-5 word title with an emoji as a title for the chat history, in the given language. Suitable Emojis for the summary can be used to enhance understanding but avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
 
 Examples of titles:
 📉 Stock Market Trends
@@ -1482,11 +1482,13 @@ Remote Work Productivity Tips
 Artificial Intelligence in Healthcare
 🎮 Video Game Development Insights
 
-Prompt: {{prompt:middletruncate:8000}}"""
+<chat_history>
+{{MESSAGES:END:2}}
+</chat_history>"""
 
     content = title_generation_template(
         template,
-        form_data["prompt"],
+        form_data["messages"],
         {
             "name": user.name,
             "location": user.info.get("location") if user.info else None,

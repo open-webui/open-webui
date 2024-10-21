@@ -1408,7 +1408,8 @@
 		const messages = createMessagesList(responseMessageId);
 		if (messages.length == 2 && messages.at(-1).content !== '' && selectedModels[0] === model.id) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-			const title = await generateChatTitle(userPrompt);
+
+			const title = await generateChatTitle(messages);
 			await setChatTitle(_chatId, title);
 
 			if ($settings?.autoTags ?? true) {
@@ -1726,7 +1727,8 @@
 		const messages = createMessagesList(responseMessageId);
 		if (messages.length == 2 && selectedModels[0] === model.id) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-			const title = await generateChatTitle(userPrompt);
+
+			const title = await generateChatTitle(messages);
 			await setChatTitle(_chatId, title);
 
 			if ($settings?.autoTags ?? true) {
@@ -1887,12 +1889,12 @@
 		}
 	};
 
-	const generateChatTitle = async (userPrompt) => {
+	const generateChatTitle = async (messages) => {
 		if ($settings?.title?.auto ?? true) {
 			const title = await generateTitle(
 				localStorage.token,
 				selectedModels[0],
-				userPrompt,
+				messages,
 				$chatId
 			).catch((error) => {
 				console.error(error);
@@ -1901,7 +1903,7 @@
 
 			return title;
 		} else {
-			return `${userPrompt}`;
+			return 'New Chat';
 		}
 	};
 
