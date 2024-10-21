@@ -35,6 +35,7 @@ export const createNewChat = async (token: string, chat: object) => {
 export const importChat = async (
 	token: string,
 	chat: object,
+	meta: object | null,
 	pinned?: boolean,
 	folderId?: string | null
 ) => {
@@ -49,6 +50,7 @@ export const importChat = async (
 		},
 		body: JSON.stringify({
 			chat: chat,
+			meta: meta ?? {},
 			pinned: pinned,
 			folder_id: folderId
 		})
@@ -868,8 +870,7 @@ export const addTagById = async (token: string, id: string, tagName: string) => 
 			return json;
 		})
 		.catch((err) => {
-			error = err;
-
+			error = err.detail;
 			console.log(err);
 			return null;
 		});

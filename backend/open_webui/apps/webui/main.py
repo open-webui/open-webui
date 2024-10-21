@@ -33,9 +33,13 @@ from open_webui.config import (
     ENABLE_MESSAGE_RATING,
     ENABLE_SIGNUP,
     JWT_EXPIRES_IN,
+    ENABLE_OAUTH_ROLE_MANAGEMENT,
+    OAUTH_ROLES_CLAIM,
     OAUTH_EMAIL_CLAIM,
     OAUTH_PICTURE_CLAIM,
     OAUTH_USERNAME_CLAIM,
+    OAUTH_ALLOWED_ROLES,
+    OAUTH_ADMIN_ROLES,
     SHOW_ADMIN_DETAILS,
     USER_PERMISSIONS,
     WEBHOOK_URL,
@@ -94,6 +98,11 @@ app.state.config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
 app.state.config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
 app.state.config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM
 
+app.state.config.ENABLE_OAUTH_ROLE_MANAGEMENT = ENABLE_OAUTH_ROLE_MANAGEMENT
+app.state.config.OAUTH_ROLES_CLAIM = OAUTH_ROLES_CLAIM
+app.state.config.OAUTH_ALLOWED_ROLES = OAUTH_ALLOWED_ROLES
+app.state.config.OAUTH_ADMIN_ROLES = OAUTH_ADMIN_ROLES
+
 app.state.MODELS = {}
 app.state.TOOLS = {}
 app.state.FUNCTIONS = {}
@@ -133,6 +142,11 @@ async def get_status():
         "default_models": app.state.config.DEFAULT_MODELS,
         "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
     }
+
+
+async def get_all_models():
+    pipe_models = await get_pipe_models()
+    return pipe_models
 
 
 def get_function_module(pipe_id: str):

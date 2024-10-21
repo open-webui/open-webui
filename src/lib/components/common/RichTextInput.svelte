@@ -6,7 +6,12 @@
 	import { EditorState, Plugin, TextSelection } from 'prosemirror-state';
 	import { EditorView, Decoration, DecorationSet } from 'prosemirror-view';
 	import { undo, redo, history } from 'prosemirror-history';
-	import { schema, defaultMarkdownParser, defaultMarkdownSerializer } from 'prosemirror-markdown';
+	import {
+		schema,
+		defaultMarkdownParser,
+		MarkdownParser,
+		defaultMarkdownSerializer
+	} from 'prosemirror-markdown';
 
 	import {
 		inputRules,
@@ -19,15 +24,13 @@
 	import { baseKeymap, chainCommands } from 'prosemirror-commands';
 	import { DOMParser, DOMSerializer, Schema, Fragment } from 'prosemirror-model';
 
-	import { marked } from 'marked'; // Import marked for markdown parsing
-	import { dev } from '$app/environment';
-
 	export let className = 'input-prose';
 	export let shiftEnter = false;
 
 	export let id = '';
 	export let value = '';
 	export let placeholder = 'Type here...';
+	export let trim = false;
 
 	let element: HTMLElement; // Element where ProseMirror will attach
 	let state;
@@ -67,18 +70,70 @@
 			.replace(/&#39;/g, "'");
 	}
 
-	// Method to convert markdown content to ProseMirror-compatible document
+	// Custom parsing rule that creates proper paragraphs for newlines and empty lines
 	function markdownToProseMirrorDoc(markdown: string) {
-		console.log('Markdown:', markdown);
-		// Parse the Markdown content into a ProseMirror document
-		let doc = defaultMarkdownParser.parse(markdown || '');
-		return doc;
+		// Split the markdown into lines
+		const lines = markdown.split('\n\n');
+
+		// Create an array to hold our paragraph nodes
+		const paragraphs = [];
+
+		// Process each line
+		lines.forEach((line) => {
+			if (line.trim() === '') {
+				// For empty lines, create an empty paragraph
+				paragraphs.push(schema.nodes.paragraph.create());
+			} else {
+				// For non-empty lines, parse as usual
+				const doc = defaultMarkdownParser.parse(line);
+				// Extract the content of the parsed document
+				doc.content.forEach((node) => {
+					paragraphs.push(node);
+				});
+			}
+		});
+
+		// Create a new document with these paragraphs
+		return schema.node('doc', null, paragraphs);
 	}
+
+	// Create a custom serializer for paragraphs
+	// Custom paragraph serializer to preserve newlines for empty paragraphs (empty block).
+	function serializeParagraph(state, node: Node) {
+		const content = node.textContent.trim();
+
+		// If the paragraph is empty, just add an empty line.
+		if (content === '') {
+			state.write('\n\n');
+		} else {
+			state.renderInline(node);
+			state.closeBlock(node);
+		}
+	}
+
+	const customMarkdownSerializer = new defaultMarkdownSerializer.constructor(
+		{
+			...defaultMarkdownSerializer.nodes,
+
+			paragraph: (state, node) => {
+				serializeParagraph(state, node); // Use custom paragraph serialization
+			}
+
+			// Customize other block formats if needed
+		},
+
+		// Copy marks directly from the original serializer (or customize them if necessary)
+		defaultMarkdownSerializer.marks
+	);
 
 	// Utility function to convert ProseMirror content back to markdown text
 	function serializeEditorContent(doc) {
-		const markdown = defaultMarkdownSerializer.serialize(doc);
-		return unescapeMarkdown(markdown);
+		const markdown = customMarkdownSerializer.serialize(doc);
+		if (trim) {
+			return unescapeMarkdown(markdown).trim();
+		} else {
+			return unescapeMarkdown(markdown);
+		}
 	}
 
 	// ---- Input Rules ----
@@ -133,8 +188,6 @@
 
 			const hasBold = storedMarks.some((mark) => mark.type === state.schema.marks.strong);
 			const hasItalic = storedMarks.some((mark) => mark.type === state.schema.marks.em);
-
-			console.log('Stored marks after space:', storedMarks, hasBold, hasItalic);
 
 			// Remove marks from the space character (marks applied to the space character will be marked as false)
 			if (hasBold) {
@@ -304,7 +357,6 @@
 					// Prevent default tab navigation and provide indent/outdent behavior inside lists:
 					Tab: chainCommands((state, dispatch, view) => {
 						const { $from } = state.selection;
-						console.log('Tab key pressed', $from.parent, $from.parent.type);
 						if (isInList(state)) {
 							return sinkListItem(schema.nodes.list_item)(state, dispatch);
 						} else {
@@ -314,7 +366,6 @@
 					}),
 					'Shift-Tab': (state, dispatch, view) => {
 						const { $from } = state.selection;
-						console.log('Shift-Tab key pressed', $from.parent, $from.parent.type);
 						if (isInList(state)) {
 							return liftListItem(schema.nodes.list_item)(state, dispatch);
 						}
@@ -334,11 +385,9 @@
 				view.updateState(newState);
 
 				value = serializeEditorContent(newState.doc); // Convert ProseMirror content to markdown text
-
-				if (dev) {
-					console.log(value);
-				}
 				eventDispatch('input', { value });
+
+				console.log('Editor content:', value);
 			},
 			handleDOMEvents: {
 				focus: (view, event) => {
@@ -354,7 +403,6 @@
 					return false;
 				},
 				paste: (view, event) => {
-					console.log(event);
 					if (event.clipboardData) {
 						// Check if the pasted content contains image files
 						const hasImageFile = Array.from(event.clipboardData.files).some((file) =>
@@ -365,9 +413,6 @@
 						const hasImageItem = Array.from(event.clipboardData.items).some((item) =>
 							item.type.startsWith('image/')
 						);
-
-						console.log('Has image file:', hasImageFile, 'Has image item:', hasImageItem);
-
 						if (hasImageFile) {
 							// If there's an image, dispatch the event to the parent
 							eventDispatch('paste', { event });
@@ -388,7 +433,6 @@
 				},
 				// Handle space input after browser has completed it
 				keyup: (view, event) => {
-					console.log('Keyup event:', event);
 					if (event.key === ' ' && event.code === 'Space') {
 						afterSpacePress(view.state, view.dispatch);
 					}

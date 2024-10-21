@@ -42,7 +42,7 @@
 		class="tabs flex flex-row overflow-x-auto space-x-1 max-w-full lg:space-x-0 lg:space-y-1 lg:flex-col lg:flex-none lg:w-44 dark:text-gray-200 text-xs text-left scrollbar-none"
 	>
 		<button
-			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
 			'general'
 				? 'bg-gray-100 dark:bg-gray-800'
 				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
@@ -68,7 +68,7 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'users'
 				? 'bg-gray-100 dark:bg-gray-800'
 				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
@@ -92,7 +92,7 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'connections'
 				? 'bg-gray-100 dark:bg-gray-800'
 				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
@@ -116,7 +116,7 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'models'
 				? 'bg-gray-100 dark:bg-gray-800'
 				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
@@ -142,7 +142,7 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'documents'
 				? 'bg-gray-100 dark:bg-gray-800'
 				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
@@ -172,7 +172,7 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'web'
 				? 'bg-gray-100 dark:bg-gray-800'
 				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
@@ -196,7 +196,7 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'interface'
 				? 'bg-gray-100 dark:bg-gray-800'
 				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
@@ -222,7 +222,7 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'audio'
 				? 'bg-gray-100 dark:bg-gray-800'
 				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
@@ -249,7 +249,7 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'images'
 				? 'bg-gray-100 dark:bg-gray-800'
 				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
@@ -275,7 +275,7 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'pipelines'
 				? 'bg-gray-100 dark:bg-gray-800'
 				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
@@ -305,7 +305,7 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'db'
 				? 'bg-gray-100 dark:bg-gray-800'
 				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"

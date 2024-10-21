@@ -110,6 +110,17 @@ async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
 async def import_chat(form_data: ChatImportForm, user=Depends(get_verified_user)):
     try:
         chat = Chats.import_chat(user.id, form_data)
+        if chat:
+            tags = chat.meta.get("tags", [])
+            for tag_id in tags:
+                tag_id = tag_id.replace(" ", "_").lower()
+                tag_name = " ".join([word.capitalize() for word in tag_id.split("_")])
+                if (
+                    tag_id != "none"
+                    and Tags.get_tag_by_name_and_user_id(tag_name, user.id) is None
+                ):
+                    Tags.insert_new_tag(tag_name, user.id)
+
         return ChatResponse(**chat.model_dump())
     except Exception as e:
         log.exception(e)
@@ -586,6 +597,12 @@ async def add_tag_by_id_and_tag_name(
         tags = chat.meta.get("tags", [])
         tag_id = form_data.name.replace(" ", "_").lower()
 
+        if tag_id == "none":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Tag name cannot be 'None'"),
+            )
+
         print(tags, tag_id)
         if tag_id not in tags:
             Chats.add_chat_tag_by_id_and_user_id_and_tag_name(
@@ -627,12 +644,12 @@ async def delete_tag_by_id_and_tag_name(
 
 
 ############################
-# DeleteAllChatTagsById
+# DeleteAllTagsById
 ############################
 
 
 @router.delete("/{id}/tags/all", response_model=Optional[bool])
-async def delete_all_chat_tags_by_id(id: str, user=Depends(get_verified_user)):
+async def delete_all_tags_by_id(id: str, user=Depends(get_verified_user)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
         Chats.delete_all_tags_by_id_and_user_id(id, user.id)
@@ -641,9 +658,7 @@ async def delete_all_chat_tags_by_id(id: str, user=Depends(get_verified_user)):
             if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 0:
                 Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
-        chat = Chats.get_chat_by_id_and_user_id(id, user.id)
-        tags = chat.meta.get("tags", [])
-        return Tags.get_tags_by_ids_and_user_id(tags, user.id)
+        return True
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND

@@ -70,22 +70,6 @@ def replace_prompt_variable(template: str, prompt: str) -> str:
     return template
 
 
-def title_generation_template(
-    template: str, prompt: str, user: Optional[dict] = None
-) -> str:
-    template = replace_prompt_variable(template, prompt)
-    template = prompt_template(
-        template,
-        **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
-            if user
-            else {}
-        ),
-    )
-
-    return template
-
-
 def replace_messages_variable(template: str, messages: list[str]) -> str:
     def replacement_function(match):
         full_match = match.group(0)
@@ -120,6 +104,46 @@ def replace_messages_variable(template: str, messages: list[str]) -> str:
         template,
     )
 
+    return template
+
+
+# {{prompt:middletruncate:8000}}
+
+
+def title_generation_template(
+    template: str, messages: list[dict], user: Optional[dict] = None
+) -> str:
+    prompt = get_last_user_message(messages)
+    template = replace_prompt_variable(template, prompt)
+    template = replace_messages_variable(template, messages)
+
+    template = prompt_template(
+        template,
+        **(
+            {"user_name": user.get("name"), "user_location": user.get("location")}
+            if user
+            else {}
+        ),
+    )
+
+    return template
+
+
+def tags_generation_template(
+    template: str, messages: list[dict], user: Optional[dict] = None
+) -> str:
+    prompt = get_last_user_message(messages)
+    template = replace_prompt_variable(template, prompt)
+    template = replace_messages_variable(template, messages)
+
+    template = prompt_template(
+        template,
+        **(
+            {"user_name": user.get("name"), "user_location": user.get("location")}
+            if user
+            else {}
+        ),
+    )
     return template
 
 

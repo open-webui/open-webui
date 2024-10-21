@@ -151,7 +151,12 @@
 
 		currentChatPage.set(1);
 		allChatsLoaded = false;
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+
+		if (search) {
+			await chats.set(await getChatListBySearchText(localStorage.token, search, $currentChatPage));
+		} else {
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		}
 
 		// Enable pagination
 		scrollPaginationEnabled.set(true);
@@ -192,6 +197,7 @@
 			return;
 		} else {
 			searchDebounceTimeout = setTimeout(async () => {
+				allChatsLoaded = false;
 				currentChatPage.set(1);
 				await chats.set(await getChatListBySearchText(localStorage.token, search));
 
@@ -205,8 +211,9 @@
 	const importChatHandler = async (items, pinned = false, folderId = null) => {
 		console.log('importChatHandler', items, pinned, folderId);
 		for (const item of items) {
+			console.log(item);
 			if (item.chat) {
-				await importChat(localStorage.token, item.chat, pinned, folderId);
+				await importChat(localStorage.token, item.chat, item?.meta ?? {}, pinned, folderId);
 			}
 		}
 

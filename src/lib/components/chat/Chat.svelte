@@ -10,7 +10,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
-	import type { Unsubscriber, Writable } from 'svelte/store';
+	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -20,6 +20,7 @@
 		config,
 		type Model,
 		models,
+		tags as allTags,
 		settings,
 		showSidebar,
 		WEBUI_NAME,
@@ -47,7 +48,11 @@
 
 	import { generateChatCompletion } from '$lib/apis/ollama';
 	import {
+		addTagById,
 		createNewChat,
+		deleteTagById,
+		deleteTagsById,
+		getAllTags,
 		getChatById,
 		getChatList,
 		getTagsById,
@@ -63,7 +68,8 @@
 		generateTitle,
 		generateSearchQuery,
 		chatAction,
-		generateMoACompletion
+		generateMoACompletion,
+		generateTags
 	} from '$lib/apis';
 
 	import Banner from '../common/Banner.svelte';
@@ -539,7 +545,10 @@
 		});
 
 		if (chat) {
-			tags = await getTags();
+			tags = await getTagsById(localStorage.token, $chatId).catch(async (error) => {
+				return [];
+			});
+
 			const chatContent = chat.chat;
 
 			if (chatContent) {
@@ -783,97 +792,105 @@
 	//////////////////////////
 
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
-		let _responses = [];
-		console.log('submitPrompt', $chatId);
-		const messages = createMessagesList(history.currentId);
+		console.log('submitPrompt', userPrompt, $chatId);
 
+		const messages = createMessagesList(history.currentId);
 		selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
 
+		if (userPrompt === '') {
+			toast.error($i18n.t('Please enter a prompt'));
+			return;
+		}
 		if (selectedModels.includes('')) {
 			toast.error($i18n.t('Model not selected'));
-		} else if (messages.length != 0 && messages.at(-1).done != true) {
+			return;
+		}
+
+		if (messages.length != 0 && messages.at(-1).done != true) {
 			// Response not done
-			console.log('wait');
-		} else if (messages.length != 0 && messages.at(-1).error) {
+			return;
+		}
+		if (messages.length != 0 && messages.at(-1).error) {
 			// Error in response
-			toast.error(
-				$i18n.t(
-					`Oops! There was an error in the previous response. Please try again or contact admin.`
-				)
-			);
-		} else if (
+			toast.error($i18n.t(`Oops! There was an error in the previous response.`));
+			return;
+		}
+		if (
 			files.length > 0 &&
 			files.filter((file) => file.type !== 'image' && file.status === 'uploading').length > 0
 		) {
-			// Upload not done
 			toast.error(
-				$i18n.t(
-					`Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.`
-				)
+				$i18n.t(`Oops! There are files still uploading. Please wait for the upload to complete.`)
 			);
-		} else if (
+			return;
+		}
+		if (
 			($config?.file?.max_count ?? null) !== null &&
 			files.length + chatFiles.length > $config?.file?.max_count
 		) {
-			console.log(chatFiles.length, files.length);
 			toast.error(
 				$i18n.t(`You can only chat with a maximum of {{maxCount}} file(s) at a time.`, {
 					maxCount: $config?.file?.max_count
 				})
 			);
-		} else {
-			// Reset chat input textarea
-			const chatInputContainer = document.getElementById('chat-input-container');
-
-			if (chatInputContainer) {
-				chatInputContainer.value = '';
-				chatInputContainer.style.height = '';
-			}
-
-			const _files = JSON.parse(JSON.stringify(files));
-			chatFiles.push(..._files.filter((item) => ['doc', 'file', 'collection'].includes(item.type)));
-			chatFiles = chatFiles.filter(
-				// Remove duplicates
-				(item, index, array) =>
-					array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
-			);
-
-			files = [];
-			prompt = '';
-
-			// Create user message
-			let userMessageId = uuidv4();
-			let userMessage = {
-				id: userMessageId,
-				parentId: messages.length !== 0 ? messages.at(-1).id : null,
-				childrenIds: [],
-				role: 'user',
-				content: userPrompt,
-				files: _files.length > 0 ? _files : undefined,
-				timestamp: Math.floor(Date.now() / 1000), // Unix epoch
-				models: selectedModels
-			};
-
-			// Add message to history and Set currentId to messageId
-			history.messages[userMessageId] = userMessage;
-			history.currentId = userMessageId;
-
-			// Append messageId to childrenIds of parent message
-			if (messages.length !== 0) {
-				history.messages[messages.at(-1).id].childrenIds.push(userMessageId);
-			}
-
-			// Wait until history/message have been updated
-			await tick();
-
-			// focus on chat input
-			const chatInput = document.getElementById('chat-input');
-			chatInput?.focus();
-
-			_responses = await sendPrompt(userPrompt, userMessageId, { newChat: true });
+			return;
 		}
+
+		let _responses = [];
+		prompt = '';
+		await tick();
+
+		// Reset chat input textarea
+		const chatInputContainer = document.getElementById('chat-input-container');
+
+		if (chatInputContainer) {
+			chatInputContainer.value = '';
+			chatInputContainer.style.height = '';
+		}
+
+		const _files = JSON.parse(JSON.stringify(files));
+		chatFiles.push(..._files.filter((item) => ['doc', 'file', 'collection'].includes(item.type)));
+		chatFiles = chatFiles.filter(
+			// Remove duplicates
+			(item, index, array) =>
+				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
+		);
+
+		files = [];
+		prompt = '';
+
+		// Create user message
+		let userMessageId = uuidv4();
+		let userMessage = {
+			id: userMessageId,
+			parentId: messages.length !== 0 ? messages.at(-1).id : null,
+			childrenIds: [],
+			role: 'user',
+			content: userPrompt,
+			files: _files.length > 0 ? _files : undefined,
+			timestamp: Math.floor(Date.now() / 1000), // Unix epoch
+			models: selectedModels
+		};
+
+		// Add message to history and Set currentId to messageId
+		history.messages[userMessageId] = userMessage;
+		history.currentId = userMessageId;
+
+		// Append messageId to childrenIds of parent message
+		if (messages.length !== 0) {
+			history.messages[messages.at(-1).id].childrenIds.push(userMessageId);
+		}
+
+		// Wait until history/message have been updated
+		await tick();
+
+		// focus on chat input
+		const chatInput = document.getElementById('chat-input');
+		chatInput?.focus();
+
+		_responses = await sendPrompt(userPrompt, userMessageId, { newChat: true });
 
 		return _responses;
 	};
@@ -1393,8 +1410,13 @@
 		const messages = createMessagesList(responseMessageId);
 		if (messages.length == 2 && messages.at(-1).content !== '' && selectedModels[0] === model.id) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-			const title = await generateChatTitle(userPrompt);
+
+			const title = await generateChatTitle(messages);
 			await setChatTitle(_chatId, title);
+
+			if ($settings?.autoTags ?? true) {
+				await setChatTags(messages);
+			}
 		}
 
 		return _response;
@@ -1707,8 +1729,13 @@
 		const messages = createMessagesList(responseMessageId);
 		if (messages.length == 2 && selectedModels[0] === model.id) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-			const title = await generateChatTitle(userPrompt);
+
+			const title = await generateChatTitle(messages);
 			await setChatTitle(_chatId, title);
+
+			if ($settings?.autoTags ?? true) {
+				await setChatTags(messages);
+			}
 		}
 
 		return _response;
@@ -1864,12 +1891,12 @@
 		}
 	};
 
-	const generateChatTitle = async (userPrompt) => {
+	const generateChatTitle = async (messages) => {
 		if ($settings?.title?.auto ?? true) {
 			const title = await generateTitle(
 				localStorage.token,
 				selectedModels[0],
-				userPrompt,
+				messages,
 				$chatId
 			).catch((error) => {
 				console.error(error);
@@ -1878,7 +1905,7 @@
 
 			return title;
 		} else {
-			return `${userPrompt}`;
+			return 'New Chat';
 		}
 	};
 
@@ -1892,6 +1919,40 @@
 
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		}
+	};
+
+	const setChatTags = async (messages) => {
+		if (!$temporaryChatEnabled) {
+			const currentTags = await getTagsById(localStorage.token, $chatId);
+			if (currentTags.length > 0) {
+				const res = await deleteTagsById(localStorage.token, $chatId);
+				if (res) {
+					allTags.set(await getAllTags(localStorage.token));
+				}
+			}
+
+			let generatedTags = await generateTags(
+				localStorage.token,
+				selectedModels[0],
+				messages,
+				$chatId
+			).catch((error) => {
+				console.error(error);
+				return [];
+			});
+
+			generatedTags = generatedTags.filter(
+				(tag) => !currentTags.find((t) => t.id === tag.replaceAll(' ', '_').toLowerCase())
+			);
+			console.log(generatedTags);
+
+			for (const tag of generatedTags) {
+				await addTagById(localStorage.token, $chatId, tag);
+			}
+
+			chat = await getChatById(localStorage.token, $chatId);
+			allTags.set(await getAllTags(localStorage.token));
 		}
 	};
 
@@ -1978,12 +2039,6 @@
 			});
 			history.messages[responseMessageId] = responseMessage;
 		}
-	};
-
-	const getTags = async () => {
-		return await getTagsById(localStorage.token, $chatId).catch(async (error) => {
-			return [];
-		});
 	};
 
 	const initChatHandler = async () => {
@@ -2218,7 +2273,7 @@
 										prompt = '';
 										atSelectedPrompt = e.detail.selectedPromptCommand;
 										await tick();
-										submitPrompt(e.detail.prompt);
+										submitPrompt(e.detail.replaceAll('\n\n', '\n'));
 									}
 								}}
 							/>
@@ -2262,9 +2317,8 @@
 								}}
 								on:submit={async (e) => {
 									if (e.detail) {
-										prompt = '';
 										await tick();
-										submitPrompt(e.detail.prompt);
+										submitPrompt(e.detail.replaceAll('\n\n', '\n'));
 									}
 								}}
 							/>
