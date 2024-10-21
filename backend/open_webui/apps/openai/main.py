@@ -240,9 +240,7 @@ def merge_models_lists(model_lists):
 
 
 def is_openai_api_disabled():
-    api_keys = app.state.config.OPENAI_API_KEYS
-    no_keys = len(api_keys) == 1 and api_keys[0] == ""
-    return no_keys or not app.state.config.ENABLE_OPENAI_API
+    return not app.state.config.ENABLE_OPENAI_API
 
 
 async def get_all_models_raw() -> list:
