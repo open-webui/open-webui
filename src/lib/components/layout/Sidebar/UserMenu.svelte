@@ -30,7 +30,7 @@
 
 	<slot name="content">
 		<DropdownMenu.Content
-			class="w-full {className} text-sm rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-xl font-primary"
+			class="w-full {className} text-sm rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg font-primary"
 			sideOffset={8}
 			side="bottom"
 			align="start"
@@ -150,7 +150,7 @@
 				</button>
 			{/if}
 
-			<hr class=" dark:border-gray-800 my-1.5 p-0" />
+			<hr class=" border-gray-50 dark:border-gray-850 my-1 p-0" />
 
 			<button
 				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
@@ -183,7 +183,7 @@
 			</button>
 
 			{#if $activeUserCount}
-				<hr class=" dark:border-gray-800 my-1.5 p-0" />
+				<hr class=" border-gray-50 dark:border-gray-850 my-1 p-0" />
 
 				<Tooltip
 					content={$USAGE_POOL && $USAGE_POOL.length > 0
