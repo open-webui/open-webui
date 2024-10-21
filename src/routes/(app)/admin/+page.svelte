@@ -278,6 +278,7 @@
 					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
 						<td class="px-3 py-1 min-w-[7rem] w-28">
 							<button
+								class=" translate-y-0.5"
 								on:click={() => {
 									if (user.role === 'user') {
 										updateRoleHandler(user.id, 'admin');
