@@ -20,6 +20,7 @@
 	import AddUserModal from '$lib/components/admin/AddUserModal.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -127,7 +128,7 @@
 
 		<div class="flex gap-1">
 			<input
-				class="w-full md:w-60 rounded-xl py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+				class="w-full md:w-60 rounded-xl py-1.5 px-1 text-sm bg-transparent outline-none"
 				placeholder={$i18n.t('Search')}
 				bind:value={search}
 			/>
@@ -135,63 +136,60 @@
 			<div class="flex gap-0.5">
 				<Tooltip content={$i18n.t('Add User')}>
 					<button
-						class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition font-medium text-sm flex items-center space-x-1"
+						class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
 						on:click={() => {
 							showAddUserModal = !showAddUserModal;
 						}}
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-							/>
-						</svg>
+						<Plus className="size-3.5" />
 					</button>
 				</Tooltip>
 			</div>
 		</div>
 	</div>
 
-	<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
-		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full">
-			<thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400">
-				<tr>
+	<div
+		class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded pt-0.5"
+	>
+		<table
+			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full rounded"
+		>
+			<thead
+				class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
+			>
+				<tr class="">
 					<th
 						scope="col"
-						class="px-3 py-2 cursor-pointer select-none"
+						class="px-3 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('role')}
 					>
 						{$i18n.t('Role')}
 						{#if sortKey === 'role'}
-							{sortOrder === 'asc' ? '▲' : '▼'}
+							<span class="font-normal ml-1">{sortOrder === 'asc' ? '▲' : '▼'}</span>
 						{:else}
 							<span class="invisible">▲</span>
 						{/if}
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-2 cursor-pointer select-none"
+						class="px-3 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('name')}
 					>
 						{$i18n.t('Name')}
 						{#if sortKey === 'name'}
-							{sortOrder === 'asc' ? '▲' : '▼'}
+							<span class="font-normal ml-1">{sortOrder === 'asc' ? '▲' : '▼'}</span>
 						{:else}
 							<span class="invisible">▲</span>
 						{/if}
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-2 cursor-pointer select-none"
+						class="px-3 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('email')}
 					>
 						{$i18n.t('Email')}
 						{#if sortKey === 'email'}
-							{sortOrder === 'asc' ? '▲' : '▼'}
+							<span class="font-normal ml-1">{sortOrder === 'asc' ? '▲' : '▼'}</span>
 						{:else}
 							<span class="invisible">▲</span>
 						{/if}
@@ -199,24 +197,24 @@
 
 					<th
 						scope="col"
-						class="px-3 py-2 cursor-pointer select-none"
+						class="px-3 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('last_active_at')}
 					>
 						{$i18n.t('Last Active')}
 						{#if sortKey === 'last_active_at'}
-							{sortOrder === 'asc' ? '▲' : '▼'}
+							<span class="font-normal ml-1">{sortOrder === 'asc' ? '▲' : '▼'}</span>
 						{:else}
 							<span class="invisible">▲</span>
 						{/if}
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-2 cursor-pointer select-none"
+						class="px-3 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('created_at')}
 					>
 						{$i18n.t('Created at')}
 						{#if sortKey === 'created_at'}
-							{sortOrder === 'asc' ? '▲' : '▼'}
+							<span class="font-normal ml-1">{sortOrder === 'asc' ? '▲' : '▼'}</span>
 						{:else}
 							<span class="invisible">▲</span>
 						{/if}
@@ -224,12 +222,12 @@
 
 					<th
 						scope="col"
-						class="px-3 py-2 cursor-pointer select-none"
+						class="px-3 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('oauth_sub')}
 					>
 						{$i18n.t('OAuth ID')}
 						{#if sortKey === 'oauth_sub'}
-							{sortOrder === 'asc' ? '▲' : '▼'}
+							<span class="font-normal ml-1">{sortOrder === 'asc' ? '▲' : '▼'}</span>
 						{:else}
 							<span class="invisible">▲</span>
 						{/if}
@@ -238,7 +236,7 @@
 					<th scope="col" class="px-3 py-2 text-right" />
 				</tr>
 			</thead>
-			<tbody>
+			<tbody class="">
 				{#each users
 					.filter((user) => {
 						if (search === '') {
@@ -254,8 +252,8 @@
 						if (a[sortKey] > b[sortKey]) return sortOrder === 'asc' ? 1 : -1;
 						return 0;
 					})
-					.slice((page - 1) * 20, page * 20) as user}
-					<tr class="bg-white border-b dark:bg-gray-900 dark:border-gray-850 text-xs">
+					.slice((page - 1) * 20, page * 20) as user, userIdx}
+					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
 						<td class="px-3 py-1 min-w-[7rem] w-28">
 							<button
 								on:click={() => {
@@ -376,7 +374,7 @@
 		</table>
 	</div>
 
-	<div class=" text-gray-500 text-xs mt-2 text-right">
+	<div class=" text-gray-500 text-xs mt-1.5 text-right">
 		ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
 	</div>
 
