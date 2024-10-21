@@ -211,8 +211,9 @@
 	const importChatHandler = async (items, pinned = false, folderId = null) => {
 		console.log('importChatHandler', items, pinned, folderId);
 		for (const item of items) {
+			console.log(item);
 			if (item.chat) {
-				await importChat(localStorage.token, item.chat, pinned, folderId);
+				await importChat(localStorage.token, item.chat, item?.meta ?? {}, pinned, folderId);
 			}
 		}
 

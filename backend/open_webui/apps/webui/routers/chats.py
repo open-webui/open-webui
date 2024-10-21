@@ -110,6 +110,16 @@ async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
 async def import_chat(form_data: ChatImportForm, user=Depends(get_verified_user)):
     try:
         chat = Chats.import_chat(user.id, form_data)
+        if chat:
+            tags = chat.meta.get("tags", [])
+            for tag_id in tags:
+                tag_id = tag_id.replace(" ", "_").lower()
+                if (
+                    tag_id != "none"
+                    and Tags.get_tag_by_name_and_user_id(tag_id, user.id) is None
+                ):
+                    Tags.insert_new_tag(tag_id, user.id)
+
         return ChatResponse(**chat.model_dump())
     except Exception as e:
         log.exception(e)

@@ -65,6 +65,7 @@ class ChatForm(BaseModel):
 
 
 class ChatImportForm(ChatForm):
+    meta: Optional[dict] = {}
     pinned: Optional[bool] = False
     folder_id: Optional[str] = None
 
@@ -139,6 +140,7 @@ class ChatTable:
                         else "New Chat"
                     ),
                     "chat": form_data.chat,
+                    "meta": form_data.meta,
                     "pinned": form_data.pinned,
                     "folder_id": form_data.folder_id,
                     "created_at": int(time.time()),
