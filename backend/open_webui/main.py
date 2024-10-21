@@ -57,7 +57,7 @@ from open_webui.apps.webui.internal.db import Session
 from open_webui.apps.webui.main import (
     app as webui_app,
     generate_function_chat_completion,
-    get_pipe_models,
+    get_all_models as get_open_webui_models,
 )
 from open_webui.apps.webui.models.functions import Functions
 from open_webui.apps.webui.models.models import Models
@@ -904,11 +904,11 @@ webui_app.state.EMBEDDING_FUNCTION = retrieval_app.state.EMBEDDING_FUNCTION
 
 async def get_all_models():
     # TODO: Optimize this function
-    pipe_models = []
+    open_webui_models = []
     openai_models = []
     ollama_models = []
 
-    pipe_models = await get_pipe_models()
+    open_webui_models = await get_open_webui_models()
 
     if app.state.config.ENABLE_OPENAI_API:
         openai_models = await get_openai_models()
@@ -928,7 +928,7 @@ async def get_all_models():
             for model in ollama_models["models"]
         ]
 
-    models = pipe_models + openai_models + ollama_models
+    models = open_webui_models + openai_models + ollama_models
 
     global_action_ids = [
         function.id for function in Functions.get_global_action_functions()

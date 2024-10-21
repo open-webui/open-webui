@@ -144,6 +144,11 @@ async def get_status():
     }
 
 
+async def get_all_models():
+    pipe_models = await get_pipe_models()
+    return pipe_models
+
+
 def get_function_module(pipe_id: str):
     # Check if function is already loaded
     if pipe_id not in app.state.FUNCTIONS:
