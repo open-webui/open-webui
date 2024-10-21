@@ -121,29 +121,47 @@
 {#if loaded}
 	<div class="mt-0.5 mb-3 gap-1 flex flex-col md:flex-row justify-between">
 		<div class="flex md:self-center text-lg font-medium px-0.5">
-			{$i18n.t('All Users')}
+			{$i18n.t('Users')}
 			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
 			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{users.length}</span>
 		</div>
 
 		<div class="flex gap-1">
-			<input
-				class="w-full md:w-60 rounded-xl py-1.5 px-1 text-sm bg-transparent outline-none"
-				placeholder={$i18n.t('Search')}
-				bind:value={search}
-			/>
+			<div class=" flex w-full space-x-2">
+				<div class="flex flex-1">
+					<div class=" self-center ml-1 mr-3">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</div>
+					<input
+						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
+						bind:value={search}
+						placeholder={$i18n.t('Search')}
+					/>
+				</div>
 
-			<div class="flex gap-0.5">
-				<Tooltip content={$i18n.t('Add User')}>
-					<button
-						class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
-						on:click={() => {
-							showAddUserModal = !showAddUserModal;
-						}}
-					>
-						<Plus className="size-3.5" />
-					</button>
-				</Tooltip>
+				<div>
+					<Tooltip content={$i18n.t('Add User')}>
+						<button
+							class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
+							on:click={() => {
+								showAddUserModal = !showAddUserModal;
+							}}
+						>
+							<Plus className="size-3.5" />
+						</button>
+					</Tooltip>
+				</div>
 			</div>
 		</div>
 	</div>
