@@ -19,7 +19,6 @@ from open_webui.config import (
 
 
 import boto3
-from boto3.s3 import S3Client
 from botocore.exceptions import ClientError
 from typing import BinaryIO, Tuple, Optional
 
@@ -96,7 +95,7 @@ class StorageProvider:
         if os.path.isfile(file_path):
             os.remove(file_path)
         else:
-            raise FileNotFoundError(f"File {filename} not found in local storage.")
+            print(f"File {file_path} not found in local storage.")
 
     def _delete_all_from_s3(self) -> None:
         """Handles deletion of all files from S3 storage."""
@@ -126,9 +125,7 @@ class StorageProvider:
                 except Exception as e:
                     print(f"Failed to delete {file_path}. Reason: {e}")
         else:
-            raise FileNotFoundError(
-                f"Directory {UPLOAD_DIR} not found in local storage."
-            )
+            print(f"Directory {UPLOAD_DIR} not found in local storage.")
 
     def upload_file(self, file: BinaryIO, filename: str) -> Tuple[bytes, str]:
         """Uploads a file either to S3 or the local file system."""
@@ -150,15 +147,17 @@ class StorageProvider:
         """Deletes a file either from S3 or the local file system."""
         if self.storage_provider == "s3":
             self._delete_from_s3(filename)
-        else:
-            self._delete_from_local(filename)
+
+        # Always delete from local storage
+        self._delete_from_local(filename)
 
     def delete_all_files(self) -> None:
         """Deletes all files from the storage."""
         if self.storage_provider == "s3":
             self._delete_all_from_s3()
-        else:
-            self._delete_all_from_local()
+
+        # Always delete from local storage
+        self._delete_all_from_local()
 
 
 Storage = StorageProvider(provider=STORAGE_PROVIDER)
