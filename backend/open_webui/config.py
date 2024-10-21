@@ -409,7 +409,10 @@ OAUTH_ROLES_CLAIM = PersistentConfig(
 OAUTH_ALLOWED_ROLES = PersistentConfig(
     "OAUTH_ALLOWED_ROLES",
     "oauth.allowed_roles",
-    [role.strip() for role in os.environ.get("OAUTH_ALLOWED_ROLES", "user,admin").split(",")],
+    [
+        role.strip()
+        for role in os.environ.get("OAUTH_ALLOWED_ROLES", "user,admin").split(",")
+    ],
 )
 
 OAUTH_ADMIN_ROLES = PersistentConfig(
@@ -417,6 +420,7 @@ OAUTH_ADMIN_ROLES = PersistentConfig(
     "oauth.admin_roles",
     [role.strip() for role in os.environ.get("OAUTH_ADMIN_ROLES", "admin").split(",")],
 )
+
 
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()

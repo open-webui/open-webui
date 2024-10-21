@@ -25,7 +25,10 @@ from open_webui.config import (
     OAUTH_PICTURE_CLAIM,
     OAUTH_USERNAME_CLAIM,
     OAUTH_ALLOWED_ROLES,
-    OAUTH_ADMIN_ROLES, WEBHOOK_URL, JWT_EXPIRES_IN, AppConfig,
+    OAUTH_ADMIN_ROLES,
+    WEBHOOK_URL,
+    JWT_EXPIRES_IN,
+    AppConfig,
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import WEBUI_SESSION_COOKIE_SAME_SITE, WEBUI_SESSION_COOKIE_SECURE
@@ -170,7 +173,9 @@ class OAuthManager:
             # If the user does not exist, check if signups are enabled
             if auth_manager_config.ENABLE_OAUTH_SIGNUP.value:
                 # Check if an existing user with the same email already exists
-                existing_user = Users.get_user_by_email(user_data.get("email", "").lower())
+                existing_user = Users.get_user_by_email(
+                    user_data.get("email", "").lower()
+                )
                 if existing_user:
                     raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
@@ -182,16 +187,18 @@ class OAuthManager:
                         async with aiohttp.ClientSession() as session:
                             async with session.get(picture_url) as resp:
                                 picture = await resp.read()
-                                base64_encoded_picture = base64.b64encode(picture).decode(
-                                    "utf-8"
-                                )
+                                base64_encoded_picture = base64.b64encode(
+                                    picture
+                                ).decode("utf-8")
                                 guessed_mime_type = mimetypes.guess_type(picture_url)[0]
                                 if guessed_mime_type is None:
                                     # assume JPG, browsers are tolerant enough of image formats
                                     guessed_mime_type = "image/jpeg"
                                 picture_url = f"data:{guessed_mime_type};base64,{base64_encoded_picture}"
                     except Exception as e:
-                        log.error(f"Error downloading profile image '{picture_url}': {e}")
+                        log.error(
+                            f"Error downloading profile image '{picture_url}': {e}"
+                        )
                         picture_url = ""
                 if not picture_url:
                     picture_url = "/user.png"
@@ -216,7 +223,9 @@ class OAuthManager:
                         auth_manager_config.WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
                         {
                             "action": "signup",
-                            "message": auth_manager_config.WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                            "message": auth_manager_config.WEBHOOK_MESSAGES.USER_SIGNUP(
+                                user.name
+                            ),
                             "user": user.model_dump_json(exclude_none=True),
                         },
                     )
@@ -242,5 +251,6 @@ class OAuthManager:
         # Redirect back to the frontend with the JWT token
         redirect_url = f"{request.base_url}auth#token={jwt_token}"
         return RedirectResponse(url=redirect_url)
+
 
 oauth_manager = OAuthManager()
