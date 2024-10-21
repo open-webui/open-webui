@@ -55,8 +55,8 @@ async def get_session_user(
         key="token",
         value=token,
         httponly=True,  # Ensures the cookie is not accessible via JavaScript
-        samesite=WEBUI_SESSION_COOKIE_SAME_SITE, 
-        secure=WEBUI_SESSION_COOKIE_SECURE,        
+        samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
+        secure=WEBUI_SESSION_COOKIE_SECURE,
     )
 
     return {
@@ -170,8 +170,8 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             key="token",
             value=token,
             httponly=True,  # Ensures the cookie is not accessible via JavaScript
-            samesite=WEBUI_SESSION_COOKIE_SAME_SITE, 
-            secure=WEBUI_SESSION_COOKIE_SECURE,            
+            samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
+            secure=WEBUI_SESSION_COOKIE_SECURE,
         )
 
         return {
@@ -242,8 +242,8 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 key="token",
                 value=token,
                 httponly=True,  # Ensures the cookie is not accessible via JavaScript
-                samesite=WEBUI_SESSION_COOKIE_SAME_SITE, 
-                secure=WEBUI_SESSION_COOKIE_SECURE,                
+                samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
+                secure=WEBUI_SESSION_COOKIE_SECURE,
             )
 
             if request.app.state.config.WEBHOOK_URL:

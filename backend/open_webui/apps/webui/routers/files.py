@@ -27,7 +27,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
 router = APIRouter()
-#storage = StorageProvider()
+# storage = StorageProvider()
 ############################
 # Upload File
 ############################
@@ -50,7 +50,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
         # with open(file_path, "wb") as f:
         #     f.write(contents)
         #     f.close()
-        storage.upload_file(file.file, file_path) 
+        storage.upload_file(file.file, file_path)
         file = Files.insert_new_file(
             user.id,
             FileForm(
@@ -118,24 +118,24 @@ async def delete_all_files(user=Depends(get_admin_user)):
     if result:
         folder = f"{UPLOAD_DIR}"
         try:
-        #     # Check if the directory exists
-        #     if os.path.exists(folder):
-        #         # Iterate over all the files and directories in the specified directory
-        #         for filename in os.listdir(folder):
-        #             file_path = os.path.join(folder, filename)
-        #             try:
-        #                 if os.path.isfile(file_path) or os.path.islink(file_path):
-        #                     os.unlink(file_path)  # Remove the file or link
-        #                 elif os.path.isdir(file_path):
-        #                     shutil.rmtree(file_path)  # Remove the directory
-        #             except Exception as e:
-        #                 print(f"Failed to delete {file_path}. Reason: {e}")
-        #     else:
-        #         print(f"The directory {folder} does not exist")
+            #     # Check if the directory exists
+            #     if os.path.exists(folder):
+            #         # Iterate over all the files and directories in the specified directory
+            #         for filename in os.listdir(folder):
+            #             file_path = os.path.join(folder, filename)
+            #             try:
+            #                 if os.path.isfile(file_path) or os.path.islink(file_path):
+            #                     os.unlink(file_path)  # Remove the file or link
+            #                 elif os.path.isdir(file_path):
+            #                     shutil.rmtree(file_path)  # Remove the directory
+            #             except Exception as e:
+            #                 print(f"Failed to delete {file_path}. Reason: {e}")
+            #     else:
+            #         print(f"The directory {folder} does not exist")
             storage.delete_all_files()
             return {"message": "All files deleted successfully"}
         except Exception as e:
-            print(f"Failed to process the directory {folder}. Reason: {e}")    
+            print(f"Failed to process the directory {folder}. Reason: {e}")
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
