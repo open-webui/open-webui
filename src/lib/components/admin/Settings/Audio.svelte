@@ -279,9 +279,17 @@
 						</div>
 
 						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
-							{$i18n.t(
-								'If you want to use a custom model, please enter the model name and click the refresh button.'
-							)}
+							{$i18n.t(`Open WebUI uses faster-whisper internally.`)}
+
+							<a
+								class=" hover:underline dark:text-gray-200 text-gray-800"
+								href="https://github.com/SYSTRAN/faster-whisper"
+								target="_blank"
+							>
+								{$i18n.t(
+									`Click here to learn more about faster-whisper and see the available models.`
+								)}
+							</a>
 						</div>
 					</div>
 				{/if}
