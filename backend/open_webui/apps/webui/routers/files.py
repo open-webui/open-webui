@@ -51,7 +51,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
         filename = f"{id}_{filename}"
         contents, file_path = Storage.upload_file(file.file, filename)
 
-        file = Files.insert_new_file(
+        file_item = Files.insert_new_file(
             user.id,
             FileForm(
                 **{
@@ -72,10 +72,10 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
             file = Files.get_file_by_id(id=id)
         except Exception as e:
             log.exception(e)
-            log.error(f"Error processing file: {file.id}")
+            log.error(f"Error processing file: {file_item.id}")
 
-        if file:
-            return file
+        if file_item:
+            return file_item
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
