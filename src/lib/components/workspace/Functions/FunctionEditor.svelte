@@ -7,6 +7,7 @@
 
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Badge from '$lib/components/common/Badge.svelte';
 
 	let formElement = null;
 	let loading = false;
@@ -321,34 +322,49 @@ class Pipe:
 			</div>
 
 			<div class="flex flex-col flex-1 overflow-auto h-0 rounded-lg">
-				<div class="w-full mb-2 flex flex-col gap-1.5">
-					<div class="flex gap-2 w-full">
-						<input
-							class="w-full px-3 py-2 text-sm font-medium bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
-							type="text"
-							placeholder={$i18n.t('Function Name (e.g. My Filter)')}
-							bind:value={name}
-							required
-						/>
+				<div class="w-full mb-2 flex flex-col gap-0.5">
+					<div class="flex gap-2 w-full items-center">
+						<div class="flex-1">
+							<input
+								class="w-full text-2xl font-medium bg-transparent outline-none"
+								type="text"
+								placeholder={$i18n.t('Function Name (e.g. My Filter)')}
+								bind:value={name}
+								required
+							/>
+						</div>
+
+						<div>
+							<Badge type="muted" content={$i18n.t('Function')} />
+						</div>
+					</div>
+
+					<div class=" flex gap-2">
+						{#if edit}
+							<div class="text-sm text-gray-500 flex-shrink-0">
+								{id}
+							</div>
+						{:else}
+							<input
+								class="w-full text-sm disabled:text-gray-500 bg-transparent outline-none"
+								type="text"
+								placeholder={$i18n.t('Function ID (e.g. my_filter)')}
+								bind:value={id}
+								required
+								disabled={edit}
+							/>
+						{/if}
 
 						<input
-							class="w-full px-3 py-2 text-sm font-medium disabled:text-gray-300 dark:disabled:text-gray-700 bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
+							class="w-full text-sm bg-transparent outline-none"
 							type="text"
-							placeholder={$i18n.t('Function ID (e.g. my_filter)')}
-							bind:value={id}
+							placeholder={$i18n.t(
+								'Function Description (e.g. A filter to remove profanity from text)'
+							)}
+							bind:value={meta.description}
 							required
-							disabled={edit}
 						/>
 					</div>
-					<input
-						class="w-full px-3 py-2 text-sm font-medium bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
-						type="text"
-						placeholder={$i18n.t(
-							'Function Description (e.g. A filter to remove profanity from text)'
-						)}
-						bind:value={meta.description}
-						required
-					/>
 				</div>
 
 				<div class="mb-2 flex-1 overflow-auto h-0 rounded-lg">
