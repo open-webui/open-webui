@@ -36,11 +36,12 @@
 					</div>
 				</button>
 			</div>
-			<div class="flex items-center text-xl font-semibold">{$i18n.t('Playground')}</div>
+			<div class="flex items-center text-xl font-semibold">
+				{$i18n.t('Playground')}
+				<span class=" text-xs font-normal text-gray-500 self-center ml-1">{$i18n.t('(Beta)')}</span>
+			</div>
 		</div>
 	</div>
-
-	<hr class=" my-2 dark:border-gray-850" />
 
 	<div class=" py-1 px-5 flex-1 max-h-full overflow-y-auto">
 		<slot />
