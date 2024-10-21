@@ -15,6 +15,11 @@
 				source = { ...source, name: metadata.name };
 			}
 
+			// Check if ID looks like a URL
+			if (id.startsWith('http://') || id.startsWith('https://')) {
+				source = { ...source, url: id };
+			}
+
 			const existingSource = acc.find((item) => item.id === id);
 
 			if (existingSource) {
