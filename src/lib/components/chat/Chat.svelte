@@ -10,7 +10,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
-	import type { Unsubscriber, Writable } from 'svelte/store';
+	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -20,6 +20,7 @@
 		config,
 		type Model,
 		models,
+		tags as allTags,
 		settings,
 		showSidebar,
 		WEBUI_NAME,
@@ -46,7 +47,9 @@
 
 	import { generateChatCompletion } from '$lib/apis/ollama';
 	import {
+		addTagById,
 		createNewChat,
+		getAllTags,
 		getChatById,
 		getChatList,
 		getTagsById,
@@ -62,7 +65,8 @@
 		generateTitle,
 		generateSearchQuery,
 		chatAction,
-		generateMoACompletion
+		generateMoACompletion,
+		generateTags
 	} from '$lib/apis';
 
 	import Banner from '../common/Banner.svelte';
@@ -78,11 +82,14 @@
 	let loaded = false;
 	const eventTarget = new EventTarget();
 	let controlPane;
+	let controlPaneComponent;
 
 	let stopResponseFlag = false;
 	let autoScroll = true;
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
+
+	let navbarElement;
 
 	let showEventConfirmation = false;
 	let eventConfirmationTitle = '';
@@ -124,7 +131,7 @@
 				loaded = true;
 
 				window.setTimeout(() => scrollToBottom(), 0);
-				const chatInput = document.getElementById('chat-textarea');
+				const chatInput = document.getElementById('chat-input');
 				chatInput?.focus();
 			} else {
 				await goto('/');
@@ -174,10 +181,30 @@
 					message.statusHistory = [data];
 				}
 			} else if (type === 'citation') {
-				if (message?.citations) {
-					message.citations.push(data);
+				if (data?.type === 'code_execution') {
+					// Code execution; update existing code execution by ID, or add new one.
+					if (!message?.code_executions) {
+						message.code_executions = [];
+					}
+
+					const existingCodeExecutionIndex = message.code_executions.findIndex(
+						(execution) => execution.id === data.id
+					);
+
+					if (existingCodeExecutionIndex !== -1) {
+						message.code_executions[existingCodeExecutionIndex] = data;
+					} else {
+						message.code_executions.push(data);
+					}
+
+					message.code_executions = message.code_executions;
 				} else {
-					message.citations = [data];
+					// Regular citation.
+					if (message?.citations) {
+						message.citations.push(data);
+					} else {
+						message.citations = [data];
+					}
 				}
 			} else if (type === 'message') {
 				message.content += data.content;
@@ -243,7 +270,7 @@
 		if (event.data.type === 'input:prompt') {
 			console.debug(event.data.text);
 
-			const inputElement = document.getElementById('chat-textarea');
+			const inputElement = document.getElementById('chat-input');
 
 			if (inputElement) {
 				prompt = event.data.text;
@@ -290,14 +317,9 @@
 			if (controlPane && !$mobile) {
 				try {
 					if (value) {
-						const currentSize = controlPane.getSize();
-
-						if (currentSize === 0) {
-							const size = parseInt(localStorage?.chatControlsSize ?? '30');
-							controlPane.resize(size ? size : 30);
-						}
+						controlPaneComponent.openPane();
 					} else {
-						controlPane.resize(0);
+						controlPane.collapse();
 					}
 				} catch (e) {
 					// ignore
@@ -307,10 +329,11 @@
 			if (!value) {
 				showCallOverlay.set(false);
 				showOverview.set(false);
+				showArtifacts.set(false);
 			}
 		});
 
-		const chatInput = document.getElementById('chat-textarea');
+		const chatInput = document.getElementById('chat-input');
 		chatInput?.focus();
 
 		chats.subscribe(() => {});
@@ -420,7 +443,29 @@
 		if ($page.url.searchParams.get('models')) {
 			selectedModels = $page.url.searchParams.get('models')?.split(',');
 		} else if ($page.url.searchParams.get('model')) {
-			selectedModels = $page.url.searchParams.get('model')?.split(',');
+			const urlModels = $page.url.searchParams.get('model')?.split(',');
+
+			if (urlModels.length === 1) {
+				const m = $models.find((m) => m.id === urlModels[0]);
+				if (!m) {
+					const modelSelectorButton = document.getElementById('model-selector-0-button');
+					if (modelSelectorButton) {
+						modelSelectorButton.click();
+						await tick();
+
+						const modelSelectorInput = document.getElementById('model-search-input');
+						if (modelSelectorInput) {
+							modelSelectorInput.focus();
+							modelSelectorInput.value = urlModels[0];
+							modelSelectorInput.dispatchEvent(new Event('input'));
+						}
+					}
+				} else {
+					selectedModels = urlModels;
+				}
+			} else {
+				selectedModels = urlModels;
+			}
 		} else if ($settings?.models) {
 			selectedModels = $settings?.models;
 		} else if ($config?.default_models) {
@@ -484,7 +529,7 @@
 			settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 		}
 
-		const chatInput = document.getElementById('chat-textarea');
+		const chatInput = document.getElementById('chat-input');
 		setTimeout(() => chatInput?.focus(), 0);
 	};
 
@@ -496,7 +541,10 @@
 		});
 
 		if (chat) {
-			tags = await getTags();
+			tags = await getTagsById(localStorage.token, $chatId).catch(async (error) => {
+				return [];
+			});
+
 			const chatContent = chat.chat;
 
 			if (chatContent) {
@@ -781,12 +829,14 @@
 				})
 			);
 		} else {
-			// Reset chat input textarea
-			const chatTextAreaElement = document.getElementById('chat-textarea');
+			prompt = '';
 
-			if (chatTextAreaElement) {
-				chatTextAreaElement.value = '';
-				chatTextAreaElement.style.height = '';
+			// Reset chat input textarea
+			const chatInputContainer = document.getElementById('chat-input-container');
+
+			if (chatInputContainer) {
+				chatInputContainer.value = '';
+				chatInputContainer.style.height = '';
 			}
 
 			const _files = JSON.parse(JSON.stringify(files));
@@ -824,6 +874,11 @@
 
 			// Wait until history/message have been updated
 			await tick();
+
+			// focus on chat input
+			const chatInput = document.getElementById('chat-input');
+			chatInput?.focus();
+
 			_responses = await sendPrompt(userPrompt, userMessageId, { newChat: true });
 		}
 
@@ -1347,6 +1402,10 @@
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
 			const title = await generateChatTitle(userPrompt);
 			await setChatTitle(_chatId, title);
+
+			if ($settings?.autoTags ?? true) {
+				await setChatTags(messages);
+			}
 		}
 
 		return _response;
@@ -1661,6 +1720,10 @@
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
 			const title = await generateChatTitle(userPrompt);
 			await setChatTitle(_chatId, title);
+
+			if ($settings?.autoTags ?? true) {
+				await setChatTags(messages);
+			}
 		}
 
 		return _response;
@@ -1847,6 +1910,33 @@
 		}
 	};
 
+	const setChatTags = async (messages) => {
+		if (!$temporaryChatEnabled) {
+			let generatedTags = await generateTags(
+				localStorage.token,
+				selectedModels[0],
+				messages,
+				$chatId
+			).catch((error) => {
+				console.error(error);
+				return [];
+			});
+
+			const currentTags = await getTagsById(localStorage.token, $chatId);
+			generatedTags = generatedTags.filter(
+				(tag) => !currentTags.find((t) => t.id === tag.replaceAll(' ', '_').toLowerCase())
+			);
+			console.log(generatedTags);
+
+			for (const tag of generatedTags) {
+				await addTagById(localStorage.token, $chatId, tag);
+			}
+
+			chat = await getChatById(localStorage.token, $chatId);
+			allTags.set(await getAllTags(localStorage.token));
+		}
+	};
+
 	const getWebSearchResults = async (
 		model: string,
 		parentId: string,
@@ -1930,12 +2020,6 @@
 			});
 			history.messages[responseMessageId] = responseMessage;
 		}
-	};
-
-	const getTags = async () => {
-		return await getTagsById(localStorage.token, $chatId).catch(async (error) => {
-			return [];
-		});
 	};
 
 	const initChatHandler = async () => {
@@ -2029,6 +2113,7 @@
 		{/if}
 
 		<Navbar
+			bind:this={navbarElement}
 			chat={{
 				id: $chatId,
 				chat: {
@@ -2165,9 +2250,8 @@
 								}}
 								on:submit={async (e) => {
 									if (e.detail) {
-										prompt = '';
 										await tick();
-										submitPrompt(e.detail);
+										submitPrompt(e.detail.replaceAll('\n\n', '\n'));
 									}
 								}}
 							/>
@@ -2210,9 +2294,8 @@
 								}}
 								on:submit={async (e) => {
 									if (e.detail) {
-										prompt = '';
 										await tick();
-										submitPrompt(e.detail);
+										submitPrompt(e.detail.replaceAll('\n\n', '\n'));
 									}
 								}}
 							/>
@@ -2222,6 +2305,7 @@
 			</Pane>
 
 			<ChatControls
+				bind:this={controlPaneComponent}
 				bind:history
 				bind:chatFiles
 				bind:params

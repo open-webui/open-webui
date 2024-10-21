@@ -33,7 +33,7 @@ function generateRegexRules(delimiters) {
 		const escapedRight = escapeRegex(right);
 
 		if (!display) {
-			// For inline delimiters, we match everyting
+			// For inline delimiters, we match everything
 			inlinePatterns.push(`${escapedLeft}((?:\\\\[^]|[^\\\\])+?)${escapedRight}`);
 		} else {
 			// Block delimiters doubles as inline delimiters when not followed by a newline

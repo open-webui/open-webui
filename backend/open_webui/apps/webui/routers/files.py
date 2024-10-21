@@ -53,11 +53,11 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
                 **{
                     "id": id,
                     "filename": filename,
+                    "path": file_path,
                     "meta": {
                         "name": name,
                         "content_type": file.content_type,
                         "size": file.size,
-                        "path": file_path,
                         "storage_provider": Storage.get_storage_provider(),
                     },
                 }
@@ -210,12 +210,12 @@ async def update_file_data_content_by_id(
 ############################
 
 
-@router.get("/{id}/content", response_model=Optional[FileModel])
+@router.get("/{id}/content")
 async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
     file = Storage.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
-        file_path = Path(file.meta["path"])
+        file_path = Path(file.path)
 
         # Check if the file already exists in the cache
         if file_path.is_file():
@@ -236,19 +236,22 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
         )
 
 
-@router.get("/{id}/content/{file_name}", response_model=Optional[FileModel])
+@router.get("/{id}/content/{file_name}")
 async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
     file = Storage.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
-        file_path = file.meta.get("path")
+        file_path = file.path
         if file_path:
             file_path = Path(file_path)
 
             # Check if the file already exists in the cache
             if file_path.is_file():
                 print(f"file_path: {file_path}")
-                return FileResponse(file_path)
+                headers = {
+                    "Content-Disposition": f'attachment; filename="{file.meta.get("name", file.filename)}"'
+                }
+                return FileResponse(file_path, headers=headers)
             else:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,

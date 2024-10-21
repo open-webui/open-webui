@@ -19,6 +19,7 @@
 	import UserChatsModal from '$lib/components/admin/UserChatsModal.svelte';
 	import AddUserModal from '$lib/components/admin/AddUserModal.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Badge from '$lib/components/common/Badge.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -195,18 +196,7 @@
 							<span class="invisible">▲</span>
 						{/if}
 					</th>
-					<th
-						scope="col"
-						class="px-3 py-2 cursor-pointer select-none"
-						on:click={() => setSortKey('oauth_sub')}
-					>
-						{$i18n.t('OAuth ID')}
-						{#if sortKey === 'oauth_sub'}
-							{sortOrder === 'asc' ? '▲' : '▼'}
-						{:else}
-							<span class="invisible">▲</span>
-						{/if}
-					</th>
+
 					<th
 						scope="col"
 						class="px-3 py-2 cursor-pointer select-none"
@@ -226,6 +216,19 @@
 					>
 						{$i18n.t('Created at')}
 						{#if sortKey === 'created_at'}
+							{sortOrder === 'asc' ? '▲' : '▼'}
+						{:else}
+							<span class="invisible">▲</span>
+						{/if}
+					</th>
+
+					<th
+						scope="col"
+						class="px-3 py-2 cursor-pointer select-none"
+						on:click={() => setSortKey('oauth_sub')}
+					>
+						{$i18n.t('OAuth ID')}
+						{#if sortKey === 'oauth_sub'}
 							{sortOrder === 'asc' ? '▲' : '▼'}
 						{:else}
 							<span class="invisible">▲</span>
@@ -253,12 +256,8 @@
 					})
 					.slice((page - 1) * 20, page * 20) as user}
 					<tr class="bg-white border-b dark:bg-gray-900 dark:border-gray-850 text-xs">
-						<td class="px-3 py-2 min-w-[7rem] w-28">
+						<td class="px-3 py-1 min-w-[7rem] w-28">
 							<button
-								class=" flex items-center gap-2 text-xs px-3 py-0.5 rounded-lg {user.role ===
-									'admin' && 'text-sky-600 dark:text-sky-200 bg-sky-200/30'} {user.role ===
-									'user' && 'text-green-600 dark:text-green-200 bg-green-200/30'} {user.role ===
-									'pending' && 'text-gray-600 dark:text-gray-200 bg-gray-200/30'}"
 								on:click={() => {
 									if (user.role === 'user') {
 										updateRoleHandler(user.id, 'admin');
@@ -269,16 +268,13 @@
 									}
 								}}
 							>
-								<div
-									class="w-1 h-1 rounded-full {user.role === 'admin' &&
-										'bg-sky-600 dark:bg-sky-300'} {user.role === 'user' &&
-										'bg-green-600 dark:bg-green-300'} {user.role === 'pending' &&
-										'bg-gray-600 dark:bg-gray-300'}"
+								<Badge
+									type={user.role === 'admin' ? 'info' : user.role === 'user' ? 'success' : 'muted'}
+									content={$i18n.t(user.role)}
 								/>
-								{$i18n.t(user.role)}</button
-							>
+							</button>
 						</td>
-						<td class="px-3 py-2 font-medium text-gray-900 dark:text-white w-max">
+						<td class="px-3 py-1 font-medium text-gray-900 dark:text-white w-max">
 							<div class="flex flex-row w-max">
 								<img
 									class=" rounded-full w-6 h-6 object-cover mr-2.5"
@@ -293,19 +289,19 @@
 								<div class=" font-medium self-center">{user.name}</div>
 							</div>
 						</td>
-						<td class=" px-3 py-2"> {user.email} </td>
+						<td class=" px-3 py-1"> {user.email} </td>
 
-						<td class=" px-3 py-2"> {user.oauth_sub ?? ''} </td>
-
-						<td class=" px-3 py-2">
+						<td class=" px-3 py-1">
 							{dayjs(user.last_active_at * 1000).fromNow()}
 						</td>
 
-						<td class=" px-3 py-2">
+						<td class=" px-3 py-1">
 							{dayjs(user.created_at * 1000).format($i18n.t('MMMM DD, YYYY'))}
 						</td>
 
-						<td class="px-3 py-2 text-right">
+						<td class=" px-3 py-1"> {user.oauth_sub ?? ''} </td>
+
+						<td class="px-3 py-1 text-right">
 							<div class="flex justify-end w-full">
 								{#if $config.features.enable_admin_chat_access && user.role !== 'admin'}
 									<Tooltip content={$i18n.t('Chats')}>

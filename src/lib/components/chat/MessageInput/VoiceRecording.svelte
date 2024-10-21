@@ -11,6 +11,7 @@
 	const dispatch = createEventDispatcher();
 
 	export let recording = false;
+	export let className = ' p-2.5 w-full max-w-full';
 
 	let loading = false;
 	let confirmed = false;
@@ -213,7 +214,7 @@
 					transcription = `${transcription}${transcript}`;
 
 					await tick();
-					document.getElementById('chat-textarea')?.focus();
+					document.getElementById('chat-input')?.focus();
 
 					// Restart the inactivity timeout
 					timeoutId = setTimeout(() => {
@@ -269,13 +270,20 @@
 			await mediaRecorder.stop();
 		}
 		clearInterval(durationCounter);
+
+		if (stream) {
+			const tracks = stream.getTracks();
+			tracks.forEach((track) => track.stop());
+		}
+
+		stream = null;
 	};
 </script>
 
 <div
 	class="{loading
 		? ' bg-gray-100/50 dark:bg-gray-850/50'
-		: 'bg-indigo-300/10 dark:bg-indigo-500/10 '} rounded-full flex p-2.5"
+		: 'bg-indigo-300/10 dark:bg-indigo-500/10 '} rounded-full flex {className}"
 >
 	<div class="flex items-center mr-1">
 		<button

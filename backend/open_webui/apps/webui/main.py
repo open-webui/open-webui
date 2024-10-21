@@ -9,6 +9,7 @@ from open_webui.apps.webui.models.models import Models
 from open_webui.apps.webui.routers import (
     auths,
     chats,
+    folders,
     configs,
     files,
     functions,
@@ -32,9 +33,13 @@ from open_webui.config import (
     ENABLE_MESSAGE_RATING,
     ENABLE_SIGNUP,
     JWT_EXPIRES_IN,
+    ENABLE_OAUTH_ROLE_MANAGEMENT,
+    OAUTH_ROLES_CLAIM,
     OAUTH_EMAIL_CLAIM,
     OAUTH_PICTURE_CLAIM,
     OAUTH_USERNAME_CLAIM,
+    OAUTH_ALLOWED_ROLES,
+    OAUTH_ADMIN_ROLES,
     SHOW_ADMIN_DETAILS,
     USER_PERMISSIONS,
     WEBHOOK_URL,
@@ -93,6 +98,11 @@ app.state.config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
 app.state.config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
 app.state.config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM
 
+app.state.config.ENABLE_OAUTH_ROLE_MANAGEMENT = ENABLE_OAUTH_ROLE_MANAGEMENT
+app.state.config.OAUTH_ROLES_CLAIM = OAUTH_ROLES_CLAIM
+app.state.config.OAUTH_ALLOWED_ROLES = OAUTH_ALLOWED_ROLES
+app.state.config.OAUTH_ADMIN_ROLES = OAUTH_ADMIN_ROLES
+
 app.state.MODELS = {}
 app.state.TOOLS = {}
 app.state.FUNCTIONS = {}
@@ -110,6 +120,7 @@ app.include_router(configs.router, prefix="/configs", tags=["configs"])
 app.include_router(auths.router, prefix="/auths", tags=["auths"])
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(chats.router, prefix="/chats", tags=["chats"])
+app.include_router(folders.router, prefix="/folders", tags=["folders"])
 
 app.include_router(models.router, prefix="/models", tags=["models"])
 app.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])
@@ -335,7 +346,7 @@ async def generate_function_chat_completion(form_data, user):
     pipe = function_module.pipe
     params = get_function_params(function_module, form_data, user, extra_params)
 
-    if form_data["stream"]:
+    if form_data.get("stream", False):
 
         async def stream_content():
             try:

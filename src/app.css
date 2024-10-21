@@ -34,6 +34,14 @@ math {
 	@apply rounded-lg;
 }
 
+.input-prose {
+	@apply prose dark:prose-invert prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+}
+
+.input-prose-sm {
+	@apply prose dark:prose-invert prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line text-sm;
+}
+
 .markdown-prose {
 	@apply prose dark:prose-invert prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
@@ -56,7 +64,7 @@ li p {
 
 ::-webkit-scrollbar-thumb {
 	--tw-border-opacity: 1;
-	background-color: rgba(217, 217, 227, 0.8);
+	background-color: rgba(236, 236, 236, 0.8);
 	border-color: rgba(255, 255, 255, var(--tw-border-opacity));
 	border-radius: 9999px;
 	border-width: 1px;
@@ -64,7 +72,7 @@ li p {
 
 /* Dark theme scrollbar styles */
 .dark ::-webkit-scrollbar-thumb {
-	background-color: rgba(69, 69, 74, 0.8); /* Darker color for dark theme */
+	background-color: rgba(33, 33, 33, 0.8); /* Darker color for dark theme */
 	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
 }
 
@@ -178,4 +186,22 @@ input[type='number'] {
 
 .bg-gray-950-90 {
 	background-color: rgba(var(--color-gray-950, #0d0d0d), 0.9);
+}
+
+.ProseMirror {
+	@apply h-full  min-h-fit max-h-full;
+}
+
+.ProseMirror:focus {
+	outline: none;
+}
+
+.placeholder::after {
+	content: attr(data-placeholder);
+	cursor: text;
+	pointer-events: none;
+
+	float: left;
+
+	@apply absolute inset-0 z-0 text-gray-500;
 }
