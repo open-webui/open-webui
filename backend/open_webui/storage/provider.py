@@ -38,11 +38,11 @@ class StorageProvider:
         else:
             self._storage_type = "local"
 
-    def get_storage_type(self):
-        return self._storage_type
-
     def _get_bucket(self):
         return S3_BUCKET_NAME
+
+    def get_storage_provider(self):
+        return self._storage_type
 
     def upload_file(self, file, filename):
         if self._storage_type == "local":
@@ -134,4 +134,4 @@ class StorageProvider:
         return Files.update_file_metadata_by_id(id, meta)
 
 
-storage = StorageProvider()
+Storage = StorageProvider()
