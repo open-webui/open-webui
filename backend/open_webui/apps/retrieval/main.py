@@ -710,7 +710,9 @@ def save_docs_to_vector_db(
                 VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
                 log.info(f"deleting existing collection {collection_name}")
             elif add is False:
-                log.info(f"collection {collection_name} already exists, overwrite is False and add is False")
+                log.info(
+                    f"collection {collection_name} already exists, overwrite is False and add is False"
+                )
                 return True
 
         log.info(f"adding to collection {collection_name}")
@@ -823,7 +825,7 @@ def process_file(
             # Process the file and save the content
             # Usage: /files/
 
-            file_path = file.meta.get("path", None)
+            file_path = file.path
             if file_path:
                 loader = Loader(
                     engine=app.state.config.CONTENT_EXTRACTION_ENGINE,

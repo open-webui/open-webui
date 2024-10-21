@@ -57,11 +57,11 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
                 **{
                     "id": id,
                     "filename": filename,
+                    "path": file_path,
                     "meta": {
                         "name": name,
                         "content_type": file.content_type,
                         "size": len(contents),
-                        "path": file_path,
                     },
                 }
             ),
@@ -244,7 +244,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
-        file_path = file.meta.get("path")
+        file_path = file.path
         if file_path:
             file_path = Path(file_path)
 

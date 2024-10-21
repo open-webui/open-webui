@@ -17,14 +17,15 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 class File(Base):
     __tablename__ = "file"
-
     id = Column(String, primary_key=True)
     user_id = Column(String)
     hash = Column(Text, nullable=True)
 
     filename = Column(Text)
+    path = Column(Text, nullable=True)
+
     data = Column(JSON, nullable=True)
-    meta = Column(JSONField)
+    meta = Column(JSON, nullable=True)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -38,8 +39,10 @@ class FileModel(BaseModel):
     hash: Optional[str] = None
 
     filename: str
+    path: Optional[str] = None
+
     data: Optional[dict] = None
-    meta: dict
+    meta: Optional[dict] = None
 
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
@@ -82,6 +85,7 @@ class FileForm(BaseModel):
     id: str
     hash: Optional[str] = None
     filename: str
+    path: str
     data: dict = {}
     meta: dict = {}
 
