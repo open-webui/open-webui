@@ -61,9 +61,14 @@
 						<div
 							class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
 						>
-							<div class="flex-1 flex items-center gap-2">
-								<WrenchSolid />
-								<Tooltip content={tools[toolId]?.description ?? ''} className="flex-1">
+							<div class="flex-1">
+								<Tooltip
+									content={tools[toolId]?.description ?? ''}
+									placement="top-start"
+									className="flex flex-1  gap-2 items-center"
+								>
+									<WrenchSolid />
+
 									<div class=" line-clamp-1">{tools[toolId].name}</div>
 								</Tooltip>
 							</div>

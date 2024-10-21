@@ -200,13 +200,13 @@ export const getEmbeddingConfig = async (token: string) => {
 type OpenAIConfigForm = {
 	key: string;
 	url: string;
-	batch_size: number;
 };
 
 type EmbeddingModelUpdateForm = {
 	openai_config?: OpenAIConfigForm;
 	embedding_engine: string;
 	embedding_model: string;
+	embedding_batch_size?: number;
 };
 
 export const updateEmbeddingConfig = async (token: string, payload: EmbeddingModelUpdateForm) => {

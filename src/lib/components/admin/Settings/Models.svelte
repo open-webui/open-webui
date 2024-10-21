@@ -763,7 +763,7 @@
 											<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 										{/if}
 										{#each $models.filter((m) => !(m?.preset ?? false) && m.owned_by === 'ollama' && (selectedOllamaUrlIdx === null ? true : (m?.ollama?.urls ?? []).includes(selectedOllamaUrlIdx))) as model}
-											<option value={model.name} class="bg-gray-50 dark:bg-gray-700"
+											<option value={model.id} class="bg-gray-50 dark:bg-gray-700"
 												>{model.name +
 													' (' +
 													(model.ollama.size / 1024 ** 3).toFixed(1) +

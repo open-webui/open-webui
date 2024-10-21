@@ -10,7 +10,7 @@
 
 <div class=" max-h-full flex flex-col w-full">
 	{#each files as file}
-		<div class="mt-2 px-2">
+		<div class="mt-1 px-2">
 			<FileItem
 				className="w-full"
 				colorClassName="{selectedFileId === file.id
@@ -23,9 +23,17 @@
 				loading={file.status === 'uploading'}
 				dismissible
 				on:click={() => {
+					if (file.status === 'uploading') {
+						return;
+					}
+
 					dispatch('click', file.id);
 				}}
 				on:dismiss={() => {
+					if (file.status === 'uploading') {
+						return;
+					}
+
 					dispatch('delete', file.id);
 				}}
 			/>

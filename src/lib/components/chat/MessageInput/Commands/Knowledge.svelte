@@ -2,6 +2,10 @@
 	import { toast } from 'svelte-sonner';
 	import Fuse from 'fuse.js';
 
+	import dayjs from 'dayjs';
+	import relativeTime from 'dayjs/plugin/relativeTime';
+	dayjs.extend(relativeTime);
+
 	import { createEventDispatcher, tick, getContext, onMount } from 'svelte';
 	import { removeLastWordFromString, isValidHttpUrl } from '$lib/utils';
 	import { knowledge } from '$lib/stores';
@@ -42,7 +46,7 @@
 		dispatch('select', item);
 
 		prompt = removeLastWordFromString(prompt, command);
-		const chatInputElement = document.getElementById('chat-textarea');
+		const chatInputElement = document.getElementById('chat-input');
 
 		await tick();
 		chatInputElement?.focus();
@@ -53,7 +57,7 @@
 		dispatch('url', url);
 
 		prompt = removeLastWordFromString(prompt, command);
-		const chatInputElement = document.getElementById('chat-textarea');
+		const chatInputElement = document.getElementById('chat-input');
 
 		await tick();
 		chatInputElement?.focus();
@@ -64,7 +68,7 @@
 		dispatch('youtube', url);
 
 		prompt = removeLastWordFromString(prompt, command);
-		const chatInputElement = document.getElementById('chat-textarea');
+		const chatInputElement = document.getElementById('chat-input');
 
 		await tick();
 		chatInputElement?.focus();
@@ -72,7 +76,13 @@
 	};
 
 	onMount(() => {
-		let legacy_documents = $knowledge.filter((item) => item?.meta?.document);
+		let legacy_documents = $knowledge
+			.filter((item) => item?.meta?.document)
+			.map((item) => ({
+				...item,
+				type: 'file'
+			}));
+
 		let legacy_collections =
 			legacy_documents.length > 0
 				? [
@@ -101,12 +111,44 @@
 					]
 				: [];
 
-		items = [...$knowledge, ...legacy_collections].map((item) => {
-			return {
+		let collections = $knowledge
+			.filter((item) => !item?.meta?.document)
+			.map((item) => ({
 				...item,
-				...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
-			};
-		});
+				type: 'collection'
+			}));
+		let collection_files =
+			$knowledge.length > 0
+				? [
+						...$knowledge
+							.reduce((a, item) => {
+								return [
+									...new Set([
+										...a,
+										...(item?.files ?? []).map((file) => ({
+											...file,
+											collection: { name: item.name, description: item.description }
+										}))
+									])
+								];
+							}, [])
+							.map((file) => ({
+								...file,
+								name: file?.meta?.name,
+								description: `${file?.collection?.name} - ${file?.collection?.description}`,
+								type: 'file'
+							}))
+					]
+				: [];
+
+		items = [...collections, ...collection_files, ...legacy_collections, ...legacy_documents].map(
+			(item) => {
+				return {
+					...item,
+					...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
+				};
+			}
+		);
 
 		fuse = new Fuse(items, {
 			keys: ['name', 'description']
@@ -117,20 +159,17 @@
 {#if filteredItems.length > 0 || prompt.split(' ')?.at(0)?.substring(1).startsWith('http')}
 	<div
 		id="commands-container"
-		class="pl-2 pr-14 mb-3 text-left w-full absolute bottom-0 left-0 right-0 z-10"
+		class="pl-3 pr-14 mb-3 text-left w-full absolute bottom-0 left-0 right-0 z-10"
 	>
-		<div class="flex w-full dark:border dark:border-gray-850 rounded-lg">
-			<div class=" bg-gray-50 dark:bg-gray-850 w-10 rounded-l-lg text-center">
-				<div class=" text-lg font-medium mt-2">#</div>
-			</div>
-
+		<div class="flex w-full rounded-xl border border-gray-50 dark:border-gray-850">
 			<div
-				class="max-h-60 flex flex-col w-full rounded-r-xl bg-white dark:bg-gray-900 dark:text-gray-100"
+				class="max-h-60 flex flex-col w-full rounded-xl bg-white dark:bg-gray-900 dark:text-gray-100"
 			>
 				<div class="m-1 overflow-y-auto p-1 rounded-r-xl space-y-0.5 scrollbar-hidden">
 					{#each filteredItems as item, idx}
 						<button
-							class=" px-3 py-1.5 rounded-xl w-full text-left {idx === selectedIdx
+							class=" px-3 py-1.5 rounded-xl w-full text-left flex justify-between items-center {idx ===
+							selectedIdx
 								? ' bg-gray-50 dark:bg-gray-850 dark:text-gray-100 selected-command-option-button'
 								: ''}"
 							type="button"
@@ -141,38 +180,87 @@
 							on:mousemove={() => {
 								selectedIdx = idx;
 							}}
-							on:focus={() => {}}
 						>
-							<div class=" font-medium text-black dark:text-gray-100 flex items-center gap-1">
-								{#if item.legacy}
-									<div
-										class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded uppercase text-xs font-bold px-1"
-									>
-										Legacy
-									</div>
-								{:else if item?.meta?.document}
-									<div
-										class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded uppercase text-xs font-bold px-1"
-									>
-										Document
-									</div>
-								{:else}
-									<div
-										class="bg-green-500/20 text-green-700 dark:text-green-200 rounded uppercase text-xs font-bold px-1"
-									>
-										Collection
-									</div>
-								{/if}
+							<div>
+								<div class=" font-medium text-black dark:text-gray-100 flex items-center gap-1">
+									{#if item.legacy}
+										<div
+											class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded uppercase text-xs font-bold px-1 flex-shrink-0"
+										>
+											Legacy
+										</div>
+									{:else if item?.meta?.document}
+										<div
+											class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded uppercase text-xs font-bold px-1 flex-shrink-0"
+										>
+											Document
+										</div>
+									{:else if item?.type === 'file'}
+										<div
+											class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded uppercase text-xs font-bold px-1 flex-shrink-0"
+										>
+											File
+										</div>
+									{:else}
+										<div
+											class="bg-green-500/20 text-green-700 dark:text-green-200 rounded uppercase text-xs font-bold px-1 flex-shrink-0"
+										>
+											Collection
+										</div>
+									{/if}
 
-								<div class="line-clamp-1">
-									{item.name}
+									<div class="line-clamp-1">
+										{item?.name}
+									</div>
+								</div>
+
+								<div class=" text-xs text-gray-600 dark:text-gray-100 line-clamp-1">
+									{item?.description}
 								</div>
 							</div>
-
-							<div class=" text-xs text-gray-600 dark:text-gray-100 line-clamp-1">
-								{item?.description}
-							</div>
 						</button>
+
+						<!-- <div slot="content" class=" pl-2 pt-1 flex flex-col gap-0.5">
+								{#if !item.legacy && (item?.files ?? []).length > 0}
+									{#each item?.files ?? [] as file, fileIdx}
+										<button
+											class=" px-3 py-1.5 rounded-xl w-full text-left flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-850 dark:hover:text-gray-100 selected-command-option-button"
+											type="button"
+											on:click={() => {
+												console.log(file);
+											}}
+											on:mousemove={() => {
+												selectedIdx = idx;
+											}}
+										>
+											<div>
+												<div
+													class=" font-medium text-black dark:text-gray-100 flex items-center gap-1"
+												>
+													<div
+														class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded uppercase text-xs font-bold px-1 flex-shrink-0"
+													>
+														File
+													</div>
+
+													<div class="line-clamp-1">
+														{file?.meta?.name}
+													</div>
+												</div>
+
+												<div class=" text-xs text-gray-600 dark:text-gray-100 line-clamp-1">
+													{$i18n.t('Updated')}
+													{dayjs(file.updated_at * 1000).fromNow()}
+												</div>
+											</div>
+										</button>
+									{/each}
+								{:else}
+									<div class=" text-gray-500 text-xs mt-1 mb-2">
+										{$i18n.t('No files found.')}
+									</div>
+								{/if}
+							</div> -->
 					{/each}
 
 					{#if prompt

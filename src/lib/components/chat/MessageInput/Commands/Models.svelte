@@ -58,7 +58,7 @@
 
 	onMount(async () => {
 		await tick();
-		const chatInputElement = document.getElementById('chat-textarea');
+		const chatInputElement = document.getElementById('chat-input');
 		await tick();
 		chatInputElement?.focus();
 		await tick();
@@ -68,15 +68,11 @@
 {#if filteredItems.length > 0}
 	<div
 		id="commands-container"
-		class="pl-2 pr-14 mb-3 text-left w-full absolute bottom-0 left-0 right-0 z-10"
+		class="pl-3 pr-14 mb-3 text-left w-full absolute bottom-0 left-0 right-0 z-10"
 	>
-		<div class="flex w-full dark:border dark:border-gray-850 rounded-lg">
-			<div class=" bg-gray-50 dark:bg-gray-850 w-10 rounded-l-lg text-center">
-				<div class=" text-lg font-medium mt-2">@</div>
-			</div>
-
+		<div class="flex w-full rounded-xl border border-gray-50 dark:border-gray-850">
 			<div
-				class="max-h-60 flex flex-col w-full rounded-r-lg bg-white dark:bg-gray-900 dark:text-gray-100"
+				class="max-h-60 flex flex-col w-full rounded-xl bg-white dark:bg-gray-900 dark:text-gray-100"
 			>
 				<div class="m-1 overflow-y-auto p-1 rounded-r-lg space-y-0.5 scrollbar-hidden">
 					{#each filteredItems as model, modelIdx}

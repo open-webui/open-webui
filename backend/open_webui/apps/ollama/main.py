@@ -547,8 +547,8 @@ class GenerateEmbeddingsForm(BaseModel):
 
 class GenerateEmbedForm(BaseModel):
     model: str
-    input: str
-    truncate: Optional[bool]
+    input: list[str] | str
+    truncate: Optional[bool] = None
     options: Optional[dict] = None
     keep_alive: Optional[Union[int, str]] = None
 
@@ -560,48 +560,7 @@ async def generate_embeddings(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
-    if url_idx is None:
-        model = form_data.model
-
-        if ":" not in model:
-            model = f"{model}:latest"
-
-        if model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[model]["urls"])
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
-            )
-
-    url = app.state.config.OLLAMA_BASE_URLS[url_idx]
-    log.info(f"url: {url}")
-
-    r = requests.request(
-        method="POST",
-        url=f"{url}/api/embed",
-        headers={"Content-Type": "application/json"},
-        data=form_data.model_dump_json(exclude_none=True).encode(),
-    )
-    try:
-        r.raise_for_status()
-
-        return r.json()
-    except Exception as e:
-        log.exception(e)
-        error_detail = "Open WebUI: Server Connection Error"
-        if r is not None:
-            try:
-                res = r.json()
-                if "error" in res:
-                    error_detail = f"Ollama: {res['error']}"
-            except Exception:
-                error_detail = f"Ollama: {e}"
-
-        raise HTTPException(
-            status_code=r.status_code if r else 500,
-            detail=error_detail,
-        )
+    return generate_ollama_batch_embeddings(form_data, url_idx)
 
 
 @app.post("/api/embeddings")
@@ -611,48 +570,7 @@ async def generate_embeddings(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
-    if url_idx is None:
-        model = form_data.model
-
-        if ":" not in model:
-            model = f"{model}:latest"
-
-        if model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[model]["urls"])
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
-            )
-
-    url = app.state.config.OLLAMA_BASE_URLS[url_idx]
-    log.info(f"url: {url}")
-
-    r = requests.request(
-        method="POST",
-        url=f"{url}/api/embeddings",
-        headers={"Content-Type": "application/json"},
-        data=form_data.model_dump_json(exclude_none=True).encode(),
-    )
-    try:
-        r.raise_for_status()
-
-        return r.json()
-    except Exception as e:
-        log.exception(e)
-        error_detail = "Open WebUI: Server Connection Error"
-        if r is not None:
-            try:
-                res = r.json()
-                if "error" in res:
-                    error_detail = f"Ollama: {res['error']}"
-            except Exception:
-                error_detail = f"Ollama: {e}"
-
-        raise HTTPException(
-            status_code=r.status_code if r else 500,
-            detail=error_detail,
-        )
+    return generate_ollama_embeddings(form_data=form_data, url_idx=url_idx)
 
 
 def generate_ollama_embeddings(
@@ -692,7 +610,64 @@ def generate_ollama_embeddings(
         log.info(f"generate_ollama_embeddings {data}")
 
         if "embedding" in data:
-            return data["embedding"]
+            return data
+        else:
+            raise Exception("Something went wrong :/")
+    except Exception as e:
+        log.exception(e)
+        error_detail = "Open WebUI: Server Connection Error"
+        if r is not None:
+            try:
+                res = r.json()
+                if "error" in res:
+                    error_detail = f"Ollama: {res['error']}"
+            except Exception:
+                error_detail = f"Ollama: {e}"
+
+        raise HTTPException(
+            status_code=r.status_code if r else 500,
+            detail=error_detail,
+        )
+
+
+def generate_ollama_batch_embeddings(
+    form_data: GenerateEmbedForm,
+    url_idx: Optional[int] = None,
+):
+    log.info(f"generate_ollama_batch_embeddings {form_data}")
+
+    if url_idx is None:
+        model = form_data.model
+
+        if ":" not in model:
+            model = f"{model}:latest"
+
+        if model in app.state.MODELS:
+            url_idx = random.choice(app.state.MODELS[model]["urls"])
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
+            )
+
+    url = app.state.config.OLLAMA_BASE_URLS[url_idx]
+    log.info(f"url: {url}")
+
+    r = requests.request(
+        method="POST",
+        url=f"{url}/api/embed",
+        headers={"Content-Type": "application/json"},
+        data=form_data.model_dump_json(exclude_none=True).encode(),
+    )
+    try:
+        r.raise_for_status()
+
+        data = r.json()
+
+        log.info(f"generate_ollama_batch_embeddings {data}")
+
+        if "embeddings" in data:
+            return data
         else:
             raise Exception("Something went wrong :/")
     except Exception as e:
@@ -788,8 +763,7 @@ async def generate_chat_completion(
     user=Depends(get_verified_user),
 ):
     payload = {**form_data.model_dump(exclude_none=True)}
-    log.debug(f"{payload = }")
-
+    log.debug(f"generate_chat_completion() - 1.payload = {payload}")
     if "metadata" in payload:
         del payload["metadata"]
 
@@ -824,7 +798,7 @@ async def generate_chat_completion(
 
     url = get_ollama_url(url_idx, payload["model"])
     log.info(f"url: {url}")
-    log.debug(payload)
+    log.debug(f"generate_chat_completion() - 2.payload = {payload}")
 
     return await post_streaming_url(
         f"{url}/api/chat",

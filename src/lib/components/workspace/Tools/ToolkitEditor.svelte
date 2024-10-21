@@ -6,6 +6,9 @@
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import { goto } from '$app/navigation';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Badge from '$lib/components/common/Badge.svelte';
+	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -182,61 +185,64 @@ class Tools:
 				}
 			}}
 		>
-			<div class="mb-2.5">
-				<button
-					class="flex space-x-1"
-					on:click={() => {
-						goto('/workspace/tools');
-					}}
-					type="button"
-				>
-					<div class=" self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
-								clip-rule="evenodd"
+			<div class="flex flex-col flex-1 overflow-auto h-0">
+				<div class="w-full mb-2 flex flex-col gap-0.5">
+					<div class="flex w-full items-center">
+						<div class=" flex-shrink-0 mr-2">
+							<Tooltip content={$i18n.t('Back')}>
+								<button
+									class="w-full text-left text-sm py-1.5 px-1 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
+									on:click={() => {
+										goto('/workspace/tools');
+									}}
+									type="button"
+								>
+									<ChevronLeft strokeWidth="2.5" />
+								</button>
+							</Tooltip>
+						</div>
+
+						<div class="flex-1">
+							<input
+								class="w-full text-2xl font-medium bg-transparent outline-none"
+								type="text"
+								placeholder={$i18n.t('Toolkit Name (e.g. My ToolKit)')}
+								bind:value={name}
+								required
 							/>
-						</svg>
-					</div>
-					<div class=" self-center font-medium text-sm">{$i18n.t('Back')}</div>
-				</button>
-			</div>
+						</div>
 
-			<div class="flex flex-col flex-1 overflow-auto h-0 rounded-lg">
-				<div class="w-full mb-2 flex flex-col gap-1.5">
-					<div class="flex gap-2 w-full">
+						<div>
+							<Badge type="muted" content={$i18n.t('Tool')} />
+						</div>
+					</div>
+
+					<div class=" flex gap-2 px-1">
+						{#if edit}
+							<div class="text-sm text-gray-500 flex-shrink-0">
+								{id}
+							</div>
+						{:else}
+							<input
+								class="w-full text-sm disabled:text-gray-500 bg-transparent outline-none"
+								type="text"
+								placeholder={$i18n.t('Toolkit ID (e.g. my_toolkit)')}
+								bind:value={id}
+								required
+								disabled={edit}
+							/>
+						{/if}
+
 						<input
-							class="w-full px-3 py-2 text-sm font-medium bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
+							class="w-full text-sm bg-transparent outline-none"
 							type="text"
-							placeholder={$i18n.t('Toolkit Name (e.g. My ToolKit)')}
-							bind:value={name}
+							placeholder={$i18n.t(
+								'Toolkit Description (e.g. A toolkit for performing various operations)'
+							)}
+							bind:value={meta.description}
 							required
 						/>
-
-						<input
-							class="w-full px-3 py-2 text-sm font-medium disabled:text-gray-300 dark:disabled:text-gray-700 bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
-							type="text"
-							placeholder={$i18n.t('Toolkit ID (e.g. my_toolkit)')}
-							bind:value={id}
-							required
-							disabled={edit}
-						/>
 					</div>
-					<input
-						class="w-full px-3 py-2 text-sm font-medium bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
-						type="text"
-						placeholder={$i18n.t(
-							'Toolkit Description (e.g. A toolkit for performing various operations)'
-						)}
-						bind:value={meta.description}
-						required
-					/>
 				</div>
 
 				<div class="mb-2 flex-1 overflow-auto h-0 rounded-lg">
@@ -268,7 +274,7 @@ class Tools:
 					</div>
 
 					<button
-						class="px-3 py-1.5 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-gray-50 transition rounded-lg"
+						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 						type="submit"
 					>
 						{$i18n.t('Save')}

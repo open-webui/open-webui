@@ -109,7 +109,9 @@ class ChromaClient:
 
     def insert(self, collection_name: str, items: list[VectorItem]):
         # Insert the items into the collection, if the collection does not exist, it will be created.
-        collection = self.client.get_or_create_collection(name=collection_name)
+        collection = self.client.get_or_create_collection(
+            name=collection_name, metadata={"hnsw:space": "cosine"}
+        )
 
         ids = [item["id"] for item in items]
         documents = [item["text"] for item in items]
@@ -127,7 +129,9 @@ class ChromaClient:
 
     def upsert(self, collection_name: str, items: list[VectorItem]):
         # Update the items in the collection, if the items are not present, insert them. If the collection does not exist, it will be created.
-        collection = self.client.get_or_create_collection(name=collection_name)
+        collection = self.client.get_or_create_collection(
+            name=collection_name, metadata={"hnsw:space": "cosine"}
+        )
 
         ids = [item["id"] for item in items]
         documents = [item["text"] for item in items]

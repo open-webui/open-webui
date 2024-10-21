@@ -16,7 +16,7 @@
 </script>
 
 <div class=" dark:text-white">
-	<div class=" flex justify-between dark:text-gray-100 mb-2">
+	<div class=" flex items-center justify-between dark:text-gray-100 mb-2">
 		<div class=" text-lg font-medium self-center font-primary">{$i18n.t('Chat Controls')}</div>
 		<button
 			class="self-center"
@@ -24,11 +24,11 @@
 				dispatch('close');
 			}}
 		>
-			<XMark className="size-4" />
+			<XMark className="size-3.5" />
 		</button>
 	</div>
 
-	<div class=" dark:text-gray-200 text-sm font-primary py-0.5">
+	<div class=" dark:text-gray-200 text-sm font-primary py-0.5 px-0.5">
 		{#if chatFiles.length > 0}
 			<Collapsible title={$i18n.t('Files')} open={true}>
 				<div class="flex flex-col gap-1 mt-1.5" slot="content">
@@ -56,7 +56,7 @@
 				</div>
 			</Collapsible>
 
-			<hr class="my-2 border-gray-100 dark:border-gray-800" />
+			<hr class="my-2 border-gray-50 dark:border-gray-850" />
 		{/if}
 
 		<Collapsible title={$i18n.t('Valves')}>
@@ -65,20 +65,20 @@
 			</div>
 		</Collapsible>
 
-		<hr class="my-2 border-gray-100 dark:border-gray-800" />
+		<hr class="my-2 border-gray-50 dark:border-gray-850" />
 
 		<Collapsible title={$i18n.t('System Prompt')} open={true}>
 			<div class=" mt-1.5" slot="content">
 				<textarea
 					bind:value={params.system}
-					class="w-full rounded-lg px-3.5 py-2.5 text-sm dark:text-gray-300 dark:bg-gray-850 border border-gray-100 dark:border-gray-800 outline-none resize-none"
+					class="w-full rounded-lg px-3.5 py-2.5 text-sm dark:text-gray-300 dark:bg-gray-850 border border-gray-50 dark:border-gray-850 outline-none resize-none"
 					rows="4"
 					placeholder={$i18n.t('Enter system prompt')}
 				/>
 			</div>
 		</Collapsible>
 
-		<hr class="my-2 border-gray-100 dark:border-gray-800" />
+		<hr class="my-2 border-gray-50 dark:border-gray-850" />
 
 		<Collapsible title={$i18n.t('Advanced Params')} open={true}>
 			<div class="text-sm mt-1.5" slot="content">

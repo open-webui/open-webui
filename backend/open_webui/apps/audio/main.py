@@ -63,6 +63,9 @@ app.state.config.STT_OPENAI_API_KEY = AUDIO_STT_OPENAI_API_KEY
 app.state.config.STT_ENGINE = AUDIO_STT_ENGINE
 app.state.config.STT_MODEL = AUDIO_STT_MODEL
 
+app.state.config.WHISPER_MODEL = WHISPER_MODEL
+app.state.faster_whisper_model = None
+
 app.state.config.TTS_OPENAI_API_BASE_URL = AUDIO_TTS_OPENAI_API_BASE_URL
 app.state.config.TTS_OPENAI_API_KEY = AUDIO_TTS_OPENAI_API_KEY
 app.state.config.TTS_ENGINE = AUDIO_TTS_ENGINE
@@ -82,6 +85,31 @@ SPEECH_CACHE_DIR = Path(CACHE_DIR).joinpath("./audio/speech/")
 SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def set_faster_whisper_model(model: str, auto_update: bool = False):
+    if model and app.state.config.STT_ENGINE == "":
+        from faster_whisper import WhisperModel
+
+        faster_whisper_kwargs = {
+            "model_size_or_path": model,
+            "device": whisper_device_type,
+            "compute_type": "int8",
+            "download_root": WHISPER_MODEL_DIR,
+            "local_files_only": not auto_update,
+        }
+
+        try:
+            app.state.faster_whisper_model = WhisperModel(**faster_whisper_kwargs)
+        except Exception:
+            log.warning(
+                "WhisperModel initialization failed, attempting download with local_files_only=False"
+            )
+            faster_whisper_kwargs["local_files_only"] = False
+            app.state.faster_whisper_model = WhisperModel(**faster_whisper_kwargs)
+
+    else:
+        app.state.faster_whisper_model = None
+
+
 class TTSConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
     OPENAI_API_KEY: str
@@ -99,6 +127,7 @@ class STTConfigForm(BaseModel):
     OPENAI_API_KEY: str
     ENGINE: str
     MODEL: str
+    WHISPER_MODEL: str
 
 
 class AudioConfigUpdateForm(BaseModel):
@@ -152,6 +181,7 @@ async def get_audio_config(user=Depends(get_admin_user)):
             "OPENAI_API_KEY": app.state.config.STT_OPENAI_API_KEY,
             "ENGINE": app.state.config.STT_ENGINE,
             "MODEL": app.state.config.STT_MODEL,
+            "WHISPER_MODEL": app.state.config.WHISPER_MODEL,
         },
     }
 
@@ -176,6 +206,8 @@ async def update_audio_config(
     app.state.config.STT_OPENAI_API_KEY = form_data.stt.OPENAI_API_KEY
     app.state.config.STT_ENGINE = form_data.stt.ENGINE
     app.state.config.STT_MODEL = form_data.stt.MODEL
+    app.state.config.WHISPER_MODEL = form_data.stt.WHISPER_MODEL
+    set_faster_whisper_model(form_data.stt.WHISPER_MODEL, WHISPER_MODEL_AUTO_UPDATE)
 
     return {
         "tts": {
@@ -194,6 +226,7 @@ async def update_audio_config(
             "OPENAI_API_KEY": app.state.config.STT_OPENAI_API_KEY,
             "ENGINE": app.state.config.STT_ENGINE,
             "MODEL": app.state.config.STT_MODEL,
+            "WHISPER_MODEL": app.state.config.WHISPER_MODEL,
         },
     }
 
@@ -367,27 +400,10 @@ def transcribe(file_path):
     id = filename.split(".")[0]
 
     if app.state.config.STT_ENGINE == "":
-        from faster_whisper import WhisperModel
+        if app.state.faster_whisper_model is None:
+            set_faster_whisper_model(app.state.config.WHISPER_MODEL)
 
-        whisper_kwargs = {
-            "model_size_or_path": WHISPER_MODEL,
-            "device": whisper_device_type,
-            "compute_type": "int8",
-            "download_root": WHISPER_MODEL_DIR,
-            "local_files_only": not WHISPER_MODEL_AUTO_UPDATE,
-        }
-
-        log.debug(f"whisper_kwargs: {whisper_kwargs}")
-
-        try:
-            model = WhisperModel(**whisper_kwargs)
-        except Exception:
-            log.warning(
-                "WhisperModel initialization failed, attempting download with local_files_only=False"
-            )
-            whisper_kwargs["local_files_only"] = False
-            model = WhisperModel(**whisper_kwargs)
-
+        model = app.state.faster_whisper_model
         segments, info = model.transcribe(file_path, beam_size=5)
         log.info(
             "Detected language '%s' with probability %f"
@@ -395,7 +411,6 @@ def transcribe(file_path):
         )
 
         transcript = "".join([segment.text for segment in list(segments)])
-
         data = {"text": transcript.strip()}
 
         # save the transcript to a json file
@@ -403,7 +418,7 @@ def transcribe(file_path):
         with open(transcript_file, "w") as f:
             json.dump(data, f)
 
-        print(data)
+        log.debug(data)
         return data
     elif app.state.config.STT_ENGINE == "openai":
         if is_mp4_audio(file_path):
@@ -417,7 +432,7 @@ def transcribe(file_path):
         files = {"file": (filename, open(file_path, "rb"))}
         data = {"model": app.state.config.STT_MODEL}
 
-        print(files, data)
+        log.debug(files, data)
 
         r = None
         try:
@@ -450,7 +465,7 @@ def transcribe(file_path):
                 except Exception:
                     error_detail = f"External: {e}"
 
-            raise error_detail
+            raise Exception(error_detail)
 
 
 @app.post("/transcriptions")

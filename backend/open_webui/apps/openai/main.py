@@ -18,7 +18,10 @@ from open_webui.config import (
     OPENAI_API_KEYS,
     AppConfig,
 )
-from open_webui.env import AIOHTTP_CLIENT_TIMEOUT
+from open_webui.env import (
+    AIOHTTP_CLIENT_TIMEOUT,
+    AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST,
+)
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
@@ -179,7 +182,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
 
 async def fetch_url(url, key):
-    timeout = aiohttp.ClientTimeout(total=3)
+    timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
     try:
         headers = {"Authorization": f"Bearer {key}"}
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
@@ -237,9 +240,7 @@ def merge_models_lists(model_lists):
 
 
 def is_openai_api_disabled():
-    api_keys = app.state.config.OPENAI_API_KEYS
-    no_keys = len(api_keys) == 1 and api_keys[0] == ""
-    return no_keys or not app.state.config.ENABLE_OPENAI_API
+    return not app.state.config.ENABLE_OPENAI_API
 
 
 async def get_all_models_raw() -> list:

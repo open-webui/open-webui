@@ -1,5 +1,5 @@
 <script>
-	import Playground from '$lib/components/playground/Playground.svelte';
+	import Chat from '$lib/components/playground/Chat.svelte';
 </script>
 
-<Playground />
+<Chat />

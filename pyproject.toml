@@ -20,6 +20,7 @@ dependencies = [
 
     "requests==2.32.3",
     "aiohttp==3.10.8",
+    "async-timeout",
 
     "sqlalchemy==2.0.32",
     "alembic==1.13.2",
@@ -49,13 +50,14 @@ dependencies = [
     "chromadb==0.5.9",
     "pymilvus==2.4.7",
 
-    "sentence-transformers==3.0.1",
+    "sentence-transformers==3.2.0",
     "colbert-ai==0.2.21",
     "einops==0.8.0",
-    
 
     "ftfy==6.2.3",
     "pypdf==4.3.1",
+    "xhtml2pdf==0.2.16",
+    "pymdown-extensions==10.11.2",
     "docx2txt==0.8",
     "python-pptx==1.0.0",
     "unstructured==0.15.9",
@@ -91,7 +93,9 @@ dependencies = [
 
     "docker~=7.1.0",
     "pytest~=8.3.2",
-    "pytest-docker~=3.1.1"
+    "pytest-docker~=3.1.1",
+
+    "googleapis-common-protos==1.63.2"
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.12.0a1"
