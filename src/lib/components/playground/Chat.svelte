@@ -189,14 +189,19 @@
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full relative">
-		<Sidebar bind:show={showSettings} className=" dark:bg-gray-900" width="250px">
+		<Sidebar bind:show={showSettings} className=" bg-white dark:bg-gray-900" width="250px">
 			<div class="flex flex-col px-5 py-3 text-sm">
 				<div class="flex justify-between items-center mb-2">
 					<div class=" font-medium text-base">Settings</div>
 
-					<div>
-						<button class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg">
-							<ArrowRight strokeWidth="2.5" />
+					<div class=" translate-x-1.5">
+						<button
+							class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
+							on:click={() => {
+								showSettings = !showSettings;
+							}}
+						>
+							<ArrowRight className="size-3" strokeWidth="2.5" />
 						</button>
 					</div>
 				</div>
@@ -206,16 +211,14 @@
 						<div class=" text-xs font-medium mb-1">Model</div>
 
 						<div class="w-full">
-							<Selector
-								triggerClassName="text-sm"
-								placeholder={$i18n.t('Select a model')}
-								items={$models.map((model) => ({
-									value: model.id,
-									label: model.name,
-									model: model
-								}))}
+							<select
+								class="w-full bg-transparent border border-gray-50 dark:border-gray-850 rounded-lg p-1.5 text-sm outline-none"
 								bind:value={selectedModelId}
-							/>
+							>
+								{#each $models as model}
+									<option value={model.id}>{model.name}</option>
+								{/each}
+							</select>
 						</div>
 					</div>
 				</div>

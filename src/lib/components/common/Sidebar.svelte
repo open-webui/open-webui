@@ -12,7 +12,7 @@
 {#if show}
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
-		class="absolute z-20 top-0 right-0 left-0 bottom-0 bg-black/10 w-full min-h-full h-full flex justify-center overflow-hidden overscroll-contain"
+		class="absolute z-20 top-0 right-0 left-0 bottom-0 bg-white/20 dark:bg-black/20 w-full min-h-full h-full flex justify-center overflow-hidden overscroll-contain"
 		on:mousedown={() => {
 			show = false;
 		}}
