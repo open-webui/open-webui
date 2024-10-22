@@ -473,12 +473,12 @@
 		} else if ($config?.default_models) {
 			console.log($config?.default_models.split(',') ?? '');
 			selectedModels = $config?.default_models.split(',');
+		}
+
+		if ($models.length > 0) {
+			selectedModels = [$models[0].id];
 		} else {
-			if ($models.length > 0) {
-				selectedModels = [$models[0].id];
-			} else {
-				selectedModels = [''];
-			}
+			selectedModels = [''];
 		}
 
 		if ($page.url.searchParams.get('youtube')) {
@@ -486,7 +486,6 @@
 				`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`
 			);
 		}
-
 		if ($page.url.searchParams.get('web-search') === 'true') {
 			webSearchEnabled = true;
 		}
