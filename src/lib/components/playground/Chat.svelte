@@ -189,7 +189,7 @@
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full relative">
-		<Sidebar bind:show={showSettings} className=" bg-white dark:bg-gray-900" width="250px">
+		<Sidebar bind:show={showSettings} className=" bg-white dark:bg-gray-900" width="300px">
 			<div class="flex flex-col px-5 py-3 text-sm">
 				<div class="flex justify-between items-center mb-2">
 					<div class=" font-medium text-base">Settings</div>
@@ -206,13 +206,13 @@
 					</div>
 				</div>
 
-				<div>
+				<div class="mt-1">
 					<div>
 						<div class=" text-xs font-medium mb-1">Model</div>
 
 						<div class="w-full">
 							<select
-								class="w-full bg-transparent border border-gray-50 dark:border-gray-850 rounded-lg p-1.5 text-sm outline-none"
+								class="w-full bg-transparent border border-gray-50 dark:border-gray-850 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-none"
 								bind:value={selectedModelId}
 							>
 								{#each $models as model}
@@ -293,6 +293,9 @@
 			</div>
 
 			<div class="pb-3">
+				<div class="text-xs font-medium text-gray-500 px-2 py-1">
+					{selectedModelId}
+				</div>
 				<div class="border border-gray-50 dark:border-gray-850 w-full px-3 py-2.5 rounded-xl">
 					<div class="py-0.5">
 						<!-- $i18n.t('a user') -->
