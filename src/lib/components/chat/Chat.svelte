@@ -475,10 +475,12 @@
 			selectedModels = $config?.default_models.split(',');
 		}
 
-		if ($models.length > 0) {
-			selectedModels = [$models[0].id];
-		} else {
-			selectedModels = [''];
+		if (selectedModels.length === 0) {
+			if ($models.length > 0) {
+				selectedModels = [$models[0].id];
+			} else {
+				selectedModels = [''];
+			}
 		}
 
 		if ($page.url.searchParams.get('youtube')) {
