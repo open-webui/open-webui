@@ -10,6 +10,7 @@
 	import { page } from '$app/stores';
 	import { getBackendConfig } from '$lib/apis';
 	import { renderSuiConnectButton } from '$lib/apis/atoma/react';
+	import { prepare, receiveToken } from '$lib/apis/atoma/zklogin';
 
 	const i18n = getContext('i18n');
 
@@ -73,7 +74,8 @@
 		}
 		const params = new URLSearchParams(hash);
 		const token = params.get('token');
-		if (!token) {
+		const idToken = params.get('id_token');
+		if (!token || !idToken) {
 			return;
 		}
 		const sessionUser = await getSessionUser(token).catch((error) => {
@@ -84,6 +86,7 @@
 			return;
 		}
 		localStorage.token = token;
+		await receiveToken(idToken);
 		await setSessionUser(sessionUser);
 	};
 
@@ -142,6 +145,8 @@
 		);
 	};
 
+	let nonce : string;
+
 	onMount(async () => {
 		if ($user !== undefined) {
 			await goto('/');
@@ -152,7 +157,9 @@
 			await signInHandler();
 		}
 		setTimeout(initSui, 0);
-	});
+	  nonce = await prepare();
+});
+
 </script>
 
 <svelte:head>
@@ -330,7 +337,7 @@
 								<button
 									class="flex items-center px-6 border-2 dark:border-gray-800 duration-300 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 w-full rounded-2xl dark:text-white text-sm py-3 transition"
 									on:click={() => {
-										window.location.href = `${WEBUI_BASE_URL}/oauth/google/login`;
+										window.location.href = `${WEBUI_BASE_URL}/oauth/google/login/${nonce}`;
 									}}
 								>
 									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="size-6 mr-3">

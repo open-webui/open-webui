@@ -2222,8 +2222,8 @@ if len(OAUTH_PROVIDERS) > 0:
     )
 
 
-@app.get("/oauth/{provider}/login")
-async def oauth_login(provider: str, request: Request):
+@app.get("/oauth/{provider}/login/{nonce}")
+async def oauth_login(provider: str, nonce: str, request: Request):
     if provider not in OAUTH_PROVIDERS:
         raise HTTPException(404)
     # If the provider has a custom redirect URL, use that, otherwise automatically generate one
@@ -2233,7 +2233,7 @@ async def oauth_login(provider: str, request: Request):
     client = oauth.create_client(provider)
     if client is None:
         raise HTTPException(404)
-    return await client.authorize_redirect(request, redirect_uri)
+    return await client.authorize_redirect(request, redirect_uri, nonce=nonce)
 
 
 # OAuth login logic is as follows:
@@ -2249,6 +2249,7 @@ async def oauth_callback(provider: str, request: Request, response: Response):
     client = oauth.create_client(provider)
     try:
         token = await client.authorize_access_token(request)
+        id_token = token["id_token"]
     except Exception as e:
         log.warning(f"OAuth callback error: {e}")
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
