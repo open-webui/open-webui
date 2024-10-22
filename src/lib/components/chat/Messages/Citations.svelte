@@ -54,7 +54,7 @@
 				}
 
 				if (id.startsWith('http://') || id.startsWith('https://')) {
-					source = { ..source, url: id };
+					source = { ...source, url: id };
 				}
 
 				const existingSource = acc.find((item) => item.id === id);
