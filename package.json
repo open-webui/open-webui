@@ -72,7 +72,7 @@
 		"js-sha256": "^0.10.1",
 		"katex": "^0.16.9",
 		"marked": "^9.1.0",
-		"mermaid": "^10.9.1",
+		"mermaid": "^10.9.3",
 		"paneforge": "^0.0.6",
 		"panzoom": "^9.4.3",
 		"pyodide": "^0.26.1",
