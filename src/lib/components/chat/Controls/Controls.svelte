@@ -56,7 +56,7 @@
 				</div>
 			</Collapsible>
 
-			<hr class="my-2 border-gray-50 dark:border-gray-800" />
+			<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 		{/if}
 
 		<Collapsible title={$i18n.t('Valves')} buttonClassName="w-full">
@@ -65,7 +65,7 @@
 			</div>
 		</Collapsible>
 
-		<hr class="my-2 border-gray-50 dark:border-gray-800" />
+		<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 
 		<Collapsible title={$i18n.t('System Prompt')} open={true} buttonClassName="w-full">
 			<div class="" slot="content">
@@ -78,7 +78,7 @@
 			</div>
 		</Collapsible>
 
-		<hr class="my-2 border-gray-50 dark:border-gray-800" />
+		<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 
 		<Collapsible title={$i18n.t('Advanced Params')} open={true} buttonClassName="w-full">
 			<div class="text-sm mt-1.5" slot="content">

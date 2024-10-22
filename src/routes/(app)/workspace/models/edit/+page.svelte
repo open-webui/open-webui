@@ -139,7 +139,7 @@
 		const _id = $page.url.searchParams.get('id');
 
 		if (_id) {
-			model = $models.find((m) => m.id === _id);
+			model = $models.find((m) => m.id === _id && m?.owned_by !== 'arena');
 			if (model) {
 				id = model.id;
 				name = model.name;
@@ -395,7 +395,7 @@
 							required
 						>
 							<option value={null} class=" text-gray-900">{$i18n.t('Select a base model')}</option>
-							{#each $models.filter((m) => m.id !== model.id && !m?.preset) as model}
+							{#each $models.filter((m) => m.id !== model.id && !m?.preset && m?.owned_by !== 'arena') as model}
 								<option value={model.id} class=" text-gray-900">{model.name}</option>
 							{/each}
 						</select>

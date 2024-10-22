@@ -243,7 +243,7 @@
 
 	onMount(async () => {
 		// Legacy code to sync localModelfiles with models
-		_models = $models;
+		_models = $models.filter((m) => m?.owned_by !== 'arena');
 		localModelfiles = JSON.parse(localStorage.getItem('modelfiles') ?? '[]');
 
 		if (localModelfiles) {

@@ -1,6 +1,7 @@
 import inspect
 import json
 import logging
+import time
 from typing import AsyncGenerator, Generator, Iterator
 
 from open_webui.apps.socket.main import get_event_call, get_event_emitter
@@ -17,6 +18,7 @@ from open_webui.apps.webui.routers import (
     models,
     knowledge,
     prompts,
+    evaluations,
     tools,
     users,
     utils,
@@ -32,6 +34,9 @@ from open_webui.config import (
     ENABLE_LOGIN_FORM,
     ENABLE_MESSAGE_RATING,
     ENABLE_SIGNUP,
+    ENABLE_EVALUATION_ARENA_MODELS,
+    EVALUATION_ARENA_MODELS,
+    DEFAULT_ARENA_MODEL,
     JWT_EXPIRES_IN,
     ENABLE_OAUTH_ROLE_MANAGEMENT,
     OAUTH_ROLES_CLAIM,
@@ -94,6 +99,9 @@ app.state.config.BANNERS = WEBUI_BANNERS
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 app.state.config.ENABLE_MESSAGE_RATING = ENABLE_MESSAGE_RATING
 
+app.state.config.ENABLE_EVALUATION_ARENA_MODELS = ENABLE_EVALUATION_ARENA_MODELS
+app.state.config.EVALUATION_ARENA_MODELS = EVALUATION_ARENA_MODELS
+
 app.state.config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
 app.state.config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
 app.state.config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM
@@ -117,20 +125,24 @@ app.add_middleware(
 
 
 app.include_router(configs.router, prefix="/configs", tags=["configs"])
+
 app.include_router(auths.router, prefix="/auths", tags=["auths"])
 app.include_router(users.router, prefix="/users", tags=["users"])
+
 app.include_router(chats.router, prefix="/chats", tags=["chats"])
-app.include_router(folders.router, prefix="/folders", tags=["folders"])
 
 app.include_router(models.router, prefix="/models", tags=["models"])
 app.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])
 app.include_router(prompts.router, prefix="/prompts", tags=["prompts"])
-
-app.include_router(files.router, prefix="/files", tags=["files"])
 app.include_router(tools.router, prefix="/tools", tags=["tools"])
 app.include_router(functions.router, prefix="/functions", tags=["functions"])
 
 app.include_router(memories.router, prefix="/memories", tags=["memories"])
+app.include_router(evaluations.router, prefix="/evaluations", tags=["evaluations"])
+
+app.include_router(folders.router, prefix="/folders", tags=["folders"])
+app.include_router(files.router, prefix="/files", tags=["files"])
+
 app.include_router(utils.router, prefix="/utils", tags=["utils"])
 
 
@@ -145,8 +157,44 @@ async def get_status():
 
 
 async def get_all_models():
+    models = []
     pipe_models = await get_pipe_models()
-    return pipe_models
+    models = models + pipe_models
+
+    if app.state.config.ENABLE_EVALUATION_ARENA_MODELS:
+        arena_models = []
+        if len(app.state.config.EVALUATION_ARENA_MODELS) > 0:
+            arena_models = [
+                {
+                    "id": model["id"],
+                    "name": model["name"],
+                    "info": {
+                        "meta": model["meta"],
+                    },
+                    "object": "model",
+                    "created": int(time.time()),
+                    "owned_by": "arena",
+                    "arena": True,
+                }
+                for model in app.state.config.EVALUATION_ARENA_MODELS
+            ]
+        else:
+            # Add default arena model
+            arena_models = [
+                {
+                    "id": DEFAULT_ARENA_MODEL["id"],
+                    "name": DEFAULT_ARENA_MODEL["name"],
+                    "info": {
+                        "meta": DEFAULT_ARENA_MODEL["meta"],
+                    },
+                    "object": "model",
+                    "created": int(time.time()),
+                    "owned_by": "arena",
+                    "arena": True,
+                }
+            ]
+        models = models + arena_models
+    return models
 
 
 def get_function_module(pipe_id: str):

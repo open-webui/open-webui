@@ -17,6 +17,9 @@
 	import WebSearch from './Settings/WebSearch.svelte';
 	import { config } from '$lib/stores';
 	import { getBackendConfig } from '$lib/apis';
+	import ChartBar from '../icons/ChartBar.svelte';
+	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
+	import Evaluations from './Settings/Evaluations.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -139,6 +142,21 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Models')}</div>
+		</button>
+
+		<button
+			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			'evaluations'
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
+			on:click={() => {
+				selectedTab = 'evaluations';
+			}}
+		>
+			<div class=" self-center mr-2">
+				<DocumentChartBar />
+			</div>
+			<div class=" self-center">{$i18n.t('Evaluations')}</div>
 		</button>
 
 		<button
@@ -357,6 +375,8 @@
 			/>
 		{:else if selectedTab === 'models'}
 			<Models />
+		{:else if selectedTab === 'evaluations'}
+			<Evaluations />
 		{:else if selectedTab === 'documents'}
 			<Documents
 				on:save={async () => {

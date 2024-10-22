@@ -63,6 +63,15 @@
 
 						<a
 							class="min-w-fit rounded-full p-1.5 px-3 {$page.url.pathname.includes(
+								'/admin/evaluations'
+							)
+								? 'bg-gray-50 dark:bg-gray-850'
+								: ''} transition"
+							href="/admin/evaluations">{$i18n.t('Evaluations')}</a
+						>
+
+						<a
+							class="min-w-fit rounded-full p-1.5 px-3 {$page.url.pathname.includes(
 								'/admin/settings'
 							)
 								? 'bg-gray-50 dark:bg-gray-850'

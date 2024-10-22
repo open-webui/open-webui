@@ -62,7 +62,7 @@
 >
 	<div class="  overflow-y-scroll scrollbar-hidden h-full pr-1.5">
 		<div>
-			<div class=" mb-2.5 text-sm font-medium flex">
+			<div class=" mb-2.5 text-sm font-medium flex items-center">
 				<div class=" mr-1">{$i18n.t('Set Task Model')}</div>
 				<Tooltip
 					content={$i18n.t(
@@ -75,7 +75,7 @@
 						viewBox="0 0 24 24"
 						stroke-width="1.5"
 						stroke="currentColor"
-						class="w-5 h-5"
+						class="size-3.5"
 					>
 						<path
 							stroke-linecap="round"

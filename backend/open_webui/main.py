@@ -7,6 +7,7 @@ import os
 import shutil
 import sys
 import time
+import random
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -23,7 +24,7 @@ from fastapi import (
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy import text
@@ -1093,6 +1094,23 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
             )
 
     model = app.state.MODELS[model_id]
+
+    if model["owned_by"] == "arena":
+        model_ids = model.get("info", {}).get("meta", {}).get("model_ids")
+        model_id = None
+        if isinstance(model_ids, list) and model_ids:
+            model_id = random.choice(model_ids)
+        else:
+            model_ids = [
+                model["id"]
+                for model in await get_all_models()
+                if model.get("owned_by") != "arena"
+                and not model.get("info", {}).get("meta", {}).get("hidden", False)
+            ]
+            model_id = random.choice(model_ids)
+
+        form_data["model"] = model_id
+        return await generate_chat_completions(form_data, user)
     if model.get("pipe"):
         return await generate_function_chat_completion(form_data, user=user)
     if model["owned_by"] == "ollama":

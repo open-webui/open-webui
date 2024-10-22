@@ -1009,10 +1009,10 @@
 					}
 
 					let _response = null;
-					if (model?.owned_by === 'openai') {
-						_response = await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
-					} else if (model) {
+					if (model?.owned_by === 'ollama') {
 						_response = await sendPromptOllama(model, prompt, responseMessageId, _chatId);
+					} else if (model) {
+						_response = await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
 					}
 					_responses.push(_response);
 
