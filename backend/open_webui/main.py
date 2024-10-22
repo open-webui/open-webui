@@ -910,8 +910,6 @@ async def get_all_models():
     openai_models = []
     ollama_models = []
 
-    open_webui_models = await get_open_webui_models()
-
     if app.state.config.ENABLE_OPENAI_API:
         openai_models = await get_openai_models()
         openai_models = openai_models["data"]
@@ -930,7 +928,13 @@ async def get_all_models():
             for model in ollama_models["models"]
         ]
 
+    open_webui_models = await get_open_webui_models()
+
     models = open_webui_models + openai_models + ollama_models
+
+    # If there are no models, return an empty list
+    if len([model for model in models if model["owned_by"] != "arena"]) == 0:
+        return []
 
     global_action_ids = [
         function.id for function in Functions.get_global_action_functions()
