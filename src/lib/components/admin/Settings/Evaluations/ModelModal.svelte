@@ -274,7 +274,6 @@
 									bind:value={description}
 									placeholder={$i18n.t('Enter description')}
 									autocomplete="off"
-									required
 								/>
 							</div>
 						</div>

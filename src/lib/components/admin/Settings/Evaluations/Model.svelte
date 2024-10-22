@@ -41,7 +41,7 @@
 
 					<div class="flex items-center gap-1">
 						<div class=" text-xs w-full text-gray-500 bg-transparent line-clamp-1">
-							{model.meta.description}
+							{model?.meta?.description ?? model.id}
 						</div>
 					</div>
 				</div>
