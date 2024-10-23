@@ -1,12 +1,17 @@
 # TODO: Merge this with the webui_app and make it a single app
-
+import json
 import logging
 import os
 import shutil
+import uuid
+from datetime import datetime
 from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from langchain_community.document_loaders import YoutubeLoader
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter, TokenTextSplitter
 from pydantic import BaseModel
 
 from open_webui.apps.retrieval.search.embeddings import get_embedding_function
@@ -15,11 +20,14 @@ from open_webui.apps.retrieval.search.search import (
     query_doc,
     query_collection_with_hybrid_search,
     query_collection,
+    search_web,
 )
+from open_webui.apps.retrieval.process.process import process_file as process_file_util
 from open_webui.apps.retrieval.utils import (
     get_model_path,
 )
 from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.apps.retrieval.web.utils import get_web_loader
 from open_webui.apps.webui.models.files import Files
 from open_webui.apps.webui.models.knowledge import Knowledges
 from open_webui.config import (
@@ -71,16 +79,13 @@ from open_webui.config import (
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS, DEVICE_TYPE, DOCKER
+from open_webui.utils.misc import calculate_sha256_string
 from open_webui.utils.utils import get_admin_user, get_verified_user
-from open_webui.apps.retrieval.process import api as process
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 app = FastAPI()
-
-app.include_router(process.router, prefix="/process", tags=["process"])
-
 
 app.state.config = AppConfig()
 
@@ -588,6 +593,314 @@ async def update_query_settings(
         "r": app.state.config.RELEVANCE_THRESHOLD,
         "hybrid": app.state.config.ENABLE_RAG_HYBRID_SEARCH,
     }
+
+
+####################################
+#
+# Document process and retrieval
+#
+####################################
+
+
+def save_docs_to_vector_db(
+    docs,
+    collection_name,
+    metadata: Optional[dict] = None,
+    overwrite: bool = False,
+    split: bool = True,
+    add: bool = False,
+) -> bool:
+    log.info(f"save_docs_to_vector_db {docs} {collection_name}")
+
+    # Check if entries with the same hash (metadata.hash) already exist
+    if metadata and "hash" in metadata:
+        result = VECTOR_DB_CLIENT.query(
+            collection_name=collection_name,
+            filter={"hash": metadata["hash"]},
+        )
+
+        if result is not None:
+            existing_doc_ids = result.ids[0]
+            if existing_doc_ids:
+                log.info(f"Document with hash {metadata['hash']} already exists")
+                raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
+
+    if split:
+        if app.state.config.TEXT_SPLITTER in ["", "character"]:
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=app.state.config.CHUNK_SIZE,
+                chunk_overlap=app.state.config.CHUNK_OVERLAP,
+                add_start_index=True,
+            )
+        elif app.state.config.TEXT_SPLITTER == "token":
+            text_splitter = TokenTextSplitter(
+                encoding_name=app.state.config.TIKTOKEN_ENCODING_NAME,
+                chunk_size=app.state.config.CHUNK_SIZE,
+                chunk_overlap=app.state.config.CHUNK_OVERLAP,
+                add_start_index=True,
+            )
+        else:
+            raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
+
+        docs = text_splitter.split_documents(docs)
+
+    if len(docs) == 0:
+        raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
+
+    texts = [doc.page_content for doc in docs]
+    metadatas = [
+        {
+            **doc.metadata,
+            **(metadata if metadata else {}),
+            "embedding_config": json.dumps(
+                {
+                    "engine": app.state.config.RAG_EMBEDDING_ENGINE,
+                    "model": app.state.config.RAG_EMBEDDING_MODEL,
+                }
+            ),
+        }
+        for doc in docs
+    ]
+
+    # ChromaDB does not like datetime formats
+    # for meta-data so convert them to string.
+    for metadata in metadatas:
+        for key, value in metadata.items():
+            if isinstance(value, datetime):
+                metadata[key] = str(value)
+
+    try:
+        if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+            log.info(f"collection {collection_name} already exists")
+
+            if overwrite:
+                VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+                log.info(f"deleting existing collection {collection_name}")
+            elif add is False:
+                log.info(
+                    f"collection {collection_name} already exists, overwrite is False and add is False"
+                )
+                return True
+
+        log.info(f"adding to collection {collection_name}")
+        embedding_function = get_embedding_function(
+            app.state.config.RAG_EMBEDDING_ENGINE,
+            app.state.config.RAG_EMBEDDING_MODEL,
+            app.state.sentence_transformer_ef,
+            app.state.config.OPENAI_API_KEY,
+            app.state.config.OPENAI_API_BASE_URL,
+            app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+        )
+
+        embeddings = embedding_function(
+            list(map(lambda x: x.replace("\n", " "), texts))
+        )
+
+        items = [
+            {
+                "id": str(uuid.uuid4()),
+                "text": text,
+                "vector": embeddings[idx],
+                "metadata": metadatas[idx],
+            }
+            for idx, text in enumerate(texts)
+        ]
+
+        VECTOR_DB_CLIENT.insert(
+            collection_name=collection_name,
+            items=items,
+        )
+
+        return True
+    except Exception as e:
+        log.exception(e)
+        return False
+
+
+class ProcessFileForm(BaseModel):
+    file_id: str
+    content: Optional[str] = None
+    collection_name: Optional[str] = None
+
+
+@app.post("/process/file")
+def process_file(
+    form_data: ProcessFileForm,
+    user=Depends(get_verified_user),
+):
+    try:
+        process_file_util(app.state, form_data)
+    except Exception as e:
+        log.exception(e)
+        if "No pandoc was found" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
+
+
+class ProcessTextForm(BaseModel):
+    name: str
+    content: str
+    collection_name: Optional[str] = None
+
+
+@app.post("/process/text")
+def process_text(
+    form_data: ProcessTextForm,
+    user=Depends(get_verified_user),
+):
+    collection_name = form_data.collection_name
+    if collection_name is None:
+        collection_name = calculate_sha256_string(form_data.content)
+
+    docs = [
+        Document(
+            page_content=form_data.content,
+            metadata={"name": form_data.name, "created_by": user.id},
+        )
+    ]
+    text_content = form_data.content
+    log.debug(f"text_content: {text_content}")
+
+    result = save_docs_to_vector_db(docs, collection_name)
+
+    if result:
+        return {
+            "status": True,
+            "collection_name": collection_name,
+            "content": text_content,
+        }
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT(),
+        )
+
+
+@app.post("/process/youtube")
+def process_youtube_video(form_data: ProcessUrlForm, user=Depends(get_verified_user)):
+    try:
+        collection_name = form_data.collection_name
+        if not collection_name:
+            collection_name = calculate_sha256_string(form_data.url)[:63]
+
+        loader = YoutubeLoader.from_youtube_url(
+            form_data.url,
+            add_video_info=True,
+            language=app.state.config.YOUTUBE_LOADER_LANGUAGE,
+            translation=app.state.YOUTUBE_LOADER_TRANSLATION,
+        )
+        docs = loader.load()
+        content = " ".join([doc.page_content for doc in docs])
+        log.debug(f"text_content: {content}")
+        save_docs_to_vector_db(docs, collection_name, overwrite=True)
+
+        return {
+            "status": True,
+            "collection_name": collection_name,
+            "filename": form_data.url,
+            "file": {
+                "data": {
+                    "content": content,
+                },
+                "meta": {
+                    "name": form_data.url,
+                },
+            },
+        }
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
+
+
+@app.post("/process/web")
+def process_web(form_data: ProcessUrlForm, user=Depends(get_verified_user)):
+    try:
+        collection_name = form_data.collection_name
+        if not collection_name:
+            collection_name = calculate_sha256_string(form_data.url)[:63]
+
+        loader = get_web_loader(
+            form_data.url,
+            verify_ssl=app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            requests_per_second=app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+        )
+        docs = loader.load()
+        content = " ".join([doc.page_content for doc in docs])
+        log.debug(f"text_content: {content}")
+        save_docs_to_vector_db(docs, collection_name, overwrite=True)
+
+        return {
+            "status": True,
+            "collection_name": collection_name,
+            "filename": form_data.url,
+            "file": {
+                "data": {
+                    "content": content,
+                },
+                "meta": {
+                    "name": form_data.url,
+                },
+            },
+        }
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
+
+
+@app.post("/process/web/search")
+def process_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
+    try:
+        logging.info(
+            f"trying to web search with {app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query}"
+        )
+        web_results = search_web(
+            app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query
+        )
+    except Exception as e:
+        log.exception(e)
+
+        print(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
+        )
+
+    try:
+        collection_name = form_data.collection_name
+        if collection_name == "":
+            collection_name = calculate_sha256_string(form_data.query)[:63]
+
+        urls = [result.link for result in web_results]
+
+        loader = get_web_loader(urls)
+        docs = loader.load()
+
+        save_docs_to_vector_db(docs, collection_name, overwrite=True)
+
+        return {
+            "status": True,
+            "collection_name": collection_name,
+            "filenames": urls,
+        }
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
 
 
 class QueryDocForm(BaseModel):
