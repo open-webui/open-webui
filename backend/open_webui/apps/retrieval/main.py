@@ -10,8 +10,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from open_webui.apps.retrieval.search.embeddings import get_embedding_function
-from open_webui.apps.retrieval.search.search import query_doc_with_hybrid_search, query_doc, \
-    query_collection_with_hybrid_search, query_collection
+from open_webui.apps.retrieval.search.search import (
+    query_doc_with_hybrid_search,
+    query_doc,
+    query_collection_with_hybrid_search,
+    query_collection,
+)
 from open_webui.apps.retrieval.utils import (
     get_model_path,
 )
@@ -584,6 +588,8 @@ async def update_query_settings(
         "r": app.state.config.RELEVANCE_THRESHOLD,
         "hybrid": app.state.config.ENABLE_RAG_HYBRID_SEARCH,
     }
+
+
 class QueryDocForm(BaseModel):
     collection_name: str
     query: str

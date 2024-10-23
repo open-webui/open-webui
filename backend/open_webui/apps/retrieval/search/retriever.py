@@ -13,10 +13,10 @@ class VectorSearchRetriever(BaseRetriever):
     top_k: int
 
     def _get_relevant_documents(
-            self,
-            query: str,
-            *,
-            run_manager: CallbackManagerForRetrieverRun,
+        self,
+        query: str,
+        *,
+        run_manager: CallbackManagerForRetrieverRun,
     ) -> list[Document]:
         result = VECTOR_DB_CLIENT.search(
             collection_name=self.collection_name,

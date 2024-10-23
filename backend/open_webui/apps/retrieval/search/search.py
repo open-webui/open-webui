@@ -23,8 +23,9 @@ from open_webui.utils.misc import get_last_user_message
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
+
 def _merge_and_sort_query_results(
-        query_results: list[dict], k: int, reverse: bool = False
+    query_results: list[dict], k: int, reverse: bool = False
 ) -> list[dict]:
     # Initialize lists to store combined data
     combined_distances = []
@@ -67,10 +68,10 @@ def _merge_and_sort_query_results(
 
 
 def query_collection(
-        collection_names: list[str],
-        query: str,
-        embedding_function,
-        k: int,
+    collection_names: list[str],
+    query: str,
+    embedding_function,
+    k: int,
 ) -> dict:
     results = []
     query_embedding = embedding_function(query)
@@ -94,12 +95,12 @@ def query_collection(
 
 
 def query_collection_with_hybrid_search(
-        collection_names: list[str],
-        query: str,
-        embedding_function,
-        k: int,
-        reranking_function,
-        r: float,
+    collection_names: list[str],
+    query: str,
+    embedding_function,
+    k: int,
+    reranking_function,
+    r: float,
 ) -> dict:
     results = []
     error = False
@@ -129,9 +130,9 @@ def query_collection_with_hybrid_search(
 
 
 def query_doc(
-        collection_name: str,
-        query_embedding: list[float],
-        k: int,
+    collection_name: str,
+    query_embedding: list[float],
+    k: int,
 ):
     try:
         result = VECTOR_DB_CLIENT.search(
@@ -148,12 +149,12 @@ def query_doc(
 
 
 def query_doc_with_hybrid_search(
-        collection_name: str,
-        query: str,
-        embedding_function,
-        k: int,
-        reranking_function,
-        r: float,
+    collection_name: str,
+    query: str,
+    embedding_function,
+    k: int,
+    reranking_function,
+    r: float,
 ) -> dict:
     try:
         result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
@@ -198,13 +199,13 @@ def query_doc_with_hybrid_search(
 
 
 def get_rag_context(
-        files,
-        messages,
-        embedding_function,
-        k,
-        reranking_function,
-        r,
-        hybrid_search,
+    files,
+    messages,
+    embedding_function,
+    k,
+    reranking_function,
+    r,
+    hybrid_search,
 ):
     log.debug(f"files: {files} {messages} {embedding_function} {reranking_function}")
     query = get_last_user_message(messages)
@@ -346,10 +347,7 @@ def search_web(state, query: str) -> list[SearchResult]:
         else:
             raise Exception("No SEARXNG_QUERY_URL found in environment variables")
     elif engine == "google_pse":
-        if (
-                state.config.GOOGLE_PSE_API_KEY
-                and state.config.GOOGLE_PSE_ENGINE_ID
-        ):
+        if state.config.GOOGLE_PSE_API_KEY and state.config.GOOGLE_PSE_ENGINE_ID:
             return search_google_pse(
                 state.config.GOOGLE_PSE_API_KEY,
                 state.config.GOOGLE_PSE_ENGINE_ID,
@@ -432,5 +430,3 @@ def search_web(state, query: str) -> list[SearchResult]:
         return search_jina(query, state.config.RAG_WEB_SEARCH_RESULT_COUNT)
     else:
         raise Exception("No search engine API key found in environment variables")
-
-

@@ -2,16 +2,19 @@ from typing import Optional, Union
 
 import requests
 
-from open_webui.apps.ollama.main import generate_ollama_batch_embeddings, GenerateEmbedForm
+from open_webui.apps.ollama.main import (
+    generate_ollama_batch_embeddings,
+    GenerateEmbedForm,
+)
 
 
 def get_embedding_function(
-        embedding_engine,
-        embedding_model,
-        embedding_function,
-        openai_key,
-        openai_url,
-        embedding_batch_size,
+    embedding_engine,
+    embedding_model,
+    embedding_function,
+    openai_key,
+    openai_url,
+    embedding_batch_size,
 ):
     if embedding_engine == "":
         return lambda query: embedding_function.encode(query).tolist()
@@ -34,6 +37,7 @@ def get_embedding_function(
                 return func(query)
 
         return lambda query: generate_multiple(query, func)
+
 
 def generate_embeddings(engine: str, model: str, text: Union[str, list[str]], **kwargs):
     if engine == "ollama":
@@ -63,7 +67,7 @@ def generate_embeddings(engine: str, model: str, text: Union[str, list[str]], **
 
 
 def generate_openai_batch_embeddings(
-        model: str, texts: list[str], key: str, url: str = "https://api.openai.com/v1"
+    model: str, texts: list[str], key: str, url: str = "https://api.openai.com/v1"
 ) -> Optional[list[list[float]]]:
     try:
         r = requests.post(

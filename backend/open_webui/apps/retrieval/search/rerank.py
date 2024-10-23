@@ -16,10 +16,10 @@ class RerankCompressor(BaseDocumentCompressor):
         arbitrary_types_allowed = True
 
     def compress_documents(
-            self,
-            documents: Sequence[Document],
-            query: str,
-            callbacks: Optional[Callbacks] = None,
+        self,
+        documents: Sequence[Document],
+        query: str,
+        callbacks: Optional[Callbacks] = None,
     ) -> Sequence[Document]:
         reranking = self.reranking_function is not None
 

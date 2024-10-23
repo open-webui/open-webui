@@ -7,7 +7,10 @@ from langchain_core.documents import Document
 from pydantic import BaseModel
 from starlette.requests import Request
 
-from open_webui.apps.retrieval.process.process import ProcessFileForm, save_docs_to_vector_db
+from open_webui.apps.retrieval.process.process import (
+    ProcessFileForm,
+    save_docs_to_vector_db,
+)
 from open_webui.apps.retrieval.process.process import process_file as process_file_util
 from open_webui.apps.retrieval.search.search import search_web
 from open_webui.apps.retrieval.web.utils import get_web_loader
@@ -41,7 +44,9 @@ class SearchForm(CollectionNameForm):
 
 
 @router.post("/web/search")
-def process_web_search(request: Request, form_data: SearchForm, user=Depends(get_verified_user)):
+def process_web_search(
+    request: Request, form_data: SearchForm, user=Depends(get_verified_user)
+):
     try:
         logging.info(
             f"trying to web search with {request.app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query}"
@@ -82,7 +87,9 @@ def process_web_search(request: Request, form_data: SearchForm, user=Depends(get
 
 
 @router.post("/web")
-def process_web(request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)):
+def process_web(
+    request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
+):
     try:
         collection_name = form_data.collection_name
         if not collection_name:
@@ -121,9 +128,9 @@ def process_web(request: Request, form_data: ProcessUrlForm, user=Depends(get_ve
 
 @router.post("/text")
 def process_text(
-        request: Request,
-        form_data: ProcessTextForm,
-        user=Depends(get_verified_user),
+    request: Request,
+    form_data: ProcessTextForm,
+    user=Depends(get_verified_user),
 ):
     collection_name = form_data.collection_name
     if collection_name is None:
@@ -154,7 +161,9 @@ def process_text(
 
 
 @router.post("/youtube")
-def process_youtube_video(request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)):
+def process_youtube_video(
+    request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
+):
     try:
         collection_name = form_data.collection_name
         if not collection_name:
@@ -194,9 +203,9 @@ def process_youtube_video(request: Request, form_data: ProcessUrlForm, user=Depe
 
 @router.post("/file")
 def process_file(
-        request: Request,
-        form_data: ProcessFileForm,
-        user=Depends(get_verified_user),
+    request: Request,
+    form_data: ProcessFileForm,
+    user=Depends(get_verified_user),
 ):
     try:
         return process_file_util(request.app.state, form_data)

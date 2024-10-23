@@ -183,7 +183,9 @@ async def update_file_data_content_by_id(
 
     if file and (file.user_id == user.id or user.role == "admin"):
         try:
-            process_file(app.state, ProcessFileForm(file_id=id, content=form_data.content))
+            process_file(
+                app.state, ProcessFileForm(file_id=id, content=form_data.content)
+            )
             file = Files.get_file_by_id(id=id)
         except Exception as e:
             log.exception(e)

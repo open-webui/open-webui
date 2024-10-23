@@ -48,6 +48,7 @@ def rag_template(template: str, context: str, query: str):
 
     return template
 
+
 def get_model_path(model: str, update_model: bool = False):
     # Construct huggingface_hub kwargs with local_files_only to return the snapshot path
     cache_dir = os.getenv("SENTENCE_TRANSFORMERS_HOME")
