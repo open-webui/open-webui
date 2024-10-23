@@ -140,7 +140,7 @@
 	</div>
 
 	<div class="mt-2 gap-1.5 flex justify-end">
-		{#if $config?.features.enable_community_sharing}
+		{#if $config?.features.enable_community_sharing && selectedModel}
 			<button
 				class=" self-center px-3.5 py-2 rounded-xl text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition"
 				type="button"
