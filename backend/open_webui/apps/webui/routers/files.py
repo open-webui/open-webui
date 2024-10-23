@@ -69,7 +69,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
 
         try:
             process_file(ProcessFileForm(file_id=id))
-            file = Files.get_file_by_id(id=id)
+            file_item = Files.get_file_by_id(id=id)
         except Exception as e:
             log.exception(e)
             log.error(f"Error processing file: {file_item.id}")
