@@ -216,7 +216,7 @@
 								bind:value={selectedModelId}
 							>
 								{#each $models as model}
-									<option value={model.id}>{model.name}</option>
+									<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
 								{/each}
 							</select>
 						</div>
