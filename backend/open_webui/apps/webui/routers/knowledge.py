@@ -163,7 +163,9 @@ def add_file_to_knowledge_by_id(
 
     # Add content to the vector database
     try:
-        process_file(app.state, ProcessFileForm(file_id=form_data.file_id, collection_name=id))
+        process_file(
+            app.state, ProcessFileForm(file_id=form_data.file_id, collection_name=id)
+        )
     except Exception as e:
         log.debug(e)
         raise HTTPException(
@@ -228,7 +230,9 @@ def update_file_from_knowledge_by_id(
 
     # Add content to the vector database
     try:
-        process_file(app.state, ProcessFileForm(file_id=form_data.file_id, collection_name=id))
+        process_file(
+            app.state, ProcessFileForm(file_id=form_data.file_id, collection_name=id)
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

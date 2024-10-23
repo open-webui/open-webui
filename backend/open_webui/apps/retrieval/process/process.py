@@ -20,14 +20,15 @@ from open_webui.utils.misc import calculate_sha256_string
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
+
 def save_docs_to_vector_db(
-        docs,
-        collection_name,
-        state,
-        metadata: Optional[dict] = None,
-        overwrite: bool = False,
-        split: bool = True,
-        add: bool = False,
+    docs,
+    collection_name,
+    state,
+    metadata: Optional[dict] = None,
+    overwrite: bool = False,
+    split: bool = True,
+    add: bool = False,
 ) -> bool:
     log.info(f"save_docs_to_vector_db {docs} {collection_name}")
 
@@ -213,9 +214,7 @@ def process_file(state, form_data: ProcessFileForm):
                 TIKA_SERVER_URL=state.config.TIKA_SERVER_URL,
                 PDF_EXTRACT_IMAGES=state.config.PDF_EXTRACT_IMAGES,
             )
-            docs = loader.load(
-                file.filename, file.meta.get("content_type"), file_path
-            )
+            docs = loader.load(file.filename, file.meta.get("content_type"), file_path)
         else:
             docs = [
                 Document(
