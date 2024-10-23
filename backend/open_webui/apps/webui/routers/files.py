@@ -4,9 +4,10 @@ import uuid
 from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
-import mimetypes
 
+from open_webui.apps.retrieval.process.process import process_file, ProcessFileForm
 from open_webui.storage.provider import Storage
+from open_webui.apps.retrieval.main import app
 
 from open_webui.apps.webui.models.files import (
     FileForm,
@@ -14,7 +15,6 @@ from open_webui.apps.webui.models.files import (
     FileModelResponse,
     Files,
 )
-from open_webui.apps.retrieval.main import process_file, ProcessFileForm
 
 from open_webui.config import UPLOAD_DIR
 from open_webui.env import SRC_LOG_LEVELS
@@ -68,7 +68,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
         )
 
         try:
-            process_file(ProcessFileForm(file_id=id))
+            process_file(app.state, ProcessFileForm(file_id=id))
             file_item = Files.get_file_by_id(id=id)
         except Exception as e:
             log.exception(e)
@@ -183,7 +183,7 @@ async def update_file_data_content_by_id(
 
     if file and (file.user_id == user.id or user.role == "admin"):
         try:
-            process_file(ProcessFileForm(file_id=id, content=form_data.content))
+            process_file(app.state, ProcessFileForm(file_id=id, content=form_data.content))
             file = Files.get_file_by_id(id=id)
         except Exception as e:
             log.exception(e)
