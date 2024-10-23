@@ -2,7 +2,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel
 
-
+from open_webui.apps.webui.models.users import Users, UserModel
 from open_webui.apps.webui.models.feedbacks import (
     FeedbackModel,
     FeedbackForm,
@@ -67,16 +67,25 @@ async def delete_feedbacks(user=Depends(get_verified_user)):
     return success
 
 
+class FeedbackUserModel(FeedbackModel):
+    user: Optional[UserModel] = None
+
+
+@router.get("/feedbacks/all", response_model=list[FeedbackUserModel])
+async def get_all_feedbacks(user=Depends(get_admin_user)):
+    feedbacks = Feedbacks.get_all_feedbacks()
+    return [
+        FeedbackUserModel(
+            **feedback.model_dump(), user=Users.get_user_by_id(feedback.user_id)
+        )
+        for feedback in feedbacks
+    ]
+
+
 @router.delete("/feedbacks/all")
 async def delete_all_feedbacks(user=Depends(get_admin_user)):
     success = Feedbacks.delete_all_feedbacks()
     return success
-
-
-@router.get("/feedbacks/all", response_model=list[FeedbackModel])
-async def get_all_feedbacks(user=Depends(get_admin_user)):
-    feedbacks = Feedbacks.get_all_feedbacks()
-    return feedbacks
 
 
 @router.post("/feedback", response_model=FeedbackModel)

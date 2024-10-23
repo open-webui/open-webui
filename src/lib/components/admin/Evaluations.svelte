@@ -1,30 +1,107 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
 
+	import dayjs from 'dayjs';
+	import relativeTime from 'dayjs/plugin/relativeTime';
+	dayjs.extend(relativeTime);
+
 	import { models } from '$lib/stores';
-	import GarbageBin from '../icons/GarbageBin.svelte';
+	import { getAllFeedbacks } from '$lib/apis/evaluations';
+
 	import FeedbackMenu from './Evaluations/FeedbackMenu.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
-	import { getAllFeedbacks } from '$lib/apis/evaluations';
+	import Tooltip from '../common/Tooltip.svelte';
+	import Badge from '../common/Badge.svelte';
+
 	const i18n = getContext('i18n');
 
 	let rankedModels = [];
 	let feedbacks = [];
 
+	type Feedback = {
+		model_id: string;
+		sibling_model_ids?: string[];
+		rating: number;
+	};
+
+	type ModelStats = {
+		rating: number;
+		won: number;
+		draw: number;
+		lost: number;
+	};
+
+	function calculateModelStats(feedbacks: Feedback[]): Map<string, ModelStats> {
+		const stats = new Map<string, ModelStats>();
+		const K = 32;
+
+		function getOrDefaultStats(modelId: string): ModelStats {
+			return stats.get(modelId) || { rating: 1000, won: 0, draw: 0, lost: 0 };
+		}
+
+		function updateStats(modelId: string, ratingChange: number, outcome: number) {
+			const currentStats = getOrDefaultStats(modelId);
+			currentStats.rating += ratingChange;
+			if (outcome === 1) currentStats.won++;
+			else if (outcome === 0.5) currentStats.draw++;
+			else if (outcome === 0) currentStats.lost++;
+			stats.set(modelId, currentStats);
+		}
+
+		function calculateEloChange(ratingA: number, ratingB: number, outcome: number): number {
+			const expectedScore = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+			return K * (outcome - expectedScore);
+		}
+
+		feedbacks.forEach((feedback) => {
+			const modelA = feedback.data.model_id;
+			const statsA = getOrDefaultStats(modelA);
+			let outcome: number;
+
+			switch (feedback.data.rating.toString()) {
+				case '1':
+					outcome = 1;
+					break;
+				case '0':
+					outcome = 0.5;
+					break;
+				case '-1':
+					outcome = 0;
+					break;
+				default:
+					return; // Skip invalid ratings
+			}
+
+			const opponents = feedback.data.sibling_model_ids || [];
+			opponents.forEach((modelB) => {
+				const statsB = getOrDefaultStats(modelB);
+				const changeA = calculateEloChange(statsA.rating, statsB.rating, outcome);
+				const changeB = calculateEloChange(statsB.rating, statsA.rating, 1 - outcome);
+
+				updateStats(modelA, changeA, outcome);
+				updateStats(modelB, changeB, 1 - outcome);
+			});
+		});
+
+		return stats;
+	}
+
 	let loaded = false;
 	onMount(async () => {
 		feedbacks = await getAllFeedbacks(localStorage.token);
+		const modelStats = calculateModelStats(feedbacks);
+
 		rankedModels = $models
 			.filter((m) => m?.owned_by !== 'arena' && (m?.info?.meta?.hidden ?? false) !== true)
 			.map((model) => {
+				const stats = modelStats.get(model.name);
 				return {
 					...model,
-					ranking: '-',
-					rating: '-',
+					rating: stats ? Math.round(stats.rating) : '-',
 					stats: {
-						won: '-',
-						draw: '-',
-						lost: '-'
+						won: stats ? stats.won.toString() : '-',
+						draw: stats ? stats.draw.toString() : '-',
+						lost: stats ? stats.lost.toString() : '-'
 					}
 				};
 			})
@@ -93,11 +170,11 @@
 					</tr>
 				</thead>
 				<tbody class="">
-					{#each rankedModels as model (model.id)}
+					{#each rankedModels as model, modelIdx (model.id)}
 						<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
 							<td class="px-3 py-1.5 text-left font-medium text-gray-900 dark:text-white w-fit">
 								<div class=" line-clamp-1">
-									{model.ranking}
+									{model?.rating !== '-' ? modelIdx + 1 : '-'}
 								</div>
 							</td>
 							<td class="px-3 py-1.5 flex flex-col justify-center">
@@ -160,6 +237,10 @@
 					class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
 				>
 					<tr class="">
+						<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-0">
+							{$i18n.t('User')}
+						</th>
+
 						<th scope="col" class="px-3 py-1.5 cursor-pointer select-none">
 							{$i18n.t('Models')}
 						</th>
@@ -169,11 +250,7 @@
 						</th>
 
 						<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-0">
-							{$i18n.t('User')}
-						</th>
-
-						<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-0">
-							{$i18n.t('Created At')}
+							{$i18n.t('Updated At')}
 						</th>
 
 						<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-0"> </th>
@@ -182,24 +259,54 @@
 				<tbody class="">
 					{#each feedbacks as feedback (feedback.id)}
 						<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
+							<td class=" py-1 text-right font-semibold">
+								<div class="flex justify-center">
+									<Tooltip content={feedback?.user?.name}>
+										<div class="flex-shrink-0">
+											<img
+												src={feedback?.user?.profile_image_url ?? '/user.png'}
+												alt={feedback?.user?.name}
+												class="size-6 rounded-full object-cover shrink-0"
+											/>
+										</div>
+									</Tooltip>
+								</div>
+							</td>
+
 							<td class="px-3 py-1 flex flex-col">
-								<div class="flex flex-col items-start gap-1">
-									<div class="font-medium text-gray-600 dark:text-gray-400">
-										{model.name}
-									</div>
-									<div class="font-medium text-gray-600 dark:text-gray-400">
-										{model.name}
+								<div class="flex flex-col items-start gap-0.5 h-full">
+									<div class="flex flex-col h-full">
+										{#if feedback.data?.sibling_model_ids}
+											<div class="font-semibold text-gray-600 dark:text-gray-400 flex-1">
+												{feedback.data?.model_id}
+											</div>
+											<div class=" text-[0.65rem] text-gray-600 dark:text-gray-400 line-clamp-1">
+												{feedback.data.sibling_model_ids.join(', ')}
+											</div>
+										{:else}
+											<div
+												class=" text-sm font-medium text-gray-600 dark:text-gray-400 flex-1 py-2"
+											>
+												{feedback.data?.model_id}
+											</div>
+										{/if}
 									</div>
 								</div>
 							</td>
 							<td class="px-3 py-1 text-right font-medium text-gray-900 dark:text-white w-max">
-								{model.rating}
+								<div class=" flex justify-end">
+									{#if feedback.data.rating.toString() === '1'}
+										<Badge type="info" content={$i18n.t('Won')} />
+									{:else if feedback.data.rating.toString() === '0'}
+										<Badge type="muted" content={$i18n.t('Draw')} />
+									{:else if feedback.data.rating.toString() === '-1'}
+										<Badge type="error" content={$i18n.t('Lost')} />
+									{/if}
+								</div>
 							</td>
 
-							<td class=" px-3 py-1 text-right font-semibold"> {model.stats.won} </td>
-
-							<td class=" px-3 py-1 text-right font-semibold">
-								{model.stats.draw}
+							<td class=" px-3 py-1 text-right font-medium">
+								{dayjs(feedback.updated_at * 1000).fromNow()}
 							</td>
 
 							<td class=" px-3 py-1 text-right font-semibold">

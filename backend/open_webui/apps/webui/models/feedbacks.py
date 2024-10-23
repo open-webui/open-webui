@@ -147,21 +147,29 @@ class FeedbackTable:
         with get_db() as db:
             return [
                 FeedbackModel.model_validate(feedback)
-                for feedback in db.query(Feedback).all()
+                for feedback in db.query(Feedback)
+                .order_by(Feedback.updated_at.desc())
+                .all()
             ]
 
     def get_feedbacks_by_type(self, type: str) -> list[FeedbackModel]:
         with get_db() as db:
             return [
                 FeedbackModel.model_validate(feedback)
-                for feedback in db.query(Feedback).filter_by(type=type).all()
+                for feedback in db.query(Feedback)
+                .filter_by(type=type)
+                .order_by(Feedback.updated_at.desc())
+                .all()
             ]
 
     def get_feedbacks_by_user_id(self, user_id: str) -> list[FeedbackModel]:
         with get_db() as db:
             return [
                 FeedbackModel.model_validate(feedback)
-                for feedback in db.query(Feedback).filter_by(user_id=user_id).all()
+                for feedback in db.query(Feedback)
+                .filter_by(user_id=user_id)
+                .order_by(Feedback.updated_at.desc())
+                .all()
             ]
 
     def update_feedback_by_id(
