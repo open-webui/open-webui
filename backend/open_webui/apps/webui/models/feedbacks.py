@@ -68,7 +68,7 @@ class RatingData(BaseModel):
     sibling_model_ids: Optional[list[str]] = None
     reason: Optional[str] = None
     comment: Optional[str] = None
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", protected_namespaces=())
 
 
 class MetaData(BaseModel):
