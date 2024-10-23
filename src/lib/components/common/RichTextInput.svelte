@@ -168,11 +168,12 @@
 	}
 
 	function boldRule(schema) {
-		return markInputRule(/\*([^*]+)\*/, schema.marks.strong);
+		return markInputRule(/(?<=^|\s)\*([^*]+)\*(?=\s|$)/, schema.marks.strong);
 	}
 
 	function italicRule(schema) {
-		return markInputRule(/\_([^*]+)\_/, schema.marks.em);
+		// Using lookbehind and lookahead to prevent the space from being consumed
+		return markInputRule(/(?<=^|\s)_([^*_]+)_(?=\s|$)/, schema.marks.em);
 	}
 
 	// Initialize Editor State and View
