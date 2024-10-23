@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   litellm:
     env_file: .env.litellm
@@ -19,7 +17,7 @@ services:
     volumes:
       - ./backend/data:/app/backend/data
     ports:
-      - '${OPEN_WEBUI_PORT-3000}:8080'
+      - '${OPEN_WEBUI_PORT-80}:8080'
     depends_on:
       - litellm
     extra_hosts:

@@ -21,5 +21,4 @@ model_list:
 general_settings:
   disable_spend_logs: true
   disable_master_key_return: true
-  disable_retry_on_max_parallel_request_limit_error: boolean  # turn off retries when max parallel request limit is reached
   disable_reset_budget: true  # turn off reset budget scheduled task
