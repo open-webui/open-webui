@@ -47,7 +47,8 @@ from open_webui.apps.openai.main import (
     get_all_models as get_openai_models,
 )
 from open_webui.apps.retrieval.main import app as retrieval_app
-from open_webui.apps.retrieval.utils import get_rag_context, rag_template
+from open_webui.apps.retrieval.search.search import get_rag_context
+from open_webui.apps.retrieval.utils import rag_template
 from open_webui.apps.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
