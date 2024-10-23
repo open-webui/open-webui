@@ -191,7 +191,7 @@
 			});
 
 			if ($user.role === 'admin') {
-				showChangelog.set(localStorage.version !== $config.version);
+				showChangelog.set($settings?.version !== $config.version);
 			}
 
 			if ($page.url.searchParams.get('temporary-chat') === 'true') {
