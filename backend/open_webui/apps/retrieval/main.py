@@ -1,53 +1,35 @@
 # TODO: Merge this with the webui_app and make it a single app
-
 import json
 import logging
-import mimetypes
 import os
 import shutil
-
 import uuid
 from datetime import datetime
-from pathlib import Path
-from typing import Iterator, Optional, Sequence, Union
+from typing import Optional
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from langchain_community.document_loaders import YoutubeLoader
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter, TokenTextSplitter
 from pydantic import BaseModel
 
-
-from open_webui.storage.provider import Storage
-from open_webui.apps.webui.models.knowledge import Knowledges
-from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
-
-# Document loaders
-from open_webui.apps.retrieval.loaders.main import Loader
-
-# Web search engines
-from open_webui.apps.retrieval.web.main import SearchResult
-from open_webui.apps.retrieval.web.utils import get_web_loader
-from open_webui.apps.retrieval.web.brave import search_brave
-from open_webui.apps.retrieval.web.duckduckgo import search_duckduckgo
-from open_webui.apps.retrieval.web.google_pse import search_google_pse
-from open_webui.apps.retrieval.web.jina_search import search_jina
-from open_webui.apps.retrieval.web.searchapi import search_searchapi
-from open_webui.apps.retrieval.web.searxng import search_searxng
-from open_webui.apps.retrieval.web.serper import search_serper
-from open_webui.apps.retrieval.web.serply import search_serply
-from open_webui.apps.retrieval.web.serpstack import search_serpstack
-from open_webui.apps.retrieval.web.tavily import search_tavily
-
-
-from open_webui.apps.retrieval.utils import (
-    get_embedding_function,
-    get_model_path,
-    query_collection,
-    query_collection_with_hybrid_search,
-    query_doc,
+from open_webui.apps.retrieval.search.embeddings import get_embedding_function
+from open_webui.apps.retrieval.search.search import (
     query_doc_with_hybrid_search,
+    query_doc,
+    query_collection_with_hybrid_search,
+    query_collection,
+    search_web,
 )
-
+from open_webui.apps.retrieval.process.process import process_file as process_file_util
+from open_webui.apps.retrieval.utils import (
+    get_model_path,
+)
+from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.apps.retrieval.web.utils import get_web_loader
 from open_webui.apps.webui.models.files import Files
+from open_webui.apps.webui.models.knowledge import Knowledges
 from open_webui.config import (
     BRAVE_SEARCH_API_KEY,
     TIKTOKEN_ENCODING_NAME,
@@ -57,7 +39,6 @@ from open_webui.config import (
     CONTENT_EXTRACTION_ENGINE,
     CORS_ALLOW_ORIGIN,
     ENABLE_RAG_HYBRID_SEARCH,
-    ENABLE_RAG_LOCAL_WEB_FETCH,
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     ENABLE_RAG_WEB_SEARCH,
     ENV,
@@ -77,7 +58,6 @@ from open_webui.config import (
     RAG_RERANKING_MODEL,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
-    DEFAULT_RAG_TEMPLATE,
     RAG_TEMPLATE,
     RAG_TOP_K,
     RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
@@ -99,20 +79,8 @@ from open_webui.config import (
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS, DEVICE_TYPE, DOCKER
-from open_webui.utils.misc import (
-    calculate_sha256,
-    calculate_sha256_string,
-    extract_folders_after_data_docs,
-    sanitize_filename,
-)
+from open_webui.utils.misc import calculate_sha256_string
 from open_webui.utils.utils import get_admin_user, get_verified_user
-
-from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
-from langchain_community.document_loaders import (
-    YoutubeLoader,
-)
-from langchain_core.documents import Document
-
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -153,7 +121,6 @@ app.state.config.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
 
 app.state.config.YOUTUBE_LOADER_LANGUAGE = YOUTUBE_LOADER_LANGUAGE
 app.state.YOUTUBE_LOADER_TRANSLATION = None
-
 
 app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
 app.state.config.RAG_WEB_SEARCH_ENGINE = RAG_WEB_SEARCH_ENGINE
@@ -762,130 +729,7 @@ def process_file(
     user=Depends(get_verified_user),
 ):
     try:
-        file = Files.get_file_by_id(form_data.file_id)
-
-        collection_name = form_data.collection_name
-
-        if collection_name is None:
-            collection_name = f"file-{file.id}"
-
-        if form_data.content:
-            # Update the content in the file
-            # Usage: /files/{file_id}/data/content/update
-
-            VECTOR_DB_CLIENT.delete(
-                collection_name=f"file-{file.id}",
-                filter={"file_id": file.id},
-            )
-
-            docs = [
-                Document(
-                    page_content=form_data.content,
-                    metadata={
-                        "name": file.meta.get("name", file.filename),
-                        "created_by": file.user_id,
-                        "file_id": file.id,
-                        **file.meta,
-                    },
-                )
-            ]
-
-            text_content = form_data.content
-        elif form_data.collection_name:
-            # Check if the file has already been processed and save the content
-            # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
-
-            result = VECTOR_DB_CLIENT.query(
-                collection_name=f"file-{file.id}", filter={"file_id": file.id}
-            )
-
-            if result is not None and len(result.ids[0]) > 0:
-                docs = [
-                    Document(
-                        page_content=result.documents[0][idx],
-                        metadata=result.metadatas[0][idx],
-                    )
-                    for idx, id in enumerate(result.ids[0])
-                ]
-            else:
-                docs = [
-                    Document(
-                        page_content=file.data.get("content", ""),
-                        metadata={
-                            "name": file.meta.get("name", file.filename),
-                            "created_by": file.user_id,
-                            "file_id": file.id,
-                            **file.meta,
-                        },
-                    )
-                ]
-
-            text_content = file.data.get("content", "")
-        else:
-            # Process the file and save the content
-            # Usage: /files/
-            file_path = file.path
-            if file_path:
-                file_path = Storage.get_file(file_path)
-                loader = Loader(
-                    engine=app.state.config.CONTENT_EXTRACTION_ENGINE,
-                    TIKA_SERVER_URL=app.state.config.TIKA_SERVER_URL,
-                    PDF_EXTRACT_IMAGES=app.state.config.PDF_EXTRACT_IMAGES,
-                )
-                docs = loader.load(
-                    file.filename, file.meta.get("content_type"), file_path
-                )
-            else:
-                docs = [
-                    Document(
-                        page_content=file.data.get("content", ""),
-                        metadata={
-                            "name": file.filename,
-                            "created_by": file.user_id,
-                            "file_id": file.id,
-                            **file.meta,
-                        },
-                    )
-                ]
-            text_content = " ".join([doc.page_content for doc in docs])
-
-        log.debug(f"text_content: {text_content}")
-        Files.update_file_data_by_id(
-            file.id,
-            {"content": text_content},
-        )
-
-        hash = calculate_sha256_string(text_content)
-        Files.update_file_hash_by_id(file.id, hash)
-
-        try:
-            result = save_docs_to_vector_db(
-                docs=docs,
-                collection_name=collection_name,
-                metadata={
-                    "file_id": file.id,
-                    "name": file.meta.get("name", file.filename),
-                    "hash": hash,
-                },
-                add=(True if form_data.collection_name else False),
-            )
-
-            if result:
-                Files.update_file_metadata_by_id(
-                    file.id,
-                    {
-                        "collection_name": collection_name,
-                    },
-                )
-
-                return {
-                    "status": True,
-                    "collection_name": collection_name,
-                    "filename": file.meta.get("name", file.filename),
-                    "content": text_content,
-                }
-        except Exception as e:
-            raise e
+        process_file_util(app.state, form_data)
     except Exception as e:
         log.exception(e)
         if "No pandoc was found" in str(e):
@@ -1014,121 +858,6 @@ def process_web(form_data: ProcessUrlForm, user=Depends(get_verified_user)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
-
-
-def search_web(engine: str, query: str) -> list[SearchResult]:
-    """Search the web using a search engine and return the results as a list of SearchResult objects.
-    Will look for a search engine API key in environment variables in the following order:
-    - SEARXNG_QUERY_URL
-    - GOOGLE_PSE_API_KEY + GOOGLE_PSE_ENGINE_ID
-    - BRAVE_SEARCH_API_KEY
-    - SERPSTACK_API_KEY
-    - SERPER_API_KEY
-    - SERPLY_API_KEY
-    - TAVILY_API_KEY
-    - SEARCHAPI_API_KEY + SEARCHAPI_ENGINE (by default `google`)
-    Args:
-        query (str): The query to search for
-    """
-
-    # TODO: add playwright to search the web
-    if engine == "searxng":
-        if app.state.config.SEARXNG_QUERY_URL:
-            return search_searxng(
-                app.state.config.SEARXNG_QUERY_URL,
-                query,
-                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
-            )
-        else:
-            raise Exception("No SEARXNG_QUERY_URL found in environment variables")
-    elif engine == "google_pse":
-        if (
-            app.state.config.GOOGLE_PSE_API_KEY
-            and app.state.config.GOOGLE_PSE_ENGINE_ID
-        ):
-            return search_google_pse(
-                app.state.config.GOOGLE_PSE_API_KEY,
-                app.state.config.GOOGLE_PSE_ENGINE_ID,
-                query,
-                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
-            )
-        else:
-            raise Exception(
-                "No GOOGLE_PSE_API_KEY or GOOGLE_PSE_ENGINE_ID found in environment variables"
-            )
-    elif engine == "brave":
-        if app.state.config.BRAVE_SEARCH_API_KEY:
-            return search_brave(
-                app.state.config.BRAVE_SEARCH_API_KEY,
-                query,
-                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
-            )
-        else:
-            raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
-    elif engine == "serpstack":
-        if app.state.config.SERPSTACK_API_KEY:
-            return search_serpstack(
-                app.state.config.SERPSTACK_API_KEY,
-                query,
-                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
-                https_enabled=app.state.config.SERPSTACK_HTTPS,
-            )
-        else:
-            raise Exception("No SERPSTACK_API_KEY found in environment variables")
-    elif engine == "serper":
-        if app.state.config.SERPER_API_KEY:
-            return search_serper(
-                app.state.config.SERPER_API_KEY,
-                query,
-                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
-            )
-        else:
-            raise Exception("No SERPER_API_KEY found in environment variables")
-    elif engine == "serply":
-        if app.state.config.SERPLY_API_KEY:
-            return search_serply(
-                app.state.config.SERPLY_API_KEY,
-                query,
-                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
-            )
-        else:
-            raise Exception("No SERPLY_API_KEY found in environment variables")
-    elif engine == "duckduckgo":
-        return search_duckduckgo(
-            query,
-            app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-            app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
-        )
-    elif engine == "tavily":
-        if app.state.config.TAVILY_API_KEY:
-            return search_tavily(
-                app.state.config.TAVILY_API_KEY,
-                query,
-                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-            )
-        else:
-            raise Exception("No TAVILY_API_KEY found in environment variables")
-    elif engine == "searchapi":
-        if app.state.config.SEARCHAPI_API_KEY:
-            return search_searchapi(
-                app.state.config.SEARCHAPI_API_KEY,
-                app.state.config.SEARCHAPI_ENGINE,
-                query,
-                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
-            )
-        else:
-            raise Exception("No SEARCHAPI_API_KEY found in environment variables")
-    elif engine == "jina":
-        return search_jina(query, app.state.config.RAG_WEB_SEARCH_RESULT_COUNT)
-    else:
-        raise Exception("No search engine API key found in environment variables")
 
 
 @app.post("/process/web/search")
