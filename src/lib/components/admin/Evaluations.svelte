@@ -6,7 +6,7 @@
 	dayjs.extend(relativeTime);
 
 	import { models } from '$lib/stores';
-	import { getAllFeedbacks } from '$lib/apis/evaluations';
+	import { deleteFeedbackById, getAllFeedbacks } from '$lib/apis/evaluations';
 
 	import FeedbackMenu from './Evaluations/FeedbackMenu.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
@@ -91,9 +91,17 @@
 		return stats;
 	}
 
-	let loaded = false;
-	onMount(async () => {
-		feedbacks = await getAllFeedbacks(localStorage.token);
+	const deleteFeedbackHandler = async (feedbackId: string) => {
+		const response = await deleteFeedbackById(localStorage.token, feedbackId).catch((err) => {
+			toast.error(err);
+			return null;
+		});
+		if (response) {
+			feedbacks = feedbacks.filter((f) => f.id !== feedbackId);
+		}
+	};
+
+	const rankHandler = async () => {
 		const modelStats = calculateModelStats(feedbacks);
 
 		rankedModels = $models
@@ -121,6 +129,15 @@
 				// If both ratings are '-', sort alphabetically (by 'name')
 				return a.name.localeCompare(b.name);
 			});
+	};
+
+	$: if (feedbacks) {
+		rankHandler();
+	}
+
+	let loaded = false;
+	onMount(async () => {
+		feedbacks = await getAllFeedbacks(localStorage.token);
 
 		loaded = true;
 	});
@@ -340,7 +357,11 @@
 							</td>
 
 							<td class=" px-3 py-1 text-right font-semibold">
-								<FeedbackMenu>
+								<FeedbackMenu
+									on:delete={(e) => {
+										deleteFeedbackHandler(feedback.id);
+									}}
+								>
 									<button
 										class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 									>
@@ -354,8 +375,9 @@
 			</table>
 		{/if}
 	</div>
-
-	<Pagination bind:page count={feedbacks.length} perPage={10} />
+	{#if feedbacks.length > 10}
+		<Pagination bind:page count={feedbacks.length} perPage={10} />
+	{/if}
 
 	<div class="pb-8"></div>
 {/if}
