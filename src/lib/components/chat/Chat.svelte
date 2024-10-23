@@ -1496,6 +1496,7 @@
 				{
 					stream: stream,
 					model: model.id,
+					user: $user?.id,
 					...(stream && (model.info?.meta?.capabilities?.usage ?? false)
 						? {
 								stream_options: {

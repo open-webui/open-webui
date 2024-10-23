@@ -44,6 +44,7 @@
 			localStorage.token,
 			{
 				model: model.id,
+				user: $user?.id,
 				stream: true,
 				messages: [
 					{
