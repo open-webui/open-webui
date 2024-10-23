@@ -1102,6 +1102,16 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
 
     if model["owned_by"] == "arena":
         model_ids = model.get("info", {}).get("meta", {}).get("model_ids")
+        filter_mode = model.get("info", {}).get("meta", {}).get("filter_mode")
+        if filter_mode == 'exclude':
+            model_ids = [
+                model["id"]
+                for model in await get_all_models()
+                if model.get("owned_by") != "arena"
+                and not model.get("info", {}).get("meta", {}).get("hidden", False)
+                and model["id"] not in model_ids
+            ]
+
         selected_model_id = None
         if isinstance(model_ids, list) and model_ids:
             selected_model_id = random.choice(model_ids)

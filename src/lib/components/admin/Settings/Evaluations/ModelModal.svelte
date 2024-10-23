@@ -37,6 +37,7 @@
 
 	let selectedModelId = '';
 	let modelIds = [];
+	let filterMode = 'include';
 
 	let imageInputElement;
 	let loading = false;
@@ -72,7 +73,8 @@
 			meta: {
 				profile_image_url: profileImageUrl,
 				description: description || null,
-				model_ids: modelIds.length > 0 ? modelIds : null
+				model_ids: modelIds.length > 0 ? modelIds : null,
+				filter_mode: modelIds.length > 0 ? (filterMode ? filterMode : null) : null
 			}
 		};
 
@@ -95,6 +97,7 @@
 			profileImageUrl = model.meta.profile_image_url;
 			description = model.meta.description;
 			modelIds = model.meta.model_ids || [];
+			filterMode = model.meta?.filter_mode ?? 'include';
 		}
 	};
 
@@ -281,7 +284,25 @@
 						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
 						<div class="flex flex-col w-full">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Models')}</div>
+							<div class="mb-1 flex justify-between">
+								<div class="text-xs text-gray-500">{$i18n.t('Models')}</div>
+
+								<div>
+									<button
+										class=" text-xs text-gray-500"
+										type="button"
+										on:click={() => {
+											filterMode = filterMode === 'include' ? 'exclude' : 'include';
+										}}
+									>
+										{#if filterMode === 'include'}
+											{$i18n.t('Include')}
+										{:else}
+											{$i18n.t('Exclude')}
+										{/if}
+									</button>
+								</div>
+							</div>
 
 							{#if modelIds.length > 0}
 								<div class="flex flex-col">
