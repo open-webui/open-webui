@@ -21,6 +21,9 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
+	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import About from '$lib/components/chat/Settings/About.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -138,10 +141,11 @@
 <UserChatsModal bind:show={showUserChatsModal} user={selectedUser} />
 
 {#if loaded}
-	<div class="mt-0.5 mb-3 gap-1 flex flex-col md:flex-row justify-between">
+	<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
 		<div class="flex md:self-center text-lg font-medium px-0.5">
 			{$i18n.t('Users')}
-			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
+			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
+
 			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{users.length}</span>
 		</div>
 
@@ -200,36 +204,69 @@
 						class="px-3 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('role')}
 					>
-						{$i18n.t('Role')}
-						{#if sortKey === 'role'}
-							<span class="font-normal ml-1">{sortOrder === 'asc' ? '▲' : '▼'}</span>
-						{:else}
-							<span class="invisible">▲</span>
-						{/if}
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('Role')}
+
+							{#if sortKey === 'role'}
+								<span class="font-normal"
+									>{#if sortOrder === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
 					<th
 						scope="col"
 						class="px-3 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('name')}
 					>
-						{$i18n.t('Name')}
-						{#if sortKey === 'name'}
-							<span class="font-normal ml-1">{sortOrder === 'asc' ? '▲' : '▼'}</span>
-						{:else}
-							<span class="invisible">▲</span>
-						{/if}
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('Name')}
+
+							{#if sortKey === 'name'}
+								<span class="font-normal"
+									>{#if sortOrder === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
 					<th
 						scope="col"
 						class="px-3 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('email')}
 					>
-						{$i18n.t('Email')}
-						{#if sortKey === 'email'}
-							<span class="font-normal ml-1">{sortOrder === 'asc' ? '▲' : '▼'}</span>
-						{:else}
-							<span class="invisible">▲</span>
-						{/if}
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('Email')}
+
+							{#if sortKey === 'email'}
+								<span class="font-normal"
+									>{#if sortOrder === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
 
 					<th
@@ -237,24 +274,45 @@
 						class="px-3 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('last_active_at')}
 					>
-						{$i18n.t('Last Active')}
-						{#if sortKey === 'last_active_at'}
-							<span class="font-normal ml-1">{sortOrder === 'asc' ? '▲' : '▼'}</span>
-						{:else}
-							<span class="invisible">▲</span>
-						{/if}
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('Last Active')}
+
+							{#if sortKey === 'last_active_at'}
+								<span class="font-normal"
+									>{#if sortOrder === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
 					<th
 						scope="col"
 						class="px-3 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('created_at')}
 					>
-						{$i18n.t('Created at')}
-						{#if sortKey === 'created_at'}
-							<span class="font-normal ml-1">{sortOrder === 'asc' ? '▲' : '▼'}</span>
-						{:else}
-							<span class="invisible">▲</span>
-						{/if}
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('Created at')}
+							{#if sortKey === 'created_at'}
+								<span class="font-normal"
+									>{#if sortOrder === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
 
 					<th
@@ -262,12 +320,23 @@
 						class="px-3 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('oauth_sub')}
 					>
-						{$i18n.t('OAuth ID')}
-						{#if sortKey === 'oauth_sub'}
-							<span class="font-normal ml-1">{sortOrder === 'asc' ? '▲' : '▼'}</span>
-						{:else}
-							<span class="invisible">▲</span>
-						{/if}
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('OAuth ID')}
+
+							{#if sortKey === 'oauth_sub'}
+								<span class="font-normal"
+									>{#if sortOrder === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
 
 					<th scope="col" class="px-3 py-2 text-right" />

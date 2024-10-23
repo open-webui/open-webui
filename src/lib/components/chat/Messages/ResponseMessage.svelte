@@ -40,6 +40,8 @@
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import ContentRenderer from './ContentRenderer.svelte';
+	import { createNewFeedback, getFeedbackById, updateFeedbackById } from '$lib/apis/evaluations';
+	import { getChatById } from '$lib/apis/chats';
 
 	interface MessageType {
 		id: string;
@@ -92,6 +94,7 @@
 		annotation?: { type: string; rating: number };
 	}
 
+	export let chatId = '';
 	export let history;
 	export let messageId;
 
@@ -328,6 +331,80 @@
 		}
 
 		generatingImage = false;
+	};
+
+	const feedbackHandler = async (
+		rating: number | null = null,
+		annotation: object | null = null
+	) => {
+		console.log('Feedback', rating, annotation);
+
+		const updatedMessage = {
+			...message,
+			annotation: {
+				...(message?.annotation ?? {}),
+				...(rating !== null ? { rating: rating } : {}),
+				...(annotation ? annotation : {})
+			}
+		};
+
+		const chat = await getChatById(localStorage.token, chatId).catch((error) => {
+			toast.error(error);
+		});
+		if (!chat) {
+			return;
+		}
+
+		let feedbackItem = {
+			type: 'rating',
+			data: {
+				...(updatedMessage?.annotation ? updatedMessage.annotation : {}),
+				model_id: message?.selectedModelId ?? message.model,
+				...(history.messages[message.parentId].childrenIds.length > 1
+					? {
+							sibling_model_ids: history.messages[message.parentId].childrenIds
+								.filter((id) => id !== message.id)
+								.map((id) => history.messages[id]?.selectedModelId ?? history.messages[id].model)
+						}
+					: {})
+			},
+			meta: {
+				arena: message ? message.arena : false,
+				message_id: message.id,
+				chat_id: chatId
+			},
+			snapshot: {
+				chat: chat
+			}
+		};
+
+		let feedback = null;
+		if (message?.feedbackId) {
+			feedback = await updateFeedbackById(
+				localStorage.token,
+				message.feedbackId,
+				feedbackItem
+			).catch((error) => {
+				toast.error(error);
+			});
+		} else {
+			feedback = await createNewFeedback(localStorage.token, feedbackItem).catch((error) => {
+				toast.error(error);
+			});
+
+			if (feedback) {
+				updatedMessage.feedbackId = feedback.id;
+			}
+		}
+
+		console.log(updatedMessage);
+		dispatch('save', updatedMessage);
+
+		await tick();
+
+		if (!annotation) {
+			showRateComment = true;
+		}
 	};
 
 	$: if (!edit) {
@@ -880,12 +957,13 @@
 											<button
 												class="{isLastMessage
 													? 'visible'
-													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(message
-													?.annotation?.rating ?? null) === 1
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(
+													message?.annotation?.rating ?? ''
+												).toString() === '1'
 													? 'bg-gray-100 dark:bg-gray-800'
 													: ''} dark:hover:text-white hover:text-black transition"
 												on:click={async () => {
-													await rateMessage(message.id, 1);
+													await feedbackHandler(1);
 
 													(model?.actions ?? [])
 														.filter((action) => action?.__webui__ ?? false)
@@ -901,7 +979,6 @@
 															});
 														});
 
-													showRateComment = true;
 													window.setTimeout(() => {
 														document
 															.getElementById(`message-feedback-${message.id}`)
@@ -930,12 +1007,13 @@
 											<button
 												class="{isLastMessage
 													? 'visible'
-													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(message
-													?.annotation?.rating ?? null) === -1
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(
+													message?.annotation?.rating ?? ''
+												).toString() === '-1'
 													? 'bg-gray-100 dark:bg-gray-800'
 													: ''} dark:hover:text-white hover:text-black transition"
 												on:click={async () => {
-													await rateMessage(message.id, -1);
+													await feedbackHandler(-1);
 
 													(model?.actions ?? [])
 														.filter((action) => action?.__webui__ ?? false)
@@ -951,7 +1029,6 @@
 															});
 														});
 
-													showRateComment = true;
 													window.setTimeout(() => {
 														document
 															.getElementById(`message-feedback-${message.id}`)
@@ -1103,15 +1180,12 @@
 						<RateComment
 							bind:message
 							bind:show={showRateComment}
-							on:save={(e) => {
-								dispatch('save', {
-									...message,
-									annotation: {
-										...message.annotation,
-										comment: e.detail.comment,
-										reason: e.detail.reason
-									}
+							on:save={async (e) => {
+								await feedbackHandler(null, {
+									comment: e.detail.comment,
+									reason: e.detail.reason
 								});
+
 								(model?.actions ?? [])
 									.filter((action) => action?.__webui__ ?? false)
 									.forEach((action) => {
