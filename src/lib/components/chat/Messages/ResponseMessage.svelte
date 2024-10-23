@@ -370,6 +370,7 @@
 			},
 			meta: {
 				arena: message ? message.arena : false,
+				model_id: message.model,
 				message_id: message.id,
 				chat_id: chatId
 			},
