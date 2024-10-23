@@ -266,14 +266,14 @@
 											<img
 												src={feedback?.user?.profile_image_url ?? '/user.png'}
 												alt={feedback?.user?.name}
-												class="size-6 rounded-full object-cover shrink-0"
+												class="size-5 rounded-full object-cover shrink-0"
 											/>
 										</div>
 									</Tooltip>
 								</div>
 							</td>
 
-							<td class="px-3 py-1 flex flex-col">
+							<td class="px-3 flex flex-col">
 								<div class="flex flex-col items-start gap-0.5 h-full">
 									<div class="flex flex-col h-full">
 										{#if feedback.data?.sibling_model_ids}
