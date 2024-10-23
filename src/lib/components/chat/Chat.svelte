@@ -475,13 +475,13 @@
 			selectedModels = $config?.default_models.split(',');
 		}
 
-		if (selectedModels.length === 0) {
+		if (selectedModels.length === 1 && selectedModels[0] === '') {
 			if ($models.length > 0) {
 				selectedModels = [$models[0].id];
-			} else {
-				selectedModels = [''];
 			}
 		}
+
+		console.log(selectedModels);
 
 		if ($page.url.searchParams.get('youtube')) {
 			uploadYoutubeTranscription(
