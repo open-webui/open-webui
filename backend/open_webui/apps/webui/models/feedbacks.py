@@ -23,9 +23,11 @@ class Feedback(Base):
     __tablename__ = "feedback"
     id = Column(Text, primary_key=True)
     user_id = Column(Text)
+    version = Column(BigInteger, default=0)
     type = Column(Text)
     data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
+    snapshot = Column(JSON, nullable=True)
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
 
@@ -33,9 +35,11 @@ class Feedback(Base):
 class FeedbackModel(BaseModel):
     id: str
     user_id: str
+    version: int
     type: str
     data: Optional[dict] = None
     meta: Optional[dict] = None
+    snapshot: Optional[dict] = None
     created_at: int
     updated_at: int
 
@@ -47,30 +51,44 @@ class FeedbackModel(BaseModel):
 ####################
 
 
+class FeedbackResponse(BaseModel):
+    id: str
+    user_id: str
+    version: int
+    type: str
+    data: Optional[dict] = None
+    meta: Optional[dict] = None
+    created_at: int
+    updated_at: int
+
+
 class RatingData(BaseModel):
-    rating: str
-    comment: str
-    model_config = ConfigDict(extra="allow")
-
-
-class VoteData(BaseModel):
-    rating: str
-    model_id: str
-    model_ids: list[str]
+    rating: Optional[str | int] = None
+    model_id: Optional[str] = None
+    sibling_model_ids: Optional[list[str]] = None
+    reason: Optional[str] = None
+    comment: Optional[str] = None
     model_config = ConfigDict(extra="allow")
 
 
 class MetaData(BaseModel):
-    chat: Optional[dict] = None
+    arena: Optional[bool] = None
+    chat_id: Optional[str] = None
     message_id: Optional[str] = None
     tags: Optional[list[str]] = None
     model_config = ConfigDict(extra="allow")
 
 
+class SnapshotData(BaseModel):
+    chat: Optional[dict] = None
+    model_config = ConfigDict(extra="allow")
+
+
 class FeedbackForm(BaseModel):
     type: str
-    data: Optional[RatingData | VoteData] = None
+    data: Optional[RatingData] = None
     meta: Optional[dict] = None
+    snapshot: Optional[SnapshotData] = None
     model_config = ConfigDict(extra="allow")
 
 
@@ -84,10 +102,10 @@ class FeedbackTable:
                 **{
                     "id": id,
                     "user_id": user_id,
-                    "type": form_data.type,
-                    "data": form_data.data,
-                    "meta": form_data.meta,
+                    "version": 0,
+                    **form_data.model_dump(),
                     "created_at": int(time.time()),
+                    "updated_at": int(time.time()),
                 }
             )
             try:
@@ -113,6 +131,25 @@ class FeedbackTable:
         except Exception:
             return None
 
+    def get_feedback_by_id_and_user_id(
+        self, id: str, user_id: str
+    ) -> Optional[FeedbackModel]:
+        try:
+            with get_db() as db:
+                feedback = db.query(Feedback).filter_by(id=id, user_id=user_id).first()
+                if not feedback:
+                    return None
+                return FeedbackModel.model_validate(feedback)
+        except Exception:
+            return None
+
+    def get_all_feedbacks(self) -> list[FeedbackModel]:
+        with get_db() as db:
+            return [
+                FeedbackModel.model_validate(feedback)
+                for feedback in db.query(Feedback).all()
+            ]
+
     def get_feedbacks_by_type(self, type: str) -> list[FeedbackModel]:
         with get_db() as db:
             return [
@@ -136,9 +173,31 @@ class FeedbackTable:
                 return None
 
             if form_data.data:
-                feedback.data = form_data.data
+                feedback.data = form_data.data.model_dump()
             if form_data.meta:
                 feedback.meta = form_data.meta
+            if form_data.snapshot:
+                feedback.snapshot = form_data.snapshot.model_dump()
+
+            feedback.updated_at = int(time.time())
+
+            db.commit()
+            return FeedbackModel.model_validate(feedback)
+
+    def update_feedback_by_id_and_user_id(
+        self, id: str, user_id: str, form_data: FeedbackForm
+    ) -> Optional[FeedbackModel]:
+        with get_db() as db:
+            feedback = db.query(Feedback).filter_by(id=id, user_id=user_id).first()
+            if not feedback:
+                return None
+
+            if form_data.data:
+                feedback.data = form_data.data.model_dump()
+            if form_data.meta:
+                feedback.meta = form_data.meta
+            if form_data.snapshot:
+                feedback.snapshot = form_data.snapshot.model_dump()
 
             feedback.updated_at = int(time.time())
 
@@ -151,6 +210,35 @@ class FeedbackTable:
             if not feedback:
                 return False
             db.delete(feedback)
+            db.commit()
+            return True
+
+    def delete_feedback_by_id_and_user_id(self, id: str, user_id: str) -> bool:
+        with get_db() as db:
+            feedback = db.query(Feedback).filter_by(id=id, user_id=user_id).first()
+            if not feedback:
+                return False
+            db.delete(feedback)
+            db.commit()
+            return True
+
+    def delete_feedbacks_by_user_id(self, user_id: str) -> bool:
+        with get_db() as db:
+            feedbacks = db.query(Feedback).filter_by(user_id=user_id).all()
+            if not feedbacks:
+                return False
+            for feedback in feedbacks:
+                db.delete(feedback)
+            db.commit()
+            return True
+
+    def delete_all_feedbacks(self) -> bool:
+        with get_db() as db:
+            feedbacks = db.query(Feedback).all()
+            if not feedbacks:
+                return False
+            for feedback in feedbacks:
+                db.delete(feedback)
             db.commit()
             return True
 

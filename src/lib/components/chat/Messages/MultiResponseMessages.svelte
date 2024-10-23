@@ -200,6 +200,7 @@
 						{#key history.currentId}
 							{#if message}
 								<ResponseMessage
+									{chatId}
 									{history}
 									messageId={_messageId}
 									isLastMessage={true}

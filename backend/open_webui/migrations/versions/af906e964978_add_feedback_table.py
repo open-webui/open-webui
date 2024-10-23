@@ -26,11 +26,17 @@ def upgrade():
         sa.Column(
             "user_id", sa.Text(), nullable=True
         ),  # ID of the user providing the feedback (TEXT type)
+        sa.Column(
+            "version", sa.BigInteger(), default=0
+        ),  # Version of feedback (BIGINT type)
         sa.Column("type", sa.Text(), nullable=True),  # Type of feedback (TEXT type)
         sa.Column("data", sa.JSON(), nullable=True),  # Feedback data (JSON type)
         sa.Column(
             "meta", sa.JSON(), nullable=True
         ),  # Metadata for feedback (JSON type)
+        sa.Column(
+            "snapshot", sa.JSON(), nullable=True
+        ),  # snapshot data for feedback (JSON type)
         sa.Column(
             "created_at", sa.BigInteger(), nullable=False
         ),  # Feedback creation timestamp (BIGINT representing epoch)
