@@ -99,8 +99,8 @@
 					...model,
 					rating: stats ? Math.round(stats.rating) : '-',
 					stats: {
+						count: stats ? stats.won + stats.draw + stats.lost : 0,
 						won: stats ? stats.won.toString() : '-',
-						draw: stats ? stats.draw.toString() : '-',
 						lost: stats ? stats.lost.toString() : '-'
 					}
 				};
@@ -157,21 +157,17 @@
 						<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-fit">
 							{$i18n.t('Rating')}
 						</th>
-						<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-fit">
+						<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-5">
 							{$i18n.t('Won')}
 						</th>
-
-						<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-fit">
-							{$i18n.t('Draw')}
-						</th>
-						<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-fit">
+						<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-5">
 							{$i18n.t('Lost')}
 						</th>
 					</tr>
 				</thead>
 				<tbody class="">
 					{#each rankedModels as model, modelIdx (model.id)}
-						<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
+						<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs group">
 							<td class="px-3 py-1.5 text-left font-medium text-gray-900 dark:text-white w-fit">
 								<div class=" line-clamp-1">
 									{model?.rating !== '-' ? modelIdx + 1 : '-'}
@@ -197,15 +193,29 @@
 							</td>
 
 							<td class=" px-3 py-1.5 text-right font-semibold text-green-500">
-								{model.stats.won}
-							</td>
-
-							<td class=" px-3 py-1.5 text-right font-semibold">
-								{model.stats.draw}
+								<div class=" w-10">
+									{#if model.stats.won === '-'}
+										-
+									{:else}
+										<span class="hidden group-hover:inline"
+											>{((model.stats.won / model.stats.count) * 100).toFixed(1)}%</span
+										>
+										<span class=" group-hover:hidden">{model.stats.won}</span>
+									{/if}
+								</div>
 							</td>
 
 							<td class="px-3 py-1.5 text-right font-semibold text-red-500">
-								{model.stats.lost}
+								<div class=" w-10">
+									{#if model.stats.lost === '-'}
+										-
+									{:else}
+										<span class="hidden group-hover:inline"
+											>{((model.stats.lost / model.stats.count) * 100).toFixed(1)}%</span
+										>
+										<span class=" group-hover:hidden">{model.stats.lost}</span>
+									{/if}
+								</div>
 							</td>
 						</tr>
 					{/each}
