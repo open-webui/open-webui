@@ -237,11 +237,11 @@
 					class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
 				>
 					<tr class="">
-						<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-0">
+						<th scope="col" class="px-3 text-right cursor-pointer select-none w-0">
 							{$i18n.t('User')}
 						</th>
 
-						<th scope="col" class="px-3 py-1.5 cursor-pointer select-none">
+						<th scope="col" class="px-3 pr-1.5 cursor-pointer select-none">
 							{$i18n.t('Models')}
 						</th>
 
@@ -273,7 +273,7 @@
 								</div>
 							</td>
 
-							<td class="px-3 flex flex-col">
+							<td class="pl-3 flex flex-col">
 								<div class="flex flex-col items-start gap-0.5 h-full">
 									<div class="flex flex-col h-full">
 										{#if feedback.data?.sibling_model_ids}
