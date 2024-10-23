@@ -1591,7 +1591,7 @@
 					const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
 
 					for await (const update of textStream) {
-						const { value, done, citations, error, usage } = update;
+						const { value, done, citations, selectedModelId, error, usage } = update;
 						if (error) {
 							await handleOpenAIError(error, null, model, responseMessage);
 							break;
@@ -1609,6 +1609,12 @@
 
 						if (usage) {
 							responseMessage.info = { ...usage, openai: true, usage };
+						}
+
+						if (selectedModelId) {
+							responseMessage.selectedModelId = selectedModelId;
+							responseMessage.arena = true;
+							continue;
 						}
 
 						if (citations) {
