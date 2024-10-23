@@ -294,9 +294,10 @@
 											<Tooltip content={feedback.data.sibling_model_ids.join(', ')}>
 												<div class=" text-[0.65rem] text-gray-600 dark:text-gray-400 line-clamp-1">
 													{#if feedback.data.sibling_model_ids.length > 2}
+														<!-- {$i18n.t('and {{COUNT}} more')} -->
 														{feedback.data.sibling_model_ids.slice(0, 2).join(', ')}, {$i18n.t(
-															`and {{count}} more`,
-															{ count: feedback.data.sibling_model_ids.length - 2 }
+															'and {{COUNT}} more',
+															{ COUNT: feedback.data.sibling_model_ids.length - 2 }
 														)}
 													{:else}
 														{feedback.data.sibling_model_ids.join(', ')}
