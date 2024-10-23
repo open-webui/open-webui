@@ -1103,7 +1103,7 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
     if model["owned_by"] == "arena":
         model_ids = model.get("info", {}).get("meta", {}).get("model_ids")
         filter_mode = model.get("info", {}).get("meta", {}).get("filter_mode")
-        if filter_mode == 'exclude':
+        if model_ids and filter_mode == 'exclude':
             model_ids = [
                 model["id"]
                 for model in await get_all_models()
