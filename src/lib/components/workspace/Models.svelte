@@ -40,9 +40,11 @@
 	let selectedModel = null;
 
 	$: if (_models) {
-		filteredModels = _models.filter(
-			(m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase())
-		);
+		filteredModels = _models
+			.filter((m) => m?.owned_by !== 'arena')
+			.filter(
+				(m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase())
+			);
 	}
 
 	let sortable = null;
@@ -243,7 +245,7 @@
 
 	onMount(async () => {
 		// Legacy code to sync localModelfiles with models
-		_models = $models.filter((m) => m?.owned_by !== 'arena');
+		_models = $models;
 		localModelfiles = JSON.parse(localStorage.getItem('modelfiles') ?? '[]');
 
 		if (localModelfiles) {
