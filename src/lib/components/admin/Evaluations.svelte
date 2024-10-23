@@ -290,9 +290,17 @@
 											<div class="font-semibold text-gray-600 dark:text-gray-400 flex-1">
 												{feedback.data?.model_id}
 											</div>
-											<div class=" text-[0.65rem] text-gray-600 dark:text-gray-400 line-clamp-1">
-												{feedback.data.sibling_model_ids.join(', ')}
-											</div>
+
+											<Tooltip content={feedback.data.sibling_model_ids.join(', ')}>
+												<div class=" text-[0.65rem] text-gray-600 dark:text-gray-400 line-clamp-1">
+													{#if feedback.data.sibling_model_ids.length > 2}
+														{feedback.data.sibling_model_ids.slice(0, 2).join(', ')}, and
+														{feedback.data.sibling_model_ids.length - 2} more
+													{:else}
+														{feedback.data.sibling_model_ids.join(', ')}
+													{/if}
+												</div>
+											</Tooltip>
 										{:else}
 											<div
 												class=" text-sm font-medium text-gray-600 dark:text-gray-400 flex-1 py-1.5"
