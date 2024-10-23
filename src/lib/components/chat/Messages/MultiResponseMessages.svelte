@@ -157,7 +157,7 @@
 		const messageElement = document.getElementById(`message-${messageId}`);
 		console.log(messageElement);
 		if (messageElement) {
-			messageElement.scrollIntoView({ block: 'center' });
+			messageElement.scrollIntoView({ block: 'start' });
 		}
 	});
 </script>
