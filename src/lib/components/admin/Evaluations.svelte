@@ -259,7 +259,7 @@
 				<tbody class="">
 					{#each feedbacks as feedback (feedback.id)}
 						<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
-							<td class=" py-1 text-right font-semibold">
+							<td class=" py-0.5 text-right font-semibold">
 								<div class="flex justify-center">
 									<Tooltip content={feedback?.user?.name}>
 										<div class="flex-shrink-0">
@@ -273,7 +273,7 @@
 								</div>
 							</td>
 
-							<td class="pl-3 flex flex-col">
+							<td class=" py-1 pl-3 flex flex-col">
 								<div class="flex flex-col items-start gap-0.5 h-full">
 									<div class="flex flex-col h-full">
 										{#if feedback.data?.sibling_model_ids}
@@ -285,7 +285,7 @@
 											</div>
 										{:else}
 											<div
-												class=" text-sm font-medium text-gray-600 dark:text-gray-400 flex-1 py-2"
+												class=" text-sm font-medium text-gray-600 dark:text-gray-400 flex-1 py-1.5"
 											>
 												{feedback.data?.model_id}
 											</div>
