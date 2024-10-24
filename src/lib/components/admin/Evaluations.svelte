@@ -298,8 +298,18 @@
 		feedbacks = await getAllFeedbacks(localStorage.token);
 		loaded = true;
 
-		tokenizer = await AutoTokenizer.from_pretrained(EMBEDDING_MODEL);
-		model = await AutoModel.from_pretrained(EMBEDDING_MODEL);
+		// Check if the tokenizer and model are already loaded and stored in the window object
+		if (!window.tokenizer) {
+			window.tokenizer = await AutoTokenizer.from_pretrained(EMBEDDING_MODEL);
+		}
+
+		if (!window.model) {
+			window.model = await AutoModel.from_pretrained(EMBEDDING_MODEL);
+		}
+
+		// Use the tokenizer and model from the window object
+		tokenizer = window.tokenizer;
+		model = window.model;
 
 		// Pre-compute embeddings for all unique tags
 		const allTags = new Set(feedbacks.flatMap((feedback) => feedback.data.tags || []));
