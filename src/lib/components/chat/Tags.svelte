@@ -71,4 +71,12 @@
 	});
 </script>
 
-<Tags {tags} {deleteTag} {addTag} />
+<Tags
+	{tags}
+	on:delete={(e) => {
+		deleteTag(e.detail);
+	}}
+	on:add={(e) => {
+		addTag(e.detail);
+	}}
+/>

@@ -19,7 +19,8 @@
 		extractSentencesForAudio,
 		cleanText,
 		getMessageContentParts,
-		sanitizeResponseContent
+		sanitizeResponseContent,
+		createMessagesList
 	} from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -42,6 +43,7 @@
 	import ContentRenderer from './ContentRenderer.svelte';
 	import { createNewFeedback, getFeedbackById, updateFeedbackById } from '$lib/apis/evaluations';
 	import { getChatById } from '$lib/apis/chats';
+	import { generateTags } from '$lib/apis';
 
 	interface MessageType {
 		id: string;
@@ -353,6 +355,24 @@
 		});
 		if (!chat) {
 			return;
+		}
+
+		if (!annotation) {
+			const messages = createMessagesList(history, message.id);
+			const tags = await generateTags(
+				localStorage.token,
+				message?.selectedModelId ?? message.model,
+				messages,
+				chatId
+			).catch((error) => {
+				console.error(error);
+				return [];
+			});
+			console.log(tags);
+
+			if (tags) {
+				updatedMessage.annotation.tags = tags;
+			}
 		}
 
 		let feedbackItem = {
@@ -1183,6 +1203,7 @@
 							bind:show={showRateComment}
 							on:save={async (e) => {
 								await feedbackHandler(null, {
+									tags: e.detail.tags,
 									comment: e.detail.comment,
 									reason: e.detail.reason
 								});

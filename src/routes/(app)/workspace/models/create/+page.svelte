@@ -671,11 +671,12 @@
 			<div class="mt-2">
 				<Tags
 					tags={info?.meta?.tags ?? []}
-					deleteTag={(tagName) => {
+					on:delete={(e) => {
+						const tagName = e.detail;
 						info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
 					}}
-					addTag={(tagName) => {
-						console.log(tagName);
+					on:add={(e) => {
+						const tagName = e.detail;
 						if (!(info?.meta?.tags ?? null)) {
 							info.meta.tags = [{ name: tagName }];
 						} else {
