@@ -10,7 +10,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
-	import type { Unsubscriber, Writable } from 'svelte/store';
+	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -20,6 +20,7 @@
 		config,
 		type Model,
 		models,
+		tags as allTags,
 		settings,
 		showSidebar,
 		WEBUI_NAME,
@@ -46,14 +47,18 @@
 
 	import { generateChatCompletion } from '$lib/apis/ollama';
 	import {
+		addTagById,
 		createNewChat,
+		deleteTagById,
+		deleteTagsById,
+		getAllTags,
 		getChatById,
 		getChatList,
 		getTagsById,
 		updateChatById
 	} from '$lib/apis/chats';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
-	import { processWebSearch } from '$lib/apis/retrieval';
+	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
@@ -62,7 +67,8 @@
 		generateTitle,
 		generateSearchQuery,
 		chatAction,
-		generateMoACompletion
+		generateMoACompletion,
+		generateTags
 	} from '$lib/apis';
 
 	import Banner from '../common/Banner.svelte';
@@ -78,11 +84,14 @@
 	let loaded = false;
 	const eventTarget = new EventTarget();
 	let controlPane;
+	let controlPaneComponent;
 
 	let stopResponseFlag = false;
 	let autoScroll = true;
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
+
+	let navbarElement;
 
 	let showEventConfirmation = false;
 	let eventConfirmationTitle = '';
@@ -124,7 +133,7 @@
 				loaded = true;
 
 				window.setTimeout(() => scrollToBottom(), 0);
-				const chatInput = document.getElementById('chat-textarea');
+				const chatInput = document.getElementById('chat-input');
 				chatInput?.focus();
 			} else {
 				await goto('/');
@@ -174,10 +183,30 @@
 					message.statusHistory = [data];
 				}
 			} else if (type === 'citation') {
-				if (message?.citations) {
-					message.citations.push(data);
+				if (data?.type === 'code_execution') {
+					// Code execution; update existing code execution by ID, or add new one.
+					if (!message?.code_executions) {
+						message.code_executions = [];
+					}
+
+					const existingCodeExecutionIndex = message.code_executions.findIndex(
+						(execution) => execution.id === data.id
+					);
+
+					if (existingCodeExecutionIndex !== -1) {
+						message.code_executions[existingCodeExecutionIndex] = data;
+					} else {
+						message.code_executions.push(data);
+					}
+
+					message.code_executions = message.code_executions;
 				} else {
-					message.citations = [data];
+					// Regular citation.
+					if (message?.citations) {
+						message.citations.push(data);
+					} else {
+						message.citations = [data];
+					}
 				}
 			} else if (type === 'message') {
 				message.content += data.content;
@@ -199,6 +228,20 @@
 
 				eventConfirmationTitle = data.title;
 				eventConfirmationMessage = data.message;
+			} else if (type === 'execute') {
+				eventCallback = cb;
+
+				try {
+					// Use Function constructor to evaluate code in a safer way
+					const asyncFunction = new Function(`return (async () => { ${data.code} })()`);
+					const result = await asyncFunction(); // Await the result of the async function
+
+					if (cb) {
+						cb(result);
+					}
+				} catch (error) {
+					console.error('Error executing code:', error);
+				}
 			} else if (type === 'input') {
 				eventCallback = cb;
 
@@ -229,7 +272,7 @@
 		if (event.data.type === 'input:prompt') {
 			console.debug(event.data.text);
 
-			const inputElement = document.getElementById('chat-textarea');
+			const inputElement = document.getElementById('chat-input');
 
 			if (inputElement) {
 				prompt = event.data.text;
@@ -276,14 +319,9 @@
 			if (controlPane && !$mobile) {
 				try {
 					if (value) {
-						const currentSize = controlPane.getSize();
-
-						if (currentSize === 0) {
-							const size = parseInt(localStorage?.chatControlsSize ?? '30');
-							controlPane.resize(size ? size : 30);
-						}
+						controlPaneComponent.openPane();
 					} else {
-						controlPane.resize(0);
+						controlPane.collapse();
 					}
 				} catch (e) {
 					// ignore
@@ -293,10 +331,11 @@
 			if (!value) {
 				showCallOverlay.set(false);
 				showOverview.set(false);
+				showArtifacts.set(false);
 			}
 		});
 
-		const chatInput = document.getElementById('chat-textarea');
+		const chatInput = document.getElementById('chat-input');
 		chatInput?.focus();
 
 		chats.subscribe(() => {});
@@ -307,6 +346,74 @@
 		window.removeEventListener('message', onMessageHandler);
 		$socket?.off('chat-events');
 	});
+
+	// File upload functions
+
+	const uploadWeb = async (url) => {
+		console.log(url);
+
+		const fileItem = {
+			type: 'doc',
+			name: url,
+			collection_name: '',
+			status: 'uploading',
+			url: url,
+			error: ''
+		};
+
+		try {
+			files = [...files, fileItem];
+			const res = await processWeb(localStorage.token, '', url);
+
+			if (res) {
+				fileItem.status = 'uploaded';
+				fileItem.collection_name = res.collection_name;
+				fileItem.file = {
+					...res.file,
+					...fileItem.file
+				};
+
+				files = files;
+			}
+		} catch (e) {
+			// Remove the failed doc from the files array
+			files = files.filter((f) => f.name !== url);
+			toast.error(JSON.stringify(e));
+		}
+	};
+
+	const uploadYoutubeTranscription = async (url) => {
+		console.log(url);
+
+		const fileItem = {
+			type: 'doc',
+			name: url,
+			collection_name: '',
+			status: 'uploading',
+			context: 'full',
+			url: url,
+			error: ''
+		};
+
+		try {
+			files = [...files, fileItem];
+			const res = await processYoutubeVideo(localStorage.token, url);
+
+			if (res) {
+				fileItem.status = 'uploaded';
+				fileItem.collection_name = res.collection_name;
+				fileItem.file = {
+					...res.file,
+					...fileItem.file
+				};
+				files = files;
+			}
+		} catch (e) {
+			// Remove the failed doc from the files array
+			files = files.filter((f) => f.name !== url);
+			toast.error(e);
+		}
+	};
 
 	//////////////////////////
 	// Web functions
@@ -338,16 +445,53 @@
 		if ($page.url.searchParams.get('models')) {
 			selectedModels = $page.url.searchParams.get('models')?.split(',');
 		} else if ($page.url.searchParams.get('model')) {
-			selectedModels = $page.url.searchParams.get('model')?.split(',');
+			const urlModels = $page.url.searchParams.get('model')?.split(',');
+
+			if (urlModels.length === 1) {
+				const m = $models.find((m) => m.id === urlModels[0]);
+				if (!m) {
+					const modelSelectorButton = document.getElementById('model-selector-0-button');
+					if (modelSelectorButton) {
+						modelSelectorButton.click();
+						await tick();
+
+						const modelSelectorInput = document.getElementById('model-search-input');
+						if (modelSelectorInput) {
+							modelSelectorInput.focus();
+							modelSelectorInput.value = urlModels[0];
+							modelSelectorInput.dispatchEvent(new Event('input'));
+						}
+					}
+				} else {
+					selectedModels = urlModels;
+				}
+			} else {
+				selectedModels = urlModels;
+			}
 		} else if ($settings?.models) {
 			selectedModels = $settings?.models;
 		} else if ($config?.default_models) {
 			console.log($config?.default_models.split(',') ?? '');
 			selectedModels = $config?.default_models.split(',');
-		} else {
-			selectedModels = [''];
 		}
 
+		selectedModels = selectedModels.filter((modelId) => $models.map((m) => m.id).includes(modelId));
+
+		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
+			if ($models.length > 0) {
+				selectedModels = [$models[0].id];
+			} else {
+				selectedModels = [''];
+			}
+		}
+
+		console.log(selectedModels);
+
+		if ($page.url.searchParams.get('youtube')) {
+			uploadYoutubeTranscription(
+				`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`
+			);
+		}
 		if ($page.url.searchParams.get('web-search') === 'true') {
 			webSearchEnabled = true;
 		}
@@ -366,6 +510,11 @@
 				.filter((id) => id);
 		}
 
+		if ($page.url.searchParams.get('call') === 'true') {
+			showCallOverlay.set(true);
+			showControls.set(true);
+		}
+
 		if ($page.url.searchParams.get('q')) {
 			prompt = $page.url.searchParams.get('q') ?? '';
 
@@ -373,11 +522,6 @@
 				await tick();
 				submitPrompt(prompt);
 			}
-		}
-
-		if ($page.url.searchParams.get('call') === 'true') {
-			showCallOverlay.set(true);
-			showControls.set(true);
 		}
 
 		selectedModels = selectedModels.map((modelId) =>
@@ -392,7 +536,7 @@
 			settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 		}
 
-		const chatInput = document.getElementById('chat-textarea');
+		const chatInput = document.getElementById('chat-input');
 		setTimeout(() => chatInput?.focus(), 0);
 	};
 
@@ -404,7 +548,10 @@
 		});
 
 		if (chat) {
-			tags = await getTags();
+			tags = await getTagsById(localStorage.token, $chatId).catch(async (error) => {
+				return [];
+			});
+
 			const chatContent = chat.chat;
 
 			if (chatContent) {
@@ -648,92 +795,105 @@
 	//////////////////////////
 
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
-		let _responses = [];
-		console.log('submitPrompt', $chatId);
-		const messages = createMessagesList(history.currentId);
+		console.log('submitPrompt', userPrompt, $chatId);
 
+		const messages = createMessagesList(history.currentId);
 		selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
 
+		if (userPrompt === '') {
+			toast.error($i18n.t('Please enter a prompt'));
+			return;
+		}
 		if (selectedModels.includes('')) {
 			toast.error($i18n.t('Model not selected'));
-		} else if (messages.length != 0 && messages.at(-1).done != true) {
+			return;
+		}
+
+		if (messages.length != 0 && messages.at(-1).done != true) {
 			// Response not done
-			console.log('wait');
-		} else if (messages.length != 0 && messages.at(-1).error) {
+			return;
+		}
+		if (messages.length != 0 && messages.at(-1).error) {
 			// Error in response
-			toast.error(
-				$i18n.t(
-					`Oops! There was an error in the previous response. Please try again or contact admin.`
-				)
-			);
-		} else if (
+			toast.error($i18n.t(`Oops! There was an error in the previous response.`));
+			return;
+		}
+		if (
 			files.length > 0 &&
 			files.filter((file) => file.type !== 'image' && file.status === 'uploading').length > 0
 		) {
-			// Upload not done
 			toast.error(
-				$i18n.t(
-					`Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.`
-				)
+				$i18n.t(`Oops! There are files still uploading. Please wait for the upload to complete.`)
 			);
-		} else if (
+			return;
+		}
+		if (
 			($config?.file?.max_count ?? null) !== null &&
 			files.length + chatFiles.length > $config?.file?.max_count
 		) {
-			console.log(chatFiles.length, files.length);
 			toast.error(
 				$i18n.t(`You can only chat with a maximum of {{maxCount}} file(s) at a time.`, {
 					maxCount: $config?.file?.max_count
 				})
 			);
-		} else {
-			// Reset chat input textarea
-			const chatTextAreaElement = document.getElementById('chat-textarea');
-
-			if (chatTextAreaElement) {
-				chatTextAreaElement.value = '';
-				chatTextAreaElement.style.height = '';
-			}
-
-			const _files = JSON.parse(JSON.stringify(files));
-			chatFiles.push(..._files.filter((item) => ['doc', 'file', 'collection'].includes(item.type)));
-			chatFiles = chatFiles.filter(
-				// Remove duplicates
-				(item, index, array) =>
-					array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
-			);
-
-			files = [];
-			prompt = '';
-
-			// Create user message
-			let userMessageId = uuidv4();
-			let userMessage = {
-				id: userMessageId,
-				parentId: messages.length !== 0 ? messages.at(-1).id : null,
-				childrenIds: [],
-				role: 'user',
-				content: userPrompt,
-				files: _files.length > 0 ? _files : undefined,
-				timestamp: Math.floor(Date.now() / 1000), // Unix epoch
-				models: selectedModels
-			};
-
-			// Add message to history and Set currentId to messageId
-			history.messages[userMessageId] = userMessage;
-			history.currentId = userMessageId;
-
-			// Append messageId to childrenIds of parent message
-			if (messages.length !== 0) {
-				history.messages[messages.at(-1).id].childrenIds.push(userMessageId);
-			}
-
-			// Wait until history/message have been updated
-			await tick();
-			_responses = await sendPrompt(userPrompt, userMessageId, { newChat: true });
+			return;
 		}
+
+		let _responses = [];
+		prompt = '';
+		await tick();
+
+		// Reset chat input textarea
+		const chatInputContainer = document.getElementById('chat-input-container');
+
+		if (chatInputContainer) {
+			chatInputContainer.value = '';
+			chatInputContainer.style.height = '';
+		}
+
+		const _files = JSON.parse(JSON.stringify(files));
+		chatFiles.push(..._files.filter((item) => ['doc', 'file', 'collection'].includes(item.type)));
+		chatFiles = chatFiles.filter(
+			// Remove duplicates
+			(item, index, array) =>
+				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
+		);
+
+		files = [];
+		prompt = '';
+
+		// Create user message
+		let userMessageId = uuidv4();
+		let userMessage = {
+			id: userMessageId,
+			parentId: messages.length !== 0 ? messages.at(-1).id : null,
+			childrenIds: [],
+			role: 'user',
+			content: userPrompt,
+			files: _files.length > 0 ? _files : undefined,
+			timestamp: Math.floor(Date.now() / 1000), // Unix epoch
+			models: selectedModels
+		};
+
+		// Add message to history and Set currentId to messageId
+		history.messages[userMessageId] = userMessage;
+		history.currentId = userMessageId;
+
+		// Append messageId to childrenIds of parent message
+		if (messages.length !== 0) {
+			history.messages[messages.at(-1).id].childrenIds.push(userMessageId);
+		}
+
+		// Wait until history/message have been updated
+		await tick();
+
+		// focus on chat input
+		const chatInput = document.getElementById('chat-input');
+		chatInput?.focus();
+
+		_responses = await sendPrompt(userPrompt, userMessageId, { newChat: true });
 
 		return _responses;
 	};
@@ -854,10 +1014,10 @@
 					}
 
 					let _response = null;
-					if (model?.owned_by === 'openai') {
-						_response = await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
-					} else if (model) {
+					if (model?.owned_by === 'ollama') {
 						_response = await sendPromptOllama(model, prompt, responseMessageId, _chatId);
+					} else if (model) {
+						_response = await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
 					}
 					_responses.push(_response);
 
@@ -1253,8 +1413,13 @@
 		const messages = createMessagesList(responseMessageId);
 		if (messages.length == 2 && messages.at(-1).content !== '' && selectedModels[0] === model.id) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-			const title = await generateChatTitle(userPrompt);
+
+			const title = await generateChatTitle(messages);
 			await setChatTitle(_chatId, title);
+
+			if ($settings?.autoTags ?? true) {
+				await setChatTags(messages);
+			}
 		}
 
 		return _response;
@@ -1430,7 +1595,7 @@
 					const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
 
 					for await (const update of textStream) {
-						const { value, done, citations, error, usage } = update;
+						const { value, done, citations, selectedModelId, error, usage } = update;
 						if (error) {
 							await handleOpenAIError(error, null, model, responseMessage);
 							break;
@@ -1448,6 +1613,12 @@
 
 						if (usage) {
 							responseMessage.info = { ...usage, openai: true, usage };
+						}
+
+						if (selectedModelId) {
+							responseMessage.selectedModelId = selectedModelId;
+							responseMessage.arena = true;
+							continue;
 						}
 
 						if (citations) {
@@ -1567,8 +1738,13 @@
 		const messages = createMessagesList(responseMessageId);
 		if (messages.length == 2 && selectedModels[0] === model.id) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-			const title = await generateChatTitle(userPrompt);
+
+			const title = await generateChatTitle(messages);
 			await setChatTitle(_chatId, title);
+
+			if ($settings?.autoTags ?? true) {
+				await setChatTags(messages);
+			}
 		}
 
 		return _response;
@@ -1724,21 +1900,21 @@
 		}
 	};
 
-	const generateChatTitle = async (userPrompt) => {
+	const generateChatTitle = async (messages) => {
 		if ($settings?.title?.auto ?? true) {
-			const title = await generateTitle(
-				localStorage.token,
-				selectedModels[0],
-				userPrompt,
-				$chatId
-			).catch((error) => {
-				console.error(error);
-				return 'New Chat';
-			});
+			const lastMessage = messages.at(-1);
+			const modelId = selectedModels[0];
+
+			const title = await generateTitle(localStorage.token, modelId, messages, $chatId).catch(
+				(error) => {
+					console.error(error);
+					return 'New Chat';
+				}
+			);
 
 			return title;
 		} else {
-			return `${userPrompt}`;
+			return 'New Chat';
 		}
 	};
 
@@ -1752,6 +1928,40 @@
 
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		}
+	};
+
+	const setChatTags = async (messages) => {
+		if (!$temporaryChatEnabled) {
+			const currentTags = await getTagsById(localStorage.token, $chatId);
+			if (currentTags.length > 0) {
+				const res = await deleteTagsById(localStorage.token, $chatId);
+				if (res) {
+					allTags.set(await getAllTags(localStorage.token));
+				}
+			}
+
+			const lastMessage = messages.at(-1);
+			const modelId = selectedModels[0];
+
+			let generatedTags = await generateTags(localStorage.token, modelId, messages, $chatId).catch(
+				(error) => {
+					console.error(error);
+					return [];
+				}
+			);
+
+			generatedTags = generatedTags.filter(
+				(tag) => !currentTags.find((t) => t.id === tag.replaceAll(' ', '_').toLowerCase())
+			);
+			console.log(generatedTags);
+
+			for (const tag of generatedTags) {
+				await addTagById(localStorage.token, $chatId, tag);
+			}
+
+			chat = await getChatById(localStorage.token, $chatId);
+			allTags.set(await getAllTags(localStorage.token));
 		}
 	};
 
@@ -1840,12 +2050,6 @@
 		}
 	};
 
-	const getTags = async () => {
-		return await getTagsById(localStorage.token, $chatId).catch(async (error) => {
-			return [];
-		});
-	};
-
 	const initChatHandler = async () => {
 		if (!$temporaryChatEnabled) {
 			chat = await createNewChat(localStorage.token, {
@@ -1855,6 +2059,7 @@
 				system: $settings.system ?? undefined,
 				params: params,
 				history: history,
+				messages: createMessagesList(history.currentId),
 				tags: [],
 				timestamp: Date.now()
 			});
@@ -1920,6 +2125,7 @@
 		class="h-screen max-h-[100dvh] {$showSidebar
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''} w-full max-w-full flex flex-col"
+		id="chat-container"
 	>
 		{#if $settings?.backgroundImageUrl ?? null}
 			<div
@@ -1935,7 +2141,18 @@
 		{/if}
 
 		<Navbar
-			{chat}
+			bind:this={navbarElement}
+			chat={{
+				id: $chatId,
+				chat: {
+					title: $chatTitle,
+					models: selectedModels,
+					system: $settings.system ?? undefined,
+					params: params,
+					history: history,
+					timestamp: Date.now()
+				}
+			}}
 			title={$chatTitle}
 			bind:selectedModels
 			shareEnabled={!!history.currentId}
@@ -2050,11 +2267,19 @@
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								{stopResponse}
 								{createMessagePair}
+								on:upload={async (e) => {
+									const { type, data } = e.detail;
+
+									if (type === 'web') {
+										await uploadWeb(data);
+									} else if (type === 'youtube') {
+										await uploadYoutubeTranscription(data);
+									}
+								}}
 								on:submit={async (e) => {
 									if (e.detail) {
-										prompt = '';
 										await tick();
-										submitPrompt(e.detail);
+										submitPrompt(e.detail.replaceAll('\n\n', '\n'));
 									}
 								}}
 							/>
@@ -2066,38 +2291,49 @@
 							</div>
 						</div>
 					{:else}
-						<Placeholder
-							{history}
-							{selectedModels}
-							bind:files
-							bind:prompt
-							bind:autoScroll
-							bind:selectedToolIds
-							bind:webSearchEnabled
-							bind:atSelectedModel
-							availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
-								const model = $models.find((m) => m.id === e);
-								if (model?.info?.meta?.toolIds ?? false) {
-									return [...new Set([...a, ...model.info.meta.toolIds])];
-								}
-								return a;
-							}, [])}
-							transparentBackground={$settings?.backgroundImageUrl ?? false}
-							{stopResponse}
-							{createMessagePair}
-							on:submit={async (e) => {
-								if (e.detail) {
-									prompt = '';
-									await tick();
-									submitPrompt(e.detail);
-								}
-							}}
-						/>
+						<div class="overflow-auto w-full h-full flex items-center">
+							<Placeholder
+								{history}
+								{selectedModels}
+								bind:files
+								bind:prompt
+								bind:autoScroll
+								bind:selectedToolIds
+								bind:webSearchEnabled
+								bind:atSelectedModel
+								availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
+									const model = $models.find((m) => m.id === e);
+									if (model?.info?.meta?.toolIds ?? false) {
+										return [...new Set([...a, ...model.info.meta.toolIds])];
+									}
+									return a;
+								}, [])}
+								transparentBackground={$settings?.backgroundImageUrl ?? false}
+								{stopResponse}
+								{createMessagePair}
+								on:upload={async (e) => {
+									const { type, data } = e.detail;
+
+									if (type === 'web') {
+										await uploadWeb(data);
+									} else if (type === 'youtube') {
+										await uploadYoutubeTranscription(data);
+									}
+								}}
+								on:submit={async (e) => {
+									if (e.detail) {
+										await tick();
+										submitPrompt(e.detail.replaceAll('\n\n', '\n'));
+									}
+								}}
+							/>
+						</div>
 					{/if}
 				</div>
 			</Pane>
 
 			<ChatControls
+				bind:this={controlPaneComponent}
 				bind:history
 				bind:chatFiles
 				bind:params

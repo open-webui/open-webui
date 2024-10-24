@@ -57,18 +57,14 @@
 		console.log(prompt);
 		await tick();
 
-		const chatInputElement = document.getElementById('chat-textarea');
-		if (chatInputElement) {
-			chatInputElement.style.height = '';
-			chatInputElement.style.height = Math.min(chatInputElement.scrollHeight, 200) + 'px';
-			chatInputElement.focus();
+		const chatInputContainerElement = document.getElementById('chat-input-container');
+		if (chatInputContainerElement) {
+			chatInputContainerElement.style.height = '';
+			chatInputContainerElement.style.height =
+				Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
 
-			const words = findWordIndices(prompt);
-
-			if (words.length > 0) {
-				const word = words.at(0);
-				chatInputElement.setSelectionRange(word?.startIndex, word.endIndex + 1);
-			}
+			const chatInputElement = document.getElementById('chat-input');
+			chatInputElement?.focus();
 		}
 
 		await tick();
@@ -89,7 +85,7 @@
 </script>
 
 {#key mounted}
-	<div class="m-auto w-full max-w-6xl px-2 xl:px-20 translate-y-6 text-center">
+	<div class="m-auto w-full max-w-6xl px-2 xl:px-20 translate-y-6 py-24 text-center">
 		{#if $temporaryChatEnabled}
 			<Tooltip
 				content="This chat won't appear in history and your messages will not be saved."
@@ -106,7 +102,7 @@
 			class="w-full text-3xl text-gray-800 dark:text-gray-100 font-medium text-center flex items-center gap-4 font-primary"
 		>
 			<div class="w-full flex flex-col justify-center items-center">
-				<div class="flex flex-col md:flex-row justify-center gap-2 md:gap-3.5 w-fit">
+				<div class="flex flex-row justify-center gap-3 sm:gap-3.5 w-fit px-5">
 					<div class="flex flex-shrink-0 justify-center">
 						<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
 							{#each models as model, modelIdx}
@@ -127,7 +123,7 @@
 												($i18n.language === 'dg-DG'
 													? `/doge.png`
 													: `${WEBUI_BASE_URL}/static/favicon.png`)}
-											class=" size-[2.5rem] rounded-full border-[1px] border-gray-200 dark:border-none"
+											class=" size-9 sm:size-10 rounded-full border-[1px] border-gray-200 dark:border-none"
 											alt="logo"
 											draggable="false"
 										/>
@@ -137,9 +133,9 @@
 						</div>
 					</div>
 
-					<div class=" capitalize line-clamp-1 text-3xl md:text-4xl" in:fade={{ duration: 100 }}>
-						{#if models[selectedModelIdx]?.info}
-							{models[selectedModelIdx]?.info?.name}
+					<div class=" capitalize text-3xl sm:text-4xl line-clamp-1" in:fade={{ duration: 100 }}>
+						{#if models[selectedModelIdx]?.name}
+							{models[selectedModelIdx]?.name}
 						{:else}
 							{$i18n.t('Hello, {{name}}', { name: $user.name })}
 						{/if}
@@ -204,6 +200,9 @@
 						{stopResponse}
 						{createMessagePair}
 						placeholder={$i18n.t('How can I help you today?')}
+						on:upload={(e) => {
+							dispatch('upload', e.detail);
+						}}
 						on:submit={(e) => {
 							dispatch('submit', e.detail);
 						}}

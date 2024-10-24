@@ -38,6 +38,9 @@
 	let STT_OPENAI_API_KEY = '';
 	let STT_ENGINE = '';
 	let STT_MODEL = '';
+	let STT_WHISPER_MODEL = '';
+
+	let STT_WHISPER_MODEL_LOADING = false;
 
 	// eslint-disable-next-line no-undef
 	let voices: SpeechSynthesisVoice[] = [];
@@ -99,16 +102,21 @@
 				OPENAI_API_BASE_URL: STT_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: STT_OPENAI_API_KEY,
 				ENGINE: STT_ENGINE,
-				MODEL: STT_MODEL
+				MODEL: STT_MODEL,
+				WHISPER_MODEL: STT_WHISPER_MODEL
 			}
 		});
 
 		if (res) {
 			saveHandler();
-			getBackendConfig()
-				.then(config.set)
-				.catch(() => {});
+			config.set(await getBackendConfig());
 		}
+	};
+
+	const sttModelUpdateHandler = async () => {
+		STT_WHISPER_MODEL_LOADING = true;
+		await updateConfigHandler();
+		STT_WHISPER_MODEL_LOADING = false;
 	};
 
 	onMount(async () => {
@@ -134,6 +142,7 @@
 
 			STT_ENGINE = res.stt.ENGINE;
 			STT_MODEL = res.stt.MODEL;
+			STT_WHISPER_MODEL = res.stt.WHISPER_MODEL;
 		}
 
 		await getVoices();
@@ -199,6 +208,88 @@
 									<option value="whisper-1" />
 								</datalist>
 							</div>
+						</div>
+					</div>
+				{:else if STT_ENGINE === ''}
+					<div>
+						<div class=" mb-1.5 text-sm font-medium">{$i18n.t('STT Model')}</div>
+
+						<div class="flex w-full">
+							<div class="flex-1 mr-2">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+									placeholder={$i18n.t('Set whisper model')}
+									bind:value={STT_WHISPER_MODEL}
+								/>
+							</div>
+
+							<button
+								class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+								on:click={() => {
+									sttModelUpdateHandler();
+								}}
+								disabled={STT_WHISPER_MODEL_LOADING}
+							>
+								{#if STT_WHISPER_MODEL_LOADING}
+									<div class="self-center">
+										<svg
+											class=" w-4 h-4"
+											viewBox="0 0 24 24"
+											fill="currentColor"
+											xmlns="http://www.w3.org/2000/svg"
+										>
+											<style>
+												.spinner_ajPY {
+													transform-origin: center;
+													animation: spinner_AtaB 0.75s infinite linear;
+												}
+
+												@keyframes spinner_AtaB {
+													100% {
+														transform: rotate(360deg);
+													}
+												}
+											</style>
+											<path
+												d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+												opacity=".25"
+											/>
+											<path
+												d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+												class="spinner_ajPY"
+											/>
+										</svg>
+									</div>
+								{:else}
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="w-4 h-4"
+									>
+										<path
+											d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z"
+										/>
+										<path
+											d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
+										/>
+									</svg>
+								{/if}
+							</button>
+						</div>
+
+						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t(`Open WebUI uses faster-whisper internally.`)}
+
+							<a
+								class=" hover:underline dark:text-gray-200 text-gray-800"
+								href="https://github.com/SYSTRAN/faster-whisper"
+								target="_blank"
+							>
+								{$i18n.t(
+									`Click here to learn more about faster-whisper and see the available models.`
+								)}
+							</a>
 						</div>
 					</div>
 				{/if}
@@ -339,7 +430,7 @@
 
 									<datalist id="tts-model-list">
 										{#each models as model}
-											<option value={model.id} />
+											<option value={model.id} class="bg-gray-50 dark:bg-gray-700" />
 										{/each}
 									</datalist>
 								</div>
@@ -380,7 +471,7 @@
 
 									<datalist id="tts-model-list">
 										{#each models as model}
-											<option value={model.id} />
+											<option value={model.id} class="bg-gray-50 dark:bg-gray-700" />
 										{/each}
 									</datalist>
 								</div>
@@ -460,7 +551,7 @@
 	</div>
 	<div class="flex justify-end text-sm font-medium">
 		<button
-			class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}

@@ -157,7 +157,7 @@
 		const messageElement = document.getElementById(`message-${messageId}`);
 		console.log(messageElement);
 		if (messageElement) {
-			messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			messageElement.scrollIntoView({ block: 'start' });
 		}
 	});
 </script>
@@ -179,7 +179,7 @@
 						class=" snap-center w-full max-w-full m-1 border {history.messages[messageId]
 							?.modelIdx == modelIdx
 							? `border-gray-100 dark:border-gray-800 border-[1.5px] ${
-									$mobile ? 'min-w-full' : 'min-w-[32rem]'
+									$mobile ? 'min-w-full' : 'min-w-80'
 								}`
 							: `border-gray-50 dark:border-gray-850 border-dashed ${
 									$mobile ? 'min-w-full' : 'min-w-80'
@@ -200,6 +200,7 @@
 						{#key history.currentId}
 							{#if message}
 								<ResponseMessage
+									{chatId}
 									{history}
 									messageId={_messageId}
 									isLastMessage={true}
