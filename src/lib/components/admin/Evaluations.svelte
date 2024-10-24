@@ -107,7 +107,7 @@
 		rankedModels = $models
 			.filter((m) => m?.owned_by !== 'arena' && (m?.info?.meta?.hidden ?? false) !== true)
 			.map((model) => {
-				const stats = modelStats.get(model.name);
+				const stats = modelStats.get(model.id);
 				return {
 					...model,
 					rating: stats ? Math.round(stats.rating) : '-',
