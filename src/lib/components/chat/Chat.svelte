@@ -1903,9 +1903,7 @@
 	const generateChatTitle = async (messages) => {
 		if ($settings?.title?.auto ?? true) {
 			const lastMessage = messages.at(-1);
-			const modelId = lastMessage
-				? (lastMessage?.selectedModelId ?? lastMessage?.model)
-				: selectedModels[0];
+			const modelId = electedModels[0];
 
 			const title = await generateTitle(localStorage.token, modelId, messages, $chatId).catch(
 				(error) => {
@@ -1944,9 +1942,7 @@
 			}
 
 			const lastMessage = messages.at(-1);
-			const modelId = lastMessage
-				? (lastMessage?.selectedModelId ?? lastMessage?.model)
-				: selectedModels[0];
+			const modelId = electedModels[0];
 
 			let generatedTags = await generateTags(localStorage.token, modelId, messages, $chatId).catch(
 				(error) => {
