@@ -44,8 +44,8 @@ class FileModel(BaseModel):
     data: Optional[dict] = None
     meta: Optional[dict] = None
 
-    created_at: int  # timestamp in epoch
-    updated_at: int  # timestamp in epoch
+    created_at: Optional[int]  # timestamp in epoch
+    updated_at: Optional[int]  # timestamp in epoch
 
 
 ####################
