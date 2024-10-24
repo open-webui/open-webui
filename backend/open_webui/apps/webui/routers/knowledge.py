@@ -12,8 +12,7 @@ from open_webui.apps.webui.models.knowledge import (
 )
 from open_webui.apps.webui.models.files import Files, FileModel
 from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
-from open_webui.apps.retrieval.main import process_file, ProcessFileForm
-
+from open_webui.apps.retrieval.main import process_file, ProcessFileForm, store_existing_file_in_collection
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.utils import get_admin_user, get_verified_user
@@ -162,7 +161,7 @@ def add_file_to_knowledge_by_id(
 
     # Add content to the vector database
     try:
-        process_file(ProcessFileForm(file_id=form_data.file_id, collection_name=id))
+        store_existing_file_in_collection(file_id=form_data.file_id, collection_name=id)
     except Exception as e:
         log.debug(e)
         raise HTTPException(
@@ -227,7 +226,7 @@ def update_file_from_knowledge_by_id(
 
     # Add content to the vector database
     try:
-        process_file(ProcessFileForm(file_id=form_data.file_id, collection_name=id))
+        store_existing_file_in_collection(file_id=form_data.file_id, collection_name=id)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

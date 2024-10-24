@@ -95,7 +95,7 @@ from open_webui.config import (
     TIKA_SERVER_URL,
     UPLOAD_DIR,
     YOUTUBE_LOADER_LANGUAGE,
-    AppConfig,
+    AppConfig, VECTOR_DB,
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS, DEVICE_TYPE, DOCKER
@@ -634,6 +634,28 @@ async def update_query_settings(
 #
 ####################################
 
+def store_existing_file_in_collection(file_id: str, collection_name: str):
+    result = VECTOR_DB_CLIENT.query(collection_name=f"file-{file_id}",
+                                    filter={"file_id": file_id},
+                                    with_vectors=True)
+    if len(result.ids[0]) > 0 and result.vectors:
+        items: list[dict] = []
+        for idx, _id in enumerate(result.ids[0]):
+            items.append({
+                "id": _id,
+                "text": result.documents[0][idx],
+                "vector": result.vectors[0][idx],
+                "metadata": result.metadatas[0][idx]
+            })
+
+        VECTOR_DB_CLIENT.insert(collection_name, items)
+
+        Files.update_file_metadata_by_id(
+            file_id,
+            {
+                "collection_name": collection_name,
+            },
+        )
 
 def save_docs_to_vector_db(
     docs,
@@ -753,7 +775,6 @@ def save_docs_to_vector_db(
 class ProcessFileForm(BaseModel):
     file_id: str
     content: Optional[str] = None
-    collection_name: Optional[str] = None
 
 
 @app.post("/process/file")
@@ -764,10 +785,7 @@ def process_file(
     try:
         file = Files.get_file_by_id(form_data.file_id)
 
-        collection_name = form_data.collection_name
-
-        if collection_name is None:
-            collection_name = f"file-{file.id}"
+        collection_name = f"file-{file.id}"
 
         if form_data.content:
             # Update the content in the file
@@ -791,36 +809,6 @@ def process_file(
             ]
 
             text_content = form_data.content
-        elif form_data.collection_name:
-            # Check if the file has already been processed and save the content
-            # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
-
-            result = VECTOR_DB_CLIENT.query(
-                collection_name=f"file-{file.id}", filter={"file_id": file.id}
-            )
-
-            if result is not None and len(result.ids[0]) > 0:
-                docs = [
-                    Document(
-                        page_content=result.documents[0][idx],
-                        metadata=result.metadatas[0][idx],
-                    )
-                    for idx, id in enumerate(result.ids[0])
-                ]
-            else:
-                docs = [
-                    Document(
-                        page_content=file.data.get("content", ""),
-                        metadata={
-                            "name": file.meta.get("name", file.filename),
-                            "created_by": file.user_id,
-                            "file_id": file.id,
-                            **file.meta,
-                        },
-                    )
-                ]
-
-            text_content = file.data.get("content", "")
         else:
             # Process the file and save the content
             # Usage: /files/
@@ -867,7 +855,7 @@ def process_file(
                     "name": file.meta.get("name", file.filename),
                     "hash": hash,
                 },
-                add=(True if form_data.collection_name else False),
+                add=False,
             )
 
             if result:
