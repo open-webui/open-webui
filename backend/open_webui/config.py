@@ -383,7 +383,7 @@ OAUTH_USERNAME_CLAIM = PersistentConfig(
 )
 
 OAUTH_PICTURE_CLAIM = PersistentConfig(
-    "OAUTH_USERNAME_CLAIM",
+    "OAUTH_PICTURE_CLAIM",
     "oauth.oidc.avatar_claim",
     os.environ.get("OAUTH_PICTURE_CLAIM", "picture"),
 )
