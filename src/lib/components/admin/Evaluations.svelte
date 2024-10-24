@@ -7,7 +7,7 @@
 	import * as ort from 'onnxruntime-web';
 	import { AutoModel, AutoTokenizer } from '@huggingface/transformers';
 
-	const embedding_model = 'TaylorAI/bge-micro-v2';
+	const EMBEDDING_MODEL = 'TaylorAI/bge-micro-v2';
 	let tokenizer = null;
 	let model = null;
 
@@ -128,9 +128,6 @@
 				case '1':
 					outcome = 1;
 					break;
-				case '0':
-					outcome = 0.5;
-					break;
 				case '-1':
 					outcome = 0;
 					break;
@@ -138,9 +135,10 @@
 					return; // Skip invalid ratings
 			}
 
-			const similarity = similarities.get(feedback.id) || 1;
-
+			// If the query is empty, set similarity to 1, else get the similarity from the map
+			const similarity = query !== '' ? similarities.get(feedback.id) || 0 : 1;
 			const opponents = feedback.data.sibling_model_ids || [];
+
 			opponents.forEach((modelB) => {
 				const statsB = getOrDefaultStats(modelB);
 				const changeA = calculateEloChange(statsA.rating, statsB.rating, outcome, similarity);
@@ -270,8 +268,8 @@
 		feedbacks = await getAllFeedbacks(localStorage.token);
 		loaded = true;
 
-		tokenizer = await AutoTokenizer.from_pretrained(embedding_model);
-		model = await AutoModel.from_pretrained(embedding_model);
+		tokenizer = await AutoTokenizer.from_pretrained(EMBEDDING_MODEL);
+		model = await AutoModel.from_pretrained(EMBEDDING_MODEL);
 
 		// Pre-compute embeddings for all unique tags
 		const allTags = new Set(feedbacks.flatMap((feedback) => feedback.data.tags || []));
