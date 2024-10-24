@@ -236,6 +236,37 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
         )
 
 
+@router.get("/{id}/content/html")
+async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user)):
+    file = Files.get_file_by_id(id)
+    if file and (file.user_id == user.id or user.role == "admin"):
+        try:
+            file_path = Storage.get_file(file.path)
+            file_path = Path(file_path)
+
+            # Check if the file already exists in the cache
+            if file_path.is_file():
+                print(f"file_path: {file_path}")
+                return FileResponse(file_path)
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=ERROR_MESSAGES.NOT_FOUND,
+                )
+        except Exception as e:
+            log.exception(e)
+            log.error(f"Error getting file content")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error getting file content"),
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
 @router.get("/{id}/content/{file_name}")
 async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)

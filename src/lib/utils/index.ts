@@ -32,7 +32,7 @@ export const replaceTokens = (content, char, user) => {
 
 	// Replace HTML ID tags with corresponding HTML content
 	content = content.replace(htmlIdToken, (match, fileId) => {
-		const htmlUrl = `${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`;
+		const htmlUrl = `${WEBUI_BASE_URL}/api/v1/files/${fileId}/content/html`;
 		return `<iframe src="${htmlUrl}" width="100%" frameborder="0" onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"></iframe>`;
 	});
 
