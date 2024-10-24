@@ -104,6 +104,8 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     ollama_payload["model"] = openai_payload.get("model")
     ollama_payload["messages"] = openai_payload.get("messages")
     ollama_payload["stream"] = openai_payload.get("stream", False)
+    if "tools" in openai_payload:
+        ollama_payload["tools"] = openai_payload["tools"]
 
     # If there are advanced parameters in the payload, format them in Ollama's options field
     ollama_options = {}

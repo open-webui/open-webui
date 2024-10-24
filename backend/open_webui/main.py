@@ -567,16 +567,28 @@ async def handle_streaming_response(request: Request, response: Response,
 async def handle_nonstreaming_response(request: Request, response: Response,
                                        tools: dict, user: UserModel, data_items: list) -> JSONResponse:
     # It only should be one response since we are in the non streaming scenario
+    content = ''
     async for data in response.body_iterator:
-        content = data
+        content += data.decode()
     citations = []
     response_dict = json.loads(content)
     body = json.loads(request._body)
 
+    if app.state.MODELS[body["model"]]["owned_by"] == "ollama":
+        is_ollama = True
+    is_openai = not is_ollama
 
-    while response_dict["choices"][0]["finish_reason"] == "tool_calls":
-        body["messages"].append(response_dict["choices"][0]["message"])
-        tool_calls = response_dict["choices"][0]["message"].get("tool_calls", [])
+    while (is_ollama and "tool_calls" in response_dict.get("message", {})) or \
+          (is_openai and response_dict["choices"][0]["finish_reason"] == "tool_calls"):
+        if is_ollama:
+            message = response_dict.get("message", {})
+            tool_calls = message.get("tool_calls", [])
+            if message:
+                body["messages"].append(message)
+        else:
+            body["messages"].append(response_dict["choices"][0]["message"])
+            tool_calls = response_dict["choices"][0]["message"].get("tool_calls", [])
+
         for tool_call in tool_calls:
             tool_function_name = tool_call["function"]["name"]
             if not tool_call["function"]["arguments"]:
@@ -601,7 +613,7 @@ async def handle_nonstreaming_response(request: Request, response: Response,
             # Append the tool output to the messages
             body["messages"].append({
                 "role": "tool",
-                "tool_call_id" : tool_call["id"],
+                "tool_call_id" : tool_call.get("id",""),
                 "name": tool_function_name,
                 "content": tool_output
             })
@@ -1315,6 +1327,7 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
     if model["owned_by"] == "ollama":
         # Using /ollama/api/chat endpoint
         form_data = convert_payload_openai_to_ollama(form_data)
+        log.debug(f"{form_data=}")
         form_data = GenerateChatCompletionForm(**form_data)
         response = await generate_ollama_chat_completion(form_data=form_data, user=user)
         if form_data.stream:
