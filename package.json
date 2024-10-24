@@ -52,6 +52,7 @@
 		"@codemirror/lang-python": "^6.1.6",
 		"@codemirror/language-data": "^6.5.1",
 		"@codemirror/theme-one-dark": "^6.1.2",
+		"@huggingface/transformers": "^3.0.0",
 		"@pyscript/core": "^0.4.32",
 		"@sveltejs/adapter-node": "^2.0.0",
 		"@xyflow/svelte": "^0.1.19",
