@@ -73,7 +73,6 @@
 
 	const saveHandler = () => {
 		console.log('saveHandler');
-
 		// if (!selectedReason) {
 		// 	toast.error($i18n.t('Please select a reason'));
 		// 	return;
@@ -82,7 +81,7 @@
 		dispatch('save', {
 			reason: selectedReason,
 			comment: comment,
-			tags: tags
+			tags: tags.map((tag) => tag.name)
 		});
 
 		toast.success($i18n.t('Thanks for your feedback!'));
