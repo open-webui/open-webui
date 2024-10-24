@@ -360,6 +360,8 @@
 			return;
 		}
 
+		const messages = createMessagesList(history, message.id);
+
 		let feedbackItem = {
 			type: 'rating',
 			data: {
@@ -377,7 +379,7 @@
 				arena: message ? message.arena : false,
 				model_id: message.model,
 				message_id: message.id,
-				message_index: createMessagesList(history, message.id).length,
+				message_index: messages.length,
 				chat_id: chatId
 			},
 			snapshot: {
@@ -414,7 +416,6 @@
 
 			if (!updatedMessage.annotation?.tags) {
 				// attempt to generate tags
-				const messages = createMessagesList(history, message.id);
 				const tags = await generateTags(
 					localStorage.token,
 					message?.selectedModelId ?? message.model,
