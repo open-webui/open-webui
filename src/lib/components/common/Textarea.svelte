@@ -20,6 +20,10 @@
 		}
 	});
 
+	$: if (value) {
+		setTimeout(adjustHeight, 0);
+	}
+
 	const adjustHeight = () => {
 		if (textareaElement) {
 			textareaElement.style.height = '';
