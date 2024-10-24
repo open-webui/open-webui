@@ -12,33 +12,27 @@
 	export let message;
 	export let show = false;
 
-	let LIKE_REASONS = [];
-	let DISLIKE_REASONS = [];
+	let LIKE_REASONS = [
+		'accurate_information',
+		'followed_instructions_perfectly',
+		'showcased_creativity',
+		'positive_attitude',
+		'attention_to_detail',
+		'thorough_explanation',
+		'other'
+	];
+	let DISLIKE_REASONS = [
+		'dont_like_the_style',
+		'too_verbose',
+		'not_helpful',
+		'not_factually_correct',
+		'didnt_fully_follow_instructions',
+		'refused_when_it_shouldnt_have',
+		'being_lazy',
+		'other'
+	];
 
 	let tags = [];
-
-	function loadReasons() {
-		LIKE_REASONS = [
-			'accurate_information',
-			'followed_instructions_perfectly',
-			'showcased_creativity',
-			'positive_attitude',
-			'attention_to_detail',
-			'thorough_explanation',
-			'other'
-		];
-
-		DISLIKE_REASONS = [
-			'dont_like_the_style',
-			'too_verbose',
-			'not_helpful',
-			'not_factually_correct',
-			'didnt_fully_follow_instructions',
-			'refused_when_it_shouldnt_have',
-			'being_lazy',
-			'other'
-		];
-	}
 
 	let reasons = [];
 	let selectedReason = null;
@@ -52,13 +46,19 @@
 		reasons = DISLIKE_REASONS;
 	}
 
-	onMount(() => {
+	$: if (message) {
+		init();
+	}
+
+	const init = () => {
 		selectedReason = message?.annotation?.reason ?? '';
 		comment = message?.annotation?.comment ?? '';
 		tags = (message?.annotation?.tags ?? []).map((tag) => ({
 			name: tag
 		}));
+	};
 
+	onMount(() => {
 		if (message?.arena) {
 			selectedModel = $models.find((m) => m.id === message.selectedModelId);
 			toast.success(
@@ -67,8 +67,6 @@
 				})
 			);
 		}
-
-		loadReasons();
 	});
 
 	const saveHandler = () => {

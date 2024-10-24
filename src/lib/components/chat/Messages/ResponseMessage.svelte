@@ -335,10 +335,13 @@
 		generatingImage = false;
 	};
 
+	let feedbackLoading = false;
+
 	const feedbackHandler = async (
 		rating: number | null = null,
 		annotation: object | null = null
 	) => {
+		feedbackLoading = true;
 		console.log('Feedback', rating, annotation);
 
 		const updatedMessage = {
@@ -355,24 +358,6 @@
 		});
 		if (!chat) {
 			return;
-		}
-
-		if (!annotation) {
-			const messages = createMessagesList(history, message.id);
-			const tags = await generateTags(
-				localStorage.token,
-				message?.selectedModelId ?? message.model,
-				messages,
-				chatId
-			).catch((error) => {
-				console.error(error);
-				return [];
-			});
-			console.log(tags);
-
-			if (tags) {
-				updatedMessage.annotation.tags = tags;
-			}
 		}
 
 		let feedbackItem = {
@@ -425,7 +410,29 @@
 
 		if (!annotation) {
 			showRateComment = true;
+
+			if (!updatedMessage.annotation?.tags) {
+				// attempt to generate tags
+				const messages = createMessagesList(history, message.id);
+				const tags = await generateTags(
+					localStorage.token,
+					message?.selectedModelId ?? message.model,
+					messages,
+					chatId
+				).catch((error) => {
+					console.error(error);
+					return [];
+				});
+				console.log(tags);
+
+				if (tags) {
+					updatedMessage.annotation.tags = tags;
+					dispatch('save', updatedMessage);
+				}
+			}
 		}
+
+		feedbackLoading = false;
 	};
 
 	$: if (!edit) {
@@ -982,7 +989,8 @@
 													message?.annotation?.rating ?? ''
 												).toString() === '1'
 													? 'bg-gray-100 dark:bg-gray-800'
-													: ''} dark:hover:text-white hover:text-black transition"
+													: ''} dark:hover:text-white hover:text-black transition disabled:cursor-progress disabled:hover:bg-transparent"
+												disabled={feedbackLoading}
 												on:click={async () => {
 													await feedbackHandler(1);
 
@@ -1032,7 +1040,8 @@
 													message?.annotation?.rating ?? ''
 												).toString() === '-1'
 													? 'bg-gray-100 dark:bg-gray-800'
-													: ''} dark:hover:text-white hover:text-black transition"
+													: ''} dark:hover:text-white hover:text-black transition disabled:cursor-progress disabled:hover:bg-transparent"
+												disabled={feedbackLoading}
 												on:click={async () => {
 													await feedbackHandler(-1);
 
