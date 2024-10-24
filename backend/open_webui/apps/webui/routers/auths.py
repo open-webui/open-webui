@@ -323,6 +323,12 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
         raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
 
 
+@router.get("/signout")
+async def signout(response: Response):
+    response.delete_cookie("token")
+    return {"status": True}
+
+
 ############################
 # AddUser
 ############################
