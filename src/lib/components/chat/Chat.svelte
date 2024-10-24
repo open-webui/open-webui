@@ -1902,15 +1902,17 @@
 
 	const generateChatTitle = async (messages) => {
 		if ($settings?.title?.auto ?? true) {
-			const title = await generateTitle(
-				localStorage.token,
-				selectedModels[0],
-				messages,
-				$chatId
-			).catch((error) => {
-				console.error(error);
-				return 'New Chat';
-			});
+			const lastMessage = messages.at(-1);
+			const modelId = lastMessage
+				? (lastMessage?.selectedModelId ?? lastMessage?.model)
+				: selectedModels[0];
+
+			const title = await generateTitle(localStorage.token, modelId, messages, $chatId).catch(
+				(error) => {
+					console.error(error);
+					return 'New Chat';
+				}
+			);
 
 			return title;
 		} else {
@@ -1941,15 +1943,17 @@
 				}
 			}
 
-			let generatedTags = await generateTags(
-				localStorage.token,
-				selectedModels[0],
-				messages,
-				$chatId
-			).catch((error) => {
-				console.error(error);
-				return [];
-			});
+			const lastMessage = messages.at(-1);
+			const modelId = lastMessage
+				? (lastMessage?.selectedModelId ?? lastMessage?.model)
+				: selectedModels[0];
+
+			let generatedTags = await generateTags(localStorage.token, modelId, messages, $chatId).catch(
+				(error) => {
+					console.error(error);
+					return [];
+				}
+			);
 
 			generatedTags = generatedTags.filter(
 				(tag) => !currentTags.find((t) => t.id === tag.replaceAll(' ', '_').toLowerCase())
