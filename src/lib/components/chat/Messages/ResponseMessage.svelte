@@ -377,8 +377,8 @@
 				arena: message ? message.arena : false,
 				model_id: message.model,
 				message_id: message.id,
-				chat_id: chatId,
-				message_turn: createMessagesList(history, message.id).length
+				message_index: createMessagesList(history, message.id).length,
+				chat_id: chatId
 			},
 			snapshot: {
 				chat: chat
