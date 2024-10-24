@@ -416,15 +416,12 @@
 
 			if (!updatedMessage.annotation?.tags) {
 				// attempt to generate tags
-				const tags = await generateTags(
-					localStorage.token,
-					message?.selectedModelId ?? message.model,
-					messages,
-					chatId
-				).catch((error) => {
-					console.error(error);
-					return [];
-				});
+				const tags = await generateTags(localStorage.token, message.model, messages, chatId).catch(
+					(error) => {
+						console.error(error);
+						return [];
+					}
+				);
 				console.log(tags);
 
 				if (tags) {
