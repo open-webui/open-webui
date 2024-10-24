@@ -427,7 +427,16 @@
 
 				if (tags) {
 					updatedMessage.annotation.tags = tags;
+					feedbackItem.data.tags = tags;
+
 					dispatch('save', updatedMessage);
+					await updateFeedbackById(
+						localStorage.token,
+						updatedMessage.feedbackId,
+						feedbackItem
+					).catch((error) => {
+						toast.error(error);
+					});
 				}
 			}
 		}
