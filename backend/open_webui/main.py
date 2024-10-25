@@ -620,8 +620,7 @@ async def handle_nonstreaming_response(request: Request, response: Response,
 
         # Make another request to the model with the updated context
         update_body_request(request, body)
-        response_dict = await generate_chat_completions(form_data = body, user = user )
-
+        response_dict = await generate_chat_completions(form_data = body, user = user, as_openai = is_openai)
 
     #FIXME: is it possible to handle citations?
     return JSONResponse(content = response_dict)
@@ -1305,7 +1304,7 @@ async def get_models(user=Depends(get_verified_user)):
 
 
 @app.post("/api/chat/completions")
-async def generate_chat_completions(form_data: dict, user=Depends(get_verified_user)):
+async def generate_chat_completions(form_data: dict, user=Depends(get_verified_user), as_openai:bool = True):
     model_id = form_data["model"]
 
     if model_id not in app.state.MODELS:
@@ -1333,11 +1332,11 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
         if form_data.stream:
             response.headers["content-type"] = "text/event-stream"
             return StreamingResponse(
-                convert_streaming_response_ollama_to_openai(response),
+                convert_streaming_response_ollama_to_openai(response) if as_openai else response,
                 headers=dict(response.headers),
             )
         else:
-            return convert_response_ollama_to_openai(response)
+            return convert_response_ollama_to_openai(response) if as_openai else response
     else:
         return await generate_openai_chat_completion(form_data, user=user)
 
