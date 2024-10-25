@@ -288,6 +288,12 @@
 		return false;
 	}
 
+	// Replace tabs with four spaces
+	function handleTabIndentation(text: string): string {
+		// Replace each tab character with four spaces
+		return text.replace(/\t/g, '    ');
+	}
+
 	onMount(() => {
 		const initialDoc = markdownToProseMirrorDoc(value || ''); // Convert the initial content
 
@@ -403,6 +409,22 @@
 				},
 				paste: (view, event) => {
 					if (event.clipboardData) {
+						// Extract plain text from clipboard and paste it without formatting
+						const plainText = event.clipboardData.getData('text/plain');
+						if (plainText) {
+							const modifiedText = handleTabIndentation(plainText);
+							console.log(modifiedText);
+
+							// Replace the current selection with the plain text content
+							const tr = view.state.tr.replaceSelectionWith(
+								view.state.schema.text(modifiedText),
+								false
+							);
+							view.dispatch(tr.scrollIntoView());
+							event.preventDefault(); // Prevent the default paste behavior
+							return true;
+						}
+
 						// Check if the pasted content contains image files
 						const hasImageFile = Array.from(event.clipboardData.files).some((file) =>
 							file.type.startsWith('image/')
