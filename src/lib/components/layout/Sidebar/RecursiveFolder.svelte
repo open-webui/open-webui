@@ -396,6 +396,7 @@
 							}}
 							on:keydown={(e) => {
 								if (e.key === 'Enter') {
+									nameUpdateHandler();
 									edit = false;
 								}
 							}}
