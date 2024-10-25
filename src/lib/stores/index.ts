@@ -147,11 +147,14 @@ type TitleSettings = {
 	prompt?: string;
 };
 
-type Prompt = {
+export type PromptBehavior = 'inline' | 'once-pinned';
+
+export type Prompt = {
 	command: string;
 	user_id: string;
 	title: string;
 	content: string;
+	behavior: PromptBehavior;
 	timestamp: number;
 };
 

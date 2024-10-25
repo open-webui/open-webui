@@ -30,7 +30,15 @@
 
 {#if ['/', '#', '@'].includes(command?.charAt(0)) || '\\#' === command.slice(0, 2)}
 	{#if command?.charAt(0) === '/'}
-		<Prompts bind:this={commandElement} bind:prompt bind:files {command} />
+		<Prompts
+			bind:this={commandElement}
+			bind:prompt
+			bind:files
+			{command}
+			on:select={(e) => {
+				dispatch('select', { type: 'prompt', prompt: e.detail });
+			}}
+		/>
 	{:else if (command?.charAt(0) === '#' && command.startsWith('#') && !command.includes('# ')) || ('\\#' === command.slice(0, 2) && command.startsWith('#') && !command.includes('# '))}
 		<Knowledge
 			bind:this={commandElement}
