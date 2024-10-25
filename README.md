@@ -142,6 +142,36 @@ Both commands facilitate a built-in, hassle-free installation of both Open WebUI
 
 After installation, you can access Open WebUI at [http://localhost:3000](http://localhost:3000). Enjoy! 😄
 
+### Installing Open WebUI with Ollama, and ChromaDB to a Docker Swarm
+
+This installation method utilizes a stack file to deploy 3 seperate containers as services in a Docker Swarm. It includes Chroma, Ollama, and of course OpenWebUI for a streamlined setup via a single command. Along with this, there are pre-filled `Environment` variables based on popular  deployment choices. Choose the appropriate command based on your hardware setup:
+
+- **Before Starting**:
+  You will need to make a directory for your volumes to attach to, or you can specify proper docker volumes.The current structure for the volumes is utilizing the dir `data`  within the same path as the `docker-stack.yaml` and subdirs for each service.
+  **For example**:
+  ```bash
+  mkdir data && mkdir data/ollama && mkdir data/chromadb && mkdir data/ollama
+  ```
+
+- **With GPU Support**:
+  Utilize the `docker-stack.yaml` file as is
+  
+  ```bash
+  docker stack deploy -c docker-stack.yaml -d super-awesome-ai
+  ```
+
+- **With CPU Support**:
+  Modify the `docker-stack.yaml` file and remove the following lines `70-76`, then deploy with the above snippet
+
+- **Additionally**:
+  1. Enable Docker GPU support in order to utilize the Ollama container as is. To do this, see [Nvidia Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html " on Nvidia's site.") 
+
+  2. You need to ensure CUDA is Enabled, follow your OS and GPU instructions for that.
+
+  3. follow the [Guide here on configuring Docker to with with your GPU](https://gist.github.com/tomlankhorst/33da3c4b9edbde5c83fc1244f010815c#configuring-docker-to-work-with-your-gpus)
+
+  4. You need to ensure GPU Resource is enabled in the Docker `config.toml`. You can enable GPU resource advertising by uncommenting the `swarm-resource = "DOCKER_RESOURCE_GPU"` line (line 2) in `/etc/nvidia-container-runtime/config.toml` . The docker daemon must be restarted after updating these files by running `sudo service docker restart` on each node. (May require entire restart)
+
 ### Other Installation Methods
 
 We offer various installation alternatives, including non-Docker native installation methods, Docker Compose, Kustomize, and Helm. Visit our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/) or join our [Discord community](https://discord.gg/5rJgQTnV4s) for comprehensive guidance.
