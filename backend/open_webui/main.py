@@ -94,6 +94,7 @@ from open_webui.config import (
 from open_webui.constants import TASKS
 from open_webui.env import (
     CHANGELOG,
+    ENABLE_AUDIT_LOGS,
     GLOBAL_LOG_LEVEL,
     SAFE_MODE,
     SRC_LOG_LEVELS,
@@ -111,6 +112,43 @@ from open_webui.utils.misc import (
     get_last_user_message,
     prepend_to_first_user_message_content,
 )
+from open_webui.utils.task import (
+    moa_response_generation_template,
+    search_query_generation_template,
+    title_generation_template,
+    tools_function_calling_generation_template,
+)
+from open_webui.utils.tools import get_tools
+from open_webui.utils.utils import (
+    create_token,
+    decode_token,
+    get_admin_user,
+    get_current_user,
+    get_http_authorization_cred,
+    get_password_hash,
+    get_verified_user,
+)
+from open_webui.utils.webhook import post_webhook
+from open_webui.utils.logger import start_logger
+
+from open_webui.utils.task import (
+    moa_response_generation_template,
+    search_query_generation_template,
+    title_generation_template,
+    tools_function_calling_generation_template,
+)
+from open_webui.utils.tools import get_tools
+from open_webui.utils.utils import (
+    create_token,
+    decode_token,
+    get_admin_user,
+    get_current_user,
+    get_http_authorization_cred,
+    get_password_hash,
+    get_verified_user,
+)
+from open_webui.utils.webhook import post_webhook
+
 from open_webui.utils.oauth import oauth_manager
 from open_webui.utils.payload import convert_payload_openai_to_ollama
 from open_webui.utils.response import (
@@ -174,6 +212,8 @@ https://github.com/open-webui/open-webui
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    start_logger(ENABLE_AUDIT_LOGS)
+
     if RESET_CONFIG_ON_START:
         reset_config()
 

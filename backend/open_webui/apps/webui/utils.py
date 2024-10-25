@@ -2,7 +2,6 @@ import os
 import re
 import subprocess
 import sys
-from importlib import util
 import types
 import tempfile
 

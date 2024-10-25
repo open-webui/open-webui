@@ -2,10 +2,11 @@ import logging
 import os
 import uuid
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 from pydantic import BaseModel
 import mimetypes
 
+from open_webui.utils.logger import AuditLogger
 from open_webui.storage.provider import Storage
 
 from open_webui.apps.webui.models.files import (
@@ -18,14 +19,14 @@ from open_webui.apps.retrieval.main import process_file, ProcessFileForm
 
 from open_webui.config import UPLOAD_DIR
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.constants import ERROR_MESSAGES
+from open_webui.constants import AUDIT_EVENT, ERROR_MESSAGES
 
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
 
 
-from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.utils.utils import get_admin_user, get_audit_logger, get_verified_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -39,7 +40,11 @@ router = APIRouter()
 
 
 @router.post("/")
-def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
+def upload_file(
+    file: UploadFile = File(...),
+    user=Depends(get_verified_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+):
     log.info(f"file.content_type: {file.content_type}")
     try:
         unsanitized_filename = file.filename
@@ -74,8 +79,14 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
             log.exception(e)
             log.error(f"Error processing file: {file_item.id}")
 
-        if file_item:
-            return file_item
+        if file:
+            audit_logger.write(
+                AUDIT_EVENT.ENTITY_CREATED,
+                cast(FileModel, file),
+                object_type="FILE",
+                admin=user,
+            )
+            return file
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -110,7 +121,11 @@ async def list_files(user=Depends(get_verified_user)):
 
 
 @router.delete("/all")
-async def delete_all_files(user=Depends(get_admin_user)):
+async def delete_all_files(
+    request: Request,
+    user=Depends(get_admin_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+):
     result = Files.delete_all_files()
     if result:
         try:
@@ -122,6 +137,16 @@ async def delete_all_files(user=Depends(get_admin_user)):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),
             )
+            print(f"Failed to process the directory {folder}. Reason: {e}")
+
+            print(f"Failed to process the directory {folder}. Reason: {e}")
+
+        audit_logger.write(
+            AUDIT_EVENT.ENTITY_DELETED,
+            admin=user,
+            request_uri=str(request.url),
+            object_type="File",
+        )
         return {"message": "All files deleted successfully"}
     else:
         raise HTTPException(
@@ -177,7 +202,10 @@ class ContentForm(BaseModel):
 
 @router.post("/{id}/data/content/update")
 async def update_file_data_content_by_id(
-    id: str, form_data: ContentForm, user=Depends(get_verified_user)
+    id: str,
+    form_data: ContentForm,
+    user=Depends(get_verified_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
 ):
     file = Files.get_file_by_id(id)
 
@@ -188,6 +216,15 @@ async def update_file_data_content_by_id(
         except Exception as e:
             log.exception(e)
             log.error(f"Error processing file: {file.id}")
+
+        if file is not None:
+            audit_logger.write(
+                AUDIT_EVENT.ENTITY_UPDATED,
+                file,
+                admin=user,
+            )
+        else:
+            log.error("File was not found or became None during processing.")
 
         return {"content": file.data.get("content", "")}
     else:
@@ -316,7 +353,11 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
 
 
 @router.delete("/{id}")
-async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
+async def delete_file_by_id(
+    id: str,
+    user=Depends(get_verified_user),
+    audit_logger: AuditLogger = Depends(get_audit_logger),
+):
     file = Files.get_file_by_id(id)
     if file and (file.user_id == user.id or user.role == "admin"):
         result = Files.delete_file_by_id(id)
@@ -330,6 +371,7 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),
                 )
+            audit_logger.write(AUDIT_EVENT.ENTITY_DELETED, id, admin=user)
             return {"message": "File deleted successfully"}
         else:
             raise HTTPException(
