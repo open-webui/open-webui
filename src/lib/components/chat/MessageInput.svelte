@@ -361,8 +361,8 @@
 							document.getElementById('chat-input')?.focus();
 						}}
 						on:confirm={async (e) => {
-							const response = e.detail;
-							prompt = `${prompt}${response} `;
+							const { text, filename } = e.detail;
+							prompt = `${prompt}${text} `;
 
 							recording = false;
 
@@ -509,54 +509,202 @@
 									</InputMenu>
 								</div>
 
-								<div
-									bind:this={chatInputContainerElement}
-									id="chat-input-container"
-									class="scrollbar-hidden text-left bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-2.5 px-1 rounded-xl resize-none h-[48px] overflow-auto"
-								>
-									<RichTextInput
-										bind:this={chatInputElement}
+								{#if $settings?.richTextInput ?? true}
+									<div
+										bind:this={chatInputContainerElement}
+										id="chat-input-container"
+										class="scrollbar-hidden text-left bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-2.5 px-1 rounded-xl resize-none h-[48px] overflow-auto"
+									>
+										<RichTextInput
+											bind:this={chatInputElement}
+											id="chat-input"
+											trim={true}
+											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
+											bind:value={prompt}
+											shiftEnter={!$mobile ||
+												!(
+													'ontouchstart' in window ||
+													navigator.maxTouchPoints > 0 ||
+													navigator.msMaxTouchPoints > 0
+												)}
+											on:enter={async (e) => {
+												if (prompt !== '') {
+													dispatch('submit', prompt);
+												}
+											}}
+											on:input={async (e) => {
+												if (chatInputContainerElement) {
+													chatInputContainerElement.style.height = '';
+													chatInputContainerElement.style.height =
+														Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
+												}
+											}}
+											on:focus={async (e) => {
+												if (chatInputContainerElement) {
+													chatInputContainerElement.style.height = '';
+													chatInputContainerElement.style.height =
+														Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
+												}
+											}}
+											on:keypress={(e) => {
+												e = e.detail.event;
+											}}
+											on:keydown={async (e) => {
+												e = e.detail.event;
+
+												if (chatInputContainerElement) {
+													chatInputContainerElement.style.height = '';
+													chatInputContainerElement.style.height =
+														Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
+												}
+
+												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
+												const commandsContainerElement =
+													document.getElementById('commands-container');
+
+												// Command/Ctrl + Shift + Enter to submit a message pair
+												if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
+													e.preventDefault();
+													createMessagePair(prompt);
+												}
+
+												// Check if Ctrl + R is pressed
+												if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
+													e.preventDefault();
+													console.log('regenerate');
+
+													const regenerateButton = [
+														...document.getElementsByClassName('regenerate-response-button')
+													]?.at(-1);
+
+													regenerateButton?.click();
+												}
+
+												if (prompt === '' && e.key == 'ArrowUp') {
+													e.preventDefault();
+
+													const userMessageElement = [
+														...document.getElementsByClassName('user-message')
+													]?.at(-1);
+
+													const editButton = [
+														...document.getElementsByClassName('edit-user-message-button')
+													]?.at(-1);
+
+													console.log(userMessageElement);
+
+													userMessageElement.scrollIntoView({ block: 'center' });
+													editButton?.click();
+												}
+
+												if (commandsContainerElement && e.key === 'ArrowUp') {
+													e.preventDefault();
+													commandsElement.selectUp();
+
+													const commandOptionButton = [
+														...document.getElementsByClassName('selected-command-option-button')
+													]?.at(-1);
+													commandOptionButton.scrollIntoView({ block: 'center' });
+												}
+
+												if (commandsContainerElement && e.key === 'ArrowDown') {
+													e.preventDefault();
+													commandsElement.selectDown();
+
+													const commandOptionButton = [
+														...document.getElementsByClassName('selected-command-option-button')
+													]?.at(-1);
+													commandOptionButton.scrollIntoView({ block: 'center' });
+												}
+
+												if (commandsContainerElement && e.key === 'Enter') {
+													e.preventDefault();
+
+													const commandOptionButton = [
+														...document.getElementsByClassName('selected-command-option-button')
+													]?.at(-1);
+
+													if (e.shiftKey) {
+														prompt = `${prompt}\n`;
+													} else if (commandOptionButton) {
+														commandOptionButton?.click();
+													} else {
+														document.getElementById('send-message-button')?.click();
+													}
+												}
+
+												if (commandsContainerElement && e.key === 'Tab') {
+													e.preventDefault();
+
+													const commandOptionButton = [
+														...document.getElementsByClassName('selected-command-option-button')
+													]?.at(-1);
+
+													commandOptionButton?.click();
+												}
+
+												if (e.key === 'Escape') {
+													console.log('Escape');
+													atSelectedModel = undefined;
+												}
+											}}
+											on:paste={async (e) => {
+												e = e.detail.event;
+												console.log(e);
+
+												const clipboardData = e.clipboardData || window.clipboardData;
+
+												if (clipboardData && clipboardData.items) {
+													for (const item of clipboardData.items) {
+														if (item.type.indexOf('image') !== -1) {
+															const blob = item.getAsFile();
+															const reader = new FileReader();
+
+															reader.onload = function (e) {
+																files = [
+																	...files,
+																	{
+																		type: 'image',
+																		url: `${e.target.result}`
+																	}
+																];
+															};
+
+															reader.readAsDataURL(blob);
+														}
+													}
+												}
+											}}
+										/>
+									</div>
+								{:else}
+									<textarea
 										id="chat-input"
-										trim={true}
+										bind:this={chatInputElement}
+										class="scrollbar-hidden bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-3 px-1 rounded-xl resize-none h-[48px]"
 										placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 										bind:value={prompt}
-										shiftEnter={!$mobile ||
-											!(
-												'ontouchstart' in window ||
-												navigator.maxTouchPoints > 0 ||
-												navigator.msMaxTouchPoints > 0
-											)}
-										on:enter={async (e) => {
-											if (prompt !== '') {
-												dispatch('submit', prompt);
-											}
-										}}
-										on:input={async (e) => {
-											if (chatInputContainerElement) {
-												chatInputContainerElement.style.height = '';
-												chatInputContainerElement.style.height =
-													Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
-											}
-										}}
-										on:focus={async (e) => {
-											if (chatInputContainerElement) {
-												chatInputContainerElement.style.height = '';
-												chatInputContainerElement.style.height =
-													Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
-											}
-										}}
 										on:keypress={(e) => {
-											e = e.detail.event;
+											if (
+												!$mobile ||
+												!(
+													'ontouchstart' in window ||
+													navigator.maxTouchPoints > 0 ||
+													navigator.msMaxTouchPoints > 0
+												)
+											) {
+												// Prevent Enter key from creating a new line
+												if (e.key === 'Enter' && !e.shiftKey) {
+													e.preventDefault();
+												}
+
+												// Submit the prompt when Enter key is pressed
+												if (prompt !== '' && e.key === 'Enter' && !e.shiftKey) {
+													dispatch('submit', prompt);
+												}
+											}
 										}}
 										on:keydown={async (e) => {
-											e = e.detail.event;
-
-											if (chatInputContainerElement) {
-												chatInputContainerElement.style.height = '';
-												chatInputContainerElement.style.height =
-													Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
-											}
-
 											const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 											const commandsContainerElement =
 												document.getElementById('commands-container');
@@ -640,6 +788,26 @@
 												]?.at(-1);
 
 												commandOptionButton?.click();
+											} else if (e.key === 'Tab') {
+												const words = findWordIndices(prompt);
+
+												if (words.length > 0) {
+													const word = words.at(0);
+													const fullPrompt = prompt;
+
+													prompt = prompt.substring(0, word?.endIndex + 1);
+													await tick();
+
+													e.target.scrollTop = e.target.scrollHeight;
+													prompt = fullPrompt;
+													await tick();
+
+													e.preventDefault();
+													e.target.setSelectionRange(word?.startIndex, word.endIndex + 1);
+												}
+
+												e.target.style.height = '';
+												e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
 											}
 
 											if (e.key === 'Escape') {
@@ -647,10 +815,17 @@
 												atSelectedModel = undefined;
 											}
 										}}
+										rows="1"
+										on:input={async (e) => {
+											e.target.style.height = '';
+											e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+											user = null;
+										}}
+										on:focus={async (e) => {
+											e.target.style.height = '';
+											e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+										}}
 										on:paste={async (e) => {
-											e = e.detail.event;
-											console.log(e);
-
 											const clipboardData = e.clipboardData || window.clipboardData;
 
 											if (clipboardData && clipboardData.items) {
@@ -675,7 +850,7 @@
 											}
 										}}
 									/>
-								</div>
+								{/if}
 
 								<div class="self-end mb-2 flex space-x-1 mr-1">
 									{#if !history?.currentId || history.messages[history.currentId]?.done == true}

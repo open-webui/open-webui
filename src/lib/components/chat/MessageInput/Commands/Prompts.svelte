@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { prompts } from '$lib/stores';
+	import { prompts, user } from '$lib/stores';
 	import {
 		findWordIndices,
 		getUserPosition,
@@ -78,6 +78,12 @@
 			text = text.replaceAll('{{USER_LOCATION}}', String(location));
 		}
 
+		if (command.content.includes('{{USER_NAME}}')) {
+			console.log($user);
+			const name = $user.name || 'User';
+			text = text.replaceAll('{{USER_NAME}}', name);
+		}
+
 		if (command.content.includes('{{USER_LANGUAGE}}')) {
 			const language = localStorage.getItem('locale') || 'en-US';
 			text = text.replaceAll('{{USER_LANGUAGE}}', language);
@@ -114,13 +120,16 @@
 		const chatInputElement = document.getElementById('chat-input');
 
 		await tick();
-
 		if (chatInputContainerElement) {
 			chatInputContainerElement.style.height = '';
 			chatInputContainerElement.style.height =
 				Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
+		}
 
-			chatInputElement?.focus();
+		await tick();
+		if (chatInputElement) {
+			chatInputElement.focus();
+			chatInputElement.dispatchEvent(new Event('input'));
 		}
 	};
 </script>

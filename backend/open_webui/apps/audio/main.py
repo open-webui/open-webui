@@ -522,7 +522,8 @@ def transcription(
             else:
                 data = transcribe(file_path)
 
-            return data
+            file_path = file_path.split("/")[-1]
+            return {**data, "filename": file_path}
         except Exception as e:
             log.exception(e)
             raise HTTPException(

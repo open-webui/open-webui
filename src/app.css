@@ -189,7 +189,7 @@ input[type='number'] {
 }
 
 .ProseMirror {
-	@apply h-full  min-h-fit max-h-full;
+	@apply h-full  min-h-fit max-h-full whitespace-pre-wrap;
 }
 
 .ProseMirror:focus {

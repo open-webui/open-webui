@@ -24,7 +24,7 @@
 		TASK_MODEL: '',
 		TASK_MODEL_EXTERNAL: '',
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
-		TAG_GENERATION_PROMPT_TEMPLATE: '',
+		TAGS_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_SEARCH_QUERY: true,
 		SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE: ''
 	};
@@ -141,7 +141,7 @@
 					placement="top-start"
 				>
 					<Textarea
-						bind:value={taskConfig.TAG_GENERATION_PROMPT_TEMPLATE}
+						bind:value={taskConfig.TAGS_GENERATION_PROMPT_TEMPLATE}
 						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 					/>
 				</Tooltip>

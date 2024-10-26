@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { createEventDispatcher, tick, getContext } from 'svelte';
+	import { createEventDispatcher, tick, getContext, onMount, onDestroy } from 'svelte';
 	import { config, settings } from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
@@ -52,7 +52,7 @@
 	let audioChunks = [];
 
 	const MIN_DECIBELS = -45;
-	const VISUALIZER_BUFFER_LENGTH = 300;
+	let VISUALIZER_BUFFER_LENGTH = 300;
 
 	let visualizerData = Array(VISUALIZER_BUFFER_LENGTH).fill(0);
 
@@ -142,8 +142,8 @@
 		});
 
 		if (res) {
-			console.log(res.text);
-			dispatch('confirm', res.text);
+			console.log(res);
+			dispatch('confirm', res);
 		}
 	};
 
@@ -278,12 +278,40 @@
 
 		stream = null;
 	};
+
+	let resizeObserver;
+	let containerWidth;
+
+	let maxVisibleItems = 300;
+	$: maxVisibleItems = Math.floor(containerWidth / 5); // 2px width + 0.5px gap
+
+	onMount(() => {
+		// listen to width changes
+		resizeObserver = new ResizeObserver(() => {
+			VISUALIZER_BUFFER_LENGTH = Math.floor(window.innerWidth / 4);
+			if (visualizerData.length > VISUALIZER_BUFFER_LENGTH) {
+				visualizerData = visualizerData.slice(visualizerData.length - VISUALIZER_BUFFER_LENGTH);
+			} else {
+				visualizerData = Array(VISUALIZER_BUFFER_LENGTH - visualizerData.length)
+					.fill(0)
+					.concat(visualizerData);
+			}
+		});
+
+		resizeObserver.observe(document.body);
+	});
+
+	onDestroy(() => {
+		// remove resize observer
+		resizeObserver.disconnect();
+	});
 </script>
 
 <div
+	bind:clientWidth={containerWidth}
 	class="{loading
 		? ' bg-gray-100/50 dark:bg-gray-850/50'
-		: 'bg-indigo-300/10 dark:bg-indigo-500/10 '} rounded-full flex {className}"
+		: 'bg-indigo-300/10 dark:bg-indigo-500/10 '} rounded-full flex justify-between {className}"
 >
 	<div class="flex items-center mr-1">
 		<button
@@ -318,146 +346,152 @@
 		class="flex flex-1 self-center items-center justify-between ml-2 mx-1 overflow-hidden h-6"
 		dir="rtl"
 	>
-		<div class="flex-1 flex items-center gap-0.5 h-6">
+		<div
+			class="flex items-center gap-0.5 h-6 w-full max-w-full overflow-hidden overflow-x-hidden flex-wrap"
+		>
 			{#each visualizerData.slice().reverse() as rms}
-				<div
-					class="w-[2px]
+				<div class="flex items-center h-full">
+					<div
+						class="w-[2px] flex-shrink-0
                     
                     {loading
-						? ' bg-gray-500 dark:bg-gray-400   '
-						: 'bg-indigo-500 dark:bg-indigo-400  '} 
+							? ' bg-gray-500 dark:bg-gray-400   '
+							: 'bg-indigo-500 dark:bg-indigo-400  '} 
                     
                     inline-block h-full"
-					style="height: {Math.min(100, Math.max(14, rms * 100))}%;"
-				/>
+						style="height: {Math.min(100, Math.max(14, rms * 100))}%;"
+					/>
+				</div>
 			{/each}
 		</div>
 	</div>
 
-	<div class="  mx-1.5 pr-1 flex justify-center items-center">
-		<div
-			class="text-sm
+	<div class="flex">
+		<div class="  mx-1.5 pr-1 flex justify-center items-center">
+			<div
+				class="text-sm
         
         
         {loading ? ' text-gray-500  dark:text-gray-400  ' : ' text-indigo-400 '} 
        font-medium flex-1 mx-auto text-center"
-		>
-			{formatSeconds(durationSeconds)}
-		</div>
-	</div>
-
-	<div class="flex items-center mr-1">
-		{#if loading}
-			<div class=" text-gray-500 rounded-full cursor-not-allowed">
-				<svg
-					width="24"
-					height="24"
-					viewBox="0 0 24 24"
-					xmlns="http://www.w3.org/2000/svg"
-					fill="currentColor"
-					><style>
-						.spinner_OSmW {
-							transform-origin: center;
-							animation: spinner_T6mA 0.75s step-end infinite;
-						}
-						@keyframes spinner_T6mA {
-							8.3% {
-								transform: rotate(30deg);
-							}
-							16.6% {
-								transform: rotate(60deg);
-							}
-							25% {
-								transform: rotate(90deg);
-							}
-							33.3% {
-								transform: rotate(120deg);
-							}
-							41.6% {
-								transform: rotate(150deg);
-							}
-							50% {
-								transform: rotate(180deg);
-							}
-							58.3% {
-								transform: rotate(210deg);
-							}
-							66.6% {
-								transform: rotate(240deg);
-							}
-							75% {
-								transform: rotate(270deg);
-							}
-							83.3% {
-								transform: rotate(300deg);
-							}
-							91.6% {
-								transform: rotate(330deg);
-							}
-							100% {
-								transform: rotate(360deg);
-							}
-						}
-					</style><g class="spinner_OSmW"
-						><rect x="11" y="1" width="2" height="5" opacity=".14" /><rect
-							x="11"
-							y="1"
-							width="2"
-							height="5"
-							transform="rotate(30 12 12)"
-							opacity=".29"
-						/><rect
-							x="11"
-							y="1"
-							width="2"
-							height="5"
-							transform="rotate(60 12 12)"
-							opacity=".43"
-						/><rect
-							x="11"
-							y="1"
-							width="2"
-							height="5"
-							transform="rotate(90 12 12)"
-							opacity=".57"
-						/><rect
-							x="11"
-							y="1"
-							width="2"
-							height="5"
-							transform="rotate(120 12 12)"
-							opacity=".71"
-						/><rect
-							x="11"
-							y="1"
-							width="2"
-							height="5"
-							transform="rotate(150 12 12)"
-							opacity=".86"
-						/><rect x="11" y="1" width="2" height="5" transform="rotate(180 12 12)" /></g
-					></svg
-				>
-			</div>
-		{:else}
-			<button
-				type="button"
-				class="p-1.5 bg-indigo-500 text-white dark:bg-indigo-500 dark:text-blue-950 rounded-full"
-				on:click={async () => {
-					await confirmRecording();
-				}}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke-width="2.5"
-					stroke="currentColor"
-					class="size-4"
+				{formatSeconds(durationSeconds)}
+			</div>
+		</div>
+
+		<div class="flex items-center">
+			{#if loading}
+				<div class=" text-gray-500 rounded-full cursor-not-allowed">
+					<svg
+						width="24"
+						height="24"
+						viewBox="0 0 24 24"
+						xmlns="http://www.w3.org/2000/svg"
+						fill="currentColor"
+						><style>
+							.spinner_OSmW {
+								transform-origin: center;
+								animation: spinner_T6mA 0.75s step-end infinite;
+							}
+							@keyframes spinner_T6mA {
+								8.3% {
+									transform: rotate(30deg);
+								}
+								16.6% {
+									transform: rotate(60deg);
+								}
+								25% {
+									transform: rotate(90deg);
+								}
+								33.3% {
+									transform: rotate(120deg);
+								}
+								41.6% {
+									transform: rotate(150deg);
+								}
+								50% {
+									transform: rotate(180deg);
+								}
+								58.3% {
+									transform: rotate(210deg);
+								}
+								66.6% {
+									transform: rotate(240deg);
+								}
+								75% {
+									transform: rotate(270deg);
+								}
+								83.3% {
+									transform: rotate(300deg);
+								}
+								91.6% {
+									transform: rotate(330deg);
+								}
+								100% {
+									transform: rotate(360deg);
+								}
+							}
+						</style><g class="spinner_OSmW"
+							><rect x="11" y="1" width="2" height="5" opacity=".14" /><rect
+								x="11"
+								y="1"
+								width="2"
+								height="5"
+								transform="rotate(30 12 12)"
+								opacity=".29"
+							/><rect
+								x="11"
+								y="1"
+								width="2"
+								height="5"
+								transform="rotate(60 12 12)"
+								opacity=".43"
+							/><rect
+								x="11"
+								y="1"
+								width="2"
+								height="5"
+								transform="rotate(90 12 12)"
+								opacity=".57"
+							/><rect
+								x="11"
+								y="1"
+								width="2"
+								height="5"
+								transform="rotate(120 12 12)"
+								opacity=".71"
+							/><rect
+								x="11"
+								y="1"
+								width="2"
+								height="5"
+								transform="rotate(150 12 12)"
+								opacity=".86"
+							/><rect x="11" y="1" width="2" height="5" transform="rotate(180 12 12)" /></g
+						></svg
+					>
+				</div>
+			{:else}
+				<button
+					type="button"
+					class="p-1.5 bg-indigo-500 text-white dark:bg-indigo-500 dark:text-blue-950 rounded-full"
+					on:click={async () => {
+						await confirmRecording();
+					}}
 				>
-					<path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-				</svg>
-			</button>
-		{/if}
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke-width="2.5"
+						stroke="currentColor"
+						class="size-4"
+					>
+						<path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+					</svg>
+				</button>
+			{/if}
+		</div>
 	</div>
 </div>
 

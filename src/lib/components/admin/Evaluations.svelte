@@ -1,4 +1,7 @@
 <script lang="ts">
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
+
 	import { onMount, getContext } from 'svelte';
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -12,7 +15,7 @@
 	let model = null;
 
 	import { models } from '$lib/stores';
-	import { deleteFeedbackById, getAllFeedbacks } from '$lib/apis/evaluations';
+	import { deleteFeedbackById, exportAllFeedbacks, getAllFeedbacks } from '$lib/apis/evaluations';
 
 	import FeedbackMenu from './Evaluations/FeedbackMenu.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
@@ -23,6 +26,10 @@
 	import Share from '../icons/Share.svelte';
 	import CloudArrowUp from '../icons/CloudArrowUp.svelte';
 	import { toast } from 'svelte-sonner';
+	import Spinner from '../common/Spinner.svelte';
+	import DocumentArrowUpSolid from '../icons/DocumentArrowUpSolid.svelte';
+	import DocumentArrowDown from '../icons/DocumentArrowDown.svelte';
+	import ArrowDownTray from '../icons/ArrowDownTray.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -35,6 +42,7 @@
 	let tagEmbeddings = new Map();
 
 	let loaded = false;
+	let loadingLeaderboard = true;
 	let debounceTimer;
 
 	$: paginatedFeedbacks = feedbacks.slice((page - 1) * 10, page * 10);
@@ -91,6 +99,8 @@
 				if (a.rating !== '-' && b.rating !== '-') return b.rating - a.rating;
 				return a.name.localeCompare(b.name);
 			});
+
+		loadingLeaderboard = false;
 	};
 
 	function calculateModelStats(
@@ -227,6 +237,8 @@
 	};
 
 	const debouncedQueryHandler = async () => {
+		loadingLeaderboard = true;
+
 		if (query.trim() === '') {
 			rankHandler();
 			return;
@@ -294,10 +306,21 @@
 		window.addEventListener('message', messageHandler, false);
 	};
 
-	onMount(async () => {
-		feedbacks = await getAllFeedbacks(localStorage.token);
-		loaded = true;
+	const exportHandler = async () => {
+		const _feedbacks = await exportAllFeedbacks(localStorage.token).catch((err) => {
+			toast.error(err);
+			return null;
+		});
 
+		if (_feedbacks) {
+			let blob = new Blob([JSON.stringify(_feedbacks)], {
+				type: 'application/json'
+			});
+			saveAs(blob, `feedback-history-export-${Date.now()}.json`);
+		}
+	};
+
+	const loadEmbeddingModel = async () => {
 		// Check if the tokenizer and model are already loaded and stored in the window object
 		if (!window.tokenizer) {
 			window.tokenizer = await AutoTokenizer.from_pretrained(EMBEDDING_MODEL);
@@ -314,6 +337,11 @@
 		// Pre-compute embeddings for all unique tags
 		const allTags = new Set(feedbacks.flatMap((feedback) => feedback.data.tags || []));
 		await getTagEmbeddings(Array.from(allTags));
+	};
+
+	onMount(async () => {
+		feedbacks = await getAllFeedbacks(localStorage.token);
+		loaded = true;
 
 		rankHandler();
 	});
@@ -343,6 +371,9 @@
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
 						bind:value={query}
 						placeholder={$i18n.t('Search')}
+						on:focus={() => {
+							loadEmbeddingModel();
+						}}
 					/>
 				</div>
 			</Tooltip>
@@ -352,13 +383,22 @@
 	<div
 		class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded pt-0.5"
 	>
+		{#if loadingLeaderboard}
+			<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
+				<div class="m-auto">
+					<Spinner />
+				</div>
+			</div>
+		{/if}
 		{#if (rankedModels ?? []).length === 0}
 			<div class="text-center text-xs text-gray-500 dark:text-gray-400 py-1">
 				{$i18n.t('No models found')}
 			</div>
 		{:else}
 			<table
-				class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full rounded"
+				class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full rounded {loadingLeaderboard
+					? 'opacity-20'
+					: ''}"
 			>
 				<thead
 					class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
@@ -462,6 +502,21 @@
 			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
 
 			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{feedbacks.length}</span>
+		</div>
+
+		<div>
+			<div>
+				<Tooltip content={$i18n.t('Export')}>
+					<button
+						class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
+						on:click={() => {
+							exportHandler();
+						}}
+					>
+						<ArrowDownTray className="size-3" />
+					</button>
+				</Tooltip>
+			</div>
 		</div>
 	</div>
 
@@ -606,18 +661,7 @@
 						</div>
 
 						<div class=" self-center">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								class="w-3.5 h-3.5"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
+							<CloudArrowUp className="size-3" strokeWidth="3" />
 						</div>
 					</button>
 				</Tooltip>
