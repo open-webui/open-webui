@@ -73,6 +73,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
         except Exception as e:
             log.exception(e)
             log.error(f"Error processing file: {file_item.id}")
+            raise e
 
         if file_item:
             return file_item
