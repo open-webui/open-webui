@@ -361,8 +361,8 @@
 							document.getElementById('chat-input')?.focus();
 						}}
 						on:confirm={async (e) => {
-							const response = e.detail;
-							prompt = `${prompt}${response} `;
+							const { text, filename } = e.detail;
+							prompt = `${prompt}${text} `;
 
 							recording = false;
 

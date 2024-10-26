@@ -85,8 +85,8 @@
 									voiceInput = false;
 								}}
 								on:confirm={(e) => {
-									const response = e.detail;
-									content = `${content}${response} `;
+									const { text, filename } = e.detail;
+									content = `${content}${text} `;
 
 									voiceInput = false;
 								}}
