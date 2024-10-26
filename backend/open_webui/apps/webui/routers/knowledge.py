@@ -50,29 +50,32 @@ async def get_knowledge_items(
         knowledge_bases = []
 
         for knowledge in Knowledges.get_knowledge_items():
-            files = Files.get_file_metadatas_by_ids(
-                knowledge.data.get("file_ids", []) if knowledge.data else []
-            )
 
-            # Check if all files exist
-            if len(files) != len(knowledge.data.get("file_ids", [])):
-                missing_files = list(
-                    set(knowledge.data.get("file_ids", []))
-                    - set([file.id for file in files])
+            files = []
+            if knowledge.data:
+                files = Files.get_file_metadatas_by_ids(
+                    knowledge.data.get("file_ids", [])
                 )
-                if missing_files:
-                    data = knowledge.data or {}
-                    file_ids = data.get("file_ids", [])
 
-                    for missing_file in missing_files:
-                        file_ids.remove(missing_file)
-
-                    data["file_ids"] = file_ids
-                    Knowledges.update_knowledge_by_id(
-                        id=knowledge.id, form_data=KnowledgeUpdateForm(data=data)
+                # Check if all files exist
+                if len(files) != len(knowledge.data.get("file_ids", [])):
+                    missing_files = list(
+                        set(knowledge.data.get("file_ids", []))
+                        - set([file.id for file in files])
                     )
+                    if missing_files:
+                        data = knowledge.data or {}
+                        file_ids = data.get("file_ids", [])
 
-                    files = Files.get_file_metadatas_by_ids(file_ids)
+                        for missing_file in missing_files:
+                            file_ids.remove(missing_file)
+
+                        data["file_ids"] = file_ids
+                        Knowledges.update_knowledge_by_id(
+                            id=knowledge.id, form_data=KnowledgeUpdateForm(data=data)
+                        )
+
+                        files = Files.get_file_metadatas_by_ids(file_ids)
 
             knowledge_bases.append(
                 KnowledgeResponse(
