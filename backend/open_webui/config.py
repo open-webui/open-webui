@@ -1074,10 +1074,10 @@ RAG_TEXT_SPLITTER = PersistentConfig(
 
 
 TIKTOKEN_CACHE_DIR = os.environ.get("TIKTOKEN_CACHE_DIR", f"{CACHE_DIR}/tiktoken")
-TIKTOKEN_ENCODING_MODEL_NAME = PersistentConfig(
-    "TIKTOKEN_ENCODING_MODEL_NAME",
-    "rag.tiktoken_encoding_model_name",
-    os.environ.get("TIKTOKEN_ENCODING_MODEL_NAME", "cl100k_base"),
+TIKTOKEN_ENCODING_NAME = PersistentConfig(
+    "TIKTOKEN_ENCODING_NAME",
+    "rag.tiktoken_encoding_name",
+    os.environ.get("TIKTOKEN_ENCODING_NAME", "cl100k_base"),
 )
 
 
