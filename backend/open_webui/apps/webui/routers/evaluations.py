@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from open_webui.apps.webui.models.users import Users, UserModel
 from open_webui.apps.webui.models.feedbacks import (
     FeedbackModel,
+    FeedbackResponse,
     FeedbackForm,
     Feedbacks,
 )
@@ -55,27 +56,15 @@ async def update_config(
     }
 
 
-@router.get("/feedbacks", response_model=list[FeedbackModel])
-async def get_feedbacks(user=Depends(get_verified_user)):
-    feedbacks = Feedbacks.get_feedbacks_by_user_id(user.id)
-    return feedbacks
-
-
-@router.delete("/feedbacks", response_model=bool)
-async def delete_feedbacks(user=Depends(get_verified_user)):
-    success = Feedbacks.delete_feedbacks_by_user_id(user.id)
-    return success
-
-
-class FeedbackUserModel(FeedbackModel):
+class FeedbackUserResponse(FeedbackResponse):
     user: Optional[UserModel] = None
 
 
-@router.get("/feedbacks/all", response_model=list[FeedbackUserModel])
+@router.get("/feedbacks/all", response_model=list[FeedbackUserResponse])
 async def get_all_feedbacks(user=Depends(get_admin_user)):
     feedbacks = Feedbacks.get_all_feedbacks()
     return [
-        FeedbackUserModel(
+        FeedbackUserResponse(
             **feedback.model_dump(), user=Users.get_user_by_id(feedback.user_id)
         )
         for feedback in feedbacks
@@ -85,6 +74,29 @@ async def get_all_feedbacks(user=Depends(get_admin_user)):
 @router.delete("/feedbacks/all")
 async def delete_all_feedbacks(user=Depends(get_admin_user)):
     success = Feedbacks.delete_all_feedbacks()
+    return success
+
+
+@router.get("/feedbacks/all/export", response_model=list[FeedbackModel])
+async def get_all_feedbacks(user=Depends(get_admin_user)):
+    feedbacks = Feedbacks.get_all_feedbacks()
+    return [
+        FeedbackModel(
+            **feedback.model_dump(), user=Users.get_user_by_id(feedback.user_id)
+        )
+        for feedback in feedbacks
+    ]
+
+
+@router.get("/feedbacks/user", response_model=list[FeedbackUserResponse])
+async def get_feedbacks(user=Depends(get_verified_user)):
+    feedbacks = Feedbacks.get_feedbacks_by_user_id(user.id)
+    return feedbacks
+
+
+@router.delete("/feedbacks", response_model=bool)
+async def delete_feedbacks(user=Depends(get_verified_user)):
+    success = Feedbacks.delete_feedbacks_by_user_id(user.id)
     return success
 
 
