@@ -490,6 +490,7 @@
 	"Not factually correct": "ไม่ถูกต้องตามข้อเท็จจริง",
 	"Not helpful": "",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "หมายเหตุ: หากคุณตั้งค่าคะแนนขั้นต่ำ การค้นหาจะคืนเอกสารที่มีคะแนนมากกว่าหรือเท่ากับคะแนนขั้นต่ำเท่านั้น",
+	"Notes": "",
 	"Notifications": "การแจ้งเตือน",
 	"November": "พฤศจิกายน",
 	"num_gpu (Ollama)": "",

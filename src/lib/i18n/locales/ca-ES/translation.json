@@ -490,6 +490,7 @@
 	"Not factually correct": "No és clarament correcte",
 	"Not helpful": "",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Nota: Si s'estableix una puntuació mínima, la cerca només retornarà documents amb una puntuació major o igual a la puntuació mínima.",
+	"Notes": "",
 	"Notifications": "Notificacions",
 	"November": "Novembre",
 	"num_gpu (Ollama)": "num_gpu (Ollama)",

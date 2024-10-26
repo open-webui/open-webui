@@ -490,6 +490,7 @@
 	"Not factually correct": "Non corretto dal punto di vista fattuale",
 	"Not helpful": "",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Nota: se imposti un punteggio minimo, la ricerca restituirà solo i documenti con un punteggio maggiore o uguale al punteggio minimo.",
+	"Notes": "",
 	"Notifications": "Notifiche desktop",
 	"November": "Novembre",
 	"num_gpu (Ollama)": "",

@@ -490,6 +490,7 @@
 	"Not factually correct": "Níl sé ceart go fírineach",
 	"Not helpful": "",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Nóta: Má shocraíonn tú íosscór, ní thabharfaidh an cuardach ach doiciméid a bhfuil scór níos mó ná nó cothrom leis an scór íosta ar ais.",
+	"Notes": "",
 	"Notifications": "Fógraí",
 	"November": "Samhain",
 	"num_gpu (Ollama)": "num_gpu (Ollama)",

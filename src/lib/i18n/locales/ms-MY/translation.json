@@ -490,6 +490,7 @@
 	"Not factually correct": "Tidak tepat secara fakta",
 	"Not helpful": "",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Nota: Jika anda menetapkan skor minimum, carian hanya akan mengembalikan dokumen dengan skor lebih besar daripada atau sama dengan skor minimum.",
+	"Notes": "",
 	"Notifications": "Pemberitahuan",
 	"November": "November",
 	"num_gpu (Ollama)": "",

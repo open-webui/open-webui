@@ -490,6 +490,7 @@
 	"Not factually correct": "Ikke faktuelt korrekt",
 	"Not helpful": "",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Bemærk: Hvis du angiver en minimumscore, returnerer søgningen kun dokumenter med en score, der er større end eller lig med minimumscoren.",
+	"Notes": "",
 	"Notifications": "Notifikationer",
 	"November": "November",
 	"num_gpu (Ollama)": "num_gpu (Ollama)",

@@ -490,6 +490,7 @@
 	"Not factually correct": "Nu este corect din punct de vedere factual",
 	"Not helpful": "",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Notă: Dacă setați un scor minim, căutarea va returna doar documente cu un scor mai mare sau egal cu scorul minim.",
+	"Notes": "",
 	"Notifications": "Notificări",
 	"November": "Noiembrie",
 	"num_gpu (Ollama)": "",
