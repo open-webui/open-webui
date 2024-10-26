@@ -667,7 +667,11 @@ def save_docs_to_vector_db(
                 add_start_index=True,
             )
         elif app.state.config.TEXT_SPLITTER == "token":
-            tiktoken.get_encoding(app.state.config.TIKTOKEN_ENCODING_NAME)
+            log.info(
+                f"Using token text splitter: {app.state.config.TIKTOKEN_ENCODING_NAME}"
+            )
+
+            tiktoken.get_encoding(str(app.state.config.TIKTOKEN_ENCODING_NAME))
             text_splitter = TokenTextSplitter(
                 encoding_name=str(app.state.config.TIKTOKEN_ENCODING_NAME),
                 chunk_size=app.state.config.CHUNK_SIZE,
