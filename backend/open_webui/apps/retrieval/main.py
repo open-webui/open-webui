@@ -669,7 +669,7 @@ def save_docs_to_vector_db(
         elif app.state.config.TEXT_SPLITTER == "token":
 
             text_splitter = TokenTextSplitter(
-                encoding_name=app.state.config.TIKTOKEN_ENCODING_NAME,
+                encoding_name=str(app.state.config.TIKTOKEN_ENCODING_NAME),
                 chunk_size=app.state.config.CHUNK_SIZE,
                 chunk_overlap=app.state.config.CHUNK_OVERLAP,
                 add_start_index=True,
