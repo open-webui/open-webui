@@ -23,6 +23,7 @@
 	import Share from '../icons/Share.svelte';
 	import CloudArrowUp from '../icons/CloudArrowUp.svelte';
 	import { toast } from 'svelte-sonner';
+	import Spinner from '../common/Spinner.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -35,6 +36,7 @@
 	let tagEmbeddings = new Map();
 
 	let loaded = false;
+	let loadingLeaderboard = true;
 	let debounceTimer;
 
 	$: paginatedFeedbacks = feedbacks.slice((page - 1) * 10, page * 10);
@@ -91,6 +93,8 @@
 				if (a.rating !== '-' && b.rating !== '-') return b.rating - a.rating;
 				return a.name.localeCompare(b.name);
 			});
+
+		loadingLeaderboard = false;
 	};
 
 	function calculateModelStats(
@@ -227,6 +231,8 @@
 	};
 
 	const debouncedQueryHandler = async () => {
+		loadingLeaderboard = true;
+
 		if (query.trim() === '') {
 			rankHandler();
 			return;
@@ -294,10 +300,7 @@
 		window.addEventListener('message', messageHandler, false);
 	};
 
-	onMount(async () => {
-		feedbacks = await getAllFeedbacks(localStorage.token);
-		loaded = true;
-
+	const loadEmbeddingModel = async () => {
 		// Check if the tokenizer and model are already loaded and stored in the window object
 		if (!window.tokenizer) {
 			window.tokenizer = await AutoTokenizer.from_pretrained(EMBEDDING_MODEL);
@@ -314,6 +317,11 @@
 		// Pre-compute embeddings for all unique tags
 		const allTags = new Set(feedbacks.flatMap((feedback) => feedback.data.tags || []));
 		await getTagEmbeddings(Array.from(allTags));
+	};
+
+	onMount(async () => {
+		feedbacks = await getAllFeedbacks(localStorage.token);
+		loaded = true;
 
 		rankHandler();
 	});
@@ -343,6 +351,9 @@
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
 						bind:value={query}
 						placeholder={$i18n.t('Search')}
+						on:focus={() => {
+							loadEmbeddingModel();
+						}}
 					/>
 				</div>
 			</Tooltip>
@@ -352,13 +363,22 @@
 	<div
 		class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded pt-0.5"
 	>
+		{#if loadingLeaderboard}
+			<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
+				<div class="m-auto">
+					<Spinner />
+				</div>
+			</div>
+		{/if}
 		{#if (rankedModels ?? []).length === 0}
 			<div class="text-center text-xs text-gray-500 dark:text-gray-400 py-1">
 				{$i18n.t('No models found')}
 			</div>
 		{:else}
 			<table
-				class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full rounded"
+				class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full rounded {loadingLeaderboard
+					? 'opacity-20'
+					: ''}"
 			>
 				<thead
 					class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
