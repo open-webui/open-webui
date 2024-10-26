@@ -442,12 +442,10 @@ async def chat_completion_tools_handler(
                 tool_function = tools[tool_function_name]["callable"]
                 sig = inspect.signature(tool_function)
                 tool_function_params = {
-                    k: v
-                    for k, v in tool_function_params.items()
-                    if k in sig.parameters
+                    k: v for k, v in tool_function_params.items() if k in sig.parameters
                 }
                 tool_output = await tool_function(**tool_function_params)
-                
+
             except Exception as e:
                 tool_output = str(e)
 
