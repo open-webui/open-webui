@@ -133,6 +133,10 @@
 			const uploadedFile = await uploadFile(localStorage.token, file);
 
 			if (uploadedFile) {
+				if (uploadedFile.error) {
+					toast.warning(uploadedFile.error);
+				}
+
 				fileItem.status = 'uploaded';
 				fileItem.file = uploadedFile;
 				fileItem.id = uploadedFile.id;

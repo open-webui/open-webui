@@ -76,7 +76,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
             file_item = FileModelResponse(
                 **{
                     **file_item.model_dump(),
-                    "error": e,
+                    "error": str(e.detail) if hasattr(e, "detail") else str(e),
                 }
             )
 
