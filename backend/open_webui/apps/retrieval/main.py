@@ -50,7 +50,7 @@ from open_webui.apps.retrieval.utils import (
 from open_webui.apps.webui.models.files import Files
 from open_webui.config import (
     BRAVE_SEARCH_API_KEY,
-    TIKTOKEN_ENCODING_NAME,
+    TIKTOKEN_ENCODING_MODEL_NAME,
     RAG_TEXT_SPLITTER,
     CHUNK_OVERLAP,
     CHUNK_SIZE,
@@ -135,7 +135,7 @@ app.state.config.CONTENT_EXTRACTION_ENGINE = CONTENT_EXTRACTION_ENGINE
 app.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL
 
 app.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER
-app.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME
+app.state.config.TIKTOKEN_ENCODING_MODEL_NAME = TIKTOKEN_ENCODING_MODEL_NAME
 
 app.state.config.CHUNK_SIZE = CHUNK_SIZE
 app.state.config.CHUNK_OVERLAP = CHUNK_OVERLAP
@@ -667,7 +667,7 @@ def save_docs_to_vector_db(
             )
         elif app.state.config.TEXT_SPLITTER == "token":
             text_splitter = TokenTextSplitter(
-                encoding_name=app.state.config.TIKTOKEN_ENCODING_NAME,
+                model_name=app.state.config.TIKTOKEN_ENCODING_MODEL_NAME,
                 chunk_size=app.state.config.CHUNK_SIZE,
                 chunk_overlap=app.state.config.CHUNK_OVERLAP,
                 add_start_index=True,
