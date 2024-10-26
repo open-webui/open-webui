@@ -120,13 +120,16 @@
 		const chatInputElement = document.getElementById('chat-input');
 
 		await tick();
-
 		if (chatInputContainerElement) {
 			chatInputContainerElement.style.height = '';
 			chatInputContainerElement.style.height =
 				Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
+		}
 
-			chatInputElement?.focus();
+		await tick();
+		if (chatInputElement) {
+			chatInputElement.focus();
+			chatInputElement.dispatchEvent(new Event('input'));
 		}
 	};
 </script>
