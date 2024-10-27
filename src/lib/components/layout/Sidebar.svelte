@@ -595,7 +595,7 @@
 									}
 
 									if (!chat.pinned) {
-										const res = await toggleChatPinnedStatusById(localStorage.token, id);
+										const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
 									}
 
 									initChatList();
@@ -681,7 +681,7 @@
 								}
 
 								if (chat.pinned) {
-									const res = await toggleChatPinnedStatusById(localStorage.token, id);
+									const res = await toggleChatPinnedStatusById(localStorage.token, chat, id);
 								}
 
 								initChatList();
