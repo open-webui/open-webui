@@ -692,7 +692,7 @@ class GenerateCompletionForm(BaseModel):
     options: Optional[dict] = None
     system: Optional[str] = None
     template: Optional[str] = None
-    context: Optional[str] = None
+    context: Optional[list[int]] = None
     stream: Optional[bool] = True
     raw: Optional[bool] = None
     keep_alive: Optional[Union[int, str]] = None
