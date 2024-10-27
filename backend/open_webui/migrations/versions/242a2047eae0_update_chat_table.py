@@ -19,17 +19,41 @@ depends_on = None
 
 
 def upgrade():
-    # Step 1: Rename current 'chat' column to 'old_chat'
-    op.alter_column("chat", "chat", new_column_name="old_chat", existing_type=sa.Text)
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
 
-    # Step 2: Add new 'chat' column of type JSON
-    op.add_column("chat", sa.Column("chat", sa.JSON(), nullable=True))
+    columns = inspector.get_columns("chat")
+    column_dict = {col["name"]: col for col in columns}
+
+    chat_column = column_dict.get("chat")
+    old_chat_exists = "old_chat" in column_dict
+
+    if chat_column:
+        if isinstance(chat_column["type"], sa.Text):
+            print("Converting 'chat' column to JSON")
+
+            if old_chat_exists:
+                print("Dropping old 'old_chat' column")
+                op.drop_column("chat", "old_chat")
+
+            # Step 1: Rename current 'chat' column to 'old_chat'
+            print("Renaming 'chat' column to 'old_chat'")
+            op.alter_column(
+                "chat", "chat", new_column_name="old_chat", existing_type=sa.Text()
+            )
+
+            # Step 2: Add new 'chat' column of type JSON
+            print("Adding new 'chat' column of type JSON")
+            op.add_column("chat", sa.Column("chat", sa.JSON(), nullable=True))
+        else:
+            # If the column is already JSON, no need to do anything
+            pass
 
     # Step 3: Migrate data from 'old_chat' to 'chat'
     chat_table = table(
         "chat",
-        sa.Column("id", sa.String, primary_key=True),
-        sa.Column("old_chat", sa.Text),
+        sa.Column("id", sa.String(), primary_key=True),
+        sa.Column("old_chat", sa.Text()),
         sa.Column("chat", sa.JSON()),
     )
 
@@ -50,6 +74,7 @@ def upgrade():
         )
 
     # Step 4: Drop 'old_chat' column
+    print("Dropping 'old_chat' column")
     op.drop_column("chat", "old_chat")
 
 
@@ -60,7 +85,7 @@ def downgrade():
     # Step 2: Convert 'chat' JSON data back to text and store in 'old_chat'
     chat_table = table(
         "chat",
-        sa.Column("id", sa.String, primary_key=True),
+        sa.Column("id", sa.String(), primary_key=True),
         sa.Column("chat", sa.JSON()),
         sa.Column("old_chat", sa.Text()),
     )
@@ -79,4 +104,4 @@ def downgrade():
     op.drop_column("chat", "chat")
 
     # Step 4: Rename 'old_chat' back to 'chat'
-    op.alter_column("chat", "old_chat", new_column_name="chat", existing_type=sa.Text)
+    op.alter_column("chat", "old_chat", new_column_name="chat", existing_type=sa.Text())
