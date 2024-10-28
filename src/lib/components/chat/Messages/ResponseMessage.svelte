@@ -362,6 +362,8 @@
 
 		const messages = createMessagesList(history, message.id);
 
+		const baseModelId = $models.find((m) => m.id === message.model)?.info?.base_model_id ?? null;
+
 		let feedbackItem = {
 			type: 'rating',
 			data: {
@@ -378,6 +380,7 @@
 			meta: {
 				arena: message ? message.arena : false,
 				model_id: message.model,
+				...(baseModelId ? { base_model_id: baseModelId } : {}),
 				message_id: message.id,
 				message_index: messages.length,
 				chat_id: chatId
