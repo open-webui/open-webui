@@ -1570,7 +1570,7 @@ Artificial Intelligence in Healthcare
         **(
             {"max_tokens": 50}
             if app.state.MODELS[task_model_id]["owned_by"] == "ollama"
-        else (
+            else (
                 {}
                 if "o1" in task_model_id
                 else {"max_completion_tokens": 50}
