@@ -15,7 +15,7 @@ from open_webui.apps.webui.models.audits import (
     RequestInfo,
     ResponseInfo,
 )
-from open_webui.constants import AUDIT_EVENT
+from open_webui.constants import AUDIT_EVENTS
 from open_webui.env import (
     AUDIT_LOG_FILE_ROTATION_SIZE,
     AUDIT_LOG_RETENTION_PERIOD,
@@ -106,8 +106,8 @@ class DatabaseAuditLogHandler:
         event_message = record["message"]
         try:
             event = (
-                AUDIT_EVENT(event_message)
-                if not isinstance(event_message, AUDIT_EVENT)
+                AUDIT_EVENTS(event_message)
+                if not isinstance(event_message, AUDIT_EVENTS)
                 else event_message
             )
         except ValueError:
@@ -133,7 +133,7 @@ class AuditLogger:
 
     def __call__(
         self,
-        event: AUDIT_EVENT,
+        event: AUDIT_EVENTS,
         *,
         level: str = "INFO",
         admin: Optional[UserModel] = None,
@@ -176,7 +176,7 @@ class AuditLogger:
 
     def write(
         self,
-        action: AUDIT_EVENT,
+        action: AUDIT_EVENTS,
         obj: Union[str, Any, None] = None,
         object_type: Optional[str] = None,
         admin: Optional[UserModel] = None,

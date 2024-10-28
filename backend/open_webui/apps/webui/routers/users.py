@@ -11,7 +11,7 @@ from open_webui.apps.webui.models.users import (
     UserSettings,
     UserUpdateForm,
 )
-from open_webui.constants import AUDIT_EVENT, ERROR_MESSAGES
+from open_webui.constants import AUDIT_EVENTS, ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
@@ -256,7 +256,7 @@ async def delete_user_by_id(
 
         if result:
             audit_logger.write(
-                AUDIT_EVENT.ENTITY_DELETED,
+                AUDIT_EVENTS.ENTITY_DELETED,
                 user_id,
                 object_type="USER",
                 admin=user,

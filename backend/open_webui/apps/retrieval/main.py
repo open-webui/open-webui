@@ -107,7 +107,7 @@ from open_webui.config import (
     YOUTUBE_LOADER_LANGUAGE,
     AppConfig,
 )
-from open_webui.constants import AUDIT_EVENT, ERROR_MESSAGES
+from open_webui.constants import AUDIT_EVENTS, ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS, DEVICE_TYPE, DOCKER
 from open_webui.utils.misc import (
     calculate_sha256,
@@ -595,7 +595,7 @@ async def update_rag_config(
     }
 
     audit_logger.write(
-        AUDIT_EVENT.CONFIG_UPDATED, admin=user, extra={"updated_config": updated_config}
+        AUDIT_EVENTS.CONFIG_UPDATED, admin=user, extra={"updated_config": updated_config}
     )
     return updated_config
 
@@ -1314,7 +1314,7 @@ def reset_vector_db(
     VECTOR_DB_CLIENT.reset()
     Knowledges.delete_all_knowledge()
     audit_logger.write(
-        AUDIT_EVENT.ENTITY_RESET, admin=user, request_uri=str(request.url)
+        AUDIT_EVENTS.ENTITY_RESET, admin=user, request_uri=str(request.url)
     )
 
 
@@ -1366,7 +1366,7 @@ def reset(user=Depends(get_admin_user)) -> bool:
 
 
     audit_logger.write(
-        AUDIT_EVENT.ENTITY_RESET, admin=user, request_uri=str(request.url)
+        AUDIT_EVENTS.ENTITY_RESET, admin=user, request_uri=str(request.url)
     )
     return True
 
@@ -1391,7 +1391,7 @@ def reset(
     try:
         VECTOR_DB_CLIENT.reset()
         audit_logger.write(
-            AUDIT_EVENT.ENTITY_RESET, admin=user, request_uri=str(request.url)
+            AUDIT_EVENTS.ENTITY_RESET, admin=user, request_uri=str(request.url)
         )
     except Exception as e:
         log.exception(e)

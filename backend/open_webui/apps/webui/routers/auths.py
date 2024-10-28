@@ -21,7 +21,7 @@ from open_webui.apps.webui.models.auths import (
 )
 from open_webui.apps.webui.models.users import Users
 from open_webui.config import WEBUI_AUTH
-from open_webui.constants import AUDIT_EVENT, ERROR_MESSAGES, WEBHOOK_MESSAGES
+from open_webui.constants import AUDIT_EVENTS, ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
@@ -116,7 +116,7 @@ async def update_profile(
         )
         if user:
             audit_logger.write(
-                AUDIT_EVENT.USER_UPDATED, user, request_uri=str(request.url)
+                AUDIT_EVENTS.USER_UPDATED, user, request_uri=str(request.url)
             )
             return user
         else:
@@ -144,7 +144,7 @@ async def update_password(
 
         if user:
             audit_logger.write(
-                AUDIT_EVENT.USER_PASSWORD_CHANGED, user, request_uri=str(request.url)
+                AUDIT_EVENTS.USER_PASSWORD_CHANGED, user, request_uri=str(request.url)
             )
             hashed = get_password_hash(form_data.new_password)
             return Auths.update_user_password_by_id(user.id, hashed)
@@ -376,7 +376,7 @@ async def add_user(
         if user:
             token = create_token(data={"id": user.id})
             audit_logger.write(
-                AUDIT_EVENT.ENTITY_CREATED,
+                AUDIT_EVENTS.ENTITY_CREATED,
                 user,
                 object_type="USER",
                 admin=user,
@@ -489,7 +489,7 @@ async def update_admin_config(
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
     }
     audit_logger.write(
-        AUDIT_EVENT.CONFIG_UPDATED,
+        AUDIT_EVENTS.CONFIG_UPDATED,
         admin=user,
         extra={"updated_config": update_admin_config},
     )
@@ -512,7 +512,7 @@ async def create_api_key_(
     success = Users.update_user_api_key_by_id(user.id, api_key)
     if success:
         audit_logger.write(
-            AUDIT_EVENT.USER_CREATED_API_KEY, user, request_uri=str(request.url)
+            AUDIT_EVENTS.USER_CREATED_API_KEY, user, request_uri=str(request.url)
         )
         return {
             "api_key": api_key,
@@ -530,7 +530,7 @@ async def delete_api_key(
 ):
     success = Users.update_user_api_key_by_id(user.id, None)
     audit_logger.write(
-        AUDIT_EVENT.USER_DELETED_API_KEY, user, request_uri=str(request.url)
+        AUDIT_EVENTS.USER_DELETED_API_KEY, user, request_uri=str(request.url)
     )
     return success
 

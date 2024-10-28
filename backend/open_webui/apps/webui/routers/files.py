@@ -19,7 +19,7 @@ from open_webui.apps.retrieval.main import process_file, ProcessFileForm
 
 from open_webui.config import UPLOAD_DIR
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.constants import AUDIT_EVENT, ERROR_MESSAGES
+from open_webui.constants import AUDIT_EVENTS, ERROR_MESSAGES
 
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
@@ -81,7 +81,7 @@ def upload_file(
 
         if file:
             audit_logger.write(
-                AUDIT_EVENT.ENTITY_CREATED,
+                AUDIT_EVENTS.ENTITY_CREATED,
                 cast(FileModel, file),
                 object_type="FILE",
                 admin=user,
@@ -142,7 +142,7 @@ async def delete_all_files(
             print(f"Failed to process the directory {folder}. Reason: {e}")
 
         audit_logger.write(
-            AUDIT_EVENT.ENTITY_DELETED,
+            AUDIT_EVENTS.ENTITY_DELETED,
             admin=user,
             request_uri=str(request.url),
             object_type="File",
@@ -219,7 +219,7 @@ async def update_file_data_content_by_id(
 
         if file is not None:
             audit_logger.write(
-                AUDIT_EVENT.ENTITY_UPDATED,
+                AUDIT_EVENTS.ENTITY_UPDATED,
                 file,
                 admin=user,
             )
@@ -340,7 +340,7 @@ async def delete_file_by_id(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),
                 )
-            audit_logger.write(AUDIT_EVENT.ENTITY_DELETED, id, admin=user)
+            audit_logger.write(AUDIT_EVENTS.ENTITY_DELETED, id, admin=user)
             return {"message": "File deleted successfully"}
         else:
             raise HTTPException(

@@ -8,7 +8,7 @@ from open_webui.apps.webui.models.documents import (
     Documents,
     DocumentUpdateForm,
 )
-from open_webui.constants import ERROR_MESSAGES, AUDIT_EVENT
+from open_webui.constants import ERROR_MESSAGES, AUDIT_EVENTS
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel
 from open_webui.utils.utils import get_admin_user, get_verified_user, get_audit_logger
@@ -51,7 +51,7 @@ async def create_new_doc(
 
         if doc:
             audit_logger.write(
-                AUDIT_EVENT.ENTITY_CREATED, doc, admin=user, object_type="DOCUMENT"
+                AUDIT_EVENTS.ENTITY_CREATED, doc, admin=user, object_type="DOCUMENT"
             )
             return DocumentResponse(
                 **{
@@ -141,7 +141,7 @@ async def update_doc_by_name(
     doc = Documents.update_doc_by_name(name, form_data)
     if doc:
         audit_logger.write(
-            AUDIT_EVENT.ENTITY_UPDATED, doc, object_type="DOCUMENT", admin=user
+            AUDIT_EVENTS.ENTITY_UPDATED, doc, object_type="DOCUMENT", admin=user
         )
         return DocumentResponse(
             **{
@@ -170,7 +170,7 @@ async def delete_doc_by_name(
 ):
     result = Documents.delete_doc_by_name(name)
     audit_logger.write(
-        AUDIT_EVENT.ENTITY_DELETED,
+        AUDIT_EVENTS.ENTITY_DELETED,
         object_type="DOCUMENT",
         admin=user,
         request_uri=str(request.url),

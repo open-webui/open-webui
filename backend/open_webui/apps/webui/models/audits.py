@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Optional
 import uuid
 
-from open_webui.constants import AUDIT_EVENT
+from open_webui.constants import AUDIT_EVENTS
 from open_webui.apps.webui.internal.db import Base, JSONField, get_db
 from open_webui.env import AUDIT_LOG_RETENTION_PERIOD, SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict, TypeAdapter
@@ -47,7 +47,7 @@ class AuditLogModel(BaseModel):
     id: str
     timestamp: int
     log_level: str
-    event: AUDIT_EVENT
+    event: AUDIT_EVENTS
     extra: Optional[dict] = None
     admin_id: Optional[str] = None
     source_ip: Optional[str] = None
@@ -93,7 +93,7 @@ class AuditLogsTable:
     def create_log(
         self,
         log_level: str,
-        event: AUDIT_EVENT,
+        event: AUDIT_EVENTS,
         admin_id: Optional[str] = None,
         source_ip: Optional[str] = None,
         object_id: Optional[str] = None,

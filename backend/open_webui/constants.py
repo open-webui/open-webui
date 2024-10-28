@@ -115,7 +115,7 @@ class TASKS(str, Enum):
     MOA_RESPONSE_GENERATION = "moa_response_generation"
 
 
-class AUDIT_EVENT(str, Enum):
+class AUDIT_EVENTS(str, Enum):
     def __str__(self) -> str:
         return super().__str__()
 

@@ -16,7 +16,7 @@ from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.apps.retrieval.main import process_file, ProcessFileForm
 
 
-from open_webui.constants import AUDIT_EVENT, ERROR_MESSAGES
+from open_webui.constants import AUDIT_EVENTS, ERROR_MESSAGES
 from open_webui.utils.utils import get_admin_user, get_audit_logger, get_verified_user
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -74,7 +74,7 @@ async def create_new_knowledge(
 
     if knowledge:
         audit_logger.write(
-            AUDIT_EVENT.ENTITY_CREATED,
+            AUDIT_EVENTS.ENTITY_CREATED,
             knowledge,
             object_type="KNOWLEDGE",
             admin=user,
@@ -134,7 +134,7 @@ async def update_knowledge_by_id(
         files = Files.get_files_by_ids(file_ids)
 
         audit_logger.write(
-            AUDIT_EVENT.ENTITY_UPDATED,
+            AUDIT_EVENTS.ENTITY_UPDATED,
             knowledge,
             object_type="KNOWLDEGE",
             admin=user,
@@ -205,7 +205,7 @@ def add_file_to_knowledge_by_id(
                 files = Files.get_files_by_ids(file_ids)
 
                 audit_logger.write(
-                    AUDIT_EVENT.ENTITY_UPDATED,
+                    AUDIT_EVENTS.ENTITY_UPDATED,
                     knowledge,
                     object_type="KNOWLEDGE",
                     admin=user,
@@ -267,7 +267,7 @@ def update_file_from_knowledge_by_id(
 
         files = Files.get_files_by_ids(file_ids)
         audit_logger.write(
-            AUDIT_EVENT.ENTITY_DELETED,
+            AUDIT_EVENTS.ENTITY_DELETED,
             knowledge,
             object_type="KNOWLEDGE",
             extra={"updated_file": id},
@@ -331,7 +331,7 @@ def remove_file_from_knowledge_by_id(
             if knowledge:
                 files = Files.get_files_by_ids(file_ids)
                 audit_logger.write(
-                    AUDIT_EVENT.ENTITY_UPDATED,
+                    AUDIT_EVENTS.ENTITY_UPDATED,
                     knowledge,
                     admin=user,
                     extra={"deleted_file_id": id},
@@ -379,7 +379,7 @@ async def reset_knowledge_by_id(
         id=id, form_data=KnowledgeUpdateForm(data={"file_ids": []})
     )
     audit_logger.write(
-        AUDIT_EVENT.ENTITY_RESET, knowledge, object_type="KNOWLDEGE", admin=user
+        AUDIT_EVENTS.ENTITY_RESET, knowledge, object_type="KNOWLDEGE", admin=user
     )
     return knowledge
 
@@ -401,5 +401,5 @@ async def delete_knowledge_by_id(
         log.debug(e)
         pass
     result = Knowledges.delete_knowledge_by_id(id=id)
-    audit_logger.write(AUDIT_EVENT.ENTITY_DELETED, admin=user, object_type="KNOWLEDGE")
+    audit_logger.write(AUDIT_EVENTS.ENTITY_DELETED, admin=user, object_type="KNOWLEDGE")
     return result
