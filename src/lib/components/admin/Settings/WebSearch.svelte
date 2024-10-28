@@ -22,7 +22,8 @@
 		'searchapi',
 		'duckduckgo',
 		'tavily',
-		'jina'
+		'jina',
+		'bing'
 	];
 
 	let youtubeLanguage = 'en';
