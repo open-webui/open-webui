@@ -225,7 +225,7 @@
 </script>
 
 <SettingsModal bind:show={$showSettings} />
-<ChangelogModal bind:show={$showChangelog} />
+<!-- <ChangelogModal bind:show={$showChangelog} />
 
 {#if version && compareVersion(version.latest, version.current)}
 	<div class=" absolute bottom-8 right-8 z-50" in:fade={{ duration: 100 }}>
@@ -237,7 +237,7 @@
 			}}
 		/>
 	</div>
-{/if}
+{/if} -->
 
 <div class="app relative">
 	<div
