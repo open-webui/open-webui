@@ -1281,7 +1281,7 @@ AUTOMATIC1111_CFG_SCALE = PersistentConfig(
 
 
 AUTOMATIC1111_SAMPLER = PersistentConfig(
-    "AUTOMATIC1111_SAMPLERE",
+    "AUTOMATIC1111_SAMPLER",
     "image_generation.automatic1111.sampler",
     (
         os.environ.get("AUTOMATIC1111_SAMPLER")
