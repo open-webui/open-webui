@@ -1570,9 +1570,11 @@ Artificial Intelligence in Healthcare
         **(
             {"max_tokens": 50}
             if app.state.MODELS[task_model_id]["owned_by"] == "ollama"
-            else {
-                pass
-            }
+        else (
+                {}
+                if "o1" in task_model_id
+                else {"max_completion_tokens": 50}
+            )
         ),
         "chat_id": form_data.get("chat_id", None),
         "metadata": {"task": str(TASKS.TITLE_GENERATION), "task_body": form_data},
