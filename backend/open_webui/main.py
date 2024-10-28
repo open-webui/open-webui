@@ -1571,7 +1571,7 @@ Artificial Intelligence in Healthcare
             {"max_tokens": 50}
             if app.state.MODELS[task_model_id]["owned_by"] == "ollama"
             else {
-                "max_completion_tokens": 50,
+                pass
             }
         ),
         "chat_id": form_data.get("chat_id", None),
