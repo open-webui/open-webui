@@ -1824,7 +1824,9 @@
 			responseMessage.done = false;
 			await tick();
 
-			const model = $models.filter((m) => m.id === responseMessage.model).at(0);
+			const model = $models
+				.filter((m) => m.id === responseMessage?.selectedModelId ?? responseMessage.model)
+				.at(0);
 
 			if (model) {
 				if (model?.owned_by === 'openai') {
