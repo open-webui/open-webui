@@ -1,0 +1,319 @@
+/* HTML and Body */
+@font-face {
+	font-family: 'NotoSans';
+	src: url('fonts/NotoSans-Variable.ttf');
+}
+
+@font-face {
+	font-family: 'NotoSansJP';
+	src: url('fonts/NotoSansJP-Variable.ttf');
+}
+
+@font-face {
+	font-family: 'NotoSansKR';
+	src: url('fonts/NotoSansKR-Variable.ttf');
+}
+
+@font-face {
+	font-family: 'NotoSansSC';
+	src: url('fonts/NotoSansSC-Variable.ttf');
+}
+
+@font-face {
+	font-family: 'NotoSansSC-Regular';
+	src: url('fonts/NotoSansSC-Regular.ttf');
+}
+
+html {
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'NotoSans', 'NotoSansJP', 'NotoSansKR',
+		'NotoSansSC', 'STSong-Light', 'MSung-Light', 'HeiseiMin-W3', 'HYSMyeongJo-Medium', Roboto,
+		'Helvetica Neue', Arial, sans-serif;
+	font-size: 14px; /* Default font size */
+	line-height: 1.5;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: inherit;
+}
+
+body {
+	margin: 0;
+	color: #212529;
+	background-color: #fff;
+	width: auto;
+}
+
+/* Typography */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-weight: 500;
+	margin: 0;
+}
+
+h1 {
+	font-size: 2.5rem;
+}
+
+h2 {
+	font-size: 2rem;
+}
+
+h3 {
+	font-size: 1.75rem;
+}
+
+h4 {
+	font-size: 1.5rem;
+}
+
+h5 {
+	font-size: 1.25rem;
+}
+
+h6 {
+	font-size: 1rem;
+}
+
+p {
+	margin-top: 0;
+	margin-bottom: 1rem;
+}
+
+/* Grid System */
+.container {
+	width: 100%;
+	padding-right: 15px;
+	padding-left: 15px;
+	margin-right: auto;
+	margin-left: auto;
+}
+
+/* Utilities */
+.text-center {
+	text-align: center;
+}
+
+/* Additional Text Utilities */
+.text-muted {
+	color: #6c757d; /* Muted text color */
+}
+
+/* Small Text */
+small {
+	font-size: 80%; /* Smaller font size relative to the base */
+	color: #6c757d; /* Lighter text color for secondary information */
+	margin-bottom: 0;
+	margin-top: 0;
+}
+
+/* Strong Element Styles */
+strong {
+	font-weight: bolder; /* Ensures the text is bold */
+	color: inherit; /* Inherits the color from its parent element */
+}
+
+/* link */
+a {
+	color: #007bff;
+	text-decoration: none;
+	background-color: transparent;
+}
+
+a:hover {
+	color: #0056b3;
+	text-decoration: underline;
+}
+
+/* General styles for lists */
+ol,
+ul,
+li {
+	padding-left: 40px; /* Increase padding to move bullet points to the right */
+	margin-left: 20px; /* Indent lists from the left */
+}
+
+/* Ordered list styles */
+ol {
+	list-style-type: decimal; /* Use numbers for ordered lists */
+	margin-bottom: 10px; /* Space after each list */
+}
+
+ol li {
+	margin-bottom: 0.5rem; /* Space between ordered list items */
+}
+
+/* Unordered list styles */
+ul {
+	list-style-type: disc; /* Use bullets for unordered lists */
+	margin-bottom: 10px; /* Space after each list */
+}
+
+ul li {
+	margin-bottom: 0.5rem; /* Space between unordered list items */
+}
+
+/* List item styles */
+li {
+	margin-bottom: 5px; /* Space between list items */
+	line-height: 1.5; /* Line height for better readability */
+}
+
+/* Nested lists */
+ol ol,
+ol ul,
+ul ol,
+ul ul {
+	padding-left: 20px;
+	margin-left: 30px; /* Further indent nested lists */
+	margin-bottom: 0; /* Remove extra margin at the bottom of nested lists */
+}
+
+/* Code blocks */
+pre {
+	background-color: #f4f4f4;
+	padding: 10px;
+	overflow-x: auto;
+	max-width: 100%; /* Ensure it doesn't overflow the page */
+	width: 80%; /* Set a specific width for a container-like appearance */
+	margin: 0 1em; /* Center the pre block */
+	box-sizing: border-box; /* Include padding in the width */
+	border: 1px solid #ccc; /* Optional: Add a border for better definition */
+	border-radius: 4px; /* Optional: Add rounded corners */
+}
+
+code {
+	font-family: 'Courier New', Courier, monospace;
+	background-color: #f4f4f4;
+	padding: 2px 4px;
+	border-radius: 4px;
+	box-sizing: border-box; /* Include padding in the width */
+}
+
+.message {
+	margin-top: 8px;
+	margin-bottom: 8px;
+	max-width: 100%;
+	overflow-wrap: break-word;
+}
+
+/* Table Styles */
+table {
+	width: 100%;
+	margin-bottom: 1rem;
+	color: #212529;
+	border-collapse: collapse; /* Removes the space between borders */
+}
+
+th,
+td {
+	margin: 0;
+	padding: 0.75rem;
+	vertical-align: top;
+	border-top: 1px solid #dee2e6;
+}
+
+thead th {
+	vertical-align: bottom;
+	border-bottom: 2px solid #dee2e6;
+}
+
+tbody + tbody {
+	border-top: 2px solid #dee2e6;
+}
+
+/* markdown-section styles */
+.markdown-section blockquote,
+.markdown-section h1,
+.markdown-section h2,
+.markdown-section h3,
+.markdown-section h4,
+.markdown-section h5,
+.markdown-section h6,
+.markdown-section p,
+.markdown-section pre,
+.markdown-section table,
+.markdown-section ul {
+	/* Give most block elements margin top and bottom */
+	margin-top: 1rem;
+}
+
+/* Remove top margin if it's the first child */
+.markdown-section blockquote:first-child,
+.markdown-section h1:first-child,
+.markdown-section h2:first-child,
+.markdown-section h3:first-child,
+.markdown-section h4:first-child,
+.markdown-section h5:first-child,
+.markdown-section h6:first-child,
+.markdown-section p:first-child,
+.markdown-section pre:first-child,
+.markdown-section table:first-child,
+.markdown-section ul:first-child {
+	margin-top: 0;
+}
+
+/* Remove top margin of <ul> following a <p> */
+.markdown-section p + ul {
+	margin-top: 0;
+}
+
+/* Remove bottom margin of <p> if it is followed by a <ul> */
+/* Note: :has is not supported in CSS, so you would need JavaScript for this behavior */
+.markdown-section p {
+	margin-bottom: 0;
+}
+
+/* Add a rule to reset margin-bottom for <p> not followed by <ul> */
+.markdown-section p + ul {
+	margin-top: 0;
+}
+
+/* List item styles */
+.markdown-section li {
+	padding: 2px;
+}
+
+.markdown-section li p {
+	margin-bottom: 0;
+	padding: 0;
+}
+
+/* Avoid margins for nested lists */
+.markdown-section li > ul {
+	margin-top: 0;
+	margin-bottom: 0;
+}
+
+/* Table styles */
+.markdown-section table {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 1rem 0;
+}
+
+.markdown-section th,
+.markdown-section td {
+	border: 1px solid #ddd;
+	padding: 0.5rem;
+	text-align: left;
+}
+
+.markdown-section th {
+	background-color: #f2f2f2;
+}
+
+.markdown-section pre {
+	padding: 10px;
+	margin: 10px;
+}
+
+.markdown-section pre code {
+	position: relative;
+	color: rgb(172, 0, 95);
+}

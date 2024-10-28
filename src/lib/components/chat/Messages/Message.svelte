@@ -66,6 +66,7 @@
 			/>
 		{:else if (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) === 1}
 			<ResponseMessage
+				{chatId}
 				{history}
 				{messageId}
 				isLastMessage={messageId === history.currentId}

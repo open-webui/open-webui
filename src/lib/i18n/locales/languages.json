@@ -28,6 +28,10 @@
 		"title": "Cebuano (Filipino)"
 	},
 	{
+		"code": "da-DK",
+		"title": "Danish (Denmark)"
+	},
+	{
 		"code": "de-DE",
 		"title": "German (Deutsch)"
 	},
@@ -62,6 +66,10 @@
 	{
 		"code": "hr-HR",
 		"title": "Croatian (Hrvatski)"
+	},
+	{
+		"code": "hu-HU",
+		"title": "Hungarian (Magyar)"
 	},
 	{
 		"code": "id-ID",

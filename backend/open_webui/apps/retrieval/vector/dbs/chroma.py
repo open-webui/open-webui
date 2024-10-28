@@ -13,11 +13,22 @@ from open_webui.config import (
     CHROMA_HTTP_SSL,
     CHROMA_TENANT,
     CHROMA_DATABASE,
+    CHROMA_CLIENT_AUTH_PROVIDER,
+    CHROMA_CLIENT_AUTH_CREDENTIALS,
 )
 
 
 class ChromaClient:
     def __init__(self):
+        settings_dict = {
+            "allow_reset": True,
+            "anonymized_telemetry": False,
+        }
+        if CHROMA_CLIENT_AUTH_PROVIDER is not None:
+            settings_dict["chroma_client_auth_provider"] = CHROMA_CLIENT_AUTH_PROVIDER
+        if CHROMA_CLIENT_AUTH_CREDENTIALS is not None:
+            settings_dict["chroma_client_auth_credentials"] = CHROMA_CLIENT_AUTH_CREDENTIALS
+
         if CHROMA_HTTP_HOST != "":
             self.client = chromadb.HttpClient(
                 host=CHROMA_HTTP_HOST,
@@ -26,12 +37,12 @@ class ChromaClient:
                 ssl=CHROMA_HTTP_SSL,
                 tenant=CHROMA_TENANT,
                 database=CHROMA_DATABASE,
-                settings=Settings(allow_reset=True, anonymized_telemetry=False),
+                settings=Settings(**settings_dict),
             )
         else:
             self.client = chromadb.PersistentClient(
                 path=CHROMA_DATA_PATH,
-                settings=Settings(allow_reset=True, anonymized_telemetry=False),
+                settings=Settings(**settings_dict),
                 tenant=CHROMA_TENANT,
                 database=CHROMA_DATABASE,
             )
@@ -109,7 +120,9 @@ class ChromaClient:
 
     def insert(self, collection_name: str, items: list[VectorItem]):
         # Insert the items into the collection, if the collection does not exist, it will be created.
-        collection = self.client.get_or_create_collection(name=collection_name)
+        collection = self.client.get_or_create_collection(
+            name=collection_name, metadata={"hnsw:space": "cosine"}
+        )
 
         ids = [item["id"] for item in items]
         documents = [item["text"] for item in items]
@@ -127,7 +140,9 @@ class ChromaClient:
 
     def upsert(self, collection_name: str, items: list[VectorItem]):
         # Update the items in the collection, if the items are not present, insert them. If the collection does not exist, it will be created.
-        collection = self.client.get_or_create_collection(name=collection_name)
+        collection = self.client.get_or_create_collection(
+            name=collection_name, metadata={"hnsw:space": "cosine"}
+        )
 
         ids = [item["id"] for item in items]
         documents = [item["text"] for item in items]

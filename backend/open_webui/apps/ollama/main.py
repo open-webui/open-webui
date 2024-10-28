@@ -547,7 +547,7 @@ class GenerateEmbeddingsForm(BaseModel):
 
 class GenerateEmbedForm(BaseModel):
     model: str
-    input: list[str]
+    input: list[str] | str
     truncate: Optional[bool] = None
     options: Optional[dict] = None
     keep_alive: Optional[Union[int, str]] = None
@@ -692,7 +692,7 @@ class GenerateCompletionForm(BaseModel):
     options: Optional[dict] = None
     system: Optional[str] = None
     template: Optional[str] = None
-    context: Optional[str] = None
+    context: Optional[list[int]] = None
     stream: Optional[bool] = True
     raw: Optional[bool] = None
     keep_alive: Optional[Union[int, str]] = None
@@ -739,7 +739,7 @@ class GenerateChatCompletionForm(BaseModel):
     format: Optional[str] = None
     options: Optional[dict] = None
     template: Optional[str] = None
-    stream: Optional[bool] = None
+    stream: Optional[bool] = True
     keep_alive: Optional[Union[int, str]] = None
 
 
@@ -761,6 +761,7 @@ async def generate_chat_completion(
     form_data: GenerateChatCompletionForm,
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
+    bypass_filter: Optional[bool] = False,
 ):
     payload = {**form_data.model_dump(exclude_none=True)}
     log.debug(f"generate_chat_completion() - 1.payload = {payload}")
@@ -769,7 +770,7 @@ async def generate_chat_completion(
 
     model_id = form_data.model
 
-    if app.state.config.ENABLE_MODEL_FILTER:
+    if not bypass_filter and app.state.config.ENABLE_MODEL_FILTER:
         if user.role == "user" and model_id not in app.state.config.MODEL_FILTER_LIST:
             raise HTTPException(
                 status_code=403,

@@ -383,7 +383,7 @@ OAUTH_USERNAME_CLAIM = PersistentConfig(
 )
 
 OAUTH_PICTURE_CLAIM = PersistentConfig(
-    "OAUTH_USERNAME_CLAIM",
+    "OAUTH_PICTURE_CLAIM",
     "oauth.oidc.avatar_claim",
     os.environ.get("OAUTH_PICTURE_CLAIM", "picture"),
 )
@@ -392,6 +392,33 @@ OAUTH_EMAIL_CLAIM = PersistentConfig(
     "OAUTH_EMAIL_CLAIM",
     "oauth.oidc.email_claim",
     os.environ.get("OAUTH_EMAIL_CLAIM", "email"),
+)
+
+ENABLE_OAUTH_ROLE_MANAGEMENT = PersistentConfig(
+    "ENABLE_OAUTH_ROLE_MANAGEMENT",
+    "oauth.enable_role_mapping",
+    os.environ.get("ENABLE_OAUTH_ROLE_MANAGEMENT", "False").lower() == "true",
+)
+
+OAUTH_ROLES_CLAIM = PersistentConfig(
+    "OAUTH_ROLES_CLAIM",
+    "oauth.roles_claim",
+    os.environ.get("OAUTH_ROLES_CLAIM", "roles"),
+)
+
+OAUTH_ALLOWED_ROLES = PersistentConfig(
+    "OAUTH_ALLOWED_ROLES",
+    "oauth.allowed_roles",
+    [
+        role.strip()
+        for role in os.environ.get("OAUTH_ALLOWED_ROLES", "user,admin").split(",")
+    ],
+)
+
+OAUTH_ADMIN_ROLES = PersistentConfig(
+    "OAUTH_ADMIN_ROLES",
+    "oauth.admin_roles",
+    [role.strip() for role in os.environ.get("OAUTH_ADMIN_ROLES", "admin").split(",")],
 )
 
 
@@ -507,6 +534,18 @@ if CUSTOM_NAME:
 
 
 ####################################
+# STORAGE PROVIDER
+####################################
+
+STORAGE_PROVIDER = os.environ.get("STORAGE_PROVIDER", "")  # defaults to local, s3
+
+S3_ACCESS_KEY_ID = os.environ.get("S3_ACCESS_KEY_ID", None)
+S3_SECRET_ACCESS_KEY = os.environ.get("S3_SECRET_ACCESS_KEY", None)
+S3_REGION_NAME = os.environ.get("S3_REGION_NAME", None)
+S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", None)
+S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", None)
+
+####################################
 # File Upload DIR
 ####################################
 
@@ -522,24 +561,8 @@ CACHE_DIR = f"{DATA_DIR}/cache"
 Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
 
 ####################################
-# Tools DIR
-####################################
-
-TOOLS_DIR = os.getenv("TOOLS_DIR", f"{DATA_DIR}/tools")
-Path(TOOLS_DIR).mkdir(parents=True, exist_ok=True)
-
-
-####################################
-# Functions DIR
-####################################
-
-FUNCTIONS_DIR = os.getenv("FUNCTIONS_DIR", f"{DATA_DIR}/functions")
-Path(FUNCTIONS_DIR).mkdir(parents=True, exist_ok=True)
-
-####################################
 # OLLAMA_BASE_URL
 ####################################
-
 
 ENABLE_OLLAMA_API = PersistentConfig(
     "ENABLE_OLLAMA_API",
@@ -728,6 +751,28 @@ USER_PERMISSIONS = PersistentConfig(
     },
 )
 
+
+ENABLE_EVALUATION_ARENA_MODELS = PersistentConfig(
+    "ENABLE_EVALUATION_ARENA_MODELS",
+    "evaluation.arena.enable",
+    os.environ.get("ENABLE_EVALUATION_ARENA_MODELS", "True").lower() == "true",
+)
+EVALUATION_ARENA_MODELS = PersistentConfig(
+    "EVALUATION_ARENA_MODELS",
+    "evaluation.arena.models",
+    [],
+)
+
+DEFAULT_ARENA_MODEL = {
+    "id": "arena-model",
+    "name": "Arena Model",
+    "meta": {
+        "profile_image_url": "/favicon.png",
+        "description": "Submit your questions to anonymous AI chatbots and vote on the best response.",
+        "model_ids": None,
+    },
+}
+
 ENABLE_MODEL_FILTER = PersistentConfig(
     "ENABLE_MODEL_FILTER",
     "model_filter.enable",
@@ -853,6 +898,12 @@ TITLE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     os.environ.get("TITLE_GENERATION_PROMPT_TEMPLATE", ""),
 )
 
+TAGS_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "TAGS_GENERATION_PROMPT_TEMPLATE",
+    "task.tags.prompt_template",
+    os.environ.get("TAGS_GENERATION_PROMPT_TEMPLATE", ""),
+)
+
 ENABLE_SEARCH_QUERY = PersistentConfig(
     "ENABLE_SEARCH_QUERY",
     "task.search.enable",
@@ -886,6 +937,8 @@ CHROMA_TENANT = os.environ.get("CHROMA_TENANT", chromadb.DEFAULT_TENANT)
 CHROMA_DATABASE = os.environ.get("CHROMA_DATABASE", chromadb.DEFAULT_DATABASE)
 CHROMA_HTTP_HOST = os.environ.get("CHROMA_HTTP_HOST", "")
 CHROMA_HTTP_PORT = int(os.environ.get("CHROMA_HTTP_PORT", "8000"))
+CHROMA_CLIENT_AUTH_PROVIDER = os.environ.get("CHROMA_CLIENT_AUTH_PROVIDER", "")
+CHROMA_CLIENT_AUTH_CREDENTIALS = os.environ.get("CHROMA_CLIENT_AUTH_CREDENTIALS", "")
 # Comma-separated list of header=value pairs
 CHROMA_HTTP_HEADERS = os.environ.get("CHROMA_HTTP_HEADERS", "")
 if CHROMA_HTTP_HEADERS:
@@ -900,6 +953,9 @@ CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 # Milvus
 
 MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
+
+# Qdrant
+QDRANT_URI = os.environ.get("QDRANT_URI", None)
 
 ####################################
 # Information Retrieval (RAG)
@@ -1011,6 +1067,22 @@ RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get("RAG_RERANKING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
 )
 
+
+RAG_TEXT_SPLITTER = PersistentConfig(
+    "RAG_TEXT_SPLITTER",
+    "rag.text_splitter",
+    os.environ.get("RAG_TEXT_SPLITTER", ""),
+)
+
+
+TIKTOKEN_CACHE_DIR = os.environ.get("TIKTOKEN_CACHE_DIR", f"{CACHE_DIR}/tiktoken")
+TIKTOKEN_ENCODING_NAME = PersistentConfig(
+    "TIKTOKEN_ENCODING_NAME",
+    "rag.tiktoken_encoding_name",
+    os.environ.get("TIKTOKEN_ENCODING_NAME", "cl100k_base"),
+)
+
+
 CHUNK_SIZE = PersistentConfig(
     "CHUNK_SIZE", "rag.chunk_size", int(os.environ.get("CHUNK_SIZE", "1000"))
 )
@@ -1023,7 +1095,7 @@ CHUNK_OVERLAP = PersistentConfig(
 DEFAULT_RAG_TEMPLATE = """You are given a user query, some textual context and rules, all inside xml tags. You have to answer the query based on the context while respecting the rules.
 
 <context>
-[context]
+{{CONTEXT}}
 </context>
 
 <rules>
@@ -1036,7 +1108,7 @@ DEFAULT_RAG_TEMPLATE = """You are given a user query, some textual context and r
 </rules>
 
 <user_query>
-[query]
+{{QUERY}}
 </user_query>
 """
 
@@ -1168,17 +1240,6 @@ RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
     "RAG_WEB_SEARCH_CONCURRENT_REQUESTS",
     "rag.web.search.concurrent_requests",
     int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
-)
-
-
-####################################
-# Transcribe
-####################################
-
-WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")
-WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models")
-WHISPER_MODEL_AUTO_UPDATE = (
-    os.environ.get("WHISPER_MODEL_AUTO_UPDATE", "").lower() == "true"
 )
 
 
@@ -1397,6 +1458,19 @@ IMAGE_GENERATION_MODEL = PersistentConfig(
 # Audio
 ####################################
 
+# Transcription
+WHISPER_MODEL = PersistentConfig(
+    "WHISPER_MODEL",
+    "audio.stt.whisper_model",
+    os.getenv("WHISPER_MODEL", "base"),
+)
+
+WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models")
+WHISPER_MODEL_AUTO_UPDATE = (
+    os.environ.get("WHISPER_MODEL_AUTO_UPDATE", "").lower() == "true"
+)
+
+
 AUDIO_STT_OPENAI_API_BASE_URL = PersistentConfig(
     "AUDIO_STT_OPENAI_API_BASE_URL",
     "audio.stt.openai.api_base_url",
@@ -1418,7 +1492,7 @@ AUDIO_STT_ENGINE = PersistentConfig(
 AUDIO_STT_MODEL = PersistentConfig(
     "AUDIO_STT_MODEL",
     "audio.stt.model",
-    os.getenv("AUDIO_STT_MODEL", "whisper-1"),
+    os.getenv("AUDIO_STT_MODEL", ""),
 )
 
 AUDIO_TTS_OPENAI_API_BASE_URL = PersistentConfig(
