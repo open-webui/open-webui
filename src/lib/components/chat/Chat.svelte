@@ -1895,20 +1895,21 @@
 	};
 
 	const generateChatTitle = async (messages) => {
+		const lastUserMessage = messages.filter((message) => message.role === 'user').at(-1);
+
 		if ($settings?.title?.auto ?? true) {
-			const lastMessage = messages.at(-1);
 			const modelId = selectedModels[0];
 
 			const title = await generateTitle(localStorage.token, modelId, messages, $chatId).catch(
 				(error) => {
 					console.error(error);
-					return 'New Chat';
+					return lastUserMessage?.content ?? 'New Chat';
 				}
 			);
 
 			return title;
 		} else {
-			return 'New Chat';
+			return lastUserMessage?.content ?? 'New Chat';
 		}
 	};
 
