@@ -8,6 +8,19 @@ import tempfile
 
 from open_webui.apps.webui.models.functions import Functions
 from open_webui.apps.webui.models.tools import Tools
+from open_webui.apps.retrieval.vector.dbs.milvus import MilvusClient
+
+
+def get_collection_name(user_id: str, vector_db_client) -> str:
+    """
+    Get the collection name based on the user ID and the vector database client instance.
+    """
+    collection_name = f"user-memory-{user_id}"
+    if isinstance(vector_db_client, MilvusClient):
+        # Ensure collection names do not contain dashes for Milvus compatibility
+        return collection_name.replace("-", "_")
+    else:
+        return collection_name
 
 
 def extract_frontmatter(content):

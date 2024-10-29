@@ -4,6 +4,7 @@ import logging
 from typing import Optional
 
 from open_webui.apps.webui.models.memories import Memories, MemoryModel
+from open_webui.apps.webui.utils import get_collection_name
 from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.utils import get_verified_user
 from open_webui.env import SRC_LOG_LEVELS
@@ -52,7 +53,7 @@ async def add_memory(
     memory = Memories.insert_new_memory(user.id, form_data.content)
 
     VECTOR_DB_CLIENT.upsert(
-        collection_name=f"user-memory-{user.id}",
+        collection_name = get_collection_name(user.id, VECTOR_DB_CLIENT),
         items=[
             {
                 "id": memory.id,
@@ -81,7 +82,7 @@ async def query_memory(
     request: Request, form_data: QueryMemoryForm, user=Depends(get_verified_user)
 ):
     results = VECTOR_DB_CLIENT.search(
-        collection_name=f"user-memory-{user.id}",
+        collection_name = get_collection_name(user.id, VECTOR_DB_CLIENT),
         vectors=[request.app.state.EMBEDDING_FUNCTION(form_data.content)],
         limit=form_data.k,
     )
@@ -100,7 +101,7 @@ async def reset_memory_from_vector_db(
 
     memories = Memories.get_memories_by_user_id(user.id)
     VECTOR_DB_CLIENT.upsert(
-        collection_name=f"user-memory-{user.id}",
+        collection_name = get_collection_name(user.id, VECTOR_DB_CLIENT),
         items=[
             {
                 "id": memory.id,
@@ -155,7 +156,7 @@ async def update_memory_by_id(
 
     if form_data.content is not None:
         VECTOR_DB_CLIENT.upsert(
-            collection_name=f"user-memory-{user.id}",
+            collection_name = get_collection_name(user.id, VECTOR_DB_CLIENT),
             items=[
                 {
                     "id": memory.id,
@@ -183,7 +184,7 @@ async def delete_memory_by_id(memory_id: str, user=Depends(get_verified_user)):
 
     if result:
         VECTOR_DB_CLIENT.delete(
-            collection_name=f"user-memory-{user.id}", ids=[memory_id]
+            collection_name = get_collection_name(user.id, VECTOR_DB_CLIENT), ids=[memory_id]
         )
         return True
 
