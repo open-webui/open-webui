@@ -1,0 +1,25 @@
+name: deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout master
+      uses: actions/checkout@v3
+
+    # Log in to Docker Hub using GitHub secrets.
+    - name: Log in to Docker Hub
+      run: echo "${{ secrets.DOCKER_TOKEN }}" | docker login -u "${{ secrets.DOCKER_USER }}" --password-stdin
+
+    # Build a Docker image of your application and tag the image with the $GITHUB_SHA.
+    - name: Build container image
+      run: docker build -t ${{ secrets.DOCKER_USER }}/anox-ui:latest .
+
+    # Push image to Docker Hub
+    - name: Push image to Docker Hub
+      run: docker push ${{ secrets.DOCKER_USER }}/anox-ui:latest
