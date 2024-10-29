@@ -411,7 +411,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Deixa-ho en blanc per utilitzar la indicació predeterminada o introdueix una indicació personalitzada",
 	"Light": "Clar",
 	"Listening...": "Escoltant...",
-	"LLMs can make mistakes. Verify important information.": "Els models de llenguatge poden cometre errors. Verifica la informació important.",
+	"Anox can make mistakes. Verify important information.": "Els models de llenguatge poden cometre errors. Verifica la informació important.",
 	"Local Models": "Models locals",
 	"Lost": "",
 	"LTR": "LTR",

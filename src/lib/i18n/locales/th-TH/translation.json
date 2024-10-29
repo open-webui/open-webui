@@ -411,7 +411,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "",
 	"Light": "แสง",
 	"Listening...": "กำลังฟัง...",
-	"LLMs can make mistakes. Verify important information.": "LLMs สามารถทำผิดพลาดได้ ตรวจสอบข้อมูลสำคัญ",
+	"Anox can make mistakes. Verify important information.": "LLMs สามารถทำผิดพลาดได้ ตรวจสอบข้อมูลสำคัญ",
 	"Local Models": "โมเดลท้องถิ่น",
 	"Lost": "",
 	"LTR": "LTR",

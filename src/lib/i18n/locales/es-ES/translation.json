@@ -411,7 +411,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Deje vacío para usar el propmt predeterminado, o ingrese un propmt personalizado",
 	"Light": "Claro",
 	"Listening...": "Escuchando...",
-	"LLMs can make mistakes. Verify important information.": "Los LLM pueden cometer errores. Verifica la información importante.",
+	"Anox can make mistakes. Verify important information.": "Los LLM pueden cometer errores. Verifica la información importante.",
 	"Local Models": "Modelos locales",
 	"Lost": "",
 	"LTR": "LTR",

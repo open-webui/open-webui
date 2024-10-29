@@ -82,7 +82,7 @@
 							bind:value={content}
 							class=" bg-transparent w-full text-sm resize-none rounded-xl p-3 outline outline-1 outline-gray-100 dark:outline-gray-800"
 							rows="3"
-							placeholder={$i18n.t('Enter a detail about yourself for your LLMs to recall')}
+							placeholder={$i18n.t('Enter a detail about yourself for your Anox to recall')}
 						/>
 
 						<div class="text-xs text-gray-500">

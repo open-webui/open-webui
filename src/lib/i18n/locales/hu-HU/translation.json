@@ -411,7 +411,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Hagyja üresen az alapértelmezett prompt használatához, vagy adjon meg egyéni promptot",
 	"Light": "Világos",
 	"Listening...": "Hallgatás...",
-	"LLMs can make mistakes. Verify important information.": "Az LLM-ek hibázhatnak. Ellenőrizze a fontos információkat.",
+	"Anox can make mistakes. Verify important information.": "Az LLM-ek hibázhatnak. Ellenőrizze a fontos információkat.",
 	"Local Models": "Helyi modellek",
 	"Lost": "Elveszett",
 	"LTR": "LTR",

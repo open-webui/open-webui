@@ -161,7 +161,7 @@
 				{:else}
 					<div class="text-center flex h-full text-sm w-full">
 						<div class=" my-auto pb-10 px-4 w-full text-gray-500">
-							{$i18n.t('Memories accessible by LLMs will be shown here.')}
+							{$i18n.t('Memories accessible by Anox will be shown here.')}
 						</div>
 					</div>
 				{/if}

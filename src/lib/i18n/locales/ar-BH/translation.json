@@ -411,7 +411,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "",
 	"Light": "فاتح",
 	"Listening...": "",
-	"LLMs can make mistakes. Verify important information.": "يمكن أن تصدر بعض الأخطاء. لذلك يجب التحقق من المعلومات المهمة",
+	"Anox can make mistakes. Verify important information.": "يمكن أن تصدر بعض الأخطاء. لذلك يجب التحقق من المعلومات المهمة",
 	"Local Models": "",
 	"Lost": "",
 	"LTR": "من جهة اليسار إلى اليمين",

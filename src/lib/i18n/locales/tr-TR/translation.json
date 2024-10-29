@@ -411,7 +411,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Varsayılan promptu kullanmak için boş bırakın veya özel bir prompt girin",
 	"Light": "Açık",
 	"Listening...": "Dinleniyor...",
-	"LLMs can make mistakes. Verify important information.": "LLM'ler hata yapabilir. Önemli bilgileri doğrulayın.",
+	"Anox can make mistakes. Verify important information.": "LLM'ler hata yapabilir. Önemli bilgileri doğrulayın.",
 	"Local Models": "Yerel Modeller",
 	"Lost": "",
 	"LTR": "Soldan Sağa",

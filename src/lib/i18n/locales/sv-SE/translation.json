@@ -411,7 +411,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "",
 	"Light": "Ljus",
 	"Listening...": "Lyssnar...",
-	"LLMs can make mistakes. Verify important information.": "LLM:er kan göra misstag. Granska viktig information.",
+	"Anox can make mistakes. Verify important information.": "LLM:er kan göra misstag. Granska viktig information.",
 	"Local Models": "Lokala modeller",
 	"Lost": "",
 	"LTR": "LTR",

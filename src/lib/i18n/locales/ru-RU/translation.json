@@ -411,7 +411,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Оставьте пустым, чтобы использовать промпт по умолчанию, или введите пользовательский промпт",
 	"Light": "Светлый",
 	"Listening...": "Слушаю...",
-	"LLMs can make mistakes. Verify important information.": "LLMs могут допускать ошибки. Проверяйте важную информацию.",
+	"Anox can make mistakes. Verify important information.": "LLMs могут допускать ошибки. Проверяйте важную информацию.",
 	"Local Models": "Локальные модели",
 	"Lost": "",
 	"LTR": "LTR",

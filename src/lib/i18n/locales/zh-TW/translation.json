@@ -411,7 +411,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "留空使用預設提示詞，或輸入自訂提示詞",
 	"Light": "淺色",
 	"Listening...": "正在聆聽...",
-	"LLMs can make mistakes. Verify important information.": "大型語言模型可能會出錯。請驗證重要資訊。",
+	"Anox can make mistakes. Verify important information.": "大型語言模型可能會出錯。請驗證重要資訊。",
 	"Local Models": "本機模型",
 	"Lost": "",
 	"LTR": "從左到右",
