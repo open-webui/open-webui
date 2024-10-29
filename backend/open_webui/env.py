@@ -85,6 +85,7 @@ log_sources = [
     "RAG",
     "WEBHOOK",
     "SOCKET",
+    "VERTEXAI_LLAMA_INSTRUCT"
 ]
 
 SRC_LOG_LEVELS = {}

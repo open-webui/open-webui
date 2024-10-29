@@ -217,6 +217,12 @@ class PersistentConfig(Generic[T]):
             "PersistentConfig object cannot be converted to dict, use config_get or .value instead."
         )
 
+    def to_dict(self):
+        return {
+            "name": self.env_name,
+            "value": self.value
+        }
+
     def __getattribute__(self, item):
         if item == "__dict__":
             raise TypeError(
@@ -258,6 +264,15 @@ class AppConfig:
 
     def __getattr__(self, key):
         return self._state[key].value
+    
+    def to_dict(self):
+        # Convert each A instance in the dictionary to a dictionary
+        return {
+            key: value.to_dict() for key, value in self._state.items()
+        }
+    
+    def __repr__(self):
+        return json.dumps(self.to_dict(), indent=4)
 
 
 ####################################

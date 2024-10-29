@@ -29,6 +29,16 @@ from open_webui.apps.openai.main import (
     get_all_models as get_openai_models,
 )
 
+from open_webui.apps.vertexai.config import (
+    ENABLE_VERTEXAI_API,
+    VERTEXAI_MODEL_LIST
+)
+from open_webui.apps.vertexai.llama_instruct import (
+    app as vertexai_app,
+    generate_chat_completion as generate_vertexai_chat_completion,
+    get_all_models as get_vertexai_models
+)
+
 from open_webui.apps.retrieval.main import app as retrieval_app
 from open_webui.apps.retrieval.utils import get_rag_context, rag_template
 
@@ -210,6 +220,7 @@ app.state.config = AppConfig()
 
 app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
 app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
+app.state.config.ENABLE_VERTEXAI_API = ENABLE_VERTEXAI_API
 
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
@@ -230,7 +241,7 @@ app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
 
 app.state.MODELS = {}
 
-
+print("App config", app.state.config)
 ##################################
 #
 # ChatCompletion Middleware
@@ -887,6 +898,7 @@ async def inspect_websocket(request: Request, call_next):
 app.mount("/ws", socket_app)
 app.mount("/ollama", ollama_app)
 app.mount("/openai", openai_app)
+app.mount("/vertexai", vertexai_app)
 
 app.mount("/images/api/v1", images_app)
 app.mount("/audio/api/v1", audio_app)
@@ -924,7 +936,11 @@ async def get_all_models():
             for model in ollama_models["models"]
         ]
 
-    models = pipe_models + openai_models + ollama_models
+    if app.state.config.ENABLE_VERTEXAI_API:
+        vertexai_models = await get_vertexai_models()
+        vertexai_models = vertexai_models["data"]
+
+    models = pipe_models + openai_models + ollama_models + vertexai_models
 
     global_action_ids = [
         function.id for function in Functions.get_global_action_functions()
@@ -1089,6 +1105,8 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
     model = app.state.MODELS[model_id]
     if model.get("pipe"):
         return await generate_function_chat_completion(form_data, user=user)
+    if model["id"] in VERTEXAI_MODEL_LIST:
+        return await generate_vertexai_chat_completion(form_data, user=user)
     if model["owned_by"] == "ollama":
         # Using /ollama/api/chat endpoint
         form_data = convert_payload_openai_to_ollama(form_data)
