@@ -466,6 +466,13 @@ def transcribe(file_path):
                     error_detail = f"External: {e}"
 
             raise Exception(error_detail)
+    elif app.state.config.STT_ENGINE == "web":
+        # For the STT engine: Web API, speech recognition is performed on the client side
+        # using the Web Speech API (SpeechRecognition or webkitSpeechRecognition),
+        # so return an empty transcript as no server-side processing is done.
+        return {"text": ""}
+    else:
+        raise ValueError(f"Unknown STT engine: {app.state.config.STT_ENGINE}")
 
 
 @app.post("/transcriptions")

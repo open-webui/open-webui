@@ -215,6 +215,7 @@
 
 					await tick();
 					document.getElementById('chat-input')?.focus();
+					dispatch('confirm', { text: transcription });
 
 					// Restart the inactivity timeout
 					timeoutId = setTimeout(() => {
@@ -229,7 +230,6 @@
 					console.log('recognition ended');
 
 					confirmRecording();
-					dispatch('confirm', transcription);
 
 					confirmed = false;
 					loading = false;
