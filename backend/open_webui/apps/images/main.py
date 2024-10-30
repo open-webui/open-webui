@@ -25,6 +25,7 @@ from open_webui.config import (
     COMFYUI_WORKFLOW,
     COMFYUI_WORKFLOW_NODES,
     CORS_ALLOW_ORIGIN,
+    OPENAI_FORWARD_USER_INFO_AS_HEADERS,
     ENABLE_IMAGE_GENERATION,
     IMAGE_GENERATION_ENGINE,
     IMAGE_GENERATION_MODEL,
@@ -455,6 +456,12 @@ async def image_generations(
             headers = {}
             headers["Authorization"] = f"Bearer {app.state.config.OPENAI_API_KEY}"
             headers["Content-Type"] = "application/json"
+
+            if OPENAI_FORWARD_USER_INFO_AS_HEADERS:
+                headers["X-OpenWebUI-User-Name"] = user.name
+                headers["X-OpenWebUI-User-Id"] = user.id
+                headers["X-OpenWebUI-User-Email"] = user.email
+                headers["X-OpenWebUI-User-Role"] = user.role
 
             data = {
                 "model": (

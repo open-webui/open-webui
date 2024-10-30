@@ -23,6 +23,7 @@ from open_webui.config import (
     AUDIO_TTS_VOICE,
     AUDIO_TTS_AZURE_SPEECH_REGION,
     AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+    OPENAI_FORWARD_USER_INFO_AS_HEADERS,
     CACHE_DIR,
     CORS_ALLOW_ORIGIN,
     WHISPER_MODEL,
@@ -247,6 +248,12 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         headers = {}
         headers["Authorization"] = f"Bearer {app.state.config.TTS_OPENAI_API_KEY}"
         headers["Content-Type"] = "application/json"
+
+        if OPENAI_FORWARD_USER_INFO_AS_HEADERS:
+            headers["X-OpenWebUI-User-Name"] = user.name
+            headers["X-OpenWebUI-User-Id"] = user.id
+            headers["X-OpenWebUI-User-Email"] = user.email
+            headers["X-OpenWebUI-User-Role"] = user.role
 
         try:
             body = body.decode("utf-8")
