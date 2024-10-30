@@ -1,0 +1,26 @@
+name: deploy
+on:
+  push:
+    branches:
+      - dev
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v3
+      
+      # Use Docker login GitHub Action
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+      
+      # Build a Docker image of your application and tag the image with the latest commit SHA
+      - name: Build container image
+        run: docker build -t ${{ secrets.DOCKER_USER }}/anox:dev .
+      
+      # Push image to Docker Hub
+      - name: Push image to Docker Hub
+        run: docker push ${{ secrets.DOCKER_USER }}/anox:dev
