@@ -49,6 +49,7 @@ dependencies = [
     "fake-useragent==1.5.1",
     "chromadb==0.5.9",
     "pymilvus==2.4.7",
+    "opensearch-py==2.7.1"
 
     "sentence-transformers==3.2.0",
     "colbert-ai==0.2.21",
