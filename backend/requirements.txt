@@ -35,8 +35,8 @@ anthropic
 google-generativeai==0.7.2
 tiktoken
 
-langchain==0.3.0
-langchain-community==0.2.12
+langchain==0.3.5
+langchain-community==0.3.3
 langchain-chroma==0.1.4
 
 fake-useragent==1.5.1
