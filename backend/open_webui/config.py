@@ -920,6 +920,13 @@ CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 
 MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
 
+# OpenSearch
+OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
+OPENSEARCH_SSL = os.environ.get("OPENSEARCH_SSL", True)
+OPENSEARCH_CERT_VERIFY = os.environ.get("OPENSEARCH_CERT_VERIFY", False)
+OPENSEARCH_USERNAME = os.environ.get("OPENSEARCH_USERNAME", None)
+OPENSEARCH_PASSWORD = os.environ.get("OPENSEARCH_PASSWORD", None)
+
 ####################################
 # RAG
 ####################################
