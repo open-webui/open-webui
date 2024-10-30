@@ -637,6 +637,25 @@ async def update_query_settings(
 ####################################
 
 
+def _get_docs_info(
+    docs: list[Document]
+) -> str:
+    docs_info = set()
+
+    # Trying to select relevant metadata identifying the document.
+    for doc in docs:
+        metadata = getattr(doc, 'metadata', {})
+        doc_name = metadata.get('name', '')
+        if not doc_name:
+            doc_name = metadata.get('title', '')
+        if not doc_name:
+            doc_name = metadata.get('source', '')
+        if doc_name:
+            docs_info.add(doc_name)
+
+    return ', '.join(docs_info)
+
+
 def save_docs_to_vector_db(
     docs,
     collection_name,
@@ -645,7 +664,7 @@ def save_docs_to_vector_db(
     split: bool = True,
     add: bool = False,
 ) -> bool:
-    log.info(f"save_docs_to_vector_db {docs} {collection_name}")
+    log.info(f"save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}")
 
     # Check if entries with the same hash (metadata.hash) already exist
     if metadata and "hash" in metadata:
