@@ -9,7 +9,7 @@
 
 	import { onMount, getContext, tick } from 'svelte';
 
-	import { WEBUI_NAME, mobile, models, settings, user } from '$lib/stores';
+	import { WEBUI_NAME, config, mobile, models, settings, user } from '$lib/stores';
 	import { addNewModel, deleteModelById, getModelInfos, updateModelById } from '$lib/apis/models';
 
 	import { deleteModel } from '$lib/apis/ollama';
@@ -35,7 +35,17 @@
 	let modelsImportInputElement: HTMLInputElement;
 
 	let _models = [];
+
+	let filteredModels = [];
 	let selectedModel = null;
+
+	$: if (_models) {
+		filteredModels = _models
+			.filter((m) => m?.owned_by !== 'arena')
+			.filter(
+				(m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase())
+			);
+	}
 
 	let sortable = null;
 	let searchValue = '';
@@ -198,7 +208,7 @@
 		saveAs(blob, `${model.id}-${Date.now()}.json`);
 	};
 
-	const positionChangeHanlder = async () => {
+	const positionChangeHandler = async () => {
 		// Get the new order of the models
 		const modelIds = Array.from(document.getElementById('model-list').children).map((child) =>
 			child.id.replace('model-item-', '')
@@ -248,7 +258,7 @@
 				animation: 150,
 				onUpdate: async (event) => {
 					console.log(event);
-					positionChangeHanlder();
+					positionChangeHandler();
 				}
 			});
 		}
@@ -294,17 +304,7 @@
 	}}
 />
 
-<div class="mb-3">
-	<div class="flex justify-between items-center">
-		<div class="flex md:self-center text-lg font-medium px-0.5">
-			{$i18n.t('Models')}
-			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
-			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{$models.length}</span>
-		</div>
-	</div>
-</div>
-
-<div class=" flex w-full space-x-2">
+<div class=" flex w-full space-x-2 mb-2.5">
 	<div class="flex flex-1">
 		<div class=" self-center ml-1 mr-3">
 			<svg
@@ -329,7 +329,7 @@
 
 	<div>
 		<a
-			class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition font-medium text-sm flex items-center space-x-1"
+			class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition font-medium text-sm flex items-center space-x-1"
 			href="/workspace/models/create"
 		>
 			<svg
@@ -346,12 +346,22 @@
 	</div>
 </div>
 
-<hr class=" border-gray-50 dark:border-gray-850 my-2.5" />
+<div class="mb-3.5">
+	<div class="flex justify-between items-center">
+		<div class="flex md:self-center text-base font-medium px-0.5">
+			{$i18n.t('Models')}
+			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
+			<span class="text-base font-medium text-gray-500 dark:text-gray-300"
+				>{filteredModels.length}</span
+			>
+		</div>
+	</div>
+</div>
 
 <a class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-1" href="/workspace/models/create">
-	<div class=" self-center w-10 flex-shrink-0">
+	<div class=" self-center w-8 flex-shrink-0">
 		<div
-			class="w-full h-10 flex justify-center rounded-full bg-transparent dark:bg-gray-700 border border-dashed border-gray-200"
+			class="w-full h-8 flex justify-center rounded-full bg-transparent dark:bg-gray-700 border border-dashed border-gray-200"
 		>
 			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6">
 				<path
@@ -365,16 +375,14 @@
 
 	<div class=" self-center">
 		<div class=" font-semibold line-clamp-1">{$i18n.t('Create a model')}</div>
-		<div class=" text-sm line-clamp-1">{$i18n.t('Customize models for a specific purpose')}</div>
+		<div class=" text-sm line-clamp-1 text-gray-500">
+			{$i18n.t('Customize models for a specific purpose')}
+		</div>
 	</div>
 </a>
 
-<hr class=" border-gray-50 dark:border-gray-850 my-2.5" />
-
 <div class=" my-2 mb-5" id="model-list">
-	{#each _models.filter((m) => searchValue === '' || m.name
-				.toLowerCase()
-				.includes(searchValue.toLowerCase())) as model}
+	{#each filteredModels as model}
 		<div
 			class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
 			id="model-item-{model.id}"
@@ -414,7 +422,9 @@
 					<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
 						{!!model?.info?.meta?.description
 							? model?.info?.meta?.description
-							: (model?.ollama?.digest ?? model.id)}
+							: model?.ollama?.digest
+								? `${model.id} (${model?.ollama?.digest})`
+								: model.id}
 					</div>
 				</div>
 			</a>
@@ -666,35 +676,42 @@
 	{/if}
 </div>
 
-<div class=" my-16">
-	<div class=" text-lg font-semibold mb-3 line-clamp-1">
-		{$i18n.t('Made by OpenWebUI Community')}
+{#if $config?.features.enable_community_sharing}
+	<div class=" my-16">
+		<div class=" text-lg font-semibold mb-3 line-clamp-1">
+			{$i18n.t('Made by OpenWebUI Community')}
+		</div>
+
+		<a
+			class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2"
+			href="https://openwebui.com/#open-webui-community"
+			target="_blank"
+		>
+			<div class=" self-center w-10 flex-shrink-0">
+				<div
+					class="w-full h-10 flex justify-center rounded-full bg-transparent dark:bg-gray-700 border border-dashed border-gray-200"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 24 24"
+						fill="currentColor"
+						class="w-6"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</div>
+			</div>
+
+			<div class=" self-center">
+				<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a model')}</div>
+				<div class=" text-sm line-clamp-1">
+					{$i18n.t('Discover, download, and explore model presets')}
+				</div>
+			</div>
+		</a>
 	</div>
-
-	<a
-		class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2"
-		href="https://openwebui.com/#open-webui-community"
-		target="_blank"
-	>
-		<div class=" self-center w-10 flex-shrink-0">
-			<div
-				class="w-full h-10 flex justify-center rounded-full bg-transparent dark:bg-gray-700 border border-dashed border-gray-200"
-			>
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6">
-					<path
-						fill-rule="evenodd"
-						d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z"
-						clip-rule="evenodd"
-					/>
-				</svg>
-			</div>
-		</div>
-
-		<div class=" self-center">
-			<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a model')}</div>
-			<div class=" text-sm line-clamp-1">
-				{$i18n.t('Discover, download, and explore model presets')}
-			</div>
-		</div>
-	</a>
-</div>
+{/if}
