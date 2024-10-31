@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
-      - dev
+      - logicc/main
+      - logicc/dev
     tags:
       - v*
 
