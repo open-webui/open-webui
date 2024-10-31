@@ -13,7 +13,7 @@ const packages = [
 ];
 
 import { loadPyodide } from 'pyodide';
-import { writeFile, readFile, copyFile, readdir, rmdir } from 'fs/promises';
+import { writeFile, readFile, copyFile, readdir, rm } from 'fs/promises';
 
 async function downloadPackages() {
 	console.log('Setting up pyodide + micropip');
@@ -37,7 +37,7 @@ async function downloadPackages() {
 
 		if (pyodideVersion !== pyodidePackageVersion) {
 			console.log('Pyodide version mismatch, removing static/pyodide directory');
-			await rmdir('static/pyodide', { recursive: true });
+			await rm('static/pyodide', { recursive: true });
 		}
 	} catch (e) {
 		console.log('Pyodide package not found, proceeding with download.');
