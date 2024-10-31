@@ -516,8 +516,8 @@
 	"Open file": "",
 	"Open in full screen": "",
 	"Open new chat": "새 채팅 열기",
-	"Open WebUI uses faster-whisper internally.": "",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "",
+	"Logicc AI uses faster-whisper internally.": "",
+	"Logicc AI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "OpenAI API 설정",
@@ -845,7 +845,7 @@
 	"You're a helpful assistant.": "당신은 유용한 어시스턴트입니다.",
 	"You're now logged in.": "로그인되었습니다.",
 	"Your account status is currently pending activation.": "현재 계정은 아직 활성화되지 않았습니다.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
+	"Your entire contribution will go directly to the plugin developer; Logicc AI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "유튜브",
 	"Youtube Loader Settings": "유튜브 로더 설정"
 }

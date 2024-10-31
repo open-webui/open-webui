@@ -516,8 +516,8 @@
 	"Open file": "",
 	"Open in full screen": "",
 	"Open new chat": "Deschide conversație nouă",
-	"Open WebUI uses faster-whisper internally.": "",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Versiunea Open WebUI (v{{OPEN_WEBUI_VERSION}}) este mai mică decât versiunea necesară (v{{REQUIRED_VERSION}})",
+	"Logicc AI uses faster-whisper internally.": "",
+	"Logicc AI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Versiunea Logicc AI (v{{OPEN_WEBUI_VERSION}}) este mai mică decât versiunea necesară (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "API OpenAI",
 	"OpenAI API Config": "Configurația API OpenAI",
@@ -846,7 +846,7 @@
 	"You're a helpful assistant.": "Ești un asistent util.",
 	"You're now logged in.": "Acum ești autentificat.",
 	"Your account status is currently pending activation.": "Statusul contului dvs. este în așteptare pentru activare.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Întreaga dvs. contribuție va merge direct la dezvoltatorul plugin-ului; Open WebUI nu ia niciun procent. Cu toate acestea, platforma de finanțare aleasă ar putea avea propriile taxe.",
+	"Your entire contribution will go directly to the plugin developer; Logicc AI does not take any percentage. However, the chosen funding platform might have its own fees.": "Întreaga dvs. contribuție va merge direct la dezvoltatorul plugin-ului; Logicc AI nu ia niciun procent. Cu toate acestea, platforma de finanțare aleasă ar putea avea propriile taxe.",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Setări Încărcător Youtube"
 }

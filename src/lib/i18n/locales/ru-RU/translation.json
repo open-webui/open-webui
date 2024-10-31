@@ -516,8 +516,8 @@
 	"Open file": "Открыть файл",
 	"Open in full screen": "",
 	"Open new chat": "Открыть новый чат",
-	"Open WebUI uses faster-whisper internally.": "",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Версия Open WebUI (v{{OPEN_WEBUI_VERSION}}) ниже требуемой версии (v{{REQUIRED_VERSION}})",
+	"Logicc AI uses faster-whisper internally.": "",
+	"Logicc AI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Версия Logicc AI (v{{OPEN_WEBUI_VERSION}}) ниже требуемой версии (v{{REQUIRED_VERSION}})",
 	"OpenAI": "Open AI",
 	"OpenAI API": "API OpenAI",
 	"OpenAI API Config": "Конфигурация API OpenAI",
@@ -847,7 +847,7 @@
 	"You're a helpful assistant.": "Вы полезный ассистент.",
 	"You're now logged in.": "Вы вошли в систему.",
 	"Your account status is currently pending activation.": "В настоящее время ваша учетная запись ожидает активации.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Весь ваш взнос будет направлен непосредственно разработчику плагина; Open WebUI не взимает никаких процентов. Однако выбранная платформа финансирования может иметь свои собственные сборы.",
+	"Your entire contribution will go directly to the plugin developer; Logicc AI does not take any percentage. However, the chosen funding platform might have its own fees.": "Весь ваш взнос будет направлен непосредственно разработчику плагина; Logicc AI не взимает никаких процентов. Однако выбранная платформа финансирования может иметь свои собственные сборы.",
 	"Youtube": "YouTube",
 	"Youtube Loader Settings": "Настройки загрузчика YouTube"
 }
