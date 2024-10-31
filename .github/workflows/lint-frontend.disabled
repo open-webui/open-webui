@@ -1,7 +1,7 @@
 name: Bun CI
 on:
   push:
-    branches: ['main']
+    branches: ['logicc/main']
   pull_request:
 jobs:
   build:

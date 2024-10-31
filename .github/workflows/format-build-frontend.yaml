@@ -3,12 +3,12 @@ name: Frontend Build
 on:
   push:
     branches:
-      - main
-      - dev
+      - logicc/main
+      - logicc/dev
   pull_request:
     branches:
-      - main
-      - dev
+      - logicc/main
+      - logicc/dev
 
 jobs:
   build:
