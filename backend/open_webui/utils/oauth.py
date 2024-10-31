@@ -162,7 +162,7 @@ class OAuthManager:
 
         if not user:
             # If the user does not exist, check if merging is enabled
-            if auth_manager_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL.value:
+            if auth_manager_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL:
                 # Check if the user exists by email
                 user = Users.get_user_by_email(email)
                 if user:
@@ -176,7 +176,7 @@ class OAuthManager:
 
         if not user:
             # If the user does not exist, check if signups are enabled
-            if auth_manager_config.ENABLE_OAUTH_SIGNUP.value:
+            if auth_manager_config.ENABLE_OAUTH_SIGNUP:
                 # Check if an existing user with the same email already exists
                 existing_user = Users.get_user_by_email(
                     user_data.get("email", "").lower()

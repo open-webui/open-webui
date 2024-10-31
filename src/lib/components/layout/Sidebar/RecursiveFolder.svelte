@@ -22,7 +22,12 @@
 		updateFolderParentIdById
 	} from '$lib/apis/folders';
 	import { toast } from 'svelte-sonner';
-	import { getChatsByFolderId, updateChatFolderIdById } from '$lib/apis/chats';
+	import {
+		getChatById,
+		getChatsByFolderId,
+		importChat,
+		updateChatFolderIdById
+	} from '$lib/apis/chats';
 	import ChatItem from './ChatItem.svelte';
 	import FolderMenu from './Folders/FolderMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -101,7 +106,7 @@
 						const data = JSON.parse(dataTransfer);
 						console.log(data);
 
-						const { type, id } = data;
+						const { type, id, item } = data;
 
 						if (type === 'folder') {
 							open = true;
@@ -122,8 +127,15 @@
 						} else if (type === 'chat') {
 							open = true;
 
+							let chat = await getChatById(localStorage.token, id).catch((error) => {
+								return null;
+							});
+							if (!chat && item) {
+								chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+							}
+
 							// Move the chat
-							const res = await updateChatFolderIdById(localStorage.token, id, folderId).catch(
+							const res = await updateChatFolderIdById(localStorage.token, chat.id, folderId).catch(
 								(error) => {
 									toast.error(error);
 									return null;
@@ -396,6 +408,7 @@
 							}}
 							on:keydown={(e) => {
 								if (e.key === 'Enter') {
+									nameUpdateHandler();
 									edit = false;
 								}
 							}}

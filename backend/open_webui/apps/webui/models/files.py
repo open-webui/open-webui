@@ -73,6 +73,8 @@ class FileModelResponse(BaseModel):
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
 
+    model_config = ConfigDict(extra="allow")
+
 
 class FileMetadataResponse(BaseModel):
     id: str

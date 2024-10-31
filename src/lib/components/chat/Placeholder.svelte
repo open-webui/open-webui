@@ -58,13 +58,18 @@
 		await tick();
 
 		const chatInputContainerElement = document.getElementById('chat-input-container');
+		const chatInputElement = document.getElementById('chat-input');
+
 		if (chatInputContainerElement) {
 			chatInputContainerElement.style.height = '';
 			chatInputContainerElement.style.height =
 				Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
+		}
 
-			const chatInputElement = document.getElementById('chat-input');
-			chatInputElement?.focus();
+		await tick();
+		if (chatInputElement) {
+			chatInputElement.focus();
+			chatInputElement.dispatchEvent(new Event('input'));
 		}
 
 		await tick();

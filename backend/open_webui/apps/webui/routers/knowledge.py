@@ -47,15 +47,43 @@ async def get_knowledge_items(
                 detail=ERROR_MESSAGES.NOT_FOUND,
             )
     else:
-        return [
-            KnowledgeResponse(
-                **knowledge.model_dump(),
-                files=Files.get_file_metadatas_by_ids(
-                    knowledge.data.get("file_ids", []) if knowledge.data else []
-                ),
+        knowledge_bases = []
+
+        for knowledge in Knowledges.get_knowledge_items():
+
+            files = []
+            if knowledge.data:
+                files = Files.get_file_metadatas_by_ids(
+                    knowledge.data.get("file_ids", [])
+                )
+
+                # Check if all files exist
+                if len(files) != len(knowledge.data.get("file_ids", [])):
+                    missing_files = list(
+                        set(knowledge.data.get("file_ids", []))
+                        - set([file.id for file in files])
+                    )
+                    if missing_files:
+                        data = knowledge.data or {}
+                        file_ids = data.get("file_ids", [])
+
+                        for missing_file in missing_files:
+                            file_ids.remove(missing_file)
+
+                        data["file_ids"] = file_ids
+                        Knowledges.update_knowledge_by_id(
+                            id=knowledge.id, form_data=KnowledgeUpdateForm(data=data)
+                        )
+
+                        files = Files.get_file_metadatas_by_ids(file_ids)
+
+            knowledge_bases.append(
+                KnowledgeResponse(
+                    **knowledge.model_dump(),
+                    files=files,
+                )
             )
-            for knowledge in Knowledges.get_knowledge_items()
-        ]
+        return knowledge_bases
 
 
 ############################

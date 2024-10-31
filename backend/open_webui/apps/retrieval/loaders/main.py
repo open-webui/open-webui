@@ -159,7 +159,7 @@ class Loader:
             elif file_ext in ["htm", "html"]:
                 loader = BSHTMLLoader(file_path, open_encoding="unicode_escape")
             elif file_ext == "md":
-                loader = UnstructuredMarkdownLoader(file_path)
+                loader = TextLoader(file_path, autodetect_encoding=True)
             elif file_content_type == "application/epub+zip":
                 loader = UnstructuredEPubLoader(file_path)
             elif (

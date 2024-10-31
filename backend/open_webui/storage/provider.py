@@ -44,14 +44,14 @@ class StorageProvider:
         )
         self.bucket_name = S3_BUCKET_NAME
 
-    def _upload_to_s3(self, file: BinaryIO, filename: str) -> Tuple[bytes, str]:
+    def _upload_to_s3(self, file_path: str, filename: str) -> Tuple[bytes, str]:
         """Handles uploading of the file to S3 storage."""
         if not self.s3_client:
             raise RuntimeError("S3 Client is not initialized.")
 
         try:
-            self.s3_client.upload_fileobj(file, self.bucket_name, filename)
-            return file.read(), f"s3://{self.bucket_name}/{filename}"
+            self.s3_client.upload_file(file_path, self.bucket_name, filename)
+            return open(file_path, "rb").read(), file_path
         except ClientError as e:
             raise RuntimeError(f"Error uploading file to S3: {e}")
 
@@ -132,10 +132,11 @@ class StorageProvider:
         contents = file.read()
         if not contents:
             raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
+        contents, file_path = self._upload_to_local(contents, filename)
 
         if self.storage_provider == "s3":
-            return self._upload_to_s3(file, filename)
-        return self._upload_to_local(contents, filename)
+            return self._upload_to_s3(file_path, filename)
+        return contents, file_path
 
     def get_file(self, file_path: str) -> str:
         """Downloads a file either from S3 or the local file system and returns the file path."""
