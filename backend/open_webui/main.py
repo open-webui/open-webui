@@ -574,6 +574,7 @@ async def handle_nonstreaming_response(request: Request, response: Response,
     response_dict = json.loads(content)
     body = json.loads(request._body)
 
+    is_ollama = False
     if app.state.MODELS[body["model"]]["owned_by"] == "ollama":
         is_ollama = True
     is_openai = not is_ollama
