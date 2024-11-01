@@ -25,7 +25,6 @@ from open_webui.config import (
     COMFYUI_WORKFLOW,
     COMFYUI_WORKFLOW_NODES,
     CORS_ALLOW_ORIGIN,
-    OPENAI_FORWARD_USER_INFO_AS_HEADERS,
     ENABLE_IMAGE_GENERATION,
     IMAGE_GENERATION_ENGINE,
     IMAGE_GENERATION_MODEL,
@@ -36,7 +35,7 @@ from open_webui.config import (
     AppConfig,
 )
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, ENABLE_FORWARD_USER_INFO_HEADERS
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -457,7 +456,7 @@ async def image_generations(
             headers["Authorization"] = f"Bearer {app.state.config.OPENAI_API_KEY}"
             headers["Content-Type"] = "application/json"
 
-            if OPENAI_FORWARD_USER_INFO_AS_HEADERS:
+            if ENABLE_FORWARD_USER_INFO_HEADERS:
                 headers["X-OpenWebUI-User-Name"] = user.name
                 headers["X-OpenWebUI-User-Id"] = user.id
                 headers["X-OpenWebUI-User-Email"] = user.email

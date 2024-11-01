@@ -658,12 +658,6 @@ except Exception:
 
 OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
-OPENAI_FORWARD_USER_INFO_AS_HEADERS = PersistentConfig(
-    "OPENAI_FORWARD_USER_INFO_AS_HEADERS",
-    "oauth.OPENAI_FORWARD_USER_INFO_AS_HEADERS",
-    os.environ.get("OPENAI_FORWARD_USER_INFO_AS_HEADERS", "False").lower() == "true",
-)
-
 ####################################
 # WEBUI
 ####################################
