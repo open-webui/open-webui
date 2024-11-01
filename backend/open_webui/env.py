@@ -196,7 +196,7 @@ CHANGELOG = changelog_json
 SAFE_MODE = os.environ.get("SAFE_MODE", "false").lower() == "true"
 
 ####################################
-# FORWARD_USER_INFO_AS_HEADERS
+# ENABLE_FORWARD_USER_INFO_HEADERS
 ####################################
 
 ENABLE_FORWARD_USER_INFO_HEADERS = os.environ.get(
