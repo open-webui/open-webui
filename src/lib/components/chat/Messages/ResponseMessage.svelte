@@ -3,7 +3,7 @@
 	import dayjs from 'dayjs';
 
 	import { createEventDispatcher } from 'svelte';
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, tick, getContext,setContext } from 'svelte';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -38,12 +38,14 @@
 	import Citations from './Citations.svelte';
 	import CodeExecutions from './CodeExecutions.svelte';
 
-	import type { Writable } from 'svelte/store';
+	import { writable, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import ContentRenderer from './ContentRenderer.svelte';
 	import { createNewFeedback, getFeedbackById, updateFeedbackById } from '$lib/apis/evaluations';
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
+	import Download from '$lib/components/icons/Download.svelte';
+	import { downloadAsFile, markedTableToCSV } from '$lib/utils/converters';
 
 	interface MessageType {
 		id: string;
@@ -469,6 +471,27 @@
 
 		await tick();
 	});
+
+	//create set context to track if content contains markdown table
+	const markdownTableTokens = writable([]);
+	setContext('markdownTableTokens',markdownTableTokens);
+	let containsMarkdownTable = false;
+	$: containsMarkdownTable = ($markdownTableTokens)?.length > 0;
+
+	
+
+	const downloadCSV = () => {
+		const markdownTableTokens = $markdownTableTokens;
+		for(const tableToken of markdownTableTokens)
+		{
+			const csvContent = markedTableToCSV(tableToken);
+			downloadAsFile(csvContent,"data.csv");
+		}
+		toast.success($i18n.t( markdownTableTokens.length > 1 ? 'Download of CSV files was successful!' : 'Download of CSV file was successful!'));
+	}
+		
+	
+
 </script>
 
 {#key message.id}
@@ -780,6 +803,23 @@
 										</svg>
 									</button>
 								</Tooltip>
+
+								{#if containsMarkdownTable}
+									<!--Add button to download tables to CSV-->
+									<Tooltip content={$i18n.t('Download CSV')} placement="bottom">
+										<button
+										class="{isLastMessage
+											? 'visible'
+											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
+										on:click={() => {
+											downloadCSV();
+										}}
+									>
+										<Download/>
+									</button>
+
+									</Tooltip>
+								{/if}
 
 								<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
 									<button
