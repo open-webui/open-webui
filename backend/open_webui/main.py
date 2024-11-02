@@ -85,6 +85,7 @@ from open_webui.config import (
     TITLE_GENERATION_PROMPT_TEMPLATE,
     TAGS_GENERATION_PROMPT_TEMPLATE,
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+    FILE_NAME_GENERATION_PROMPT_TEMPLATE,
     WEBHOOK_URL,
     WEBUI_AUTH,
     WEBUI_NAME,
@@ -119,6 +120,7 @@ from open_webui.utils.response import (
 )
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.task import (
+    file_name_generation_template,
     moa_response_generation_template,
     tags_generation_template,
     search_query_generation_template,
@@ -206,6 +208,7 @@ app.state.config.ENABLE_SEARCH_QUERY = ENABLE_SEARCH_QUERY
 app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
 )
+app.state.config.FILE_NAME_GENERATION_PROMPT_TEMPLATE = FILE_NAME_GENERATION_PROMPT_TEMPLATE
 
 app.state.MODELS = {}
 
@@ -1476,6 +1479,7 @@ async def get_task_config(user=Depends(get_verified_user)):
         "ENABLE_SEARCH_QUERY": app.state.config.ENABLE_SEARCH_QUERY,
         "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE": app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+        "FILE_NAME_GENERATION_PROMPT_TEMPLATE": app.state.config.FILE_NAME_GENERATION_PROMPT_TEMPLATE,
     }
 
 
@@ -1487,6 +1491,7 @@ class TaskConfigForm(BaseModel):
     SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE: str
     ENABLE_SEARCH_QUERY: bool
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: str
+    FILE_NAME_GENERATION_PROMPT_TEMPLATE: str
 
 
 @app.post("/api/task/config/update")
@@ -1507,6 +1512,9 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
     app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
         form_data.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
     )
+    app.state.config.FILE_NAME_GENERATION_PROMPT_TEMPLATE = (
+        form_data.FILE_NAME_GENERATION_PROMPT_TEMPLATE
+    )
 
     return {
         "TASK_MODEL": app.state.config.TASK_MODEL,
@@ -1516,6 +1524,7 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
         "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE": app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_SEARCH_QUERY": app.state.config.ENABLE_SEARCH_QUERY,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+        "FILE_NAME_GENERATION_PROMPT_TEMPLATE": app.state.config.FILE_NAME_GENERATION_PROMPT_TEMPLATE,
     }
 
 
@@ -1873,6 +1882,80 @@ Responses from models: {{responses}}"""
 
     return await generate_chat_completions(form_data=payload, user=user)
 
+# API to generate file names
+# [feat:ability to download answers in table format as an Excel or CSV file](https://github.com/open-webui/open-webui/issues/1612)
+@app.post("/api/task/filename/completions")
+async def generate_title(form_data: dict, user=Depends(get_verified_user)):
+    print("generate_file_name")
+
+    model_id = form_data["model"]
+    if model_id not in app.state.MODELS:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model not found",
+        )
+
+    # Check if the user has a custom task model
+    # If the user has a custom task model, use that model
+    task_model_id = get_task_model_id(model_id)
+    print(task_model_id)
+
+    
+    if app.state.config.FILE_NAME_GENERATION_PROMPT_TEMPLATE != "":
+        template = app.state.config.FILE_NAME_GENERATION_PROMPT_TEMPLATE
+    else:
+        template = """### Task:
+        Create concise and friendly file name based on contents of markdown table. ONLY RESPONSE WITH ONE FILE NAME AND NOT USE SPCIAL CHARACTER.
+        
+        ### Example filename
+        top_5_most_populous_countries.csv
+        dietary_recommendations.csv
+        vegetable_seasonal_availability.csv
+        
+        {{prompt}}
+        """
+
+    content = file_name_generation_template(
+        template,
+        form_data["content"],
+        {
+            "name": user.name,
+            "location": user.info.get("location") if user.info else None,
+        },
+    )
+
+    payload = {
+        "model": task_model_id,
+        "messages": [{"role": "user", "content": content}],
+        "stream": False,
+        **(
+            {"max_tokens": 50}
+            if app.state.MODELS[task_model_id]["owned_by"] == "ollama"
+            else {
+                "max_completion_tokens": 50,
+            }
+        ),
+        "metadata": {"task": str(TASKS.FILE_NAME_GENERATION), "task_body": form_data},
+    }
+    
+    log.debug(payload)
+
+    # Handle pipeline filters
+    try:
+        payload = filter_pipeline(payload, user)
+    except Exception as e:
+        if len(e.args) > 1:
+            return JSONResponse(
+                status_code=e.args[0],
+                content={"detail": e.args[1]},
+            )
+        else:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={"detail": str(e)},
+            )
+    
+    return await generate_chat_completions(form_data=payload, user=user)
 
 ##################################
 #

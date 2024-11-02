@@ -43,7 +43,7 @@
 	import ContentRenderer from './ContentRenderer.svelte';
 	import { createNewFeedback, getFeedbackById, updateFeedbackById } from '$lib/apis/evaluations';
 	import { getChatById } from '$lib/apis/chats';
-	import { generateTags } from '$lib/apis';
+	import { generateFilename, generateTags } from '$lib/apis';
 	import Download from '$lib/components/icons/Download.svelte';
 	import { downloadAsFile, markedTableToCSV } from '$lib/utils/converters';
 
@@ -478,14 +478,29 @@
 	let containsMarkdownTable = false;
 	$: containsMarkdownTable = ($markdownTableTokens)?.length > 0;
 
-	
 
-	const downloadCSV = () => {
+	const downloadCSV = async () => {
 		const markdownTableTokens = $markdownTableTokens;
 		for(const tableToken of markdownTableTokens)
 		{
+			//@ts-ignore
+			const raw_content = tableToken.raw;
+						
+			const model = message?.model;
+			let filename = 'data.csv'
+			try 
+			{
+				filename = await generateFilename(localStorage.token,model,raw_content);
+			}
+			catch
+			{
+				toast.error('An error occurred during file generation; data.csv has been used instead.');
+			}
+
 			const csvContent = markedTableToCSV(tableToken);
-			downloadAsFile(csvContent,"data.csv");
+			
+
+			downloadAsFile(csvContent,filename);
 		}
 		toast.success($i18n.t( markdownTableTokens.length > 1 ? 'Download of CSV files was successful!' : 'Download of CSV file was successful!'));
 	}
@@ -811,8 +826,8 @@
 										class="{isLastMessage
 											? 'visible'
 											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
-										on:click={() => {
-											downloadCSV();
+										on:click={async() => {
+											await downloadCSV();
 										}}
 									>
 										<Download/>

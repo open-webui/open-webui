@@ -128,6 +128,24 @@ def title_generation_template(
 
     return template
 
+# ile name genration template
+# [feat:ability to download answers in table format as an Excel or CSV file](https://github.com/open-webui/open-webui/issues/1612)
+def file_name_generation_template(
+    template: str, content: str, user: Optional[dict] = None
+) -> str:
+    
+    template = replace_prompt_variable(template,content)
+    
+    template = prompt_template(
+        template,
+        **(
+            {"user_name": user.get("name"), "user_location": user.get("location")}
+            if user
+            else {}
+        ),
+    )
+
+    return template
 
 def tags_generation_template(
     template: str, messages: list[dict], user: Optional[dict] = None

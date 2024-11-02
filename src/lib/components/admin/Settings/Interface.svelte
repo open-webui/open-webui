@@ -24,6 +24,7 @@
 		TASK_MODEL: '',
 		TASK_MODEL_EXTERNAL: '',
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
+		FILE_NAME_GENERATION_PROMPT_TEMPLATE:'',
 		TAGS_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_SEARCH_QUERY: true,
 		SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE: ''
@@ -128,6 +129,20 @@
 				>
 					<Textarea
 						bind:value={taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE}
+						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+					/>
+				</Tooltip>
+			</div>
+
+			<div class="mt-3">
+				<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Filename Generation Prompt')}</div>
+
+				<Tooltip
+					content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+					placement="top-start"
+				>
+					<Textarea
+						bind:value={taskConfig.FILE_NAME_GENERATION_PROMPT_TEMPLATE}
 						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 					/>
 				</Tooltip>

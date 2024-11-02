@@ -113,3 +113,4 @@ class TASKS(str, Enum):
     QUERY_GENERATION = "query_generation"
     FUNCTION_CALLING = "function_calling"
     MOA_RESPONSE_GENERATION = "moa_response_generation"
+    FILE_NAME_GENERATION = "filename_generation" # to generate file names reference [feat:ability to download answers in table format as an Excel or CSV file](https://github.com/open-webui/open-webui/issues/1612)

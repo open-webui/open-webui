@@ -924,6 +924,13 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
     os.environ.get("TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE", ""),
 )
 
+# File name generate prompt template used to generate file name to download CSV/Excel files 
+# [feat:ability to download answers in table format as an Excel or CSV file](https://github.com/open-webui/open-webui/issues/1612)
+FILE_NAME_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "FILE_NAME_GENERATION_PROMPT_TEMPLATE",
+    "task.filename.prompt_template",
+    os.environ.get("FILE_NAME_GENERATION_PROMPT_TEMPLATE", ""),
+)
 
 ####################################
 # Vector Database
