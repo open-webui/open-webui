@@ -595,7 +595,11 @@ async def handle_nonstreaming_response(request: Request, response: Response,
             if not tool_call["function"]["arguments"]:
                 tool_function_params = {}
             else: 
-                tool_function_params = json.loads(tool_call["function"]["arguments"]) 
+                if is_openai:
+                    tool_function_params = json.loads(tool_call["function"]["arguments"]) 
+                if is_ollama:
+                    tool_function_params = tool_call["function"]["arguments"] 
+
 
             try:
                 tool_output = await tools[tool_function_name]["callable"](**tool_function_params)
