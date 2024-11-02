@@ -135,20 +135,6 @@
 			</div>
 
 			<div class="mt-3">
-				<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Filename Generation Prompt')}</div>
-
-				<Tooltip
-					content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
-					placement="top-start"
-				>
-					<Textarea
-						bind:value={taskConfig.FILE_NAME_GENERATION_PROMPT_TEMPLATE}
-						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
-					/>
-				</Tooltip>
-			</div>
-
-			<div class="mt-3">
 				<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Tags Generation Prompt')}</div>
 
 				<Tooltip
@@ -189,6 +175,20 @@
 					</Tooltip>
 				</div>
 			{/if}
+
+			<div class="mt-3">
+				<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Filename Generation Prompt')}</div>
+
+				<Tooltip
+					content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+					placement="top-start"
+				>
+					<Textarea
+						bind:value={taskConfig.FILE_NAME_GENERATION_PROMPT_TEMPLATE}
+						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+					/>
+				</Tooltip>
+			</div>
 		</div>
 
 		<hr class=" dark:border-gray-850 my-3" />

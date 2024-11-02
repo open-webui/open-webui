@@ -1905,7 +1905,7 @@ async def generate_title(form_data: dict, user=Depends(get_verified_user)):
         template = app.state.config.FILE_NAME_GENERATION_PROMPT_TEMPLATE
     else:
         template = """### Task:
-        Create concise and friendly file name based on contents of markdown table. ONLY RESPONSE WITH ONE FILE NAME AND NOT USE SPCIAL CHARACTER.
+        Create concise and user friendly file name based on contents of markdown table. NOT USE SPECIAL CHARACTER AND ONLY RESPONSE WITH ONE FILE NAME.
         
         ### Example filename
         top_5_most_populous_countries.csv

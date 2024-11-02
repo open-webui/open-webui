@@ -46,6 +46,7 @@
 	import { generateFilename, generateTags } from '$lib/apis';
 	import Download from '$lib/components/icons/Download.svelte';
 	import { downloadAsFile, markedTableToCSV } from '$lib/utils/converters';
+	import { error } from '@sveltejs/kit';
 
 	interface MessageType {
 		id: string;
@@ -476,33 +477,56 @@
 	const markdownTableTokens = writable([]);
 	setContext('markdownTableTokens',markdownTableTokens);
 	let containsMarkdownTable = false;
+	let downloadingFile = false;
 	$: containsMarkdownTable = ($markdownTableTokens)?.length > 0;
 
 
 	const downloadCSV = async () => {
+		downloadingFile = true;
 		const markdownTableTokens = $markdownTableTokens;
+		const model = message?.model;
+
+		let errorGenerateFilename = false;
+		let filename = 'data.csv'
+
 		for(const tableToken of markdownTableTokens)
 		{
 			//@ts-ignore
 			const raw_content = tableToken.raw;
-						
-			const model = message?.model;
-			let filename = 'data.csv'
-			try 
+			//Generate filename if the auto filename generation is set On in user settings
+			//@ts-ignore
+			if(!($settings?.autoFilename === false))
 			{
-				filename = await generateFilename(localStorage.token,model,raw_content);
+				if(errorGenerateFilename == false) //Skip generating filename is error occured
+				{
+					try 
+					{
+						filename = await generateFilename(localStorage.token,model,raw_content);
+					}
+					catch(error)
+					{
+						console.error(error);
+						errorGenerateFilename = true;
+					}
+				}
 			}
-			catch
-			{
-				toast.error('An error occurred during file generation; data.csv has been used instead.');
-			}
-
 			const csvContent = markedTableToCSV(tableToken);
-			
-
 			downloadAsFile(csvContent,filename);
 		}
-		toast.success($i18n.t( markdownTableTokens.length > 1 ? 'Download of CSV files was successful!' : 'Download of CSV file was successful!'));
+		let toast_msg =  markdownTableTokens.length > 1 ?  
+							$i18n.t('Download of {{NUMBER_OF_FILES}} CSV files was successful!',{NUMBER_OF_FILES:markdownTableTokens.length}) 
+							: $i18n.t('Download of CSV file was successful!');
+		if(errorGenerateFilename)
+		{
+			toast_msg = `${$i18n.t('An error occurred during file generation; {{DEFAULT_FILENAME}} will be used instead.',{DEFAULT_FILENAME:filename})} ${toast_msg}`;
+			toast.warning(toast_msg);
+		}
+		else
+		{
+			toast.success(toast_msg);
+		}
+
+		downloadingFile=false;
 	}
 		
 	
@@ -821,17 +845,22 @@
 
 								{#if containsMarkdownTable}
 									<!--Add button to download tables to CSV-->
-									<Tooltip content={$i18n.t('Download CSV')} placement="bottom">
-										<button
-										class="{isLastMessage
-											? 'visible'
-											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
-										on:click={async() => {
-											await downloadCSV();
-										}}
-									>
-										<Download/>
-									</button>
+									<Tooltip content={downloadingFile ? $i18n.t('Downloading CSV') : $i18n.t('Download CSV')} placement="bottom">
+										{#if downloadingFile}
+											<Spinner/>
+										{:else}
+											<button
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
+												on:click={async() => {
+													await downloadCSV();
+												}}
+											>
+												<Download/>
+											</button>
+										{/if}
+										
 
 									</Tooltip>
 								{/if}
