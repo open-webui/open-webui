@@ -46,7 +46,6 @@
 	import { generateFilename, generateTags } from '$lib/apis';
 	import Download from '$lib/components/icons/Download.svelte';
 	import { downloadAsFile, markedTableToCSV } from '$lib/utils/converters';
-	import { error } from '@sveltejs/kit';
 
 	interface MessageType {
 		id: string;
