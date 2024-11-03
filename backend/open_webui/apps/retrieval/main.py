@@ -985,7 +985,7 @@ def process_youtube_video(form_data: ProcessUrlForm, user=Depends(get_verified_u
 
         loader = YoutubeLoader.from_youtube_url(
             form_data.url,
-            add_video_info=True,
+            add_video_info=False,
             language=app.state.config.YOUTUBE_LOADER_LANGUAGE,
             translation=app.state.YOUTUBE_LOADER_TRANSLATION,
         )
