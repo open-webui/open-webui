@@ -579,8 +579,10 @@ async def handle_nonstreaming_response(request: Request, response: Response,
         is_ollama = True
     is_openai = not is_ollama
 
+    log.debug(f"smonux 1: { response_dict=} ")
+
     while (is_ollama and "tool_calls" in response_dict.get("message", {})) or \
-          (is_openai and response_dict["choices"][0]["finish_reason"] == "tool_calls"):
+          (is_openai and "tool_calls" in response_dict["choices"][0].get("message",{}) ):
         if is_ollama:
             message = response_dict.get("message", {})
             tool_calls = message.get("tool_calls", [])
