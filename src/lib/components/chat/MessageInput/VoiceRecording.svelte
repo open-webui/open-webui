@@ -250,6 +250,11 @@
 		if (recording && mediaRecorder) {
 			await mediaRecorder.stop();
 		}
+
+		if (speechRecognition) {
+			speechRecognition.stop();
+		}
+
 		stopDurationCounter();
 		audioChunks = [];
 
