@@ -1,11 +1,30 @@
 services:
+  openWebUI:
+    image: ghcr.io/open-webui/open-webui:latest
+    restart: always
+    ports:
+      - "8500:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - open-webui-local:/app/backend/data
+
   ollama:
-    # GPU support
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-local:/root/.ollama
     deploy:
       resources:
         reservations:
           devices:
-            - driver: ${OLLAMA_GPU_DRIVER-nvidia}
-              count: ${OLLAMA_GPU_COUNT-1}
-              capabilities:
-                - gpu
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  ollama-local:
+    external: true
+  open-webui-local:
+    external: true
