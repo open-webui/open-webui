@@ -54,4 +54,4 @@ if [ -n "$SPACE_ID" ]; then
   export WEBUI_URL=${SPACE_HOST}
 fi
 
-WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec hypercorn open_webui.main:app --bind "$HOST:$PORT"
+WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec hypercorn open_webui.main:app --bind "$HOST:$PORT" --proxy-headers
