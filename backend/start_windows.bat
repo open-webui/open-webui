@@ -7,8 +7,8 @@ SET "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%" || exit /b
 
 SET "KEY_FILE=.webui_secret_key"
-IF "%PORT%"=="" SET PORT=8080
-IF "%HOST%"=="" SET HOST=0.0.0.0
+IF "%PORT%"=="" SET PORT=80
+IF "%HOST%"=="" SET HOST=localhost
 SET "WEBUI_SECRET_KEY=%WEBUI_SECRET_KEY%"
 SET "WEBUI_JWT_SECRET_KEY=%WEBUI_JWT_SECRET_KEY%"
 
@@ -30,4 +30,7 @@ IF "%WEBUI_SECRET_KEY%%WEBUI_JWT_SECRET_KEY%" == " " (
 
 :: Execute uvicorn
 SET "WEBUI_SECRET_KEY=%WEBUI_SECRET_KEY%"
-uvicorn open_webui.main:app --host "%HOST%" --port "%PORT%" --forwarded-allow-ips '*'
+:start
+hypercorn open_webui.main:app --bind %HOST%:%PORT%
+timeout 10
+goto start
