@@ -12,7 +12,7 @@
 
 	onMount(() => {
 		setInterval(() => {
-			selectedImageIdx = (selectedImageIdx + 1) % 5;
+			selectedImageIdx = (selectedImageIdx + 1) % (imageUrls.length - 1);
 		}, duration);
 	});
 </script>

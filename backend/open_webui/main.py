@@ -2216,11 +2216,16 @@ async def get_app_config(request: Request):
         if data is not None and "id" in data:
             user = Users.get_user_by_id(data["id"])
 
+    user_count = 0
+    if user is None:
+        user_count = Users.get_num_users()
+
     return {
         "status": True,
         "name": WEBUI_NAME,
         "version": VERSION,
         "default_locale": str(DEFAULT_LOCALE),
+        **({"onboarding": True} if user_count is 0 else {}),
         "oauth": {
             "providers": {
                 name: config.get("name", name)

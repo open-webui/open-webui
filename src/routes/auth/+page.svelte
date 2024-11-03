@@ -10,6 +10,7 @@
 	import { page } from '$app/stores';
 	import { getBackendConfig } from '$lib/apis';
 	import SlideShow from '$lib/components/common/SlideShow.svelte';
+	import OnBoarding from '$lib/components/OnBoarding.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -87,6 +88,8 @@
 		await setSessionUser(sessionUser);
 	};
 
+	let onboarding = false;
+
 	onMount(async () => {
 		if ($user !== undefined) {
 			await goto('/');
@@ -96,6 +99,7 @@
 		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
 			await signInHandler();
 		}
+		onboarding = $config?.onboarding ?? false;
 	});
 </script>
 
@@ -105,14 +109,16 @@
 	</title>
 </svelte:head>
 
+<OnBoarding
+	bind:show={onboarding}
+	getStartedHandler={() => {
+		onboarding = false;
+		mode = 'signup';
+	}}
+/>
+
 <div class="w-full h-screen max-h-[100dvh] text-white relative">
 	<div class="w-full h-full absolute top-0 left-0 bg-white dark:bg-black"></div>
-
-	<!-- <div
-		class="w-full h-full absolute top-0 left-0 bg-gradient-to-t dark:from-black dark:to-black/60"
-	></div> -->
-
-	<!-- <div class="w-full h-full absolute top-0 left-0 backdrop-blur-xl bg-black/50"></div> -->
 
 	{#if loaded}
 		<div class="fixed m-10 z-50">
