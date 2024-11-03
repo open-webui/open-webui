@@ -32,7 +32,7 @@ from open_webui.config import (
 )
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS, DEVICE_TYPE
+from open_webui.env import SRC_LOG_LEVELS, DEVICE_TYPE, ENABLE_FORWARD_USER_INFO_HEADERS
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -247,6 +247,12 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         headers = {}
         headers["Authorization"] = f"Bearer {app.state.config.TTS_OPENAI_API_KEY}"
         headers["Content-Type"] = "application/json"
+
+        if ENABLE_FORWARD_USER_INFO_HEADERS:
+            headers["X-OpenWebUI-User-Name"] = user.name
+            headers["X-OpenWebUI-User-Id"] = user.id
+            headers["X-OpenWebUI-User-Email"] = user.email
+            headers["X-OpenWebUI-User-Role"] = user.role
 
         try:
             body = body.decode("utf-8")
