@@ -372,6 +372,7 @@ async def generate_function_chat_completion(form_data, user):
             "name": user.name,
             "role": user.role,
         },
+        "metadata": metadata,
     }
     extra_params["__tools__"] = get_tools(
         app,
