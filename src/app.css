@@ -16,6 +16,12 @@
 	font-display: swap;
 }
 
+@font-face {
+	font-family: 'InstrumentSerif';
+	src: url('/assets/fonts/InstrumentSerif-Regular.ttf');
+	font-display: swap;
+}
+
 html {
 	word-break: break-word;
 }
@@ -24,6 +30,10 @@ code {
 	/* white-space-collapse: preserve !important; */
 	overflow-x: auto;
 	width: auto;
+}
+
+.font-secondary {
+	font-family: 'InstrumentSerif', sans-serif;
 }
 
 math {
