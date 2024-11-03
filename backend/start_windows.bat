@@ -31,6 +31,6 @@ IF "%WEBUI_SECRET_KEY%%WEBUI_JWT_SECRET_KEY%" == " " (
 :: Execute uvicorn
 SET "WEBUI_SECRET_KEY=%WEBUI_SECRET_KEY%"
 :start
-hypercorn open_webui.main:app --bind %HOST%:%PORT%
+hypercorn open_webui.main:app --bind %HOST%:%PORT% --proxy-headers
 timeout 10
 goto start
