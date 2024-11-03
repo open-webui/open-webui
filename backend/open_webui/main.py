@@ -1639,7 +1639,6 @@ JSON format: { "tags": ["tag1", "tag2", "tag3"] }
         template, form_data["messages"], {"name": user.name}
     )
 
-    print("content", content)
     payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
