@@ -324,8 +324,8 @@
 
              rounded-full"
 			on:click={async () => {
-				dispatch('cancel');
 				stopRecording();
+				dispatch('cancel');
 			}}
 		>
 			<svg
