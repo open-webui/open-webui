@@ -331,7 +331,7 @@ async def chat_completion_filter_functions_handler(body, model, extra_params):
     return body, {}
 
 
-def get_tools_function_calling_payload(messages, task_model_id, content):
+def get_tools_function_calling_payload(messages, task_model_id, content, oAI = False):
     user_message = get_last_user_message(messages)
     history = "\n".join(
         f"{message['role'].upper()}: \"\"\"{message['content']}\"\"\""
@@ -339,30 +339,46 @@ def get_tools_function_calling_payload(messages, task_model_id, content):
     )
 
     prompt = f"History:\n{history}\nQuery: {user_message}"
-
-    return {
-        "model": task_model_id,
-        "messages": [
+    messages = (
+        [
+            {"role": "user", "content": f"Query: {prompt}"},
+        ]
+        if oAI else
+        [
             {"role": "system", "content": content},
             {"role": "user", "content": f"Query: {prompt}"},
-        ],
-        "stream": False,
-        "metadata": {"task": str(TASKS.FUNCTION_CALLING)},
-    }
+        ])
+    payload = (
+        {
+            "model": task_model_id,
+            "messages": messages,
+            "tools" : [{'type':'function','function':tool} for tool in content],
+            "stream": False,
+            "metadata": {"task": str(TASKS.FUNCTION_CALLING)},
+        }
+        if oAI else
+        {
+            "model": task_model_id,
+            "messages": messages,
+            "stream": False,
+            "metadata": {"task": str(TASKS.FUNCTION_CALLING)},
+        }
+    )
+    return payload
 
 
-async def get_content_from_response(response) -> Optional[str]:
+async def get_content_from_response(response, field='content') -> Optional[str]:
     content = None
     if hasattr(response, "body_iterator"):
         async for chunk in response.body_iterator:
             data = json.loads(chunk.decode("utf-8"))
-            content = data["choices"][0]["message"]["content"]
+            content = data["choices"][0]["message"][field]
 
         # Cleanup any remaining background tasks if necessary
         if response.background is not None:
             await response.background()
     else:
-        content = response["choices"][0]["message"]["content"]
+        content = response["choices"][0]["message"][field]
     return content
 
 
@@ -396,19 +412,9 @@ async def chat_completion_tools_handler(
     log.info(f"{tools=}")
 
     specs = [tool["spec"] for tool in tools.values()]
-    tools_specs = json.dumps(specs)
 
-    if app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE != "":
-        template = app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
-    else:
-        template = """Available Tools: {{TOOLS}}\nReturn an empty string if no tools match the query. If a function tool matches, construct and return a JSON object in the format {\"name\": \"functionName\", \"parameters\": {\"requiredFunctionParamKey\": \"requiredFunctionParamValue\"}} using the appropriate tool and its parameters. Only return the object and limit the response to the JSON object without additional text."""
-
-    tools_function_calling_prompt = tools_function_calling_generation_template(
-        template, tools_specs
-    )
-    log.info(f"{tools_function_calling_prompt=}")
     payload = get_tools_function_calling_payload(
-        body["messages"], task_model_id, tools_function_calling_prompt
+        body["messages"], task_model_id, specs, True
     )
 
     try:
@@ -419,18 +425,26 @@ async def chat_completion_tools_handler(
     try:
         response = await generate_chat_completions(form_data=payload, user=user)
         log.debug(f"{response=}")
-        content = await get_content_from_response(response)
-        log.debug(f"{content=}")
+        tool_calls = await get_content_from_response(response,"tool_calls")
+        log.debug(f"{tool_calls=}")
 
-        if not content:
-            return body, {}
+        if not tool_calls:
+            content = await get_content_from_response(response)
+            log.debug(f"{content=}")
+            if not content:
+                return body, {}
 
         try:
-            content = content[content.find("{") : content.rfind("}") + 1]
-            if not content:
-                raise Exception("No JSON object found in the response")
+            if not tool_calls:
+                content = content[content.find("{") : content.rfind("}") + 1]
+                if not content:
+                    raise Exception("No JSON object found in the response")
 
-            result = json.loads(content)
+                result = json.loads(content)
+            else:
+                result = tool_calls[0]["function"]
+                result["parameters"] = result.pop("arguments")
+                result["parameters"] = json.loads(result["parameters"])
 
             tool_function_name = result.get("name", None)
             if tool_function_name not in tools:

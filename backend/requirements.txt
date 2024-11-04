@@ -81,6 +81,7 @@ black==24.8.0
 langfuse==2.44.0
 youtube-transcript-api==0.6.2
 pytube==15.0.0
+openrouteservice==2.3.3
 
 extract_msg
 pydub
