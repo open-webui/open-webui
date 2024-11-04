@@ -428,7 +428,7 @@ async def get_rag_config(user=Depends(get_admin_user)):
             "translation": app.state.YOUTUBE_LOADER_TRANSLATION,
         },
         "web": {
-            "ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            "web_loader_ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             "search": {
                 "enabled": app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "engine": app.state.config.RAG_WEB_SEARCH_ENGINE,
@@ -592,7 +592,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
             "translation": app.state.YOUTUBE_LOADER_TRANSLATION,
         },
         "web": {
-            "ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            "web_loader_ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             "search": {
                 "enabled": app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "engine": app.state.config.RAG_WEB_SEARCH_ENGINE,
