@@ -3,17 +3,21 @@ from typing import Optional
 
 from open_webui.apps.rag.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import (
-    OPENSEARCH_URI,  # Assuming you define OPENSEARCH_URI in config
+    OPENSEARCH_URI,
+    OPENSEARCH_SSL,
+    OPENSEARCH_CERT_VERIFY,
+    OPENSEARCH_USERNAME,
+    OPENSEARCH_PASSWORD
 )
 
 class OpenSearchClient:
     def __init__(self):
         self.index_prefix = "open_webui"
         self.client = OpenSearch(
-            hosts=[config["OPENSEARCH_URI"]],
+            hosts=[OPENSEARCH_URI],
             use_ssl=OPENSEARCH_SSL,
             verify_certs=OPENSEARCH_CERT_VERIFY,
-            http_auth=(OPENSEARCH_USERNAME,OPENSEARCH_PASSWORD),
+            http_auth=(OPENSEARCH_USERNAME, OPENSEARCH_PASSWORD),
         )
 
     def _result_to_get_result(self, result) -> GetResult:
@@ -103,11 +107,9 @@ class OpenSearchClient:
 
         return self._result_to_search_result(result)
 
-
     def get_or_create_index(self, index_name: str, dimension: int):
         if not self.has_index(index_name):
             self._create_index(index_name, dimension)
-
 
     def get(self, index_name: str) -> Optional[GetResult]:
         query = {
