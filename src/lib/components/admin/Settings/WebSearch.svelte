@@ -319,7 +319,7 @@
 							}}
 							type="button"
 						>
-							{#if webConfig.web_loader_ssl_verification === true}
+							{#if webConfig.web_loader_ssl_verification === false}
 								<span class="ml-2 self-center">{$i18n.t('On')}</span>
 							{:else}
 								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
