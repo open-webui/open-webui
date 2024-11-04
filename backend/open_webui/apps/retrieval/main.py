@@ -428,7 +428,7 @@ async def get_rag_config(user=Depends(get_admin_user)):
             "translation": app.state.YOUTUBE_LOADER_TRANSLATION,
         },
         "web": {
-            "ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            "web_loader_ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             "search": {
                 "enabled": app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "engine": app.state.config.RAG_WEB_SEARCH_ENGINE,
@@ -537,6 +537,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
 
     if form_data.web is not None:
         app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
+            #Note: When UI "Bypass SSL verification for Websites"=True then ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION=False
             form_data.web.web_loader_ssl_verification
         )
 
@@ -592,7 +593,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
             "translation": app.state.YOUTUBE_LOADER_TRANSLATION,
         },
         "web": {
-            "ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            "web_loader_ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             "search": {
                 "enabled": app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "engine": app.state.config.RAG_WEB_SEARCH_ENGINE,
@@ -1229,7 +1230,7 @@ def process_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
 
         urls = [result.link for result in web_results]
 
-        loader = get_web_loader(urls)
+        loader = get_web_loader(urls, verify_ssl=app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION)
         docs = loader.load()
 
         save_docs_to_vector_db(docs, collection_name, overwrite=True)
