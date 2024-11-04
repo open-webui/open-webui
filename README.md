@@ -187,18 +187,6 @@ docker run -d -p 3000:8080 -v open-webui:/app/backend/data --name open-webui --a
 
 Discover upcoming features on our roadmap in the [Open WebUI Documentation](https://docs.openwebui.com/roadmap/).
 
-## Supporters ✨
-
-A big shoutout to our amazing supporters who's helping to make this project possible! 🙏
-
-### Platinum Sponsors 🤍
-
-- We're looking for Sponsors!
-
-### Acknowledgments
-
-Special thanks to [Prof. Lawrence Kim](https://www.lhkim.com/) and [Prof. Nick Vincent](https://www.nickmvincent.com/) for their invaluable support and guidance in shaping this project into a research endeavor. Grateful for your mentorship throughout the journey! 🙌
-
 ## License 📜
 
 This project is licensed under the [MIT License](LICENSE) - see the [LICENSE](LICENSE) file for details. 📄
