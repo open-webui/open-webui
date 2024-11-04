@@ -571,10 +571,15 @@
 							importChatHandler(e.detail, true);
 						}}
 						on:drop={async (e) => {
-							const { type, id } = e.detail;
+							const { type, id, item } = e.detail;
 
 							if (type === 'chat') {
-								const chat = await getChatById(localStorage.token, id);
+								let chat = await getChatById(localStorage.token, id).catch((error) => {
+									return null;
+								});
+								if (!chat && item) {
+									chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+								}
 
 								if (chat) {
 									console.log(chat);
@@ -587,19 +592,13 @@
 											toast.error(error);
 											return null;
 										});
-
-										if (res) {
-											initChatList();
-										}
 									}
 
 									if (!chat.pinned) {
-										const res = await toggleChatPinnedStatusById(localStorage.token, id);
-
-										if (res) {
-											initChatList();
-										}
+										const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
 									}
+
+									initChatList();
 								}
 							}
 						}}
@@ -660,10 +659,15 @@
 						importChatHandler(e.detail);
 					}}
 					on:drop={async (e) => {
-						const { type, id } = e.detail;
+						const { type, id, item } = e.detail;
 
 						if (type === 'chat') {
-							const chat = await getChatById(localStorage.token, id);
+							let chat = await getChatById(localStorage.token, id).catch((error) => {
+								return null;
+							});
+							if (!chat && item) {
+								chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+							}
 
 							if (chat) {
 								console.log(chat);
@@ -674,19 +678,13 @@
 											return null;
 										}
 									);
-
-									if (res) {
-										initChatList();
-									}
 								}
 
 								if (chat.pinned) {
-									const res = await toggleChatPinnedStatusById(localStorage.token, id);
-
-									if (res) {
-										initChatList();
-									}
+									const res = await toggleChatPinnedStatusById(localStorage.token, chat, id);
 								}
+
+								initChatList();
 							}
 						} else if (type === 'folder') {
 							if (folders[id].parent_id === null) {

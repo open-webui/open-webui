@@ -937,6 +937,8 @@ CHROMA_TENANT = os.environ.get("CHROMA_TENANT", chromadb.DEFAULT_TENANT)
 CHROMA_DATABASE = os.environ.get("CHROMA_DATABASE", chromadb.DEFAULT_DATABASE)
 CHROMA_HTTP_HOST = os.environ.get("CHROMA_HTTP_HOST", "")
 CHROMA_HTTP_PORT = int(os.environ.get("CHROMA_HTTP_PORT", "8000"))
+CHROMA_CLIENT_AUTH_PROVIDER = os.environ.get("CHROMA_CLIENT_AUTH_PROVIDER", "")
+CHROMA_CLIENT_AUTH_CREDENTIALS = os.environ.get("CHROMA_CLIENT_AUTH_CREDENTIALS", "")
 # Comma-separated list of header=value pairs
 CHROMA_HTTP_HEADERS = os.environ.get("CHROMA_HTTP_HEADERS", "")
 if CHROMA_HTTP_HEADERS:
@@ -1216,6 +1218,12 @@ TAVILY_API_KEY = PersistentConfig(
     os.getenv("TAVILY_API_KEY", ""),
 )
 
+JINA_API_KEY = PersistentConfig(
+    "JINA_API_KEY",
+    "rag.web.search.jina_api_key",
+    os.getenv("JINA_API_KEY", ""),
+)
+
 SEARCHAPI_API_KEY = PersistentConfig(
     "SEARCHAPI_API_KEY",
     "rag.web.search.searchapi_api_key",
@@ -1227,6 +1235,21 @@ SEARCHAPI_ENGINE = PersistentConfig(
     "rag.web.search.searchapi_engine",
     os.getenv("SEARCHAPI_ENGINE", ""),
 )
+
+BING_SEARCH_V7_ENDPOINT = PersistentConfig(
+    "BING_SEARCH_V7_ENDPOINT",
+    "rag.web.search.bing_search_v7_endpoint",
+    os.environ.get(
+        "BING_SEARCH_V7_ENDPOINT", "https://api.bing.microsoft.com/v7.0/search"
+    ),
+)
+
+BING_SEARCH_V7_SUBSCRIPTION_KEY = PersistentConfig(
+    "BING_SEARCH_V7_SUBSCRIPTION_KEY",
+    "rag.web.search.bing_search_v7_subscription_key",
+    os.environ.get("BING_SEARCH_V7_SUBSCRIPTION_KEY", ""),
+)
+
 
 RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(
     "RAG_WEB_SEARCH_RESULT_COUNT",
@@ -1279,7 +1302,7 @@ AUTOMATIC1111_CFG_SCALE = PersistentConfig(
 
 
 AUTOMATIC1111_SAMPLER = PersistentConfig(
-    "AUTOMATIC1111_SAMPLERE",
+    "AUTOMATIC1111_SAMPLER",
     "image_generation.automatic1111.sampler",
     (
         os.environ.get("AUTOMATIC1111_SAMPLER")

@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
+	import { v4 as uuidv4 } from 'uuid';
+
 	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
 	const dispatch = createEventDispatcher();
 
@@ -89,6 +91,7 @@
 	const uploadFileHandler = async (file) => {
 		console.log(file);
 
+		const tempItemId = uuidv4();
 		const fileItem = {
 			type: 'file',
 			file: '',
@@ -98,10 +101,16 @@
 			collection_name: '',
 			status: 'uploading',
 			size: file.size,
-			error: ''
+			error: '',
+			itemId: tempItemId
 		};
-		files = [...files, fileItem];
 
+		if (fileItem.size == 0) {
+			toast.error($i18n.t('You cannot upload an empty file.'));
+			return null;
+		}
+
+		files = [...files, fileItem];
 		// Check if the file is an audio file and transcribe/convert it to text file
 		if (['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'].includes(file['type'])) {
 			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
@@ -124,6 +133,10 @@
 			const uploadedFile = await uploadFile(localStorage.token, file);
 
 			if (uploadedFile) {
+				if (uploadedFile.error) {
+					toast.warning(uploadedFile.error);
+				}
+
 				fileItem.status = 'uploaded';
 				fileItem.file = uploadedFile;
 				fileItem.id = uploadedFile.id;
@@ -132,11 +145,11 @@
 
 				files = files;
 			} else {
-				files = files.filter((item) => item.status !== null);
+				files = files.filter((item) => item?.itemId !== tempItemId);
 			}
 		} catch (e) {
 			toast.error(e);
-			files = files.filter((item) => item.status !== null);
+			files = files.filter((item) => item?.itemId !== tempItemId);
 		}
 	};
 

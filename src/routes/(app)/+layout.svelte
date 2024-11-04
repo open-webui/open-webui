@@ -190,7 +190,7 @@
 				}
 			});
 
-			if ($user.role === 'admin') {
+			if ($user.role === 'admin' && ($settings?.showChangelog ?? true)) {
 				showChangelog.set($settings?.version !== $config.version);
 			}
 

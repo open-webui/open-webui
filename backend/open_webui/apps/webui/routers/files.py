@@ -38,7 +38,7 @@ router = APIRouter()
 ############################
 
 
-@router.post("/")
+@router.post("/", response_model=FileModelResponse)
 def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
     log.info(f"file.content_type: {file.content_type}")
     try:
@@ -73,6 +73,12 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
         except Exception as e:
             log.exception(e)
             log.error(f"Error processing file: {file_item.id}")
+            file_item = FileModelResponse(
+                **{
+                    **file_item.model_dump(),
+                    "error": str(e.detail) if hasattr(e, "detail") else str(e),
+                }
+            )
 
         if file_item:
             return file_item

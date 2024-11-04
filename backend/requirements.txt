@@ -1,7 +1,7 @@
 fastapi==0.111.0
 uvicorn[standard]==0.30.6
 pydantic==2.9.2
-python-multipart==0.0.9
+python-multipart==0.0.17
 
 Flask==3.0.3
 Flask-Cors==5.0.0
@@ -24,7 +24,7 @@ bcrypt==4.2.0
 
 pymongo
 redis
-boto3==1.35.0
+boto3==1.35.53
 
 argon2-cffi==23.1.0
 APScheduler==3.10.4
@@ -35,13 +35,13 @@ anthropic
 google-generativeai==0.7.2
 tiktoken
 
-langchain==0.2.15
-langchain-community==0.2.12
+langchain==0.3.5
+langchain-community==0.3.3
 langchain-chroma==0.1.4
 
 fake-useragent==1.5.1
-chromadb==0.5.9
-pymilvus==2.4.7
+chromadb==0.5.15
+pymilvus==2.4.9
 qdrant-client~=1.12.0
 
 sentence-transformers==3.2.0
@@ -51,7 +51,7 @@ einops==0.8.0
 
 ftfy==6.2.3
 pypdf==4.3.1
-xhtml2pdf==0.2.16
+fpdf2==2.7.9
 pymdown-extensions==10.11.2
 docx2txt==0.8
 python-pptx==1.0.0
@@ -68,8 +68,6 @@ psutil
 
 opencv-python-headless==4.10.0.84
 rapidocr-onnxruntime==1.3.24
-
-fpdf2==2.7.9
 rank-bm25==0.2.2
 
 faster-whisper==1.0.3

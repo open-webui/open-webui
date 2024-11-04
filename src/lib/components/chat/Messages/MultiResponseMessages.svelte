@@ -16,7 +16,6 @@
 	import Markdown from './Markdown.svelte';
 	import Name from './Name.svelte';
 	import Skeleton from './Skeleton.svelte';
-
 	const i18n = getContext('i18n');
 
 	export let chatId;
@@ -155,7 +154,6 @@
 		await tick();
 
 		const messageElement = document.getElementById(`message-${messageId}`);
-		console.log(messageElement);
 		if (messageElement) {
 			messageElement.scrollIntoView({ block: 'start' });
 		}
@@ -237,7 +235,7 @@
 			{/each}
 		</div>
 
-		{#if !readOnly && isLastMessage}
+		{#if !readOnly}
 			{#if !Object.keys(groupedMessageIds).find((modelIdx) => {
 				const { messageIds } = groupedMessageIds[modelIdx];
 				const _messageId = messageIds[groupedMessageIdsIdx[modelIdx]];
@@ -272,22 +270,24 @@
 						{/if}
 					</div>
 
-					<div class=" flex-shrink-0 text-gray-600 dark:text-gray-500 mt-1">
-						<Tooltip content={$i18n.t('Merge Responses')} placement="bottom">
-							<button
-								type="button"
-								id="merge-response-button"
-								class="{true
-									? 'visible'
-									: 'invisible group-hover:visible'} p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
-								on:click={() => {
-									mergeResponsesHandler();
-								}}
-							>
-								<Merge className=" size-5 " />
-							</button>
-						</Tooltip>
-					</div>
+					{#if isLastMessage}
+						<div class=" flex-shrink-0 text-gray-600 dark:text-gray-500 mt-1">
+							<Tooltip content={$i18n.t('Merge Responses')} placement="bottom">
+								<button
+									type="button"
+									id="merge-response-button"
+									class="{true
+										? 'visible'
+										: 'invisible group-hover:visible'} p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
+									on:click={() => {
+										mergeResponsesHandler();
+									}}
+								>
+									<Merge className=" size-5 " />
+								</button>
+							</Tooltip>
+						</div>
+					{/if}
 				</div>
 			{/if}
 		{/if}

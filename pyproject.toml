@@ -42,7 +42,7 @@ dependencies = [
     "google-generativeai==0.7.2",
     "tiktoken",
 
-    "langchain==0.2.15",
+    "langchain==0.3.0",
     "langchain-community==0.2.12",
     "langchain-chroma==0.1.4",
 
@@ -56,7 +56,7 @@ dependencies = [
 
     "ftfy==6.2.3",
     "pypdf==4.3.1",
-    "xhtml2pdf==0.2.16",
+    "fpdf2==2.7.9",
     "pymdown-extensions==10.11.2",
     "docx2txt==0.8",
     "python-pptx==1.0.0",
@@ -73,8 +73,6 @@ dependencies = [
 
     "opencv-python-headless==4.10.0.84",
     "rapidocr-onnxruntime==1.3.24",
-
-    "fpdf2==2.7.9",
     "rank-bm25==0.2.2",
 
     "faster-whisper==1.0.3",

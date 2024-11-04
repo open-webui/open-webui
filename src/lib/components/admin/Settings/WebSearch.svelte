@@ -22,7 +22,8 @@
 		'searchapi',
 		'duckduckgo',
 		'tavily',
-		'jina'
+		'jina',
+		'bing'
 	];
 
 	let youtubeLanguage = 'en';
@@ -220,6 +221,46 @@
 								<SensitiveInput
 									placeholder={$i18n.t('Enter Tavily API Key')}
 									bind:value={webConfig.search.tavily_api_key}
+								/>
+							</div>
+						{:else if webConfig.search.engine === 'jina'}
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Jina API Key')}
+								</div>
+
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Jina API Key')}
+									bind:value={webConfig.search.jina_api_key}
+								/>
+							</div>
+						{:else if webConfig.search.engine === 'bing'}
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Bing Search V7 Endpoint')}
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1">
+										<input
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+											type="text"
+											placeholder={$i18n.t('Enter Bing Search V7 Endpoint')}
+											bind:value={webConfig.search.bing_search_v7_endpoint}
+											autocomplete="off"
+										/>
+									</div>
+								</div>
+							</div>
+
+							<div class="mt-2">
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Bing Search V7 Subscription Key')}
+								</div>
+
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Bing Search V7 Subscription Key')}
+									bind:value={webConfig.search.bing_search_v7_subscription_key}
 								/>
 							</div>
 						{/if}
