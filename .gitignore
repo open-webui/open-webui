@@ -141,6 +141,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# virtual environment
+backend/open-webui/
+
 # Spyder project settings
 .spyderproject
 .spyproject
