@@ -19,6 +19,7 @@ alembic==1.13.2
 peewee==3.17.6
 peewee-migrate==1.12.2
 psycopg2-binary==2.9.9
+pgvector==0.3.5
 PyMySQL==1.1.1
 bcrypt==4.2.0
 

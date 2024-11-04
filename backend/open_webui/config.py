@@ -20,6 +20,7 @@ from open_webui.env import (
     WEBUI_FAVICON_URL,
     WEBUI_NAME,
     log,
+    DATABASE_URL,
 )
 from pydantic import BaseModel
 from sqlalchemy import JSON, Column, DateTime, Integer, func
@@ -930,6 +931,9 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
 ####################################
 
 VECTOR_DB = os.environ.get("VECTOR_DB", "chroma")
+
+if VECTOR_DB == 'pgvector' and not DATABASE_URL.startswith("postgres"):
+    raise ValueError("Pgvector requires using Postgres with vector extension as the primary database.")
 
 # Chroma
 CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
