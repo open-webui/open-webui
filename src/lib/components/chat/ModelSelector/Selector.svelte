@@ -438,14 +438,23 @@
 				{/each}
 
 				{#if !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user.role === 'admin'}
-					<button
-						class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
-						on:click={() => {
-							pullModelHandler();
-						}}
+					<Tooltip
+						content={$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, {
+							searchValue: searchValue
+						})}
+						placement="top-start"
 					>
-						{$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, { searchValue: searchValue })}
-					</button>
+						<button
+							class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
+							on:click={() => {
+								pullModelHandler();
+							}}
+						>
+							<div class=" truncate">
+								{$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, { searchValue: searchValue })}
+							</div>
+						</button>
+					</Tooltip>
 				{/if}
 
 				{#each Object.keys($MODEL_DOWNLOAD_POOL) as model}
