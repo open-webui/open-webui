@@ -1218,6 +1218,12 @@ TAVILY_API_KEY = PersistentConfig(
     os.getenv("TAVILY_API_KEY", ""),
 )
 
+JINA_API_KEY = PersistentConfig(
+    "JINA_API_KEY",
+    "rag.web.search.jina_api_key",
+    os.getenv("JINA_API_KEY", ""),
+)
+
 SEARCHAPI_API_KEY = PersistentConfig(
     "SEARCHAPI_API_KEY",
     "rag.web.search.searchapi_api_key",
@@ -1229,6 +1235,21 @@ SEARCHAPI_ENGINE = PersistentConfig(
     "rag.web.search.searchapi_engine",
     os.getenv("SEARCHAPI_ENGINE", ""),
 )
+
+BING_SEARCH_V7_ENDPOINT = PersistentConfig(
+    "BING_SEARCH_V7_ENDPOINT",
+    "rag.web.search.bing_search_v7_endpoint",
+    os.environ.get(
+        "BING_SEARCH_V7_ENDPOINT", "https://api.bing.microsoft.com/v7.0/search"
+    ),
+)
+
+BING_SEARCH_V7_SUBSCRIPTION_KEY = PersistentConfig(
+    "BING_SEARCH_V7_SUBSCRIPTION_KEY",
+    "rag.web.search.bing_search_v7_subscription_key",
+    os.environ.get("BING_SEARCH_V7_SUBSCRIPTION_KEY", ""),
+)
+
 
 RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(
     "RAG_WEB_SEARCH_RESULT_COUNT",

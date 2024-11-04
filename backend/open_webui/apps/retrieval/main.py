@@ -86,6 +86,7 @@ from open_webui.config import (
     RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
     RAG_WEB_SEARCH_ENGINE,
     RAG_WEB_SEARCH_RESULT_COUNT,
+    JINA_API_KEY,
     SEARCHAPI_API_KEY,
     SEARCHAPI_ENGINE,
     SEARXNG_QUERY_URL,
@@ -94,6 +95,8 @@ from open_webui.config import (
     SERPSTACK_API_KEY,
     SERPSTACK_HTTPS,
     TAVILY_API_KEY,
+    BING_SEARCH_V7_ENDPOINT,
+    BING_SEARCH_V7_SUBSCRIPTION_KEY,
     TIKA_SERVER_URL,
     UPLOAD_DIR,
     YOUTUBE_LOADER_LANGUAGE,
@@ -105,8 +108,6 @@ from open_webui.env import (
     SRC_LOG_LEVELS,
     DEVICE_TYPE,
     DOCKER,
-    BING_SEARCH_V7_ENDPOINT,
-    BING_SEARCH_V7_SUBSCRIPTION_KEY,
 )
 from open_webui.utils.misc import (
     calculate_sha256,
@@ -179,6 +180,10 @@ app.state.config.SERPLY_API_KEY = SERPLY_API_KEY
 app.state.config.TAVILY_API_KEY = TAVILY_API_KEY
 app.state.config.SEARCHAPI_API_KEY = SEARCHAPI_API_KEY
 app.state.config.SEARCHAPI_ENGINE = SEARCHAPI_ENGINE
+app.state.config.JINA_API_KEY = JINA_API_KEY
+app.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT
+app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY
+
 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
 app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
 
@@ -438,6 +443,9 @@ async def get_rag_config(user=Depends(get_admin_user)):
                 "tavily_api_key": app.state.config.TAVILY_API_KEY,
                 "searchapi_api_key": app.state.config.SEARCHAPI_API_KEY,
                 "seaarchapi_engine": app.state.config.SEARCHAPI_ENGINE,
+                "jina_api_key": app.state.config.JINA_API_KEY,
+                "bing_search_v7_endpoint": app.state.config.BING_SEARCH_V7_ENDPOINT,
+                "bing_search_v7_subscription_key": app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
                 "result_count": app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             },
@@ -480,6 +488,9 @@ class WebSearchConfig(BaseModel):
     tavily_api_key: Optional[str] = None
     searchapi_api_key: Optional[str] = None
     searchapi_engine: Optional[str] = None
+    jina_api_key: Optional[str] = None
+    bing_search_v7_endpoint: Optional[str] = None
+    bing_search_v7_subscription_key: Optional[str] = None
     result_count: Optional[int] = None
     concurrent_requests: Optional[int] = None
 
@@ -546,6 +557,15 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
         app.state.config.TAVILY_API_KEY = form_data.web.search.tavily_api_key
         app.state.config.SEARCHAPI_API_KEY = form_data.web.search.searchapi_api_key
         app.state.config.SEARCHAPI_ENGINE = form_data.web.search.searchapi_engine
+
+        app.state.config.JINA_API_KEY = form_data.web.search.jina_api_key
+        app.state.config.BING_SEARCH_V7_ENDPOINT = (
+            form_data.web.search.bing_search_v7_endpoint
+        )
+        app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = (
+            form_data.web.search.bing_search_v7_subscription_key
+        )
+
         app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = form_data.web.search.result_count
         app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = (
             form_data.web.search.concurrent_requests
@@ -587,6 +607,9 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
                 "serachapi_api_key": app.state.config.SEARCHAPI_API_KEY,
                 "searchapi_engine": app.state.config.SEARCHAPI_ENGINE,
                 "tavily_api_key": app.state.config.TAVILY_API_KEY,
+                "jina_api_key": app.state.config.JINA_API_KEY,
+                "bing_search_v7_endpoint": app.state.config.BING_SEARCH_V7_ENDPOINT,
+                "bing_search_v7_subscription_key": app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
                 "result_count": app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             },
@@ -1163,11 +1186,15 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
         else:
             raise Exception("No SEARCHAPI_API_KEY found in environment variables")
     elif engine == "jina":
-        return search_jina(query, app.state.config.RAG_WEB_SEARCH_RESULT_COUNT)
+        return search_jina(
+            app.state.config.JINA_API_KEY,
+            query,
+            app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+        )
     elif engine == "bing":
         return search_bing(
-            BING_SEARCH_V7_SUBSCRIPTION_KEY,
-            BING_SEARCH_V7_ENDPOINT,
+            app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
+            app.state.config.BING_SEARCH_V7_ENDPOINT,
             str(DEFAULT_LOCALE),
             query,
             app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,

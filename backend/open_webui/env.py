@@ -199,9 +199,9 @@ SAFE_MODE = os.environ.get("SAFE_MODE", "false").lower() == "true"
 # ENABLE_FORWARD_USER_INFO_HEADERS
 ####################################
 
-ENABLE_FORWARD_USER_INFO_HEADERS = os.environ.get(
-    "ENABLE_FORWARD_USER_INFO_HEADERS", "False"
-).lower() == "true"
+ENABLE_FORWARD_USER_INFO_HEADERS = (
+    os.environ.get("ENABLE_FORWARD_USER_INFO_HEADERS", "False").lower() == "true"
+)
 
 
 ####################################
@@ -391,11 +391,3 @@ else:
 ####################################
 
 OFFLINE_MODE = os.environ.get("OFFLINE_MODE", "false").lower() == "true"
-
-####################################
-# WEB SEARCH
-####################################
-
-BING_SEARCH_V7_ENDPOINT = os.environ.get("BING_SEARCH_V7_ENDPOINT", "https://api.bing.microsoft.com/v7.0/search")
-
-BING_SEARCH_V7_SUBSCRIPTION_KEY = os.environ.get("BING_SEARCH_V7_SUBSCRIPTION_KEY", "")
