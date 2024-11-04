@@ -26,7 +26,7 @@
 
 {#if loaded}
 	<div
-		class=" relative flex flex-col w-full min-h-screen max-h-screen {$showSidebar
+		class=" relative flex flex-col w-full h-screen max-h-[100dvh] {$showSidebar
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''}"
 	>
