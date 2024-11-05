@@ -966,9 +966,11 @@ OPENSEARCH_USERNAME = os.environ.get("OPENSEARCH_USERNAME", None)
 OPENSEARCH_PASSWORD = os.environ.get("OPENSEARCH_PASSWORD", None)
 
 # Pgvector
-PGVECTOR_DB_URL = os.environ.get("PGVECTOR_DB_URL", None)
-if VECTOR_DB == 'pgvector' and not (DATABASE_URL.startswith("postgres") or PGVECTOR_DB_URL):
-    raise ValueError("Pgvector requires setting PGVECTOR_DB_URL or using Postgres with vector extension as the primary database.")
+PGVECTOR_DB_URL = os.environ.get("PGVECTOR_DB_URL", DATABASE_URL)
+if VECTOR_DB == "pgvector" and not PGVECTOR_DB_URL.startswith("postgres"):
+    raise ValueError(
+        "Pgvector requires setting PGVECTOR_DB_URL or using Postgres with vector extension as the primary database."
+    )
 
 ####################################
 # Information Retrieval (RAG)
@@ -1605,59 +1607,53 @@ LDAP_SERVER_LABEL = PersistentConfig(
 LDAP_SERVER_HOST = PersistentConfig(
     "LDAP_SERVER_HOST",
     "ldap.server.host",
-    os.environ.get("LDAP_SERVER_HOST", "localhost")
+    os.environ.get("LDAP_SERVER_HOST", "localhost"),
 )
 
 LDAP_SERVER_PORT = PersistentConfig(
     "LDAP_SERVER_PORT",
     "ldap.server.port",
-    int(os.environ.get("LDAP_SERVER_PORT", "389"))
+    int(os.environ.get("LDAP_SERVER_PORT", "389")),
 )
 
 LDAP_ATTRIBUTE_FOR_USERNAME = PersistentConfig(
     "LDAP_ATTRIBUTE_FOR_USERNAME",
     "ldap.server.attribute_for_username",
-    os.environ.get("LDAP_ATTRIBUTE_FOR_USERNAME", "uid")
+    os.environ.get("LDAP_ATTRIBUTE_FOR_USERNAME", "uid"),
 )
 
 LDAP_APP_DN = PersistentConfig(
-    "LDAP_APP_DN",
-    "ldap.server.app_dn",
-    os.environ.get("LDAP_APP_DN", "")
+    "LDAP_APP_DN", "ldap.server.app_dn", os.environ.get("LDAP_APP_DN", "")
 )
 
 LDAP_APP_PASSWORD = PersistentConfig(
     "LDAP_APP_PASSWORD",
     "ldap.server.app_password",
-    os.environ.get("LDAP_APP_PASSWORD", "")
+    os.environ.get("LDAP_APP_PASSWORD", ""),
 )
 
 LDAP_SEARCH_BASE = PersistentConfig(
-    "LDAP_SEARCH_BASE",
-    "ldap.server.users_dn",
-    os.environ.get("LDAP_SEARCH_BASE", "")
+    "LDAP_SEARCH_BASE", "ldap.server.users_dn", os.environ.get("LDAP_SEARCH_BASE", "")
 )
 
 LDAP_SEARCH_FILTERS = PersistentConfig(
     "LDAP_SEARCH_FILTER",
     "ldap.server.search_filter",
-    os.environ.get("LDAP_SEARCH_FILTER", "")
+    os.environ.get("LDAP_SEARCH_FILTER", ""),
 )
 
 LDAP_USE_TLS = PersistentConfig(
     "LDAP_USE_TLS",
     "ldap.server.use_tls",
-    os.environ.get("LDAP_USE_TLS", "True").lower() == "true"
+    os.environ.get("LDAP_USE_TLS", "True").lower() == "true",
 )
 
 LDAP_CA_CERT_FILE = PersistentConfig(
     "LDAP_CA_CERT_FILE",
     "ldap.server.ca_cert_file",
-    os.environ.get("LDAP_CA_CERT_FILE", "")
+    os.environ.get("LDAP_CA_CERT_FILE", ""),
 )
 
 LDAP_CIPHERS = PersistentConfig(
-    "LDAP_CIPHERS",
-    "ldap.server.ciphers",
-    os.environ.get("LDAP_CIPHERS", "ALL")
+    "LDAP_CIPHERS", "ldap.server.ciphers", os.environ.get("LDAP_CIPHERS", "ALL")
 )
