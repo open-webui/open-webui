@@ -1,25 +1,31 @@
 <script>
+	import { toast } from 'svelte-sonner';
+
+	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+
+	import { getBackendConfig } from '$lib/apis';
 	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
-	import Spinner from '$lib/components/common/Spinner.svelte';
+
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
-	import { onMount, getContext } from 'svelte';
-	import { toast } from 'svelte-sonner';
+
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
-	import { page } from '$app/stores';
-	import { getBackendConfig } from '$lib/apis';
-	import SlideShow from '$lib/components/common/SlideShow.svelte';
+
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
 
 	const i18n = getContext('i18n');
 
 	let loaded = false;
-	let mode = (
+
+	let mode =
 		!$config?.features.enable_login_form &&
 		Object.keys($config?.oauth?.providers ?? {}).length == 0 &&
 		$config?.features.enable_ldap_form
-	) ? 'ldap' : 'signin';
+			? 'ldap'
+			: 'signin';
 
 	let name = '';
 	let email = '';
@@ -28,8 +34,12 @@
 	let ldapUsername = '';
 	let ldapPassword = '';
 
-	$: showSwitchButtonForSignInForm = ($config?.features.enable_ldap_form && mode !== 'ldap') || ($config?.features.enable_login_form && mode === 'ldap');
-	$: showOtherSignInMethods = Object.keys($config?.oauth?.providers ?? {}).length > 0 || showSwitchButtonForSignInForm;
+	$: showSwitchButtonForSignInForm =
+		($config?.features.enable_ldap_form && mode !== 'ldap') ||
+		($config?.features.enable_login_form && mode === 'ldap');
+
+	$: showOtherSignInMethods =
+		Object.keys($config?.oauth?.providers ?? {}).length > 0 || showSwitchButtonForSignInForm;
 
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
@@ -75,10 +85,9 @@
 	};
 
 	const submitHandler = async () => {
-		if (mode === 'ldap'){
+		if (mode === 'ldap') {
 			await ldapSignInHandler();
-		}
-		else if (mode === 'signin') {
+		} else if (mode === 'signin') {
 			await signInHandler();
 		} else {
 			await signUpHandler();
@@ -135,11 +144,12 @@
 	bind:show={onboarding}
 	getStartedHandler={() => {
 		onboarding = false;
-		mode = (
+		mode =
 			!$config?.features.enable_login_form &&
 			Object.keys($config?.oauth?.providers ?? {}).length == 0 &&
 			$config?.features.enable_ldap_form
-		) ? 'ldap' : 'signup';;
+				? 'ldap'
+				: 'signup';
 	}}
 />
 
@@ -188,12 +198,12 @@
 						>
 							<div class="mb-1">
 								<div class=" text-2xl font-medium">
-									{#if mode === 'signin'}
-										{$i18n.t(`Sign in to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
-									{:else if $config?.onboarding ?? false}
+									{#if $config?.onboarding ?? false}
 										{$i18n.t(`Get started with {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
 									{:else if mode === 'ldap'}
 										{$i18n.t(`Sign in to {{WEBUI_NAME}} with LDAP`, { WEBUI_NAME: $WEBUI_NAME })}
+									{:else if mode === 'signin'}
+										{$i18n.t(`Sign in to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
 									{:else}
 										{$i18n.t(`Sign up to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
 									{/if}
@@ -209,7 +219,7 @@
 								{/if}
 							</div>
 
-							{#if $config?.features.enable_login_form || $config?.features.enable_ldap_form }
+							{#if $config?.features.enable_login_form || $config?.features.enable_ldap_form}
 								<div class="flex flex-col mt-4">
 									{#if mode === 'signup'}
 										<div class="mb-2">
@@ -330,7 +340,7 @@
 							<div class="flex flex-col space-y-2">
 								{#if $config?.oauth?.providers?.google}
 									<button
-										class="flex items-center px-6 border-2 dark:border-gray-800 duration-300 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 w-full rounded-2xl dark:text-white text-sm py-3 transition"
+										class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
 										on:click={() => {
 											window.location.href = `${WEBUI_BASE_URL}/oauth/google/login`;
 										}}
@@ -355,7 +365,7 @@
 								{/if}
 								{#if $config?.oauth?.providers?.microsoft}
 									<button
-										class="flex items-center px-6 border-2 dark:border-gray-800 duration-300 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 w-full rounded-2xl dark:text-white text-sm py-3 transition"
+										class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
 										on:click={() => {
 											window.location.href = `${WEBUI_BASE_URL}/oauth/microsoft/login`;
 										}}
@@ -380,7 +390,7 @@
 								{/if}
 								{#if $config?.oauth?.providers?.oidc}
 									<button
-										class="flex items-center px-6 border-2 dark:border-gray-800 duration-300 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 w-full rounded-2xl dark:text-white text-sm py-3 transition"
+										class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
 										on:click={() => {
 											window.location.href = `${WEBUI_BASE_URL}/oauth/oidc/login`;
 										}}
@@ -409,29 +419,37 @@
 								{/if}
 								{#if showSwitchButtonForSignInForm}
 									<button
-									class="flex items-center px-6 border-2 dark:border-gray-800 duration-300 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 w-full rounded-2xl dark:text-white text-sm py-3 transition"
-									on:click={() => {
-										if (mode === 'ldap')
-											mode = ($config?.onboarding ?? false) ? 'signup' : 'signin';
-										else mode = 'ldap';
-									}}
+										class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
+										on:click={() => {
+											if (mode === 'ldap')
+												mode = ($config?.onboarding ?? false) ? 'signup' : 'signin';
+											else mode = 'ldap';
+										}}
 									>
 										{#if mode === 'ldap'}
-											<svg 
+											<svg
 												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 24 24" 
-												fill="none" 
+												viewBox="0 0 24 24"
+												fill="none"
 												stroke-width="1.5"
 												stroke="currentColor"
 												class="size-6 mr-3"
 											>
-												<path 
+												<path
 													stroke-linecap="round"
 													stroke-linejoin="round"
 													d="M4 7.00005L10.2 11.65C11.2667 12.45 12.7333 12.45 13.8 11.65L20 7"
 													stroke-width="2"
 												/>
-												<rect x="3" y="5" width="18" height="14" rx="2" stroke-width="2" stroke-linecap="round"/>
+												<rect
+													x="3"
+													y="5"
+													width="18"
+													height="14"
+													rx="2"
+													stroke-width="2"
+													stroke-linecap="round"
+												/>
 											</svg>
 										{:else}
 											<svg
@@ -449,7 +467,11 @@
 												/>
 											</svg>
 										{/if}
-										<span>{mode === 'ldap' ? $i18n.t('Continue with Email') : $i18n.t('Continue with LDAP')}</span>
+										<span
+											>{mode === 'ldap'
+												? $i18n.t('Continue with Email')
+												: $i18n.t('Continue with LDAP')}</span
+										>
 									</button>
 								{/if}
 							</div>
