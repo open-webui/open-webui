@@ -111,7 +111,7 @@
 					<input
 						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 						type="number"
-						placeholder="Enter Seed"
+						placeholder={$i18n.t('Enter Seed')}
 						bind:value={params.seed}
 						autocomplete="off"
 						min="0"
@@ -1115,7 +1115,7 @@
 					<div class=" flex-1">
 						<textarea
 							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg -mb-1"
-							placeholder="Write your model template content here"
+							placeholder={$i18n.t('Write your model template content here')}
 							rows="4"
 							bind:value={params.template}
 						/>
