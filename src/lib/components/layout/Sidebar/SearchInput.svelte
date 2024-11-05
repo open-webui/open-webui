@@ -182,7 +182,9 @@
 						{/each}
 					</div>
 				{:else if filteredOptions.length > 0}
-					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">Search options</div>
+					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">
+						{$i18n.t('Search options')}
+					</div>
 
 					<div class=" max-h-60 overflow-auto">
 						{#each filteredOptions as option, optionIdx}
