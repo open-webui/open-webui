@@ -44,6 +44,7 @@ from typing import Optional, List
 
 from ldap3 import Server, Connection, ALL, Tls
 from ssl import CERT_REQUIRED, PROTOCOL_TLS
+from ldap3.utils.conv import escape_filter_chars
 
 router = APIRouter()
 
@@ -181,7 +182,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
         search_success = connection_app.search(
             search_base=LDAP_SEARCH_BASE,
-            search_filter=f'(&({LDAP_ATTRIBUTE_FOR_USERNAME}={form_data.user.lower()}){LDAP_SEARCH_FILTERS})',
+            search_filter=f'(&({LDAP_ATTRIBUTE_FOR_USERNAME}={escape_filter_chars(form_data.user.lower())}){LDAP_SEARCH_FILTERS})',
             attributes=[f'{LDAP_ATTRIBUTE_FOR_USERNAME}', 'mail', 'cn']
         )
 
