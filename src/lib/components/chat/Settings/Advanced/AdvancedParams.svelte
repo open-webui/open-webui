@@ -48,7 +48,7 @@
 			<div class=" py-0.5 flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
 					<Tooltip 
-						content="When enabled, the model will respond to each chat message in real-time, generating a response as soon as the user sends a message. This mode is useful for live chat applications, but may impact performance on slower hardware." 
+						content={$i18n.t("When enabled, the model will respond to each chat message in real-time, generating a response as soon as the user sends a message. This mode is useful for live chat applications, but may impact performance on slower hardware.")}
 						placement="top-start" 
 						className="inline-tooltip"
 					>
@@ -82,7 +82,7 @@
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">
 				<Tooltip 
-					content="Sets the random number seed to use for generation. Setting this to a specific number will make the model generate the same text for the same prompt. (Default: random)" 
+					content={$i18n.t("Sets the random number seed to use for generation. Setting this to a specific number will make the model generate the same text for the same prompt. (Default: random)")}
 					placement="top-start" 
 					className="inline-tooltip"
 				>
@@ -125,7 +125,7 @@
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">
 				<Tooltip 
-					content="Sets the stop sequences to use. When this pattern is encountered, the LLM will stop generating text and return. Multiple stop patterns may be set by specifying multiple separate stop parameters in a modelfile." 
+					content={$i18n.t("Sets the stop sequences to use. When this pattern is encountered, the LLM will stop generating text and return. Multiple stop patterns may be set by specifying multiple separate stop parameters in a modelfile.")}
 					placement="top-start" 
 					className="inline-tooltip"
 				>
@@ -167,7 +167,7 @@
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">
 				<Tooltip 
-					content="The temperature of the model. Increasing the temperature will make the model answer more creatively. (Default: 0.8)" 
+					content={$i18n.t("The temperature of the model. Increasing the temperature will make the model answer more creatively. (Default: 0.8)")}
 					placement="top-start" 
 					className="inline-tooltip"
 				>
@@ -219,7 +219,7 @@
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">
 				<Tooltip 
-					content="Enable Mirostat sampling for controlling perplexity. (Default: 0, 0 = Disabled, 1 = Mirostat, 2 = Mirostat 2.0)" 
+					content={$i18n.t("Enable Mirostat sampling for controlling perplexity. (Default: 0, 0 = Disabled, 1 = Mirostat, 2 = Mirostat 2.0)")}
 					placement="top-start" 
 					className="inline-tooltip"
 				>
@@ -271,7 +271,7 @@
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">
 				<Tooltip 
-					content="Influences how quickly the algorithm responds to feedback from the generated text. A lower learning rate will result in slower adjustments, while a higher learning rate will make the algorithm more responsive. (Default: 0.1)" 
+					content={$i18n.t("Influences how quickly the algorithm responds to feedback from the generated text. A lower learning rate will result in slower adjustments, while a higher learning rate will make the algorithm more responsive. (Default: 0.1)")}
 					placement="top-start" 
 					className="inline-tooltip"
 				>
@@ -323,7 +323,7 @@
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">
 				<Tooltip 
-					content="Controls the balance between coherence and diversity of the output. A lower value will result in more focused and coherent text. (Default: 5.0)" 
+					content={$i18n.t("Controls the balance between coherence and diversity of the output. A lower value will result in more focused and coherent text. (Default: 5.0)")}
 					placement="top-start" 
 					className="inline-tooltip"
 				>
@@ -377,7 +377,7 @@
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">
 				<Tooltip 
-					content="Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40)" 
+					content={$i18n.t("Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40)")}
 					placement="top-start" 
 					className="inline-tooltip"
 				>
@@ -429,7 +429,7 @@
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">
 				<Tooltip 
-					content="Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)" 
+					content={$i18n.t("Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)")}
 					placement="top-start" 
 					className="inline-tooltip"
 				>
@@ -483,7 +483,7 @@
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">
 				<Tooltip 
-					content="Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out. (Default: 0.0)" 
+					content={$i18n.t("Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out. (Default: 0.0)")}
 					placement="top-start" 
 					className="inline-tooltip"
 				>
@@ -535,7 +535,7 @@
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">
 				<Tooltip 
-					content="Sets how strongly to penalize repetitions. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. (Default: 1.1)" 
+					content={$i18n.t("Sets how strongly to penalize repetitions. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. (Default: 1.1)")}
 					placement="top-start" 
 					className="inline-tooltip"
 				>
@@ -589,7 +589,7 @@
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">
 				<Tooltip 
-					content="Sets how far back for the model to look back to prevent repetition. (Default: 64, 0 = disabled, -1 = num_ctx)" 
+					content={$i18n.t("Sets how far back for the model to look back to prevent repetition. (Default: 64, 0 = disabled, -1 = num_ctx)")}
 					placement="top-start" 
 					className="inline-tooltip"
 				>
@@ -643,7 +643,7 @@
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">
 				<Tooltip 
-					content="Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting. (default: 1)" 
+					content={$i18n.t("Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting. (default: 1)")}
 					placement="top-start" 
 					className="inline-tooltip"
 				>
@@ -697,7 +697,7 @@
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">
 				<Tooltip 
-					content="Sets the size of the context window used to generate the next token. (Default: 2048)" 
+					content={$i18n.t("Sets the size of the context window used to generate the next token. (Default: 2048)")}
 					placement="top-start" 
 					className="inline-tooltip"
 				>
@@ -750,7 +750,7 @@
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">
 				<Tooltip 
-					content="The batch size determines how many text requests are processed together at once. A higher batch size can increase the performance and speed of the model, but it also requires more memory.  (Default: 512)" 
+					content={$i18n.t("The batch size determines how many text requests are processed together at once. A higher batch size can increase the performance and speed of the model, but it also requires more memory.  (Default: 512)")}
 					placement="top-start" 
 					className="inline-tooltip"
 				>
@@ -803,7 +803,7 @@
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">
 				<Tooltip 
-					content="This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics. (Default: 24)" 
+					content={$i18n.t("This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics. (Default: 24)")}
 					placement="top-start" 
 					className="inline-tooltip"
 				>
@@ -856,7 +856,7 @@
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">
 				<Tooltip 
-					content="This option sets the maximum number of tokens the model can generate in its response. Increasing this limit allows the model to provide longer answers, but it may also increase the likelihood of unhelpful or irrelevant content being generated.  (Default: 128)" 
+					content={$i18n.t("This option sets the maximum number of tokens the model can generate in its response. Increasing this limit allows the model to provide longer answers, but it may also increase the likelihood of unhelpful or irrelevant content being generated.  (Default: 128)")}
 					placement="top-start" 
 					className="inline-tooltip"
 				>
@@ -910,7 +910,7 @@
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
 					<Tooltip 
-						content="Enable Memory Mapping (mmap) to load model data. This option allows the system to use disk storage as an extension of RAM by treating disk files as if they were in RAM. This can improve model performance by allowing for faster data access. However, it may not work correctly with all systems and can consume a significant amount of disk space." 
+						content={$i18n.t("Enable Memory Mapping (mmap) to load model data. This option allows the system to use disk storage as an extension of RAM by treating disk files as if they were in RAM. This can improve model performance by allowing for faster data access. However, it may not work correctly with all systems and can consume a significant amount of disk space.")}
 						placement="top-start" 
 						className="inline-tooltip"
 					>
@@ -947,7 +947,7 @@
 				<div class="flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">
 						<Tooltip 
-							content="Enable Memory Locking (mlock) to prevent model data from being swapped out of RAM. This option locks the model's working set of pages into RAM, ensuring that they will not be swapped out to disk. This can help maintain performance by avoiding page faults and ensuring fast data access." 
+							content={$i18n.t("Enable Memory Locking (mlock) to prevent model data from being swapped out of RAM. This option locks the model's working set of pages into RAM, ensuring that they will not be swapped out to disk. This can help maintain performance by avoiding page faults and ensuring fast data access.")}
 							placement="top-start" 
 							className="inline-tooltip"
 						>
@@ -987,7 +987,7 @@
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">
 				<Tooltip 
-					content="Set the number of worker threads used for computation. This option controls how many threads are used to process incoming requests concurrently. Increasing this value can improve performance under high concurrency workloads but may also consume more CPU resources." 
+					content={$i18n.t("Set the number of worker threads used for computation. This option controls how many threads are used to process incoming requests concurrently. Increasing this value can improve performance under high concurrency workloads but may also consume more CPU resources.")}
 					placement="top-start" 
 					className="inline-tooltip"
 				>
@@ -1041,7 +1041,7 @@
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">
 				<Tooltip 
-					content="Set the number of GPU devices used for computation. This option controls how many GPU devices (if available) are used to process incoming requests. Increasing this value can significantly improve performance for models that are optimized for GPU acceleration but may also consume more power and GPU resources." 
+					content={$i18n.t("Set the number of GPU devices used for computation. This option controls how many GPU devices (if available) are used to process incoming requests. Increasing this value can significantly improve performance for models that are optimized for GPU acceleration but may also consume more power and GPU resources.")}
 					placement="top-start" 
 					className="inline-tooltip"
 				>
