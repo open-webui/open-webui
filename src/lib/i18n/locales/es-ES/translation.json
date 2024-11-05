@@ -606,7 +606,7 @@
 	"Reset": "Reiniciar",
 	"Reset Upload Directory": "Reiniciar Directorio de carga",
 	"Reset Vector Storage/Knowledge": "",
-	"Response AutoCopy to Clipboard": "Copiar respuesta automáticamente al portapapeles",
+	"Auto-Copy Response to Clipboard": "Copiar respuesta automáticamente al portapapeles",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Las notificaciones de respuesta no pueden activarse debido a que los permisos del sitio web han sido denegados. Por favor, visite las configuraciones de su navegador para otorgar el acceso necesario.",
 	"Response splitting": "División de respuestas",
 	"Result": "",

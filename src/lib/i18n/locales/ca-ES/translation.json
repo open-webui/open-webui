@@ -606,7 +606,7 @@
 	"Reset": "Restableix",
 	"Reset Upload Directory": "Restableix el directori de pujades",
 	"Reset Vector Storage/Knowledge": "Restableix el Repositori de vectors/Coneixement",
-	"Response AutoCopy to Clipboard": "Copiar la resposta automàticament al porta-retalls",
+	"Auto-Copy Response to Clipboard": "Copiar la resposta automàticament al porta-retalls",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Les notifications de resposta no es poden activar perquè els permisos del lloc web han estat rebutjats. Comprova les preferències del navegador per donar l'accés necessari.",
 	"Response splitting": "Divisió de la resposta",
 	"Result": "",

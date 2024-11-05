@@ -606,7 +606,7 @@
 	"Reset": "",
 	"Reset Upload Directory": "",
 	"Reset Vector Storage/Knowledge": "",
-	"Response AutoCopy to Clipboard": "রেসপন্সগুলো স্বয়ংক্রিভাবে ক্লিপবোর্ডে কপি হবে",
+	"Auto-Copy Response to Clipboard": "রেসপন্সগুলো স্বয়ংক্রিভাবে ক্লিপবোর্ডে কপি হবে",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "",
 	"Response splitting": "",
 	"Result": "",

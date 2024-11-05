@@ -606,7 +606,7 @@
 	"Reset": "Réinitialiser",
 	"Reset Upload Directory": "Réinitialiser le répertoire de téléchargement",
 	"Reset Vector Storage/Knowledge": "Réinitialiser le stockage vectoriel/connaissances",
-	"Response AutoCopy to Clipboard": "Copie automatique de la réponse vers le presse-papiers",
+	"Auto-Copy Response to Clipboard": "Copie automatique de la réponse vers le presse-papiers",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Les notifications de réponse ne peuvent pas être activées car les autorisations du site web ont été refusées. Veuillez vérifier les paramètres de votre navigateur pour accorder l'accès nécessaire.",
 	"Response splitting": "Fractionnement de la réponse",
 	"Result": "Résultat",

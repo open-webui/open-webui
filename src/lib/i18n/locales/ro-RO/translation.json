@@ -606,7 +606,7 @@
 	"Reset": "Resetează",
 	"Reset Upload Directory": "Resetează Directorul de Încărcare",
 	"Reset Vector Storage/Knowledge": "Resetarea Stocării/Vectoului de Cunoștințe",
-	"Response AutoCopy to Clipboard": "Copiere Automată a Răspunsului în Clipboard",
+	"Auto-Copy Response to Clipboard": "Copiere Automată a Răspunsului în Clipboard",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Notificările de răspuns nu pot fi activate deoarece permisiunile site-ului au fost refuzate. Vă rugăm să vizitați setările browserului pentru a acorda accesul necesar.",
 	"Response splitting": "Împărțirea răspunsurilor",
 	"Result": "Rezultat",

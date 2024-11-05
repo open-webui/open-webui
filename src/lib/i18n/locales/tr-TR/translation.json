@@ -606,7 +606,7 @@
 	"Reset": "Sıfırla",
 	"Reset Upload Directory": "Yükleme Dizinini Sıfırla",
 	"Reset Vector Storage/Knowledge": "",
-	"Response AutoCopy to Clipboard": "Yanıtı Panoya Otomatik Kopyala",
+	"Auto-Copy Response to Clipboard": "Yanıtı Panoya Otomatik Kopyala",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Web sitesi izinleri reddedildiğinden yanıt bildirimleri etkinleştirilemiyor. Gerekli erişimi sağlamak için lütfen tarayıcı ayarlarınızı ziyaret edin.",
 	"Response splitting": "Yanıt bölme",
 	"Result": "",

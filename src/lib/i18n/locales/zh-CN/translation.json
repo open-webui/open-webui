@@ -606,7 +606,7 @@
 	"Reset": "重置",
 	"Reset Upload Directory": "重置上传目录",
 	"Reset Vector Storage/Knowledge": "重置向量存储/知识",
-	"Response AutoCopy to Clipboard": "自动复制回复到剪贴板",
+	"Auto-Copy Response to Clipboard": "自动复制回复到剪贴板",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "无法激活回复时发送通知。请检查浏览器设置，并授予必要的访问权限。",
 	"Response splitting": "拆分回复",
 	"Result": "结果",

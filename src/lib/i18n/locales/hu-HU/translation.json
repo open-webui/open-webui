@@ -606,7 +606,7 @@
 	"Reset": "Visszaállítás",
 	"Reset Upload Directory": "Feltöltési könyvtár visszaállítása",
 	"Reset Vector Storage/Knowledge": "Vektor tárhely/tudásbázis visszaállítása",
-	"Response AutoCopy to Clipboard": "Válasz automatikus másolása a vágólapra",
+	"Auto-Copy Response to Clipboard": "Válasz automatikus másolása a vágólapra",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "A válasz értesítések nem aktiválhatók, mert a weboldal engedélyei meg lettek tagadva. Kérjük, látogasson el a böngésző beállításaihoz a szükséges hozzáférés megadásához.",
 	"Response splitting": "Válasz felosztás",
 	"Result": "Eredmény",

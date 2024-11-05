@@ -606,7 +606,7 @@
 	"Reset": "Nulstil",
 	"Reset Upload Directory": "Nulstil uploadmappe",
 	"Reset Vector Storage/Knowledge": "",
-	"Response AutoCopy to Clipboard": "Automatisk kopiering af svar til udklipsholder",
+	"Auto-Copy Response to Clipboard": "Automatisk kopiering af svar til udklipsholder",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Svarnotifikationer kan ikke aktiveres, da webstedets tilladelser er blevet nægtet. Besøg dine browserindstillinger for at give den nødvendige adgang.",
 	"Response splitting": "Svaropdeling",
 	"Result": "",

@@ -606,7 +606,7 @@
 	"Reset": "Сбросить",
 	"Reset Upload Directory": "Сбросить каталог загрузок",
 	"Reset Vector Storage/Knowledge": "",
-	"Response AutoCopy to Clipboard": "Автоматическое копирование ответа в буфер обмена",
+	"Auto-Copy Response to Clipboard": "Автоматическое копирование ответа в буфер обмена",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Уведомления об ответах не могут быть активированы, поскольку доступ к веб-сайту был заблокирован. Пожалуйста, перейдите к настройкам своего браузера, чтобы предоставить необходимый доступ.",
 	"Response splitting": "Разделение ответов",
 	"Result": "",

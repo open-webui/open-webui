@@ -606,7 +606,7 @@
 	"Reset": "",
 	"Reset Upload Directory": "アップロードディレクトリをリセット",
 	"Reset Vector Storage/Knowledge": "",
-	"Response AutoCopy to Clipboard": "クリップボードへの応答の自動コピー",
+	"Auto-Copy Response to Clipboard": "クリップボードへの応答の自動コピー",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "",
 	"Response splitting": "応答の分割",
 	"Result": "",

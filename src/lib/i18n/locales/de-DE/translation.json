@@ -606,7 +606,7 @@
 	"Reset": "Zurücksetzen",
 	"Reset Upload Directory": "Upload-Verzeichnis zurücksetzen",
 	"Reset Vector Storage/Knowledge": "Vektorspeicher/Wissen zurücksetzen",
-	"Response AutoCopy to Clipboard": "Antwort automatisch in die Zwischenablage kopieren",
+	"Auto-Copy Response to Clipboard": "Antwort automatisch in die Zwischenablage kopieren",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Benachrichtigungen können nicht aktiviert werden, da die Website-Berechtigungen abgelehnt wurden. Bitte besuchen Sie Ihre Browser-Einstellungen, um den erforderlichen Zugriff zu gewähren.",
 	"Response splitting": "Antwortaufteilung",
 	"Result": "Ergebnis",

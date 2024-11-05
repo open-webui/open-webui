@@ -606,7 +606,7 @@
 	"Reset": "초기화",
 	"Reset Upload Directory": "업로드 디렉토리 초기화",
 	"Reset Vector Storage/Knowledge": "벡터 저장 공간/지식 기반 초기화",
-	"Response AutoCopy to Clipboard": "응답을 클립보드에 자동 복사",
+	"Auto-Copy Response to Clipboard": "응답을 클립보드에 자동 복사",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "웹사이트 권환과 같이 응답 알림이 활성화될 수 없습니다. 필요한 접근을 사용하기 위해 브라우져 설정을 확인 부탁드립니다.",
 	"Response splitting": "응답 나누기",
 	"Result": "결과",
