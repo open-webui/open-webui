@@ -98,8 +98,9 @@
 		loaded = true;
 		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
 			await signInHandler();
+		} else {
+			onboarding = $config?.onboarding ?? false;
 		}
-		onboarding = $config?.onboarding ?? false;
 	});
 </script>
 
@@ -164,12 +165,14 @@
 								<div class=" text-2xl font-medium">
 									{#if mode === 'signin'}
 										{$i18n.t(`Sign in to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
+									{:else if $config?.onboarding ?? false}
+										{$i18n.t(`Get started with {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
 									{:else}
 										{$i18n.t(`Sign up to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
 									{/if}
 								</div>
 
-								{#if mode === 'signup'}
+								{#if mode === 'signup' && ($config?.onboarding ?? false)}
 									<div class=" mt-1 text-xs font-medium text-gray-500">
 										ⓘ {$WEBUI_NAME}
 										{$i18n.t(
@@ -228,10 +231,14 @@
 										class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
 										type="submit"
 									>
-										{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
+										{mode === 'signin'
+											? $i18n.t('Sign in')
+											: ($config?.onboarding ?? false)
+												? $i18n.t('Create Admin Account')
+												: $i18n.t('Create Account')}
 									</button>
 
-									{#if $config?.features.enable_signup}
+									{#if $config?.features.enable_signup && !($config?.onboarding ?? false)}
 										<div class=" mt-4 text-sm text-center">
 											{mode === 'signin'
 												? $i18n.t("Don't have an account?")
