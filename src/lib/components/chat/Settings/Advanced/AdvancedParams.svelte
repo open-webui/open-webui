@@ -43,36 +43,40 @@
 	}
 </script>
 
-<!-- LLM failed to help successfully for this tooltip -->
-<div class=" space-y-1 text-xs pb-safe-bottom">
-	<div>
-		<div class=" py-0.5 flex w-full justify-between">
-			<div class=" self-center text-xs font-medium">
-				{$i18n.t('Stream Chat Response')}
+	<div class=" space-y-1 text-xs pb-safe-bottom">
+		<div>
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					<Tooltip 
+						content="When enabled, the model will respond to each chat message in real-time, generating a response as soon as the user sends a message. This mode is useful for live chat applications, but may impact performance on slower hardware." 
+						placement="top-start" 
+						className="inline-tooltip"
+					>
+						{$i18n.t('Stream Chat Response')}
+					</Tooltip>
+				</div>
+				<button
+					class="p-1 px-3 text-xs flex rounded transition"
+					on:click={() => {
+						params.stream_response =
+							(params?.stream_response ?? null) === null
+								? true
+								: params.stream_response
+									? false
+									: null;
+					}}
+					type="button"
+				>
+					{#if params.stream_response === true}
+						<span class="ml-2 self-center">{$i18n.t('On')}</span>
+					{:else if params.stream_response === false}
+						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{/if}
+				</button>
 			</div>
-
-			<button
-				class="p-1 px-3 text-xs flex rounded transition"
-				on:click={() => {
-					params.stream_response =
-						(params?.stream_response ?? null) === null
-							? true
-							: params.stream_response
-								? false
-								: null;
-				}}
-				type="button"
-			>
-				{#if params.stream_response === true}
-					<span class="ml-2 self-center">{$i18n.t('On')}</span>
-				{:else if params.stream_response === false}
-					<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-				{:else}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-				{/if}
-			</button>
 		</div>
-	</div>
 
 	<div class=" py-0.5 w-full justify-between">
 		<div class="flex w-full justify-between">
@@ -901,12 +905,18 @@
 		{/if}
 	</div>
 
-<!-- LLM failed to help successfully for this tooltip -->
 	{#if admin}
 		<div class=" py-0.5 w-full justify-between">
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('use_mmap (Ollama)')}</div>
-
+				<div class=" self-center text-xs font-medium">
+					<Tooltip 
+						content="Enable Memory Mapping (mmap) to load model data. This option allows the system to use disk storage as an extension of RAM by treating disk files as if they were in RAM. This can improve model performance by allowing for faster data access. However, it may not work correctly with all systems and can consume a significant amount of disk space." 
+						placement="top-start" 
+						className="inline-tooltip"
+					>
+						{$i18n.t('use_mmap (Ollama)')}
+					</Tooltip>
+				</div>
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
@@ -921,13 +931,11 @@
 					{/if}
 				</button>
 			</div>
-
 			{#if (params?.use_mmap ?? null) !== null}
 				<div class="flex justify-between items-center mt-1">
 					<div class="text-xs text-gray-500">
 						{params.use_mmap ? 'Enabled' : 'Disabled'}
 					</div>
-
 					<div class=" pr-2">
 						<Switch bind:state={params.use_mmap} />
 					</div>
