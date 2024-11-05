@@ -12,6 +12,10 @@ elif VECTOR_DB == "opensearch":
     from open_webui.apps.retrieval.vector.dbs.opensearch import OpenSearchClient
 
     VECTOR_DB_CLIENT = OpenSearchClient()
+elif VECTOR_DB == "pgvector":
+    from open_webui.apps.retrieval.vector.dbs.pgvector import PgvectorClient
+
+    VECTOR_DB_CLIENT = PgvectorClient()
 else:
     from open_webui.apps.retrieval.vector.dbs.chroma import ChromaClient
 
