@@ -646,6 +646,7 @@ def save_docs_to_vector_db(
 ) -> bool:
     log.info(f"save_docs_to_vector_db {docs} {collection_name}")
 
+    # TODO: check the metadata , should contain S3 path 
     # Check if entries with the same hash (metadata.hash) already exist
     if metadata and "hash" in metadata:
         result = VECTOR_DB_CLIENT.query(
@@ -832,15 +833,15 @@ def process_file(
             # Usage: /files/
             file_path = file.path
             if file_path:
-                file_path = Storage.get_file(file_path)
-                loader = Loader(
-                    engine=app.state.config.CONTENT_EXTRACTION_ENGINE,
-                    TIKA_SERVER_URL=app.state.config.TIKA_SERVER_URL,
-                    PDF_EXTRACT_IMAGES=app.state.config.PDF_EXTRACT_IMAGES,
-                )
-                docs = loader.load(
-                    file.filename, file.meta.get("content_type"), file_path
-                )
+                with Storage.as_local_file(file_path) as local_file:
+                    loader = Loader(
+                        engine=app.state.config.CONTENT_EXTRACTION_ENGINE,
+                        TIKA_SERVER_URL=app.state.config.TIKA_SERVER_URL,
+                        PDF_EXTRACT_IMAGES=app.state.config.PDF_EXTRACT_IMAGES,
+                    )
+                    docs = loader.load(
+                        file.filename, file.meta.get("content_type"), local_file.get_local_path()
+                    )                
             else:
                 docs = [
                     Document(
