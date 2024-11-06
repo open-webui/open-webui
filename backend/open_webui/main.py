@@ -2235,9 +2235,9 @@ async def get_app_config(request: Request):
         "features": {
             "auth": WEBUI_AUTH,
             "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
+            "enable_ldap": webui_app.state.config.ENABLE_LDAP,
             "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
             "enable_login_form": webui_app.state.config.ENABLE_LOGIN_FORM,
-            "enable_ldap_form": webui_app.state.config.ENABLE_LDAP,
             **(
                 {
                     "enable_web_search": retrieval_app.state.config.ENABLE_RAG_WEB_SEARCH,
