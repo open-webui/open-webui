@@ -120,6 +120,11 @@
 			}
 		});
 
+		if (contents.length === 0) {
+			showControls.set(false);
+			showArtifacts.set(false);
+		}
+
 		selectedContentIdx = contents ? contents.length - 1 : 0;
 	};
 

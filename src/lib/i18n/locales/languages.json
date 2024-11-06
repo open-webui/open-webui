@@ -28,6 +28,14 @@
 		"title": "Cebuano (Filipino)"
 	},
 	{
+		"code": "cs-CZ",
+		"title": "Czech (čeština)"
+	},
+	{
+		"code": "da-DK",
+		"title": "Danish (Denmark)"
+	},
+	{
 		"code": "de-DE",
 		"title": "German (Deutsch)"
 	},
@@ -62,6 +70,10 @@
 	{
 		"code": "hr-HR",
 		"title": "Croatian (Hrvatski)"
+	},
+	{
+		"code": "hu-HU",
+		"title": "Hungarian (Magyar)"
 	},
 	{
 		"code": "id-ID",
@@ -150,6 +162,10 @@
 	{
 		"code": "uk-UA",
 		"title": "Ukrainian (Українська)"
+	},
+	{
+		"code": "ur-PK",
+		"title": "Urdu (اردو)"
 	},
 	{
 		"code": "vi-VN",

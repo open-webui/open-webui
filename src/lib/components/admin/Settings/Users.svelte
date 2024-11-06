@@ -3,10 +3,19 @@
 	import { getSignUpEnabledStatus, toggleSignUpEnabledStatus } from '$lib/apis/auths';
 	import { getUserPermissions, updateUserPermissions } from '$lib/apis/users';
 
+	import {
+		getLdapConfig,
+		updateLdapConfig,
+		getLdapServer,
+		updateLdapServer
+	} from '$lib/apis/auths';
+
 	import { onMount, getContext } from 'svelte';
 	import { models, config } from '$lib/stores';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import { setDefaultModels } from '$lib/apis/configs';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -24,14 +33,56 @@
 		}
 	};
 
+	let chatDeletion = true;
+	let chatEdit = true;
+	let chatTemporary = true;
+
+	// LDAP
+	let ENABLE_LDAP = false;
+	let LDAP_SERVER = {
+		label: '',
+		host: '',
+		port: '',
+		attribute_for_username: 'uid',
+		app_dn: '',
+		app_dn_password: '',
+		search_base: '',
+		search_filters: '',
+		use_tls: false,
+		certificate_path: '',
+		ciphers: ''
+	};
+
+	const updateLdapServerHandler = async () => {
+		if (!ENABLE_LDAP) return;
+		const res = await updateLdapServer(localStorage.token, LDAP_SERVER).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+		if (res) {
+			toast.success($i18n.t('LDAP server updated'));
+		}
+	};
+
 	onMount(async () => {
 		permissions = await getUserPermissions(localStorage.token);
+
+		chatDeletion = permissions?.chat?.deletion ?? true;
+		chatEdit = permissions?.chat?.editing ?? true;
+		chatTemporary = permissions?.chat?.temporary ?? true;
 
 		const res = await getModelFilterConfig(localStorage.token);
 		if (res) {
 			whitelistEnabled = res.enabled;
 			whitelistModels = res.models.length > 0 ? res.models : [''];
 		}
+
+		(async () => {
+			LDAP_SERVER = await getLdapServer(localStorage.token);
+		})();
+
+		const ldapConfig = await getLdapConfig(localStorage.token);
+		ENABLE_LDAP = ldapConfig.ENABLE_LDAP;
 
 		defaultModelId = $config.default_models ? $config?.default_models.split(',')[0] : '';
 	});
@@ -43,138 +94,232 @@
 		// console.log('submit');
 
 		await setDefaultModels(localStorage.token, defaultModelId);
-		await updateUserPermissions(localStorage.token, permissions);
+		await updateUserPermissions(localStorage.token, {
+			chat: {
+				deletion: chatDeletion,
+				editing: chatEdit,
+				temporary: chatTemporary
+			}
+		});
 		await updateModelFilterConfig(localStorage.token, whitelistEnabled, whitelistModels);
+
+		await updateLdapServerHandler();
+
 		saveHandler();
 
 		await config.set(await getBackendConfig());
 	}}
 >
-	<div class=" space-y-3 overflow-y-scroll max-h-full">
+	<div class=" space-y-3 overflow-y-scroll max-h-full pr-1.5">
 		<div>
 			<div class=" mb-2 text-sm font-medium">{$i18n.t('User Permissions')}</div>
 
-			<div class="  flex w-full justify-between">
+			<div class="  flex w-full justify-between my-2 pr-2">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Allow Chat Deletion')}</div>
 
-				<button
-					class="p-1 px-3 text-xs flex rounded transition"
-					on:click={() => {
-						permissions.chat.deletion = !(permissions?.chat?.deletion ?? true);
-					}}
-					type="button"
-				>
-					{#if permissions?.chat?.deletion ?? true}
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								d="M11.5 1A3.5 3.5 0 0 0 8 4.5V7H2.5A1.5 1.5 0 0 0 1 8.5v5A1.5 1.5 0 0 0 2.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 9.5 7V4.5a2 2 0 1 1 4 0v1.75a.75.75 0 0 0 1.5 0V4.5A3.5 3.5 0 0 0 11.5 1Z"
-							/>
-						</svg>
-						<span class="ml-2 self-center">{$i18n.t('Allow')}</span>
-					{:else}
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-
-						<span class="ml-2 self-center">{$i18n.t("Don't Allow")}</span>
-					{/if}
-				</button>
+				<Switch bind:state={chatDeletion} />
 			</div>
 
-			<div class="  flex w-full justify-between">
+			<div class="  flex w-full justify-between my-2 pr-2">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Allow Chat Editing')}</div>
 
-				<button
-					class="p-1 px-3 text-xs flex rounded transition"
-					on:click={() => {
-						permissions.chat.editing = !(permissions?.chat?.editing ?? true);
-					}}
-					type="button"
-				>
-					{#if permissions?.chat?.editing ?? true}
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								d="M11.5 1A3.5 3.5 0 0 0 8 4.5V7H2.5A1.5 1.5 0 0 0 1 8.5v5A1.5 1.5 0 0 0 2.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 9.5 7V4.5a2 2 0 1 1 4 0v1.75a.75.75 0 0 0 1.5 0V4.5A3.5 3.5 0 0 0 11.5 1Z"
-							/>
-						</svg>
-						<span class="ml-2 self-center">{$i18n.t('Allow')}</span>
-					{:else}
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-
-						<span class="ml-2 self-center">{$i18n.t("Don't Allow")}</span>
-					{/if}
-				</button>
+				<Switch bind:state={chatEdit} />
 			</div>
 
-			<div class="  flex w-full justify-between">
+			<div class="  flex w-full justify-between my-2 pr-2">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Allow Temporary Chat')}</div>
 
-				<button
-					class="p-1 px-3 text-xs flex rounded transition"
-					on:click={() => {
-						permissions.chat.temporary = !(permissions?.chat?.temporary ?? true);
-					}}
-					type="button"
-				>
-					{#if permissions?.chat?.temporary ?? true}
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								d="M11.5 1A3.5 3.5 0 0 0 8 4.5V7H2.5A1.5 1.5 0 0 0 1 8.5v5A1.5 1.5 0 0 0 2.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 9.5 7V4.5a2 2 0 1 1 4 0v1.75a.75.75 0 0 0 1.5 0V4.5A3.5 3.5 0 0 0 11.5 1Z"
-							/>
-						</svg>
-						<span class="ml-2 self-center">{$i18n.t('Allow')}</span>
-					{:else}
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
+				<Switch bind:state={chatTemporary} />
+			</div>
+		</div>
 
-						<span class="ml-2 self-center">{$i18n.t("Don't Allow")}</span>
-					{/if}
-				</button>
+		<hr class=" dark:border-gray-850" />
+
+		<div class=" space-y-3">
+			<div class="mt-2 space-y-2 pr-1.5">
+				<div class="flex justify-between items-center text-sm">
+					<div class="  font-medium">{$i18n.t('LDAP')}</div>
+
+					<div class="mt-1">
+						<Switch
+							bind:state={ENABLE_LDAP}
+							on:change={async () => {
+								updateLdapConfig(localStorage.token, ENABLE_LDAP);
+							}}
+						/>
+					</div>
+				</div>
+
+				{#if ENABLE_LDAP}
+					<div class="flex flex-col gap-1">
+						<div class="flex w-full gap-2">
+							<div class="w-full">
+								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+									{$i18n.t('Label')}
+								</div>
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+									required
+									placeholder={$i18n.t('Enter server label')}
+									bind:value={LDAP_SERVER.label}
+								/>
+							</div>
+							<div class="w-full"></div>
+						</div>
+						<div class="flex w-full gap-2">
+							<div class="w-full">
+								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+									{$i18n.t('Host')}
+								</div>
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+									required
+									placeholder={$i18n.t('Enter server host')}
+									bind:value={LDAP_SERVER.host}
+								/>
+							</div>
+							<div class="w-full">
+								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+									{$i18n.t('Port')}
+								</div>
+								<Tooltip
+									placement="top-start"
+									content={$i18n.t('Default to 389 or 636 if TLS is enabled')}
+									className="w-full"
+								>
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										type="number"
+										placeholder={$i18n.t('Enter server port')}
+										bind:value={LDAP_SERVER.port}
+									/>
+								</Tooltip>
+							</div>
+						</div>
+						<div class="flex w-full gap-2">
+							<div class="w-full">
+								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+									{$i18n.t('Application DN')}
+								</div>
+								<Tooltip
+									content={$i18n.t('The Application Account DN you bind with for search')}
+									placement="top-start"
+								>
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										required
+										placeholder={$i18n.t('Enter Application DN')}
+										bind:value={LDAP_SERVER.app_dn}
+									/>
+								</Tooltip>
+							</div>
+							<div class="w-full">
+								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+									{$i18n.t('Application DN Password')}
+								</div>
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Application DN Password')}
+									bind:value={LDAP_SERVER.app_dn_password}
+								/>
+							</div>
+						</div>
+						<div class="flex w-full gap-2">
+							<div class="w-full">
+								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+									{$i18n.t('Attribute for Username')}
+								</div>
+								<Tooltip
+									content={$i18n.t(
+										'The LDAP attribute that maps to the username that users use to sign in.'
+									)}
+									placement="top-start"
+								>
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										required
+										placeholder={$i18n.t('Example: sAMAccountName or uid or userPrincipalName')}
+										bind:value={LDAP_SERVER.attribute_for_username}
+									/>
+								</Tooltip>
+							</div>
+						</div>
+						<div class="flex w-full gap-2">
+							<div class="w-full">
+								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+									{$i18n.t('Search Base')}
+								</div>
+								<Tooltip content={$i18n.t('The base to search for users')} placement="top-start">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										required
+										placeholder={$i18n.t('Example: ou=users,dc=foo,dc=example')}
+										bind:value={LDAP_SERVER.search_base}
+									/>
+								</Tooltip>
+							</div>
+						</div>
+						<div class="flex w-full gap-2">
+							<div class="w-full">
+								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+									{$i18n.t('Search Filters')}
+								</div>
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+									placeholder={$i18n.t('Example: (&(objectClass=inetOrgPerson)(uid=%s))')}
+									bind:value={LDAP_SERVER.search_filters}
+								/>
+							</div>
+						</div>
+						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+							<a
+								class=" text-gray-300 font-medium underline"
+								href="https://ldap.com/ldap-filters/"
+								target="_blank"
+							>
+								{$i18n.t('Click here for filter guides.')}
+							</a>
+						</div>
+						<div>
+							<div class="flex justify-between items-center text-sm">
+								<div class="  font-medium">{$i18n.t('TLS')}</div>
+
+								<div class="mt-1">
+									<Switch bind:state={LDAP_SERVER.use_tls} />
+								</div>
+							</div>
+							{#if LDAP_SERVER.use_tls}
+								<div class="flex w-full gap-2">
+									<div class="w-full">
+										<div class=" self-center text-xs font-medium min-w-fit mb-1 mt-1">
+											{$i18n.t('Certificate Path')}
+										</div>
+										<input
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+											required
+											placeholder={$i18n.t('Enter certificate path')}
+											bind:value={LDAP_SERVER.certificate_path}
+										/>
+									</div>
+								</div>
+								<div class="flex w-full gap-2">
+									<div class="w-full">
+										<div class=" self-center text-xs font-medium min-w-fit mb-1">
+											{$i18n.t('Ciphers')}
+										</div>
+										<Tooltip content={$i18n.t('Default to ALL')} placement="top-start">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+												placeholder={$i18n.t('Example: ALL')}
+												bind:value={LDAP_SERVER.ciphers}
+											/>
+										</Tooltip>
+									</div>
+									<div class="w-full"></div>
+								</div>
+							{/if}
+						</div>
+					</div>
+				{/if}
 			</div>
 		</div>
 
@@ -210,7 +355,7 @@
 
 				<div class=" space-y-1">
 					<div class="mb-2">
-						<div class="flex justify-between items-center text-xs">
+						<div class="flex justify-between items-center text-xs my-3 pr-2">
 							<div class=" text-xs font-medium">{$i18n.t('Model Whitelisting')}</div>
 
 							<Switch bind:state={whitelistEnabled} />
@@ -296,7 +441,7 @@
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
-			class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}

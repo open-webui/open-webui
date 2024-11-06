@@ -29,8 +29,10 @@
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
 	export let mergeResponses: Function;
+
 	export let chatActionHandler: Function;
 	export let showMessage: Function = () => {};
+	export let submitMessage: Function = () => {};
 
 	export let readOnly = false;
 
@@ -79,9 +81,9 @@
 		element.scrollTop = element.scrollHeight;
 	};
 
-	const updateChatHistory = async () => {
-		await tick();
+	const updateChat = async () => {
 		history = history;
+		await tick();
 		await updateChatById(localStorage.token, chatId, {
 			history: history,
 			messages: messages
@@ -195,7 +197,7 @@
 			rating: rating
 		};
 
-		await updateChatHistory();
+		await updateChat();
 	};
 
 	const editMessage = async (messageId, content, submit = true) => {
@@ -232,7 +234,7 @@
 			} else {
 				// Edit user message
 				history.messages[messageId].content = content;
-				await updateChatHistory();
+				await updateChat();
 			}
 		} else {
 			if (submit) {
@@ -261,14 +263,23 @@
 					];
 				}
 
-				await updateChatHistory();
+				await updateChat();
 			} else {
 				// Edit response message
 				history.messages[messageId].originalContent = history.messages[messageId].content;
 				history.messages[messageId].content = content;
-				await updateChatHistory();
+				await updateChat();
 			}
 		}
+	};
+
+	const actionMessage = async (actionId, event = null) => {
+		await chatActionHandler(chatId, actionId, message.model, message.id, event);
+	};
+
+	const saveMessage = async (messageId, message) => {
+		history.messages[messageId] = message;
+		await updateChat();
 	};
 
 	const deleteMessage = async (messageId) => {
@@ -306,7 +317,17 @@
 		showMessage({ id: parentMessageId });
 
 		// Update the chat
-		await updateChatHistory();
+		await updateChat();
+	};
+
+	const triggerScroll = () => {
+		if (autoScroll) {
+			const element = document.getElementById('messages-container');
+			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			setTimeout(() => {
+				scrollToBottom();
+			}, 100);
+		}
 	};
 </script>
 
@@ -330,20 +351,14 @@
 
 				await tick();
 
-				const chatInputElement = document.getElementById('chat-textarea');
-				if (chatInputElement) {
+				const chatInputContainerElement = document.getElementById('chat-input-container');
+				if (chatInputContainerElement) {
 					prompt = p;
 
-					chatInputElement.style.height = '';
-					chatInputElement.style.height = Math.min(chatInputElement.scrollHeight, 200) + 'px';
-					chatInputElement.focus();
-
-					const words = findWordIndices(prompt);
-
-					if (words.length > 0) {
-						const word = words.at(0);
-						chatInputElement.setSelectionRange(word?.startIndex, word.endIndex + 1);
-					}
+					chatInputContainerElement.style.height = '';
+					chatInputContainerElement.style.height =
+						Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
+					chatInputContainerElement.focus();
 				}
 
 				await tick();
@@ -378,37 +393,18 @@
 							{user}
 							{showPreviousMessage}
 							{showNextMessage}
+							{updateChat}
 							{editMessage}
 							{deleteMessage}
 							{rateMessage}
+							{actionMessage}
+							{saveMessage}
+							{submitMessage}
 							{regenerateResponse}
 							{continueResponse}
 							{mergeResponses}
+							{triggerScroll}
 							{readOnly}
-							on:submit={async (e) => {
-								dispatch('submit', e.detail);
-							}}
-							on:action={async (e) => {
-								if (typeof e.detail === 'string') {
-									await chatActionHandler(chatId, e.detail, message.model, message.id);
-								} else {
-									const { id, event } = e.detail;
-									await chatActionHandler(chatId, id, message.model, message.id, event);
-								}
-							}}
-							on:update={() => {
-								updateChatHistory();
-							}}
-							on:scroll={() => {
-								if (autoScroll) {
-									const element = document.getElementById('messages-container');
-									autoScroll =
-										element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-									setTimeout(() => {
-										scrollToBottom();
-									}, 100);
-								}
-							}}
 						/>
 					{/each}
 				</div>

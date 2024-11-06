@@ -2,7 +2,7 @@
 	import {
 		addTagById,
 		deleteTagById,
-		getAllChatTags,
+		getAllTags,
 		getChatList,
 		getChatListByTagName,
 		getTagsById,
@@ -20,6 +20,7 @@
 	const dispatch = createEventDispatcher();
 
 	import Tags from '../common/Tags.svelte';
+	import { toast } from 'svelte-sonner';
 
 	export let chatId = '';
 	let tags = [];
@@ -31,13 +32,23 @@
 	};
 
 	const addTag = async (tagName) => {
-		const res = await addTagById(localStorage.token, chatId, tagName);
+		const res = await addTagById(localStorage.token, chatId, tagName).catch(async (error) => {
+			toast.error(error);
+			return null;
+		});
+		if (!res) {
+			return;
+		}
+
 		tags = await getTags();
 		await updateChatById(localStorage.token, chatId, {
 			tags: tags
 		});
 
-		_tags.set(await getAllChatTags(localStorage.token));
+		await _tags.set(await getAllTags(localStorage.token));
+		dispatch('add', {
+			name: tagName
+		});
 	};
 
 	const deleteTag = async (tagName) => {
@@ -47,7 +58,7 @@
 			tags: tags
 		});
 
-		await _tags.set(await getAllChatTags(localStorage.token));
+		await _tags.set(await getAllTags(localStorage.token));
 		dispatch('delete', {
 			name: tagName
 		});
@@ -60,4 +71,12 @@
 	});
 </script>
 
-<Tags {tags} {deleteTag} {addTag} />
+<Tags
+	{tags}
+	on:delete={(e) => {
+		deleteTag(e.detail);
+	}}
+	on:add={(e) => {
+		addTag(e.detail);
+	}}
+/>

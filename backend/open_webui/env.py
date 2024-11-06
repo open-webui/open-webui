@@ -196,6 +196,15 @@ CHANGELOG = changelog_json
 SAFE_MODE = os.environ.get("SAFE_MODE", "false").lower() == "true"
 
 ####################################
+# ENABLE_FORWARD_USER_INFO_HEADERS
+####################################
+
+ENABLE_FORWARD_USER_INFO_HEADERS = (
+    os.environ.get("ENABLE_FORWARD_USER_INFO_HEADERS", "False").lower() == "true"
+)
+
+
+####################################
 # WEBUI_BUILD_HASH
 ####################################
 
@@ -362,6 +371,20 @@ else:
         AIOHTTP_CLIENT_TIMEOUT = int(AIOHTTP_CLIENT_TIMEOUT)
     except Exception:
         AIOHTTP_CLIENT_TIMEOUT = 300
+
+AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = os.environ.get(
+    "AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST", "3"
+)
+
+if AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST == "":
+    AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = None
+else:
+    try:
+        AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = int(
+            AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST
+        )
+    except Exception:
+        AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = 3
 
 ####################################
 # OFFLINE_MODE

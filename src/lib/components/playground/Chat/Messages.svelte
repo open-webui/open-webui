@@ -17,12 +17,11 @@
 	{#each messages as message, idx}
 		<div class="flex gap-2 group">
 			<div class="flex items-start pt-1">
-				<button
-					class="px-2 py-1 text-sm font-semibold uppercase min-w-[6rem] text-left dark:group-hover:bg-gray-800 rounded-lg transition"
-					on:click={() => {
-						message.role = message.role === 'user' ? 'assistant' : 'user';
-					}}>{$i18n.t(message.role)}</button
+				<div
+					class="px-2 py-1 text-sm font-semibold uppercase min-w-[6rem] text-left rounded-lg transition"
 				>
+					{$i18n.t(message.role)}
+				</div>
 			</div>
 
 			<div class="flex-1">
@@ -74,38 +73,5 @@
 				</button>
 			</div>
 		</div>
-
-		<hr class=" dark:border-gray-800" />
 	{/each}
-
-	<button
-		class="flex items-center gap-2 px-2 py-1"
-		on:click={() => {
-			console.log(messages.at(-1));
-			messages.push({
-				role: (messages.at(-1)?.role ?? 'assistant') === 'user' ? 'assistant' : 'user',
-				content: ''
-			});
-			messages = messages;
-		}}
-	>
-		<div>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke-width="1.5"
-				stroke="currentColor"
-				class="w-5 h-5"
-			>
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-				/>
-			</svg>
-		</div>
-
-		<div class=" text-sm font-medium">{$i18n.t('Add message')}</div>
-	</button>
 </div>

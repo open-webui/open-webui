@@ -16,7 +16,6 @@
 	import Markdown from './Markdown.svelte';
 	import Name from './Name.svelte';
 	import Skeleton from './Skeleton.svelte';
-
 	const i18n = getContext('i18n');
 
 	export let chatId;
@@ -26,12 +25,18 @@
 	export let isLastMessage;
 	export let readOnly = false;
 
+	export let updateChat: Function;
 	export let editMessage: Function;
+	export let saveMessage: Function;
 	export let rateMessage: Function;
+	export let actionMessage: Function;
 
+	export let submitMessage: Function;
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
 	export let mergeResponses: Function;
+
+	export let triggerScroll: Function;
 
 	const dispatch = createEventDispatcher();
 
@@ -47,7 +52,7 @@
 		}
 	}
 
-	const showPreviousMessage = (modelIdx) => {
+	const showPreviousMessage = async (modelIdx) => {
 		groupedMessageIdsIdx[modelIdx] = Math.max(0, groupedMessageIdsIdx[modelIdx] - 1);
 
 		let messageId = groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]];
@@ -61,10 +66,13 @@
 		}
 
 		history.currentId = messageId;
-		dispatch('change');
+
+		await tick();
+		await updateChat();
+		triggerScroll();
 	};
 
-	const showNextMessage = (modelIdx) => {
+	const showNextMessage = async (modelIdx) => {
 		groupedMessageIdsIdx[modelIdx] = Math.min(
 			groupedMessageIds[modelIdx].messageIds.length - 1,
 			groupedMessageIdsIdx[modelIdx] + 1
@@ -81,7 +89,10 @@
 		}
 
 		history.currentId = messageId;
-		dispatch('change');
+
+		await tick();
+		await updateChat();
+		triggerScroll();
 	};
 
 	const initHandler = async () => {
@@ -155,9 +166,8 @@
 		await tick();
 
 		const messageElement = document.getElementById(`message-${messageId}`);
-		console.log(messageElement);
 		if (messageElement) {
-			messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			messageElement.scrollIntoView({ block: 'start' });
 		}
 	});
 </script>
@@ -179,12 +189,12 @@
 						class=" snap-center w-full max-w-full m-1 border {history.messages[messageId]
 							?.modelIdx == modelIdx
 							? `border-gray-100 dark:border-gray-800 border-[1.5px] ${
-									$mobile ? 'min-w-full' : 'min-w-[32rem]'
+									$mobile ? 'min-w-full' : 'min-w-80'
 								}`
 							: `border-gray-50 dark:border-gray-850 border-dashed ${
 									$mobile ? 'min-w-full' : 'min-w-80'
 								}`} transition-all p-5 rounded-2xl"
-						on:click={() => {
+						on:click={async () => {
 							if (messageId != _messageId) {
 								let currentMessageId = _messageId;
 								let messageChildrenIds = history.messages[currentMessageId].childrenIds;
@@ -193,39 +203,35 @@
 									messageChildrenIds = history.messages[currentMessageId].childrenIds;
 								}
 								history.currentId = currentMessageId;
-								dispatch('change');
+
+								await tick();
+								await updateChat();
+								triggerScroll();
 							}
 						}}
 					>
 						{#key history.currentId}
 							{#if message}
 								<ResponseMessage
+									{chatId}
 									{history}
 									messageId={_messageId}
 									isLastMessage={true}
 									siblings={groupedMessageIds[modelIdx].messageIds}
 									showPreviousMessage={() => showPreviousMessage(modelIdx)}
 									showNextMessage={() => showNextMessage(modelIdx)}
-									{rateMessage}
+									{updateChat}
 									{editMessage}
+									{saveMessage}
+									{rateMessage}
+									{actionMessage}
+									{submitMessage}
 									{continueResponse}
 									regenerateResponse={async (message) => {
 										regenerateResponse(message);
 										await tick();
 										groupedMessageIdsIdx[modelIdx] =
 											groupedMessageIds[modelIdx].messageIds.length - 1;
-									}}
-									on:submit={async (e) => {
-										dispatch('submit', e.detail);
-									}}
-									on:action={async (e) => {
-										dispatch('action', e.detail);
-									}}
-									on:update={async (e) => {
-										dispatch('update', e.detail);
-									}}
-									on:save={async (e) => {
-										dispatch('save', e.detail);
 									}}
 									{readOnly}
 								/>
@@ -236,7 +242,7 @@
 			{/each}
 		</div>
 
-		{#if !readOnly && isLastMessage}
+		{#if !readOnly}
 			{#if !Object.keys(groupedMessageIds).find((modelIdx) => {
 				const { messageIds } = groupedMessageIds[modelIdx];
 				const _messageId = messageIds[groupedMessageIdsIdx[modelIdx]];
@@ -271,22 +277,24 @@
 						{/if}
 					</div>
 
-					<div class=" flex-shrink-0 text-gray-600 dark:text-gray-500 mt-1">
-						<Tooltip content={$i18n.t('Merge Responses')} placement="bottom">
-							<button
-								type="button"
-								id="merge-response-button"
-								class="{true
-									? 'visible'
-									: 'invisible group-hover:visible'} p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
-								on:click={() => {
-									mergeResponsesHandler();
-								}}
-							>
-								<Merge className=" size-5 " />
-							</button>
-						</Tooltip>
-					</div>
+					{#if isLastMessage}
+						<div class=" flex-shrink-0 text-gray-600 dark:text-gray-500 mt-1">
+							<Tooltip content={$i18n.t('Merge Responses')} placement="bottom">
+								<button
+									type="button"
+									id="merge-response-button"
+									class="{true
+										? 'visible'
+										: 'invisible group-hover:visible'} p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
+									on:click={() => {
+										mergeResponsesHandler();
+									}}
+								>
+									<Merge className=" size-5 " />
+								</button>
+							</Tooltip>
+						</div>
+					{/if}
 				</div>
 			{/if}
 		{/if}

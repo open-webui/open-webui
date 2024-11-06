@@ -10,9 +10,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.utils.tools import get_tools_specs
 from open_webui.utils.utils import get_admin_user, get_verified_user
 
-TOOLS_DIR = f"{DATA_DIR}/tools"
-os.makedirs(TOOLS_DIR, exist_ok=True)
-
 
 router = APIRouter()
 

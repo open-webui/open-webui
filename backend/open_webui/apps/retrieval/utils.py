@@ -19,6 +19,7 @@ from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.misc import get_last_user_message
 
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.config import DEFAULT_RAG_TEMPLATE
 
 
 log = logging.getLogger(__name__)
@@ -75,7 +76,7 @@ def query_doc(
             limit=k,
         )
 
-        log.info(f"query_doc:result {result}")
+        log.info(f"query_doc:result {result.ids} {result.metadatas}")
         return result
     except Exception as e:
         print(e)
@@ -126,7 +127,10 @@ def query_doc_with_hybrid_search(
             "metadatas": [[d.metadata for d in result]],
         }
 
-        log.info(f"query_doc_with_hybrid_search:result {result}")
+        log.info(
+            "query_doc_with_hybrid_search:result " +
+            f"{result.metadatas} {result.distances}"
+        )
         return result
     except Exception as e:
         raise e
@@ -239,8 +243,13 @@ def query_collection_with_hybrid_search(
 
 
 def rag_template(template: str, context: str, query: str):
-    count = template.count("[context]")
-    assert "[context]" in template, "RAG template does not contain '[context]'"
+    if template == "":
+        template = DEFAULT_RAG_TEMPLATE
+
+    if "[context]" not in template and "{{CONTEXT}}" not in template:
+        log.debug(
+            "WARNING: The RAG template does not contain the '[context]' or '{{CONTEXT}}' placeholder."
+        )
 
     if "<context>" in context and "</context>" in context:
         log.debug(
@@ -249,14 +258,25 @@ def rag_template(template: str, context: str, query: str):
             "nothing, or the user might be trying to hack something."
         )
 
+    query_placeholders = []
     if "[query]" in context:
-        query_placeholder = f"[query-{str(uuid.uuid4())}]"
+        query_placeholder = "{{QUERY" + str(uuid.uuid4()) + "}}"
         template = template.replace("[query]", query_placeholder)
-        template = template.replace("[context]", context)
+        query_placeholders.append(query_placeholder)
+
+    if "{{QUERY}}" in context:
+        query_placeholder = "{{QUERY" + str(uuid.uuid4()) + "}}"
+        template = template.replace("{{QUERY}}", query_placeholder)
+        query_placeholders.append(query_placeholder)
+
+    template = template.replace("[context]", context)
+    template = template.replace("{{CONTEXT}}", context)
+    template = template.replace("[query]", query)
+    template = template.replace("{{QUERY}}", query)
+
+    for query_placeholder in query_placeholders:
         template = template.replace(query_placeholder, query)
-    else:
-        template = template.replace("[context]", context)
-        template = template.replace("[query]", query)
+
     return template
 
 
@@ -368,6 +388,8 @@ def get_rag_context(
             extracted_collections.extend(collection_names)
 
         if context:
+            if "data" in file:
+                del file["data"]
             relevant_contexts.append({**context, "file": file})
 
     contexts = []
@@ -375,22 +397,36 @@ def get_rag_context(
     for context in relevant_contexts:
         try:
             if "documents" in context:
+                file_names = list(
+                    set(
+                        [
+                            metadata["name"]
+                            for metadata in context["metadatas"][0]
+                            if metadata is not None and "name" in metadata
+                        ]
+                    )
+                )
                 contexts.append(
-                    "\n\n".join(
+                    ((", ".join(file_names) + ":\n\n") if file_names else "")
+                    + "\n\n".join(
                         [text for text in context["documents"][0] if text is not None]
                     )
                 )
 
                 if "metadatas" in context:
-                    citations.append(
-                        {
-                            "source": context["file"],
-                            "document": context["documents"][0],
-                            "metadata": context["metadatas"][0],
-                        }
-                    )
+                    citation = {
+                        "source": context["file"],
+                        "document": context["documents"][0],
+                        "metadata": context["metadatas"][0],
+                    }
+                    if "distances" in context and context["distances"]:
+                        citation["distances"] = context["distances"][0]
+                    citations.append(citation)
         except Exception as e:
             log.exception(e)
+
+    print("contexts", contexts)
+    print("citations", citations)
 
     return contexts, citations
 

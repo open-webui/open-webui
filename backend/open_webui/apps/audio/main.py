@@ -32,7 +32,7 @@ from open_webui.config import (
 )
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS, DEVICE_TYPE
+from open_webui.env import SRC_LOG_LEVELS, DEVICE_TYPE, ENABLE_FORWARD_USER_INFO_HEADERS
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -63,6 +63,9 @@ app.state.config.STT_OPENAI_API_KEY = AUDIO_STT_OPENAI_API_KEY
 app.state.config.STT_ENGINE = AUDIO_STT_ENGINE
 app.state.config.STT_MODEL = AUDIO_STT_MODEL
 
+app.state.config.WHISPER_MODEL = WHISPER_MODEL
+app.state.faster_whisper_model = None
+
 app.state.config.TTS_OPENAI_API_BASE_URL = AUDIO_TTS_OPENAI_API_BASE_URL
 app.state.config.TTS_OPENAI_API_KEY = AUDIO_TTS_OPENAI_API_KEY
 app.state.config.TTS_ENGINE = AUDIO_TTS_ENGINE
@@ -70,6 +73,10 @@ app.state.config.TTS_MODEL = AUDIO_TTS_MODEL
 app.state.config.TTS_VOICE = AUDIO_TTS_VOICE
 app.state.config.TTS_API_KEY = AUDIO_TTS_API_KEY
 app.state.config.TTS_SPLIT_ON = AUDIO_TTS_SPLIT_ON
+
+
+app.state.speech_synthesiser = None
+app.state.speech_speaker_embeddings_dataset = None
 
 app.state.config.TTS_AZURE_SPEECH_REGION = AUDIO_TTS_AZURE_SPEECH_REGION
 app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT
@@ -80,6 +87,31 @@ log.info(f"whisper_device_type: {whisper_device_type}")
 
 SPEECH_CACHE_DIR = Path(CACHE_DIR).joinpath("./audio/speech/")
 SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def set_faster_whisper_model(model: str, auto_update: bool = False):
+    if model and app.state.config.STT_ENGINE == "":
+        from faster_whisper import WhisperModel
+
+        faster_whisper_kwargs = {
+            "model_size_or_path": model,
+            "device": whisper_device_type,
+            "compute_type": "int8",
+            "download_root": WHISPER_MODEL_DIR,
+            "local_files_only": not auto_update,
+        }
+
+        try:
+            app.state.faster_whisper_model = WhisperModel(**faster_whisper_kwargs)
+        except Exception:
+            log.warning(
+                "WhisperModel initialization failed, attempting download with local_files_only=False"
+            )
+            faster_whisper_kwargs["local_files_only"] = False
+            app.state.faster_whisper_model = WhisperModel(**faster_whisper_kwargs)
+
+    else:
+        app.state.faster_whisper_model = None
 
 
 class TTSConfigForm(BaseModel):
@@ -99,6 +131,7 @@ class STTConfigForm(BaseModel):
     OPENAI_API_KEY: str
     ENGINE: str
     MODEL: str
+    WHISPER_MODEL: str
 
 
 class AudioConfigUpdateForm(BaseModel):
@@ -152,6 +185,7 @@ async def get_audio_config(user=Depends(get_admin_user)):
             "OPENAI_API_KEY": app.state.config.STT_OPENAI_API_KEY,
             "ENGINE": app.state.config.STT_ENGINE,
             "MODEL": app.state.config.STT_MODEL,
+            "WHISPER_MODEL": app.state.config.WHISPER_MODEL,
         },
     }
 
@@ -176,6 +210,8 @@ async def update_audio_config(
     app.state.config.STT_OPENAI_API_KEY = form_data.stt.OPENAI_API_KEY
     app.state.config.STT_ENGINE = form_data.stt.ENGINE
     app.state.config.STT_MODEL = form_data.stt.MODEL
+    app.state.config.WHISPER_MODEL = form_data.stt.WHISPER_MODEL
+    set_faster_whisper_model(form_data.stt.WHISPER_MODEL, WHISPER_MODEL_AUTO_UPDATE)
 
     return {
         "tts": {
@@ -194,8 +230,24 @@ async def update_audio_config(
             "OPENAI_API_KEY": app.state.config.STT_OPENAI_API_KEY,
             "ENGINE": app.state.config.STT_ENGINE,
             "MODEL": app.state.config.STT_MODEL,
+            "WHISPER_MODEL": app.state.config.WHISPER_MODEL,
         },
     }
+
+
+def load_speech_pipeline():
+    from transformers import pipeline
+    from datasets import load_dataset
+
+    if app.state.speech_synthesiser is None:
+        app.state.speech_synthesiser = pipeline(
+            "text-to-speech", "microsoft/speecht5_tts"
+        )
+
+    if app.state.speech_speaker_embeddings_dataset is None:
+        app.state.speech_speaker_embeddings_dataset = load_dataset(
+            "Matthijs/cmu-arctic-xvectors", split="validation"
+        )
 
 
 @app.post("/speech")
@@ -214,6 +266,12 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         headers = {}
         headers["Authorization"] = f"Bearer {app.state.config.TTS_OPENAI_API_KEY}"
         headers["Content-Type"] = "application/json"
+
+        if ENABLE_FORWARD_USER_INFO_HEADERS:
+            headers["X-OpenWebUI-User-Name"] = user.name
+            headers["X-OpenWebUI-User-Id"] = user.id
+            headers["X-OpenWebUI-User-Email"] = user.email
+            headers["X-OpenWebUI-User-Role"] = user.role
 
         try:
             body = body.decode("utf-8")
@@ -358,6 +416,43 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             raise HTTPException(
                 status_code=500, detail=f"Error synthesizing speech - {response.reason}"
             )
+    elif app.state.config.TTS_ENGINE == "transformers":
+        payload = None
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except Exception as e:
+            log.exception(e)
+            raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+        import torch
+        import soundfile as sf
+
+        load_speech_pipeline()
+
+        embeddings_dataset = app.state.speech_speaker_embeddings_dataset
+
+        speaker_index = 6799
+        try:
+            speaker_index = embeddings_dataset["filename"].index(
+                app.state.config.TTS_MODEL
+            )
+        except Exception:
+            pass
+
+        speaker_embedding = torch.tensor(
+            embeddings_dataset[speaker_index]["xvector"]
+        ).unsqueeze(0)
+
+        speech = app.state.speech_synthesiser(
+            payload["input"],
+            forward_params={"speaker_embeddings": speaker_embedding},
+        )
+
+        sf.write(file_path, speech["audio"], samplerate=speech["sampling_rate"])
+        with open(file_body_path, "w") as f:
+            json.dump(json.loads(body.decode("utf-8")), f)
+
+        return FileResponse(file_path)
 
 
 def transcribe(file_path):
@@ -367,27 +462,10 @@ def transcribe(file_path):
     id = filename.split(".")[0]
 
     if app.state.config.STT_ENGINE == "":
-        from faster_whisper import WhisperModel
+        if app.state.faster_whisper_model is None:
+            set_faster_whisper_model(app.state.config.WHISPER_MODEL)
 
-        whisper_kwargs = {
-            "model_size_or_path": WHISPER_MODEL,
-            "device": whisper_device_type,
-            "compute_type": "int8",
-            "download_root": WHISPER_MODEL_DIR,
-            "local_files_only": not WHISPER_MODEL_AUTO_UPDATE,
-        }
-
-        log.debug(f"whisper_kwargs: {whisper_kwargs}")
-
-        try:
-            model = WhisperModel(**whisper_kwargs)
-        except Exception:
-            log.warning(
-                "WhisperModel initialization failed, attempting download with local_files_only=False"
-            )
-            whisper_kwargs["local_files_only"] = False
-            model = WhisperModel(**whisper_kwargs)
-
+        model = app.state.faster_whisper_model
         segments, info = model.transcribe(file_path, beam_size=5)
         log.info(
             "Detected language '%s' with probability %f"
@@ -395,7 +473,6 @@ def transcribe(file_path):
         )
 
         transcript = "".join([segment.text for segment in list(segments)])
-
         data = {"text": transcript.strip()}
 
         # save the transcript to a json file
@@ -403,7 +480,7 @@ def transcribe(file_path):
         with open(transcript_file, "w") as f:
             json.dump(data, f)
 
-        print(data)
+        log.debug(data)
         return data
     elif app.state.config.STT_ENGINE == "openai":
         if is_mp4_audio(file_path):
@@ -417,7 +494,7 @@ def transcribe(file_path):
         files = {"file": (filename, open(file_path, "rb"))}
         data = {"model": app.state.config.STT_MODEL}
 
-        print(files, data)
+        log.debug(files, data)
 
         r = None
         try:
@@ -507,7 +584,8 @@ def transcription(
             else:
                 data = transcribe(file_path)
 
-            return data
+            file_path = file_path.split("/")[-1]
+            return {**data, "filename": file_path}
         except Exception as e:
             log.exception(e)
             raise HTTPException(

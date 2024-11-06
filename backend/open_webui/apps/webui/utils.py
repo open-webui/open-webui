@@ -8,7 +8,6 @@ import tempfile
 
 from open_webui.apps.webui.models.functions import Functions
 from open_webui.apps.webui.models.tools import Tools
-from open_webui.config import FUNCTIONS_DIR, TOOLS_DIR
 
 
 def extract_frontmatter(content):
