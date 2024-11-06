@@ -1094,8 +1094,14 @@
 			$settings?.params?.stream_response ??
 			params?.stream_response ??
 			true;
+		const native_tool_call =
+			model?.info?.params?.native_tool_call ??
+			$settings?.params?.native_tool_call ??
+			params?.native_tool_call ??
+			true;
 		const [res, controller] = await generateChatCompletion(localStorage.token, {
 			stream: stream,
+			native_tool_call: native_tool_call,
 			model: model.id,
 			messages: messagesBody,
 			options: {
@@ -1419,10 +1425,17 @@
 				params?.stream_response ??
 				true;
 
+			const native_tool_call =
+				model?.info?.params?.native_tool_call ??
+				$settings?.params?.native_tool_call ??
+				params?.native_tool_call ??
+				true;
+
 			const [res, controller] = await generateOpenAIChatCompletion(
 				localStorage.token,
 				{
 					stream: stream,
+					native_tool_call : native_tool_call,
 					model: model.id,
 					...(stream && (model.info?.meta?.capabilities?.usage ?? false)
 						? {
