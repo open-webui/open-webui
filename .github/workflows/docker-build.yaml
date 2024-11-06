@@ -9,6 +9,7 @@ on:
       - custom_name_envvar
     tags:
       - v*
+  pull_request:
 
 env:
   REGISTRY: ghcr.io
