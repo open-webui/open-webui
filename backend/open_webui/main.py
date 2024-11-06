@@ -2224,7 +2224,14 @@ async def get_app_config(request: Request):
     user = None
     if "token" in request.cookies:
         token = request.cookies.get("token")
-        data = decode_token(token)
+        try:
+            data = decode_token(token)
+        except Exception as e:
+            log.debug(e)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+            )
         if data is not None and "id" in data:
             user = Users.get_user_by_id(data["id"])
 
