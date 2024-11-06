@@ -1595,7 +1595,7 @@ AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
 ENABLE_LDAP = PersistentConfig(
     "ENABLE_LDAP",
     "ldap.enable",
-    os.environ.get("ENABLE_LDAP", "True").lower() == "true",
+    os.environ.get("ENABLE_LDAP", "false").lower() == "true",
 )
 
 LDAP_SERVER_LABEL = PersistentConfig(
