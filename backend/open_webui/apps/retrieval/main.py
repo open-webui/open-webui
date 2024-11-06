@@ -764,7 +764,7 @@ class ProcessFileForm(BaseModel):
 
 
 @app.post("/process/file")
-def process_file(
+async def process_file(
     form_data: ProcessFileForm,
     user=Depends(get_verified_user),
 ):
@@ -831,7 +831,7 @@ def process_file(
             # Usage: /files/
             file_path = file.path
             if file_path:
-                with Storage.as_local_file(file_path) as local_file:
+                with await Storage.as_local_file(file_path) as local_file:
                     loader = Loader(
                         engine=app.state.config.CONTENT_EXTRACTION_ENGINE,
                         TIKA_SERVER_URL=app.state.config.TIKA_SERVER_URL,

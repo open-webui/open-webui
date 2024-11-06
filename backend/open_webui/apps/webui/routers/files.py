@@ -39,7 +39,7 @@ router = APIRouter()
 
 
 @router.post("/", response_model=FileModelResponse)
-def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
+async def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
     log.info(f"***** file.content_type: {file.content_type}, user: {user}")
     try:
         unsanitized_filename = file.filename
@@ -49,7 +49,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
         id = str(uuid.uuid4())
         name = filename
         filename = f"{user.id}/{id}_{filename}"
-        contents, file_path = Storage.upload_file(file.file, filename)
+        contents, file_path = await Storage.upload_file(file.file, filename)
 
         file_item = Files.insert_new_file(
             user.id,
@@ -68,7 +68,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
         )
 
         try:
-            process_file(ProcessFileForm(file_id=id))
+            await process_file(ProcessFileForm(file_id=id))
             file_item = Files.get_file_by_id(id=id)
         except Exception as e:
             log.exception(e)
@@ -120,7 +120,7 @@ async def delete_all_files(user=Depends(get_admin_user)):
     result = Files.delete_all_files()
     if result:
         try:
-            Storage.delete_all_files()
+            await Storage.delete_all_files()
         except Exception as e:
             log.exception(e)
             log.error(f"Error deleting files")
@@ -189,7 +189,7 @@ async def update_file_data_content_by_id(
 
     if file and (file.user_id == user.id or user.role == "admin"):
         try:
-            process_file(ProcessFileForm(file_id=id, content=form_data.content))
+            await process_file(ProcessFileForm(file_id=id, content=form_data.content))
             file = Files.get_file_by_id(id=id)
         except Exception as e:
             log.exception(e)
@@ -210,24 +210,15 @@ async def update_file_data_content_by_id(
 
 @router.get("/{id}/content")
 async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
+    print("*************** get_file_content_by_id @ L213")
     file = Files.get_file_by_id(id)
     if file and (file.user_id == user.id or user.role == "admin"):
         try:
-            file_path = Storage.get_file(file.path)
-            file_path = Path(file_path)
+            file_content_it = await Storage.get_file(file.path)
 
-            # Check if the file already exists in the cache
-            if file_path.is_file():
-                print(f"file_path: {file_path}")
-                headers = {
+            return StreamingResponse(file_content_it, headers={
                     "Content-Disposition": f'attachment; filename="{file.meta.get("name", file.filename)}"'
-                }
-                return FileResponse(file_path, headers=headers)
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=ERROR_MESSAGES.NOT_FOUND,
-                )
+                })
         except Exception as e:
             log.exception(e)
             log.error(f"Error getting file content")
@@ -245,9 +236,10 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
 @router.get("/{id}/content/html")
 async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
+    print("get html content @ L239")
     if file and (file.user_id == user.id or user.role == "admin"):
         try:
-            file_path = Storage.get_file(file.path)
+            file_path = await Storage.get_file(file.path)
             file_path = Path(file_path)
 
             # Check if the file already exists in the cache
@@ -277,10 +269,11 @@ async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user)):
 async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
 
+    print("*************** get_file_content_by_id @ L271")
     if file and (file.user_id == user.id or user.role == "admin"):
         file_path = file.path
         if file_path:
-            file_path = Storage.get_file(file_path)
+            file_path = await Storage.get_file(file_path)
             file_path = Path(file_path)
 
             # Check if the file already exists in the cache
@@ -328,7 +321,7 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
         result = Files.delete_file_by_id(id)
         if result:
             try:
-                Storage.delete_file(file.filename)
+                await Storage.delete_file(file.filename)
             except Exception as e:
                 log.exception(e)
                 log.error(f"Error deleting files")
