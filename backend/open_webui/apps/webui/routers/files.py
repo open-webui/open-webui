@@ -40,7 +40,7 @@ router = APIRouter()
 
 @router.post("/", response_model=FileModelResponse)
 def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
-    log.info(f"file.content_type: {file.content_type}")
+    log.info(f"***** file.content_type: {file.content_type}, user: {user}")
     try:
         unsanitized_filename = file.filename
         filename = os.path.basename(unsanitized_filename)
@@ -48,7 +48,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
         # replace filename with uuid
         id = str(uuid.uuid4())
         name = filename
-        filename = f"{id}_{filename}"
+        filename = f"{user.id}/{id}_{filename}"
         contents, file_path = Storage.upload_file(file.file, filename)
 
         file_item = Files.insert_new_file(

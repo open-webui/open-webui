@@ -779,7 +779,6 @@ def process_file(
         if form_data.content:
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update
-
             VECTOR_DB_CLIENT.delete(
                 collection_name=f"file-{file.id}",
                 filter={"file_id": file.id},
@@ -801,7 +800,6 @@ def process_file(
         elif form_data.collection_name:
             # Check if the file has already been processed and save the content
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
-
             result = VECTOR_DB_CLIENT.query(
                 collection_name=f"file-{file.id}", filter={"file_id": file.id}
             )
@@ -839,9 +837,21 @@ def process_file(
                         TIKA_SERVER_URL=app.state.config.TIKA_SERVER_URL,
                         PDF_EXTRACT_IMAGES=app.state.config.PDF_EXTRACT_IMAGES,
                     )
-                    docs = loader.load(
+                    loaded_docs = loader.load(
                         file.filename, file.meta.get("content_type"), local_file.get_local_path()
-                    )                
+                    )
+
+                    docs = [
+                        Document(
+                            page_content=doc.page_content,
+                            metadata = {
+                                "name": file.meta.get("name", file.filename),
+                                "created_by": file.user_id,
+                                "file_id": file.id,
+                                **file.meta,
+                            }
+                        )
+                        for doc in loaded_docs]
             else:
                 docs = [
                     Document(
