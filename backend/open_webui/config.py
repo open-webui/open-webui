@@ -495,10 +495,11 @@ else:
 ####################################
 
 CUSTOM_NAME = os.environ.get("CUSTOM_NAME", "")
+OWUI_API_URL = os.environ.get("OWUI_API_URL", "https://api.openwebui.com")
 
 if CUSTOM_NAME:
     try:
-        r = requests.get(f"https://api.openwebui.com/api/v1/custom/{CUSTOM_NAME}")
+        r = requests.get(f"{OWUI_API_URL}/api/v1/custom/{CUSTOM_NAME}")
         data = r.json()
         if r.ok:
             if "logo" in data:
