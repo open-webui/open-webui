@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - dev
+      - custom_name_envvar
     tags:
       - v*
 
