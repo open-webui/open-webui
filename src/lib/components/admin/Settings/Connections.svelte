@@ -24,7 +24,7 @@
 		getLdapConfig,
 		updateLdapConfig,
 		getLdapServer,
-		updateLdapServer,
+		updateLdapServer
 	} from '$lib/apis/auths';
 	import { toast } from 'svelte-sonner';
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -51,7 +51,6 @@
 	let ENABLE_OPENAI_API = null;
 	let ENABLE_OLLAMA_API = null;
 
-	
 	// LDAP
 	let ENABLE_LDAP = false;
 	let LDAP_SERVER = {
@@ -488,168 +487,176 @@
 
 					{#if ENABLE_LDAP}
 						<div class="flex flex-col gap-1">
-								<div class="flex w-full gap-2">
-									<div class="w-full">
-										<div class=" self-center text-xs font-medium min-w-fit mb-1">
-											{$i18n.t('Label')}
-										</div>
-										<input
+							<div class="flex w-full gap-2">
+								<div class="w-full">
+									<div class=" self-center text-xs font-medium min-w-fit mb-1">
+										{$i18n.t('Label')}
+									</div>
+									<input
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 										required
 										placeholder={$i18n.t('Enter server label')}
 										bind:value={LDAP_SERVER.label}
-										/>
-									</div>
-									<div class="w-full"></div>
+									/>
 								</div>
-								<div class="flex w-full gap-2">
-									<div class="w-full">
-										<div class=" self-center text-xs font-medium min-w-fit mb-1">
-											{$i18n.t('Host')}
-										</div>
-										<input
+								<div class="w-full"></div>
+							</div>
+							<div class="flex w-full gap-2">
+								<div class="w-full">
+									<div class=" self-center text-xs font-medium min-w-fit mb-1">
+										{$i18n.t('Host')}
+									</div>
+									<input
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 										required
 										placeholder={$i18n.t('Enter server host')}
 										bind:value={LDAP_SERVER.host}
-										/>
+									/>
+								</div>
+								<div class="w-full">
+									<div class=" self-center text-xs font-medium min-w-fit mb-1">
+										{$i18n.t('Port')}
 									</div>
-									<div class="w-full">
-										<div class=" self-center text-xs font-medium min-w-fit mb-1">
-											{$i18n.t('Port')}
-										</div>
-										<Tooltip placement="top-start" content={$i18n.t("Default to 389 or 636 if TLS is enabled")} className="w-full">
-											<input
+									<Tooltip
+										placement="top-start"
+										content={$i18n.t('Default to 389 or 636 if TLS is enabled')}
+										className="w-full"
+									>
+										<input
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 											type="number"
 											placeholder={$i18n.t('Enter server port')}
 											bind:value={LDAP_SERVER.port}
-											/>
-										</Tooltip>
-									</div>
+										/>
+									</Tooltip>
 								</div>
-								<div class="flex w-full gap-2">
-									<div class="w-full">
-										<div class=" self-center text-xs font-medium min-w-fit mb-1">
-											{$i18n.t('Application DN')}
-										</div>
-										<Tooltip content={$i18n.t('The Application Account DN you bind with for search')} placement="top-start">
-											<input
+							</div>
+							<div class="flex w-full gap-2">
+								<div class="w-full">
+									<div class=" self-center text-xs font-medium min-w-fit mb-1">
+										{$i18n.t('Application DN')}
+									</div>
+									<Tooltip
+										content={$i18n.t('The Application Account DN you bind with for search')}
+										placement="top-start"
+									>
+										<input
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 											required
 											placeholder={$i18n.t('Enter Application DN')}
 											bind:value={LDAP_SERVER.app_dn}
-											/>
-										</Tooltip>
+										/>
+									</Tooltip>
+								</div>
+								<div class="w-full">
+									<div class=" self-center text-xs font-medium min-w-fit mb-1">
+										{$i18n.t('Application DN Password')}
 									</div>
-									<div class="w-full">
-										<div class=" self-center text-xs font-medium min-w-fit mb-1">
-											{$i18n.t('Application DN Password')}
-										</div>
-										<SensitiveInput
+									<SensitiveInput
 										placeholder={$i18n.t('Enter Application DN Password')}
 										bind:value={LDAP_SERVER.app_dn_password}
-										/>
-									</div>
+									/>
 								</div>
-								<div class="flex w-full gap-2">
-									<div class="w-full">
-										<div class=" self-center text-xs font-medium min-w-fit mb-1">
-											{$i18n.t('Attribute for Username')}
-										</div>
-										<Tooltip content={$i18n.t('The LDAP attribute that maps to the username that users use to sign in.')} placement="top-start">
-											<input
+							</div>
+							<div class="flex w-full gap-2">
+								<div class="w-full">
+									<div class=" self-center text-xs font-medium min-w-fit mb-1">
+										{$i18n.t('Attribute for Username')}
+									</div>
+									<Tooltip
+										content={$i18n.t(
+											'The LDAP attribute that maps to the username that users use to sign in.'
+										)}
+										placement="top-start"
+									>
+										<input
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 											required
 											placeholder={$i18n.t('Example: sAMAccountName or uid or userPrincipalName')}
 											bind:value={LDAP_SERVER.attribute_for_username}
-											/>
-										</Tooltip>
-									</div>
+										/>
+									</Tooltip>
 								</div>
-								<div class="flex w-full gap-2">
-									<div class="w-full">
-										<div class=" self-center text-xs font-medium min-w-fit mb-1">
-											{$i18n.t('Search Base')}
-										</div>
-										<Tooltip content={$i18n.t('The base to search for users')} placement="top-start">
-											<input
+							</div>
+							<div class="flex w-full gap-2">
+								<div class="w-full">
+									<div class=" self-center text-xs font-medium min-w-fit mb-1">
+										{$i18n.t('Search Base')}
+									</div>
+									<Tooltip content={$i18n.t('The base to search for users')} placement="top-start">
+										<input
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 											required
 											placeholder={$i18n.t('Example: ou=users,dc=foo,dc=example')}
 											bind:value={LDAP_SERVER.search_base}
-											/>
-										</Tooltip>
-									</div>
+										/>
+									</Tooltip>
 								</div>
-								<div class="flex w-full gap-2">
-									<div class="w-full">
-										<div class=" self-center text-xs font-medium min-w-fit mb-1">
-											{$i18n.t('Search Filters')}
-										</div>
-										<input
+							</div>
+							<div class="flex w-full gap-2">
+								<div class="w-full">
+									<div class=" self-center text-xs font-medium min-w-fit mb-1">
+										{$i18n.t('Search Filters')}
+									</div>
+									<input
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 										placeholder={$i18n.t('Example: (&(objectClass=inetOrgPerson)(uid=%s))')}
 										bind:value={LDAP_SERVER.search_filters}
-										/>
-									</div>
+									/>
 								</div>
-								<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-									<a
-										class=" text-gray-300 font-medium underline"
-										href="https://ldap.com/ldap-filters/"
-										target="_blank"
-									>
-										{$i18n.t('Click here for filter guides.')}
-									</a>
-								</div>
-								<div>
-									<div class="flex justify-between items-center text-sm">
-										<div class="  font-medium">{$i18n.t('TLS')}</div>
+							</div>
+							<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+								<a
+									class=" text-gray-300 font-medium underline"
+									href="https://ldap.com/ldap-filters/"
+									target="_blank"
+								>
+									{$i18n.t('Click here for filter guides.')}
+								</a>
+							</div>
+							<div>
+								<div class="flex justify-between items-center text-sm">
+									<div class="  font-medium">{$i18n.t('TLS')}</div>
 
-										<div class="mt-1">
-											<Switch
-												bind:state={LDAP_SERVER.use_tls}
-											/>
-										</div>
+									<div class="mt-1">
+										<Switch bind:state={LDAP_SERVER.use_tls} />
 									</div>
-									{#if LDAP_SERVER.use_tls}
-										<div class="flex w-full gap-2">
-											<div class="w-full">
-												<div class=" self-center text-xs font-medium min-w-fit mb-1 mt-1">
-													{$i18n.t('Certificate Path')}
-												</div>
-												<input
+								</div>
+								{#if LDAP_SERVER.use_tls}
+									<div class="flex w-full gap-2">
+										<div class="w-full">
+											<div class=" self-center text-xs font-medium min-w-fit mb-1 mt-1">
+												{$i18n.t('Certificate Path')}
+											</div>
+											<input
 												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 												required
 												placeholder={$i18n.t('Enter certificate path')}
 												bind:value={LDAP_SERVER.certificate_path}
-												/>
-											</div>
+											/>
 										</div>
-										<div class="flex w-full gap-2">
-											<div class="w-full">
-												<div class=" self-center text-xs font-medium min-w-fit mb-1">
-													{$i18n.t('Ciphers')}
-												</div>
-												<Tooltip content={$i18n.t('Default to ALL')} placement="top-start">
-													<input
+									</div>
+									<div class="flex w-full gap-2">
+										<div class="w-full">
+											<div class=" self-center text-xs font-medium min-w-fit mb-1">
+												{$i18n.t('Ciphers')}
+											</div>
+											<Tooltip content={$i18n.t('Default to ALL')} placement="top-start">
+												<input
 													class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 													placeholder={$i18n.t('Example: ALL')}
 													bind:value={LDAP_SERVER.ciphers}
-													/>
-												</Tooltip>
-											</div>
-											<div class="w-full"></div>
+												/>
+											</Tooltip>
 										</div>
-									{/if}
-								</div>
+										<div class="w-full"></div>
+									</div>
+								{/if}
+							</div>
 						</div>
 					{/if}
-
 				</div>
 			</div>
-
 		{:else}
 			<div class="flex h-full justify-center">
 				<div class="my-auto">

@@ -150,7 +150,7 @@ export const getLdapConfig = async (token: string = '') => {
 		headers: {
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
-		},
+		}
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -167,7 +167,7 @@ export const getLdapConfig = async (token: string = '') => {
 	}
 
 	return res;
-}
+};
 
 export const updateLdapConfig = async (token: string = '', enable_ldap: boolean) => {
 	let error = null;
@@ -197,7 +197,7 @@ export const updateLdapConfig = async (token: string = '', enable_ldap: boolean)
 	}
 
 	return res;
-}
+};
 
 export const getLdapServer = async (token: string = '') => {
 	let error = null;
@@ -207,7 +207,7 @@ export const getLdapServer = async (token: string = '') => {
 		headers: {
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
-		},
+		}
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -224,7 +224,7 @@ export const getLdapServer = async (token: string = '') => {
 	}
 
 	return res;
-}
+};
 
 export const updateLdapServer = async (token: string = '', body: object) => {
 	let error = null;
