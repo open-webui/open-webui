@@ -288,7 +288,7 @@
 			if (visibleTabs.length > 0 && !visibleTabs.includes(selectedTab)) {
 				selectedTab = visibleTabs[0];
 			}
-		}, 200);
+		}, 100);
 	};
 
 	const saveSettings = async (updated) => {
