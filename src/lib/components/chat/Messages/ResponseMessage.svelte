@@ -653,7 +653,7 @@
 									<Error content={message?.error?.content ?? message.content} />
 								{/if}
 
-								{#if message.citations}
+								{#if message.citations && $config?.features.show_citations_in_messages}
 									<Citations citations={message.citations} />
 								{/if}
 

@@ -2263,6 +2263,7 @@ async def get_app_config(request: Request):
                     "enable_web_search": retrieval_app.state.config.ENABLE_RAG_WEB_SEARCH,
                     "enable_image_generation": images_app.state.config.ENABLED,
                     "enable_community_sharing": webui_app.state.config.ENABLE_COMMUNITY_SHARING,
+                    "show_citations_in_messages": webui_app.state.config.SHOW_CITATIONS_IN_MESSAGES,
                     "enable_message_rating": webui_app.state.config.ENABLE_MESSAGE_RATING,
                     "enable_admin_export": ENABLE_ADMIN_EXPORT,
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,

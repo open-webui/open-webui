@@ -802,6 +802,12 @@ ENABLE_COMMUNITY_SHARING = PersistentConfig(
     os.environ.get("ENABLE_COMMUNITY_SHARING", "True").lower() == "true",
 )
 
+SHOW_CITATIONS_IN_MESSAGES = PersistentConfig(
+    "SHOW_CITATIONS_IN_MESSAGES",
+    "ui.show_citations_in_messages",
+    os.environ.get("SHOW_CITATIONS_IN_MESSAGES", "True").lower() == "true",
+)
+
 ENABLE_MESSAGE_RATING = PersistentConfig(
     "ENABLE_MESSAGE_RATING",
     "ui.enable_message_rating",

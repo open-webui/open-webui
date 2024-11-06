@@ -86,6 +86,14 @@
 				</div>
 
 				<div class="my-3 flex w-full items-center justify-between pr-2">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Show citations in messages')}
+					</div>
+
+					<Switch bind:state={adminConfig.SHOW_CITATIONS_IN_MESSAGES} />
+				</div>
+
+				<div class="my-3 flex w-full items-center justify-between pr-2">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Enable Message Rating')}</div>
 
 					<Switch bind:state={adminConfig.ENABLE_MESSAGE_RATING} />
