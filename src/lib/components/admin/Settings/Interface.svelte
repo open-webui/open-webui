@@ -25,6 +25,7 @@
 		TASK_MODEL_EXTERNAL: '',
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
 		TAGS_GENERATION_PROMPT_TEMPLATE: '',
+		ENABLE_TAGS_GENERATION: true,
 		ENABLE_SEARCH_QUERY: true,
 		SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE: ''
 	};
@@ -133,19 +134,31 @@
 				</Tooltip>
 			</div>
 
-			<div class="mt-3">
-				<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Tags Generation Prompt')}</div>
+			<hr class=" dark:border-gray-850 my-3" />
 
-				<Tooltip
-					content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
-					placement="top-start"
-				>
-					<Textarea
-						bind:value={taskConfig.TAGS_GENERATION_PROMPT_TEMPLATE}
-						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
-					/>
-				</Tooltip>
+			<div class="my-3 flex w-full items-center justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Enable Tags Generation')}
+				</div>
+
+				<Switch bind:state={taskConfig.ENABLE_TAGS_GENERATION} />
 			</div>
+
+			{#if taskConfig.ENABLE_TAGS_GENERATION}
+				<div class="mt-3">
+					<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Tags Generation Prompt')}</div>
+
+					<Tooltip
+						content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+						placement="top-start"
+					>
+						<Textarea
+							bind:value={taskConfig.TAGS_GENERATION_PROMPT_TEMPLATE}
+							placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+						/>
+					</Tooltip>
+				</div>
+			{/if}
 
 			<hr class=" dark:border-gray-850 my-3" />
 
