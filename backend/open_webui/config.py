@@ -905,6 +905,12 @@ TAGS_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     os.environ.get("TAGS_GENERATION_PROMPT_TEMPLATE", ""),
 )
 
+ENABLE_TAGS_GENERATION = PersistentConfig(
+    "ENABLE_TAGS_GENERATION",
+    "task.tags.enable",
+    os.environ.get("ENABLE_TAGS_GENERATION", "True").lower() == "true",
+)
+
 ENABLE_SEARCH_QUERY = PersistentConfig(
     "ENABLE_SEARCH_QUERY",
     "task.search.enable",
