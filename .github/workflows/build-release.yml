@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main # or whatever branch you want to use
+      - custom_name_envvar
 
 jobs:
   release:
