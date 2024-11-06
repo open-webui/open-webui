@@ -27,7 +27,6 @@
 	let password = '';
 
 	let ldapUsername = '';
-	let ldapPassword = '';
 
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
@@ -64,6 +63,14 @@
 		await setSessionUser(sessionUser);
 	};
 
+	const ldapSignInHandler = async () => {
+		const sessionUser = await ldapUserSignIn(ldapUsername, password).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+		await setSessionUser(sessionUser);
+	};
+
 	const submitHandler = async () => {
 		if (mode === 'ldap') {
 			await ldapSignInHandler();
@@ -72,14 +79,6 @@
 		} else {
 			await signUpHandler();
 		}
-	};
-
-	const ldapSignInHandler = async () => {
-		const sessionUser = await ldapUserSignIn(ldapUsername, ldapPassword).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-		await setSessionUser(sessionUser);
 	};
 
 	const checkOauthCallback = async () => {
@@ -113,6 +112,7 @@
 			await goto('/');
 		}
 		await checkOauthCallback();
+
 		loaded = true;
 		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
 			await signInHandler();
@@ -175,7 +175,8 @@
 					<div class="  my-auto pb-10 w-full dark:text-gray-100">
 						<form
 							class=" flex flex-col justify-center"
-							on:submit|preventDefault={() => {
+							on:submit={(e) => {
+								e.preventDefault();
 								submitHandler();
 							}}
 						>
@@ -265,9 +266,7 @@
 											class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
 											type="submit"
 										>
-											{($config?.onboarding ?? false)
-												? $i18n.t('Authenticate as Admin')
-												: $i18n.t('Authenticate')}
+											{$i18n.t('Authenticate')}
 										</button>
 									{:else}
 										<button
@@ -406,6 +405,7 @@
 							<div class="mt-2">
 								<button
 									class="flex justify-center items-center text-xs w-full text-center underline"
+									type="button"
 									on:click={() => {
 										if (mode === 'ldap')
 											mode = ($config?.onboarding ?? false) ? 'signup' : 'signin';
