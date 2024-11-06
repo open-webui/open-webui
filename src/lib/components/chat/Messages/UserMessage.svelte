@@ -1,7 +1,7 @@
 <script lang="ts">
 	import dayjs from 'dayjs';
 	import { toast } from 'svelte-sonner';
-	import { tick, createEventDispatcher, getContext, onMount } from 'svelte';
+	import { tick, getContext, onMount } from 'svelte';
 
 	import { models, settings } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
@@ -19,7 +19,6 @@
 
 	const i18n = getContext('i18n');
 
-	const dispatch = createEventDispatcher();
 	export let user;
 
 	export let history;
@@ -31,6 +30,7 @@
 	export let showNextMessage: Function;
 
 	export let editMessage: Function;
+	export let deleteMessage: Function;
 
 	export let isFirstMessage: boolean;
 	export let readOnly: boolean;
@@ -78,7 +78,7 @@
 	};
 
 	const deleteMessageHandler = async () => {
-		dispatch('delete', message.id);
+		deleteMessage(message.id);
 	};
 
 	onMount(() => {

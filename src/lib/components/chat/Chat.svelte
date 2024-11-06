@@ -1794,6 +1794,33 @@
 		console.log('stopResponse');
 	};
 
+	const submitMessage = async (parentId, prompt) => {
+		let userPrompt = prompt;
+		let userMessageId = uuidv4();
+
+		let userMessage = {
+			id: userMessageId,
+			parentId: parentId,
+			childrenIds: [],
+			role: 'user',
+			content: userPrompt,
+			models: selectedModels
+		};
+
+		if (parentId !== null) {
+			history.messages[parentId].childrenIds = [
+				...history.messages[parentId].childrenIds,
+				userMessageId
+			];
+		}
+
+		history.messages[userMessageId] = userMessage;
+		history.currentId = userMessageId;
+
+		await tick();
+		await sendPrompt(userPrompt, userMessageId);
+	};
+
 	const regenerateResponse = async (message) => {
 		console.log('regenerateResponse');
 
@@ -2204,42 +2231,12 @@
 									{selectedModels}
 									{sendPrompt}
 									{showMessage}
+									{submitMessage}
 									{continueResponse}
 									{regenerateResponse}
 									{mergeResponses}
 									{chatActionHandler}
 									bottomPadding={files.length > 0}
-									on:submit={async (e) => {
-										if (e.detail) {
-											// New user message
-											let userPrompt = e.detail.prompt;
-											let userMessageId = uuidv4();
-
-											let userMessage = {
-												id: userMessageId,
-												parentId: e.detail.parentId,
-												childrenIds: [],
-												role: 'user',
-												content: userPrompt,
-												models: selectedModels
-											};
-
-											let messageParentId = e.detail.parentId;
-
-											if (messageParentId !== null) {
-												history.messages[messageParentId].childrenIds = [
-													...history.messages[messageParentId].childrenIds,
-													userMessageId
-												];
-											}
-
-											history.messages[userMessageId] = userMessage;
-											history.currentId = userMessageId;
-
-											await tick();
-											await sendPrompt(userPrompt, userMessageId);
-										}
-									}}
 								/>
 							</div>
 						</div>
