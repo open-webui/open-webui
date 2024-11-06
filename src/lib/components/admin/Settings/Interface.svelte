@@ -154,7 +154,9 @@
 					>
 						<Textarea
 							bind:value={taskConfig.TAGS_GENERATION_PROMPT_TEMPLATE}
-							placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+							placeholder={$i18n.t(
+								'Leave empty to use the default prompt, or enter a custom prompt'
+							)}
 						/>
 					</Tooltip>
 				</div>
