@@ -701,7 +701,6 @@ def save_docs_to_vector_db(
         f"save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
     )
 
-    # TODO: check the metadata , should contain S3 path 
     # Check if entries with the same hash (metadata.hash) already exist
     if metadata and "hash" in metadata:
         result = VECTOR_DB_CLIENT.query(
