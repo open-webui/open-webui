@@ -16,7 +16,7 @@ from open_webui.apps.webui.models.files import (
 )
 from open_webui.apps.retrieval.main import process_file, ProcessFileForm
 
-from open_webui.config import UPLOAD_DIR
+from open_webui.config import USER_UPLOAD_FOLDER
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.constants import ERROR_MESSAGES
 
@@ -48,7 +48,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
         # replace filename with uuid
         id = str(uuid.uuid4())
         name = filename
-        filename = f"{user.id}/{id}_{filename}"
+        filename = f"{USER_UPLOAD_FOLDER}/{user.id}/{id}_{filename}"
         contents, file_path = Storage.upload_file(file.file, filename)
 
         file_item = Files.insert_new_file(

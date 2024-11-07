@@ -7,18 +7,16 @@ from fastapi import HTTPException, status
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import (
-    S3_BUCKET_PREFIX,
     S3_LOCAL_CACHE_DIR,
     S3_ACCESS_KEY_ID,
     S3_SECRET_ACCESS_KEY,
-    S3_BUCKET_NAME,
     S3_REGION_NAME,
     S3_ENDPOINT_URL,
 )
 from open_webui.storage.base_storage_provider import LocalCachedFile, StorageProvider
 
 class S3StorageProvider(StorageProvider):
-    def __init__(self):
+    def __init__(self, bucket_name: str, prefix: str):
         self.client = boto3.client(
             "s3",
             region_name=S3_REGION_NAME,
@@ -26,8 +24,8 @@ class S3StorageProvider(StorageProvider):
             aws_access_key_id=S3_ACCESS_KEY_ID,
             aws_secret_access_key=S3_SECRET_ACCESS_KEY,
         )
-        self.bucket_name: Optional[str] = S3_BUCKET_NAME
-        self.bucket_prefix: Optional[str] = S3_BUCKET_PREFIX
+        self.bucket_name: Optional[str] = bucket_name
+        self.bucket_prefix: Optional[str] = prefix
 
     def upload_file(self, file: BinaryIO, filename: str) -> Tuple[bytes, str]:
         """Uploads a file to S3."""
