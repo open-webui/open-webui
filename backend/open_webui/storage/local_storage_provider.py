@@ -42,11 +42,12 @@ class LocalStorageProvider(StorageProvider):
         else:
             print(f"File {file_path} not found in local storage.")
 
-    def delete_all_files(self) -> None:
+    def delete_all_files(self, folder) -> None:
         """Deletes all files from the storage."""
-        if os.path.exists(self.folder):
-            for filename in os.listdir(self.folder):
-                file_path = os.path.join(self.folder, filename)
+        folder_to_delete = f"{self.folder}/{folder}"
+        if os.path.exists(folder_to_delete):
+            for filename in os.listdir(folder_to_delete):
+                file_path = os.path.join(folder_to_delete, filename)
                 try:
                     if os.path.isfile(file_path) or os.path.islink(file_path):
                         os.unlink(file_path)  # Remove the file or link
@@ -55,4 +56,4 @@ class LocalStorageProvider(StorageProvider):
                 except Exception as e:
                     print(f"Failed to delete {file_path}. Reason: {e}")
         else:
-            print(f"Directory {self.folder} not found in local storage.")
+            print(f"Directory {folder_to_delete} not found in local storage.")

@@ -120,7 +120,7 @@ async def delete_all_files(user=Depends(get_admin_user)):
     result = Files.delete_all_files()
     if result:
         try:
-            Storage.delete_all_files()
+            Storage.delete_all_files(USER_UPLOAD_FOLDER)
         except Exception as e:
             log.exception(e)
             log.error(f"Error deleting files")

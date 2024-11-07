@@ -53,5 +53,5 @@ class StorageProvider(abc.ABC):
         """Deletes a file from S3."""
 
     @abc.abstractmethod
-    def delete_all_files(self) -> None:
+    def delete_all_files(self, folder: str) -> None:
         """Deletes all files from the storage."""

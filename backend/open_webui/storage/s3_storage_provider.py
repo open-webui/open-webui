@@ -72,13 +72,20 @@ class S3StorageProvider(StorageProvider):
         except Exception as e:
             raise RuntimeError(f"Error deleting file {filename} from S3: {e}")
 
-    def delete_all_files(self) -> None:
+    def delete_all_files(self, folder: str) -> None:
         """Deletes all files from S3."""
         try:
-            # TODO: add paginator
-            response = self.client.list_objects_v2(Bucket=self.bucket_name, Prefix=self.bucket_prefix)
-            if "Contents" in response:
-                for content in response["Contents"]:
-                    self.client.delete_object(Bucket=self.bucket_name, Key=content["Key"])
+            paginator = self.client.get_paginator('list_objects_v2')
+            pages = paginator.paginate(Bucket=self.bucket_name, Prefix=f"{self.bucket_prefix}/{folder}")
+            for page in pages:
+                if "Contents" in page:
+                    objects_to_delete = [{'Key': obj['Key']} for obj in page['Contents']]
+                    self.client.delete_objects(
+                        Bucket=self.bucket_name,
+                        Delete={
+                            'Objects': objects_to_delete,
+                            'Quiet': True
+                        }
+                    )
         except Exception as e:
             raise RuntimeError(f"Error deleting all files from S3: {e}")
