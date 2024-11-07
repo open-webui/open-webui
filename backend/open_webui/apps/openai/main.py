@@ -21,6 +21,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST,
     ENABLE_FORWARD_USER_INFO_HEADERS,
+    PASSTHROUGH_SESSION_COOKIES,
 )
 
 from open_webui.constants import ERROR_MESSAGES
@@ -479,6 +480,7 @@ async def verify_connection(
 @app.post("/chat/completions")
 async def generate_chat_completion(
     form_data: dict,
+    request: Request,
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
 ):
@@ -602,6 +604,15 @@ async def generate_chat_completion(
         session = aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         )
+        if PASSTHROUGH_SESSION_COOKIES is not None:
+            passthrough_cookies_list = PASSTHROUGH_SESSION_COOKIES.split(",")
+            for passthrough_cookie in passthrough_cookies_list:
+                passthrough_cookie_value = request.cookies.get(passthrough_cookie, None)
+                if passthrough_cookie_value is not None:
+                    session.cookie_jar.update_cookies(
+                        {passthrough_cookie: passthrough_cookie_value}
+                    )
+
         r = await session.request(
             method="POST",
             url=f"{url}/chat/completions",
