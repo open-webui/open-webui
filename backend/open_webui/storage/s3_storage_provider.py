@@ -1,4 +1,5 @@
-import os
+from contextlib import contextmanager
+from tempfile import NamedTemporaryFile
 import boto3
 
 from typing import BinaryIO, Iterator, Tuple, Optional
@@ -7,13 +8,12 @@ from fastapi import HTTPException, status
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import (
-    S3_LOCAL_CACHE_DIR,
     S3_ACCESS_KEY_ID,
     S3_SECRET_ACCESS_KEY,
     S3_REGION_NAME,
     S3_ENDPOINT_URL,
 )
-from open_webui.storage.base_storage_provider import LocalCachedFile, StorageProvider
+from open_webui.storage.base_storage_provider import StorageProvider
 
 class S3StorageProvider(StorageProvider):
     def __init__(self, bucket_name: str, prefix: str):
@@ -54,14 +54,13 @@ class S3StorageProvider(StorageProvider):
             else:
                 raise RuntimeError(f"Error downloading file {file_path} from S3: {e}")
         
-    def as_local_file(self, file_path: str) -> LocalCachedFile:
+    @contextmanager
+    def as_local_file(self, file_path: str) -> Iterator[str]:
         try:
             bucket_name, key = file_path.split("//")[1].split("/", 1)
-            local_file_path = f"{S3_LOCAL_CACHE_DIR}/{key}"
-            os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
-            self.client.download_file(bucket_name, key, local_file_path)
-
-            return LocalCachedFile(local_file_path)
+            with NamedTemporaryFile() as f:
+                self.client.download_fileobj(bucket_name, key, f)
+                yield f.name
         except Exception as e:
             raise RuntimeError(f"Error downloading file {file_path} from S3: {e}")
 

@@ -540,7 +540,6 @@ if CUSTOM_NAME:
 # USER_DATA_DIR could be either a local file path or a S3 path
 USER_DATA_DIR = os.getenv("USER_DATA_DIR", DATA_DIR)
 USER_UPLOAD_FOLDER = os.environ.get("USER_UPLOAD_FOLDER", "uploads")
-S3_LOCAL_CACHE_DIR = os.environ.get("S3_LOCAL_CACHE_DIR", f"{DATA_DIR}/cache/s3_cache")
 
 S3_ACCESS_KEY_ID = os.environ.get("S3_ACCESS_KEY_ID", None)
 S3_SECRET_ACCESS_KEY = os.environ.get("S3_SECRET_ACCESS_KEY", None)

@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import os
 import shutil
 
@@ -5,7 +6,7 @@ from typing import BinaryIO, Iterator, Tuple
 
 from open_webui.constants import ERROR_MESSAGES
 
-from open_webui.storage.base_storage_provider import LocalFile, StorageProvider
+from open_webui.storage.base_storage_provider import StorageProvider
 
 class LocalStorageProvider(StorageProvider):
     def __init__(self, folder: str):
@@ -24,15 +25,16 @@ class LocalStorageProvider(StorageProvider):
 
     def get_file(self, file_path: str) -> Iterator[bytes]:
         chunk_size = 8 * 1024
-        with open(file_path, 'rb') as file:
+        with open(file_path, "rb") as file:
             while True:
                 chunk = file.read(chunk_size)
                 if not chunk:
                     break
                 yield chunk
 
-    def as_local_file(self, file_path: str) -> LocalFile:
-        return LocalFile(file_path)
+    @contextmanager
+    def as_local_file(self, file_path: str) -> Iterator[str]:
+        yield file_path
     
     def delete_file(self, filename: str) -> None:
         """Deletes a file from the local file system."""

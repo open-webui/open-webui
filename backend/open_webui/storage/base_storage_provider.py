@@ -1,39 +1,8 @@
 import abc
 import os
-from typing import BinaryIO, Iterator, Tuple
+from typing import BinaryIO, ContextManager, Iterator, Tuple
 
 from typing import BinaryIO, Tuple
-
-class StorageFile(abc.ABC):
-    local_path: str
-
-    def __init__(self, local_path: str) -> None:
-        self.local_path = local_path
-
-    def get_local_path(self) -> str:
-        return self.local_path
-
-    def cleanup_local_file(self) -> None:
-        pass
-
-    def __enter__(self):
-       return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.cleanup_local_file()
-
-
-class LocalCachedFile(StorageFile):
-    def __init__(self, local_path: str) -> None:
-        super().__init__(local_path)
-
-    def cleanup_local_file(self) -> None:
-        os.remove(self.local_path)
-        pass
-
-class LocalFile(StorageFile):
-    def __init__(self, local_path: str) -> None:
-        super().__init__(local_path)
 
 class StorageProvider(abc.ABC):
     @abc.abstractmethod
@@ -42,11 +11,11 @@ class StorageProvider(abc.ABC):
 
     @abc.abstractmethod
     def get_file(self, file_path: str) -> Iterator[bytes]:
-        """Downloads file content"""
+        """Read the content of a file"""
 
     @abc.abstractmethod
-    def as_local_file(self, file_path: str) -> StorageFile:
-        """Downloads a file from S3 and returns the file path."""
+    def as_local_file(self, file_path: str) -> ContextManager[str]:
+        """Get the local file path for a file. Download from remote if not using local fs, e.g. s3"""
 
     @abc.abstractmethod
     def delete_file(self, filename: str) -> None:
