@@ -170,7 +170,7 @@ class KnowledgeFileIdForm(BaseModel):
 
 
 @router.post("/{id}/file/add", response_model=Optional[KnowledgeFilesResponse])
-async def add_file_to_knowledge_by_id(
+def add_file_to_knowledge_by_id(
     id: str,
     form_data: KnowledgeFileIdForm,
     user=Depends(get_admin_user),
@@ -190,7 +190,7 @@ async def add_file_to_knowledge_by_id(
 
     # Add content to the vector database
     try:
-        await process_file(ProcessFileForm(file_id=form_data.file_id, collection_name=id))
+        process_file(ProcessFileForm(file_id=form_data.file_id, collection_name=id))
     except Exception as e:
         log.debug(e)
         raise HTTPException(
@@ -235,7 +235,7 @@ async def add_file_to_knowledge_by_id(
 
 
 @router.post("/{id}/file/update", response_model=Optional[KnowledgeFilesResponse])
-async def update_file_from_knowledge_by_id(
+def update_file_from_knowledge_by_id(
     id: str,
     form_data: KnowledgeFileIdForm,
     user=Depends(get_admin_user),
@@ -255,7 +255,7 @@ async def update_file_from_knowledge_by_id(
 
     # Add content to the vector database
     try:
-        await process_file(ProcessFileForm(file_id=form_data.file_id, collection_name=id))
+        process_file(ProcessFileForm(file_id=form_data.file_id, collection_name=id))
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

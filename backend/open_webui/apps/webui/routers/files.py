@@ -39,7 +39,7 @@ router = APIRouter()
 
 
 @router.post("/", response_model=FileModelResponse)
-async def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
+def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
     log.info(f"***** file.content_type: {file.content_type}, user: {user}")
     try:
         unsanitized_filename = file.filename
@@ -49,7 +49,7 @@ async def upload_file(file: UploadFile = File(...), user=Depends(get_verified_us
         id = str(uuid.uuid4())
         name = filename
         filename = f"{user.id}/{id}_{filename}"
-        contents, file_path = await Storage.upload_file(file.file, filename)
+        contents, file_path = Storage.upload_file(file.file, filename)
 
         file_item = Files.insert_new_file(
             user.id,
@@ -68,7 +68,7 @@ async def upload_file(file: UploadFile = File(...), user=Depends(get_verified_us
         )
 
         try:
-            await process_file(ProcessFileForm(file_id=id))
+            process_file(ProcessFileForm(file_id=id))
             file_item = Files.get_file_by_id(id=id)
         except Exception as e:
             log.exception(e)
@@ -120,7 +120,7 @@ async def delete_all_files(user=Depends(get_admin_user)):
     result = Files.delete_all_files()
     if result:
         try:
-            await Storage.delete_all_files()
+            Storage.delete_all_files()
         except Exception as e:
             log.exception(e)
             log.error(f"Error deleting files")
@@ -189,7 +189,7 @@ async def update_file_data_content_by_id(
 
     if file and (file.user_id == user.id or user.role == "admin"):
         try:
-            await process_file(ProcessFileForm(file_id=id, content=form_data.content))
+            process_file(ProcessFileForm(file_id=id, content=form_data.content))
             file = Files.get_file_by_id(id=id)
         except Exception as e:
             log.exception(e)
@@ -214,10 +214,11 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
     if file and (file.user_id == user.id or user.role == "admin"):
         try:
             file_content_it = Storage.get_file(file.path)
-
             return StreamingResponse(file_content_it, headers={
                 "Content-Disposition": f'attachment; filename="{file.meta.get("name", file.filename)}"'
             })
+        except HTTPException as e:
+            raise e
         except Exception as e:
             log.exception(e)
             log.error(f"Error getting file content")
@@ -239,6 +240,8 @@ async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user)):
         try:
             file_content_it = Storage.get_file(file.path)
             return StreamingResponse(file_content_it)
+        except HTTPException as e:
+            raise e
         except Exception as e:
             log.exception(e)
             log.error(f"Error getting file content")
@@ -258,12 +261,21 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
-        file_path = file.path
-        if file_path:
-            file_content_it = Storage.get_file(file_path)
-            return StreamingResponse(file_content_it, headers={
-                "Content-Disposition": f'attachment; filename="{file.meta.get("name", file.filename)}"'
-            })
+        if file.path:
+            try:
+                file_content_it = Storage.get_file(file.path)
+                return StreamingResponse(file_content_it, headers={
+                    "Content-Disposition": f'attachment; filename="{file.meta.get("name", file.filename)}"'
+                })
+            except HTTPException as e:
+                raise e
+            except Exception as e:
+                log.exception(e)
+                log.error(f"Error getting file content")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT("Error getting file content"),
+                )
         else:
             # File path doesn’t exist, return the content as .txt if possible
             file_content = file.content.get("content", "")
@@ -297,7 +309,7 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
         result = Files.delete_file_by_id(id)
         if result:
             try:
-                await Storage.delete_file(file.filename)
+                Storage.delete_file(file.filename)
             except Exception as e:
                 log.exception(e)
                 log.error(f"Error deleting files")

@@ -124,7 +124,6 @@ class Loader:
         loader = self._get_loader(filename, file_content_type, file_path)
         docs = loader.load()
 
-        #TODO: Add original file path to metadata
         return [
             Document(
                 page_content=ftfy.fix_text(doc.page_content), metadata=doc.metadata

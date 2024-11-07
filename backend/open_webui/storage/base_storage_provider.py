@@ -1,6 +1,6 @@
 import abc
 import os
-from typing import AsyncIterator, BinaryIO, Tuple
+from typing import BinaryIO, Iterator, Tuple
 
 from typing import BinaryIO, Tuple
 
@@ -37,21 +37,21 @@ class LocalFile(StorageFile):
 
 class StorageProvider(abc.ABC):
     @abc.abstractmethod
-    async def upload_file(self, file: BinaryIO, filename: str) -> Tuple[bytes, str]:
+    def upload_file(self, file: BinaryIO, filename: str) -> Tuple[bytes, str]:
         """Uploads a file to the storage and returns the file content bytes and path."""
 
     @abc.abstractmethod
-    async def get_file(self, file_path: str) -> AsyncIterator[bytes]:
+    def get_file(self, file_path: str) -> Iterator[bytes]:
         """Downloads file content"""
 
     @abc.abstractmethod
-    async def as_local_file(self, file_path: str) -> StorageFile:
+    def as_local_file(self, file_path: str) -> StorageFile:
         """Downloads a file from S3 and returns the file path."""
 
     @abc.abstractmethod
-    async def delete_file(self, filename: str) -> None:
+    def delete_file(self, filename: str) -> None:
         """Deletes a file from S3."""
 
     @abc.abstractmethod
-    async def delete_all_files(self) -> None:
+    def delete_all_files(self) -> None:
         """Deletes all files from the storage."""

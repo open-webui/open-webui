@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from typing import AsyncIterator, BinaryIO, Tuple
+from typing import BinaryIO, Iterator, Tuple
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import UPLOAD_DIR
@@ -9,7 +9,7 @@ from open_webui.config import UPLOAD_DIR
 from open_webui.storage.base_storage_provider import LocalFile, StorageProvider
 
 class LocalStorageProvider(StorageProvider):
-    async def upload_file(self, file: BinaryIO, filename: str) -> Tuple[bytes, str]:
+    def upload_file(self, file: BinaryIO, filename: str) -> Tuple[bytes, str]:
         """Uploads a file to the local file system."""
         contents = file.read()
         if not contents:
@@ -20,7 +20,7 @@ class LocalStorageProvider(StorageProvider):
             f.write(contents)
         return contents, file_path
 
-    async def get_file(self, file_path: str) -> AsyncIterator[bytes]:
+    def get_file(self, file_path: str) -> Iterator[bytes]:
         chunk_size = 8 * 1024
         with open(file_path, 'rb') as file:
             while True:
@@ -29,10 +29,10 @@ class LocalStorageProvider(StorageProvider):
                     break
                 yield chunk
 
-    async def as_local_file(self, file_path: str) -> LocalFile:
+    def as_local_file(self, file_path: str) -> LocalFile:
         return LocalFile(file_path)
     
-    async def delete_file(self, filename: str) -> None:
+    def delete_file(self, filename: str) -> None:
         """Deletes a file from the local file system."""
         file_path = f"{UPLOAD_DIR}/{filename}"
         if os.path.isfile(file_path):
@@ -40,7 +40,7 @@ class LocalStorageProvider(StorageProvider):
         else:
             print(f"File {file_path} not found in local storage.")
 
-    async def delete_all_files(self) -> None:
+    def delete_all_files(self) -> None:
         """Deletes all files from the storage."""
         if os.path.exists(UPLOAD_DIR):
             for filename in os.listdir(UPLOAD_DIR):
