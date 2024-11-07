@@ -19,6 +19,11 @@
 	import UserChatsModal from '$lib/components/admin/UserChatsModal.svelte';
 	import AddUserModal from '$lib/components/admin/AddUserModal.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Badge from '$lib/components/common/Badge.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
+	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import About from '$lib/components/chat/Settings/About.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -88,6 +93,25 @@
 			sortOrder = 'asc';
 		}
 	}
+
+	let filteredUsers;
+
+	$: filteredUsers = users
+		.filter((user) => {
+			if (search === '') {
+				return true;
+			} else {
+				let name = user.name.toLowerCase();
+				const query = search.toLowerCase();
+				return name.includes(query);
+			}
+		})
+		.sort((a, b) => {
+			if (a[sortKey] < b[sortKey]) return sortOrder === 'asc' ? -1 : 1;
+			if (a[sortKey] > b[sortKey]) return sortOrder === 'asc' ? 1 : -1;
+			return 0;
+		})
+		.slice((page - 1) * 20, page * 20);
 </script>
 
 <ConfirmDialog
@@ -117,148 +141,213 @@
 <UserChatsModal bind:show={showUserChatsModal} user={selectedUser} />
 
 {#if loaded}
-	<div class="mt-0.5 mb-3 gap-1 flex flex-col md:flex-row justify-between">
+	<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
 		<div class="flex md:self-center text-lg font-medium px-0.5">
-			{$i18n.t('All Users')}
-			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
+			{$i18n.t('Users')}
+			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
+
 			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{users.length}</span>
 		</div>
 
 		<div class="flex gap-1">
-			<input
-				class="w-full md:w-60 rounded-xl py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-				placeholder={$i18n.t('Search')}
-				bind:value={search}
-			/>
-
-			<div class="flex gap-0.5">
-				<Tooltip content={$i18n.t('Add User')}>
-					<button
-						class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition font-medium text-sm flex items-center space-x-1"
-						on:click={() => {
-							showAddUserModal = !showAddUserModal;
-						}}
-					>
+			<div class=" flex w-full space-x-2">
+				<div class="flex flex-1">
+					<div class=" self-center ml-1 mr-3">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
+							viewBox="0 0 20 20"
 							fill="currentColor"
 							class="w-4 h-4"
 						>
 							<path
-								d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
+								fill-rule="evenodd"
+								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+								clip-rule="evenodd"
 							/>
 						</svg>
-					</button>
-				</Tooltip>
+					</div>
+					<input
+						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
+						bind:value={search}
+						placeholder={$i18n.t('Search')}
+					/>
+				</div>
+
+				<div>
+					<Tooltip content={$i18n.t('Add User')}>
+						<button
+							class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
+							on:click={() => {
+								showAddUserModal = !showAddUserModal;
+							}}
+						>
+							<Plus className="size-3.5" />
+						</button>
+					</Tooltip>
+				</div>
 			</div>
 		</div>
 	</div>
 
-	<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
-		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full">
-			<thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400">
-				<tr>
+	<div
+		class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded pt-0.5"
+	>
+		<table
+			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full rounded"
+		>
+			<thead
+				class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
+			>
+				<tr class="">
 					<th
 						scope="col"
-						class="px-3 py-2 cursor-pointer select-none"
+						class="px-3 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('role')}
 					>
-						{$i18n.t('Role')}
-						{#if sortKey === 'role'}
-							{sortOrder === 'asc' ? '▲' : '▼'}
-						{:else}
-							<span class="invisible">▲</span>
-						{/if}
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('Role')}
+
+							{#if sortKey === 'role'}
+								<span class="font-normal"
+									>{#if sortOrder === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-2 cursor-pointer select-none"
+						class="px-3 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('name')}
 					>
-						{$i18n.t('Name')}
-						{#if sortKey === 'name'}
-							{sortOrder === 'asc' ? '▲' : '▼'}
-						{:else}
-							<span class="invisible">▲</span>
-						{/if}
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('Name')}
+
+							{#if sortKey === 'name'}
+								<span class="font-normal"
+									>{#if sortOrder === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-2 cursor-pointer select-none"
+						class="px-3 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('email')}
 					>
-						{$i18n.t('Email')}
-						{#if sortKey === 'email'}
-							{sortOrder === 'asc' ? '▲' : '▼'}
-						{:else}
-							<span class="invisible">▲</span>
-						{/if}
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('Email')}
+
+							{#if sortKey === 'email'}
+								<span class="font-normal"
+									>{#if sortOrder === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
+
 					<th
 						scope="col"
-						class="px-3 py-2 cursor-pointer select-none"
-						on:click={() => setSortKey('oauth_sub')}
-					>
-						{$i18n.t('OAuth ID')}
-						{#if sortKey === 'oauth_sub'}
-							{sortOrder === 'asc' ? '▲' : '▼'}
-						{:else}
-							<span class="invisible">▲</span>
-						{/if}
-					</th>
-					<th
-						scope="col"
-						class="px-3 py-2 cursor-pointer select-none"
+						class="px-3 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('last_active_at')}
 					>
-						{$i18n.t('Last Active')}
-						{#if sortKey === 'last_active_at'}
-							{sortOrder === 'asc' ? '▲' : '▼'}
-						{:else}
-							<span class="invisible">▲</span>
-						{/if}
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('Last Active')}
+
+							{#if sortKey === 'last_active_at'}
+								<span class="font-normal"
+									>{#if sortOrder === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-2 cursor-pointer select-none"
+						class="px-3 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('created_at')}
 					>
-						{$i18n.t('Created at')}
-						{#if sortKey === 'created_at'}
-							{sortOrder === 'asc' ? '▲' : '▼'}
-						{:else}
-							<span class="invisible">▲</span>
-						{/if}
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('Created at')}
+							{#if sortKey === 'created_at'}
+								<span class="font-normal"
+									>{#if sortOrder === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
+					</th>
+
+					<th
+						scope="col"
+						class="px-3 py-1.5 cursor-pointer select-none"
+						on:click={() => setSortKey('oauth_sub')}
+					>
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('OAuth ID')}
+
+							{#if sortKey === 'oauth_sub'}
+								<span class="font-normal"
+									>{#if sortOrder === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
 
 					<th scope="col" class="px-3 py-2 text-right" />
 				</tr>
 			</thead>
-			<tbody>
-				{#each users
-					.filter((user) => {
-						if (search === '') {
-							return true;
-						} else {
-							let name = user.name.toLowerCase();
-							const query = search.toLowerCase();
-							return name.includes(query);
-						}
-					})
-					.sort((a, b) => {
-						if (a[sortKey] < b[sortKey]) return sortOrder === 'asc' ? -1 : 1;
-						if (a[sortKey] > b[sortKey]) return sortOrder === 'asc' ? 1 : -1;
-						return 0;
-					})
-					.slice((page - 1) * 20, page * 20) as user}
-					<tr class="bg-white border-b dark:bg-gray-900 dark:border-gray-850 text-xs">
-						<td class="px-3 py-2 min-w-[7rem] w-28">
+			<tbody class="">
+				{#each filteredUsers as user, userIdx}
+					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
+						<td class="px-3 py-1 min-w-[7rem] w-28">
 							<button
-								class=" flex items-center gap-2 text-xs px-3 py-0.5 rounded-lg {user.role ===
-									'admin' && 'text-sky-600 dark:text-sky-200 bg-sky-200/30'} {user.role ===
-									'user' && 'text-green-600 dark:text-green-200 bg-green-200/30'} {user.role ===
-									'pending' && 'text-gray-600 dark:text-gray-200 bg-gray-200/30'}"
+								class=" translate-y-0.5"
 								on:click={() => {
 									if (user.role === 'user') {
 										updateRoleHandler(user.id, 'admin');
@@ -269,16 +358,13 @@
 									}
 								}}
 							>
-								<div
-									class="w-1 h-1 rounded-full {user.role === 'admin' &&
-										'bg-sky-600 dark:bg-sky-300'} {user.role === 'user' &&
-										'bg-green-600 dark:bg-green-300'} {user.role === 'pending' &&
-										'bg-gray-600 dark:bg-gray-300'}"
+								<Badge
+									type={user.role === 'admin' ? 'info' : user.role === 'user' ? 'success' : 'muted'}
+									content={$i18n.t(user.role)}
 								/>
-								{$i18n.t(user.role)}</button
-							>
+							</button>
 						</td>
-						<td class="px-3 py-2 font-medium text-gray-900 dark:text-white w-max">
+						<td class="px-3 py-1 font-medium text-gray-900 dark:text-white w-max">
 							<div class="flex flex-row w-max">
 								<img
 									class=" rounded-full w-6 h-6 object-cover mr-2.5"
@@ -293,19 +379,19 @@
 								<div class=" font-medium self-center">{user.name}</div>
 							</div>
 						</td>
-						<td class=" px-3 py-2"> {user.email} </td>
+						<td class=" px-3 py-1"> {user.email} </td>
 
-						<td class=" px-3 py-2"> {user.oauth_sub ?? ''} </td>
-
-						<td class=" px-3 py-2">
+						<td class=" px-3 py-1">
 							{dayjs(user.last_active_at * 1000).fromNow()}
 						</td>
 
-						<td class=" px-3 py-2">
+						<td class=" px-3 py-1">
 							{dayjs(user.created_at * 1000).format($i18n.t('MMMM DD, YYYY'))}
 						</td>
 
-						<td class="px-3 py-2 text-right">
+						<td class=" px-3 py-1"> {user.oauth_sub ?? ''} </td>
+
+						<td class="px-3 py-1 text-right">
 							<div class="flex justify-end w-full">
 								{#if $config.features.enable_admin_chat_access && user.role !== 'admin'}
 									<Tooltip content={$i18n.t('Chats')}>
@@ -380,7 +466,7 @@
 		</table>
 	</div>
 
-	<div class=" text-gray-500 text-xs mt-2 text-right">
+	<div class=" text-gray-500 text-xs mt-1.5 text-right">
 		ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
 	</div>
 

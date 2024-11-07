@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { SvelteFlowProvider } from '@xyflow/svelte';
 	import { slide } from 'svelte/transition';
+	import { Pane, PaneResizer } from 'paneforge';
 
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { mobile, showControls, showCallOverlay, showOverview, showArtifacts } from '$lib/stores';
@@ -10,9 +11,9 @@
 	import CallOverlay from './MessageInput/CallOverlay.svelte';
 	import Drawer from '../common/Drawer.svelte';
 	import Overview from './Overview.svelte';
-	import { Pane, PaneResizer } from 'paneforge';
 	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
 	import Artifacts from './Artifacts.svelte';
+	import { min } from '@floating-ui/utils';
 
 	export let history;
 	export let models = [];
@@ -34,6 +35,16 @@
 	let mediaQuery;
 	let largeScreen = false;
 	let dragged = false;
+
+	let minSize = 0;
+
+	export const openPane = () => {
+		if (parseInt(localStorage?.chatControlsSize)) {
+			pane.resize(parseInt(localStorage?.chatControlsSize));
+		} else {
+			pane.resize(minSize);
+		}
+	};
 
 	const handleMediaQuery = async (e) => {
 		if (e.matches) {
@@ -70,6 +81,32 @@
 
 		mediaQuery.addEventListener('change', handleMediaQuery);
 		handleMediaQuery(mediaQuery);
+
+		// Select the container element you want to observe
+		const container = document.getElementById('chat-container');
+
+		// initialize the minSize based on the container width
+		minSize = Math.floor((350 / container.clientWidth) * 100);
+
+		// Create a new ResizeObserver instance
+		const resizeObserver = new ResizeObserver((entries) => {
+			for (let entry of entries) {
+				const width = entry.contentRect.width;
+				// calculate the percentage of 200px
+				const percentage = (350 / width) * 100;
+				// set the minSize to the percentage, must be an integer
+				minSize = Math.floor(percentage);
+
+				if ($showControls) {
+					if (pane && pane.isExpanded() && pane.getSize() < minSize) {
+						pane.resize(minSize);
+					}
+				}
+			}
+		});
+
+		// Start observing the container's size changes
+		resizeObserver.observe(container);
 
 		document.addEventListener('mousedown', onMouseDown);
 		document.addEventListener('mouseup', onMouseUp);
@@ -163,23 +200,29 @@
 				</div>
 			</PaneResizer>
 		{/if}
+
 		<Pane
 			bind:pane
-			defaultSize={$showControls
-				? parseInt(localStorage?.chatControlsSize ?? '30')
-					? parseInt(localStorage?.chatControlsSize ?? '30')
-					: 30
-				: 0}
+			defaultSize={0}
 			onResize={(size) => {
-				if (size === 0) {
-					showControls.set(false);
-				} else {
-					if (!$showControls) {
-						showControls.set(true);
+				console.log('size', size, minSize);
+
+				if ($showControls && pane.isExpanded()) {
+					if (size < minSize) {
+						pane.resize(minSize);
 					}
-					localStorage.chatControlsSize = size;
+
+					if (size < minSize) {
+						localStorage.chatControlsSize = 0;
+					} else {
+						localStorage.chatControlsSize = size;
+					}
 				}
 			}}
+			onCollapse={() => {
+				showControls.set(false);
+			}}
+			collapsible={true}
 			class="pt-8"
 		>
 			{#if $showControls}
@@ -187,7 +230,7 @@
 					<div
 						class="w-full {($showOverview || $showArtifacts) && !$showCallOverlay
 							? ' '
-							: 'px-5 py-4 bg-white dark:shadow-lg dark:bg-gray-850  border border-gray-50 dark:border-gray-800'}  rounded-lg z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
+							: 'px-4 py-4 bg-white dark:shadow-lg dark:bg-gray-850  border border-gray-50 dark:border-gray-850'}  rounded-xl z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
 					>
 						{#if $showCallOverlay}
 							<div class="w-full h-full flex justify-center">

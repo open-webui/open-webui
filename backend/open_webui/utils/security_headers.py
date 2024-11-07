@@ -60,7 +60,7 @@ def set_hsts(value: str):
     pattern = r"^max-age=(\d+)(;includeSubDomains)?(;preload)?$"
     match = re.match(pattern, value, re.IGNORECASE)
     if not match:
-        return "max-age=31536000;includeSubDomains"
+        value = "max-age=31536000;includeSubDomains"
     return {"Strict-Transport-Security": value}
 
 

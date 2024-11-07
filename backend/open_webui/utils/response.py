@@ -26,7 +26,6 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
         )
 
         line = f"data: {json.dumps(data)}\n\n"
-        if done:
-            line += "data: [DONE]\n\n"
-
         yield line
+
+    yield "data: [DONE]\n\n"

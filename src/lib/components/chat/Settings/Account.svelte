@@ -93,23 +93,23 @@
 						// Calculate the aspect ratio of the image
 						const aspectRatio = img.width / img.height;
 
-						// Calculate the new width and height to fit within 100x100
+						// Calculate the new width and height to fit within 250x250
 						let newWidth, newHeight;
 						if (aspectRatio > 1) {
-							newWidth = 100 * aspectRatio;
-							newHeight = 100;
+							newWidth = 250 * aspectRatio;
+							newHeight = 250;
 						} else {
-							newWidth = 100;
-							newHeight = 100 / aspectRatio;
+							newWidth = 250;
+							newHeight = 250 / aspectRatio;
 						}
 
 						// Set the canvas size
-						canvas.width = 100;
-						canvas.height = 100;
+						canvas.width = 250;
+						canvas.height = 250;
 
 						// Calculate the position to center the image
-						const offsetX = (100 - newWidth) / 2;
-						const offsetY = (100 - newHeight) / 2;
+						const offsetX = (250 - newWidth) / 2;
+						const offsetY = (250 - newHeight) / 2;
 
 						// Draw the image on the canvas
 						ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
@@ -397,7 +397,7 @@
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
-			class="  px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			on:click={async () => {
 				const res = await submitHandler();
 
