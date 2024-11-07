@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 import os
+from pathlib import Path
 import shutil
 
 from typing import BinaryIO, Iterator, Tuple
@@ -18,10 +19,11 @@ class LocalStorageProvider(StorageProvider):
         if not contents:
             raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
-        file_path = f"{self.folder}/{filename}"
+        file_path = Path(self.folder) / filename
+        file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(file_path, "wb") as f:
             f.write(contents)
-        return contents, file_path
+        return contents, file_path.as_posix()
 
     def get_file(self, file_path: str) -> Iterator[bytes]:
         chunk_size = 8 * 1024
