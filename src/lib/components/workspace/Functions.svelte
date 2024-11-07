@@ -216,7 +216,7 @@
 	</div>
 </div>
 
-<div class="my-3 mb-5">
+<div class="mb-5">
 	{#each filteredItems as func}
 		<div
 			class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
