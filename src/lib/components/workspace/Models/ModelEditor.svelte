@@ -306,13 +306,13 @@
 							<img
 								src={info.meta.profile_image_url}
 								alt="model profile"
-								class="rounded-lg size-72 object-cover shrink-0"
+								class="rounded-lg size-72 md:size-64 lg:size-72 object-cover shrink-0"
 							/>
 						{:else}
 							<img
 								src="/static/favicon.png"
 								alt="model profile"
-								class=" rounded-lg size-72 object-cover shrink-0"
+								class=" rounded-lg size-72 md:size-64 lg:size-72 object-cover shrink-0"
 							/>
 						{/if}
 					</button>
@@ -639,8 +639,8 @@
 				<div class="my-2 flex justify-end mb-20">
 					<button
 						class=" text-sm px-3 py-2 transition rounded-lg {loading
-							? ' cursor-not-allowed bg-gray-100 dark:bg-gray-800'
-							: ' bg-gray-50 hover:bg-gray-100 dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
+							? ' cursor-not-allowed bg-white hover:bg-gray-100 text-black'
+							: ' bg-white hover:bg-gray-100 text-black'} flex w-full justify-center"
 						type="submit"
 						disabled={loading}
 					>
