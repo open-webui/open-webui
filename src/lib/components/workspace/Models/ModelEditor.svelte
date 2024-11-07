@@ -306,13 +306,13 @@
 							<img
 								src={info.meta.profile_image_url}
 								alt="model profile"
-								class="rounded-lg size-64 object-cover shrink-0"
+								class="rounded-lg size-72 object-cover shrink-0"
 							/>
 						{:else}
 							<img
 								src="/static/favicon.png"
 								alt="model profile"
-								class=" rounded-lg size-64 object-cover shrink-0"
+								class=" rounded-lg size-72 object-cover shrink-0"
 							/>
 						{/if}
 					</button>
@@ -409,8 +409,6 @@
 					<div class="flex w-full justify-between">
 						<div class=" self-center text-sm font-semibold">{$i18n.t('Model Params')}</div>
 					</div>
-
-					<!-- <div class=" text-sm font-semibold mb-2"></div> -->
 
 					<div class="mt-2">
 						<div class="my-1">
@@ -516,12 +514,12 @@
 					</div>
 
 					{#if info?.meta?.suggestion_prompts}
-						<div class="flex flex-col space-y-1 mt-2">
+						<div class="flex flex-col space-y-1 mt-1 mb-3">
 							{#if info.meta.suggestion_prompts.length > 0}
 								{#each info.meta.suggestion_prompts as prompt, promptIdx}
-									<div class=" flex border dark:border-gray-600 rounded-lg">
+									<div class=" flex rounded-lg">
 										<input
-											class="px-3 py-1.5 text-sm w-full bg-transparent outline-none border-r dark:border-gray-600"
+											class=" text-sm w-full bg-transparent outline-none border-r border-gray-50 dark:border-gray-850"
 											placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
 											bind:value={prompt.content}
 										/>
@@ -640,7 +638,7 @@
 
 				<div class="my-2 flex justify-end mb-20">
 					<button
-						class=" text-sm px-3 py-2 transition rounded-xl {loading
+						class=" text-sm px-3 py-2 transition rounded-lg {loading
 							? ' cursor-not-allowed bg-gray-100 dark:bg-gray-800'
 							: ' bg-gray-50 hover:bg-gray-100 dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
 						type="submit"
