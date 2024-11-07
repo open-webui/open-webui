@@ -162,7 +162,7 @@
 						? info.meta.suggestion_prompts.filter((prompt) => prompt.content !== '')
 						: null
 				},
-				params: { ...info.params, ...params }
+				params: { ...params,...info.params }
 			});
 
 			if (res) {
