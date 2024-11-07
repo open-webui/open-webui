@@ -30,7 +30,7 @@
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''}"
 	>
-		<div class="   px-3.5 py-1 backdrop-blur-xl">
+		<div class="   px-2.5 py-1 backdrop-blur-xl">
 			<div class=" flex items-center gap-1">
 				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
 					<button
