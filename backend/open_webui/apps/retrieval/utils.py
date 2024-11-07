@@ -76,7 +76,7 @@ def query_doc(
             limit=k,
         )
 
-        log.info(f"query_doc:result {result}")
+        log.info(f"query_doc:result {result.ids} {result.metadatas}")
         return result
     except Exception as e:
         print(e)
@@ -127,7 +127,10 @@ def query_doc_with_hybrid_search(
             "metadatas": [[d.metadata for d in result]],
         }
 
-        log.info(f"query_doc_with_hybrid_search:result {result}")
+        log.info(
+            "query_doc_with_hybrid_search:result " +
+            f"{result.metadatas} {result.distances}"
+        )
         return result
     except Exception as e:
         raise e

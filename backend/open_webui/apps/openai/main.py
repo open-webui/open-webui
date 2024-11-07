@@ -21,6 +21,7 @@ from open_webui.config import (
 from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST,
+    ENABLE_FORWARD_USER_INFO_HEADERS,
 )
 
 from open_webui.constants import ERROR_MESSAGES
@@ -140,6 +141,11 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         if "openrouter.ai" in app.state.config.OPENAI_API_BASE_URLS[idx]:
             headers["HTTP-Referer"] = "https://openwebui.com/"
             headers["X-Title"] = "Open WebUI"
+        if ENABLE_FORWARD_USER_INFO_HEADERS:
+            headers["X-OpenWebUI-User-Name"] = user.name
+            headers["X-OpenWebUI-User-Id"] = user.id
+            headers["X-OpenWebUI-User-Email"] = user.email
+            headers["X-OpenWebUI-User-Role"] = user.role
         r = None
         try:
             r = requests.post(
@@ -325,6 +331,11 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
         headers = {}
         headers["Authorization"] = f"Bearer {key}"
         headers["Content-Type"] = "application/json"
+        if ENABLE_FORWARD_USER_INFO_HEADERS:
+            headers["X-OpenWebUI-User-Name"] = user.name
+            headers["X-OpenWebUI-User-Id"] = user.id
+            headers["X-OpenWebUI-User-Email"] = user.email
+            headers["X-OpenWebUI-User-Role"] = user.role
 
         r = None
 
@@ -437,6 +448,11 @@ async def generate_chat_completion(
     if "openrouter.ai" in app.state.config.OPENAI_API_BASE_URLS[idx]:
         headers["HTTP-Referer"] = "https://openwebui.com/"
         headers["X-Title"] = "Open WebUI"
+    if ENABLE_FORWARD_USER_INFO_HEADERS:
+        headers["X-OpenWebUI-User-Name"] = user.name
+        headers["X-OpenWebUI-User-Id"] = user.id
+        headers["X-OpenWebUI-User-Email"] = user.email
+        headers["X-OpenWebUI-User-Role"] = user.role
 
     r = None
     session = None
@@ -505,6 +521,11 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     headers = {}
     headers["Authorization"] = f"Bearer {key}"
     headers["Content-Type"] = "application/json"
+    if ENABLE_FORWARD_USER_INFO_HEADERS:
+        headers["X-OpenWebUI-User-Name"] = user.name
+        headers["X-OpenWebUI-User-Id"] = user.id
+        headers["X-OpenWebUI-User-Email"] = user.email
+        headers["X-OpenWebUI-User-Role"] = user.role
 
     r = None
     session = None

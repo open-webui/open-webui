@@ -692,7 +692,7 @@ class GenerateCompletionForm(BaseModel):
     options: Optional[dict] = None
     system: Optional[str] = None
     template: Optional[str] = None
-    context: Optional[str] = None
+    context: Optional[list[int]] = None
     stream: Optional[bool] = True
     raw: Optional[bool] = None
     keep_alive: Optional[Union[int, str]] = None
@@ -817,7 +817,7 @@ class OpenAIChatMessageContent(BaseModel):
 
 class OpenAIChatMessage(BaseModel):
     role: str
-    content: Union[str, OpenAIChatMessageContent]
+    content: Union[str, list[OpenAIChatMessageContent]]
 
     model_config = ConfigDict(extra="allow")
 
@@ -836,7 +836,15 @@ async def generate_openai_chat_completion(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
-    completion_form = OpenAIChatCompletionForm(**form_data)
+    try:
+        completion_form = OpenAIChatCompletionForm(**form_data)
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        )
+
     payload = {**completion_form.model_dump(exclude_none=True, exclude=["metadata"])}
     if "metadata" in payload:
         del payload["metadata"]

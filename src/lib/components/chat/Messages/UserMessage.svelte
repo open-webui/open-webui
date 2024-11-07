@@ -1,7 +1,7 @@
 <script lang="ts">
 	import dayjs from 'dayjs';
 	import { toast } from 'svelte-sonner';
-	import { tick, createEventDispatcher, getContext, onMount } from 'svelte';
+	import { tick, getContext, onMount } from 'svelte';
 
 	import { models, settings } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
@@ -19,7 +19,6 @@
 
 	const i18n = getContext('i18n');
 
-	const dispatch = createEventDispatcher();
 	export let user;
 
 	export let history;
@@ -31,6 +30,7 @@
 	export let showNextMessage: Function;
 
 	export let editMessage: Function;
+	export let deleteMessage: Function;
 
 	export let isFirstMessage: boolean;
 	export let readOnly: boolean;
@@ -78,7 +78,7 @@
 	};
 
 	const deleteMessageHandler = async () => {
-		dispatch('delete', message.id);
+		deleteMessage(message.id);
 	};
 
 	onMount(() => {
@@ -88,11 +88,15 @@
 
 <div class=" flex w-full user-message" dir={$settings.chatDirection} id="message-{message.id}">
 	{#if !($settings?.chatBubble ?? true)}
-		<ProfileImage
-			src={message.user
-				? ($models.find((m) => m.id === message.user)?.info?.meta?.profile_image_url ?? '/user.png')
-				: (user?.profile_image_url ?? '/user.png')}
-		/>
+		<div class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
+			<ProfileImage
+				src={message.user
+					? ($models.find((m) => m.id === message.user)?.info?.meta?.profile_image_url ??
+						'/user.png')
+					: (user?.profile_image_url ?? '/user.png')}
+				className={'size-8'}
+			/>
+		</div>
 	{/if}
 	<div class="flex-auto w-0 max-w-full pl-1">
 		{#if !($settings?.chatBubble ?? true)}
