@@ -128,8 +128,8 @@ def query_doc_with_hybrid_search(
         }
 
         log.info(
-            "query_doc_with_hybrid_search:result " +
-            f"{result["metadatas"]} {result["distances"]}"
+            "query_doc_with_hybrid_search:result "
+            + f'{result["metadatas"]} {result["distances"]}'
         )
         return result
     except Exception as e:
