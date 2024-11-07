@@ -14,6 +14,7 @@ from typing import Optional
 from open_webui.apps.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import (
     QDRANT_API_KEY,
+    QDRANT_TIMEOUT_SECONDS,
     QDRANT_URL,
 )
 
@@ -21,8 +22,7 @@ from open_webui.config import (
 class QdrantClient:
     def __init__(self):
         self.client = Client(
-            url=QDRANT_URL,
-            api_key=QDRANT_API_KEY,
+            url=QDRANT_URL, api_key=QDRANT_API_KEY, timeout=QDRANT_TIMEOUT_SECONDS
         )
 
     def _result_to_get_result(self, result) -> GetResult:
