@@ -26,6 +26,7 @@
 	import Map from '../icons/Map.svelte';
 	import { stringify } from 'postcss';
 	import PencilSquare from '../icons/PencilSquare.svelte';
+	import Plus from '../icons/Plus.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -43,17 +44,17 @@
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 
-<div class="sticky top-0 z-30 w-full px-1 py-1 -mb-8 flex items-center">
+<div class="sticky top-0 z-30 w-full px-1.5 py-1.5 -mb-8 flex items-center">
 	<div
 		class=" bg-gradient-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1] blur"
 	></div>
 
-	<div class=" flex max-w-full w-full mx-auto px-2 pt-0.5 bg-transparent">
+	<div class=" flex max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent">
 		<div class="flex items-center w-full max-w-full">
 			<div
 				class="{$showSidebar
 					? 'md:hidden'
-					: ''} mr-2 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
+					: ''} mr-1 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
 			>
 				<button
 					id="sidebar-toggle-button"
@@ -69,7 +70,11 @@
 				</button>
 			</div>
 
-			<div class="flex-1 overflow-hidden max-w-full">
+			<div
+				class="flex-1 overflow-hidden max-w-full py-0.5
+			{$showSidebar ? 'ml-1' : ''}
+			"
+			>
 				{#if showModelSelector}
 					<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
 				{/if}
