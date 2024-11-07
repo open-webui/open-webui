@@ -306,7 +306,7 @@
 	}}
 />
 
-<div class="flex flex-col gap-0.5 mt-1 mb-2">
+<div class="flex flex-col gap-1 mt-1.5 mb-2">
 	<div class="flex justify-between items-center">
 		<div class="flex items-center md:self-center text-xl font-medium px-0.5">
 			{$i18n.t('Models')}
