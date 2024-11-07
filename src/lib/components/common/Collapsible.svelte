@@ -1,4 +1,9 @@
 <script lang="ts">
+	import { getContext, createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher();
+	$: dispatch('change', open);
+
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 
@@ -7,39 +12,77 @@
 
 	export let open = false;
 	export let className = '';
+	export let buttonClassName =
+		'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
 	export let title = null;
+
+	export let grow = false;
+
+	export let disabled = false;
+	export let hide = false;
 </script>
 
 <div class={className}>
 	{#if title !== null}
-		<button class="w-fit" on:click={() => (open = !open)}>
-			<div class=" w-fit font-medium transition flex items-center justify-between gap-2">
-				<div>
+		<!-- svelte-ignore a11y-no-static-element-interactions -->
+		<!-- svelte-ignore a11y-click-events-have-key-events -->
+		<div
+			class="{buttonClassName} cursor-pointer"
+			on:pointerup={() => {
+				if (!disabled) {
+					open = !open;
+				}
+			}}
+		>
+			<div class=" w-full font-medium flex items-center justify-between gap-2">
+				<div class="">
 					{title}
 				</div>
 
 				<div>
 					{#if open}
-						<ChevronUp strokeWidth="3.5" className="size-3.5 " />
+						<ChevronUp strokeWidth="3.5" className="size-3.5" />
 					{:else}
-						<ChevronDown strokeWidth="3.5" className="size-3.5 " />
+						<ChevronDown strokeWidth="3.5" className="size-3.5" />
 					{/if}
 				</div>
 			</div>
-		</button>
+		</div>
 	{:else}
-		<button on:click={() => (open = !open)}>
-			<div
-				class="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
-			>
+		<!-- svelte-ignore a11y-no-static-element-interactions -->
+		<!-- svelte-ignore a11y-click-events-have-key-events -->
+		<div
+			class="{buttonClassName} cursor-pointer"
+			on:pointerup={() => {
+				if (!disabled) {
+					open = !open;
+				}
+			}}
+		>
+			<div>
 				<slot />
+
+				{#if grow}
+					{#if open && !hide}
+						<div
+							transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}
+							on:pointerup={(e) => {
+								e.stopPropagation();
+							}}
+						>
+							<slot name="content" />
+						</div>
+					{/if}
+				{/if}
 			</div>
-		</button>
+		</div>
 	{/if}
 
-	{#if open}
-		<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
-			<slot name="content" />
-		</div>
+	{#if !grow}
+		{#if open && !hide}
+			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
+				<slot name="content" />
+			</div>
+		{/if}
 	{/if}
 </div>
