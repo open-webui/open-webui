@@ -11,6 +11,8 @@
 	import PromptMenu from './Prompts/PromptMenu.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Search from '../icons/Search.svelte';
+	import Plus from '../icons/Plus.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -79,56 +81,36 @@
 	</div>
 </DeleteConfirmDialog>
 
-<div class=" flex w-full space-x-2 mb-2.5">
-	<div class="flex flex-1">
-		<div class=" self-center ml-1 mr-3">
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 20 20"
-				fill="currentColor"
-				class="w-4 h-4"
-			>
-				<path
-					fill-rule="evenodd"
-					d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-					clip-rule="evenodd"
-				/>
-			</svg>
-		</div>
-		<input
-			class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
-			bind:value={query}
-			placeholder={$i18n.t('Search Prompts')}
-		/>
-	</div>
-
-	<div>
-		<a
-			class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition font-medium text-sm flex items-center space-x-1"
-			href="/workspace/prompts/create"
-		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 16 16"
-				fill="currentColor"
-				class="w-4 h-4"
-			>
-				<path
-					d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-				/>
-			</svg>
-		</a>
-	</div>
-</div>
-
-<div class="mb-3.5">
+<div class="flex flex-col gap-0.5 mt-1 mb-2">
 	<div class="flex justify-between items-center">
-		<div class="flex md:self-center text-base font-medium px-0.5">
+		<div class="flex md:self-center text-xl font-medium px-0.5 items-center">
 			{$i18n.t('Prompts')}
 			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-			<span class="text-base font-medium text-gray-500 dark:text-gray-300"
+			<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
 				>{filteredItems.length}</span
 			>
+		</div>
+	</div>
+
+	<div class=" flex w-full space-x-2">
+		<div class="flex flex-1">
+			<div class=" self-center ml-1 mr-3">
+				<Search className="size-3.5" />
+			</div>
+			<input
+				class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
+				bind:value={query}
+				placeholder={$i18n.t('Search Prompts')}
+			/>
+		</div>
+
+		<div>
+			<a
+				class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
+				href="/workspace/prompts/create"
+			>
+				<Plus className="size-3.5" />
+			</a>
 		</div>
 	</div>
 </div>

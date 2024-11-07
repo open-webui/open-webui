@@ -30,7 +30,7 @@
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''}"
 	>
-		<div class="   px-3.5 mt-1.5 bg-transparent backdrop-blur-xl">
+		<div class="   px-3.5 py-1 backdrop-blur-xl">
 			<div class=" flex items-center gap-1">
 				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
 					<button
@@ -49,7 +49,7 @@
 
 				<div class="">
 					<div
-						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent p-1 touch-auto pointer-events-auto"
+						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
 					>
 						<a
 							class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/workspace/models')
