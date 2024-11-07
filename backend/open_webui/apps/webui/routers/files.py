@@ -40,7 +40,6 @@ router = APIRouter()
 
 @router.post("/", response_model=FileModelResponse)
 def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
-    log.info(f"***** file.content_type: {file.content_type}, user: {user}")
     try:
         unsanitized_filename = file.filename
         filename = os.path.basename(unsanitized_filename)

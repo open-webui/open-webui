@@ -547,7 +547,6 @@ S3_SECRET_ACCESS_KEY = os.environ.get("S3_SECRET_ACCESS_KEY", None)
 S3_REGION_NAME = os.environ.get("S3_REGION_NAME", None)
 S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", None)
 
-
 ####################################
 # File Upload DIR
 ####################################
@@ -1509,12 +1508,7 @@ WHISPER_MODEL = PersistentConfig(
     os.getenv("WHISPER_MODEL", "base"),
 )
 
-WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR")
-if not WHISPER_MODEL_DIR:
-    if CACHE_DIR.lower().startswith("s3://"):
-        WHISPER_MODEL_DIR = f"{OPEN_WEBUI_DIR}/data/cache/whisper/models"
-    else:
-        WHISPER_MODEL_DIR = f"{CACHE_DIR}/whisper/models"
+WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models")
 
 WHISPER_MODEL_AUTO_UPDATE = (
     os.environ.get("WHISPER_MODEL_AUTO_UPDATE", "").lower() == "true"

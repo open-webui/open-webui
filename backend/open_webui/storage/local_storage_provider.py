@@ -1,17 +1,15 @@
-from contextlib import contextmanager
 import os
-from pathlib import Path
 import shutil
 
+from contextlib import contextmanager
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.storage.base_storage_provider import StorageProvider
+from pathlib import Path
 from typing import BinaryIO, Iterator, Tuple
 
-from open_webui.constants import ERROR_MESSAGES
-
-from open_webui.storage.base_storage_provider import StorageProvider
-
 class LocalStorageProvider(StorageProvider):
-    def __init__(self, folder: str):
-        self.folder: str = folder
+    def __init__(self, storage_home: str):
+        self.storage_home: str = storage_home
 
     def upload_file(self, file: BinaryIO, filename: str) -> Tuple[bytes, str]:
         """Uploads a file to the local file system."""
@@ -19,7 +17,7 @@ class LocalStorageProvider(StorageProvider):
         if not contents:
             raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
-        file_path = Path(self.folder) / filename
+        file_path = Path(self.storage_home) / filename
         file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(file_path, "wb") as f:
             f.write(contents)
@@ -40,7 +38,7 @@ class LocalStorageProvider(StorageProvider):
     
     def delete_file(self, filename: str) -> None:
         """Deletes a file from the local file system."""
-        file_path = f"{self.folder}/{filename}"
+        file_path = f"{self.storage_home}/{filename}"
         if os.path.isfile(file_path):
             os.remove(file_path)
         else:
@@ -48,7 +46,7 @@ class LocalStorageProvider(StorageProvider):
 
     def delete_all_files(self, folder) -> None:
         """Deletes all files from the storage."""
-        folder_to_delete = f"{self.folder}/{folder}"
+        folder_to_delete = f"{self.storage_home}/{folder}"
         if os.path.exists(folder_to_delete):
             for filename in os.listdir(folder_to_delete):
                 file_path = os.path.join(folder_to_delete, filename)

@@ -1,6 +1,5 @@
 from urllib.parse import urlparse
 from open_webui.config import USER_DATA_DIR
-
 from open_webui.storage.base_storage_provider import StorageProvider
 from open_webui.storage.local_storage_provider import LocalStorageProvider
 from open_webui.storage.s3_storage_provider import S3StorageProvider

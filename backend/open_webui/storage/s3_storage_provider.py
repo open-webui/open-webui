@@ -1,11 +1,9 @@
-from contextlib import contextmanager
-from tempfile import NamedTemporaryFile
 import boto3
 
-from typing import BinaryIO, Iterator, Tuple, Optional
-
+from contextlib import contextmanager
+from tempfile import NamedTemporaryFile
 from fastapi import HTTPException, status
-
+from typing import BinaryIO, Iterator, Tuple, Optional
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import (
     S3_ACCESS_KEY_ID,
