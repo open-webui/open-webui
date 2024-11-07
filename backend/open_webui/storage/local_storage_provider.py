@@ -2,13 +2,13 @@ import os
 import shutil
 
 
-from typing import AsyncGenerator, AsyncIterator, BinaryIO, Tuple
+from typing import AsyncGenerator, AsyncIterator, BinaryIO, Generator, Iterator, Tuple
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import UPLOAD_DIR
 from smart_open import open
 
-from openwebui.backend.open_webui.storage.base_storage_provider import LocalFile, StorageProvider
+from open_webui.storage.base_storage_provider import LocalFile, StorageProvider
 
 class LocalStorageProvider(StorageProvider):
     async def upload_file(self, file: BinaryIO, filename: str) -> Tuple[bytes, str]:
@@ -22,7 +22,7 @@ class LocalStorageProvider(StorageProvider):
             f.write(contents)
         return contents, file_path
 
-    async def get_file(self, file_path: str) -> AsyncGenerator[bytes]:
+    async def get_file(self, file_path: str) -> AsyncIterator[bytes]:
         chunk_size = 8 * 1024
         with open(file_path, 'rb') as file:
             while True:

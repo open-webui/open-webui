@@ -1,6 +1,6 @@
 import abc
 import os
-from typing import BinaryIO, Iterator, Tuple
+from typing import AsyncIterator, BinaryIO, Iterator, Tuple
 
 from typing import BinaryIO, Tuple
 
@@ -41,7 +41,7 @@ class StorageProvider(abc.ABC):
         """Uploads a file to the storage and returns the file content bytes and path."""
 
     @abc.abstractmethod
-    async def get_file(self, file_path: str) -> Iterator[bytes]:
+    async def get_file(self, file_path: str) -> AsyncIterator[bytes]:
         """Downloads file content"""
 
     @abc.abstractmethod
