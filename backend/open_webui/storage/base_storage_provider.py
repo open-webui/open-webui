@@ -1,6 +1,6 @@
 import abc
 import os
-from typing import AsyncIterator, BinaryIO, Iterator, Tuple
+from typing import AsyncIterator, BinaryIO, Tuple
 
 from typing import BinaryIO, Tuple
 

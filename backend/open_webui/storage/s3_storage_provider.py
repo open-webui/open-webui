@@ -1,7 +1,7 @@
 import os
 import aioboto3
 
-from typing import AsyncGenerator, AsyncIterator, BinaryIO, Iterator, Tuple, Optional
+from typing import AsyncIterator, BinaryIO, Tuple, Optional
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import (
@@ -12,17 +12,12 @@ from open_webui.config import (
     S3_BUCKET_NAME,
     S3_REGION_NAME,
     S3_ENDPOINT_URL,
-    UPLOAD_DIR,
 )
-from typing import BinaryIO, Tuple, Optional
-
-
 from open_webui.storage.base_storage_provider import LocalCachedFile, StorageProvider
 
 class S3StorageProvider(StorageProvider):
     def __init__(self):
         self.session = aioboto3.Session()
-        # self.s3_client: S3Client = 
         self.bucket_name: Optional[str] = S3_BUCKET_NAME
         self.bucket_prefix: Optional[str] = S3_BUCKET_PREFIX
 
@@ -52,11 +47,10 @@ class S3StorageProvider(StorageProvider):
         """Downloads a file from S3 and returns the local file path."""
         try:
             bucket_name, key = file_path.split("//")[1].split("/", 1)
-            # local_file_path = f"{S3_LOCAL_CACHE_DIR}/{key}"
-            # os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
             async with self.get_client() as client:
                 response = await client.get_object(Bucket=bucket_name, Key=key)
-                return response.get("Body").iter_chunks()
+                async for chunk in response.get("Body").iter_chunks():
+                    yield chunk
         except Exception as e:
             raise RuntimeError(f"Error downloading file {file_path} from S3: {e}")
         
@@ -67,7 +61,7 @@ class S3StorageProvider(StorageProvider):
             os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
             async with self.get_client() as client:
                 await client.download_file(bucket_name, key, local_file_path)
-            print(f"download s3 file to {local_file_path}")
+
             return LocalCachedFile(local_file_path)
         except Exception as e:
             raise RuntimeError(f"Error downloading file {file_path} from S3: {e}")

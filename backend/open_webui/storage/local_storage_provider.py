@@ -1,12 +1,10 @@
 import os
 import shutil
 
-
-from typing import AsyncGenerator, AsyncIterator, BinaryIO, Generator, Iterator, Tuple
+from typing import AsyncIterator, BinaryIO, Tuple
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import UPLOAD_DIR
-from smart_open import open
 
 from open_webui.storage.base_storage_provider import LocalFile, StorageProvider
 
