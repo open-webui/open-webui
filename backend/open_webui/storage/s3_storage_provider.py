@@ -57,7 +57,7 @@ class S3StorageProvider(StorageProvider):
         try:
             bucket_name, key = file_path.split("//")[1].split("/", 1)
             with NamedTemporaryFile() as f:
-                self.client.download_fileobj(bucket_name, key, f)
+                self.client.download_file(bucket_name, key, f.name)
                 yield f.name
         except Exception as e:
             raise RuntimeError(f"Error downloading file {file_path} from S3: {e}")
