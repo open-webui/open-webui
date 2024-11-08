@@ -1,4 +1,4 @@
-name: deploy
+name: deploy-prd
 on:
   push:
     branches:
