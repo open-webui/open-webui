@@ -306,13 +306,13 @@
 							<img
 								src={info.meta.profile_image_url}
 								alt="model profile"
-								class="rounded-lg size-72 md:size-64 lg:size-72 object-cover shrink-0"
+								class="rounded-lg size-72 md:size-64 object-cover shrink-0"
 							/>
 						{:else}
 							<img
 								src="/static/favicon.png"
 								alt="model profile"
-								class=" rounded-lg size-72 md:size-64 lg:size-72 object-cover shrink-0"
+								class=" rounded-lg size-72 md:size-64 object-cover shrink-0"
 							/>
 						{/if}
 					</button>
@@ -336,7 +336,7 @@
 						<!-- <div class=" text-sm font-semibold">{$i18n.t('Model ID')}*</div> -->
 						<div>
 							<input
-								class="text-xs w-full bg-transparent text-gray-500 outline-none rounded-lg"
+								class="text-xs w-full bg-transparent text-gray-500 outline-none"
 								placeholder={$i18n.t('Model ID')}
 								value={id}
 								disabled={edit}
@@ -352,7 +352,7 @@
 
 						<div>
 							<select
-								class="text-sm w-full bg-transparent outline-none rounded-lg"
+								class="text-sm w-full bg-transparent outline-none"
 								placeholder="Select a base model (e.g. llama3, gpt-4o)"
 								bind:value={info.base_model_id}
 								on:change={(e) => {
