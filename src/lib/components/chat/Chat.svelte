@@ -1169,7 +1169,7 @@
 			model?.info?.params?.native_tool_call ??
 			$settings?.params?.native_tool_call ??
 			params?.native_tool_call ??
-			true;
+			false;
 		const [res, controller] = await generateChatCompletion(localStorage.token, {
 			stream: stream,
 			native_tool_call: native_tool_call,
