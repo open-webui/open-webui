@@ -9,7 +9,6 @@ from urllib.parse import urlparse
 
 import chromadb
 import requests
-import yaml
 from open_webui.apps.webui.internal.db import Base, get_db
 from open_webui.env import (
     OPEN_WEBUI_DIR,
@@ -624,6 +623,12 @@ OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
 
 if OPENAI_API_BASE_URL == "":
     OPENAI_API_BASE_URL = "https://api.openai.com/v1"
+
+AZURE_OPENAI_API_BASE_URL = os.environ.get(
+    "AZURE_OPENAI_API_BASE_URL",
+    "https://malte-m2xdit50-swedencentral.openai.azure.com/",
+)
+AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY", "")
 
 OPENAI_API_KEYS = os.environ.get("OPENAI_API_KEYS", "")
 OPENAI_API_KEYS = OPENAI_API_KEYS if OPENAI_API_KEYS != "" else OPENAI_API_KEY
@@ -1436,6 +1441,17 @@ IMAGES_OPENAI_API_KEY = PersistentConfig(
     "IMAGES_OPENAI_API_KEY",
     "image_generation.openai.api_key",
     os.getenv("IMAGES_OPENAI_API_KEY", OPENAI_API_KEY),
+)
+
+AZURE_OPENAI_API_BASE_URL = PersistentConfig(
+    "AZURE_OPENAI_API_BASE_URL",
+    "image_generation.azure.api_base_url",
+    os.getenv("AZURE_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
+)
+AZURE_OPENAI_API_KEY = PersistentConfig(
+    "AZURE_OPENAI_API_KEY",
+    "image_generation.azure.api_key",
+    os.getenv("AZURE_OPENAI_API_KEY", OPENAI_API_KEY),
 )
 
 IMAGE_SIZE = PersistentConfig(

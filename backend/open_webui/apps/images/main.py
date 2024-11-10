@@ -20,6 +20,8 @@ from open_webui.config import (
     AUTOMATIC1111_CFG_SCALE,
     AUTOMATIC1111_SAMPLER,
     AUTOMATIC1111_SCHEDULER,
+    AZURE_OPENAI_API_BASE_URL,
+    AZURE_OPENAI_API_KEY,
     CACHE_DIR,
     COMFYUI_BASE_URL,
     COMFYUI_WORKFLOW,
@@ -64,6 +66,9 @@ app.state.config.ENABLED = ENABLE_IMAGE_GENERATION
 app.state.config.OPENAI_API_BASE_URL = IMAGES_OPENAI_API_BASE_URL
 app.state.config.OPENAI_API_KEY = IMAGES_OPENAI_API_KEY
 
+app.state.config.AZURE_OPENAI_API_BASE_URL = AZURE_OPENAI_API_BASE_URL
+app.state.config.AZURE_OPENAI_API_KEY = AZURE_OPENAI_API_KEY
+
 app.state.config.MODEL = IMAGE_GENERATION_MODEL
 
 app.state.config.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
@@ -88,6 +93,10 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
             "OPENAI_API_BASE_URL": app.state.config.OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": app.state.config.OPENAI_API_KEY,
         },
+        "azure": {
+            "AZURE_OPENAI_API_BASE_URL": app.state.config.AZURE_OPENAI_API_BASE_URL,
+            "AZURE_OPENAI_API_KEY": app.state.config.AZURE_OPENAI_API_KEY,
+        },
         "automatic1111": {
             "AUTOMATIC1111_BASE_URL": app.state.config.AUTOMATIC1111_BASE_URL,
             "AUTOMATIC1111_API_AUTH": app.state.config.AUTOMATIC1111_API_AUTH,
@@ -108,6 +117,11 @@ class OpenAIConfigForm(BaseModel):
     OPENAI_API_KEY: str
 
 
+class AzureOpenAIConfigForm(BaseModel):
+    AZURE_OPENAI_API_BASE_URL: str
+    AZURE_OPENAI_API_KEY: str
+
+
 class Automatic1111ConfigForm(BaseModel):
     AUTOMATIC1111_BASE_URL: str
     AUTOMATIC1111_API_AUTH: str
@@ -126,6 +140,7 @@ class ConfigForm(BaseModel):
     enabled: bool
     engine: str
     openai: OpenAIConfigForm
+    azure: AzureOpenAIConfigForm
     automatic1111: Automatic1111ConfigForm
     comfyui: ComfyUIConfigForm
 
@@ -137,6 +152,11 @@ async def update_config(form_data: ConfigForm, user=Depends(get_admin_user)):
 
     app.state.config.OPENAI_API_BASE_URL = form_data.openai.OPENAI_API_BASE_URL
     app.state.config.OPENAI_API_KEY = form_data.openai.OPENAI_API_KEY
+
+    app.state.config.AZURE_OPENAI_API_BASE_URL = (
+        form_data.azure.AZURE_OPENAI_API_BASE_URL
+    )
+    app.state.config.AZURE_OPENAI_API_KEY = form_data.azure.AZURE_OPENAI_API_KEY
 
     app.state.config.AUTOMATIC1111_BASE_URL = (
         form_data.automatic1111.AUTOMATIC1111_BASE_URL
@@ -171,6 +191,10 @@ async def update_config(form_data: ConfigForm, user=Depends(get_admin_user)):
         "openai": {
             "OPENAI_API_BASE_URL": app.state.config.OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": app.state.config.OPENAI_API_KEY,
+        },
+        "azure": {
+            "AZURE_OPENAI_API_BASE_URL": app.state.config.AZURE_OPENAI_API_BASE_URL,
+            "AZURE_OPENAI_API_KEY": app.state.config.AZURE_OPENAI_API_KEY,
         },
         "automatic1111": {
             "AUTOMATIC1111_BASE_URL": app.state.config.AUTOMATIC1111_BASE_URL,
@@ -243,7 +267,7 @@ def set_image_model(model: str):
 
 
 def get_image_model():
-    if app.state.config.ENGINE == "openai":
+    if app.state.config.ENGINE == "openai" or app.state.config.ENGINE == "azure":
         return app.state.config.MODEL if app.state.config.MODEL else "dall-e-2"
     elif app.state.config.ENGINE == "comfyui":
         return app.state.config.MODEL if app.state.config.MODEL else ""
@@ -307,7 +331,7 @@ async def update_image_config(form_data: ImageConfigForm, user=Depends(get_admin
 @app.get("/models")
 def get_models(user=Depends(get_verified_user)):
     try:
-        if app.state.config.ENGINE == "openai":
+        if app.state.config.ENGINE == "openai" or app.state.config.ENGINE == "azure":
             return [
                 {"id": "dall-e-2", "name": "DALL·E 2"},
                 {"id": "dall-e-3", "name": "DALL·E 3"},
@@ -451,17 +475,23 @@ async def image_generations(
 
     r = None
     try:
-        if app.state.config.ENGINE == "openai":
-            headers = {}
-            headers["Authorization"] = f"Bearer {app.state.config.OPENAI_API_KEY}"
-            headers["Content-Type"] = "application/json"
+        if app.state.config.ENGINE in ["openai", "azure"]:
+            headers = {
+                "Content-Type": "application/json",
+            }
+
+            model = (
+                app.state.config.MODEL if app.state.config.MODEL != "" else "dall-e-2"
+            )
+
+            if app.state.config.ENGINE == "azure":
+                headers["api-key"] = app.state.config.AZURE_OPENAI_API_KEY
+                base_url = f"{app.state.config.AZURE_OPENAI_API_BASE_URL}/openai/deployments/{model}/images/generations?api-version=2024-02-01"
+            else:
+                headers["Authorization"] = f"Bearer {app.state.config.OPENAI_API_KEY}"
+                base_url = f"{app.state.config.OPENAI_API_BASE_URL}/images/generations"
 
             data = {
-                "model": (
-                    app.state.config.MODEL
-                    if app.state.config.MODEL != ""
-                    else "dall-e-2"
-                ),
                 "prompt": form_data.prompt,
                 "n": form_data.n,
                 "size": (
@@ -470,10 +500,12 @@ async def image_generations(
                 "response_format": "b64_json",
             }
 
-            # Use asyncio.to_thread for the requests.post call
+            if app.state.config.ENGINE != "azure":
+                data["model"] = model
+
             r = await asyncio.to_thread(
                 requests.post,
-                url=f"{app.state.config.OPENAI_API_BASE_URL}/images/generations",
+                url=base_url,
                 json=data,
                 headers=headers,
             )

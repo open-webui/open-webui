@@ -278,6 +278,7 @@
 							}}
 						>
 							<option value="openai">{$i18n.t('Default (Open AI)')}</option>
+							<option value="azure">{$i18n.t('Azure (Open AI)')}</option>
 							<option value="comfyui">{$i18n.t('ComfyUI')}</option>
 							<option value="automatic1111">{$i18n.t('Automatic1111')}</option>
 						</select>
@@ -577,6 +578,24 @@
 								bind:value={config.openai.OPENAI_API_KEY}
 							/>
 						</div>
+					</div>
+				{:else if config?.engine === 'azure'}
+				<div>
+					<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Azure API Config')}</div>
+
+					<div class="flex gap-2 mb-1">
+						<input
+							class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							placeholder={$i18n.t('API Base URL')}
+							bind:value={config.azure.AZURE_OPENAI_API_BASE_URL}
+							required
+						/>
+
+						<SensitiveInput
+							placeholder={$i18n.t('API Key')}
+							bind:value={config.azure.AZURE_OPENAI_API_KEY}
+						/>
+					</div>
 					</div>
 				{/if}
 			</div>
