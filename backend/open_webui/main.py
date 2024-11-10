@@ -85,6 +85,7 @@ from open_webui.config import (
     TITLE_GENERATION_PROMPT_TEMPLATE,
     TAGS_GENERATION_PROMPT_TEMPLATE,
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+    DEFAULT_RAG_PROMPT_GENERATION_TEMPLATE,
     WEBHOOK_URL,
     WEBUI_AUTH,
     WEBUI_NAME,
@@ -351,6 +352,15 @@ def get_tools_function_calling_payload(messages, task_model_id, content):
     }
 
 
+def get_rag_generated_prompt_payload(task_model_id, content, form_data):
+    return {
+        "model": task_model_id,
+        "messages": [{"role": "user", "content": content}],
+        "stream": False,
+        "metadata": {"task": str(TASKS.QUERY_GENERATION), "task_body": form_data},
+    }
+
+
 async def get_content_from_response(response) -> Optional[str]:
     content = None
     if hasattr(response, "body_iterator"):
@@ -486,14 +496,51 @@ async def chat_completion_tools_handler(
     return body, {"contexts": contexts, "citations": citations}
 
 
-async def chat_completion_files_handler(body) -> tuple[dict, dict[str, list]]:
+async def chat_completion_files_handler(body, user: UserModel) -> tuple[dict, dict[str, list]]:
     contexts = []
     citations = []
 
     if files := body.get("metadata", {}).get("files", None):
+        query = ""
+
+        if retrieval_app.state.config.ENABLE_RAG_PROMPT_GENERATION:
+            if retrieval_app.state.config.RAG_PROMPT_GENERATION_TEMPLATE != "":
+                template = retrieval_app.state.config.RAG_PROMPT_GENERATION_TEMPLATE
+            else:
+                template = DEFAULT_RAG_PROMPT_GENERATION_TEMPLATE
+
+            task_model_id = get_task_model_id(body["model"])
+            rag_generated_prompt = search_query_generation_template(
+                template, body["messages"], {"name": user.name}
+            )
+            log.info(f"{rag_generated_prompt=}")
+            payload = get_rag_generated_prompt_payload(
+                task_model_id, rag_generated_prompt, body
+            )
+
+            try:
+                payload = filter_pipeline(payload, user)
+            except Exception as e:
+                raise e
+
+            if "chat_id" in payload:
+                del payload["chat_id"]
+
+            response = await generate_chat_completions(form_data=payload, user=user)
+            log.debug(f"{response=}")
+            query = await get_content_from_response(response)
+
+        else:
+            query = get_last_user_message(body["messages"])
+
+        log.debug(f"{query=}")
+
+        if not query:
+            return body, {"contexts": contexts, "citations": citations}
+
         contexts, citations = get_rag_context(
             files=files,
-            messages=body["messages"],
+            query=query,
             embedding_function=retrieval_app.state.EMBEDDING_FUNCTION,
             k=retrieval_app.state.config.TOP_K,
             reranking_function=retrieval_app.state.sentence_transformer_rf,
@@ -597,7 +644,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             log.exception(e)
 
         try:
-            body, flags = await chat_completion_files_handler(body)
+            body, flags = await chat_completion_files_handler(body, user)
             contexts.extend(flags.get("contexts", []))
             citations.extend(flags.get("citations", []))
         except Exception as e:

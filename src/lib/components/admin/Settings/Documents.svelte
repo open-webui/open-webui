@@ -66,6 +66,9 @@
 		hybrid: false
 	};
 
+	let promptGenerationEnabled = false;
+	let promptGenerationTemplate = '';
+
 	const embeddingModelUpdateHandler = async () => {
 		if (embeddingEngine === '' && embeddingModel.split('/').length - 1 > 1) {
 			toast.error(
@@ -188,7 +191,11 @@
 			content_extraction: {
 				engine: contentExtractionEngine,
 				tika_server_url: tikaServerUrl
-			}
+			},
+			prompt_generation: {
+				enabled: promptGenerationEnabled,
+				template: promptGenerationTemplate,
+			},
 		});
 
 		await updateQuerySettings(localStorage.token, querySettings);
@@ -243,6 +250,9 @@
 
 			fileMaxSize = res?.file.max_size ?? '';
 			fileMaxCount = res?.file.max_count ?? '';
+
+			promptGenerationEnabled = res.prompt_generation.enabled;
+			promptGenerationTemplate = res.prompt_generation.template;
 		}
 	});
 </script>
@@ -636,6 +646,31 @@
 					/>
 				</Tooltip>
 			</div>
+
+			<div class="my-2">
+				<div class="flex justify-between items-center text-xs">
+					<div class=" text-xs font-medium">{$i18n.t('Enable RAG Prompt Generation')}</div>
+
+					<div>
+						<Switch bind:state={promptGenerationEnabled} />
+					</div>
+				</div>
+			</div>
+
+			{#if promptGenerationEnabled === true}
+				<div class="mt-2">
+					<div class=" mb-1 text-xs font-medium">{$i18n.t('RAG Prompt Generation Template')}</div>
+					<Tooltip
+						content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+						placement="top-start"
+					>
+						<Textarea
+							bind:value={promptGenerationTemplate}
+							placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+						/>
+					</Tooltip>
+				</div>
+			{/if}
 		</div>
 
 		<hr class=" dark:border-gray-850" />

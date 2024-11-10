@@ -85,6 +85,8 @@ from open_webui.config import (
     RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
     RAG_WEB_SEARCH_ENGINE,
     RAG_WEB_SEARCH_RESULT_COUNT,
+    ENABLE_RAG_PROMPT_GENERATION,
+    RAG_PROMPT_GENERATION_TEMPLATE,
     SEARCHAPI_API_KEY,
     SEARCHAPI_ENGINE,
     SEARXNG_QUERY_URL,
@@ -173,6 +175,11 @@ app.state.config.SEARCHAPI_API_KEY = SEARCHAPI_API_KEY
 app.state.config.SEARCHAPI_ENGINE = SEARCHAPI_ENGINE
 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
 app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
+
+app.state.config.ENABLE_RAG_PROMPT_GENERATION = ENABLE_RAG_PROMPT_GENERATION
+app.state.config.RAG_PROMPT_GENERATION_TEMPLATE = (
+    RAG_PROMPT_GENERATION_TEMPLATE
+)
 
 
 def update_embedding_model(
@@ -430,6 +437,10 @@ async def get_rag_config(user=Depends(get_admin_user)):
                 "concurrent_requests": app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             },
         },
+        "prompt_generation": {
+            "enabled": app.state.config.ENABLE_RAG_PROMPT_GENERATION,
+            "template": app.state.config.RAG_PROMPT_GENERATION_TEMPLATE,
+        },
     }
 
 
@@ -477,6 +488,11 @@ class WebConfig(BaseModel):
     web_loader_ssl_verification: Optional[bool] = None
 
 
+class PromptGenerationConfig(BaseModel):
+    enabled: bool
+    template: Optional[str] = None
+
+
 class ConfigUpdateForm(BaseModel):
     pdf_extract_images: Optional[bool] = None
     file: Optional[FileConfig] = None
@@ -484,6 +500,7 @@ class ConfigUpdateForm(BaseModel):
     chunk: Optional[ChunkParamUpdateForm] = None
     youtube: Optional[YoutubeLoaderConfig] = None
     web: Optional[WebConfig] = None
+    prompt_generation: Optional[PromptGenerationConfig] = None
 
 
 @app.post("/config/update")
@@ -539,6 +556,10 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
             form_data.web.search.concurrent_requests
         )
 
+    if form_data.prompt_generation is not None:
+        app.state.config.ENABLE_RAG_PROMPT_GENERATION = form_data.prompt_generation.enabled
+        app.state.config.RAG_PROMPT_GENERATION_TEMPLATE = form_data.prompt_generation.template
+
     return {
         "status": True,
         "pdf_extract_images": app.state.config.PDF_EXTRACT_IMAGES,
@@ -578,6 +599,10 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
                 "result_count": app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             },
+        },
+        "prompt_generation": {
+            "enabled": app.state.config.ENABLE_RAG_PROMPT_GENERATION,
+            "template": app.state.config.RAG_PROMPT_GENERATION_TEMPLATE,
         },
     }
 
