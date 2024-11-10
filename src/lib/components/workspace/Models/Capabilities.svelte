@@ -23,9 +23,9 @@
 	<div class="flex w-full justify-between mb-1">
 		<div class=" self-center text-sm font-semibold">{$i18n.t('Capabilities')}</div>
 	</div>
-	<div class="flex flex-col">
+	<div class="flex">
 		{#each Object.keys(capabilities) as capability}
-			<div class=" flex items-center gap-2">
+			<div class=" flex items-center gap-2 mr-3">
 				<Checkbox
 					state={capabilities[capability] ? 'checked' : 'unchecked'}
 					on:change={(e) => {

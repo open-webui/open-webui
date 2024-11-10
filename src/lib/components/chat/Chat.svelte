@@ -1865,7 +1865,7 @@
 			await tick();
 
 			const model = $models
-				.filter((m) => m.id === responseMessage?.selectedModelId ?? responseMessage.model)
+				.filter((m) => m.id === (responseMessage?.selectedModelId ?? responseMessage.model))
 				.at(0);
 
 			if (model) {
@@ -1884,8 +1884,6 @@
 						_chatId
 					);
 			}
-		} else {
-			toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 		}
 	};
 
