@@ -12,7 +12,7 @@
 	export let params = {
 		// Advanced
 		stream_response: null, // Set stream responses for this model individually
-		native_tool_call: null, 
+		native_tool_call: null,
 		seed: null,
 		stop: null,
 		temperature: null,
