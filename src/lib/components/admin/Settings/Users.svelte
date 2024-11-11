@@ -158,7 +158,7 @@
 									{$i18n.t('Label')}
 								</div>
 								<input
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+									class="w-full bg-transparent outline-none py-0.5"
 									required
 									placeholder={$i18n.t('Enter server label')}
 									bind:value={LDAP_SERVER.label}
@@ -172,7 +172,7 @@
 									{$i18n.t('Host')}
 								</div>
 								<input
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+									class="w-full bg-transparent outline-none py-0.5"
 									required
 									placeholder={$i18n.t('Enter server host')}
 									bind:value={LDAP_SERVER.host}
@@ -188,7 +188,7 @@
 									className="w-full"
 								>
 									<input
-										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										class="w-full bg-transparent outline-none py-0.5"
 										type="number"
 										placeholder={$i18n.t('Enter server port')}
 										bind:value={LDAP_SERVER.port}
@@ -206,7 +206,7 @@
 									placement="top-start"
 								>
 									<input
-										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										class="w-full bg-transparent outline-none py-0.5"
 										required
 										placeholder={$i18n.t('Enter Application DN')}
 										bind:value={LDAP_SERVER.app_dn}
@@ -235,7 +235,7 @@
 									placement="top-start"
 								>
 									<input
-										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										class="w-full bg-transparent outline-none py-0.5"
 										required
 										placeholder={$i18n.t('Example: sAMAccountName or uid or userPrincipalName')}
 										bind:value={LDAP_SERVER.attribute_for_username}
@@ -250,7 +250,7 @@
 								</div>
 								<Tooltip content={$i18n.t('The base to search for users')} placement="top-start">
 									<input
-										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										class="w-full bg-transparent outline-none py-0.5"
 										required
 										placeholder={$i18n.t('Example: ou=users,dc=foo,dc=example')}
 										bind:value={LDAP_SERVER.search_base}
@@ -264,13 +264,13 @@
 									{$i18n.t('Search Filters')}
 								</div>
 								<input
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+									class="w-full bg-transparent outline-none py-0.5"
 									placeholder={$i18n.t('Example: (&(objectClass=inetOrgPerson)(uid=%s))')}
 									bind:value={LDAP_SERVER.search_filters}
 								/>
 							</div>
 						</div>
-						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+						<div class="text-xs text-gray-400 dark:text-gray-500">
 							<a
 								class=" text-gray-300 font-medium underline"
 								href="https://ldap.com/ldap-filters/"
@@ -294,7 +294,7 @@
 											{$i18n.t('Certificate Path')}
 										</div>
 										<input
-											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+											class="w-full bg-transparent outline-none py-0.5"
 											required
 											placeholder={$i18n.t('Enter certificate path')}
 											bind:value={LDAP_SERVER.certificate_path}
@@ -308,7 +308,7 @@
 										</div>
 										<Tooltip content={$i18n.t('Default to ALL')} placement="top-start">
 											<input
-												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+												class="w-full bg-transparent outline-none py-0.5"
 												placeholder={$i18n.t('Example: ALL')}
 												bind:value={LDAP_SERVER.ciphers}
 											/>
@@ -341,7 +341,7 @@
 
 					<div class="flex-1 mr-2">
 						<select
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full bg-transparent outline-none py-0.5"
 							bind:value={defaultModelId}
 							placeholder="Select a model"
 						>
@@ -369,7 +369,7 @@
 									<div class="flex w-full">
 										<div class="flex-1 mr-2">
 											<select
-												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+												class="w-full bg-transparent outline-none py-0.5"
 												bind:value={modelId}
 												placeholder="Select a model"
 											>
