@@ -6,6 +6,7 @@ node_modules
 .env
 .env.*
 !.env.example
+!.env.dev.example
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 # Byte-compiled / optimized / DLL files
