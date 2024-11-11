@@ -218,7 +218,7 @@
 	});
 </script>
 
-<div class="w-full max-h-full">
+<div class="w-full max-h-full flex justify-center">
 	<input
 		bind:this={filesInputElement}
 		bind:files={inputFiles}
@@ -657,7 +657,7 @@
 					{/if}
 				</div>
 
-				<div class="my-2 flex justify-end mb-20">
+				<div class="my-2 flex justify-end pb-20">
 					<button
 						class=" text-sm px-3 py-2 transition rounded-lg {loading
 							? ' cursor-not-allowed bg-white hover:bg-gray-100 text-black'

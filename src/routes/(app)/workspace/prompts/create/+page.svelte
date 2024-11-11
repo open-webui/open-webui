@@ -58,8 +58,6 @@
 	});
 </script>
 
-<div class="w-full max-h-full">
-	{#key prompt}
-		<PromptEditor {prompt} {onSubmit} />
-	{/key}
-</div>
+{#key prompt}
+	<PromptEditor {prompt} {onSubmit} />
+{/key}

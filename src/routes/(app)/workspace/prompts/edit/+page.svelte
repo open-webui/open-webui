@@ -44,8 +44,6 @@
 	});
 </script>
 
-<div class="w-full max-h-full">
-	{#if prompt}
-		<PromptEditor {prompt} {onSubmit} edit />
-	{/if}
-</div>
+{#if prompt}
+	<PromptEditor {prompt} {onSubmit} edit />
+{/if}
