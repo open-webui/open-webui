@@ -319,13 +319,13 @@
 						<div class="absolute bottom-0 right-0 z-10">
 							<div class="m-1.5">
 								<div
-									class="shadow-xl p-[5px] rounded-full border-[1.5px] border-white bg-gray-800 text-white group-hover:bg-gray-600 transition dark:border-black dark:bg-white dark:group-hover:bg-gray-300 dark:text-black"
+									class="shadow-xl p-1 rounded-full border-2 border-white bg-gray-800 text-white group-hover:bg-gray-600 transition dark:border-black dark:bg-white dark:group-hover:bg-gray-200 dark:text-black"
 								>
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
 										viewBox="0 0 16 16"
 										fill="currentColor"
-										class="size-4"
+										class="size-5"
 									>
 										<path
 											fill-rule="evenodd"
@@ -336,6 +336,10 @@
 								</div>
 							</div>
 						</div>
+
+						<div
+							class="absolute top-0 bottom-0 left-0 right-0 bg-white dark:bg-black rounded-lg opacity-0 group-hover:opacity-20 transition"
+						></div>
 					</button>
 				</div>
 			</div>
