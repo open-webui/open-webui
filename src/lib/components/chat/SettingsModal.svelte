@@ -590,7 +590,7 @@
 					</div>
 				{/if}
 			</div>
-			<div class="flex-1 md:min-h-[32rem]">
+			<div class="flex-1 md:min-h-[32rem] max-h-[32rem]">
 				{#if selectedTab === 'general'}
 					<General
 						{getModels}

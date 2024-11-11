@@ -242,29 +242,7 @@
 		}}
 	/>
 
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[25rem] scrollbar-hidden">
-		<div class=" space-y-1 mb-3">
-			<div class="mb-2">
-				<div class="flex justify-between items-center text-xs">
-					<div class=" text-sm font-medium">{$i18n.t('Default Model')}</div>
-				</div>
-			</div>
-
-			<div class="flex-1 mr-2">
-				<select
-					class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-					bind:value={defaultModelId}
-					placeholder="Select a model"
-				>
-					<option value="" disabled selected>{$i18n.t('Select a model')}</option>
-					{#each $models.filter((model) => model.id) as model}
-						<option value={model.id} class="bg-gray-100 dark:bg-gray-700">{model.name}</option>
-					{/each}
-				</select>
-			</div>
-		</div>
-		<hr class=" dark:border-gray-850" />
-
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll scrollbar-hidden">
 		<div>
 			<div class=" mb-1.5 text-sm font-medium">{$i18n.t('UI')}</div>
 
