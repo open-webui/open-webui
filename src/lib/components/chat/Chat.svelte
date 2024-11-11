@@ -141,15 +141,12 @@
 		})();
 	}
 
-	$: if (selectedModels) {
+	$: if (selectedModels && chatIdProp !== '') {
 		saveSessionSelectedModels();
 	}
 
 	const saveSessionSelectedModels = () => {
 		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
-			return;
-		}
-		if (chatIdProp === '') {
 			return;
 		}
 		sessionStorage.selectedModels = JSON.stringify(selectedModels);
@@ -913,6 +910,7 @@
 		const chatInput = document.getElementById('chat-input');
 		chatInput?.focus();
 
+		saveSessionSelectedModels();
 		_responses = await sendPrompt(userPrompt, userMessageId, { newChat: true });
 
 		return _responses;
