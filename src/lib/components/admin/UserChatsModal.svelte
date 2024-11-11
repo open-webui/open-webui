@@ -75,7 +75,7 @@
 				{#if chats.length > 0}
 					<div class="text-left text-sm w-full mb-4 max-h-[22rem] overflow-y-scroll">
 						<div class="relative overflow-x-auto">
-							<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-fixed">
+							<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto">
 								<thead
 									class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 dark:border-gray-800"
 								>
@@ -94,19 +94,7 @@
 										</th>
 										<th
 											scope="col"
-											class="px-3 py-2 cursor-pointer select-none"
-											on:click={() => setSortKey('created_at')}
-										>
-											{$i18n.t('Created at')}
-											{#if sortKey === 'created_at'}
-												{sortOrder === 'asc' ? '▲' : '▼'}
-											{:else}
-												<span class="invisible">▲</span>
-											{/if}
-										</th>
-										<th
-											scope="col"
-											class="px-3 py-2 hidden md:flex cursor-pointer select-none"
+											class="px-3 py-2 hidden md:flex cursor-pointer select-none justify-end"
 											on:click={() => setSortKey('updated_at')}
 										>
 											{$i18n.t('Updated at')}
@@ -131,19 +119,14 @@
 										>
 											<td class="px-3 py-1">
 												<a href="/s/{chat.id}" target="_blank">
-													<div class=" underline line-clamp-1">
+													<div class=" underline line-clamp-1 max-w-96">
 														{chat.title}
 													</div>
 												</a>
 											</td>
 
-											<td class=" px-3 py-1 h-[2.5rem]">
-												<div class="my-auto">
-													{dayjs(chat.created_at * 1000).format($i18n.t('MMMM DD, YYYY HH:mm'))}
-												</div>
-											</td>
-											<td class=" px-3 py-1 hidden md:flex h-[2.5rem]">
-												<div class="my-auto">
+											<td class=" px-3 py-1 hidden md:flex h-[2.5rem] justify-end">
+												<div class="my-auto shrink-0">
 													{dayjs(chat.updated_at * 1000).format($i18n.t('MMMM DD, YYYY HH:mm'))}
 												</div>
 											</td>
