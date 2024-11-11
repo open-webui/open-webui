@@ -5,7 +5,7 @@ services:
     build:
       context: .
       target: build
-    command: ["npm", "run", "dev"]
+    command: ["sh", "/app/src/frontend-dev.sh"]
     depends_on:
       - backend
     ports:
