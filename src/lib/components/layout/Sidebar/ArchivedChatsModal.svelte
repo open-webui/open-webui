@@ -7,24 +7,24 @@
 
 	const dispatch = createEventDispatcher();
 
-	import Modal from '$lib/components/common/Modal.svelte';
 	import {
 		archiveChatById,
 		deleteChatById,
 		getAllArchivedChats,
 		getArchivedChatList
 	} from '$lib/apis/chats';
+
+	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import UnarchiveAllConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	const i18n = getContext('i18n');
 
 	export let show = false;
 
-	let searchValue = '';
-
 	let chats = [];
 
-	let unarchiveAllDialogShow = false;
+	let searchValue = '';
+	let showUnarchiveAllConfirmDialog = false;
 
 	const unarchiveChatHandler = async (chatId) => {
 		const res = await archiveChatById(localStorage.token, chatId).catch((error) => {
@@ -64,6 +64,15 @@
 		})();
 	}
 </script>
+
+<UnarchiveAllConfirmDialog
+	bind:show={showUnarchiveAllConfirmDialog}
+	message={$i18n.t('Are you sure you want to unarchive all archived chats?')}
+	confirmLabel={$i18n.t('Unarchive All')}
+	on:confirm={() => {
+		unarchiveAllHandler();
+	}}
+/>
 
 <Modal size="lg" bind:show>
 	<div>
@@ -212,24 +221,15 @@
 							</div>
 						</div>
 
-						<div class="flex flex-wrap text-sm font-medium gap-1.5 mt-2 m-1">
+						<div class="flex flex-wrap text-sm font-medium gap-1.5 mt-2 m-1 justify-end w-full">
 							<button
 								class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl"
 								on:click={() => {
-									unarchiveAllDialogShow = true;
+									showUnarchiveAllConfirmDialog = true;
 								}}
 							>
 								{$i18n.t('Unarchive All Archived Chats')}
 							</button>
-
-							<ConfirmDialog
-								bind:show={unarchiveAllDialogShow}
-								message={$i18n.t('Are you sure you want to unarchive all archived chats?')}
-								confirmLabel={$i18n.t('Unarchive All')}
-								on:confirm={() => {
-									unarchiveAllHandler();
-								}}
-							/>
 
 							<button
 								class="px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl"
