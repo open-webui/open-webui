@@ -468,7 +468,7 @@
 	}
 
 	onMount(async () => {
-		console.log('ResponseMessage mounted');
+		// console.log('ResponseMessage mounted');
 
 		await tick();
 	});

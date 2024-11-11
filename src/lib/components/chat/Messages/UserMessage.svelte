@@ -83,7 +83,7 @@
 	};
 
 	onMount(() => {
-		console.log('UserMessage mounted');
+		// console.log('UserMessage mounted');
 	});
 </script>
 
