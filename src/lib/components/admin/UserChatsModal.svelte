@@ -75,7 +75,7 @@
 				{#if chats.length > 0}
 					<div class="text-left text-sm w-full mb-4 max-h-[22rem] overflow-y-scroll">
 						<div class="relative overflow-x-auto">
-							<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto">
+							<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-fixed">
 								<thead
 									class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 dark:border-gray-800"
 								>
