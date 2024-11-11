@@ -87,6 +87,7 @@ from open_webui.config import (
     RAG_WEB_SEARCH_RESULT_COUNT,
     SEARCHAPI_API_KEY,
     SEARCHAPI_ENGINE,
+    JINA_API_KEY,
     SEARXNG_QUERY_URL,
     SERPER_API_KEY,
     SERPLY_API_KEY,
@@ -171,6 +172,7 @@ app.state.config.SERPLY_API_KEY = SERPLY_API_KEY
 app.state.config.TAVILY_API_KEY = TAVILY_API_KEY
 app.state.config.SEARCHAPI_API_KEY = SEARCHAPI_API_KEY
 app.state.config.SEARCHAPI_ENGINE = SEARCHAPI_ENGINE
+app.state.config.JINA_API_KEY = JINA_API_KEY
 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
 app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
 
@@ -426,6 +428,7 @@ async def get_rag_config(user=Depends(get_admin_user)):
                 "tavily_api_key": app.state.config.TAVILY_API_KEY,
                 "searchapi_api_key": app.state.config.SEARCHAPI_API_KEY,
                 "seaarchapi_engine": app.state.config.SEARCHAPI_ENGINE,
+                "jina_api_key": app.state.config.JINA_API_KEY,
                 "result_count": app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             },
@@ -468,6 +471,7 @@ class WebSearchConfig(BaseModel):
     tavily_api_key: Optional[str] = None
     searchapi_api_key: Optional[str] = None
     searchapi_engine: Optional[str] = None
+    jina_api_key: Optional[str] = None
     result_count: Optional[int] = None
     concurrent_requests: Optional[int] = None
 
@@ -534,6 +538,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
         app.state.config.TAVILY_API_KEY = form_data.web.search.tavily_api_key
         app.state.config.SEARCHAPI_API_KEY = form_data.web.search.searchapi_api_key
         app.state.config.SEARCHAPI_ENGINE = form_data.web.search.searchapi_engine
+        app.state.config.JINA_API_KEY = form_data.web.search.jina_api_key
         app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = form_data.web.search.result_count
         app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = (
             form_data.web.search.concurrent_requests
@@ -1032,6 +1037,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
     - SERPER_API_KEY
     - SERPLY_API_KEY
     - TAVILY_API_KEY
+    - JINA_API_KEY
     - SEARCHAPI_API_KEY + SEARCHAPI_ENGINE (by default `google`)
     Args:
         query (str): The query to search for
@@ -1132,7 +1138,14 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
         else:
             raise Exception("No SEARCHAPI_API_KEY found in environment variables")
     elif engine == "jina":
-        return search_jina(query, app.state.config.RAG_WEB_SEARCH_RESULT_COUNT)
+        if app.state.config.JINA_API_KEY:
+            return search_jina(
+                app.state.config.JINA_API_KEY,  # Now using JINA_API_KEY
+                query,
+                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+            )
+        else:
+            return search_jina(None, query, app.state.config.RAG_WEB_SEARCH_RESULT_COUNT)
     else:
         raise Exception("No search engine API key found in environment variables")
 

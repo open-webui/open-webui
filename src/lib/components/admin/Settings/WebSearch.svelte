@@ -223,6 +223,18 @@
 								/>
 							</div>
 						{/if}
+						{:else if webConfig.search.engine === 'jina'}
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Jina API Key')}
+								</div>
+
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Jina API Key')}
+									bind:value={webConfig.search.jina_api_key}
+								/>
+							</div>
+						{/if}
 					</div>
 				{/if}
 
