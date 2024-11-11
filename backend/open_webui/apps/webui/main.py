@@ -65,6 +65,7 @@ from open_webui.config import (
     AppConfig,
 )
 from open_webui.env import (
+    ENV,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
 )
@@ -84,7 +85,7 @@ from open_webui.utils.payload import (
 
 from open_webui.utils.tools import get_tools
 
-app = FastAPI()
+app = FastAPI(docs_url="/docs" if ENV == "dev" else None, openapi_url="/openapi.json" if ENV == "dev" else None, redoc_url=None)
 
 log = logging.getLogger(__name__)
 
