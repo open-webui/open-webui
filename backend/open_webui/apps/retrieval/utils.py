@@ -313,15 +313,14 @@ def get_embedding_function(
 
 def get_rag_context(
     files,
-    messages,
+    query,
     embedding_function,
     k,
     reranking_function,
     r,
     hybrid_search,
 ):
-    log.debug(f"files: {files} {messages} {embedding_function} {reranking_function}")
-    query = get_last_user_message(messages)
+    log.debug(f"files: {files} {query} {embedding_function} {reranking_function}")
 
     extracted_collections = []
     relevant_contexts = []

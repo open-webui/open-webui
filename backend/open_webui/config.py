@@ -1173,6 +1173,29 @@ RAG_WEB_SEARCH_ENGINE = PersistentConfig(
     os.getenv("RAG_WEB_SEARCH_ENGINE", ""),
 )
 
+
+ENABLE_RAG_QUERY_GENERATION = PersistentConfig(
+    "ENABLE_RAG_QUERY_GENERATION",
+    "rag.enable_prompt_generation",
+    os.environ.get("ENABLE_RAG_QUERY_GENERATION", "False").lower() == "true",
+)
+
+DEFAULT_RAG_QUERY_GENERATION_TEMPLATE = """Given the user's message and interaction history, decide if a file search is necessary. You must be concise and exclusively provide a search query if one is necessary. Refrain from verbose responses or any additional commentary. Prefer suggesting a search if uncertain to provide comprehensive or updated information. If a search isn't needed at all, respond with an empty string. Default to a search query when in doubt.
+
+User Message:
+{{prompt:end:4000}}
+
+Interaction History:
+{{MESSAGES:END:6}}
+
+Search Query:"""
+
+RAG_QUERY_GENERATION_TEMPLATE = PersistentConfig(
+    "RAG_QUERY_GENERATION_TEMPLATE",
+    "rag.prompt_generation_template",
+    os.environ.get("RAG_QUERY_GENERATION_TEMPLATE", DEFAULT_RAG_QUERY_GENERATION_TEMPLATE),
+)
+
 # You can provide a list of your own websites to filter after performing a web search.
 # This ensures the highest level of safety and reliability of the information sources.
 RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
