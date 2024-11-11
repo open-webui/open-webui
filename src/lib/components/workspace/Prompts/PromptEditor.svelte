@@ -3,6 +3,7 @@
 
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import { toast } from 'svelte-sonner';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	export let onSubmit: Function;
 	export let edit = false;
@@ -58,65 +59,54 @@
 </script>
 
 <form
-	class="flex flex-col max-w-2xl mx-auto mt-4 mb-10 pb-10"
+	class="flex flex-col max-w-4xl mx-auto mt-4 mb-10 pb-10"
 	on:submit|preventDefault={() => {
 		submitHandler();
 	}}
 >
 	<div class="my-2">
-		<div class=" text-sm font-semibold mb-2">{$i18n.t('Title')}*</div>
+		<Tooltip
+			content={`${$i18n.t('Only alphanumeric characters and hyphens are allowed')} - ${$i18n.t(
+				'Activate this command by typing "/{{COMMAND}}" to chat input.',
+				{
+					COMMAND: command
+				}
+			)}`}
+			placement="bottom-start"
+		>
+			<div class="flex flex-col w-full">
+				<div>
+					<input
+						class="text-2xl font-semibold w-full bg-transparent outline-none"
+						placeholder={$i18n.t('Title')}
+						bind:value={title}
+						required
+					/>
+				</div>
 
-		<div>
-			<input
-				class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-				placeholder={$i18n.t('Add a short title for this prompt')}
-				bind:value={title}
-				required
-			/>
-		</div>
-	</div>
-
-	<div class="my-2">
-		<div class=" text-sm font-semibold mb-2">{$i18n.t('Command')}*</div>
-
-		<div class="flex items-center mb-1">
-			<div
-				class="bg-gray-200 dark:bg-gray-600 font-semibold px-3 py-1 border border-r-0 dark:border-gray-600 rounded-l-lg"
-			>
-				/
+				<div class="flex gap-0.5 items-center text-xs text-gray-500">
+					<div class="">/</div>
+					<input
+						class=" w-full bg-transparent outline-none"
+						placeholder={$i18n.t('Command')}
+						bind:value={command}
+						required
+						disabled={edit}
+					/>
+				</div>
 			</div>
-			<input
-				class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-r-lg"
-				placeholder={$i18n.t('short-summary')}
-				bind:value={command}
-				required
-				disabled={edit}
-			/>
-		</div>
-
-		<div class="text-xs text-gray-400 dark:text-gray-500">
-			{$i18n.t('Only')}
-			<span class=" text-gray-600 dark:text-gray-300 font-medium"
-				>{$i18n.t('alphanumeric characters and hyphens')}</span
-			>
-			{$i18n.t('are allowed - Activate this command by typing')}&nbsp;"<span
-				class=" text-gray-600 dark:text-gray-300 font-medium"
-			>
-				/{command}
-			</span>" &nbsp;
-			{$i18n.t('to chat input.')}
-		</div>
+		</Tooltip>
 	</div>
 
 	<div class="my-2">
 		<div class="flex w-full justify-between">
-			<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt Content')}*</div>
+			<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt Content')}</div>
 		</div>
 
 		<div class="mt-2">
 			<div>
 				<Textarea
-					className="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none overflow-y-hidden rounded-lg resize-none"
+					className="text-sm w-full bg-transparent outline-none overflow-y-hidden resize-none"
 					placeholder={$i18n.t('Write a summary in 50 words that summarizes [topic or keyword].')}
 					bind:value={content}
 					rows={6}
@@ -144,11 +134,11 @@
 		</div>
 	</div>
 
-	<div class="my-2 flex justify-end">
+	<div class="my-4 flex justify-end">
 		<button
-			class=" text-sm px-3 py-2 transition rounded-xl {loading
-				? ' cursor-not-allowed bg-gray-100 dark:bg-gray-800'
-				: ' bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-800'} flex"
+			class=" text-sm px-3 py-2 transition rounded-lg {loading
+				? ' cursor-not-allowed bg-white hover:bg-gray-100 text-black'
+				: ' bg-white hover:bg-gray-100 text-black'} flex w-full justify-center"
 			type="submit"
 			disabled={loading}
 		>
