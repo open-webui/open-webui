@@ -70,7 +70,7 @@
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[25rem]">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll">
 		<input
 			id="profile-image-input"
 			bind:this={profileImageInputElement}

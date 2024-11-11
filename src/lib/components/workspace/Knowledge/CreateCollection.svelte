@@ -68,32 +68,34 @@
 		}}
 	>
 		<div class=" w-full flex flex-col justify-center">
-			<div class=" text-2xl font-medium font-primary mb-2.5">Create a knowledge base</div>
+			<div class=" text-2xl font-medium font-primary mb-2.5">
+				{$i18n.t('Create a knowledge base')}
+			</div>
 
 			<div class="w-full flex flex-col gap-2.5">
 				<div class="w-full">
-					<div class=" text-sm mb-2">What are you working on?</div>
+					<div class=" text-sm mb-2">{$i18n.t('What are you working on?')}</div>
 
 					<div class="w-full mt-1">
 						<input
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							type="text"
 							bind:value={name}
-							placeholder={`Name your knowledge base`}
+							placeholder={$i18n.t('Name your knowledge base')}
 							required
 						/>
 					</div>
 				</div>
 
 				<div>
-					<div class="text-sm mb-2">What are you trying to achieve?</div>
+					<div class="text-sm mb-2">{$i18n.t('What are you trying to achieve?')}</div>
 
 					<div class=" w-full mt-1">
 						<textarea
 							class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							rows="4"
 							bind:value={description}
-							placeholder={`Describe your knowledge base and objectives`}
+							placeholder={$i18n.t('Describe your knowledge base and objectives')}
 							required
 						/>
 					</div>

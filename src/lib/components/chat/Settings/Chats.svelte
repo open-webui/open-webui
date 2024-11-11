@@ -97,7 +97,7 @@
 	};
 </script>
 
-<div class="flex flex-col h-full justify-between space-y-3 text-sm max-h-[22rem]">
+<div class="flex flex-col h-full justify-between space-y-3 text-sm">
 	<div class=" space-y-2">
 		<div class="flex flex-col">
 			<input

@@ -28,6 +28,10 @@
 		"title": "Cebuano (Filipino)"
 	},
 	{
+		"code": "cs-CZ",
+		"title": "Czech (čeština)"
+	},
+	{
 		"code": "da-DK",
 		"title": "Danish (Denmark)"
 	},
@@ -158,6 +162,10 @@
 	{
 		"code": "uk-UA",
 		"title": "Ukrainian (Українська)"
+	},
+	{
+		"code": "ur-PK",
+		"title": "Urdu (اردو)"
 	},
 	{
 		"code": "vi-VN",

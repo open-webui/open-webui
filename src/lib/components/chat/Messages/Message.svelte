@@ -22,23 +22,21 @@
 
 	export let showPreviousMessage;
 	export let showNextMessage;
+	export let updateChat;
 
 	export let editMessage;
+	export let saveMessage;
 	export let deleteMessage;
 	export let rateMessage;
+	export let actionMessage;
+	export let submitMessage;
 
 	export let regenerateResponse;
 	export let continueResponse;
-
-	// MultiResponseMessages
 	export let mergeResponses;
 
-	export let autoScroll = false;
+	export let triggerScroll;
 	export let readOnly = false;
-
-	onMount(() => {
-		// console.log('message', idx);
-	});
 </script>
 
 <div
@@ -61,7 +59,7 @@
 				{showPreviousMessage}
 				{showNextMessage}
 				{editMessage}
-				on:delete={() => deleteMessage(messageId)}
+				{deleteMessage}
 				{readOnly}
 			/>
 		{:else if (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) === 1}
@@ -73,30 +71,14 @@
 				siblings={history.messages[history.messages[messageId].parentId]?.childrenIds ?? []}
 				{showPreviousMessage}
 				{showNextMessage}
+				{updateChat}
 				{editMessage}
+				{saveMessage}
 				{rateMessage}
+				{actionMessage}
+				{submitMessage}
 				{continueResponse}
 				{regenerateResponse}
-				on:submit={async (e) => {
-					dispatch('submit', e.detail);
-				}}
-				on:action={async (e) => {
-					dispatch('action', e.detail);
-				}}
-				on:update={async (e) => {
-					dispatch('update');
-				}}
-				on:save={async (e) => {
-					console.log('save', e);
-
-					const message = e.detail;
-					if (message) {
-						history.messages[message.id] = message;
-						dispatch('update');
-					} else {
-						dispatch('update');
-					}
-				}}
 				{readOnly}
 			/>
 		{:else}
@@ -105,35 +87,16 @@
 				{chatId}
 				{messageId}
 				isLastMessage={messageId === history?.currentId}
-				{rateMessage}
+				{updateChat}
 				{editMessage}
+				{saveMessage}
+				{rateMessage}
+				{actionMessage}
+				{submitMessage}
 				{continueResponse}
 				{regenerateResponse}
 				{mergeResponses}
-				on:submit={async (e) => {
-					dispatch('submit', e.detail);
-				}}
-				on:action={async (e) => {
-					dispatch('action', e.detail);
-				}}
-				on:update={async (e) => {
-					dispatch('update');
-				}}
-				on:save={async (e) => {
-					console.log('save', e);
-					const message = e.detail;
-					if (message) {
-						history.messages[message.id] = message;
-						dispatch('update');
-					} else {
-						dispatch('update');
-					}
-				}}
-				on:change={async () => {
-					await tick();
-					dispatch('update');
-					dispatch('scroll');
-				}}
+				{triggerScroll}
 				{readOnly}
 			/>
 		{/if}

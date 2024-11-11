@@ -13,7 +13,6 @@ def search_jina(api_key: str, query: str, count: int) -> list[SearchResult]:
     """
     Search using Jina's Search API and return the results as a list of SearchResult objects.
     Args:
-        api_key (str): A Jina Search API key
         query (str): The query to search for
         count (int): The number of results to return
 
@@ -21,10 +20,7 @@ def search_jina(api_key: str, query: str, count: int) -> list[SearchResult]:
         list[SearchResult]: A list of search results
     """
     jina_search_endpoint = "https://s.jina.ai/"
-    headers = {
-        "Accept": "application/json",
-        "Authorization": f"Bearer {api_key}"
-    }
+    headers = {"Accept": "application/json", "Authorization": f"Bearer {api_key}"}
     url = str(URL(jina_search_endpoint + query))
     response = requests.get(url, headers=headers)
     response.raise_for_status()

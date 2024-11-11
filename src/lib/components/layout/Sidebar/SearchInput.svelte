@@ -73,7 +73,7 @@
 	});
 </script>
 
-<div class="px-2 mb-1 flex justify-center space-x-2 relative z-10" id="search-container">
+<div class="px-1 mb-1 flex justify-center space-x-2 relative z-10" id="search-container">
 	<div class="flex w-full rounded-xl" id="chat-search">
 		<div class="self-center pl-3 py-2 rounded-l-xl bg-transparent">
 			<svg
@@ -182,7 +182,9 @@
 						{/each}
 					</div>
 				{:else if filteredOptions.length > 0}
-					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">Search options</div>
+					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">
+						{$i18n.t('Search options')}
+					</div>
 
 					<div class=" max-h-60 overflow-auto">
 						{#each filteredOptions as option, optionIdx}
