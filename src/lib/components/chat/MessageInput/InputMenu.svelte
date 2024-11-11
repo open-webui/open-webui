@@ -58,30 +58,30 @@
 			{#if Object.keys(tools).length > 0}
 				<div class="  max-h-28 overflow-y-auto scrollbar-hidden">
 					{#each Object.keys(tools) as toolId}
-						<div
-							class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
+						<button
+							class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
+							on:click={() => {
+								selectedToolIds = tools[toolId].enabled
+									? selectedToolIds.filter((id) => id !== toolId)
+									: [...selectedToolIds, toolId];
+							}}
 						>
-							<div class="flex-1">
+							<div class="flex-1 truncate">
 								<Tooltip
 									content={tools[toolId]?.description ?? ''}
 									placement="top-start"
-									className="flex flex-1  gap-2 items-center"
+									className="flex flex-1 gap-2 items-center"
 								>
 									<WrenchSolid />
 
-									<div class=" line-clamp-1">{tools[toolId].name}</div>
+									<div class=" truncate">{tools[toolId].name}</div>
 								</Tooltip>
 							</div>
 
-							<Switch
-								bind:state={tools[toolId].enabled}
-								on:change={(e) => {
-									selectedToolIds = e.detail
-										? [...selectedToolIds, toolId]
-										: selectedToolIds.filter((id) => id !== toolId);
-								}}
-							/>
-						</div>
+							<div class=" shrink-0 flex-shrink-0">
+								<Switch state={tools[toolId].enabled} />
+							</div>
+						</button>
 					{/each}
 				</div>
 
@@ -89,16 +89,19 @@
 			{/if}
 
 			{#if $config?.features?.enable_web_search}
-				<div
-					class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
+				<button
+					class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
+					on:click={() => {
+						webSearchEnabled = !webSearchEnabled;
+					}}
 				>
 					<div class="flex-1 flex items-center gap-2">
 						<GlobeAltSolid />
 						<div class=" line-clamp-1">{$i18n.t('Web Search')}</div>
 					</div>
 
-					<Switch bind:state={webSearchEnabled} />
-				</div>
+					<Switch state={webSearchEnabled} />
+				</button>
 
 				<hr class="border-gray-100 dark:border-gray-800 my-1" />
 			{/if}
