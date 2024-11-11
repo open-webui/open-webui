@@ -223,6 +223,24 @@
 			]
 		},
 		{
+			id: 'admin',
+			title: 'Admin',
+			keywords: [
+				'admin',
+				'administrator',
+				'adminsettings',
+				'adminpanel',
+				'systemadmin',
+				'administratoraccess',
+				'systemcontrol',
+				'manage',
+				'management',
+				'admincontrols',
+				'adminfeatures',
+				'usercontrol'
+			]
+		},
+		{
 			id: 'about',
 			title: 'About',
 			keywords: [
@@ -247,24 +265,6 @@
 				'termsandconditions',
 				'contact',
 				'aboutpage'
-			]
-		},
-		{
-			id: 'admin',
-			title: 'Admin',
-			keywords: [
-				'admin',
-				'administrator',
-				'adminsettings',
-				'adminpanel',
-				'systemadmin',
-				'administratoraccess',
-				'systemcontrol',
-				'manage',
-				'management',
-				'admincontrols',
-				'adminfeatures',
-				'usercontrol'
 			]
 		}
 	];
