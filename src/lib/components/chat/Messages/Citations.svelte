@@ -54,7 +54,7 @@
 				}
 
 				if (id.startsWith('http://') || id.startsWith('https://')) {
-					source = { name: id, ...source, url: id };
+					source = { ...source, name: id, url: id };
 				}
 
 				const existingSource = acc.find((item) => item.id === id);
@@ -89,28 +89,28 @@
 />
 
 {#if _citations.length > 0}
-	<div class="mt-1 mb-2 w-full flex gap-1 items-center flex-wrap">
+	<div class="my-1 -mx-0.5 w-full flex gap-1 items-center flex-wrap">
 		{#if _citations.length <= 3}
-			{#each _citations as citation, idx}
-				<div class="flex gap-1 text-xs font-semibold">
+			<div class="flex gap-2 text-xs font-semibold">
+				{#each _citations as citation, idx}
 					<button
-						class="no-toggle flex dark:text-gray-300 py-1 px-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-xl max-w-96"
+						class="no-toggle outline-none flex dark:text-gray-300 p-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition rounded-xl max-w-96"
 						on:click={() => {
 							showCitationModal = true;
 							selectedCitation = citation;
 						}}
 					>
 						{#if _citations.every((c) => c.distances !== undefined)}
-							<div class="bg-white dark:bg-gray-700 rounded-full size-4">
+							<div class="bg-gray-50 dark:bg-gray-800 rounded-full size-4">
 								{idx + 1}
 							</div>
 						{/if}
-						<div class="flex-1 mx-2 line-clamp-1 truncate">
+						<div class="flex-1 mx-1 line-clamp-1 truncate">
 							{citation.source.name}
 						</div>
 					</button>
-				</div>
-			{/each}
+				{/each}
+			</div>
 		{:else}
 			<Collapsible bind:open={isCollapsibleOpen} className="w-full">
 				<div
