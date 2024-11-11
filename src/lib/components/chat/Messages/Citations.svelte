@@ -145,9 +145,7 @@
 						</div>
 						<div class="flex items-center gap-1 whitespace-nowrap">
 							<span class="hidden sm:inline">{$i18n.t('and')}</span>
-							<span class="text-gray-600 dark:text-gray-400">
-								{_citations.length - 2}
-							</span>
+							{_citations.length - 2}
 							<span>{$i18n.t('more')}</span>
 						</div>
 					</div>
