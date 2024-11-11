@@ -296,7 +296,7 @@
 			<div class="self-center md:self-start flex justify-center my-2 flex-shrink-0">
 				<div class="self-center">
 					<button
-						class="rounded-2xl flex flex-shrink-0 items-center bg-white"
+						class="rounded-2xl flex flex-shrink-0 items-center bg-white shadow-2xl group relative"
 						type="button"
 						on:click={() => {
 							filesInputElement.click();
@@ -315,6 +315,27 @@
 								class=" rounded-lg size-72 md:size-64 object-cover shrink-0"
 							/>
 						{/if}
+
+						<div class="absolute bottom-0 right-0 z-10">
+							<div class="m-1.5">
+								<div
+									class="shadow-xl p-[5px] rounded-full border-[1.5px] border-white bg-gray-800 text-white group-hover:bg-gray-600 transition dark:border-black dark:bg-white dark:group-hover:bg-gray-300 dark:text-black"
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="size-4"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								</div>
+							</div>
+						</div>
 					</button>
 				</div>
 			</div>
