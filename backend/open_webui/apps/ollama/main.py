@@ -263,12 +263,12 @@ def merge_models_lists(model_lists):
     for idx, model_list in enumerate(model_lists):
         if model_list is not None:
             for model in model_list:
-                digest = model["digest"]
-                if digest not in merged_models:
+                id = model["model"]
+                if id not in merged_models:
                     model["urls"] = [idx]
-                    merged_models[digest] = model
+                    merged_models[id] = model
                 else:
-                    merged_models[digest]["urls"].append(idx)
+                    merged_models[id]["urls"].append(idx)
 
     return list(merged_models.values())
 
@@ -311,6 +311,8 @@ async def get_all_models():
                 if prefix_id:
                     for model in response["models"]:
                         model["model"] = f"{prefix_id}.{model['model']}"
+
+        print(responses)
 
         models = {
             "models": merge_models_lists(
