@@ -32,7 +32,7 @@
 
 		await Promise.all([
 			(async () => {
-				models.set(await getModels());
+				models.set(await getModels(localStorage.token));
 			})(),
 			(async () => {
 				knowledge.set(await getKnowledgeItems(localStorage.token));
