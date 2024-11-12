@@ -30,24 +30,6 @@
 			await goto('/');
 		}
 
-		await Promise.all([
-			(async () => {
-				models.set(await getModels(localStorage.token));
-			})(),
-			(async () => {
-				knowledge.set(await getKnowledgeItems(localStorage.token));
-			})(),
-			(async () => {
-				prompts.set(await getPrompts(localStorage.token));
-			})(),
-			(async () => {
-				tools.set(await getTools(localStorage.token));
-			})(),
-			(async () => {
-				functions.set(await getFunctions(localStorage.token));
-			})()
-		]);
-
 		loaded = true;
 	});
 </script>
@@ -136,7 +118,7 @@
 			</div>
 		</div>
 
-		<div class=" pb-1 px-[18px] flex-1 max-h-full overflow-y-auto" id="workspace-container">
+		<div class=" -mt-1 pb-1 px-[18px] flex-1 max-h-full overflow-y-auto" id="workspace-container">
 			<slot />
 		</div>
 	</div>
