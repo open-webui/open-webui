@@ -1,6 +1,6 @@
 <script lang="ts">
+	import { getAllTags } from '$lib/apis/chats';
 	import { tags } from '$lib/stores';
-	import { stringify } from 'postcss';
 	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 	import { fade } from 'svelte/transition';
 
@@ -15,13 +15,14 @@
 	let lastWord = '';
 	$: lastWord = value ? value.split(' ').at(-1) : value;
 
-	let focused = false;
 	let options = [
 		{
 			name: 'tag:',
 			description: $i18n.t('search for tags')
 		}
 	];
+	let focused = false;
+	let loading = false;
 
 	let filteredOptions = options;
 	$: filteredOptions = options.filter((option) => {
@@ -51,6 +52,12 @@
 				}
 			})
 		: [];
+
+	const initTags = async () => {
+		loading = true;
+		await tags.set(await getAllTags(localStorage.token));
+		loading = false;
+	};
 
 	const documentClickHandler = (e) => {
 		const searchContainer = document.getElementById('search-container');
@@ -99,6 +106,7 @@
 			}}
 			on:focus={() => {
 				focused = true;
+				initTags();
 			}}
 			on:keydown={(e) => {
 				if (e.key === 'Enter') {

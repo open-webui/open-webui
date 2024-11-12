@@ -102,22 +102,7 @@
 					models.set(await getModels());
 				})(),
 				(async () => {
-					prompts.set(await getPrompts(localStorage.token));
-				})(),
-				(async () => {
-					knowledge.set(await getKnowledgeItems(localStorage.token));
-				})(),
-				(async () => {
-					tools.set(await getTools(localStorage.token));
-				})(),
-				(async () => {
-					functions.set(await getFunctions(localStorage.token));
-				})(),
-				(async () => {
 					banners.set(await getBanners(localStorage.token));
-				})(),
-				(async () => {
-					tags.set(await getAllTags(localStorage.token));
 				})()
 			]);
 

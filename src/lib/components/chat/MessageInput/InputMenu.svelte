@@ -1,37 +1,52 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
 	import { flyAndScale } from '$lib/utils/transitions';
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
+
+	import { config, user, tools as _tools } from '$lib/stores';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import DocumentArrowUpSolid from '$lib/components/icons/DocumentArrowUpSolid.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import GlobeAltSolid from '$lib/components/icons/GlobeAltSolid.svelte';
-	import { config } from '$lib/stores';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
+	import { getTools } from '$lib/apis/tools';
 
 	const i18n = getContext('i18n');
 
 	export let uploadFilesHandler: Function;
 
+	export let availableToolIds: string[] = [];
 	export let selectedToolIds: string[] = [];
+
 	export let webSearchEnabled: boolean;
 
-	export let tools = {};
 	export let onClose: Function;
 
-	$: tools = Object.fromEntries(
-		Object.keys(tools).map((toolId) => [
-			toolId,
-			{
-				...tools[toolId],
-				enabled: selectedToolIds.includes(toolId)
-			}
-		])
-	);
-
+	let tools = {};
 	let show = false;
+
+	$: if (show) {
+		init();
+	}
+
+	const init = async () => {
+		if ($_tools === null) {
+			await _tools.set(await getTools(localStorage.token));
+		}
+
+		tools = $_tools.reduce((a, tool, i, arr) => {
+			if (availableToolIds.includes(tool.id) || ($user?.role ?? 'user') === 'admin') {
+				a[tool.id] = {
+					name: tool.name,
+					description: tool.meta.description,
+					enabled: selectedToolIds.includes(tool.id)
+				};
+			}
+			return a;
+		}, {});
+	};
 </script>
 
 <Dropdown

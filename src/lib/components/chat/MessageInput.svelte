@@ -519,16 +519,7 @@
 									<InputMenu
 										bind:webSearchEnabled
 										bind:selectedToolIds
-										tools={$tools.reduce((a, e, i, arr) => {
-											if (availableToolIds.includes(e.id) || ($_user?.role ?? 'user') === 'admin') {
-												a[e.id] = {
-													name: e.name,
-													description: e.meta.description,
-													enabled: false
-												};
-											}
-											return a;
-										}, {})}
+										{availableToolIds}
 										uploadFilesHandler={() => {
 											filesInputElement.click();
 										}}

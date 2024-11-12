@@ -1,10 +1,25 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, showSidebar, functions, user, mobile } from '$lib/stores';
+	import {
+		WEBUI_NAME,
+		showSidebar,
+		functions,
+		user,
+		mobile,
+		models,
+		prompts,
+		knowledge,
+		tools
+	} from '$lib/stores';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
+	import { getModels } from '$lib/apis';
+	import { getPrompts } from '$lib/apis/prompts';
+	import { getKnowledgeItems } from '$lib/apis/knowledge';
+	import { getTools } from '$lib/apis/tools';
+	import { getFunctions } from '$lib/apis/functions';
 
 	const i18n = getContext('i18n');
 
@@ -14,6 +29,25 @@
 		if ($user?.role !== 'admin') {
 			await goto('/');
 		}
+
+		await Promise.all([
+			(async () => {
+				models.set(await getModels());
+			})(),
+			(async () => {
+				knowledge.set(await getKnowledgeItems(localStorage.token));
+			})(),
+			(async () => {
+				prompts.set(await getPrompts(localStorage.token));
+			})(),
+			(async () => {
+				tools.set(await getTools(localStorage.token));
+			})(),
+			(async () => {
+				functions.set(await getFunctions(localStorage.token));
+			})()
+		]);
+
 		loaded = true;
 	});
 </script>
