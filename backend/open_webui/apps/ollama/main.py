@@ -288,7 +288,7 @@ async def get_all_models():
                 if enable:
                     tasks.append(aiohttp_get(f"{url}/api/tags", key))
                 else:
-                    tasks.append(None)
+                    tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
 
         responses = await asyncio.gather(*tasks)
 
