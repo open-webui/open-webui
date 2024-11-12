@@ -45,7 +45,7 @@
 		})}
 		placement="top-start"
 	>
-		{#if !(config?.enabled ?? true)}
+		{#if !(config?.enable ?? true)}
 			<div
 				class="absolute top-0 bottom-0 left-0 right-0 opacity-60 bg-white dark:bg-gray-900 z-10"
 			></div>

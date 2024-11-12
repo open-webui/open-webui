@@ -26,7 +26,7 @@
 	let key = '';
 
 	let prefixId = '';
-	let enabled = true;
+	let enable = true;
 
 	let modelId = '';
 	let modelIds = [];
@@ -63,7 +63,7 @@
 			url,
 			key,
 			config: {
-				enabled: enabled,
+				enable: enable,
 				prefix_id: prefixId,
 				model_ids: modelIds
 			}
@@ -85,7 +85,7 @@
 			url = connection.url;
 			key = connection.key;
 
-			enabled = connection.config?.enabled ?? true;
+			enable = connection.config?.enable ?? true;
 			prefixId = connection.config?.prefix_id ?? '';
 			modelIds = connection.config?.model_ids ?? [];
 		}
@@ -179,8 +179,8 @@
 							</Tooltip>
 
 							<div class="flex flex-col flex-shrink-0 self-end">
-								<Tooltip content={enabled ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
-									<Switch bind:state={enabled} />
+								<Tooltip content={enable ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
+									<Switch bind:state={enable} />
 								</Tooltip>
 							</div>
 						</div>
