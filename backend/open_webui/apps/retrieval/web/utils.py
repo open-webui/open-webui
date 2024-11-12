@@ -6,6 +6,7 @@ from typing import Union, Sequence, Iterator
 from langchain_community.document_loaders import (
     WebBaseLoader,
 )
+from langchain_community.document_loaders.web_base import _build_metadata
 from langchain_core.documents import Document
 
 
@@ -63,18 +64,7 @@ class SafeWebBaseLoader(WebBaseLoader):
             try:
                 soup = self._scrape(path, bs_kwargs=self.bs_kwargs)
                 text = soup.get_text(**self.bs_get_text_kwargs)
-
-                # Build metadata
-                metadata = {"source": path}
-                if title := soup.find("title"):
-                    metadata["title"] = title.get_text()
-                if description := soup.find("meta", attrs={"name": "description"}):
-                    metadata["description"] = description.get(
-                        "content", "No description found."
-                    )
-                if html := soup.find("html"):
-                    metadata["language"] = html.get("lang", "No language found.")
-
+                metadata =  _build_metadata(soup, path)
                 yield Document(page_content=text, metadata=metadata)
             except Exception as e:
                 # Log the error and continue with the next URL
