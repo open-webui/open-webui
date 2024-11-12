@@ -290,10 +290,10 @@ async def get_all_models_raw() -> list:
         else:
             api_config = app.state.config.OPENAI_API_CONFIGS.get(url, {})
 
-            enabled = api_config.get("enabled", True)
+            enable = api_config.get("enable", True)
             model_ids = api_config.get("model_ids", [])
 
-            if enabled:
+            if enable:
                 if len(model_ids) == 0:
                     tasks.append(
                         aiohttp_get(
