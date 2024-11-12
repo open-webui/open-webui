@@ -13,10 +13,11 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
 
 	import OpenAIConnection from './Connections/OpenAIConnection.svelte';
-	import OpenAIConnectionModal from './Connections/OpenAIConnectionModal.svelte';
-	import Plus from '$lib/components/icons/Plus.svelte';
+	import AddConnectionModal from './Connections/AddConnectionModal.svelte';
+	import OllamaConnection from './Connections/OllamaConnection.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -38,10 +39,14 @@
 
 	let pipelineUrls = {};
 	let showAddOpenAIConnectionModal = false;
+	let showAddOllamaConnectionModal = false;
 
 	const updateOpenAIHandler = async () => {
 		if (ENABLE_OPENAI_API !== null) {
-			OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.map((url) => url.replace(/\/$/, ''));
+			OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.filter(
+				(url, urlIdx) => OPENAI_API_BASE_URLS.indexOf(url) === urlIdx && url !== ''
+			).map((url) => url.replace(/\/$/, ''));
+
 			// Check if API KEYS length is same than API URLS length
 			if (OPENAI_API_KEYS.length !== OPENAI_API_BASE_URLS.length) {
 				// if there are more keys than urls, remove the extra keys
@@ -76,9 +81,10 @@
 
 	const updateOllamaHandler = async () => {
 		if (ENABLE_OLLAMA_API !== null) {
-			OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url) => url !== '').map((url) =>
-				url.replace(/\/$/, '')
-			);
+			// Remove duplicate URLs
+			OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter(
+				(url, urlIdx) => OLLAMA_BASE_URLS.indexOf(url) === urlIdx && url !== ''
+			).map((url) => url.replace(/\/$/, ''));
 
 			console.log(OLLAMA_BASE_URLS);
 
@@ -108,6 +114,13 @@
 		OPENAI_API_CONFIGS[connection.url] = connection.config;
 
 		await updateOpenAIHandler();
+	};
+
+	const addOllamaConnectionHandler = async (connection) => {
+		OLLAMA_BASE_URLS = [...OLLAMA_BASE_URLS, connection.url];
+		OLLAMA_API_CONFIGS[connection.url] = connection.config;
+
+		await updateOllamaHandler();
 	};
 
 	onMount(async () => {
@@ -160,9 +173,15 @@
 	});
 </script>
 
-<OpenAIConnectionModal
+<AddConnectionModal
 	bind:show={showAddOpenAIConnectionModal}
 	onSubmit={addOpenAIConnectionHandler}
+/>
+
+<AddConnectionModal
+	ollama
+	bind:show={showAddOllamaConnectionModal}
+	onSubmit={addOllamaConnectionHandler}
 />
 
 <form
@@ -219,7 +238,7 @@
 										pipeline={pipelineUrls[url] ? true : false}
 										bind:url
 										bind:key={OPENAI_API_KEYS[idx]}
-										bind:config={OPENAI_API_CONFIGS[OPENAI_API_BASE_URLS[idx]]}
+										bind:config={OPENAI_API_CONFIGS[url]}
 										onSubmit={() => {
 											updateOpenAIHandler();
 										}}
@@ -247,11 +266,7 @@
 						<Switch
 							bind:state={ENABLE_OLLAMA_API}
 							on:change={async () => {
-								updateOllamaConfig(localStorage.token, ENABLE_OLLAMA_API);
-
-								if (OLLAMA_BASE_URLS.length === 0) {
-									OLLAMA_BASE_URLS = [''];
-								}
+								updateOllamaHandler();
 							}}
 						/>
 					</div>
@@ -261,85 +276,35 @@
 					<hr class=" border-gray-50 dark:border-gray-850 my-2" />
 
 					<div class="">
-						<div class="flex justify-between items-center mb-1.5">
+						<div class="flex justify-between items-center">
 							<div class="font-medium">{$i18n.t('Manage Ollama API Connections')}</div>
 
-							<button
-								class="px-1"
-								on:click={() => {
-									OLLAMA_BASE_URLS = [...OLLAMA_BASE_URLS, ''];
-								}}
-								type="button"
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 16 16"
-									fill="currentColor"
-									class="w-4 h-4"
+							<Tooltip content={$i18n.t(`Add Connection`)}>
+								<button
+									class="px-1"
+									on:click={() => {
+										showAddOllamaConnectionModal = true;
+									}}
+									type="button"
 								>
-									<path
-										d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-									/>
-								</svg>
-							</button>
+									<Plus />
+								</button>
+							</Tooltip>
 						</div>
 
 						<div class="flex w-full gap-1.5">
-							<div class="flex-1 flex flex-col gap-2">
+							<div class="flex-1 flex flex-col gap-1.5 mt-1.5">
 								{#each OLLAMA_BASE_URLS as url, idx}
-									<div class="flex gap-1.5">
-										<input
-											class="w-full text-sm bg-transparent outline-none"
-											placeholder={$i18n.t('Enter URL (e.g. http://localhost:11434)')}
-											bind:value={url}
-										/>
-
-										<div class="flex gap-1">
-											<Tooltip content="Verify" className="self-start">
-												<button
-													class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
-													on:click={() => {
-														verifyOllamaHandler(idx);
-													}}
-													type="button"
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 20 20"
-														fill="currentColor"
-														class="w-4 h-4"
-													>
-														<path
-															fill-rule="evenodd"
-															d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
-															clip-rule="evenodd"
-														/>
-													</svg>
-												</button>
-											</Tooltip>
-
-											<Tooltip content={$i18n.t('Remove')} className="self-start">
-												<button
-													class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
-													on:click={() => {
-														OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter(
-															(url, urlIdx) => idx !== urlIdx
-														);
-													}}
-													type="button"
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 16 16"
-														fill="currentColor"
-														class="w-4 h-4"
-													>
-														<path d="M3.75 7.25a.75.75 0 0 0 0 1.5h8.5a.75.75 0 0 0 0-1.5h-8.5Z" />
-													</svg>
-												</button>
-											</Tooltip>
-										</div>
-									</div>
+									<OllamaConnection
+										bind:url
+										bind:config={OLLAMA_API_CONFIGS[url]}
+										onSubmit={() => {
+											updateOllamaHandler();
+										}}
+										onDelete={() => {
+											OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url, urlIdx) => idx !== urlIdx);
+										}}
+									/>
 								{/each}
 							</div>
 						</div>

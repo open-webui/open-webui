@@ -36,7 +36,7 @@
 
 	let ollamaEnabled = null;
 
-	let OLLAMA_URLS = [];
+	let OLLAMA_BASE_URLS = [];
 	let selectedOllamaUrlIdx: number | null = null;
 
 	let updateModelId = null;
@@ -532,21 +532,13 @@
 		if (ollamaConfig.ENABLE_OLLAMA_API) {
 			ollamaEnabled = true;
 
-			await Promise.all([
-				(async () => {
-					OLLAMA_URLS = await getOllamaUrls(localStorage.token).catch((error) => {
-						toast.error(error);
-						return [];
-					});
+			OLLAMA_BASE_URLS = ollamaConfig.OLLAMA_BASE_URLS;
 
-					if (OLLAMA_URLS.length > 0) {
-						selectedOllamaUrlIdx = 0;
-					}
-				})(),
-				(async () => {
-					ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
-				})()
-			]);
+			if (OLLAMA_BASE_URLS.length > 0) {
+				selectedOllamaUrlIdx = 0;
+			}
+
+			ollamaVersion = true;
 		} else {
 			ollamaEnabled = false;
 			toast.error($i18n.t('Ollama API is disabled'));
@@ -568,7 +560,7 @@
 				<div class="space-y-2 pr-1.5">
 					<div class="text-sm font-medium">{$i18n.t('Manage Ollama Models')}</div>
 
-					{#if OLLAMA_URLS.length > 0}
+					{#if OLLAMA_BASE_URLS.length > 0}
 						<div class="flex gap-2">
 							<div class="flex-1 pb-1">
 								<select
@@ -576,7 +568,7 @@
 									bind:value={selectedOllamaUrlIdx}
 									placeholder={$i18n.t('Select an Ollama instance')}
 								>
-									{#each OLLAMA_URLS as url, idx}
+									{#each OLLAMA_BASE_URLS as url, idx}
 										<option value={idx} class="bg-gray-50 dark:bg-gray-700">{url}</option>
 									{/each}
 								</select>

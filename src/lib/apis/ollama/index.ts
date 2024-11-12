@@ -1,5 +1,44 @@
 import { OLLAMA_API_BASE_URL } from '$lib/constants';
 
+
+export const verifyOllamaConnection = async (
+	token: string = '',
+	url: string = '',
+	key: string = ''
+) => {
+	let error = null;
+
+	const res = await fetch(
+		`${OLLAMA_API_BASE_URL}/verify`,
+		{
+			method: 'POST',
+			headers: {
+				Accept: 'application/json',
+				Authorization: `Bearer ${token}`,
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				url,
+				key
+			})
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = `Ollama: ${err?.error?.message ?? 'Network Problem'}`;
+			return [];
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getOllamaConfig = async (token: string = '') => {
 	let error = null;
 
