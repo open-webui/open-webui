@@ -149,7 +149,11 @@
 							{$i18n.t('Content')}
 						</div>
 						<pre class="text-sm dark:text-gray-400 whitespace-pre-line">
-							{document.document}
+							{#if document.metadata?.html}
+								{@html document.document}
+							{:else}
+								{document.document}
+							{/if}
 						</pre>
 					</div>
 
