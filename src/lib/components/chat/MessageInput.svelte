@@ -291,7 +291,7 @@
 			<div class="w-full relative">
 				{#if atSelectedModel !== undefined || webSearchEnabled}
 					<div
-						class="px-3 py-1 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10"
+						class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10"
 					>
 						{#if atSelectedModel !== undefined}
 							<div class="flex items-center justify-between w-full">

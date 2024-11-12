@@ -148,18 +148,22 @@
 			OLLAMA_API_CONFIGS = ollamaConfig.OLLAMA_API_CONFIGS;
 
 			if (ENABLE_OPENAI_API) {
-				OPENAI_API_BASE_URLS.forEach(async (url, idx) => {
-					const res = await getOpenAIModels(localStorage.token, idx);
-					if (res.pipelines) {
-						pipelineUrls[url] = true;
-					}
-				});
-
 				for (const url of OPENAI_API_BASE_URLS) {
 					if (!OPENAI_API_CONFIGS[url]) {
 						OPENAI_API_CONFIGS[url] = {};
 					}
 				}
+
+				OPENAI_API_BASE_URLS.forEach(async (url, idx) => {
+					OPENAI_API_CONFIGS[url] = OPENAI_API_CONFIGS[url] || {};
+					if (!(OPENAI_API_CONFIGS[url]?.enable ?? true)) {
+						return;
+					}
+					const res = await getOpenAIModels(localStorage.token, idx);
+					if (res.pipelines) {
+						pipelineUrls[url] = true;
+					}
+				});
 			}
 
 			if (ENABLE_OLLAMA_API) {
