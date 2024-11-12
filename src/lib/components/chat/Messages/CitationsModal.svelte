@@ -1,4 +1,6 @@
 <script lang="ts">
+	import DOMPurify from 'dompurify';
+
 	import { getContext, onMount, tick } from 'svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -149,7 +151,11 @@
 							{$i18n.t('Content')}
 						</div>
 						<pre class="text-sm dark:text-gray-400 whitespace-pre-line">
-							{document.document}
+							{#if document.metadata?.html}
+								{@html DOMPurify(document.document)}
+							{:else}
+								{document.document}
+							{/if}
 						</pre>
 					</div>
 
