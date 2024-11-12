@@ -288,7 +288,7 @@ async def get_all_models_raw() -> list:
                 aiohttp_get(f"{url}/models", app.state.config.OPENAI_API_KEYS[idx])
             )
         else:
-            api_config = app.state.config.OPENAI_API_CONFIGS[url]
+            api_config = app.state.config.OPENAI_API_CONFIGS.get(url, {})
 
             enabled = api_config.get("enabled", True)
             model_ids = api_config.get("model_ids", [])
@@ -322,7 +322,7 @@ async def get_all_models_raw() -> list:
     for idx, response in enumerate(responses):
         if response:
             url = app.state.config.OPENAI_API_BASE_URLS[idx]
-            api_config = app.state.config.OPENAI_API_CONFIGS[url]
+            api_config = app.state.config.OPENAI_API_CONFIGS.get(url, {})
 
             prefix_id = api_config.get("prefix_id", None)
 
