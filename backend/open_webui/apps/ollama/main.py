@@ -46,7 +46,11 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
 
 
-app = FastAPI(docs_url="/docs" if ENV == "dev" else None, openapi_url="/openapi.json" if ENV == "dev" else None, redoc_url=None)
+app = FastAPI(
+    docs_url="/docs" if ENV == "dev" else None,
+    openapi_url="/openapi.json" if ENV == "dev" else None,
+    redoc_url=None,
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -90,34 +94,26 @@ async def get_status():
 
 @app.get("/config")
 async def get_config(user=Depends(get_admin_user)):
-    return {"ENABLE_OLLAMA_API": app.state.config.ENABLE_OLLAMA_API}
+    return {
+        "ENABLE_OLLAMA_API": app.state.config.ENABLE_OLLAMA_API,
+        "OLLAMA_BASE_URLS": app.state.config.OLLAMA_BASE_URLS,
+    }
 
 
 class OllamaConfigForm(BaseModel):
-    enable_ollama_api: Optional[bool] = None
+    ENABLE_OLLAMA_API: Optional[bool] = None
+    OLLAMA_BASE_URLS: list[str]
 
 
 @app.post("/config/update")
 async def update_config(form_data: OllamaConfigForm, user=Depends(get_admin_user)):
-    app.state.config.ENABLE_OLLAMA_API = form_data.enable_ollama_api
-    return {"ENABLE_OLLAMA_API": app.state.config.ENABLE_OLLAMA_API}
+    app.state.config.ENABLE_OLLAMA_API = form_data.ENABLE_OLLAMA_API
+    app.state.config.OLLAMA_BASE_URLS = form_data.OLLAMA_BASE_URLS
 
-
-@app.get("/urls")
-async def get_ollama_api_urls(user=Depends(get_admin_user)):
-    return {"OLLAMA_BASE_URLS": app.state.config.OLLAMA_BASE_URLS}
-
-
-class UrlUpdateForm(BaseModel):
-    urls: list[str]
-
-
-@app.post("/urls/update")
-async def update_ollama_api_url(form_data: UrlUpdateForm, user=Depends(get_admin_user)):
-    app.state.config.OLLAMA_BASE_URLS = form_data.urls
-
-    log.info(f"app.state.config.OLLAMA_BASE_URLS: {app.state.config.OLLAMA_BASE_URLS}")
-    return {"OLLAMA_BASE_URLS": app.state.config.OLLAMA_BASE_URLS}
+    return {
+        "ENABLE_OLLAMA_API": app.state.config.ENABLE_OLLAMA_API,
+        "OLLAMA_BASE_URLS": app.state.config.OLLAMA_BASE_URLS,
+    }
 
 
 async def fetch_url(url):

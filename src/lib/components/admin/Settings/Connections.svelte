@@ -1,33 +1,22 @@
 <script lang="ts">
-	import { models, user } from '$lib/stores';
+	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 
 	const dispatch = createEventDispatcher();
 
-	import {
-		getOllamaConfig,
-		getOllamaUrls,
-		getOllamaVersion,
-		updateOllamaConfig,
-		updateOllamaUrls
-	} from '$lib/apis/ollama';
-	import {
-		getOpenAIConfig,
-		getOpenAIKeys,
-		getOpenAIModels,
-		getOpenAIUrls,
-		updateOpenAIConfig,
-		updateOpenAIKeys,
-		updateOpenAIUrls
-	} from '$lib/apis/openai';
+	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
+	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
+	import { getModels as _getModels } from '$lib/apis';
 
-	import { toast } from 'svelte-sonner';
+	import { models, user } from '$lib/stores';
+
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { getModels as _getModels } from '$lib/apis';
-	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
-	import Cog6 from '$lib/components/icons/Cog6.svelte';
+
+	import OpenAIConnection from './Connections/OpenAIConnection.svelte';
+	import OpenAIConnectionModal from './Connections/OpenAIConnectionModal.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -38,125 +27,112 @@
 
 	// External
 	let OLLAMA_BASE_URLS = [''];
+	let OLLAMA_API_CONFIGS = {};
 
 	let OPENAI_API_KEYS = [''];
 	let OPENAI_API_BASE_URLS = [''];
+	let OPENAI_API_CONFIGS = {};
+
+	let ENABLE_OPENAI_API: null | boolean = null;
+	let ENABLE_OLLAMA_API: null | boolean = null;
 
 	let pipelineUrls = {};
-
-	let ENABLE_OPENAI_API = null;
-	let ENABLE_OLLAMA_API = null;
-
-	const verifyOpenAIHandler = async (idx) => {
-		OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.map((url) => url.replace(/\/$/, ''));
-
-		OPENAI_API_BASE_URLS = await updateOpenAIUrls(localStorage.token, OPENAI_API_BASE_URLS);
-		OPENAI_API_KEYS = await updateOpenAIKeys(localStorage.token, OPENAI_API_KEYS);
-
-		const res = await getOpenAIModels(localStorage.token, idx).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-
-		if (res) {
-			toast.success($i18n.t('Server connection verified'));
-			if (res.pipelines) {
-				pipelineUrls[OPENAI_API_BASE_URLS[idx]] = true;
-			}
-		}
-
-		await models.set(await getModels());
-	};
-
-	const verifyOllamaHandler = async (idx) => {
-		OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url) => url !== '').map((url) =>
-			url.replace(/\/$/, '')
-		);
-
-		OLLAMA_BASE_URLS = await updateOllamaUrls(localStorage.token, OLLAMA_BASE_URLS);
-
-		const res = await getOllamaVersion(localStorage.token, idx).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-
-		if (res) {
-			toast.success($i18n.t('Server connection verified'));
-		}
-
-		await models.set(await getModels());
-	};
+	let showAddOpenAIConnectionModal = false;
 
 	const updateOpenAIHandler = async () => {
-		OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.map((url) => url.replace(/\/$/, ''));
+		if (ENABLE_OPENAI_API !== null) {
+			OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.map((url) => url.replace(/\/$/, ''));
+			// Check if API KEYS length is same than API URLS length
+			if (OPENAI_API_KEYS.length !== OPENAI_API_BASE_URLS.length) {
+				// if there are more keys than urls, remove the extra keys
+				if (OPENAI_API_KEYS.length > OPENAI_API_BASE_URLS.length) {
+					OPENAI_API_KEYS = OPENAI_API_KEYS.slice(0, OPENAI_API_BASE_URLS.length);
+				}
 
-		// Check if API KEYS length is same than API URLS length
-		if (OPENAI_API_KEYS.length !== OPENAI_API_BASE_URLS.length) {
-			// if there are more keys than urls, remove the extra keys
-			if (OPENAI_API_KEYS.length > OPENAI_API_BASE_URLS.length) {
-				OPENAI_API_KEYS = OPENAI_API_KEYS.slice(0, OPENAI_API_BASE_URLS.length);
-			}
-
-			// if there are more urls than keys, add empty keys
-			if (OPENAI_API_KEYS.length < OPENAI_API_BASE_URLS.length) {
-				const diff = OPENAI_API_BASE_URLS.length - OPENAI_API_KEYS.length;
-				for (let i = 0; i < diff; i++) {
-					OPENAI_API_KEYS.push('');
+				// if there are more urls than keys, add empty keys
+				if (OPENAI_API_KEYS.length < OPENAI_API_BASE_URLS.length) {
+					const diff = OPENAI_API_BASE_URLS.length - OPENAI_API_KEYS.length;
+					for (let i = 0; i < diff; i++) {
+						OPENAI_API_KEYS.push('');
+					}
 				}
 			}
-		}
 
-		OPENAI_API_BASE_URLS = await updateOpenAIUrls(localStorage.token, OPENAI_API_BASE_URLS);
-		OPENAI_API_KEYS = await updateOpenAIKeys(localStorage.token, OPENAI_API_KEYS);
-		await models.set(await getModels());
-	};
-
-	const updateOllamaUrlsHandler = async () => {
-		OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url) => url !== '').map((url) =>
-			url.replace(/\/$/, '')
-		);
-
-		console.log(OLLAMA_BASE_URLS);
-
-		if (OLLAMA_BASE_URLS.length === 0) {
-			ENABLE_OLLAMA_API = false;
-			await updateOllamaConfig(localStorage.token, ENABLE_OLLAMA_API);
-
-			toast.info($i18n.t('Ollama API disabled'));
-		} else {
-			OLLAMA_BASE_URLS = await updateOllamaUrls(localStorage.token, OLLAMA_BASE_URLS);
-
-			const ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => {
+			const res = await updateOpenAIConfig(localStorage.token, {
+				ENABLE_OPENAI_API: ENABLE_OPENAI_API,
+				OPENAI_API_BASE_URLS: OPENAI_API_BASE_URLS,
+				OPENAI_API_KEYS: OPENAI_API_KEYS,
+				OPENAI_API_CONFIGS: OPENAI_API_CONFIGS
+			}).catch((error) => {
 				toast.error(error);
-				return null;
 			});
 
-			if (ollamaVersion) {
-				toast.success($i18n.t('Server connection verified'));
+			if (res) {
+				toast.success($i18n.t('OpenAI API settings updated'));
 				await models.set(await getModels());
 			}
 		}
 	};
 
+	const updateOllamaHandler = async () => {
+		if (ENABLE_OLLAMA_API !== null) {
+			OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url) => url !== '').map((url) =>
+				url.replace(/\/$/, '')
+			);
+
+			console.log(OLLAMA_BASE_URLS);
+
+			if (OLLAMA_BASE_URLS.length === 0) {
+				ENABLE_OLLAMA_API = false;
+				toast.info($i18n.t('Ollama API disabled'));
+			}
+
+			const res = await updateOllamaConfig(localStorage.token, {
+				ENABLE_OLLAMA_API: ENABLE_OLLAMA_API,
+				OLLAMA_BASE_URLS: OLLAMA_BASE_URLS,
+				OLLAMA_API_CONFIGS: OLLAMA_API_CONFIGS
+			}).catch((error) => {
+				toast.error(error);
+			});
+
+			if (res) {
+				toast.success($i18n.t('Ollama API settings updated'));
+				await models.set(await getModels());
+			}
+		}
+	};
+
+	const addOpenAIConnectionHandler = async (connection) => {
+		OPENAI_API_BASE_URLS = [...OPENAI_API_BASE_URLS, connection.url];
+		OPENAI_API_KEYS = [...OPENAI_API_KEYS, connection.key];
+		OPENAI_API_CONFIGS[connection.url] = connection.config;
+
+		await updateOpenAIHandler();
+	};
+
 	onMount(async () => {
 		if ($user.role === 'admin') {
+			let ollamaConfig = {};
+			let openaiConfig = {};
+
 			await Promise.all([
 				(async () => {
-					OLLAMA_BASE_URLS = await getOllamaUrls(localStorage.token);
+					ollamaConfig = await getOllamaConfig(localStorage.token);
 				})(),
 				(async () => {
-					OPENAI_API_BASE_URLS = await getOpenAIUrls(localStorage.token);
-				})(),
-				(async () => {
-					OPENAI_API_KEYS = await getOpenAIKeys(localStorage.token);
+					openaiConfig = await getOpenAIConfig(localStorage.token);
 				})()
 			]);
 
-			const ollamaConfig = await getOllamaConfig(localStorage.token);
-			const openaiConfig = await getOpenAIConfig(localStorage.token);
-
 			ENABLE_OPENAI_API = openaiConfig.ENABLE_OPENAI_API;
 			ENABLE_OLLAMA_API = ollamaConfig.ENABLE_OLLAMA_API;
+
+			OPENAI_API_BASE_URLS = openaiConfig.OPENAI_API_BASE_URLS;
+			OPENAI_API_KEYS = openaiConfig.OPENAI_API_KEYS;
+			OPENAI_API_CONFIGS = openaiConfig.OPENAI_API_CONFIGS;
+
+			OLLAMA_BASE_URLS = ollamaConfig.OLLAMA_BASE_URLS;
+			OLLAMA_API_CONFIGS = ollamaConfig.OLLAMA_API_CONFIGS;
 
 			if (ENABLE_OPENAI_API) {
 				OPENAI_API_BASE_URLS.forEach(async (url, idx) => {
@@ -165,16 +141,35 @@
 						pipelineUrls[url] = true;
 					}
 				});
+
+				for (const url of OPENAI_API_BASE_URLS) {
+					if (!OPENAI_API_CONFIGS[url]) {
+						OPENAI_API_CONFIGS[url] = {};
+					}
+				}
+			}
+
+			if (ENABLE_OLLAMA_API) {
+				for (const url of OLLAMA_BASE_URLS) {
+					if (!OLLAMA_API_CONFIGS[url]) {
+						OLLAMA_API_CONFIGS[url] = {};
+					}
+				}
 			}
 		}
 	});
 </script>
 
+<OpenAIConnectionModal
+	bind:show={showAddOpenAIConnectionModal}
+	onSubmit={addOpenAIConnectionHandler}
+/>
+
 <form
 	class="flex flex-col h-full justify-between text-sm"
 	on:submit|preventDefault={() => {
 		updateOpenAIHandler();
-		updateOllamaUrlsHandler();
+		updateOllamaHandler();
 
 		dispatch('save');
 	}}
@@ -191,7 +186,7 @@
 								<Switch
 									bind:state={ENABLE_OPENAI_API}
 									on:change={async () => {
-										updateOpenAIConfig(localStorage.token, ENABLE_OPENAI_API);
+										updateOpenAIHandler();
 									}}
 								/>
 							</div>
@@ -202,149 +197,39 @@
 						<hr class=" border-gray-50 dark:border-gray-850" />
 
 						<div class="">
-							<div class="flex justify-between items-center mb-1.5">
+							<div class="flex justify-between items-center">
 								<div class="font-medium">{$i18n.t('Manage OpenAI API Connections')}</div>
 
-								<button
-									class="px-1"
-									on:click={() => {
-										OPENAI_API_BASE_URLS = [...OPENAI_API_BASE_URLS, ''];
-										OPENAI_API_KEYS = [...OPENAI_API_KEYS, ''];
-									}}
-									type="button"
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-										class="w-4 h-4"
+								<Tooltip content={$i18n.t(`Add Connection`)}>
+									<button
+										class="px-1"
+										on:click={() => {
+											showAddOpenAIConnectionModal = true;
+										}}
+										type="button"
 									>
-										<path
-											d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-										/>
-									</svg>
-								</button>
+										<Plus />
+									</button>
+								</Tooltip>
 							</div>
 
-							<div class="flex flex-col gap-1.5">
+							<div class="flex flex-col gap-1.5 mt-1.5">
 								{#each OPENAI_API_BASE_URLS as url, idx}
-									<div class="flex w-full gap-2 items-center">
-										<Tooltip
-											className="w-full"
-											content={$i18n.t(`WebUI will make requests to "{{url}}/chat/completions"`, {
-												url
-											})}
-											placement="top-start"
-										>
-											<div class="flex w-full">
-												<div class="flex-1 relative">
-													<input
-														class=" outline-none w-full bg-transparent {pipelineUrls[url]
-															? 'pr-8'
-															: ''}"
-														placeholder={$i18n.t('API Base URL')}
-														bind:value={url}
-														autocomplete="off"
-													/>
-
-													{#if pipelineUrls[url]}
-														<div class=" absolute top-2.5 right-2.5">
-															<Tooltip content="Pipelines">
-																<svg
-																	xmlns="http://www.w3.org/2000/svg"
-																	viewBox="0 0 24 24"
-																	fill="currentColor"
-																	class="size-4"
-																>
-																	<path
-																		d="M11.644 1.59a.75.75 0 0 1 .712 0l9.75 5.25a.75.75 0 0 1 0 1.32l-9.75 5.25a.75.75 0 0 1-.712 0l-9.75-5.25a.75.75 0 0 1 0-1.32l9.75-5.25Z"
-																	/>
-																	<path
-																		d="m3.265 10.602 7.668 4.129a2.25 2.25 0 0 0 2.134 0l7.668-4.13 1.37.739a.75.75 0 0 1 0 1.32l-9.75 5.25a.75.75 0 0 1-.71 0l-9.75-5.25a.75.75 0 0 1 0-1.32l1.37-.738Z"
-																	/>
-																	<path
-																		d="m10.933 19.231-7.668-4.13-1.37.739a.75.75 0 0 0 0 1.32l9.75 5.25c.221.12.489.12.71 0l9.75-5.25a.75.75 0 0 0 0-1.32l-1.37-.738-7.668 4.13a2.25 2.25 0 0 1-2.134-.001Z"
-																	/>
-																</svg>
-															</Tooltip>
-														</div>
-													{/if}
-												</div>
-
-												<SensitiveInput
-													inputClassName=" outline-none bg-transparent w-full"
-													placeholder={$i18n.t('API Key')}
-													bind:value={OPENAI_API_KEYS[idx]}
-												/>
-											</div>
-										</Tooltip>
-
-										<div class="flex gap-1">
-											<Tooltip content="Verify" className="self-start">
-												<button
-													class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
-													on:click={() => {
-														verifyOpenAIHandler(idx);
-													}}
-													type="button"
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 20 20"
-														fill="currentColor"
-														class="w-4 h-4"
-													>
-														<path
-															fill-rule="evenodd"
-															d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
-															clip-rule="evenodd"
-														/>
-													</svg>
-												</button>
-											</Tooltip>
-
-											<!-- <Tooltip content={$i18n.t('Configure')} className="self-start">
-												<button
-													class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
-													on:click={() => {
-														OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.filter(
-															(url, urlIdx) => idx !== urlIdx
-														);
-														OPENAI_API_KEYS = OPENAI_API_KEYS.filter(
-															(key, keyIdx) => idx !== keyIdx
-														);
-													}}
-													type="button"
-												>
-													<Cog6 />
-												</button>
-											</Tooltip> -->
-
-											<Tooltip content={$i18n.t('Remove')} className="self-start">
-												<button
-													class="self-center p-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
-													on:click={() => {
-														OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.filter(
-															(url, urlIdx) => idx !== urlIdx
-														);
-														OPENAI_API_KEYS = OPENAI_API_KEYS.filter(
-															(key, keyIdx) => idx !== keyIdx
-														);
-													}}
-													type="button"
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 16 16"
-														fill="currentColor"
-														class="w-4 h-4"
-													>
-														<path d="M3.75 7.25a.75.75 0 0 0 0 1.5h8.5a.75.75 0 0 0 0-1.5h-8.5Z" />
-													</svg>
-												</button>
-											</Tooltip>
-										</div>
-									</div>
+									<OpenAIConnection
+										pipeline={pipelineUrls[url] ? true : false}
+										bind:url
+										bind:key={OPENAI_API_KEYS[idx]}
+										bind:config={OPENAI_API_CONFIGS[OPENAI_API_BASE_URLS[idx]]}
+										onSubmit={() => {
+											updateOpenAIHandler();
+										}}
+										onDelete={() => {
+											OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.filter(
+												(url, urlIdx) => idx !== urlIdx
+											);
+											OPENAI_API_KEYS = OPENAI_API_KEYS.filter((key, keyIdx) => idx !== keyIdx);
+										}}
+									/>
 								{/each}
 							</div>
 						</div>
@@ -435,7 +320,7 @@
 
 											<Tooltip content={$i18n.t('Remove')} className="self-start">
 												<button
-													class="self-center p-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
+													class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
 													on:click={() => {
 														OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter(
 															(url, urlIdx) => idx !== urlIdx

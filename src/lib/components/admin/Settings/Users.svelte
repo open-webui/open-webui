@@ -133,7 +133,7 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-850" />
+		<hr class=" border-gray-50 dark:border-gray-850" />
 
 		<div class=" space-y-3">
 			<div class="mt-2 space-y-2 pr-1.5">
@@ -323,7 +323,7 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-850 my-2" />
+		<hr class=" border-gray-50 dark:border-gray-850 my-2" />
 
 		<div class="mt-2 space-y-3">
 			<div>
