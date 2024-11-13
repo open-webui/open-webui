@@ -300,7 +300,7 @@ async def get_all_models():
                 prefix_id = api_config.get("prefix_id", None)
                 model_ids = api_config.get("model_ids", [])
 
-                if len(model_ids) != 0:
+                if len(model_ids) != 0 and "models" in response:
                     response["models"] = list(
                         filter(
                             lambda model: model["model"] in model_ids,
@@ -309,7 +309,7 @@ async def get_all_models():
                     )
 
                 if prefix_id:
-                    for model in response["models"]:
+                    for model in response.get("models", []):
                         model["model"] = f"{prefix_id}.{model['model']}"
 
         print(responses)
@@ -317,7 +317,8 @@ async def get_all_models():
         models = {
             "models": merge_models_lists(
                 map(
-                    lambda response: response["models"] if response else None, responses
+                    lambda response: response.get("models", []) if response else None,
+                    responses,
                 )
             )
         }
