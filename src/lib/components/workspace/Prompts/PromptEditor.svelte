@@ -60,7 +60,7 @@
 
 <div class="w-full max-h-full flex justify-center">
 	<form
-		class="flex flex-col max-w-4xl mx-auto mb-10 py-4"
+		class="flex flex-col w-full mb-10"
 		on:submit|preventDefault={() => {
 			submitHandler();
 		}}
@@ -137,9 +137,9 @@
 
 		<div class="my-4 flex justify-end pb-20">
 			<button
-				class=" text-sm px-3 py-2 transition rounded-lg {loading
+				class=" text-sm w-full lg:w-fit px-4 py-2 transition rounded-lg {loading
 					? ' cursor-not-allowed bg-white hover:bg-gray-100 text-black'
-					: ' bg-white hover:bg-gray-100 text-black'} flex w-full justify-center"
+					: ' bg-white hover:bg-gray-100 text-black'} flex justify-center"
 				type="submit"
 				disabled={loading}
 			>
