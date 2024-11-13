@@ -323,7 +323,7 @@
 			</div>
 		</div>
 
-		<hr class=" border-gray-50 dark:border-gray-850 my-2" />
+		<!-- <hr class=" border-gray-50 dark:border-gray-850 my-2" />
 
 		<div class="mt-2 space-y-3">
 			<div>
@@ -436,7 +436,7 @@
 					{/if}
 				</div>
 			</div>
-		</div>
+		</div> -->
 	</div>
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
