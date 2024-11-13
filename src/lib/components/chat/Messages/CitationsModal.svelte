@@ -13,9 +13,9 @@
 	let mergedDocuments = [];
 
 	function calculatePercentage(distance: number) {
-		if (distance < 0) return 100;
-		if (distance > 1) return 0;
-		return Math.round((1 - distance) * 10000) / 100;
+		if (distance < 0) return 0;
+		if (distance > 1) return 100;
+		return Math.round(distance * 10000) / 100;
 	}
 
 	function getRelevanceColor(percentage: number) {
