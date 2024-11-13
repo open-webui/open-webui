@@ -25,6 +25,8 @@
 
 	const i18n = getContext('i18n');
 
+	export let show = false;
+
 	let tab = 'tools';
 	let selectedId = '';
 
@@ -115,21 +117,25 @@
 		getUserValves();
 	}
 
-	onMount(async () => {
+	$: if (show) {
+		init();
+	}
+
+	const init = async () => {
 		loading = true;
 
-		if ($functions.length === 0) {
+		if ($functions === null) {
 			functions.set(await getFunctions(localStorage.token));
 		}
-		if ($tools.length === 0) {
+		if ($tools === null) {
 			tools.set(await getTools(localStorage.token));
 		}
 
 		loading = false;
-	});
+	};
 </script>
 
-{#if !loading}
+{#if show && !loading}
 	<form
 		class="flex flex-col h-full justify-between space-y-3 text-sm"
 		on:submit|preventDefault={() => {
@@ -203,5 +209,5 @@
 		</div>
 	</form>
 {:else}
-	<Spinner className="size-6" />
+	<Spinner className="size-4" />
 {/if}
