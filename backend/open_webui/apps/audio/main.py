@@ -395,60 +395,60 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             )
 
 def remove_silence_from_chunk(audio_chunk):
-    """Удаляет тишину из фрагмента аудио."""
+    """Removes silence from an audio chunk."""
     return split_on_silence(
         audio_chunk,
-        min_silence_len=5000,  # минимальная длина тишины для разделения
-        silence_thresh=-40  # порог громкости тишины
+        min_silence_len=5000,  # minimum silence length for splitting
+        silence_thresh=-40  # silence volume threshold
     )
 
 def remove_silence(audio):
-    """Удаляет тишину из аудиофайла, разделяя его на фрагменты и обрабатывая их параллельно."""
-    chunk_size = 5000  # размер фрагмента в миллисекундах
+    """Removes silence from an audio file by splitting it into chunks and processing them in parallel."""
+    chunk_size = 5000  # chunk size in milliseconds
     chunks = [audio[i:i+chunk_size] for i in range(0, len(audio), chunk_size)]
     
-    # Параллельная обработка фрагментов аудио
+    # Parallel processing of audio chunks
     with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
         results = pool.map(remove_silence_from_chunk, chunks)
     
-    # Объединение фрагментов без тишины
+    # Combining non-silent chunks
     non_silent_segments = [segment for chunk in results for segment in chunk]
     return sum(non_silent_segments) if non_silent_segments else audio
 
 def transcribe(file_path):
-    """Обрабатывает аудиофайл: удаляет тишину и выполняет транскрипцию."""
+    """Processes an audio file: removes silence and performs transcription."""
     print("Transcribing", file_path)
     
     filename = os.path.basename(file_path)
     file_dir = os.path.dirname(file_path)
-    file_id = filename.split(".")[0]  # Идентификатор файла без расширения
+    file_id = filename.split(".")[0]  # File identifier without extension
     
-    # Проверка на выбор движка для распознавания речи
+    # Check for speech recognition engine selection
     if app.state.config.STT_ENGINE == "":
         if app.state.faster_whisper_model is None:
             set_faster_whisper_model(app.state.config.WHISPER_MODEL)
 
         model = app.state.faster_whisper_model
 
-        # Загрузка и обработка аудиофайла
+        # Loading and processing the audio file
         audio = AudioSegment.from_file(file_path)
-        processed_audio = remove_silence(audio)  # Удаление тишины из аудио
+        processed_audio = remove_silence(audio)  # Removing silence from audio
         
-        # Сохранение обработанного аудио во временный файл
+        # Saving processed audio to a temporary file
         temp_path = os.path.join(file_dir, f"{file_id}_processed.wav")
         processed_audio.export(temp_path, format="wav")
         
-        # Транскрипция с использованием модели
+        # Transcription using the model
         segments, info = model.transcribe(temp_path, beam_size=5)
         log.info(
             "Detected language '%s' with probability %f" % (info.language, info.language_probability)
         )
 
-        # Составление текста из сегментов транскрипции
+        # Constructing the transcript from segments
         transcript = "".join([segment.text for segment in segments])
         data = {"text": transcript.strip()}
 
-        # Сохранение расшифровки в JSON-файл
+        # Saving the transcription to a JSON file
         transcript_file = os.path.join(file_dir, f"{file_id}.json")
         with open(transcript_file, "w") as f:
             json.dump(data, f)
