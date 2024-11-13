@@ -352,7 +352,7 @@
 									<button
 										class="flex items-center dark:text-gray-500"
 										on:click={() => {
-											webSearchEnabled = false;
+											selectedToolIds = [];
 										}}
 									>
 										<XMark />
