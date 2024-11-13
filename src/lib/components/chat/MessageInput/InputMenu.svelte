@@ -31,7 +31,12 @@
 		init();
 	}
 
+	$: if (tools) {
+		selectedToolIds = Object.keys(tools).filter((toolId) => tools[toolId]?.enabled ?? false);
+	}
+
 	const init = async () => {
+		console.log('init');
 		if ($_tools === null) {
 			await _tools.set(await getTools(localStorage.token));
 		}
@@ -76,9 +81,7 @@
 						<button
 							class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
 							on:click={() => {
-								selectedToolIds = tools[toolId].enabled
-									? selectedToolIds.filter((id) => id !== toolId)
-									: [...selectedToolIds, toolId];
+								tools[toolId].enabled = !tools[toolId].enabled;
 							}}
 						>
 							<div class="flex-1 truncate">
@@ -93,7 +96,7 @@
 								</Tooltip>
 							</div>
 
-							<div class=" shrink-0 flex-shrink-0">
+							<div class=" flex-shrink-0">
 								<Switch state={tools[toolId].enabled} />
 							</div>
 						</button>
