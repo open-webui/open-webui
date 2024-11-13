@@ -183,7 +183,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    docs_url="/docs" if ENV == "dev" else None, openapi_url="/openapi.json" if ENV == "dev" else None, redoc_url=None, lifespan=lifespan
+    docs_url="/docs" if ENV == "dev" else None,
+    openapi_url="/openapi.json" if ENV == "dev" else None,
+    redoc_url=None,
+    lifespan=lifespan,
 )
 
 app.state.config = AppConfig()
@@ -1081,15 +1084,16 @@ async def get_models(user=Depends(get_verified_user)):
         if "pipeline" not in model or model["pipeline"].get("type", None) != "filter"
     ]
 
-    if app.state.config.ENABLE_MODEL_FILTER:
-        if user.role == "user":
-            models = list(
-                filter(
-                    lambda model: model["id"] in app.state.config.MODEL_FILTER_LIST,
-                    models,
-                )
-            )
-            return {"data": models}
+    # TODO: Check User Group and Filter Models
+    # if app.state.config.ENABLE_MODEL_FILTER:
+    #     if user.role == "user":
+    #         models = list(
+    #             filter(
+    #                 lambda model: model["id"] in app.state.config.MODEL_FILTER_LIST,
+    #                 models,
+    #             )
+    #         )
+    #         return {"data": models}
 
     return {"data": models}
 
@@ -1106,12 +1110,14 @@ async def generate_chat_completions(
             detail="Model not found",
         )
 
-    if not bypass_filter and app.state.config.ENABLE_MODEL_FILTER:
-        if user.role == "user" and model_id not in app.state.config.MODEL_FILTER_LIST:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Model not found",
-            )
+    # TODO: Check User Group and Filter Models
+    # if not bypass_filter:
+    #     if app.state.config.ENABLE_MODEL_FILTER:
+    #         if user.role == "user" and model_id not in app.state.config.MODEL_FILTER_LIST:
+    #             raise HTTPException(
+    #                 status_code=status.HTTP_403_FORBIDDEN,
+    #                 detail="Model not found",
+    #             )
 
     model = app.state.MODELS[model_id]
 
@@ -1161,14 +1167,16 @@ async def generate_chat_completions(
                 ),
                 "selected_model_id": selected_model_id,
             }
+
     if model.get("pipe"):
+        # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter
         return await generate_function_chat_completion(form_data, user=user)
     if model["owned_by"] == "ollama":
         # Using /ollama/api/chat endpoint
         form_data = convert_payload_openai_to_ollama(form_data)
         form_data = GenerateChatCompletionForm(**form_data)
         response = await generate_ollama_chat_completion(
-            form_data=form_data, user=user, bypass_filter=True
+            form_data=form_data, user=user, bypass_filter=bypass_filter
         )
         if form_data.stream:
             response.headers["content-type"] = "text/event-stream"
@@ -1179,7 +1187,9 @@ async def generate_chat_completions(
         else:
             return convert_response_ollama_to_openai(response)
     else:
-        return await generate_openai_chat_completion(form_data, user=user)
+        return await generate_openai_chat_completion(
+            form_data, user=user, bypass_filter=bypass_filter
+        )
 
 
 @app.post("/api/chat/completed")
@@ -2294,32 +2304,6 @@ async def get_app_config(request: Request):
             if user is not None
             else {}
         ),
-    }
-
-
-@app.get("/api/config/model/filter")
-async def get_model_filter_config(user=Depends(get_admin_user)):
-    return {
-        "enabled": app.state.config.ENABLE_MODEL_FILTER,
-        "models": app.state.config.MODEL_FILTER_LIST,
-    }
-
-
-class ModelFilterConfigForm(BaseModel):
-    enabled: bool
-    models: list[str]
-
-
-@app.post("/api/config/model/filter")
-async def update_model_filter_config(
-    form_data: ModelFilterConfigForm, user=Depends(get_admin_user)
-):
-    app.state.config.ENABLE_MODEL_FILTER = form_data.enabled
-    app.state.config.MODEL_FILTER_LIST = form_data.models
-
-    return {
-        "enabled": app.state.config.ENABLE_MODEL_FILTER,
-        "models": app.state.config.MODEL_FILTER_LIST,
     }
 
 

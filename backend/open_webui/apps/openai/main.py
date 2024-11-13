@@ -11,9 +11,7 @@ from open_webui.apps.webui.models.models import Models
 from open_webui.config import (
     CACHE_DIR,
     CORS_ALLOW_ORIGIN,
-    ENABLE_MODEL_FILTER,
     ENABLE_OPENAI_API,
-    MODEL_FILTER_LIST,
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
@@ -60,9 +58,6 @@ app.add_middleware(
 )
 
 app.state.config = AppConfig()
-
-app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
-app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
 app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
@@ -372,15 +367,18 @@ async def get_all_models(raw=False) -> dict[str, list] | list:
 async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_user)):
     if url_idx is None:
         models = await get_all_models()
-        if app.state.config.ENABLE_MODEL_FILTER:
-            if user.role == "user":
-                models["data"] = list(
-                    filter(
-                        lambda model: model["id"] in app.state.config.MODEL_FILTER_LIST,
-                        models["data"],
-                    )
-                )
-                return models
+
+        # TODO: Check User Group and Filter Models
+        # if app.state.config.ENABLE_MODEL_FILTER:
+        #     if user.role == "user":
+        #         models["data"] = list(
+        #             filter(
+        #                 lambda model: model["id"] in app.state.config.MODEL_FILTER_LIST,
+        #                 models["data"],
+        #             )
+        #         )
+        #         return models
+
         return models
     else:
         url = app.state.config.OPENAI_API_BASE_URLS[url_idx]
@@ -492,11 +490,10 @@ async def verify_connection(
 
 
 @app.post("/chat/completions")
-@app.post("/chat/completions/{url_idx}")
 async def generate_chat_completion(
     form_data: dict,
-    url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
+    bypass_filter: Optional[bool] = False,
 ):
     idx = 0
     payload = {**form_data}
@@ -505,6 +502,16 @@ async def generate_chat_completion(
         del payload["metadata"]
 
     model_id = form_data.get("model")
+
+    # TODO: Check User Group and Filter Models
+    # if not bypass_filter:
+    #     if app.state.config.ENABLE_MODEL_FILTER:
+    #         if user.role == "user" and model_id not in app.state.config.MODEL_FILTER_LIST:
+    #             raise HTTPException(
+    #                 status_code=403,
+    #                 detail="Model not found",
+    #             )
+
     model_info = Models.get_model_by_id(model_id)
 
     if model_info:

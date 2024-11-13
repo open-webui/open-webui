@@ -12,6 +12,12 @@
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
+	import Badge from '$lib/components/common/Badge.svelte';
+	import UsersSolid from '$lib/components/icons/UsersSolid.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import User from '$lib/components/icons/User.svelte';
+	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -38,7 +44,16 @@
 		if ($user?.role !== 'admin') {
 			await goto('/');
 		} else {
-			groups = [];
+			groups = [
+				{
+					name: 'Admins',
+					description: 'Admins have full access to all features and settings.',
+					permissions: {
+						admin: true
+					},
+					user_ids: [1, 2, 3]
+				}
+			];
 		}
 		loaded = true;
 	});
@@ -117,7 +132,64 @@
 				</div>
 			</div>
 		{:else}
-			<div></div>
+			<div>
+				<div class=" flex items-center gap-3 justify-between text-xs uppercase px-1 font-bold">
+					<div class="w-full">Group</div>
+
+					<div class="w-full">Users</div>
+
+					<div class="w-full"></div>
+				</div>
+
+				<hr class="mt-1.5 mb-2 border-gray-50 dark:border-gray-850" />
+
+				{#each filteredGroups as group}
+					<div class="flex items-center gap-3 justify-between px-1 text-xs w-full transition">
+						<div class="flex items-center gap-1.5 w-full font-medium">
+							<div>
+								<UserCircleSolid className="size-4" />
+							</div>
+							{group.name}
+						</div>
+
+						<div class="flex items-center gap-1.5 w-full font-medium">
+							{group.user_ids.length}
+
+							<div>
+								<User className="size-3.5" />
+							</div>
+						</div>
+
+						<div class="w-full flex justify-end">
+							<button class=" rounded-lg p-1">
+								<EllipsisHorizontal />
+							</button>
+						</div>
+					</div>
+				{/each}
+			</div>
 		{/if}
+
+		<hr class="my-2 border-gray-50 dark:border-gray-850" />
+
+		<button class="flex items-center justify-between rounded-lg w-full transition pt-1">
+			<div class="flex items-center gap-2.5">
+				<div class="p-1.5 bg-black/5 dark:bg-white/10 rounded-full">
+					<UsersSolid className="size-4" />
+				</div>
+
+				<div class="text-left">
+					<div class=" text-sm font-medium">{$i18n.t('Default permissions')}</div>
+
+					<div class="flex text-xs mt-0.5">
+						{$i18n.t('applies to all users with the "user" role')}
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<ChevronRight strokeWidth="2.5" />
+			</div>
+		</button>
 	</div>
 {/if}

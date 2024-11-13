@@ -411,7 +411,7 @@
 				</div>
 			</a>
 			<div class="flex flex-row gap-0.5 self-center">
-				{#if shiftKey}
+				{#if $user?.role === 'admin' && shiftKey}
 					<Tooltip
 						content={(model?.info?.meta?.hidden ?? false)
 							? $i18n.t('Show Model')
@@ -475,28 +475,31 @@
 						</button>
 					</Tooltip>
 				{:else}
-					<a
-						class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-						type="button"
-						href={`/workspace/models/edit?id=${encodeURIComponent(model.id)}`}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="1.5"
-							stroke="currentColor"
-							class="w-4 h-4"
+					{#if $user?.role === 'admin'}
+						<a
+							class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+							type="button"
+							href={`/workspace/models/edit?id=${encodeURIComponent(model.id)}`}
 						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
-							/>
-						</svg>
-					</a>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="1.5"
+								stroke="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+								/>
+							</svg>
+						</a>
+					{/if}
 
 					<ModelMenu
+						user={$user}
 						{model}
 						shareHandler={() => {
 							shareModelHandler(model);
@@ -532,131 +535,133 @@
 	{/each}
 </div>
 
-<div class=" flex justify-end w-full mb-3">
-	<div class="flex space-x-1">
-		<input
-			id="models-import-input"
-			bind:this={modelsImportInputElement}
-			bind:files={importFiles}
-			type="file"
-			accept=".json"
-			hidden
-			on:change={() => {
-				console.log(importFiles);
+{#if $user?.role === 'admin'}
+	<div class=" flex justify-end w-full mb-3">
+		<div class="flex space-x-1">
+			<input
+				id="models-import-input"
+				bind:this={modelsImportInputElement}
+				bind:files={importFiles}
+				type="file"
+				accept=".json"
+				hidden
+				on:change={() => {
+					console.log(importFiles);
 
-				let reader = new FileReader();
-				reader.onload = async (event) => {
-					let savedModels = JSON.parse(event.target.result);
-					console.log(savedModels);
+					let reader = new FileReader();
+					reader.onload = async (event) => {
+						let savedModels = JSON.parse(event.target.result);
+						console.log(savedModels);
 
-					for (const model of savedModels) {
-						if (model?.info ?? false) {
-							if ($models.find((m) => m.id === model.id)) {
-								await updateModelById(localStorage.token, model.id, model.info).catch((error) => {
-									return null;
-								});
-							} else {
-								await addNewModel(localStorage.token, model.info).catch((error) => {
-									return null;
-								});
+						for (const model of savedModels) {
+							if (model?.info ?? false) {
+								if ($models.find((m) => m.id === model.id)) {
+									await updateModelById(localStorage.token, model.id, model.info).catch((error) => {
+										return null;
+									});
+								} else {
+									await addNewModel(localStorage.token, model.info).catch((error) => {
+										return null;
+									});
+								}
 							}
 						}
-					}
 
-					await models.set(await getModels(localStorage.token));
-					_models = $models;
-				};
+						await models.set(await getModels(localStorage.token));
+						_models = $models;
+					};
 
-				reader.readAsText(importFiles[0]);
-			}}
-		/>
+					reader.readAsText(importFiles[0]);
+				}}
+			/>
 
-		<button
-			class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-			on:click={() => {
-				modelsImportInputElement.click();
-			}}
-		>
-			<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Import Models')}</div>
+			<button
+				class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+				on:click={() => {
+					modelsImportInputElement.click();
+				}}
+			>
+				<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Import Models')}</div>
 
-			<div class=" self-center">
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 16 16"
-					fill="currentColor"
-					class="w-3.5 h-3.5"
-				>
-					<path
-						fill-rule="evenodd"
-						d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
-						clip-rule="evenodd"
-					/>
-				</svg>
-			</div>
-		</button>
+				<div class=" self-center">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="w-3.5 h-3.5"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</div>
+			</button>
 
-		<button
-			class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-			on:click={async () => {
-				downloadModels($models);
-			}}
-		>
-			<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Export Models')}</div>
+			<button
+				class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+				on:click={async () => {
+					downloadModels($models);
+				}}
+			>
+				<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Export Models')}</div>
 
-			<div class=" self-center">
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 16 16"
-					fill="currentColor"
-					class="w-3.5 h-3.5"
-				>
-					<path
-						fill-rule="evenodd"
-						d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
-						clip-rule="evenodd"
-					/>
-				</svg>
-			</div>
-		</button>
-	</div>
-
-	{#if localModelfiles.length > 0}
-		<div class="flex">
-			<div class=" self-center text-sm font-medium mr-4">
-				{localModelfiles.length} Local Modelfiles Detected
-			</div>
-
-			<div class="flex space-x-1">
-				<button
-					class="self-center w-fit text-sm p-1.5 border dark:border-gray-600 rounded-xl flex"
-					on:click={async () => {
-						downloadModels(localModelfiles);
-
-						localStorage.removeItem('modelfiles');
-						localModelfiles = JSON.parse(localStorage.getItem('modelfiles') ?? '[]');
-					}}
-				>
-					<div class=" self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="1.5"
-							stroke="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-							/>
-						</svg>
-					</div>
-				</button>
-			</div>
+				<div class=" self-center">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="w-3.5 h-3.5"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</div>
+			</button>
 		</div>
-	{/if}
-</div>
+
+		{#if localModelfiles.length > 0}
+			<div class="flex">
+				<div class=" self-center text-sm font-medium mr-4">
+					{localModelfiles.length} Local Modelfiles Detected
+				</div>
+
+				<div class="flex space-x-1">
+					<button
+						class="self-center w-fit text-sm p-1.5 border dark:border-gray-600 rounded-xl flex"
+						on:click={async () => {
+							downloadModels(localModelfiles);
+
+							localStorage.removeItem('modelfiles');
+							localModelfiles = JSON.parse(localStorage.getItem('modelfiles') ?? '[]');
+						}}
+					>
+						<div class=" self-center">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="1.5"
+								stroke="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+								/>
+							</svg>
+						</div>
+					</button>
+				</div>
+			</div>
+		{/if}
+	</div>
+{/if}
 
 {#if $config?.features.enable_community_sharing}
 	<div class=" my-16">
