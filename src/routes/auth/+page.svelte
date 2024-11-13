@@ -66,28 +66,29 @@
 
 	const checkOauthCallback = async () => {
 		if (!$page.url.hash) {
-			return;
+			return false;
 		}
 		const hash = $page.url.hash.substring(1);
 		if (!hash) {
-			return;
+			return false;
 		}
 		const params = new URLSearchParams(hash);
 		const token = params.get('token');
 		const idToken = params.get('id_token');
 		if (!token || !idToken) {
-			return;
+			return false;
 		}
 		const sessionUser = await getSessionUser(token).catch((error) => {
 			toast.error(error);
 			return null;
 		});
 		if (!sessionUser) {
-			return;
+			return false;
 		}
 		localStorage.token = token;
 		await receiveToken(idToken);
 		await setSessionUser(sessionUser);
+		return true;
 	};
 
 	let reactRootRef: HTMLElement;
@@ -145,21 +146,22 @@
 		);
 	};
 
-	let nonce : string;
+	let nonce: string;
 
 	onMount(async () => {
 		if ($user !== undefined) {
 			await goto('/');
 		}
-		await checkOauthCallback();
+		let callback_success = await checkOauthCallback();
 		loaded = true;
 		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
 			await signInHandler();
 		}
 		setTimeout(initSui, 0);
-	  nonce = await prepare();
-});
-
+		if (!callback_success) {
+			nonce = await prepare();
+		}
+	});
 </script>
 
 <svelte:head>

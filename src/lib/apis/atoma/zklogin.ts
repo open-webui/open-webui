@@ -29,14 +29,19 @@ type PartialZkLoginSignature = Omit<
 >;
 
 export async function prepare(): Promise<string> {
+	console.log('Preparing for ZKLogin');
 	const ephemeralKeyPair = new Ed25519Keypair();
 	localStorage.setItem(LOCAL_STORAGE_SECRET_KEY, ephemeralKeyPair.getSecretKey());
+	console.log('Ephemeral key pair acquired');
 	const { epoch } = await suiClient.getLatestSuiSystemState();
+	console.log('Sui epoch: ', epoch);
 	const maxEpoch = Number(epoch) + 2;
 	localStorage.setItem(LOCAL_STORAGE_MAX_EPOCH, maxEpoch.toString());
 	const randomness = generateRandomness();
 	localStorage.setItem(LOCAL_STORAGE_RANDOMNESS, randomness);
+	console.log('Randomness generated');
 	const nonce = generateNonce(ephemeralKeyPair.getPublicKey(), maxEpoch, randomness);
+	console.log('Nonce generated');
 	return nonce;
 }
 
@@ -51,6 +56,7 @@ export async function receiveToken(idToken: string) {
 	let zkLoginUserAddress = localStorage.getItem(LOCAL_STORAGE_ZK_ADDRESS);
 
 	if (!salt) {
+		console.log('No salt found. Generating new one.');
 		// Generate new salt if this is first time.
 		const saltArray = crypto.getRandomValues(new Uint8Array(16));
 		salt = BigInt(
@@ -62,6 +68,7 @@ export async function receiveToken(idToken: string) {
 		localStorage.setItem(LOCAL_STORAGE_SALT, salt);
 	}
 	zkLoginUserAddress = jwtToAddress(idToken, salt);
+	console.log('ZKLogin user address: ', zkLoginUserAddress);
 	localStorage.setItem(LOCAL_STORAGE_ZK_ADDRESS, zkLoginUserAddress);
 	let ephemeralKeyPair;
 	if (secret_key) {
@@ -87,6 +94,7 @@ export async function receiveToken(idToken: string) {
 		})
 	});
 	const zkProofResult = await response.json();
+	console.log('ZKProof result: ', zkProofResult);
 	const partialLogin = zkProofResult as PartialZkLoginSignature;
 	localStorage.setItem(LOCAL_STORAGE_ZKP, JSON.stringify(partialLogin));
 }
