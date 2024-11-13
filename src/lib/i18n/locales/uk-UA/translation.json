@@ -594,6 +594,7 @@
 	"Port": "Порт",
 	"Positive attitude": "Позитивне ставлення",
 	"Prefix ID": "",
+	"Prefix ID is used to avoid conflicts with other connections by adding a prefix to the model IDs - leave empty to disable": "",
 	"Previous 30 days": "Попередні 30 днів",
 	"Previous 7 days": "Попередні 7 днів",
 	"Profile Image": "Зображення профілю",

@@ -594,6 +594,7 @@
 	"Port": "",
 	"Positive attitude": "Positiv holdning",
 	"Prefix ID": "",
+	"Prefix ID is used to avoid conflicts with other connections by adding a prefix to the model IDs - leave empty to disable": "",
 	"Previous 30 days": "Forrige 30 dager",
 	"Previous 7 days": "Forrige 7 dager",
 	"Profile Image": "Profilbilde",

@@ -594,6 +594,7 @@
 	"Port": "",
 	"Positive attitude": "前向きな態度",
 	"Prefix ID": "",
+	"Prefix ID is used to avoid conflicts with other connections by adding a prefix to the model IDs - leave empty to disable": "",
 	"Previous 30 days": "前の30日間",
 	"Previous 7 days": "前の7日間",
 	"Profile Image": "プロフィール画像",

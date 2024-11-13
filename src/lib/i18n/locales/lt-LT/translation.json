@@ -594,6 +594,7 @@
 	"Port": "",
 	"Positive attitude": "Pozityvus elgesys",
 	"Prefix ID": "",
+	"Prefix ID is used to avoid conflicts with other connections by adding a prefix to the model IDs - leave empty to disable": "",
 	"Previous 30 days": "Paskutinės 30 dienų",
 	"Previous 7 days": "Paskutinės 7 dienos",
 	"Profile Image": "Profilio nuotrauka",

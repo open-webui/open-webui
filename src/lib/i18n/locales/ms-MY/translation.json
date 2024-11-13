@@ -594,6 +594,7 @@
 	"Port": "",
 	"Positive attitude": "Sikap positif",
 	"Prefix ID": "",
+	"Prefix ID is used to avoid conflicts with other connections by adding a prefix to the model IDs - leave empty to disable": "",
 	"Previous 30 days": "30 hari sebelumnya",
 	"Previous 7 days": "7 hari sebelumnya",
 	"Profile Image": "Imej Profail",

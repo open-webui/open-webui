@@ -594,6 +594,7 @@
 	"Port": "",
 	"Positive attitude": "Atitudine pozitivă",
 	"Prefix ID": "",
+	"Prefix ID is used to avoid conflicts with other connections by adding a prefix to the model IDs - leave empty to disable": "",
 	"Previous 30 days": "Ultimele 30 de zile",
 	"Previous 7 days": "Ultimele 7 zile",
 	"Profile Image": "Imagine de Profil",
