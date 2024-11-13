@@ -306,7 +306,7 @@
 												? `/doge.png`
 												: `${WEBUI_BASE_URL}/static/favicon.png`)}
 									/>
-									<div>
+									<div class="translate-y-[0.5px]">
 										Talking to <span class=" font-medium">{atSelectedModel.name}</span>
 									</div>
 								</div>
@@ -340,7 +340,7 @@
 											/>
 										</svg>
 									</div>
-									<div>
+									<div class=" translate-y-[0.5px]">
 										{selectedToolIds
 											.map((id) => {
 												return $tools.find((tool) => tool.id === id)?.name;
@@ -378,7 +378,7 @@
 											/>
 										</svg>
 									</div>
-									<div>{$i18n.t('Search the web')}</div>
+									<div class=" translate-y-[0.5px]">{$i18n.t('Search the web')}</div>
 								</div>
 								<div>
 									<button
