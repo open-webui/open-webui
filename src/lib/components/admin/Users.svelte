@@ -1,463 +1,86 @@
 <script>
-	import { WEBUI_BASE_URL } from '$lib/constants';
-	import { WEBUI_NAME, config, user, showSidebar } from '$lib/stores';
-	import { goto } from '$app/navigation';
-	import { onMount, getContext } from 'svelte';
-
-	import dayjs from 'dayjs';
-	import relativeTime from 'dayjs/plugin/relativeTime';
-	dayjs.extend(relativeTime);
-
+	import { getContext, tick, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
-
-	import { updateUserRole, getUsers, deleteUserById } from '$lib/apis/users';
-
-	import EditUserModal from '$lib/components/admin/EditUserModal.svelte';
-	import Pagination from '$lib/components/common/Pagination.svelte';
-	import ChatBubbles from '$lib/components/icons/ChatBubbles.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import UserChatsModal from '$lib/components/admin/UserChatsModal.svelte';
-	import AddUserModal from '$lib/components/admin/AddUserModal.svelte';
-	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import Badge from '$lib/components/common/Badge.svelte';
-	import Plus from '$lib/components/icons/Plus.svelte';
-	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
-	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
-	import About from '$lib/components/chat/Settings/About.svelte';
+	import UserList from './Users/UserList.svelte';
+	import Groups from './Users/Groups.svelte';
 
 	const i18n = getContext('i18n');
 
-	let loaded = false;
-	let tab = '';
-	let users = [];
+	let selectedTab = 'overview';
 
-	let search = '';
-	let selectedUser = null;
+	onMount(() => {
+		const containerElement = document.getElementById('users-tabs-container');
 
-	let page = 1;
-
-	let showDeleteConfirmDialog = false;
-	let showAddUserModal = false;
-
-	let showUserChatsModal = false;
-	let showEditUserModal = false;
-
-	const updateRoleHandler = async (id, role) => {
-		const res = await updateUserRole(localStorage.token, id, role).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-
-		if (res) {
-			users = await getUsers(localStorage.token);
+		if (containerElement) {
+			containerElement.addEventListener('wheel', function (event) {
+				if (event.deltaY !== 0) {
+					// Adjust horizontal scroll position based on vertical scroll
+					containerElement.scrollLeft += event.deltaY;
+				}
+			});
 		}
-	};
-
-	const deleteUserHandler = async (id) => {
-		const res = await deleteUserById(localStorage.token, id).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-		if (res) {
-			users = await getUsers(localStorage.token);
-		}
-	};
-
-	onMount(async () => {
-		if ($user?.role !== 'admin') {
-			await goto('/');
-		} else {
-			users = await getUsers(localStorage.token);
-		}
-		loaded = true;
 	});
-	let sortKey = 'created_at'; // default sort key
-	let sortOrder = 'asc'; // default sort order
-
-	function setSortKey(key) {
-		if (sortKey === key) {
-			sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-		} else {
-			sortKey = key;
-			sortOrder = 'asc';
-		}
-	}
-
-	let filteredUsers;
-
-	$: filteredUsers = users
-		.filter((user) => {
-			if (search === '') {
-				return true;
-			} else {
-				let name = user.name.toLowerCase();
-				const query = search.toLowerCase();
-				return name.includes(query);
-			}
-		})
-		.sort((a, b) => {
-			if (a[sortKey] < b[sortKey]) return sortOrder === 'asc' ? -1 : 1;
-			if (a[sortKey] > b[sortKey]) return sortOrder === 'asc' ? 1 : -1;
-			return 0;
-		})
-		.slice((page - 1) * 20, page * 20);
 </script>
 
-<ConfirmDialog
-	bind:show={showDeleteConfirmDialog}
-	on:confirm={() => {
-		deleteUserHandler(selectedUser.id);
-	}}
-/>
-
-{#key selectedUser}
-	<EditUserModal
-		bind:show={showEditUserModal}
-		{selectedUser}
-		sessionUser={$user}
-		on:save={async () => {
-			users = await getUsers(localStorage.token);
-		}}
-	/>
-{/key}
-
-<AddUserModal
-	bind:show={showAddUserModal}
-	on:save={async () => {
-		users = await getUsers(localStorage.token);
-	}}
-/>
-<UserChatsModal bind:show={showUserChatsModal} user={selectedUser} />
-
-{#if loaded}
-	<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
-		<div class="flex md:self-center text-lg font-medium px-0.5">
-			{$i18n.t('Users')}
-			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-
-			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{users.length}</span>
-		</div>
-
-		<div class="flex gap-1">
-			<div class=" flex w-full space-x-2">
-				<div class="flex flex-1">
-					<div class=" self-center ml-1 mr-3">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</div>
-					<input
-						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
-						bind:value={search}
-						placeholder={$i18n.t('Search')}
-					/>
-				</div>
-
-				<div>
-					<Tooltip content={$i18n.t('Add User')}>
-						<button
-							class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
-							on:click={() => {
-								showAddUserModal = !showAddUserModal;
-							}}
-						>
-							<Plus className="size-3.5" />
-						</button>
-					</Tooltip>
-				</div>
-			</div>
-		</div>
-	</div>
-
+<div class="flex flex-col lg:flex-row w-full h-full -mt-0.5 pb-2 lg:space-x-4">
 	<div
-		class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded pt-0.5"
+		id="users-tabs-container"
+		class="tabs flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
 	>
-		<table
-			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full rounded"
+		<button
+			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab ===
+			'overview'
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => {
+				selectedTab = 'overview';
+			}}
 		>
-			<thead
-				class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
-			>
-				<tr class="">
-					<th
-						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
-						on:click={() => setSortKey('role')}
-					>
-						<div class="flex gap-1.5 items-center">
-							{$i18n.t('Role')}
+			<div class=" self-center mr-2">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 16 16"
+					fill="currentColor"
+					class="size-4"
+				>
+					<path
+						d="M8.5 4.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM10.9 12.006c.11.542-.348.994-.9.994H2c-.553 0-1.01-.452-.902-.994a5.002 5.002 0 0 1 9.803 0ZM14.002 12h-1.59a2.556 2.556 0 0 0-.04-.29 6.476 6.476 0 0 0-1.167-2.603 3.002 3.002 0 0 1 3.633 1.911c.18.522-.283.982-.836.982ZM12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"
+					/>
+				</svg>
+			</div>
+			<div class=" self-center">{$i18n.t('Overview')}</div>
+		</button>
 
-							{#if sortKey === 'role'}
-								<span class="font-normal"
-									>{#if sortOrder === 'asc'}
-										<ChevronUp className="size-2" />
-									{:else}
-										<ChevronDown className="size-2" />
-									{/if}
-								</span>
-							{:else}
-								<span class="invisible">
-									<ChevronUp className="size-2" />
-								</span>
-							{/if}
-						</div>
-					</th>
-					<th
-						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
-						on:click={() => setSortKey('name')}
-					>
-						<div class="flex gap-1.5 items-center">
-							{$i18n.t('Name')}
-
-							{#if sortKey === 'name'}
-								<span class="font-normal"
-									>{#if sortOrder === 'asc'}
-										<ChevronUp className="size-2" />
-									{:else}
-										<ChevronDown className="size-2" />
-									{/if}
-								</span>
-							{:else}
-								<span class="invisible">
-									<ChevronUp className="size-2" />
-								</span>
-							{/if}
-						</div>
-					</th>
-					<th
-						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
-						on:click={() => setSortKey('email')}
-					>
-						<div class="flex gap-1.5 items-center">
-							{$i18n.t('Email')}
-
-							{#if sortKey === 'email'}
-								<span class="font-normal"
-									>{#if sortOrder === 'asc'}
-										<ChevronUp className="size-2" />
-									{:else}
-										<ChevronDown className="size-2" />
-									{/if}
-								</span>
-							{:else}
-								<span class="invisible">
-									<ChevronUp className="size-2" />
-								</span>
-							{/if}
-						</div>
-					</th>
-
-					<th
-						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
-						on:click={() => setSortKey('last_active_at')}
-					>
-						<div class="flex gap-1.5 items-center">
-							{$i18n.t('Last Active')}
-
-							{#if sortKey === 'last_active_at'}
-								<span class="font-normal"
-									>{#if sortOrder === 'asc'}
-										<ChevronUp className="size-2" />
-									{:else}
-										<ChevronDown className="size-2" />
-									{/if}
-								</span>
-							{:else}
-								<span class="invisible">
-									<ChevronUp className="size-2" />
-								</span>
-							{/if}
-						</div>
-					</th>
-					<th
-						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
-						on:click={() => setSortKey('created_at')}
-					>
-						<div class="flex gap-1.5 items-center">
-							{$i18n.t('Created at')}
-							{#if sortKey === 'created_at'}
-								<span class="font-normal"
-									>{#if sortOrder === 'asc'}
-										<ChevronUp className="size-2" />
-									{:else}
-										<ChevronDown className="size-2" />
-									{/if}
-								</span>
-							{:else}
-								<span class="invisible">
-									<ChevronUp className="size-2" />
-								</span>
-							{/if}
-						</div>
-					</th>
-
-					<th
-						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
-						on:click={() => setSortKey('oauth_sub')}
-					>
-						<div class="flex gap-1.5 items-center">
-							{$i18n.t('OAuth ID')}
-
-							{#if sortKey === 'oauth_sub'}
-								<span class="font-normal"
-									>{#if sortOrder === 'asc'}
-										<ChevronUp className="size-2" />
-									{:else}
-										<ChevronDown className="size-2" />
-									{/if}
-								</span>
-							{:else}
-								<span class="invisible">
-									<ChevronUp className="size-2" />
-								</span>
-							{/if}
-						</div>
-					</th>
-
-					<th scope="col" class="px-3 py-2 text-right" />
-				</tr>
-			</thead>
-			<tbody class="">
-				{#each filteredUsers as user, userIdx}
-					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
-						<td class="px-3 py-1 min-w-[7rem] w-28">
-							<button
-								class=" translate-y-0.5"
-								on:click={() => {
-									if (user.role === 'user') {
-										updateRoleHandler(user.id, 'admin');
-									} else if (user.role === 'pending') {
-										updateRoleHandler(user.id, 'user');
-									} else {
-										updateRoleHandler(user.id, 'pending');
-									}
-								}}
-							>
-								<Badge
-									type={user.role === 'admin' ? 'info' : user.role === 'user' ? 'success' : 'muted'}
-									content={$i18n.t(user.role)}
-								/>
-							</button>
-						</td>
-						<td class="px-3 py-1 font-medium text-gray-900 dark:text-white w-max">
-							<div class="flex flex-row w-max">
-								<img
-									class=" rounded-full w-6 h-6 object-cover mr-2.5"
-									src={user.profile_image_url.startsWith(WEBUI_BASE_URL) ||
-									user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
-									user.profile_image_url.startsWith('data:')
-										? user.profile_image_url
-										: `/user.png`}
-									alt="user"
-								/>
-
-								<div class=" font-medium self-center">{user.name}</div>
-							</div>
-						</td>
-						<td class=" px-3 py-1"> {user.email} </td>
-
-						<td class=" px-3 py-1">
-							{dayjs(user.last_active_at * 1000).fromNow()}
-						</td>
-
-						<td class=" px-3 py-1">
-							{dayjs(user.created_at * 1000).format($i18n.t('MMMM DD, YYYY'))}
-						</td>
-
-						<td class=" px-3 py-1"> {user.oauth_sub ?? ''} </td>
-
-						<td class="px-3 py-1 text-right">
-							<div class="flex justify-end w-full">
-								{#if $config.features.enable_admin_chat_access && user.role !== 'admin'}
-									<Tooltip content={$i18n.t('Chats')}>
-										<button
-											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-											on:click={async () => {
-												showUserChatsModal = !showUserChatsModal;
-												selectedUser = user;
-											}}
-										>
-											<ChatBubbles />
-										</button>
-									</Tooltip>
-								{/if}
-
-								<Tooltip content={$i18n.t('Edit User')}>
-									<button
-										class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-										on:click={async () => {
-											showEditUserModal = !showEditUserModal;
-											selectedUser = user;
-										}}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke-width="1.5"
-											stroke="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
-											/>
-										</svg>
-									</button>
-								</Tooltip>
-
-								{#if user.role !== 'admin'}
-									<Tooltip content={$i18n.t('Delete User')}>
-										<button
-											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-											on:click={async () => {
-												showDeleteConfirmDialog = true;
-												selectedUser = user;
-											}}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="1.5"
-												stroke="currentColor"
-												class="w-4 h-4"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-												/>
-											</svg>
-										</button>
-									</Tooltip>
-								{/if}
-							</div>
-						</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
+		<button
+			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab ===
+			'groups'
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => {
+				selectedTab = 'groups';
+			}}
+		>
+			<div class=" self-center mr-2">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 16 16"
+					fill="currentColor"
+					class="size-4"
+				>
+					<path
+						d="M8 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM3.156 11.763c.16-.629.44-1.21.813-1.72a2.5 2.5 0 0 0-2.725 1.377c-.136.287.102.58.418.58h1.449c.01-.077.025-.156.045-.237ZM12.847 11.763c.02.08.036.16.046.237h1.446c.316 0 .554-.293.417-.579a2.5 2.5 0 0 0-2.722-1.378c.374.51.653 1.09.813 1.72ZM14 7.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM3.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM5 13c-.552 0-1.013-.455-.876-.99a4.002 4.002 0 0 1 7.753 0c.136.535-.324.99-.877.99H5Z"
+					/>
+				</svg>
+			</div>
+			<div class=" self-center">{$i18n.t('Groups')}</div>
+		</button>
 	</div>
 
-	<div class=" text-gray-500 text-xs mt-1.5 text-right">
-		ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
+	<div class="flex-1 mt-1 lg:mt-0 overflow-y-scroll">
+		{#if selectedTab === 'overview'}
+			<UserList />
+		{:else if selectedTab === 'groups'}
+			<Groups />
+		{/if}
 	</div>
-
-	<Pagination bind:page count={users.length} />
-{/if}
+</div>

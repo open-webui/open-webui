@@ -300,7 +300,7 @@
 
 		{#if !edit || model}
 			<form
-				class="flex flex-col md:flex-row mx-auto gap-3 md:gap-6"
+				class="flex flex-col md:flex-row w-full gap-3 md:gap-6"
 				on:submit|preventDefault={() => {
 					submitHandler();
 				}}
@@ -356,7 +356,7 @@
 					</div>
 				</div>
 
-				<div>
+				<div class="w-full">
 					<div class="mt-2 my-2 flex flex-col">
 						<div class="flex-1">
 							<div>

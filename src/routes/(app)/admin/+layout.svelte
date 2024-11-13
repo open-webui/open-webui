@@ -52,12 +52,10 @@
 						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent py-1"
 					>
 						<a
-							class="min-w-fit rounded-full p-1.5 {['/admin', '/admin/'].includes(
-								$page.url.pathname
-							)
+							class="min-w-fit rounded-full p-1.5 {['/admin/users'].includes($page.url.pathname)
 								? ''
 								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-							href="/admin">{$i18n.t('Dashboard')}</a
+							href="/admin">{$i18n.t('Users')}</a
 						>
 
 						<a
