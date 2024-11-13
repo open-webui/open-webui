@@ -237,7 +237,20 @@
 				'management',
 				'admincontrols',
 				'adminfeatures',
-				'usercontrol'
+				'usercontrol',
+				'arenamodel',
+				'evaluations',
+				'websearch',
+				'database',
+				'pipelines',
+				'images',
+				'audio',
+				'documents',
+				'rag',
+				'models',
+				'ollama',
+				'openai',
+				'users'
 			]
 		},
 		{
