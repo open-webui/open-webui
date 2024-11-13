@@ -106,7 +106,7 @@
 	};
 </script>
 
-<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
+<div class="mt-0.5 mb-2 gap-1 flex flex-row justify-between">
 	<div class="flex md:self-center text-lg font-medium px-0.5">
 		{$i18n.t('Feedback History')}
 
