@@ -630,6 +630,7 @@
 	"Prefix ID is used to avoid conflicts with other connections by adding a prefix to the model IDs - leave empty to disable": "",
 	"Previous 30 days": "過去 30 天",
 	"Previous 7 days": "過去 7 天",
+	"Private API keys are disabled in this environment": "",
 	"Profile Image": "個人檔案圖片",
 	"Prompt (e.g. Tell me a fun fact about the Roman Empire)": "提示詞（例如：告訴我關於羅馬帝國的一些趣事）",
 	"Prompt Content": "提示詞內容",

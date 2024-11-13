@@ -630,6 +630,7 @@
 	"Prefix ID is used to avoid conflicts with other connections by adding a prefix to the model IDs - leave empty to disable": "",
 	"Previous 30 days": "이전 30일",
 	"Previous 7 days": "이전 7일",
+	"Private API keys are disabled in this environment": "",
 	"Profile Image": "프로필 이미지",
 	"Prompt (e.g. Tell me a fun fact about the Roman Empire)": "프롬프트 (예: 로마 황제에 대해 재미있는 사실을 알려주세요)",
 	"Prompt Content": "프롬프트 내용",

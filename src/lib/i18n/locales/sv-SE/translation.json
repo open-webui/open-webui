@@ -630,6 +630,7 @@
 	"Prefix ID is used to avoid conflicts with other connections by adding a prefix to the model IDs - leave empty to disable": "",
 	"Previous 30 days": "Föregående 30 dagar",
 	"Previous 7 days": "Föregående 7 dagar",
+	"Private API keys are disabled in this environment": "",
 	"Profile Image": "Profilbild",
 	"Prompt (e.g. Tell me a fun fact about the Roman Empire)": "Instruktion (t.ex. Berätta en kuriosa om Romerska Imperiet)",
 	"Prompt Content": "Instruktionens innehåll",

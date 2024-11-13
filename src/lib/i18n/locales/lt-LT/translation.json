@@ -630,6 +630,7 @@
 	"Prefix ID is used to avoid conflicts with other connections by adding a prefix to the model IDs - leave empty to disable": "",
 	"Previous 30 days": "Paskutinės 30 dienų",
 	"Previous 7 days": "Paskutinės 7 dienos",
+	"Private API keys are disabled in this environment": "",
 	"Profile Image": "Profilio nuotrauka",
 	"Prompt (e.g. Tell me a fun fact about the Roman Empire)": "Užklausa (pvz. supaprastink šį laišką)",
 	"Prompt Content": "Užklausos turinys",
