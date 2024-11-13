@@ -242,7 +242,7 @@
 		}}
 	/>
 
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll scrollbar-hidden">
+	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div>
 			<div class=" mb-1.5 text-sm font-medium">{$i18n.t('UI')}</div>
 
