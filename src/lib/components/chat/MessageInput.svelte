@@ -289,7 +289,7 @@
 			</div>
 
 			<div class="w-full relative">
-				{#if atSelectedModel !== undefined || webSearchEnabled}
+				{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || webSearchEnabled}
 					<div
 						class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10"
 					>
@@ -315,6 +315,44 @@
 										class="flex items-center dark:text-gray-500"
 										on:click={() => {
 											atSelectedModel = undefined;
+										}}
+									>
+										<XMark />
+									</button>
+								</div>
+							</div>
+						{/if}
+
+						{#if selectedToolIds.length > 0}
+							<div class="flex items-center justify-between w-full">
+								<div class="flex items-center gap-2 text-sm dark:text-gray-500">
+									<div>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 16 16"
+											fill="currentColor"
+											class="size-3.5"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M11.5 8a3.5 3.5 0 0 0 3.362-4.476c-.094-.325-.497-.39-.736-.15L12.099 5.4a.48.48 0 0 1-.653.033 8.554 8.554 0 0 1-.879-.879.48.48 0 0 1 .033-.653l2.027-2.028c.24-.239.175-.642-.15-.736a3.502 3.502 0 0 0-4.476 3.427c.018.99-.133 2.093-.914 2.7l-5.31 4.13a2.015 2.015 0 1 0 2.828 2.827l4.13-5.309c.607-.78 1.71-.932 2.7-.914L11.5 8ZM3 13.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
+												clip-rule="evenodd"
+											/>
+										</svg>
+									</div>
+									<div>
+										{selectedToolIds
+											.map((id) => {
+												return $tools.find((tool) => tool.id === id)?.name;
+											})
+											.join(', ')}
+									</div>
+								</div>
+								<div>
+									<button
+										class="flex items-center dark:text-gray-500"
+										on:click={() => {
+											webSearchEnabled = false;
 										}}
 									>
 										<XMark />
@@ -686,6 +724,7 @@
 												if (e.key === 'Escape') {
 													console.log('Escape');
 													atSelectedModel = undefined;
+													selectedToolIds = [];
 													webSearchEnabled = false;
 												}
 											}}
@@ -854,6 +893,7 @@
 											if (e.key === 'Escape') {
 												console.log('Escape');
 												atSelectedModel = undefined;
+												selectedToolIds = [];
 												webSearchEnabled = false;
 											}
 										}}
