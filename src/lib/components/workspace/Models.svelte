@@ -8,12 +8,11 @@
 	const { saveAs } = fileSaver;
 
 	import { onMount, getContext, tick } from 'svelte';
-
-	import { WEBUI_NAME, config, mobile, models, settings, user } from '$lib/stores';
-	import { addNewModel, deleteModelById, getModelInfos, updateModelById } from '$lib/apis/models';
-
-	import { deleteModel } from '$lib/apis/ollama';
 	import { goto } from '$app/navigation';
+	const i18n = getContext('i18n');
+
+	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
+	import { addNewModel, deleteModelById, getModelInfos, updateModelById } from '$lib/apis/models';
 
 	import { getModels } from '$lib/apis';
 
@@ -25,24 +24,21 @@
 	import Search from '../icons/Search.svelte';
 	import Plus from '../icons/Plus.svelte';
 
-	const i18n = getContext('i18n');
-
 	let shiftKey = false;
 
-	let showModelDeleteConfirm = false;
-
 	let localModelfiles = [];
-
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
 
-	let _models = [];
+	let models = [];
 
 	let filteredModels = [];
 	let selectedModel = null;
 
-	$: if (_models) {
-		filteredModels = _models
+	let showModelDeleteConfirm = false;
+
+	$: if (models) {
+		filteredModels = models
 			.filter((m) => m?.owned_by !== 'arena')
 			.filter(
 				(m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase())
@@ -69,8 +65,8 @@
 			toast.success($i18n.t(`Deleted {{name}}`, { name: model.id }));
 		}
 
-		await models.set(await getModels(localStorage.token));
-		_models = $models;
+		await _models.set(await getModels(localStorage.token));
+		models = $_models;
 	};
 
 	const cloneModelHandler = async (model) => {
@@ -110,7 +106,7 @@
 
 	const moveToTopHandler = async (model) => {
 		// find models with position 0 and set them to 1
-		const topModels = _models.filter((m) => m.info?.meta?.position === 0);
+		const topModels = models.filter((m) => m.info?.meta?.position === 0);
 		for (const m of topModels) {
 			let info = m.info;
 			if (!info) {
@@ -156,8 +152,8 @@
 			toast.success($i18n.t(`Model {{name}} is now at the top`, { name: info.id }));
 		}
 
-		await models.set(await getModels(localStorage.token));
-		_models = $models;
+		await _models.set(await getModels(localStorage.token));
+		models = $_models;
 	};
 
 	const hideModelHandler = async (model) => {
@@ -192,8 +188,8 @@
 			);
 		}
 
-		await models.set(await getModels(localStorage.token));
-		_models = $models;
+		await _models.set(await getModels(localStorage.token));
+		models = $_models;
 	};
 
 	const downloadModels = async (models) => {
@@ -218,7 +214,7 @@
 
 		// Update the position of the models
 		for (const [index, id] of modelIds.entries()) {
-			const model = $models.find((m) => m.id === id);
+			const model = $_models.find((m) => m.id === id);
 			if (model) {
 				let info = model.info;
 
@@ -242,27 +238,32 @@
 		}
 
 		await tick();
-		await models.set(await getModels(localStorage.token));
+		await _models.set(await getModels(localStorage.token));
 	};
 
 	onMount(async () => {
-		// Legacy code to sync localModelfiles with models
-		_models = $models;
-		localModelfiles = JSON.parse(localStorage.getItem('modelfiles') ?? '[]');
+		if ($user?.role === 'admin') {
+			models = $_models;
 
-		if (localModelfiles) {
-			console.log(localModelfiles);
-		}
+			// Legacy code to sync localModelfiles with models
+			localModelfiles = JSON.parse(localStorage.getItem('modelfiles') ?? '[]');
 
-		if (!$mobile) {
-			// SortableJS
-			sortable = new Sortable(document.getElementById('model-list'), {
-				animation: 150,
-				onUpdate: async (event) => {
-					console.log(event);
-					positionChangeHandler();
-				}
-			});
+			if (localModelfiles) {
+				console.log(localModelfiles);
+			}
+
+			if (!$mobile) {
+				// SortableJS
+				sortable = new Sortable(document.getElementById('model-list'), {
+					animation: 150,
+					onUpdate: async (event) => {
+						console.log(event);
+						positionChangeHandler();
+					}
+				});
+			}
+		} else {
+			models = [];
 		}
 
 		const onKeyDown = (event) => {
@@ -555,7 +556,7 @@
 
 						for (const model of savedModels) {
 							if (model?.info ?? false) {
-								if ($models.find((m) => m.id === model.id)) {
+								if ($_models.find((m) => m.id === model.id)) {
 									await updateModelById(localStorage.token, model.id, model.info).catch((error) => {
 										return null;
 									});
@@ -567,8 +568,8 @@
 							}
 						}
 
-						await models.set(await getModels(localStorage.token));
-						_models = $models;
+						await _models.set(await getModels(localStorage.token));
+						models = $_models;
 					};
 
 					reader.readAsText(importFiles[0]);
@@ -602,7 +603,7 @@
 			<button
 				class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
 				on:click={async () => {
-					downloadModels($models);
+					downloadModels($_models);
 				}}
 			>
 				<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Export Models')}</div>

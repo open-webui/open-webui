@@ -18,11 +18,16 @@
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import User from '$lib/components/icons/User.svelte';
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
-	import GroupModal from './Groups/GroupModal.svelte';
+	import GroupModal from './Groups/EditGroupModal.svelte';
+	import Pencil from '$lib/components/icons/Pencil.svelte';
+	import GroupItem from './Groups/GroupItem.svelte';
+	import AddGroupModal from './Groups/AddGroupModal.svelte';
 
 	const i18n = getContext('i18n');
 
 	let loaded = false;
+
+	export let users = [];
 
 	let groups = [];
 	let filteredGroups;
@@ -40,6 +45,7 @@
 	let search = '';
 
 	let showCreateGroupModal = false;
+	let showDefaultPermissionsModal = false;
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
@@ -47,12 +53,16 @@
 		} else {
 			groups = [
 				{
+					id: '1',
 					name: 'Admins',
 					description: 'Admins have full access to all features and settings.',
-					permissions: {
-						admin: true
+					data: {
+						permissions: {
+							admin: true
+						}
 					},
-					user_ids: [1, 2, 3]
+					user_ids: [1, 2, 3],
+					admin_ids: [1]
 				}
 			];
 		}
@@ -61,7 +71,7 @@
 </script>
 
 {#if loaded}
-	<GroupModal bind:show={showCreateGroupModal} />
+	<AddGroupModal bind:show={showCreateGroupModal} />
 	<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
 		<div class="flex md:self-center text-lg font-medium px-0.5">
 			{$i18n.t('Groups')}
@@ -146,35 +156,21 @@
 				<hr class="mt-1.5 mb-2 border-gray-50 dark:border-gray-850" />
 
 				{#each filteredGroups as group}
-					<div class="flex items-center gap-3 justify-between px-1 text-xs w-full transition">
-						<div class="flex items-center gap-1.5 w-full font-medium">
-							<div>
-								<UserCircleSolid className="size-4" />
-							</div>
-							{group.name}
-						</div>
-
-						<div class="flex items-center gap-1.5 w-full font-medium">
-							{group.user_ids.length}
-
-							<div>
-								<User className="size-3.5" />
-							</div>
-						</div>
-
-						<div class="w-full flex justify-end">
-							<button class=" rounded-lg p-1">
-								<EllipsisHorizontal />
-							</button>
-						</div>
-					</div>
+					<GroupItem {group} {users} />
 				{/each}
 			</div>
 		{/if}
 
 		<hr class="my-2 border-gray-50 dark:border-gray-850" />
 
-		<button class="flex items-center justify-between rounded-lg w-full transition pt-1">
+		<GroupModal bind:show={showDefaultPermissionsModal} tabs={['permissions']} custom={false} />
+
+		<button
+			class="flex items-center justify-between rounded-lg w-full transition pt-1"
+			on:click={() => {
+				showDefaultPermissionsModal = true;
+			}}
+		>
 			<div class="flex items-center gap-2.5">
 				<div class="p-1.5 bg-black/5 dark:bg-white/10 rounded-full">
 					<UsersSolid className="size-4" />

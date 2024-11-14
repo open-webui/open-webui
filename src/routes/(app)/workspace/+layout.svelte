@@ -12,24 +12,14 @@
 		tools
 	} from '$lib/stores';
 	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
 
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
-	import { getModels } from '$lib/apis';
-	import { getPrompts } from '$lib/apis/prompts';
-	import { getKnowledgeItems } from '$lib/apis/knowledge';
-	import { getTools } from '$lib/apis/tools';
-	import { getFunctions } from '$lib/apis/functions';
 
 	const i18n = getContext('i18n');
 
 	let loaded = false;
 
 	onMount(async () => {
-		if ($user?.role !== 'admin') {
-			await goto('/');
-		}
-
 		loaded = true;
 	});
 </script>
@@ -92,25 +82,27 @@
 							href="/workspace/prompts">{$i18n.t('Prompts')}</a
 						>
 
-						<a
-							class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/workspace/tools')
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-							href="/workspace/tools"
-						>
-							{$i18n.t('Tools')}
-						</a>
+						{#if $user?.role === 'admin'}
+							<a
+								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/workspace/tools')
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/tools"
+							>
+								{$i18n.t('Tools')}
+							</a>
 
-						<a
-							class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
-								'/workspace/functions'
-							)
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-							href="/workspace/functions"
-						>
-							{$i18n.t('Functions')}
-						</a>
+							<a
+								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
+									'/workspace/functions'
+								)
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/functions"
+							>
+								{$i18n.t('Functions')}
+							</a>
+						{/if}
 					</div>
 				</div>
 

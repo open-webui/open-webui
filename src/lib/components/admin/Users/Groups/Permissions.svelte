@@ -8,6 +8,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 
 	export let permissions = {};
+	export let custom = true;
 
 	let defaultModelId = '';
 
@@ -135,17 +136,34 @@
 		<div class=" mb-2 text-sm font-medium">{$i18n.t('Workspace Permissions')}</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Allow Models Access')}</div>
+			<div class=" self-center text-xs font-medium">
+				{#if custom}
+					{$i18n.t('Admins')}:
+				{/if}
+				{$i18n.t('Models Access')}
+			</div>
 			<Switch bind:state={workspaceModelsAccess} />
 		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Allow Knowledge Access')}</div>
+			<div class=" self-center text-xs font-medium">
+				{#if custom}
+					{$i18n.t('Admins')}:
+				{/if}
+
+				{$i18n.t('Knowledge Access')}
+			</div>
 			<Switch bind:state={workspaceKnowledgeAccess} />
 		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Allow Prompts Access')}</div>
+			<div class=" self-center text-xs font-medium">
+				{#if custom}
+					{$i18n.t('Admins')}:
+				{/if}
+
+				{$i18n.t('Prompts Access')}
+			</div>
 			<Switch bind:state={workspacePromptsAccess} />
 		</div>
 
@@ -166,19 +184,34 @@
 		<div class=" mb-2 text-sm font-medium">{$i18n.t('Chat Permissions')}</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Allow Chat Deletion')}</div>
+			<div class=" self-center text-xs font-medium">
+				{#if custom}
+					{$i18n.t('Members')}:
+				{/if}
+				{$i18n.t('Allow Chat Deletion')}
+			</div>
 
 			<Switch bind:state={chatDeletion} />
 		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Allow Chat Editing')}</div>
+			<div class=" self-center text-xs font-medium">
+				{#if custom}
+					{$i18n.t('Members')}:
+				{/if}
+				{$i18n.t('Allow Chat Editing')}
+			</div>
 
 			<Switch bind:state={chatEdit} />
 		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Allow Temporary Chat')}</div>
+			<div class=" self-center text-xs font-medium">
+				{#if custom}
+					{$i18n.t('Members')}:
+				{/if}
+				{$i18n.t('Allow Temporary Chat')}
+			</div>
 
 			<Switch bind:state={chatTemporary} />
 		</div>

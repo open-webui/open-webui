@@ -596,7 +596,7 @@
 	}}
 />
 
-<div class="flex flex-col w-full h-full max-h-[100dvh] mt-1" id="collection-container">
+<div class="flex flex-col w-full h-full max-h-[100dvh] translate-y-1" id="collection-container">
 	{#if id && knowledge}
 		<div class="flex flex-row flex-1 h-full max-h-full pb-2.5">
 			<PaneGroup direction="horizontal">

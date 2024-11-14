@@ -19,7 +19,13 @@
 
 	export let show = false;
 	export let edit = false;
+
+	export let users = [];
 	export let group = null;
+
+	export let custom = true;
+
+	export let tabs = ['display', 'permissions', 'users'];
 
 	let selectedTab = 'display';
 
@@ -28,6 +34,7 @@
 
 	let permissions = {};
 	let userIds = [];
+	let adminIds = [];
 
 	let loading = false;
 
@@ -65,18 +72,24 @@
 	}
 
 	onMount(() => {
+		console.log(tabs);
+		selectedTab = tabs[0];
 		init();
 	});
 </script>
 
 <Modal size="sm" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 mb-1">
+		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 mb-1.5">
 			<div class=" text-lg font-medium self-center font-primary">
-				{#if edit}
-					{$i18n.t('Edit User Group')}
+				{#if custom}
+					{#if edit}
+						{$i18n.t('Edit User Group')}
+					{:else}
+						{$i18n.t('Add User Group')}
+					{/if}
 				{:else}
-					{$i18n.t('Add User Group')}
+					{$i18n.t('Edit Default Permissions')}
 				{/if}
 			</div>
 			<button
@@ -108,54 +121,60 @@
 					}}
 				>
 					<div
-						class=" tabs flex flex-row overflow-x-auto gap-2.5 text-sm font-medium mb-3 border-b border-b-gray-800 scrollbar-hidden"
+						class=" tabs flex flex-row overflow-x-auto gap-2.5 text-sm font-medium border-b border-b-gray-800 scrollbar-hidden"
 					>
-						<button
-							class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
-							'display'
-								? ' dark:border-white'
-								: 'border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-							on:click={() => {
-								selectedTab = 'display';
-							}}
-							type="button"
-						>
-							{$i18n.t('Display')}
-						</button>
+						{#if tabs.includes('display')}
+							<button
+								class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
+								'display'
+									? ' dark:border-white'
+									: 'border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+								on:click={() => {
+									selectedTab = 'display';
+								}}
+								type="button"
+							>
+								{$i18n.t('Display')}
+							</button>
+						{/if}
 
-						<button
-							class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
-							'permissions'
-								? '  dark:border-white'
-								: 'border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-							on:click={() => {
-								selectedTab = 'permissions';
-							}}
-							type="button"
-						>
-							{$i18n.t('Permissions')}
-						</button>
+						{#if tabs.includes('permissions')}
+							<button
+								class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
+								'permissions'
+									? '  dark:border-white'
+									: 'border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+								on:click={() => {
+									selectedTab = 'permissions';
+								}}
+								type="button"
+							>
+								{$i18n.t('Permissions')}
+							</button>
+						{/if}
 
-						<button
-							class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
-							'users'
-								? ' dark:border-white'
-								: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-							on:click={() => {
-								selectedTab = 'users';
-							}}
-							type="button"
-						>
-							{$i18n.t('Users')} ({userIds.length})
-						</button>
+						{#if tabs.includes('users')}
+							<button
+								class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
+								'users'
+									? ' dark:border-white'
+									: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+								on:click={() => {
+									selectedTab = 'users';
+								}}
+								type="button"
+							>
+								{$i18n.t('Users')} ({userIds.length})
+							</button>
+						{/if}
 					</div>
-					<div class="px-1 h-96 lg:max-h-96 overflow-y-auto scrollbar-hidden">
+					<div class="px-1 h-96 lg:max-h-96 overflow-y-auto scrollbar-hidden mt-2.5">
 						{#if selectedTab == 'display'}
 							<Display bind:name bind:description />
 						{:else if selectedTab == 'permissions'}
-							<Permissions bind:permissions />
+							<Permissions bind:permissions {custom} />
 						{:else if selectedTab == 'users'}
-							<Users bind:userIds />
+							<Users bind:userIds bind:adminIds {users} />
 						{/if}
 					</div>
 
