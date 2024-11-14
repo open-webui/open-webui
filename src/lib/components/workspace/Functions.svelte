@@ -50,12 +50,14 @@
 	let showDeleteConfirm = false;
 
 	let filteredItems = [];
-	$: filteredItems = $functions.filter(
-		(f) =>
-			query === '' ||
-			f.name.toLowerCase().includes(query.toLowerCase()) ||
-			f.id.toLowerCase().includes(query.toLowerCase())
-	);
+	$: filteredItems = $functions
+		.filter(
+			(f) =>
+				query === '' ||
+				f.name.toLowerCase().includes(query.toLowerCase()) ||
+				f.id.toLowerCase().includes(query.toLowerCase())
+		)
+		.sort((a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
 
 	const shareHandler = async (func) => {
 		const item = await getFunctionById(localStorage.token, func.id).catch((error) => {
