@@ -73,6 +73,7 @@ from open_webui.config import (
     ENABLE_MODEL_FILTER,
     ENABLE_OLLAMA_API,
     ENABLE_OPENAI_API,
+    ENABLE_TAGS_GENERATION,
     ENV,
     FRONTEND_BUILD_DIR,
     MODEL_FILTER_LIST,
@@ -182,7 +183,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    docs_url="/docs" if ENV == "dev" else None, redoc_url=None, lifespan=lifespan
+    docs_url="/docs" if ENV == "dev" else None, openapi_url="/openapi.json" if ENV == "dev" else None, redoc_url=None, lifespan=lifespan
 )
 
 app.state.config = AppConfig()
@@ -199,6 +200,7 @@ app.state.config.TASK_MODEL = TASK_MODEL
 app.state.config.TASK_MODEL_EXTERNAL = TASK_MODEL_EXTERNAL
 app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE
 app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE
+app.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION
 app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE = (
     SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE
 )
@@ -1473,6 +1475,7 @@ async def get_task_config(user=Depends(get_verified_user)):
         "TASK_MODEL_EXTERNAL": app.state.config.TASK_MODEL_EXTERNAL,
         "TITLE_GENERATION_PROMPT_TEMPLATE": app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE,
         "TAGS_GENERATION_PROMPT_TEMPLATE": app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE,
+        "ENABLE_TAGS_GENERATION": app.state.config.ENABLE_TAGS_GENERATION,
         "ENABLE_SEARCH_QUERY": app.state.config.ENABLE_SEARCH_QUERY,
         "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE": app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
@@ -1484,6 +1487,7 @@ class TaskConfigForm(BaseModel):
     TASK_MODEL_EXTERNAL: Optional[str]
     TITLE_GENERATION_PROMPT_TEMPLATE: str
     TAGS_GENERATION_PROMPT_TEMPLATE: str
+    ENABLE_TAGS_GENERATION: bool
     SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE: str
     ENABLE_SEARCH_QUERY: bool
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: str
@@ -1499,6 +1503,7 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
     app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = (
         form_data.TAGS_GENERATION_PROMPT_TEMPLATE
     )
+    app.state.config.ENABLE_TAGS_GENERATION = form_data.ENABLE_TAGS_GENERATION
 
     app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE = (
         form_data.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE
@@ -1513,6 +1518,7 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
         "TASK_MODEL_EXTERNAL": app.state.config.TASK_MODEL_EXTERNAL,
         "TITLE_GENERATION_PROMPT_TEMPLATE": app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE,
         "TAGS_GENERATION_PROMPT_TEMPLATE": app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE,
+        "ENABLE_TAGS_GENERATION": app.state.config.ENABLE_TAGS_GENERATION,
         "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE": app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_SEARCH_QUERY": app.state.config.ENABLE_SEARCH_QUERY,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
@@ -1602,6 +1608,12 @@ Artificial Intelligence in Healthcare
 @app.post("/api/task/tags/completions")
 async def generate_chat_tags(form_data: dict, user=Depends(get_verified_user)):
     print("generate_chat_tags")
+    if not app.state.config.ENABLE_TAGS_GENERATION:
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"detail": "Tags generation is disabled"},
+        )
+
     model_id = form_data["model"]
     if model_id not in app.state.MODELS:
         raise HTTPException(
@@ -1639,7 +1651,6 @@ JSON format: { "tags": ["tag1", "tag2", "tag3"] }
         template, form_data["messages"], {"name": user.name}
     )
 
-    print("content", content)
     payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
@@ -2213,11 +2224,24 @@ async def get_app_config(request: Request):
     user = None
     if "token" in request.cookies:
         token = request.cookies.get("token")
-        data = decode_token(token)
+        try:
+            data = decode_token(token)
+        except Exception as e:
+            log.debug(e)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+            )
         if data is not None and "id" in data:
             user = Users.get_user_by_id(data["id"])
 
+    onboarding = False
+    if user is None:
+        user_count = Users.get_num_users()
+        onboarding = user_count == 0
+
     return {
+        **({"onboarding": True} if onboarding else {}),
         "status": True,
         "name": WEBUI_NAME,
         "version": VERSION,
@@ -2231,6 +2255,7 @@ async def get_app_config(request: Request):
         "features": {
             "auth": WEBUI_AUTH,
             "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
+            "enable_ldap": webui_app.state.config.ENABLE_LDAP,
             "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
             "enable_login_form": webui_app.state.config.ENABLE_LOGIN_FORM,
             **(
@@ -2394,7 +2419,7 @@ async def get_manifest_json():
         "start_url": "/",
         "display": "standalone",
         "background_color": "#343541",
-        "orientation": "any",
+        "orientation": "natural",
         "icons": [
             {
                 "src": "/static/logo.png",
