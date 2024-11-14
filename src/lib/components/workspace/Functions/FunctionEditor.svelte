@@ -315,13 +315,15 @@ class Pipe:
 						</div>
 
 						<div class="flex-1">
-							<input
-								class="w-full text-2xl font-medium bg-transparent outline-none font-primary"
-								type="text"
-								placeholder={$i18n.t('Function Name (e.g. My Filter)')}
-								bind:value={name}
-								required
-							/>
+							<Tooltip content={$i18n.t('e.g. My Filter')} placement="top-start">
+								<input
+									class="w-full text-2xl font-medium bg-transparent outline-none font-primary"
+									type="text"
+									placeholder={$i18n.t('Function Name')}
+									bind:value={name}
+									required
+								/>
+							</Tooltip>
 						</div>
 
 						<div>
@@ -329,31 +331,37 @@ class Pipe:
 						</div>
 					</div>
 
-					<div class=" flex gap-2 px-1">
+					<div class=" flex gap-2 px-1 items-center">
 						{#if edit}
 							<div class="text-sm text-gray-500 flex-shrink-0">
 								{id}
 							</div>
 						{:else}
-							<input
-								class="w-full text-sm disabled:text-gray-500 bg-transparent outline-none"
-								type="text"
-								placeholder={$i18n.t('Function ID (e.g. my_filter)')}
-								bind:value={id}
-								required
-								disabled={edit}
-							/>
+							<Tooltip className="w-full" content={$i18n.t('e.g. my_filter')} placement="top-start">
+								<input
+									class="w-full text-sm disabled:text-gray-500 bg-transparent outline-none"
+									type="text"
+									placeholder={$i18n.t('Function ID')}
+									bind:value={id}
+									required
+									disabled={edit}
+								/>
+							</Tooltip>
 						{/if}
 
-						<input
-							class="w-full text-sm bg-transparent outline-none"
-							type="text"
-							placeholder={$i18n.t(
-								'Function Description (e.g. A filter to remove profanity from text)'
-							)}
-							bind:value={meta.description}
-							required
-						/>
+						<Tooltip
+							className="w-full self-center items-center flex"
+							content={$i18n.t('e.g. A filter to remove profanity from text')}
+							placement="top-start"
+						>
+							<input
+								class="w-full text-sm bg-transparent outline-none"
+								type="text"
+								placeholder={$i18n.t('Function Description')}
+								bind:value={meta.description}
+								required
+							/>
+						</Tooltip>
 					</div>
 				</div>
 

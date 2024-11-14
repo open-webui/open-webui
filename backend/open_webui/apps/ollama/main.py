@@ -17,10 +17,14 @@ from open_webui.config import (
     ENABLE_OLLAMA_API,
     MODEL_FILTER_LIST,
     OLLAMA_BASE_URLS,
+    OLLAMA_API_CONFIGS,
     UPLOAD_DIR,
     AppConfig,
 )
-from open_webui.env import AIOHTTP_CLIENT_TIMEOUT
+from open_webui.env import (
+    AIOHTTP_CLIENT_TIMEOUT,
+    AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST,
+)
 
 
 from open_webui.constants import ERROR_MESSAGES
@@ -46,7 +50,11 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
 
 
-app = FastAPI(docs_url="/docs" if ENV == "dev" else None, openapi_url="/openapi.json" if ENV == "dev" else None, redoc_url=None)
+app = FastAPI(
+    docs_url="/docs" if ENV == "dev" else None,
+    openapi_url="/openapi.json" if ENV == "dev" else None,
+    redoc_url=None,
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -63,6 +71,8 @@ app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
 app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
+app.state.config.OLLAMA_API_CONFIGS = OLLAMA_API_CONFIGS
+
 app.state.MODELS = {}
 
 
@@ -88,43 +98,92 @@ async def get_status():
     return {"status": True}
 
 
+class ConnectionVerificationForm(BaseModel):
+    url: str
+    key: Optional[str] = None
+
+
+@app.post("/verify")
+async def verify_connection(
+    form_data: ConnectionVerificationForm, user=Depends(get_admin_user)
+):
+    url = form_data.url
+    key = form_data.key
+
+    headers = {}
+    if key:
+        headers["Authorization"] = f"Bearer {key}"
+
+    timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        try:
+            async with session.get(f"{url}/api/version", headers=headers) as r:
+                if r.status != 200:
+                    # Extract response error details if available
+                    error_detail = f"HTTP Error: {r.status}"
+                    res = await r.json()
+                    if "error" in res:
+                        error_detail = f"External Error: {res['error']}"
+                    raise Exception(error_detail)
+
+                response_data = await r.json()
+                return response_data
+
+        except aiohttp.ClientError as e:
+            # ClientError covers all aiohttp requests issues
+            log.exception(f"Client error: {str(e)}")
+            # Handle aiohttp-specific connection issues, timeout etc.
+            raise HTTPException(
+                status_code=500, detail="Open WebUI: Server Connection Error"
+            )
+        except Exception as e:
+            log.exception(f"Unexpected error: {e}")
+            # Generic error handler in case parsing JSON or other steps fail
+            error_detail = f"Unexpected error: {str(e)}"
+            raise HTTPException(status_code=500, detail=error_detail)
+
+
 @app.get("/config")
 async def get_config(user=Depends(get_admin_user)):
-    return {"ENABLE_OLLAMA_API": app.state.config.ENABLE_OLLAMA_API}
+    return {
+        "ENABLE_OLLAMA_API": app.state.config.ENABLE_OLLAMA_API,
+        "OLLAMA_BASE_URLS": app.state.config.OLLAMA_BASE_URLS,
+        "OLLAMA_API_CONFIGS": app.state.config.OLLAMA_API_CONFIGS,
+    }
 
 
 class OllamaConfigForm(BaseModel):
-    enable_ollama_api: Optional[bool] = None
+    ENABLE_OLLAMA_API: Optional[bool] = None
+    OLLAMA_BASE_URLS: list[str]
+    OLLAMA_API_CONFIGS: dict
 
 
 @app.post("/config/update")
 async def update_config(form_data: OllamaConfigForm, user=Depends(get_admin_user)):
-    app.state.config.ENABLE_OLLAMA_API = form_data.enable_ollama_api
-    return {"ENABLE_OLLAMA_API": app.state.config.ENABLE_OLLAMA_API}
+    app.state.config.ENABLE_OLLAMA_API = form_data.ENABLE_OLLAMA_API
+    app.state.config.OLLAMA_BASE_URLS = form_data.OLLAMA_BASE_URLS
+
+    app.state.config.OLLAMA_API_CONFIGS = form_data.OLLAMA_API_CONFIGS
+
+    # Remove any extra configs
+    config_urls = app.state.config.OLLAMA_API_CONFIGS.keys()
+    for url in list(app.state.config.OLLAMA_BASE_URLS):
+        if url not in config_urls:
+            app.state.config.OLLAMA_API_CONFIGS.pop(url, None)
+
+    return {
+        "ENABLE_OLLAMA_API": app.state.config.ENABLE_OLLAMA_API,
+        "OLLAMA_BASE_URLS": app.state.config.OLLAMA_BASE_URLS,
+        "OLLAMA_API_CONFIGS": app.state.config.OLLAMA_API_CONFIGS,
+    }
 
 
-@app.get("/urls")
-async def get_ollama_api_urls(user=Depends(get_admin_user)):
-    return {"OLLAMA_BASE_URLS": app.state.config.OLLAMA_BASE_URLS}
-
-
-class UrlUpdateForm(BaseModel):
-    urls: list[str]
-
-
-@app.post("/urls/update")
-async def update_ollama_api_url(form_data: UrlUpdateForm, user=Depends(get_admin_user)):
-    app.state.config.OLLAMA_BASE_URLS = form_data.urls
-
-    log.info(f"app.state.config.OLLAMA_BASE_URLS: {app.state.config.OLLAMA_BASE_URLS}")
-    return {"OLLAMA_BASE_URLS": app.state.config.OLLAMA_BASE_URLS}
-
-
-async def fetch_url(url):
-    timeout = aiohttp.ClientTimeout(total=3)
+async def aiohttp_get(url, key=None):
+    timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
     try:
+        headers = {"Authorization": f"Bearer {key}"} if key else {}
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-            async with session.get(url) as response:
+            async with session.get(url, headers=headers) as response:
                 return await response.json()
     except Exception as e:
         # Handle connection error here
@@ -150,10 +209,18 @@ async def post_streaming_url(
         session = aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         )
+
+        api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+        key = api_config.get("key", None)
+
+        headers = {"Content-Type": "application/json"}
+        if key:
+            headers["Authorization"] = f"Bearer {key}"
+
         r = await session.post(
             url,
             data=payload,
-            headers={"Content-Type": "application/json"},
+            headers=headers,
         )
         r.raise_for_status()
 
@@ -196,29 +263,62 @@ def merge_models_lists(model_lists):
     for idx, model_list in enumerate(model_lists):
         if model_list is not None:
             for model in model_list:
-                digest = model["digest"]
-                if digest not in merged_models:
+                id = model["model"]
+                if id not in merged_models:
                     model["urls"] = [idx]
-                    merged_models[digest] = model
+                    merged_models[id] = model
                 else:
-                    merged_models[digest]["urls"].append(idx)
+                    merged_models[id]["urls"].append(idx)
 
     return list(merged_models.values())
 
 
 async def get_all_models():
     log.info("get_all_models()")
-
     if app.state.config.ENABLE_OLLAMA_API:
-        tasks = [
-            fetch_url(f"{url}/api/tags") for url in app.state.config.OLLAMA_BASE_URLS
-        ]
+        tasks = []
+        for idx, url in enumerate(app.state.config.OLLAMA_BASE_URLS):
+            if url not in app.state.config.OLLAMA_API_CONFIGS:
+                tasks.append(aiohttp_get(f"{url}/api/tags"))
+            else:
+                api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+                enable = api_config.get("enable", True)
+                key = api_config.get("key", None)
+
+                if enable:
+                    tasks.append(aiohttp_get(f"{url}/api/tags", key))
+                else:
+                    tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
+
         responses = await asyncio.gather(*tasks)
+
+        for idx, response in enumerate(responses):
+            if response:
+                url = app.state.config.OLLAMA_BASE_URLS[idx]
+                api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+
+                prefix_id = api_config.get("prefix_id", None)
+                model_ids = api_config.get("model_ids", [])
+
+                if len(model_ids) != 0 and "models" in response:
+                    response["models"] = list(
+                        filter(
+                            lambda model: model["model"] in model_ids,
+                            response["models"],
+                        )
+                    )
+
+                if prefix_id:
+                    for model in response.get("models", []):
+                        model["model"] = f"{prefix_id}.{model['model']}"
+
+        print(responses)
 
         models = {
             "models": merge_models_lists(
                 map(
-                    lambda response: response["models"] if response else None, responses
+                    lambda response: response.get("models", []) if response else None,
+                    responses,
                 )
             )
         }
@@ -253,9 +353,16 @@ async def get_ollama_tags(
     else:
         url = app.state.config.OLLAMA_BASE_URLS[url_idx]
 
+        api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+        key = api_config.get("key", None)
+
+        headers = {}
+        if key:
+            headers["Authorization"] = f"Bearer {key}"
+
         r = None
         try:
-            r = requests.request(method="GET", url=f"{url}/api/tags")
+            r = requests.request(method="GET", url=f"{url}/api/tags", headers=headers)
             r.raise_for_status()
 
             return r.json()
@@ -283,7 +390,10 @@ async def get_ollama_versions(url_idx: Optional[int] = None):
         if url_idx is None:
             # returns lowest version
             tasks = [
-                fetch_url(f"{url}/api/version")
+                aiohttp_get(
+                    f"{url}/api/version",
+                    app.state.config.OLLAMA_API_CONFIGS.get(url, {}).get("key", None),
+                )
                 for url in app.state.config.OLLAMA_BASE_URLS
             ]
             responses = await asyncio.gather(*tasks)
@@ -423,10 +533,18 @@ async def copy_model(
 
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
+
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    key = api_config.get("key", None)
+
+    headers = {"Content-Type": "application/json"}
+    if key:
+        headers["Authorization"] = f"Bearer {key}"
+
     r = requests.request(
         method="POST",
         url=f"{url}/api/copy",
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         data=form_data.model_dump_json(exclude_none=True).encode(),
     )
 
@@ -472,11 +590,18 @@ async def delete_model(
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    key = api_config.get("key", None)
+
+    headers = {"Content-Type": "application/json"}
+    if key:
+        headers["Authorization"] = f"Bearer {key}"
+
     r = requests.request(
         method="DELETE",
         url=f"{url}/api/delete",
-        headers={"Content-Type": "application/json"},
         data=form_data.model_dump_json(exclude_none=True).encode(),
+        headers=headers,
     )
     try:
         r.raise_for_status()
@@ -513,10 +638,17 @@ async def show_model_info(form_data: ModelNameForm, user=Depends(get_verified_us
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    key = api_config.get("key", None)
+
+    headers = {"Content-Type": "application/json"}
+    if key:
+        headers["Authorization"] = f"Bearer {key}"
+
     r = requests.request(
         method="POST",
         url=f"{url}/api/show",
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         data=form_data.model_dump_json(exclude_none=True).encode(),
     )
     try:
@@ -598,10 +730,17 @@ def generate_ollama_embeddings(
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    key = api_config.get("key", None)
+
+    headers = {"Content-Type": "application/json"}
+    if key:
+        headers["Authorization"] = f"Bearer {key}"
+
     r = requests.request(
         method="POST",
         url=f"{url}/api/embeddings",
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         data=form_data.model_dump_json(exclude_none=True).encode(),
     )
     try:
@@ -655,10 +794,17 @@ def generate_ollama_batch_embeddings(
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    key = api_config.get("key", None)
+
+    headers = {"Content-Type": "application/json"}
+    if key:
+        headers["Authorization"] = f"Bearer {key}"
+
     r = requests.request(
         method="POST",
         url=f"{url}/api/embed",
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         data=form_data.model_dump_json(exclude_none=True).encode(),
     )
     try:
@@ -694,7 +840,7 @@ class GenerateCompletionForm(BaseModel):
     options: Optional[dict] = None
     system: Optional[str] = None
     template: Optional[str] = None
-    context: Optional[str] = None
+    context: Optional[list[int]] = None
     stream: Optional[bool] = True
     raw: Optional[bool] = None
     keep_alive: Optional[Union[int, str]] = None
@@ -722,6 +868,10 @@ async def generate_completion(
             )
 
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    prefix_id = api_config.get("prefix_id", None)
+    if prefix_id:
+        form_data.model = form_data.model.replace(f"{prefix_id}.", "")
     log.info(f"url: {url}")
 
     return await post_streaming_url(
@@ -803,6 +953,11 @@ async def generate_chat_completion(
     log.info(f"url: {url}")
     log.debug(f"generate_chat_completion() - 2.payload = {payload}")
 
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    prefix_id = api_config.get("prefix_id", None)
+    if prefix_id:
+        payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
+
     return await post_streaming_url(
         f"{url}/api/chat",
         json.dumps(payload),
@@ -819,7 +974,7 @@ class OpenAIChatMessageContent(BaseModel):
 
 class OpenAIChatMessage(BaseModel):
     role: str
-    content: Union[str, OpenAIChatMessageContent]
+    content: Union[str, list[OpenAIChatMessageContent]]
 
     model_config = ConfigDict(extra="allow")
 
@@ -838,7 +993,15 @@ async def generate_openai_chat_completion(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
-    completion_form = OpenAIChatCompletionForm(**form_data)
+    try:
+        completion_form = OpenAIChatCompletionForm(**form_data)
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        )
+
     payload = {**completion_form.model_dump(exclude_none=True, exclude=["metadata"])}
     if "metadata" in payload:
         del payload["metadata"]
@@ -869,6 +1032,11 @@ async def generate_openai_chat_completion(
 
     url = get_ollama_url(url_idx, payload["model"])
     log.info(f"url: {url}")
+
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    prefix_id = api_config.get("prefix_id", None)
+    if prefix_id:
+        payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
 
     return await post_streaming_url(
         f"{url}/v1/chat/completions",
