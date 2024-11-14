@@ -10,6 +10,9 @@
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
+	import Display from './Display.svelte';
+	import Permissions from './Permissions.svelte';
+	import Users from './Users.svelte';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -18,9 +21,13 @@
 	export let edit = false;
 	export let group = null;
 
+	let selectedTab = 'display';
+
 	let name = '';
 	let description = '';
+
 	let permissions = {};
+	let userIds = [];
 
 	let loading = false;
 
@@ -30,7 +37,8 @@
 		const group = {
 			name,
 			description,
-			permissions
+			permissions,
+			user_ids: userIds
 		};
 
 		await onSubmit(group);
@@ -40,6 +48,7 @@
 
 		name = '';
 		permissions = {};
+		userIds = [];
 	};
 
 	const init = () => {
@@ -47,6 +56,7 @@
 			name = group.name;
 			description = group.description;
 			permissions = group?.permissions ?? {};
+			userIds = group?.user_ids ?? [];
 		}
 	};
 
@@ -59,9 +69,9 @@
 	});
 </script>
 
-<Modal size="lg" bind:show>
+<Modal size="sm" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
+		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 mb-1">
 			<div class=" text-lg font-medium self-center font-primary">
 				{#if edit}
 					{$i18n.t('Edit User Group')}
@@ -97,39 +107,56 @@
 						submitHandler();
 					}}
 				>
-					<div class="px-1">
-						<div class="flex gap-2">
-							<div class="flex flex-col w-full">
-								<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('Name')}</div>
+					<div
+						class=" tabs flex flex-row overflow-x-auto gap-2.5 text-sm font-medium mb-3 border-b border-b-gray-800 scrollbar-hidden"
+					>
+						<button
+							class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
+							'display'
+								? ' dark:border-white'
+								: 'border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+							on:click={() => {
+								selectedTab = 'display';
+							}}
+							type="button"
+						>
+							{$i18n.t('Display')}
+						</button>
 
-								<div class="flex-1">
-									<input
-										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-none"
-										type="text"
-										bind:value={name}
-										placeholder={$i18n.t('User Group Name')}
-										autocomplete="off"
-										required
-									/>
-								</div>
-							</div>
-						</div>
+						<button
+							class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
+							'permissions'
+								? '  dark:border-white'
+								: 'border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+							on:click={() => {
+								selectedTab = 'permissions';
+							}}
+							type="button"
+						>
+							{$i18n.t('Permissions')}
+						</button>
 
-						<div class="flex flex-col w-full mt-2">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Description')}</div>
-
-							<div class="flex-1">
-								<input
-									class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-none"
-									type="text"
-									bind:value={description}
-									placeholder={$i18n.t('Enter description')}
-									autocomplete="off"
-								/>
-							</div>
-						</div>
-
-						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+						<button
+							class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
+							'users'
+								? ' dark:border-white'
+								: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+							on:click={() => {
+								selectedTab = 'users';
+							}}
+							type="button"
+						>
+							{$i18n.t('Users')} ({userIds.length})
+						</button>
+					</div>
+					<div class="px-1 h-96 lg:max-h-96 overflow-y-auto scrollbar-hidden">
+						{#if selectedTab == 'display'}
+							<Display bind:name bind:description />
+						{:else if selectedTab == 'permissions'}
+							<Permissions bind:permissions />
+						{:else if selectedTab == 'users'}
+							<Users bind:userIds />
+						{/if}
 					</div>
 
 					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">

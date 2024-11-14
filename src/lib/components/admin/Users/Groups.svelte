@@ -18,6 +18,7 @@
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import User from '$lib/components/icons/User.svelte';
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
+	import GroupModal from './Groups/GroupModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -60,6 +61,7 @@
 </script>
 
 {#if loaded}
+	<GroupModal bind:show={showCreateGroupModal} />
 	<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
 		<div class="flex md:self-center text-lg font-medium px-0.5">
 			{$i18n.t('Groups')}
