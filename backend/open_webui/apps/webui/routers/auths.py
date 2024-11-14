@@ -204,11 +204,23 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             if not user:
 
                 try:
+                    role = (
+                        "admin"
+                        if Users.get_num_users() == 0
+                        else request.app.state.config.DEFAULT_USER_ROLE
+                    )
+
+                    if Users.get_num_users() == 0:
+                        # Disable signup after the first user is created
+                        request.app.state.config.ENABLE_SIGNUP = False
+
                     hashed = get_password_hash(form_data.password)
                     user = Auths.insert_new_auth(
                         mail,
                         hashed,
-                        cn
+                        cn,
+                        "/user.png",
+                        role
                     )
 
                     if not user:
