@@ -7,7 +7,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import { WEBUI_NAME, config, user, showSidebar } from '$lib/stores';
+	import { WEBUI_NAME, config, user, showSidebar, knowledge } from '$lib/stores';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -54,15 +54,51 @@
 			groups = [
 				{
 					id: '1',
-					name: 'Admins',
-					description: 'Admins have full access to all features and settings.',
-					data: {
-						permissions: {
-							admin: true
+					name: 'Group A',
+					description: 'Group A description',
+					permissions: {
+						model: {
+							enable_filter: false, // boolean
+							ids: [], // array of strings
+							default_id: null // null or string
+						},
+						workspace: {
+							models: false, // boolean
+							knowledge: false, // boolean
+							prompts: false // boolean
+						},
+						chat: {
+							delete: true, // boolean
+							edit: true, // boolean
+							temporary: true // boolean
 						}
 					},
-					user_ids: [1, 2, 3],
-					admin_ids: [1]
+					user_ids: ['1', '2', '3'], // array of strings
+					admin_ids: ['1'] // array of strings
+				},
+				{
+					id: '2',
+					name: 'Moderators',
+					description: 'Moderators description',
+					permissions: {
+						model: {
+							enable_filter: false, // boolean
+							ids: [], // array of strings
+							default_id: null // null or string
+						},
+						workspace: {
+							models: false, // boolean
+							knowledge: false, // boolean
+							prompts: false // boolean
+						},
+						chat: {
+							delete: true, // boolean
+							edit: true, // boolean
+							temporary: true // boolean
+						}
+					},
+					user_ids: ['1', '5', '6'], // array of strings
+					admin_ids: ['1'] // array of strings
 				}
 			];
 		}
@@ -153,15 +189,17 @@
 					<div class="w-full"></div>
 				</div>
 
-				<hr class="mt-1.5 mb-2 border-gray-50 dark:border-gray-850" />
+				<hr class="mt-1.5 border-gray-50 dark:border-gray-850" />
 
 				{#each filteredGroups as group}
-					<GroupItem {group} {users} />
+					<div class="my-2">
+						<GroupItem {group} {users} />
+					</div>
 				{/each}
 			</div>
 		{/if}
 
-		<hr class="my-2 border-gray-50 dark:border-gray-850" />
+		<hr class="mb-2 border-gray-50 dark:border-gray-850" />
 
 		<GroupModal bind:show={showDefaultPermissionsModal} tabs={['permissions']} custom={false} />
 

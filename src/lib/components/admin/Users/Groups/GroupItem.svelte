@@ -39,7 +39,7 @@
 				showEdit = true;
 			}}
 		>
-			<Pencil />
+			<Pencil className="size-3.5" />
 		</button>
 	</div>
 </div>
