@@ -163,40 +163,67 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
     LDAP_APP_PASSWORD = request.app.state.config.LDAP_APP_PASSWORD
     LDAP_USE_TLS = request.app.state.config.LDAP_USE_TLS
     LDAP_CA_CERT_FILE = request.app.state.config.LDAP_CA_CERT_FILE
-    LDAP_CIPHERS = request.app.state.config.LDAP_CIPHERS if request.app.state.config.LDAP_CIPHERS else 'ALL'
+    LDAP_CIPHERS = (
+        request.app.state.config.LDAP_CIPHERS
+        if request.app.state.config.LDAP_CIPHERS
+        else "ALL"
+    )
 
     if not ENABLE_LDAP:
         raise HTTPException(400, detail="LDAP authentication is not enabled")
 
     try:
-        tls = Tls(validate=CERT_REQUIRED, version=PROTOCOL_TLS, ca_certs_file=LDAP_CA_CERT_FILE, ciphers=LDAP_CIPHERS)
+        tls = Tls(
+            validate=CERT_REQUIRED,
+            version=PROTOCOL_TLS,
+            ca_certs_file=LDAP_CA_CERT_FILE,
+            ciphers=LDAP_CIPHERS,
+        )
     except Exception as e:
         log.error(f"An error occurred on TLS: {str(e)}")
         raise HTTPException(400, detail=str(e))
 
     try:
-        server = Server(host=LDAP_SERVER_HOST, port=LDAP_SERVER_PORT, get_info=ALL, use_ssl=LDAP_USE_TLS, tls=tls)
-        connection_app = Connection(server, LDAP_APP_DN, LDAP_APP_PASSWORD, auto_bind='NONE', authentication='SIMPLE')
+        server = Server(
+            host=LDAP_SERVER_HOST,
+            port=LDAP_SERVER_PORT,
+            get_info=ALL,
+            use_ssl=LDAP_USE_TLS,
+            tls=tls,
+        )
+        connection_app = Connection(
+            server,
+            LDAP_APP_DN,
+            LDAP_APP_PASSWORD,
+            auto_bind="NONE",
+            authentication="SIMPLE",
+        )
         if not connection_app.bind():
             raise HTTPException(400, detail="Application account bind failed")
 
         search_success = connection_app.search(
             search_base=LDAP_SEARCH_BASE,
-            search_filter=f'(&({LDAP_ATTRIBUTE_FOR_USERNAME}={escape_filter_chars(form_data.user.lower())}){LDAP_SEARCH_FILTERS})',
-            attributes=[f'{LDAP_ATTRIBUTE_FOR_USERNAME}', 'mail', 'cn']
+            search_filter=f"(&({LDAP_ATTRIBUTE_FOR_USERNAME}={escape_filter_chars(form_data.user.lower())}){LDAP_SEARCH_FILTERS})",
+            attributes=[f"{LDAP_ATTRIBUTE_FOR_USERNAME}", "mail", "cn"],
         )
 
         if not search_success:
             raise HTTPException(400, detail="User not found in the LDAP server")
 
         entry = connection_app.entries[0]
-        username = str(entry[f'{LDAP_ATTRIBUTE_FOR_USERNAME}']).lower()
-        mail = str(entry['mail'])
-        cn = str(entry['cn'])
+        username = str(entry[f"{LDAP_ATTRIBUTE_FOR_USERNAME}"]).lower()
+        mail = str(entry["mail"])
+        cn = str(entry["cn"])
         user_dn = entry.entry_dn
 
         if username == form_data.user.lower():
-            connection_user = Connection(server, user_dn, form_data.password, auto_bind='NONE', authentication='SIMPLE')
+            connection_user = Connection(
+                server,
+                user_dn,
+                form_data.password,
+                auto_bind="NONE",
+                authentication="SIMPLE",
+            )
             if not connection_user.bind():
                 raise HTTPException(400, f"Authentication failed for {form_data.user}")
 
@@ -205,14 +232,12 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
                 try:
                     hashed = get_password_hash(form_data.password)
-                    user = Auths.insert_new_auth(
-                        mail,
-                        hashed,
-                        cn
-                    )
+                    user = Auths.insert_new_auth(mail, hashed, cn)
 
                     if not user:
-                        raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+                        raise HTTPException(
+                            500, detail=ERROR_MESSAGES.CREATE_USER_ERROR
+                        )
 
                 except HTTPException:
                     raise
@@ -224,7 +249,9 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             if user:
                 token = create_token(
                     data={"id": user.id},
-                    expires_delta=parse_duration(request.app.state.config.JWT_EXPIRES_IN),
+                    expires_delta=parse_duration(
+                        request.app.state.config.JWT_EXPIRES_IN
+                    ),
                 )
 
                 # Set the cookie token
@@ -246,7 +273,10 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             else:
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         else:
-            raise HTTPException(400, f"User {form_data.user} does not match the record. Search result: {str(entry[f'{LDAP_ATTRIBUTE_FOR_USERNAME}'])}")
+            raise HTTPException(
+                400,
+                f"User {form_data.user} does not match the record. Search result: {str(entry[f'{LDAP_ATTRIBUTE_FOR_USERNAME}'])}",
+            )
     except Exception as e:
         raise HTTPException(400, detail=str(e))
 
@@ -583,19 +613,18 @@ class LdapServerConfig(BaseModel):
     label: str
     host: str
     port: Optional[int] = None
-    attribute_for_username: str = 'uid'
+    attribute_for_username: str = "uid"
     app_dn: str
     app_dn_password: str
     search_base: str
-    search_filters: str = ''
+    search_filters: str = ""
     use_tls: bool = True
     certificate_path: Optional[str] = None
-    ciphers: Optional[str] = 'ALL'
+    ciphers: Optional[str] = "ALL"
+
 
 @router.get("/admin/config/ldap/server", response_model=LdapServerConfig)
-async def get_ldap_server(
-    request: Request, user=Depends(get_admin_user)
-):
+async def get_ldap_server(request: Request, user=Depends(get_admin_user)):
     return {
         "label": request.app.state.config.LDAP_SERVER_LABEL,
         "host": request.app.state.config.LDAP_SERVER_HOST,
@@ -607,26 +636,38 @@ async def get_ldap_server(
         "search_filters": request.app.state.config.LDAP_SEARCH_FILTERS,
         "use_tls": request.app.state.config.LDAP_USE_TLS,
         "certificate_path": request.app.state.config.LDAP_CA_CERT_FILE,
-        "ciphers": request.app.state.config.LDAP_CIPHERS
+        "ciphers": request.app.state.config.LDAP_CIPHERS,
     }
+
 
 @router.post("/admin/config/ldap/server")
 async def update_ldap_server(
     request: Request, form_data: LdapServerConfig, user=Depends(get_admin_user)
 ):
-    required_fields = ['label', 'host', 'attribute_for_username', 'app_dn', 'app_dn_password', 'search_base']
+    required_fields = [
+        "label",
+        "host",
+        "attribute_for_username",
+        "app_dn",
+        "app_dn_password",
+        "search_base",
+    ]
     for key in required_fields:
         value = getattr(form_data, key)
         if not value:
             raise HTTPException(400, detail=f"Required field {key} is empty")
 
     if form_data.use_tls and not form_data.certificate_path:
-        raise HTTPException(400, detail="TLS is enabled but certificate file path is missing")
+        raise HTTPException(
+            400, detail="TLS is enabled but certificate file path is missing"
+        )
 
     request.app.state.config.LDAP_SERVER_LABEL = form_data.label
     request.app.state.config.LDAP_SERVER_HOST = form_data.host
     request.app.state.config.LDAP_SERVER_PORT = form_data.port
-    request.app.state.config.LDAP_ATTRIBUTE_FOR_USERNAME = form_data.attribute_for_username
+    request.app.state.config.LDAP_ATTRIBUTE_FOR_USERNAME = (
+        form_data.attribute_for_username
+    )
     request.app.state.config.LDAP_APP_DN = form_data.app_dn
     request.app.state.config.LDAP_APP_PASSWORD = form_data.app_dn_password
     request.app.state.config.LDAP_SEARCH_BASE = form_data.search_base
@@ -646,18 +687,23 @@ async def update_ldap_server(
         "search_filters": request.app.state.config.LDAP_SEARCH_FILTERS,
         "use_tls": request.app.state.config.LDAP_USE_TLS,
         "certificate_path": request.app.state.config.LDAP_CA_CERT_FILE,
-        "ciphers": request.app.state.config.LDAP_CIPHERS
+        "ciphers": request.app.state.config.LDAP_CIPHERS,
     }
+
 
 @router.get("/admin/config/ldap")
 async def get_ldap_config(request: Request, user=Depends(get_admin_user)):
     return {"ENABLE_LDAP": request.app.state.config.ENABLE_LDAP}
 
+
 class LdapConfigForm(BaseModel):
     enable_ldap: Optional[bool] = None
 
+
 @router.post("/admin/config/ldap")
-async def update_ldap_config(request: Request, form_data: LdapConfigForm, user=Depends(get_admin_user)):
+async def update_ldap_config(
+    request: Request, form_data: LdapConfigForm, user=Depends(get_admin_user)
+):
     request.app.state.config.ENABLE_LDAP = form_data.enable_ldap
     return {"ENABLE_LDAP": request.app.state.config.ENABLE_LDAP}
 

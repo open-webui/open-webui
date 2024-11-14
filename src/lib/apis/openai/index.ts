@@ -32,15 +32,12 @@ export const getOpenAIConfig = async (token: string = '') => {
 	return res;
 };
 
-
 type OpenAIConfig = {
 	ENABLE_OPENAI_API: boolean;
 	OPENAI_API_BASE_URLS: string[];
 	OPENAI_API_KEYS: string[];
 	OPENAI_API_CONFIGS: object;
-}
-
-
+};
 
 export const updateOpenAIConfig = async (token: string = '', config: OpenAIConfig) => {
 	let error = null;
@@ -108,7 +105,6 @@ export const getOpenAIUrls = async (token: string = '') => {
 
 	return res.OPENAI_API_BASE_URLS;
 };
-
 
 export const updateOpenAIUrls = async (token: string = '', urls: string[]) => {
 	let error = null;
@@ -249,22 +245,18 @@ export const verifyOpenAIConnection = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(
-		`${OPENAI_API_BASE_URL}/verify`,
-		{
-			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				Authorization: `Bearer ${token}`,
-				'Content-Type': 'application/json',
-
-			},
-			body: JSON.stringify({
-				url,
-				key
-			})
-		}
-	)
+	const res = await fetch(`${OPENAI_API_BASE_URL}/verify`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			url,
+			key
+		})
+	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
