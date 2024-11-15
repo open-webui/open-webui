@@ -112,7 +112,7 @@
 	</div>
 </div>
 
-<div class="my-3 mb-5 grid md:grid-cols-2 lg:grid-cols-3 gap-2">
+<div class="my-3 mb-5 grid lg:grid-cols-2 xl:grid-cols-3 gap-2">
 	{#each filteredItems as item}
 		<button
 			class=" flex space-x-4 cursor-pointer text-left w-full px-4 py-3 border border-gray-50 dark:border-gray-850 dark:hover:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-xl"

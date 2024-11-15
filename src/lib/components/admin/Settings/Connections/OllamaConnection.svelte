@@ -4,15 +4,20 @@
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
-	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import AddConnectionModal from './AddConnectionModal.svelte';
+
+	import Cog6 from '$lib/components/icons/Cog6.svelte';
+	import Wrench from '$lib/components/icons/Wrench.svelte';
+	import ManageOllamaModal from './ManageOllamaModal.svelte';
 
 	export let onDelete = () => {};
 	export let onSubmit = () => {};
 
 	export let url = '';
+	export let idx = 0;
 	export let config = {};
 
+	let showManageModal = false;
 	let showConfigModal = false;
 </script>
 
@@ -32,6 +37,8 @@
 		onSubmit(connection);
 	}}
 />
+
+<ManageOllamaModal bind:show={showManageModal} urlIdx={idx} />
 
 <div class="flex gap-1.5">
 	<Tooltip
@@ -55,6 +62,18 @@
 	</Tooltip>
 
 	<div class="flex gap-1">
+		<Tooltip content={$i18n.t('Manage')} className="self-start">
+			<button
+				class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
+				on:click={() => {
+					showManageModal = true;
+				}}
+				type="button"
+			>
+				<Wrench />
+			</button>
+		</Tooltip>
+
 		<Tooltip content={$i18n.t('Configure')} className="self-start">
 			<button
 				class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"

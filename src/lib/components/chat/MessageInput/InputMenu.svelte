@@ -42,13 +42,11 @@
 		}
 
 		tools = $_tools.reduce((a, tool, i, arr) => {
-			if (availableToolIds.includes(tool.id) || ($user?.role ?? 'user') === 'admin') {
-				a[tool.id] = {
-					name: tool.name,
-					description: tool.meta.description,
-					enabled: selectedToolIds.includes(tool.id)
-				};
-			}
+			a[tool.id] = {
+				name: tool.name,
+				description: tool.meta.description,
+				enabled: selectedToolIds.includes(tool.id)
+			};
 			return a;
 		}, {});
 	};

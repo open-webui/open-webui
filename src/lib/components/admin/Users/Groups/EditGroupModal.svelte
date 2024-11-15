@@ -26,10 +26,10 @@
 	let selectedTab = 'general';
 	let loading = false;
 
-	let name = '';
-	let description = '';
+	export let name = '';
+	export let description = '';
 
-	let permissions = {
+	export let permissions = {
 		workspace: {
 			models: false,
 			knowledge: false,
@@ -42,7 +42,7 @@
 			temporary: true
 		}
 	};
-	let userIds = [];
+	export let userIds = [];
 
 	const submitHandler = async () => {
 		loading = true;
@@ -60,7 +60,24 @@
 		show = false;
 
 		name = '';
-		permissions = {};
+		permissions = {
+			model: {
+				filter: false,
+				model_ids: [],
+				default_id: ''
+			},
+			workspace: {
+				models: false,
+				knowledge: false,
+				prompts: false,
+				tools: false
+			},
+			chat: {
+				delete: true,
+				edit: true,
+				temporary: true
+			}
+		};
 		userIds = [];
 	};
 

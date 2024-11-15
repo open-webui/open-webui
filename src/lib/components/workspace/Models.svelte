@@ -12,7 +12,12 @@
 	const i18n = getContext('i18n');
 
 	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
-	import { addNewModel, deleteModelById, getModelInfos, updateModelById } from '$lib/apis/models';
+	import {
+		createNewModel,
+		deleteModelById,
+		getWorkspaceModels,
+		updateModelById
+	} from '$lib/apis/models';
 
 	import { getModels } from '$lib/apis';
 
@@ -38,29 +43,15 @@
 	let showModelDeleteConfirm = false;
 
 	$: if (models) {
-		filteredModels = models
-			.filter((m) => m?.owned_by !== 'arena')
-			.filter(
-				(m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase())
-			);
+		filteredModels = models.filter(
+			(m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase())
+		);
 	}
 
-	let sortable = null;
 	let searchValue = '';
 
 	const deleteModelHandler = async (model) => {
-		console.log(model.info);
-		if (!model?.info) {
-			toast.error(
-				$i18n.t('{{ owner }}: You cannot delete a base model', {
-					owner: model.owned_by.toUpperCase()
-				})
-			);
-			return null;
-		}
-
 		const res = await deleteModelById(localStorage.token, model.id);
-
 		if (res) {
 			toast.success($i18n.t(`Deleted {{name}}`, { name: model.id }));
 		}
@@ -70,17 +61,12 @@
 	};
 
 	const cloneModelHandler = async (model) => {
-		if ((model?.info?.base_model_id ?? null) === null) {
-			toast.error($i18n.t('You cannot clone a base model'));
-			return;
-		} else {
-			sessionStorage.model = JSON.stringify({
-				...model,
-				id: `${model.id}-clone`,
-				name: `${model.name} (Clone)`
-			});
-			goto('/workspace/models/create');
-		}
+		sessionStorage.model = JSON.stringify({
+			...model,
+			id: `${model.id}-clone`,
+			name: `${model.name} (Clone)`
+		});
+		goto('/workspace/models/create');
 	};
 
 	const shareModelHandler = async (model) => {
@@ -102,58 +88,6 @@
 		};
 
 		window.addEventListener('message', messageHandler, false);
-	};
-
-	const moveToTopHandler = async (model) => {
-		// find models with position 0 and set them to 1
-		const topModels = models.filter((m) => m.info?.meta?.position === 0);
-		for (const m of topModels) {
-			let info = m.info;
-			if (!info) {
-				info = {
-					id: m.id,
-					name: m.name,
-					meta: {
-						position: 1
-					},
-					params: {}
-				};
-			}
-
-			info.meta = {
-				...info.meta,
-				position: 1
-			};
-
-			await updateModelById(localStorage.token, info.id, info);
-		}
-
-		let info = model.info;
-
-		if (!info) {
-			info = {
-				id: model.id,
-				name: model.name,
-				meta: {
-					position: 0
-				},
-				params: {}
-			};
-		}
-
-		info.meta = {
-			...info.meta,
-			position: 0
-		};
-
-		const res = await updateModelById(localStorage.token, info.id, info);
-
-		if (res) {
-			toast.success($i18n.t(`Model {{name}} is now at the top`, { name: info.id }));
-		}
-
-		await _models.set(await getModels(localStorage.token));
-		models = $_models;
 	};
 
 	const hideModelHandler = async (model) => {
@@ -206,65 +140,8 @@
 		saveAs(blob, `${model.id}-${Date.now()}.json`);
 	};
 
-	const positionChangeHandler = async () => {
-		// Get the new order of the models
-		const modelIds = Array.from(document.getElementById('model-list').children).map((child) =>
-			child.id.replace('model-item-', '')
-		);
-
-		// Update the position of the models
-		for (const [index, id] of modelIds.entries()) {
-			const model = $_models.find((m) => m.id === id);
-			if (model) {
-				let info = model.info;
-
-				if (!info) {
-					info = {
-						id: model.id,
-						name: model.name,
-						meta: {
-							position: index
-						},
-						params: {}
-					};
-				}
-
-				info.meta = {
-					...info.meta,
-					position: index
-				};
-				await updateModelById(localStorage.token, info.id, info);
-			}
-		}
-
-		await tick();
-		await _models.set(await getModels(localStorage.token));
-	};
-
 	onMount(async () => {
-		if ($user?.role === 'admin') {
-			models = $_models;
-
-			// Legacy code to sync localModelfiles with models
-			localModelfiles = JSON.parse(localStorage.getItem('modelfiles') ?? '[]');
-
-			if (localModelfiles) {
-				console.log(localModelfiles);
-			}
-
-			if (!$mobile) {
-				// SortableJS
-				sortable = new Sortable(document.getElementById('model-list'), {
-					animation: 150,
-					onUpdate: async (event) => {
-						console.log(event);
-						positionChangeHandler();
-					}
-				});
-			}
-		} else {
-			models = [];
-		}
+		models = await getWorkspaceModels(localStorage.token);
 
 		const onKeyDown = (event) => {
 			if (event.key === 'Shift') {
@@ -376,47 +253,35 @@
 			>
 				<div class=" self-start w-8 pt-0.5">
 					<div
-						class=" rounded-full object-cover {(model?.info?.meta?.hidden ?? false)
+						class=" rounded-full object-cover {(model?.meta?.hidden ?? false)
 							? 'brightness-90 dark:brightness-50'
 							: ''} "
 					>
 						<img
-							src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
+							src={model?.meta?.profile_image_url ?? '/static/favicon.png'}
 							alt="modelfile profile"
 							class=" rounded-full w-full h-auto object-cover"
 						/>
 					</div>
 				</div>
 
-				<div
-					class=" flex-1 self-center {(model?.info?.meta?.hidden ?? false) ? 'text-gray-500' : ''}"
-				>
+				<div class=" flex-1 self-center {(model?.meta?.hidden ?? false) ? 'text-gray-500' : ''}">
 					<Tooltip
-						content={marked.parse(
-							model?.ollama?.digest
-								? `${model?.ollama?.digest} *(${model?.ollama?.modified_at})*`
-								: ''
-						)}
+						content={marked.parse(model?.meta?.description ?? model.id)}
 						className=" w-fit"
 						placement="top-start"
 					>
 						<div class="  font-semibold line-clamp-1">{model.name}</div>
 					</Tooltip>
 					<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
-						{!!model?.info?.meta?.description
-							? model?.info?.meta?.description
-							: model?.ollama?.digest
-								? `${model.id} (${model?.ollama?.digest})`
-								: model.id}
+						{model?.meta?.description ?? model.id}
 					</div>
 				</div>
 			</a>
 			<div class="flex flex-row gap-0.5 self-center">
 				{#if $user?.role === 'admin' && shiftKey}
 					<Tooltip
-						content={(model?.info?.meta?.hidden ?? false)
-							? $i18n.t('Show Model')
-							: $i18n.t('Hide Model')}
+						content={(model?.meta?.hidden ?? false) ? $i18n.t('Show Model') : $i18n.t('Hide Model')}
 					>
 						<button
 							class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
@@ -425,7 +290,7 @@
 								hideModelHandler(model);
 							}}
 						>
-							{#if model?.info?.meta?.hidden ?? false}
+							{#if model?.meta?.hidden ?? false}
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
 									fill="none"
@@ -511,9 +376,6 @@
 						exportHandler={() => {
 							exportModelHandler(model);
 						}}
-						moveToTopHandler={() => {
-							moveToTopHandler(model);
-						}}
 						hideHandler={() => {
 							hideModelHandler(model);
 						}}
@@ -561,7 +423,7 @@
 										return null;
 									});
 								} else {
-									await addNewModel(localStorage.token, model.info).catch((error) => {
+									await createNewModel(localStorage.token, model.info).catch((error) => {
 										return null;
 									});
 								}

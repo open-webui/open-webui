@@ -23,6 +23,7 @@
 	import GroupItem from './Groups/GroupItem.svelte';
 	import AddGroupModal from './Groups/AddGroupModal.svelte';
 	import { createNewGroup, getGroups } from '$lib/apis/groups';
+	import { getUserPermissions, updateUserPermissions } from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
 
@@ -44,6 +45,19 @@
 	});
 
 	let search = '';
+	let defaultPermissions = {
+		workspace: {
+			models: false,
+			knowledge: false,
+			prompts: false,
+			tools: false
+		},
+		chat: {
+			delete: true,
+			edit: true,
+			temporary: true
+		}
+	};
 
 	let showCreateGroupModal = false;
 	let showDefaultPermissionsModal = false;
@@ -64,8 +78,20 @@
 		}
 	};
 
-	const updateDefaultPermissionsHandler = async (permissions) => {
-		console.log(permissions);
+	const updateDefaultPermissionsHandler = async (group) => {
+		console.log(group.permissions);
+
+		const res = await updateUserPermissions(localStorage.token, group.permissions).catch(
+			(error) => {
+				toast.error(error);
+				return null;
+			}
+		);
+
+		if (res) {
+			toast.success($i18n.t('Default permissions updated successfully'));
+			defaultPermissions = group.permissions;
+		}
 	};
 
 	onMount(async () => {
@@ -73,6 +99,7 @@
 			await goto('/');
 		} else {
 			await setGroups();
+			defaultPermissions = await getUserPermissions(localStorage.token);
 		}
 		loaded = true;
 	});
@@ -176,6 +203,7 @@
 		<GroupModal
 			bind:show={showDefaultPermissionsModal}
 			tabs={['permissions']}
+			permissions={defaultPermissions}
 			custom={false}
 			onSubmit={updateDefaultPermissionsHandler}
 		/>

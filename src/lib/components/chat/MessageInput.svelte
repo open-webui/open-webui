@@ -557,7 +557,6 @@
 									<InputMenu
 										bind:webSearchEnabled
 										bind:selectedToolIds
-										{availableToolIds}
 										uploadFilesHandler={() => {
 											filesInputElement.click();
 										}}

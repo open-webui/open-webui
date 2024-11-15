@@ -17,6 +17,7 @@
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
 	import { getKnowledgeItems } from '$lib/apis/knowledge';
+	import AccessPermissions from '../common/AccessPermissionsModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -82,7 +83,7 @@
 
 		if (baseModel) {
 			if (baseModel.owned_by === 'openai') {
-				capabilities.usage = baseModel.info?.meta?.capabilities?.usage ?? false;
+				capabilities.usage = basemodel?.meta?.capabilities?.usage ?? false;
 			} else {
 				delete capabilities.usage;
 			}
@@ -159,33 +160,31 @@
 
 			id = model.id;
 
-			if (model.info.base_model_id) {
+			if (model.base_model_id) {
 				const base_model = $models
 					.filter((m) => !m?.preset && m?.owned_by !== 'arena')
-					.find((m) =>
-						[model.info.base_model_id, `${model.info.base_model_id}:latest`].includes(m.id)
-					);
+					.find((m) => [model.base_model_id, `${model.base_model_id}:latest`].includes(m.id));
 
 				console.log('base_model', base_model);
 
 				if (base_model) {
-					model.info.base_model_id = base_model.id;
+					model.base_model_id = base_model.id;
 				} else {
-					model.info.base_model_id = null;
+					model.base_model_id = null;
 				}
 			}
 
-			params = { ...params, ...model?.info?.params };
+			params = { ...params, ...model?.params };
 			params.stop = params?.stop
 				? (typeof params.stop === 'string' ? params.stop.split(',') : (params?.stop ?? [])).join(
 						','
 					)
 				: null;
 
-			toolIds = model?.info?.meta?.toolIds ?? [];
-			filterIds = model?.info?.meta?.filterIds ?? [];
-			actionIds = model?.info?.meta?.actionIds ?? [];
-			knowledge = (model?.info?.meta?.knowledge ?? []).map((item) => {
+			toolIds = model?.meta?.toolIds ?? [];
+			filterIds = model?.meta?.filterIds ?? [];
+			actionIds = model?.meta?.actionIds ?? [];
+			knowledge = (model?.meta?.knowledge ?? []).map((item) => {
 				if (item?.collection_name) {
 					return {
 						id: item.collection_name,
@@ -203,7 +202,7 @@
 					return item;
 				}
 			});
-			capabilities = { ...capabilities, ...(model?.info?.meta?.capabilities ?? {}) };
+			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
 			if (model?.owned_by === 'openai') {
 				capabilities.usage = false;
 			}
@@ -212,8 +211,8 @@
 				...info,
 				...JSON.parse(
 					JSON.stringify(
-						model?.info
-							? model?.info
+						model
+							? model
 							: {
 									id: model.id,
 									name: model.name
@@ -441,6 +440,26 @@
 						{/if}
 					</div>
 
+					<div class="my-1">
+						<div class="">
+							<Tags
+								tags={info?.meta?.tags ?? []}
+								on:delete={(e) => {
+									const tagName = e.detail;
+									info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
+								}}
+								on:add={(e) => {
+									const tagName = e.detail;
+									if (!(info?.meta?.tags ?? null)) {
+										info.meta.tags = [{ name: tagName }];
+									} else {
+										info.meta.tags = [...info.meta.tags, { name: tagName }];
+									}
+								}}
+							/>
+						</div>
+					</div>
+
 					<hr class=" dark:border-gray-850 my-1.5" />
 
 					<div class="my-2">
@@ -620,28 +639,8 @@
 						<Capabilities bind:capabilities />
 					</div>
 
-					<div class="my-1">
-						<div class="flex w-full justify-between items-center">
-							<div class=" self-center text-sm font-semibold">{$i18n.t('Tags')}</div>
-						</div>
-
-						<div class="mt-2">
-							<Tags
-								tags={info?.meta?.tags ?? []}
-								on:delete={(e) => {
-									const tagName = e.detail;
-									info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
-								}}
-								on:add={(e) => {
-									const tagName = e.detail;
-									if (!(info?.meta?.tags ?? null)) {
-										info.meta.tags = [{ name: tagName }];
-									} else {
-										info.meta.tags = [...info.meta.tags, { name: tagName }];
-									}
-								}}
-							/>
-						</div>
+					<div class="my-2">
+						<AccessPermissions />
 					</div>
 
 					<div class="my-2 text-gray-300 dark:text-gray-700">

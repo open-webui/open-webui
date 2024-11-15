@@ -4,7 +4,7 @@ import { getUserPosition } from '$lib/utils';
 export const getUserPermissions = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/permissions/user`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/permissions`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -31,7 +31,7 @@ export const getUserPermissions = async (token: string) => {
 export const updateUserPermissions = async (token: string, permissions: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/permissions/user`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/permissions`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',

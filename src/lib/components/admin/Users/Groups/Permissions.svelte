@@ -28,11 +28,11 @@
 			<div class="flex justify-between items-center text-xs pr-2">
 				<div class=" text-xs font-medium">{$i18n.t('Model Filtering')}</div>
 
-				<Switch bind:state={filterEnabled} />
+				<Switch bind:state={permissions.model.filter} />
 			</div>
 		</div>
 
-		{#if filterEnabled}
+		{#if permissions.model.filter}
 			<div class="mb-2">
 				<div class=" space-y-1.5">
 					<div class="flex flex-col w-full">
@@ -40,9 +40,9 @@
 							<div class="text-xs text-gray-500">{$i18n.t('Model IDs')}</div>
 						</div>
 
-						{#if filterModelIds.length > 0}
+						{#if model_ids.length > 0}
 							<div class="flex flex-col">
-								{#each filterModelIds as modelId, modelIdx}
+								{#each model_ids as modelId, modelIdx}
 									<div class=" flex gap-2 w-full justify-between items-center">
 										<div class=" text-sm flex-1 rounded-lg">
 											{modelId}
@@ -51,7 +51,7 @@
 											<button
 												type="button"
 												on:click={() => {
-													filterModelIds = filterModelIds.filter((_, idx) => idx !== modelIdx);
+													model_ids = model_ids.filter((_, idx) => idx !== modelIdx);
 												}}
 											>
 												<Minus strokeWidth="2" className="size-3.5" />
@@ -86,8 +86,8 @@
 						<button
 							type="button"
 							on:click={() => {
-								if (selectedModelId && !filterModelIds.includes(selectedModelId)) {
-									filterModelIds = [...filterModelIds, selectedModelId];
+								if (selectedModelId && !permissions.model.model_ids.includes(selectedModelId)) {
+									permissions.model.model_ids = [...permissions.model.model_ids, selectedModelId];
 									selectedModelId = '';
 								}
 							}}
@@ -109,11 +109,11 @@
 			<div class="flex-1 mr-2">
 				<select
 					class="w-full bg-transparent outline-none py-0.5 text-sm"
-					bind:value={defaultModelId}
+					bind:value={permissions.model.default_id}
 					placeholder="Select a model"
 				>
 					<option value="" disabled selected>{$i18n.t('Select a model')}</option>
-					{#each filterEnabled ? $models.filter( (model) => filterModelIds.includes(model.id) ) : $models.filter((model) => model.id) as model}
+					{#each permissions.model.filter ? $models.filter( (model) => filterModelIds.includes(model.id) ) : $models.filter((model) => model.id) as model}
 						<option value={model.id} class="bg-gray-100 dark:bg-gray-700">{model.name}</option>
 					{/each}
 				</select>

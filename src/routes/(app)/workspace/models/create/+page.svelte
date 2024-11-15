@@ -5,7 +5,7 @@
 	import { models } from '$lib/stores';
 
 	import { onMount, tick, getContext } from 'svelte';
-	import { addNewModel, getModelById, getModelInfos } from '$lib/apis/models';
+	import { createNewModel, getModelById } from '$lib/apis/models';
 	import { getModels } from '$lib/apis';
 
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
@@ -21,7 +21,7 @@
 		}
 
 		if (modelInfo) {
-			const res = await addNewModel(localStorage.token, {
+			const res = await createNewModel(localStorage.token, {
 				...modelInfo,
 				meta: {
 					...modelInfo.meta,
