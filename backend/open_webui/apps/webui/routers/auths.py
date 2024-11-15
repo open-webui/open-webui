@@ -219,8 +219,6 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                 except Exception as err:
                     raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
 
-            user = Auths.authenticate_user(mail, password=str(form_data.password))
-
             if user:
                 token = create_token(
                     data={"id": user.id},
