@@ -3,7 +3,7 @@ from typing import Optional
 
 from open_webui.apps.webui.internal.db import Base, get_db
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, Column, String, Text, JSON
 
 ####################
 # Prompts DB Schema
@@ -19,6 +19,12 @@ class Prompt(Base):
     content = Column(Text)
     timestamp = Column(BigInteger)
 
+    access_control = Column(JSON, nullable=True)  # Controls data access levels.
+    # NULL for public access (open to all users with "user" role).
+    # {} for individual access (private to the owner).
+    # {"group_ids": ["group_id1", "group_id2"]} for access restricted to specific groups.
+    # {"user_ids": ["user_id1", "user_id2"]} for access restricted to specific users.
+
 
 class PromptModel(BaseModel):
     command: str
@@ -27,6 +33,7 @@ class PromptModel(BaseModel):
     content: str
     timestamp: int  # timestamp in epoch
 
+    access_control = Optional[dict] = None
     model_config = ConfigDict(from_attributes=True)
 
 

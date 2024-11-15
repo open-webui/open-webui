@@ -6,7 +6,7 @@ from open_webui.apps.webui.internal.db import Base, JSONField, get_db
 from open_webui.apps.webui.models.users import Users
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, Column, String, Text, JSON
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -26,6 +26,13 @@ class Tool(Base):
     specs = Column(JSONField)
     meta = Column(JSONField)
     valves = Column(JSONField)
+
+    access_control = Column(JSON, nullable=True)  # Controls data access levels.
+    # NULL for public access (open to all users with "user" role).
+    # {} for individual access (private to the owner).
+    # {"group_ids": ["group_id1", "group_id2"]} for access restricted to specific groups.
+    # {"user_ids": ["user_id1", "user_id2"]} for access restricted to specific users.
+
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
 
@@ -42,6 +49,8 @@ class ToolModel(BaseModel):
     content: str
     specs: list[dict]
     meta: ToolMeta
+    access_control = Optional[dict] = None
+
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
