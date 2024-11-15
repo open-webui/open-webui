@@ -34,7 +34,6 @@ class Group(Base):
 
     permissions = Column(JSON, nullable=True)
     user_ids = Column(JSON, nullable=True)
-    admin_ids = Column(JSON, nullable=True)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -51,7 +50,6 @@ class GroupModel(BaseModel):
 
     permissions: Optional[dict] = None
     user_ids: list[str] = []
-    admin_ids: list[str] = []
 
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch

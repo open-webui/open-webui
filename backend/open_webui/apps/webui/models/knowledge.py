@@ -35,10 +35,21 @@ class Knowledge(Base):
     meta = Column(JSON, nullable=True)
 
     access_control = Column(JSON, nullable=True)  # Controls data access levels.
-    # NULL for public access (open to all users with "user" role).
-    # {} for individual access (private to the owner).
-    # {"group_ids": ["group_id1", "group_id2"]} for access restricted to specific groups.
-    # {"user_ids": ["user_id1", "user_id2"]} for access restricted to specific users.
+    # Defines access control rules for this entry.
+    # - `None`: Public access, available to all users with the "user" role.
+    # - `{}`: Private access, restricted exclusively to the owner.
+    # - Custom permissions: Specific access control for reading and writing;
+    #   Can specify group or user-level restrictions:
+    #   {
+    #      "read": {
+    #          "group_ids": ["group_id1", "group_id2"],
+    #          "user_ids":  ["user_id1", "user_id2"]
+    #      },
+    #      "write": {
+    #          "group_ids": ["group_id1", "group_id2"],
+    #          "user_ids":  ["user_id1", "user_id2"]
+    #      }
+    #   }
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -56,7 +67,7 @@ class KnowledgeModel(BaseModel):
     data: Optional[dict] = None
     meta: Optional[dict] = None
 
-    access_control = Optional[dict] = None
+    access_control: Optional[dict] = None
 
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
