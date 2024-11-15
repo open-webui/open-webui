@@ -1005,66 +1005,57 @@ async def get_all_models():
                 }
             )
 
-    for model in models:
-        action_ids = []
-        if "action_ids" in model:
-            action_ids = model["action_ids"]
-            del model["action_ids"]
+    # Process action_ids to get the actions
+    def get_action_items_from_module(module):
+        actions = []
+        if hasattr(module, "actions"):
+            actions = module.actions
+            return [
+                {
+                    "id": f"{module.id}.{action['id']}",
+                    "name": action.get("name", f"{module.name} ({action['id']})"),
+                    "description": module.meta.description,
+                    "icon_url": action.get(
+                        "icon_url", module.meta.manifest.get("icon_url", None)
+                    ),
+                }
+                for action in actions
+            ]
+        else:
+            return [
+                {
+                    "id": module.id,
+                    "name": module.name,
+                    "description": module.meta.description,
+                    "icon_url": module.meta.manifest.get("icon_url", None),
+                }
+            ]
 
-        action_ids = action_ids + global_action_ids
-        action_ids = list(set(action_ids))
+    def get_function_module_by_id(function_id):
+        if function_id in webui_app.state.FUNCTIONS:
+            function_module = webui_app.state.FUNCTIONS[function_id]
+        else:
+            function_module, _, _ = load_function_module_by_id(function_id)
+            webui_app.state.FUNCTIONS[function_id] = function_module
+
+    for model in models:
         action_ids = [
-            action_id for action_id in action_ids if action_id in enabled_action_ids
+            action_id
+            for action_id in list(set(model.pop("action_ids", []) + global_action_ids))
+            if action_id in enabled_action_ids
         ]
 
         model["actions"] = []
         for action_id in action_ids:
-            action = Functions.get_function_by_id(action_id)
-            if action is None:
+            action_function = Functions.get_function_by_id(action_id)
+            if action_function is None:
                 raise Exception(f"Action not found: {action_id}")
 
-            if action_id in webui_app.state.FUNCTIONS:
-                function_module = webui_app.state.FUNCTIONS[action_id]
-            else:
-                function_module, _, _ = load_function_module_by_id(action_id)
-                webui_app.state.FUNCTIONS[action_id] = function_module
-
-            __webui__ = False
-            if hasattr(function_module, "__webui__"):
-                __webui__ = function_module.__webui__
-
-            if hasattr(function_module, "actions"):
-                actions = function_module.actions
-                model["actions"].extend(
-                    [
-                        {
-                            "id": f"{action_id}.{_action['id']}",
-                            "name": _action.get(
-                                "name", f"{action.name} ({_action['id']})"
-                            ),
-                            "description": action.meta.description,
-                            "icon_url": _action.get(
-                                "icon_url", action.meta.manifest.get("icon_url", None)
-                            ),
-                            **({"__webui__": __webui__} if __webui__ else {}),
-                        }
-                        for _action in actions
-                    ]
-                )
-            else:
-                model["actions"].append(
-                    {
-                        "id": action_id,
-                        "name": action.name,
-                        "description": action.meta.description,
-                        "icon_url": action.meta.manifest.get("icon_url", None),
-                        **({"__webui__": __webui__} if __webui__ else {}),
-                    }
-                )
+            function_module = get_function_module_by_id(action_id)
+            model["actions"].extend(get_action_items_from_module(function_module))
 
     app.state.MODELS = {model["id"]: model for model in models}
     webui_app.state.MODELS = app.state.MODELS
-
     return models
 
 
@@ -1162,6 +1153,10 @@ async def generate_chat_completions(
                 ),
                 "selected_model_id": selected_model_id,
             }
+
+    if model_id.startswith("open-webui-"):
+        model_id = model_id[len("open-webui-") :]
+        form_data["model"] = model_id
 
     if model.get("pipe"):
         # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter

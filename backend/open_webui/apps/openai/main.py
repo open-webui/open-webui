@@ -522,8 +522,11 @@ async def generate_chat_completion(
         payload = apply_model_params_to_body_openai(params, payload)
         payload = apply_model_system_prompt_to_body(params, payload, user)
 
-    model = app.state.MODELS[payload.get("model")]
-    idx = model["urlIdx"]
+    try:
+        model = app.state.MODELS[payload.get("model")]
+        idx = model["urlIdx"]
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="Model not found")
 
     api_config = app.state.config.OPENAI_API_CONFIGS.get(
         app.state.config.OPENAI_API_BASE_URLS[idx], {}

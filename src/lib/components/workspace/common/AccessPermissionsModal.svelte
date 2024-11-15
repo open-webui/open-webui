@@ -39,7 +39,7 @@
 	</div>
 
 	<div class="">
-		<div class=" text-sm font-semibold mb-2">{$i18n.t('General access')}</div>
+		<div class=" text-sm font-semibold mb-2">{$i18n.t('Visibility')}</div>
 
 		<div class="flex gap-2.5 items-center">
 			<div>

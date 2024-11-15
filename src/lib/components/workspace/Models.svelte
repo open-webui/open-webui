@@ -341,7 +341,7 @@
 						</button>
 					</Tooltip>
 				{:else}
-					{#if $user?.role === 'admin'}
+					{#if $user?.role === 'admin' || model.user_id === $user?.id}
 						<a
 							class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 							type="button"

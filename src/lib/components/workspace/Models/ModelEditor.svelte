@@ -24,6 +24,7 @@
 	export let onSubmit: Function;
 	export let model = null;
 	export let edit = false;
+	export let preset = true;
 
 	let loading = false;
 	let success = false;
@@ -382,7 +383,7 @@
 						</div>
 					</div>
 
-					{#if !edit || model.preset}
+					{#if preset}
 						<div class="my-1">
 							<div class=" text-sm font-semibold mb-1">{$i18n.t('Base Model (From)')}</div>
 

@@ -524,7 +524,7 @@
 	}}
 />
 
-<Modal size="md" bind:show>
+<Modal size="sm" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
 			<div class=" text-lg font-medium self-center font-primary">
