@@ -102,7 +102,7 @@ class GroupTable:
             )
 
             try:
-                result = Groups(**group.model_dump())
+                result = Group(**group.model_dump())
                 db.add(result)
                 db.commit()
                 db.refresh(result)
@@ -118,13 +118,13 @@ class GroupTable:
         with get_db() as db:
             return [
                 GroupModel.model_validate(group)
-                for group in db.query(Groups).order_by(Groups.updated_at.desc()).all()
+                for group in db.query(Group).order_by(Group.updated_at.desc()).all()
             ]
 
     def get_group_by_id(self, id: str) -> Optional[GroupModel]:
         try:
             with get_db() as db:
-                group = db.query(Groups).filter_by(id=id).first()
+                group = db.query(Group).filter_by(id=id).first()
                 return GroupModel.model_validate(group) if group else None
         except Exception:
             return None
@@ -134,7 +134,7 @@ class GroupTable:
     ) -> Optional[GroupModel]:
         try:
             with get_db() as db:
-                db.query(Groups).filter_by(id=id).update(
+                db.query(Group).filter_by(id=id).update(
                     {
                         **form_data.model_dump(exclude_none=True),
                         "updated_at": int(time.time()),
@@ -149,7 +149,7 @@ class GroupTable:
     def delete_group_by_id(self, id: str) -> bool:
         try:
             with get_db() as db:
-                db.query(Groups).filter_by(id=id).delete()
+                db.query(Group).filter_by(id=id).delete()
                 db.commit()
                 return True
         except Exception:
@@ -158,7 +158,7 @@ class GroupTable:
     def delete_all_groups(self) -> bool:
         with get_db() as db:
             try:
-                db.query(Groups).delete()
+                db.query(Group).delete()
                 db.commit()
 
                 return True
