@@ -22,6 +22,7 @@
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import GroupItem from './Groups/GroupItem.svelte';
 	import AddGroupModal from './Groups/AddGroupModal.svelte';
+	import { createNewGroup, getGroups } from '$lib/apis/groups';
 
 	const i18n = getContext('i18n');
 
@@ -51,56 +52,58 @@
 		if ($user?.role !== 'admin') {
 			await goto('/');
 		} else {
-			groups = [
-				{
-					id: '1',
-					name: 'Group A',
-					description: 'Group A description',
-					permissions: {
-						model: {
-							enable_filter: false, // boolean
-							ids: [], // array of strings
-							default_id: null // null or string
-						},
-						workspace: {
-							models: false, // boolean
-							knowledge: false, // boolean
-							prompts: false // boolean
-						},
-						chat: {
-							delete: true, // boolean
-							edit: true, // boolean
-							temporary: true // boolean
-						}
-					},
-					user_ids: ['1', '2', '3'], // array of strings
-					admin_ids: ['1'] // array of strings
-				},
-				{
-					id: '2',
-					name: 'Moderators',
-					description: 'Moderators description',
-					permissions: {
-						model: {
-							enable_filter: false, // boolean
-							ids: [], // array of strings
-							default_id: null // null or string
-						},
-						workspace: {
-							models: false, // boolean
-							knowledge: false, // boolean
-							prompts: false // boolean
-						},
-						chat: {
-							delete: true, // boolean
-							edit: true, // boolean
-							temporary: true // boolean
-						}
-					},
-					user_ids: ['1', '5', '6'], // array of strings
-					admin_ids: ['1'] // array of strings
-				}
-			];
+			groups = await getGroups(localStorage.token);
+
+			// [
+			// {
+			// 	id: '1',
+			// 	name: 'Group A',
+			// 	description: 'Group A description',
+			// 	permissions: {
+			// 		model: {
+			// 			enable_filter: false, // boolean
+			// 			ids: [], // array of strings
+			// 			default_id: null // null or string
+			// 		},
+			// 		workspace: {
+			// 			models: false, // boolean
+			// 			knowledge: false, // boolean
+			// 			prompts: false // boolean
+			// 		},
+			// 		chat: {
+			// 			delete: true, // boolean
+			// 			edit: true, // boolean
+			// 			temporary: true // boolean
+			// 		}
+			// 	},
+			// 	user_ids: ['1', '2', '3'], // array of strings
+			// 	admin_ids: ['1'] // array of strings
+			// },
+			// {
+			// 	id: '2',
+			// 	name: 'Moderators',
+			// 	description: 'Moderators description',
+			// 	permissions: {
+			// 		model: {
+			// 			enable_filter: false, // boolean
+			// 			ids: [], // array of strings
+			// 			default_id: null // null or string
+			// 		},
+			// 		workspace: {
+			// 			models: false, // boolean
+			// 			knowledge: false, // boolean
+			// 			prompts: false // boolean
+			// 		},
+			// 		chat: {
+			// 			delete: true, // boolean
+			// 			edit: true, // boolean
+			// 			temporary: true // boolean
+			// 		}
+			// 	},
+			// 	user_ids: ['1', '5', '6'], // array of strings
+			// 	admin_ids: ['1'] // array of strings
+			// }
+			// ];
 		}
 		loaded = true;
 	});

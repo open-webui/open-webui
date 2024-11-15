@@ -19,8 +19,7 @@
 
 		const group = {
 			name,
-			description,
-			user_ids: userIds
+			description
 		};
 
 		await onSubmit(group);
