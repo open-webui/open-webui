@@ -190,6 +190,7 @@ type Config = {
 type PromptSuggestion = {
 	content: string;
 	title: [string, string];
+	lang: string;
 };
 
 type SessionUser = {

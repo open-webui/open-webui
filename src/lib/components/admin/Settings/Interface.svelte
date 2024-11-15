@@ -15,6 +15,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import { getLanguages } from '$lib/i18n';
 
 	const dispatch = createEventDispatcher();
 
@@ -31,6 +32,7 @@
 
 	let promptSuggestions = [];
 	let banners: Banner[] = [];
+	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
 
 	const updateInterfaceHandler = async () => {
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
@@ -46,6 +48,7 @@
 
 		promptSuggestions = $config?.default_prompt_suggestions;
 		banners = await getBanners(localStorage.token);
+		languages = await getLanguages();
 	});
 
 	const updateBanners = async () => {
@@ -283,7 +286,10 @@
 						type="button"
 						on:click={() => {
 							if (promptSuggestions.length === 0 || promptSuggestions.at(-1).content !== '') {
-								promptSuggestions = [...promptSuggestions, { content: '', title: ['', ''] }];
+								promptSuggestions = [
+									...promptSuggestions,
+									{ content: '', title: ['', ''], lang: i18n.language }
+								];
 							}
 						}}
 					>
@@ -305,6 +311,15 @@
 							class=" flex border border-gray-100 dark:border-none dark:bg-gray-850 rounded-xl py-1.5"
 						>
 							<div class="flex flex-col flex-1 pl-1">
+								<select
+									class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r border-gray-100 dark:border-gray-800"
+									bind:value={prompt.lang}
+									placeholder={$i18n.languages[prompt.lang] || 'Unknown Language'}
+								>
+									{#each languages as language}
+										<option value={language.code}>{language.title}</option>
+									{/each}
+								</select>
 								<div class="flex border-b border-gray-100 dark:border-gray-800 w-full">
 									<input
 										class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r border-gray-100 dark:border-gray-800"

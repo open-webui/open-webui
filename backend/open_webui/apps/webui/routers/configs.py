@@ -41,6 +41,7 @@ class SetDefaultModelsForm(BaseModel):
 class PromptSuggestion(BaseModel):
     title: list[str]
     content: str
+    lang: str
 
 
 class SetDefaultSuggestionsForm(BaseModel):

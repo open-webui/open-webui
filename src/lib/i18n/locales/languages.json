@@ -1,10 +1,10 @@
 [
 	{
-		"code": "en-CA",
-		"title": "English (Canada)"
+		"code": "en-US",
+		"title": "English"
 	},
 	{
 		"code": "fr-CA",
-		"title": "French (Canada)"
+		"title": "French"
 	}
 ]
