@@ -12,6 +12,7 @@ from open_webui.apps.webui.routers import (
     chats,
     folders,
     configs,
+    groups,
     files,
     functions,
     memories,
@@ -85,7 +86,11 @@ from open_webui.utils.payload import (
 
 from open_webui.utils.tools import get_tools
 
-app = FastAPI(docs_url="/docs" if ENV == "dev" else None, openapi_url="/openapi.json" if ENV == "dev" else None, redoc_url=None)
+app = FastAPI(
+    docs_url="/docs" if ENV == "dev" else None,
+    openapi_url="/openapi.json" if ENV == "dev" else None,
+    redoc_url=None,
+)
 
 log = logging.getLogger(__name__)
 
@@ -161,13 +166,15 @@ app.include_router(models.router, prefix="/models", tags=["models"])
 app.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])
 app.include_router(prompts.router, prefix="/prompts", tags=["prompts"])
 app.include_router(tools.router, prefix="/tools", tags=["tools"])
-app.include_router(functions.router, prefix="/functions", tags=["functions"])
 
 app.include_router(memories.router, prefix="/memories", tags=["memories"])
+app.include_router(folders.router, prefix="/folders", tags=["folders"])
+
+app.include_router(groups.router, prefix="/groups", tags=["groups"])
+app.include_router(files.router, prefix="/files", tags=["files"])
+app.include_router(functions.router, prefix="/functions", tags=["functions"])
 app.include_router(evaluations.router, prefix="/evaluations", tags=["evaluations"])
 
-app.include_router(folders.router, prefix="/folders", tags=["folders"])
-app.include_router(files.router, prefix="/files", tags=["files"])
 
 app.include_router(utils.router, prefix="/utils", tags=["utils"])
 
