@@ -28,6 +28,7 @@
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Search from '../icons/Search.svelte';
 	import Plus from '../icons/Plus.svelte';
+	import { get } from 'svelte/store';
 
 	let shiftKey = false;
 
@@ -51,13 +52,17 @@
 	let searchValue = '';
 
 	const deleteModelHandler = async (model) => {
-		const res = await deleteModelById(localStorage.token, model.id);
+		const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
+			toast.error(e);
+			return null;
+		});
+
 		if (res) {
 			toast.success($i18n.t(`Deleted {{name}}`, { name: model.id }));
 		}
 
 		await _models.set(await getModels(localStorage.token));
-		models = $_models;
+		models = await getWorkspaceModels(localStorage.token);
 	};
 
 	const cloneModelHandler = async (model) => {
@@ -123,7 +128,7 @@
 		}
 
 		await _models.set(await getModels(localStorage.token));
-		models = $_models;
+		models = await getWorkspaceModels(localStorage.token);
 	};
 
 	const downloadModels = async (models) => {
@@ -431,7 +436,7 @@
 						}
 
 						await _models.set(await getModels(localStorage.token));
-						models = $_models;
+						models = await getWorkspaceModels(localStorage.token);
 					};
 
 					reader.readAsText(importFiles[0]);
