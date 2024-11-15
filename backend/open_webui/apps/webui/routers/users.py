@@ -36,16 +36,34 @@ async def get_users(skip: int = 0, limit: int = 50, user=Depends(get_admin_user)
 ############################
 
 
-@router.get("/permissions/user")
+class WorkspacePermissions(BaseModel):
+    models: bool
+    knowledge: bool
+    prompts: bool
+    tools: bool
+
+
+class ChatPermissions(BaseModel):
+    delete: bool
+    edit: bool
+    temporary: bool
+
+
+class UserPermissions(BaseModel):
+    workspace: WorkspacePermissions
+    chat: ChatPermissions
+
+
+@router.get("/permissions")
 async def get_user_permissions(request: Request, user=Depends(get_admin_user)):
     return request.app.state.config.USER_PERMISSIONS
 
 
-@router.post("/permissions/user")
+@router.post("/permissions")
 async def update_user_permissions(
-    request: Request, form_data: dict, user=Depends(get_admin_user)
+    request: Request, form_data: UserPermissions, user=Depends(get_admin_user)
 ):
-    request.app.state.config.USER_PERMISSIONS = form_data
+    request.app.state.config.USER_PERMISSIONS = form_data.model_dump()
     return request.app.state.config.USER_PERMISSIONS
 
 

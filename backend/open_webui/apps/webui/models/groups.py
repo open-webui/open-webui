@@ -68,7 +68,6 @@ class GroupResponse(BaseModel):
     permissions: Optional[dict] = None
     meta: Optional[dict] = None
     user_ids: list[str] = []
-    admin_ids: list[str] = []
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
 
@@ -117,6 +116,16 @@ class GroupTable:
             return [
                 GroupModel.model_validate(group)
                 for group in db.query(Group).order_by(Group.updated_at.desc()).all()
+            ]
+
+    def get_groups_by_member_id(self, user_id: str) -> list[GroupModel]:
+        with get_db() as db:
+            return [
+                GroupModel.model_validate(group)
+                for group in db.query(Group)
+                .filter(Group.user_ids.contains([user_id]))
+                .order_by(Group.updated_at.desc())
+                .all()
             ]
 
     def get_group_by_id(self, id: str) -> Optional[GroupModel]:

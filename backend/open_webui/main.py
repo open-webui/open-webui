@@ -993,7 +993,7 @@ async def get_all_models():
 
             models.append(
                 {
-                    "id": custom_model.id,
+                    "id": f"open-webui-{custom_model.id}",
                     "name": custom_model.name,
                     "object": "model",
                     "created": custom_model.created_at,

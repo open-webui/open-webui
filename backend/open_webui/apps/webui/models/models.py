@@ -4,8 +4,19 @@ from typing import Optional
 
 from open_webui.apps.webui.internal.db import Base, JSONField, get_db
 from open_webui.env import SRC_LOG_LEVELS
+
+from open_webui.apps.webui.models.groups import Groups
+
+
 from pydantic import BaseModel, ConfigDict
+
+from sqlalchemy import or_, and_, func
+from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy import BigInteger, Column, Text, JSON
+
+
+from open_webui.utils.utils import has_access
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -112,8 +123,14 @@ class ModelModel(BaseModel):
 
 class ModelResponse(BaseModel):
     id: str
+    user_id: str
+    base_model_id: Optional[str] = None
+
     name: str
+    params: ModelParams
     meta: ModelMeta
+
+    access_control: Optional[dict] = None
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
@@ -156,6 +173,24 @@ class ModelsTable:
     def get_all_models(self) -> list[ModelModel]:
         with get_db() as db:
             return [ModelModel.model_validate(model) for model in db.query(Model).all()]
+
+    def get_models(self) -> list[ModelModel]:
+        with get_db() as db:
+            return [
+                ModelModel.model_validate(model)
+                for model in db.query(Model).filter(Model.base_model_id != None).all()
+            ]
+
+    def get_models_by_user_id(
+        self, user_id: str, permission: str = "write"
+    ) -> list[ModelModel]:
+        models = self.get_all_models()
+        return [
+            model
+            for model in models
+            if model.user_id == user_id
+            or has_access(user_id, permission, model.access_control)
+        ]
 
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:
         try:
