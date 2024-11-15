@@ -323,12 +323,6 @@
 	{/each}
 </div>
 
-<div class=" text-gray-500 text-xs mt-1 mb-2">
-	ⓘ {$i18n.t(
-		'Admins have access to all tools at all times; users need tools assigned per model in the workspace.'
-	)}
-</div>
-
 <div class=" flex justify-end w-full mb-2">
 	<div class="flex space-x-2">
 		<input

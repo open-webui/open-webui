@@ -5,7 +5,6 @@
 
 	import { WEBUI_NAME, config, functions, models } from '$lib/stores';
 	import { onMount, getContext, tick } from 'svelte';
-	import { createNewPrompt, deletePromptByCommand, getPrompts } from '$lib/apis/prompts';
 
 	import { goto } from '$app/navigation';
 	import {
@@ -25,8 +24,8 @@
 	import FunctionMenu from './Functions/FunctionMenu.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import Switch from '../common/Switch.svelte';
-	import ValvesModal from './common/ValvesModal.svelte';
-	import ManifestModal from './common/ManifestModal.svelte';
+	import ValvesModal from '../workspace/common/ValvesModal.svelte';
+	import ManifestModal from '../workspace/common/ManifestModal.svelte';
 	import Heart from '../icons/Heart.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
@@ -98,7 +97,7 @@
 				id: `${_function.id}_clone`,
 				name: `${_function.name} (Clone)`
 			});
-			goto('/workspace/functions/create');
+			goto('/admin/functions/create');
 		}
 	};
 
@@ -210,7 +209,7 @@
 		<div>
 			<a
 				class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
-				href="/workspace/functions/create"
+				href="/admin/functions/create"
 			>
 				<Plus className="size-3.5" />
 			</a>
@@ -225,7 +224,7 @@
 		>
 			<a
 				class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
-				href={`/workspace/functions/edit?id=${encodeURIComponent(func.id)}`}
+				href={`/admin/functions/edit?id=${encodeURIComponent(func.id)}`}
 			>
 				<div class="flex items-center text-left">
 					<div class=" flex-1 self-center pl-1">
@@ -322,7 +321,7 @@
 					<FunctionMenu
 						{func}
 						editHandler={() => {
-							goto(`/workspace/functions/edit?id=${encodeURIComponent(func.id)}`);
+							goto(`/admin/functions/edit?id=${encodeURIComponent(func.id)}`);
 						}}
 						shareHandler={() => {
 							shareHandler(func);

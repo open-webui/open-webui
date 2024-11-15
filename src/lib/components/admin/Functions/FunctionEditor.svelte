@@ -305,7 +305,7 @@ class Pipe:
 								<button
 									class="w-full text-left text-sm py-1.5 px-1 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
 									on:click={() => {
-										goto('/workspace/functions');
+										goto('/admin/functions');
 									}}
 									type="button"
 								>
