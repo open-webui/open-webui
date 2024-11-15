@@ -1,7 +1,13 @@
 <script>
+	import { toast } from 'svelte-sonner';
+	import { getContext } from 'svelte';
+
+	const i18n = getContext('i18n');
+
+	import { deleteGroupById, updateGroupById } from '$lib/apis/groups';
+
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import User from '$lib/components/icons/User.svelte';
-
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import GroupModal from './EditGroupModal.svelte';
 
@@ -11,10 +17,43 @@
 		user_ids: [1, 2, 3]
 	};
 
+	export let setGroups = () => {};
+
 	let showEdit = false;
+
+	const updateHandler = async (_group) => {
+		const res = await updateGroupById(localStorage.token, group.id, _group).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Group updated successfully'));
+			setGroups();
+		}
+	};
+
+	const deleteHandler = async () => {
+		const res = await deleteGroupById(localStorage.token, group.id).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Group deleted successfully'));
+			setGroups();
+		}
+	};
 </script>
 
-<GroupModal bind:show={showEdit} edit {group} {users} />
+<GroupModal
+	bind:show={showEdit}
+	edit
+	{users}
+	{group}
+	onSubmit={updateHandler}
+	onDelete={deleteHandler}
+/>
 
 <div class="flex items-center gap-3 justify-between px-1 text-xs w-full transition">
 	<div class="flex items-center gap-1.5 w-full font-medium">

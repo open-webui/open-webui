@@ -48,69 +48,38 @@
 	let showCreateGroupModal = false;
 	let showDefaultPermissionsModal = false;
 
+	const setGroups = async () => {
+		groups = await getGroups(localStorage.token);
+	};
+
+	const addGroupHandler = async (group) => {
+		const res = await createNewGroup(localStorage.token, group).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Group created successfully'));
+			groups = await getGroups(localStorage.token);
+		}
+	};
+
+	const updateDefaultPermissionsHandler = async (permissions) => {
+		console.log(permissions);
+	};
+
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
 			await goto('/');
 		} else {
-			groups = await getGroups(localStorage.token);
-
-			// [
-			// {
-			// 	id: '1',
-			// 	name: 'Group A',
-			// 	description: 'Group A description',
-			// 	permissions: {
-			// 		model: {
-			// 			enable_filter: false, // boolean
-			// 			ids: [], // array of strings
-			// 			default_id: null // null or string
-			// 		},
-			// 		workspace: {
-			// 			models: false, // boolean
-			// 			knowledge: false, // boolean
-			// 			prompts: false // boolean
-			// 		},
-			// 		chat: {
-			// 			delete: true, // boolean
-			// 			edit: true, // boolean
-			// 			temporary: true // boolean
-			// 		}
-			// 	},
-			// 	user_ids: ['1', '2', '3'], // array of strings
-			// 	admin_ids: ['1'] // array of strings
-			// },
-			// {
-			// 	id: '2',
-			// 	name: 'Moderators',
-			// 	description: 'Moderators description',
-			// 	permissions: {
-			// 		model: {
-			// 			enable_filter: false, // boolean
-			// 			ids: [], // array of strings
-			// 			default_id: null // null or string
-			// 		},
-			// 		workspace: {
-			// 			models: false, // boolean
-			// 			knowledge: false, // boolean
-			// 			prompts: false // boolean
-			// 		},
-			// 		chat: {
-			// 			delete: true, // boolean
-			// 			edit: true, // boolean
-			// 			temporary: true // boolean
-			// 		}
-			// 	},
-			// 	user_ids: ['1', '5', '6'], // array of strings
-			// 	admin_ids: ['1'] // array of strings
-			// }
-			// ];
+			await setGroups();
 		}
 		loaded = true;
 	});
 </script>
 
 {#if loaded}
-	<AddGroupModal bind:show={showCreateGroupModal} />
+	<AddGroupModal bind:show={showCreateGroupModal} onSubmit={addGroupHandler} />
 	<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
 		<div class="flex md:self-center text-lg font-medium px-0.5">
 			{$i18n.t('Groups')}
@@ -196,7 +165,7 @@
 
 				{#each filteredGroups as group}
 					<div class="my-2">
-						<GroupItem {group} {users} />
+						<GroupItem {group} {users} {setGroups} />
 					</div>
 				{/each}
 			</div>
@@ -204,7 +173,12 @@
 
 		<hr class="mb-2 border-gray-50 dark:border-gray-850" />
 
-		<GroupModal bind:show={showDefaultPermissionsModal} tabs={['permissions']} custom={false} />
+		<GroupModal
+			bind:show={showDefaultPermissionsModal}
+			tabs={['permissions']}
+			custom={false}
+			onSubmit={updateDefaultPermissionsHandler}
+		/>
 
 		<button
 			class="flex items-center justify-between rounded-lg w-full transition pt-1"

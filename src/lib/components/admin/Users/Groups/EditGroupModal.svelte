@@ -4,16 +4,9 @@
 	const i18n = getContext('i18n');
 
 	import Modal from '$lib/components/common/Modal.svelte';
-	import Plus from '$lib/components/icons/Plus.svelte';
-	import Minus from '$lib/components/icons/Minus.svelte';
-	import PencilSolid from '$lib/components/icons/PencilSolid.svelte';
-	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Switch from '$lib/components/common/Switch.svelte';
 	import Display from './Display.svelte';
 	import Permissions from './Permissions.svelte';
 	import Users from './Users.svelte';
-	import UsersSolid from '$lib/components/icons/UsersSolid.svelte';
 	import UserPlusSolid from '$lib/components/icons/UserPlusSolid.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 
@@ -31,15 +24,25 @@
 	export let tabs = ['general', 'permissions', 'users'];
 
 	let selectedTab = 'general';
+	let loading = false;
 
 	let name = '';
 	let description = '';
 
-	let permissions = {};
+	let permissions = {
+		workspace: {
+			models: false,
+			knowledge: false,
+			prompts: false,
+			tools: false
+		},
+		chat: {
+			delete: true,
+			edit: true,
+			temporary: true
+		}
+	};
 	let userIds = [];
-	let adminIds = [];
-
-	let loading = false;
 
 	const submitHandler = async () => {
 		loading = true;
@@ -65,7 +68,19 @@
 		if (group) {
 			name = group.name;
 			description = group.description;
-			permissions = group?.permissions ?? {};
+			permissions = group?.permissions ?? {
+				workspace: {
+					models: false,
+					knowledge: false,
+					prompts: false,
+					tools: false
+				},
+				chat: {
+					delete: true,
+					edit: true,
+					temporary: true
+				}
+			};
 			userIds = group?.user_ids ?? [];
 		}
 	};
@@ -200,9 +215,9 @@
 							{#if selectedTab == 'general'}
 								<Display bind:name bind:description />
 							{:else if selectedTab == 'permissions'}
-								<Permissions bind:permissions {custom} />
+								<Permissions bind:permissions />
 							{:else if selectedTab == 'users'}
-								<Users bind:userIds bind:adminIds {users} />
+								<Users bind:userIds {users} />
 							{/if}
 						</div>
 					</div>

@@ -10,7 +10,6 @@
 
 	export let users = [];
 	export let userIds = [];
-	export let adminIds = [];
 
 	let filteredUsers = [];
 
@@ -30,16 +29,10 @@
 			);
 		})
 		.sort((a, b) => {
-			const aIsAdmin = adminIds.includes(a.id);
-			const bIsAdmin = adminIds.includes(b.id);
 			const aUserIndex = userIds.indexOf(a.id);
 			const bUserIndex = userIds.indexOf(b.id);
 
-			// Admin users should come first
-			if (aIsAdmin && !bIsAdmin) return -1; // Place 'a' first if it's admin
-			if (!aIsAdmin && bIsAdmin) return 1; // Place 'b' first if it's admin
-
-			// Neither are admin, compare based on userIds or fall back to alphabetical order
+			// Compare based on userIds or fall back to alphabetical order
 			if (aUserIndex !== -1 && bUserIndex === -1) return -1; // 'a' has valid userId -> prioritize
 			if (bUserIndex !== -1 && aUserIndex === -1) return 1; // 'b' has valid userId -> prioritize
 
@@ -114,20 +107,7 @@
 							</Tooltip>
 
 							{#if userIds.includes(user.id)}
-								<button
-									on:click={() => {
-										adminIds = adminIds.includes(user.id)
-											? adminIds.filter((id) => id !== user.id)
-											: [...adminIds, user.id];
-									}}
-									type="button"
-								>
-									{#if adminIds.includes(user.id)}
-										<Badge type="info" content="admin" />
-									{:else}
-										<Badge type="success" content="member" />
-									{/if}
-								</button>
+								<Badge type="success" content="member" />
 							{/if}
 						</div>
 					</div>

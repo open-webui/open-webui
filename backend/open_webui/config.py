@@ -739,12 +739,12 @@ DEFAULT_USER_ROLE = PersistentConfig(
     os.getenv("DEFAULT_USER_ROLE", "pending"),
 )
 
-USER_PERMISSIONS_CHAT_DELETION = (
-    os.environ.get("USER_PERMISSIONS_CHAT_DELETION", "True").lower() == "true"
+USER_PERMISSIONS_CHAT_DELETE = (
+    os.environ.get("USER_PERMISSIONS_CHAT_DELETE", "True").lower() == "true"
 )
 
-USER_PERMISSIONS_CHAT_EDITING = (
-    os.environ.get("USER_PERMISSIONS_CHAT_EDITING", "True").lower() == "true"
+USER_PERMISSIONS_CHAT_EDIT = (
+    os.environ.get("USER_PERMISSIONS_CHAT_EDIT", "True").lower() == "true"
 )
 
 USER_PERMISSIONS_CHAT_TEMPORARY = (
@@ -753,11 +753,11 @@ USER_PERMISSIONS_CHAT_TEMPORARY = (
 
 USER_PERMISSIONS = PersistentConfig(
     "USER_PERMISSIONS",
-    "ui.user_permissions",
+    "user.permissions",
     {
         "chat": {
-            "deletion": USER_PERMISSIONS_CHAT_DELETION,
-            "editing": USER_PERMISSIONS_CHAT_EDITING,
+            "deletion": USER_PERMISSIONS_CHAT_DELETE,
+            "editing": USER_PERMISSIONS_CHAT_EDIT,
             "temporary": USER_PERMISSIONS_CHAT_TEMPORARY,
         }
     },
@@ -784,18 +784,6 @@ DEFAULT_ARENA_MODEL = {
         "model_ids": None,
     },
 }
-
-ENABLE_MODEL_FILTER = PersistentConfig(
-    "ENABLE_MODEL_FILTER",
-    "model_filter.enable",
-    os.environ.get("ENABLE_MODEL_FILTER", "False").lower() == "true",
-)
-MODEL_FILTER_LIST = os.environ.get("MODEL_FILTER_LIST", "")
-MODEL_FILTER_LIST = PersistentConfig(
-    "MODEL_FILTER_LIST",
-    "model_filter.list",
-    [model.strip() for model in MODEL_FILTER_LIST.split(";")],
-)
 
 WEBHOOK_URL = PersistentConfig(
     "WEBHOOK_URL", "webhook_url", os.environ.get("WEBHOOK_URL", "")
