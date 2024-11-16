@@ -353,13 +353,13 @@
 								<img
 									src={info.meta.profile_image_url}
 									alt="model profile"
-									class="rounded-lg size-72 md:size-64 object-cover shrink-0"
+									class="rounded-lg size-72 md:size-60 object-cover shrink-0"
 								/>
 							{:else}
 								<img
 									src="/static/favicon.png"
 									alt="model profile"
-									class=" rounded-lg size-72 md:size-64 object-cover shrink-0"
+									class=" rounded-lg size-72 md:size-60 object-cover shrink-0"
 								/>
 							{/if}
 
@@ -498,12 +498,7 @@
 
 					<div class="my-2">
 						<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
-							<AccessControl
-								{accessControl}
-								onChange={(_accessControl) => {
-									accessControl = _accessControl;
-								}}
-							/>
+							<AccessControl bind:accessControl />
 						</div>
 					</div>
 

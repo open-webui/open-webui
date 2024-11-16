@@ -18,6 +18,8 @@
 	let command = '';
 	let content = '';
 
+	let accessControl = null;
+
 	$: if (!edit) {
 		command = title !== '' ? `${title.replace(/\s+/g, '-').toLowerCase()}` : '';
 	}
@@ -29,7 +31,8 @@
 			await onSubmit({
 				title,
 				command,
-				content
+				content,
+				access_control: accessControl
 			});
 		} else {
 			toast.error(
@@ -55,6 +58,8 @@
 
 			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
 			content = prompt.content;
+
+			accessControl = prompt?.access_control ?? null;
 		}
 	});
 </script>
@@ -137,7 +142,9 @@
 		</div>
 
 		<div class="mt-2">
-			<AccessControl />
+			<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+				<AccessControl bind:accessControl />
+			</div>
 		</div>
 
 		<div class="my-4 flex justify-end pb-20">
