@@ -43,7 +43,7 @@
 
 	const init = async () => {
 		const workspaceModels = await getBaseModels(localStorage.token);
-		const allModels = await getModels(localStorage.token);
+		const allModels = await getModels(localStorage.token, true);
 
 		models = allModels
 			.filter((m) => !(m?.preset ?? false))

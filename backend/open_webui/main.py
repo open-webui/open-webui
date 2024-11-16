@@ -915,8 +915,7 @@ app.mount("/api/v1", webui_app)
 webui_app.state.EMBEDDING_FUNCTION = retrieval_app.state.EMBEDDING_FUNCTION
 
 
-async def get_all_models():
-    # TODO: Optimize this function
+async def get_all_base_models():
     open_webui_models = []
     openai_models = []
     ollama_models = []
@@ -942,6 +941,11 @@ async def get_all_models():
     open_webui_models = await get_open_webui_models()
 
     models = open_webui_models + openai_models + ollama_models
+    return models
+
+
+async def get_all_models():
+    models = await get_all_base_models()
 
     # If there are no models, return an empty list
     if len([model for model in models if model["owned_by"] != "arena"]) == 0:
@@ -1081,6 +1085,12 @@ async def get_models(user=Depends(get_verified_user)):
     #         )
     #         return {"data": models}
 
+    return {"data": models}
+
+
+@app.get("/api/models/base")
+async def get_base_models(user=Depends(get_admin_user)):
+    models = await get_all_base_models()
     return {"data": models}
 
 

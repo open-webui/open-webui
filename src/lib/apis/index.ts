@@ -1,9 +1,10 @@
 import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
-export const getModels = async (token: string = '') => {
+export const getModels = async (token: string = '', base: boolean = false) => {
 	let error = null;
-
-	const res = await fetch(`${WEBUI_BASE_URL}/api/models`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/models${
+		base ? '/base' : ''
+	}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -16,17 +17,17 @@ export const getModels = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
 			error = err;
+			console.log(err);
 			return null;
 		});
+	
 
 	if (error) {
 		throw error;
 	}
 
 	let models = res?.data ?? [];
-
 	models = models
 		.filter((models) => models)
 		// Sort the models
