@@ -14,6 +14,7 @@
 	import { getFunctions } from '$lib/apis/functions';
 	import { getKnowledgeItems } from '$lib/apis/knowledge';
 	import AccessControl from '../common/AccessControl.svelte';
+	import { stringify } from 'postcss';
 
 	const i18n = getContext('i18n');
 
@@ -159,6 +160,7 @@
 		}
 
 		if (model) {
+			console.log(model);
 			name = model.name;
 			await tick();
 
@@ -166,7 +168,7 @@
 
 			if (model.base_model_id) {
 				const base_model = $models
-					.filter((m) => !m?.preset && m?.owned_by !== 'arena')
+					.filter((m) => !m?.preset && !(m?.arena ?? false))
 					.find((m) => [model.base_model_id, `${model.base_model_id}:latest`].includes(m.id));
 
 				console.log('base_model', base_model);
@@ -212,6 +214,9 @@
 			}
 
 			accessControl = model?.access_control ?? null;
+
+			console.log(model?.access_control);
+			console.log(accessControl);
 
 			info = {
 				...info,
@@ -491,6 +496,17 @@
 						</div>
 					</div>
 
+					<div class="my-2">
+						<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+							<AccessControl
+								{accessControl}
+								onChange={(_accessControl) => {
+									accessControl = _accessControl;
+								}}
+							/>
+						</div>
+					</div>
+
 					<hr class=" border-gray-50 dark:border-gray-850 my-1.5" />
 
 					<div class="my-2">
@@ -668,12 +684,6 @@
 
 					<div class="my-2">
 						<Capabilities bind:capabilities />
-					</div>
-
-					<div class="my-2">
-						<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
-							<AccessControl bind:accessControl />
-						</div>
 					</div>
 
 					<div class="my-2 text-gray-300 dark:text-gray-700">

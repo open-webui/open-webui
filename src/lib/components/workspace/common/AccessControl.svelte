@@ -11,30 +11,11 @@
 
 	export let accessControl = null;
 
-	let privateAccess = false;
-
 	let selectedGroupId = '';
-
 	let groups = [];
-
-	$: if (privateAccess) {
-		accessControl = {
-			read: {
-				group_ids: []
-			}
-		};
-	} else {
-		accessControl = null;
-	}
 
 	onMount(async () => {
 		groups = await getGroups(localStorage.token);
-
-		if (accessControl === null) {
-			privateAccess = false;
-		} else {
-			privateAccess = true;
-		}
 	});
 </script>
 
@@ -45,7 +26,7 @@
 		<div class="flex gap-2.5 items-center mb-1">
 			<div>
 				<div class=" p-2 bg-black/5 dark:bg-white/5 rounded-full">
-					{#if privateAccess}
+					{#if accessControl !== null}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
@@ -83,14 +64,25 @@
 				<select
 					id="models"
 					class="outline-none bg-transparent text-sm font-medium rounded-lg block w-fit pr-10 max-w-full placeholder-gray-400"
-					bind:value={privateAccess}
+					value={accessControl !== null ? 'private' : 'public'}
+					on:change={(e) => {
+						if (e.target.value === 'public') {
+							accessControl = null;
+						} else {
+							accessControl = {
+								read: {
+									group_ids: []
+								}
+							};
+						}
+					}}
 				>
-					<option class=" text-gray-700" value={true} selected>Private</option>
-					<option class=" text-gray-700" value={false} selected>Public</option>
+					<option class=" text-gray-700" value="private" selected>Private</option>
+					<option class=" text-gray-700" value="public" selected>Public</option>
 				</select>
 
 				<div class=" text-xs text-gray-400 font-medium">
-					{#if privateAccess}
+					{#if accessControl !== null}
 						{$i18n.t('Only select users and groups with permission can access')}
 					{:else}
 						{$i18n.t('Accessible to all users')}
@@ -100,7 +92,7 @@
 		</div>
 	</div>
 
-	{#if privateAccess}
+	{#if accessControl !== null}
 		{@const accessGroups = groups.filter((group) =>
 			accessControl.read.group_ids.includes(group.id)
 		)}
@@ -151,7 +143,7 @@
 				</div>
 			</div>
 
-			<hr class=" my-2 border-gray-50 dark:border-gray-900" />
+			<hr class=" my-2 border-black/5 dark:border-white/5" />
 
 			<div class="mb-1">
 				<div class="flex w-full">
