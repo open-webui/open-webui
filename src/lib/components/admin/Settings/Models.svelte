@@ -81,6 +81,7 @@
 			});
 		}
 
+		_models.set(await getModels(localStorage.token));
 		await init();
 	};
 

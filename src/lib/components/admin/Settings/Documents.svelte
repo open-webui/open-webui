@@ -376,19 +376,12 @@
 			{#if embeddingEngine === 'ollama'}
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
-						<select
+						<input
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							bind:value={embeddingModel}
-							placeholder={$i18n.t('Select a model')}
+							placeholder={$i18n.t('Set embedding model')}
 							required
-						>
-							{#if !embeddingModel}
-								<option value="" disabled selected>{$i18n.t('Select a model')}</option>
-							{/if}
-							{#each $models.filter((m) => m.id && m.ollama && !(m?.preset ?? false)) as model}
-								<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
-							{/each}
-						</select>
+						/>
 					</div>
 				</div>
 			{:else}
