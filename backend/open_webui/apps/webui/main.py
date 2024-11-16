@@ -50,9 +50,22 @@ from open_webui.config import (
     WEBHOOK_URL,
     WEBUI_AUTH,
     WEBUI_BANNERS,
+    ENABLE_LDAP,
+    LDAP_SERVER_LABEL,
+    LDAP_SERVER_HOST,
+    LDAP_SERVER_PORT,
+    LDAP_ATTRIBUTE_FOR_USERNAME,
+    LDAP_SEARCH_FILTERS,
+    LDAP_SEARCH_BASE,
+    LDAP_APP_DN,
+    LDAP_APP_PASSWORD,
+    LDAP_USE_TLS,
+    LDAP_CA_CERT_FILE,
+    LDAP_CIPHERS,
     AppConfig,
 )
 from open_webui.env import (
+    ENV,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
 )
@@ -72,7 +85,7 @@ from open_webui.utils.payload import (
 
 from open_webui.utils.tools import get_tools
 
-app = FastAPI()
+app = FastAPI(docs_url="/docs" if ENV == "dev" else None, openapi_url="/openapi.json" if ENV == "dev" else None, redoc_url=None)
 
 log = logging.getLogger(__name__)
 
@@ -110,6 +123,19 @@ app.state.config.ENABLE_OAUTH_ROLE_MANAGEMENT = ENABLE_OAUTH_ROLE_MANAGEMENT
 app.state.config.OAUTH_ROLES_CLAIM = OAUTH_ROLES_CLAIM
 app.state.config.OAUTH_ALLOWED_ROLES = OAUTH_ALLOWED_ROLES
 app.state.config.OAUTH_ADMIN_ROLES = OAUTH_ADMIN_ROLES
+
+app.state.config.ENABLE_LDAP = ENABLE_LDAP
+app.state.config.LDAP_SERVER_LABEL = LDAP_SERVER_LABEL
+app.state.config.LDAP_SERVER_HOST = LDAP_SERVER_HOST
+app.state.config.LDAP_SERVER_PORT = LDAP_SERVER_PORT
+app.state.config.LDAP_ATTRIBUTE_FOR_USERNAME = LDAP_ATTRIBUTE_FOR_USERNAME
+app.state.config.LDAP_APP_DN = LDAP_APP_DN
+app.state.config.LDAP_APP_PASSWORD = LDAP_APP_PASSWORD
+app.state.config.LDAP_SEARCH_BASE = LDAP_SEARCH_BASE
+app.state.config.LDAP_SEARCH_FILTERS = LDAP_SEARCH_FILTERS
+app.state.config.LDAP_USE_TLS = LDAP_USE_TLS
+app.state.config.LDAP_CA_CERT_FILE = LDAP_CA_CERT_FILE
+app.state.config.LDAP_CIPHERS = LDAP_CIPHERS
 
 app.state.MODELS = {}
 app.state.TOOLS = {}

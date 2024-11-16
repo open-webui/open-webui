@@ -141,6 +141,18 @@
 		})();
 	}
 
+	$: if (selectedModels && chatIdProp !== '') {
+		saveSessionSelectedModels();
+	}
+
+	const saveSessionSelectedModels = () => {
+		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
+			return;
+		}
+		sessionStorage.selectedModels = JSON.stringify(selectedModels);
+		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
+	};
+
 	const showMessage = async (message) => {
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 		let _messageId = JSON.parse(JSON.stringify(message.id));
@@ -300,6 +312,7 @@
 	};
 
 	onMount(async () => {
+		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
 
@@ -420,6 +433,55 @@
 	//////////////////////////
 
 	const initNewChat = async () => {
+		if (sessionStorage.selectedModels) {
+			selectedModels = JSON.parse(sessionStorage.selectedModels);
+			sessionStorage.removeItem('selectedModels');
+		} else {
+			if ($page.url.searchParams.get('models')) {
+				selectedModels = $page.url.searchParams.get('models')?.split(',');
+			} else if ($page.url.searchParams.get('model')) {
+				const urlModels = $page.url.searchParams.get('model')?.split(',');
+
+				if (urlModels.length === 1) {
+					const m = $models.find((m) => m.id === urlModels[0]);
+					if (!m) {
+						const modelSelectorButton = document.getElementById('model-selector-0-button');
+						if (modelSelectorButton) {
+							modelSelectorButton.click();
+							await tick();
+
+							const modelSelectorInput = document.getElementById('model-search-input');
+							if (modelSelectorInput) {
+								modelSelectorInput.focus();
+								modelSelectorInput.value = urlModels[0];
+								modelSelectorInput.dispatchEvent(new Event('input'));
+							}
+						}
+					} else {
+						selectedModels = urlModels;
+					}
+				} else {
+					selectedModels = urlModels;
+				}
+			} else if ($settings?.models) {
+				selectedModels = $settings?.models;
+			} else if ($config?.default_models) {
+				console.log($config?.default_models.split(',') ?? '');
+				selectedModels = $config?.default_models.split(',');
+			}
+		}
+
+		selectedModels = selectedModels.filter((modelId) => $models.map((m) => m.id).includes(modelId));
+		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
+			if ($models.length > 0) {
+				selectedModels = [$models[0].id];
+			} else {
+				selectedModels = [''];
+			}
+		}
+
+		console.log(selectedModels);
+
 		await showControls.set(false);
 		await showCallOverlay.set(false);
 		await showOverview.set(false);
@@ -441,51 +503,6 @@
 
 		chatFiles = [];
 		params = {};
-
-		if ($page.url.searchParams.get('models')) {
-			selectedModels = $page.url.searchParams.get('models')?.split(',');
-		} else if ($page.url.searchParams.get('model')) {
-			const urlModels = $page.url.searchParams.get('model')?.split(',');
-
-			if (urlModels.length === 1) {
-				const m = $models.find((m) => m.id === urlModels[0]);
-				if (!m) {
-					const modelSelectorButton = document.getElementById('model-selector-0-button');
-					if (modelSelectorButton) {
-						modelSelectorButton.click();
-						await tick();
-
-						const modelSelectorInput = document.getElementById('model-search-input');
-						if (modelSelectorInput) {
-							modelSelectorInput.focus();
-							modelSelectorInput.value = urlModels[0];
-							modelSelectorInput.dispatchEvent(new Event('input'));
-						}
-					}
-				} else {
-					selectedModels = urlModels;
-				}
-			} else {
-				selectedModels = urlModels;
-			}
-		} else if ($settings?.models) {
-			selectedModels = $settings?.models;
-		} else if ($config?.default_models) {
-			console.log($config?.default_models.split(',') ?? '');
-			selectedModels = $config?.default_models.split(',');
-		}
-
-		selectedModels = selectedModels.filter((modelId) => $models.map((m) => m.id).includes(modelId));
-
-		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
-			if ($models.length > 0) {
-				selectedModels = [$models[0].id];
-			} else {
-				selectedModels = [''];
-			}
-		}
-
-		console.log(selectedModels);
 
 		if ($page.url.searchParams.get('youtube')) {
 			uploadYoutubeTranscription(
@@ -893,6 +910,7 @@
 		const chatInput = document.getElementById('chat-input');
 		chatInput?.focus();
 
+		saveSessionSelectedModels();
 		_responses = await sendPrompt(userPrompt, userMessageId, { newChat: true });
 
 		return _responses;
@@ -1794,6 +1812,33 @@
 		console.log('stopResponse');
 	};
 
+	const submitMessage = async (parentId, prompt) => {
+		let userPrompt = prompt;
+		let userMessageId = uuidv4();
+
+		let userMessage = {
+			id: userMessageId,
+			parentId: parentId,
+			childrenIds: [],
+			role: 'user',
+			content: userPrompt,
+			models: selectedModels
+		};
+
+		if (parentId !== null) {
+			history.messages[parentId].childrenIds = [
+				...history.messages[parentId].childrenIds,
+				userMessageId
+			];
+		}
+
+		history.messages[userMessageId] = userMessage;
+		history.currentId = userMessageId;
+
+		await tick();
+		await sendPrompt(userPrompt, userMessageId);
+	};
+
 	const regenerateResponse = async (message) => {
 		console.log('regenerateResponse');
 
@@ -1825,7 +1870,7 @@
 			await tick();
 
 			const model = $models
-				.filter((m) => m.id === responseMessage?.selectedModelId ?? responseMessage.model)
+				.filter((m) => m.id === (responseMessage?.selectedModelId ?? responseMessage.model))
 				.at(0);
 
 			if (model) {
@@ -1844,8 +1889,6 @@
 						_chatId
 					);
 			}
-		} else {
-			toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 		}
 	};
 
@@ -2204,42 +2247,12 @@
 									{selectedModels}
 									{sendPrompt}
 									{showMessage}
+									{submitMessage}
 									{continueResponse}
 									{regenerateResponse}
 									{mergeResponses}
 									{chatActionHandler}
 									bottomPadding={files.length > 0}
-									on:submit={async (e) => {
-										if (e.detail) {
-											// New user message
-											let userPrompt = e.detail.prompt;
-											let userMessageId = uuidv4();
-
-											let userMessage = {
-												id: userMessageId,
-												parentId: e.detail.parentId,
-												childrenIds: [],
-												role: 'user',
-												content: userPrompt,
-												models: selectedModels
-											};
-
-											let messageParentId = e.detail.parentId;
-
-											if (messageParentId !== null) {
-												history.messages[messageParentId].childrenIds = [
-													...history.messages[messageParentId].childrenIds,
-													userMessageId
-												];
-											}
-
-											history.messages[userMessageId] = userMessage;
-											history.currentId = userMessageId;
-
-											await tick();
-											await sendPrompt(userPrompt, userMessageId);
-										}
-									}}
 								/>
 							</div>
 						</div>

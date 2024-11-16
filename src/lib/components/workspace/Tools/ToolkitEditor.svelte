@@ -203,13 +203,15 @@ class Tools:
 						</div>
 
 						<div class="flex-1">
-							<input
-								class="w-full text-2xl font-medium bg-transparent outline-none"
-								type="text"
-								placeholder={$i18n.t('Toolkit Name (e.g. My ToolKit)')}
-								bind:value={name}
-								required
-							/>
+							<Tooltip content={$i18n.t('e.g. My ToolKit')} placement="top-start">
+								<input
+									class="w-full text-2xl font-medium bg-transparent outline-none"
+									type="text"
+									placeholder={$i18n.t('Toolkit Name')}
+									bind:value={name}
+									required
+								/>
+							</Tooltip>
 						</div>
 
 						<div>
@@ -217,31 +219,41 @@ class Tools:
 						</div>
 					</div>
 
-					<div class=" flex gap-2 px-1">
+					<div class=" flex gap-2 px-1 items-center">
 						{#if edit}
 							<div class="text-sm text-gray-500 flex-shrink-0">
 								{id}
 							</div>
 						{:else}
-							<input
-								class="w-full text-sm disabled:text-gray-500 bg-transparent outline-none"
-								type="text"
-								placeholder={$i18n.t('Toolkit ID (e.g. my_toolkit)')}
-								bind:value={id}
-								required
-								disabled={edit}
-							/>
+							<Tooltip
+								className="w-full"
+								content={$i18n.t('e.g. my_toolkit')}
+								placement="top-start"
+							>
+								<input
+									class="w-full text-sm disabled:text-gray-500 bg-transparent outline-none"
+									type="text"
+									placeholder={$i18n.t('Toolkit ID')}
+									bind:value={id}
+									required
+									disabled={edit}
+								/>
+							</Tooltip>
 						{/if}
 
-						<input
-							class="w-full text-sm bg-transparent outline-none"
-							type="text"
-							placeholder={$i18n.t(
-								'Toolkit Description (e.g. A toolkit for performing various operations)'
-							)}
-							bind:value={meta.description}
-							required
-						/>
+						<Tooltip
+							className="w-full self-center items-center flex"
+							content={$i18n.t('e.g. A toolkit for performing various operations')}
+							placement="top-start"
+						>
+							<input
+								class="w-full text-sm bg-transparent outline-none"
+								type="text"
+								placeholder={$i18n.t('Toolkit Description')}
+								bind:value={meta.description}
+								required
+							/>
+						</Tooltip>
 					</div>
 				</div>
 

@@ -225,7 +225,7 @@
 			</div>
 		</Sidebar>
 
-		<div class=" flex flex-col h-full px-4 py-1">
+		<div class=" flex flex-col h-full px-3.5">
 			<div class="flex w-full items-start gap-1.5">
 				<Collapsible
 					className="w-full flex-1"

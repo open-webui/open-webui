@@ -64,7 +64,7 @@
 		await config.set(await getBackendConfig());
 	}}
 >
-	<div class=" space-y-3 overflow-y-scroll max-h-full">
+	<div class=" space-y-3 overflow-y-scroll max-h-full pr-1.5">
 		<div>
 			<div class=" mb-2 text-sm font-medium">{$i18n.t('User Permissions')}</div>
 
@@ -87,7 +87,7 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-850 my-2" />
+		<!-- <hr class=" border-gray-50 dark:border-gray-850 my-2" />
 
 		<div class="mt-2 space-y-3">
 			<div>
@@ -105,7 +105,7 @@
 
 					<div class="flex-1 mr-2">
 						<select
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full bg-transparent outline-none py-0.5"
 							bind:value={defaultModelId}
 							placeholder="Select a model"
 						>
@@ -133,7 +133,7 @@
 									<div class="flex w-full">
 										<div class="flex-1 mr-2">
 											<select
-												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+												class="w-full bg-transparent outline-none py-0.5"
 												bind:value={modelId}
 												placeholder="Select a model"
 											>
@@ -200,7 +200,7 @@
 					{/if}
 				</div>
 			</div>
-		</div>
+		</div> -->
 	</div>
 
 	<div class="flex justify-end pt-3 text-sm font-medium">

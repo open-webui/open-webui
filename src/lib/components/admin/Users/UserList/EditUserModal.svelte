@@ -5,7 +5,8 @@
 	import { onMount, getContext } from 'svelte';
 
 	import { updateUserById } from '$lib/apis/users';
-	import Modal from '../common/Modal.svelte';
+
+	import Modal from '$lib/components/common/Modal.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();

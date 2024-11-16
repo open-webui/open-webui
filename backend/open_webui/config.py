@@ -20,6 +20,7 @@ from open_webui.env import (
     WEBUI_FAVICON_URL,
     WEBUI_NAME,
     log,
+    DATABASE_URL,
 )
 from pydantic import BaseModel
 from sqlalchemy import JSON, Column, DateTime, Integer, func
@@ -606,6 +607,12 @@ OLLAMA_BASE_URLS = PersistentConfig(
     "OLLAMA_BASE_URLS", "ollama.base_urls", OLLAMA_BASE_URLS
 )
 
+OLLAMA_API_CONFIGS = PersistentConfig(
+    "OLLAMA_API_CONFIGS",
+    "ollama.api_configs",
+    {},
+)
+
 ####################################
 # OPENAI_API
 ####################################
@@ -646,15 +653,20 @@ OPENAI_API_BASE_URLS = PersistentConfig(
     "OPENAI_API_BASE_URLS", "openai.api_base_urls", OPENAI_API_BASE_URLS
 )
 
-OPENAI_API_KEY = ""
+OPENAI_API_CONFIGS = PersistentConfig(
+    "OPENAI_API_CONFIGS",
+    "openai.api_configs",
+    {},
+)
 
+# Get the actual OpenAI API key based on the base URL
+OPENAI_API_KEY = ""
 try:
     OPENAI_API_KEY = OPENAI_API_KEYS.value[
         OPENAI_API_BASE_URLS.value.index("https://api.openai.com/v1")
     ]
 except Exception:
     pass
-
 OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
 ####################################
@@ -904,6 +916,12 @@ TAGS_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     os.environ.get("TAGS_GENERATION_PROMPT_TEMPLATE", ""),
 )
 
+ENABLE_TAGS_GENERATION = PersistentConfig(
+    "ENABLE_TAGS_GENERATION",
+    "task.tags.enable",
+    os.environ.get("ENABLE_TAGS_GENERATION", "True").lower() == "true",
+)
+
 ENABLE_SEARCH_QUERY = PersistentConfig(
     "ENABLE_SEARCH_QUERY",
     "task.search.enable",
@@ -956,6 +974,20 @@ MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
 
 # Qdrant
 QDRANT_URI = os.environ.get("QDRANT_URI", None)
+
+# OpenSearch
+OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
+OPENSEARCH_SSL = os.environ.get("OPENSEARCH_SSL", True)
+OPENSEARCH_CERT_VERIFY = os.environ.get("OPENSEARCH_CERT_VERIFY", False)
+OPENSEARCH_USERNAME = os.environ.get("OPENSEARCH_USERNAME", None)
+OPENSEARCH_PASSWORD = os.environ.get("OPENSEARCH_PASSWORD", None)
+
+# Pgvector
+PGVECTOR_DB_URL = os.environ.get("PGVECTOR_DB_URL", DATABASE_URL)
+if VECTOR_DB == "pgvector" and not PGVECTOR_DB_URL.startswith("postgres"):
+    raise ValueError(
+        "Pgvector requires setting PGVECTOR_DB_URL or using Postgres with vector extension as the primary database."
+    )
 
 ####################################
 # Information Retrieval (RAG)
@@ -1035,11 +1067,11 @@ RAG_EMBEDDING_MODEL = PersistentConfig(
 log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL.value}")
 
 RAG_EMBEDDING_MODEL_AUTO_UPDATE = (
-    os.environ.get("RAG_EMBEDDING_MODEL_AUTO_UPDATE", "").lower() == "true"
+    os.environ.get("RAG_EMBEDDING_MODEL_AUTO_UPDATE", "True").lower() == "true"
 )
 
 RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
-    os.environ.get("RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
+    os.environ.get("RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE", "True").lower() == "true"
 )
 
 RAG_EMBEDDING_BATCH_SIZE = PersistentConfig(
@@ -1060,11 +1092,11 @@ if RAG_RERANKING_MODEL.value != "":
     log.info(f"Reranking model set: {RAG_RERANKING_MODEL.value}")
 
 RAG_RERANKING_MODEL_AUTO_UPDATE = (
-    os.environ.get("RAG_RERANKING_MODEL_AUTO_UPDATE", "").lower() == "true"
+    os.environ.get("RAG_RERANKING_MODEL_AUTO_UPDATE", "True").lower() == "true"
 )
 
 RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
-    os.environ.get("RAG_RERANKING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
+    os.environ.get("RAG_RERANKING_MODEL_TRUST_REMOTE_CODE", "True").lower() == "true"
 )
 
 
@@ -1218,6 +1250,12 @@ TAVILY_API_KEY = PersistentConfig(
     os.getenv("TAVILY_API_KEY", ""),
 )
 
+JINA_API_KEY = PersistentConfig(
+    "JINA_API_KEY",
+    "rag.web.search.jina_api_key",
+    os.getenv("JINA_API_KEY", ""),
+)
+
 SEARCHAPI_API_KEY = PersistentConfig(
     "SEARCHAPI_API_KEY",
     "rag.web.search.searchapi_api_key",
@@ -1229,6 +1267,21 @@ SEARCHAPI_ENGINE = PersistentConfig(
     "rag.web.search.searchapi_engine",
     os.getenv("SEARCHAPI_ENGINE", ""),
 )
+
+BING_SEARCH_V7_ENDPOINT = PersistentConfig(
+    "BING_SEARCH_V7_ENDPOINT",
+    "rag.web.search.bing_search_v7_endpoint",
+    os.environ.get(
+        "BING_SEARCH_V7_ENDPOINT", "https://api.bing.microsoft.com/v7.0/search"
+    ),
+)
+
+BING_SEARCH_V7_SUBSCRIPTION_KEY = PersistentConfig(
+    "BING_SEARCH_V7_SUBSCRIPTION_KEY",
+    "rag.web.search.bing_search_v7_subscription_key",
+    os.environ.get("BING_SEARCH_V7_SUBSCRIPTION_KEY", ""),
+)
+
 
 RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(
     "RAG_WEB_SEARCH_RESULT_COUNT",
@@ -1549,4 +1602,75 @@ AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
     os.getenv(
         "AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT", "audio-24khz-160kbitrate-mono-mp3"
     ),
+)
+
+
+####################################
+# LDAP
+####################################
+
+ENABLE_LDAP = PersistentConfig(
+    "ENABLE_LDAP",
+    "ldap.enable",
+    os.environ.get("ENABLE_LDAP", "false").lower() == "true",
+)
+
+LDAP_SERVER_LABEL = PersistentConfig(
+    "LDAP_SERVER_LABEL",
+    "ldap.server.label",
+    os.environ.get("LDAP_SERVER_LABEL", "LDAP Server"),
+)
+
+LDAP_SERVER_HOST = PersistentConfig(
+    "LDAP_SERVER_HOST",
+    "ldap.server.host",
+    os.environ.get("LDAP_SERVER_HOST", "localhost"),
+)
+
+LDAP_SERVER_PORT = PersistentConfig(
+    "LDAP_SERVER_PORT",
+    "ldap.server.port",
+    int(os.environ.get("LDAP_SERVER_PORT", "389")),
+)
+
+LDAP_ATTRIBUTE_FOR_USERNAME = PersistentConfig(
+    "LDAP_ATTRIBUTE_FOR_USERNAME",
+    "ldap.server.attribute_for_username",
+    os.environ.get("LDAP_ATTRIBUTE_FOR_USERNAME", "uid"),
+)
+
+LDAP_APP_DN = PersistentConfig(
+    "LDAP_APP_DN", "ldap.server.app_dn", os.environ.get("LDAP_APP_DN", "")
+)
+
+LDAP_APP_PASSWORD = PersistentConfig(
+    "LDAP_APP_PASSWORD",
+    "ldap.server.app_password",
+    os.environ.get("LDAP_APP_PASSWORD", ""),
+)
+
+LDAP_SEARCH_BASE = PersistentConfig(
+    "LDAP_SEARCH_BASE", "ldap.server.users_dn", os.environ.get("LDAP_SEARCH_BASE", "")
+)
+
+LDAP_SEARCH_FILTERS = PersistentConfig(
+    "LDAP_SEARCH_FILTER",
+    "ldap.server.search_filter",
+    os.environ.get("LDAP_SEARCH_FILTER", ""),
+)
+
+LDAP_USE_TLS = PersistentConfig(
+    "LDAP_USE_TLS",
+    "ldap.server.use_tls",
+    os.environ.get("LDAP_USE_TLS", "True").lower() == "true",
+)
+
+LDAP_CA_CERT_FILE = PersistentConfig(
+    "LDAP_CA_CERT_FILE",
+    "ldap.server.ca_cert_file",
+    os.environ.get("LDAP_CA_CERT_FILE", ""),
+)
+
+LDAP_CIPHERS = PersistentConfig(
+    "LDAP_CIPHERS", "ldap.server.ciphers", os.environ.get("LDAP_CIPHERS", "ALL")
 )
