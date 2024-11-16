@@ -53,6 +53,7 @@
 			tools: false
 		},
 		chat: {
+			file_upload: true,
 			delete: true,
 			edit: true,
 			temporary: true
@@ -90,7 +91,7 @@
 
 		if (res) {
 			toast.success($i18n.t('Default permissions updated successfully'));
-			defaultPermissions = group.permissions;
+			defaultPermissions = await getUserDefaultPermissions(localStorage.token);
 		}
 	};
 
@@ -203,7 +204,7 @@
 		<GroupModal
 			bind:show={showDefaultPermissionsModal}
 			tabs={['permissions']}
-			permissions={defaultPermissions}
+			bind:permissions={defaultPermissions}
 			custom={false}
 			onSubmit={updateDefaultPermissionsHandler}
 		/>

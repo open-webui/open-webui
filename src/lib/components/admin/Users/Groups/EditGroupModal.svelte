@@ -37,6 +37,7 @@
 			tools: false
 		},
 		chat: {
+			file_upload: true,
 			delete: true,
 			edit: true,
 			temporary: true
@@ -58,27 +59,6 @@
 
 		loading = false;
 		show = false;
-
-		name = '';
-		permissions = {
-			model: {
-				filter: false,
-				model_ids: [],
-				default_id: ''
-			},
-			workspace: {
-				models: false,
-				knowledge: false,
-				prompts: false,
-				tools: false
-			},
-			chat: {
-				delete: true,
-				edit: true,
-				temporary: true
-			}
-		};
-		userIds = [];
 	};
 
 	const init = () => {
@@ -93,6 +73,7 @@
 					tools: false
 				},
 				chat: {
+					file_upload: true,
 					delete: true,
 					edit: true,
 					temporary: true
