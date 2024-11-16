@@ -22,6 +22,7 @@ def upgrade():
         sa.Column("user_id", sa.Text(), nullable=True),
         sa.Column("name", sa.Text(), nullable=True),
         sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("data", sa.JSON(), nullable=True),
         sa.Column("meta", sa.JSON(), nullable=True),
         sa.Column("permissions", sa.JSON(), nullable=True),
         sa.Column("user_ids", sa.JSON(), nullable=True),

@@ -30,6 +30,8 @@ class Group(Base):
 
     name = Column(Text)
     description = Column(Text)
+
+    data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
 
     permissions = Column(JSON, nullable=True)
@@ -46,6 +48,8 @@ class GroupModel(BaseModel):
 
     name: str
     description: str
+
+    data: Optional[dict] = None
     meta: Optional[dict] = None
 
     permissions: Optional[dict] = None
@@ -66,6 +70,7 @@ class GroupResponse(BaseModel):
     name: str
     description: str
     permissions: Optional[dict] = None
+    data: Optional[dict] = None
     meta: Optional[dict] = None
     user_ids: list[str] = []
     created_at: int  # timestamp in epoch
