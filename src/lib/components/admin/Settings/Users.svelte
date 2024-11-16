@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getBackendConfig, getModelFilterConfig, updateModelFilterConfig } from '$lib/apis';
 	import { getSignUpEnabledStatus, toggleSignUpEnabledStatus } from '$lib/apis/auths';
-	import { getUserPermissions, updateUserPermissions } from '$lib/apis/users';
+	import { getUserDefaultPermissions, updateUserDefaultPermissions } from '$lib/apis/users';
 
 	import { onMount, getContext } from 'svelte';
 	import { models, config } from '$lib/stores';
@@ -29,7 +29,7 @@
 	let chatTemporary = true;
 
 	onMount(async () => {
-		permissions = await getUserPermissions(localStorage.token);
+		permissions = await getUserDefaultPermissions(localStorage.token);
 
 		chatDeletion = permissions?.chat?.deletion ?? true;
 		chatEdit = permissions?.chat?.editing ?? true;
@@ -51,7 +51,7 @@
 		// console.log('submit');
 
 		await setDefaultModels(localStorage.token, defaultModelId);
-		await updateUserPermissions(localStorage.token, {
+		await updateUserDefaultPermissions(localStorage.token, {
 			chat: {
 				deletion: chatDeletion,
 				editing: chatEdit,

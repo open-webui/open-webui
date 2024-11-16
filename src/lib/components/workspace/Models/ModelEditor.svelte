@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, getContext, tick } from 'svelte';
-	import { models, tools, functions, knowledge as knowledgeCollections } from '$lib/stores';
+	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -98,6 +98,8 @@
 
 		info.id = id;
 		info.name = name;
+
+		info.access_control = accessControl;
 		info.meta.capabilities = capabilities;
 
 		if (knowledge.length > 0) {
@@ -669,7 +671,9 @@
 					</div>
 
 					<div class="my-2">
-						<AccessControl bind:accessControl />
+						<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+							<AccessControl bind:accessControl />
+						</div>
 					</div>
 
 					<div class="my-2 text-gray-300 dark:text-gray-700">

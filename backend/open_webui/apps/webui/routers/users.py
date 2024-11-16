@@ -32,10 +32,28 @@ async def get_users(skip: int = 0, limit: int = 50, user=Depends(get_admin_user)
 
 
 ############################
+# User Groups
+############################
+
+
+@router.get("/groups")
+async def get_user_groups(user=Depends(get_verified_user)):
+    return Users.get_user_groups(user.id)
+
+
+############################
 # User Permissions
 ############################
 
 
+@router.get("/permissions")
+async def get_user_permissisions(user=Depends(get_verified_user)):
+    return Users.get_user_groups(user.id)
+
+
+############################
+# User Default Permissions
+############################
 class WorkspacePermissions(BaseModel):
     models: bool
     knowledge: bool
@@ -54,12 +72,12 @@ class UserPermissions(BaseModel):
     chat: ChatPermissions
 
 
-@router.get("/permissions")
+@router.get("/default/permissions")
 async def get_user_permissions(request: Request, user=Depends(get_admin_user)):
     return request.app.state.config.USER_PERMISSIONS
 
 
-@router.post("/permissions")
+@router.post("/default/permissions")
 async def update_user_permissions(
     request: Request, form_data: UserPermissions, user=Depends(get_admin_user)
 ):

@@ -22,8 +22,11 @@ router = APIRouter()
 
 
 @router.get("/", response_model=list[GroupResponse])
-async def get_groups(user=Depends(get_admin_user)):
-    return Groups.get_groups()
+async def get_groups(user=Depends(get_verified_user)):
+    if user.role == "admin":
+        return Groups.get_groups()
+    else:
+        return Groups.get_groups_by_member_id(user.id)
 
 
 ############################

@@ -1,31 +1,51 @@
 <script lang="ts">
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Plus from '$lib/components/icons/Plus.svelte';
 	import { getContext, onMount } from 'svelte';
+
 	const i18n = getContext('i18n');
 
+	import { getGroups } from '$lib/apis/groups';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
+	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
+
 	export let accessControl = null;
-	let access = 'private';
 
-	let query = '';
+	let privateAccess = false;
 
-	onMount(() => {
+	let selectedGroupId = '';
+
+	let groups = [];
+
+	$: if (privateAccess) {
+		accessControl = {
+			read: {
+				group_ids: []
+			}
+		};
+	} else {
+		accessControl = null;
+	}
+
+	onMount(async () => {
+		groups = await getGroups(localStorage.token);
+
 		if (accessControl === null) {
-			access = 'public';
+			privateAccess = false;
 		} else {
-			access = 'private';
+			privateAccess = true;
 		}
 	});
 </script>
 
-<div class=" rounded-lg flex flex-col gap-3">
+<div class=" rounded-lg flex flex-col gap-2">
 	<div class="">
 		<div class=" text-sm font-semibold mb-1">{$i18n.t('Visibility')}</div>
 
-		<div class="flex gap-2.5 items-center">
+		<div class="flex gap-2.5 items-center mb-1">
 			<div>
-				<div class=" p-2 bg-gray-50 dark:bg-gray-850 rounded-full">
-					{#if access === 'private'}
+				<div class=" p-2 bg-black/5 dark:bg-white/5 rounded-full">
+					{#if privateAccess}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
@@ -63,16 +83,16 @@
 				<select
 					id="models"
 					class="outline-none bg-transparent text-sm font-medium rounded-lg block w-fit pr-10 max-w-full placeholder-gray-400"
-					bind:value={access}
+					bind:value={privateAccess}
 				>
-					<option class=" text-gray-700" value="private" selected>Private</option>
-					<option class=" text-gray-700" value="public" selected>Public</option>
+					<option class=" text-gray-700" value={true} selected>Private</option>
+					<option class=" text-gray-700" value={false} selected>Public</option>
 				</select>
 
 				<div class=" text-xs text-gray-400 font-medium">
-					{#if access === 'private'}
+					{#if privateAccess}
 						{$i18n.t('Only select users and groups with permission can access')}
-					{:else if access === 'public'}
+					{:else}
 						{$i18n.t('Accessible to all users')}
 					{/if}
 				</div>
@@ -80,37 +100,90 @@
 		</div>
 	</div>
 
-	{#if access === 'private'}
+	{#if privateAccess}
+		{@const accessGroups = groups.filter((group) =>
+			accessControl.read.group_ids.includes(group.id)
+		)}
 		<div>
-			<div class=" text-sm font-semibold mb-0.5">{$i18n.t('People with access')}</div>
+			<div class="">
+				<div class="flex justify-between mb-1.5">
+					<div class="text-sm font-semibold">
+						{$i18n.t('Groups')}
+					</div>
+				</div>
 
-			<div>
-				<div class="flex w-full py-1">
-					<div class="flex flex-1">
-						<div class=" self-center mr-3">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 20 20"
-								fill="currentColor"
-								class="w-4 h-4"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-									clip-rule="evenodd"
-								/>
-							</svg>
+				<div class="flex flex-col gap-2">
+					{#if accessGroups.length > 0}
+						{#each accessGroups as group}
+							<div class="flex items-center gap-3 justify-between text-xs w-full transition">
+								<div class="flex items-center gap-1.5 w-full font-medium">
+									<div>
+										<UserCircleSolid className="size-4" />
+									</div>
+
+									<div>
+										{group.name}
+									</div>
+								</div>
+
+								<div class="w-full flex justify-end">
+									<button
+										class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+										type="button"
+										on:click={() => {
+											accessControl.read.group_ids = accessControl.read.group_ids.filter(
+												(id) => id !== group.id
+											);
+										}}
+									>
+										<XMark />
+									</button>
+								</div>
+							</div>
+						{/each}
+					{:else}
+						<div class="flex items-center justify-center">
+							<div class="text-gray-500 text-xs text-center py-2 px-10">
+								{$i18n.t('No groups with access, add a group to grant access')}
+							</div>
 						</div>
-						<input
-							class=" w-full text-sm pr-4 placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-none bg-transparent"
-							bind:value={query}
-							placeholder={$i18n.t('Add user or groups')}
-						/>
+					{/if}
+				</div>
+			</div>
+
+			<hr class=" my-2 border-gray-50 dark:border-gray-900" />
+
+			<div class="mb-1">
+				<div class="flex w-full">
+					<div class="flex flex-1 items-center">
+						<div class="w-full">
+							<select
+								class="outline-none bg-transparent text-sm font-medium rounded-lg block w-full pr-10 max-w-full dark:placeholder-gray-700"
+								bind:value={selectedGroupId}
+							>
+								<option class=" text-gray-700" value="" disabled selected
+									>{$i18n.t('Select a group')}</option
+								>
+								{#each groups.filter((group) => !accessControl.read.group_ids.includes(group.id)) as group}
+									<option class=" text-gray-700" value={group.id}>{group.name}</option>
+								{/each}
+							</select>
+						</div>
 						<div>
-							<Tooltip content={$i18n.t('Add User/Group')}>
+							<Tooltip content={$i18n.t('Add Group')}>
 								<button
-									class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
-									on:click={() => {}}
+									class=" p-1 rounded-xl bg-transparent dark:hover:bg-white/5 hover:bg-black/5 transition font-medium text-sm flex items-center space-x-1"
+									type="button"
+									on:click={() => {
+										if (selectedGroupId !== '') {
+											accessControl.read.group_ids = [
+												...accessControl.read.group_ids,
+												selectedGroupId
+											];
+
+											selectedGroupId = '';
+										}
+									}}
 								>
 									<Plus className="size-3.5" />
 								</button>

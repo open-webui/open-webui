@@ -967,15 +967,23 @@ async def get_all_models():
                     custom_model.id == model["id"]
                     or custom_model.id == model["id"].split(":")[0]
                 ):
-                    model["name"] = custom_model.name
-                    model["info"] = custom_model.model_dump()
+                    if custom_model.is_active:
+                        model["name"] = custom_model.name
+                        model["info"] = custom_model.model_dump()
 
-                    action_ids = []
-                    if "info" in model and "meta" in model["info"]:
-                        action_ids.extend(model["info"]["meta"].get("actionIds", []))
+                        action_ids = []
+                        if "info" in model and "meta" in model["info"]:
+                            action_ids.extend(
+                                model["info"]["meta"].get("actionIds", [])
+                            )
 
-                    model["action_ids"] = action_ids
-        elif custom_model.id not in [model["id"] for model in models]:
+                        model["action_ids"] = action_ids
+                    else:
+                        models.remove(model)
+
+        elif custom_model.is_active and (
+            custom_model.id not in [model["id"] for model in models]
+        ):
             owned_by = "openai"
             pipe = None
             action_ids = []

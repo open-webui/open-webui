@@ -23,7 +23,7 @@
 	import GroupItem from './Groups/GroupItem.svelte';
 	import AddGroupModal from './Groups/AddGroupModal.svelte';
 	import { createNewGroup, getGroups } from '$lib/apis/groups';
-	import { getUserPermissions, updateUserPermissions } from '$lib/apis/users';
+	import { getUserDefaultPermissions, updateUserDefaultPermissions } from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
 
@@ -81,7 +81,7 @@
 	const updateDefaultPermissionsHandler = async (group) => {
 		console.log(group.permissions);
 
-		const res = await updateUserPermissions(localStorage.token, group.permissions).catch(
+		const res = await updateUserDefaultPermissions(localStorage.token, group.permissions).catch(
 			(error) => {
 				toast.error(error);
 				return null;
@@ -99,7 +99,7 @@
 			await goto('/');
 		} else {
 			await setGroups();
-			defaultPermissions = await getUserPermissions(localStorage.token);
+			defaultPermissions = await getUserDefaultPermissions(localStorage.token);
 		}
 		loaded = true;
 	});

@@ -255,7 +255,7 @@
 		>
 			<a
 				class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
-				href={`/?models=open-webui.${encodeURIComponent(model.id)}`}
+				href={`/?models=${encodeURIComponent(model.id)}`}
 			>
 				<div class=" self-center w-8">
 					<div
