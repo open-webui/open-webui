@@ -153,6 +153,21 @@
 		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
 	};
 
+	$: if (selectedModelIds) {
+		setToolIds();
+	}
+
+	const setToolIds = () => {
+		if (selectedModels.length !== 1) {
+			return;
+		}
+
+		const model = $models.find((m) => m.id === selectedModels[0]);
+		if (model) {
+			selectedToolIds = model?.info?.meta?.toolIds ?? [];
+		}
+	};
+
 	const showMessage = async (message) => {
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 		let _messageId = JSON.parse(JSON.stringify(message.id));
