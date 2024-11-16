@@ -4,6 +4,7 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import { toast } from 'svelte-sonner';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import AccessControl from '../common/AccessControl.svelte';
 
 	export let onSubmit: Function;
 	export let edit = false;
@@ -133,6 +134,10 @@
 					{$i18n.t('variable to have them replaced with clipboard content.')}
 				</div>
 			</div>
+		</div>
+
+		<div class="mt-2">
+			<AccessControl />
 		</div>
 
 		<div class="my-4 flex justify-end pb-20">

@@ -203,11 +203,11 @@ class Tools:
 						</div>
 
 						<div class="flex-1">
-							<Tooltip content={$i18n.t('e.g. My ToolKit')} placement="top-start">
+							<Tooltip content={$i18n.t('e.g. My Tools')} placement="top-start">
 								<input
 									class="w-full text-2xl font-medium bg-transparent outline-none"
 									type="text"
-									placeholder={$i18n.t('Toolkit Name')}
+									placeholder={$i18n.t('Tool Name')}
 									bind:value={name}
 									required
 								/>
@@ -225,15 +225,11 @@ class Tools:
 								{id}
 							</div>
 						{:else}
-							<Tooltip
-								className="w-full"
-								content={$i18n.t('e.g. my_toolkit')}
-								placement="top-start"
-							>
+							<Tooltip className="w-full" content={$i18n.t('e.g. my_tools')} placement="top-start">
 								<input
 									class="w-full text-sm disabled:text-gray-500 bg-transparent outline-none"
 									type="text"
-									placeholder={$i18n.t('Toolkit ID')}
+									placeholder={$i18n.t('Tool ID')}
 									bind:value={id}
 									required
 									disabled={edit}
@@ -243,13 +239,13 @@ class Tools:
 
 						<Tooltip
 							className="w-full self-center items-center flex"
-							content={$i18n.t('e.g. A toolkit for performing various operations')}
+							content={$i18n.t('e.g. Tools for performing various operations')}
 							placement="top-start"
 						>
 							<input
 								class="w-full text-sm bg-transparent outline-none"
 								type="text"
-								placeholder={$i18n.t('Toolkit Description')}
+								placeholder={$i18n.t('Tool Description')}
 								bind:value={meta.description}
 								required
 							/>

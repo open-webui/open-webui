@@ -6,6 +6,7 @@
 	import { createNewKnowledge, getKnowledgeItems } from '$lib/apis/knowledge';
 	import { toast } from 'svelte-sonner';
 	import { knowledge } from '$lib/stores';
+	import AccessControl from '../common/AccessControl.svelte';
 
 	let loading = false;
 
@@ -101,6 +102,10 @@
 					</div>
 				</div>
 			</div>
+		</div>
+
+		<div class="mt-2">
+			<AccessControl />
 		</div>
 
 		<div class="flex justify-end mt-2">

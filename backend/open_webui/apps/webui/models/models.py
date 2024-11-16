@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict
 
 from sqlalchemy import or_, and_, func
 from sqlalchemy.dialects import postgresql, sqlite
-from sqlalchemy import BigInteger, Column, Text, JSON
+from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
 
 
 from open_webui.utils.utils import has_access
@@ -95,6 +95,8 @@ class Model(Base):
     #      }
     #   }
 
+    is_active = Column(Boolean, default=True)
+
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
 
@@ -110,6 +112,7 @@ class ModelModel(BaseModel):
 
     access_control: Optional[dict] = None
 
+    is_active: bool
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
@@ -131,6 +134,8 @@ class ModelResponse(BaseModel):
     meta: ModelMeta
 
     access_control: Optional[dict] = None
+
+    is_active: bool
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
@@ -141,6 +146,8 @@ class ModelForm(BaseModel):
     name: str
     meta: ModelMeta
     params: ModelParams
+    access_control: Optional[dict] = None
+    is_active: bool = True
 
 
 class ModelsTable:
@@ -199,6 +206,23 @@ class ModelsTable:
                 return ModelModel.model_validate(model)
         except Exception:
             return None
+
+    def toggle_model_by_id(self, id: str) -> Optional[ModelModel]:
+        with get_db() as db:
+            try:
+                is_active = db.query(Model).filter_by(id=id).first().is_active
+
+                db.query(Model).filter_by(id=id).update(
+                    {
+                        "is_active": not is_active,
+                        "updated_at": int(time.time()),
+                    }
+                )
+                db.commit()
+
+                return self.get_model_by_id(id)
+            except Exception:
+                return None
 
     def update_model_by_id(self, id: str, model: ModelForm) -> Optional[ModelModel]:
         try:

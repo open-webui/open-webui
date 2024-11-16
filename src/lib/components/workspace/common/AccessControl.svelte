@@ -1,10 +1,19 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
-	export let type = 'private';
+	export let accessControl = null;
+	let access = 'private';
 
 	let query = '';
+
+	onMount(() => {
+		if (accessControl === null) {
+			access = 'public';
+		} else {
+			access = 'private';
+		}
+	});
 </script>
 
 <div class=" rounded-lg flex flex-col gap-3">
@@ -14,7 +23,7 @@
 		<div class="flex gap-2.5 items-center">
 			<div>
 				<div class=" p-2 bg-gray-50 dark:bg-gray-850 rounded-full">
-					{#if type === 'private'}
+					{#if access === 'private'}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
@@ -52,16 +61,16 @@
 				<select
 					id="models"
 					class="outline-none bg-transparent text-sm font-medium rounded-lg block w-fit pr-10 max-w-full placeholder-gray-400"
-					bind:value={type}
+					bind:value={access}
 				>
 					<option class=" text-gray-700" value="private" selected>Private</option>
 					<option class=" text-gray-700" value="public" selected>Public</option>
 				</select>
 
 				<div class=" text-xs text-gray-400 font-medium">
-					{#if type === 'private'}
+					{#if access === 'private'}
 						{$i18n.t('Only select users and groups with permission can access')}
-					{:else if type === 'public'}
+					{:else if access === 'public'}
 						{$i18n.t('Accessible to all users')}
 					{/if}
 				</div>
@@ -69,7 +78,7 @@
 		</div>
 	</div>
 
-	{#if type === 'private'}
+	{#if access === 'private'}
 		<div>
 			<div class=" text-sm font-semibold mb-0.5">{$i18n.t('People with access')}</div>
 

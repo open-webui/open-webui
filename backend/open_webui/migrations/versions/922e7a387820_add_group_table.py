@@ -35,6 +35,17 @@ def upgrade():
         sa.Column("access_control", sa.JSON(), nullable=True),
     )
 
+    # Add 'is_active' column to 'model' table
+    op.add_column(
+        "model",
+        sa.Column(
+            "is_active",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.sql.expression.true(),
+        ),
+    )
+
     # Add 'access_control' column to 'knowledge' table
     op.add_column(
         "knowledge",
@@ -59,6 +70,9 @@ def downgrade():
 
     # Drop 'access_control' column from 'model' table
     op.drop_column("model", "access_control")
+
+    # Drop 'is_active' column from 'model' table
+    op.drop_column("model", "is_active")
 
     # Drop 'access_control' column from 'knowledge' table
     op.drop_column("knowledge", "access_control")

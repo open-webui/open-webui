@@ -80,6 +80,41 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user)):
 
 
 ############################
+# ToggelModelById
+############################
+
+
+@router.post("/id/{id}/toggle", response_model=Optional[ModelResponse])
+async def toggle_model_by_id(id: str, user=Depends(get_verified_user)):
+    model = Models.get_model_by_id(id)
+    if model:
+        if (
+            user.role == "admin"
+            or model.user_id == user.id
+            or has_access(user.id, "write", model.access_control)
+        ):
+            model = Models.toggle_model_by_id(id)
+
+            if model:
+                return model
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT("Error updating function"),
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.UNAUTHORIZED,
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
 # UpdateModelById
 ############################
 

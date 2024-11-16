@@ -100,6 +100,43 @@ export const getModelById = async (token: string, id: string) => {
 	return res;
 };
 
+
+export const toggleModelById = async (token: string, id: string) => {
+	let error = null;
+
+	const searchParams = new URLSearchParams();
+	searchParams.append('id', id);
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/id/${id}/toggle`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+
 export const updateModelById = async (token: string, id: string, model: object) => {
 	let error = null;
 

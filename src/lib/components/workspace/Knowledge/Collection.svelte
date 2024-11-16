@@ -39,6 +39,7 @@
 	import Drawer from '$lib/components/common/Drawer.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
+	import AccessControl from '../common/AccessControl.svelte';
 
 	let largeScreen = true;
 
@@ -687,7 +688,17 @@
 										/>
 									</div>
 								{:else}
-									<div class="m-auto text-gray-500 text-xs">{$i18n.t('No content found')}</div>
+									<div
+										class="m-auto flex flex-col justify-center text-center text-gray-500 text-xs"
+									>
+										<div>
+											{$i18n.t('No content found')}
+										</div>
+
+										<div class="mx-12 mt-2 text-center text-gray-200 dark:text-gray-700">
+											{$i18n.t('Drag and drop a file to upload or select a file to view')}
+										</div>
+									</div>
 								{/if}
 							</div>
 						</div>
@@ -753,7 +764,7 @@
 									</div>
 								</div>
 							{:else}
-								<div class="m-auto pb-32">
+								<div class="m-auto pb-20">
 									<div>
 										<div class=" flex w-full mt-1 mb-3.5">
 											<div class="flex-1">
@@ -784,8 +795,8 @@
 										</div>
 									</div>
 
-									<div class=" mt-2 text-center text-sm text-gray-200 dark:text-gray-700 w-full">
-										{$i18n.t('Select a file to view or drag and drop a file to upload')}
+									<div class="mt-2">
+										<AccessControl />
 									</div>
 								</div>
 							{/if}

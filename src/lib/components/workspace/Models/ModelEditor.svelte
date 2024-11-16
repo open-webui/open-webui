@@ -17,7 +17,7 @@
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
 	import { getKnowledgeItems } from '$lib/apis/knowledge';
-	import AccessPermissions from '../common/AccessPermissionsModal.svelte';
+	import AccessControl from '../common/AccessControl.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -78,6 +78,8 @@
 	let toolIds = [];
 	let filterIds = [];
 	let actionIds = [];
+
+	let accessControl = null;
 
 	const addUsage = (base_model_id) => {
 		const baseModel = $models.find((m) => m.id === base_model_id);
@@ -207,6 +209,8 @@
 			if (model?.owned_by === 'openai') {
 				capabilities.usage = false;
 			}
+
+			accessControl = model?.access_control ?? null;
 
 			info = {
 				...info,
@@ -641,7 +645,7 @@
 					</div>
 
 					<div class="my-2">
-						<AccessPermissions />
+						<AccessControl bind:accessControl />
 					</div>
 
 					<div class="my-2 text-gray-300 dark:text-gray-700">
