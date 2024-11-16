@@ -86,7 +86,7 @@
 
 		if (baseModel) {
 			if (baseModel.owned_by === 'openai') {
-				capabilities.usage = basemodel?.meta?.capabilities?.usage ?? false;
+				capabilities.usage = baseModel?.meta?.capabilities?.usage ?? false;
 			} else {
 				delete capabilities.usage;
 			}
