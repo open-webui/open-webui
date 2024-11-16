@@ -935,7 +935,6 @@ app.mount("/api/v1", webui_app)
 webui_app.state.EMBEDDING_FUNCTION = retrieval_app.state.EMBEDDING_FUNCTION
 
 
-@cached(ttl=1)
 async def get_all_base_models():
     open_webui_models = []
     openai_models = []
