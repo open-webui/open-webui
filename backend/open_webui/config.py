@@ -759,6 +759,10 @@ USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS = (
     os.environ.get("USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS", "False").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_FILE_UPLOAD = (
+    os.environ.get("USER_PERMISSIONS_CHAT_FILE_UPLOAD", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_CHAT_DELETE = (
     os.environ.get("USER_PERMISSIONS_CHAT_DELETE", "True").lower() == "true"
 )
@@ -782,8 +786,9 @@ USER_PERMISSIONS = PersistentConfig(
             "tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS,
         },
         "chat": {
-            "deletion": USER_PERMISSIONS_CHAT_DELETE,
-            "editing": USER_PERMISSIONS_CHAT_EDIT,
+            "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
+            "delete": USER_PERMISSIONS_CHAT_DELETE,
+            "edit": USER_PERMISSIONS_CHAT_EDIT,
             "temporary": USER_PERMISSIONS_CHAT_TEMPORARY,
         },
     },

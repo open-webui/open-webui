@@ -52,7 +52,7 @@ async def get_session_user_chat_list(
 async def delete_all_user_chats(request: Request, user=Depends(get_verified_user)):
     if user.role == "user" and not request.app.state.config.USER_PERMISSIONS.get(
         "chat", {}
-    ).get("deletion", {}):
+    ).get("delete", {}):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -386,7 +386,7 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
         return result
     else:
         if not request.app.state.config.USER_PERMISSIONS.get("chat", {}).get(
-            "deletion", {}
+            "delete", {}
         ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

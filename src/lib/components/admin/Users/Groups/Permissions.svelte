@@ -15,7 +15,8 @@
 		chat: {
 			delete: true,
 			edit: true,
-			temporary: true
+			temporary: true,
+			file_upload: true
 		}
 	};
 </script>
@@ -167,6 +168,14 @@
 
 	<div>
 		<div class=" mb-2 text-sm font-medium">{$i18n.t('Chat Permissions')}</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow File Upload')}
+			</div>
+
+			<Switch bind:state={permissions.chat.file_upload} />
+		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
 			<div class=" self-center text-xs font-medium">
