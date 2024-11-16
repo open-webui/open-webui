@@ -71,7 +71,7 @@
 	const upsertModelHandler = async (model) => {
 		model.base_model_id = null;
 
-		if (models.find((m) => m.id === model.id)) {
+		if (workspaceModels.find((m) => m.id === model.id)) {
 			await updateModelById(localStorage.token, model.id, model).catch((error) => {
 				return null;
 			});

@@ -142,7 +142,6 @@ app.state.config.LDAP_USE_TLS = LDAP_USE_TLS
 app.state.config.LDAP_CA_CERT_FILE = LDAP_CA_CERT_FILE
 app.state.config.LDAP_CIPHERS = LDAP_CIPHERS
 
-app.state.MODELS = {}
 app.state.TOOLS = {}
 app.state.FUNCTIONS = {}
 
@@ -369,7 +368,7 @@ def get_function_params(function_module, form_data, user, extra_params=None):
     return params
 
 
-async def generate_function_chat_completion(form_data, user):
+async def generate_function_chat_completion(form_data, user, models: dict = {}):
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
 
@@ -412,7 +411,7 @@ async def generate_function_chat_completion(form_data, user):
         user,
         {
             **extra_params,
-            "__model__": app.state.MODELS[form_data["model"]],
+            "__model__": models.get(form_data["model"], None),
             "__messages__": form_data["messages"],
             "__files__": files,
         },

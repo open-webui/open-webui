@@ -192,15 +192,16 @@ def has_permission(
 
 def has_access(
     user_id: str,
-    action: str = "write",
+    type: str = "write",
     access_control: Optional[dict] = None,
 ) -> bool:
+    print("user_id", user_id, "type", type, "access_control", access_control)
     if access_control is None:
-        return action == "read"
+        return type == "read"
 
     user_groups = Groups.get_groups_by_member_id(user_id)
     user_group_ids = [group.id for group in user_groups]
-    permission_access = access_control.get(action, {})
+    permission_access = access_control.get(type, {})
     permitted_group_ids = permission_access.get("group_ids", [])
     permitted_user_ids = permission_access.get("user_ids", [])
 

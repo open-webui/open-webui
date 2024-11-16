@@ -68,23 +68,10 @@ app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
 app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 app.state.config.OLLAMA_API_CONFIGS = OLLAMA_API_CONFIGS
 
-app.state.MODELS = {}
-
 
 # TODO: Implement a more intelligent load balancing mechanism for distributing requests among multiple backend instances.
 # Current implementation uses a simple round-robin approach (random.choice). Consider incorporating algorithms like weighted round-robin,
 # least connections, or least response time for better resource utilization and performance optimization.
-
-
-@app.middleware("http")
-async def check_url(request: Request, call_next):
-    if len(app.state.MODELS) == 0:
-        await get_all_models()
-    else:
-        pass
-
-    response = await call_next(request)
-    return response
 
 
 @app.head("/")
@@ -321,8 +308,6 @@ async def get_all_models():
     else:
         models = {"models": []}
 
-    app.state.MODELS = {model["model"]: model for model in models["models"]}
-
     return models
 
 
@@ -470,8 +455,11 @@ async def push_model(
     user=Depends(get_admin_user),
 ):
     if url_idx is None:
-        if form_data.name in app.state.MODELS:
-            url_idx = app.state.MODELS[form_data.name]["urls"][0]
+        model_list = await get_all_models()
+        models = {model["model"]: model for model in model_list["models"]}
+
+        if form_data.name in models:
+            url_idx = models[form_data.name]["urls"][0]
         else:
             raise HTTPException(
                 status_code=400,
@@ -520,8 +508,11 @@ async def copy_model(
     user=Depends(get_admin_user),
 ):
     if url_idx is None:
-        if form_data.source in app.state.MODELS:
-            url_idx = app.state.MODELS[form_data.source]["urls"][0]
+        model_list = await get_all_models()
+        models = {model["model"]: model for model in model_list["models"]}
+
+        if form_data.source in models:
+            url_idx = models[form_data.source]["urls"][0]
         else:
             raise HTTPException(
                 status_code=400,
@@ -576,8 +567,11 @@ async def delete_model(
     user=Depends(get_admin_user),
 ):
     if url_idx is None:
-        if form_data.name in app.state.MODELS:
-            url_idx = app.state.MODELS[form_data.name]["urls"][0]
+        model_list = await get_all_models()
+        models = {model["model"]: model for model in model_list["models"]}
+
+        if form_data.name in models:
+            url_idx = models[form_data.name]["urls"][0]
         else:
             raise HTTPException(
                 status_code=400,
@@ -625,13 +619,16 @@ async def delete_model(
 
 @app.post("/api/show")
 async def show_model_info(form_data: ModelNameForm, user=Depends(get_verified_user)):
-    if form_data.name not in app.state.MODELS:
+    model_list = await get_all_models()
+    models = {model["model"]: model for model in model_list["models"]}
+
+    if form_data.name not in models:
         raise HTTPException(
             status_code=400,
             detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.name),
         )
 
-    url_idx = random.choice(app.state.MODELS[form_data.name]["urls"])
+    url_idx = random.choice(models[form_data.name]["urls"])
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
@@ -701,23 +698,26 @@ async def generate_embeddings(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
-    return generate_ollama_embeddings(form_data=form_data, url_idx=url_idx)
+    return await generate_ollama_embeddings(form_data=form_data, url_idx=url_idx)
 
 
-def generate_ollama_embeddings(
+async def generate_ollama_embeddings(
     form_data: GenerateEmbeddingsForm,
     url_idx: Optional[int] = None,
 ):
     log.info(f"generate_ollama_embeddings {form_data}")
 
     if url_idx is None:
+        model_list = await get_all_models()
+        models = {model["model"]: model for model in model_list["models"]}
+
         model = form_data.model
 
         if ":" not in model:
             model = f"{model}:latest"
 
-        if model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[model]["urls"])
+        if model in models:
+            url_idx = random.choice(models[model]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
@@ -768,20 +768,23 @@ def generate_ollama_embeddings(
         )
 
 
-def generate_ollama_batch_embeddings(
+async def generate_ollama_batch_embeddings(
     form_data: GenerateEmbedForm,
     url_idx: Optional[int] = None,
 ):
     log.info(f"generate_ollama_batch_embeddings {form_data}")
 
     if url_idx is None:
+        model_list = await get_all_models()
+        models = {model["model"]: model for model in model_list["models"]}
+
         model = form_data.model
 
         if ":" not in model:
             model = f"{model}:latest"
 
-        if model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[model]["urls"])
+        if model in models:
+            url_idx = random.choice(models[model]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
@@ -851,13 +854,16 @@ async def generate_completion(
     user=Depends(get_verified_user),
 ):
     if url_idx is None:
+        model_list = await get_all_models()
+        models = {model["model"]: model for model in model_list["models"]}
+
         model = form_data.model
 
         if ":" not in model:
             model = f"{model}:latest"
 
-        if model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[model]["urls"])
+        if model in models:
+            url_idx = random.choice(models[model]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
@@ -892,14 +898,17 @@ class GenerateChatCompletionForm(BaseModel):
     keep_alive: Optional[Union[int, str]] = None
 
 
-def get_ollama_url(url_idx: Optional[int], model: str):
+async def get_ollama_url(url_idx: Optional[int], model: str):
     if url_idx is None:
-        if model not in app.state.MODELS:
+        model_list = await get_all_models()
+        models = {model["model"]: model for model in model_list["models"]}
+
+        if model not in models:
             raise HTTPException(
                 status_code=400,
                 detail=ERROR_MESSAGES.MODEL_NOT_FOUND(model),
             )
-        url_idx = random.choice(app.state.MODELS[model]["urls"])
+        url_idx = random.choice(models[model]["urls"])
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     return url
 
@@ -948,7 +957,7 @@ async def generate_chat_completion(
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
 
-    url = get_ollama_url(url_idx, payload["model"])
+    url = await get_ollama_url(url_idx, payload["model"])
     log.info(f"url: {url}")
     log.debug(f"generate_chat_completion() - 2.payload = {payload}")
 
@@ -1030,7 +1039,7 @@ async def generate_openai_chat_completion(
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
 
-    url = get_ollama_url(url_idx, payload["model"])
+    url = await get_ollama_url(url_idx, payload["model"])
     log.info(f"url: {url}")
 
     api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
