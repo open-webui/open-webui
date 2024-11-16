@@ -461,7 +461,7 @@
 						</div>
 					</div>
 
-					<hr class=" dark:border-gray-850 my-1.5" />
+					<hr class=" border-gray-50 dark:border-gray-850 my-1.5" />
 
 					<div class="my-2">
 						<div class="flex w-full justify-between">
@@ -515,7 +515,7 @@
 						</div>
 					</div>
 
-					<hr class=" dark:border-gray-850 my-1" />
+					<hr class=" border-gray-50 dark:border-gray-850 my-1" />
 
 					<div class="my-2">
 						<div class="flex w-full justify-between items-center">
@@ -612,7 +612,7 @@
 						{/if}
 					</div>
 
-					<hr class=" dark:border-gray-850 my-1.5" />
+					<hr class=" border-gray-50 dark:border-gray-850 my-1.5" />
 
 					<div class="my-2">
 						<Knowledge bind:selectedKnowledge={knowledge} collections={$knowledgeCollections} />
@@ -679,8 +679,8 @@
 					<div class="my-2 flex justify-end pb-20">
 						<button
 							class=" text-sm px-3 py-2 transition rounded-lg {loading
-								? ' cursor-not-allowed bg-white hover:bg-gray-100 text-black'
-								: ' bg-white hover:bg-gray-100 text-black'} flex w-full justify-center"
+								? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
+								: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
 							type="submit"
 							disabled={loading}
 						>
