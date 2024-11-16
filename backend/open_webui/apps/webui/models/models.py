@@ -238,7 +238,7 @@ class ModelsTable:
                 result = (
                     db.query(Model)
                     .filter_by(id=id)
-                    .update(model.model_dump(exclude={"id"}, exclude_none=True))
+                    .update(model.model_dump(exclude={"id"}))
                 )
                 db.commit()
 

@@ -1,8 +1,4 @@
 <script lang="ts">
-	import { v4 as uuidv4 } from 'uuid';
-	import { toast } from 'svelte-sonner';
-	import { goto } from '$app/navigation';
-
 	import { onMount, getContext, tick } from 'svelte';
 	import { models, tools, functions, knowledge as knowledgeCollections } from '$lib/stores';
 
@@ -22,8 +18,11 @@
 	const i18n = getContext('i18n');
 
 	export let onSubmit: Function;
+	export let onBack: null | Function = null;
+
 	export let model = null;
 	export let edit = false;
+
 	export let preset = true;
 
 	let loading = false;
@@ -234,6 +233,31 @@
 </script>
 
 {#if loaded}
+	{#if onBack}
+		<button
+			class="flex space-x-1"
+			on:click={() => {
+				onBack();
+			}}
+		>
+			<div class=" self-center">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="h-4 w-4"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+			</div>
+			<div class=" self-center text-sm font-medium">{'Back'}</div>
+		</button>
+	{/if}
+
 	<div class="w-full max-h-full flex justify-center">
 		<input
 			bind:this={filesInputElement}
@@ -302,7 +326,7 @@
 			}}
 		/>
 
-		{#if !edit || model}
+		{#if !edit || (edit && model)}
 			<form
 				class="flex flex-col md:flex-row w-full gap-3 md:gap-6"
 				on:submit|preventDefault={() => {

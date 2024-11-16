@@ -948,7 +948,7 @@ async def get_all_models():
     models = await get_all_base_models()
 
     # If there are no models, return an empty list
-    if len([model for model in models if model["owned_by"] != "arena"]) == 0:
+    if len([model for model in models if not model.get("arena", False)]) == 0:
         return []
 
     global_action_ids = [
@@ -975,7 +975,7 @@ async def get_all_models():
                         action_ids.extend(model["info"]["meta"].get("actionIds", []))
 
                     model["action_ids"] = action_ids
-        else:
+        elif custom_model.id not in [model["id"] for model in models]:
             owned_by = "openai"
             pipe = None
             action_ids = []
@@ -997,7 +997,7 @@ async def get_all_models():
 
             models.append(
                 {
-                    "id": f"open-webui.{custom_model.id}",
+                    "id": f"{custom_model.id}",
                     "name": custom_model.name,
                     "object": "model",
                     "created": custom_model.created_at,
@@ -1163,10 +1163,6 @@ async def generate_chat_completions(
                 ),
                 "selected_model_id": selected_model_id,
             }
-
-    if model_id.startswith("open-webui."):
-        model_id = model_id[len("open-webui.") :]
-        form_data["model"] = model_id
 
     if model.get("pipe"):
         # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter

@@ -10,15 +10,10 @@
 	const i18n = getContext('i18n');
 
 	import { WEBUI_NAME, knowledge } from '$lib/stores';
-
 	import { getKnowledgeItems, deleteKnowledgeById } from '$lib/apis/knowledge';
 
-	import { blobToFile, transformFileName } from '$lib/utils';
-
 	import { goto } from '$app/navigation';
-	import Tooltip from '../common/Tooltip.svelte';
-	import GarbageBin from '../icons/GarbageBin.svelte';
-	import Pencil from '../icons/Pencil.svelte';
+
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
 	import ItemMenu from './Knowledge/ItemMenu.svelte';
 	import Badge from '../common/Badge.svelte';

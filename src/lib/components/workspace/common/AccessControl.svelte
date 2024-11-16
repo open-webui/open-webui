@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -104,6 +106,16 @@
 							bind:value={query}
 							placeholder={$i18n.t('Add user or groups')}
 						/>
+						<div>
+							<Tooltip content={$i18n.t('Add User/Group')}>
+								<button
+									class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
+									on:click={() => {}}
+								>
+									<Plus className="size-3.5" />
+								</button>
+							</Tooltip>
+						</div>
 					</div>
 				</div>
 			</div>
