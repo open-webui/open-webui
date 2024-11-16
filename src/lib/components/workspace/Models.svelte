@@ -15,7 +15,7 @@
 	import {
 		createNewModel,
 		deleteModelById,
-		getWorkspaceModels,
+		getModels as getWorkspaceModels,
 		toggleModelById,
 		updateModelById
 	} from '$lib/apis/models';
@@ -29,7 +29,6 @@
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Search from '../icons/Search.svelte';
 	import Plus from '../icons/Plus.svelte';
-	import { get } from 'svelte/store';
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Switch from '../common/Switch.svelte';
 

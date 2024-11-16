@@ -28,6 +28,16 @@ async def get_models(id: Optional[str] = None, user=Depends(get_verified_user)):
         return Models.get_models_by_user_id(user.id)
 
 
+###########################
+# GetBaseModels
+###########################
+
+
+@router.get("/base", response_model=list[ModelResponse])
+async def get_base_models(user=Depends(get_admin_user)):
+    return Models.get_base_models()
+
+
 ############################
 # CreateNewModel
 ############################

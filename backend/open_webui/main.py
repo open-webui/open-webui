@@ -993,7 +993,7 @@ async def get_all_models():
 
             models.append(
                 {
-                    "id": f"open-webui-{custom_model.id}",
+                    "id": f"open-webui.{custom_model.id}",
                     "name": custom_model.name,
                     "object": "model",
                     "created": custom_model.created_at,
@@ -1154,8 +1154,8 @@ async def generate_chat_completions(
                 "selected_model_id": selected_model_id,
             }
 
-    if model_id.startswith("open-webui-"):
-        model_id = model_id[len("open-webui-") :]
+    if model_id.startswith("open-webui."):
+        model_id = model_id[len("open-webui.") :]
         form_data["model"] = model_id
 
     if model.get("pipe"):

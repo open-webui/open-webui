@@ -1,8 +1,259 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
-	import { onMount, getContext } from 'svelte';
+	import { marked } from 'marked';
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
+
+	import { onMount, getContext, tick } from 'svelte';
+	const i18n = getContext('i18n');
+
+	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
+	import {
+		createNewModel,
+		getBaseModels,
+		toggleModelById,
+		updateModelById
+	} from '$lib/apis/models';
+
+	import { getModels } from '$lib/apis';
+	import Search from '$lib/components/icons/Search.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
+
+	let importFiles;
+	let modelsImportInputElement: HTMLInputElement;
+
+	let models = [];
+	let filteredModels = [];
+
+	$: if (models) {
+		filteredModels = models.filter(
+			(m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase())
+		);
+	}
+
+	let searchValue = '';
+
+	const downloadModels = async (models) => {
+		let blob = new Blob([JSON.stringify(models)], {
+			type: 'application/json'
+		});
+		saveAs(blob, `models-export-${Date.now()}.json`);
+	};
+
+	const init = async () => {
+		const workspaceModels = await getBaseModels(localStorage.token);
+		const allModels = await getModels(localStorage.token);
+
+		models = allModels
+			.filter((m) => !(m?.preset ?? false))
+			.map((m) => {
+				const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
+
+				if (workspaceModel) {
+					return workspaceModel;
+				} else {
+					return {
+						...m,
+						is_active: true
+					};
+				}
+			});
+	};
+
+	onMount(async () => {
+		init();
+	});
 </script>
 
-<div class="flex flex-col h-full justify-between text-sm">
-	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">Models</div>
+<div class="flex flex-col gap-1 mt-1.5 mb-2">
+	<div class="flex justify-between items-center">
+		<div class="flex items-center md:self-center text-xl font-medium px-0.5">
+			{$i18n.t('Models')}
+			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
+			<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
+				>{filteredModels.length}</span
+			>
+		</div>
+	</div>
+
+	<div class=" flex flex-1 items-center w-full space-x-2">
+		<div class="flex flex-1 items-center">
+			<div class=" self-center ml-1 mr-3">
+				<Search className="size-3.5" />
+			</div>
+			<input
+				class=" w-full text-sm py-1 rounded-r-xl outline-none bg-transparent"
+				bind:value={searchValue}
+				placeholder={$i18n.t('Search Models')}
+			/>
+		</div>
+	</div>
 </div>
+
+<div class=" my-2 mb-5" id="model-list">
+	{#each filteredModels as model (model.id)}
+		<div
+			class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-lg transition"
+			id="model-item-{model.id}"
+		>
+			<a
+				class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
+				href={`/?models=open-webui.${encodeURIComponent(model.id)}`}
+			>
+				<div class=" self-center w-8">
+					<div
+						class=" rounded-full object-cover {(model?.is_active ?? true)
+							? ''
+							: 'opacity-50 dark:opacity-50'} "
+					>
+						<img
+							src={model?.meta?.profile_image_url ?? '/static/favicon.png'}
+							alt="modelfile profile"
+							class=" rounded-full w-full h-auto object-cover"
+						/>
+					</div>
+				</div>
+
+				<div class=" flex-1 self-center {(model?.is_active ?? true) ? '' : 'text-gray-500'}">
+					<Tooltip
+						content={marked.parse(model?.meta?.description ?? model.id)}
+						className=" w-fit"
+						placement="top-start"
+					>
+						<div class="  font-semibold line-clamp-1">{model.name}</div>
+					</Tooltip>
+					<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
+						{model?.meta?.description ?? model.id}
+					</div>
+				</div>
+			</a>
+			<div class="flex flex-row gap-0.5 items-center self-center">
+				{#if $user?.role === 'admin' || model.user_id === $user?.id}
+					<a
+						class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+						type="button"
+						href={`/workspace/models/edit?id=${encodeURIComponent(model.id)}`}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+							/>
+						</svg>
+					</a>
+				{/if}
+
+				<div class="ml-1">
+					<Tooltip content={(model?.is_active ?? true) ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
+						<Switch
+							bind:state={model.is_active}
+							on:change={async (e) => {
+								toggleModelById(localStorage.token, model.id);
+								_models.set(await getModels(localStorage.token));
+							}}
+						/>
+					</Tooltip>
+				</div>
+			</div>
+		</div>
+	{/each}
+</div>
+
+{#if $user?.role === 'admin'}
+	<div class=" flex justify-end w-full mb-3">
+		<div class="flex space-x-1">
+			<input
+				id="models-import-input"
+				bind:this={modelsImportInputElement}
+				bind:files={importFiles}
+				type="file"
+				accept=".json"
+				hidden
+				on:change={() => {
+					console.log(importFiles);
+
+					let reader = new FileReader();
+					reader.onload = async (event) => {
+						let savedModels = JSON.parse(event.target.result);
+						console.log(savedModels);
+
+						for (const model of savedModels) {
+							if (model?.info ?? false) {
+								if ($_models.find((m) => m.id === model.id)) {
+									await updateModelById(localStorage.token, model.id, model.info).catch((error) => {
+										return null;
+									});
+								} else {
+									await createNewModel(localStorage.token, model.info).catch((error) => {
+										return null;
+									});
+								}
+							}
+						}
+
+						await _models.set(await getModels(localStorage.token));
+						init();
+					};
+
+					reader.readAsText(importFiles[0]);
+				}}
+			/>
+
+			<button
+				class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+				on:click={() => {
+					modelsImportInputElement.click();
+				}}
+			>
+				<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Import Presets')}</div>
+
+				<div class=" self-center">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="w-3.5 h-3.5"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</div>
+			</button>
+
+			<button
+				class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+				on:click={async () => {
+					downloadModels($_models);
+				}}
+			>
+				<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Export Presets')}</div>
+
+				<div class=" self-center">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="w-3.5 h-3.5"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</div>
+			</button>
+		</div>
+	</div>
+{/if}
