@@ -313,6 +313,15 @@
 			}));
 
 			dispatch('save', { ...message, files: files });
+						
+			// Wait for the DOM to update
+			await tick();
+			
+			// Scroll to the message container with smooth behavior
+			const messageElement = document.getElementById(`message-${message.id}`);
+			if (messageElement) {
+				messageElement.scrollIntoView({ behavior: 'smooth' });
+			}
 		}
 
 		generatingImage = false;

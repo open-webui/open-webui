@@ -3,6 +3,8 @@
 	import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 
+	import { imageGenerations } from '$lib/apis/images';
+
 	import {
 		type Model,
 		mobile,
@@ -35,6 +37,7 @@
 	export let transparentBackground = false;
 
 	export let createMessagePair: Function;
+	export let createMessageWithImagesPair: Function;
 	export let stopResponse: Function;
 
 	export let autoScroll = false;
@@ -59,6 +62,8 @@
 
 	let inputFiles;
 	let dragged = false;
+
+	let generatingImage = false;
 
 	let user = null;
 	export let placeholder = '';
@@ -173,6 +178,27 @@
 				uploadFileHandler(file);
 			}
 		});
+	};
+
+	const generateImage = async (message: string) => {
+		generatingImage = true;
+
+		const res = await imageGenerations(localStorage.token, message).catch((error) => {
+			toast.error(error);
+		});
+
+		if (res) {
+			const files = res.map((image) => ({
+				type: 'image',
+				url: `${image.url}`
+			}));
+
+			createMessageWithImagesPair(prompt, files);
+		}
+
+		prompt = '';
+
+		generatingImage = false;
 	};
 
 	onMount(() => {
@@ -789,6 +815,68 @@
 										</Tooltip>
 									</div>
 								{/if}
+								<div class=" flex items-center mb-1">
+									<Tooltip content={$i18n.t('Generate Image')} placement="bottom">
+										<button
+											type="button"
+											class="visible ml-3 p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+											on:click={() => {
+												if (!generatingImage) {
+													generateImage(prompt);
+												}
+											}}
+										>
+											{#if generatingImage}
+												<svg
+													class=" size-6"
+													fill="currentColor"
+													viewBox="0 0 24 24"
+													xmlns="http://www.w3.org/2000/svg"
+												>
+													<style>
+														.spinner_S1WN {
+															animation: spinner_MGfb 0.8s linear infinite;
+															animation-delay: -0.8s;
+														}
+
+														.spinner_Km9P {
+															animation-delay: -0.65s;
+														}
+
+														.spinner_JApP {
+															animation-delay: -0.5s;
+														}
+
+														@keyframes spinner_MGfb {
+															93.75%,
+															100% {
+																opacity: 0.2;
+															}
+														}
+													</style>
+													<circle class="spinner_S1WN" cx="4" cy="12" r="3" />
+													<circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3" />
+													<circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3" />
+												</svg>
+											{:else}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke-width="2.3"
+													stroke="currentColor"
+													class="size-6"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+													/>
+												</svg>
+											{/if}
+										</button>
+									</Tooltip>
+								</div>
 							{:else}
 								<div class=" flex items-center mb-1.5">
 									<button

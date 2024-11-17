@@ -475,7 +475,28 @@
 	const scrollToBottom = async () => {
 		await tick();
 		if (messagesContainerElement) {
-			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+			// Wait for any images to load
+			const images = messagesContainerElement.getElementsByTagName('img');
+			if (images.length > 0) {
+				await Promise.all(
+					Array.from(images).map(
+						img => new Promise((resolve) => {
+							if (img.complete) {
+								resolve(null);
+							} else {
+								img.onload = () => resolve(null);
+								img.onerror = () => resolve(null);
+							}
+						})
+					)
+				);
+			}
+			
+			// Now scroll after images are loaded
+			messagesContainerElement.scrollTo({
+				top: messagesContainerElement.scrollHeight,
+				behavior: 'smooth'
+			});
 		}
 	};
 
@@ -658,6 +679,69 @@
 
 			if (autoScroll) {
 				scrollToBottom();
+			}
+
+			if (messages.length === 0) {
+				await initChatHandler();
+			} else {
+				await saveChatHandler($chatId);
+			}
+		}
+	};
+
+	const createMessageWithImagesPair = async (userPrompt, files) => {
+		prompt = '';
+		if (selectedModels.length === 0) {
+			toast.error($i18n.t('Model not selected'));
+		} else {
+			const modelId = selectedModels[0];
+			const model = $models.filter((m) => m.id === modelId).at(0);
+
+			const messages = createMessagesList(history.currentId);
+			const parentMessage = messages.length !== 0 ? messages.at(-1) : null;
+
+			const userMessageId = uuidv4();
+			const responseMessageId = uuidv4();
+
+
+			const userMessage = {
+				id: userMessageId,
+				parentId: parentMessage ? parentMessage.id : null,
+				childrenIds: [responseMessageId],
+				role: 'user',
+				content: userPrompt ? userPrompt : `[PROMPT] ${userMessageId}`,
+				timestamp: Math.floor(Date.now() / 1000)
+			};
+
+			const responseMessage = {
+				id: responseMessageId,
+				parentId: userMessageId,
+				childrenIds: [],
+				role: 'assistant',
+				content: `${userPrompt}`,
+				done: true,
+
+				model: modelId,
+				modelName: model.name ?? model.id,
+				modelIdx: 0,
+				timestamp: Math.floor(Date.now() / 1000),
+				files: files
+			};
+
+			if (parentMessage) {
+				parentMessage.childrenIds.push(userMessageId);
+				history.messages[parentMessage.id] = parentMessage;
+			}
+			history.messages[userMessageId] = userMessage;
+			history.messages[responseMessageId] = responseMessage;
+
+			history.currentId = responseMessageId;
+
+			await tick();
+
+			if (autoScroll) {
+				console.log('scrollToBottom');
+				await scrollToBottom()
 			}
 
 			if (messages.length === 0) {
@@ -2076,6 +2160,7 @@
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								{stopResponse}
 								{createMessagePair}
+								{createMessageWithImagesPair}
 								on:submit={async (e) => {
 									if (e.detail) {
 										prompt = '';
@@ -2111,6 +2196,7 @@
 							transparentBackground={$settings?.backgroundImageUrl ?? false}
 							{stopResponse}
 							{createMessagePair}
+							{createMessageWithImagesPair}
 							on:submit={async (e) => {
 								if (e.detail) {
 									prompt = '';

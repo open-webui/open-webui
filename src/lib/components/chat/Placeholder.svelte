@@ -21,6 +21,7 @@
 	export let transparentBackground = false;
 
 	export let createMessagePair: Function;
+	export let createMessageWithImagesPair: Function;
 	export let stopResponse: Function;
 
 	export let autoScroll = false;
@@ -203,6 +204,7 @@
 						{transparentBackground}
 						{stopResponse}
 						{createMessagePair}
+						{createMessageWithImagesPair}
 						placeholder={$i18n.t('How can I help you today?')}
 						on:submit={(e) => {
 							dispatch('submit', e.detail);
