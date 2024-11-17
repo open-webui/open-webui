@@ -5,6 +5,8 @@
 	import { toast } from 'svelte-sonner';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import AccessControl from '../common/AccessControl.svelte';
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import AccessControlModal from '../common/AccessControlModal.svelte';
 
 	export let onSubmit: Function;
 	export let edit = false;
@@ -19,6 +21,8 @@
 	let content = '';
 
 	let accessControl = null;
+
+	let showAccessControlModal = false;
 
 	$: if (!edit) {
 		command = title !== '' ? `${title.replace(/\s+/g, '-').toLowerCase()}` : '';
@@ -64,6 +68,8 @@
 	});
 </script>
 
+<AccessControlModal bind:show={showAccessControlModal} bind:accessControl />
+
 <div class="w-full max-h-full flex justify-center">
 	<form
 		class="flex flex-col w-full mb-10"
@@ -82,13 +88,29 @@
 				placement="bottom-start"
 			>
 				<div class="flex flex-col w-full">
-					<div>
+					<div class="flex items-center">
 						<input
 							class="text-2xl font-semibold w-full bg-transparent outline-none"
 							placeholder={$i18n.t('Title')}
 							bind:value={title}
 							required
 						/>
+
+						<div>
+							<button
+								class="bg-gray-50 hover:bg-gray-100 text-black transition px-2 py-1 rounded-full flex gap-1 items-center"
+								type="button"
+								on:click={() => {
+									showAccessControlModal = true;
+								}}
+							>
+								<LockClosed strokeWidth="2.5" />
+
+								<div class="text-sm font-medium flex-shrink-0">
+									{$i18n.t('Share')}
+								</div>
+							</button>
+						</div>
 					</div>
 
 					<div class="flex gap-0.5 items-center text-xs text-gray-500">
@@ -138,12 +160,6 @@
 					>
 					{$i18n.t('variable to have them replaced with clipboard content.')}
 				</div>
-			</div>
-		</div>
-
-		<div class="mt-2">
-			<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
-				<AccessControl bind:accessControl />
 			</div>
 		</div>
 
