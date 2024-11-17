@@ -343,7 +343,10 @@
 				<div class="self-center md:self-start flex justify-center my-2 flex-shrink-0">
 					<div class="self-center">
 						<button
-							class="rounded-2xl flex flex-shrink-0 items-center bg-white shadow-xl group relative"
+							class="rounded-2xl flex flex-shrink-0 items-center {info.meta.profile_image_url !==
+							'/static/favicon.png'
+								? 'bg-transparent'
+								: 'bg-white'} shadow-xl group relative"
 							type="button"
 							on:click={() => {
 								filesInputElement.click();
