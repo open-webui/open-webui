@@ -1,10 +1,11 @@
 from typing import Optional, Union, List, Dict, Any
 from open_webui.apps.webui.models.groups import Groups
+import json
 
 
 def get_permissions(
     user_id: str,
-    default_permissions: Dict[str, Any] = {},
+    default_permissions: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
     Get all permissions for a user by combining the permissions of all groups the user is a member of.
@@ -29,7 +30,9 @@ def get_permissions(
         return permissions
 
     user_groups = Groups.get_groups_by_member_id(user_id)
-    permissions = default_permissions.copy()
+
+    # deep copy default permissions to avoid modifying the original dict
+    permissions = json.loads(json.dumps(default_permissions))
 
     for group in user_groups:
         group_permissions = group.permissions
