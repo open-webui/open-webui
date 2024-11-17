@@ -66,7 +66,7 @@
 		}),
 		{
 			keys: ['value', 'tags', 'modelName'],
-			threshold: 0.3
+			threshold: 0.4
 		}
 	);
 
