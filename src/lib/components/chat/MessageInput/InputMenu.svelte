@@ -89,9 +89,10 @@
 							<div class=" flex-shrink-0">
 								<Switch
 									state={tools[toolId].enabled}
-									on:change={async () => {
+									on:change={async (e) => {
+										const state = e.detail;
 										await tick();
-										if (tools[toolId].enabled) {
+										if (state) {
 											selectedToolIds = [...selectedToolIds, toolId];
 										} else {
 											selectedToolIds = selectedToolIds.filter((id) => id !== toolId);

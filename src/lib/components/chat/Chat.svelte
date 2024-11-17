@@ -161,9 +161,6 @@
 		if (selectedModels.length !== 1) {
 			return;
 		}
-
-		console.log('setToolIds', selectedModels);
-
 		const model = $models.find((m) => m.id === selectedModels[0]);
 		if (model) {
 			selectedToolIds = model?.info?.meta?.toolIds ?? [];
@@ -830,9 +827,12 @@
 		console.log('submitPrompt', userPrompt, $chatId);
 
 		const messages = createMessagesList(history.currentId);
-		selectedModels = selectedModels.map((modelId) =>
+		const _selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
+		if (JSON.stringify(selectedModels) !== JSON.stringify(_selectedModels)) {
+			selectedModels = _selectedModels;
+		}
 
 		if (userPrompt === '') {
 			toast.error($i18n.t('Please enter a prompt'));
