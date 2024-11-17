@@ -2709,6 +2709,22 @@ async def get_manifest_json():
         "display": "standalone",
         "background_color": "#343541",
         "orientation": "natural",
+        "share_target": {
+            "action": "/share",
+            "method": "POST",
+            "enctype": "multipart/form-data",
+            "params": {
+                "title": "name",
+                "text": "description",
+                "url": "link",
+                "files": [
+                    {
+                        "name": "images",
+                        "accept": ["image/*", ".png", ".jpg", ".jpeg", ".gif"],
+                    }
+                ]
+            }
+        },
         "icons": [
             {
                 "src": "/static/logo.png",

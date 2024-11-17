@@ -81,6 +81,8 @@
 	import Placeholder from './Placeholder.svelte';
 	import { getTools } from '$lib/apis/tools';
 
+	import { openDB } from 'idb';
+
 	export let chatIdProp = '';
 
 	let loaded = false;
@@ -523,6 +525,21 @@
 
 		chatFiles = [];
 		params = {};
+
+		// check if the share indexdb is available
+		const shareDB = await openDB('share', 1, {
+			upgrade(db) {
+				db.createObjectStore('share');
+			}
+		});
+
+		// check if the share indexdb is available
+		const shareData = await shareDB.get('share', 'share');
+
+		if (shareData) {
+			await handleShare(shareData);
+			await shareDB.delete('share', 'share');
+		}
 
 		if ($page.url.searchParams.get('youtube')) {
 			uploadYoutubeTranscription(
@@ -2156,6 +2173,59 @@
 			}
 		}
 	};
+
+	interface ShareData {
+		images?: any[];
+		description?: string;
+		link?: string;
+		title?: string;
+	}
+
+	async function handleShare(shareData: any) {
+		if (shareData.images) {
+			// Handle images by adding them to the files array
+			const images = Array.isArray(shareData.images) ? shareData.images : [shareData.images];
+
+			files = [
+				...files,
+				...images.map((image) => ({
+					type: 'image',
+					name: image.name,
+					url: `data:${image.data}`,
+					status: 'uploaded'
+				}))
+			];
+			return;
+		}
+
+		// Handle shared URL
+		if (shareData.description && shareData.description.startsWith('http')) {
+			if (
+				shareData.description.includes('youtube.com') ||
+				shareData.description.includes('youtu.be')
+			) {
+				await uploadYoutubeTranscription(shareData.description);
+			} else {
+				await uploadWeb(shareData.description);
+			}
+			return;
+		}
+
+		// Handle shared link
+		if (shareData.link && shareData.link.startsWith('http')) {
+			await uploadWeb(shareData.link);
+			return;
+		}
+
+		// Handle all other shared text
+		if (shareData.description) {
+			//TODO: could prepend the prompt with a summary explanation of the shared content
+			prompt = shareData.description;
+			await tick();
+			// Optional: Auto-submit the prompt
+			// submitPrompt(prompt);
+		}
+	}
 </script>
 
 <svelte:head>
