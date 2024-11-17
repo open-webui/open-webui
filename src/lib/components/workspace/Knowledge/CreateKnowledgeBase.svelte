@@ -12,6 +12,7 @@
 
 	let name = '';
 	let description = '';
+	let accessControl = null;
 
 	const submitHandler = async () => {
 		loading = true;
@@ -24,7 +25,12 @@
 			return;
 		}
 
-		const res = await createNewKnowledge(localStorage.token, name, description).catch((e) => {
+		const res = await createNewKnowledge(
+			localStorage.token,
+			name,
+			description,
+			accessControl
+		).catch((e) => {
 			toast.error(e);
 		});
 
@@ -105,7 +111,9 @@
 		</div>
 
 		<div class="mt-2">
-			<AccessControl />
+			<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+				<AccessControl bind:accessControl />
+			</div>
 		</div>
 
 		<div class="flex justify-end mt-2">

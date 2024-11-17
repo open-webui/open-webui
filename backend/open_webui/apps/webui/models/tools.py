@@ -81,6 +81,7 @@ class ToolResponse(BaseModel):
     user_id: str
     name: str
     meta: ToolMeta
+    access_control: Optional[dict] = None
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
@@ -90,6 +91,7 @@ class ToolForm(BaseModel):
     name: str
     content: str
     meta: ToolMeta
+    access_control: Optional[dict] = None
 
 
 class ToolValves(BaseModel):

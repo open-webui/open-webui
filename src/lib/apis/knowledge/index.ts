@@ -1,6 +1,6 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export const createNewKnowledge = async (token: string, name: string, description: string) => {
+export const createNewKnowledge = async (token: string, name: string, description: string, accessControl: null|object) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/create`, {
@@ -12,7 +12,8 @@ export const createNewKnowledge = async (token: string, name: string, descriptio
 		},
 		body: JSON.stringify({
 			name: name,
-			description: description
+			description: description,
+			access_control: accessControl
 		})
 	})
 		.then(async (res) => {
@@ -130,6 +131,7 @@ type KnowledgeUpdateForm = {
 	name?: string;
 	description?: string;
 	data?: object;
+	access_control?: null|object;
 };
 
 export const updateKnowledgeById = async (token: string, id: string, form: KnowledgeUpdateForm) => {
@@ -145,7 +147,8 @@ export const updateKnowledgeById = async (token: string, id: string, form: Knowl
 		body: JSON.stringify({
 			name: form?.name ? form.name : undefined,
 			description: form?.description ? form.description : undefined,
-			data: form?.data ? form.data : undefined
+			data: form?.data ? form.data : undefined,
+			access_control: form.access_control
 		})
 	})
 		.then(async (res) => {

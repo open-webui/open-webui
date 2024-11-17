@@ -9,6 +9,8 @@
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
+	export let onChange: Function = () => {};
+
 	export let accessControl = null;
 
 	let selectedGroupId = '';
@@ -17,6 +19,8 @@
 	onMount(async () => {
 		groups = await getGroups(localStorage.token);
 	});
+
+	$: onChange(accessControl);
 </script>
 
 <div class=" rounded-lg flex flex-col gap-2">

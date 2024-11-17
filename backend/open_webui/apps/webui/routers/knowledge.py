@@ -6,7 +6,6 @@ import logging
 
 from open_webui.apps.webui.models.knowledge import (
     Knowledges,
-    KnowledgeUpdateForm,
     KnowledgeForm,
     KnowledgeResponse,
 )
@@ -64,8 +63,8 @@ async def get_knowledge(user=Depends(get_verified_user)):
                         file_ids.remove(missing_file)
 
                     data["file_ids"] = file_ids
-                    Knowledges.update_knowledge_by_id(
-                        id=knowledge_base.id, form_data=KnowledgeUpdateForm(data=data)
+                    Knowledges.update_knowledge_data_by_id(
+                        id=knowledge_base.id, data=data
                     )
 
                     files = Files.get_file_metadatas_by_ids(file_ids)
@@ -109,8 +108,8 @@ async def get_knowledge_list(user=Depends(get_verified_user)):
                         file_ids.remove(missing_file)
 
                     data["file_ids"] = file_ids
-                    Knowledges.update_knowledge_by_id(
-                        id=knowledge_base.id, form_data=KnowledgeUpdateForm(data=data)
+                    Knowledges.update_knowledge_data_by_id(
+                        id=knowledge_base.id, data=data
                     )
 
                     files = Files.get_file_metadatas_by_ids(file_ids)
@@ -186,7 +185,7 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 @router.post("/{id}/update", response_model=Optional[KnowledgeFilesResponse])
 async def update_knowledge_by_id(
     id: str,
-    form_data: KnowledgeUpdateForm,
+    form_data: KnowledgeForm,
     user=Depends(get_verified_user),
 ):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
@@ -277,9 +276,7 @@ def add_file_to_knowledge_by_id(
             file_ids.append(form_data.file_id)
             data["file_ids"] = file_ids
 
-            knowledge = Knowledges.update_knowledge_by_id(
-                id=id, form_data=KnowledgeUpdateForm(data=data)
-            )
+            knowledge = Knowledges.update_knowledge_data_by_id(id=id.id, data=data)
 
             if knowledge:
                 files = Files.get_files_by_ids(file_ids)
@@ -413,9 +410,7 @@ def remove_file_from_knowledge_by_id(
             file_ids.remove(form_data.file_id)
             data["file_ids"] = file_ids
 
-            knowledge = Knowledges.update_knowledge_by_id(
-                id=id, form_data=KnowledgeUpdateForm(data=data)
-            )
+            knowledge = Knowledges.update_knowledge_data_by_id(id=id.id, data=data)
 
             if knowledge:
                 files = Files.get_files_by_ids(file_ids)
@@ -496,7 +491,6 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
         log.debug(e)
         pass
 
-    knowledge = Knowledges.update_knowledge_by_id(
-        id=id, form_data=KnowledgeUpdateForm(data={"file_ids": []})
-    )
+    knowledge = Knowledges.update_knowledge_data_by_id(id=id.id, data={"file_ids": []})
+
     return knowledge
