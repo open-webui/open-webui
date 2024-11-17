@@ -501,7 +501,7 @@ async def generate_chat_completion(
         payload = apply_model_system_prompt_to_body(params, payload, user)
 
         # Check if user has access to the model
-        if user.role == "user" and not has_access(
+        if not bypass_filter and user.role == "user" and not has_access(
             user.id, type="read", access_control=model_info.access_control
         ):
             raise HTTPException(
