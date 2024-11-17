@@ -36,7 +36,7 @@
 			</button>
 		</div>
 
-		<div class="w-full px-5 pb-4">
+		<div class="w-full px-5 pb-4 dark:text-white">
 			<AccessControl bind:accessControl {onChange} />
 		</div>
 	</div>
