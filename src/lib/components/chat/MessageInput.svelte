@@ -92,6 +92,11 @@
 	};
 
 	const uploadFileHandler = async (file) => {
+		if (!($user?.permissions?.chat?.file_upload ?? true)) {
+			toast.error($i18n.t('You do not have permission to upload files.'));
+			return null;
+		}
+
 		console.log(file);
 
 		const tempItemId = uuidv4();
