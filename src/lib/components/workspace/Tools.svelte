@@ -13,6 +13,7 @@
 		deleteToolById,
 		exportTools,
 		getToolById,
+		getToolList,
 		getTools
 	} from '$lib/apis/tools';
 	import ArrowDownTray from '../icons/ArrowDownTray.svelte';
@@ -47,6 +48,7 @@
 
 	let tools = [];
 	let filteredItems = [];
+
 	$: filteredItems = tools.filter(
 		(t) =>
 			query === '' ||
@@ -119,11 +121,18 @@
 
 		if (res) {
 			toast.success($i18n.t('Tool deleted successfully'));
-			_tools.set(await getTools(localStorage.token));
+
+			init();
 		}
 	};
 
+	const init = async () => {
+		tools = await getToolList(localStorage.token);
+		_tools.set(await getTools(localStorage.token));
+	};
+
 	onMount(() => {
+		init();
 		const onKeyDown = (event) => {
 			if (event.key === 'Shift') {
 				shiftKey = true;

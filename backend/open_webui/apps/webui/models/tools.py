@@ -145,7 +145,7 @@ class ToolsTable:
             tool
             for tool in tools
             if tool.user_id == user_id
-            or has_access(tool.access_control, user_id, permission)
+            or has_access(user_id, permission, tool.access_control)
         ]
 
     def get_tool_valves_by_id(self, id: str) -> Optional[dict]:
