@@ -9,6 +9,7 @@ from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.utils.tools import get_tools_specs
 from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_access
 
 
 router = APIRouter()
@@ -119,7 +120,12 @@ async def get_tools_by_id(id: str, user=Depends(get_verified_user)):
     tools = Tools.get_tool_by_id(id)
 
     if tools:
-        return tools
+        if (
+            user.role == "admin"
+            or tools.user_id == user.id
+            or has_access(user.id, "read", tools.access_control)
+        ):
+            return tools
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -139,6 +145,19 @@ async def update_tools_by_id(
     form_data: ToolForm,
     user=Depends(get_verified_user),
 ):
+    tools = Tools.get_tool_by_id(id)
+    if not tools:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if tools.user_id != user.id and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
     try:
         form_data.content = replace_imports(form_data.content)
         tools_module, frontmatter = load_tools_module_by_id(
@@ -183,8 +202,20 @@ async def update_tools_by_id(
 async def delete_tools_by_id(
     request: Request, id: str, user=Depends(get_verified_user)
 ):
-    result = Tools.delete_tool_by_id(id)
+    tools = Tools.get_tool_by_id(id)
+    if not tools:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
 
+    if tools.user_id != user.id and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    result = Tools.delete_tool_by_id(id)
     if result:
         TOOLS = request.app.state.TOOLS
         if id in TOOLS:
