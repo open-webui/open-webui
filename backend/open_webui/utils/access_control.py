@@ -2,6 +2,38 @@ from typing import Optional, Union, List, Dict
 from open_webui.apps.webui.models.groups import Groups
 
 
+def get_permissions(
+    user_id: str,
+    default_permissions: Dict[str, bool] = {},
+) -> dict:
+    """
+    Get all permissions for a user by combining the permissions of all groups the user is a member of.
+    If a permission is defined in multiple groups, the most permissive value is used.
+    """
+
+    def merge_permissions(
+        permissions: Dict[str, bool], new_permissions: Dict[str, bool]
+    ) -> Dict[str, bool]:
+        """Merge two permission dictionaries, keeping the most permissive value."""
+        for key, value in new_permissions.items():
+            if key not in permissions:
+                permissions[key] = value
+            else:
+                permissions[key] = (
+                    permissions[key] or value
+                )  # Use the most permissive value
+
+        return permissions
+
+    user_groups = Groups.get_groups_by_member_id(user_id)
+    user_permissions = default_permissions.copy()
+
+    for group in user_groups:
+        user_permissions = merge_permissions(user_permissions, group.permissions)
+
+    return user_permissions
+
+
 def has_permission(
     user_id: str,
     permission_key: str,
