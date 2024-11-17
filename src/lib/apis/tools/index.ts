@@ -62,7 +62,6 @@ export const getTools = async (token: string = '') => {
 	return res;
 };
 
-
 export const getToolList = async (token: string = '') => {
 	let error = null;
 
@@ -93,7 +92,6 @@ export const getToolList = async (token: string = '') => {
 
 	return res;
 };
-
 
 export const exportTools = async (token: string = '') => {
 	let error = null;

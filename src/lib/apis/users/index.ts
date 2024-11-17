@@ -1,7 +1,6 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { getUserPosition } from '$lib/utils';
 
-
 export const getUserGroups = async (token: string) => {
 	let error = null;
 
@@ -28,8 +27,6 @@ export const getUserGroups = async (token: string) => {
 
 	return res;
 };
-
-
 
 export const getUserDefaultPermissions = async (token: string) => {
 	let error = null;

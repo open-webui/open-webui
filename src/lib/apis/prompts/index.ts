@@ -1,19 +1,13 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-
 type PromptItem = {
 	command: string;
 	title: string;
 	content: string;
-	access_control: null|object;
-}
+	access_control: null | object;
+};
 
-
-
-export const createNewPrompt = async (
-	token: string,
-	prompt: PromptItem
-) => {
+export const createNewPrompt = async (token: string, prompt: PromptItem) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/create`, {
@@ -25,7 +19,7 @@ export const createNewPrompt = async (
 		},
 		body: JSON.stringify({
 			...prompt,
-			command: `/${prompt.command}`,
+			command: `/${prompt.command}`
 		})
 	})
 		.then(async (res) => {
@@ -76,7 +70,6 @@ export const getPrompts = async (token: string = '') => {
 	return res;
 };
 
-
 export const getPromptList = async (token: string = '') => {
 	let error = null;
 
@@ -107,7 +100,6 @@ export const getPromptList = async (token: string = '') => {
 
 	return res;
 };
-
 
 export const getPromptByCommand = async (token: string, command: string) => {
 	let error = null;
@@ -141,12 +133,7 @@ export const getPromptByCommand = async (token: string, command: string) => {
 	return res;
 };
 
-
-
-export const updatePromptByCommand = async (
-	token: string,
-	prompt: PromptItem
-) => {
+export const updatePromptByCommand = async (token: string, prompt: PromptItem) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${prompt.command}/update`, {
@@ -158,7 +145,7 @@ export const updatePromptByCommand = async (
 		},
 		body: JSON.stringify({
 			...prompt,
-			command: `/${prompt.command}`,
+			command: `/${prompt.command}`
 		})
 	})
 		.then(async (res) => {

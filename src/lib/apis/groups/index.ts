@@ -62,7 +62,6 @@ export const getGroups = async (token: string = '') => {
 	return res;
 };
 
-
 export const getGroupById = async (token: string, id: string) => {
 	let error = null;
 

@@ -15,10 +15,11 @@ class QdrantClient:
         self.collection_prefix = "open-webui"
         self.QDRANT_URI = QDRANT_URI
         self.QDRANT_API_KEY = QDRANT_API_KEY
-        self.client = Qclient(
-                url=self.QDRANT_URI,
-                api_key=self.QDRANT_API_KEY
-                ) if self.QDRANT_URI else None
+        self.client = (
+            Qclient(url=self.QDRANT_URI, api_key=self.QDRANT_API_KEY)
+            if self.QDRANT_URI
+            else None
+        )
 
     def _result_to_get_result(self, points) -> GetResult:
         ids = []

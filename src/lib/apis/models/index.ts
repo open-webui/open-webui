@@ -1,6 +1,5 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-
 export const getModels = async (token: string = '') => {
 	let error = null;
 
@@ -31,8 +30,6 @@ export const getModels = async (token: string = '') => {
 
 	return res;
 };
-
-
 
 export const getBaseModels = async (token: string = '') => {
 	let error = null;
@@ -65,8 +62,6 @@ export const getBaseModels = async (token: string = '') => {
 	return res;
 };
 
-
-
 export const createNewModel = async (token: string, model: object) => {
 	let error = null;
 
@@ -95,8 +90,6 @@ export const createNewModel = async (token: string, model: object) => {
 
 	return res;
 };
-
-
 
 export const getModelById = async (token: string, id: string) => {
 	let error = null;
@@ -133,7 +126,6 @@ export const getModelById = async (token: string, id: string) => {
 	return res;
 };
 
-
 export const toggleModelById = async (token: string, id: string) => {
 	let error = null;
 
@@ -168,7 +160,6 @@ export const toggleModelById = async (token: string, id: string) => {
 
 	return res;
 };
-
 
 export const updateModelById = async (token: string, id: string, model: object) => {
 	let error = null;

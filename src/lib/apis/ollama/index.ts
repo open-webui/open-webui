@@ -1,6 +1,5 @@
 import { OLLAMA_API_BASE_URL } from '$lib/constants';
 
-
 export const verifyOllamaConnection = async (
 	token: string = '',
 	url: string = '',
@@ -8,21 +7,18 @@ export const verifyOllamaConnection = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(
-		`${OLLAMA_API_BASE_URL}/verify`,
-		{
-			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				Authorization: `Bearer ${token}`,
-				'Content-Type': 'application/json',
-			},
-			body: JSON.stringify({
-				url,
-				key
-			})
-		}
-	)
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/verify`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			url,
+			key
+		})
+	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
@@ -72,10 +68,10 @@ export const getOllamaConfig = async (token: string = '') => {
 };
 
 type OllamaConfig = {
-	ENABLE_OLLAMA_API: boolean, 
-	OLLAMA_BASE_URLS: string[], 
-	OLLAMA_API_CONFIGS: object
-}
+	ENABLE_OLLAMA_API: boolean;
+	OLLAMA_BASE_URLS: string[];
+	OLLAMA_API_CONFIGS: object;
+};
 
 export const updateOllamaConfig = async (token: string = '', config: OllamaConfig) => {
 	let error = null;
@@ -211,12 +207,10 @@ export const getOllamaVersion = async (token: string, urlIdx?: number) => {
 	return res?.version ?? false;
 };
 
-export const getOllamaModels = async (token: string = '', urlIdx: null|number = null) => {
+export const getOllamaModels = async (token: string = '', urlIdx: null | number = null) => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/tags${
-		urlIdx !== null ? `/${urlIdx}` : ''
-	}`, {
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/tags${urlIdx !== null ? `/${urlIdx}` : ''}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
