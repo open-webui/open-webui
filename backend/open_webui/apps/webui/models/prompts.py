@@ -71,16 +71,14 @@ class PromptsTable:
         prompt = PromptModel(
             **{
                 "user_id": user_id,
-                "command": form_data.command,
-                "title": form_data.title,
-                "content": form_data.content,
+                **form_data.model_dump(),
                 "timestamp": int(time.time()),
             }
         )
 
         try:
             with get_db() as db:
-                result = Prompt(**prompt.dict())
+                result = Prompt(**prompt.model_dump())
                 db.add(result)
                 db.commit()
                 db.refresh(result)
