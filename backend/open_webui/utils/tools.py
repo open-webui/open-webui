@@ -4,7 +4,7 @@ from typing import Awaitable, Callable, get_type_hints
 
 from open_webui.apps.webui.models.tools import Tools
 from open_webui.apps.webui.models.users import UserModel
-from open_webui.apps.webui.utils import load_toolkit_module_by_id
+from open_webui.apps.webui.utils import load_tools_module_by_id
 from open_webui.utils.schemas import json_schema_to_model
 
 log = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ def get_tools(
 
         module = webui_app.state.TOOLS.get(tool_id, None)
         if module is None:
-            module, _ = load_toolkit_module_by_id(tool_id)
+            module, _ = load_tools_module_by_id(tool_id)
             webui_app.state.TOOLS[tool_id] = module
 
         extra_params["__id__"] = tool_id
