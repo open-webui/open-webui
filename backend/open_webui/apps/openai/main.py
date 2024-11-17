@@ -11,9 +11,7 @@ from open_webui.apps.webui.models.models import Models
 from open_webui.config import (
     CACHE_DIR,
     CORS_ALLOW_ORIGIN,
-    ENABLE_MODEL_FILTER,
     ENABLE_OPENAI_API,
-    MODEL_FILTER_LIST,
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
@@ -39,6 +37,8 @@ from open_webui.utils.payload import (
 )
 
 from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_access
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
@@ -61,24 +61,10 @@ app.add_middleware(
 
 app.state.config = AppConfig()
 
-app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
-app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
-
 app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
 app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 app.state.config.OPENAI_API_CONFIGS = OPENAI_API_CONFIGS
-
-app.state.MODELS = {}
-
-
-@app.middleware("http")
-async def check_url(request: Request, call_next):
-    if len(app.state.MODELS) == 0:
-        await get_all_models()
-
-    response = await call_next(request)
-    return response
 
 
 @app.get("/config")
@@ -264,7 +250,7 @@ def merge_models_lists(model_lists):
     return merged_list
 
 
-async def get_all_models_raw() -> list:
+async def get_all_models_responses() -> list:
     if not app.state.config.ENABLE_OPENAI_API:
         return []
 
@@ -335,22 +321,13 @@ async def get_all_models_raw() -> list:
     return responses
 
 
-@overload
-async def get_all_models(raw: Literal[True]) -> list: ...
-
-
-@overload
-async def get_all_models(raw: Literal[False] = False) -> dict[str, list]: ...
-
-
-async def get_all_models(raw=False) -> dict[str, list] | list:
+async def get_all_models() -> dict[str, list]:
     log.info("get_all_models()")
-    if not app.state.config.ENABLE_OPENAI_API:
-        return [] if raw else {"data": []}
 
-    responses = await get_all_models_raw()
-    if raw:
-        return responses
+    if not app.state.config.ENABLE_OPENAI_API:
+        return {"data": []}
+
+    responses = await get_all_models_responses()
 
     def extract_data(response):
         if response and "data" in response:
@@ -360,9 +337,7 @@ async def get_all_models(raw=False) -> dict[str, list] | list:
         return None
 
     models = {"data": merge_models_lists(map(extract_data, responses))}
-
     log.debug(f"models: {models}")
-    app.state.MODELS = {model["id"]: model for model in models["data"]}
 
     return models
 
@@ -370,18 +345,12 @@ async def get_all_models(raw=False) -> dict[str, list] | list:
 @app.get("/models")
 @app.get("/models/{url_idx}")
 async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_user)):
+    models = {
+        "data": [],
+    }
+
     if url_idx is None:
         models = await get_all_models()
-        if app.state.config.ENABLE_MODEL_FILTER:
-            if user.role == "user":
-                models["data"] = list(
-                    filter(
-                        lambda model: model["id"] in app.state.config.MODEL_FILTER_LIST,
-                        models["data"],
-                    )
-                )
-                return models
-        return models
     else:
         url = app.state.config.OPENAI_API_BASE_URLS[url_idx]
         key = app.state.config.OPENAI_API_KEYS[url_idx]
@@ -389,6 +358,7 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
         headers = {}
         headers["Authorization"] = f"Bearer {key}"
         headers["Content-Type"] = "application/json"
+
         if ENABLE_FORWARD_USER_INFO_HEADERS:
             headers["X-OpenWebUI-User-Name"] = user.name
             headers["X-OpenWebUI-User-Id"] = user.id
@@ -430,8 +400,7 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
                             )
                         ]
 
-                    return response_data
-
+                    models = response_data
             except aiohttp.ClientError as e:
                 # ClientError covers all aiohttp requests issues
                 log.exception(f"Client error: {str(e)}")
@@ -444,6 +413,22 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
                 # Generic error handler in case parsing JSON or other steps fail
                 error_detail = f"Unexpected error: {str(e)}"
                 raise HTTPException(status_code=500, detail=error_detail)
+
+    if user.role == "user":
+        # Filter models based on user access control
+        filtered_models = []
+        for model in models.get("data", []):
+            model_info = Models.get_model_by_id(model["id"])
+            if model_info:
+                if has_access(
+                    user.id, type="read", access_control=model_info.access_control
+                ):
+                    filtered_models.append(model)
+            else:
+                filtered_models.append(model)
+        models["data"] = filtered_models
+
+    return models
 
 
 class ConnectionVerificationForm(BaseModel):
@@ -492,11 +477,10 @@ async def verify_connection(
 
 
 @app.post("/chat/completions")
-@app.post("/chat/completions/{url_idx}")
 async def generate_chat_completion(
     form_data: dict,
-    url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
+    bypass_filter: Optional[bool] = False,
 ):
     idx = 0
     payload = {**form_data}
@@ -507,6 +491,7 @@ async def generate_chat_completion(
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
 
+    # Check model info and override the payload
     if model_info:
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
@@ -515,9 +500,33 @@ async def generate_chat_completion(
         payload = apply_model_params_to_body_openai(params, payload)
         payload = apply_model_system_prompt_to_body(params, payload, user)
 
-    model = app.state.MODELS[payload.get("model")]
-    idx = model["urlIdx"]
+        # Check if user has access to the model
+        if user.role == "user" and not has_access(
+            user.id, type="read", access_control=model_info.access_control
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Model not found",
+            )
 
+    # Attemp to get urlIdx from the model
+    models = await get_all_models()
+
+    # Find the model from the list
+    model = next(
+        (model for model in models["data"] if model["id"] == payload.get("model")),
+        None,
+    )
+
+    if model:
+        idx = model["urlIdx"]
+    else:
+        raise HTTPException(
+            status_code=404,
+            detail="Model not found",
+        )
+
+    # Get the API config for the model
     api_config = app.state.config.OPENAI_API_CONFIGS.get(
         app.state.config.OPENAI_API_BASE_URLS[idx], {}
     )
@@ -526,6 +535,7 @@ async def generate_chat_completion(
     if prefix_id:
         payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
 
+    # Add user info to the payload if the model is a pipeline
     if "pipeline" in model and model.get("pipeline"):
         payload["user"] = {
             "name": user.name,
@@ -536,8 +546,9 @@ async def generate_chat_completion(
 
     url = app.state.config.OPENAI_API_BASE_URLS[idx]
     key = app.state.config.OPENAI_API_KEYS[idx]
-    is_o1 = payload["model"].lower().startswith("o1-")
 
+    # Fix: O1 does not support the "max_tokens" parameter, Modify "max_tokens" to "max_completion_tokens"
+    is_o1 = payload["model"].lower().startswith("o1-")
     # Change max_completion_tokens to max_tokens (Backward compatible)
     if "api.openai.com" not in url and not is_o1:
         if "max_completion_tokens" in payload:

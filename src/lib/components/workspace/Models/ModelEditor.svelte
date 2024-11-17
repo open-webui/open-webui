@@ -1,10 +1,6 @@
 <script lang="ts">
-	import { v4 as uuidv4 } from 'uuid';
-	import { toast } from 'svelte-sonner';
-	import { goto } from '$app/navigation';
-
 	import { onMount, getContext, tick } from 'svelte';
-	import { models, tools, functions, knowledge as knowledgeCollections } from '$lib/stores';
+	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -16,13 +12,19 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
-	import { getKnowledgeItems } from '$lib/apis/knowledge';
+	import { getKnowledgeBases } from '$lib/apis/knowledge';
+	import AccessControl from '../common/AccessControl.svelte';
+	import { stringify } from 'postcss';
 
 	const i18n = getContext('i18n');
 
 	export let onSubmit: Function;
+	export let onBack: null | Function = null;
+
 	export let model = null;
 	export let edit = false;
+
+	export let preset = true;
 
 	let loading = false;
 	let success = false;
@@ -77,12 +79,14 @@
 	let filterIds = [];
 	let actionIds = [];
 
+	let accessControl = null;
+
 	const addUsage = (base_model_id) => {
 		const baseModel = $models.find((m) => m.id === base_model_id);
 
 		if (baseModel) {
 			if (baseModel.owned_by === 'openai') {
-				capabilities.usage = baseModel.info?.meta?.capabilities?.usage ?? false;
+				capabilities.usage = baseModel?.meta?.capabilities?.usage ?? false;
 			} else {
 				delete capabilities.usage;
 			}
@@ -95,6 +99,8 @@
 
 		info.id = id;
 		info.name = name;
+
+		info.access_control = accessControl;
 		info.meta.capabilities = capabilities;
 
 		if (knowledge.length > 0) {
@@ -145,7 +151,7 @@
 	onMount(async () => {
 		await tools.set(await getTools(localStorage.token));
 		await functions.set(await getFunctions(localStorage.token));
-		await knowledgeCollections.set(await getKnowledgeItems(localStorage.token));
+		await knowledgeCollections.set(await getKnowledgeBases(localStorage.token));
 
 		// Scroll to top 'workspace-container' element
 		const workspaceContainer = document.getElementById('workspace-container');
@@ -154,38 +160,37 @@
 		}
 
 		if (model) {
+			console.log(model);
 			name = model.name;
 			await tick();
 
 			id = model.id;
 
-			if (model.info.base_model_id) {
+			if (model.base_model_id) {
 				const base_model = $models
-					.filter((m) => !m?.preset && m?.owned_by !== 'arena')
-					.find((m) =>
-						[model.info.base_model_id, `${model.info.base_model_id}:latest`].includes(m.id)
-					);
+					.filter((m) => !m?.preset && !(m?.arena ?? false))
+					.find((m) => [model.base_model_id, `${model.base_model_id}:latest`].includes(m.id));
 
 				console.log('base_model', base_model);
 
 				if (base_model) {
-					model.info.base_model_id = base_model.id;
+					model.base_model_id = base_model.id;
 				} else {
-					model.info.base_model_id = null;
+					model.base_model_id = null;
 				}
 			}
 
-			params = { ...params, ...model?.info?.params };
+			params = { ...params, ...model?.params };
 			params.stop = params?.stop
 				? (typeof params.stop === 'string' ? params.stop.split(',') : (params?.stop ?? [])).join(
 						','
 					)
 				: null;
 
-			toolIds = model?.info?.meta?.toolIds ?? [];
-			filterIds = model?.info?.meta?.filterIds ?? [];
-			actionIds = model?.info?.meta?.actionIds ?? [];
-			knowledge = (model?.info?.meta?.knowledge ?? []).map((item) => {
+			toolIds = model?.meta?.toolIds ?? [];
+			filterIds = model?.meta?.filterIds ?? [];
+			actionIds = model?.meta?.actionIds ?? [];
+			knowledge = (model?.meta?.knowledge ?? []).map((item) => {
 				if (item?.collection_name) {
 					return {
 						id: item.collection_name,
@@ -203,17 +208,22 @@
 					return item;
 				}
 			});
-			capabilities = { ...capabilities, ...(model?.info?.meta?.capabilities ?? {}) };
+			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
 			if (model?.owned_by === 'openai') {
 				capabilities.usage = false;
 			}
+
+			accessControl = model?.access_control ?? null;
+
+			console.log(model?.access_control);
+			console.log(accessControl);
 
 			info = {
 				...info,
 				...JSON.parse(
 					JSON.stringify(
-						model?.info
-							? model?.info
+						model
+							? model
 							: {
 									id: model.id,
 									name: model.name
@@ -230,6 +240,31 @@
 </script>
 
 {#if loaded}
+	{#if onBack}
+		<button
+			class="flex space-x-1"
+			on:click={() => {
+				onBack();
+			}}
+		>
+			<div class=" self-center">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="h-4 w-4"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+			</div>
+			<div class=" self-center text-sm font-medium">{'Back'}</div>
+		</button>
+	{/if}
+
 	<div class="w-full max-h-full flex justify-center">
 		<input
 			bind:this={filesInputElement}
@@ -298,7 +333,7 @@
 			}}
 		/>
 
-		{#if !edit || model}
+		{#if !edit || (edit && model)}
 			<form
 				class="flex flex-col md:flex-row w-full gap-3 md:gap-6"
 				on:submit|preventDefault={() => {
@@ -308,7 +343,7 @@
 				<div class="self-center md:self-start flex justify-center my-2 flex-shrink-0">
 					<div class="self-center">
 						<button
-							class="rounded-2xl flex flex-shrink-0 items-center bg-white shadow-2xl group relative"
+							class="rounded-2xl flex flex-shrink-0 items-center bg-white shadow-xl group relative"
 							type="button"
 							on:click={() => {
 								filesInputElement.click();
@@ -318,13 +353,13 @@
 								<img
 									src={info.meta.profile_image_url}
 									alt="model profile"
-									class="rounded-lg size-72 md:size-64 object-cover shrink-0"
+									class="rounded-lg size-72 md:size-60 object-cover shrink-0"
 								/>
 							{:else}
 								<img
 									src="/static/favicon.png"
 									alt="model profile"
-									class=" rounded-lg size-72 md:size-64 object-cover shrink-0"
+									class=" rounded-lg size-72 md:size-60 object-cover shrink-0"
 								/>
 							{/if}
 
@@ -383,7 +418,7 @@
 						</div>
 					</div>
 
-					{#if !edit || model.preset}
+					{#if preset}
 						<div class="my-1">
 							<div class=" text-sm font-semibold mb-1">{$i18n.t('Base Model (From)')}</div>
 
@@ -441,7 +476,33 @@
 						{/if}
 					</div>
 
-					<hr class=" dark:border-gray-850 my-1.5" />
+					<div class="my-1">
+						<div class="">
+							<Tags
+								tags={info?.meta?.tags ?? []}
+								on:delete={(e) => {
+									const tagName = e.detail;
+									info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
+								}}
+								on:add={(e) => {
+									const tagName = e.detail;
+									if (!(info?.meta?.tags ?? null)) {
+										info.meta.tags = [{ name: tagName }];
+									} else {
+										info.meta.tags = [...info.meta.tags, { name: tagName }];
+									}
+								}}
+							/>
+						</div>
+					</div>
+
+					<div class="my-2">
+						<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+							<AccessControl bind:accessControl />
+						</div>
+					</div>
+
+					<hr class=" border-gray-50 dark:border-gray-850 my-1.5" />
 
 					<div class="my-2">
 						<div class="flex w-full justify-between">
@@ -495,7 +556,7 @@
 						</div>
 					</div>
 
-					<hr class=" dark:border-gray-850 my-1" />
+					<hr class=" border-gray-50 dark:border-gray-850 my-1" />
 
 					<div class="my-2">
 						<div class="flex w-full justify-between items-center">
@@ -592,7 +653,7 @@
 						{/if}
 					</div>
 
-					<hr class=" dark:border-gray-850 my-1.5" />
+					<hr class=" border-gray-50 dark:border-gray-850 my-1.5" />
 
 					<div class="my-2">
 						<Knowledge bind:selectedKnowledge={knowledge} collections={$knowledgeCollections} />
@@ -618,30 +679,6 @@
 
 					<div class="my-2">
 						<Capabilities bind:capabilities />
-					</div>
-
-					<div class="my-1">
-						<div class="flex w-full justify-between items-center">
-							<div class=" self-center text-sm font-semibold">{$i18n.t('Tags')}</div>
-						</div>
-
-						<div class="mt-2">
-							<Tags
-								tags={info?.meta?.tags ?? []}
-								on:delete={(e) => {
-									const tagName = e.detail;
-									info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
-								}}
-								on:add={(e) => {
-									const tagName = e.detail;
-									if (!(info?.meta?.tags ?? null)) {
-										info.meta.tags = [{ name: tagName }];
-									} else {
-										info.meta.tags = [...info.meta.tags, { name: tagName }];
-									}
-								}}
-							/>
-						</div>
 					</div>
 
 					<div class="my-2 text-gray-300 dark:text-gray-700">
@@ -679,8 +716,8 @@
 					<div class="my-2 flex justify-end pb-20">
 						<button
 							class=" text-sm px-3 py-2 transition rounded-lg {loading
-								? ' cursor-not-allowed bg-white hover:bg-gray-100 text-black'
-								: ' bg-white hover:bg-gray-100 text-black'} flex w-full justify-center"
+								? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
+								: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
 							type="submit"
 							disabled={loading}
 						>

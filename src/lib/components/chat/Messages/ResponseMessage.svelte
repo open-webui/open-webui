@@ -729,7 +729,7 @@
 
 							{#if message.done}
 								{#if !readOnly}
-									{#if $user.role === 'user' ? ($config?.permissions?.chat?.editing ?? true) : true}
+									{#if $user.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
 										<Tooltip content={$i18n.t('Edit')} placement="bottom">
 											<button
 												class="{isLastMessage
@@ -1125,19 +1125,17 @@
 												showRateComment = false;
 												regenerateResponse(message);
 
-												(model?.actions ?? [])
-													.filter((action) => action?.__webui__ ?? false)
-													.forEach((action) => {
-														dispatch('action', {
-															id: action.id,
-															event: {
-																id: 'regenerate-response',
-																data: {
-																	messageId: message.id
-																}
+												(model?.actions ?? []).forEach((action) => {
+													dispatch('action', {
+														id: action.id,
+														event: {
+															id: 'regenerate-response',
+															data: {
+																messageId: message.id
 															}
-														});
+														}
 													});
+												});
 											}}
 										>
 											<svg

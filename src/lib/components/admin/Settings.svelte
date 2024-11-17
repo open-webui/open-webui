@@ -327,7 +327,7 @@
 		</button>
 	</div>
 
-	<div class="flex-1 mt-3 lg:mt-0 overflow-y-scroll">
+	<div class="flex-1 mt-3 lg:mt-0 overflow-y-scroll pr-1 scrollbar-hidden">
 		{#if selectedTab === 'general'}
 			<General
 				saveHandler={async () => {

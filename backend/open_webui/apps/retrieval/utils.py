@@ -3,6 +3,7 @@ import os
 import uuid
 from typing import Optional, Union
 
+import asyncio
 import requests
 
 from huggingface_hub import snapshot_download
@@ -291,7 +292,13 @@ def get_embedding_function(
     if embedding_engine == "":
         return lambda query: embedding_function.encode(query).tolist()
     elif embedding_engine in ["ollama", "openai"]:
-        func = lambda query: generate_embeddings(
+
+        # Wrapper to run the async generate_embeddings synchronously.
+        def sync_generate_embeddings(*args, **kwargs):
+            return asyncio.run(generate_embeddings(*args, **kwargs))
+
+        # Semantic expectation from the original version (using sync wrapper).
+        func = lambda query: sync_generate_embeddings(
             engine=embedding_engine,
             model=embedding_model,
             text=query,
@@ -469,7 +476,7 @@ def get_model_path(model: str, update_model: bool = False):
         return model
 
 
-def generate_openai_batch_embeddings(
+async def generate_openai_batch_embeddings(
     model: str, texts: list[str], key: str, url: str = "https://api.openai.com/v1"
 ) -> Optional[list[list[float]]]:
     try:
@@ -492,14 +499,16 @@ def generate_openai_batch_embeddings(
         return None
 
 
-def generate_embeddings(engine: str, model: str, text: Union[str, list[str]], **kwargs):
+async def generate_embeddings(
+    engine: str, model: str, text: Union[str, list[str]], **kwargs
+):
     if engine == "ollama":
         if isinstance(text, list):
-            embeddings = generate_ollama_batch_embeddings(
+            embeddings = await generate_ollama_batch_embeddings(
                 GenerateEmbedForm(**{"model": model, "input": text})
             )
         else:
-            embeddings = generate_ollama_batch_embeddings(
+            embeddings = await generate_ollama_batch_embeddings(
                 GenerateEmbedForm(**{"model": model, "input": [text]})
             )
         return (
@@ -512,9 +521,9 @@ def generate_embeddings(engine: str, model: str, text: Union[str, list[str]], **
         url = kwargs.get("url", "https://api.openai.com/v1")
 
         if isinstance(text, list):
-            embeddings = generate_openai_batch_embeddings(model, text, key, url)
+            embeddings = await generate_openai_batch_embeddings(model, text, key, url)
         else:
-            embeddings = generate_openai_batch_embeddings(model, [text], key, url)
+            embeddings = await generate_openai_batch_embeddings(model, [text], key, url)
 
         return embeddings[0] if isinstance(text, str) else embeddings
 

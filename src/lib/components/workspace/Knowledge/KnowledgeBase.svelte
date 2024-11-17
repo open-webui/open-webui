@@ -15,7 +15,7 @@
 	import {
 		addFileToKnowledgeById,
 		getKnowledgeById,
-		getKnowledgeItems,
+		getKnowledgeBases,
 		removeFileFromKnowledgeById,
 		resetKnowledgeById,
 		updateFileFromKnowledgeById,
@@ -27,18 +27,19 @@
 	import { processFile } from '$lib/apis/retrieval';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import Files from './Collection/Files.svelte';
+	import Files from './KnowledgeBase/Files.svelte';
 	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
 
-	import AddContentMenu from './Collection/AddContentMenu.svelte';
-	import AddTextContentModal from './Collection/AddTextContentModal.svelte';
+	import AddContentMenu from './KnowledgeBase/AddContentMenu.svelte';
+	import AddTextContentModal from './KnowledgeBase/AddTextContentModal.svelte';
 
 	import SyncConfirmDialog from '../../common/ConfirmDialog.svelte';
 	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
 	import EllipsisVertical from '$lib/components/icons/EllipsisVertical.svelte';
 	import Drawer from '$lib/components/common/Drawer.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
-	import MenuLines from '$lib/components/icons/MenuLines.svelte';
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import AccessControlModal from '../common/AccessControlModal.svelte';
 
 	let largeScreen = true;
 
@@ -62,6 +63,7 @@
 
 	let showAddTextContentModal = false;
 	let showSyncConfirmModal = false;
+	let showAccessControlModal = false;
 
 	let inputFiles = null;
 
@@ -420,14 +422,15 @@
 
 			const res = await updateKnowledgeById(localStorage.token, id, {
 				name: knowledge.name,
-				description: knowledge.description
+				description: knowledge.description,
+				access_control: knowledge.access_control
 			}).catch((e) => {
 				toast.error(e);
 			});
 
 			if (res) {
 				toast.success($i18n.t('Knowledge updated successfully'));
-				_knowledge.set(await getKnowledgeItems(localStorage.token));
+				_knowledge.set(await getKnowledgeBases(localStorage.token));
 			}
 		}, 1000);
 	};
@@ -596,8 +599,63 @@
 	}}
 />
 
-<div class="flex flex-col w-full h-full max-h-[100dvh] mt-1" id="collection-container">
+<div class="flex flex-col w-full h-full max-h-[100dvh] translate-y-1" id="collection-container">
 	{#if id && knowledge}
+		<AccessControlModal
+			bind:show={showAccessControlModal}
+			bind:accessControl={knowledge.access_control}
+			onChange={() => {
+				changeDebounceHandler();
+			}}
+		/>
+		<div class="w-full mb-2.5">
+			<div class=" flex w-full">
+				<div class="flex-1">
+					<div class="flex items-center justify-between w-full px-0.5 mb-1">
+						<div class="w-full">
+							<input
+								type="text"
+								class="text-left w-full font-semibold text-2xl font-primary bg-transparent outline-none"
+								bind:value={knowledge.name}
+								placeholder="Knowledge Name"
+								on:input={() => {
+									changeDebounceHandler();
+								}}
+							/>
+						</div>
+
+						<div class="self-center">
+							<button
+								class="bg-gray-50 hover:bg-gray-100 text-black transition px-2 py-1 rounded-full flex gap-1 items-center"
+								type="button"
+								on:click={() => {
+									showAccessControlModal = true;
+								}}
+							>
+								<LockClosed strokeWidth="2.5" className="size-3.5" />
+
+								<div class="text-sm font-medium flex-shrink-0">
+									{$i18n.t('Share')}
+								</div>
+							</button>
+						</div>
+					</div>
+
+					<div class="flex w-full px-1">
+						<input
+							type="text"
+							class="text-left text-xs w-full text-gray-500 bg-transparent outline-none"
+							bind:value={knowledge.description}
+							placeholder="Knowledge Description"
+							on:input={() => {
+								changeDebounceHandler();
+							}}
+						/>
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<div class="flex flex-row flex-1 h-full max-h-full pb-2.5">
 			<PaneGroup direction="horizontal">
 				<Pane
@@ -687,7 +745,17 @@
 										/>
 									</div>
 								{:else}
-									<div class="m-auto text-gray-500 text-xs">{$i18n.t('No content found')}</div>
+									<div
+										class="m-auto flex flex-col justify-center text-center text-gray-500 text-xs"
+									>
+										<div>
+											{$i18n.t('No content found')}
+										</div>
+
+										<div class="mx-12 mt-2 text-center text-gray-200 dark:text-gray-700">
+											{$i18n.t('Drag and drop a file to upload or select a file to view')}
+										</div>
+									</div>
 								{/if}
 							</div>
 						</div>
@@ -753,41 +821,7 @@
 									</div>
 								</div>
 							{:else}
-								<div class="m-auto pb-32">
-									<div>
-										<div class=" flex w-full mt-1 mb-3.5">
-											<div class="flex-1">
-												<div class="flex items-center justify-between w-full px-0.5 mb-1">
-													<div class="w-full">
-														<input
-															type="text"
-															class="text-center w-full font-medium text-3xl font-primary bg-transparent outline-none"
-															bind:value={knowledge.name}
-															on:input={() => {
-																changeDebounceHandler();
-															}}
-														/>
-													</div>
-												</div>
-
-												<div class="flex w-full px-1">
-													<input
-														type="text"
-														class="text-center w-full text-gray-500 bg-transparent outline-none"
-														bind:value={knowledge.description}
-														on:input={() => {
-															changeDebounceHandler();
-														}}
-													/>
-												</div>
-											</div>
-										</div>
-									</div>
-
-									<div class=" mt-2 text-center text-sm text-gray-200 dark:text-gray-700 w-full">
-										{$i18n.t('Select a file to view or drag and drop a file to upload')}
-									</div>
-								</div>
+								<div></div>
 							{/if}
 						</div>
 					</Pane>

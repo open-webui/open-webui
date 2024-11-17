@@ -15,11 +15,6 @@
 	import { goto } from '$app/navigation';
 
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
-	import { getModels } from '$lib/apis';
-	import { getPrompts } from '$lib/apis/prompts';
-	import { getKnowledgeItems } from '$lib/apis/knowledge';
-	import { getTools } from '$lib/apis/tools';
-	import { getFunctions } from '$lib/apis/functions';
 
 	const i18n = getContext('i18n');
 
@@ -27,7 +22,21 @@
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
-			await goto('/');
+			if ($page.url.pathname.includes('/models') && !$user?.permissions?.workspace?.models) {
+				goto('/');
+			} else if (
+				$page.url.pathname.includes('/knowledge') &&
+				!$user?.permissions?.workspace?.knowledge
+			) {
+				goto('/');
+			} else if (
+				$page.url.pathname.includes('/prompts') &&
+				!$user?.permissions?.workspace?.prompts
+			) {
+				goto('/');
+			} else if ($page.url.pathname.includes('/tools') && !$user?.permissions?.workspace?.tools) {
+				goto('/');
+			}
 		}
 
 		loaded = true;
@@ -46,7 +55,7 @@
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''}"
 	>
-		<div class="   px-2.5 py-1 backdrop-blur-xl">
+		<div class="   px-2.5 pt-1 backdrop-blur-xl">
 			<div class=" flex items-center gap-1">
 				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
 					<button
@@ -67,50 +76,51 @@
 					<div
 						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
 					>
-						<a
-							class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/workspace/models')
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-							href="/workspace/models">{$i18n.t('Models')}</a
-						>
+						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
+							<a
+								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
+									'/workspace/models'
+								)
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/models">{$i18n.t('Models')}</a
+							>
+						{/if}
 
-						<a
-							class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
-								'/workspace/knowledge'
-							)
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-							href="/workspace/knowledge"
-						>
-							{$i18n.t('Knowledge')}
-						</a>
+						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
+							<a
+								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
+									'/workspace/knowledge'
+								)
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/knowledge"
+							>
+								{$i18n.t('Knowledge')}
+							</a>
+						{/if}
 
-						<a
-							class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/workspace/prompts')
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-							href="/workspace/prompts">{$i18n.t('Prompts')}</a
-						>
+						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
+							<a
+								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
+									'/workspace/prompts'
+								)
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/prompts">{$i18n.t('Prompts')}</a
+							>
+						{/if}
 
-						<a
-							class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/workspace/tools')
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-							href="/workspace/tools"
-						>
-							{$i18n.t('Tools')}
-						</a>
-
-						<a
-							class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
-								'/workspace/functions'
-							)
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-							href="/workspace/functions"
-						>
-							{$i18n.t('Functions')}
-						</a>
+						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.tools}
+							<a
+								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/workspace/tools')
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/tools"
+							>
+								{$i18n.t('Tools')}
+							</a>
+						{/if}
 					</div>
 				</div>
 
@@ -118,7 +128,7 @@
 			</div>
 		</div>
 
-		<div class=" -mt-1 pb-1 px-[18px] flex-1 max-h-full overflow-y-auto" id="workspace-container">
+		<div class="  pb-1 px-[18px] flex-1 max-h-full overflow-y-auto" id="workspace-container">
 			<slot />
 		</div>
 	</div>

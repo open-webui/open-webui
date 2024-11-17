@@ -1,9 +1,10 @@
 import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
-export const getModels = async (token: string = '') => {
+export const getModels = async (token: string = '', base: boolean = false) => {
 	let error = null;
-
-	const res = await fetch(`${WEBUI_BASE_URL}/api/models`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/models${
+		base ? '/base' : ''
+	}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -16,36 +17,21 @@ export const getModels = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
 			error = err;
+			console.log(err);
 			return null;
 		});
+	
 
 	if (error) {
 		throw error;
 	}
 
 	let models = res?.data ?? [];
-
 	models = models
 		.filter((models) => models)
 		// Sort the models
 		.sort((a, b) => {
-			// Check if models have position property
-			const aHasPosition = a.info?.meta?.position !== undefined;
-			const bHasPosition = b.info?.meta?.position !== undefined;
-
-			// If both a and b have the position property
-			if (aHasPosition && bHasPosition) {
-				return a.info.meta.position - b.info.meta.position;
-			}
-
-			// If only a has the position property, it should come first
-			if (aHasPosition) return -1;
-
-			// If only b has the position property, it should come first
-			if (bHasPosition) return 1;
-
 			// Compare case-insensitively by name for models without position property
 			const lowerA = a.name.toLowerCase();
 			const lowerB = b.name.toLowerCase();

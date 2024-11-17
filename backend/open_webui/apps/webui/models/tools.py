@@ -6,7 +6,10 @@ from open_webui.apps.webui.internal.db import Base, JSONField, get_db
 from open_webui.apps.webui.models.users import Users
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, Column, String, Text, JSON
+
+from open_webui.utils.access_control import has_access
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -26,6 +29,24 @@ class Tool(Base):
     specs = Column(JSONField)
     meta = Column(JSONField)
     valves = Column(JSONField)
+
+    access_control = Column(JSON, nullable=True)  # Controls data access levels.
+    # Defines access control rules for this entry.
+    # - `None`: Public access, available to all users with the "user" role.
+    # - `{}`: Private access, restricted exclusively to the owner.
+    # - Custom permissions: Specific access control for reading and writing;
+    #   Can specify group or user-level restrictions:
+    #   {
+    #      "read": {
+    #          "group_ids": ["group_id1", "group_id2"],
+    #          "user_ids":  ["user_id1", "user_id2"]
+    #      },
+    #      "write": {
+    #          "group_ids": ["group_id1", "group_id2"],
+    #          "user_ids":  ["user_id1", "user_id2"]
+    #      }
+    #   }
+
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
 
@@ -42,6 +63,8 @@ class ToolModel(BaseModel):
     content: str
     specs: list[dict]
     meta: ToolMeta
+    access_control: Optional[dict] = None
+
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
@@ -58,6 +81,7 @@ class ToolResponse(BaseModel):
     user_id: str
     name: str
     meta: ToolMeta
+    access_control: Optional[dict] = None
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
@@ -67,6 +91,7 @@ class ToolForm(BaseModel):
     name: str
     content: str
     meta: ToolMeta
+    access_control: Optional[dict] = None
 
 
 class ToolValves(BaseModel):
@@ -112,6 +137,18 @@ class ToolsTable:
     def get_tools(self) -> list[ToolModel]:
         with get_db() as db:
             return [ToolModel.model_validate(tool) for tool in db.query(Tool).all()]
+
+    def get_tools_by_user_id(
+        self, user_id: str, permission: str = "write"
+    ) -> list[ToolModel]:
+        tools = self.get_tools()
+
+        return [
+            tool
+            for tool in tools
+            if tool.user_id == user_id
+            or has_access(user_id, permission, tool.access_control)
+        ]
 
     def get_tool_valves_by_id(self, id: str) -> Optional[dict]:
         try:

@@ -34,7 +34,8 @@
 		mobile,
 		showOverview,
 		chatTitle,
-		showArtifacts
+		showArtifacts,
+		tools
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -78,6 +79,7 @@
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
+	import { getTools } from '$lib/apis/tools';
 
 	export let chatIdProp = '';
 
@@ -151,6 +153,26 @@
 		}
 		sessionStorage.selectedModels = JSON.stringify(selectedModels);
 		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
+	};
+
+	$: if (selectedModels) {
+		setToolIds();
+	}
+
+	const setToolIds = async () => {
+		if (!$tools) {
+			tools.set(await getTools(localStorage.token));
+		}
+
+		if (selectedModels.length !== 1) {
+			return;
+		}
+		const model = $models.find((m) => m.id === selectedModels[0]);
+		if (model) {
+			selectedToolIds = (model?.info?.meta?.toolIds ?? []).filter((id) =>
+				$tools.find((t) => t.id === id)
+			);
+		}
 	};
 
 	const showMessage = async (message) => {
@@ -479,8 +501,6 @@
 				selectedModels = [''];
 			}
 		}
-
-		console.log(selectedModels);
 
 		await showControls.set(false);
 		await showCallOverlay.set(false);
@@ -815,9 +835,12 @@
 		console.log('submitPrompt', userPrompt, $chatId);
 
 		const messages = createMessagesList(history.currentId);
-		selectedModels = selectedModels.map((modelId) =>
+		const _selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
+		if (JSON.stringify(selectedModels) !== JSON.stringify(_selectedModels)) {
+			selectedModels = _selectedModels;
+		}
 
 		if (userPrompt === '') {
 			toast.error($i18n.t('Please enter a prompt'));
@@ -2267,13 +2290,6 @@
 								bind:selectedToolIds
 								bind:webSearchEnabled
 								bind:atSelectedModel
-								availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
-									const model = $models.find((m) => m.id === e);
-									if (model?.info?.meta?.toolIds ?? false) {
-										return [...new Set([...a, ...model.info.meta.toolIds])];
-									}
-									return a;
-								}, [])}
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								{stopResponse}
 								{createMessagePair}
@@ -2311,13 +2327,6 @@
 								bind:selectedToolIds
 								bind:webSearchEnabled
 								bind:atSelectedModel
-								availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
-									const model = $models.find((m) => m.id === e);
-									if (model?.info?.meta?.toolIds ?? false) {
-										return [...new Set([...a, ...model.info.meta.toolIds])];
-									}
-									return a;
-								}, [])}
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								{stopResponse}
 								{createMessagePair}

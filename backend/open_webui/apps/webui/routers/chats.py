@@ -17,7 +17,10 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
+
+
 from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_permission
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -50,9 +53,10 @@ async def get_session_user_chat_list(
 
 @router.delete("/", response_model=bool)
 async def delete_all_user_chats(request: Request, user=Depends(get_verified_user)):
-    if user.role == "user" and not request.app.state.config.USER_PERMISSIONS.get(
-        "chat", {}
-    ).get("deletion", {}):
+
+    if user.role == "user" and not has_permission(
+        user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -385,8 +389,8 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
 
         return result
     else:
-        if not request.app.state.config.USER_PERMISSIONS.get("chat", {}).get(
-            "deletion", {}
+        if not has_permission(
+            user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
         ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

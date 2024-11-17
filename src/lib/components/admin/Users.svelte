@@ -1,14 +1,38 @@
 <script>
 	import { getContext, tick, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
+
+	import { goto } from '$app/navigation';
+	import { user } from '$lib/stores';
+
+	import { getUsers } from '$lib/apis/users';
+
 	import UserList from './Users/UserList.svelte';
 	import Groups from './Users/Groups.svelte';
 
 	const i18n = getContext('i18n');
 
-	let selectedTab = 'overview';
+	let users = [];
 
-	onMount(() => {
+	let selectedTab = 'overview';
+	let loaded = false;
+
+	$: if (selectedTab) {
+		getUsersHandler();
+	}
+
+	const getUsersHandler = async () => {
+		users = await getUsers(localStorage.token);
+	};
+
+	onMount(async () => {
+		if ($user?.role !== 'admin') {
+			await goto('/');
+		} else {
+			users = await getUsers(localStorage.token);
+		}
+		loaded = true;
+
 		const containerElement = document.getElementById('users-tabs-container');
 
 		if (containerElement) {
@@ -25,7 +49,7 @@
 <div class="flex flex-col lg:flex-row w-full h-full -mt-0.5 pb-2 lg:space-x-4">
 	<div
 		id="users-tabs-container"
-		class="tabs flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
+		class=" flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
 	>
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab ===
@@ -78,9 +102,9 @@
 
 	<div class="flex-1 mt-1 lg:mt-0 overflow-y-scroll">
 		{#if selectedTab === 'overview'}
-			<UserList />
+			<UserList {users} />
 		{:else if selectedTab === 'groups'}
-			<Groups />
+			<Groups {users} />
 		{/if}
 	</div>
 </div>

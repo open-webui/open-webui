@@ -5,7 +5,6 @@
 
 	import { WEBUI_NAME, config, functions, models } from '$lib/stores';
 	import { onMount, getContext, tick } from 'svelte';
-	import { createNewPrompt, deletePromptByCommand, getPrompts } from '$lib/apis/prompts';
 
 	import { goto } from '$app/navigation';
 	import {
@@ -25,13 +24,14 @@
 	import FunctionMenu from './Functions/FunctionMenu.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import Switch from '../common/Switch.svelte';
-	import ValvesModal from './common/ValvesModal.svelte';
-	import ManifestModal from './common/ManifestModal.svelte';
+	import ValvesModal from '../workspace/common/ValvesModal.svelte';
+	import ManifestModal from '../workspace/common/ManifestModal.svelte';
 	import Heart from '../icons/Heart.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Search from '../icons/Search.svelte';
 	import Plus from '../icons/Plus.svelte';
+	import ChevronRight from '../icons/ChevronRight.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -98,7 +98,7 @@
 				id: `${_function.id}_clone`,
 				name: `${_function.name} (Clone)`
 			});
-			goto('/workspace/functions/create');
+			goto('/admin/functions/create');
 		}
 	};
 
@@ -210,7 +210,7 @@
 		<div>
 			<a
 				class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
-				href="/workspace/functions/create"
+				href="/admin/functions/create"
 			>
 				<Plus className="size-3.5" />
 			</a>
@@ -225,7 +225,7 @@
 		>
 			<a
 				class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
-				href={`/workspace/functions/edit?id=${encodeURIComponent(func.id)}`}
+				href={`/admin/functions/edit?id=${encodeURIComponent(func.id)}`}
 			>
 				<div class="flex items-center text-left">
 					<div class=" flex-1 self-center pl-1">
@@ -322,7 +322,7 @@
 					<FunctionMenu
 						{func}
 						editHandler={() => {
-							goto(`/workspace/functions/edit?id=${encodeURIComponent(func.id)}`);
+							goto(`/admin/functions/edit?id=${encodeURIComponent(func.id)}`);
 						}}
 						shareHandler={() => {
 							shareHandler(func);
@@ -452,38 +452,25 @@
 
 {#if $config?.features.enable_community_sharing}
 	<div class=" my-16">
-		<div class=" text-lg font-semibold mb-3 line-clamp-1">
+		<div class=" text-lg font-semibold mb-0.5 line-clamp-1">
 			{$i18n.t('Made by OpenWebUI Community')}
 		</div>
 
 		<a
-			class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2"
+			class=" flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full mb-2 px-3.5 py-1.5 rounded-xl transition"
 			href="https://openwebui.com/#open-webui-community"
 			target="_blank"
 		>
-			<div class=" self-center w-10 flex-shrink-0">
-				<div
-					class="w-full h-10 flex justify-center rounded-full bg-transparent dark:bg-gray-700 border border-dashed border-gray-200"
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 24 24"
-						fill="currentColor"
-						class="w-6"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				</div>
-			</div>
-
 			<div class=" self-center">
 				<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a function')}</div>
 				<div class=" text-sm line-clamp-1">
 					{$i18n.t('Discover, download, and explore custom functions')}
+				</div>
+			</div>
+
+			<div>
+				<div>
+					<ChevronRight />
 				</div>
 			</div>
 		</a>

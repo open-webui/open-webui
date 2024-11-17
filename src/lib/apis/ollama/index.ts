@@ -211,10 +211,12 @@ export const getOllamaVersion = async (token: string, urlIdx?: number) => {
 	return res?.version ?? false;
 };
 
-export const getOllamaModels = async (token: string = '') => {
+export const getOllamaModels = async (token: string = '', urlIdx: null|number = null) => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/tags`, {
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/tags${
+		urlIdx !== null ? `/${urlIdx}` : ''
+	}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',

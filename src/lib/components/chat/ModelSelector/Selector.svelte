@@ -55,17 +55,15 @@
 	let selectedModelIdx = 0;
 
 	const fuse = new Fuse(
-		items
-			.filter((item) => !item.model?.info?.meta?.hidden)
-			.map((item) => {
-				const _item = {
-					...item,
-					modelName: item.model?.name,
-					tags: item.model?.info?.meta?.tags?.map((tag) => tag.name).join(' '),
-					desc: item.model?.info?.meta?.description
-				};
-				return _item;
-			}),
+		items.map((item) => {
+			const _item = {
+				...item,
+				modelName: item.model?.name,
+				tags: item.model?.info?.meta?.tags?.map((tag) => tag.name).join(' '),
+				desc: item.model?.info?.meta?.description
+			};
+			return _item;
+		}),
 		{
 			keys: ['value', 'tags', 'modelName'],
 			threshold: 0.3
@@ -76,7 +74,7 @@
 		? fuse.search(searchValue).map((e) => {
 				return e.item;
 			})
-		: items.filter((item) => !item.model?.info?.meta?.hidden);
+		: items;
 
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = searchValue.trim().replace(/^ollama\s+(run|pull)\s+/, '');
@@ -583,14 +581,3 @@
 		</slot>
 	</DropdownMenu.Content>
 </DropdownMenu.Root>
-
-<style>
-	.scrollbar-hidden:active::-webkit-scrollbar-thumb,
-	.scrollbar-hidden:focus::-webkit-scrollbar-thumb,
-	.scrollbar-hidden:hover::-webkit-scrollbar-thumb {
-		visibility: visible;
-	}
-	.scrollbar-hidden::-webkit-scrollbar-thumb {
-		visibility: hidden;
-	}
-</style>

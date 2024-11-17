@@ -9,12 +9,16 @@
 	import Badge from '$lib/components/common/Badge.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import AccessControlModal from '../common/AccessControlModal.svelte';
 
 	const dispatch = createEventDispatcher();
 
 	let formElement = null;
 	let loading = false;
+
 	let showConfirm = false;
+	let showAccessControlModal = false;
 
 	export let edit = false;
 	export let clone = false;
@@ -25,6 +29,8 @@
 		description: ''
 	};
 	export let content = '';
+	export let accessControl = null;
+
 	let _content = '';
 
 	$: if (content) {
@@ -148,7 +154,8 @@ class Tools:
 			id,
 			name,
 			meta,
-			content
+			content,
+			access_control: accessControl
 		});
 	};
 
@@ -171,6 +178,8 @@ class Tools:
 		}
 	};
 </script>
+
+<AccessControlModal bind:show={showAccessControlModal} bind:accessControl />
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full">
@@ -203,11 +212,11 @@ class Tools:
 						</div>
 
 						<div class="flex-1">
-							<Tooltip content={$i18n.t('e.g. My ToolKit')} placement="top-start">
+							<Tooltip content={$i18n.t('e.g. My Tools')} placement="top-start">
 								<input
-									class="w-full text-2xl font-medium bg-transparent outline-none"
+									class="w-full text-2xl font-semibold bg-transparent outline-none"
 									type="text"
-									placeholder={$i18n.t('Toolkit Name')}
+									placeholder={$i18n.t('Tool Name')}
 									bind:value={name}
 									required
 								/>
@@ -215,7 +224,19 @@ class Tools:
 						</div>
 
 						<div>
-							<Badge type="muted" content={$i18n.t('Tool')} />
+							<button
+								class="bg-gray-50 hover:bg-gray-100 text-black transition px-2 py-1 rounded-full flex gap-1 items-center"
+								type="button"
+								on:click={() => {
+									showAccessControlModal = true;
+								}}
+							>
+								<LockClosed strokeWidth="2.5" className="size-3.5" />
+
+								<div class="text-sm font-medium flex-shrink-0">
+									{$i18n.t('Share')}
+								</div>
+							</button>
 						</div>
 					</div>
 
@@ -225,15 +246,11 @@ class Tools:
 								{id}
 							</div>
 						{:else}
-							<Tooltip
-								className="w-full"
-								content={$i18n.t('e.g. my_toolkit')}
-								placement="top-start"
-							>
+							<Tooltip className="w-full" content={$i18n.t('e.g. my_tools')} placement="top-start">
 								<input
 									class="w-full text-sm disabled:text-gray-500 bg-transparent outline-none"
 									type="text"
-									placeholder={$i18n.t('Toolkit ID')}
+									placeholder={$i18n.t('Tool ID')}
 									bind:value={id}
 									required
 									disabled={edit}
@@ -243,13 +260,13 @@ class Tools:
 
 						<Tooltip
 							className="w-full self-center items-center flex"
-							content={$i18n.t('e.g. A toolkit for performing various operations')}
+							content={$i18n.t('e.g. Tools for performing various operations')}
 							placement="top-start"
 						>
 							<input
 								class="w-full text-sm bg-transparent outline-none"
 								type="text"
-								placeholder={$i18n.t('Toolkit Description')}
+								placeholder={$i18n.t('Tool Description')}
 								bind:value={meta.description}
 								required
 							/>
