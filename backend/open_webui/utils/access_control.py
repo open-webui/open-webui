@@ -42,7 +42,6 @@ def has_access(
     type: str = "write",
     access_control: Optional[dict] = None,
 ) -> bool:
-    print("user_id", user_id, "type", type, "access_control", access_control)
     if access_control is None:
         return type == "read"
 
