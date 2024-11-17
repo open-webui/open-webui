@@ -29,10 +29,12 @@
 	import Search from '../icons/Search.svelte';
 	import Plus from '../icons/Plus.svelte';
 	import ChevronRight from '../icons/ChevronRight.svelte';
+	import Spinner from '../common/Spinner.svelte';
 
 	const i18n = getContext('i18n');
 
 	let shiftKey = false;
+	let loaded = false;
 
 	let toolsImportInputElement: HTMLInputElement;
 	let importFiles;
@@ -131,8 +133,10 @@
 		_tools.set(await getTools(localStorage.token));
 	};
 
-	onMount(() => {
-		init();
+	onMount(async () => {
+		await init();
+		loaded = true;
+
 		const onKeyDown = (event) => {
 			if (event.key === 'Shift') {
 				shiftKey = true;
@@ -167,330 +171,336 @@
 	</title>
 </svelte:head>
 
-<div class="flex flex-col gap-1 mt-1.5 mb-2">
-	<div class="flex justify-between items-center">
-		<div class="flex md:self-center text-xl font-medium px-0.5 items-center">
-			{$i18n.t('Tools')}
-			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-			<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-				>{filteredItems.length}</span
-			>
-		</div>
-	</div>
-
-	<div class=" flex w-full space-x-2">
-		<div class="flex flex-1">
-			<div class=" self-center ml-1 mr-3">
-				<Search className="size-3.5" />
+{#if loaded}
+	<div class="flex flex-col gap-1 mt-1.5 mb-2">
+		<div class="flex justify-between items-center">
+			<div class="flex md:self-center text-xl font-medium px-0.5 items-center">
+				{$i18n.t('Tools')}
+				<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
+				<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
+					>{filteredItems.length}</span
+				>
 			</div>
-			<input
-				class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
-				bind:value={query}
-				placeholder={$i18n.t('Search Tools')}
-			/>
 		</div>
 
-		<div>
-			<a
-				class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
-				href="/workspace/tools/create"
-			>
-				<Plus className="size-3.5" />
-			</a>
+		<div class=" flex w-full space-x-2">
+			<div class="flex flex-1">
+				<div class=" self-center ml-1 mr-3">
+					<Search className="size-3.5" />
+				</div>
+				<input
+					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
+					bind:value={query}
+					placeholder={$i18n.t('Search Tools')}
+				/>
+			</div>
+
+			<div>
+				<a
+					class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
+					href="/workspace/tools/create"
+				>
+					<Plus className="size-3.5" />
+				</a>
+			</div>
 		</div>
 	</div>
-</div>
 
-<div class="mb-5">
-	{#each filteredItems as tool}
-		<div
-			class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
-		>
-			<a
-				class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
-				href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}
+	<div class="mb-5">
+		{#each filteredItems as tool}
+			<div
+				class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
 			>
-				<div class="flex items-center text-left">
-					<div class=" flex-1 self-center pl-1">
-						<div class=" font-semibold flex items-center gap-1.5">
-							<div
-								class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
-							>
-								TOOL
-							</div>
-
-							{#if tool?.meta?.manifest?.version}
+				<a
+					class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
+					href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}
+				>
+					<div class="flex items-center text-left">
+						<div class=" flex-1 self-center pl-1">
+							<div class=" font-semibold flex items-center gap-1.5">
 								<div
-									class="text-xs font-bold px-1 rounded line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+									class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 								>
-									v{tool?.meta?.manifest?.version ?? ''}
+									TOOL
 								</div>
-							{/if}
 
-							<div class="line-clamp-1">
-								{tool.name}
+								{#if tool?.meta?.manifest?.version}
+									<div
+										class="text-xs font-bold px-1 rounded line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+									>
+										v{tool?.meta?.manifest?.version ?? ''}
+									</div>
+								{/if}
+
+								<div class="line-clamp-1">
+									{tool.name}
+								</div>
 							</div>
-						</div>
 
-						<div class="flex gap-1.5 px-1">
-							<div class=" text-gray-500 text-xs font-medium flex-shrink-0">{tool.id}</div>
+							<div class="flex gap-1.5 px-1">
+								<div class=" text-gray-500 text-xs font-medium flex-shrink-0">{tool.id}</div>
 
-							<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
-								{tool.meta.description}
+								<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
+									{tool.meta.description}
+								</div>
 							</div>
 						</div>
 					</div>
-				</div>
-			</a>
-			<div class="flex flex-row gap-0.5 self-center">
-				{#if shiftKey}
-					<Tooltip content={$i18n.t('Delete')}>
-						<button
-							class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-							type="button"
-							on:click={() => {
-								deleteHandler(tool);
-							}}
-						>
-							<GarbageBin />
-						</button>
-					</Tooltip>
-				{:else}
-					{#if tool?.meta?.manifest?.funding_url ?? false}
-						<Tooltip content="Support">
+				</a>
+				<div class="flex flex-row gap-0.5 self-center">
+					{#if shiftKey}
+						<Tooltip content={$i18n.t('Delete')}>
+							<button
+								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+								type="button"
+								on:click={() => {
+									deleteHandler(tool);
+								}}
+							>
+								<GarbageBin />
+							</button>
+						</Tooltip>
+					{:else}
+						{#if tool?.meta?.manifest?.funding_url ?? false}
+							<Tooltip content="Support">
+								<button
+									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+									type="button"
+									on:click={() => {
+										selectedTool = tool;
+										showManifestModal = true;
+									}}
+								>
+									<Heart />
+								</button>
+							</Tooltip>
+						{/if}
+
+						<Tooltip content={$i18n.t('Valves')}>
 							<button
 								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 								type="button"
 								on:click={() => {
 									selectedTool = tool;
-									showManifestModal = true;
+									showValvesModal = true;
 								}}
 							>
-								<Heart />
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="1.5"
+									stroke="currentColor"
+									class="size-4"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"
+									/>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+									/>
+								</svg>
 							</button>
 						</Tooltip>
-					{/if}
 
-					<Tooltip content={$i18n.t('Valves')}>
-						<button
-							class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-							type="button"
-							on:click={() => {
-								selectedTool = tool;
-								showValvesModal = true;
+						<ToolMenu
+							editHandler={() => {
+								goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
 							}}
+							shareHandler={() => {
+								shareHandler(tool);
+							}}
+							cloneHandler={() => {
+								cloneHandler(tool);
+							}}
+							exportHandler={() => {
+								exportHandler(tool);
+							}}
+							deleteHandler={async () => {
+								selectedTool = tool;
+								showDeleteConfirm = true;
+							}}
+							onClose={() => {}}
 						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke-width="1.5"
-								stroke="currentColor"
-								class="size-4"
+							<button
+								class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+								type="button"
 							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"
-								/>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-								/>
-							</svg>
-						</button>
-					</Tooltip>
+								<EllipsisHorizontal className="size-5" />
+							</button>
+						</ToolMenu>
+					{/if}
+				</div>
+			</div>
+		{/each}
+	</div>
 
-					<ToolMenu
-						editHandler={() => {
-							goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
-						}}
-						shareHandler={() => {
-							shareHandler(tool);
-						}}
-						cloneHandler={() => {
-							cloneHandler(tool);
-						}}
-						exportHandler={() => {
-							exportHandler(tool);
-						}}
-						deleteHandler={async () => {
-							selectedTool = tool;
-							showDeleteConfirm = true;
-						}}
-						onClose={() => {}}
-					>
-						<button
-							class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-							type="button"
+	{#if $user?.role === 'admin'}
+		<div class=" flex justify-end w-full mb-2">
+			<div class="flex space-x-2">
+				<input
+					id="documents-import-input"
+					bind:this={toolsImportInputElement}
+					bind:files={importFiles}
+					type="file"
+					accept=".json"
+					hidden
+					on:change={() => {
+						console.log(importFiles);
+						showConfirm = true;
+					}}
+				/>
+
+				<button
+					class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+					on:click={() => {
+						toolsImportInputElement.click();
+					}}
+				>
+					<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Import Tools')}</div>
+
+					<div class=" self-center">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="w-4 h-4"
 						>
-							<EllipsisHorizontal className="size-5" />
-						</button>
-					</ToolMenu>
-				{/if}
+							<path
+								fill-rule="evenodd"
+								d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</div>
+				</button>
+
+				<button
+					class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+					on:click={async () => {
+						const _tools = await exportTools(localStorage.token).catch((error) => {
+							toast.error(error);
+							return null;
+						});
+
+						if (_tools) {
+							let blob = new Blob([JSON.stringify(_tools)], {
+								type: 'application/json'
+							});
+							saveAs(blob, `tools-export-${Date.now()}.json`);
+						}
+					}}
+				>
+					<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Export Tools')}</div>
+
+					<div class=" self-center">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</div>
+				</button>
 			</div>
 		</div>
-	{/each}
-</div>
+	{/if}
 
-{#if $user?.role === 'admin'}
-	<div class=" flex justify-end w-full mb-2">
-		<div class="flex space-x-2">
-			<input
-				id="documents-import-input"
-				bind:this={toolsImportInputElement}
-				bind:files={importFiles}
-				type="file"
-				accept=".json"
-				hidden
-				on:change={() => {
-					console.log(importFiles);
-					showConfirm = true;
-				}}
-			/>
+	{#if $config?.features.enable_community_sharing}
+		<div class=" my-16">
+			<div class=" text-lg font-semibold mb-0.5 line-clamp-1">
+				{$i18n.t('Made by OpenWebUI Community')}
+			</div>
 
-			<button
-				class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-				on:click={() => {
-					toolsImportInputElement.click();
-				}}
+			<a
+				class=" flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full mb-2 px-3.5 py-1.5 rounded-xl transition"
+				href="https://openwebui.com/#open-webui-community"
+				target="_blank"
 			>
-				<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Import Tools')}</div>
-
 				<div class=" self-center">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 16 16"
-						fill="currentColor"
-						class="w-4 h-4"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
-							clip-rule="evenodd"
-						/>
-					</svg>
+					<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a tool')}</div>
+					<div class=" text-sm line-clamp-1">
+						{$i18n.t('Discover, download, and explore custom tools')}
+					</div>
 				</div>
-			</button>
 
-			<button
-				class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-				on:click={async () => {
-					const _tools = await exportTools(localStorage.token).catch((error) => {
+				<div>
+					<div>
+						<ChevronRight />
+					</div>
+				</div>
+			</a>
+		</div>
+	{/if}
+
+	<DeleteConfirmDialog
+		bind:show={showDeleteConfirm}
+		title={$i18n.t('Delete tool?')}
+		on:confirm={() => {
+			deleteHandler(selectedTool);
+		}}
+	>
+		<div class=" text-sm text-gray-500">
+			{$i18n.t('This will delete')} <span class="  font-semibold">{selectedTool.name}</span>.
+		</div>
+	</DeleteConfirmDialog>
+
+	<ValvesModal bind:show={showValvesModal} type="tool" id={selectedTool?.id ?? null} />
+	<ManifestModal bind:show={showManifestModal} manifest={selectedTool?.meta?.manifest ?? {}} />
+
+	<ConfirmDialog
+		bind:show={showConfirm}
+		on:confirm={() => {
+			const reader = new FileReader();
+			reader.onload = async (event) => {
+				const _tools = JSON.parse(event.target.result);
+				console.log(_tools);
+
+				for (const tool of _tools) {
+					const res = await createNewTool(localStorage.token, tool).catch((error) => {
 						toast.error(error);
 						return null;
 					});
+				}
 
-					if (_tools) {
-						let blob = new Blob([JSON.stringify(_tools)], {
-							type: 'application/json'
-						});
-						saveAs(blob, `tools-export-${Date.now()}.json`);
-					}
-				}}
-			>
-				<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Export Tools')}</div>
+				toast.success($i18n.t('Tool imported successfully'));
+				tools.set(await getTools(localStorage.token));
+			};
 
-				<div class=" self-center">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 16 16"
-						fill="currentColor"
-						class="w-4 h-4"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				</div>
-			</button>
-		</div>
-	</div>
-{/if}
+			reader.readAsText(importFiles[0]);
+		}}
+	>
+		<div class="text-sm text-gray-500">
+			<div class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-lg px-4 py-3">
+				<div>{$i18n.t('Please carefully review the following warnings:')}</div>
 
-{#if $config?.features.enable_community_sharing}
-	<div class=" my-16">
-		<div class=" text-lg font-semibold mb-0.5 line-clamp-1">
-			{$i18n.t('Made by OpenWebUI Community')}
-		</div>
-
-		<a
-			class=" flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full mb-2 px-3.5 py-1.5 rounded-xl transition"
-			href="https://openwebui.com/#open-webui-community"
-			target="_blank"
-		>
-			<div class=" self-center">
-				<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a tool')}</div>
-				<div class=" text-sm line-clamp-1">
-					{$i18n.t('Discover, download, and explore custom tools')}
-				</div>
+				<ul class=" mt-1 list-disc pl-4 text-xs">
+					<li>
+						{$i18n.t('Tools have a function calling system that allows arbitrary code execution')}.
+					</li>
+					<li>{$i18n.t('Do not install tools from sources you do not fully trust.')}</li>
+				</ul>
 			</div>
 
-			<div>
-				<div>
-					<ChevronRight />
-				</div>
+			<div class="my-3">
+				{$i18n.t(
+					'I acknowledge that I have read and I understand the implications of my action. I am aware of the risks associated with executing arbitrary code and I have verified the trustworthiness of the source.'
+				)}
 			</div>
-		</a>
+		</div>
+	</ConfirmDialog>
+{:else}
+	<div class="w-full h-full flex justify-center items-center">
+		<Spinner />
 	</div>
 {/if}
-
-<DeleteConfirmDialog
-	bind:show={showDeleteConfirm}
-	title={$i18n.t('Delete tool?')}
-	on:confirm={() => {
-		deleteHandler(selectedTool);
-	}}
->
-	<div class=" text-sm text-gray-500">
-		{$i18n.t('This will delete')} <span class="  font-semibold">{selectedTool.name}</span>.
-	</div>
-</DeleteConfirmDialog>
-
-<ValvesModal bind:show={showValvesModal} type="tool" id={selectedTool?.id ?? null} />
-<ManifestModal bind:show={showManifestModal} manifest={selectedTool?.meta?.manifest ?? {}} />
-
-<ConfirmDialog
-	bind:show={showConfirm}
-	on:confirm={() => {
-		const reader = new FileReader();
-		reader.onload = async (event) => {
-			const _tools = JSON.parse(event.target.result);
-			console.log(_tools);
-
-			for (const tool of _tools) {
-				const res = await createNewTool(localStorage.token, tool).catch((error) => {
-					toast.error(error);
-					return null;
-				});
-			}
-
-			toast.success($i18n.t('Tool imported successfully'));
-			tools.set(await getTools(localStorage.token));
-		};
-
-		reader.readAsText(importFiles[0]);
-	}}
->
-	<div class="text-sm text-gray-500">
-		<div class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-lg px-4 py-3">
-			<div>{$i18n.t('Please carefully review the following warnings:')}</div>
-
-			<ul class=" mt-1 list-disc pl-4 text-xs">
-				<li>
-					{$i18n.t('Tools have a function calling system that allows arbitrary code execution')}.
-				</li>
-				<li>{$i18n.t('Do not install tools from sources you do not fully trust.')}</li>
-			</ul>
-		</div>
-
-		<div class="my-3">
-			{$i18n.t(
-				'I acknowledge that I have read and I understand the implications of my action. I am aware of the risks associated with executing arbitrary code and I have verified the trustworthiness of the source.'
-			)}
-		</div>
-	</div>
-</ConfirmDialog>
