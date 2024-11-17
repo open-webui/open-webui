@@ -420,7 +420,7 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
         for model in models.get("data", []):
             model_info = Models.get_model_by_id(model["id"])
             if model_info:
-                if has_access(
+                if user.id == model_info.user_id or has_access(
                     user.id, type="read", access_control=model_info.access_control
                 ):
                     filtered_models.append(model)
@@ -501,13 +501,17 @@ async def generate_chat_completion(
         payload = apply_model_system_prompt_to_body(params, payload, user)
 
         # Check if user has access to the model
-        if not bypass_filter and user.role == "user" and not has_access(
-            user.id, type="read", access_control=model_info.access_control
-        ):
-            raise HTTPException(
-                status_code=403,
-                detail="Model not found",
-            )
+        if not bypass_filter and user.role == "user":
+            if not (
+                user.id == model_info.user_id
+                or has_access(
+                    user.id, type="read", access_control=model_info.access_control
+                )
+            ):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Model not found",
+                )
 
     # Attemp to get urlIdx from the model
     models = await get_all_models()
