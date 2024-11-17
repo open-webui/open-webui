@@ -236,8 +236,14 @@
 		dragged = false;
 	};
 
+	let dropzoneElement;
+
 	onMount(async () => {
-		await tools.set(await getTools(localStorage.token));
+		console.log('hi');
+
+		if (!$tools) {
+			await tools.set(await getTools(localStorage.token));
+		}
 
 		loaded = true;
 
@@ -248,24 +254,29 @@
 
 		window.addEventListener('keydown', handleKeyDown);
 
-		const dropZone = document.getElementById('chat-container');
-
-		dropZone?.addEventListener('dragover', onDragOver);
-		dropZone?.addEventListener('drop', onDrop);
-		dropZone?.addEventListener('dragleave', onDragLeave);
+		if (dropzoneElement) {
+			dropzoneElement?.addEventListener('dragover', onDragOver);
+			dropzoneElement?.addEventListener('drop', onDrop);
+			dropzoneElement?.addEventListener('dragleave', onDragLeave);
+		}
 	});
 
 	onDestroy(() => {
+		console.log('destroy');
 		window.removeEventListener('keydown', handleKeyDown);
 
-		const dropZone = document.getElementById('chat-container');
-
-		dropZone?.removeEventListener('dragover', onDragOver);
-		dropZone?.removeEventListener('drop', onDrop);
-		dropZone?.removeEventListener('dragleave', onDragLeave);
+		if (dropzoneElement) {
+			dropzoneElement?.removeEventListener('dragover', onDragOver);
+			dropzoneElement?.removeEventListener('drop', onDrop);
+			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
+		}
 	});
 </script>
 
+<div
+	class="absolute top-0 bottom-0 left-0 right-0 w-full h-full touch-none pointer-events-none"
+	bind:this={dropzoneElement}
+></div>
 <FilesOverlay show={dragged} />
 
 {#if loaded}
