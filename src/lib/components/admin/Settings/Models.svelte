@@ -21,6 +21,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
+	import { toast } from 'svelte-sonner';
 
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
@@ -72,13 +73,21 @@
 		model.base_model_id = null;
 
 		if (workspaceModels.find((m) => m.id === model.id)) {
-			await updateModelById(localStorage.token, model.id, model).catch((error) => {
+			const res = await updateModelById(localStorage.token, model.id, model).catch((error) => {
 				return null;
 			});
+
+			if (res) {
+				toast.success($i18n.t('Model updated successfully'));
+			}
 		} else {
-			await createNewModel(localStorage.token, model).catch((error) => {
+			const res = await createNewModel(localStorage.token, model).catch((error) => {
 				return null;
 			});
+
+			if (res) {
+				toast.success($i18n.t('Model updated successfully'));
+			}
 		}
 
 		_models.set(await getModels(localStorage.token));
