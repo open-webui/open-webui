@@ -32,7 +32,7 @@
 
 	export let prompt = '';
 	export let files = [];
-	export let availableToolIds = [];
+
 	export let selectedToolIds = [];
 	export let webSearchEnabled = false;
 
@@ -200,7 +200,6 @@
 						bind:selectedToolIds
 						bind:webSearchEnabled
 						bind:atSelectedModel
-						{availableToolIds}
 						{transparentBackground}
 						{stopResponse}
 						{createMessagePair}

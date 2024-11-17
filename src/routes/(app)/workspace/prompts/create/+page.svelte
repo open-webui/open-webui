@@ -8,14 +8,11 @@
 	import PromptEditor from '$lib/components/workspace/Prompts/PromptEditor.svelte';
 
 	let prompt = null;
-	const onSubmit = async ({ title, command, content }) => {
-		const prompt = await createNewPrompt(localStorage.token, command, title, content).catch(
-			(error) => {
-				toast.error(error);
-
-				return null;
-			}
-		);
+	const onSubmit = async (_prompt) => {
+		const prompt = await createNewPrompt(localStorage.token, _prompt).catch((error) => {
+			toast.error(error);
+			return null;
+		});
 
 		if (prompt) {
 			await prompts.set(await getPrompts(localStorage.token));
@@ -37,7 +34,8 @@
 			prompt = {
 				title: _prompt.title,
 				command: _prompt.command,
-				content: _prompt.content
+				content: _prompt.content,
+				access_control: null
 			};
 		});
 
@@ -51,7 +49,8 @@
 			prompt = {
 				title: _prompt.title,
 				command: _prompt.command,
-				content: _prompt.content
+				content: _prompt.content,
+				access_control: null
 			};
 			sessionStorage.removeItem('prompt');
 		}

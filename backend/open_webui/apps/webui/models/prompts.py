@@ -61,6 +61,7 @@ class PromptForm(BaseModel):
     command: str
     title: str
     content: str
+    access_control: Optional[dict] = None
 
 
 class PromptsTable:
@@ -124,6 +125,7 @@ class PromptsTable:
                 prompt = db.query(Prompt).filter_by(command=command).first()
                 prompt.title = form_data.title
                 prompt.content = form_data.content
+                prompt.access_control = form_data.access_control
                 prompt.timestamp = int(time.time())
                 db.commit()
                 return PromptModel.model_validate(prompt)

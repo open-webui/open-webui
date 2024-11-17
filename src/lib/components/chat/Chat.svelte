@@ -153,14 +153,16 @@
 		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
 	};
 
-	$: if (selectedModelIds) {
+	$: if (selectedModels) {
 		setToolIds();
 	}
 
-	const setToolIds = () => {
+	const setToolIds = async () => {
 		if (selectedModels.length !== 1) {
 			return;
 		}
+
+		console.log('setToolIds', selectedModels);
 
 		const model = $models.find((m) => m.id === selectedModels[0]);
 		if (model) {
@@ -494,8 +496,6 @@
 				selectedModels = [''];
 			}
 		}
-
-		console.log(selectedModels);
 
 		await showControls.set(false);
 		await showCallOverlay.set(false);
@@ -2282,13 +2282,6 @@
 								bind:selectedToolIds
 								bind:webSearchEnabled
 								bind:atSelectedModel
-								availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
-									const model = $models.find((m) => m.id === e);
-									if (model?.info?.meta?.toolIds ?? false) {
-										return [...new Set([...a, ...model.info.meta.toolIds])];
-									}
-									return a;
-								}, [])}
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								{stopResponse}
 								{createMessagePair}
@@ -2326,13 +2319,6 @@
 								bind:selectedToolIds
 								bind:webSearchEnabled
 								bind:atSelectedModel
-								availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
-									const model = $models.find((m) => m.id === e);
-									if (model?.info?.meta?.toolIds ?? false) {
-										return [...new Set([...a, ...model.info.meta.toolIds])];
-									}
-									return a;
-								}, [])}
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								{stopResponse}
 								{createMessagePair}

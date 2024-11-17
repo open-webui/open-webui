@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
 	import { flyAndScale } from '$lib/utils/transitions';
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
 
 	import { config, user, tools as _tools } from '$lib/stores';
+	import { getTools } from '$lib/apis/tools';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -11,17 +12,13 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import GlobeAltSolid from '$lib/components/icons/GlobeAltSolid.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
-	import { getTools } from '$lib/apis/tools';
 
 	const i18n = getContext('i18n');
 
 	export let uploadFilesHandler: Function;
-
-	export let availableToolIds: string[] = [];
 	export let selectedToolIds: string[] = [];
 
 	export let webSearchEnabled: boolean;
-
 	export let onClose: Function;
 
 	let tools = {};
@@ -31,12 +28,7 @@
 		init();
 	}
 
-	$: if (tools) {
-		selectedToolIds = Object.keys(tools).filter((toolId) => tools[toolId]?.enabled ?? false);
-	}
-
 	const init = async () => {
-		console.log('init');
 		if ($_tools === null) {
 			await _tools.set(await getTools(localStorage.token));
 		}
@@ -95,7 +87,17 @@
 							</div>
 
 							<div class=" flex-shrink-0">
-								<Switch state={tools[toolId].enabled} />
+								<Switch
+									state={tools[toolId].enabled}
+									on:change={async () => {
+										await tick();
+										if (tools[toolId].enabled) {
+											selectedToolIds = [...selectedToolIds, toolId];
+										} else {
+											selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
+										}
+									}}
+								/>
 							</div>
 						</button>
 					{/each}

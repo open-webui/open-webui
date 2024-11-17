@@ -51,7 +51,7 @@
 
 	export let prompt = '';
 	export let files = [];
-	export let availableToolIds = [];
+
 	export let selectedToolIds = [];
 	export let webSearchEnabled = false;
 
