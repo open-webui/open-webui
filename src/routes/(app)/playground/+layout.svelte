@@ -46,23 +46,23 @@
 							$page.url.pathname
 						)
 							? ''
-							: 'text-gray-300 dark:text-gray-600'} transition"
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 						href="/playground">{$i18n.t('Chat')}</a
 					>
 
-					<a
+					<!-- <a
 						class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/playground/notes')
 							? ''
-							: 'text-gray-300 dark:text-gray-600'} transition"
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 						href="/playground/notes">{$i18n.t('Notes')}</a
-					>
+					> -->
 
 					<a
 						class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
 							'/playground/completions'
 						)
 							? ''
-							: 'text-gray-300 dark:text-gray-600'} transition"
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 						href="/playground/completions">{$i18n.t('Completions')}</a
 					>
 				</div>

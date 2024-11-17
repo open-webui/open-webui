@@ -8,17 +8,20 @@
 	import { page } from '$app/stores';
 	import { models } from '$lib/stores';
 
-	import { updateModelById } from '$lib/apis/models';
+	import { getModelById, updateModelById } from '$lib/apis/models';
 
 	import { getModels } from '$lib/apis';
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
 
 	let model = null;
 
-	onMount(() => {
+	onMount(async () => {
 		const _id = $page.url.searchParams.get('id');
 		if (_id) {
-			model = $models.find((m) => m.id === _id && m?.owned_by !== 'arena');
+			model = await getModelById(localStorage.token, _id).catch((e) => {
+				return null;
+			});
+
 			if (!model) {
 				goto('/workspace/models');
 			}

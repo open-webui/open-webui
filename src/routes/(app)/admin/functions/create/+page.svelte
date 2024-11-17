@@ -1,20 +1,19 @@
 <script>
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
-
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { functions, models } from '$lib/stores';
-	import { updateFunctionById, getFunctions, getFunctionById } from '$lib/apis/functions';
 
-	import FunctionEditor from '$lib/components/workspace/Functions/FunctionEditor.svelte';
-	import Spinner from '$lib/components/common/Spinner.svelte';
+	import { functions, models } from '$lib/stores';
+	import { createNewFunction, getFunctions } from '$lib/apis/functions';
+	import FunctionEditor from '$lib/components/admin/Functions/FunctionEditor.svelte';
 	import { getModels } from '$lib/apis';
 	import { compareVersion, extractFrontmatter } from '$lib/utils';
 	import { WEBUI_VERSION } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
+	let mounted = false;
+	let clone = false;
 	let func = null;
 
 	const saveHandler = async (data) => {
@@ -35,7 +34,7 @@
 			return;
 		}
 
-		const res = await updateFunctionById(localStorage.token, func.id, {
+		const res = await createNewFunction(localStorage.token, {
 			id: data.id,
 			name: data.name,
 			meta: data.meta,
@@ -46,43 +45,54 @@
 		});
 
 		if (res) {
-			toast.success($i18n.t('Function updated successfully'));
+			toast.success($i18n.t('Function created successfully'));
 			functions.set(await getFunctions(localStorage.token));
 			models.set(await getModels(localStorage.token));
+
+			await goto('/workspace/functions');
 		}
 	};
 
-	onMount(async () => {
-		console.log('mounted');
-		const id = $page.url.searchParams.get('id');
+	onMount(() => {
+		window.addEventListener('message', async (event) => {
+			if (
+				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
+					event.origin
+				)
+			)
+				return;
 
-		if (id) {
-			func = await getFunctionById(localStorage.token, id).catch((error) => {
-				toast.error(error);
-				goto('/workspace/functions');
-				return null;
-			});
+			func = JSON.parse(event.data);
+			console.log(func);
+		});
+
+		if (window.opener ?? false) {
+			window.opener.postMessage('loaded', '*');
+		}
+
+		if (sessionStorage.function) {
+			func = JSON.parse(sessionStorage.function);
+			sessionStorage.removeItem('function');
 
 			console.log(func);
+			clone = true;
 		}
+
+		mounted = true;
 	});
 </script>
 
-{#if func}
-	<FunctionEditor
-		edit={true}
-		id={func.id}
-		name={func.name}
-		meta={func.meta}
-		content={func.content}
-		on:save={(e) => {
-			saveHandler(e.detail);
-		}}
-	/>
-{:else}
-	<div class="flex items-center justify-center h-full">
-		<div class=" pb-16">
-			<Spinner />
-		</div>
-	</div>
+{#if mounted}
+	{#key func?.content}
+		<FunctionEditor
+			id={func?.id ?? ''}
+			name={func?.name ?? ''}
+			meta={func?.meta ?? { description: '' }}
+			content={func?.content ?? ''}
+			{clone}
+			on:save={(e) => {
+				saveHandler(e.detail);
+			}}
+		/>
+	{/key}
 {/if}

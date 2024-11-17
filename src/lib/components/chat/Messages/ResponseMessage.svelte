@@ -468,7 +468,7 @@
 	}
 
 	onMount(async () => {
-		console.log('ResponseMessage mounted');
+		// console.log('ResponseMessage mounted');
 
 		await tick();
 	});
@@ -520,7 +520,7 @@
 							{@const status = (
 								message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]
 							).at(-1)}
-							<div class="status-description flex items-center gap-2 pt-0.5 pb-1">
+							<div class="status-description flex items-center gap-2 py-0.5">
 								{#if status?.done === false}
 									<div class="">
 										<Spinner className="size-4" />
@@ -729,7 +729,7 @@
 
 							{#if message.done}
 								{#if !readOnly}
-									{#if $user.role === 'user' ? ($config?.permissions?.chat?.editing ?? true) : true}
+									{#if $user.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
 										<Tooltip content={$i18n.t('Edit')} placement="bottom">
 											<button
 												class="{isLastMessage
@@ -1125,19 +1125,17 @@
 												showRateComment = false;
 												regenerateResponse(message);
 
-												(model?.actions ?? [])
-													.filter((action) => action?.__webui__ ?? false)
-													.forEach((action) => {
-														dispatch('action', {
-															id: action.id,
-															event: {
-																id: 'regenerate-response',
-																data: {
-																	messageId: message.id
-																}
+												(model?.actions ?? []).forEach((action) => {
+													dispatch('action', {
+														id: action.id,
+														event: {
+															id: 'regenerate-response',
+															data: {
+																messageId: message.id
 															}
-														});
+														}
 													});
+												});
 											}}
 										>
 											<svg
@@ -1166,7 +1164,7 @@
 														? 'visible'
 														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 													on:click={() => {
-														actionMessage(action.id);
+														actionMessage(action.id, message);
 													}}
 												>
 													{#if action.icon_url}

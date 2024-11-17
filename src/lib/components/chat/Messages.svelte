@@ -273,7 +273,7 @@
 		}
 	};
 
-	const actionMessage = async (actionId, event = null) => {
+	const actionMessage = async (actionId, message, event = null) => {
 		await chatActionHandler(chatId, actionId, message.model, message.id, event);
 	};
 

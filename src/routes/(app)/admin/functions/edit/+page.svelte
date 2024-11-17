@@ -1,19 +1,20 @@
 <script>
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
-	import { goto } from '$app/navigation';
 
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { functions, models } from '$lib/stores';
-	import { createNewFunction, getFunctions } from '$lib/apis/functions';
-	import FunctionEditor from '$lib/components/workspace/Functions/FunctionEditor.svelte';
+	import { updateFunctionById, getFunctions, getFunctionById } from '$lib/apis/functions';
+
+	import FunctionEditor from '$lib/components/admin/Functions/FunctionEditor.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { getModels } from '$lib/apis';
 	import { compareVersion, extractFrontmatter } from '$lib/utils';
 	import { WEBUI_VERSION } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
-	let mounted = false;
-	let clone = false;
 	let func = null;
 
 	const saveHandler = async (data) => {
@@ -34,7 +35,7 @@
 			return;
 		}
 
-		const res = await createNewFunction(localStorage.token, {
+		const res = await updateFunctionById(localStorage.token, func.id, {
 			id: data.id,
 			name: data.name,
 			meta: data.meta,
@@ -45,54 +46,43 @@
 		});
 
 		if (res) {
-			toast.success($i18n.t('Function created successfully'));
+			toast.success($i18n.t('Function updated successfully'));
 			functions.set(await getFunctions(localStorage.token));
 			models.set(await getModels(localStorage.token));
-
-			await goto('/workspace/functions');
 		}
 	};
 
-	onMount(() => {
-		window.addEventListener('message', async (event) => {
-			if (
-				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
-					event.origin
-				)
-			)
-				return;
+	onMount(async () => {
+		console.log('mounted');
+		const id = $page.url.searchParams.get('id');
 
-			func = JSON.parse(event.data);
-			console.log(func);
-		});
-
-		if (window.opener ?? false) {
-			window.opener.postMessage('loaded', '*');
-		}
-
-		if (sessionStorage.function) {
-			func = JSON.parse(sessionStorage.function);
-			sessionStorage.removeItem('function');
+		if (id) {
+			func = await getFunctionById(localStorage.token, id).catch((error) => {
+				toast.error(error);
+				goto('/workspace/functions');
+				return null;
+			});
 
 			console.log(func);
-			clone = true;
 		}
-
-		mounted = true;
 	});
 </script>
 
-{#if mounted}
-	{#key func?.content}
-		<FunctionEditor
-			id={func?.id ?? ''}
-			name={func?.name ?? ''}
-			meta={func?.meta ?? { description: '' }}
-			content={func?.content ?? ''}
-			{clone}
-			on:save={(e) => {
-				saveHandler(e.detail);
-			}}
-		/>
-	{/key}
+{#if func}
+	<FunctionEditor
+		edit={true}
+		id={func.id}
+		name={func.name}
+		meta={func.meta}
+		content={func.content}
+		on:save={(e) => {
+			saveHandler(e.detail);
+		}}
+	/>
+{:else}
+	<div class="flex items-center justify-center h-full">
+		<div class=" pb-16">
+			<Spinner />
+		</div>
+	</div>
 {/if}

@@ -32,7 +32,14 @@ export const getOpenAIConfig = async (token: string = '') => {
 	return res;
 };
 
-export const updateOpenAIConfig = async (token: string = '', enable_openai_api: boolean) => {
+type OpenAIConfig = {
+	ENABLE_OPENAI_API: boolean;
+	OPENAI_API_BASE_URLS: string[];
+	OPENAI_API_KEYS: string[];
+	OPENAI_API_CONFIGS: object;
+};
+
+export const updateOpenAIConfig = async (token: string = '', config: OpenAIConfig) => {
 	let error = null;
 
 	const res = await fetch(`${OPENAI_API_BASE_URL}/config/update`, {
@@ -43,7 +50,7 @@ export const updateOpenAIConfig = async (token: string = '', enable_openai_api: 
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			enable_openai_api: enable_openai_api
+			...config
 		})
 	})
 		.then(async (res) => {
@@ -231,41 +238,39 @@ export const getOpenAIModels = async (token: string, urlIdx?: number) => {
 	return res;
 };
 
-export const getOpenAIModelsDirect = async (
-	base_url: string = 'https://api.openai.com/v1',
-	api_key: string = ''
+export const verifyOpenAIConnection = async (
+	token: string = '',
+	url: string = 'https://api.openai.com/v1',
+	key: string = ''
 ) => {
 	let error = null;
 
-	const res = await fetch(`${base_url}/models`, {
-		method: 'GET',
+	const res = await fetch(`${OPENAI_API_BASE_URL}/verify`, {
+		method: 'POST',
 		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${api_key}`
-		}
+			Accept: 'application/json',
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			url,
+			key
+		})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
 			error = `OpenAI: ${err?.error?.message ?? 'Network Problem'}`;
-			return null;
+			return [];
 		});
 
 	if (error) {
 		throw error;
 	}
 
-	const models = Array.isArray(res) ? res : (res?.data ?? null);
-
-	return models
-		.map((model) => ({ id: model.id, name: model.name ?? model.id, external: true }))
-		.filter((model) => (base_url.includes('openai') ? model.name.includes('gpt') : true))
-		.sort((a, b) => {
-			return a.name.localeCompare(b.name);
-		});
+	return res;
 };
 
 export const generateOpenAIChatCompletion = async (

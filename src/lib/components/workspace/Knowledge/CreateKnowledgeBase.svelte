@@ -3,14 +3,16 @@
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { createNewKnowledge, getKnowledgeItems } from '$lib/apis/knowledge';
+	import { createNewKnowledge, getKnowledgeBases } from '$lib/apis/knowledge';
 	import { toast } from 'svelte-sonner';
 	import { knowledge } from '$lib/stores';
+	import AccessControl from '../common/AccessControl.svelte';
 
 	let loading = false;
 
 	let name = '';
 	let description = '';
+	let accessControl = null;
 
 	const submitHandler = async () => {
 		loading = true;
@@ -23,13 +25,18 @@
 			return;
 		}
 
-		const res = await createNewKnowledge(localStorage.token, name, description).catch((e) => {
+		const res = await createNewKnowledge(
+			localStorage.token,
+			name,
+			description,
+			accessControl
+		).catch((e) => {
 			toast.error(e);
 		});
 
 		if (res) {
 			toast.success($i18n.t('Knowledge created successfully.'));
-			knowledge.set(await getKnowledgeItems(localStorage.token));
+			knowledge.set(await getKnowledgeBases(localStorage.token));
 			goto(`/workspace/knowledge/${res.id}`);
 		}
 
@@ -100,6 +107,12 @@
 						/>
 					</div>
 				</div>
+			</div>
+		</div>
+
+		<div class="mt-2">
+			<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+				<AccessControl bind:accessControl />
 			</div>
 		</div>
 
