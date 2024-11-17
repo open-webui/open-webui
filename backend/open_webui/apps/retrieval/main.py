@@ -190,9 +190,7 @@ app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
 app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
 
 app.state.config.ENABLE_RAG_QUERY_GENERATION = ENABLE_RAG_QUERY_GENERATION
-app.state.config.RAG_QUERY_GENERATION_TEMPLATE = (
-    RAG_QUERY_GENERATION_TEMPLATE
-)
+app.state.config.RAG_QUERY_GENERATION_TEMPLATE = RAG_QUERY_GENERATION_TEMPLATE
 
 
 def update_embedding_model(
@@ -457,7 +455,7 @@ async def get_rag_config(user=Depends(get_admin_user)):
                 "concurrent_requests": app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             },
         },
-        "prompt_generation": {
+        "query_generation": {
             "enabled": app.state.config.ENABLE_RAG_QUERY_GENERATION,
             "template": app.state.config.RAG_QUERY_GENERATION_TEMPLATE,
         },
@@ -511,7 +509,7 @@ class WebConfig(BaseModel):
     web_loader_ssl_verification: Optional[bool] = None
 
 
-class PromptGenerationConfig(BaseModel):
+class QueryGenerationConfig(BaseModel):
     enabled: bool
     template: Optional[str] = None
 
@@ -523,7 +521,7 @@ class ConfigUpdateForm(BaseModel):
     chunk: Optional[ChunkParamUpdateForm] = None
     youtube: Optional[YoutubeLoaderConfig] = None
     web: Optional[WebConfig] = None
-    prompt_generation: Optional[PromptGenerationConfig] = None
+    query_generation: Optional[QueryGenerationConfig] = None
 
 
 @app.post("/config/update")
@@ -554,7 +552,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
 
     if form_data.web is not None:
         app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
-            #Note: When UI "Bypass SSL verification for Websites"=True then ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION=False
+            # Note: When UI "Bypass SSL verification for Websites"=True then ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION=False
             form_data.web.web_loader_ssl_verification
         )
 
@@ -589,9 +587,13 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
             form_data.web.search.concurrent_requests
         )
 
-    if form_data.prompt_generation is not None:
-        app.state.config.ENABLE_RAG_QUERY_GENERATION = form_data.prompt_generation.enabled
-        app.state.config.RAG_QUERY_GENERATION_TEMPLATE = form_data.prompt_generation.template
+    if form_data.query_generation is not None:
+        app.state.config.ENABLE_RAG_QUERY_GENERATION = (
+            form_data.query_generation.enabled
+        )
+        app.state.config.RAG_QUERY_GENERATION_TEMPLATE = (
+            form_data.query_generation.template
+        )
 
     return {
         "status": True,
@@ -636,7 +638,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
                 "concurrent_requests": app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             },
         },
-        "prompt_generation": {
+        "query_generation": {
             "enabled": app.state.config.ENABLE_RAG_QUERY_GENERATION,
             "template": app.state.config.RAG_QUERY_GENERATION_TEMPLATE,
         },
@@ -1255,7 +1257,9 @@ def process_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
 
         urls = [result.link for result in web_results]
 
-        loader = get_web_loader(urls, verify_ssl=app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION)
+        loader = get_web_loader(
+            urls, verify_ssl=app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
+        )
         docs = loader.load()
 
         save_docs_to_vector_db(docs, collection_name, overwrite=True)
