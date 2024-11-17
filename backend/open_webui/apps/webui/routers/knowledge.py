@@ -1,7 +1,7 @@
 import json
 from typing import Optional, Union
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 import logging
 
 from open_webui.apps.webui.models.knowledge import (
@@ -16,7 +16,7 @@ from open_webui.apps.retrieval.main import process_file, ProcessFileForm
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.utils import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_access
+from open_webui.utils.access_control import has_access, has_permission
 
 
 from open_webui.env import SRC_LOG_LEVELS
@@ -129,8 +129,16 @@ async def get_knowledge_list(user=Depends(get_verified_user)):
 
 @router.post("/create", response_model=Optional[KnowledgeResponse])
 async def create_new_knowledge(
-    form_data: KnowledgeForm, user=Depends(get_verified_user)
+    request: Request, form_data: KnowledgeForm, user=Depends(get_verified_user)
 ):
+    if user.role != "admin" and not has_permission(
+        user.id, "workspace.knowledge", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
     knowledge = Knowledges.insert_new_knowledge(user.id, form_data)
 
     if knowledge:

@@ -2,9 +2,9 @@ from typing import Optional
 
 from open_webui.apps.webui.models.prompts import PromptForm, PromptModel, Prompts
 from open_webui.constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from open_webui.utils.utils import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_access
+from open_webui.utils.access_control import has_access, has_permission
 
 router = APIRouter()
 
@@ -39,7 +39,17 @@ async def get_prompt_list(user=Depends(get_verified_user)):
 
 
 @router.post("/create", response_model=Optional[PromptModel])
-async def create_new_prompt(form_data: PromptForm, user=Depends(get_verified_user)):
+async def create_new_prompt(
+    request: Request, form_data: PromptForm, user=Depends(get_verified_user)
+):
+    if user.role != "admin" and not has_permission(
+        user.id, "workspace.prompts", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
     prompt = Prompts.get_prompt_by_command(form_data.command)
     if prompt is None:
         prompt = Prompts.insert_new_prompt(user.id, form_data)

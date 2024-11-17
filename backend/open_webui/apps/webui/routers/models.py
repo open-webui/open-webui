@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 
 from open_webui.utils.utils import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_access
+from open_webui.utils.access_control import has_access, has_permission
 
 
 router = APIRouter()
@@ -47,9 +47,17 @@ async def get_base_models(user=Depends(get_admin_user)):
 
 @router.post("/create", response_model=Optional[ModelModel])
 async def create_new_model(
+    request: Request,
     form_data: ModelForm,
     user=Depends(get_verified_user),
 ):
+    if user.role != "admin" and not has_permission(
+        user.id, "workspace.models", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
 
     model = Models.get_model_by_id(form_data.id)
     if model:
