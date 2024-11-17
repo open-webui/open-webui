@@ -1,37 +1,41 @@
-from typing import Optional, Union, List, Dict
+from typing import Optional, Union, List, Dict, Any
 from open_webui.apps.webui.models.groups import Groups
 
 
 def get_permissions(
     user_id: str,
-    default_permissions: Dict[str, bool] = {},
-) -> dict:
+    default_permissions: Dict[str, Any] = {},
+) -> Dict[str, Any]:
     """
     Get all permissions for a user by combining the permissions of all groups the user is a member of.
-    If a permission is defined in multiple groups, the most permissive value is used.
+    If a permission is defined in multiple groups, the most permissive value is used (True > False).
+    Permissions are nested in a dict with the permission key as the key and a boolean as the value.
     """
 
-    def merge_permissions(
-        permissions: Dict[str, bool], new_permissions: Dict[str, bool]
-    ) -> Dict[str, bool]:
-        """Merge two permission dictionaries, keeping the most permissive value."""
-        for key, value in new_permissions.items():
-            if key not in permissions:
-                permissions[key] = value
+    def combine_permissions(
+        permissions: Dict[str, Any], group_permissions: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Combine permissions from multiple groups by taking the most permissive value."""
+        for key, value in group_permissions.items():
+            if isinstance(value, dict):
+                if key not in permissions:
+                    permissions[key] = {}
+                permissions[key] = combine_permissions(permissions[key], value)
             else:
-                permissions[key] = (
-                    permissions[key] or value
-                )  # Use the most permissive value
-
+                if key not in permissions:
+                    permissions[key] = value
+                else:
+                    permissions[key] = permissions[key] or value
         return permissions
 
     user_groups = Groups.get_groups_by_member_id(user_id)
-    user_permissions = default_permissions.copy()
+    permissions = default_permissions.copy()
 
     for group in user_groups:
-        user_permissions = merge_permissions(user_permissions, group.permissions)
+        group_permissions = group.permissions
+        permissions = combine_permissions(permissions, group_permissions)
 
-    return user_permissions
+    return permissions
 
 
 def has_permission(
