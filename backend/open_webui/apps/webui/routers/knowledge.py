@@ -276,7 +276,7 @@ def add_file_to_knowledge_by_id(
             file_ids.append(form_data.file_id)
             data["file_ids"] = file_ids
 
-            knowledge = Knowledges.update_knowledge_data_by_id(id=id.id, data=data)
+            knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
 
             if knowledge:
                 files = Files.get_files_by_ids(file_ids)
@@ -410,7 +410,7 @@ def remove_file_from_knowledge_by_id(
             file_ids.remove(form_data.file_id)
             data["file_ids"] = file_ids
 
-            knowledge = Knowledges.update_knowledge_data_by_id(id=id.id, data=data)
+            knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
 
             if knowledge:
                 files = Files.get_files_by_ids(file_ids)
@@ -491,6 +491,6 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
         log.debug(e)
         pass
 
-    knowledge = Knowledges.update_knowledge_data_by_id(id=id.id, data={"file_ids": []})
+    knowledge = Knowledges.update_knowledge_data_by_id(id=id, data={"file_ids": []})
 
     return knowledge
