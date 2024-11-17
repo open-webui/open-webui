@@ -993,6 +993,7 @@ MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
 
 # Qdrant
 QDRANT_URI = os.environ.get("QDRANT_URI", None)
+QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
 
 # OpenSearch
 OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
