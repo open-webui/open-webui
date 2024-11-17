@@ -11,7 +11,7 @@ from open_webui.apps.webui.models.files import FileMetadataResponse
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, JSON
+from sqlalchemy import BigInteger, Column, String, Text, JSON, func
 
 
 log = logging.getLogger(__name__)
@@ -128,7 +128,8 @@ class GroupTable:
             return [
                 GroupModel.model_validate(group)
                 for group in db.query(Group)
-                .filter(Group.user_ids.contains([user_id]))
+                .filter(func.json_array_length(Group.user_ids) > 0)  # Ensure array exists
+                .filter(Group.user_ids.cast(String).like(f'%"{user_id}"%'))  # String-based check
                 .order_by(Group.updated_at.desc())
                 .all()
             ]
