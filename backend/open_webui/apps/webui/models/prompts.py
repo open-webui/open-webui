@@ -7,6 +7,8 @@ from open_webui.apps.webui.models.groups import Groups
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON
 
+from open_webui.utils.access_control import has_access
+
 ####################
 # Prompts DB Schema
 ####################
@@ -107,58 +109,12 @@ class PromptsTable:
     ) -> list[PromptModel]:
         prompts = self.get_prompts()
 
-        groups = Groups.get_groups_by_member_id(user_id)
-        group_ids = [group.id for group in groups]
-
-        if permission == "write":
-            return [
-                prompt
-                for prompt in prompts
-                if prompt.user_id == user_id
-                or (
-                    prompt.access_control
-                    and (
-                        any(
-                            group_id
-                            in prompt.access_control.get(permission, {}).get(
-                                "group_ids", []
-                            )
-                            for group_id in group_ids
-                        )
-                        or (
-                            user_id
-                            in prompt.access_control.get(permission, {}).get(
-                                "user_ids", []
-                            )
-                        )
-                    )
-                )
-            ]
-        elif permission == "read":
-            return [
-                prompt
-                for prompt in prompts
-                if prompt.user_id == user_id
-                or prompt.access_control is None
-                or (
-                    prompt.access_control
-                    and (
-                        any(
-                            prompt.access_control.get(permission, {}).get(
-                                "group_ids", []
-                            )
-                            in group_id
-                            for group_id in group_ids
-                        )
-                        or (
-                            user_id
-                            in prompt.access_control.get(permission, {}).get(
-                                "user_ids", []
-                            )
-                        )
-                    )
-                )
-            ]
+        return [
+            prompt
+            for prompt in prompts
+            if prompt.user_id == user_id
+            or has_access(user_id, permission, prompt.access_control)
+        ]
 
     def update_prompt_by_command(
         self, command: str, form_data: PromptForm

@@ -3,11 +3,17 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, config, prompts } from '$lib/stores';
-	import { createNewPrompt, deletePromptByCommand, getPrompts } from '$lib/apis/prompts';
-	import { error } from '@sveltejs/kit';
 	import { goto } from '$app/navigation';
+	import { onMount, getContext } from 'svelte';
+	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
+
+	import {
+		createNewPrompt,
+		deletePromptByCommand,
+		getPrompts,
+		getPromptList
+	} from '$lib/apis/prompts';
+
 	import PromptMenu from './Prompts/PromptMenu.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -16,16 +22,18 @@
 	import ChevronRight from '../icons/ChevronRight.svelte';
 
 	const i18n = getContext('i18n');
+	let promptsImportInputElement: HTMLInputElement;
 
 	let importFiles = '';
 	let query = '';
-	let promptsImportInputElement: HTMLInputElement;
+
+	let prompts = [];
 
 	let showDeleteConfirm = false;
 	let deletePrompt = null;
 
 	let filteredItems = [];
-	$: filteredItems = $prompts.filter((p) => query === '' || p.command.includes(query));
+	$: filteredItems = prompts.filter((p) => query === '' || p.command.includes(query));
 
 	const shareHandler = async (prompt) => {
 		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
@@ -60,8 +68,17 @@
 	const deleteHandler = async (prompt) => {
 		const command = prompt.command;
 		await deletePromptByCommand(localStorage.token, command);
-		await prompts.set(await getPrompts(localStorage.token));
+		await init();
 	};
+
+	const init = async () => {
+		prompts = await getPromptList(localStorage.token);
+		await _prompts.set(await getPrompts(localStorage.token));
+	};
+
+	onMount(async () => {
+		await init();
+	});
 </script>
 
 <svelte:head>
@@ -181,103 +198,98 @@
 	{/each}
 </div>
 
-<div class=" flex justify-end w-full mb-3">
-	<div class="flex space-x-2">
-		<input
-			id="prompts-import-input"
-			bind:this={promptsImportInputElement}
-			bind:files={importFiles}
-			type="file"
-			accept=".json"
-			hidden
-			on:change={() => {
-				console.log(importFiles);
+{#if $user?.role === 'admin'}
+	<div class=" flex justify-end w-full mb-3">
+		<div class="flex space-x-2">
+			<input
+				id="prompts-import-input"
+				bind:this={promptsImportInputElement}
+				bind:files={importFiles}
+				type="file"
+				accept=".json"
+				hidden
+				on:change={() => {
+					console.log(importFiles);
 
-				const reader = new FileReader();
-				reader.onload = async (event) => {
-					const savedPrompts = JSON.parse(event.target.result);
-					console.log(savedPrompts);
+					const reader = new FileReader();
+					reader.onload = async (event) => {
+						const savedPrompts = JSON.parse(event.target.result);
+						console.log(savedPrompts);
 
-					for (const prompt of savedPrompts) {
-						await createNewPrompt(
-							localStorage.token,
-							prompt.command.charAt(0) === '/' ? prompt.command.slice(1) : prompt.command,
-							prompt.title,
-							prompt.content
-						).catch((error) => {
-							toast.error(error);
-							return null;
-						});
-					}
+						for (const prompt of savedPrompts) {
+							await createNewPrompt(
+								localStorage.token,
+								prompt.command.charAt(0) === '/' ? prompt.command.slice(1) : prompt.command,
+								prompt.title,
+								prompt.content
+							).catch((error) => {
+								toast.error(error);
+								return null;
+							});
+						}
 
-					await prompts.set(await getPrompts(localStorage.token));
-				};
+						prompts = await getPromptList(localStorage.token);
+						await _prompts.set(await getPrompts(localStorage.token));
+					};
 
-				reader.readAsText(importFiles[0]);
-			}}
-		/>
+					reader.readAsText(importFiles[0]);
+				}}
+			/>
 
-		<button
-			class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-			on:click={() => {
-				promptsImportInputElement.click();
-			}}
-		>
-			<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Import Prompts')}</div>
+			<button
+				class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+				on:click={() => {
+					promptsImportInputElement.click();
+				}}
+			>
+				<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Import Prompts')}</div>
 
-			<div class=" self-center">
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 16 16"
-					fill="currentColor"
-					class="w-4 h-4"
-				>
-					<path
-						fill-rule="evenodd"
-						d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
-						clip-rule="evenodd"
-					/>
-				</svg>
-			</div>
-		</button>
-
-		<button
-			class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-			on:click={async () => {
-				// promptsImportInputElement.click();
-				let blob = new Blob([JSON.stringify($prompts)], {
-					type: 'application/json'
-				});
-				saveAs(blob, `prompts-export-${Date.now()}.json`);
-			}}
-		>
-			<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Export Prompts')}</div>
-
-			<div class=" self-center">
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 16 16"
-					fill="currentColor"
-					class="w-4 h-4"
-				>
-					<path
-						fill-rule="evenodd"
-						d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
-						clip-rule="evenodd"
-					/>
-				</svg>
-			</div>
-		</button>
-
-		<!-- <button
-						on:click={() => {
-							loadDefaultPrompts();
-						}}
+				<div class=" self-center">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="w-4 h-4"
 					>
-						dd
-					</button> -->
+						<path
+							fill-rule="evenodd"
+							d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</div>
+			</button>
+
+			<button
+				class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+				on:click={async () => {
+					// promptsImportInputElement.click();
+					let blob = new Blob([JSON.stringify(prompts)], {
+						type: 'application/json'
+					});
+					saveAs(blob, `prompts-export-${Date.now()}.json`);
+				}}
+			>
+				<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Export Prompts')}</div>
+
+				<div class=" self-center">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="w-4 h-4"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</div>
+			</button>
+		</div>
 	</div>
-</div>
+{/if}
 
 {#if $config?.features.enable_community_sharing}
 	<div class=" my-16">

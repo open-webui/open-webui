@@ -14,7 +14,22 @@ router = APIRouter()
 
 @router.get("/", response_model=list[PromptModel])
 async def get_prompts(user=Depends(get_verified_user)):
-    return Prompts.get_prompts()
+    if user.role == "admin":
+        prompts = Prompts.get_prompts()
+    else:
+        prompts = Prompts.get_prompts_by_user_id(user.id, "read")
+
+    return prompts
+
+
+@router.get("/list", response_model=list[PromptModel])
+async def get_prompt_list(user=Depends(get_verified_user)):
+    if user.role == "admin":
+        prompts = Prompts.get_prompts()
+    else:
+        prompts = Prompts.get_prompts_by_user_id(user.id, "write")
+
+    return prompts
 
 
 ############################
@@ -23,7 +38,7 @@ async def get_prompts(user=Depends(get_verified_user)):
 
 
 @router.post("/create", response_model=Optional[PromptModel])
-async def create_new_prompt(form_data: PromptForm, user=Depends(get_admin_user)):
+async def create_new_prompt(form_data: PromptForm, user=Depends(get_verified_user)):
     prompt = Prompts.get_prompt_by_command(form_data.command)
     if prompt is None:
         prompt = Prompts.insert_new_prompt(user.id, form_data)
@@ -67,7 +82,7 @@ async def get_prompt_by_command(command: str, user=Depends(get_verified_user)):
 async def update_prompt_by_command(
     command: str,
     form_data: PromptForm,
-    user=Depends(get_admin_user),
+    user=Depends(get_verified_user),
 ):
     prompt = Prompts.update_prompt_by_command(f"/{command}", form_data)
     if prompt:
@@ -85,6 +100,6 @@ async def update_prompt_by_command(
 
 
 @router.delete("/command/{command}/delete", response_model=bool)
-async def delete_prompt_by_command(command: str, user=Depends(get_admin_user)):
+async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)):
     result = Prompts.delete_prompt_by_command(f"/{command}")
     return result
