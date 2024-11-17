@@ -10,7 +10,11 @@
 	const i18n = getContext('i18n');
 
 	import { WEBUI_NAME, knowledge } from '$lib/stores';
-	import { getKnowledgeItems, deleteKnowledgeById } from '$lib/apis/knowledge';
+	import {
+		getKnowledgeBases,
+		deleteKnowledgeById,
+		getKnowledgeBaseList
+	} from '$lib/apis/knowledge';
 
 	import { goto } from '$app/navigation';
 
@@ -26,13 +30,21 @@
 
 	let fuse = null;
 
+	let knowledgeBases = [];
 	let filteredItems = [];
+
+	$: if (knowledgeBases) {
+		fuse = new Fuse(knowledgeBases, {
+			keys: ['name', 'description']
+		});
+	}
+
 	$: if (fuse) {
 		filteredItems = query
 			? fuse.search(query).map((e) => {
 					return e.item;
 				})
-			: $knowledge;
+			: knowledgeBases;
 	}
 
 	const deleteHandler = async (item) => {
@@ -41,19 +53,14 @@
 		});
 
 		if (res) {
-			knowledge.set(await getKnowledgeItems(localStorage.token));
+			knowledgeBases = await getKnowledgeBaseList(localStorage.token);
+			knowledge.set(await getKnowledgeBases(localStorage.token));
 			toast.success($i18n.t('Knowledge deleted successfully.'));
 		}
 	};
 
 	onMount(async () => {
-		knowledge.set(await getKnowledgeItems(localStorage.token));
-
-		knowledge.subscribe((value) => {
-			fuse = new Fuse(value, {
-				keys: ['name', 'description']
-			});
-		});
+		knowledgeBases = await getKnowledgeBaseList(localStorage.token);
 	});
 </script>
 

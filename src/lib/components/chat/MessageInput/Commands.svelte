@@ -8,7 +8,7 @@
 
 	import { removeLastWordFromString } from '$lib/utils';
 	import { getPrompts } from '$lib/apis/prompts';
-	import { getKnowledgeItems } from '$lib/apis/knowledge';
+	import { getKnowledgeBases } from '$lib/apis/knowledge';
 
 	import Prompts from './Commands/Prompts.svelte';
 	import Knowledge from './Commands/Knowledge.svelte';
@@ -46,7 +46,7 @@
 				prompts.set(await getPrompts(localStorage.token));
 			})(),
 			(async () => {
-				knowledge.set(await getKnowledgeItems(localStorage.token));
+				knowledge.set(await getKnowledgeBases(localStorage.token));
 			})()
 		]);
 		loading = false;

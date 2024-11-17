@@ -17,9 +17,11 @@
 		user as _user,
 		showControls
 	} from '$lib/stores';
+
 	import { blobToFile, findWordIndices } from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import { uploadFile } from '$lib/apis/files';
+	import { getTools } from '$lib/apis/tools';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -32,7 +34,6 @@
 	import Commands from './MessageInput/Commands.svelte';
 	import XMark from '../icons/XMark.svelte';
 	import RichTextInput from '../common/RichTextInput.svelte';
-	import { getTools } from '$lib/apis/tools';
 
 	const i18n = getContext('i18n');
 

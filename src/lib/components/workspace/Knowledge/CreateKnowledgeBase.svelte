@@ -3,7 +3,7 @@
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { createNewKnowledge, getKnowledgeItems } from '$lib/apis/knowledge';
+	import { createNewKnowledge, getKnowledgeBases } from '$lib/apis/knowledge';
 	import { toast } from 'svelte-sonner';
 	import { knowledge } from '$lib/stores';
 	import AccessControl from '../common/AccessControl.svelte';
@@ -30,7 +30,7 @@
 
 		if (res) {
 			toast.success($i18n.t('Knowledge created successfully.'));
-			knowledge.set(await getKnowledgeItems(localStorage.token));
+			knowledge.set(await getKnowledgeBases(localStorage.token));
 			goto(`/workspace/knowledge/${res.id}`);
 		}
 

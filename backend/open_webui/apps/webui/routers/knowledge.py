@@ -26,64 +26,98 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 router = APIRouter()
 
 ############################
-# GetKnowledgeItems
+# getKnowledgeBases
 ############################
 
 
-@router.get(
-    "/", response_model=Optional[Union[list[KnowledgeResponse], KnowledgeResponse]]
-)
-async def get_knowledge_items(
-    id: Optional[str] = None, user=Depends(get_verified_user)
-):
-    if id:
-        knowledge = Knowledges.get_knowledge_by_id(id=id)
+@router.get("/", response_model=list[KnowledgeResponse])
+async def get_knowledge(user=Depends(get_verified_user)):
+    knowledge_bases = []
 
-        if knowledge:
-            return knowledge
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=ERROR_MESSAGES.NOT_FOUND,
-            )
+    if user.role == "admin":
+        knowledge_bases = Knowledges.get_knowledge_bases()
     else:
-        knowledge_bases = []
+        knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "read")
 
-        for knowledge in Knowledges.get_knowledge_items():
-
-            files = []
-            if knowledge.data:
-                files = Files.get_file_metadatas_by_ids(
-                    knowledge.data.get("file_ids", [])
-                )
-
-                # Check if all files exist
-                if len(files) != len(knowledge.data.get("file_ids", [])):
-                    missing_files = list(
-                        set(knowledge.data.get("file_ids", []))
-                        - set([file.id for file in files])
-                    )
-                    if missing_files:
-                        data = knowledge.data or {}
-                        file_ids = data.get("file_ids", [])
-
-                        for missing_file in missing_files:
-                            file_ids.remove(missing_file)
-
-                        data["file_ids"] = file_ids
-                        Knowledges.update_knowledge_by_id(
-                            id=knowledge.id, form_data=KnowledgeUpdateForm(data=data)
-                        )
-
-                        files = Files.get_file_metadatas_by_ids(file_ids)
-
-            knowledge_bases.append(
-                KnowledgeResponse(
-                    **knowledge.model_dump(),
-                    files=files,
-                )
+    # Get files for each knowledge base
+    for knowledge_base in knowledge_bases:
+        files = []
+        if knowledge_base.data:
+            files = Files.get_file_metadatas_by_ids(
+                knowledge_base.data.get("file_ids", [])
             )
-        return knowledge_bases
+
+            # Check if all files exist
+            if len(files) != len(knowledge_base.data.get("file_ids", [])):
+                missing_files = list(
+                    set(knowledge_base.data.get("file_ids", []))
+                    - set([file.id for file in files])
+                )
+                if missing_files:
+                    data = knowledge_base.data or {}
+                    file_ids = data.get("file_ids", [])
+
+                    for missing_file in missing_files:
+                        file_ids.remove(missing_file)
+
+                    data["file_ids"] = file_ids
+                    Knowledges.update_knowledge_by_id(
+                        id=knowledge_base.id, form_data=KnowledgeUpdateForm(data=data)
+                    )
+
+                    files = Files.get_file_metadatas_by_ids(file_ids)
+
+        knowledge_base = KnowledgeResponse(
+            **knowledge_base.model_dump(),
+            files=files,
+        )
+
+    return knowledge_bases
+
+
+@router.get("/list", response_model=list[KnowledgeResponse])
+async def get_knowledge_list(user=Depends(get_verified_user)):
+    knowledge_bases = []
+
+    if user.role == "admin":
+        knowledge_bases = Knowledges.get_knowledge_bases()
+    else:
+        knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "write")
+
+    # Get files for each knowledge base
+    for knowledge_base in knowledge_bases:
+        files = []
+        if knowledge_base.data:
+            files = Files.get_file_metadatas_by_ids(
+                knowledge_base.data.get("file_ids", [])
+            )
+
+            # Check if all files exist
+            if len(files) != len(knowledge_base.data.get("file_ids", [])):
+                missing_files = list(
+                    set(knowledge_base.data.get("file_ids", []))
+                    - set([file.id for file in files])
+                )
+                if missing_files:
+                    data = knowledge_base.data or {}
+                    file_ids = data.get("file_ids", [])
+
+                    for missing_file in missing_files:
+                        file_ids.remove(missing_file)
+
+                    data["file_ids"] = file_ids
+                    Knowledges.update_knowledge_by_id(
+                        id=knowledge_base.id, form_data=KnowledgeUpdateForm(data=data)
+                    )
+
+                    files = Files.get_file_metadatas_by_ids(file_ids)
+
+        knowledge_base = KnowledgeResponse(
+            **knowledge_base.model_dump(),
+            files=files,
+        )
+
+    return knowledge_bases
 
 
 ############################
@@ -92,7 +126,9 @@ async def get_knowledge_items(
 
 
 @router.post("/create", response_model=Optional[KnowledgeResponse])
-async def create_new_knowledge(form_data: KnowledgeForm, user=Depends(get_admin_user)):
+async def create_new_knowledge(
+    form_data: KnowledgeForm, user=Depends(get_verified_user)
+):
     knowledge = Knowledges.insert_new_knowledge(user.id, form_data)
 
     if knowledge:
@@ -141,7 +177,7 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 async def update_knowledge_by_id(
     id: str,
     form_data: KnowledgeUpdateForm,
-    user=Depends(get_admin_user),
+    user=Depends(get_verified_user),
 ):
     knowledge = Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
 
@@ -173,7 +209,7 @@ class KnowledgeFileIdForm(BaseModel):
 def add_file_to_knowledge_by_id(
     id: str,
     form_data: KnowledgeFileIdForm,
-    user=Depends(get_admin_user),
+    user=Depends(get_verified_user),
 ):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     file = Files.get_file_by_id(form_data.file_id)
@@ -238,7 +274,7 @@ def add_file_to_knowledge_by_id(
 def update_file_from_knowledge_by_id(
     id: str,
     form_data: KnowledgeFileIdForm,
-    user=Depends(get_admin_user),
+    user=Depends(get_verified_user),
 ):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     file = Files.get_file_by_id(form_data.file_id)
@@ -288,7 +324,7 @@ def update_file_from_knowledge_by_id(
 def remove_file_from_knowledge_by_id(
     id: str,
     form_data: KnowledgeFileIdForm,
-    user=Depends(get_admin_user),
+    user=Depends(get_verified_user),
 ):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     file = Files.get_file_by_id(form_data.file_id)
@@ -371,7 +407,7 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_admin_user)):
 
 
 @router.delete("/{id}/delete", response_model=bool)
-async def delete_knowledge_by_id(id: str, user=Depends(get_admin_user)):
+async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
     try:
         VECTOR_DB_CLIENT.delete_collection(collection_name=id)
     except Exception as e:

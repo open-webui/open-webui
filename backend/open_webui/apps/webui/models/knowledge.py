@@ -13,6 +13,7 @@ from open_webui.apps.webui.models.files import FileMetadataResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON
 
+from open_webui.utils.access_control import has_access
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -129,7 +130,7 @@ class KnowledgeTable:
             except Exception:
                 return None
 
-    def get_knowledge_items(self) -> list[KnowledgeModel]:
+    def get_knowledge_bases(self) -> list[KnowledgeModel]:
         with get_db() as db:
             return [
                 KnowledgeModel.model_validate(knowledge)
@@ -137,6 +138,17 @@ class KnowledgeTable:
                 .order_by(Knowledge.updated_at.desc())
                 .all()
             ]
+
+    def get_knowledge_bases_by_user_id(
+        self, user_id: str, permission: str = "write"
+    ) -> list[KnowledgeModel]:
+        knowledge_bases = self.get_knowledge_bases()
+        return [
+            knowledge_base
+            for knowledge_base in knowledge_bases
+            if knowledge_base.user_id == user_id
+            or has_access(user_id, permission, knowledge_base.access_control)
+        ]
 
     def get_knowledge_by_id(self, id: str) -> Optional[KnowledgeModel]:
         try:

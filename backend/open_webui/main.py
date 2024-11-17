@@ -134,8 +134,8 @@ from open_webui.utils.utils import (
     get_current_user,
     get_http_authorization_cred,
     get_verified_user,
-    has_access,
 )
+from open_webui.utils.access_control import has_access
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")

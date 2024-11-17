@@ -36,7 +36,9 @@ from open_webui.utils.payload import (
     apply_model_system_prompt_to_body,
 )
 
-from open_webui.utils.utils import get_admin_user, get_verified_user, has_access
+from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_access
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])

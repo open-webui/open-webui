@@ -15,7 +15,7 @@
 	import {
 		addFileToKnowledgeById,
 		getKnowledgeById,
-		getKnowledgeItems,
+		getKnowledgeBases,
 		removeFileFromKnowledgeById,
 		resetKnowledgeById,
 		updateFileFromKnowledgeById,
@@ -27,11 +27,11 @@
 	import { processFile } from '$lib/apis/retrieval';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import Files from './Collection/Files.svelte';
+	import Files from './KnowledgeBase/Files.svelte';
 	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
 
-	import AddContentMenu from './Collection/AddContentMenu.svelte';
-	import AddTextContentModal from './Collection/AddTextContentModal.svelte';
+	import AddContentMenu from './KnowledgeBase/AddContentMenu.svelte';
+	import AddTextContentModal from './KnowledgeBase/AddTextContentModal.svelte';
 
 	import SyncConfirmDialog from '../../common/ConfirmDialog.svelte';
 	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
@@ -428,7 +428,7 @@
 
 			if (res) {
 				toast.success($i18n.t('Knowledge updated successfully'));
-				_knowledge.set(await getKnowledgeItems(localStorage.token));
+				_knowledge.set(await getKnowledgeBases(localStorage.token));
 			}
 		}, 1000);
 	};

@@ -10,7 +10,9 @@ from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 
-from open_webui.utils.utils import get_admin_user, get_verified_user, has_access
+from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_access
+
 
 router = APIRouter()
 
