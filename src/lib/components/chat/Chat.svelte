@@ -34,7 +34,8 @@
 		mobile,
 		showOverview,
 		chatTitle,
-		showArtifacts
+		showArtifacts,
+		tools
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -78,6 +79,7 @@
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
+	import { getTools } from '$lib/apis/tools';
 
 	export let chatIdProp = '';
 
@@ -158,12 +160,18 @@
 	}
 
 	const setToolIds = async () => {
+		if (!$tools) {
+			tools.set(await getTools(localStorage.token));
+		}
+
 		if (selectedModels.length !== 1) {
 			return;
 		}
 		const model = $models.find((m) => m.id === selectedModels[0]);
 		if (model) {
-			selectedToolIds = model?.info?.meta?.toolIds ?? [];
+			selectedToolIds = (model?.info?.meta?.toolIds ?? []).filter((id) =>
+				$tools.find((t) => t.id === id)
+			);
 		}
 	};
 

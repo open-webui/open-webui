@@ -231,7 +231,7 @@ class Tools:
 									showAccessControlModal = true;
 								}}
 							>
-								<LockClosed strokeWidth="2.5" />
+								<LockClosed strokeWidth="2.5" className="size-3.5" />
 
 								<div class="text-sm font-medium flex-shrink-0">
 									{$i18n.t('Share')}
