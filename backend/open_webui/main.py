@@ -1047,17 +1047,17 @@ async def get_all_models():
             )
 
     # Process action_ids to get the actions
-    def get_action_items_from_module(module):
+    def get_action_items_from_module(function, module):
         actions = []
         if hasattr(module, "actions"):
             actions = module.actions
             return [
                 {
-                    "id": f"{module.id}.{action['id']}",
-                    "name": action.get("name", f"{module.name} ({action['id']})"),
-                    "description": module.meta.description,
+                    "id": f"{function.id}.{action['id']}",
+                    "name": action.get("name", f"{function.name} ({action['id']})"),
+                    "description": function.meta.description,
                     "icon_url": action.get(
-                        "icon_url", module.meta.manifest.get("icon_url", None)
+                        "icon_url", function.meta.manifest.get("icon_url", None)
                     ),
                 }
                 for action in actions
@@ -1065,10 +1065,10 @@ async def get_all_models():
         else:
             return [
                 {
-                    "id": module.id,
-                    "name": module.name,
-                    "description": module.meta.description,
-                    "icon_url": module.meta.manifest.get("icon_url", None),
+                    "id": function.id,
+                    "name": function.name,
+                    "description": function.meta.description,
+                    "icon_url": function.meta.manifest.get("icon_url", None),
                 }
             ]
 
@@ -1093,7 +1093,9 @@ async def get_all_models():
                 raise Exception(f"Action not found: {action_id}")
 
             function_module = get_function_module_by_id(action_id)
-            model["actions"].extend(get_action_items_from_module(function_module))
+            model["actions"].extend(
+                get_action_items_from_module(action_function, function_module)
+            )
     return models
 
 
