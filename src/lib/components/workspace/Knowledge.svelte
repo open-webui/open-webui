@@ -84,7 +84,7 @@
 		}}
 	/>
 
-	<div class="flex flex-col gap-1 mt-1.5 mb-2">
+	<div class="flex flex-col gap-1 my-1.5">
 		<div class="flex justify-between items-center">
 			<div class="flex md:self-center text-xl font-medium px-0.5 items-center">
 				{$i18n.t('Knowledge')}
@@ -121,10 +121,10 @@
 		</div>
 	</div>
 
-	<div class="my-3 mb-5 grid lg:grid-cols-2 xl:grid-cols-3 gap-2">
+	<div class="mb-5 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2">
 		{#each filteredItems as item}
 			<button
-				class=" flex space-x-4 cursor-pointer text-left w-full px-4 py-3 border border-gray-50 dark:border-gray-850 dark:hover:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-xl"
+				class=" flex space-x-4 cursor-pointer text-left w-full px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-xl"
 				on:click={() => {
 					if (item?.meta?.document) {
 						toast.error(
@@ -163,7 +163,7 @@
 						</div>
 
 						<div class="mt-3 flex justify-between">
-							<div class="text-xs">
+							<div class="text-xs text-gray-500">
 								<Tooltip
 									content={item?.user?.email}
 									className="flex shrink-0"

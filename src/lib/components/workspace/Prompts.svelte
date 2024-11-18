@@ -21,6 +21,8 @@
 	import Plus from '../icons/Plus.svelte';
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
+	import { capitalizeFirstLetter } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 	let promptsImportInputElement: HTMLInputElement;
@@ -103,7 +105,7 @@
 		</div>
 	</DeleteConfirmDialog>
 
-	<div class="flex flex-col gap-1 mt-1.5 mb-2">
+	<div class="flex flex-col gap-1 my-1.5">
 		<div class="flex justify-between items-center">
 			<div class="flex md:self-center text-xl font-medium px-0.5 items-center">
 				{$i18n.t('Prompts')}
@@ -137,18 +139,32 @@
 		</div>
 	</div>
 
-	<div class="mb-5">
+	<div class="mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
 		{#each filteredItems as prompt}
 			<div
-				class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
+				class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
 			>
 				<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 					<a href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}>
-						<div class=" flex-1 self-center pl-1.5">
-							<div class=" font-semibold line-clamp-1">{prompt.command}</div>
+						<div class=" flex-1 flex items-center gap-2 self-center">
+							<div class=" font-semibold line-clamp-1 capitalize">{prompt.title}</div>
 							<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
-								{prompt.title}
+								{prompt.command}
 							</div>
+						</div>
+
+						<div class=" text-xs">
+							<Tooltip
+								content={prompt?.user?.email}
+								className="flex shrink-0"
+								placement="top-start"
+							>
+								<div class="shrink-0 text-gray-500">
+									{$i18n.t('By {{name}}', {
+										name: capitalizeFirstLetter(prompt?.user?.name ?? prompt?.user?.email)
+									})}
+								</div>
+							</Tooltip>
 						</div>
 					</a>
 				</div>

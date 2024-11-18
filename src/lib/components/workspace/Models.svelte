@@ -196,7 +196,7 @@
 		}}
 	/>
 
-	<div class="flex flex-col gap-1 mt-1.5 mb-2">
+	<div class="flex flex-col gap-1 my-1.5">
 		<div class="flex justify-between items-center">
 			<div class="flex items-center md:self-center text-xl font-medium px-0.5">
 				{$i18n.t('Models')}
@@ -230,14 +230,14 @@
 		</div>
 	</div>
 
-	<div class=" my-2 mb-5 grid gap-2 md:grid-cols-2 lg:grid-cols-3" id="model-list">
+	<div class=" my-2 mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3" id="model-list">
 		{#each filteredModels as model}
 			<div
 				class=" flex flex-col cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-lg transition"
 				id="model-item-{model.id}"
 			>
 				<div class="flex gap-4 mt-1 mb-0.5">
-					<div class=" w-10">
+					<div class=" w-[44px]">
 						<div
 							class=" rounded-full object-cover {model.is_active
 								? ''
@@ -252,7 +252,7 @@
 					</div>
 
 					<a
-						class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
+						class=" flex flex-1 cursor-pointer w-full"
 						href={`/?models=${encodeURIComponent(model.id)}`}
 					>
 						<div class=" flex-1 self-center {model.is_active ? '' : 'text-gray-500'}">
@@ -261,7 +261,7 @@
 								className=" w-fit"
 								placement="top-start"
 							>
-								<div class=" font-medium line-clamp-1">{model.name}</div>
+								<div class=" font-semibold line-clamp-1">{model.name}</div>
 							</Tooltip>
 
 							<div class="flex gap-1 text-xs overflow-hidden">
@@ -278,7 +278,7 @@
 				</div>
 
 				<div class="flex justify-between items-center">
-					<div class=" text-xs">
+					<div class=" text-xs mt-1">
 						<Tooltip content={model?.user?.email} className="flex shrink-0" placement="top-start">
 							<div class="shrink-0 text-gray-500">
 								{$i18n.t('By {{name}}', {

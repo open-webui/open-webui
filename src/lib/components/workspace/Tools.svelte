@@ -30,6 +30,7 @@
 	import Plus from '../icons/Plus.svelte';
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import { capitalizeFirstLetter } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 
@@ -172,7 +173,7 @@
 </svelte:head>
 
 {#if loaded}
-	<div class="flex flex-col gap-1 mt-1.5 mb-2">
+	<div class="flex flex-col gap-1 my-1.5">
 		<div class="flex justify-between items-center">
 			<div class="flex md:self-center text-xl font-medium px-0.5 items-center">
 				{$i18n.t('Tools')}
@@ -206,10 +207,10 @@
 		</div>
 	</div>
 
-	<div class="mb-5">
+	<div class="mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
 		{#each filteredItems as tool}
 			<div
-				class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
+				class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
 			>
 				<a
 					class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
@@ -217,32 +218,46 @@
 				>
 					<div class="flex items-center text-left">
 						<div class=" flex-1 self-center pl-1">
-							<div class=" font-semibold flex items-center gap-1.5">
-								<div
-									class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
-								>
-									TOOL
-								</div>
-
-								{#if tool?.meta?.manifest?.version}
+							<Tooltip content={tool?.meta?.description ?? ''} placement="top-start">
+								<div class=" font-semibold flex items-center gap-1.5">
 									<div
-										class="text-xs font-bold px-1 rounded line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+										class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 									>
-										v{tool?.meta?.manifest?.version ?? ''}
+										TOOL
 									</div>
-								{/if}
 
-								<div class="line-clamp-1">
-									{tool.name}
+									{#if tool?.meta?.manifest?.version}
+										<div
+											class="text-xs font-bold px-1 rounded line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+										>
+											v{tool?.meta?.manifest?.version ?? ''}
+										</div>
+									{/if}
+
+									<div class="line-clamp-1">
+										{tool.name}
+
+										<span class=" text-gray-500 text-xs font-medium flex-shrink-0">{tool.id}</span>
+									</div>
 								</div>
-							</div>
+							</Tooltip>
 
-							<div class="flex gap-1.5 px-1">
-								<div class=" text-gray-500 text-xs font-medium flex-shrink-0">{tool.id}</div>
-
+							<div class="flex gap-1.5 mb-0.5">
 								<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
 									{tool.meta.description}
 								</div>
+							</div>
+
+							<div class="text-xs text-gray-500 shrink-0">
+								<Tooltip
+									content={tool?.user?.email}
+									className="flex shrink-0"
+									placement="top-start"
+								>
+									{$i18n.t('By {{name}}', {
+										name: capitalizeFirstLetter(tool?.user?.name ?? tool?.user?.email)
+									})}
+								</Tooltip>
 							</div>
 						</div>
 					</div>
