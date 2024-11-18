@@ -510,7 +510,7 @@ async def generate_chat_completion(
                     status_code=403,
                     detail="Model not found",
                 )
-    else:
+    elif not bypass_filter:
         if user.role != "admin":
             raise HTTPException(
                 status_code=403,
