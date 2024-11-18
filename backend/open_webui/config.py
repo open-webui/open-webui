@@ -1127,6 +1127,27 @@ RAG_TEXT_SPLITTER = PersistentConfig(
 )
 
 
+ENABLE_RAG_QUERY_GENERATION = PersistentConfig(
+    "ENABLE_RAG_QUERY_GENERATION",
+    "rag.query_generation.enable",
+    os.environ.get("ENABLE_RAG_QUERY_GENERATION", "False").lower() == "true",
+)
+
+DEFAULT_RAG_QUERY_GENERATION_TEMPLATE = """Given the user's message and interaction history, decide if a file search is necessary. You must be concise and exclusively provide a search query if one is necessary. Refrain from verbose responses or any additional commentary. Prefer suggesting a search if uncertain to provide comprehensive or updated information. If a search isn't needed at all, respond with an empty string. Default to a search query when in doubt.
+User Message:
+{{prompt:end:4000}}
+Interaction History:
+{{MESSAGES:END:6}}
+Search Query:"""
+
+
+RAG_QUERY_GENERATION_TEMPLATE = PersistentConfig(
+    "RAG_QUERY_GENERATION_TEMPLATE",
+    "rag.query_generation.template",
+    os.environ.get("RAG_QUERY_GENERATION_TEMPLATE", ""),
+)
+
+
 TIKTOKEN_CACHE_DIR = os.environ.get("TIKTOKEN_CACHE_DIR", f"{CACHE_DIR}/tiktoken")
 TIKTOKEN_ENCODING_NAME = PersistentConfig(
     "TIKTOKEN_ENCODING_NAME",
@@ -1180,6 +1201,19 @@ RAG_OPENAI_API_KEY = PersistentConfig(
     "rag.openai_api_key",
     os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY),
 )
+
+RAG_OLLAMA_BASE_URL = PersistentConfig(
+    "RAG_OLLAMA_BASE_URL",
+    "rag.ollama.url",
+    os.getenv("RAG_OLLAMA_BASE_URL", OLLAMA_BASE_URL),
+)
+
+RAG_OLLAMA_API_KEY = PersistentConfig(
+    "RAG_OLLAMA_API_KEY",
+    "rag.ollama.key",
+    os.getenv("RAG_OLLAMA_API_KEY", ""),
+)
+
 
 ENABLE_RAG_LOCAL_WEB_FETCH = (
     os.getenv("ENABLE_RAG_LOCAL_WEB_FETCH", "False").lower() == "true"
