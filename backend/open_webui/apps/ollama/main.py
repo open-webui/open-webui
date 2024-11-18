@@ -931,9 +931,6 @@ async def generate_chat_completion(
         del payload["metadata"]
 
     model_id = payload["model"]
-    if ":" not in model_id:
-        model_id = f"{model_id}:latest"
-
     model_info = Models.get_model_by_id(model_id)
 
     if model_info:
