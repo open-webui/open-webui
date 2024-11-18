@@ -233,10 +233,10 @@
 	<div class=" my-2 mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3" id="model-list">
 		{#each filteredModels as model}
 			<div
-				class=" flex flex-col cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-lg transition"
+				class=" flex flex-col cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
 				id="model-item-{model.id}"
 			>
-				<div class="flex gap-4 mt-1 mb-0.5">
+				<div class="flex gap-4 mt-0.5 mb-0.5">
 					<div class=" w-[44px]">
 						<div
 							class=" rounded-full object-cover {model.is_active
@@ -277,8 +277,8 @@
 					</a>
 				</div>
 
-				<div class="flex justify-between items-center">
-					<div class=" text-xs mt-1">
+				<div class="flex justify-between items-center -mb-0.5">
+					<div class=" text-xs mt-0.5">
 						<Tooltip content={model?.user?.email} className="flex shrink-0" placement="top-start">
 							<div class="shrink-0 text-gray-500">
 								{$i18n.t('By {{name}}', {

@@ -124,7 +124,7 @@
 	<div class="mb-5 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2">
 		{#each filteredItems as item}
 			<button
-				class=" flex space-x-4 cursor-pointer text-left w-full px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-xl"
+				class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-xl"
 				on:click={() => {
 					if (item?.meta?.document) {
 						toast.error(

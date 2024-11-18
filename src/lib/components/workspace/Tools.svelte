@@ -217,7 +217,7 @@
 					href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}
 				>
 					<div class="flex items-center text-left">
-						<div class=" flex-1 self-center pl-1">
+						<div class=" flex-1 self-center">
 							<Tooltip content={tool?.meta?.description ?? ''} placement="top-start">
 								<div class=" font-semibold flex items-center gap-1.5">
 									<div
