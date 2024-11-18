@@ -89,7 +89,7 @@
 	});
 </script>
 
-{#key mounted}
+{#if mounted}
 	<div class="m-auto w-full max-w-6xl px-2 xl:px-20 translate-y-6 py-24 text-center">
 		{#if $temporaryChatEnabled}
 			<Tooltip
@@ -227,4 +227,4 @@
 			</div>
 		</div>
 	</div>
-{/key}
+{/if}
