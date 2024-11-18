@@ -684,6 +684,21 @@
 															};
 
 															reader.readAsDataURL(blob);
+														} else if (item.type === 'text/plain') {
+															const text = await new Promise((resolve) =>
+																item.getAsString(resolve)
+															);
+															if (text.length > 1000) {
+																const blob = new Blob([text], { type: 'text/plain' });
+																const file = new File([blob], `large_paste_${Date.now()}.txt`, {
+																	type: 'text/plain'
+																});
+																const fileItem = await uploadFileHandler(file);
+																if (fileItem) {
+																	files = [...files, fileItem];
+																}
+																event.preventDefault();
+															}
 														}
 													}
 												}
