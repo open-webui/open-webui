@@ -451,7 +451,7 @@ async def handle_streaming_response(request: Request, response: Response,
                     yield peek
                     continue
 
-                # We reached a tool call we consume all the messages to assemble it
+                # We reached a tool call so we consume all the messages to assemble it
                 log.debug("async tool call detected")
                 tool_calls = [] # id, name, arguments
                 tool_calls.append({'id':'', 'type': 'function', 'function' : {'name':'', 'arguments':''}})
