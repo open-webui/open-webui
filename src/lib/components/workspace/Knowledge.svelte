@@ -155,7 +155,7 @@
 						</div>
 					</div>
 
-					<div class=" self-center flex-1 px-0.5">
+					<div class=" self-center flex-1 px-0.5 mb-1">
 						<div class=" font-semibold line-clamp-1 h-fit">{item.name}</div>
 
 						<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
