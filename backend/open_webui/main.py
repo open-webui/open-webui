@@ -604,6 +604,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                 "name": user.name,
                 "role": user.role,
             },
+            "__metadata__": metadata,
         }
 
         # Initialize data_items to store additional data to be sent to the client
