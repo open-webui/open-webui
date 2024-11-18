@@ -104,7 +104,7 @@
 					{/each}
 				</div>
 
-				<hr class="border-gray-100 dark:border-gray-800 my-1" />
+				<hr class="border-black/5 dark:border-white/5 my-1" />
 			{/if}
 
 			{#if $config?.features?.enable_web_search}
@@ -122,7 +122,7 @@
 					<Switch state={webSearchEnabled} />
 				</button>
 
-				<hr class="border-gray-100 dark:border-gray-800 my-1" />
+				<hr class="border-black/5 dark:border-white/5 my-1" />
 			{/if}
 
 			<DropdownMenu.Item
