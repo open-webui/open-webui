@@ -10,6 +10,7 @@
 	import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import SvgPanZoom from '../common/SVGPanZoom.svelte';
+	import ArrowLeft from '../icons/ArrowLeft.svelte';
 
 	export let overlay = false;
 	export let history;
@@ -119,6 +120,11 @@
 			}
 		});
 
+		if (contents.length === 0) {
+			showControls.set(false);
+			showArtifacts.set(false);
+		}
+
 		selectedContentIdx = contents ? contents.length - 1 : 0;
 	};
 
@@ -183,6 +189,17 @@
 			<div class=" absolute top-0 left-0 right-0 bottom-0 z-10"></div>
 		{/if}
 
+		<div class="absolute pointer-events-none z-50 w-full flex items-center justify-start p-4">
+			<button
+				class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
+				on:click={() => {
+					showArtifacts.set(false);
+				}}
+			>
+				<ArrowLeft className="size-3.5  text-gray-900 dark:text-white" />
+			</button>
+		</div>
+
 		<div class=" absolute pointer-events-none z-50 w-full flex items-center justify-end p-4">
 			<button
 				class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
@@ -192,7 +209,7 @@
 					showArtifacts.set(false);
 				}}
 			>
-				<XMark className="size-3 text-gray-900 dark:text-white" />
+				<XMark className="size-3.5 text-gray-900 dark:text-white" />
 			</button>
 		</div>
 

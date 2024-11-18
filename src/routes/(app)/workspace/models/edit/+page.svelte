@@ -27,6 +27,7 @@
 	import FiltersSelector from '$lib/components/workspace/Models/FiltersSelector.svelte';
 	import ActionsSelector from '$lib/components/workspace/Models/ActionsSelector.svelte';
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -138,7 +139,7 @@
 		const _id = $page.url.searchParams.get('id');
 
 		if (_id) {
-			model = $models.find((m) => m.id === _id);
+			model = $models.find((m) => m.id === _id && m?.owned_by !== 'arena');
 			if (model) {
 				id = model.id;
 				name = model.name;
@@ -394,7 +395,7 @@
 							required
 						>
 							<option value={null} class=" text-gray-900">{$i18n.t('Select a base model')}</option>
-							{#each $models.filter((m) => m.id !== model.id && !m?.preset) as model}
+							{#each $models.filter((m) => m.id !== model.id && !m?.preset && m?.owned_by !== 'arena') as model}
 								<option value={model.id} class=" text-gray-900">{model.name}</option>
 							{/each}
 						</select>
@@ -448,10 +449,10 @@
 					<div class="my-1">
 						<div class=" text-xs font-semibold mb-2">{$i18n.t('System Prompt')}</div>
 						<div>
-							<textarea
-								class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg -mb-1"
+							<Textarea
+								className="px-3 py-2 text-sm w-full bg-transparent border dark:border-gray-600 outline-none resize-none overflow-y-hidden rounded-lg "
 								placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
-								rows="4"
+								rows={4}
 								bind:value={info.params.system}
 							/>
 						</div>
@@ -617,11 +618,12 @@
 				<div class="mt-2">
 					<Tags
 						tags={info?.meta?.tags ?? []}
-						deleteTag={(tagName) => {
+						on:delete={(e) => {
+							const tagName = e.detail;
 							info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
 						}}
-						addTag={(tagName) => {
-							console.log(tagName);
+						on:add={(e) => {
+							const tagName = e.detail;
 							if (!(info?.meta?.tags ?? null)) {
 								info.meta.tags = [{ name: tagName }];
 							} else {

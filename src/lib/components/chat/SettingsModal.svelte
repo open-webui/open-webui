@@ -88,15 +88,15 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full p-4 md:space-x-4">
+		<div class="flex flex-col md:flex-row w-full px-4 pt-2 pb-4 md:space-x-4">
 			<div
 				id="settings-tabs-container"
 				class="tabs flex flex-row overflow-x-auto space-x-1 md:space-x-0 md:space-y-1 md:flex-col flex-1 md:flex-none md:w-40 dark:text-gray-200 text-xs text-left mb-3 md:mb-0"
 			>
 				<button
-					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+					class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 					'general'
-						? 'bg-gray-200 dark:bg-gray-800'
+						? 'bg-gray-100 dark:bg-gray-800'
 						: ' hover:bg-gray-100 dark:hover:bg-gray-850'}"
 					on:click={() => {
 						selectedTab = 'general';
@@ -120,9 +120,9 @@
 				</button>
 
 				<button
-					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+					class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 					'interface'
-						? 'bg-gray-200 dark:bg-gray-800'
+						? 'bg-gray-100 dark:bg-gray-800'
 						: ' hover:bg-gray-100 dark:hover:bg-gray-850'}"
 					on:click={() => {
 						selectedTab = 'interface';
@@ -146,9 +146,9 @@
 				</button>
 
 				<button
-					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+					class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 					'personalization'
-						? 'bg-gray-200 dark:bg-gray-800'
+						? 'bg-gray-100 dark:bg-gray-800'
 						: ' hover:bg-gray-100 dark:hover:bg-gray-850'}"
 					on:click={() => {
 						selectedTab = 'personalization';
@@ -161,9 +161,9 @@
 				</button>
 
 				<button
-					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+					class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 					'audio'
-						? 'bg-gray-200 dark:bg-gray-800'
+						? 'bg-gray-100 dark:bg-gray-800'
 						: ' hover:bg-gray-100 dark:hover:bg-gray-850'}"
 					on:click={() => {
 						selectedTab = 'audio';
@@ -188,9 +188,9 @@
 				</button>
 
 				<button
-					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+					class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 					'chats'
-						? 'bg-gray-200 dark:bg-gray-800'
+						? 'bg-gray-100 dark:bg-gray-800'
 						: ' hover:bg-gray-100 dark:hover:bg-gray-850'}"
 					on:click={() => {
 						selectedTab = 'chats';
@@ -214,9 +214,9 @@
 				</button>
 
 				<button
-					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+					class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 					'account'
-						? 'bg-gray-200 dark:bg-gray-800'
+						? 'bg-gray-100 dark:bg-gray-800'
 						: ' hover:bg-gray-100 dark:hover:bg-gray-850'}"
 					on:click={() => {
 						selectedTab = 'account';
@@ -241,9 +241,9 @@
 
 				{#if $user.role === 'admin'}
 					<button
-						class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+						class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 						'admin'
-							? 'bg-gray-200 dark:bg-gray-800'
+							? 'bg-gray-100 dark:bg-gray-800'
 							: ' hover:bg-gray-100 dark:hover:bg-gray-850'}"
 						on:click={async () => {
 							await goto('/admin/settings');
@@ -269,9 +269,9 @@
 				{/if}
 
 				<button
-					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+					class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 					'about'
-						? 'bg-gray-200 dark:bg-gray-800'
+						? 'bg-gray-100 dark:bg-gray-800'
 						: ' hover:bg-gray-100 dark:hover:bg-gray-850'}"
 					on:click={() => {
 						selectedTab = 'about';
