@@ -223,7 +223,7 @@ class Tools:
 							</Tooltip>
 						</div>
 
-						<div>
+						<div class="self-center flex-shrink-0">
 							<button
 								class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
 								type="button"
@@ -234,7 +234,7 @@ class Tools:
 								<LockClosed strokeWidth="2.5" className="size-3.5" />
 
 								<div class="text-sm font-medium flex-shrink-0">
-									{$i18n.t('Share')}
+									{$i18n.t('Access')}
 								</div>
 							</button>
 						</div>

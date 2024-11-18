@@ -38,7 +38,7 @@
 	});
 </script>
 
-<div class="flex flex-col lg:flex-row w-full h-full pb-2 -mt-0.5 lg:space-x-4">
+<div class="flex flex-col lg:flex-row w-full h-full pb-2 lg:space-x-4">
 	<div
 		id="admin-settings-tabs-container"
 		class="tabs flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"

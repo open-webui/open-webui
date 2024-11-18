@@ -21,6 +21,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
+	import { toast } from 'svelte-sonner';
 
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
@@ -57,11 +58,16 @@
 			const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
 
 			if (workspaceModel) {
-				return workspaceModel;
+				return {
+					...m,
+					...workspaceModel
+				};
 			} else {
 				return {
+					...m,
 					id: m.id,
 					name: m.name,
+
 					is_active: true
 				};
 			}
@@ -72,13 +78,21 @@
 		model.base_model_id = null;
 
 		if (workspaceModels.find((m) => m.id === model.id)) {
-			await updateModelById(localStorage.token, model.id, model).catch((error) => {
+			const res = await updateModelById(localStorage.token, model.id, model).catch((error) => {
 				return null;
 			});
+
+			if (res) {
+				toast.success($i18n.t('Model updated successfully'));
+			}
 		} else {
-			await createNewModel(localStorage.token, model).catch((error) => {
+			const res = await createNewModel(localStorage.token, model).catch((error) => {
 				return null;
 			});
+
+			if (res) {
+				toast.success($i18n.t('Model updated successfully'));
+			}
 		}
 
 		_models.set(await getModels(localStorage.token));
@@ -93,6 +107,7 @@
 				base_model_id: null,
 				meta: {},
 				params: {},
+				access_control: {},
 				is_active: model.is_active
 			}).catch((error) => {
 				return null;
@@ -168,14 +183,26 @@
 
 							<div class=" flex-1 self-center {(model?.is_active ?? true) ? '' : 'text-gray-500'}">
 								<Tooltip
-									content={marked.parse(model?.meta?.description ?? model.id)}
+									content={marked.parse(
+										!!model?.meta?.description
+											? model?.meta?.description
+											: model?.ollama?.digest
+												? `${model?.ollama?.digest} **(${model?.ollama?.modified_at})**`
+												: model.id
+									)}
 									className=" w-fit"
 									placement="top-start"
 								>
 									<div class="  font-semibold line-clamp-1">{model.name}</div>
 								</Tooltip>
 								<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
-									{model?.meta?.description ?? model.id}
+									<span class=" line-clamp-1">
+										{!!model?.meta?.description
+											? model?.meta?.description
+											: model?.ollama?.digest
+												? `${model.id} (${model?.ollama?.digest})`
+												: model.id}
+									</span>
 								</div>
 							</div>
 						</button>

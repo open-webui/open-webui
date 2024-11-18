@@ -406,6 +406,7 @@ async def generate_function_chat_completion(form_data, user, models: dict = {}):
             "name": user.name,
             "role": user.role,
         },
+        "__metadata__": metadata,
     }
     extra_params["__tools__"] = get_tools(
         app,

@@ -2,7 +2,13 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from open_webui.apps.webui.models.tools import ToolForm, ToolModel, ToolResponse, Tools
+from open_webui.apps.webui.models.tools import (
+    ToolForm,
+    ToolModel,
+    ToolResponse,
+    ToolUserResponse,
+    Tools,
+)
 from open_webui.apps.webui.utils import load_tools_module_by_id, replace_imports
 from open_webui.config import CACHE_DIR, DATA_DIR
 from open_webui.constants import ERROR_MESSAGES
@@ -19,7 +25,7 @@ router = APIRouter()
 ############################
 
 
-@router.get("/", response_model=list[ToolResponse])
+@router.get("/", response_model=list[ToolUserResponse])
 async def get_tools(user=Depends(get_verified_user)):
     if user.role == "admin":
         tools = Tools.get_tools()
@@ -33,7 +39,7 @@ async def get_tools(user=Depends(get_verified_user)):
 ############################
 
 
-@router.get("/list", response_model=list[ToolResponse])
+@router.get("/list", response_model=list[ToolUserResponse])
 async def get_tool_list(user=Depends(get_verified_user)):
     if user.role == "admin":
         tools = Tools.get_tools()

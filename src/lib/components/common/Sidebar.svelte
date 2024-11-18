@@ -7,6 +7,7 @@
 	export let width = '200px';
 
 	export let className = '';
+	export let duration = 100;
 </script>
 
 {#if show}
@@ -16,12 +17,12 @@
 		on:mousedown={() => {
 			show = false;
 		}}
-		transition:fade
+		transition:fade={{ duration: duration }}
 	/>
 
 	<div
 		class="absolute z-30 shadow-xl {side === 'right' ? 'right-0' : 'left-0'} top-0 bottom-0"
-		transition:slide={{ easing: quadInOut, axis: side === 'right' ? 'x' : 'y' }}
+		transition:slide={{ duration: duration, easing: quadInOut, axis: side === 'right' ? 'x' : 'y' }}
 	>
 		<div class="{className} h-full" style="width: {show ? width : '0px'}">
 			<slot />

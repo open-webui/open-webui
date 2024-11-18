@@ -4,6 +4,7 @@ from open_webui.apps.webui.models.models import (
     ModelForm,
     ModelModel,
     ModelResponse,
+    ModelUserResponse,
     Models,
 )
 from open_webui.constants import ERROR_MESSAGES
@@ -22,7 +23,7 @@ router = APIRouter()
 ###########################
 
 
-@router.get("/", response_model=list[ModelResponse])
+@router.get("/", response_model=list[ModelUserResponse])
 async def get_models(id: Optional[str] = None, user=Depends(get_verified_user)):
     if user.role == "admin":
         return Models.get_models()

@@ -3,7 +3,7 @@ import time
 from typing import Optional
 
 from open_webui.apps.webui.internal.db import Base, JSONField, get_db
-from open_webui.apps.webui.models.users import Users
+from open_webui.apps.webui.models.users import Users, UserResponse
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON
@@ -86,6 +86,10 @@ class ToolResponse(BaseModel):
     created_at: int  # timestamp in epoch
 
 
+class ToolUserResponse(ToolResponse):
+    user: Optional[UserResponse] = None
+
+
 class ToolForm(BaseModel):
     id: str
     name: str
@@ -134,13 +138,21 @@ class ToolsTable:
         except Exception:
             return None
 
-    def get_tools(self) -> list[ToolModel]:
+    def get_tools(self) -> list[ToolUserResponse]:
         with get_db() as db:
-            return [ToolModel.model_validate(tool) for tool in db.query(Tool).all()]
+            return [
+                ToolUserResponse.model_validate(
+                    {
+                        **ToolModel.model_validate(tool).model_dump(),
+                        "user": Users.get_user_by_id(tool.user_id).model_dump(),
+                    }
+                )
+                for tool in db.query(Tool).order_by(Tool.updated_at.desc()).all()
+            ]
 
     def get_tools_by_user_id(
         self, user_id: str, permission: str = "write"
-    ) -> list[ToolModel]:
+    ) -> list[ToolUserResponse]:
         tools = self.get_tools()
 
         return [

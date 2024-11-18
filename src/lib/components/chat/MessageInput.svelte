@@ -236,11 +236,7 @@
 		dragged = false;
 	};
 
-	let dropzoneElement;
-
 	onMount(async () => {
-		console.log('hi');
-
 		if (!$tools) {
 			await tools.set(await getTools(localStorage.token));
 		}
@@ -254,16 +250,20 @@
 
 		window.addEventListener('keydown', handleKeyDown);
 
-		if (dropzoneElement) {
-			dropzoneElement?.addEventListener('dragover', onDragOver);
-			dropzoneElement?.addEventListener('drop', onDrop);
-			dropzoneElement?.addEventListener('dragleave', onDragLeave);
-		}
+		await tick();
+
+		const dropzoneElement = document.getElementById('chat-container');
+
+		dropzoneElement?.addEventListener('dragover', onDragOver);
+		dropzoneElement?.addEventListener('drop', onDrop);
+		dropzoneElement?.addEventListener('dragleave', onDragLeave);
 	});
 
 	onDestroy(() => {
 		console.log('destroy');
 		window.removeEventListener('keydown', handleKeyDown);
+
+		const dropzoneElement = document.getElementById('chat-container');
 
 		if (dropzoneElement) {
 			dropzoneElement?.removeEventListener('dragover', onDragOver);
@@ -273,10 +273,6 @@
 	});
 </script>
 
-<div
-	class="absolute top-0 bottom-0 left-0 right-0 w-full h-full touch-none pointer-events-none"
-	bind:this={dropzoneElement}
-></div>
 <FilesOverlay show={dragged} />
 
 {#if loaded}

@@ -55,7 +55,12 @@
 	onDelete={deleteHandler}
 />
 
-<div class="flex items-center gap-3 justify-between px-1 text-xs w-full transition">
+<button
+	class="flex items-center gap-3 justify-between px-1 text-xs w-full transition"
+	on:click={() => {
+		showEdit = true;
+	}}
+>
 	<div class="flex items-center gap-1.5 w-full font-medium">
 		<div>
 			<UserCircleSolid className="size-4" />
@@ -72,13 +77,8 @@
 	</div>
 
 	<div class="w-full flex justify-end">
-		<button
-			class=" rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-			on:click={() => {
-				showEdit = true;
-			}}
-		>
+		<div class=" rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition">
 			<Pencil className="size-3.5" />
-		</button>
+		</div>
 	</div>
-</div>
+</button>
