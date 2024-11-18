@@ -79,7 +79,7 @@
 	let filterIds = [];
 	let actionIds = [];
 
-	let accessControl = null;
+	let accessControl = {};
 
 	const addUsage = (base_model_id) => {
 		const baseModel = $models.find((m) => m.id === base_model_id);
@@ -213,7 +213,11 @@
 				capabilities.usage = false;
 			}
 
-			accessControl = model?.access_control ?? null;
+			if ('access_control' in model) {
+				accessControl = model.access_control;
+			} else {
+				accessControl = {};
+			}
 
 			console.log(model?.access_control);
 			console.log(accessControl);

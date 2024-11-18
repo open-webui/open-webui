@@ -557,7 +557,12 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
 
         model_info = Models.get_model_by_id(model["id"])
         if user.role == "user":
-            if model_info and not (
+            if not model_info:
+                return JSONResponse(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    content={"detail": "Model not found"},
+                )
+            elif not (
                 user.id == model_info.user_id
                 or has_access(
                     user.id, type="read", access_control=model_info.access_control
@@ -1113,8 +1118,6 @@ async def get_models(user=Depends(get_verified_user)):
                     user.id, type="read", access_control=model_info.access_control
                 ):
                     filtered_models.append(model)
-            else:
-                filtered_models.append(model)
         models = filtered_models
 
     return {"data": models}
@@ -1147,7 +1150,12 @@ async def generate_chat_completions(
     # Check if user has access to the model
     if user.role == "user":
         model_info = Models.get_model_by_id(model_id)
-        if model_info and not (
+        if not model_info:
+            raise HTTPException(
+                status_code=404,
+                detail="Model not found",
+            )
+        elif not (
             user.id == model_info.user_id
             or has_access(
                 user.id, type="read", access_control=model_info.access_control

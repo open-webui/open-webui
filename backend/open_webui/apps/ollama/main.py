@@ -362,8 +362,6 @@ async def get_ollama_tags(
                     user.id, type="read", access_control=model_info.access_control
                 ):
                     filtered_models.append(model)
-            else:
-                filtered_models.append(model)
         models["models"] = filtered_models
 
     return models
@@ -960,6 +958,12 @@ async def generate_chat_completion(
                     status_code=403,
                     detail="Model not found",
                 )
+    else:
+        if user.role != "admin":
+            raise HTTPException(
+                status_code=403,
+                detail="Model not found",
+            )
 
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
@@ -1048,6 +1052,12 @@ async def generate_openai_chat_completion(
                     status_code=403,
                     detail="Model not found",
                 )
+    else:
+        if user.role != "admin":
+            raise HTTPException(
+                status_code=403,
+                detail="Model not found",
+            )
 
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
@@ -1130,8 +1140,6 @@ async def get_openai_models(
                     user.id, type="read", access_control=model_info.access_control
                 ):
                     filtered_models.append(model)
-            else:
-                filtered_models.append(model)
         models = filtered_models
 
     return {

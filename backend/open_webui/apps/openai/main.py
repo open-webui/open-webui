@@ -424,8 +424,6 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
                     user.id, type="read", access_control=model_info.access_control
                 ):
                     filtered_models.append(model)
-            else:
-                filtered_models.append(model)
         models["data"] = filtered_models
 
     return models
@@ -512,6 +510,12 @@ async def generate_chat_completion(
                     status_code=403,
                     detail="Model not found",
                 )
+    else:
+        if user.role != "admin":
+            raise HTTPException(
+                status_code=403,
+                detail="Model not found",
+            )
 
     # Attemp to get urlIdx from the model
     models = await get_all_models()
