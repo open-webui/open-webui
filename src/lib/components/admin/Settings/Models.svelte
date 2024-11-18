@@ -61,8 +61,10 @@
 				return workspaceModel;
 			} else {
 				return {
+					...m,
 					id: m.id,
 					name: m.name,
+
 					is_active: true
 				};
 			}
@@ -178,14 +180,26 @@
 
 							<div class=" flex-1 self-center {(model?.is_active ?? true) ? '' : 'text-gray-500'}">
 								<Tooltip
-									content={marked.parse(model?.meta?.description ?? model.id)}
+									content={marked.parse(
+										!!model?.meta?.description
+											? model?.meta?.description
+											: model?.ollama?.digest
+												? `${model.id} (${model?.ollama?.digest})`
+												: model.id
+									)}
 									className=" w-fit"
 									placement="top-start"
 								>
 									<div class="  font-semibold line-clamp-1">{model.name}</div>
 								</Tooltip>
 								<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
-									{model?.meta?.description ?? model.id}
+									<span class=" line-clamp-1">
+										{!!model?.meta?.description
+											? model?.meta?.description
+											: model?.ollama?.digest
+												? `${model.id} (${model?.ollama?.digest})`
+												: model.id}
+									</span>
 								</div>
 							</div>
 						</button>
