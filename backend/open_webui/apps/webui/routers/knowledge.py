@@ -8,6 +8,7 @@ from open_webui.apps.webui.models.knowledge import (
     Knowledges,
     KnowledgeForm,
     KnowledgeResponse,
+    KnowledgeUserResponse,
 )
 from open_webui.apps.webui.models.files import Files, FileModel
 from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
@@ -32,7 +33,7 @@ router = APIRouter()
 ############################
 
 
-@router.get("/", response_model=list[KnowledgeResponse])
+@router.get("/", response_model=list[KnowledgeUserResponse])
 async def get_knowledge(user=Depends(get_verified_user)):
     knowledge_bases = []
 
@@ -77,7 +78,7 @@ async def get_knowledge(user=Depends(get_verified_user)):
     return knowledge_bases
 
 
-@router.get("/list", response_model=list[KnowledgeResponse])
+@router.get("/list", response_model=list[KnowledgeUserResponse])
 async def get_knowledge_list(user=Depends(get_verified_user)):
     knowledge_bases = []
 

@@ -24,6 +24,8 @@
 	import Search from '../icons/Search.svelte';
 	import Plus from '../icons/Plus.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import { capitalizeFirstLetter } from '$lib/utils';
+	import Tooltip from '../common/Tooltip.svelte';
 
 	let loaded = false;
 
@@ -137,7 +139,11 @@
 			>
 				<div class=" w-full">
 					<div class="flex items-center justify-between -mt-1">
-						<div class=" font-semibold line-clamp-1 h-fit">{item.name}</div>
+						{#if item?.meta?.document}
+							<Badge type="muted" content={$i18n.t('Document')} />
+						{:else}
+							<Badge type="success" content={$i18n.t('Collection')} />
+						{/if}
 
 						<div class=" flex self-center">
 							<ItemMenu
@@ -150,17 +156,23 @@
 					</div>
 
 					<div class=" self-center flex-1">
+						<div class=" font-semibold line-clamp-1 h-fit">{item.name}</div>
+
 						<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
 							{item.description}
 						</div>
 
-						<div class="mt-5 flex justify-between">
-							<div>
-								{#if item?.meta?.document}
-									<Badge type="muted" content={$i18n.t('Document')} />
-								{:else}
-									<Badge type="success" content={$i18n.t('Collection')} />
-								{/if}
+						<div class="mt-3 flex justify-between">
+							<div class="text-xs">
+								<Tooltip
+									content={item?.user?.email}
+									className="flex shrink-0"
+									placement="top-start"
+								>
+									{$i18n.t('By {{name}}', {
+										name: capitalizeFirstLetter(item?.user?.name ?? item?.user?.email)
+									})}
+								</Tooltip>
 							</div>
 							<div class=" text-xs text-gray-500 line-clamp-1">
 								{$i18n.t('Updated')}

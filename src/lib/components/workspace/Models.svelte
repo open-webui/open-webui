@@ -32,6 +32,7 @@
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Switch from '../common/Switch.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import { capitalizeFirstLetter } from '$lib/utils';
 
 	let shiftKey = false;
 
@@ -288,7 +289,9 @@
 						<div class="flex gap-1 text-xs overflow-hidden">
 							<Tooltip content={model?.user?.email} className="flex shrink-0" placement="top-start">
 								<div class="shrink-0 text-gray-500">
-									By <span class=" capitalize">{model?.user?.name ?? model?.user?.email}</span>
+									{$i18n.t('By {{name}}', {
+										name: capitalizeFirstLetter(model?.user?.name ?? model?.user?.email)
+									})}
 								</div>
 							</Tooltip>
 						</div>

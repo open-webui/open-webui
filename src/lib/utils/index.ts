@@ -8,6 +8,7 @@ import { TTS_RESPONSE_SPLIT } from '$lib/types';
 // Helper functions
 //////////////////////////
 
+
 export const replaceTokens = (content, char, user) => {
 	const charToken = /{{char}}/gi;
 	const userToken = /{{user}}/gi;
