@@ -102,6 +102,7 @@
 				base_model_id: null,
 				meta: {},
 				params: {},
+				access_control: {},
 				is_active: model.is_active
 			}).catch((error) => {
 				return null;
