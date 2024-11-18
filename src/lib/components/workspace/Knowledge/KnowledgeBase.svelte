@@ -421,6 +421,7 @@
 			}
 
 			const res = await updateKnowledgeById(localStorage.token, id, {
+				...knowledge,
 				name: knowledge.name,
 				description: knowledge.description,
 				access_control: knowledge.access_control
