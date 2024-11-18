@@ -18,6 +18,21 @@
 
 	onMount(async () => {
 		groups = await getGroups(localStorage.token);
+
+		if (accessControl === null) {
+			accessControl = null;
+		} else {
+			accessControl = {
+				read: {
+					group_ids: accessControl?.read?.group_ids ?? [],
+					user_ids: accessControl?.read?.user_ids ?? []
+				},
+				write: {
+					group_ids: accessControl?.write?.group_ids ?? [],
+					user_ids: accessControl?.write?.user_ids ?? []
+				}
+			};
+		}
 	});
 
 	$: onChange(accessControl);
