@@ -1846,8 +1846,6 @@ Search Query:"""
         template, form_data["messages"], {"name": user.name}
     )
 
-    print("content", content)
-
     payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
