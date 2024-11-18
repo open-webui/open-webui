@@ -184,7 +184,7 @@
 										!!model?.meta?.description
 											? model?.meta?.description
 											: model?.ollama?.digest
-												? `${model.id} (${model?.ollama?.digest})`
+												? `${model?.ollama?.digest} **(${model?.ollama?.modified_at})**`
 												: model.id
 									)}
 									className=" w-fit"
