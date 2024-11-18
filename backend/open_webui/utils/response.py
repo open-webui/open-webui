@@ -1,4 +1,5 @@
 import json
+import datetime
 from open_webui.utils.misc import (
     openai_chat_chunk_message_template,
     openai_chat_completion_message_template,
@@ -29,3 +30,8 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
         yield line
 
     yield "data: [DONE]\n\n"
+
+
+def convert_response_bedrock_to_openai(bedrock_response: dict) -> dict:
+    openai_response = bedrock_response
+    return openai_response

@@ -617,9 +617,25 @@ ENABLE_OPENAI_API = PersistentConfig(
     os.environ.get("ENABLE_OPENAI_API", "True").lower() == "true",
 )
 
+ENABLE_BEDROCK_API = PersistentConfig(
+    "ENABLE_BEDROCK_API",
+    "bedrock.enable",
+    os.environ.get("ENABLE_BEDROCK_API", "True").lower() == "true",
+)
+
+BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
+BEDROCK_REGION = PersistentConfig(
+    "BEDROCK_REGION",
+    "bedrock.enable",
+    os.environ.get("BEDROCK_REGION", "us-east-1").lower() == "true",
+)
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
+
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID", "")
+AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
+AWS_SESSION_TOKEN = os.environ.get("AWS_SESSION_TOKEN", "")
 
 
 if OPENAI_API_BASE_URL == "":

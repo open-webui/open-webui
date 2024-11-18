@@ -33,6 +33,16 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
 
+# Import AWS Bedrock SDK
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError
+
+# Import Bedrock application
+from open_webui.apps.bedrock.main import (
+    app as bedrock_app,
+    generate_chat_completion as generate_bedrock_chat_completion,
+)
+
 from open_webui.apps.audio.main import app as audio_app
 from open_webui.apps.images.main import app as images_app
 from open_webui.apps.ollama.main import (
@@ -73,6 +83,8 @@ from open_webui.config import (
     ENABLE_MODEL_FILTER,
     ENABLE_OLLAMA_API,
     ENABLE_OPENAI_API,
+    ENABLE_BEDROCK_API,
+    BEDROCK_REGION,
     ENV,
     FRONTEND_BUILD_DIR,
     MODEL_FILTER_LIST,
@@ -116,6 +128,7 @@ from open_webui.utils.payload import convert_payload_openai_to_ollama
 from open_webui.utils.response import (
     convert_response_ollama_to_openai,
     convert_streaming_response_ollama_to_openai,
+    convert_response_bedrock_to_openai
 )
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.task import (
@@ -182,13 +195,15 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    docs_url="/docs" if ENV == "dev" else None, openapi_url="/openapi.json" if ENV == "dev" else None, redoc_url=None, lifespan=lifespan
+    docs_url="/docs" if ENV == "dev" else None, redoc_url=None, lifespan=lifespan
 )
 
 app.state.config = AppConfig()
 
 app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
 app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
+app.state.config.ENABLE_BEDROCK_API = ENABLE_BEDROCK_API
+app.state.config.BEDROCK_REGION = BEDROCK_REGION
 
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
@@ -208,6 +223,22 @@ app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
 )
 
 app.state.MODELS = {}
+
+# Add AWS Bedrock client initialization
+def get_bedrock_client():
+    try:
+        bedrock_client = boto3.client(
+            service_name="bedrock-runtime",
+            region_name=app.state.config.BEDROCK_REGION,
+        )
+        return bedrock_client
+    except (BotoCoreError, ClientError) as error:
+        log.error(f"Failed to create Bedrock client: {error}")
+        raise HTTPException(status_code=500, detail="Failed to initialize AWS Bedrock client")
+
+# Add default Bedrock configuration
+app.state.config.ENABLE_BEDROCK_API = True  # Set to True or False as per your requirement
+app.state.config.BEDROCK_REGION = "us-east-1"
 
 
 ##################################
@@ -904,6 +935,7 @@ async def inspect_websocket(request: Request, call_next):
 app.mount("/ws", socket_app)
 app.mount("/ollama", ollama_app)
 app.mount("/openai", openai_app)
+app.mount("/bedrock", bedrock_app)
 
 app.mount("/images/api/v1", images_app)
 app.mount("/audio/api/v1", audio_app)
@@ -920,6 +952,7 @@ async def get_all_models():
     open_webui_models = []
     openai_models = []
     ollama_models = []
+    bedrock_models = [] 
 
     if app.state.config.ENABLE_OPENAI_API:
         openai_models = await get_openai_models()
@@ -938,10 +971,27 @@ async def get_all_models():
             }
             for model in ollama_models["models"]
         ]
+    
+    if app.state.config.ENABLE_BEDROCK_API:
+        bedrock_models = [
+            {
+                "id": "anthropic.claude-3-5-sonnet-20240620-v1:0",
+                "name": "Claude 3.5 sonnet",
+                "object": "model",
+                "created": int(time.time()),
+                "owned_by": "bedrock",
+                "bedrock": "anthropic.claude-3-5-sonnet-20240620-v1:0",
+                "info": {
+                    "params": {
+                        "stream_response": False
+                    }
+                }
+            }
+        ]
 
     open_webui_models = await get_open_webui_models()
 
-    models = open_webui_models + openai_models + ollama_models
+    models = open_webui_models + openai_models + ollama_models + bedrock_models
 
     # If there are no models, return an empty list
     if len([model for model in models if model["owned_by"] != "arena"]) == 0:
@@ -1176,6 +1226,11 @@ async def generate_chat_completions(
             )
         else:
             return convert_response_ollama_to_openai(response)
+    elif model["owned_by"] == "bedrock":  # Add this block
+        # Using /bedrock/api/chat endpoint
+        response =  await generate_bedrock_chat_completion(form_data=form_data, user=user)
+        print(response)
+        return convert_response_bedrock_to_openai(response)
     else:
         return await generate_openai_chat_completion(form_data, user=user)
 

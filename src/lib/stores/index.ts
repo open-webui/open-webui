@@ -52,17 +52,23 @@ export const temporaryChatEnabled = writable(false);
 export const scrollPaginationEnabled = writable(false);
 export const currentChatPage = writable(1);
 
-export type Model = OpenAIModel | OllamaModel;
+export type Model = OpenAIModel | OllamaModel | BedrockModel;
 
 type BaseModel = {
 	id: string;
 	name: string;
 	info?: ModelConfig;
-	owned_by: 'ollama' | 'openai' | 'arena';
+	owned_by: 'ollama' | 'openai' | 'arena' | 'bedrock';
 };
 
 export interface OpenAIModel extends BaseModel {
 	owned_by: 'openai';
+	external: boolean;
+	source?: string;
+}
+
+export interface BedrockModel extends BaseModel {
+	owned_by: 'bedrock';
 	external: boolean;
 	source?: string;
 }

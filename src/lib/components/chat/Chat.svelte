@@ -1016,6 +1016,8 @@
 					let _response = null;
 					if (model?.owned_by === 'ollama') {
 						_response = await sendPromptOllama(model, prompt, responseMessageId, _chatId);
+					} else if (model?.owned_by === 'bedrock') {
+						_response = await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
 					} else if (model) {
 						_response = await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
 					}
@@ -1494,7 +1496,6 @@
 				$settings?.params?.stream_response ??
 				params?.stream_response ??
 				true;
-
 			const [res, controller] = await generateOpenAIChatCompletion(
 				localStorage.token,
 				{
@@ -1828,6 +1829,13 @@
 
 			if (model) {
 				if (model?.owned_by === 'openai') {
+					await sendPromptOpenAI(
+						model,
+						history.messages[responseMessage.parentId].content,
+						responseMessage.id,
+						_chatId
+					);
+				} else if(model?.owned_by === 'bedrock') {
 					await sendPromptOpenAI(
 						model,
 						history.messages[responseMessage.parentId].content,
