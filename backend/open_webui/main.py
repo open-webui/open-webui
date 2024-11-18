@@ -1114,6 +1114,17 @@ async def get_models(user=Depends(get_verified_user)):
     if user.role == "user":
         filtered_models = []
         for model in models:
+            if model.get("arena"):
+                if has_access(
+                    user.id,
+                    type="read",
+                    access_control=model.get("info", {})
+                    .get("meta", {})
+                    .get("access_control", {}),
+                ):
+                    filtered_models.append(model)
+                continue
+
             model_info = Models.get_model_by_id(model["id"])
             if model_info:
                 if user.id == model_info.user_id or has_access(
