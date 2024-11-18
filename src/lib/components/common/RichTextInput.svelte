@@ -412,13 +412,13 @@
 						// Extract plain text from clipboard and paste it without formatting
 						const plainText = event.clipboardData.getData('text/plain');
 						if (plainText) {
-						    const CHARACTER_LIMIT = 1000;
-                            if (plainText.length > CHARACTER_LIMIT) {
-                                // Dispatch paste event to parent component
-                                eventDispatch('paste', { event });
-                                event.preventDefault();
-                                return true;
-                            }
+							const CHARACTER_LIMIT = 1000;
+                            				if (plainText.length > CHARACTER_LIMIT) {
+                                				// Dispatch paste event to parent component
+                                				eventDispatch('paste', { event });
+                                				event.preventDefault();
+                                				return true;
+                            				}
 							const modifiedText = handleTabIndentation(plainText);
 							console.log(modifiedText);
 
