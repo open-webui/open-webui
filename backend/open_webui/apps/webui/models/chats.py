@@ -206,10 +206,11 @@ class ChatTable:
                 print("update_shared_chat_by_id")
                 chat = db.get(Chat, chat_id)
                 print(chat)
-                chat.title = chat.title
-                chat.chat = chat.chat
+                shared_chat = db.get(Chat, chat.share_id)
+                shared_chat.title = chat.title
+                shared_chat.chat = chat.chat
                 db.commit()
-                db.refresh(chat)
+                db.refresh(shared_chat)
 
                 return self.get_chat_by_id(chat.share_id)
         except Exception:
