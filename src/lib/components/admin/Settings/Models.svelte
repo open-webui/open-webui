@@ -58,7 +58,10 @@
 			const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
 
 			if (workspaceModel) {
-				return workspaceModel;
+				return {
+					...m,
+					...workspaceModel
+				};
 			} else {
 				return {
 					...m,
