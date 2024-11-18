@@ -35,6 +35,7 @@
 		updateChatFolderIdById,
 		importChat
 	} from '$lib/apis/chats';
+	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
@@ -47,7 +48,6 @@
 	import Folder from '../common/Folder.svelte';
 	import Plus from '../icons/Plus.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
-	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
 	import Folders from './Sidebar/Folders.svelte';
 
 	const BREAKPOINT = 768;
@@ -410,14 +410,14 @@
 	data-state={$showSidebar}
 >
 	<div
-		class="py-2.5 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
+		class="py-2 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
 			? ''
 			: 'invisible'}"
 	>
-		<div class="px-2.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
+		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
 			<a
 				id="sidebar-new-chat-button"
-				class="flex flex-1 justify-between rounded-lg px-2 h-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class="flex flex-1 rounded-lg px-2 py-1 h-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 				href="/"
 				draggable="false"
 				on:click={async () => {
@@ -436,32 +436,17 @@
 					<img
 						crossorigin="anonymous"
 						src="{WEBUI_BASE_URL}/static/favicon.png"
-						class=" size-6 -translate-x-1.5 rounded-full"
+						class=" size-5 -translate-x-1.5 rounded-full"
 						alt="logo"
 					/>
 				</div>
 				<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
 					{$i18n.t('New Chat')}
 				</div>
-				<div class="self-center ml-auto">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						class="size-5"
-					>
-						<path
-							d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z"
-						/>
-						<path
-							d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z"
-						/>
-					</svg>
-				</div>
 			</a>
 
 			<button
-				class=" cursor-pointer px-2 py-2 flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
 				}}
@@ -485,10 +470,10 @@
 			</button>
 		</div>
 
-		{#if $user?.role === 'admin'}
-			<div class="px-2.5 flex justify-center text-gray-800 dark:text-gray-200">
+		{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
+			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
-					class="flex-grow flex space-x-3 rounded-lg px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/workspace"
 					on:click={() => {
 						selectedChatId = null;
@@ -529,7 +514,13 @@
 				<div class="absolute z-40 w-full h-full flex justify-center"></div>
 			{/if}
 
-			<div class="absolute z-40 right-4 top-1">
+			<SearchInput
+				bind:value={search}
+				on:input={searchDebounceHandler}
+				placeholder={$i18n.t('Search')}
+			/>
+
+			<div class="absolute z-40 right-3.5 top-1">
 				<Tooltip content={$i18n.t('New folder')}>
 					<button
 						class="p-1 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-gray-950 dark:hover:bg-gray-900 transition"
@@ -541,12 +532,6 @@
 					</button>
 				</Tooltip>
 			</div>
-
-			<SearchInput
-				bind:value={search}
-				on:input={searchDebounceHandler}
-				placeholder={$i18n.t('Search')}
-			/>
 		</div>
 
 		<div
@@ -571,10 +556,15 @@
 							importChatHandler(e.detail, true);
 						}}
 						on:drop={async (e) => {
-							const { type, id } = e.detail;
+							const { type, id, item } = e.detail;
 
 							if (type === 'chat') {
-								const chat = await getChatById(localStorage.token, id);
+								let chat = await getChatById(localStorage.token, id).catch((error) => {
+									return null;
+								});
+								if (!chat && item) {
+									chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+								}
 
 								if (chat) {
 									console.log(chat);
@@ -587,19 +577,13 @@
 											toast.error(error);
 											return null;
 										});
-
-										if (res) {
-											initChatList();
-										}
 									}
 
 									if (!chat.pinned) {
-										const res = await toggleChatPinnedStatusById(localStorage.token, id);
-
-										if (res) {
-											initChatList();
-										}
+										const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
 									}
+
+									initChatList();
 								}
 							}
 						}}
@@ -660,10 +644,15 @@
 						importChatHandler(e.detail);
 					}}
 					on:drop={async (e) => {
-						const { type, id } = e.detail;
+						const { type, id, item } = e.detail;
 
 						if (type === 'chat') {
-							const chat = await getChatById(localStorage.token, id);
+							let chat = await getChatById(localStorage.token, id).catch((error) => {
+								return null;
+							});
+							if (!chat && item) {
+								chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+							}
 
 							if (chat) {
 								console.log(chat);
@@ -674,19 +663,13 @@
 											return null;
 										}
 									);
-
-									if (res) {
-										initChatList();
-									}
 								}
 
 								if (chat.pinned) {
-									const res = await toggleChatPinnedStatusById(localStorage.token, id);
-
-									if (res) {
-										initChatList();
-									}
+									const res = await toggleChatPinnedStatusById(localStorage.token, chat, id);
 								}
+
+								initChatList();
 							}
 						} else if (type === 'folder') {
 							if (folders[id].parent_id === null) {

@@ -1,6 +1,16 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, showSidebar, functions, user, mobile } from '$lib/stores';
+	import {
+		WEBUI_NAME,
+		showSidebar,
+		functions,
+		user,
+		mobile,
+		models,
+		prompts,
+		knowledge,
+		tools
+	} from '$lib/stores';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 
@@ -12,8 +22,23 @@
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
-			await goto('/');
+			if ($page.url.pathname.includes('/models') && !$user?.permissions?.workspace?.models) {
+				goto('/');
+			} else if (
+				$page.url.pathname.includes('/knowledge') &&
+				!$user?.permissions?.workspace?.knowledge
+			) {
+				goto('/');
+			} else if (
+				$page.url.pathname.includes('/prompts') &&
+				!$user?.permissions?.workspace?.prompts
+			) {
+				goto('/');
+			} else if ($page.url.pathname.includes('/tools') && !$user?.permissions?.workspace?.tools) {
+				goto('/');
+			}
 		}
+
 		loaded = true;
 	});
 </script>
@@ -26,13 +51,13 @@
 
 {#if loaded}
 	<div
-		class=" relative flex flex-col w-full min-h-screen max-h-screen {$showSidebar
+		class=" relative flex flex-col w-full h-screen max-h-[100dvh] {$showSidebar
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''}"
 	>
-		<div class="   px-3.5 my-2 bg-transparent backdrop-blur-xl">
+		<div class="   px-2.5 pt-1 backdrop-blur-xl">
 			<div class=" flex items-center gap-1">
-				<div class="{$showSidebar ? 'md:hidden' : ''} mr-1 self-center flex flex-none items-center">
+				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
 					<button
 						id="sidebar-toggle-button"
 						class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
@@ -47,62 +72,55 @@
 					</button>
 				</div>
 
-				<!-- <div class="flex items-center text-xl font-semibold mr-3">{$i18n.t('Workspace')}</div> -->
-
 				<div class="">
 					<div
-						class="flex scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent/10 backdrop-blur-2xl p-1 touch-auto pointer-events-auto"
+						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
 					>
-						<a
-							class="min-w-fit rounded-full p-1.5 px-3 {$page.url.pathname.includes(
-								'/workspace/models'
-							)
-								? 'bg-gray-50 dark:bg-gray-850'
-								: ''} transition"
-							href="/workspace/models">{$i18n.t('Models')}</a
-						>
+						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
+							<a
+								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
+									'/workspace/models'
+								)
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/models">{$i18n.t('Models')}</a
+							>
+						{/if}
 
-						<a
-							class="min-w-fit rounded-full p-1.5 px-3 {$page.url.pathname.includes(
-								'/workspace/knowledge'
-							)
-								? 'bg-gray-50 dark:bg-gray-850'
-								: ''} transition"
-							href="/workspace/knowledge"
-						>
-							{$i18n.t('Knowledge')}
-						</a>
+						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
+							<a
+								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
+									'/workspace/knowledge'
+								)
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/knowledge"
+							>
+								{$i18n.t('Knowledge')}
+							</a>
+						{/if}
 
-						<a
-							class="min-w-fit rounded-full p-1.5 px-3 {$page.url.pathname.includes(
-								'/workspace/prompts'
-							)
-								? 'bg-gray-50 dark:bg-gray-850'
-								: ''} transition"
-							href="/workspace/prompts">{$i18n.t('Prompts')}</a
-						>
+						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
+							<a
+								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
+									'/workspace/prompts'
+								)
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/prompts">{$i18n.t('Prompts')}</a
+							>
+						{/if}
 
-						<a
-							class="min-w-fit rounded-full p-1.5 px-3 {$page.url.pathname.includes(
-								'/workspace/tools'
-							)
-								? 'bg-gray-50 dark:bg-gray-850'
-								: ''} transition"
-							href="/workspace/tools"
-						>
-							{$i18n.t('Tools')}
-						</a>
-
-						<a
-							class="min-w-fit rounded-full p-1.5 px-3 {$page.url.pathname.includes(
-								'/workspace/functions'
-							)
-								? 'bg-gray-50 dark:bg-gray-850'
-								: ''} transition"
-							href="/workspace/functions"
-						>
-							{$i18n.t('Functions')}
-						</a>
+						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.tools}
+							<a
+								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/workspace/tools')
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/tools"
+							>
+								{$i18n.t('Tools')}
+							</a>
+						{/if}
 					</div>
 				</div>
 
@@ -110,7 +128,7 @@
 			</div>
 		</div>
 
-		<div class=" pb-1 px-[18px] flex-1 max-h-full overflow-y-auto">
+		<div class="  pb-1 px-[18px] flex-1 max-h-full overflow-y-auto" id="workspace-container">
 			<slot />
 		</div>
 	</div>

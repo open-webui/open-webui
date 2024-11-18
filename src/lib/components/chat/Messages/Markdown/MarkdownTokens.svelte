@@ -1,6 +1,11 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	const i18n = getContext('i18n');
+
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
+
 	import { marked, type Token } from 'marked';
 	import { revertSanitizedResponseContent, unescapeHtml } from '$lib/utils';
 
@@ -10,6 +15,8 @@
 	import MarkdownInlineTokens from '$lib/components/chat/Messages/Markdown/MarkdownInlineTokens.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -21,6 +28,31 @@
 
 	const headerComponent = (depth: number) => {
 		return 'h' + depth;
+	};
+
+	const exportTableToCSVHandler = (token, tokenIdx = 0) => {
+		console.log('Exporting table to CSV');
+
+		// Create an array for rows that will hold the mapped cell text.
+		const rows = token.rows.map((row) =>
+			row.map((cell) => cell.tokens.map((token) => token.text).join(''))
+		);
+
+		// Join the rows using commas (,) as the separator and rows using newline (\n).
+		const csvContent = rows.map((row) => row.join(',')).join('\n');
+
+		// Log rows and CSV content to ensure everything is correct.
+		console.log(rows);
+		console.log(csvContent);
+
+		// To handle Unicode characters, you need to prefix the data with a BOM:
+		const bom = '\uFEFF'; // BOM for UTF-8
+
+		// Create a new Blob prefixed with the BOM to ensure proper Unicode encoding.
+		const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=UTF-8' });
+
+		// Use FileSaver.js's saveAs function to save the generated CSV file.
+		saveAs(blob, `table-${id}-${tokenIdx}.csv`);
 	};
 </script>
 
@@ -55,35 +87,68 @@
 			{token.text}
 		{/if}
 	{:else if token.type === 'table'}
-		<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
-			<table class="w-full">
-				<thead>
-					<tr>
-						{#each token.header as header, headerIdx}
-							<th style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}>
-								<MarkdownInlineTokens
-									id={`${id}-${tokenIdx}-header-${headerIdx}`}
-									tokens={header.tokens}
-								/>
-							</th>
-						{/each}
-					</tr>
-				</thead>
-				<tbody>
-					{#each token.rows as row, rowIdx}
-						<tr>
-							{#each row ?? [] as cell, cellIdx}
-								<td style={token.align[cellIdx] ? '' : `text-align: ${token.align[cellIdx]}`}>
-									<MarkdownInlineTokens
-										id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
-										tokens={cell.tokens}
-									/>
-								</td>
+		<div class="relative w-full group">
+			<div
+				class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-lg"
+			>
+				<table
+					class="table-auto w-full text-sm text-left text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
+				>
+					<thead
+						class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 border-none"
+					>
+						<tr class="">
+							{#each token.header as header, headerIdx}
+								<th
+									scope="col"
+									class="!px-2 !py-1.5 cursor-pointer select-none border border-gray-50 dark:border-gray-850"
+									style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}
+								>
+									<div class="flex gap-1.5 items-center">
+										<MarkdownInlineTokens
+											id={`${id}-${tokenIdx}-header-${headerIdx}`}
+											tokens={header.tokens}
+										/>
+									</div>
+								</th>
 							{/each}
 						</tr>
-					{/each}
-				</tbody>
-			</table>
+					</thead>
+					<tbody>
+						{#each token.rows as row, rowIdx}
+							<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
+								{#each row ?? [] as cell, cellIdx}
+									<td
+										class="!px-2 !py-1.5 font-medium text-gray-900 dark:text-white w-max border border-gray-50 dark:border-gray-850"
+										style={token.align[cellIdx] ? '' : `text-align: ${token.align[cellIdx]}`}
+									>
+										<div class="flex">
+											<MarkdownInlineTokens
+												id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
+												tokens={cell.tokens}
+											/>
+										</div>
+									</td>
+								{/each}
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+
+			<div class=" absolute top-1 right-1.5 z-20 invisible group-hover:visible">
+				<Tooltip content={$i18n.t('Export to CSV')}>
+					<button
+						class="p-1 rounded-lg bg-transparent transition"
+						on:click={(e) => {
+							e.stopPropagation();
+							exportTableToCSVHandler(token, tokenIdx);
+						}}
+					>
+						<ArrowDownTray className=" size-3.5" strokeWidth="1.5" />
+					</button>
+				</Tooltip>
+			</div>
 		</div>
 	{:else if token.type === 'blockquote'}
 		<blockquote>

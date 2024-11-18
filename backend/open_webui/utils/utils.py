@@ -1,12 +1,17 @@
 import logging
 import uuid
-from datetime import UTC, datetime, timedelta
-from typing import Optional, Union
-
 import jwt
+
+from datetime import UTC, datetime, timedelta
+from typing import Optional, Union, List, Dict
+
+
 from open_webui.apps.webui.models.users import Users
+
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import WEBUI_SECRET_KEY
+
+
 from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
@@ -91,7 +96,15 @@ def get_current_user(
         return get_current_user_by_api_key(token)
 
     # auth by jwt token
-    data = decode_token(token)
+
+    try:
+        data = decode_token(token)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+        )
+
     if data is not None and "id" in data:
         user = Users.get_user_by_id(data["id"])
         if user is None:

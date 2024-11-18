@@ -32,7 +32,7 @@
 
 	export let prompt = '';
 	export let files = [];
-	export let availableToolIds = [];
+
 	export let selectedToolIds = [];
 	export let webSearchEnabled = false;
 
@@ -89,7 +89,7 @@
 	});
 </script>
 
-{#key mounted}
+{#if mounted}
 	<div class="m-auto w-full max-w-6xl px-2 xl:px-20 translate-y-6 py-24 text-center">
 		{#if $temporaryChatEnabled}
 			<Tooltip
@@ -138,7 +138,7 @@
 						</div>
 					</div>
 
-					<div class=" capitalize text-3xl sm:text-4xl line-clamp-1" in:fade={{ duration: 100 }}>
+					<div class=" text-3xl sm:text-4xl line-clamp-1" in:fade={{ duration: 100 }}>
 						{#if models[selectedModelIdx]?.name}
 							{models[selectedModelIdx]?.name}
 						{:else}
@@ -200,7 +200,6 @@
 						bind:selectedToolIds
 						bind:webSearchEnabled
 						bind:atSelectedModel
-						{availableToolIds}
 						{transparentBackground}
 						{stopResponse}
 						{createMessagePair}
@@ -228,4 +227,4 @@
 			</div>
 		</div>
 	</div>
-{/key}
+{/if}
