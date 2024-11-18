@@ -7,6 +7,7 @@ type TextStreamUpdate = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	citations?: any;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	selectedModelId?: any;
 	error?: any;
 	usage?: ResponseUsage;
 };
@@ -68,6 +69,11 @@ async function* openAIStreamToIterator(
 
 			if (parsedData.citations) {
 				yield { done: false, value: '', citations: parsedData.citations };
+				continue;
+			}
+
+			if (parsedData.selected_model_id) {
+				yield { done: false, value: '', selectedModelId: parsedData.selected_model_id };
 				continue;
 			}
 

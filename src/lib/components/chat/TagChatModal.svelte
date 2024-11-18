@@ -15,6 +15,14 @@
 
 <Modal bind:show size="xs">
 	<div class="px-4 pt-4 pb-5 w-full flex flex-col justify-center">
-		<Tags {tags} {deleteTag} {addTag} />
+		<Tags
+			{tags}
+			on:delete={(e) => {
+				deleteTag(e.detail);
+			}}
+			on:add={(e) => {
+				addTag(e.detail);
+			}}
+		/>
 	</div>
 </Modal>

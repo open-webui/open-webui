@@ -13,7 +13,7 @@
 	import { getKnowledgeItems } from '$lib/apis/knowledge';
 	import { getFunctions } from '$lib/apis/functions';
 	import { getModels as _getModels, getVersionUpdates } from '$lib/apis';
-	import { getAllChatTags } from '$lib/apis/chats';
+	import { getAllTags } from '$lib/apis/chats';
 	import { getPrompts } from '$lib/apis/prompts';
 	import { getTools } from '$lib/apis/tools';
 	import { getBanners } from '$lib/apis/configs';
@@ -117,7 +117,7 @@
 					banners.set(await getBanners(localStorage.token));
 				})(),
 				(async () => {
-					tags.set(await getAllChatTags(localStorage.token));
+					tags.set(await getAllTags(localStorage.token));
 				})()
 			]);
 
@@ -137,7 +137,7 @@
 				if (isShiftPressed && event.key === 'Escape') {
 					event.preventDefault();
 					console.log('focusInput');
-					document.getElementById('chat-textarea')?.focus();
+					document.getElementById('chat-input')?.focus();
 				}
 
 				// Check if Ctrl + Shift + ; is pressed
@@ -165,7 +165,11 @@
 				}
 
 				// Check if Ctrl + Shift + Backspace is pressed
-				if (isCtrlPressed && isShiftPressed && event.key === 'Backspace') {
+				if (
+					isCtrlPressed &&
+					isShiftPressed &&
+					(event.key === 'Backspace' || event.key === 'Delete')
+				) {
 					event.preventDefault();
 					console.log('deleteChat');
 					document.getElementById('delete-chat-button')?.click();
@@ -187,7 +191,7 @@
 			});
 
 			if ($user.role === 'admin') {
-				showChangelog.set(localStorage.version !== $config.version);
+				showChangelog.set($settings?.version !== $config.version);
 			}
 
 			if ($page.url.searchParams.get('temporary-chat') === 'true') {
@@ -227,7 +231,7 @@
 <SettingsModal bind:show={$showSettings} />
 <ChangelogModal bind:show={$showChangelog} />
 
-{#if version && compareVersion(version.latest, version.current)}
+{#if version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}
 	<div class=" absolute bottom-8 right-8 z-50" in:fade={{ duration: 100 }}>
 		<UpdateInfoToast
 			{version}
