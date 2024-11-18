@@ -153,7 +153,7 @@
 							</div>
 						</div>
 
-						<div class=" text-xs">
+						<div class=" text-xs px-0.5">
 							<Tooltip
 								content={prompt?.user?.email}
 								className="flex shrink-0"

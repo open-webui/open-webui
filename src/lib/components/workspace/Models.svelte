@@ -277,7 +277,7 @@
 					</a>
 				</div>
 
-				<div class="flex justify-between items-center -mb-0.5">
+				<div class="flex justify-between items-center -mb-0.5 px-0.5">
 					<div class=" text-xs mt-0.5">
 						<Tooltip content={model?.user?.email} className="flex shrink-0" placement="top-start">
 							<div class="shrink-0 text-gray-500">
