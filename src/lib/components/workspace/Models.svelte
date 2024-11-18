@@ -284,8 +284,13 @@
 						>
 							<div class="  font-semibold line-clamp-1">{model.name}</div>
 						</Tooltip>
-						<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
-							{model?.meta?.description ?? model.id}
+
+						<div class="flex gap-1 text-xs overflow-hidden">
+							<Tooltip content={model?.user?.email} className="flex shrink-0" placement="top-start">
+								<div class="shrink-0 text-gray-500">
+									By <span class=" capitalize">{model?.user?.name ?? model?.user?.email}</span>
+								</div>
+							</Tooltip>
 						</div>
 					</div>
 				</a>
