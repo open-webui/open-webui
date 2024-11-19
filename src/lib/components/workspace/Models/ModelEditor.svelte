@@ -71,7 +71,8 @@
 	let params = {};
 	let capabilities = {
 		vision: true,
-		usage: undefined
+		usage: undefined,
+		citations: true
 	};
 
 	let knowledge = [];

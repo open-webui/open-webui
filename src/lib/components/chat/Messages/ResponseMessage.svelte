@@ -656,7 +656,7 @@
 									<Error content={message?.error?.content ?? message.content} />
 								{/if}
 
-								{#if message.citations}
+								{#if message.citations && (model?.info?.meta?.capabilities?.citations ?? true)}
 									<Citations citations={message.citations} />
 								{/if}
 
