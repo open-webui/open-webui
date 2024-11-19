@@ -1283,9 +1283,11 @@ def process_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
         urls = [result.link for result in web_results]
 
         loader = get_web_loader(
-            urls, verify_ssl=app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
+            urls,
+            verify_ssl=app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            requests_per_second=app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS
         )
-        docs = loader.load()
+        docs = loader.aload()
 
         save_docs_to_vector_db(docs, collection_name, overwrite=True)
 
