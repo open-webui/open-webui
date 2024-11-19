@@ -37,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🎥 YouTube Video Attachments**: Fixed issues preventing proper loading and attachment of YouTube videos as files.
 - **🔄 Shared Chat Update**: Corrected issues where shared chats were not updating, improving collaboration consistency.
 - **🔍 DuckDuckGo Rate Limit Fix**: Addressed issues with DuckDuckGo search integration, enhancing search stability and performance when operating within rate limits.
-- **🧾 Citations Relevance Fix**: Adjusted the relevance percentage calculation for citations, so that the webui properly reflect the accuracy of a retrieved document in RAG, ensuring users get clearer insights into sources.
+- **🧾 Citations Relevance Fix**: Adjusted the relevance percentage calculation for citations, so that Open WebUI properly reflect the accuracy of a retrieved document in RAG, ensuring users get clearer insights into sources.
 - **🔑 Jina Search API Key Requirement**: Added the option to input an API key for Jina Search, ensuring smooth functionality as keys are now mandatory.
 
 ### Changed
