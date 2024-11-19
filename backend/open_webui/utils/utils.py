@@ -73,15 +73,10 @@ def get_http_authorization_cred(auth_header: str):
     except Exception:
         raise ValueError(ERROR_MESSAGES.INVALID_TOKEN)
 
-def get_api_key_auth_config():
-    from open_webui.config import ENABLE_API_KEY_AUTH
-    return ENABLE_API_KEY_AUTH
-
 
 def get_current_user(
     request: Request,
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
-    api_key_auth_enabled: bool = Depends(get_api_key_auth_config)
 ):
     token = None
 
@@ -96,14 +91,13 @@ def get_current_user(
 
     # auth by api key
     if token.startswith("sk-"):
-        if not api_key_auth_enabled:
+        if not request.state.enable_api_key:
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
             )
         return get_current_user_by_api_key(token)
 
     # auth by jwt token
-
     try:
         data = decode_token(token)
     except Exception as e:

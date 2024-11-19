@@ -265,9 +265,12 @@ class AppConfig:
 # WEBUI_AUTH (Required for security)
 ####################################
 
-ENABLE_API_KEY_AUTH = (
-    os.environ.get("ENABLE_API_KEY_AUTH", "True").lower() == "true"
+ENABLE_API_KEY = PersistentConfig(
+    "ENABLE_API_KEY",
+    "auth.api_key.enable",
+    os.environ.get("ENABLE_API_KEY", "True").lower() == "true",
 )
+
 
 JWT_EXPIRES_IN = PersistentConfig(
     "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "-1")

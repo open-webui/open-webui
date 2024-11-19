@@ -26,9 +26,6 @@
 
 	let APIKey = '';
 	let APIKeyCopied = false;
-
-	$: enableApiKeyAuth = $config?.features.enable_api_key_auth ?? true;
-
 	let profileImageInputElement: HTMLInputElement;
 
 	const submitHandler = async () => {
@@ -303,16 +300,11 @@
 						</button>
 					</div>
 				</div>
-				<div class="justify-between w-full">
-					<div class="flex justify-between w-full">
-						<div class="self-center text-xs font-medium">{$i18n.t('API Key')}</div>
-					</div>
-
-					{#if !enableApiKeyAuth}
-						<div class="mt-2 p-2 bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-lg">
-							{$i18n.t('Private API keys are disabled in this environment')}
+				{#if $config?.features?.enable_api_key ?? true}
+					<div class="justify-between w-full">
+						<div class="flex justify-between w-full">
+							<div class="self-center text-xs font-medium">{$i18n.t('API Key')}</div>
 						</div>
-					{:else}
 						<div class="flex mt-2">
 							{#if APIKey}
 								<SensitiveInput value={APIKey} readOnly={true} />
@@ -397,8 +389,8 @@
 								>
 							{/if}
 						</div>
-					{/if}
-				</div>
+					</div>
+				{/if}
 			</div>
 		{/if}
 	</div>
