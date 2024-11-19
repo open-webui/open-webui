@@ -162,7 +162,7 @@
 								showResetModal = true;
 							}}
 						>
-							<div class="text-sm flex-shrink-0">
+							<div class="text-xs flex-shrink-0">
 								{$i18n.t('Reset')}
 							</div>
 						</button>
