@@ -172,6 +172,7 @@ type Config = {
 	features: {
 		auth: boolean;
 		auth_trusted_header: boolean;
+		enable_api_key_auth: boolean;
 		enable_signup: boolean;
 		enable_login_form: boolean;
 		enable_web_search?: boolean;

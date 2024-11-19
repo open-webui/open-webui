@@ -18,9 +18,10 @@ from open_webui.apps.webui.models.auths import (
     UserResponse,
 )
 from open_webui.apps.webui.models.users import Users
-from open_webui.config import WEBUI_AUTH
+from open_webui.config import ENABLE_API_KEY_AUTH
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
+    WEBUI_AUTH,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
     WEBUI_SESSION_COOKIE_SAME_SITE,
@@ -734,6 +735,11 @@ async def update_ldap_config(
 # create api key
 @router.post("/api_key", response_model=ApiKey)
 async def create_api_key_(user=Depends(get_current_user)):
+    if not ENABLE_API_KEY_AUTH:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_CREATION_NOT_ALLOWED
+        )
+
     api_key = create_api_key()
     success = Users.update_user_api_key_by_id(user.id, api_key)
     if success:

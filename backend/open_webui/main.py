@@ -74,6 +74,7 @@ from open_webui.config import (
     ENABLE_ADMIN_EXPORT,
     ENABLE_OLLAMA_API,
     ENABLE_OPENAI_API,
+    ENABLE_API_KEY_AUTH,
     ENABLE_TAGS_GENERATION,
     ENV,
     FRONTEND_BUILD_DIR,
@@ -2427,6 +2428,7 @@ async def get_app_config(request: Request):
             "auth": WEBUI_AUTH,
             "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
             "enable_ldap": webui_app.state.config.ENABLE_LDAP,
+            "enable_api_key_auth": ENABLE_API_KEY_AUTH,
             "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
             "enable_login_form": webui_app.state.config.ENABLE_LOGIN_FORM,
             **(
