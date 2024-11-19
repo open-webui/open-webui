@@ -180,3 +180,9 @@ async def delete_model_by_id(id: str, user=Depends(get_verified_user)):
 
     result = Models.delete_model_by_id(id)
     return result
+
+
+@router.delete("/delete/all", response_model=bool)
+async def delete_all_models(user=Depends(get_admin_user)):
+    result = Models.delete_all_models()
+    return result

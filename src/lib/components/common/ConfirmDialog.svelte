@@ -12,6 +12,8 @@
 	export let cancelLabel = $i18n.t('Cancel');
 	export let confirmLabel = $i18n.t('Confirm');
 
+	export let onConfirm = () => {};
+
 	export let input = false;
 	export let inputPlaceholder = '';
 	export let inputValue = '';
@@ -29,9 +31,15 @@
 
 		if (event.key === 'Enter') {
 			console.log('Enter');
-			show = false;
-			dispatch('confirm', inputValue);
+			confirmHandler();
 		}
+	};
+
+	const confirmHandler = async () => {
+		show = false;
+
+		await onConfirm();
+		dispatch('confirm', inputValue);
 	};
 
 	onMount(() => {
@@ -110,8 +118,7 @@
 					<button
 						class="bg-gray-900 hover:bg-gray-850 text-gray-100 dark:bg-gray-100 dark:hover:bg-white dark:text-gray-800 font-medium w-full py-2.5 rounded-lg transition"
 						on:click={() => {
-							show = false;
-							dispatch('confirm', inputValue);
+							confirmHandler();
 						}}
 						type="button"
 					>

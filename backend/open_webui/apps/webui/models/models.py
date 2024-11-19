@@ -257,5 +257,15 @@ class ModelsTable:
         except Exception:
             return False
 
+    def delete_all_models(self) -> bool:
+        try:
+            with get_db() as db:
+                db.query(Model).delete()
+                db.commit()
+
+                return True
+        except Exception:
+            return False
+
 
 Models = ModelsTable()
