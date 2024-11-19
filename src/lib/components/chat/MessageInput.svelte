@@ -776,10 +776,10 @@
 																reader.readAsDataURL(blob);
 															} else if (item.type === 'text/plain') {
 																if ($settings?.largeTextAsFile ?? false) {
-																	e.preventDefault();
 																	const text = await clipboardData.getData('text/plain');
 
 																	if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
+																		e.preventDefault();
 																		const blob = new Blob([text], { type: 'text/plain' });
 																		const file = new File([blob], `Pasted_Text_${Date.now()}.txt`, {
 																			type: 'text/plain'
@@ -966,10 +966,10 @@
 															reader.readAsDataURL(blob);
 														} else if (item.type === 'text/plain') {
 															if ($settings?.largeTextAsFile ?? false) {
-																e.preventDefault();
 																const text = await clipboardData.getData('text/plain');
 
 																if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
+																	e.preventDefault();
 																	const blob = new Blob([text], { type: 'text/plain' });
 																	const file = new File([blob], `Pasted_Text_${Date.now()}.txt`, {
 																		type: 'text/plain'
