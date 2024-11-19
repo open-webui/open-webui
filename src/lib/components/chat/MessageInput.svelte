@@ -238,10 +238,6 @@
 	};
 
 	onMount(async () => {
-		if (!$tools) {
-			await tools.set(await getTools(localStorage.token));
-		}
-
 		loaded = true;
 
 		window.setTimeout(() => {
