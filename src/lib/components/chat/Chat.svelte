@@ -1552,7 +1552,7 @@
 				localStorage.token,
 				{
 					stream: stream,
-					native_tool_call : native_tool_call,
+					native_tool_call: native_tool_call,
 					model: model.id,
 					...(stream && (model.info?.meta?.capabilities?.usage ?? false)
 						? {

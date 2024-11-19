@@ -89,8 +89,8 @@
 			<button
 				class="p-1 px-3 text-xs flex rounded transition"
 				on:click={() => {
-					params.native_tool_call=
-						(params?.native_tool_call?? null) === null
+					params.native_tool_call =
+						(params?.native_tool_call ?? null) === null
 							? true
 							: params.native_tool_call
 								? false
@@ -108,8 +108,6 @@
 			</button>
 		</div>
 	</div>
-
-
 
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
