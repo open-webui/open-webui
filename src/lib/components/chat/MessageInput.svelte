@@ -776,7 +776,7 @@
 																reader.readAsDataURL(blob);
 															} else if (item.type === 'text/plain') {
 																if ($settings?.largeTextAsFile ?? false) {
-																	const text = await clipboardData.getData('text/plain');
+																	const text = clipboardData.getData('text/plain');
 
 																	if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
 																		e.preventDefault();
@@ -966,7 +966,7 @@
 															reader.readAsDataURL(blob);
 														} else if (item.type === 'text/plain') {
 															if ($settings?.largeTextAsFile ?? false) {
-																const text = await clipboardData.getData('text/plain');
+																const text = clipboardData.getData('text/plain');
 
 																if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
 																	e.preventDefault();
