@@ -321,7 +321,7 @@
 												<span class="relative inline-flex rounded-full size-2 bg-yellow-500" />
 											</span>
 										</div>
-										<div class=" translate-y-[0.5px]">
+										<div class=" translate-y-[0.5px] line-clamp-1">
 											{selectedToolIds
 												.map((id) => {
 													return $tools ? $tools.find((tool) => tool.id === id)?.name : id;
