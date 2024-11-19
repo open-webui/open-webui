@@ -232,7 +232,6 @@ export const deleteModelById = async (token: string, id: string) => {
 	return res;
 };
 
-
 export const deleteAllModels = async (token: string) => {
 	let error = null;
 

@@ -1285,7 +1285,7 @@ def process_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
         loader = get_web_loader(
             urls,
             verify_ssl=app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
-            requests_per_second=app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS
+            requests_per_second=app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
         )
         docs = loader.aload()
 

@@ -387,7 +387,6 @@ export const generateQueries = async (
 		throw error;
 	}
 
-
 	try {
 		// Step 1: Safely extract the response string
 		const response = res?.choices[0]?.message?.content ?? '';

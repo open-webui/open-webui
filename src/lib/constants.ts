@@ -95,7 +95,6 @@ export const SUPPORTED_FILE_EXTENSIONS = [
 	'msg'
 ];
 
-
 export const PASTED_TEXT_CHARACTER_LIMIT = 1000;
 
 // Source: https://kit.svelte.dev/docs/modules#$env-static-public
