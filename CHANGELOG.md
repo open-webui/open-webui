@@ -20,12 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🎨 Redesigned Prompt Workspace**: A fresh UI to conveniently organize and manage prompts.
 - **🧩 Sorted Functions Workspace**: Functions are now automatically categorized by type (Action, Filter, Pipe), streamlining management.
 - **💻 Redesigned Collaborative Workspace**: Enhanced support for multiple users contributing to models, knowledge, prompts, or tools, improving collaboration.
-- **🔧 Auto-Selected Tools in Model Editor**: Tools enabled through the model editor are now automatically selected, reducing manual steps.
+- **🔧 Auto-Selected Tools in Model Editor**: Tools enabled through the model editor are now automatically selected, whereas previously it only gave users the option to enable the tool, reducing manual steps and enhancing efficiency.
 - **🔔 Web Search & Tools Indicator**: A clear indication now shows when web search or tools are active, reducing confusion.
-- **🔑 Toggle API Key Auth**: Tighten security by easily enabling or disabling API key authentication for Open WebUI.
+- **🔑 Toggle API Key Auth**: Tighten security by easily enabling or disabling API key authentication option for Open WebUI.
 - **🗂️ Agentic Retrieval**: Improve RAG accuracy via smart pre-processing of chat history to determine the best queries before retrieval.
 - **📁 Large Text as File Option**: Optionally convert large pasted text into a file upload, keeping the chat interface cleaner.
-- **🗂️ Citations for Models**: New option allows models to disable citations.
+- **🗂️ Toggle Citations for Models**: Ability to disable citations has been introduced in the model editor.
 - **🔍 User Settings Search**: Quickly search for settings fields, improving ease of use and navigation.
 - **🗣️ Experimental SpeechT5 TTS**: Local SpeechT5 support added for improved text-to-speech capabilities.
 - **🔄 Unified Reset for Models**: A one-click option has been introduced to reset and remove all models from the Admin Settings.
@@ -45,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🛠️ Functions Moved to Admin Panel**: As Functions operate as advanced plugins, they are now accessible from the Admin Panel instead of the workspace.
 - **🛠️ Manage Ollama Connections**: The "Models" section in Admin Settings has been relocated to Admin Settings > "Connections" > Ollama Connections. You can now manage Ollama instances via a dedicated "Manage Ollama" modal from "Connections", streamlining the setup and configuration of Ollama models.
 - **📊 Base Models in Admin Settings**: Admins can now find all base models, both connections or functions, in the "Models" Admin setting. Global model accessibility can be enabled or disabled here. Models are private by default, requiring explicit permission assignment for user access.
-- **📌 Sticky Model Selection for New Chats**: The model chosen from a previous chat now persists when creating a new chat. However, if you click "New Chat" again from the new chat page, it will revert to your default model.
+- **📌 Sticky Model Selection for New Chats**: The model chosen from a previous chat now persists when creating a new chat. If you click "New Chat" again from the new chat page, it will revert to your default model.
 - **🎨 Design Refactoring**: Overall design refinements across the platform have been made, providing a more cohesive and polished user experience.
 
 ### Removed
