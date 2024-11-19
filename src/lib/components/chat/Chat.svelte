@@ -2033,6 +2033,7 @@
 		parentId: string,
 		responseMessageId: string
 	) => {
+		// TODO: move this to the backend
 		const responseMessage = history.messages[responseMessageId];
 		const userMessage = history.messages[parentId];
 		const messages = createMessagesList(history.currentId);
