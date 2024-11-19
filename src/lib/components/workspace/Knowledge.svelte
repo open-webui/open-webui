@@ -145,7 +145,7 @@
 							<Badge type="success" content={$i18n.t('Collection')} />
 						{/if}
 
-						<div class=" flex self-center">
+						<div class=" flex self-center -mr-1 translate-y-1">
 							<ItemMenu
 								on:delete={() => {
 									selectedItem = item;
