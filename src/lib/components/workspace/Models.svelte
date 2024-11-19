@@ -266,7 +266,7 @@
 
 							<div class="flex gap-1 text-xs overflow-hidden">
 								<div class="line-clamp-1">
-									{#if model?.meta?.description.trim()}
+									{#if (model?.meta?.description ?? '').trim()}
 										{model?.meta?.description}
 									{:else}
 										{model.id}
