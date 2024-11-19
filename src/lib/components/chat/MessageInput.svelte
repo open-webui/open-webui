@@ -91,7 +91,7 @@
 		});
 	};
 
-	const uploadFileHandler = async (file) => {
+	const uploadFileHandler = async (file, fullContext: boolean = false) => {
 		if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true)) {
 			toast.error($i18n.t('You do not have permission to upload files.'));
 			return null;
@@ -110,7 +110,8 @@
 			status: 'uploading',
 			size: file.size,
 			error: '',
-			itemId: tempItemId
+			itemId: tempItemId,
+			...(fullContext ? { context: 'full' } : {})
 		};
 
 		if (fileItem.size == 0) {
@@ -619,6 +620,7 @@
 												id="chat-input"
 												trim={true}
 												placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
+												largeTextAsFile={$settings?.largeTextAsFile ?? false}
 												bind:value={prompt}
 												shiftEnter={!$mobile ||
 													!(
@@ -773,16 +775,18 @@
 
 																reader.readAsDataURL(blob);
 															} else if (item.type === 'text/plain') {
-																e.preventDefault();
-																const text = await clipboardData.getData('text/plain');
+																if ($settings?.largeTextAsFile ?? false) {
+																	e.preventDefault();
+																	const text = await clipboardData.getData('text/plain');
 
-																if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
-																	const blob = new Blob([text], { type: 'text/plain' });
-																	const file = new File([blob], `Pasted_Text_${Date.now()}.txt`, {
-																		type: 'text/plain'
-																	});
+																	if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
+																		const blob = new Blob([text], { type: 'text/plain' });
+																		const file = new File([blob], `Pasted_Text_${Date.now()}.txt`, {
+																			type: 'text/plain'
+																		});
 
-																	await uploadFileHandler(file);
+																		await uploadFileHandler(file, true);
+																	}
 																}
 															}
 														}
@@ -961,16 +965,18 @@
 
 															reader.readAsDataURL(blob);
 														} else if (item.type === 'text/plain') {
-															e.preventDefault();
-															const text = await clipboardData.getData('text/plain');
+															if ($settings?.largeTextAsFile ?? false) {
+																e.preventDefault();
+																const text = await clipboardData.getData('text/plain');
 
-															if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
-																const blob = new Blob([text], { type: 'text/plain' });
-																const file = new File([blob], `Pasted_Text_${Date.now()}.txt`, {
-																	type: 'text/plain'
-																});
+																if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
+																	const blob = new Blob([text], { type: 'text/plain' });
+																	const file = new File([blob], `Pasted_Text_${Date.now()}.txt`, {
+																		type: 'text/plain'
+																	});
 
-																await uploadFileHandler(file);
+																	await uploadFileHandler(file, true);
+																}
 															}
 														}
 													}

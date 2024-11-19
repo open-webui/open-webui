@@ -27,6 +27,7 @@
 
 	export let className = 'input-prose';
 	export let shiftEnter = false;
+	export let largeTextAsFile = false;
 
 	export let id = '';
 	export let value = '';
@@ -413,11 +414,13 @@
 						// Extract plain text from clipboard and paste it without formatting
 						const plainText = event.clipboardData.getData('text/plain');
 						if (plainText) {
-							if (plainText.length > PASTED_TEXT_CHARACTER_LIMIT) {
-								// Dispatch paste event to parent component
-								eventDispatch('paste', { event });
-								event.preventDefault();
-								return true;
+							if (largeTextAsFile) {
+								if (plainText.length > PASTED_TEXT_CHARACTER_LIMIT) {
+									// Dispatch paste event to parent component
+									eventDispatch('paste', { event });
+									event.preventDefault();
+									return true;
+								}
 							}
 
 							const modifiedText = handleTabIndentation(plainText);
