@@ -940,6 +940,7 @@ async def commit_session_after_request(request: Request, call_next):
 @app.middleware("http")
 async def check_url(request: Request, call_next):
     start_time = int(time.time())
+    request.state.enable_api_key = webui_app.state.config.ENABLE_API_KEY
     response = await call_next(request)
     process_time = int(time.time()) - start_time
     response.headers["X-Process-Time"] = str(process_time)
@@ -2427,6 +2428,7 @@ async def get_app_config(request: Request):
             "auth": WEBUI_AUTH,
             "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
             "enable_ldap": webui_app.state.config.ENABLE_LDAP,
+            "enable_api_key": webui_app.state.config.ENABLE_API_KEY,
             "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
             "enable_login_form": webui_app.state.config.ENABLE_LOGIN_FORM,
             **(
