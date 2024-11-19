@@ -66,7 +66,7 @@
 	import {
 		chatCompleted,
 		generateTitle,
-		generateSearchQuery,
+		generateQueries,
 		chatAction,
 		generateMoACompletion,
 		generateTags
@@ -2047,17 +2047,17 @@
 		history.messages[responseMessageId] = responseMessage;
 
 		const prompt = userMessage.content;
-		let searchQuery = await generateSearchQuery(
+		let queries = await generateQueries(
 			localStorage.token,
 			model,
 			messages.filter((message) => message?.content?.trim()),
 			prompt
 		).catch((error) => {
 			console.log(error);
-			return prompt;
+			return [];
 		});
 
-		if (!searchQuery || searchQuery == '') {
+		if (queries.length === 0) {
 			responseMessage.statusHistory.push({
 				done: true,
 				error: true,
@@ -2067,6 +2067,8 @@
 			history.messages[responseMessageId] = responseMessage;
 			return;
 		}
+
+		const searchQuery = queries[0];
 
 		responseMessage.statusHistory.push({
 			done: false,

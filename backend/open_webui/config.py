@@ -941,18 +941,48 @@ ENABLE_TAGS_GENERATION = PersistentConfig(
     os.environ.get("ENABLE_TAGS_GENERATION", "True").lower() == "true",
 )
 
-ENABLE_SEARCH_QUERY = PersistentConfig(
-    "ENABLE_SEARCH_QUERY",
-    "task.search.enable",
-    os.environ.get("ENABLE_SEARCH_QUERY", "True").lower() == "true",
+
+ENABLE_SEARCH_QUERY_GENERATION = PersistentConfig(
+    "ENABLE_SEARCH_QUERY_GENERATION",
+    "task.query.search.enable",
+    os.environ.get("ENABLE_SEARCH_QUERY_GENERATION", "True").lower() == "true",
+)
+
+ENABLE_RETRIEVAL_QUERY_GENERATION = PersistentConfig(
+    "ENABLE_RETRIEVAL_QUERY_GENERATION",
+    "task.query.retrieval.enable",
+    os.environ.get("ENABLE_RETRIEVAL_QUERY_GENERATION", "True").lower() == "true",
 )
 
 
-SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
-    "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE",
-    "task.search.prompt_template",
-    os.environ.get("SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE", ""),
+QUERY_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "QUERY_GENERATION_PROMPT_TEMPLATE",
+    "task.query.prompt_template",
+    os.environ.get("QUERY_GENERATION_PROMPT_TEMPLATE", ""),
 )
+
+DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE = """### Task:
+Based on the chat history, determine whether a search is necessary, and if so, generate a 1-3 broad search queries to retrieve comprehensive and updated information. If no search is required, return an empty list.
+
+### Guidelines:
+- Respond exclusively with a JSON object.
+- If a search query is needed, return an object like: { "queries": ["query1", "query2"] } where each query is distinct and concise.
+- If no search query is necessary, output should be: { "queries": [] }
+- Default to suggesting a search query to ensure accurate and updated information, unless it is definitively clear no search is required.
+- Be concise, focusing strictly on composing search queries with no additional commentary or text.
+- When in doubt, prefer to suggest a search for comprehensiveness.
+- Today's date is: {{CURRENT_DATE}}
+
+### Output:
+JSON format: {
+  "queries": ["query1", "query2"]
+}
+
+### Chat History:
+<chat_history>
+{{MESSAGES:END:6}}
+</chat_history>
+"""
 
 
 TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
@@ -1124,27 +1154,6 @@ RAG_TEXT_SPLITTER = PersistentConfig(
     "RAG_TEXT_SPLITTER",
     "rag.text_splitter",
     os.environ.get("RAG_TEXT_SPLITTER", ""),
-)
-
-
-ENABLE_RAG_QUERY_GENERATION = PersistentConfig(
-    "ENABLE_RAG_QUERY_GENERATION",
-    "rag.query_generation.enable",
-    os.environ.get("ENABLE_RAG_QUERY_GENERATION", "False").lower() == "true",
-)
-
-DEFAULT_RAG_QUERY_GENERATION_TEMPLATE = """Given the user's message and interaction history, decide if a file search is necessary. You must be concise and exclusively provide a search query if one is necessary. Refrain from verbose responses or any additional commentary. Prefer suggesting a search if uncertain to provide comprehensive or updated information. If a search isn't needed at all, respond with an empty string. Default to a search query when in doubt.
-User Message:
-{{prompt:end:4000}}
-Interaction History:
-{{MESSAGES:END:6}}
-Search Query:"""
-
-
-RAG_QUERY_GENERATION_TEMPLATE = PersistentConfig(
-    "RAG_QUERY_GENERATION_TEMPLATE",
-    "rag.query_generation.template",
-    os.environ.get("RAG_QUERY_GENERATION_TEMPLATE", ""),
 )
 
 
