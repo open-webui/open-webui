@@ -2054,7 +2054,7 @@
 			prompt
 		).catch((error) => {
 			console.log(error);
-			return [];
+			return [prompt];
 		});
 
 		if (queries.length === 0) {
