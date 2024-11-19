@@ -163,7 +163,7 @@ def emoji_generation_template(
     return template
 
 
-def search_query_generation_template(
+def query_generation_template(
     template: str, messages: list[dict], user: Optional[dict] = None
 ) -> str:
     prompt = get_last_user_message(messages)

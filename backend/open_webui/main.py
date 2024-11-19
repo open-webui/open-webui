@@ -11,6 +11,7 @@ import random
 from contextlib import asynccontextmanager
 from typing import Optional
 
+from aiocache import cached
 import aiohttp
 import requests
 from fastapi import (
@@ -45,6 +46,7 @@ from open_webui.apps.openai.main import (
     app as openai_app,
     generate_chat_completion as generate_openai_chat_completion,
     get_all_models as get_openai_models,
+    get_all_models_responses as get_openai_models_responses,
 )
 from open_webui.apps.retrieval.main import app as retrieval_app
 from open_webui.apps.retrieval.utils import get_rag_context, rag_template
@@ -70,18 +72,19 @@ from open_webui.config import (
     DEFAULT_LOCALE,
     ENABLE_ADMIN_CHAT_ACCESS,
     ENABLE_ADMIN_EXPORT,
-    ENABLE_MODEL_FILTER,
     ENABLE_OLLAMA_API,
     ENABLE_OPENAI_API,
+    ENABLE_TAGS_GENERATION,
     ENV,
     FRONTEND_BUILD_DIR,
-    MODEL_FILTER_LIST,
     OAUTH_PROVIDERS,
-    ENABLE_SEARCH_QUERY,
-    SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
     STATIC_DIR,
     TASK_MODEL,
     TASK_MODEL_EXTERNAL,
+    ENABLE_SEARCH_QUERY_GENERATION,
+    ENABLE_RETRIEVAL_QUERY_GENERATION,
+    QUERY_GENERATION_PROMPT_TEMPLATE,
+    DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE,
     TITLE_GENERATION_PROMPT_TEMPLATE,
     TAGS_GENERATION_PROMPT_TEMPLATE,
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
@@ -121,7 +124,7 @@ from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.task import (
     moa_response_generation_template,
     tags_generation_template,
-    search_query_generation_template,
+    query_generation_template,
     emoji_generation_template,
     title_generation_template,
     tools_function_calling_generation_template,
@@ -134,6 +137,7 @@ from open_webui.utils.utils import (
     get_http_authorization_cred,
     get_verified_user,
 )
+from open_webui.utils.access_control import has_access
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -182,7 +186,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    docs_url="/docs" if ENV == "dev" else None, openapi_url="/openapi.json" if ENV == "dev" else None, redoc_url=None, lifespan=lifespan
+    docs_url="/docs" if ENV == "dev" else None,
+    openapi_url="/openapi.json" if ENV == "dev" else None,
+    redoc_url=None,
+    lifespan=lifespan,
 )
 
 app.state.config = AppConfig()
@@ -190,51 +197,30 @@ app.state.config = AppConfig()
 app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
 app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
 
-app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
-app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
-
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
 
 app.state.config.TASK_MODEL = TASK_MODEL
 app.state.config.TASK_MODEL_EXTERNAL = TASK_MODEL_EXTERNAL
+
 app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE
+
+app.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION
 app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE
-app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE = (
-    SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE
-)
-app.state.config.ENABLE_SEARCH_QUERY = ENABLE_SEARCH_QUERY
+
+
+app.state.config.ENABLE_SEARCH_QUERY_GENERATION = ENABLE_SEARCH_QUERY_GENERATION
+app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = ENABLE_RETRIEVAL_QUERY_GENERATION
+app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE = QUERY_GENERATION_PROMPT_TEMPLATE
+
 app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
 )
-
-app.state.MODELS = {}
-
 
 ##################################
 #
 # ChatCompletion Middleware
 #
 ##################################
-
-
-def get_task_model_id(default_model_id):
-    # Set the task model
-    task_model_id = default_model_id
-    # Check if the user has a custom task model and use that model
-    if app.state.MODELS[task_model_id]["owned_by"] == "ollama":
-        if (
-            app.state.config.TASK_MODEL
-            and app.state.config.TASK_MODEL in app.state.MODELS
-        ):
-            task_model_id = app.state.config.TASK_MODEL
-    else:
-        if (
-            app.state.config.TASK_MODEL_EXTERNAL
-            and app.state.config.TASK_MODEL_EXTERNAL in app.state.MODELS
-        ):
-            task_model_id = app.state.config.TASK_MODEL_EXTERNAL
-
-    return task_model_id
 
 
 def get_filter_function_ids(model):
@@ -366,8 +352,24 @@ async def get_content_from_response(response) -> Optional[str]:
     return content
 
 
+def get_task_model_id(
+    default_model_id: str, task_model: str, task_model_external: str, models
+) -> str:
+    # Set the task model
+    task_model_id = default_model_id
+    # Check if the user has a custom task model and use that model
+    if models[task_model_id]["owned_by"] == "ollama":
+        if task_model and task_model in models:
+            task_model_id = task_model
+    else:
+        if task_model_external and task_model_external in models:
+            task_model_id = task_model_external
+
+    return task_model_id
+
+
 async def chat_completion_tools_handler(
-    body: dict, user: UserModel, extra_params: dict
+    body: dict, user: UserModel, models, extra_params: dict
 ) -> tuple[dict, dict]:
     # If tool_ids field is present, call the functions
     metadata = body.get("metadata", {})
@@ -381,14 +383,19 @@ async def chat_completion_tools_handler(
     contexts = []
     citations = []
 
-    task_model_id = get_task_model_id(body["model"])
+    task_model_id = get_task_model_id(
+        body["model"],
+        app.state.config.TASK_MODEL,
+        app.state.config.TASK_MODEL_EXTERNAL,
+        models,
+    )
     tools = get_tools(
         webui_app,
         tool_ids,
         user,
         {
             **extra_params,
-            "__model__": app.state.MODELS[task_model_id],
+            "__model__": models[task_model_id],
             "__messages__": body["messages"],
             "__files__": metadata.get("files", []),
         },
@@ -412,7 +419,7 @@ async def chat_completion_tools_handler(
     )
 
     try:
-        payload = filter_pipeline(payload, user)
+        payload = filter_pipeline(payload, user, models)
     except Exception as e:
         raise e
 
@@ -486,14 +493,41 @@ async def chat_completion_tools_handler(
     return body, {"contexts": contexts, "citations": citations}
 
 
-async def chat_completion_files_handler(body) -> tuple[dict, dict[str, list]]:
+async def chat_completion_files_handler(
+    body: dict, user: UserModel
+) -> tuple[dict, dict[str, list]]:
     contexts = []
     citations = []
+
+    try:
+        queries_response = await generate_queries(
+            {
+                "model": body["model"],
+                "messages": body["messages"],
+                "type": "retrieval",
+            },
+            user,
+        )
+        queries_response = queries_response["choices"][0]["message"]["content"]
+
+        try:
+            queries_response = json.loads(queries_response)
+        except Exception as e:
+            queries_response = {"queries": []}
+
+        queries = queries_response.get("queries", [])
+    except Exception as e:
+        queries = []
+
+    if len(queries) == 0:
+        queries = [get_last_user_message(body["messages"])]
+
+    print(f"{queries=}")
 
     if files := body.get("metadata", {}).get("files", None):
         contexts, citations = get_rag_context(
             files=files,
-            messages=body["messages"],
+            queries=queries,
             embedding_function=retrieval_app.state.EMBEDDING_FUNCTION,
             k=retrieval_app.state.config.TOP_K,
             reranking_function=retrieval_app.state.sentence_transformer_rf,
@@ -513,16 +547,16 @@ def is_chat_completion_request(request):
     )
 
 
-async def get_body_and_model_and_user(request):
+async def get_body_and_model_and_user(request, models):
     # Read the original request body
     body = await request.body()
     body_str = body.decode("utf-8")
     body = json.loads(body_str) if body_str else {}
 
     model_id = body["model"]
-    if model_id not in app.state.MODELS:
+    if model_id not in models:
         raise Exception("Model not found")
-    model = app.state.MODELS[model_id]
+    model = models[model_id]
 
     user = get_current_user(
         request,
@@ -538,13 +572,47 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         log.debug(f"request.url.path: {request.url.path}")
 
+        model_list = await get_all_models()
+        models = {model["id"]: model for model in model_list}
+
         try:
-            body, model, user = await get_body_and_model_and_user(request)
+            body, model, user = await get_body_and_model_and_user(request, models)
         except Exception as e:
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={"detail": str(e)},
             )
+
+        model_info = Models.get_model_by_id(model["id"])
+        if user.role == "user":
+            if model.get("arena"):
+                if not has_access(
+                    user.id,
+                    type="read",
+                    access_control=model.get("info", {})
+                    .get("meta", {})
+                    .get("access_control", {}),
+                ):
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Model not found",
+                    )
+            else:
+                if not model_info:
+                    return JSONResponse(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        content={"detail": "Model not found"},
+                    )
+                elif not (
+                    user.id == model_info.user_id
+                    or has_access(
+                        user.id, type="read", access_control=model_info.access_control
+                    )
+                ):
+                    return JSONResponse(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        content={"detail": "User does not have access to the model"},
+                    )
 
         metadata = {
             "chat_id": body.pop("chat_id", None),
@@ -564,6 +632,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                 "name": user.name,
                 "role": user.role,
             },
+            "__metadata__": metadata,
         }
 
         # Initialize data_items to store additional data to be sent to the client
@@ -582,22 +651,27 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                 content={"detail": str(e)},
             )
 
+        tool_ids = body.pop("tool_ids", None)
+        files = body.pop("files", None)
+
         metadata = {
             **metadata,
-            "tool_ids": body.pop("tool_ids", None),
-            "files": body.pop("files", None),
+            "tool_ids": tool_ids,
+            "files": files,
         }
         body["metadata"] = metadata
 
         try:
-            body, flags = await chat_completion_tools_handler(body, user, extra_params)
+            body, flags = await chat_completion_tools_handler(
+                body, user, models, extra_params
+            )
             contexts.extend(flags.get("contexts", []))
             citations.extend(flags.get("citations", []))
         except Exception as e:
             log.exception(e)
 
         try:
-            body, flags = await chat_completion_files_handler(body)
+            body, flags = await chat_completion_files_handler(body, user)
             contexts.extend(flags.get("contexts", []))
             citations.extend(flags.get("citations", []))
         except Exception as e:
@@ -687,10 +761,10 @@ app.add_middleware(ChatCompletionMiddleware)
 ##################################
 
 
-def get_sorted_filters(model_id):
+def get_sorted_filters(model_id, models):
     filters = [
         model
-        for model in app.state.MODELS.values()
+        for model in models.values()
         if "pipeline" in model
         and "type" in model["pipeline"]
         and model["pipeline"]["type"] == "filter"
@@ -706,12 +780,12 @@ def get_sorted_filters(model_id):
     return sorted_filters
 
 
-def filter_pipeline(payload, user):
+def filter_pipeline(payload, user, models):
     user = {"id": user.id, "email": user.email, "name": user.name, "role": user.role}
     model_id = payload["model"]
-    sorted_filters = get_sorted_filters(model_id)
 
-    model = app.state.MODELS[model_id]
+    sorted_filters = get_sorted_filters(model_id, models)
+    model = models[model_id]
 
     if "pipeline" in model:
         sorted_filters.append(model)
@@ -782,8 +856,11 @@ class PipelineMiddleware(BaseHTTPMiddleware):
                     content={"detail": "Not authenticated"},
                 )
 
+        model_list = await get_all_models()
+        models = {model["id"]: model for model in model_list}
+
         try:
-            data = filter_pipeline(data, user)
+            data = filter_pipeline(data, user, models)
         except Exception as e:
             if len(e.args) > 1:
                 return JSONResponse(
@@ -862,16 +939,11 @@ async def commit_session_after_request(request: Request, call_next):
 
 @app.middleware("http")
 async def check_url(request: Request, call_next):
-    if len(app.state.MODELS) == 0:
-        await get_all_models()
-    else:
-        pass
-
     start_time = int(time.time())
+    request.state.enable_api_key = webui_app.state.config.ENABLE_API_KEY
     response = await call_next(request)
     process_time = int(time.time()) - start_time
     response.headers["X-Process-Time"] = str(process_time)
-
     return response
 
 
@@ -911,12 +983,10 @@ app.mount("/retrieval/api/v1", retrieval_app)
 
 app.mount("/api/v1", webui_app)
 
-
 webui_app.state.EMBEDDING_FUNCTION = retrieval_app.state.EMBEDDING_FUNCTION
 
 
-async def get_all_models():
-    # TODO: Optimize this function
+async def get_all_base_models():
     open_webui_models = []
     openai_models = []
     ollama_models = []
@@ -942,9 +1012,15 @@ async def get_all_models():
     open_webui_models = await get_open_webui_models()
 
     models = open_webui_models + openai_models + ollama_models
+    return models
+
+
+@cached(ttl=1)
+async def get_all_models():
+    models = await get_all_base_models()
 
     # If there are no models, return an empty list
-    if len([model for model in models if model["owned_by"] != "arena"]) == 0:
+    if len([model for model in models if not model.get("arena", False)]) == 0:
         return []
 
     global_action_ids = [
@@ -963,15 +1039,23 @@ async def get_all_models():
                     custom_model.id == model["id"]
                     or custom_model.id == model["id"].split(":")[0]
                 ):
-                    model["name"] = custom_model.name
-                    model["info"] = custom_model.model_dump()
+                    if custom_model.is_active:
+                        model["name"] = custom_model.name
+                        model["info"] = custom_model.model_dump()
 
-                    action_ids = []
-                    if "info" in model and "meta" in model["info"]:
-                        action_ids.extend(model["info"]["meta"].get("actionIds", []))
+                        action_ids = []
+                        if "info" in model and "meta" in model["info"]:
+                            action_ids.extend(
+                                model["info"]["meta"].get("actionIds", [])
+                            )
 
-                    model["action_ids"] = action_ids
-        else:
+                        model["action_ids"] = action_ids
+                    else:
+                        models.remove(model)
+
+        elif custom_model.is_active and (
+            custom_model.id not in [model["id"] for model in models]
+        ):
             owned_by = "openai"
             pipe = None
             action_ids = []
@@ -993,7 +1077,7 @@ async def get_all_models():
 
             models.append(
                 {
-                    "id": custom_model.id,
+                    "id": f"{custom_model.id}",
                     "name": custom_model.name,
                     "object": "model",
                     "created": custom_model.created_at,
@@ -1005,66 +1089,56 @@ async def get_all_models():
                 }
             )
 
-    for model in models:
-        action_ids = []
-        if "action_ids" in model:
-            action_ids = model["action_ids"]
-            del model["action_ids"]
+    # Process action_ids to get the actions
+    def get_action_items_from_module(function, module):
+        actions = []
+        if hasattr(module, "actions"):
+            actions = module.actions
+            return [
+                {
+                    "id": f"{function.id}.{action['id']}",
+                    "name": action.get("name", f"{function.name} ({action['id']})"),
+                    "description": function.meta.description,
+                    "icon_url": action.get(
+                        "icon_url", function.meta.manifest.get("icon_url", None)
+                    ),
+                }
+                for action in actions
+            ]
+        else:
+            return [
+                {
+                    "id": function.id,
+                    "name": function.name,
+                    "description": function.meta.description,
+                    "icon_url": function.meta.manifest.get("icon_url", None),
+                }
+            ]
 
-        action_ids = action_ids + global_action_ids
-        action_ids = list(set(action_ids))
+    def get_function_module_by_id(function_id):
+        if function_id in webui_app.state.FUNCTIONS:
+            function_module = webui_app.state.FUNCTIONS[function_id]
+        else:
+            function_module, _, _ = load_function_module_by_id(function_id)
+            webui_app.state.FUNCTIONS[function_id] = function_module
+
+    for model in models:
         action_ids = [
-            action_id for action_id in action_ids if action_id in enabled_action_ids
+            action_id
+            for action_id in list(set(model.pop("action_ids", []) + global_action_ids))
+            if action_id in enabled_action_ids
         ]
 
         model["actions"] = []
         for action_id in action_ids:
-            action = Functions.get_function_by_id(action_id)
-            if action is None:
+            action_function = Functions.get_function_by_id(action_id)
+            if action_function is None:
                 raise Exception(f"Action not found: {action_id}")
 
-            if action_id in webui_app.state.FUNCTIONS:
-                function_module = webui_app.state.FUNCTIONS[action_id]
-            else:
-                function_module, _, _ = load_function_module_by_id(action_id)
-                webui_app.state.FUNCTIONS[action_id] = function_module
-
-            __webui__ = False
-            if hasattr(function_module, "__webui__"):
-                __webui__ = function_module.__webui__
-
-            if hasattr(function_module, "actions"):
-                actions = function_module.actions
-                model["actions"].extend(
-                    [
-                        {
-                            "id": f"{action_id}.{_action['id']}",
-                            "name": _action.get(
-                                "name", f"{action.name} ({_action['id']})"
-                            ),
-                            "description": action.meta.description,
-                            "icon_url": _action.get(
-                                "icon_url", action.meta.manifest.get("icon_url", None)
-                            ),
-                            **({"__webui__": __webui__} if __webui__ else {}),
-                        }
-                        for _action in actions
-                    ]
-                )
-            else:
-                model["actions"].append(
-                    {
-                        "id": action_id,
-                        "name": action.name,
-                        "description": action.meta.description,
-                        "icon_url": action.meta.manifest.get("icon_url", None),
-                        **({"__webui__": __webui__} if __webui__ else {}),
-                    }
-                )
-
-    app.state.MODELS = {model["id"]: model for model in models}
-    webui_app.state.MODELS = app.state.MODELS
-
+            function_module = get_function_module_by_id(action_id)
+            model["actions"].extend(
+                get_action_items_from_module(action_function, function_module)
+            )
     return models
 
 
@@ -1079,16 +1153,38 @@ async def get_models(user=Depends(get_verified_user)):
         if "pipeline" not in model or model["pipeline"].get("type", None) != "filter"
     ]
 
-    if app.state.config.ENABLE_MODEL_FILTER:
-        if user.role == "user":
-            models = list(
-                filter(
-                    lambda model: model["id"] in app.state.config.MODEL_FILTER_LIST,
-                    models,
-                )
-            )
-            return {"data": models}
+    # Filter out models that the user does not have access to
+    if user.role == "user":
+        filtered_models = []
+        for model in models:
+            if model.get("arena"):
+                if has_access(
+                    user.id,
+                    type="read",
+                    access_control=model.get("info", {})
+                    .get("meta", {})
+                    .get("access_control", {}),
+                ):
+                    filtered_models.append(model)
+                continue
 
+            model_info = Models.get_model_by_id(model["id"])
+            if model_info:
+                if user.id == model_info.user_id or has_access(
+                    user.id, type="read", access_control=model_info.access_control
+                ):
+                    filtered_models.append(model)
+        models = filtered_models
+
+    return {"data": models}
+
+
+@app.get("/api/models/base")
+async def get_base_models(user=Depends(get_admin_user)):
+    models = await get_all_base_models()
+
+    # Filter out arena models
+    models = [model for model in models if not model.get("arena", False)]
     return {"data": models}
 
 
@@ -1096,22 +1192,49 @@ async def get_models(user=Depends(get_verified_user)):
 async def generate_chat_completions(
     form_data: dict, user=Depends(get_verified_user), bypass_filter: bool = False
 ):
-    model_id = form_data["model"]
+    model_list = await get_all_models()
+    models = {model["id"]: model for model in model_list}
 
-    if model_id not in app.state.MODELS:
+    model_id = form_data["model"]
+    if model_id not in models:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Model not found",
         )
 
-    if not bypass_filter and app.state.config.ENABLE_MODEL_FILTER:
-        if user.role == "user" and model_id not in app.state.config.MODEL_FILTER_LIST:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Model not found",
-            )
+    model = models[model_id]
 
-    model = app.state.MODELS[model_id]
+    # Check if user has access to the model
+    if not bypass_filter and user.role == "user":
+        if model.get("arena"):
+            if not has_access(
+                user.id,
+                type="read",
+                access_control=model.get("info", {})
+                .get("meta", {})
+                .get("access_control", {}),
+            ):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Model not found",
+                )
+        else:
+            model_info = Models.get_model_by_id(model_id)
+            if not model_info:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Model not found",
+                )
+            elif not (
+                user.id == model_info.user_id
+                or has_access(
+                    user.id, type="read", access_control=model_info.access_control
+                )
+            ):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Model not found",
+                )
 
     if model["owned_by"] == "arena":
         model_ids = model.get("info", {}).get("meta", {}).get("model_ids")
@@ -1120,9 +1243,7 @@ async def generate_chat_completions(
             model_ids = [
                 model["id"]
                 for model in await get_all_models()
-                if model.get("owned_by") != "arena"
-                and not model.get("info", {}).get("meta", {}).get("hidden", False)
-                and model["id"] not in model_ids
+                if model.get("owned_by") != "arena" and model["id"] not in model_ids
             ]
 
         selected_model_id = None
@@ -1133,7 +1254,6 @@ async def generate_chat_completions(
                 model["id"]
                 for model in await get_all_models()
                 if model.get("owned_by") != "arena"
-                and not model.get("info", {}).get("meta", {}).get("hidden", False)
             ]
             selected_model_id = random.choice(model_ids)
 
@@ -1159,14 +1279,18 @@ async def generate_chat_completions(
                 ),
                 "selected_model_id": selected_model_id,
             }
+
     if model.get("pipe"):
-        return await generate_function_chat_completion(form_data, user=user)
+        # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter
+        return await generate_function_chat_completion(
+            form_data, user=user, models=models
+        )
     if model["owned_by"] == "ollama":
         # Using /ollama/api/chat endpoint
         form_data = convert_payload_openai_to_ollama(form_data)
         form_data = GenerateChatCompletionForm(**form_data)
         response = await generate_ollama_chat_completion(
-            form_data=form_data, user=user, bypass_filter=True
+            form_data=form_data, user=user, bypass_filter=bypass_filter
         )
         if form_data.stream:
             response.headers["content-type"] = "text/event-stream"
@@ -1177,21 +1301,27 @@ async def generate_chat_completions(
         else:
             return convert_response_ollama_to_openai(response)
     else:
-        return await generate_openai_chat_completion(form_data, user=user)
+        return await generate_openai_chat_completion(
+            form_data, user=user, bypass_filter=bypass_filter
+        )
 
 
 @app.post("/api/chat/completed")
 async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
+
+    model_list = await get_all_models()
+    models = {model["id"]: model for model in model_list}
+
     data = form_data
     model_id = data["model"]
-    if model_id not in app.state.MODELS:
+    if model_id not in models:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Model not found",
         )
-    model = app.state.MODELS[model_id]
 
-    sorted_filters = get_sorted_filters(model_id)
+    model = models[model_id]
+    sorted_filters = get_sorted_filters(model_id, models)
     if "pipeline" in model:
         sorted_filters = [model] + sorted_filters
 
@@ -1366,14 +1496,18 @@ async def chat_action(action_id: str, form_data: dict, user=Depends(get_verified
             detail="Action not found",
         )
 
+    model_list = await get_all_models()
+    models = {model["id"]: model for model in model_list}
+
     data = form_data
     model_id = data["model"]
-    if model_id not in app.state.MODELS:
+
+    if model_id not in models:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Model not found",
         )
-    model = app.state.MODELS[model_id]
+    model = models[model_id]
 
     __event_emitter__ = get_event_emitter(
         {
@@ -1473,8 +1607,10 @@ async def get_task_config(user=Depends(get_verified_user)):
         "TASK_MODEL_EXTERNAL": app.state.config.TASK_MODEL_EXTERNAL,
         "TITLE_GENERATION_PROMPT_TEMPLATE": app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE,
         "TAGS_GENERATION_PROMPT_TEMPLATE": app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE,
-        "ENABLE_SEARCH_QUERY": app.state.config.ENABLE_SEARCH_QUERY,
-        "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE": app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
+        "ENABLE_TAGS_GENERATION": app.state.config.ENABLE_TAGS_GENERATION,
+        "ENABLE_SEARCH_QUERY_GENERATION": app.state.config.ENABLE_SEARCH_QUERY_GENERATION,
+        "ENABLE_RETRIEVAL_QUERY_GENERATION": app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION,
+        "QUERY_GENERATION_PROMPT_TEMPLATE": app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     }
 
@@ -1484,8 +1620,10 @@ class TaskConfigForm(BaseModel):
     TASK_MODEL_EXTERNAL: Optional[str]
     TITLE_GENERATION_PROMPT_TEMPLATE: str
     TAGS_GENERATION_PROMPT_TEMPLATE: str
-    SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE: str
-    ENABLE_SEARCH_QUERY: bool
+    ENABLE_TAGS_GENERATION: bool
+    ENABLE_SEARCH_QUERY_GENERATION: bool
+    ENABLE_RETRIEVAL_QUERY_GENERATION: bool
+    QUERY_GENERATION_PROMPT_TEMPLATE: str
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: str
 
 
@@ -1499,11 +1637,17 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
     app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = (
         form_data.TAGS_GENERATION_PROMPT_TEMPLATE
     )
-
-    app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE = (
-        form_data.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE
+    app.state.config.ENABLE_TAGS_GENERATION = form_data.ENABLE_TAGS_GENERATION
+    app.state.config.ENABLE_SEARCH_QUERY_GENERATION = (
+        form_data.ENABLE_SEARCH_QUERY_GENERATION
     )
-    app.state.config.ENABLE_SEARCH_QUERY = form_data.ENABLE_SEARCH_QUERY
+    app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = (
+        form_data.ENABLE_RETRIEVAL_QUERY_GENERATION
+    )
+
+    app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE = (
+        form_data.QUERY_GENERATION_PROMPT_TEMPLATE
+    )
     app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
         form_data.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
     )
@@ -1513,8 +1657,10 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
         "TASK_MODEL_EXTERNAL": app.state.config.TASK_MODEL_EXTERNAL,
         "TITLE_GENERATION_PROMPT_TEMPLATE": app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE,
         "TAGS_GENERATION_PROMPT_TEMPLATE": app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE,
-        "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE": app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
-        "ENABLE_SEARCH_QUERY": app.state.config.ENABLE_SEARCH_QUERY,
+        "ENABLE_TAGS_GENERATION": app.state.config.ENABLE_TAGS_GENERATION,
+        "ENABLE_SEARCH_QUERY_GENERATION": app.state.config.ENABLE_SEARCH_QUERY_GENERATION,
+        "ENABLE_RETRIEVAL_QUERY_GENERATION": app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION,
+        "QUERY_GENERATION_PROMPT_TEMPLATE": app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     }
 
@@ -1523,8 +1669,11 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
 async def generate_title(form_data: dict, user=Depends(get_verified_user)):
     print("generate_title")
 
+    model_list = await get_all_models()
+    models = {model["id"]: model for model in model_list}
+
     model_id = form_data["model"]
-    if model_id not in app.state.MODELS:
+    if model_id not in models:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Model not found",
@@ -1532,10 +1681,16 @@ async def generate_title(form_data: dict, user=Depends(get_verified_user)):
 
     # Check if the user has a custom task model
     # If the user has a custom task model, use that model
-    task_model_id = get_task_model_id(model_id)
+    task_model_id = get_task_model_id(
+        model_id,
+        app.state.config.TASK_MODEL,
+        app.state.config.TASK_MODEL_EXTERNAL,
+        models,
+    )
+
     print(task_model_id)
 
-    model = app.state.MODELS[task_model_id]
+    model = models[task_model_id]
 
     if app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE != "":
         template = app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE
@@ -1569,7 +1724,7 @@ Artificial Intelligence in Healthcare
         "stream": False,
         **(
             {"max_tokens": 50}
-            if app.state.MODELS[task_model_id]["owned_by"] == "ollama"
+            if models[task_model_id]["owned_by"] == "ollama"
             else {
                 "max_completion_tokens": 50,
             }
@@ -1581,7 +1736,7 @@ Artificial Intelligence in Healthcare
 
     # Handle pipeline filters
     try:
-        payload = filter_pipeline(payload, user)
+        payload = filter_pipeline(payload, user, models)
     except Exception as e:
         if len(e.args) > 1:
             return JSONResponse(
@@ -1602,8 +1757,17 @@ Artificial Intelligence in Healthcare
 @app.post("/api/task/tags/completions")
 async def generate_chat_tags(form_data: dict, user=Depends(get_verified_user)):
     print("generate_chat_tags")
+    if not app.state.config.ENABLE_TAGS_GENERATION:
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"detail": "Tags generation is disabled"},
+        )
+
+    model_list = await get_all_models()
+    models = {model["id"]: model for model in model_list}
+
     model_id = form_data["model"]
-    if model_id not in app.state.MODELS:
+    if model_id not in models:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Model not found",
@@ -1611,7 +1775,12 @@ async def generate_chat_tags(form_data: dict, user=Depends(get_verified_user)):
 
     # Check if the user has a custom task model
     # If the user has a custom task model, use that model
-    task_model_id = get_task_model_id(model_id)
+    task_model_id = get_task_model_id(
+        model_id,
+        app.state.config.TASK_MODEL,
+        app.state.config.TASK_MODEL_EXTERNAL,
+        models,
+    )
     print(task_model_id)
 
     if app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE != "":
@@ -1639,7 +1808,6 @@ JSON format: { "tags": ["tag1", "tag2", "tag3"] }
         template, form_data["messages"], {"name": user.name}
     )
 
-    print("content", content)
     payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
@@ -1650,7 +1818,7 @@ JSON format: { "tags": ["tag1", "tag2", "tag3"] }
 
     # Handle pipeline filters
     try:
-        payload = filter_pipeline(payload, user)
+        payload = filter_pipeline(payload, user, models)
     except Exception as e:
         if len(e.args) > 1:
             return JSONResponse(
@@ -1668,17 +1836,28 @@ JSON format: { "tags": ["tag1", "tag2", "tag3"] }
     return await generate_chat_completions(form_data=payload, user=user)
 
 
-@app.post("/api/task/query/completions")
-async def generate_search_query(form_data: dict, user=Depends(get_verified_user)):
-    print("generate_search_query")
-    if not app.state.config.ENABLE_SEARCH_QUERY:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Search query generation is disabled",
-        )
+@app.post("/api/task/queries/completions")
+async def generate_queries(form_data: dict, user=Depends(get_verified_user)):
+    print("generate_queries")
+    type = form_data.get("type")
+    if type == "web_search":
+        if not app.state.config.ENABLE_SEARCH_QUERY_GENERATION:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Search query generation is disabled",
+            )
+    elif type == "retrieval":
+        if not app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Query generation is disabled",
+            )
+
+    model_list = await get_all_models()
+    models = {model["id"]: model for model in model_list}
 
     model_id = form_data["model"]
-    if model_id not in app.state.MODELS:
+    if model_id not in models:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Model not found",
@@ -1686,48 +1865,36 @@ async def generate_search_query(form_data: dict, user=Depends(get_verified_user)
 
     # Check if the user has a custom task model
     # If the user has a custom task model, use that model
-    task_model_id = get_task_model_id(model_id)
+    task_model_id = get_task_model_id(
+        model_id,
+        app.state.config.TASK_MODEL,
+        app.state.config.TASK_MODEL_EXTERNAL,
+        models,
+    )
     print(task_model_id)
 
-    model = app.state.MODELS[task_model_id]
+    model = models[task_model_id]
 
-    if app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE != "":
-        template = app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE
+    if app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE != "":
+        template = app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE
     else:
-        template = """Given the user's message and interaction history, decide if a web search is necessary. You must be concise and exclusively provide a search query if one is necessary. Refrain from verbose responses or any additional commentary. Prefer suggesting a search if uncertain to provide comprehensive or updated information. If a search isn't needed at all, respond with an empty string. Default to a search query when in doubt. Today's date is {{CURRENT_DATE}}.
+        template = DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE
 
-User Message:
-{{prompt:end:4000}}
-
-Interaction History:
-{{MESSAGES:END:6}}
-
-Search Query:"""
-
-    content = search_query_generation_template(
+    content = query_generation_template(
         template, form_data["messages"], {"name": user.name}
     )
-
-    print("content", content)
 
     payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": False,
-        **(
-            {"max_tokens": 30}
-            if app.state.MODELS[task_model_id]["owned_by"] == "ollama"
-            else {
-                "max_completion_tokens": 30,
-            }
-        ),
         "metadata": {"task": str(TASKS.QUERY_GENERATION), "task_body": form_data},
     }
     log.debug(payload)
 
     # Handle pipeline filters
     try:
-        payload = filter_pipeline(payload, user)
+        payload = filter_pipeline(payload, user, models)
     except Exception as e:
         if len(e.args) > 1:
             return JSONResponse(
@@ -1749,8 +1916,11 @@ Search Query:"""
 async def generate_emoji(form_data: dict, user=Depends(get_verified_user)):
     print("generate_emoji")
 
+    model_list = await get_all_models()
+    models = {model["id"]: model for model in model_list}
+
     model_id = form_data["model"]
-    if model_id not in app.state.MODELS:
+    if model_id not in models:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Model not found",
@@ -1758,10 +1928,15 @@ async def generate_emoji(form_data: dict, user=Depends(get_verified_user)):
 
     # Check if the user has a custom task model
     # If the user has a custom task model, use that model
-    task_model_id = get_task_model_id(model_id)
+    task_model_id = get_task_model_id(
+        model_id,
+        app.state.config.TASK_MODEL,
+        app.state.config.TASK_MODEL_EXTERNAL,
+        models,
+    )
     print(task_model_id)
 
-    model = app.state.MODELS[task_model_id]
+    model = models[task_model_id]
 
     template = '''
 Your task is to reflect the speaker's likely facial expression through a fitting emoji. Interpret emotions from the message and reflect their facial expression using fitting, diverse emojis (e.g., 😊, 😢, 😡, 😱).
@@ -1783,7 +1958,7 @@ Message: """{{prompt}}"""
         "stream": False,
         **(
             {"max_tokens": 4}
-            if app.state.MODELS[task_model_id]["owned_by"] == "ollama"
+            if models[task_model_id]["owned_by"] == "ollama"
             else {
                 "max_completion_tokens": 4,
             }
@@ -1795,7 +1970,7 @@ Message: """{{prompt}}"""
 
     # Handle pipeline filters
     try:
-        payload = filter_pipeline(payload, user)
+        payload = filter_pipeline(payload, user, models)
     except Exception as e:
         if len(e.args) > 1:
             return JSONResponse(
@@ -1817,8 +1992,11 @@ Message: """{{prompt}}"""
 async def generate_moa_response(form_data: dict, user=Depends(get_verified_user)):
     print("generate_moa_response")
 
+    model_list = await get_all_models()
+    models = {model["id"]: model for model in model_list}
+
     model_id = form_data["model"]
-    if model_id not in app.state.MODELS:
+    if model_id not in models:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Model not found",
@@ -1826,10 +2004,15 @@ async def generate_moa_response(form_data: dict, user=Depends(get_verified_user)
 
     # Check if the user has a custom task model
     # If the user has a custom task model, use that model
-    task_model_id = get_task_model_id(model_id)
+    task_model_id = get_task_model_id(
+        model_id,
+        app.state.config.TASK_MODEL,
+        app.state.config.TASK_MODEL_EXTERNAL,
+        models,
+    )
     print(task_model_id)
 
-    model = app.state.MODELS[task_model_id]
+    model = models[task_model_id]
 
     template = """You have been provided with a set of responses from various models to the latest user query: "{{prompt}}"
 
@@ -1856,7 +2039,7 @@ Responses from models: {{responses}}"""
     log.debug(payload)
 
     try:
-        payload = filter_pipeline(payload, user)
+        payload = filter_pipeline(payload, user, models)
     except Exception as e:
         if len(e.args) > 1:
             return JSONResponse(
@@ -1886,7 +2069,7 @@ Responses from models: {{responses}}"""
 
 @app.get("/api/pipelines/list")
 async def get_pipelines_list(user=Depends(get_admin_user)):
-    responses = await get_openai_models(raw=True)
+    responses = await get_openai_models_responses()
 
     print(responses)
     urlIdxs = [
@@ -2213,11 +2396,24 @@ async def get_app_config(request: Request):
     user = None
     if "token" in request.cookies:
         token = request.cookies.get("token")
-        data = decode_token(token)
+        try:
+            data = decode_token(token)
+        except Exception as e:
+            log.debug(e)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+            )
         if data is not None and "id" in data:
             user = Users.get_user_by_id(data["id"])
 
+    onboarding = False
+    if user is None:
+        user_count = Users.get_num_users()
+        onboarding = user_count == 0
+
     return {
+        **({"onboarding": True} if onboarding else {}),
         "status": True,
         "name": WEBUI_NAME,
         "version": VERSION,
@@ -2231,6 +2427,8 @@ async def get_app_config(request: Request):
         "features": {
             "auth": WEBUI_AUTH,
             "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
+            "enable_ldap": webui_app.state.config.ENABLE_LDAP,
+            "enable_api_key": webui_app.state.config.ENABLE_API_KEY,
             "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
             "enable_login_form": webui_app.state.config.ENABLE_LOGIN_FORM,
             **(
@@ -2269,32 +2467,6 @@ async def get_app_config(request: Request):
             if user is not None
             else {}
         ),
-    }
-
-
-@app.get("/api/config/model/filter")
-async def get_model_filter_config(user=Depends(get_admin_user)):
-    return {
-        "enabled": app.state.config.ENABLE_MODEL_FILTER,
-        "models": app.state.config.MODEL_FILTER_LIST,
-    }
-
-
-class ModelFilterConfigForm(BaseModel):
-    enabled: bool
-    models: list[str]
-
-
-@app.post("/api/config/model/filter")
-async def update_model_filter_config(
-    form_data: ModelFilterConfigForm, user=Depends(get_admin_user)
-):
-    app.state.config.ENABLE_MODEL_FILTER = form_data.enabled
-    app.state.config.MODEL_FILTER_LIST = form_data.models
-
-    return {
-        "enabled": app.state.config.ENABLE_MODEL_FILTER,
-        "models": app.state.config.MODEL_FILTER_LIST,
     }
 
 
@@ -2394,7 +2566,7 @@ async def get_manifest_json():
         "start_url": "/",
         "display": "standalone",
         "background_color": "#343541",
-        "orientation": "any",
+        "orientation": "natural",
         "icons": [
             {
                 "src": "/static/logo.png",

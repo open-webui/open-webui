@@ -34,7 +34,8 @@
 		mobile,
 		showOverview,
 		chatTitle,
-		showArtifacts
+		showArtifacts,
+		tools
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -65,7 +66,7 @@
 	import {
 		chatCompleted,
 		generateTitle,
-		generateSearchQuery,
+		generateQueries,
 		chatAction,
 		generateMoACompletion,
 		generateTags
@@ -78,6 +79,7 @@
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
+	import { getTools } from '$lib/apis/tools';
 
 	export let chatIdProp = '';
 
@@ -140,6 +142,38 @@
 			}
 		})();
 	}
+
+	$: if (selectedModels && chatIdProp !== '') {
+		saveSessionSelectedModels();
+	}
+
+	const saveSessionSelectedModels = () => {
+		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
+			return;
+		}
+		sessionStorage.selectedModels = JSON.stringify(selectedModels);
+		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
+	};
+
+	$: if (selectedModels) {
+		setToolIds();
+	}
+
+	const setToolIds = async () => {
+		if (!$tools) {
+			tools.set(await getTools(localStorage.token));
+		}
+
+		if (selectedModels.length !== 1) {
+			return;
+		}
+		const model = $models.find((m) => m.id === selectedModels[0]);
+		if (model) {
+			selectedToolIds = (model?.info?.meta?.toolIds ?? []).filter((id) =>
+				$tools.find((t) => t.id === id)
+			);
+		}
+	};
 
 	const showMessage = async (message) => {
 		const _chatId = JSON.parse(JSON.stringify($chatId));
@@ -300,6 +334,7 @@
 	};
 
 	onMount(async () => {
+		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
 
@@ -420,6 +455,53 @@
 	//////////////////////////
 
 	const initNewChat = async () => {
+		if (sessionStorage.selectedModels) {
+			selectedModels = JSON.parse(sessionStorage.selectedModels);
+			sessionStorage.removeItem('selectedModels');
+		} else {
+			if ($page.url.searchParams.get('models')) {
+				selectedModels = $page.url.searchParams.get('models')?.split(',');
+			} else if ($page.url.searchParams.get('model')) {
+				const urlModels = $page.url.searchParams.get('model')?.split(',');
+
+				if (urlModels.length === 1) {
+					const m = $models.find((m) => m.id === urlModels[0]);
+					if (!m) {
+						const modelSelectorButton = document.getElementById('model-selector-0-button');
+						if (modelSelectorButton) {
+							modelSelectorButton.click();
+							await tick();
+
+							const modelSelectorInput = document.getElementById('model-search-input');
+							if (modelSelectorInput) {
+								modelSelectorInput.focus();
+								modelSelectorInput.value = urlModels[0];
+								modelSelectorInput.dispatchEvent(new Event('input'));
+							}
+						}
+					} else {
+						selectedModels = urlModels;
+					}
+				} else {
+					selectedModels = urlModels;
+				}
+			} else if ($settings?.models) {
+				selectedModels = $settings?.models;
+			} else if ($config?.default_models) {
+				console.log($config?.default_models.split(',') ?? '');
+				selectedModels = $config?.default_models.split(',');
+			}
+		}
+
+		selectedModels = selectedModels.filter((modelId) => $models.map((m) => m.id).includes(modelId));
+		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
+			if ($models.length > 0) {
+				selectedModels = [$models[0].id];
+			} else {
+				selectedModels = [''];
+			}
+		}
+
 		await showControls.set(false);
 		await showCallOverlay.set(false);
 		await showOverview.set(false);
@@ -441,51 +523,6 @@
 
 		chatFiles = [];
 		params = {};
-
-		if ($page.url.searchParams.get('models')) {
-			selectedModels = $page.url.searchParams.get('models')?.split(',');
-		} else if ($page.url.searchParams.get('model')) {
-			const urlModels = $page.url.searchParams.get('model')?.split(',');
-
-			if (urlModels.length === 1) {
-				const m = $models.find((m) => m.id === urlModels[0]);
-				if (!m) {
-					const modelSelectorButton = document.getElementById('model-selector-0-button');
-					if (modelSelectorButton) {
-						modelSelectorButton.click();
-						await tick();
-
-						const modelSelectorInput = document.getElementById('model-search-input');
-						if (modelSelectorInput) {
-							modelSelectorInput.focus();
-							modelSelectorInput.value = urlModels[0];
-							modelSelectorInput.dispatchEvent(new Event('input'));
-						}
-					}
-				} else {
-					selectedModels = urlModels;
-				}
-			} else {
-				selectedModels = urlModels;
-			}
-		} else if ($settings?.models) {
-			selectedModels = $settings?.models;
-		} else if ($config?.default_models) {
-			console.log($config?.default_models.split(',') ?? '');
-			selectedModels = $config?.default_models.split(',');
-		}
-
-		selectedModels = selectedModels.filter((modelId) => $models.map((m) => m.id).includes(modelId));
-
-		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
-			if ($models.length > 0) {
-				selectedModels = [$models[0].id];
-			} else {
-				selectedModels = [''];
-			}
-		}
-
-		console.log(selectedModels);
 
 		if ($page.url.searchParams.get('youtube')) {
 			uploadYoutubeTranscription(
@@ -798,9 +835,12 @@
 		console.log('submitPrompt', userPrompt, $chatId);
 
 		const messages = createMessagesList(history.currentId);
-		selectedModels = selectedModels.map((modelId) =>
+		const _selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
+		if (JSON.stringify(selectedModels) !== JSON.stringify(_selectedModels)) {
+			selectedModels = _selectedModels;
+		}
 
 		if (userPrompt === '') {
 			toast.error($i18n.t('Please enter a prompt'));
@@ -893,6 +933,7 @@
 		const chatInput = document.getElementById('chat-input');
 		chatInput?.focus();
 
+		saveSessionSelectedModels();
 		_responses = await sendPrompt(userPrompt, userMessageId, { newChat: true });
 
 		return _responses;
@@ -1794,6 +1835,33 @@
 		console.log('stopResponse');
 	};
 
+	const submitMessage = async (parentId, prompt) => {
+		let userPrompt = prompt;
+		let userMessageId = uuidv4();
+
+		let userMessage = {
+			id: userMessageId,
+			parentId: parentId,
+			childrenIds: [],
+			role: 'user',
+			content: userPrompt,
+			models: selectedModels
+		};
+
+		if (parentId !== null) {
+			history.messages[parentId].childrenIds = [
+				...history.messages[parentId].childrenIds,
+				userMessageId
+			];
+		}
+
+		history.messages[userMessageId] = userMessage;
+		history.currentId = userMessageId;
+
+		await tick();
+		await sendPrompt(userPrompt, userMessageId);
+	};
+
 	const regenerateResponse = async (message) => {
 		console.log('regenerateResponse');
 
@@ -1824,7 +1892,9 @@
 			responseMessage.done = false;
 			await tick();
 
-			const model = $models.filter((m) => m.id === responseMessage.model).at(0);
+			const model = $models
+				.filter((m) => m.id === (responseMessage?.selectedModelId ?? responseMessage.model))
+				.at(0);
 
 			if (model) {
 				if (model?.owned_by === 'openai') {
@@ -1842,8 +1912,6 @@
 						_chatId
 					);
 			}
-		} else {
-			toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 		}
 	};
 
@@ -1895,20 +1963,21 @@
 	};
 
 	const generateChatTitle = async (messages) => {
+		const lastUserMessage = messages.filter((message) => message.role === 'user').at(-1);
+
 		if ($settings?.title?.auto ?? true) {
-			const lastMessage = messages.at(-1);
 			const modelId = selectedModels[0];
 
 			const title = await generateTitle(localStorage.token, modelId, messages, $chatId).catch(
 				(error) => {
 					console.error(error);
-					return 'New Chat';
+					return lastUserMessage?.content ?? 'New Chat';
 				}
 			);
 
 			return title;
 		} else {
-			return 'New Chat';
+			return lastUserMessage?.content ?? 'New Chat';
 		}
 	};
 
@@ -1964,6 +2033,7 @@
 		parentId: string,
 		responseMessageId: string
 	) => {
+		// TODO: move this to the backend
 		const responseMessage = history.messages[responseMessageId];
 		const userMessage = history.messages[parentId];
 		const messages = createMessagesList(history.currentId);
@@ -1978,17 +2048,17 @@
 		history.messages[responseMessageId] = responseMessage;
 
 		const prompt = userMessage.content;
-		let searchQuery = await generateSearchQuery(
+		let queries = await generateQueries(
 			localStorage.token,
 			model,
 			messages.filter((message) => message?.content?.trim()),
 			prompt
 		).catch((error) => {
 			console.log(error);
-			return prompt;
+			return [prompt];
 		});
 
-		if (!searchQuery || searchQuery == '') {
+		if (queries.length === 0) {
 			responseMessage.statusHistory.push({
 				done: true,
 				error: true,
@@ -1998,6 +2068,8 @@
 			history.messages[responseMessageId] = responseMessage;
 			return;
 		}
+
+		const searchQuery = queries[0];
 
 		responseMessage.statusHistory.push({
 			done: false,
@@ -2201,42 +2273,12 @@
 									{selectedModels}
 									{sendPrompt}
 									{showMessage}
+									{submitMessage}
 									{continueResponse}
 									{regenerateResponse}
 									{mergeResponses}
 									{chatActionHandler}
 									bottomPadding={files.length > 0}
-									on:submit={async (e) => {
-										if (e.detail) {
-											// New user message
-											let userPrompt = e.detail.prompt;
-											let userMessageId = uuidv4();
-
-											let userMessage = {
-												id: userMessageId,
-												parentId: e.detail.parentId,
-												childrenIds: [],
-												role: 'user',
-												content: userPrompt,
-												models: selectedModels
-											};
-
-											let messageParentId = e.detail.parentId;
-
-											if (messageParentId !== null) {
-												history.messages[messageParentId].childrenIds = [
-													...history.messages[messageParentId].childrenIds,
-													userMessageId
-												];
-											}
-
-											history.messages[userMessageId] = userMessage;
-											history.currentId = userMessageId;
-
-											await tick();
-											await sendPrompt(userPrompt, userMessageId);
-										}
-									}}
 								/>
 							</div>
 						</div>
@@ -2251,13 +2293,6 @@
 								bind:selectedToolIds
 								bind:webSearchEnabled
 								bind:atSelectedModel
-								availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
-									const model = $models.find((m) => m.id === e);
-									if (model?.info?.meta?.toolIds ?? false) {
-										return [...new Set([...a, ...model.info.meta.toolIds])];
-									}
-									return a;
-								}, [])}
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								{stopResponse}
 								{createMessagePair}
@@ -2295,13 +2330,6 @@
 								bind:selectedToolIds
 								bind:webSearchEnabled
 								bind:atSelectedModel
-								availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
-									const model = $models.find((m) => m.id === e);
-									if (model?.info?.meta?.toolIds ?? false) {
-										return [...new Set([...a, ...model.info.meta.toolIds])];
-									}
-									return a;
-								}, [])}
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								{stopResponse}
 								{createMessagePair}

@@ -25,8 +25,10 @@
 		TASK_MODEL_EXTERNAL: '',
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
 		TAGS_GENERATION_PROMPT_TEMPLATE: '',
-		ENABLE_SEARCH_QUERY: true,
-		SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE: ''
+		ENABLE_TAGS_GENERATION: true,
+		ENABLE_SEARCH_QUERY_GENERATION: true,
+		ENABLE_RETRIEVAL_QUERY_GENERATION: true,
+		QUERY_GENERATION_PROMPT_TEMPLATE: ''
 	};
 
 	let promptSuggestions = [];
@@ -133,40 +135,26 @@
 				</Tooltip>
 			</div>
 
-			<div class="mt-3">
-				<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Tags Generation Prompt')}</div>
-
-				<Tooltip
-					content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
-					placement="top-start"
-				>
-					<Textarea
-						bind:value={taskConfig.TAGS_GENERATION_PROMPT_TEMPLATE}
-						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
-					/>
-				</Tooltip>
-			</div>
-
 			<hr class=" dark:border-gray-850 my-3" />
 
 			<div class="my-3 flex w-full items-center justify-between">
 				<div class=" self-center text-xs font-medium">
-					{$i18n.t('Enable Web Search Query Generation')}
+					{$i18n.t('Enable Tags Generation')}
 				</div>
 
-				<Switch bind:state={taskConfig.ENABLE_SEARCH_QUERY} />
+				<Switch bind:state={taskConfig.ENABLE_TAGS_GENERATION} />
 			</div>
 
-			{#if taskConfig.ENABLE_SEARCH_QUERY}
-				<div class="">
-					<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Search Query Generation Prompt')}</div>
+			{#if taskConfig.ENABLE_TAGS_GENERATION}
+				<div class="mt-3">
+					<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Tags Generation Prompt')}</div>
 
 					<Tooltip
 						content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 						placement="top-start"
 					>
 						<Textarea
-							bind:value={taskConfig.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE}
+							bind:value={taskConfig.TAGS_GENERATION_PROMPT_TEMPLATE}
 							placeholder={$i18n.t(
 								'Leave empty to use the default prompt, or enter a custom prompt'
 							)}
@@ -174,6 +162,38 @@
 					</Tooltip>
 				</div>
 			{/if}
+
+			<hr class=" dark:border-gray-850 my-3" />
+
+			<div class="my-3 flex w-full items-center justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Enable Retrieval Query Generation')}
+				</div>
+
+				<Switch bind:state={taskConfig.ENABLE_RETRIEVAL_QUERY_GENERATION} />
+			</div>
+
+			<div class="my-3 flex w-full items-center justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Enable Web Search Query Generation')}
+				</div>
+
+				<Switch bind:state={taskConfig.ENABLE_SEARCH_QUERY_GENERATION} />
+			</div>
+
+			<div class="">
+				<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Query Generation Prompt')}</div>
+
+				<Tooltip
+					content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+					placement="top-start"
+				>
+					<Textarea
+						bind:value={taskConfig.QUERY_GENERATION_PROMPT_TEMPLATE}
+						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+					/>
+				</Tooltip>
+			</div>
 		</div>
 
 		<hr class=" dark:border-gray-850 my-3" />

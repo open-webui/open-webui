@@ -15,9 +15,6 @@
 	import {
 		copyToClipboard as _copyToClipboard,
 		approximateToHumanReadable,
-		extractParagraphsForAudio,
-		extractSentencesForAudio,
-		cleanText,
 		getMessageContentParts,
 		sanitizeResponseContent,
 		createMessagesList
@@ -33,7 +30,6 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import WebSearchResults from './ResponseMessage/WebSearchResults.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
-	import Markdown from './Markdown.svelte';
 	import Error from './Error.svelte';
 	import Citations from './Citations.svelte';
 	import CodeExecutions from './CodeExecutions.svelte';
@@ -112,9 +108,13 @@
 	export let showPreviousMessage: Function;
 	export let showNextMessage: Function;
 
+	export let updateChat: Function;
 	export let editMessage: Function;
+	export let saveMessage: Function;
 	export let rateMessage: Function;
+	export let actionMessage: Function;
 
+	export let submitMessage: Function;
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
 
@@ -329,7 +329,10 @@
 				url: `${image.url}`
 			}));
 
-			dispatch('save', { ...message, files: files });
+			saveMessage(message.id, {
+				...message,
+				files: files
+			});
 		}
 
 		generatingImage = false;
@@ -422,7 +425,7 @@
 		}
 
 		console.log(updatedMessage);
-		dispatch('save', updatedMessage);
+		saveMessage(message.id, updatedMessage);
 
 		await tick();
 
@@ -443,7 +446,7 @@
 					updatedMessage.annotation.tags = tags;
 					feedbackItem.data.tags = tags;
 
-					dispatch('save', updatedMessage);
+					saveMessage(message.id, updatedMessage);
 					await updateFeedbackById(
 						localStorage.token,
 						updatedMessage.feedbackId,
@@ -465,7 +468,7 @@
 	}
 
 	onMount(async () => {
-		console.log('ResponseMessage mounted');
+		// console.log('ResponseMessage mounted');
 
 		await tick();
 	});
@@ -477,10 +480,13 @@
 		id="message-{message.id}"
 		dir={$settings.chatDirection}
 	>
-		<ProfileImage
-			src={model?.info?.meta?.profile_image_url ??
-				($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
-		/>
+		<div class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
+			<ProfileImage
+				src={model?.info?.meta?.profile_image_url ??
+					($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
+				className={'size-8'}
+			/>
+		</div>
 
 		<div class="flex-auto w-0 pl-1">
 			<Name>
@@ -514,7 +520,7 @@
 							{@const status = (
 								message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]
 							).at(-1)}
-							<div class="status-description flex items-center gap-2 pt-0.5 pb-1">
+							<div class="status-description flex items-center gap-2 py-0.5">
 								{#if status?.done === false}
 									<div class="">
 										<Spinner className="size-4" />
@@ -628,22 +634,19 @@
 												message.id
 											].content.replace(raw, raw.replace(oldContent, newContent));
 
-											dispatch('update');
+											updateChat();
 										}}
 										on:select={(e) => {
 											const { type, content } = e.detail;
 
 											if (type === 'explain') {
-												dispatch('submit', {
-													parentId: message.id,
-													prompt: `Explain this section to me in more detail\n\n\`\`\`\n${content}\n\`\`\``
-												});
+												submitMessage(
+													message.id,
+													`Explain this section to me in more detail\n\n\`\`\`\n${content}\n\`\`\``
+												);
 											} else if (type === 'ask') {
 												const input = e.detail?.input ?? '';
-												dispatch('submit', {
-													parentId: message.id,
-													prompt: `\`\`\`\n${content}\n\`\`\`\n${input}`
-												});
+												submitMessage(message.id, `\`\`\`\n${content}\n\`\`\`\n${input}`);
 											}
 										}}
 									/>
@@ -653,7 +656,7 @@
 									<Error content={message?.error?.content ?? message.content} />
 								{/if}
 
-								{#if message.citations}
+								{#if message.citations && (model?.info?.meta?.capabilities?.citations ?? true)}
 									<Citations citations={message.citations} />
 								{/if}
 
@@ -726,7 +729,7 @@
 
 							{#if message.done}
 								{#if !readOnly}
-									{#if $user.role === 'user' ? ($config?.permissions?.chat?.editing ?? true) : true}
+									{#if $user.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
 										<Tooltip content={$i18n.t('Edit')} placement="bottom">
 											<button
 												class="{isLastMessage
@@ -1016,21 +1019,6 @@
 												disabled={feedbackLoading}
 												on:click={async () => {
 													await feedbackHandler(1);
-
-													(model?.actions ?? [])
-														.filter((action) => action?.__webui__ ?? false)
-														.forEach((action) => {
-															dispatch('action', {
-																id: action.id,
-																event: {
-																	id: 'good-response',
-																	data: {
-																		messageId: message.id
-																	}
-																}
-															});
-														});
-
 													window.setTimeout(() => {
 														document
 															.getElementById(`message-feedback-${message.id}`)
@@ -1067,21 +1055,6 @@
 												disabled={feedbackLoading}
 												on:click={async () => {
 													await feedbackHandler(-1);
-
-													(model?.actions ?? [])
-														.filter((action) => action?.__webui__ ?? false)
-														.forEach((action) => {
-															dispatch('action', {
-																id: action.id,
-																event: {
-																	id: 'bad-response',
-																	data: {
-																		messageId: message.id
-																	}
-																}
-															});
-														});
-
 													window.setTimeout(() => {
 														document
 															.getElementById(`message-feedback-${message.id}`)
@@ -1117,20 +1090,6 @@
 													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 												on:click={() => {
 													continueResponse();
-
-													(model?.actions ?? [])
-														.filter((action) => action?.__webui__ ?? false)
-														.forEach((action) => {
-															dispatch('action', {
-																id: action.id,
-																event: {
-																	id: 'continue-response',
-																	data: {
-																		messageId: message.id
-																	}
-																}
-															});
-														});
 												}}
 											>
 												<svg
@@ -1154,50 +1113,50 @@
 												</svg>
 											</button>
 										</Tooltip>
+									{/if}
 
-										<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
-											<button
-												type="button"
-												class="{isLastMessage
-													? 'visible'
-													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
-												on:click={() => {
-													showRateComment = false;
-													regenerateResponse(message);
+									<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
+										<button
+											type="button"
+											class="{isLastMessage
+												? 'visible'
+												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
+											on:click={() => {
+												showRateComment = false;
+												regenerateResponse(message);
 
-													(model?.actions ?? [])
-														.filter((action) => action?.__webui__ ?? false)
-														.forEach((action) => {
-															dispatch('action', {
-																id: action.id,
-																event: {
-																	id: 'regenerate-response',
-																	data: {
-																		messageId: message.id
-																	}
-																}
-															});
-														});
-												}}
+												(model?.actions ?? []).forEach((action) => {
+													dispatch('action', {
+														id: action.id,
+														event: {
+															id: 'regenerate-response',
+															data: {
+																messageId: message.id
+															}
+														}
+													});
+												});
+											}}
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke-width="2.3"
+												stroke="currentColor"
+												class="w-4 h-4"
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="2.3"
-													stroke="currentColor"
-													class="w-4 h-4"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-													/>
-												</svg>
-											</button>
-										</Tooltip>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+												/>
+											</svg>
+										</button>
+									</Tooltip>
 
-										{#each (model?.actions ?? []).filter((action) => !(action?.__webui__ ?? false)) as action}
+									{#if isLastMessage}
+										{#each model?.actions ?? [] as action}
 											<Tooltip content={action.name} placement="bottom">
 												<button
 													type="button"
@@ -1205,7 +1164,7 @@
 														? 'visible'
 														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 													on:click={() => {
-														dispatch('action', action.id);
+														actionMessage(action.id, message);
 													}}
 												>
 													{#if action.icon_url}
@@ -1239,22 +1198,6 @@
 									comment: e.detail.comment,
 									reason: e.detail.reason
 								});
-
-								(model?.actions ?? [])
-									.filter((action) => action?.__webui__ ?? false)
-									.forEach((action) => {
-										dispatch('action', {
-											id: action.id,
-											event: {
-												id: 'rate-comment',
-												data: {
-													messageId: message.id,
-													comment: e.detail.comment,
-													reason: e.detail.reason
-												}
-											}
-										});
-									});
 							}}
 						/>
 					{/if}

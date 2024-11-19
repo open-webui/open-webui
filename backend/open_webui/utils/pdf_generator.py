@@ -54,18 +54,18 @@ class PDFGenerator:
         html_content = markdown(content, extensions=["pymdownx.extra"])
 
         html_message = f"""
-              <div class="message">
-                  <small> {date_str} </small>
-                  <div>
-                      <h2>
-                          <strong>{role.title()}</strong>
-                          <small class="text-muted">{model}</small>
-                      </h2>
-                  </div>
-                  <div class="markdown-section">
-                      {html_content}
-                  </div>
-              </div>
+            <div> {date_str} </div>
+            <div class="message">
+                <div>
+                    <h2>
+                        <strong>{role.title()}</strong>
+                        <span style="font-size: 12px; color: #888;">{model}</span>
+                    </h2>
+                </div>
+                <pre class="markdown-section">
+                    {content}
+                </pre>
+            </div>
           """
         return html_message
 

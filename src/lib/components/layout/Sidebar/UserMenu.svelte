@@ -69,7 +69,7 @@
 						/>
 					</svg>
 				</div>
-				<div class=" self-center">{$i18n.t('Settings')}</div>
+				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
 			</button>
 
 			<button
@@ -86,14 +86,14 @@
 				<div class=" self-center mr-3">
 					<ArchiveBox className="size-5" strokeWidth="1.5" />
 				</div>
-				<div class=" self-center">{$i18n.t('Archived Chats')}</div>
+				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
 			</button>
 
 			{#if role === 'admin'}
-				<button
+				<a
 					class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+					href="/playground"
 					on:click={() => {
-						goto('/playground');
 						show = false;
 
 						if ($mobile) {
@@ -117,13 +117,13 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">{$i18n.t('Playground')}</div>
-				</button>
+					<div class=" self-center truncate">{$i18n.t('Playground')}</div>
+				</a>
 
-				<button
+				<a
 					class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+					href="/admin"
 					on:click={() => {
-						goto('/admin');
 						show = false;
 
 						if ($mobile) {
@@ -147,8 +147,8 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">{$i18n.t('Admin Panel')}</div>
-				</button>
+					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
+				</a>
 			{/if}
 
 			<hr class=" border-gray-50 dark:border-gray-850 my-1 p-0" />
@@ -181,7 +181,7 @@
 						/>
 					</svg>
 				</div>
-				<div class=" self-center">{$i18n.t('Sign Out')}</div>
+				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
 			</button>
 
 			{#if $activeUserCount}
