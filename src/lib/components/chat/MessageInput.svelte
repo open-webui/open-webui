@@ -23,7 +23,7 @@
 	import { uploadFile } from '$lib/apis/files';
 	import { getTools } from '$lib/apis/tools';
 
-	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
 	import Tooltip from '../common/Tooltip.svelte';
 	import InputMenu from './MessageInput/InputMenu.svelte';
@@ -772,6 +772,18 @@
 																};
 
 																reader.readAsDataURL(blob);
+															} else if (item.type === 'text/plain') {
+																e.preventDefault();
+																const text = await clipboardData.getData('text/plain');
+
+																if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
+																	const blob = new Blob([text], { type: 'text/plain' });
+																	const file = new File([blob], `Pasted_Text_${Date.now()}.txt`, {
+																		type: 'text/plain'
+																	});
+
+																	await uploadFileHandler(file);
+																}
 															}
 														}
 													}
@@ -948,6 +960,18 @@
 															};
 
 															reader.readAsDataURL(blob);
+														} else if (item.type === 'text/plain') {
+															e.preventDefault();
+															const text = await clipboardData.getData('text/plain');
+
+															if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
+																const blob = new Blob([text], { type: 'text/plain' });
+																const file = new File([blob], `Pasted_Text_${Date.now()}.txt`, {
+																	type: 'text/plain'
+																});
+
+																await uploadFileHandler(file);
+															}
 														}
 													}
 												}
