@@ -1,6 +1,11 @@
 from typing import Optional
 
-from open_webui.apps.webui.models.prompts import PromptForm, PromptModel, Prompts
+from open_webui.apps.webui.models.prompts import (
+    PromptForm,
+    PromptUserResponse,
+    PromptModel,
+    Prompts,
+)
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from open_webui.utils.utils import get_admin_user, get_verified_user
@@ -23,7 +28,7 @@ async def get_prompts(user=Depends(get_verified_user)):
     return prompts
 
 
-@router.get("/list", response_model=list[PromptModel])
+@router.get("/list", response_model=list[PromptUserResponse])
 async def get_prompt_list(user=Depends(get_verified_user)):
     if user.role == "admin":
         prompts = Prompts.get_prompts()

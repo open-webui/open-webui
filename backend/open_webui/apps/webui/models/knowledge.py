@@ -8,6 +8,7 @@ from open_webui.apps.webui.internal.db import Base, get_db
 from open_webui.env import SRC_LOG_LEVELS
 
 from open_webui.apps.webui.models.files import FileMetadataResponse
+from open_webui.apps.webui.models.users import Users, UserResponse
 
 
 from pydantic import BaseModel, ConfigDict
@@ -79,17 +80,15 @@ class KnowledgeModel(BaseModel):
 ####################
 
 
-class KnowledgeResponse(BaseModel):
-    id: str
-    name: str
-    description: str
-    data: Optional[dict] = None
-    meta: Optional[dict] = None
+class KnowledgeUserModel(KnowledgeModel):
+    user: Optional[UserResponse] = None
 
-    access_control: Optional[dict] = None
-    created_at: int  # timestamp in epoch
-    updated_at: int  # timestamp in epoch
 
+class KnowledgeResponse(KnowledgeModel):
+    files: Optional[list[FileMetadataResponse | dict]] = None
+
+
+class KnowledgeUserResponse(KnowledgeUserModel):
     files: Optional[list[FileMetadataResponse | dict]] = None
 
 
@@ -127,18 +126,26 @@ class KnowledgeTable:
             except Exception:
                 return None
 
-    def get_knowledge_bases(self) -> list[KnowledgeModel]:
+    def get_knowledge_bases(self) -> list[KnowledgeUserModel]:
         with get_db() as db:
-            return [
-                KnowledgeModel.model_validate(knowledge)
-                for knowledge in db.query(Knowledge)
-                .order_by(Knowledge.updated_at.desc())
-                .all()
-            ]
+            knowledge_bases = []
+            for knowledge in (
+                db.query(Knowledge).order_by(Knowledge.updated_at.desc()).all()
+            ):
+                user = Users.get_user_by_id(knowledge.user_id)
+                knowledge_bases.append(
+                    KnowledgeUserModel.model_validate(
+                        {
+                            **KnowledgeModel.model_validate(knowledge).model_dump(),
+                            "user": user.model_dump() if user else None,
+                        }
+                    )
+                )
+            return knowledge_bases
 
     def get_knowledge_bases_by_user_id(
         self, user_id: str, permission: str = "write"
-    ) -> list[KnowledgeModel]:
+    ) -> list[KnowledgeUserModel]:
         knowledge_bases = self.get_knowledge_bases()
         return [
             knowledge_base

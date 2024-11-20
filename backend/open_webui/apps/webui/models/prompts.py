@@ -2,7 +2,7 @@ import time
 from typing import Optional
 
 from open_webui.apps.webui.internal.db import Base, get_db
-from open_webui.apps.webui.models.groups import Groups
+from open_webui.apps.webui.models.users import Users, UserResponse
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON
@@ -57,6 +57,10 @@ class PromptModel(BaseModel):
 ####################
 
 
+class PromptUserResponse(PromptModel):
+    user: Optional[UserResponse] = None
+
+
 class PromptForm(BaseModel):
     command: str
     title: str
@@ -97,15 +101,26 @@ class PromptsTable:
         except Exception:
             return None
 
-    def get_prompts(self) -> list[PromptModel]:
+    def get_prompts(self) -> list[PromptUserResponse]:
         with get_db() as db:
-            return [
-                PromptModel.model_validate(prompt) for prompt in db.query(Prompt).all()
-            ]
+            prompts = []
+
+            for prompt in db.query(Prompt).order_by(Prompt.timestamp.desc()).all():
+                user = Users.get_user_by_id(prompt.user_id)
+                prompts.append(
+                    PromptUserResponse.model_validate(
+                        {
+                            **PromptModel.model_validate(prompt).model_dump(),
+                            "user": user.model_dump() if user else None,
+                        }
+                    )
+                )
+
+            return prompts
 
     def get_prompts_by_user_id(
         self, user_id: str, permission: str = "write"
-    ) -> list[PromptModel]:
+    ) -> list[PromptUserResponse]:
         prompts = self.get_prompts()
 
         return [

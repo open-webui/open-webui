@@ -4,6 +4,7 @@ from open_webui.apps.webui.models.models import (
     ModelForm,
     ModelModel,
     ModelResponse,
+    ModelUserResponse,
     Models,
 )
 from open_webui.constants import ERROR_MESSAGES
@@ -22,7 +23,7 @@ router = APIRouter()
 ###########################
 
 
-@router.get("/", response_model=list[ModelResponse])
+@router.get("/", response_model=list[ModelUserResponse])
 async def get_models(id: Optional[str] = None, user=Depends(get_verified_user)):
     if user.role == "admin":
         return Models.get_models()
@@ -82,7 +83,8 @@ async def create_new_model(
 ###########################
 
 
-@router.get("/id/{id}", response_model=Optional[ModelResponse])
+# Note: We're not using the typical url path param here, but instead using a query parameter to allow '/' in the id
+@router.get("/model", response_model=Optional[ModelResponse])
 async def get_model_by_id(id: str, user=Depends(get_verified_user)):
     model = Models.get_model_by_id(id)
     if model:
@@ -104,7 +106,7 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user)):
 ############################
 
 
-@router.post("/id/{id}/toggle", response_model=Optional[ModelResponse])
+@router.post("/model/toggle", response_model=Optional[ModelResponse])
 async def toggle_model_by_id(id: str, user=Depends(get_verified_user)):
     model = Models.get_model_by_id(id)
     if model:
@@ -139,7 +141,7 @@ async def toggle_model_by_id(id: str, user=Depends(get_verified_user)):
 ############################
 
 
-@router.post("/id/{id}/update", response_model=Optional[ModelModel])
+@router.post("/model/update", response_model=Optional[ModelModel])
 async def update_model_by_id(
     id: str,
     form_data: ModelForm,
@@ -162,7 +164,7 @@ async def update_model_by_id(
 ############################
 
 
-@router.delete("/id/{id}/delete", response_model=bool)
+@router.delete("/model/delete", response_model=bool)
 async def delete_model_by_id(id: str, user=Depends(get_verified_user)):
     model = Models.get_model_by_id(id)
     if not model:
@@ -178,4 +180,10 @@ async def delete_model_by_id(id: str, user=Depends(get_verified_user)):
         )
 
     result = Models.delete_model_by_id(id)
+    return result
+
+
+@router.delete("/delete/all", response_model=bool)
+async def delete_all_models(user=Depends(get_admin_user)):
+    result = Models.delete_all_models()
     return result

@@ -35,6 +35,7 @@ from open_webui.config import (
     ENABLE_LOGIN_FORM,
     ENABLE_MESSAGE_RATING,
     ENABLE_SIGNUP,
+    ENABLE_API_KEY,
     ENABLE_EVALUATION_ARENA_MODELS,
     EVALUATION_ARENA_MODELS,
     DEFAULT_ARENA_MODEL,
@@ -98,6 +99,8 @@ app.state.config = AppConfig()
 
 app.state.config.ENABLE_SIGNUP = ENABLE_SIGNUP
 app.state.config.ENABLE_LOGIN_FORM = ENABLE_LOGIN_FORM
+app.state.config.ENABLE_API_KEY = ENABLE_API_KEY
+
 app.state.config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
 app.state.AUTH_TRUSTED_NAME_HEADER = WEBUI_AUTH_TRUSTED_NAME_HEADER
@@ -406,6 +409,7 @@ async def generate_function_chat_completion(form_data, user, models: dict = {}):
             "name": user.name,
             "role": user.role,
         },
+        "__metadata__": metadata,
     }
     extra_params["__tools__"] = get_tools(
         app,

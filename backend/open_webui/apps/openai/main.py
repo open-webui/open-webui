@@ -313,7 +313,9 @@ async def get_all_models_responses() -> list:
             prefix_id = api_config.get("prefix_id", None)
 
             if prefix_id:
-                for model in response["data"]:
+                for model in (
+                    response if isinstance(response, list) else response.get("data", [])
+                ):
                     model["id"] = f"{prefix_id}.{model['id']}"
 
     log.debug(f"get_all_models:responses() {responses}")
@@ -424,8 +426,6 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
                     user.id, type="read", access_control=model_info.access_control
                 ):
                     filtered_models.append(model)
-            else:
-                filtered_models.append(model)
         models["data"] = filtered_models
 
     return models
@@ -512,6 +512,12 @@ async def generate_chat_completion(
                     status_code=403,
                     detail="Model not found",
                 )
+    elif not bypass_filter:
+        if user.role != "admin":
+            raise HTTPException(
+                status_code=403,
+                detail="Model not found",
+            )
 
     # Attemp to get urlIdx from the model
     models = await get_all_models()

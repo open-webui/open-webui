@@ -9,6 +9,7 @@
 	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
 	import {
 		createNewModel,
+		deleteAllModels,
 		getBaseModels,
 		toggleModelById,
 		updateModelById
@@ -21,6 +22,8 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
+	import { toast } from 'svelte-sonner';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
@@ -31,8 +34,8 @@
 	let baseModels = null;
 
 	let filteredModels = [];
-
 	let selectedModelId = null;
+	let showResetModal = false;
 
 	$: if (models) {
 		filteredModels = models.filter(
@@ -57,11 +60,16 @@
 			const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
 
 			if (workspaceModel) {
-				return workspaceModel;
+				return {
+					...m,
+					...workspaceModel
+				};
 			} else {
 				return {
+					...m,
 					id: m.id,
 					name: m.name,
+
 					is_active: true
 				};
 			}
@@ -72,13 +80,21 @@
 		model.base_model_id = null;
 
 		if (workspaceModels.find((m) => m.id === model.id)) {
-			await updateModelById(localStorage.token, model.id, model).catch((error) => {
+			const res = await updateModelById(localStorage.token, model.id, model).catch((error) => {
 				return null;
 			});
+
+			if (res) {
+				toast.success($i18n.t('Model updated successfully'));
+			}
 		} else {
-			await createNewModel(localStorage.token, model).catch((error) => {
+			const res = await createNewModel(localStorage.token, model).catch((error) => {
 				return null;
 			});
+
+			if (res) {
+				toast.success($i18n.t('Model updated successfully'));
+			}
 		}
 
 		_models.set(await getModels(localStorage.token));
@@ -93,6 +109,7 @@
 				base_model_id: null,
 				meta: {},
 				params: {},
+				access_control: {},
 				is_active: model.is_active
 			}).catch((error) => {
 				return null;
@@ -111,6 +128,19 @@
 	});
 </script>
 
+<ConfirmDialog
+	title={$i18n.t('Delete All Models')}
+	message={$i18n.t('This will delete all models including custom models and cannot be undone.')}
+	bind:show={showResetModal}
+	onConfirm={async () => {
+		const res = deleteAllModels(localStorage.token);
+		if (res) {
+			toast.success($i18n.t('All models deleted successfully'));
+			init();
+		}
+	}}
+/>
+
 {#if models !== null}
 	{#if selectedModelId === null}
 		<div class="flex flex-col gap-1 mt-1.5 mb-2">
@@ -121,6 +151,22 @@
 					<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
 						>{filteredModels.length}</span
 					>
+				</div>
+
+				<div>
+					<Tooltip content={$i18n.t('This will delete all models including custom models')}>
+						<button
+							class=" px-2.5 py-1 rounded-full flex gap-1 items-center"
+							type="button"
+							on:click={() => {
+								showResetModal = true;
+							}}
+						>
+							<div class="text-xs flex-shrink-0">
+								{$i18n.t('Reset')}
+							</div>
+						</button>
+					</Tooltip>
 				</div>
 			</div>
 
@@ -168,14 +214,26 @@
 
 							<div class=" flex-1 self-center {(model?.is_active ?? true) ? '' : 'text-gray-500'}">
 								<Tooltip
-									content={marked.parse(model?.meta?.description ?? model.id)}
+									content={marked.parse(
+										!!model?.meta?.description
+											? model?.meta?.description
+											: model?.ollama?.digest
+												? `${model?.ollama?.digest} **(${model?.ollama?.modified_at})**`
+												: model.id
+									)}
 									className=" w-fit"
 									placement="top-start"
 								>
 									<div class="  font-semibold line-clamp-1">{model.name}</div>
 								</Tooltip>
 								<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
-									{model?.meta?.description ?? model.id}
+									<span class=" line-clamp-1">
+										{!!model?.meta?.description
+											? model?.meta?.description
+											: model?.ollama?.digest
+												? `${model.id} (${model?.ollama?.digest})`
+												: model.id}
+									</span>
 								</div>
 							</div>
 						</button>

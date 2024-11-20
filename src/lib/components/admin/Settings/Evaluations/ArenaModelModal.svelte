@@ -9,6 +9,7 @@
 	import Minus from '$lib/components/icons/Minus.svelte';
 	import PencilSolid from '$lib/components/icons/PencilSolid.svelte';
 	import { toast } from 'svelte-sonner';
+	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 
 	export let show = false;
 	export let edit = false;
@@ -38,6 +39,8 @@
 	let selectedModelId = '';
 	let modelIds = [];
 	let filterMode = 'include';
+
+	let accessControl = {};
 
 	let imageInputElement;
 	let loading = false;
@@ -74,7 +77,8 @@
 				profile_image_url: profileImageUrl,
 				description: description || null,
 				model_ids: modelIds.length > 0 ? modelIds : null,
-				filter_mode: modelIds.length > 0 ? (filterMode ? filterMode : null) : null
+				filter_mode: modelIds.length > 0 ? (filterMode ? filterMode : null) : null,
+				access_control: accessControl
 			}
 		};
 
@@ -98,6 +102,7 @@
 			description = model.meta.description;
 			modelIds = model.meta.model_ids || [];
 			filterMode = model.meta?.filter_mode ?? 'include';
+			accessControl = 'access_control' in model.meta ? model.meta.access_control : {};
 		}
 	};
 
@@ -278,6 +283,14 @@
 									placeholder={$i18n.t('Enter description')}
 									autocomplete="off"
 								/>
+							</div>
+						</div>
+
+						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+
+						<div class="my-2 -mx-2">
+							<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+								<AccessControl bind:accessControl />
 							</div>
 						</div>
 

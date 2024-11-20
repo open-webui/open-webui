@@ -5,7 +5,7 @@ from typing import Optional
 from open_webui.apps.webui.internal.db import Base, JSONField, get_db
 from open_webui.env import SRC_LOG_LEVELS
 
-from open_webui.apps.webui.models.groups import Groups
+from open_webui.apps.webui.models.users import Users, UserResponse
 
 
 from pydantic import BaseModel, ConfigDict
@@ -124,20 +124,12 @@ class ModelModel(BaseModel):
 ####################
 
 
-class ModelResponse(BaseModel):
-    id: str
-    user_id: str
-    base_model_id: Optional[str] = None
+class ModelUserResponse(ModelModel):
+    user: Optional[UserResponse] = None
 
-    name: str
-    params: ModelParams
-    meta: ModelMeta
 
-    access_control: Optional[dict] = None
-
-    is_active: bool
-    updated_at: int  # timestamp in epoch
-    created_at: int  # timestamp in epoch
+class ModelResponse(ModelModel):
+    pass
 
 
 class ModelForm(BaseModel):
@@ -181,12 +173,20 @@ class ModelsTable:
         with get_db() as db:
             return [ModelModel.model_validate(model) for model in db.query(Model).all()]
 
-    def get_models(self) -> list[ModelModel]:
+    def get_models(self) -> list[ModelUserResponse]:
         with get_db() as db:
-            return [
-                ModelModel.model_validate(model)
-                for model in db.query(Model).filter(Model.base_model_id != None).all()
-            ]
+            models = []
+            for model in db.query(Model).filter(Model.base_model_id != None).all():
+                user = Users.get_user_by_id(model.user_id)
+                models.append(
+                    ModelUserResponse.model_validate(
+                        {
+                            **ModelModel.model_validate(model).model_dump(),
+                            "user": user.model_dump() if user else None,
+                        }
+                    )
+                )
+            return models
 
     def get_base_models(self) -> list[ModelModel]:
         with get_db() as db:
@@ -197,8 +197,8 @@ class ModelsTable:
 
     def get_models_by_user_id(
         self, user_id: str, permission: str = "write"
-    ) -> list[ModelModel]:
-        models = self.get_all_models()
+    ) -> list[ModelUserResponse]:
+        models = self.get_models()
         return [
             model
             for model in models
@@ -254,6 +254,16 @@ class ModelsTable:
         try:
             with get_db() as db:
                 db.query(Model).filter_by(id=id).delete()
+                db.commit()
+
+                return True
+        except Exception:
+            return False
+
+    def delete_all_models(self) -> bool:
+        try:
+            with get_db() as db:
+                db.query(Model).delete()
                 db.commit()
 
                 return True

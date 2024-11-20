@@ -78,11 +78,13 @@ from open_webui.config import (
     ENV,
     FRONTEND_BUILD_DIR,
     OAUTH_PROVIDERS,
-    ENABLE_SEARCH_QUERY,
-    SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
     STATIC_DIR,
     TASK_MODEL,
     TASK_MODEL_EXTERNAL,
+    ENABLE_SEARCH_QUERY_GENERATION,
+    ENABLE_RETRIEVAL_QUERY_GENERATION,
+    QUERY_GENERATION_PROMPT_TEMPLATE,
+    DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE,
     TITLE_GENERATION_PROMPT_TEMPLATE,
     TAGS_GENERATION_PROMPT_TEMPLATE,
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
@@ -122,7 +124,7 @@ from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.task import (
     moa_response_generation_template,
     tags_generation_template,
-    search_query_generation_template,
+    query_generation_template,
     emoji_generation_template,
     title_generation_template,
     tools_function_calling_generation_template,
@@ -206,10 +208,9 @@ app.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION
 app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE
 
 
-app.state.config.ENABLE_SEARCH_QUERY = ENABLE_SEARCH_QUERY
-app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE = (
-    SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE
-)
+app.state.config.ENABLE_SEARCH_QUERY_GENERATION = ENABLE_SEARCH_QUERY_GENERATION
+app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = ENABLE_RETRIEVAL_QUERY_GENERATION
+app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE = QUERY_GENERATION_PROMPT_TEMPLATE
 
 app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
@@ -492,14 +493,41 @@ async def chat_completion_tools_handler(
     return body, {"contexts": contexts, "citations": citations}
 
 
-async def chat_completion_files_handler(body) -> tuple[dict, dict[str, list]]:
+async def chat_completion_files_handler(
+    body: dict, user: UserModel
+) -> tuple[dict, dict[str, list]]:
     contexts = []
     citations = []
+
+    try:
+        queries_response = await generate_queries(
+            {
+                "model": body["model"],
+                "messages": body["messages"],
+                "type": "retrieval",
+            },
+            user,
+        )
+        queries_response = queries_response["choices"][0]["message"]["content"]
+
+        try:
+            queries_response = json.loads(queries_response)
+        except Exception as e:
+            queries_response = {"queries": []}
+
+        queries = queries_response.get("queries", [])
+    except Exception as e:
+        queries = []
+
+    if len(queries) == 0:
+        queries = [get_last_user_message(body["messages"])]
+
+    print(f"{queries=}")
 
     if files := body.get("metadata", {}).get("files", None):
         contexts, citations = get_rag_context(
             files=files,
-            messages=body["messages"],
+            queries=queries,
             embedding_function=retrieval_app.state.EMBEDDING_FUNCTION,
             k=retrieval_app.state.config.TOP_K,
             reranking_function=retrieval_app.state.sentence_transformer_rf,
@@ -557,16 +585,34 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
 
         model_info = Models.get_model_by_id(model["id"])
         if user.role == "user":
-            if model_info and not (
-                user.id == model_info.user_id
-                or has_access(
-                    user.id, type="read", access_control=model_info.access_control
-                )
-            ):
-                return JSONResponse(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    content={"detail": "User does not have access to the model"},
-                )
+            if model.get("arena"):
+                if not has_access(
+                    user.id,
+                    type="read",
+                    access_control=model.get("info", {})
+                    .get("meta", {})
+                    .get("access_control", {}),
+                ):
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Model not found",
+                    )
+            else:
+                if not model_info:
+                    return JSONResponse(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        content={"detail": "Model not found"},
+                    )
+                elif not (
+                    user.id == model_info.user_id
+                    or has_access(
+                        user.id, type="read", access_control=model_info.access_control
+                    )
+                ):
+                    return JSONResponse(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        content={"detail": "User does not have access to the model"},
+                    )
 
         metadata = {
             "chat_id": body.pop("chat_id", None),
@@ -586,6 +632,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                 "name": user.name,
                 "role": user.role,
             },
+            "__metadata__": metadata,
         }
 
         # Initialize data_items to store additional data to be sent to the client
@@ -624,7 +671,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             log.exception(e)
 
         try:
-            body, flags = await chat_completion_files_handler(body)
+            body, flags = await chat_completion_files_handler(body, user)
             contexts.extend(flags.get("contexts", []))
             citations.extend(flags.get("citations", []))
         except Exception as e:
@@ -808,6 +855,11 @@ class PipelineMiddleware(BaseHTTPMiddleware):
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     content={"detail": "Not authenticated"},
                 )
+        except HTTPException as e:
+            return JSONResponse(
+                status_code=e.status_code,
+                content={"detail": e.detail},
+            )
 
         model_list = await get_all_models()
         models = {model["id"]: model for model in model_list}
@@ -893,6 +945,7 @@ async def commit_session_after_request(request: Request, call_next):
 @app.middleware("http")
 async def check_url(request: Request, call_next):
     start_time = int(time.time())
+    request.state.enable_api_key = webui_app.state.config.ENABLE_API_KEY
     response = await call_next(request)
     process_time = int(time.time()) - start_time
     response.headers["X-Process-Time"] = str(process_time)
@@ -1042,17 +1095,17 @@ async def get_all_models():
             )
 
     # Process action_ids to get the actions
-    def get_action_items_from_module(module):
+    def get_action_items_from_module(function, module):
         actions = []
         if hasattr(module, "actions"):
             actions = module.actions
             return [
                 {
-                    "id": f"{module.id}.{action['id']}",
-                    "name": action.get("name", f"{module.name} ({action['id']})"),
-                    "description": module.meta.description,
+                    "id": f"{function.id}.{action['id']}",
+                    "name": action.get("name", f"{function.name} ({action['id']})"),
+                    "description": function.meta.description,
                     "icon_url": action.get(
-                        "icon_url", module.meta.manifest.get("icon_url", None)
+                        "icon_url", function.meta.manifest.get("icon_url", None)
                     ),
                 }
                 for action in actions
@@ -1060,10 +1113,10 @@ async def get_all_models():
         else:
             return [
                 {
-                    "id": module.id,
-                    "name": module.name,
-                    "description": module.meta.description,
-                    "icon_url": module.meta.manifest.get("icon_url", None),
+                    "id": function.id,
+                    "name": function.name,
+                    "description": function.meta.description,
+                    "icon_url": function.meta.manifest.get("icon_url", None),
                 }
             ]
 
@@ -1088,7 +1141,9 @@ async def get_all_models():
                 raise Exception(f"Action not found: {action_id}")
 
             function_module = get_function_module_by_id(action_id)
-            model["actions"].extend(get_action_items_from_module(function_module))
+            model["actions"].extend(
+                get_action_items_from_module(action_function, function_module)
+            )
     return models
 
 
@@ -1107,14 +1162,23 @@ async def get_models(user=Depends(get_verified_user)):
     if user.role == "user":
         filtered_models = []
         for model in models:
+            if model.get("arena"):
+                if has_access(
+                    user.id,
+                    type="read",
+                    access_control=model.get("info", {})
+                    .get("meta", {})
+                    .get("access_control", {}),
+                ):
+                    filtered_models.append(model)
+                continue
+
             model_info = Models.get_model_by_id(model["id"])
             if model_info:
                 if user.id == model_info.user_id or has_access(
                     user.id, type="read", access_control=model_info.access_control
                 ):
                     filtered_models.append(model)
-            else:
-                filtered_models.append(model)
         models = filtered_models
 
     return {"data": models}
@@ -1144,19 +1208,38 @@ async def generate_chat_completions(
         )
 
     model = models[model_id]
+
     # Check if user has access to the model
-    if user.role == "user":
-        model_info = Models.get_model_by_id(model_id)
-        if not (
-            user.id == model_info.user_id
-            or has_access(
-                user.id, type="read", access_control=model_info.access_control
-            )
-        ):
-            raise HTTPException(
-                status_code=403,
-                detail="Model not found",
-            )
+    if not bypass_filter and user.role == "user":
+        if model.get("arena"):
+            if not has_access(
+                user.id,
+                type="read",
+                access_control=model.get("info", {})
+                .get("meta", {})
+                .get("access_control", {}),
+            ):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Model not found",
+                )
+        else:
+            model_info = Models.get_model_by_id(model_id)
+            if not model_info:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Model not found",
+                )
+            elif not (
+                user.id == model_info.user_id
+                or has_access(
+                    user.id, type="read", access_control=model_info.access_control
+                )
+            ):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Model not found",
+                )
 
     if model["owned_by"] == "arena":
         model_ids = model.get("info", {}).get("meta", {}).get("model_ids")
@@ -1165,9 +1248,7 @@ async def generate_chat_completions(
             model_ids = [
                 model["id"]
                 for model in await get_all_models()
-                if model.get("owned_by") != "arena"
-                and not model.get("info", {}).get("meta", {}).get("hidden", False)
-                and model["id"] not in model_ids
+                if model.get("owned_by") != "arena" and model["id"] not in model_ids
             ]
 
         selected_model_id = None
@@ -1178,7 +1259,6 @@ async def generate_chat_completions(
                 model["id"]
                 for model in await get_all_models()
                 if model.get("owned_by") != "arena"
-                and not model.get("info", {}).get("meta", {}).get("hidden", False)
             ]
             selected_model_id = random.choice(model_ids)
 
@@ -1533,8 +1613,9 @@ async def get_task_config(user=Depends(get_verified_user)):
         "TITLE_GENERATION_PROMPT_TEMPLATE": app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE,
         "TAGS_GENERATION_PROMPT_TEMPLATE": app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_TAGS_GENERATION": app.state.config.ENABLE_TAGS_GENERATION,
-        "ENABLE_SEARCH_QUERY": app.state.config.ENABLE_SEARCH_QUERY,
-        "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE": app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
+        "ENABLE_SEARCH_QUERY_GENERATION": app.state.config.ENABLE_SEARCH_QUERY_GENERATION,
+        "ENABLE_RETRIEVAL_QUERY_GENERATION": app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION,
+        "QUERY_GENERATION_PROMPT_TEMPLATE": app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     }
 
@@ -1545,8 +1626,9 @@ class TaskConfigForm(BaseModel):
     TITLE_GENERATION_PROMPT_TEMPLATE: str
     TAGS_GENERATION_PROMPT_TEMPLATE: str
     ENABLE_TAGS_GENERATION: bool
-    SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE: str
-    ENABLE_SEARCH_QUERY: bool
+    ENABLE_SEARCH_QUERY_GENERATION: bool
+    ENABLE_RETRIEVAL_QUERY_GENERATION: bool
+    QUERY_GENERATION_PROMPT_TEMPLATE: str
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: str
 
 
@@ -1561,11 +1643,16 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
         form_data.TAGS_GENERATION_PROMPT_TEMPLATE
     )
     app.state.config.ENABLE_TAGS_GENERATION = form_data.ENABLE_TAGS_GENERATION
-
-    app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE = (
-        form_data.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE
+    app.state.config.ENABLE_SEARCH_QUERY_GENERATION = (
+        form_data.ENABLE_SEARCH_QUERY_GENERATION
     )
-    app.state.config.ENABLE_SEARCH_QUERY = form_data.ENABLE_SEARCH_QUERY
+    app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = (
+        form_data.ENABLE_RETRIEVAL_QUERY_GENERATION
+    )
+
+    app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE = (
+        form_data.QUERY_GENERATION_PROMPT_TEMPLATE
+    )
     app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
         form_data.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
     )
@@ -1576,8 +1663,9 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
         "TITLE_GENERATION_PROMPT_TEMPLATE": app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE,
         "TAGS_GENERATION_PROMPT_TEMPLATE": app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_TAGS_GENERATION": app.state.config.ENABLE_TAGS_GENERATION,
-        "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE": app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
-        "ENABLE_SEARCH_QUERY": app.state.config.ENABLE_SEARCH_QUERY,
+        "ENABLE_SEARCH_QUERY_GENERATION": app.state.config.ENABLE_SEARCH_QUERY_GENERATION,
+        "ENABLE_RETRIEVAL_QUERY_GENERATION": app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION,
+        "QUERY_GENERATION_PROMPT_TEMPLATE": app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     }
 
@@ -1753,14 +1841,22 @@ JSON format: { "tags": ["tag1", "tag2", "tag3"] }
     return await generate_chat_completions(form_data=payload, user=user)
 
 
-@app.post("/api/task/query/completions")
-async def generate_search_query(form_data: dict, user=Depends(get_verified_user)):
-    print("generate_search_query")
-    if not app.state.config.ENABLE_SEARCH_QUERY:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Search query generation is disabled",
-        )
+@app.post("/api/task/queries/completions")
+async def generate_queries(form_data: dict, user=Depends(get_verified_user)):
+    print("generate_queries")
+    type = form_data.get("type")
+    if type == "web_search":
+        if not app.state.config.ENABLE_SEARCH_QUERY_GENERATION:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Search query generation is disabled",
+            )
+    elif type == "retrieval":
+        if not app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Query generation is disabled",
+            )
 
     model_list = await get_all_models()
     models = {model["id"]: model for model in model_list}
@@ -1784,36 +1880,19 @@ async def generate_search_query(form_data: dict, user=Depends(get_verified_user)
 
     model = models[task_model_id]
 
-    if app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE != "":
-        template = app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE
+    if app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE != "":
+        template = app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE
     else:
-        template = """Given the user's message and interaction history, decide if a web search is necessary. You must be concise and exclusively provide a search query if one is necessary. Refrain from verbose responses or any additional commentary. Prefer suggesting a search if uncertain to provide comprehensive or updated information. If a search isn't needed at all, respond with an empty string. Default to a search query when in doubt. Today's date is {{CURRENT_DATE}}.
+        template = DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE
 
-User Message:
-{{prompt:end:4000}}
-
-Interaction History:
-{{MESSAGES:END:6}}
-
-Search Query:"""
-
-    content = search_query_generation_template(
+    content = query_generation_template(
         template, form_data["messages"], {"name": user.name}
     )
-
-    print("content", content)
 
     payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": False,
-        **(
-            {"max_tokens": 30}
-            if models[task_model_id]["owned_by"] == "ollama"
-            else {
-                "max_completion_tokens": 30,
-            }
-        ),
         "metadata": {"task": str(TASKS.QUERY_GENERATION), "task_body": form_data},
     }
     log.debug(payload)
@@ -2354,6 +2433,7 @@ async def get_app_config(request: Request):
             "auth": WEBUI_AUTH,
             "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
             "enable_ldap": webui_app.state.config.ENABLE_LDAP,
+            "enable_api_key": webui_app.state.config.ENABLE_API_KEY,
             "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
             "enable_login_form": webui_app.state.config.ENABLE_LOGIN_FORM,
             **(

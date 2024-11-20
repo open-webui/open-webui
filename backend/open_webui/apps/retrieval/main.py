@@ -23,6 +23,7 @@ from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 
 # Document loaders
 from open_webui.apps.retrieval.loaders.main import Loader
+from open_webui.apps.retrieval.loaders.youtube import YoutubeLoader
 
 # Web search engines
 from open_webui.apps.retrieval.web.main import SearchResult
@@ -75,6 +76,8 @@ from open_webui.config import (
     RAG_FILE_MAX_SIZE,
     RAG_OPENAI_API_BASE_URL,
     RAG_OPENAI_API_KEY,
+    RAG_OLLAMA_BASE_URL,
+    RAG_OLLAMA_API_KEY,
     RAG_RELEVANCE_THRESHOLD,
     RAG_RERANKING_MODEL,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
@@ -118,9 +121,6 @@ from open_webui.utils.misc import (
 from open_webui.utils.utils import get_admin_user, get_verified_user
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
-from langchain_community.document_loaders import (
-    YoutubeLoader,
-)
 from langchain_core.documents import Document
 
 
@@ -162,6 +162,9 @@ app.state.config.RAG_TEMPLATE = RAG_TEMPLATE
 
 app.state.config.OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
 app.state.config.OPENAI_API_KEY = RAG_OPENAI_API_KEY
+
+app.state.config.OLLAMA_BASE_URL = RAG_OLLAMA_BASE_URL
+app.state.config.OLLAMA_API_KEY = RAG_OLLAMA_API_KEY
 
 app.state.config.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
 
@@ -261,8 +264,16 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.config.RAG_EMBEDDING_ENGINE,
     app.state.config.RAG_EMBEDDING_MODEL,
     app.state.sentence_transformer_ef,
-    app.state.config.OPENAI_API_KEY,
-    app.state.config.OPENAI_API_BASE_URL,
+    (
+        app.state.config.OPENAI_API_BASE_URL
+        if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+        else app.state.config.OLLAMA_BASE_URL
+    ),
+    (
+        app.state.config.OPENAI_API_KEY
+        if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+        else app.state.config.OLLAMA_API_KEY
+    ),
     app.state.config.RAG_EMBEDDING_BATCH_SIZE,
 )
 
@@ -312,6 +323,10 @@ async def get_embedding_config(user=Depends(get_admin_user)):
             "url": app.state.config.OPENAI_API_BASE_URL,
             "key": app.state.config.OPENAI_API_KEY,
         },
+        "ollama_config": {
+            "url": app.state.config.OLLAMA_BASE_URL,
+            "key": app.state.config.OLLAMA_API_KEY,
+        },
     }
 
 
@@ -328,8 +343,14 @@ class OpenAIConfigForm(BaseModel):
     key: str
 
 
+class OllamaConfigForm(BaseModel):
+    url: str
+    key: str
+
+
 class EmbeddingModelUpdateForm(BaseModel):
     openai_config: Optional[OpenAIConfigForm] = None
+    ollama_config: Optional[OllamaConfigForm] = None
     embedding_engine: str
     embedding_model: str
     embedding_batch_size: Optional[int] = 1
@@ -350,6 +371,11 @@ async def update_embedding_config(
             if form_data.openai_config is not None:
                 app.state.config.OPENAI_API_BASE_URL = form_data.openai_config.url
                 app.state.config.OPENAI_API_KEY = form_data.openai_config.key
+
+            if form_data.ollama_config is not None:
+                app.state.config.OLLAMA_BASE_URL = form_data.ollama_config.url
+                app.state.config.OLLAMA_API_KEY = form_data.ollama_config.key
+
             app.state.config.RAG_EMBEDDING_BATCH_SIZE = form_data.embedding_batch_size
 
         update_embedding_model(app.state.config.RAG_EMBEDDING_MODEL)
@@ -358,8 +384,16 @@ async def update_embedding_config(
             app.state.config.RAG_EMBEDDING_ENGINE,
             app.state.config.RAG_EMBEDDING_MODEL,
             app.state.sentence_transformer_ef,
-            app.state.config.OPENAI_API_KEY,
-            app.state.config.OPENAI_API_BASE_URL,
+            (
+                app.state.config.OPENAI_API_BASE_URL
+                if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                else app.state.config.OLLAMA_BASE_URL
+            ),
+            (
+                app.state.config.OPENAI_API_KEY
+                if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                else app.state.config.OLLAMA_API_KEY
+            ),
             app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
 
@@ -371,6 +405,10 @@ async def update_embedding_config(
             "openai_config": {
                 "url": app.state.config.OPENAI_API_BASE_URL,
                 "key": app.state.config.OPENAI_API_KEY,
+            },
+            "ollama_config": {
+                "url": app.state.config.OLLAMA_BASE_URL,
+                "key": app.state.config.OLLAMA_API_KEY,
             },
         }
     except Exception as e:
@@ -785,8 +823,16 @@ def save_docs_to_vector_db(
             app.state.config.RAG_EMBEDDING_ENGINE,
             app.state.config.RAG_EMBEDDING_MODEL,
             app.state.sentence_transformer_ef,
-            app.state.config.OPENAI_API_KEY,
-            app.state.config.OPENAI_API_BASE_URL,
+            (
+                app.state.config.OPENAI_API_BASE_URL
+                if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                else app.state.config.OLLAMA_BASE_URL
+            ),
+            (
+                app.state.config.OPENAI_API_KEY
+                if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                else app.state.config.OLLAMA_API_KEY
+            ),
             app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
 
@@ -1011,12 +1057,10 @@ def process_youtube_video(form_data: ProcessUrlForm, user=Depends(get_verified_u
         if not collection_name:
             collection_name = calculate_sha256_string(form_data.url)[:63]
 
-        loader = YoutubeLoader.from_youtube_url(
-            form_data.url,
-            add_video_info=False,
-            language=app.state.config.YOUTUBE_LOADER_LANGUAGE,
-            translation=app.state.YOUTUBE_LOADER_TRANSLATION,
+        loader = YoutubeLoader(
+            form_data.url, language=app.state.config.YOUTUBE_LOADER_LANGUAGE
         )
+
         docs = loader.load()
         content = " ".join([doc.page_content for doc in docs])
         log.debug(f"text_content: {content}")
@@ -1235,9 +1279,11 @@ def process_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
         urls = [result.link for result in web_results]
 
         loader = get_web_loader(
-            urls, verify_ssl=app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
+            urls,
+            verify_ssl=app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            requests_per_second=app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
         )
-        docs = loader.load()
+        docs = loader.aload()
 
         save_docs_to_vector_db(docs, collection_name, overwrite=True)
 

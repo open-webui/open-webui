@@ -62,6 +62,14 @@ class UserModel(BaseModel):
 ####################
 
 
+class UserResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    role: str
+    profile_image_url: str
+
+
 class UserRoleUpdateForm(BaseModel):
     id: str
     role: str

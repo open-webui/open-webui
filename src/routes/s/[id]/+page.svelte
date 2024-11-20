@@ -6,7 +6,7 @@
 	import dayjs from 'dayjs';
 
 	import { settings, chatId, WEBUI_NAME, models } from '$lib/stores';
-	import { convertMessagesToHistory } from '$lib/utils';
+	import { convertMessagesToHistory, createMessagesList } from '$lib/utils';
 
 	import { getChatByShareId } from '$lib/apis/chats';
 
@@ -40,19 +40,7 @@
 		currentId: null
 	};
 
-	$: if (history.currentId !== null) {
-		let _messages = [];
-
-		let currentMessage = history.messages[history.currentId];
-		while (currentMessage !== null) {
-			_messages.unshift({ ...currentMessage });
-			currentMessage =
-				currentMessage.parentId !== null ? history.messages[currentMessage.parentId] : null;
-		}
-		messages = _messages;
-	} else {
-		messages = [];
-	}
+	$: messages = createMessagesList(history, history.currentId);
 
 	$: if ($page.params.id) {
 		(async () => {
@@ -138,7 +126,7 @@
 					</div>
 				</div>
 
-				<hr class=" dark:border-gray-800 mt-6 mb-2" />
+				<hr class="border-gray-50 dark:border-gray-850 mt-6 mb-2" />
 			</div>
 
 			<div class=" flex flex-col w-full flex-auto overflow-auto h-0" id="messages-container">
