@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **🚫 Graceful Handling of Deleted Users**: Resolved an issue where deleted users caused models, knowledge, prompts, or tools to fail loading in the workspace, ensuring smoother operation and fewer interruptions.
 - **🔗 Proxy Fix for HTTPS Models Endpoint**: Fixed issues with proxies affecting the secure `/api/v1/models/` endpoint, ensuring stable connections and reliable access.
+- **🔒 API Key Creation**: Addressed a bug that previously prevented API keys from being created.
 
 ## [0.4.0] - 2024-11-19
 
