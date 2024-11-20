@@ -103,15 +103,20 @@ class PromptsTable:
 
     def get_prompts(self) -> list[PromptUserResponse]:
         with get_db() as db:
-            return [
-                PromptUserResponse.model_validate(
-                    {
-                        **PromptModel.model_validate(prompt).model_dump(),
-                        "user": Users.get_user_by_id(prompt.user_id).model_dump(),
-                    }
+            prompts = []
+
+            for prompt in db.query(Prompt).order_by(Prompt.timestamp.desc()).all():
+                user = Users.get_user_by_id(prompt.user_id)
+                prompts.append(
+                    PromptUserResponse.model_validate(
+                        {
+                            **PromptModel.model_validate(prompt).model_dump(),
+                            "user": user.model_dump() if user else None,
+                        }
+                    )
                 )
-                for prompt in db.query(Prompt).all()
-            ]
+
+            return prompts
 
     def get_prompts_by_user_id(
         self, user_id: str, permission: str = "write"

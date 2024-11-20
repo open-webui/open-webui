@@ -234,6 +234,7 @@
 	"Delete User": "사용자 삭제",
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} 삭제됨",
 	"Deleted {{name}}": "{{name}}을(를) 삭제했습니다.",
+	"Deleted User": "",
 	"Describe your knowledge base and objectives": "",
 	"Description": "설명",
 	"Didn't fully follow instructions": "완전히 지침을 따르지 않음",

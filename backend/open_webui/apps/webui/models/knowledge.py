@@ -128,17 +128,20 @@ class KnowledgeTable:
 
     def get_knowledge_bases(self) -> list[KnowledgeUserModel]:
         with get_db() as db:
-            return [
-                KnowledgeUserModel.model_validate(
-                    {
-                        **KnowledgeModel.model_validate(knowledge).model_dump(),
-                        "user": Users.get_user_by_id(knowledge.user_id).model_dump(),
-                    }
+            knowledge_bases = []
+            for knowledge in (
+                db.query(Knowledge).order_by(Knowledge.updated_at.desc()).all()
+            ):
+                user = Users.get_user_by_id(knowledge.user_id)
+                knowledge_bases.append(
+                    KnowledgeUserModel.model_validate(
+                        {
+                            **KnowledgeModel.model_validate(knowledge).model_dump(),
+                            "user": user.model_dump() if user else None,
+                        }
+                    )
                 )
-                for knowledge in db.query(Knowledge)
-                .order_by(Knowledge.updated_at.desc())
-                .all()
-            ]
+            return knowledge_bases
 
     def get_knowledge_bases_by_user_id(
         self, user_id: str, permission: str = "write"

@@ -234,6 +234,7 @@
 	"Delete User": "Eliminar usuari",
 	"Deleted {{deleteModelTag}}": "S'ha eliminat {{deleteModelTag}}",
 	"Deleted {{name}}": "S'ha eliminat {{name}}",
+	"Deleted User": "",
 	"Describe your knowledge base and objectives": "Descriu la teva base de coneixement i objectius",
 	"Description": "Descripció",
 	"Didn't fully follow instructions": "No s'han seguit les instruccions completament",

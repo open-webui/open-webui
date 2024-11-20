@@ -234,6 +234,7 @@
 	"Delete User": "Izbriši korisnika",
 	"Deleted {{deleteModelTag}}": "Izbrisan {{deleteModelTag}}",
 	"Deleted {{name}}": "Izbrisano {{name}}",
+	"Deleted User": "",
 	"Describe your knowledge base and objectives": "",
 	"Description": "Opis",
 	"Didn't fully follow instructions": "Nije u potpunosti slijedio upute",

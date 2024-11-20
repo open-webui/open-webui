@@ -234,6 +234,7 @@
 	"Delete User": "Felhasználó törlése",
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} törölve",
 	"Deleted {{name}}": "{{name}} törölve",
+	"Deleted User": "",
 	"Describe your knowledge base and objectives": "",
 	"Description": "Leírás",
 	"Didn't fully follow instructions": "Nem követte teljesen az utasításokat",

@@ -234,6 +234,7 @@
 	"Delete User": "Poista käyttäjä",
 	"Deleted {{deleteModelTag}}": "Poistettu {{deleteModelTag}}",
 	"Deleted {{name}}": "Poistettu {{nimi}}",
+	"Deleted User": "",
 	"Describe your knowledge base and objectives": "",
 	"Description": "Kuvaus",
 	"Didn't fully follow instructions": "Ei noudattanut ohjeita täysin",

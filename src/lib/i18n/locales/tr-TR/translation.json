@@ -234,6 +234,7 @@
 	"Delete User": "Kullanıcıyı Sil",
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} silindi",
 	"Deleted {{name}}": "{{name}} silindi",
+	"Deleted User": "",
 	"Describe your knowledge base and objectives": "",
 	"Description": "Açıklama",
 	"Didn't fully follow instructions": "Talimatları tam olarak takip etmedi",

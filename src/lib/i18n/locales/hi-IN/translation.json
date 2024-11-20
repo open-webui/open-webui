@@ -234,6 +234,7 @@
 	"Delete User": "उपभोक्ता मिटायें",
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} हटा दिया गया",
 	"Deleted {{name}}": "{{name}} हटा दिया गया",
+	"Deleted User": "",
 	"Describe your knowledge base and objectives": "",
 	"Description": "विवरण",
 	"Didn't fully follow instructions": "निर्देशों का पूरी तरह से पालन नहीं किया",
