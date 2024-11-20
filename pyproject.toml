@@ -88,7 +88,7 @@ dependencies = [
 
     "black==24.8.0",
     "langfuse==2.44.0",
-    "youtube-transcript-api==0.6.2",
+    "youtube-transcript-api==0.6.3",
     "pytube==15.0.0",
 
     "extract_msg",
