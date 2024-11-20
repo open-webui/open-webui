@@ -3,7 +3,7 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 export const getModels = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
