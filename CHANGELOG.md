@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2024-11-19
+
+### Added
+
+- **🛠️ Tool Descriptions on Hover**: When enabled, tool descriptions now appear upon hovering over the tool icon in the message input, giving you more context instantly and improving workflow fluidity.
+
+### Fixed
+
+- **🚫 Graceful Handling of Deleted Users**: Resolved an issue where deleted users caused models, knowledge, prompts, or tools to fail loading in the workspace, ensuring smoother operation and fewer interruptions.
+- **🔗 Proxy Fix for HTTPS Models Endpoint**: Fixed issues with proxies affecting the secure `/api/v1/models/` endpoint, ensuring stable connections and reliable access.
+
 ## [0.4.0] - 2024-11-19
 
 ### Added
