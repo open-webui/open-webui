@@ -9,13 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **🛠️ Tool Descriptions on Hover**: When enabled, tool descriptions now appear upon hovering over the tool icon in the message input, giving you more context instantly and improving workflow fluidity.
+- **📊 Enhanced Feedback System**: Introduced a detailed 1-10 rating scale for feedback alongside thumbs up/down, preparing for more precise model fine-tuning and improving feedback quality.
+- **ℹ️ Tool Descriptions on Hover**: Easily access tool descriptions by hovering over the message input, providing a smoother workflow with more context when utilizing tools.
 
 ### Fixed
 
-- **🚫 Graceful Handling of Deleted Users**: Resolved an issue where deleted users caused models, knowledge, prompts, or tools to fail loading in the workspace, ensuring smoother operation and fewer interruptions.
-- **🔗 Proxy Fix for HTTPS Models Endpoint**: Fixed issues with proxies affecting the secure `/api/v1/models/` endpoint, ensuring stable connections and reliable access.
-- **🔒 API Key Creation**: Addressed a bug that previously prevented API keys from being created.
+- **🗑️ Graceful Handling of Deleted Users**: Resolved an issue where deleted users caused workspace items (models, knowledge, prompts, tools) to fail, ensuring reliable workspace loading.
+- **🔑 API Key Creation**: Fixed an issue preventing users from creating new API keys, restoring secure and seamless API management.
+- **🔗 HTTPS Proxy Fix**: Corrected HTTPS proxy issues affecting the '/api/v1/models/' endpoint, ensuring smoother, uninterrupted model management.
 
 ## [0.4.0] - 2024-11-19
 
