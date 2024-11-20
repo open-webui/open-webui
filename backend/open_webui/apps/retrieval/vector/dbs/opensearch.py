@@ -1,7 +1,7 @@
 from opensearchpy import OpenSearch
 from typing import Optional
 
-from open_webui.apps.rag.vector.main import VectorItem, SearchResult, GetResult
+from open_webui.apps.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import (
     OPENSEARCH_URI,
     OPENSEARCH_SSL,
