@@ -234,6 +234,7 @@
 	"Delete User": "Șterge Utilizatorul",
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} șters",
 	"Deleted {{name}}": "{{name}} șters",
+	"Deleted User": "",
 	"Describe your knowledge base and objectives": "",
 	"Description": "Descriere",
 	"Didn't fully follow instructions": "Nu a urmat complet instrucțiunile",

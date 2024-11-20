@@ -234,6 +234,7 @@
 	"Delete User": "حذف المستخدم",
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} حذف",
 	"Deleted {{name}}": "حذف {{name}}",
+	"Deleted User": "",
 	"Describe your knowledge base and objectives": "",
 	"Description": "وصف",
 	"Didn't fully follow instructions": "لم أتبع التعليمات بشكل كامل",

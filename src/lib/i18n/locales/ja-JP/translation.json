@@ -234,6 +234,7 @@
 	"Delete User": "ユーザーを削除",
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} を削除しました",
 	"Deleted {{name}}": "{{name}}を削除しました",
+	"Deleted User": "",
 	"Describe your knowledge base and objectives": "",
 	"Description": "説明",
 	"Didn't fully follow instructions": "説明に沿って操作していませんでした",

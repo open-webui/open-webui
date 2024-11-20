@@ -234,6 +234,7 @@
 	"Delete User": "Изтриване на потребител",
 	"Deleted {{deleteModelTag}}": "Изтрито {{deleteModelTag}}",
 	"Deleted {{name}}": "Изтрито {{име}}",
+	"Deleted User": "",
 	"Describe your knowledge base and objectives": "",
 	"Description": "Описание",
 	"Didn't fully follow instructions": "Не следва инструкциите",

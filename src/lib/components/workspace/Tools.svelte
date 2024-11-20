@@ -251,12 +251,14 @@
 
 								<div class="text-xs text-gray-500 shrink-0">
 									<Tooltip
-										content={tool?.user?.email}
+										content={tool?.user?.email ?? $i18n.t('Deleted User')}
 										className="flex shrink-0"
 										placement="top-start"
 									>
 										{$i18n.t('By {{name}}', {
-											name: capitalizeFirstLetter(tool?.user?.name ?? tool?.user?.email)
+											name: capitalizeFirstLetter(
+												tool?.user?.name ?? tool?.user?.email ?? $i18n.t('Deleted User')
+											)
 										})}
 									</Tooltip>
 								</div>

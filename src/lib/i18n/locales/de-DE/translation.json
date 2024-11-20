@@ -234,6 +234,7 @@
 	"Delete User": "Benutzer löschen",
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} gelöscht",
 	"Deleted {{name}}": "{{name}} gelöscht",
+	"Deleted User": "",
 	"Describe your knowledge base and objectives": "",
 	"Description": "Beschreibung",
 	"Didn't fully follow instructions": "Nicht genau den Answeisungen gefolgt",

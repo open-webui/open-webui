@@ -234,6 +234,7 @@
 	"Delete User": "ইউজার মুছে ফেলুন",
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} মুছে ফেলা হয়েছে",
 	"Deleted {{name}}": "{{name}} মোছা হয়েছে",
+	"Deleted User": "",
 	"Describe your knowledge base and objectives": "",
 	"Description": "বিবরণ",
 	"Didn't fully follow instructions": "ইনস্ট্রাকশন সম্পূর্ণ অনুসরণ করা হয়নি",

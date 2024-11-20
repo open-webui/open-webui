@@ -234,6 +234,7 @@
 	"Delete User": "حذف کاربر",
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} پاک شد",
 	"Deleted {{name}}": "حذف شده {{name}}",
+	"Deleted User": "",
 	"Describe your knowledge base and objectives": "",
 	"Description": "توضیحات",
 	"Didn't fully follow instructions": "نمی تواند دستورالعمل را کامل پیگیری کند",

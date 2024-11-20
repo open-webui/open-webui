@@ -234,6 +234,7 @@
 	"Delete User": "Verwijder Gebruiker",
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} is verwijderd",
 	"Deleted {{name}}": "{{name}} verwijderd",
+	"Deleted User": "",
 	"Describe your knowledge base and objectives": "",
 	"Description": "Beschrijving",
 	"Didn't fully follow instructions": "Heeft niet alle instructies gevolgt",

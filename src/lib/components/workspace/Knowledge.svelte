@@ -165,12 +165,14 @@
 						<div class="mt-3 flex justify-between">
 							<div class="text-xs text-gray-500">
 								<Tooltip
-									content={item?.user?.email}
+									content={item?.user?.email ?? $i18n.t('Deleted User')}
 									className="flex shrink-0"
 									placement="top-start"
 								>
 									{$i18n.t('By {{name}}', {
-										name: capitalizeFirstLetter(item?.user?.name ?? item?.user?.email)
+										name: capitalizeFirstLetter(
+											item?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')
+										)
 									})}
 								</Tooltip>
 							</div>

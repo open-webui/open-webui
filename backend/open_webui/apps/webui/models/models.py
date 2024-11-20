@@ -175,15 +175,18 @@ class ModelsTable:
 
     def get_models(self) -> list[ModelUserResponse]:
         with get_db() as db:
-            return [
-                ModelUserResponse.model_validate(
-                    {
-                        **ModelModel.model_validate(model).model_dump(),
-                        "user": Users.get_user_by_id(model.user_id).model_dump(),
-                    }
+            models = []
+            for model in db.query(Model).filter(Model.base_model_id != None).all():
+                user = Users.get_user_by_id(model.user_id)
+                models.append(
+                    ModelUserResponse.model_validate(
+                        {
+                            **ModelModel.model_validate(model).model_dump(),
+                            "user": user.model_dump() if user else None,
+                        }
+                    )
                 )
-                for model in db.query(Model).filter(Model.base_model_id != None).all()
-            ]
+            return models
 
     def get_base_models(self) -> list[ModelModel]:
         with get_db() as db:

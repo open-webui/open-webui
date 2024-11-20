@@ -234,6 +234,7 @@
 	"Delete User": "ลบผู้ใช้",
 	"Deleted {{deleteModelTag}}": "ลบ {{deleteModelTag}}",
 	"Deleted {{name}}": "ลบ {{name}}",
+	"Deleted User": "",
 	"Describe your knowledge base and objectives": "",
 	"Description": "คำอธิบาย",
 	"Didn't fully follow instructions": "ไม่ได้ปฏิบัติตามคำแนะนำทั้งหมด",

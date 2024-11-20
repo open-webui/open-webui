@@ -234,6 +234,7 @@
 	"Delete User": "Slett bruker",
 	"Deleted {{deleteModelTag}}": "Slettet {{deleteModelTag}}",
 	"Deleted {{name}}": "Slettet {{name}}",
+	"Deleted User": "",
 	"Describe your knowledge base and objectives": "Beskriv kunnskapsbasen din og målene dine",
 	"Description": "Beskrivelse",
 	"Didn't fully follow instructions": "Fulgte ikke instruksjonene fullstendig",

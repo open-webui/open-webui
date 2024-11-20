@@ -234,6 +234,7 @@
 	"Delete User": "刪除使用者",
 	"Deleted {{deleteModelTag}}": "已刪除 {{deleteModelTag}}",
 	"Deleted {{name}}": "已刪除 {{name}}",
+	"Deleted User": "",
 	"Describe your knowledge base and objectives": "",
 	"Description": "描述",
 	"Didn't fully follow instructions": "未完全遵循指示",
