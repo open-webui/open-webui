@@ -44,8 +44,8 @@ dependencies = [
     "google-generativeai==0.7.2",
     "tiktoken",
 
-    "langchain==0.3.5",
-    "langchain-community==0.3.3",
+    "langchain==0.3.7",
+    "langchain-community==0.3.7",
     "langchain-chroma==0.1.4",
 
     "fake-useragent==1.5.1",
@@ -88,7 +88,7 @@ dependencies = [
 
     "black==24.8.0",
     "langfuse==2.44.0",
-    "youtube-transcript-api==0.6.2",
+    "youtube-transcript-api==0.6.3",
     "pytube==15.0.0",
 
     "extract_msg",

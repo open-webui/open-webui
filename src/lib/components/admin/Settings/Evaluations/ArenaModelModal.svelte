@@ -102,7 +102,7 @@
 			description = model.meta.description;
 			modelIds = model.meta.model_ids || [];
 			filterMode = model.meta?.filter_mode ?? 'include';
-			accessControl = model.meta?.access_control ?? {};
+			accessControl = 'access_control' in model.meta ? model.meta.access_control : {};
 		}
 	};
 

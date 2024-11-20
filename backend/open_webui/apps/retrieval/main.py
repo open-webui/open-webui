@@ -23,6 +23,7 @@ from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 
 # Document loaders
 from open_webui.apps.retrieval.loaders.main import Loader
+from open_webui.apps.retrieval.loaders.youtube import YoutubeLoader
 
 # Web search engines
 from open_webui.apps.retrieval.web.main import SearchResult
@@ -120,9 +121,6 @@ from open_webui.utils.misc import (
 from open_webui.utils.utils import get_admin_user, get_verified_user
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
-from langchain_community.document_loaders import (
-    YoutubeLoader,
-)
 from langchain_core.documents import Document
 
 
@@ -1059,12 +1057,10 @@ def process_youtube_video(form_data: ProcessUrlForm, user=Depends(get_verified_u
         if not collection_name:
             collection_name = calculate_sha256_string(form_data.url)[:63]
 
-        loader = YoutubeLoader.from_youtube_url(
-            form_data.url,
-            add_video_info=False,
-            language=app.state.config.YOUTUBE_LOADER_LANGUAGE,
-            translation=app.state.YOUTUBE_LOADER_TRANSLATION,
+        loader = YoutubeLoader(
+            form_data.url, language=app.state.config.YOUTUBE_LOADER_LANGUAGE
         )
+
         docs = loader.load()
         content = " ".join([doc.page_content for doc in docs])
         log.debug(f"text_content: {content}")

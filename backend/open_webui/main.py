@@ -855,6 +855,11 @@ class PipelineMiddleware(BaseHTTPMiddleware):
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     content={"detail": "Not authenticated"},
                 )
+        except HTTPException as e:
+            return JSONResponse(
+                status_code=e.status_code,
+                content={"detail": e.detail},
+            )
 
         model_list = await get_all_models()
         models = {model["id"]: model for model in model_list}

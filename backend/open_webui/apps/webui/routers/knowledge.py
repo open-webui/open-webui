@@ -43,6 +43,7 @@ async def get_knowledge(user=Depends(get_verified_user)):
         knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "read")
 
     # Get files for each knowledge base
+    knowledge_with_files = []
     for knowledge_base in knowledge_bases:
         files = []
         if knowledge_base.data:
@@ -70,12 +71,14 @@ async def get_knowledge(user=Depends(get_verified_user)):
 
                     files = Files.get_file_metadatas_by_ids(file_ids)
 
-        knowledge_base = KnowledgeResponse(
-            **knowledge_base.model_dump(),
-            files=files,
+        knowledge_with_files.append(
+            KnowledgeUserResponse(
+                **knowledge_base.model_dump(),
+                files=files,
+            )
         )
 
-    return knowledge_bases
+    return knowledge_with_files
 
 
 @router.get("/list", response_model=list[KnowledgeUserResponse])
@@ -88,6 +91,7 @@ async def get_knowledge_list(user=Depends(get_verified_user)):
         knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "write")
 
     # Get files for each knowledge base
+    knowledge_with_files = []
     for knowledge_base in knowledge_bases:
         files = []
         if knowledge_base.data:
@@ -115,12 +119,13 @@ async def get_knowledge_list(user=Depends(get_verified_user)):
 
                     files = Files.get_file_metadatas_by_ids(file_ids)
 
-        knowledge_base = KnowledgeResponse(
-            **knowledge_base.model_dump(),
-            files=files,
+        knowledge_with_files.append(
+            KnowledgeUserResponse(
+                **knowledge_base.model_dump(),
+                files=files,
+            )
         )
-
-    return knowledge_bases
+    return knowledge_with_files
 
 
 ############################
