@@ -171,7 +171,7 @@
 		mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
 		mediaRecorder.onstop = async () => {
 			console.log('Recording stopped');
-			if (($settings?.audio?.stt?.engine ?? '') === 'web') {
+			if ($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web') {
 				audioChunks = [];
 			} else {
 				if (confirmed) {
@@ -229,8 +229,7 @@
 					console.log('recognition ended');
 
 					confirmRecording();
-					dispatch('confirm', transcription);
-
+					dispatch('confirm', { text: transcription });
 					confirmed = false;
 					loading = false;
 				};
@@ -251,6 +250,11 @@
 		if (recording && mediaRecorder) {
 			await mediaRecorder.stop();
 		}
+
+		if (speechRecognition) {
+			speechRecognition.stop();
+		}
+
 		stopDurationCounter();
 		audioChunks = [];
 
@@ -325,8 +329,8 @@
 
              rounded-full"
 			on:click={async () => {
-				dispatch('cancel');
 				stopRecording();
+				dispatch('cancel');
 			}}
 		>
 			<svg

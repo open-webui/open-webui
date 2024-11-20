@@ -7,12 +7,14 @@
 	import {
 		getUserValvesSpecById as getToolUserValvesSpecById,
 		getUserValvesById as getToolUserValvesById,
-		updateUserValvesById as updateToolUserValvesById
+		updateUserValvesById as updateToolUserValvesById,
+		getTools
 	} from '$lib/apis/tools';
 	import {
 		getUserValvesSpecById as getFunctionUserValvesSpecById,
 		getUserValvesById as getFunctionUserValvesById,
-		updateUserValvesById as updateFunctionUserValvesById
+		updateUserValvesById as updateFunctionUserValvesById,
+		getFunctions
 	} from '$lib/apis/functions';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -22,6 +24,8 @@
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
+
+	export let show = false;
 
 	let tab = 'tools';
 	let selectedId = '';
@@ -112,77 +116,98 @@
 	$: if (selectedId) {
 		getUserValves();
 	}
+
+	$: if (show) {
+		init();
+	}
+
+	const init = async () => {
+		loading = true;
+
+		if ($functions === null) {
+			functions.set(await getFunctions(localStorage.token));
+		}
+		if ($tools === null) {
+			tools.set(await getTools(localStorage.token));
+		}
+
+		loading = false;
+	};
 </script>
 
-<form
-	class="flex flex-col h-full justify-between space-y-3 text-sm"
-	on:submit|preventDefault={() => {
-		submitHandler();
-		dispatch('save');
-	}}
->
-	<div class="flex flex-col">
-		<div class="space-y-1">
-			<div class="flex gap-2">
-				<div class="flex-1">
-					<select
-						class="  w-full rounded text-xs py-2 px-1 bg-transparent outline-none"
-						bind:value={tab}
-						placeholder="Select"
-					>
-						<option value="tools" class="bg-gray-100 dark:bg-gray-800">{$i18n.t('Tools')}</option>
-						<option value="functions" class="bg-gray-100 dark:bg-gray-800"
-							>{$i18n.t('Functions')}</option
+{#if show && !loading}
+	<form
+		class="flex flex-col h-full justify-between space-y-3 text-sm"
+		on:submit|preventDefault={() => {
+			submitHandler();
+			dispatch('save');
+		}}
+	>
+		<div class="flex flex-col">
+			<div class="space-y-1">
+				<div class="flex gap-2">
+					<div class="flex-1">
+						<select
+							class="  w-full rounded text-xs py-2 px-1 bg-transparent outline-none"
+							bind:value={tab}
+							placeholder="Select"
 						>
-					</select>
-				</div>
-
-				<div class="flex-1">
-					<select
-						class="w-full rounded py-2 px-1 text-xs bg-transparent outline-none"
-						bind:value={selectedId}
-						on:change={async () => {
-							await tick();
-						}}
-					>
-						{#if tab === 'tools'}
-							<option value="" selected disabled class="bg-gray-100 dark:bg-gray-800"
-								>{$i18n.t('Select a tool')}</option
+							<option value="tools" class="bg-gray-100 dark:bg-gray-800">{$i18n.t('Tools')}</option>
+							<option value="functions" class="bg-gray-100 dark:bg-gray-800"
+								>{$i18n.t('Functions')}</option
 							>
+						</select>
+					</div>
 
-							{#each $tools as tool, toolIdx}
-								<option value={tool.id} class="bg-gray-100 dark:bg-gray-800">{tool.name}</option>
-							{/each}
-						{:else if tab === 'functions'}
-							<option value="" selected disabled class="bg-gray-100 dark:bg-gray-800"
-								>{$i18n.t('Select a function')}</option
-							>
+					<div class="flex-1">
+						<select
+							class="w-full rounded py-2 px-1 text-xs bg-transparent outline-none"
+							bind:value={selectedId}
+							on:change={async () => {
+								await tick();
+							}}
+						>
+							{#if tab === 'tools'}
+								<option value="" selected disabled class="bg-gray-100 dark:bg-gray-800"
+									>{$i18n.t('Select a tool')}</option
+								>
 
-							{#each $functions as func, funcIdx}
-								<option value={func.id} class="bg-gray-100 dark:bg-gray-800">{func.name}</option>
-							{/each}
-						{/if}
-					</select>
+								{#each $tools as tool, toolIdx}
+									<option value={tool.id} class="bg-gray-100 dark:bg-gray-800">{tool.name}</option>
+								{/each}
+							{:else if tab === 'functions'}
+								<option value="" selected disabled class="bg-gray-100 dark:bg-gray-800"
+									>{$i18n.t('Select a function')}</option
+								>
+
+								{#each $functions as func, funcIdx}
+									<option value={func.id} class="bg-gray-100 dark:bg-gray-800">{func.name}</option>
+								{/each}
+							{/if}
+						</select>
+					</div>
 				</div>
 			</div>
+
+			{#if selectedId}
+				<hr class="dark:border-gray-800 my-1 w-full" />
+
+				<div class="my-2 text-xs">
+					{#if !loading}
+						<Valves
+							{valvesSpec}
+							bind:valves
+							on:change={() => {
+								debounceSubmitHandler();
+							}}
+						/>
+					{:else}
+						<Spinner className="size-5" />
+					{/if}
+				</div>
+			{/if}
 		</div>
-
-		{#if selectedId}
-			<hr class="dark:border-gray-800 my-1 w-full" />
-
-			<div class="my-2 text-xs">
-				{#if !loading}
-					<Valves
-						{valvesSpec}
-						bind:valves
-						on:change={() => {
-							debounceSubmitHandler();
-						}}
-					/>
-				{:else}
-					<Spinner className="size-5" />
-				{/if}
-			</div>
-		{/if}
-	</div>
-</form>
+	</form>
+{:else}
+	<Spinner className="size-4" />
+{/if}

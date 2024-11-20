@@ -6,6 +6,7 @@
 	export let alt = '';
 
 	export let className = ' w-full';
+	export let imageClassName = 'rounded-lg';
 
 	let _src = '';
 	$: _src = src.startsWith('/') ? `${WEBUI_BASE_URL}${src}` : src;
@@ -19,7 +20,7 @@
 		showImagePreview = true;
 	}}
 >
-	<img src={_src} {alt} class=" rounded-lg cursor-pointer" draggable="false" data-cy="image" />
+	<img src={_src} {alt} class={imageClassName} draggable="false" data-cy="image" />
 </button>
 
 <ImagePreview bind:show={showImagePreview} src={_src} {alt} />

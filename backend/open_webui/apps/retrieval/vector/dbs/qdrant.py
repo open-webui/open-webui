@@ -5,7 +5,7 @@ from qdrant_client.http.models import PointStruct
 from qdrant_client.models import models
 
 from open_webui.apps.retrieval.vector.main import VectorItem, SearchResult, GetResult
-from open_webui.config import QDRANT_URI
+from open_webui.config import QDRANT_URI, QDRANT_API_KEY
 
 NO_LIMIT = 999999999
 
@@ -14,7 +14,12 @@ class QdrantClient:
     def __init__(self):
         self.collection_prefix = "open-webui"
         self.QDRANT_URI = QDRANT_URI
-        self.client = Qclient(url=self.QDRANT_URI) if self.QDRANT_URI else None
+        self.QDRANT_API_KEY = QDRANT_API_KEY
+        self.client = (
+            Qclient(url=self.QDRANT_URI, api_key=self.QDRANT_API_KEY)
+            if self.QDRANT_URI
+            else None
+        )
 
     def _result_to_get_result(self, points) -> GetResult:
         ids = []

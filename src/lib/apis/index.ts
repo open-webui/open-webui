@@ -1,9 +1,8 @@
 import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
-export const getModels = async (token: string = '') => {
+export const getModels = async (token: string = '', base: boolean = false) => {
 	let error = null;
-
-	const res = await fetch(`${WEBUI_BASE_URL}/api/models`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/models${base ? '/base' : ''}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -16,8 +15,8 @@ export const getModels = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
 			error = err;
+			console.log(err);
 			return null;
 		});
 
@@ -26,26 +25,10 @@ export const getModels = async (token: string = '') => {
 	}
 
 	let models = res?.data ?? [];
-
 	models = models
 		.filter((models) => models)
 		// Sort the models
 		.sort((a, b) => {
-			// Check if models have position property
-			const aHasPosition = a.info?.meta?.position !== undefined;
-			const bHasPosition = b.info?.meta?.position !== undefined;
-
-			// If both a and b have the position property
-			if (aHasPosition && bHasPosition) {
-				return a.info.meta.position - b.info.meta.position;
-			}
-
-			// If only a has the position property, it should come first
-			if (aHasPosition) return -1;
-
-			// If only b has the position property, it should come first
-			if (bHasPosition) return 1;
-
 			// Compare case-insensitively by name for models without position property
 			const lowerA = a.name.toLowerCase();
 			const lowerB = b.name.toLowerCase();
@@ -365,15 +348,16 @@ export const generateEmoji = async (
 	return null;
 };
 
-export const generateSearchQuery = async (
+export const generateQueries = async (
 	token: string = '',
 	model: string,
 	messages: object[],
-	prompt: string
+	prompt: string,
+	type?: string = 'web_search'
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/task/query/completions`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/task/queries/completions`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -383,7 +367,8 @@ export const generateSearchQuery = async (
 		body: JSON.stringify({
 			model: model,
 			messages: messages,
-			prompt: prompt
+			prompt: prompt,
+			type: type
 		})
 	})
 		.then(async (res) => {
@@ -402,7 +387,39 @@ export const generateSearchQuery = async (
 		throw error;
 	}
 
-	return res?.choices[0]?.message?.content.replace(/["']/g, '') ?? prompt;
+	try {
+		// Step 1: Safely extract the response string
+		const response = res?.choices[0]?.message?.content ?? '';
+
+		// Step 2: Attempt to fix common JSON format issues like single quotes
+		const sanitizedResponse = response.replace(/['‘’`]/g, '"'); // Convert single quotes to double quotes for valid JSON
+
+		// Step 3: Find the relevant JSON block within the response
+		const jsonStartIndex = sanitizedResponse.indexOf('{');
+		const jsonEndIndex = sanitizedResponse.lastIndexOf('}');
+
+		// Step 4: Check if we found a valid JSON block (with both `{` and `}`)
+		if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+			const jsonResponse = sanitizedResponse.substring(jsonStartIndex, jsonEndIndex + 1);
+
+			// Step 5: Parse the JSON block
+			const parsed = JSON.parse(jsonResponse);
+
+			// Step 6: If there's a "queries" key, return the queries array; otherwise, return an empty array
+			if (parsed && parsed.queries) {
+				return Array.isArray(parsed.queries) ? parsed.queries : [];
+			} else {
+				return [];
+			}
+		}
+
+		// If no valid JSON block found, return an empty array
+		return [];
+	} catch (e) {
+		// Catch and safely return empty array on any parsing errors
+		console.error('Failed to parse response: ', e);
+		return [];
+	}
 };
 
 export const generateMoACompletion = async (

@@ -13,11 +13,24 @@ from open_webui.config import (
     CHROMA_HTTP_SSL,
     CHROMA_TENANT,
     CHROMA_DATABASE,
+    CHROMA_CLIENT_AUTH_PROVIDER,
+    CHROMA_CLIENT_AUTH_CREDENTIALS,
 )
 
 
 class ChromaClient:
     def __init__(self):
+        settings_dict = {
+            "allow_reset": True,
+            "anonymized_telemetry": False,
+        }
+        if CHROMA_CLIENT_AUTH_PROVIDER is not None:
+            settings_dict["chroma_client_auth_provider"] = CHROMA_CLIENT_AUTH_PROVIDER
+        if CHROMA_CLIENT_AUTH_CREDENTIALS is not None:
+            settings_dict["chroma_client_auth_credentials"] = (
+                CHROMA_CLIENT_AUTH_CREDENTIALS
+            )
+
         if CHROMA_HTTP_HOST != "":
             self.client = chromadb.HttpClient(
                 host=CHROMA_HTTP_HOST,
@@ -26,12 +39,12 @@ class ChromaClient:
                 ssl=CHROMA_HTTP_SSL,
                 tenant=CHROMA_TENANT,
                 database=CHROMA_DATABASE,
-                settings=Settings(allow_reset=True, anonymized_telemetry=False),
+                settings=Settings(**settings_dict),
             )
         else:
             self.client = chromadb.PersistentClient(
                 path=CHROMA_DATA_PATH,
-                settings=Settings(allow_reset=True, anonymized_telemetry=False),
+                settings=Settings(**settings_dict),
                 tenant=CHROMA_TENANT,
                 database=CHROMA_DATABASE,
             )

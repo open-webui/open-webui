@@ -4,14 +4,12 @@
 	export let state = true;
 
 	const dispatch = createEventDispatcher();
+
+	$: dispatch('change', state);
 </script>
 
 <Switch.Root
 	bind:checked={state}
-	onCheckedChange={async (e) => {
-		await tick();
-		dispatch('change', e);
-	}}
 	class="flex h-5 min-h-5 w-9 shrink-0 cursor-pointer items-center rounded-full px-[3px] mx-[1px] transition  {state
 		? ' bg-emerald-600'
 		: 'bg-gray-200 dark:bg-transparent'} outline outline-1 outline-gray-100 dark:outline-gray-800"
