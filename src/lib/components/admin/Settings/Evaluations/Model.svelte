@@ -4,13 +4,13 @@
 	const i18n = getContext('i18n');
 
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
-	import ModelModal from './ModelModal.svelte';
+	import ArenaModelModal from './ArenaModelModal.svelte';
 	export let model;
 
 	let showModel = false;
 </script>
 
-<ModelModal
+<ArenaModelModal
 	bind:show={showModel}
 	edit={true}
 	{model}

@@ -4,8 +4,19 @@ from typing import Optional
 
 from open_webui.apps.webui.internal.db import Base, JSONField, get_db
 from open_webui.env import SRC_LOG_LEVELS
+
+from open_webui.apps.webui.models.users import Users, UserResponse
+
+
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, Text
+
+from sqlalchemy import or_, and_, func
+from sqlalchemy.dialects import postgresql, sqlite
+from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
+
+
+from open_webui.utils.access_control import has_access
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -67,6 +78,25 @@ class Model(Base):
         Holds a JSON encoded blob of metadata, see `ModelMeta`.
     """
 
+    access_control = Column(JSON, nullable=True)  # Controls data access levels.
+    # Defines access control rules for this entry.
+    # - `None`: Public access, available to all users with the "user" role.
+    # - `{}`: Private access, restricted exclusively to the owner.
+    # - Custom permissions: Specific access control for reading and writing;
+    #   Can specify group or user-level restrictions:
+    #   {
+    #      "read": {
+    #          "group_ids": ["group_id1", "group_id2"],
+    #          "user_ids":  ["user_id1", "user_id2"]
+    #      },
+    #      "write": {
+    #          "group_ids": ["group_id1", "group_id2"],
+    #          "user_ids":  ["user_id1", "user_id2"]
+    #      }
+    #   }
+
+    is_active = Column(Boolean, default=True)
+
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
 
@@ -80,6 +110,9 @@ class ModelModel(BaseModel):
     params: ModelParams
     meta: ModelMeta
 
+    access_control: Optional[dict] = None
+
+    is_active: bool
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
@@ -91,12 +124,12 @@ class ModelModel(BaseModel):
 ####################
 
 
-class ModelResponse(BaseModel):
-    id: str
-    name: str
-    meta: ModelMeta
-    updated_at: int  # timestamp in epoch
-    created_at: int  # timestamp in epoch
+class ModelUserResponse(ModelModel):
+    user: Optional[UserResponse] = None
+
+
+class ModelResponse(ModelModel):
+    pass
 
 
 class ModelForm(BaseModel):
@@ -105,6 +138,8 @@ class ModelForm(BaseModel):
     name: str
     meta: ModelMeta
     params: ModelParams
+    access_control: Optional[dict] = None
+    is_active: bool = True
 
 
 class ModelsTable:
@@ -138,6 +173,39 @@ class ModelsTable:
         with get_db() as db:
             return [ModelModel.model_validate(model) for model in db.query(Model).all()]
 
+    def get_models(self) -> list[ModelUserResponse]:
+        with get_db() as db:
+            models = []
+            for model in db.query(Model).filter(Model.base_model_id != None).all():
+                user = Users.get_user_by_id(model.user_id)
+                models.append(
+                    ModelUserResponse.model_validate(
+                        {
+                            **ModelModel.model_validate(model).model_dump(),
+                            "user": user.model_dump() if user else None,
+                        }
+                    )
+                )
+            return models
+
+    def get_base_models(self) -> list[ModelModel]:
+        with get_db() as db:
+            return [
+                ModelModel.model_validate(model)
+                for model in db.query(Model).filter(Model.base_model_id == None).all()
+            ]
+
+    def get_models_by_user_id(
+        self, user_id: str, permission: str = "write"
+    ) -> list[ModelUserResponse]:
+        models = self.get_models()
+        return [
+            model
+            for model in models
+            if model.user_id == user_id
+            or has_access(user_id, permission, model.access_control)
+        ]
+
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:
         try:
             with get_db() as db:
@@ -146,6 +214,23 @@ class ModelsTable:
         except Exception:
             return None
 
+    def toggle_model_by_id(self, id: str) -> Optional[ModelModel]:
+        with get_db() as db:
+            try:
+                is_active = db.query(Model).filter_by(id=id).first().is_active
+
+                db.query(Model).filter_by(id=id).update(
+                    {
+                        "is_active": not is_active,
+                        "updated_at": int(time.time()),
+                    }
+                )
+                db.commit()
+
+                return self.get_model_by_id(id)
+            except Exception:
+                return None
+
     def update_model_by_id(self, id: str, model: ModelForm) -> Optional[ModelModel]:
         try:
             with get_db() as db:
@@ -153,7 +238,7 @@ class ModelsTable:
                 result = (
                     db.query(Model)
                     .filter_by(id=id)
-                    .update(model.model_dump(exclude={"id"}, exclude_none=True))
+                    .update(model.model_dump(exclude={"id"}))
                 )
                 db.commit()
 
@@ -169,6 +254,16 @@ class ModelsTable:
         try:
             with get_db() as db:
                 db.query(Model).filter_by(id=id).delete()
+                db.commit()
+
+                return True
+        except Exception:
+            return False
+
+    def delete_all_models(self) -> bool:
+        try:
+            with get_db() as db:
+                db.query(Model).delete()
                 db.commit()
 
                 return True

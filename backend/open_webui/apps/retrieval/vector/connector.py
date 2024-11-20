@@ -16,6 +16,16 @@ match VECTOR_DB:
 
         VECTOR_DB_CLIENT = QdrantClient()
 
+    case "opensearch":
+        from open_webui.apps.retrieval.vector.dbs.opensearch import OpenSearchClient
+
+        VECTOR_DB_CLIENT = OpenSearchClient()
+
+    case "pgvector":
+        from open_webui.apps.retrieval.vector.dbs.pgvector import PgvectorClient
+
+        VECTOR_DB_CLIENT = PgvectorClient()
+
     case _:
         from open_webui.apps.retrieval.vector.dbs.chroma import ChromaClient
 

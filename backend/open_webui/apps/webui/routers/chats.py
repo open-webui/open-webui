@@ -17,7 +17,10 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
+
+
 from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_permission
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -50,9 +53,10 @@ async def get_session_user_chat_list(
 
 @router.delete("/", response_model=bool)
 async def delete_all_user_chats(request: Request, user=Depends(get_verified_user)):
-    if user.role == "user" and not request.app.state.config.USER_PERMISSIONS.get(
-        "chat", {}
-    ).get("deletion", {}):
+
+    if user.role == "user" and not has_permission(
+        user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -181,6 +185,53 @@ async def get_chats_by_folder_id(folder_id: str, user=Depends(get_verified_user)
         ChatResponse(**chat.model_dump())
         for chat in Chats.get_chats_by_folder_ids_and_user_id(folder_ids, user.id)
     ]
+
+
+############################
+# GetPinnedChats
+############################
+
+
+@router.get("/pinned", response_model=list[ChatResponse])
+async def get_user_pinned_chats(user=Depends(get_verified_user)):
+    return [
+        ChatResponse(**chat.model_dump())
+        for chat in Chats.get_pinned_chats_by_user_id(user.id)
+    ]
+
+
+############################
+# GetChats
+############################
+
+
+@router.get("/search", response_model=list[ChatTitleIdResponse])
+async def search_user_chats(
+    text: str, page: Optional[int] = None, user=Depends(get_verified_user)
+):
+    if page is None:
+        page = 1
+
+    limit = 60
+    skip = (page - 1) * limit
+
+    chat_list = [
+        ChatTitleIdResponse(**chat.model_dump())
+        for chat in Chats.get_chats_by_user_id_and_search_text(
+            user.id, text, skip=skip, limit=limit
+        )
+    ]
+
+    # Delete tag if no chat is found
+    words = text.strip().split(" ")
+    if page == 1 and len(words) == 1 and words[0].startswith("tag:"):
+        tag_id = words[0].replace("tag:", "")
+        if len(chat_list) == 0:
+            if Tags.get_tag_by_name_and_user_id(tag_id, user.id):
+                log.debug(f"deleting tag: {tag_id}")
+                Tags.delete_tag_by_name_and_user_id(tag_id, user.id)
+
+    return chat_list
 
 
 ############################
@@ -385,8 +436,8 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
 
         return result
     else:
-        if not request.app.state.config.USER_PERMISSIONS.get("chat", {}).get(
-            "deletion", {}
+        if not has_permission(
+            user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
         ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

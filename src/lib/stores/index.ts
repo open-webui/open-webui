@@ -28,11 +28,11 @@ export const pinnedChats = writable([]);
 export const tags = writable([]);
 
 export const models: Writable<Model[]> = writable([]);
-export const prompts: Writable<Prompt[]> = writable([]);
-export const knowledge: Writable<Document[]> = writable([]);
 
-export const tools = writable([]);
-export const functions = writable([]);
+export const prompts: Writable<null | Prompt[]> = writable(null);
+export const knowledge: Writable<null | Document[]> = writable(null);
+export const tools = writable(null);
+export const functions = writable(null);
 
 export const banners: Writable<Banner[]> = writable([]);
 
@@ -172,6 +172,7 @@ type Config = {
 	features: {
 		auth: boolean;
 		auth_trusted_header: boolean;
+		enable_api_key: boolean;
 		enable_signup: boolean;
 		enable_login_form: boolean;
 		enable_web_search?: boolean;

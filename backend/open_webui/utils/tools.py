@@ -4,7 +4,7 @@ from typing import Awaitable, Callable, get_type_hints
 
 from open_webui.apps.webui.models.tools import Tools
 from open_webui.apps.webui.models.users import UserModel
-from open_webui.apps.webui.utils import load_toolkit_module_by_id
+from open_webui.apps.webui.utils import load_tools_module_by_id
 from open_webui.utils.schemas import json_schema_to_model
 
 log = logging.getLogger(__name__)
@@ -32,15 +32,16 @@ def apply_extra_params_to_tool_function(
 def get_tools(
     webui_app, tool_ids: list[str], user: UserModel, extra_params: dict
 ) -> dict[str, dict]:
-    tools = {}
+    tools_dict = {}
+
     for tool_id in tool_ids:
-        toolkit = Tools.get_tool_by_id(tool_id)
-        if toolkit is None:
+        tools = Tools.get_tool_by_id(tool_id)
+        if tools is None:
             continue
 
         module = webui_app.state.TOOLS.get(tool_id, None)
         if module is None:
-            module, _ = load_toolkit_module_by_id(tool_id)
+            module, _ = load_tools_module_by_id(tool_id)
             webui_app.state.TOOLS[tool_id] = module
 
         extra_params["__id__"] = tool_id
@@ -53,11 +54,19 @@ def get_tools(
                 **Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
             )
 
-        for spec in toolkit.specs:
+        for spec in tools.specs:
             # TODO: Fix hack for OpenAI API
             for val in spec.get("parameters", {}).get("properties", {}).values():
                 if val["type"] == "str":
                     val["type"] = "string"
+
+            # Remove internal parameters
+            spec["parameters"]["properties"] = {
+                key: val
+                for key, val in spec["parameters"]["properties"].items()
+                if not key.startswith("__")
+            }
+
             function_name = spec["name"]
 
             # convert to function that takes only model params and inserts custom params
@@ -77,13 +86,14 @@ def get_tools(
             }
 
             # TODO: if collision, prepend toolkit name
-            if function_name in tools:
-                log.warning(f"Tool {function_name} already exists in another toolkit!")
-                log.warning(f"Collision between {toolkit} and {tool_id}.")
-                log.warning(f"Discarding {toolkit}.{function_name}")
+            if function_name in tools_dict:
+                log.warning(f"Tool {function_name} already exists in another tools!")
+                log.warning(f"Collision between {tools} and {tool_id}.")
+                log.warning(f"Discarding {tools}.{function_name}")
             else:
-                tools[function_name] = tool_dict
-    return tools
+                tools_dict[function_name] = tool_dict
+
+    return tools_dict
 
 
 def doc_to_dict(docstring):

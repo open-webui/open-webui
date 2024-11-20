@@ -75,6 +75,17 @@ class ChatTitleMessagesForm(BaseModel):
     messages: list[dict]
 
 
+class ChatImportForm(ChatForm):
+    meta: Optional[dict] = {}
+    pinned: Optional[bool] = False
+    folder_id: Optional[str] = None
+
+
+class ChatTitleMessagesForm(BaseModel):
+    title: str
+    messages: list[dict]
+
+
 class ChatTitleForm(BaseModel):
     title: str
 
@@ -203,15 +214,22 @@ class ChatTable:
     def update_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
         try:
             with get_db() as db:
-                print("update_shared_chat_by_id")
                 chat = db.get(Chat, chat_id)
-                print(chat)
-                chat.title = chat.title
-                chat.chat = chat.chat
-                db.commit()
-                db.refresh(chat)
+                shared_chat = (
+                    db.query(Chat).filter_by(user_id=f"shared-{chat_id}").first()
+                )
 
-                return self.get_chat_by_id(chat.share_id)
+                if shared_chat is None:
+                    return self.insert_shared_chat_by_chat_id(chat_id)
+
+                shared_chat.title = chat.title
+                shared_chat.chat = chat.chat
+
+                shared_chat.updated_at = int(time.time())
+                db.commit()
+                db.refresh(shared_chat)
+
+                return ChatModel.model_validate(shared_chat)
         except Exception:
             return None
 
@@ -614,6 +632,135 @@ class ChatTable:
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
+
+    def get_chat_tags_by_id_and_user_id(self, id: str, user_id: str) -> list[TagModel]:
+        with get_db() as db:
+            chat = db.get(Chat, id)
+            tags = chat.meta.get("tags", [])
+            return [Tags.get_tag_by_name_and_user_id(tag, user_id) for tag in tags]
+
+    def get_chat_list_by_user_id_and_tag_name(
+        self, user_id: str, tag_name: str, skip: int = 0, limit: int = 50
+    ) -> list[ChatModel]:
+        with get_db() as db:
+            query = db.query(Chat).filter_by(user_id=user_id)
+            tag_id = tag_name.replace(" ", "_").lower()
+
+            print(db.bind.dialect.name)
+            if db.bind.dialect.name == "sqlite":
+                # SQLite JSON1 querying for tags within the meta JSON field
+                query = query.filter(
+                    text(
+                        f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)"
+                    )
+                ).params(tag_id=tag_id)
+            elif db.bind.dialect.name == "postgresql":
+                # PostgreSQL JSON query for tags within the meta JSON field (for `json` type)
+                query = query.filter(
+                    text(
+                        "EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
+                    )
+                ).params(tag_id=tag_id)
+            else:
+                raise NotImplementedError(
+                    f"Unsupported dialect: {db.bind.dialect.name}"
+                )
+
+            all_chats = query.all()
+            print("all_chats", all_chats)
+            return [ChatModel.model_validate(chat) for chat in all_chats]
+
+    def add_chat_tag_by_id_and_user_id_and_tag_name(
+        self, id: str, user_id: str, tag_name: str
+    ) -> Optional[ChatModel]:
+        tag = Tags.get_tag_by_name_and_user_id(tag_name, user_id)
+        if tag is None:
+            tag = Tags.insert_new_tag(tag_name, user_id)
+        try:
+            with get_db() as db:
+                chat = db.get(Chat, id)
+
+                tag_id = tag.id
+                if tag_id not in chat.meta.get("tags", []):
+                    chat.meta = {
+                        **chat.meta,
+                        "tags": list(set(chat.meta.get("tags", []) + [tag_id])),
+                    }
+
+                db.commit()
+                db.refresh(chat)
+                return ChatModel.model_validate(chat)
+        except Exception:
+            return None
+
+    def count_chats_by_tag_name_and_user_id(self, tag_name: str, user_id: str) -> int:
+        with get_db() as db:  # Assuming `get_db()` returns a session object
+            query = db.query(Chat).filter_by(user_id=user_id, archived=False)
+
+            # Normalize the tag_name for consistency
+            tag_id = tag_name.replace(" ", "_").lower()
+
+            if db.bind.dialect.name == "sqlite":
+                # SQLite JSON1 support for querying the tags inside the `meta` JSON field
+                query = query.filter(
+                    text(
+                        f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)"
+                    )
+                ).params(tag_id=tag_id)
+
+            elif db.bind.dialect.name == "postgresql":
+                # PostgreSQL JSONB support for querying the tags inside the `meta` JSON field
+                query = query.filter(
+                    text(
+                        "EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
+                    )
+                ).params(tag_id=tag_id)
+
+            else:
+                raise NotImplementedError(
+                    f"Unsupported dialect: {db.bind.dialect.name}"
+                )
+
+            # Get the count of matching records
+            count = query.count()
+
+            # Debugging output for inspection
+            print(f"Count of chats for tag '{tag_name}':", count)
+
+            return count
+
+    def delete_tag_by_id_and_user_id_and_tag_name(
+        self, id: str, user_id: str, tag_name: str
+    ) -> bool:
+        try:
+            with get_db() as db:
+                chat = db.get(Chat, id)
+                tags = chat.meta.get("tags", [])
+                tag_id = tag_name.replace(" ", "_").lower()
+
+                tags = [tag for tag in tags if tag != tag_id]
+                chat.meta = {
+                    **chat.meta,
+                    "tags": list(set(tags)),
+                }
+                db.commit()
+                return True
+        except Exception:
+            return False
+
+    def delete_all_tags_by_id_and_user_id(self, id: str, user_id: str) -> bool:
+        try:
+            with get_db() as db:
+                chat = db.get(Chat, id)
+                chat.meta = {
+                    **chat.meta,
+                    "tags": [],
+                }
+                db.commit()
+
+                return True
+        except Exception:
+            return False
 
     def get_chat_tags_by_id_and_user_id(self, id: str, user_id: str) -> list[TagModel]:
         with get_db() as db:

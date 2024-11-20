@@ -1,6 +1,6 @@
 <script lang="ts">
+	import { getAllTags } from '$lib/apis/chats';
 	import { tags } from '$lib/stores';
-	import { stringify } from 'postcss';
 	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 	import { fade } from 'svelte/transition';
 
@@ -15,13 +15,14 @@
 	let lastWord = '';
 	$: lastWord = value ? value.split(' ').at(-1) : value;
 
-	let focused = false;
 	let options = [
 		{
 			name: 'tag:',
 			description: $i18n.t('search for tags')
 		}
 	];
+	let focused = false;
+	let loading = false;
 
 	let filteredOptions = options;
 	$: filteredOptions = options.filter((option) => {
@@ -52,6 +53,12 @@
 			})
 		: [];
 
+	const initTags = async () => {
+		loading = true;
+		await tags.set(await getAllTags(localStorage.token));
+		loading = false;
+	};
+
 	const documentClickHandler = (e) => {
 		const searchContainer = document.getElementById('search-container');
 		const chatSearch = document.getElementById('chat-search');
@@ -73,7 +80,7 @@
 	});
 </script>
 
-<div class="px-2 mb-1 flex justify-center space-x-2 relative z-10" id="search-container">
+<div class="px-1 mb-1 flex justify-center space-x-2 relative z-10" id="search-container">
 	<div class="flex w-full rounded-xl" id="chat-search">
 		<div class="self-center pl-3 py-2 rounded-l-xl bg-transparent">
 			<svg
@@ -99,6 +106,7 @@
 			}}
 			on:focus={() => {
 				focused = true;
+				initTags();
 			}}
 			on:keydown={(e) => {
 				if (e.key === 'Enter') {
@@ -182,7 +190,9 @@
 						{/each}
 					</div>
 				{:else if filteredOptions.length > 0}
-					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">Search options</div>
+					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">
+						{$i18n.t('Search options')}
+					</div>
 
 					<div class=" max-h-60 overflow-auto">
 						{#each filteredOptions as option, optionIdx}

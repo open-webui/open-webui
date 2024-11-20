@@ -37,6 +37,7 @@ from open_webui.apps.retrieval.web.serper import search_serper
 from open_webui.apps.retrieval.web.serply import search_serply
 from open_webui.apps.retrieval.web.serpstack import search_serpstack
 from open_webui.apps.retrieval.web.tavily import search_tavily
+from open_webui.apps.retrieval.web.bing import search_bing
 
 
 from open_webui.apps.retrieval.utils import (
@@ -74,6 +75,8 @@ from open_webui.config import (
     RAG_FILE_MAX_SIZE,
     RAG_OPENAI_API_BASE_URL,
     RAG_OPENAI_API_KEY,
+    RAG_OLLAMA_BASE_URL,
+    RAG_OLLAMA_API_KEY,
     RAG_RELEVANCE_THRESHOLD,
     RAG_RERANKING_MODEL,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
@@ -85,6 +88,7 @@ from open_webui.config import (
     RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
     RAG_WEB_SEARCH_ENGINE,
     RAG_WEB_SEARCH_RESULT_COUNT,
+    JINA_API_KEY,
     SEARCHAPI_API_KEY,
     SEARCHAPI_ENGINE,
     SEARXNG_QUERY_URL,
@@ -93,13 +97,20 @@ from open_webui.config import (
     SERPSTACK_API_KEY,
     SERPSTACK_HTTPS,
     TAVILY_API_KEY,
+    BING_SEARCH_V7_ENDPOINT,
+    BING_SEARCH_V7_SUBSCRIPTION_KEY,
     TIKA_SERVER_URL,
     UPLOAD_DIR,
     YOUTUBE_LOADER_LANGUAGE,
+    DEFAULT_LOCALE,
     AppConfig,
 )
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS, DEVICE_TYPE, DOCKER
+from open_webui.env import (
+    SRC_LOG_LEVELS,
+    DEVICE_TYPE,
+    DOCKER,
+)
 from open_webui.utils.misc import (
     calculate_sha256,
     calculate_sha256_string,
@@ -118,7 +129,11 @@ from langchain_core.documents import Document
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
-app = FastAPI()
+app = FastAPI(
+    docs_url="/docs" if ENV == "dev" else None,
+    openapi_url="/openapi.json" if ENV == "dev" else None,
+    redoc_url=None,
+)
 
 app.state.config = AppConfig()
 
@@ -150,6 +165,9 @@ app.state.config.RAG_TEMPLATE = RAG_TEMPLATE
 app.state.config.OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
 app.state.config.OPENAI_API_KEY = RAG_OPENAI_API_KEY
 
+app.state.config.OLLAMA_BASE_URL = RAG_OLLAMA_BASE_URL
+app.state.config.OLLAMA_API_KEY = RAG_OLLAMA_API_KEY
+
 app.state.config.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
 
 app.state.config.YOUTUBE_LOADER_LANGUAGE = YOUTUBE_LOADER_LANGUAGE
@@ -171,6 +189,10 @@ app.state.config.SERPLY_API_KEY = SERPLY_API_KEY
 app.state.config.TAVILY_API_KEY = TAVILY_API_KEY
 app.state.config.SEARCHAPI_API_KEY = SEARCHAPI_API_KEY
 app.state.config.SEARCHAPI_ENGINE = SEARCHAPI_ENGINE
+app.state.config.JINA_API_KEY = JINA_API_KEY
+app.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT
+app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY
+
 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
 app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
 
@@ -182,11 +204,15 @@ def update_embedding_model(
     if embedding_model and app.state.config.RAG_EMBEDDING_ENGINE == "":
         from sentence_transformers import SentenceTransformer
 
-        app.state.sentence_transformer_ef = SentenceTransformer(
-            get_model_path(embedding_model, auto_update),
-            device=DEVICE_TYPE,
-            trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
-        )
+        try:
+            app.state.sentence_transformer_ef = SentenceTransformer(
+                get_model_path(embedding_model, auto_update),
+                device=DEVICE_TYPE,
+                trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
+            )
+        except Exception as e:
+            log.debug(f"Error loading SentenceTransformer: {e}")
+            app.state.sentence_transformer_ef = None
     else:
         app.state.sentence_transformer_ef = None
 
@@ -240,8 +266,16 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.config.RAG_EMBEDDING_ENGINE,
     app.state.config.RAG_EMBEDDING_MODEL,
     app.state.sentence_transformer_ef,
-    app.state.config.OPENAI_API_KEY,
-    app.state.config.OPENAI_API_BASE_URL,
+    (
+        app.state.config.OPENAI_API_BASE_URL
+        if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+        else app.state.config.OLLAMA_BASE_URL
+    ),
+    (
+        app.state.config.OPENAI_API_KEY
+        if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+        else app.state.config.OLLAMA_API_KEY
+    ),
     app.state.config.RAG_EMBEDDING_BATCH_SIZE,
 )
 
@@ -291,6 +325,10 @@ async def get_embedding_config(user=Depends(get_admin_user)):
             "url": app.state.config.OPENAI_API_BASE_URL,
             "key": app.state.config.OPENAI_API_KEY,
         },
+        "ollama_config": {
+            "url": app.state.config.OLLAMA_BASE_URL,
+            "key": app.state.config.OLLAMA_API_KEY,
+        },
     }
 
 
@@ -307,8 +345,14 @@ class OpenAIConfigForm(BaseModel):
     key: str
 
 
+class OllamaConfigForm(BaseModel):
+    url: str
+    key: str
+
+
 class EmbeddingModelUpdateForm(BaseModel):
     openai_config: Optional[OpenAIConfigForm] = None
+    ollama_config: Optional[OllamaConfigForm] = None
     embedding_engine: str
     embedding_model: str
     embedding_batch_size: Optional[int] = 1
@@ -329,6 +373,11 @@ async def update_embedding_config(
             if form_data.openai_config is not None:
                 app.state.config.OPENAI_API_BASE_URL = form_data.openai_config.url
                 app.state.config.OPENAI_API_KEY = form_data.openai_config.key
+
+            if form_data.ollama_config is not None:
+                app.state.config.OLLAMA_BASE_URL = form_data.ollama_config.url
+                app.state.config.OLLAMA_API_KEY = form_data.ollama_config.key
+
             app.state.config.RAG_EMBEDDING_BATCH_SIZE = form_data.embedding_batch_size
 
         update_embedding_model(app.state.config.RAG_EMBEDDING_MODEL)
@@ -337,8 +386,16 @@ async def update_embedding_config(
             app.state.config.RAG_EMBEDDING_ENGINE,
             app.state.config.RAG_EMBEDDING_MODEL,
             app.state.sentence_transformer_ef,
-            app.state.config.OPENAI_API_KEY,
-            app.state.config.OPENAI_API_BASE_URL,
+            (
+                app.state.config.OPENAI_API_BASE_URL
+                if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                else app.state.config.OLLAMA_BASE_URL
+            ),
+            (
+                app.state.config.OPENAI_API_KEY
+                if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                else app.state.config.OLLAMA_API_KEY
+            ),
             app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
 
@@ -350,6 +407,10 @@ async def update_embedding_config(
             "openai_config": {
                 "url": app.state.config.OPENAI_API_BASE_URL,
                 "key": app.state.config.OPENAI_API_KEY,
+            },
+            "ollama_config": {
+                "url": app.state.config.OLLAMA_BASE_URL,
+                "key": app.state.config.OLLAMA_API_KEY,
             },
         }
     except Exception as e:
@@ -411,7 +472,7 @@ async def get_rag_config(user=Depends(get_admin_user)):
             "translation": app.state.YOUTUBE_LOADER_TRANSLATION,
         },
         "web": {
-            "ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            "web_loader_ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             "search": {
                 "enabled": app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "engine": app.state.config.RAG_WEB_SEARCH_ENGINE,
@@ -426,6 +487,9 @@ async def get_rag_config(user=Depends(get_admin_user)):
                 "tavily_api_key": app.state.config.TAVILY_API_KEY,
                 "searchapi_api_key": app.state.config.SEARCHAPI_API_KEY,
                 "seaarchapi_engine": app.state.config.SEARCHAPI_ENGINE,
+                "jina_api_key": app.state.config.JINA_API_KEY,
+                "bing_search_v7_endpoint": app.state.config.BING_SEARCH_V7_ENDPOINT,
+                "bing_search_v7_subscription_key": app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
                 "result_count": app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             },
@@ -468,6 +532,9 @@ class WebSearchConfig(BaseModel):
     tavily_api_key: Optional[str] = None
     searchapi_api_key: Optional[str] = None
     searchapi_engine: Optional[str] = None
+    jina_api_key: Optional[str] = None
+    bing_search_v7_endpoint: Optional[str] = None
+    bing_search_v7_subscription_key: Optional[str] = None
     result_count: Optional[int] = None
     concurrent_requests: Optional[int] = None
 
@@ -514,6 +581,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
 
     if form_data.web is not None:
         app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
+            # Note: When UI "Bypass SSL verification for Websites"=True then ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION=False
             form_data.web.web_loader_ssl_verification
         )
 
@@ -534,6 +602,15 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
         app.state.config.TAVILY_API_KEY = form_data.web.search.tavily_api_key
         app.state.config.SEARCHAPI_API_KEY = form_data.web.search.searchapi_api_key
         app.state.config.SEARCHAPI_ENGINE = form_data.web.search.searchapi_engine
+
+        app.state.config.JINA_API_KEY = form_data.web.search.jina_api_key
+        app.state.config.BING_SEARCH_V7_ENDPOINT = (
+            form_data.web.search.bing_search_v7_endpoint
+        )
+        app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = (
+            form_data.web.search.bing_search_v7_subscription_key
+        )
+
         app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = form_data.web.search.result_count
         app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = (
             form_data.web.search.concurrent_requests
@@ -560,7 +637,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
             "translation": app.state.YOUTUBE_LOADER_TRANSLATION,
         },
         "web": {
-            "ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            "web_loader_ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             "search": {
                 "enabled": app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "engine": app.state.config.RAG_WEB_SEARCH_ENGINE,
@@ -575,6 +652,9 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
                 "serachapi_api_key": app.state.config.SEARCHAPI_API_KEY,
                 "searchapi_engine": app.state.config.SEARCHAPI_ENGINE,
                 "tavily_api_key": app.state.config.TAVILY_API_KEY,
+                "jina_api_key": app.state.config.JINA_API_KEY,
+                "bing_search_v7_endpoint": app.state.config.BING_SEARCH_V7_ENDPOINT,
+                "bing_search_v7_subscription_key": app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
                 "result_count": app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             },
@@ -636,6 +716,23 @@ async def update_query_settings(
 ####################################
 
 
+def _get_docs_info(docs: list[Document]) -> str:
+    docs_info = set()
+
+    # Trying to select relevant metadata identifying the document.
+    for doc in docs:
+        metadata = getattr(doc, "metadata", {})
+        doc_name = metadata.get("name", "")
+        if not doc_name:
+            doc_name = metadata.get("title", "")
+        if not doc_name:
+            doc_name = metadata.get("source", "")
+        if doc_name:
+            docs_info.add(doc_name)
+
+    return ", ".join(docs_info)
+
+
 def save_docs_to_vector_db(
     docs,
     collection_name,
@@ -644,7 +741,9 @@ def save_docs_to_vector_db(
     split: bool = True,
     add: bool = False,
 ) -> bool:
-    log.info(f"save_docs_to_vector_db {docs} {collection_name}")
+    log.info(
+        f"save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
+    )
 
     # Check if entries with the same hash (metadata.hash) already exist
     if metadata and "hash" in metadata:
@@ -726,8 +825,16 @@ def save_docs_to_vector_db(
             app.state.config.RAG_EMBEDDING_ENGINE,
             app.state.config.RAG_EMBEDDING_MODEL,
             app.state.sentence_transformer_ef,
-            app.state.config.OPENAI_API_KEY,
-            app.state.config.OPENAI_API_BASE_URL,
+            (
+                app.state.config.OPENAI_API_BASE_URL
+                if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                else app.state.config.OLLAMA_BASE_URL
+            ),
+            (
+                app.state.config.OPENAI_API_KEY
+                if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                else app.state.config.OLLAMA_API_KEY
+            ),
             app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
 
@@ -954,7 +1061,7 @@ def process_youtube_video(form_data: ProcessUrlForm, user=Depends(get_verified_u
 
         loader = YoutubeLoader.from_youtube_url(
             form_data.url,
-            add_video_info=True,
+            add_video_info=False,
             language=app.state.config.YOUTUBE_LOADER_LANGUAGE,
             translation=app.state.YOUTUBE_LOADER_TRANSLATION,
         )
@@ -1132,7 +1239,20 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
         else:
             raise Exception("No SEARCHAPI_API_KEY found in environment variables")
     elif engine == "jina":
-        return search_jina(query, app.state.config.RAG_WEB_SEARCH_RESULT_COUNT)
+        return search_jina(
+            app.state.config.JINA_API_KEY,
+            query,
+            app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+        )
+    elif engine == "bing":
+        return search_bing(
+            app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
+            app.state.config.BING_SEARCH_V7_ENDPOINT,
+            str(DEFAULT_LOCALE),
+            query,
+            app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+            app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
     else:
         raise Exception("No search engine API key found in environment variables")
 
@@ -1162,8 +1282,12 @@ def process_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
 
         urls = [result.link for result in web_results]
 
-        loader = get_web_loader(urls)
-        docs = loader.load()
+        loader = get_web_loader(
+            urls,
+            verify_ssl=app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            requests_per_second=app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+        )
+        docs = loader.aload()
 
         save_docs_to_vector_db(docs, collection_name, overwrite=True)
 

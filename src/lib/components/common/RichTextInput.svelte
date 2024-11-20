@@ -23,9 +23,11 @@
 	import { keymap } from 'prosemirror-keymap';
 	import { baseKeymap, chainCommands } from 'prosemirror-commands';
 	import { DOMParser, DOMSerializer, Schema, Fragment } from 'prosemirror-model';
+	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
 	export let className = 'input-prose';
 	export let shiftEnter = false;
+	export let largeTextAsFile = false;
 
 	export let id = '';
 	export let value = '';
@@ -412,6 +414,15 @@
 						// Extract plain text from clipboard and paste it without formatting
 						const plainText = event.clipboardData.getData('text/plain');
 						if (plainText) {
+							if (largeTextAsFile) {
+								if (plainText.length > PASTED_TEXT_CHARACTER_LIMIT) {
+									// Dispatch paste event to parent component
+									eventDispatch('paste', { event });
+									event.preventDefault();
+									return true;
+								}
+							}
+
 							const modifiedText = handleTabIndentation(plainText);
 							console.log(modifiedText);
 

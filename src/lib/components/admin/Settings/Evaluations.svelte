@@ -11,7 +11,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Model from './Evaluations/Model.svelte';
-	import ModelModal from './Evaluations/ModelModal.svelte';
+	import ArenaModelModal from './Evaluations/ArenaModelModal.svelte';
 	import { getConfig, updateConfig } from '$lib/apis/evaluations';
 
 	const i18n = getContext('i18n');
@@ -65,7 +65,7 @@
 	});
 </script>
 
-<ModelModal
+<ArenaModelModal
 	bind:show={showAddModel}
 	on:submit={async (e) => {
 		addModelHandler(e.detail);
