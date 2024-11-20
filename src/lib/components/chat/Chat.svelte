@@ -663,7 +663,8 @@
 				role: m.role,
 				content: m.content,
 				info: m.info ? m.info : undefined,
-				timestamp: m.timestamp
+				timestamp: m.timestamp,
+				...(m.citations ? { citations: m.citations } : {})
 			})),
 			chat_id: chatId,
 			session_id: $socket?.id,
@@ -716,7 +717,8 @@
 				role: m.role,
 				content: m.content,
 				info: m.info ? m.info : undefined,
-				timestamp: m.timestamp
+				timestamp: m.timestamp,
+				...(m.citations ? { citations: m.citations } : {})
 			})),
 			...(event ? { event: event } : {}),
 			chat_id: chatId,
