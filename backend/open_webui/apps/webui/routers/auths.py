@@ -738,8 +738,8 @@ async def update_ldap_config(
 
 # create api key
 @router.post("/api_key", response_model=ApiKey)
-async def create_api_key(request: Request, user=Depends(get_current_user)):
-    if not request.app.config.state.ENABLE_API_KEY:
+async def generate_api_key(request: Request, user=Depends(get_current_user)):
+    if not request.app.state.config.ENABLE_API_KEY:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.API_KEY_CREATION_NOT_ALLOWED,

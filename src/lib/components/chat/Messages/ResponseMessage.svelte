@@ -340,19 +340,16 @@
 
 	let feedbackLoading = false;
 
-	const feedbackHandler = async (
-		rating: number | null = null,
-		annotation: object | null = null
-	) => {
+	const feedbackHandler = async (rating: number | null = null, details: object | null = null) => {
 		feedbackLoading = true;
-		console.log('Feedback', rating, annotation);
+		console.log('Feedback', rating, details);
 
 		const updatedMessage = {
 			...message,
 			annotation: {
 				...(message?.annotation ?? {}),
 				...(rating !== null ? { rating: rating } : {}),
-				...(annotation ? annotation : {})
+				...(details ? details : {})
 			}
 		};
 
@@ -429,7 +426,7 @@
 
 		await tick();
 
-		if (!annotation) {
+		if (!details) {
 			showRateComment = true;
 
 			if (!updatedMessage.annotation?.tags) {
@@ -1194,9 +1191,7 @@
 							bind:show={showRateComment}
 							on:save={async (e) => {
 								await feedbackHandler(null, {
-									tags: e.detail.tags,
-									comment: e.detail.comment,
-									reason: e.detail.reason
+									...e.detail
 								});
 							}}
 						/>
