@@ -1060,10 +1060,9 @@ def process_youtube_video(form_data: ProcessUrlForm, user=Depends(get_verified_u
             collection_name = calculate_sha256_string(form_data.url)[:63]
 
         loader = YoutubeLoader.from_youtube_url(
-            form_data.url,
-            language=app.state.config.YOUTUBE_LOADER_LANGUAGE,
-            translation=app.state.YOUTUBE_LOADER_TRANSLATION,
+            form_data.url, language=app.state.config.YOUTUBE_LOADER_LANGUAGE
         )
+
         docs = loader.load()
         content = " ".join([doc.page_content for doc in docs])
         log.debug(f"text_content: {content}")
