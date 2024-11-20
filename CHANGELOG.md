@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2024-11-20
+
+### Fixed
+
+- **📁 Knowledge Files Visibility Issue**: Resolved the bug preventing individual files in knowledge collections from displaying when referenced from `#`.
+- **🔗 OpenAI Endpoint Prefix**: Fixed the issue where certain OpenAI connections that deviate from the official API spec weren’t working correctly with prefixes.
+- **⚔️ Arena Model Access Control**: Corrected an issue where arena model access control settings were not being saved.
+- **🔧 Usage Capability Selector**: Fixed the broken usage capabilities selector in the model editor.
+
 ## [0.4.1] - 2024-11-19
 
 ### Added
