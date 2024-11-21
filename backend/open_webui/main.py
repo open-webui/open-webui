@@ -402,16 +402,16 @@ def update_body_request(request: Request, body: dict) -> None:
     return None
 
 
-def extract_json(binary: bytes) -> dict:
+def extract_json(binary: bytes) -> Optional[dict]:
     try:
         s = binary.decode("utf-8")
         return json.loads(s[s.find("{") : s.rfind("}") + 1])
-    except Exception as e:
+    except Exception:
         return None
 
 
 def fill_with_delta(fcall_dict: dict, delta: dict) -> None:
-    if not "delta" in delta["choices"][0]:
+    if "delta" not in delta["choices"][0]:
         return
     j = delta["choices"][0]["delta"]["tool_calls"][0]
     if "id" in j:
@@ -428,13 +428,10 @@ async def handle_streaming_response(
     response: Response,
     tools: dict,
     data_items: list,
-    call_next: Callable,
     user: UserModel,
 ) -> StreamingResponse:
-
     content_type = response.headers["Content-Type"]
     is_openai = "text/event-stream" in content_type
-    is_ollama = "application/x-ndjson" in content_type
 
     def wrap_item(item):
         return f"data: {item}\n\n" if is_openai else f"{item}\n"
@@ -455,8 +452,8 @@ async def handle_streaming_response(
 
                 if (
                     peek_json is None
-                    or not "choices" in peek_json
-                    or not "tool_calls" in peek_json["choices"][0]["delta"]
+                    or "choices" not in peek_json
+                    or "tool_calls" not in peek_json["choices"][0]["delta"]
                 ):
                     yield peek
                     continue
@@ -481,8 +478,8 @@ async def handle_streaming_response(
 
                     if (
                         delta is None
-                        or not "choices" in delta
-                        or not "tool_calls" in delta["choices"][0]["delta"]
+                        or "choices" not in delta
+                        or "tool_calls" not in delta["choices"][0]["delta"]
                         or delta["choices"][0].get("finish_reason", None) is not None
                     ):
                         continue
@@ -585,7 +582,6 @@ async def handle_nonstreaming_response(
     response: Response,
     tools: dict,
     user: UserModel,
-    data_items: list,
     models,
 ) -> JSONResponse:
     # It only should be one response since we are in the non streaming scenario
@@ -828,11 +824,11 @@ async def chat_completion_files_handler(
 
         try:
             queries_response = json.loads(queries_response)
-        except Exception as e:
+        except Exception:
             queries_response = {"queries": []}
 
         queries = queries_response.get("queries", [])
-    except Exception as e:
+    except Exception:
         queries = []
 
     if len(queries) == 0:
@@ -1020,7 +1016,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                 and context_string.strip() == ""
             ):
                 log.debug(
-                    f"With a 0 relevancy threshold for RAG, the context cannot be empty"
+                    "With a 0 relevancy threshold for RAG, the context cannot be empty"
                 )
 
             # Workaround for Ollama 2.0+ system prompt issue
@@ -1048,7 +1044,6 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
 
         if not body["metadata"]["native_tool_call"]:
-
             if not isinstance(response, StreamingResponse):
                 return response
             content_type = response.headers["Content-Type"]
@@ -1074,10 +1069,10 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
         else:
             if not body.get("stream", False):
                 return await handle_nonstreaming_response(
-                    request, response, tools, user, data_items, models
+                    request, response, tools, user, models
                 )
             return await handle_streaming_response(
-                request, response, tools, data_items, call_next, user
+                request, response, tools, data_items, user
             )
 
     async def _receive(self, body: bytes):
@@ -1656,7 +1651,6 @@ async def generate_chat_completions(
 
 @app.post("/api/chat/completed")
 async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
-
     model_list = await get_all_models()
     models = {model["id"]: model for model in model_list}
 
@@ -2192,13 +2186,13 @@ async def generate_queries(form_data: dict, user=Depends(get_verified_user)):
         if not app.state.config.ENABLE_SEARCH_QUERY_GENERATION:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Search query generation is disabled",
+                detail="Search query generation is disabled",
             )
     elif type == "retrieval":
         if not app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Query generation is disabled",
+                detail="Query generation is disabled",
             )
 
     model_list = await get_all_models()
@@ -2220,8 +2214,6 @@ async def generate_queries(form_data: dict, user=Depends(get_verified_user)):
         models,
     )
     print(task_model_id)
-
-    model = models[task_model_id]
 
     if app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE != "":
         template = app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE
@@ -2283,8 +2275,6 @@ async def generate_emoji(form_data: dict, user=Depends(get_verified_user)):
         models,
     )
     print(task_model_id)
-
-    model = models[task_model_id]
 
     template = '''
 Your task is to reflect the speaker's likely facial expression through a fitting emoji. Interpret emotions from the message and reflect their facial expression using fitting, diverse emojis (e.g., 😊, 😢, 😡, 😱).
@@ -2359,8 +2349,6 @@ async def generate_moa_response(form_data: dict, user=Depends(get_verified_user)
         models,
     )
     print(task_model_id)
-
-    model = models[task_model_id]
 
     template = """You have been provided with a set of responses from various models to the latest user query: "{{prompt}}"
 

@@ -837,6 +837,7 @@ async def generate_ollama_batch_embeddings(
 class GenerateCompletionForm(BaseModel):
     model: str
     prompt: str
+    suffix: Optional[str] = None
     images: Optional[list[str]] = None
     format: Optional[str] = None
     options: Optional[dict] = None
