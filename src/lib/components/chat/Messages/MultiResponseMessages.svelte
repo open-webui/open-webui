@@ -25,12 +25,18 @@
 	export let isLastMessage;
 	export let readOnly = false;
 
+	export let updateChat: Function;
 	export let editMessage: Function;
+	export let saveMessage: Function;
 	export let rateMessage: Function;
+	export let actionMessage: Function;
 
+	export let submitMessage: Function;
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
 	export let mergeResponses: Function;
+
+	export let triggerScroll: Function;
 
 	const dispatch = createEventDispatcher();
 
@@ -46,7 +52,7 @@
 		}
 	}
 
-	const showPreviousMessage = (modelIdx) => {
+	const showPreviousMessage = async (modelIdx) => {
 		groupedMessageIdsIdx[modelIdx] = Math.max(0, groupedMessageIdsIdx[modelIdx] - 1);
 
 		let messageId = groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]];
@@ -60,10 +66,13 @@
 		}
 
 		history.currentId = messageId;
-		dispatch('change');
+
+		await tick();
+		await updateChat();
+		triggerScroll();
 	};
 
-	const showNextMessage = (modelIdx) => {
+	const showNextMessage = async (modelIdx) => {
 		groupedMessageIdsIdx[modelIdx] = Math.min(
 			groupedMessageIds[modelIdx].messageIds.length - 1,
 			groupedMessageIdsIdx[modelIdx] + 1
@@ -80,7 +89,10 @@
 		}
 
 		history.currentId = messageId;
-		dispatch('change');
+
+		await tick();
+		await updateChat();
+		triggerScroll();
 	};
 
 	const initHandler = async () => {
@@ -182,7 +194,7 @@
 							: `border-gray-50 dark:border-gray-850 border-dashed ${
 									$mobile ? 'min-w-full' : 'min-w-80'
 								}`} transition-all p-5 rounded-2xl"
-						on:click={() => {
+						on:click={async () => {
 							if (messageId != _messageId) {
 								let currentMessageId = _messageId;
 								let messageChildrenIds = history.messages[currentMessageId].childrenIds;
@@ -191,7 +203,10 @@
 									messageChildrenIds = history.messages[currentMessageId].childrenIds;
 								}
 								history.currentId = currentMessageId;
-								dispatch('change');
+
+								await tick();
+								await updateChat();
+								triggerScroll();
 							}
 						}}
 					>
@@ -205,26 +220,18 @@
 									siblings={groupedMessageIds[modelIdx].messageIds}
 									showPreviousMessage={() => showPreviousMessage(modelIdx)}
 									showNextMessage={() => showNextMessage(modelIdx)}
-									{rateMessage}
+									{updateChat}
 									{editMessage}
+									{saveMessage}
+									{rateMessage}
+									{actionMessage}
+									{submitMessage}
 									{continueResponse}
 									regenerateResponse={async (message) => {
 										regenerateResponse(message);
 										await tick();
 										groupedMessageIdsIdx[modelIdx] =
 											groupedMessageIds[modelIdx].messageIds.length - 1;
-									}}
-									on:submit={async (e) => {
-										dispatch('submit', e.detail);
-									}}
-									on:action={async (e) => {
-										dispatch('action', e.detail);
-									}}
-									on:update={async (e) => {
-										dispatch('update', e.detail);
-									}}
-									on:save={async (e) => {
-										dispatch('save', e.detail);
 									}}
 									{readOnly}
 								/>

@@ -51,7 +51,10 @@ class StorageProvider:
 
         try:
             self.s3_client.upload_file(file_path, self.bucket_name, filename)
-            return open(file_path, "rb").read(), file_path
+            return (
+                open(file_path, "rb").read(),
+                "s3://" + self.bucket_name + "/" + filename,
+            )
         except ClientError as e:
             raise RuntimeError(f"Error uploading file to S3: {e}")
 

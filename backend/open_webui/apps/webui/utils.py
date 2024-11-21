@@ -63,7 +63,7 @@ def replace_imports(content):
     return content
 
 
-def load_toolkit_module_by_id(toolkit_id, content=None):
+def load_tools_module_by_id(toolkit_id, content=None):
 
     if content is None:
         tool = Tools.get_tool_by_id(toolkit_id)

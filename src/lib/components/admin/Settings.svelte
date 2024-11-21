@@ -2,11 +2,11 @@
 	import { getContext, tick, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
+	import { config } from '$lib/stores';
+	import { getBackendConfig } from '$lib/apis';
 	import Database from './Settings/Database.svelte';
 
 	import General from './Settings/General.svelte';
-	import Users from './Settings/Users.svelte';
-
 	import Pipelines from './Settings/Pipelines.svelte';
 	import Audio from './Settings/Audio.svelte';
 	import Images from './Settings/Images.svelte';
@@ -15,8 +15,7 @@
 	import Connections from './Settings/Connections.svelte';
 	import Documents from './Settings/Documents.svelte';
 	import WebSearch from './Settings/WebSearch.svelte';
-	import { config } from '$lib/stores';
-	import { getBackendConfig } from '$lib/apis';
+
 	import ChartBar from '../icons/ChartBar.svelte';
 	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
 	import Evaluations from './Settings/Evaluations.svelte';
@@ -39,16 +38,16 @@
 	});
 </script>
 
-<div class="flex flex-col lg:flex-row w-full h-full py-2 lg:space-x-4">
+<div class="flex flex-col lg:flex-row w-full h-full pb-2 lg:space-x-4">
 	<div
 		id="admin-settings-tabs-container"
-		class="tabs flex flex-row overflow-x-auto space-x-1 max-w-full lg:space-x-0 lg:space-y-1 lg:flex-col lg:flex-none lg:w-44 dark:text-gray-200 text-xs text-left scrollbar-none"
+		class="tabs flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
 	>
 		<button
-			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
 			'general'
-				? 'bg-gray-100 dark:bg-gray-800'
-				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'general';
 			}}
@@ -71,34 +70,10 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
-			'users'
-				? 'bg-gray-100 dark:bg-gray-800'
-				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
-			on:click={() => {
-				selectedTab = 'users';
-			}}
-		>
-			<div class=" self-center mr-2">
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 16 16"
-					fill="currentColor"
-					class="w-4 h-4"
-				>
-					<path
-						d="M8 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM3.156 11.763c.16-.629.44-1.21.813-1.72a2.5 2.5 0 0 0-2.725 1.377c-.136.287.102.58.418.58h1.449c.01-.077.025-.156.045-.237ZM12.847 11.763c.02.08.036.16.046.237h1.446c.316 0 .554-.293.417-.579a2.5 2.5 0 0 0-2.722-1.378c.374.51.653 1.09.813 1.72ZM14 7.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM3.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM5 13c-.552 0-1.013-.455-.876-.99a4.002 4.002 0 0 1 7.753 0c.136.535-.324.99-.877.99H5Z"
-					/>
-				</svg>
-			</div>
-			<div class=" self-center">{$i18n.t('Users')}</div>
-		</button>
-
-		<button
-			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'connections'
-				? 'bg-gray-100 dark:bg-gray-800'
-				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'connections';
 			}}
@@ -119,10 +94,10 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'models'
-				? 'bg-gray-100 dark:bg-gray-800'
-				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'models';
 			}}
@@ -145,10 +120,10 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'evaluations'
-				? 'bg-gray-100 dark:bg-gray-800'
-				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'evaluations';
 			}}
@@ -160,10 +135,10 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'documents'
-				? 'bg-gray-100 dark:bg-gray-800'
-				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'documents';
 			}}
@@ -190,10 +165,10 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'web'
-				? 'bg-gray-100 dark:bg-gray-800'
-				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'web';
 			}}
@@ -214,10 +189,10 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'interface'
-				? 'bg-gray-100 dark:bg-gray-800'
-				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'interface';
 			}}
@@ -240,10 +215,10 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'audio'
-				? 'bg-gray-100 dark:bg-gray-800'
-				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'audio';
 			}}
@@ -267,10 +242,10 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'images'
-				? 'bg-gray-100 dark:bg-gray-800'
-				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'images';
 			}}
@@ -293,10 +268,10 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'pipelines'
-				? 'bg-gray-100 dark:bg-gray-800'
-				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'pipelines';
 			}}
@@ -323,10 +298,10 @@
 		</button>
 
 		<button
-			class="px-2.5 py-2 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'db'
-				? 'bg-gray-100 dark:bg-gray-800'
-				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'db';
 			}}
@@ -351,7 +326,7 @@
 		</button>
 	</div>
 
-	<div class="flex-1 mt-3 lg:mt-0 overflow-y-scroll">
+	<div class="flex-1 mt-3 lg:mt-0 overflow-y-scroll pr-1 scrollbar-hidden">
 		{#if selectedTab === 'general'}
 			<General
 				saveHandler={async () => {
@@ -359,12 +334,6 @@
 
 					await tick();
 					await config.set(await getBackendConfig());
-				}}
-			/>
-		{:else if selectedTab === 'users'}
-			<Users
-				saveHandler={() => {
-					toast.success($i18n.t('Settings saved successfully!'));
 				}}
 			/>
 		{:else if selectedTab === 'connections'}
