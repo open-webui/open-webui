@@ -140,15 +140,18 @@ class ToolsTable:
 
     def get_tools(self) -> list[ToolUserResponse]:
         with get_db() as db:
-            return [
-                ToolUserResponse.model_validate(
-                    {
-                        **ToolModel.model_validate(tool).model_dump(),
-                        "user": Users.get_user_by_id(tool.user_id).model_dump(),
-                    }
+            tools = []
+            for tool in db.query(Tool).order_by(Tool.updated_at.desc()).all():
+                user = Users.get_user_by_id(tool.user_id)
+                tools.append(
+                    ToolUserResponse.model_validate(
+                        {
+                            **ToolModel.model_validate(tool).model_dump(),
+                            "user": user.model_dump() if user else None,
+                        }
+                    )
                 )
-                for tool in db.query(Tool).order_by(Tool.updated_at.desc()).all()
-            ]
+            return tools
 
     def get_tools_by_user_id(
         self, user_id: str, permission: str = "write"

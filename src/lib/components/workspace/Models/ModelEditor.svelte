@@ -71,7 +71,8 @@
 	let params = {};
 	let capabilities = {
 		vision: true,
-		usage: undefined
+		usage: undefined,
+		citations: true
 	};
 
 	let knowledge = [];
@@ -209,9 +210,6 @@
 				}
 			});
 			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
-			if (model?.owned_by === 'openai') {
-				capabilities.usage = false;
-			}
 
 			if ('access_control' in model) {
 				accessControl = model.access_control;

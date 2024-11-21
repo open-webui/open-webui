@@ -266,7 +266,7 @@
 
 							<div class="flex gap-1 text-xs overflow-hidden">
 								<div class="line-clamp-1">
-									{#if model?.meta?.description.trim()}
+									{#if (model?.meta?.description ?? '').trim()}
 										{model?.meta?.description}
 									{:else}
 										{model.id}
@@ -279,10 +279,16 @@
 
 				<div class="flex justify-between items-center -mb-0.5 px-0.5">
 					<div class=" text-xs mt-0.5">
-						<Tooltip content={model?.user?.email} className="flex shrink-0" placement="top-start">
+						<Tooltip
+							content={model?.user?.email ?? $i18n.t('Deleted User')}
+							className="flex shrink-0"
+							placement="top-start"
+						>
 							<div class="shrink-0 text-gray-500">
 								{$i18n.t('By {{name}}', {
-									name: capitalizeFirstLetter(model?.user?.name ?? model?.user?.email)
+									name: capitalizeFirstLetter(
+										model?.user?.name ?? model?.user?.email ?? $i18n.t('Deleted User')
+									)
 								})}
 							</div>
 						</Tooltip>

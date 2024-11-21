@@ -22,7 +22,7 @@
 	});
 </script>
 
-<Modal bind:show>
+<Modal bind:show size="lg">
 	<div class="px-5 pt-4 dark:text-gray-300 text-gray-700">
 		<div class="flex justify-between items-start">
 			<div class="text-xl font-semibold">
@@ -59,7 +59,7 @@
 	</div>
 
 	<div class=" w-full p-4 px-5 text-gray-700 dark:text-gray-100">
-		<div class=" overflow-y-scroll max-h-80 scrollbar-hidden">
+		<div class=" overflow-y-scroll max-h-96 scrollbar-hidden">
 			<div class="mb-3">
 				{#if changelog}
 					{#each Object.keys(changelog) as version}
@@ -111,7 +111,7 @@
 					await updateUserSettings(localStorage.token, { ui: $settings });
 					show = false;
 				}}
-				class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
+				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			>
 				<span class="relative">{$i18n.t("Okay, Let's Go!")}</span>
 			</button>

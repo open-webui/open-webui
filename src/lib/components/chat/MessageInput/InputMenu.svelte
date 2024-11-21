@@ -80,7 +80,9 @@
 									placement="top-start"
 									className="flex flex-1 gap-2 items-center"
 								>
-									<WrenchSolid />
+									<div class="flex-shrink-0">
+										<WrenchSolid />
+									</div>
 
 									<div class=" truncate">{tools[toolId].name}</div>
 								</Tooltip>

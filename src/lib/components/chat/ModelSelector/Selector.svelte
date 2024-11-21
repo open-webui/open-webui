@@ -320,12 +320,17 @@
 								<div class="flex items-center min-w-fit">
 									<div class="line-clamp-1">
 										<div class="flex items-center min-w-fit">
-											<img
-												src={item.model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
-												alt="Model"
-												class="rounded-full size-5 flex items-center mr-2"
-											/>
-											{item.label}
+											<Tooltip
+												content={$user?.role === 'admin' ? (item?.value ?? '') : ''}
+												placement="top-start"
+											>
+												<img
+													src={item.model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
+													alt="Model"
+													class="rounded-full size-5 flex items-center mr-2"
+												/>
+												{item.label}
+											</Tooltip>
 										</div>
 									</div>
 									{#if item.model.owned_by === 'ollama' && (item.model.ollama?.details?.parameter_size ?? '') !== ''}
