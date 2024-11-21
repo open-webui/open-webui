@@ -11,12 +11,18 @@
 
 	import { Editor } from '@tiptap/core';
 
+	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 	import Placeholder from '@tiptap/extension-placeholder';
 	import Highlight from '@tiptap/extension-highlight';
 	import Typography from '@tiptap/extension-typography';
 	import StarterKit from '@tiptap/starter-kit';
 
+	import { all, createLowlight } from 'lowlight';
+
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
+
+	// create a lowlight instance with all languages loaded
+	const lowlight = createLowlight(all);
 
 	export let className = 'input-prose';
 	export let placeholder = 'Type here...';
@@ -109,7 +115,15 @@
 	onMount(() => {
 		editor = new Editor({
 			element: element,
-			extensions: [StarterKit, Highlight, Typography, Placeholder.configure({ placeholder })],
+			extensions: [
+				StarterKit,
+				CodeBlockLowlight.configure({
+					lowlight
+				}),
+				Highlight,
+				Typography,
+				Placeholder.configure({ placeholder })
+			],
 			content: marked.parse(value),
 			autofocus: true,
 			onTransaction: () => {
@@ -144,10 +158,22 @@
 						}
 
 						if (messageInput) {
+							if (event.key === 'Enter') {
+								// Check if the current selection is inside a code block
+								const { state } = view;
+								const { $head } = state.selection;
+								const isInCodeBlock = $head.parent.type.name === 'codeBlock';
+
+								if (isInCodeBlock) {
+									return false; // Prevent Enter action inside a code block
+								}
+							}
+
 							// Handle shift + Enter for a line break
 							if (shiftEnter) {
 								if (event.key === 'Enter' && event.shiftKey) {
 									editor.commands.setHardBreak(); // Insert a hard break
+									view.dispatch(view.state.tr.scrollIntoView()); // Move viewport to the cursor
 									event.preventDefault();
 									return true;
 								}

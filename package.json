@@ -58,6 +58,7 @@
 		"@pyscript/core": "^0.4.32",
 		"@sveltejs/adapter-node": "^2.0.0",
 		"@tiptap/core": "^2.10.0",
+		"@tiptap/extension-code-block-lowlight": "^2.10.0",
 		"@tiptap/extension-highlight": "^2.10.0",
 		"@tiptap/extension-placeholder": "^2.10.0",
 		"@tiptap/extension-typography": "^2.10.0",
