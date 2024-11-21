@@ -159,13 +159,30 @@
 
 						if (messageInput) {
 							if (event.key === 'Enter') {
-								// Check if the current selection is inside a code block
+								// Check if the current selection is inside a structured block (like codeBlock or list)
 								const { state } = view;
 								const { $head } = state.selection;
-								const isInCodeBlock = $head.parent.type.name === 'codeBlock';
 
-								if (isInCodeBlock) {
-									return false; // Prevent Enter action inside a code block
+								// Recursive function to check ancestors for specific node types
+								function isInside(nodeTypes: string[]): boolean {
+									let currentNode = $head;
+									while (currentNode) {
+										if (nodeTypes.includes(currentNode.parent.type.name)) {
+											return true;
+										}
+										if (!currentNode.depth) break; // Stop if we reach the top
+										currentNode = state.doc.resolve(currentNode.before()); // Move to the parent node
+									}
+									return false;
+								}
+
+								const isInCodeBlock = isInside(['codeBlock']);
+								const isInList = isInside(['listItem', 'bulletList', 'orderedList']);
+								const isInHeading = isInside(['heading']);
+
+								if (isInCodeBlock || isInList || isInHeading) {
+									// Let ProseMirror handle the normal Enter behavior
+									return false;
 								}
 							}
 
@@ -183,14 +200,12 @@
 									return true;
 								}
 							}
-
 							if (event.key === 'Enter') {
 								eventDispatch('enter', { event });
 								event.preventDefault();
 								return true;
 							}
 						}
-
 						eventDispatch('keydown', { event });
 						return false;
 					},
