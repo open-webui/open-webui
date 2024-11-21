@@ -16,6 +16,8 @@ log = logging.getLogger(__name__)
 def apply_extra_params_to_tool_function(
     function: Callable, extra_params: dict
 ) -> Callable[..., Awaitable]:
+    sig = inspect.signature(function)
+    extra_params = {k: v for k, v in extra_params.items() if k in sig.parameters}
     partial_func = partial(function, **extra_params)
     if inspect.iscoroutinefunction(function):
         update_wrapper(partial_func, function)
