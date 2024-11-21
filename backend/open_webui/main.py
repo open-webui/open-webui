@@ -1020,7 +1020,7 @@ async def get_all_base_models():
     return models
 
 
-@cached(ttl=1)
+@cached(ttl=3)
 async def get_all_models():
     models = await get_all_base_models()
 
