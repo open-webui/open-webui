@@ -1292,7 +1292,7 @@ BRAVE_SEARCH_API_KEY = PersistentConfig(
 
 MOJEEK_SEARCH_API_KEY = PersistentConfig(
     "MOJEEK_SEARCH_API_KEY",
-    "rag.web.search.MOJEEK_search_api_key",
+    "rag.web.search.mojeek_search_api_key",
     os.getenv("MOJEEK_SEARCH_API_KEY", ""),
 )
 
