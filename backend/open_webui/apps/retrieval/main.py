@@ -598,7 +598,9 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
         app.state.config.BRAVE_SEARCH_API_KEY = (
             form_data.web.search.brave_search_api_key
         )
-        app.state.config.MOJEEK_SEARCH_API_KEY = form_data.web.search.mojeek_search_api_key
+        app.state.config.MOJEEK_SEARCH_API_KEY = (
+            form_data.web.search.mojeek_search_api_key
+        )
         app.state.config.SERPSTACK_API_KEY = form_data.web.search.serpstack_api_key
         app.state.config.SERPSTACK_HTTPS = form_data.web.search.serpstack_https
         app.state.config.SERPER_API_KEY = form_data.web.search.serper_api_key

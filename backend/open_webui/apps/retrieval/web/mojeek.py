@@ -22,7 +22,7 @@ def search_mojeek(
     headers = {
         "Accept": "application/json",
     }
-    params = {"q": query, "api_key": api_key, 'fmt': 'json', 't': count}
+    params = {"q": query, "api_key": api_key, "fmt": "json", "t": count}
 
     response = requests.get(url, headers=headers, params=params)
     response.raise_for_status()
@@ -31,7 +31,6 @@ def search_mojeek(
     print(results)
     if filter_list:
         results = get_filtered_results(results, filter_list)
-
 
     return [
         SearchResult(
