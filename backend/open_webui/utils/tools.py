@@ -109,9 +109,12 @@ def parse_docstring(docstring):
 
     for line in docstring.splitlines():
         match = param_pattern.match(line.strip())
-        if match:
-            param_name, param_description = match.groups()
-            param_descriptions[param_name] = param_description
+        if not match:
+            continue
+        param_name, param_description = match.groups()
+        if param_name.startswith("__"):
+            continue
+        param_descriptions[param_name] = param_description
 
     return param_descriptions
 
