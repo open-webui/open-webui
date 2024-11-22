@@ -698,12 +698,13 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                 if "document" in source:
                     for doc_idx, doc_context in enumerate(source["document"]):
                         metadata = source.get("metadata")
+                        doc_source_id = None
 
                         if metadata:
                             doc_source_id = metadata[doc_idx].get("source", source_id)
 
                         if source_id:
-                            context_string += f"<source><source_id>{doc_source_id}</source_id><source_context>{doc_context}</source_context></source>\n"
+                            context_string += f"<source><source_id>{doc_source_id if doc_source_id is not None else source_id}</source_id><source_context>{doc_context}</source_context></source>\n"
                         else:
                             # If there is no source_id, then do not include the source_id tag
                             context_string += f"<source><source_context>{doc_context}</source_context></source>\n"
