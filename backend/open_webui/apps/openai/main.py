@@ -302,6 +302,8 @@ async def get_all_models_responses() -> list:
                     }
 
                     tasks.append(asyncio.ensure_future(asyncio.sleep(0, model_list)))
+            else:
+                tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
 
     responses = await asyncio.gather(*tasks)
 
