@@ -117,7 +117,13 @@
 	};
 
 	onMount(() => {
-		const content = marked.parse(value);
+		let content = '';
+		try {
+			content = marked.parse(value);
+		} catch (error) {
+			console.error('Error parsing markdown content:', error);
+		}
+
 		editor = new Editor({
 			element: element,
 			extensions: [
