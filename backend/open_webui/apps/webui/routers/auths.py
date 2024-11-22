@@ -245,11 +245,13 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                         else request.app.state.config.DEFAULT_USER_ROLE
                     )
 
+                    picture_url = "/user.png"
+
                     user = Auths.insert_new_auth(
                         mail,
                         str(uuid.uuid4()),
                         cn,
-                        None,
+                        picture_url,
                         role,
                     )
 
