@@ -255,6 +255,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                         role,
                     )
 
+
                     if not user:
                         raise HTTPException(
                             500, detail=ERROR_MESSAGES.CREATE_USER_ERROR
