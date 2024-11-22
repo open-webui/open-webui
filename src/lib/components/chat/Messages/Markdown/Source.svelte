@@ -14,7 +14,7 @@
 </script>
 
 <button
-	class="text-xs font-medium px-1.5 py-0.5 dark:bg-white/5 dark:hover:bg-white/10 bg-black/5 hover:bg-black/10 transition rounded-lg"
+	class="text-xs font-medium px-2 py-0.5 dark:bg-white/5 dark:text-white/50 dark:hover:text-white bg-gray-50 text-black/60 hover:text-black transition rounded-lg"
 	on:click={() => {
 		onClick(id);
 	}}
