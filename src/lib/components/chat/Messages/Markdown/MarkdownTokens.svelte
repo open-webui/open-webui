@@ -25,6 +25,7 @@
 	export let top = true;
 
 	export let save = false;
+	export let onSourceClick: Function = () => {};
 
 	const headerComponent = (depth: number) => {
 		return 'h' + depth;
@@ -62,7 +63,7 @@
 		<hr />
 	{:else if token.type === 'heading'}
 		<svelte:element this={headerComponent(token.depth)}>
-			<MarkdownInlineTokens id={`${id}-${tokenIdx}-h`} tokens={token.tokens} />
+			<MarkdownInlineTokens id={`${id}-${tokenIdx}-h`} tokens={token.tokens} {onSourceClick} />
 		</svelte:element>
 	{:else if token.type === 'code'}
 		{#if token.raw.includes('```')}
@@ -108,6 +109,7 @@
 										<MarkdownInlineTokens
 											id={`${id}-${tokenIdx}-header-${headerIdx}`}
 											tokens={header.tokens}
+											{onSourceClick}
 										/>
 									</div>
 								</th>
@@ -126,6 +128,7 @@
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
 												tokens={cell.tokens}
+												{onSourceClick}
 											/>
 										</div>
 									</td>
@@ -205,19 +208,27 @@
 		></iframe>
 	{:else if token.type === 'paragraph'}
 		<p>
-			<MarkdownInlineTokens id={`${id}-${tokenIdx}-p`} tokens={token.tokens ?? []} />
+			<MarkdownInlineTokens
+				id={`${id}-${tokenIdx}-p`}
+				tokens={token.tokens ?? []}
+				{onSourceClick}
+			/>
 		</p>
 	{:else if token.type === 'text'}
 		{#if top}
 			<p>
 				{#if token.tokens}
-					<MarkdownInlineTokens id={`${id}-${tokenIdx}-t`} tokens={token.tokens} />
+					<MarkdownInlineTokens id={`${id}-${tokenIdx}-t`} tokens={token.tokens} {onSourceClick} />
 				{:else}
 					{unescapeHtml(token.text)}
 				{/if}
 			</p>
 		{:else if token.tokens}
-			<MarkdownInlineTokens id={`${id}-${tokenIdx}-p`} tokens={token.tokens ?? []} />
+			<MarkdownInlineTokens
+				id={`${id}-${tokenIdx}-p`}
+				tokens={token.tokens ?? []}
+				{onSourceClick}
+			/>
 		{:else}
 			{unescapeHtml(token.text)}
 		{/if}

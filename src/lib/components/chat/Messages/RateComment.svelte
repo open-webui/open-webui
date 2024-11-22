@@ -136,7 +136,7 @@
 						class="size-7 text-sm border border-gray-50 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 {detailedRating ===
 						rating
 							? 'bg-gray-100 dark:bg-gray-800'
-							: ''} transition rounded-full disabled:cursor-not-allowed disabled:bg-white disabled:dark:bg-gray-900"
+							: ''} transition rounded-full disabled:cursor-not-allowed disabled:text-gray-500 disabled:bg-white disabled:dark:bg-gray-900"
 						on:click={() => {
 							detailedRating = rating;
 						}}
