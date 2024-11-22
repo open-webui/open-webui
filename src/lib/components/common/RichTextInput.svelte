@@ -116,13 +116,24 @@
 		}
 	};
 
-	onMount(() => {
-		let content = '';
-		try {
-			content = marked.parse(value);
-		} catch (error) {
-			console.error('Error parsing markdown content:', error);
+	onMount(async () => {
+		async function tryParse(value, attempts = 3, interval = 100) {
+			try {
+				// Try parsing the value
+				return marked.parse(value);
+			} catch (error) {
+				// If no attempts remain, fallback to plain text
+				if (attempts <= 1) {
+					return value;
+				}
+				// Wait for the interval, then retry
+				await new Promise((resolve) => setTimeout(resolve, interval));
+				return tryParse(value, attempts - 1, interval); // Recursive call
+			}
 		}
+
+		// Usage example
+		let content = await tryParse(value);
 
 		editor = new Editor({
 			element: element,
