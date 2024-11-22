@@ -6,7 +6,10 @@ from pathlib import Path
 from typing import Literal, Optional, overload
 
 import aiohttp
+from aiocache import cached
 import requests
+
+
 from open_webui.apps.webui.models.models import Models
 from open_webui.config import (
     CACHE_DIR,
@@ -302,6 +305,8 @@ async def get_all_models_responses() -> list:
                     }
 
                     tasks.append(asyncio.ensure_future(asyncio.sleep(0, model_list)))
+            else:
+                tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
 
     responses = await asyncio.gather(*tasks)
 
@@ -323,6 +328,7 @@ async def get_all_models_responses() -> list:
     return responses
 
 
+@cached(ttl=3)
 async def get_all_models() -> dict[str, list]:
     log.info("get_all_models()")
 

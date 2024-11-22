@@ -186,7 +186,7 @@
 
 		<div class=" my-2 mb-5" id="model-list">
 			{#if models.length > 0}
-				{#each filteredModels as model (model.id)}
+				{#each filteredModels as model, modelIdx (`${model.id}-${modelIdx}`)}
 					<div
 						class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-lg transition"
 						id="model-item-{model.id}"
