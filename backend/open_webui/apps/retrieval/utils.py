@@ -483,7 +483,6 @@ def generate_ollama_batch_embeddings(
         r.raise_for_status()
         data = r.json()
 
-        print(data)
         if "embeddings" in data:
             return data["embeddings"]
         else:

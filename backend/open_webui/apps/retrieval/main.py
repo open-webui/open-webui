@@ -893,7 +893,7 @@ def process_file(
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update
 
-            VECTOR_DB_CLIENT.delete(collection_name=f"file-{file.id}")
+            VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
 
             docs = [
                 Document(
@@ -1015,7 +1015,7 @@ def process_file(
                 return {
                     "status": True,
                     "collection_name": collection_name,
-                    "filename": file.meta.get("name", file.filename),
+                    "filename": file.filename,
                     "content": text_content,
                 }
         except Exception as e:
