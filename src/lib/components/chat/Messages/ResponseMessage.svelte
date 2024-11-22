@@ -64,7 +64,7 @@
 		};
 		done: boolean;
 		error?: boolean | { content: string };
-		citations?: string[];
+		sources?: string[];
 		code_executions?: {
 			uuid: string;
 			name: string;
@@ -621,7 +621,7 @@
 									<ContentRenderer
 										id={message.id}
 										content={message.content}
-										citations={message.citations}
+										sources={message.sources}
 										floatingButtons={message?.done}
 										save={!readOnly}
 										{model}
@@ -662,8 +662,8 @@
 									<Error content={message?.error?.content ?? message.content} />
 								{/if}
 
-								{#if message.citations && (model?.info?.meta?.capabilities?.citations ?? true)}
-									<Citations citations={message.citations} />
+								{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
+									<Citations sources={message?.sources ?? message?.citations} />
 								{/if}
 
 								{#if message.code_executions}

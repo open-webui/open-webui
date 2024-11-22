@@ -7,9 +7,9 @@
 
 	const i18n = getContext('i18n');
 
-	export let citations = [];
+	export let sources = [];
 
-	let _citations = [];
+	let citations = [];
 	let showPercentage = false;
 	let showRelevance = true;
 
@@ -17,8 +17,8 @@
 	let selectedCitation: any = null;
 	let isCollapsibleOpen = false;
 
-	function calculateShowRelevance(citations: any[]) {
-		const distances = citations.flatMap((citation) => citation.distances ?? []);
+	function calculateShowRelevance(sources: any[]) {
+		const distances = sources.flatMap((citation) => citation.distances ?? []);
 		const inRange = distances.filter((d) => d !== undefined && d >= -1 && d <= 1).length;
 		const outOfRange = distances.filter((d) => d !== undefined && (d < -1 || d > 1)).length;
 
@@ -36,29 +36,31 @@
 		return true;
 	}
 
-	function shouldShowPercentage(citations: any[]) {
-		const distances = citations.flatMap((citation) => citation.distances ?? []);
+	function shouldShowPercentage(sources: any[]) {
+		const distances = sources.flatMap((citation) => citation.distances ?? []);
 		return distances.every((d) => d !== undefined && d >= -1 && d <= 1);
 	}
 
 	$: {
-		_citations = citations.reduce((acc, citation) => {
-			if (Object.keys(citation).length === 0) {
+		citations = sources.reduce((acc, source) => {
+			if (Object.keys(source).length === 0) {
 				return acc;
 			}
 
-			citation.document.forEach((document, index) => {
-				const metadata = citation.metadata?.[index];
-				const distance = citation.distances?.[index];
+			source.document.forEach((document, index) => {
+				const metadata = source.metadata?.[index];
+				const distance = source.distances?.[index];
+
+				// Within the same citation there could be multiple documents
 				const id = metadata?.source ?? 'N/A';
-				let source = citation?.source;
+				let _source = source?.source;
 
 				if (metadata?.name) {
-					source = { ...source, name: metadata.name };
+					_source = { ..._source, name: metadata.name };
 				}
 
 				if (id.startsWith('http://') || id.startsWith('https://')) {
-					source = { ...source, name: id, url: id };
+					_source = { ..._source, name: id, url: id };
 				}
 
 				const existingSource = acc.find((item) => item.id === id);
@@ -70,7 +72,7 @@
 				} else {
 					acc.push({
 						id: id,
-						source: source,
+						source: _source,
 						document: [document],
 						metadata: metadata ? [metadata] : [],
 						distances: distance !== undefined ? [distance] : undefined
@@ -80,8 +82,8 @@
 			return acc;
 		}, []);
 
-		showRelevance = calculateShowRelevance(_citations);
-		showPercentage = shouldShowPercentage(_citations);
+		showRelevance = calculateShowRelevance(citations);
+		showPercentage = shouldShowPercentage(citations);
 	}
 </script>
 
@@ -92,11 +94,11 @@
 	{showRelevance}
 />
 
-{#if _citations.length > 0}
+{#if citations.length > 0}
 	<div class=" py-0.5 -mx-0.5 w-full flex gap-1 items-center flex-wrap">
-		{#if _citations.length <= 3}
+		{#if citations.length <= 3}
 			<div class="flex text-xs font-medium">
-				{#each _citations as citation, idx}
+				{#each citations as citation, idx}
 					<button
 						id={`source-${citation.source.name}`}
 						class="no-toggle outline-none flex dark:text-gray-300 p-1 bg-white dark:bg-gray-900 rounded-xl max-w-96"
@@ -105,7 +107,7 @@
 							selectedCitation = citation;
 						}}
 					>
-						{#if _citations.every((c) => c.distances !== undefined)}
+						{#if citations.every((c) => c.distances !== undefined)}
 							<div class="bg-gray-50 dark:bg-gray-800 rounded-full size-4">
 								{idx + 1}
 							</div>
@@ -127,7 +129,7 @@
 						<span class="whitespace-nowrap hidden sm:inline">{$i18n.t('References from')}</span>
 						<div class="flex items-center">
 							<div class="flex text-xs font-medium items-center">
-								{#each _citations.slice(0, 2) as citation, idx}
+								{#each citations.slice(0, 2) as citation, idx}
 									<button
 										class="no-toggle outline-none flex dark:text-gray-300 p-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition rounded-xl max-w-96"
 										on:click={() => {
@@ -138,7 +140,7 @@
 											e.stopPropagation();
 										}}
 									>
-										{#if _citations.every((c) => c.distances !== undefined)}
+										{#if citations.every((c) => c.distances !== undefined)}
 											<div class="bg-gray-50 dark:bg-gray-800 rounded-full size-4">
 												{idx + 1}
 											</div>
@@ -152,7 +154,7 @@
 						</div>
 						<div class="flex items-center gap-1 whitespace-nowrap">
 							<span class="hidden sm:inline">{$i18n.t('and')}</span>
-							{_citations.length - 2}
+							{citations.length - 2}
 							<span>{$i18n.t('more')}</span>
 						</div>
 					</div>
@@ -166,7 +168,7 @@
 				</div>
 				<div slot="content">
 					<div class="flex text-xs font-medium">
-						{#each _citations as citation, idx}
+						{#each citations as citation, idx}
 							<button
 								class="no-toggle outline-none flex dark:text-gray-300 p-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition rounded-xl max-w-96"
 								on:click={() => {
@@ -174,7 +176,7 @@
 									selectedCitation = citation;
 								}}
 							>
-								{#if _citations.every((c) => c.distances !== undefined)}
+								{#if citations.every((c) => c.distances !== undefined)}
 									<div class="bg-gray-50 dark:bg-gray-800 rounded-full size-4">
 										{idx + 1}
 									</div>

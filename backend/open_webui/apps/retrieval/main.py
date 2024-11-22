@@ -902,10 +902,11 @@ def process_file(
                 Document(
                     page_content=form_data.content,
                     metadata={
-                        "name": file.meta.get("name", file.filename),
+                        **file.meta,
+                        "name": file.filename,
                         "created_by": file.user_id,
                         "file_id": file.id,
-                        **file.meta,
+                        "source": file.filename,
                     },
                 )
             ]
@@ -932,10 +933,11 @@ def process_file(
                     Document(
                         page_content=file.data.get("content", ""),
                         metadata={
-                            "name": file.meta.get("name", file.filename),
+                            **file.meta,
+                            "name": file.filename,
                             "created_by": file.user_id,
                             "file_id": file.id,
-                            **file.meta,
+                            "source": file.filename,
                         },
                     )
                 ]
@@ -955,15 +957,30 @@ def process_file(
                 docs = loader.load(
                     file.filename, file.meta.get("content_type"), file_path
                 )
+
+                docs = [
+                    Document(
+                        page_content=doc.page_content,
+                        metadata={
+                            **doc.metadata,
+                            "name": file.filename,
+                            "created_by": file.user_id,
+                            "file_id": file.id,
+                            "source": file.filename,
+                        },
+                    )
+                    for doc in docs
+                ]
             else:
                 docs = [
                     Document(
                         page_content=file.data.get("content", ""),
                         metadata={
+                            **file.meta,
                             "name": file.filename,
                             "created_by": file.user_id,
                             "file_id": file.id,
-                            **file.meta,
+                            "source": file.filename,
                         },
                     )
                 ]
