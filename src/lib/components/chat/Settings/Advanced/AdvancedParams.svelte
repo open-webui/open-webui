@@ -32,6 +32,7 @@
 		use_mlock: null,
 		num_thread: null,
 		num_gpu: null,
+		cache_prompt: null,
 		template: null
 	};
 
@@ -1138,6 +1139,46 @@
 				</div>
 			{/if}
 		</div>
+
+                <div class=" py-0.5 w-full justify-between">
+                        <Tooltip 
+                                content={$i18n.t(
+                                        'Re-use KV cache from a previous request if possible. This way the common prefix does not have to be re-processed, only the suffix that differs between the requests. Because (depending on the backend) the logits are **not** guaranteed to be bit-for-bit identical for different batch sizes (prompt processing vs. token generation) enabling this option can cause nondeterministic results. Default: false'
+                                )}
+                                placement="top-start"
+                                className="inline-tooltip"
+                        >
+                                <div class="flex w-full justify-between">
+                                        <div class=" self-center text-xs font-medium">
+                                                {$i18n.t('cache_prompt (llama-server)')}
+                                        </div>
+                                        <button
+                                                class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+                                                type="button"
+                                                on:click={() => {
+                                                        params.cache_prompt = (params?.cache_prompt ?? null) === null ? true : null;
+                                                }}
+                                        >
+                                                {#if (params?.cache_prompt ?? null) === null}
+                                                        <span class="ml-2 self-center">{$i18n.t('Default')}</span>
+                                                {:else}
+                                                        <span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+                                                {/if}
+                                        </button>
+                                </div>
+                        </Tooltip>
+
+                        {#if (params?.cache_prompt ?? null) !== null}
+                                <div class="flex justify-between items-center mt-1">
+                                        <div class="text-xs text-gray-500">
+                                                {params.cache_prompt ? 'Enabled' : 'Disabled'}
+                                        </div>
+                                        <div class=" pr-2">
+                                                <Switch bind:state={params.cache_prompt} />
+                                        </div>
+                                </div>
+                        {/if}
+                </div>
 
 		<!-- <div class=" py-0.5 w-full justify-between">
 			<div class="flex w-full justify-between">

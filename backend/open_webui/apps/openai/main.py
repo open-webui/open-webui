@@ -500,6 +500,10 @@ async def generate_chat_completion(
         payload = apply_model_params_to_body_openai(params, payload)
         payload = apply_model_system_prompt_to_body(params, payload, user)
 
+        # Remove cache_prompt from the payload if it is not enabled
+        if not payload.get("cache_prompt"):
+            payload.pop("cache_prompt", None)
+
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
             if not (
