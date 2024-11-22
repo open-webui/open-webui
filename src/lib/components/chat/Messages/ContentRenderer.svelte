@@ -11,9 +11,11 @@
 	export let id;
 	export let content;
 	export let model = null;
+	export let citations = null;
 
 	export let save = false;
 	export let floatingButtons = true;
+	export let onSourceClick = () => {};
 
 	let contentContainerElement;
 	let buttonsContainerElement;
@@ -129,6 +131,8 @@
 		{content}
 		{model}
 		{save}
+		sourceIds={(citations ?? []).map((c) => c?.source?.name)}
+		{onSourceClick}
 		on:update={(e) => {
 			dispatch('update', e.detail);
 		}}

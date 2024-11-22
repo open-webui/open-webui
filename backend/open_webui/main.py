@@ -679,7 +679,13 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
 
         # If context is not empty, insert it into the messages
         if len(contexts) > 0:
-            context_string = "/n".join(contexts).strip()
+            context_string = ""
+            for context_idx, context in enumerate(contexts):
+                print(context)
+                source_id = citations[context_idx].get("source", {}).get("name", "")
+                context_string += f"<source><source_id>{source_id}</source_id><source_context>{context}</source_context></source>\n"
+
+            context_string = context_string.strip()
             prompt = get_last_user_message(body["messages"])
 
             if prompt is None:

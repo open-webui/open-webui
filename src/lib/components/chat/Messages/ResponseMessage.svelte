@@ -621,9 +621,18 @@
 									<ContentRenderer
 										id={message.id}
 										content={message.content}
+										citations={message.citations}
 										floatingButtons={message?.done}
 										save={!readOnly}
 										{model}
+										onSourceClick={(e) => {
+											console.log(e);
+											const sourceButton = document.getElementById(`source-${e}`);
+
+											if (sourceButton) {
+												sourceButton.click();
+											}
+										}}
 										on:update={(e) => {
 											const { raw, oldContent, newContent } = e.detail;
 

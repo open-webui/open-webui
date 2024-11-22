@@ -94,6 +94,7 @@
 			<div class="flex text-xs font-medium">
 				{#each _citations as citation, idx}
 					<button
+						id={`source-${citation.source.name}`}
 						class="no-toggle outline-none flex dark:text-gray-300 p-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition rounded-xl max-w-96"
 						on:click={() => {
 							showCitationModal = true;
