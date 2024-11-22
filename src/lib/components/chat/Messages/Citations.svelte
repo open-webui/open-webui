@@ -95,7 +95,7 @@
 				{#each _citations as citation, idx}
 					<button
 						id={`source-${citation.source.name}`}
-						class="no-toggle outline-none flex dark:text-gray-300 p-1 bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-850 transition rounded-xl max-w-96"
+						class="no-toggle outline-none flex dark:text-gray-300 p-1 bg-white dark:bg-gray-900 rounded-xl max-w-96"
 						on:click={() => {
 							showCitationModal = true;
 							selectedCitation = citation;
@@ -106,7 +106,9 @@
 								{idx + 1}
 							</div>
 						{/if}
-						<div class="flex-1 mx-1 line-clamp-1 truncate">
+						<div
+							class="flex-1 mx-1 line-clamp-1 truncate text-black/60 hover:text-black dark:text-white/60 dark:hover:text-white transition"
+						>
 							{citation.source.name}
 						</div>
 					</button>
