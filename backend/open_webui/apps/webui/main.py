@@ -338,7 +338,7 @@ def get_pipe_id(form_data: dict) -> str:
     pipe_id = form_data["model"]
     if "." in pipe_id:
         pipe_id, _ = pipe_id.split(".", 1)
-    print(pipe_id)
+
     return pipe_id
 
 
