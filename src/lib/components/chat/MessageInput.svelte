@@ -75,14 +75,6 @@
 		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
 	);
 
-	$: if (prompt) {
-		if (chatInputContainerElement) {
-			chatInputContainerElement.style.height = '';
-			chatInputContainerElement.style.height =
-				Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
-		}
-	}
-
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
 		element.scrollTo({
@@ -585,40 +577,39 @@
 
 									{#if $settings?.richTextInput ?? true}
 										<div
-											bind:this={chatInputContainerElement}
-											id="chat-input-container"
-											class="scrollbar-hidden text-left bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-2.5 px-1 rounded-xl resize-none h-[48px] overflow-auto"
+											class="scrollbar-hidden text-left bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-2.5 px-1 rounded-xl resize-none h-fit max-h-60 overflow-auto"
 										>
 											<RichTextInput
 												bind:this={chatInputElement}
 												id="chat-input"
-												trim={true}
-												placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
-												largeTextAsFile={$settings?.largeTextAsFile ?? false}
-												bind:value={prompt}
+												messageInput={true}
 												shiftEnter={!$mobile ||
 													!(
 														'ontouchstart' in window ||
 														navigator.maxTouchPoints > 0 ||
 														navigator.msMaxTouchPoints > 0
 													)}
+												placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
+												largeTextAsFile={$settings?.largeTextAsFile ?? false}
+												bind:value={prompt}
 												on:enter={async (e) => {
+													const commandsContainerElement =
+														document.getElementById('commands-container');
+													if (commandsContainerElement) {
+														e.preventDefault();
+
+														const commandOptionButton = [
+															...document.getElementsByClassName('selected-command-option-button')
+														]?.at(-1);
+
+														if (commandOptionButton) {
+															commandOptionButton?.click();
+															return;
+														}
+													}
+
 													if (prompt !== '') {
 														dispatch('submit', prompt);
-													}
-												}}
-												on:input={async (e) => {
-													if (chatInputContainerElement) {
-														chatInputContainerElement.style.height = '';
-														chatInputContainerElement.style.height =
-															Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
-													}
-												}}
-												on:focus={async (e) => {
-													if (chatInputContainerElement) {
-														chatInputContainerElement.style.height = '';
-														chatInputContainerElement.style.height =
-															Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
 													}
 												}}
 												on:keypress={(e) => {
@@ -626,12 +617,6 @@
 												}}
 												on:keydown={async (e) => {
 													e = e.detail.event;
-
-													if (chatInputContainerElement) {
-														chatInputContainerElement.style.height = '';
-														chatInputContainerElement.style.height =
-															Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
-													}
 
 													const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 													const commandsContainerElement =
@@ -690,22 +675,6 @@
 															...document.getElementsByClassName('selected-command-option-button')
 														]?.at(-1);
 														commandOptionButton.scrollIntoView({ block: 'center' });
-													}
-
-													if (commandsContainerElement && e.key === 'Enter') {
-														e.preventDefault();
-
-														const commandOptionButton = [
-															...document.getElementsByClassName('selected-command-option-button')
-														]?.at(-1);
-
-														if (e.shiftKey) {
-															prompt = `${prompt}\n`;
-														} else if (commandOptionButton) {
-															commandOptionButton?.click();
-														} else {
-															document.getElementById('send-message-button')?.click();
-														}
 													}
 
 													if (commandsContainerElement && e.key === 'Tab') {

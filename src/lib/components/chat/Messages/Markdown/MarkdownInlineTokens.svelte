@@ -12,9 +12,11 @@
 
 	import Image from '$lib/components/common/Image.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
+	import Source from './Source.svelte';
 
 	export let id: string;
 	export let tokens: Token[];
+	export let onSourceClick: Function = () => {};
 </script>
 
 {#each tokens as token}
@@ -26,6 +28,8 @@
 			{@html html}
 		{:else if token.text.includes(`<iframe src="${WEBUI_BASE_URL}/api/v1/files/`)}
 			{@html `${token.text}`}
+		{:else if token.text.includes(`<source_id`)}
+			<Source {token} onClick={onSourceClick} />
 		{:else}
 			{token.text}
 		{/if}
