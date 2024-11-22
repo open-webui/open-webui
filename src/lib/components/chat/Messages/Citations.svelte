@@ -43,6 +43,10 @@
 
 	$: {
 		_citations = citations.reduce((acc, citation) => {
+			if (Object.keys(citation).length === 0) {
+				return acc;
+			}
+
 			citation.document.forEach((document, index) => {
 				const metadata = citation.metadata?.[index];
 				const distance = citation.distances?.[index];

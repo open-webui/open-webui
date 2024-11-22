@@ -463,6 +463,8 @@ async def chat_completion_tools_handler(
             except Exception as e:
                 tool_output = str(e)
 
+            print(tools[tool_function_name]["citation"])
+
             if tools[tool_function_name]["citation"]:
                 citations.append(
                     {
@@ -473,6 +475,9 @@ async def chat_completion_tools_handler(
                         "metadata": [{"source": tool_function_name}],
                     }
                 )
+            else:
+                citations.append({})
+
             if tools[tool_function_name]["file_handler"]:
                 skip_files = True
 
@@ -485,7 +490,7 @@ async def chat_completion_tools_handler(
         log.exception(f"Error: {e}")
         content = None
 
-    log.debug(f"tool_contexts: {contexts}")
+    log.debug(f"tool_contexts: {contexts} {citations}")
 
     if skip_files and "files" in body.get("metadata", {}):
         del body["metadata"]["files"]
@@ -683,7 +688,14 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             for context_idx, context in enumerate(contexts):
                 print(context)
                 source_id = citations[context_idx].get("source", {}).get("name", "")
-                context_string += f"<source><source_id>{source_id}</source_id><source_context>{context}</source_context></source>\n"
+
+                print(f"\n\n\n\n{source_id}\n\n\n\n")
+                if source_id:
+                    context_string += f"<source><source_id>{source_id}</source_id><source_context>{context}</source_context></source>\n"
+                else:
+                    context_string += (
+                        f"<source><source_context>{context}</source_context></source>\n"
+                    )
 
             context_string = context_string.strip()
             prompt = get_last_user_message(body["messages"])
