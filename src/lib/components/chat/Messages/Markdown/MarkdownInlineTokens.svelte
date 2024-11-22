@@ -36,7 +36,7 @@
 	{:else if token.type === 'link'}
 		{#if token.tokens}
 			<a href={token.href} target="_blank" rel="nofollow" title={token.title}>
-				<svelte:self id={`${id}-a`} tokens={token.tokens} />
+				<svelte:self id={`${id}-a`} tokens={token.tokens} {onSourceClick} />
 			</a>
 		{:else}
 			<a href={token.href} target="_blank" rel="nofollow" title={token.title}>{token.text}</a>
@@ -45,11 +45,11 @@
 		<Image src={token.href} alt={token.text} />
 	{:else if token.type === 'strong'}
 		<strong>
-			<svelte:self id={`${id}-strong`} tokens={token.tokens} />
+			<svelte:self id={`${id}-strong`} tokens={token.tokens} {onSourceClick} />
 		</strong>
 	{:else if token.type === 'em'}
 		<em>
-			<svelte:self id={`${id}-em`} tokens={token.tokens} />
+			<svelte:self id={`${id}-em`} tokens={token.tokens} {onSourceClick} />
 		</em>
 	{:else if token.type === 'codespan'}
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -65,7 +65,7 @@
 		<br />
 	{:else if token.type === 'del'}
 		<del>
-			<svelte:self id={`${id}-del`} tokens={token.tokens} />
+			<svelte:self id={`${id}-del`} tokens={token.tokens} {onSourceClick} />
 		</del>
 	{:else if token.type === 'inlineKatex'}
 		{#if token.text}
