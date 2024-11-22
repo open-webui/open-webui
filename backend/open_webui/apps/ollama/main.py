@@ -256,8 +256,8 @@ def merge_models_lists(model_lists):
     return list(merged_models.values())
 
 
-async def get_all_models():
-    log.info("get_all_models()")
+async def get_ollama_models():
+    log.info("get_ollama_models()")
     if app.state.config.ENABLE_OLLAMA_API:
         tasks = []
         for idx, url in enumerate(app.state.config.OLLAMA_BASE_URLS):
@@ -319,7 +319,7 @@ async def get_ollama_tags(
 ):
     models = []
     if url_idx is None:
-        models = await get_all_models()
+        models = await get_ollama_models()
     else:
         url = app.state.config.OLLAMA_BASE_URLS[url_idx]
 
@@ -457,7 +457,7 @@ async def push_model(
     user=Depends(get_admin_user),
 ):
     if url_idx is None:
-        model_list = await get_all_models()
+        model_list = await get_ollama_models()
         models = {model["model"]: model for model in model_list["models"]}
 
         if form_data.name in models:
@@ -510,7 +510,7 @@ async def copy_model(
     user=Depends(get_admin_user),
 ):
     if url_idx is None:
-        model_list = await get_all_models()
+        model_list = await get_ollama_models()
         models = {model["model"]: model for model in model_list["models"]}
 
         if form_data.source in models:
@@ -569,7 +569,7 @@ async def delete_model(
     user=Depends(get_admin_user),
 ):
     if url_idx is None:
-        model_list = await get_all_models()
+        model_list = await get_ollama_models()
         models = {model["model"]: model for model in model_list["models"]}
 
         if form_data.name in models:
@@ -621,7 +621,7 @@ async def delete_model(
 
 @app.post("/api/show")
 async def show_model_info(form_data: ModelNameForm, user=Depends(get_verified_user)):
-    model_list = await get_all_models()
+    model_list = await get_ollama_models()
     models = {model["model"]: model for model in model_list["models"]}
 
     if form_data.name not in models:
@@ -710,7 +710,7 @@ async def generate_ollama_embeddings(
     log.info(f"generate_ollama_embeddings {form_data}")
 
     if url_idx is None:
-        model_list = await get_all_models()
+        model_list = await get_ollama_models()
         models = {model["model"]: model for model in model_list["models"]}
 
         model = form_data.model
@@ -777,7 +777,7 @@ async def generate_ollama_batch_embeddings(
     log.info(f"generate_ollama_batch_embeddings {form_data}")
 
     if url_idx is None:
-        model_list = await get_all_models()
+        model_list = await get_ollama_models()
         models = {model["model"]: model for model in model_list["models"]}
 
         model = form_data.model
@@ -856,7 +856,7 @@ async def generate_completion(
     user=Depends(get_verified_user),
 ):
     if url_idx is None:
-        model_list = await get_all_models()
+        model_list = await get_ollama_models()
         models = {model["model"]: model for model in model_list["models"]}
 
         model = form_data.model
@@ -902,7 +902,7 @@ class GenerateChatCompletionForm(BaseModel):
 
 async def get_ollama_url(url_idx: Optional[int], model: str):
     if url_idx is None:
-        model_list = await get_all_models()
+        model_list = await get_ollama_models()
         models = {model["model"]: model for model in model_list["models"]}
 
         if model not in models:
@@ -1086,7 +1086,7 @@ async def get_openai_models(
 
     models = []
     if url_idx is None:
-        model_list = await get_all_models()
+        model_list = await get_ollama_models()
         models = [
             {
                 "id": model["model"],

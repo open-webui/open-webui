@@ -5,9 +5,14 @@ import sys
 from importlib import util
 import types
 import tempfile
+import logging
 
+from open_webui.env import SRC_LOG_LEVELS
 from open_webui.apps.webui.models.functions import Functions
 from open_webui.apps.webui.models.tools import Tools
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 def extract_frontmatter(content):
@@ -139,7 +144,8 @@ def load_function_module_by_id(function_id, content=None):
         # Execute the modified content in the created module's namespace
         exec(content, module.__dict__)
         frontmatter = extract_frontmatter(content)
-        print(f"Loaded module: {module.__name__}")
+
+        log.info(f"Loaded module: {module.__name__}")
 
         # Create appropriate object based on available class type in the module
         if hasattr(module, "Pipe"):
@@ -159,6 +165,25 @@ def load_function_module_by_id(function_id, content=None):
     finally:
         os.unlink(temp_file.name)
 
+def get_function_module_by_id(app, function_module_id: str):
+    # Check if function is already loaded
+    if function_module_id not in app.state.FUNCTIONS:
+        
+        function_module, _, _ = load_function_module_by_id(function_module_id)
+
+        app.state.FUNCTIONS[function_module_id] = function_module
+
+        # Apply valves - is it sufficient to do only when loading, we don't need to reapply when simply getting a cached module?
+
+        if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
+            valves = Functions.get_function_valves_by_id(function_module_id)
+            function_module.valves = function_module.Valves(**(valves if valves else {}))
+
+    else:
+        function_module = app.state.FUNCTIONS[function_module_id]
+
+    return function_module
+
 
 def install_frontmatter_requirements(requirements):
     if requirements:
@@ -168,3 +193,6 @@ def install_frontmatter_requirements(requirements):
             subprocess.check_call([sys.executable, "-m", "pip", "install", req])
     else:
         print("No requirements found in frontmatter.")
+
+
+

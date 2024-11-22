@@ -38,14 +38,14 @@ from open_webui.apps.audio.main import app as audio_app
 from open_webui.apps.images.main import app as images_app
 from open_webui.apps.ollama.main import (
     app as ollama_app,
-    get_all_models as get_ollama_models,
+    get_ollama_models as get_ollama_models,
     generate_chat_completion as generate_ollama_chat_completion,
     GenerateChatCompletionForm,
 )
 from open_webui.apps.openai.main import (
     app as openai_app,
     generate_chat_completion as generate_openai_chat_completion,
-    get_all_models as get_openai_models,
+    get_openai_models as get_openai_models,
     get_all_models_responses as get_openai_models_responses,
 )
 from open_webui.apps.retrieval.main import app as retrieval_app
@@ -60,12 +60,12 @@ from open_webui.apps.webui.internal.db import Session
 from open_webui.apps.webui.main import (
     app as webui_app,
     generate_function_chat_completion,
-    get_all_models as get_open_webui_models,
+    get_pipe_and_arena_models,
 )
 from open_webui.apps.webui.models.functions import Functions
 from open_webui.apps.webui.models.models import Models
 from open_webui.apps.webui.models.users import UserModel, Users
-from open_webui.apps.webui.utils import load_function_module_by_id
+from open_webui.apps.webui.utils import get_function_module_by_id
 from open_webui.config import (
     CACHE_DIR,
     CORS_ALLOW_ORIGIN,
@@ -258,21 +258,11 @@ async def chat_completion_filter_functions_handler(body, model, extra_params):
         if not filter:
             continue
 
-        if filter_id in webui_app.state.FUNCTIONS:
-            function_module = webui_app.state.FUNCTIONS[filter_id]
-        else:
-            function_module, _, _ = load_function_module_by_id(filter_id)
-            webui_app.state.FUNCTIONS[filter_id] = function_module
+        function_module = get_function_module_by_id(app, filter_id)
 
         # Check if the function has a file_handler variable
         if hasattr(function_module, "file_handler"):
             skip_files = function_module.file_handler
-
-        if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
-            valves = Functions.get_function_valves_by_id(filter_id)
-            function_module.valves = function_module.Valves(
-                **(valves if valves else {})
-            )
 
         if not hasattr(function_module, "inlet"):
             continue
@@ -419,7 +409,7 @@ async def chat_completion_tools_handler(
     )
 
     try:
-        payload = filter_pipeline(payload, user, models)
+        payload = apply_pipeline_filter_inlets(payload, user, models)
     except Exception as e:
         raise e
 
@@ -568,9 +558,15 @@ async def get_body_and_model_and_user(request, models):
 
 class ChatCompletionMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+
         if not is_chat_completion_request(request):
             return await call_next(request)
-        log.debug(f"request.url.path: {request.url.path}")
+        
+        ############################################
+        # #CHAT COMPLETION REQUEST PRE-PROCESSING
+        ############################################
+
+        log.debug(f"ChatCompletionMiddleware request.url.path: {request.url.path}")
 
         model_list = await get_all_models()
         models = {model["id"]: model for model in model_list}
@@ -635,8 +631,6 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             "__metadata__": metadata,
         }
 
-        # Initialize data_items to store additional data to be sent to the client
-        # Initialize contexts and citation
         data_items = []
         contexts = []
         citations = []
@@ -722,9 +716,20 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             *[(k, v) for k, v in request.headers.raw if k.lower() != b"content-length"],
         ]
 
-        response = await call_next(request)
-        if not isinstance(response, StreamingResponse):
+        ############################################
+        # -> MAIN METHOD generate_chat_completions()
+        ############################################
+
+        response = await call_next(request)                
+        
+        
+        if not isinstance(response, StreamingResponse):     
             return response
+        
+
+        ############################################
+        # STREAMING RESPONSE POST-PROCESSING
+        ############################################
 
         content_type = response.headers["Content-Type"]
         is_openai = "text/event-stream" in content_type
@@ -761,7 +766,7 @@ app.add_middleware(ChatCompletionMiddleware)
 ##################################
 
 
-def get_sorted_filters(model_id, models):
+def get_sorted_pipeline_filters(model_id, models):
     filters = [
         model
         for model in models.values()
@@ -780,11 +785,11 @@ def get_sorted_filters(model_id, models):
     return sorted_filters
 
 
-def filter_pipeline(payload, user, models):
+def apply_pipeline_filter_inlets(payload, user, models):
     user = {"id": user.id, "email": user.email, "name": user.name, "role": user.role}
     model_id = payload["model"]
 
-    sorted_filters = get_sorted_filters(model_id, models)
+    sorted_filters = get_sorted_pipeline_filters(model_id, models)
     model = models[model_id]
 
     if "pipeline" in model:
@@ -827,6 +832,7 @@ def filter_pipeline(payload, user, models):
 
 class PipelineMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+
         if not is_chat_completion_request(request):
             return await call_next(request)
 
@@ -865,7 +871,7 @@ class PipelineMiddleware(BaseHTTPMiddleware):
         models = {model["id"]: model for model in model_list}
 
         try:
-            data = filter_pipeline(data, user, models)
+            data = apply_pipeline_filter_inlets(data, user, models)
         except Exception as e:
             if len(e.args) > 1:
                 return JSONResponse(
@@ -992,7 +998,7 @@ webui_app.state.EMBEDDING_FUNCTION = retrieval_app.state.EMBEDDING_FUNCTION
 
 
 async def get_all_base_models():
-    open_webui_models = []
+    pipe_and_arena_models = []
     openai_models = []
     ollama_models = []
 
@@ -1014,18 +1020,20 @@ async def get_all_base_models():
             for model in ollama_models["models"]
         ]
 
-    open_webui_models = await get_open_webui_models()
+    pipe_and_arena_models = await get_pipe_and_arena_models()
 
-    models = open_webui_models + openai_models + ollama_models
+    models = pipe_and_arena_models + openai_models + ollama_models
     return models
 
 
 @cached(ttl=1)
 async def get_all_models():
-    models = await get_all_base_models()
+
+    base_models = await get_all_base_models()
+    all_models = base_models.copy()
 
     # If there are no models, return an empty list
-    if len([model for model in models if not model.get("arena", False)]) == 0:
+    if len([model for model in base_models if not model.get("arena", False)]) == 0:
         return []
 
     global_action_ids = [
@@ -1036,17 +1044,18 @@ async def get_all_models():
         for function in Functions.get_functions_by_type("action", active_only=True)
     ]
 
-    custom_models = Models.get_all_models()
-    for custom_model in custom_models:
-        if custom_model.base_model_id is None:
-            for model in models:
+    all_db_models = Models.get_all_db_models()
+
+    for db_model in all_db_models:
+        if db_model.base_model_id is None:  
+            for model in base_models:
                 if (
-                    custom_model.id == model["id"]
-                    or custom_model.id == model["id"].split(":")[0]
-                ):
-                    if custom_model.is_active:
-                        model["name"] = custom_model.name
-                        model["info"] = custom_model.model_dump()
+                    db_model.id == model["id"]
+                    or db_model.id == model["id"].split(":")[0]
+                ):  # Base Model
+                    if db_model.is_active:
+                        model["name"] = db_model.name
+                        model["info"] = db_model.model_dump()
 
                         action_ids = []
                         if "info" in model and "meta" in model["info"]:
@@ -1056,38 +1065,38 @@ async def get_all_models():
 
                         model["action_ids"] = action_ids
                     else:
-                        models.remove(model)
+                        all_models.remove(model)
 
-        elif custom_model.is_active and (
-            custom_model.id not in [model["id"] for model in models]
-        ):
+        elif db_model.is_active and (
+            db_model.id not in [model["id"] for model in base_models]
+        ):          # Custom Model (active)
             owned_by = "openai"
             pipe = None
             action_ids = []
 
-            for model in models:
+            for model in base_models:
                 if (
-                    custom_model.base_model_id == model["id"]
-                    or custom_model.base_model_id == model["id"].split(":")[0]
-                ):
+                    db_model.base_model_id == model["id"]
+                    or db_model.base_model_id == model["id"].split(":")[0]
+                ):  # Inherit ownership properties and pipe reference from Base Model
                     owned_by = model["owned_by"]
                     if "pipe" in model:
                         pipe = model["pipe"]
                     break
 
-            if custom_model.meta:
-                meta = custom_model.meta.model_dump()
+            if db_model.meta:
+                meta = db_model.meta.model_dump()
                 if "actionIds" in meta:
                     action_ids.extend(meta["actionIds"])
 
-            models.append(
+            all_models.append(
                 {
-                    "id": f"{custom_model.id}",
-                    "name": custom_model.name,
+                    "id": f"{db_model.id}",
+                    "name": db_model.name,
                     "object": "model",
-                    "created": custom_model.created_at,
+                    "created": db_model.created_at,
                     "owned_by": owned_by,
-                    "info": custom_model.model_dump(),
+                    "info": db_model.model_dump(),
                     "preset": True,
                     **({"pipe": pipe} if pipe is not None else {}),
                     "action_ids": action_ids,
@@ -1120,14 +1129,7 @@ async def get_all_models():
                 }
             ]
 
-    def get_function_module_by_id(function_id):
-        if function_id in webui_app.state.FUNCTIONS:
-            function_module = webui_app.state.FUNCTIONS[function_id]
-        else:
-            function_module, _, _ = load_function_module_by_id(function_id)
-            webui_app.state.FUNCTIONS[function_id] = function_module
-
-    for model in models:
+    for model in all_models:
         action_ids = [
             action_id
             for action_id in list(set(model.pop("action_ids", []) + global_action_ids))
@@ -1140,15 +1142,18 @@ async def get_all_models():
             if action_function is None:
                 raise Exception(f"Action not found: {action_id}")
 
-            function_module = get_function_module_by_id(action_id)
+            function_module = get_function_module_by_id(app, action_id)
             model["actions"].extend(
                 get_action_items_from_module(action_function, function_module)
             )
-    return models
+
+    return all_models
 
 
 @app.get("/api/models")
 async def get_models(user=Depends(get_verified_user)):
+    log.debug("get_models")
+
     models = await get_all_models()
 
     # Filter out filter pipelines
@@ -1181,6 +1186,8 @@ async def get_models(user=Depends(get_verified_user)):
                     filtered_models.append(model)
         models = filtered_models
 
+    log.debug(f"get_models returned filtered models accessible to the user: {json.dumps([model['id'] for model in models])}")
+
     return {"data": models}
 
 
@@ -1197,6 +1204,8 @@ async def get_base_models(user=Depends(get_admin_user)):
 async def generate_chat_completions(
     form_data: dict, user=Depends(get_verified_user), bypass_filter: bool = False
 ):
+    log.debug("generate_chat_completions")
+
     model_list = await get_all_models()
     models = {model["id"]: model for model in model_list}
 
@@ -1238,7 +1247,7 @@ async def generate_chat_completions(
             ):
                 raise HTTPException(
                     status_code=403,
-                    detail="Model not found",
+                    detail="User does not have access to this model",
                 )
 
     if model["owned_by"] == "arena":
@@ -1313,6 +1322,7 @@ async def generate_chat_completions(
 
 @app.post("/api/chat/completed")
 async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
+    log.debug("chat_completed")
 
     model_list = await get_all_models()
     models = {model["id"]: model for model in model_list}
@@ -1326,7 +1336,7 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
         )
 
     model = models[model_id]
-    sorted_filters = get_sorted_filters(model_id, models)
+    sorted_filters = get_sorted_pipeline_filters(model_id, models)
     if "pipeline" in model:
         sorted_filters = [model] + sorted_filters
 
@@ -1418,17 +1428,7 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
         if not filter:
             continue
 
-        if filter_id in webui_app.state.FUNCTIONS:
-            function_module = webui_app.state.FUNCTIONS[filter_id]
-        else:
-            function_module, _, _ = load_function_module_by_id(filter_id)
-            webui_app.state.FUNCTIONS[filter_id] = function_module
-
-        if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
-            valves = Functions.get_function_valves_by_id(filter_id)
-            function_module.valves = function_module.Valves(
-                **(valves if valves else {})
-            )
+        function_module = get_function_module_by_id(app, filter_id)
 
         if not hasattr(function_module, "outlet"):
             continue
@@ -1489,6 +1489,8 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
 
 @app.post("/api/chat/actions/{action_id}")
 async def chat_action(action_id: str, form_data: dict, user=Depends(get_verified_user)):
+    log.debug("chat_action")
+
     if "." in action_id:
         action_id, sub_action_id = action_id.split(".")
     else:
@@ -1529,15 +1531,7 @@ async def chat_action(action_id: str, form_data: dict, user=Depends(get_verified
         }
     )
 
-    if action_id in webui_app.state.FUNCTIONS:
-        function_module = webui_app.state.FUNCTIONS[action_id]
-    else:
-        function_module, _, _ = load_function_module_by_id(action_id)
-        webui_app.state.FUNCTIONS[action_id] = function_module
-
-    if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
-        valves = Functions.get_function_valves_by_id(action_id)
-        function_module.valves = function_module.Valves(**(valves if valves else {}))
+    function_module = get_function_module_by_id(app, action_id)
 
     if hasattr(function_module, "action"):
         try:
@@ -1672,7 +1666,7 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
 
 @app.post("/api/task/title/completions")
 async def generate_title(form_data: dict, user=Depends(get_verified_user)):
-    print("generate_title")
+    log.debug("generate_title")
 
     model_list = await get_all_models()
     models = {model["id"]: model for model in model_list}
@@ -1741,7 +1735,7 @@ Artificial Intelligence in Healthcare
 
     # Handle pipeline filters
     try:
-        payload = filter_pipeline(payload, user, models)
+        payload = apply_pipeline_filter_inlets(payload, user, models)
     except Exception as e:
         if len(e.args) > 1:
             return JSONResponse(
@@ -1761,7 +1755,7 @@ Artificial Intelligence in Healthcare
 
 @app.post("/api/task/tags/completions")
 async def generate_chat_tags(form_data: dict, user=Depends(get_verified_user)):
-    print("generate_chat_tags")
+    log.debug("generate_chat_tags")
     if not app.state.config.ENABLE_TAGS_GENERATION:
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -1823,7 +1817,7 @@ JSON format: { "tags": ["tag1", "tag2", "tag3"] }
 
     # Handle pipeline filters
     try:
-        payload = filter_pipeline(payload, user, models)
+        payload = apply_pipeline_filter_inlets(payload, user, models)
     except Exception as e:
         if len(e.args) > 1:
             return JSONResponse(
@@ -1843,7 +1837,7 @@ JSON format: { "tags": ["tag1", "tag2", "tag3"] }
 
 @app.post("/api/task/queries/completions")
 async def generate_queries(form_data: dict, user=Depends(get_verified_user)):
-    print("generate_queries")
+    log.debug("generate_queries")
     type = form_data.get("type")
     if type == "web_search":
         if not app.state.config.ENABLE_SEARCH_QUERY_GENERATION:
@@ -1899,7 +1893,7 @@ async def generate_queries(form_data: dict, user=Depends(get_verified_user)):
 
     # Handle pipeline filters
     try:
-        payload = filter_pipeline(payload, user, models)
+        payload = apply_pipeline_filter_inlets(payload, user, models)
     except Exception as e:
         if len(e.args) > 1:
             return JSONResponse(
@@ -1919,7 +1913,7 @@ async def generate_queries(form_data: dict, user=Depends(get_verified_user)):
 
 @app.post("/api/task/emoji/completions")
 async def generate_emoji(form_data: dict, user=Depends(get_verified_user)):
-    print("generate_emoji")
+    log.debug("generate_emoji")
 
     model_list = await get_all_models()
     models = {model["id"]: model for model in model_list}
@@ -1975,7 +1969,7 @@ Message: """{{prompt}}"""
 
     # Handle pipeline filters
     try:
-        payload = filter_pipeline(payload, user, models)
+        payload = apply_pipeline_filter_inlets(payload, user, models)
     except Exception as e:
         if len(e.args) > 1:
             return JSONResponse(
@@ -1995,7 +1989,7 @@ Message: """{{prompt}}"""
 
 @app.post("/api/task/moa/completions")
 async def generate_moa_response(form_data: dict, user=Depends(get_verified_user)):
-    print("generate_moa_response")
+    log.debug("generate_moa_response")
 
     model_list = await get_all_models()
     models = {model["id"]: model for model in model_list}
@@ -2044,7 +2038,7 @@ Responses from models: {{responses}}"""
     log.debug(payload)
 
     try:
-        payload = filter_pipeline(payload, user, models)
+        payload = apply_pipeline_filter_inlets(payload, user, models)
     except Exception as e:
         if len(e.args) > 1:
             return JSONResponse(

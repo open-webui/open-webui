@@ -297,6 +297,10 @@ async def update_function_valves_by_id(
                 form_data = {k: v for k, v in form_data.items() if v is not None}
                 valves = Valves(**form_data)
                 Functions.update_function_valves_by_id(id, valves.model_dump())
+
+                if hasattr(function_module, "valves"):
+                    function_module.valves = valves
+
                 return valves.model_dump()
             except Exception as e:
                 print(e)
