@@ -893,10 +893,7 @@ def process_file(
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update
 
-            VECTOR_DB_CLIENT.delete(
-                collection_name=f"file-{file.id}",
-                filter={"file_id": file.id},
-            )
+            VECTOR_DB_CLIENT.delete(collection_name=f"file-{file.id}")
 
             docs = [
                 Document(
@@ -1001,7 +998,7 @@ def process_file(
                 collection_name=collection_name,
                 metadata={
                     "file_id": file.id,
-                    "name": file.meta.get("name", file.filename),
+                    "name": file.filename,
                     "hash": hash,
                 },
                 add=(True if form_data.collection_name else False),
