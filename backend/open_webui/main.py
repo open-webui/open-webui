@@ -691,7 +691,6 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
 
         # If context is not empty, insert it into the messages
         if len(sources) > 0:
-            print("\n\n\n\n\n\n\nHI\n\n\n\n\n\n")
             context_string = ""
             for source_idx, source in enumerate(sources):
                 source_id = source.get("source", {}).get("name", "")
