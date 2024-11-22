@@ -113,7 +113,7 @@
 							</div>
 						{/if}
 						<div
-							class="flex-1 mx-1 line-clamp-1 truncate text-black/60 hover:text-black dark:text-white/60 dark:hover:text-white transition"
+							class="flex-1 mx-1 line-clamp-1 text-black/60 hover:text-black dark:text-white/60 dark:hover:text-white transition"
 						>
 							{citation.source.name}
 						</div>
