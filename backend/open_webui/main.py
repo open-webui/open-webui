@@ -825,37 +825,8 @@ async def chat_completion_tools_handler(
 async def chat_completion_files_handler(
     body: dict, user: UserModel
 ) -> tuple[dict, dict[str, list]]:
-<<<<<<< HEAD
-    contexts = []
-    citations = []
 
-    try:
-        queries_response = await generate_queries(
-            {
-                "model": body["model"],
-                "messages": body["messages"],
-                "type": "retrieval",
-            },
-            user,
-        )
-        queries_response = queries_response["choices"][0]["message"]["content"]
-
-        try:
-            queries_response = json.loads(queries_response)
-        except Exception:
-            queries_response = {"queries": []}
-
-        queries = queries_response.get("queries", [])
-    except Exception:
-        queries = []
-
-    if len(queries) == 0:
-        queries = [get_last_user_message(body["messages"])]
-
-    print(f"{queries=}")
-=======
     sources = []
->>>>>>> upstream/dev
 
     if files := body.get("metadata", {}).get("files", None):
         try:
@@ -1026,7 +997,6 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             log.info(
                 "Ollama models don't support function calling in streaming yet. forcing native_tool_call to False"
             )
-<<<<<<< HEAD
             body["metadata"]["native_tool_call"] = False
 
         if not body["metadata"]["native_tool_call"]:
@@ -1037,13 +1007,9 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                 )
                 contexts.extend(flags.get("contexts", []))
                 citations.extend(flags.get("citations", []))
+                sources.extend(flags.get("sources", []))
             except Exception as e:
                 log.exception(e)
-=======
-            sources.extend(flags.get("sources", []))
-        except Exception as e:
-            log.exception(e)
->>>>>>> upstream/dev
 
         try:
             body, flags = await chat_completion_files_handler(body, user)
@@ -2361,11 +2327,8 @@ async def generate_emoji(form_data: dict, user=Depends(get_verified_user)):
         models,
     )
 
-<<<<<<< HEAD
-=======
     log.debug(f"generating emoji using model {task_model_id} for user {user.email} ")
 
->>>>>>> upstream/dev
     template = '''
 Your task is to reflect the speaker's likely facial expression through a fitting emoji. Interpret emotions from the message and reflect their facial expression using fitting, diverse emojis (e.g., 😊, 😢, 😡, 😱).
 
@@ -2437,11 +2400,8 @@ async def generate_moa_response(form_data: dict, user=Depends(get_verified_user)
         models,
     )
 
-<<<<<<< HEAD
-=======
     log.debug(f"generating MOA model {task_model_id} for user {user.email} ")
 
->>>>>>> upstream/dev
     template = """You have been provided with a set of responses from various models to the latest user query: "{{prompt}}"
 
 Your task is to synthesize these responses into a single, high-quality response. It is crucial to critically evaluate the information provided in these responses, recognizing that some of it may be biased or incorrect. Your response should not simply replicate the given answers but should offer a refined, accurate, and comprehensive reply to the instruction. Ensure your response is well-structured, coherent, and adheres to the highest standards of accuracy and reliability.
