@@ -329,7 +329,7 @@
 	"Enter language codes": "Geben Sie die Sprachcodes ein",
 	"Enter Model ID": "Geben Sie die Modell-ID ein",
 	"Enter model tag (e.g. {{modelTag}})": "Geben Sie den Model-Tag ein",
-	"Enter Mojeek Search API Key": "Geben Sie den Mojeek Search API-Schlüssel ein", 
+	"Enter Mojeek Search API Key": "Geben Sie den Mojeek Search API-Schlüssel ein",
 	"Enter Number of Steps (e.g. 50)": "Geben Sie die Anzahl an Schritten ein (z. B. 50)",
 	"Enter Sampler (e.g. Euler a)": "Geben Sie den Sampler ein (z. B. Euler a)",
 	"Enter Scheduler (e.g. Karras)": "Geben Sie den Scheduler ein (z. B. Karras)",
