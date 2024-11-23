@@ -14,6 +14,7 @@ requests==2.32.3
 aiohttp==3.10.8
 async-timeout
 aiocache
+aiofiles
 
 sqlalchemy==2.0.32
 alembic==1.13.2
