@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **🌐 Translation Updates**: Refreshed Catalan, Brazilian Portuguese (pt-BR), and Ukrainian translations, further enhancing the platform's accessibility and improving the experience for international users.
+- **🌐 Translation Updates**: Refreshed Catalan, Brazilian Portuguese, German, and Ukrainian translations, further enhancing the platform's accessibility and improving the experience for international users.
 
 ### Fixed
 
