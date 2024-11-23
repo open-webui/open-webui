@@ -307,7 +307,7 @@ def get_embedding_function(
         return lambda query: generate_multiple(query, func)
 
 
-def get_rag_context(
+def get_sources_from_files(
     files,
     queries,
     embedding_function,
@@ -387,43 +387,24 @@ def get_rag_context(
                 del file["data"]
             relevant_contexts.append({**context, "file": file})
 
-    contexts = []
-    citations = []
+    sources = []
     for context in relevant_contexts:
         try:
             if "documents" in context:
-                file_names = list(
-                    set(
-                        [
-                            metadata["name"]
-                            for metadata in context["metadatas"][0]
-                            if metadata is not None and "name" in metadata
-                        ]
-                    )
-                )
-                contexts.append(
-                    ((", ".join(file_names) + ":\n\n") if file_names else "")
-                    + "\n\n".join(
-                        [text for text in context["documents"][0] if text is not None]
-                    )
-                )
-
                 if "metadatas" in context:
-                    citation = {
+                    source = {
                         "source": context["file"],
                         "document": context["documents"][0],
                         "metadata": context["metadatas"][0],
                     }
                     if "distances" in context and context["distances"]:
-                        citation["distances"] = context["distances"][0]
-                    citations.append(citation)
+                        source["distances"] = context["distances"][0]
+
+                    sources.append(source)
         except Exception as e:
             log.exception(e)
 
-    print("contexts", contexts)
-    print("citations", citations)
-
-    return contexts, citations
+    return sources
 
 
 def get_model_path(model: str, update_model: bool = False):
@@ -502,7 +483,6 @@ def generate_ollama_batch_embeddings(
         r.raise_for_status()
         data = r.json()
 
-        print(data)
         if "embeddings" in data:
             return data["embeddings"]
         else:

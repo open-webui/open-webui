@@ -36,6 +36,10 @@
 	let element;
 	let editor;
 
+	const options = {
+		throwOnError: false
+	};
+
 	// Function to find the next template in the document
 	function findNextTemplate(doc, from = 0) {
 		const patterns = [
@@ -112,7 +116,25 @@
 		}
 	};
 
-	onMount(() => {
+	onMount(async () => {
+		async function tryParse(value, attempts = 3, interval = 100) {
+			try {
+				// Try parsing the value
+				return marked.parse(value);
+			} catch (error) {
+				// If no attempts remain, fallback to plain text
+				if (attempts <= 1) {
+					return value;
+				}
+				// Wait for the interval, then retry
+				await new Promise((resolve) => setTimeout(resolve, interval));
+				return tryParse(value, attempts - 1, interval); // Recursive call
+			}
+		}
+
+		// Usage example
+		let content = await tryParse(value);
+
 		editor = new Editor({
 			element: element,
 			extensions: [
@@ -124,7 +146,7 @@
 				Typography,
 				Placeholder.configure({ placeholder })
 			],
-			content: marked.parse(value),
+			content: content,
 			autofocus: true,
 			onTransaction: () => {
 				// force re-render so `editor.isActive` works as expected

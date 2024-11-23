@@ -893,19 +893,17 @@ def process_file(
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update
 
-            VECTOR_DB_CLIENT.delete(
-                collection_name=f"file-{file.id}",
-                filter={"file_id": file.id},
-            )
+            VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
 
             docs = [
                 Document(
                     page_content=form_data.content,
                     metadata={
-                        "name": file.meta.get("name", file.filename),
+                        **file.meta,
+                        "name": file.filename,
                         "created_by": file.user_id,
                         "file_id": file.id,
-                        **file.meta,
+                        "source": file.filename,
                     },
                 )
             ]
@@ -932,10 +930,11 @@ def process_file(
                     Document(
                         page_content=file.data.get("content", ""),
                         metadata={
-                            "name": file.meta.get("name", file.filename),
+                            **file.meta,
+                            "name": file.filename,
                             "created_by": file.user_id,
                             "file_id": file.id,
-                            **file.meta,
+                            "source": file.filename,
                         },
                     )
                 ]
@@ -955,15 +954,30 @@ def process_file(
                 docs = loader.load(
                     file.filename, file.meta.get("content_type"), file_path
                 )
+
+                docs = [
+                    Document(
+                        page_content=doc.page_content,
+                        metadata={
+                            **doc.metadata,
+                            "name": file.filename,
+                            "created_by": file.user_id,
+                            "file_id": file.id,
+                            "source": file.filename,
+                        },
+                    )
+                    for doc in docs
+                ]
             else:
                 docs = [
                     Document(
                         page_content=file.data.get("content", ""),
                         metadata={
+                            **file.meta,
                             "name": file.filename,
                             "created_by": file.user_id,
                             "file_id": file.id,
-                            **file.meta,
+                            "source": file.filename,
                         },
                     )
                 ]
@@ -984,7 +998,7 @@ def process_file(
                 collection_name=collection_name,
                 metadata={
                     "file_id": file.id,
-                    "name": file.meta.get("name", file.filename),
+                    "name": file.filename,
                     "hash": hash,
                 },
                 add=(True if form_data.collection_name else False),
@@ -1001,7 +1015,7 @@ def process_file(
                 return {
                     "status": True,
                     "collection_name": collection_name,
-                    "filename": file.meta.get("name", file.filename),
+                    "filename": file.filename,
                     "content": text_content,
                 }
         except Exception as e:
