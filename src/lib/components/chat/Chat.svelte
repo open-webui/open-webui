@@ -216,7 +216,7 @@
 				} else {
 					message.statusHistory = [data];
 				}
-			} else if (type === 'source') {
+			} else if (type === 'source' || type === 'citation') {
 				if (data?.type === 'code_execution') {
 					// Code execution; update existing code execution by ID, or add new one.
 					if (!message?.code_executions) {
