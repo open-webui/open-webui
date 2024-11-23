@@ -272,7 +272,9 @@ async def get_pipe_models():
                 log.exception(e)
                 sub_pipes = []
 
-            log.debug(f"get_pipe_models: function '{pipe.id}' is a manifold of {sub_pipes}")
+            log.debug(
+                f"get_pipe_models: function '{pipe.id}' is a manifold of {sub_pipes}"
+            )
 
             for p in sub_pipes:
                 sub_pipe_id = f'{pipe.id}.{p["id"]}'
@@ -282,7 +284,7 @@ async def get_pipe_models():
                     sub_pipe_name = f"{function_module.name}{sub_pipe_name}"
 
                 pipe_flag = {"type": pipe.type}
-                
+
                 pipe_models.append(
                     {
                         "id": sub_pipe_id,
@@ -296,8 +298,10 @@ async def get_pipe_models():
         else:
             pipe_flag = {"type": "pipe"}
 
-            log.debug(f"get_pipe_models: function '{pipe.id}' is a single pipe {{ 'id': {pipe.id}, 'name': {pipe.name} }}")
-            
+            log.debug(
+                f"get_pipe_models: function '{pipe.id}' is a single pipe {{ 'id': {pipe.id}, 'name': {pipe.name} }}"
+            )
+
             pipe_models.append(
                 {
                     "id": pipe.id,
