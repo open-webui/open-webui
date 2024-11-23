@@ -1005,7 +1005,6 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                 body, flags = await chat_completion_tools_handler(
                     body, user, extra_params, models
                 )
-                citations.extend(flags.get("citations", []))
                 sources.extend(flags.get("sources", []))
             except Exception as e:
                 log.exception(e)
