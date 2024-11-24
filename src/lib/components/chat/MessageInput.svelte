@@ -881,7 +881,6 @@
 											on:input={async (e) => {
 												e.target.style.height = '';
 												e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
-												user = null;
 											}}
 											on:focus={async (e) => {
 												e.target.style.height = '';

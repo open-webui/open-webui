@@ -888,11 +888,10 @@
 		await tick();
 
 		// Reset chat input textarea
-		const chatInputContainer = document.getElementById('chat-input-container');
+		const chatInputElement = document.getElementById('chat-input');
 
-		if (chatInputContainer) {
-			chatInputContainer.value = '';
-			chatInputContainer.style.height = '';
+		if (chatInputElement) {
+			chatInputElement.style.height = '';
 		}
 
 		const _files = JSON.parse(JSON.stringify(files));
