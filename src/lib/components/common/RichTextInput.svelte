@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { marked } from 'marked';
 	import TurndownService from 'turndown';
-	const turndownService = new TurndownService();
+	const turndownService = new TurndownService({
+		codeBlockStyle: 'fenced'
+	});
+	turndownService.escape = (string) => string;
 
 	import { onMount, onDestroy } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
@@ -154,7 +157,7 @@
 
 				const newValue = turndownService.turndown(editor.getHTML());
 				if (value !== newValue) {
-					value = newValue; // Trigger parent updates
+					value = newValue;
 				}
 			},
 			editorProps: {
