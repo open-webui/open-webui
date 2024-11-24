@@ -158,6 +158,10 @@
 				const newValue = turndownService.turndown(editor.getHTML());
 				if (value !== newValue) {
 					value = newValue;
+
+					if (value === '') {
+						editor.commands.clearContent();
+					}
 				}
 			},
 			editorProps: {
