@@ -119,7 +119,11 @@
 				</div>
 
 				<div class="my-3 flex w-full tems-center justify-between pr-2">
-					<Tooltip content={$i18n.t('When disabled, API keys can only access /api/chat/completions and /api/models endpoints')}>
+					<Tooltip
+						content={$i18n.t(
+							'When disabled, API keys can only access /api/chat/completions and /api/models endpoints'
+						)}
+					>
 						<div class="self-center text-xs font-medium flex items-center gap-2">
 							{$i18n.t('API Key allow access to all endpoints')}
 						</div>
@@ -127,7 +131,6 @@
 
 					<Switch bind:state={adminConfig.API_KEY_ALLOW_ALL_ENDPOINTS} />
 				</div>
-
 
 				<hr class=" border-gray-50 dark:border-gray-850 my-2" />
 
