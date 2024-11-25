@@ -49,7 +49,9 @@ from open_webui.apps.openai.main import (
     get_all_models_responses as get_openai_models_responses,
 )
 from open_webui.apps.retrieval.main import app as retrieval_app
-from open_webui.apps.retrieval.utils import get_sources_from_files, rag_template
+from open_webui.apps.retrieval.utils import get_sources_from_files
+
+
 from open_webui.apps.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
@@ -122,11 +124,12 @@ from open_webui.utils.response import (
 )
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.task import (
-    moa_response_generation_template,
-    tags_generation_template,
-    query_generation_template,
-    emoji_generation_template,
+    rag_template,
     title_generation_template,
+    query_generation_template,
+    tags_generation_template,
+    emoji_generation_template,
+    moa_response_generation_template,
     tools_function_calling_generation_template,
 )
 from open_webui.utils.tools import get_tools
