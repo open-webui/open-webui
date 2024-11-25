@@ -1976,7 +1976,7 @@
 				}
 			);
 
-			return title;
+			return title ? title : (lastUserMessage?.content ?? 'New Chat');
 		} else {
 			return lastUserMessage?.content ?? 'New Chat';
 		}
