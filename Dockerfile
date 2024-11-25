@@ -26,6 +26,9 @@ ARG BUILD_HASH
 
 WORKDIR /app
 
+# Add NODE_OPTIONS to increase memory limit
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 COPY package.json package-lock.json ./
 RUN npm ci
 
