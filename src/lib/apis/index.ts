@@ -391,16 +391,13 @@ export const generateQueries = async (
 		// Step 1: Safely extract the response string
 		const response = res?.choices[0]?.message?.content ?? '';
 
-		// Step 2: Attempt to fix common JSON format issues like single quotes
-		const sanitizedResponse = response.replace(/['‘’`]/g, '"'); // Convert single quotes to double quotes for valid JSON
-
 		// Step 3: Find the relevant JSON block within the response
-		const jsonStartIndex = sanitizedResponse.indexOf('{');
-		const jsonEndIndex = sanitizedResponse.lastIndexOf('}');
+		const jsonStartIndex = response.indexOf('{');
+		const jsonEndIndex = response.lastIndexOf('}');
 
 		// Step 4: Check if we found a valid JSON block (with both `{` and `}`)
 		if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
-			const jsonResponse = sanitizedResponse.substring(jsonStartIndex, jsonEndIndex + 1);
+			const jsonResponse = response.substring(jsonStartIndex, jsonEndIndex + 1);
 
 			// Step 5: Parse the JSON block
 			const parsed = JSON.parse(jsonResponse);

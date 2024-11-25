@@ -972,7 +972,7 @@ DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE = """### Task:
 Based on the chat history, determine whether a search is necessary, and if so, generate a 1-3 broad search queries to retrieve comprehensive and updated information. If no search is required, return an empty list.
 
 ### Guidelines:
-- Respond exclusively with a JSON object.
+- Respond **EXCLUSIVELY** with a JSON object. Any form of extra commentary, explanation, or additional text is prohibited.
 - If a search query is needed, return an object like: { "queries": ["query1", "query2"] } where each query is distinct and concise.
 - If no search query is necessary, output should be: { "queries": [] }
 - Default to suggesting a search query to ensure accurate and updated information, unless it is definitively clear no search is required.
@@ -981,7 +981,8 @@ Based on the chat history, determine whether a search is necessary, and if so, g
 - Today's date is: {{CURRENT_DATE}}
 
 ### Output:
-JSON format: {
+Strictly return in JSON format: 
+{
   "queries": ["query1", "query2"]
 }
 
