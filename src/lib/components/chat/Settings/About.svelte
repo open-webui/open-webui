@@ -137,7 +137,7 @@
 			<a
 				class=" text-gray-500 dark:text-gray-300 font-medium"
 				href="https://github.com/arsanalytics"
-				target="_blank">Abdur Sami</a
+				target="_blank">Timothy J. Baek MODIFIED BY: Abdur Sami</a
 			>
 		</div>
 	</div>
