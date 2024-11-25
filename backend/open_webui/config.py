@@ -271,6 +271,12 @@ ENABLE_API_KEY = PersistentConfig(
     os.environ.get("ENABLE_API_KEY", "True").lower() == "true",
 )
 
+API_KEY_ALLOW_ALL_ENDPOINTS = PersistentConfig(
+    "API_KEY_ALLOW_ALL_ENDPOINTS",
+    "auth.api_key.allow_all_endpoints",
+    os.environ.get("API_KEY_ALLOW_ALL_ENDPOINTS", "False").lower() == "true",
+)
+
 
 JWT_EXPIRES_IN = PersistentConfig(
     "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "-1")

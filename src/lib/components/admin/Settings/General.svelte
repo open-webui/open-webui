@@ -118,6 +118,17 @@
 					<Switch bind:state={adminConfig.ENABLE_API_KEY} />
 				</div>
 
+				<div class="my-3 flex w-full tems-center justify-between pr-2">
+					<Tooltip content={$i18n.t('When disabled, API keys can only access /api/chat/completions and /api/models endpoints')}>
+						<div class="self-center text-xs font-medium flex items-center gap-2">
+							{$i18n.t('API Key allow access to all endpoints')}
+						</div>
+					</Tooltip>
+
+					<Switch bind:state={adminConfig.API_KEY_ALLOW_ALL_ENDPOINTS} />
+				</div>
+
+
 				<hr class=" border-gray-50 dark:border-gray-850 my-2" />
 
 				<div class="my-3 flex w-full items-center justify-between pr-2">

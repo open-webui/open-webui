@@ -91,11 +91,22 @@ def get_current_user(
 
     # auth by api key
     if token.startswith("sk-"):
+
         if not request.state.enable_api_key:
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
             )
-        return get_current_user_by_api_key(token)
+
+        if (
+            request["path"] in ("/api/chat/completions", "/api/models")
+            or request.state.api_key_allow_all_endpoints
+        ):
+            return get_current_user_by_api_key(token)
+        else:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED_THIS_ENDPOINT,
+            )
 
     # auth by jwt token
     try:
@@ -124,6 +135,7 @@ def get_current_user(
 
 
 def get_current_user_by_api_key(api_key: str):
+
     user = Users.get_user_by_api_key(api_key)
 
     if user is None:
