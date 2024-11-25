@@ -25,7 +25,7 @@
 				...modelInfo,
 				meta: {
 					...modelInfo.meta,
-					profile_image_url: modelInfo.meta.profile_image_url ?? '/static/favicon.png',
+					profile_image_url: modelInfo.meta.profile_image_url ?? '$lib/assets/icons/favicon.png',
 					suggestion_prompts: modelInfo.meta.suggestion_prompts
 						? modelInfo.meta.suggestion_prompts.filter((prompt) => prompt.content !== '')
 						: null

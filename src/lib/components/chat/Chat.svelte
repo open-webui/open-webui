@@ -14,6 +14,8 @@
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
+	import favicon from '../../assets/icons/favicon.png';
+
 	import {
 		chatId,
 		chats,
@@ -520,6 +522,20 @@
 			messages: {},
 			currentId: null
 		};
+
+		// Initialize welcome message
+		const welcomeMessageId = uuidv4();
+		history.messages[welcomeMessageId] = {
+			id: welcomeMessageId,
+			role: 'assistant',
+			content: $i18n.t('welcome.message'),
+			done: true,
+			timestamp: new Date().getTime(),
+			parentId: null,
+			childrenIds: [],
+			model: selectedModels[0]
+		};
+		history.currentId = welcomeMessageId;
 
 		chatFiles = [];
 		params = {};
@@ -1240,12 +1256,14 @@
 
 				responseMessage.content = response.message.content;
 				responseMessage.info = {
-					eval_count: response.eval_count,
-					eval_duration: response.eval_duration,
+					total_duration: response.total_duration,
 					load_duration: response.load_duration,
+					sample_count: response.sample_count,
+					sample_duration: response.sample_duration,
 					prompt_eval_count: response.prompt_eval_count,
 					prompt_eval_duration: response.prompt_eval_duration,
-					total_duration: response.total_duration
+					eval_count: response.eval_count,
+					eval_duration: response.eval_duration
 				};
 				responseMessage.done = true;
 			} else {
@@ -1353,12 +1371,12 @@
 
 									history.messages[responseMessageId] = responseMessage;
 
-									if ($settings.notificationEnabled && !document.hasFocus()) {
-										const notification = new Notification(`${model.id}`, {
-											body: responseMessage.content,
-											icon: `${WEBUI_BASE_URL}/static/favicon.png`
-										});
-									}
+if ($settings.notificationEnabled && !document.hasFocus()) {
+	const notification = new Notification(`${model.id}`, {
+		body: responseMessage.content,
+		icon: favicon
+	});
+}
 
 									if ($settings?.responseAutoCopy ?? false) {
 										copyToClipboard(responseMessage.content);
@@ -1709,14 +1727,14 @@
 					}
 				}
 
-				if ($settings.notificationEnabled && !document.hasFocus()) {
-					const notification = new Notification(`${model.id}`, {
-						body: responseMessage.content,
-						icon: `${WEBUI_BASE_URL}/static/favicon.png`
-					});
-				}
+if ($settings.notificationEnabled && !document.hasFocus()) {
+	const notification = new Notification(`${model.id}`, {
+		body: responseMessage.content,
+		icon: favicon
+	});
+}
 
-				if ($settings.responseAutoCopy) {
+if ($settings.responseAutoCopy) {
 					copyToClipboard(responseMessage.content);
 				}
 
@@ -2127,8 +2145,6 @@
 				system: $settings.system ?? undefined,
 				params: params,
 				history: history,
-				messages: createMessagesList(history.currentId),
-				tags: [],
 				timestamp: Date.now()
 			});
 

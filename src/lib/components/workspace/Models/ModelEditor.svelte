@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, getContext, tick } from 'svelte';
 	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
-
+	import favicon from '../../assets/icons/favicon.png';
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
@@ -58,7 +58,7 @@
 		base_model_id: null,
 		name: '',
 		meta: {
-			profile_image_url: '/static/favicon.png',
+			profile_image_url: favicon,
 			description: '',
 			suggestion_prompts: null,
 			tags: []
@@ -346,7 +346,7 @@
 					<div class="self-center">
 						<button
 							class="rounded-2xl flex flex-shrink-0 items-center {info.meta.profile_image_url !==
-							'/static/favicon.png'
+							favicon
 								? 'bg-transparent'
 								: 'bg-white'} shadow-xl group relative"
 							type="button"
@@ -362,7 +362,7 @@
 								/>
 							{:else}
 								<img
-									src="/static/favicon.png"
+									src={favicon}
 									alt="model profile"
 									class=" rounded-lg size-72 md:size-60 object-cover shrink-0"
 								/>

@@ -1,0 +1,24 @@
+.app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+.background-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+/* Light theme specific styles */
+:root[data-theme="light"] .background-canvas {
+  background-color: #fff;
+}
+
+/* Dark theme specific styles */
+:root[data-theme="dark"] .background-canvas {
+  background-color: #000;
+}

@@ -228,8 +228,8 @@ def merge_models_lists(model_lists):
                 [
                     {
                         **model,
-                        "name": model.get("name", model["id"]),
-                        "owned_by": "openai",
+                        "name": model.get("name", model["id"]),  # Ensure name is always present
+                        "owned_by": model.get("owned_by", "vllm"),  # Keep original owned_by if present
                         "openai": model,
                         "urlIdx": idx,
                     }
@@ -254,78 +254,79 @@ def merge_models_lists(model_lists):
 
 
 async def get_all_models_responses() -> list:
-    if not app.state.config.ENABLE_OPENAI_API:
-        return []
+   # if not app.state.config.ENABLE_OPENAI_API:
+    # Return a list with just the Cicero model
+    return [{
+        "object": "list",
+        "data": [{
+            "id": "arthrod/cicerollamatry8",
+            "name": "Cicero-Pt-BR",
+            "object": "model",
+            "created": 1677649963,
+            "owned_by": "vllm"
+        }]
+    }]
 
-    # Check if API KEYS length is same than API URLS length
-    num_urls = len(app.state.config.OPENAI_API_BASE_URLS)
-    num_keys = len(app.state.config.OPENAI_API_KEYS)
+    # Original implementation commented out below
+    # if not app.state.config.ENABLE_OPENAI_API:
+    #     return []
 
-    if num_keys != num_urls:
-        # if there are more keys than urls, remove the extra keys
-        if num_keys > num_urls:
-            new_keys = app.state.config.OPENAI_API_KEYS[:num_urls]
-            app.state.config.OPENAI_API_KEYS = new_keys
-        # if there are more urls than keys, add empty keys
-        else:
-            app.state.config.OPENAI_API_KEYS += [""] * (num_urls - num_keys)
+    # # Check if API KEYS length is same than API URLS length
+    # num_urls = len(app.state.config.OPENAI_API_BASE_URLS)
+    # num_keys = len(app.state.config.OPENAI_API_KEYS)
 
-    tasks = []
-    for idx, url in enumerate(app.state.config.OPENAI_API_BASE_URLS):
-        if url not in app.state.config.OPENAI_API_CONFIGS:
-            tasks.append(
-                aiohttp_get(f"{url}/models", app.state.config.OPENAI_API_KEYS[idx])
-            )
-        else:
-            api_config = app.state.config.OPENAI_API_CONFIGS.get(url, {})
+    # if num_keys != num_urls:
+    #     # if there are more keys than urls, remove the extra keys
+    #     if num_keys > num_urls:
+    #         new_keys = app.state.config.OPENAI_API_KEYS[:num_urls]
+    #         app.state.config.OPENAI_API_KEYS = new_keys
+    #     # if there are more urls than keys, add empty keys
+    #     else:
+    #         app.state.config.OPENAI_API_KEYS += [""] * (num_urls - num_keys)
 
-            enable = api_config.get("enable", True)
-            model_ids = api_config.get("model_ids", [])
+    # tasks = []
+    # for idx, url in enumerate(app.state.config.OPENAI_API_BASE_URLS):
+    #     if url not in app.state.config.OPENAI_API_CONFIGS:
+    #         tasks.append(
+    #             aiohttp_get(f"{url}/models", app.state.config.OPENAI_API_KEYS[idx])
+    #         )
+    #     else:
+    #         api_config = app.state.config.OPENAI_API_CONFIGS.get(url, {})
 
-            if enable:
-                if len(model_ids) == 0:
-                    tasks.append(
-                        aiohttp_get(
-                            f"{url}/models", app.state.config.OPENAI_API_KEYS[idx]
-                        )
-                    )
-                else:
-                    model_list = {
-                        "object": "list",
-                        "data": [
-                            {
-                                "id": model_id,
-                                "name": model_id,
-                                "owned_by": "openai",
-                                "openai": {"id": model_id},
-                                "urlIdx": idx,
-                            }
-                            for model_id in model_ids
-                        ],
-                    }
+    #         enable = api_config.get("enable", True)
+    #         model_ids = api_config.get("model_ids", [])
 
-                    tasks.append(asyncio.ensure_future(asyncio.sleep(0, model_list)))
-            else:
-                tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
+    #         if enable:
+    #             if len(model_ids) == 0:
+    #                 tasks.append(
+    #                     aiohttp_get(
+    #                         f"{url}/models", app.state.config.OPENAI_API_KEYS[idx]
+    #                     )
+    #                 )
+    #             else:
+    #                 model_list = {
+    #                     "object": "list",
+    #                     "data": [
+    #                         {
+    #                             "id": model_id,
+    #                             "name": model_id,
+    #                             "owned_by": "openai",
+    #                             "openai": {"id": model_id},
+    #                             "urlIdx": idx,
+    #                         }
+    #                         for model_id in model_ids
+    #                     ],
+    #                 }
 
-    responses = await asyncio.gather(*tasks)
+    #                 tasks.append(asyncio.sleep(0, result=model_list))
+    #         else:
+    #             tasks.append(asyncio.sleep(0))
 
-    for idx, response in enumerate(responses):
-        if response:
-            url = app.state.config.OPENAI_API_BASE_URLS[idx]
-            api_config = app.state.config.OPENAI_API_CONFIGS.get(url, {})
+    # responses = await asyncio.gather(*tasks, return_exceptions=True)
+    # responses = [r for r in responses if r is not None and not isinstance(r, Exception)]
 
-            prefix_id = api_config.get("prefix_id", None)
-
-            if prefix_id:
-                for model in (
-                    response if isinstance(response, list) else response.get("data", [])
-                ):
-                    model["id"] = f"{prefix_id}.{model['id']}"
-
-    log.debug(f"get_all_models:responses() {responses}")
-
-    return responses
+    # log.debug(f"get_all_models:responses() {responses}")
+    # return responses
 
 
 @cached(ttl=3)
@@ -350,9 +351,32 @@ async def get_all_models() -> dict[str, list]:
     return models
 
 
+# Model name mapping for display purposes
+MODEL_NAME_MAPPING = {
+    'arthrod/cicerollamatry8': 'Cicero-Pt-BR'
+}
+
 @app.get("/models")
 @app.get("/models/{url_idx}")
 async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_user)):
+    """
+    Returns a fixed response with Cicero model.
+    Original implementation commented out below.
+    """
+    return {
+        "data": [
+            {
+                "id": "arthrod/cicerollamatry8",
+                "object": "model",
+                "created": 1677649963,
+                "owned_by": "openai"
+            }
+        ],
+        "object": "list"
+    }
+
+    # Original implementation commented out
+    """
     models = {
         "data": [],
     }
@@ -435,12 +459,11 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
         models["data"] = filtered_models
 
     return models
-
+    """
 
 class ConnectionVerificationForm(BaseModel):
     url: str
     key: str
-
 
 @app.post("/verify")
 async def verify_connection(

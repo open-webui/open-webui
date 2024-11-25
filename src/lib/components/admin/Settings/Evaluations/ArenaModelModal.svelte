@@ -33,7 +33,7 @@
 		}
 	};
 
-	let profileImageUrl = '/favicon.png';
+	let profileImageUrl = '$lib/assets/icons/favicon.png';
 	let description = '';
 
 	let selectedModelId = '';
@@ -87,8 +87,8 @@
 		show = false;
 
 		name = '';
-		id = '';
-		profileImageUrl = '/favicon.png';
+	id = '';
+		profileImageUrl = '$lib/assets/icons/favicon.png';
 		description = '';
 		modelIds = [];
 		selectedModelId = '';

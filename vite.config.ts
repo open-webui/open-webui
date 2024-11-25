@@ -26,5 +26,11 @@ export default defineConfig({
 	},
 	worker: {
 		format: 'es'
+	},
+	publicDir: 'static',
+	resolve: {
+		alias: {
+			'$lib': '/src/lib'
+		}
 	}
 });
