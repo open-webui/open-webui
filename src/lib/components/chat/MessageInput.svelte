@@ -688,6 +688,7 @@
 															)
 														) {
 															// Prevent Enter key from creating a new line
+															// Uses keyCode '13' for Enter key for chinese/japanese keyboards
 															if (e.keyCode === 13 && !e.shiftKey) {
 																e.preventDefault();
 															}
