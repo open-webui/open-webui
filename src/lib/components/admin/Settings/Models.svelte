@@ -24,6 +24,8 @@
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
 	import { toast } from 'svelte-sonner';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Cog6 from '$lib/components/icons/Cog6.svelte';
+	import ConfigureModelsModal from './Models/ConfigureModelsModal.svelte';
 
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
@@ -35,7 +37,8 @@
 
 	let filteredModels = [];
 	let selectedModelId = null;
-	let showResetModal = false;
+
+	let showConfigModal = false;
 
 	$: if (models) {
 		filteredModels = models
@@ -135,18 +138,7 @@
 	});
 </script>
 
-<ConfirmDialog
-	title={$i18n.t('Delete All Models')}
-	message={$i18n.t('This will delete all models including custom models and cannot be undone.')}
-	bind:show={showResetModal}
-	onConfirm={async () => {
-		const res = deleteAllModels(localStorage.token);
-		if (res) {
-			toast.success($i18n.t('All models deleted successfully'));
-			init();
-		}
-	}}
-/>
+<ConfigureModelsModal bind:show={showConfigModal} {init} />
 
 {#if models !== null}
 	{#if selectedModelId === null}
@@ -161,17 +153,15 @@
 				</div>
 
 				<div>
-					<Tooltip content={$i18n.t('This will delete all models including custom models')}>
+					<Tooltip content={$i18n.t('Configure')}>
 						<button
 							class=" px-2.5 py-1 rounded-full flex gap-1 items-center"
 							type="button"
 							on:click={() => {
-								showResetModal = true;
+								showConfigModal = true;
 							}}
 						>
-							<div class="text-xs flex-shrink-0">
-								{$i18n.t('Reset')}
-							</div>
+							<Cog6 />
 						</button>
 					</Tooltip>
 				</div>
