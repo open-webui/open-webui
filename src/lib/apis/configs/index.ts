@@ -58,7 +58,6 @@ export const exportConfig = async (token: string) => {
 	return res;
 };
 
-
 export const getModelsConfig = async (token: string) => {
 	let error = null;
 
@@ -85,7 +84,6 @@ export const getModelsConfig = async (token: string) => {
 
 	return res;
 };
-
 
 export const setModelsConfig = async (token: string, config: object) => {
 	let error = null;
@@ -116,7 +114,6 @@ export const setModelsConfig = async (token: string, config: object) => {
 
 	return res;
 };
-
 
 export const setDefaultPromptSuggestions = async (token: string, promptSuggestions: string) => {
 	let error = null;
