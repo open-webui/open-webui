@@ -373,12 +373,6 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
             headers["X-OpenWebUI-User-Email"] = user.email
             headers["X-OpenWebUI-User-Role"] = user.role
 
-        if ENABLE_FORWARD_USER_INFO_HEADERS:
-            headers["X-OpenWebUI-User-Name"] = user.name
-            headers["X-OpenWebUI-User-Id"] = user.id
-            headers["X-OpenWebUI-User-Email"] = user.email
-            headers["X-OpenWebUI-User-Role"] = user.role
-
         r = None
 
         timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
@@ -590,8 +584,6 @@ async def generate_chat_completion(
 
     # Convert the modified body back to JSON
     payload = json.dumps(payload)
-
-    log.debug(payload)
 
     headers = {}
     headers["Authorization"] = f"Bearer {key}"

@@ -130,18 +130,6 @@ class PromptsTable:
             or has_access(user_id, permission, prompt.access_control)
         ]
 
-    def get_prompts_by_user_id(
-        self, user_id: str, permission: str = "write"
-    ) -> list[PromptUserResponse]:
-        prompts = self.get_prompts()
-
-        return [
-            prompt
-            for prompt in prompts
-            if prompt.user_id == user_id
-            or has_access(user_id, permission, prompt.access_control)
-        ]
-
     def update_prompt_by_command(
         self, command: str, form_data: PromptForm
     ) -> Optional[PromptModel]:

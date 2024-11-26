@@ -18,9 +18,6 @@ from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
 from open_webui.utils.access_control import has_access
 
 
-from open_webui.utils.utils import has_access
-
-
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
@@ -190,13 +187,6 @@ class ModelsTable:
                     )
                 )
             return models
-
-    def get_base_models(self) -> list[ModelModel]:
-        with get_db() as db:
-            return [
-                ModelModel.model_validate(model)
-                for model in db.query(Model).filter(Model.base_model_id == None).all()
-            ]
 
     def get_base_models(self) -> list[ModelModel]:
         with get_db() as db:

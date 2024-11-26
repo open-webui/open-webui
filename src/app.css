@@ -231,6 +231,15 @@ input[type='number'] {
 	@apply dark:bg-gray-800 bg-gray-100;
 }
 
+.tiptap p code {
+	color: #eb5757;
+	border-width: 0px;
+	padding: 3px 8px;
+	font-size: 0.8em;
+	font-weight: 600;
+	@apply rounded-md dark:bg-gray-800 bg-gray-100 mx-0.5;
+}
+
 /* Code styling */
 .hljs-comment,
 .hljs-quote {

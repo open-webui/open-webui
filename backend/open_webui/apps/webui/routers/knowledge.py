@@ -68,19 +68,8 @@ async def get_knowledge(user=Depends(get_verified_user)):
                     Knowledges.update_knowledge_data_by_id(
                         id=knowledge_base.id, data=data
                     )
-                    if missing_files:
-                        data = knowledge.data or {}
-                        file_ids = data.get("file_ids", [])
 
-                        for missing_file in missing_files:
-                            file_ids.remove(missing_file)
-
-                        data["file_ids"] = file_ids
-                        Knowledges.update_knowledge_by_id(
-                            id=knowledge.id, form_data=KnowledgeUpdateForm(data=data)
-                        )
-
-                        files = Files.get_file_metadatas_by_ids(file_ids)
+                    files = Files.get_file_metadatas_by_ids(file_ids)
 
         knowledge_with_files.append(
             KnowledgeUserResponse(

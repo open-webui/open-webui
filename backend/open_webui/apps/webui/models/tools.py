@@ -165,18 +165,6 @@ class ToolsTable:
             or has_access(user_id, permission, tool.access_control)
         ]
 
-    def get_tools_by_user_id(
-        self, user_id: str, permission: str = "write"
-    ) -> list[ToolUserResponse]:
-        tools = self.get_tools()
-
-        return [
-            tool
-            for tool in tools
-            if tool.user_id == user_id
-            or has_access(user_id, permission, tool.access_control)
-        ]
-
     def get_tool_valves_by_id(self, id: str) -> Optional[dict]:
         try:
             with get_db() as db:

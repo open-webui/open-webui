@@ -36,7 +36,9 @@ from pydantic import BaseModel, ConfigDict
 from starlette.background import BackgroundTask
 
 
-from open_webui.utils.misc import calculate_sha256
+from open_webui.utils.misc import (
+    calculate_sha256,
+)
 from open_webui.utils.payload import (
     apply_model_params_to_body_ollama,
     apply_model_params_to_body_openai,
@@ -193,7 +195,10 @@ async def post_streaming_url(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         )
 
-        api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+        parsed_url = urlparse(url)
+        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+        api_config = app.state.config.OLLAMA_API_CONFIGS.get(base_url, {})
         key = api_config.get("key", None)
 
         headers = {"Content-Type": "application/json"}
@@ -208,13 +213,13 @@ async def post_streaming_url(
         r.raise_for_status()
 
         if stream:
-            headers = dict(r.headers)
+            response_headers = dict(r.headers)
             if content_type:
-                headers["Content-Type"] = content_type
+                response_headers["Content-Type"] = content_type
             return StreamingResponse(
                 r.content,
                 status_code=r.status,
-                headers=headers,
+                headers=response_headers,
                 background=BackgroundTask(
                     cleanup_response, response=r, session=session
                 ),
@@ -322,7 +327,10 @@ async def get_ollama_tags(
     else:
         url = app.state.config.OLLAMA_BASE_URLS[url_idx]
 
-        api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+        parsed_url = urlparse(url)
+        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+        api_config = app.state.config.OLLAMA_API_CONFIGS.get(base_url, {})
         key = api_config.get("key", None)
 
         headers = {}
@@ -350,20 +358,6 @@ async def get_ollama_tags(
                 status_code=r.status_code if r else 500,
                 detail=error_detail,
             )
-
-    if user.role == "user":
-        # Filter models based on user access control
-        filtered_models = []
-        for model in models.get("models", []):
-            model_info = Models.get_model_by_id(model["model"])
-            if model_info:
-                if user.id == model_info.user_id or has_access(
-                    user.id, type="read", access_control=model_info.access_control
-                ):
-                    filtered_models.append(model)
-        models["models"] = filtered_models
-
-    return models
 
     if user.role == "user":
         # Filter models based on user access control
@@ -537,7 +531,10 @@ async def copy_model(
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
-    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    parsed_url = urlparse(url)
+    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(base_url, {})
     key = api_config.get("key", None)
 
     headers = {"Content-Type": "application/json"}
@@ -596,7 +593,10 @@ async def delete_model(
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
-    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    parsed_url = urlparse(url)
+    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(base_url, {})
     key = api_config.get("key", None)
 
     headers = {"Content-Type": "application/json"}
@@ -647,7 +647,10 @@ async def show_model_info(form_data: ModelNameForm, user=Depends(get_verified_us
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
-    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    parsed_url = urlparse(url)
+    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(base_url, {})
     key = api_config.get("key", None)
 
     headers = {"Content-Type": "application/json"}
@@ -742,7 +745,10 @@ async def generate_ollama_embeddings(
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
-    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    parsed_url = urlparse(url)
+    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(base_url, {})
     key = api_config.get("key", None)
 
     headers = {"Content-Type": "application/json"}
@@ -809,7 +815,10 @@ async def generate_ollama_batch_embeddings(
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
-    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    parsed_url = urlparse(url)
+    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(base_url, {})
     key = api_config.get("key", None)
 
     headers = {"Content-Type": "application/json"}
@@ -978,6 +987,7 @@ async def generate_chat_completion(
                 status_code=403,
                 detail="Model not found",
             )
+
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
 
@@ -985,7 +995,10 @@ async def generate_chat_completion(
     log.info(f"url: {url}")
     log.debug(f"generate_chat_completion() - 2.payload = {payload}")
 
-    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    parsed_url = urlparse(url)
+    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(base_url, {})
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
         payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
@@ -1096,6 +1109,7 @@ async def get_openai_models(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
+
     models = []
     if url_idx is None:
         model_list = await get_all_models()
@@ -1141,23 +1155,6 @@ async def get_openai_models(
                 status_code=r.status_code if r else 500,
                 detail=error_detail,
             )
-
-    if user.role == "user":
-        # Filter models based on user access control
-        filtered_models = []
-        for model in models:
-            model_info = Models.get_model_by_id(model["id"])
-            if model_info:
-                if user.id == model_info.user_id or has_access(
-                    user.id, type="read", access_control=model_info.access_control
-                ):
-                    filtered_models.append(model)
-        models = filtered_models
-
-    return {
-        "data": models,
-        "object": "list",
-    }
 
     if user.role == "user":
         # Filter models based on user access control

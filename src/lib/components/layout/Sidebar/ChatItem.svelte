@@ -378,12 +378,6 @@
 					on:tag={(e) => {
 						dispatch('tag', e.detail);
 					}}
-					on:tag={(e) => {
-						dispatch('tag', e.detail);
-					}}
-					on:tag={(e) => {
-						dispatch('tag', e.detail);
-					}}
 				>
 					<button
 						aria-label="Chat Menu"

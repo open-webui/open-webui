@@ -22,6 +22,7 @@ dependencies = [
     "aiohttp==3.10.8",
     "async-timeout",
     "aiocache",
+    "aiofiles",
 
     "sqlalchemy==2.0.32",
     "alembic==1.13.2",
@@ -98,7 +99,6 @@ dependencies = [
     "docker~=7.1.0",
     "pytest~=8.3.2",
     "pytest-docker~=3.1.1",
-    "qdrant-client>=1.12.0",
     "googleapis-common-protos==1.63.2",
 
     "ldap3==2.9.1"
