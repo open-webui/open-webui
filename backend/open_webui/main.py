@@ -49,7 +49,9 @@ from open_webui.apps.openai.main import (
     get_all_models_responses as get_openai_models_responses,
 )
 from open_webui.apps.retrieval.main import app as retrieval_app
-from open_webui.apps.retrieval.utils import get_sources_from_files, rag_template
+from open_webui.apps.retrieval.utils import get_sources_from_files
+
+
 from open_webui.apps.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
@@ -122,11 +124,12 @@ from open_webui.utils.response import (
 )
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.task import (
-    moa_response_generation_template,
-    tags_generation_template,
-    query_generation_template,
-    emoji_generation_template,
+    rag_template,
     title_generation_template,
+    query_generation_template,
+    tags_generation_template,
+    emoji_generation_template,
+    moa_response_generation_template,
     tools_function_calling_generation_template,
 )
 from open_webui.utils.tools import get_tools
@@ -538,8 +541,6 @@ async def chat_completion_files_handler(
 
         if len(queries) == 0:
             queries = [get_last_user_message(body["messages"])]
-
-        print(f"{queries=}")
 
         sources = get_sources_from_files(
             files=files,
@@ -970,7 +971,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 @app.middleware("http")
 async def commit_session_after_request(request: Request, call_next):
     response = await call_next(request)
-    log.debug("Commit session after request")
+    # log.debug("Commit session after request")
     Session.commit()
     return response
 
@@ -1177,6 +1178,8 @@ async def get_all_models():
             model["actions"].extend(
                 get_action_items_from_module(action_function, function_module)
             )
+    log.debug(f"get_all_models() returned {len(models)} models")
+
     return models
 
 
@@ -1190,6 +1193,14 @@ async def get_models(user=Depends(get_verified_user)):
         for model in models
         if "pipeline" not in model or model["pipeline"].get("type", None) != "filter"
     ]
+
+    model_order_list = webui_app.state.config.MODEL_ORDER_LIST
+    if model_order_list:
+        model_order_dict = {model_id: i for i, model_id in enumerate(model_order_list)}
+        # Sort models by order list priority, with fallback for those not in the list
+        models.sort(
+            key=lambda x: (model_order_dict.get(x["id"], float("inf")), x["name"])
+        )
 
     # Filter out models that the user does not have access to
     if user.role == "user":
@@ -1213,6 +1224,10 @@ async def get_models(user=Depends(get_verified_user)):
                 ):
                     filtered_models.append(model)
         models = filtered_models
+
+    log.debug(
+        f"/api/models returned filtered models accessible to the user: {json.dumps([model['id'] for model in models])}"
+    )
 
     return {"data": models}
 
@@ -1704,7 +1719,6 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
 
 @app.post("/api/task/title/completions")
 async def generate_title(form_data: dict, user=Depends(get_verified_user)):
-    print("generate_title")
 
     model_list = await get_all_models()
     models = {model["id"]: model for model in model_list}
@@ -1725,9 +1739,9 @@ async def generate_title(form_data: dict, user=Depends(get_verified_user)):
         models,
     )
 
-    print(task_model_id)
-
-    model = models[task_model_id]
+    log.debug(
+        f"generating chat title using model {task_model_id} for user {user.email} "
+    )
 
     if app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE != "":
         template = app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE
@@ -1766,10 +1780,12 @@ Artificial Intelligence in Healthcare
                 "max_completion_tokens": 50,
             }
         ),
-        "chat_id": form_data.get("chat_id", None),
-        "metadata": {"task": str(TASKS.TITLE_GENERATION), "task_body": form_data},
+        "metadata": {
+            "task": str(TASKS.TITLE_GENERATION),
+            "task_body": form_data,
+            "chat_id": form_data.get("chat_id", None),
+        },
     }
-    log.debug(payload)
 
     # Handle pipeline filters
     try:
@@ -1793,7 +1809,7 @@ Artificial Intelligence in Healthcare
 
 @app.post("/api/task/tags/completions")
 async def generate_chat_tags(form_data: dict, user=Depends(get_verified_user)):
-    print("generate_chat_tags")
+
     if not app.state.config.ENABLE_TAGS_GENERATION:
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -1818,7 +1834,10 @@ async def generate_chat_tags(form_data: dict, user=Depends(get_verified_user)):
         app.state.config.TASK_MODEL_EXTERNAL,
         models,
     )
-    print(task_model_id)
+
+    log.debug(
+        f"generating chat tags using model {task_model_id} for user {user.email} "
+    )
 
     if app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE != "":
         template = app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE
@@ -1849,9 +1868,12 @@ JSON format: { "tags": ["tag1", "tag2", "tag3"] }
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": False,
-        "metadata": {"task": str(TASKS.TAGS_GENERATION), "task_body": form_data},
+        "metadata": {
+            "task": str(TASKS.TAGS_GENERATION),
+            "task_body": form_data,
+            "chat_id": form_data.get("chat_id", None),
+        },
     }
-    log.debug(payload)
 
     # Handle pipeline filters
     try:
@@ -1875,7 +1897,7 @@ JSON format: { "tags": ["tag1", "tag2", "tag3"] }
 
 @app.post("/api/task/queries/completions")
 async def generate_queries(form_data: dict, user=Depends(get_verified_user)):
-    print("generate_queries")
+
     type = form_data.get("type")
     if type == "web_search":
         if not app.state.config.ENABLE_SEARCH_QUERY_GENERATION:
@@ -1908,9 +1930,10 @@ async def generate_queries(form_data: dict, user=Depends(get_verified_user)):
         app.state.config.TASK_MODEL_EXTERNAL,
         models,
     )
-    print(task_model_id)
 
-    model = models[task_model_id]
+    log.debug(
+        f"generating {type} queries using model {task_model_id} for user {user.email}"
+    )
 
     if app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE != "":
         template = app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE
@@ -1925,9 +1948,12 @@ async def generate_queries(form_data: dict, user=Depends(get_verified_user)):
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": False,
-        "metadata": {"task": str(TASKS.QUERY_GENERATION), "task_body": form_data},
+        "metadata": {
+            "task": str(TASKS.QUERY_GENERATION),
+            "task_body": form_data,
+            "chat_id": form_data.get("chat_id", None),
+        },
     }
-    log.debug(payload)
 
     # Handle pipeline filters
     try:
@@ -1951,7 +1977,6 @@ async def generate_queries(form_data: dict, user=Depends(get_verified_user)):
 
 @app.post("/api/task/emoji/completions")
 async def generate_emoji(form_data: dict, user=Depends(get_verified_user)):
-    print("generate_emoji")
 
     model_list = await get_all_models()
     models = {model["id"]: model for model in model_list}
@@ -1971,9 +1996,8 @@ async def generate_emoji(form_data: dict, user=Depends(get_verified_user)):
         app.state.config.TASK_MODEL_EXTERNAL,
         models,
     )
-    print(task_model_id)
 
-    model = models[task_model_id]
+    log.debug(f"generating emoji using model {task_model_id} for user {user.email} ")
 
     template = '''
 Your task is to reflect the speaker's likely facial expression through a fitting emoji. Interpret emotions from the message and reflect their facial expression using fitting, diverse emojis (e.g., 😊, 😢, 😡, 😱).
@@ -2003,7 +2027,6 @@ Message: """{{prompt}}"""
         "chat_id": form_data.get("chat_id", None),
         "metadata": {"task": str(TASKS.EMOJI_GENERATION), "task_body": form_data},
     }
-    log.debug(payload)
 
     # Handle pipeline filters
     try:
@@ -2027,7 +2050,6 @@ Message: """{{prompt}}"""
 
 @app.post("/api/task/moa/completions")
 async def generate_moa_response(form_data: dict, user=Depends(get_verified_user)):
-    print("generate_moa_response")
 
     model_list = await get_all_models()
     models = {model["id"]: model for model in model_list}
@@ -2047,9 +2069,8 @@ async def generate_moa_response(form_data: dict, user=Depends(get_verified_user)
         app.state.config.TASK_MODEL_EXTERNAL,
         models,
     )
-    print(task_model_id)
 
-    model = models[task_model_id]
+    log.debug(f"generating MOA model {task_model_id} for user {user.email} ")
 
     template = """You have been provided with a set of responses from various models to the latest user query: "{{prompt}}"
 
@@ -2073,7 +2094,6 @@ Responses from models: {{responses}}"""
             "task_body": form_data,
         },
     }
-    log.debug(payload)
 
     try:
         payload = filter_pipeline(payload, user, models)
@@ -2108,7 +2128,7 @@ Responses from models: {{responses}}"""
 async def get_pipelines_list(user=Depends(get_admin_user)):
     responses = await get_openai_models_responses()
 
-    print(responses)
+    log.debug(f"get_pipelines_list: get_openai_models_responses returned {responses}")
     urlIdxs = [
         idx
         for idx, response in enumerate(responses)

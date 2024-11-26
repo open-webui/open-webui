@@ -592,29 +592,6 @@
 												placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 												largeTextAsFile={$settings?.largeTextAsFile ?? false}
 												bind:value={prompt}
-												on:enter={async (e) => {
-													const commandsContainerElement =
-														document.getElementById('commands-container');
-													if (commandsContainerElement) {
-														e.preventDefault();
-
-														const commandOptionButton = [
-															...document.getElementsByClassName('selected-command-option-button')
-														]?.at(-1);
-
-														if (commandOptionButton) {
-															commandOptionButton?.click();
-															return;
-														}
-													}
-
-													if (prompt !== '') {
-														dispatch('submit', prompt);
-													}
-												}}
-												on:keypress={(e) => {
-													e = e.detail.event;
-												}}
 												on:keydown={async (e) => {
 													e = e.detail.event;
 
@@ -657,34 +634,70 @@
 														editButton?.click();
 													}
 
-													if (commandsContainerElement && e.key === 'ArrowUp') {
-														e.preventDefault();
-														commandsElement.selectUp();
+													if (commandsContainerElement) {
+														if (commandsContainerElement && e.key === 'ArrowUp') {
+															e.preventDefault();
+															commandsElement.selectUp();
 
-														const commandOptionButton = [
-															...document.getElementsByClassName('selected-command-option-button')
-														]?.at(-1);
-														commandOptionButton.scrollIntoView({ block: 'center' });
-													}
+															const commandOptionButton = [
+																...document.getElementsByClassName('selected-command-option-button')
+															]?.at(-1);
+															commandOptionButton.scrollIntoView({ block: 'center' });
+														}
 
-													if (commandsContainerElement && e.key === 'ArrowDown') {
-														e.preventDefault();
-														commandsElement.selectDown();
+														if (commandsContainerElement && e.key === 'ArrowDown') {
+															e.preventDefault();
+															commandsElement.selectDown();
 
-														const commandOptionButton = [
-															...document.getElementsByClassName('selected-command-option-button')
-														]?.at(-1);
-														commandOptionButton.scrollIntoView({ block: 'center' });
-													}
+															const commandOptionButton = [
+																...document.getElementsByClassName('selected-command-option-button')
+															]?.at(-1);
+															commandOptionButton.scrollIntoView({ block: 'center' });
+														}
 
-													if (commandsContainerElement && e.key === 'Tab') {
-														e.preventDefault();
+														if (commandsContainerElement && e.key === 'Tab') {
+															e.preventDefault();
 
-														const commandOptionButton = [
-															...document.getElementsByClassName('selected-command-option-button')
-														]?.at(-1);
+															const commandOptionButton = [
+																...document.getElementsByClassName('selected-command-option-button')
+															]?.at(-1);
 
-														commandOptionButton?.click();
+															commandOptionButton?.click();
+														}
+
+														if (commandsContainerElement && e.key === 'Enter') {
+															e.preventDefault();
+
+															const commandOptionButton = [
+																...document.getElementsByClassName('selected-command-option-button')
+															]?.at(-1);
+
+															if (commandOptionButton) {
+																commandOptionButton?.click();
+															} else {
+																document.getElementById('send-message-button')?.click();
+															}
+														}
+													} else {
+														if (
+															!$mobile ||
+															!(
+																'ontouchstart' in window ||
+																navigator.maxTouchPoints > 0 ||
+																navigator.msMaxTouchPoints > 0
+															)
+														) {
+															// Prevent Enter key from creating a new line
+															// Uses keyCode '13' for Enter key for chinese/japanese keyboards
+															if (e.keyCode === 13 && !e.shiftKey) {
+																e.preventDefault();
+															}
+
+															// Submit the prompt when Enter key is pressed
+															if (prompt !== '' && e.keyCode === 13 && !e.shiftKey) {
+																dispatch('submit', prompt);
+															}
+														}
 													}
 
 													if (e.key === 'Escape') {
@@ -881,7 +894,6 @@
 											on:input={async (e) => {
 												e.target.style.height = '';
 												e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
-												user = null;
 											}}
 											on:focus={async (e) => {
 												e.target.style.height = '';

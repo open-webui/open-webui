@@ -3,30 +3,27 @@
 
 	export let value = '';
 	export let placeholder = '';
-
 	export let rows = 1;
 	export let required = false;
-
 	export let className =
 		'w-full rounded-lg px-3 py-2 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none h-full';
 
 	let textareaElement;
 
+	// Adjust height on mount and after setting the element.
 	onMount(async () => {
 		await tick();
-		if (textareaElement) {
-			await tick();
-			setTimeout(adjustHeight, 0);
-		}
+		adjustHeight();
 	});
 
-	$: if (value) {
-		setTimeout(adjustHeight, 0);
-	}
+	// This reactive statement runs whenever `value` changes
+	$: adjustHeight();
 
+	// Adjust height to match content
 	const adjustHeight = () => {
 		if (textareaElement) {
-			textareaElement.style.height = '';
+			// Reset height to calculate the correct scroll height
+			textareaElement.style.height = 'auto';
 			textareaElement.style.height = `${textareaElement.scrollHeight}px`;
 		}
 	};
@@ -37,7 +34,6 @@
 	bind:value
 	{placeholder}
 	on:input={adjustHeight}
-	on:focus={adjustHeight}
 	class={className}
 	{rows}
 	{required}
