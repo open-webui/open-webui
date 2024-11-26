@@ -16,6 +16,12 @@ from open_webui.apps.webui.models.feedbacks import (
     Feedbacks,
 )
 
+from open_webui.apps.webui.models.feedbacks import (
+    FeedbackModel,
+    FeedbackForm,
+    Feedbacks,
+)
+
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.utils import get_admin_user, get_verified_user
 

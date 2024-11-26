@@ -41,6 +41,44 @@ def get_permissions(
     return permissions
 
 
+def get_permissions(
+    user_id: str,
+    default_permissions: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Get all permissions for a user by combining the permissions of all groups the user is a member of.
+    If a permission is defined in multiple groups, the most permissive value is used (True > False).
+    Permissions are nested in a dict with the permission key as the key and a boolean as the value.
+    """
+
+    def combine_permissions(
+        permissions: Dict[str, Any], group_permissions: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Combine permissions from multiple groups by taking the most permissive value."""
+        for key, value in group_permissions.items():
+            if isinstance(value, dict):
+                if key not in permissions:
+                    permissions[key] = {}
+                permissions[key] = combine_permissions(permissions[key], value)
+            else:
+                if key not in permissions:
+                    permissions[key] = value
+                else:
+                    permissions[key] = permissions[key] or value
+        return permissions
+
+    user_groups = Groups.get_groups_by_member_id(user_id)
+
+    # deep copy default permissions to avoid modifying the original dict
+    permissions = json.loads(json.dumps(default_permissions))
+
+    for group in user_groups:
+        group_permissions = group.permissions
+        permissions = combine_permissions(permissions, group_permissions)
+
+    return permissions
+
+
 def has_permission(
     user_id: str,
     permission_key: str,

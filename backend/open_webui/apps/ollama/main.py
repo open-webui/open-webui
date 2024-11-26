@@ -9,6 +9,8 @@ from typing import Optional, Union
 from urllib.parse import urlparse
 
 import aiohttp
+from aiocache import cached
+
 import requests
 from open_webui.apps.webui.models.models import Models
 from open_webui.config import (
@@ -254,6 +256,7 @@ def merge_models_lists(model_lists):
     return list(merged_models.values())
 
 
+@cached(ttl=3)
 async def get_all_models():
     log.info("get_all_models()")
     if app.state.config.ENABLE_OLLAMA_API:
@@ -292,8 +295,6 @@ async def get_all_models():
                 if prefix_id:
                     for model in response.get("models", []):
                         model["model"] = f"{prefix_id}.{model['model']}"
-
-        print(responses)
 
         models = {
             "models": merge_models_lists(
@@ -349,6 +350,20 @@ async def get_ollama_tags(
                 status_code=r.status_code if r else 500,
                 detail=error_detail,
             )
+
+    if user.role == "user":
+        # Filter models based on user access control
+        filtered_models = []
+        for model in models.get("models", []):
+            model_info = Models.get_model_by_id(model["model"])
+            if model_info:
+                if user.id == model_info.user_id or has_access(
+                    user.id, type="read", access_control=model_info.access_control
+                ):
+                    filtered_models.append(model)
+        models["models"] = filtered_models
+
+    return models
 
     if user.role == "user":
         # Filter models based on user access control
@@ -835,6 +850,7 @@ async def generate_ollama_batch_embeddings(
 class GenerateCompletionForm(BaseModel):
     model: str
     prompt: str
+    suffix: Optional[str] = None
     images: Optional[list[str]] = None
     format: Optional[str] = None
     options: Optional[dict] = None
@@ -962,7 +978,6 @@ async def generate_chat_completion(
                 status_code=403,
                 detail="Model not found",
             )
-
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
 
@@ -1081,7 +1096,6 @@ async def get_openai_models(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
-
     models = []
     if url_idx is None:
         model_list = await get_all_models()
@@ -1127,6 +1141,23 @@ async def get_openai_models(
                 status_code=r.status_code if r else 500,
                 detail=error_detail,
             )
+
+    if user.role == "user":
+        # Filter models based on user access control
+        filtered_models = []
+        for model in models:
+            model_info = Models.get_model_by_id(model["id"])
+            if model_info:
+                if user.id == model_info.user_id or has_access(
+                    user.id, type="read", access_control=model_info.access_control
+                ):
+                    filtered_models.append(model)
+        models = filtered_models
+
+    return {
+        "data": models,
+        "object": "list",
+    }
 
     if user.role == "user":
         # Filter models based on user access control

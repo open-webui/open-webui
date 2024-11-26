@@ -210,15 +210,15 @@
 				}
 			});
 			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
-			if (model?.owned_by === 'openai') {
-				capabilities.usage = false;
-			}
 
 			if ('access_control' in model) {
 				accessControl = model.access_control;
 			} else {
 				accessControl = {};
 			}
+
+			console.log(model?.access_control);
+			console.log(accessControl);
 
 			console.log(model?.access_control);
 			console.log(accessControl);

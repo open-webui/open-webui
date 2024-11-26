@@ -68,7 +68,7 @@
 	let inputFiles = null;
 
 	let filteredItems = [];
-	$: if (knowledge) {
+	$: if (knowledge && knowledge.files) {
 		fuse = new Fuse(knowledge.files, {
 			keys: ['meta.name', 'meta.description']
 		});
@@ -760,6 +760,26 @@
 								{/if}
 							</div>
 						</div>
+
+						{#if filteredItems.length > 0}
+							<div class=" flex overflow-y-auto h-full w-full scrollbar-hidden text-xs">
+								<Files
+									files={filteredItems}
+									{selectedFileId}
+									on:click={(e) => {
+										selectedFileId = selectedFileId === e.detail ? null : e.detail;
+									}}
+									on:delete={(e) => {
+										console.log(e.detail);
+
+										selectedFileId = null;
+										deleteFileHandler(e.detail);
+									}}
+								/>
+							</div>
+						{:else}
+							<div class="m-auto text-gray-500 text-xs">{$i18n.t('No content found')}</div>
+						{/if}
 					</div>
 				</Pane>
 
@@ -796,6 +816,14 @@
 												{selectedFile?.meta?.name}
 											</a>
 										</div>
+										<input
+											class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
+											bind:value={query}
+											placeholder={$i18n.t('Search Collection')}
+											on:focus={() => {
+												selectedFileId = null;
+											}}
+										/>
 
 										<div>
 											<button

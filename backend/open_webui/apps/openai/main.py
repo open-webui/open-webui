@@ -6,7 +6,10 @@ from pathlib import Path
 from typing import Literal, Optional, overload
 
 import aiohttp
+from aiocache import cached
 import requests
+
+
 from open_webui.apps.webui.models.models import Models
 from open_webui.config import (
     CACHE_DIR,
@@ -302,6 +305,8 @@ async def get_all_models_responses() -> list:
                     }
 
                     tasks.append(asyncio.ensure_future(asyncio.sleep(0, model_list)))
+            else:
+                tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
 
     responses = await asyncio.gather(*tasks)
 
@@ -313,7 +318,9 @@ async def get_all_models_responses() -> list:
             prefix_id = api_config.get("prefix_id", None)
 
             if prefix_id:
-                for model in response["data"]:
+                for model in (
+                    response if isinstance(response, list) else response.get("data", [])
+                ):
                     model["id"] = f"{prefix_id}.{model['id']}"
 
     log.debug(f"get_all_models:responses() {responses}")
@@ -321,6 +328,7 @@ async def get_all_models_responses() -> list:
     return responses
 
 
+@cached(ttl=3)
 async def get_all_models() -> dict[str, list]:
     log.info("get_all_models()")
 
@@ -358,6 +366,12 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
         headers = {}
         headers["Authorization"] = f"Bearer {key}"
         headers["Content-Type"] = "application/json"
+
+        if ENABLE_FORWARD_USER_INFO_HEADERS:
+            headers["X-OpenWebUI-User-Name"] = user.name
+            headers["X-OpenWebUI-User-Id"] = user.id
+            headers["X-OpenWebUI-User-Email"] = user.email
+            headers["X-OpenWebUI-User-Role"] = user.role
 
         if ENABLE_FORWARD_USER_INFO_HEADERS:
             headers["X-OpenWebUI-User-Name"] = user.name

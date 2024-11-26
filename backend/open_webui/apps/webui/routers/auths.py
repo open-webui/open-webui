@@ -18,7 +18,6 @@ from open_webui.apps.webui.models.auths import (
     UserResponse,
 )
 from open_webui.apps.webui.models.users import Users
-
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
     WEBUI_AUTH,
@@ -238,10 +237,16 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
             user = Users.get_user_by_email(mail)
             if not user:
-
                 try:
-                    hashed = get_password_hash(form_data.password)
-                    user = Auths.insert_new_auth(mail, hashed, cn)
+                    role = (
+                        "admin"
+                        if Users.get_num_users() == 0
+                        else request.app.state.config.DEFAULT_USER_ROLE
+                    )
+
+                    user = Auths.insert_new_auth(
+                        email=mail, password=str(uuid.uuid4()), name=cn, role=role
+                    )
 
                     if not user:
                         raise HTTPException(
@@ -253,7 +258,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                 except Exception as err:
                     raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
 
-            user = Auths.authenticate_user(mail, password=str(form_data.password))
+            user = Auths.authenticate_user_by_trusted_header(mail)
 
             if user:
                 token = create_token(

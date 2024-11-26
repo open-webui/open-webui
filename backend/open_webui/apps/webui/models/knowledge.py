@@ -92,6 +92,14 @@ class KnowledgeUserResponse(KnowledgeUserModel):
     files: Optional[list[FileMetadataResponse | dict]] = None
 
 
+class KnowledgeResponse(KnowledgeModel):
+    files: Optional[list[FileMetadataResponse | dict]] = None
+
+
+class KnowledgeUserResponse(KnowledgeUserModel):
+    files: Optional[list[FileMetadataResponse | dict]] = None
+
+
 class KnowledgeForm(BaseModel):
     name: str
     description: str
@@ -142,6 +150,17 @@ class KnowledgeTable:
                     )
                 )
             return knowledge_bases
+
+    def get_knowledge_bases_by_user_id(
+        self, user_id: str, permission: str = "write"
+    ) -> list[KnowledgeUserModel]:
+        knowledge_bases = self.get_knowledge_bases()
+        return [
+            knowledge_base
+            for knowledge_base in knowledge_bases
+            if knowledge_base.user_id == user_id
+            or has_access(user_id, permission, knowledge_base.access_control)
+        ]
 
     def get_knowledge_bases_by_user_id(
         self, user_id: str, permission: str = "write"

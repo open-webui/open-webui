@@ -90,6 +90,13 @@ class FileMetadataResponse(BaseModel):
     updated_at: int  # timestamp in epoch
 
 
+class FileMetadataResponse(BaseModel):
+    id: str
+    meta: dict
+    created_at: int  # timestamp in epoch
+    updated_at: int  # timestamp in epoch
+
+
 class FileForm(BaseModel):
     id: str
     hash: Optional[str] = None
