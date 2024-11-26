@@ -51,6 +51,8 @@
 	onMount(async () => {
 		config = await getModelsConfig(localStorage.token);
 
+		defaultModelIds = config.DEFAULT_MODELS.split(',').filter((id) => id);
+
 		const modelOrderList = config.MODEL_ORDER_LIST || [];
 		const allModelIds = $models.map((model) => model.id);
 
