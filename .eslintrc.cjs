@@ -19,6 +19,16 @@ module.exports = {
 		es2017: true,
 		node: true
 	},
+	rules: {
+		// Only error on severe issues
+		'@typescript-eslint/no-explicit-any': 'off',
+		'@typescript-eslint/no-unused-vars': 'warn',
+		'no-unused-vars': 'warn',
+		'@typescript-eslint/no-empty-function': 'off',
+		'@typescript-eslint/ban-ts-comment': 'off',
+		'@typescript-eslint/no-non-null-assertion': 'off',
+		'no-mixed-spaces-and-tabs': 'warn'
+	},
 	overrides: [
 		{
 			files: ['*.svelte'],

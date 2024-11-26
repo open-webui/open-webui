@@ -1,8 +1,9 @@
 [project]
-name = "open-webui"
-description = "Open WebUI"
+name = "cicero"
+version = "0.1.0"
+description = "Cicero - An advanced AI-powered platform designed specifically for legal professionals, focusing on drafting, learning, and improving contracts and legal documents."
 authors = [
-    { name = "Timothy Jaeryang Baek", email = "tim@openwebui.com" }
+    { name = "Arthur Souza Rodrigues", email = "contact@cicero.chat" }
 ]
 license = { file = "LICENSE" }
 dependencies = [
@@ -105,7 +106,6 @@ dependencies = [
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.12.0a1"
-dynamic = ["version"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: MIT License",

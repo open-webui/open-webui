@@ -7,14 +7,18 @@ services:
     tty: true
     restart: unless-stopped
     image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   open-webui:
     build:
-      context: .
+      context: https://github.com/arthrod/cicero.git#main
       args:
         OLLAMA_BASE_URL: '/ollama'
       dockerfile: Dockerfile
-    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
     container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
@@ -28,6 +32,11 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   ollama: {}
