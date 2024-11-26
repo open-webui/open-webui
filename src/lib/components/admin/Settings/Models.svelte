@@ -266,6 +266,7 @@
 										bind:state={model.is_active}
 										on:change={async () => {
 											toggleModelHandler(model);
+											await _models.set(await getModels(localStorage.token));
 										}}
 									/>
 								</Tooltip>
