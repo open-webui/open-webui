@@ -27,13 +27,13 @@
                     {$t('footer.termsPrivacy')}
                 </a>
                 <a href="https://www.cicero.chat/privacy-policy.html" class="text-[var(--foreground)] hover:opacity-80 transition-opacity">
-                    Privacy Policy
+                    {$t('footer.privacyPolicy')}
                 </a>
             </div>
 
             <!-- Copyright -->
             <div class="text-[var(--foreground)] opacity-60">
-                © 2024 Cicero. {$t('footer.rights')}
+                2024 Cicero. {$t('footer.rights')}
             </div>
         </div>
     </div>

@@ -68,6 +68,12 @@
             <div class="flex items-center gap-[30px]">
                 <div class="social flex items-center gap-5">
                     <a
+                        href="/about"
+                        class="text-[var(--foreground)] hover:opacity-80 transition-all"
+                    >
+                        About
+                    </a>
+                    <a
                         href="https://blog.synthetic.lawyer"
                         target="_blank"
                         class="hover:scale-110 transition-all p-2 rounded-full flex items-center justify-center bg-[var(--surface-primary)]"
