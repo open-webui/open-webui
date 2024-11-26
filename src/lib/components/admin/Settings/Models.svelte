@@ -124,12 +124,11 @@
 			}).catch((error) => {
 				return null;
 			});
-
-			await init();
 		} else {
 			await toggleModelById(localStorage.token, model.id);
 		}
 
+		await init();
 		_models.set(await getModels(localStorage.token));
 	};
 
@@ -183,7 +182,7 @@
 
 		<div class=" my-2 mb-5" id="model-list">
 			{#if models.length > 0}
-				{#each filteredModels as model, modelIdx (`${model.id}-${modelIdx}`)}
+				{#each filteredModels as model, modelIdx (model.id)}
 					<div
 						class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-lg transition"
 						id="model-item-{model.id}"
@@ -266,7 +265,6 @@
 										bind:state={model.is_active}
 										on:change={async () => {
 											toggleModelHandler(model);
-											await _models.set(await getModels(localStorage.token));
 										}}
 									/>
 								</Tooltip>
