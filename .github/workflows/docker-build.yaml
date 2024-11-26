@@ -151,7 +151,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.PACKAGES_TOKEN }}  # Use your new token
 
       - name: Extract metadata for Docker images (cuda tag)
         id: meta
