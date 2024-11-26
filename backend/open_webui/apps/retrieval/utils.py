@@ -15,8 +15,6 @@ from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.misc import get_last_user_message
 
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.config import DEFAULT_RAG_TEMPLATE
-
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -238,44 +236,6 @@ def query_collection_with_hybrid_search(
     return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
-def rag_template(template: str, context: str, query: str):
-    if template == "":
-        template = DEFAULT_RAG_TEMPLATE
-
-    if "[context]" not in template and "{{CONTEXT}}" not in template:
-        log.debug(
-            "WARNING: The RAG template does not contain the '[context]' or '{{CONTEXT}}' placeholder."
-        )
-
-    if "<context>" in context and "</context>" in context:
-        log.debug(
-            "WARNING: Potential prompt injection attack: the RAG "
-            "context contains '<context>' and '</context>'. This might be "
-            "nothing, or the user might be trying to hack something."
-        )
-
-    query_placeholders = []
-    if "[query]" in context:
-        query_placeholder = "{{QUERY" + str(uuid.uuid4()) + "}}"
-        template = template.replace("[query]", query_placeholder)
-        query_placeholders.append(query_placeholder)
-
-    if "{{QUERY}}" in context:
-        query_placeholder = "{{QUERY" + str(uuid.uuid4()) + "}}"
-        template = template.replace("{{QUERY}}", query_placeholder)
-        query_placeholders.append(query_placeholder)
-
-    template = template.replace("[context]", context)
-    template = template.replace("{{CONTEXT}}", context)
-    template = template.replace("[query]", query)
-    template = template.replace("{{QUERY}}", query)
-
-    for query_placeholder in query_placeholders:
-        template = template.replace(query_placeholder, query)
-
-    return template
-
-
 def get_embedding_function(
     embedding_engine,
     embedding_model,
@@ -307,7 +267,7 @@ def get_embedding_function(
         return lambda query: generate_multiple(query, func)
 
 
-def get_rag_context(
+def get_sources_from_files(
     files,
     queries,
     embedding_function,
@@ -387,43 +347,24 @@ def get_rag_context(
                 del file["data"]
             relevant_contexts.append({**context, "file": file})
 
-    contexts = []
-    citations = []
+    sources = []
     for context in relevant_contexts:
         try:
             if "documents" in context:
-                file_names = list(
-                    set(
-                        [
-                            metadata["name"]
-                            for metadata in context["metadatas"][0]
-                            if metadata is not None and "name" in metadata
-                        ]
-                    )
-                )
-                contexts.append(
-                    ((", ".join(file_names) + ":\n\n") if file_names else "")
-                    + "\n\n".join(
-                        [text for text in context["documents"][0] if text is not None]
-                    )
-                )
-
                 if "metadatas" in context:
-                    citation = {
+                    source = {
                         "source": context["file"],
                         "document": context["documents"][0],
                         "metadata": context["metadatas"][0],
                     }
                     if "distances" in context and context["distances"]:
-                        citation["distances"] = context["distances"][0]
-                    citations.append(citation)
+                        source["distances"] = context["distances"][0]
+
+                    sources.append(source)
         except Exception as e:
             log.exception(e)
 
-    print("contexts", contexts)
-    print("citations", citations)
-
-    return contexts, citations
+    return sources
 
 
 def get_model_path(model: str, update_model: bool = False):
@@ -502,7 +443,6 @@ def generate_ollama_batch_embeddings(
         r.raise_for_status()
         data = r.json()
 
-        print(data)
         if "embeddings" in data:
             return data["embeddings"]
         else:

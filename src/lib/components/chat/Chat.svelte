@@ -216,7 +216,7 @@
 				} else {
 					message.statusHistory = [data];
 				}
-			} else if (type === 'citation') {
+			} else if (type === 'source' || type === 'citation') {
 				if (data?.type === 'code_execution') {
 					// Code execution; update existing code execution by ID, or add new one.
 					if (!message?.code_executions) {
@@ -235,11 +235,11 @@
 
 					message.code_executions = message.code_executions;
 				} else {
-					// Regular citation.
-					if (message?.citations) {
-						message.citations.push(data);
+					// Regular source.
+					if (message?.sources) {
+						message.sources.push(data);
 					} else {
-						message.citations = [data];
+						message.sources = [data];
 					}
 				}
 			} else if (type === 'message') {
@@ -664,7 +664,7 @@
 				content: m.content,
 				info: m.info ? m.info : undefined,
 				timestamp: m.timestamp,
-				...(m.citations ? { citations: m.citations } : {})
+				...(m.sources ? { sources: m.sources } : {})
 			})),
 			chat_id: chatId,
 			session_id: $socket?.id,
@@ -718,7 +718,7 @@
 				content: m.content,
 				info: m.info ? m.info : undefined,
 				timestamp: m.timestamp,
-				...(m.citations ? { citations: m.citations } : {})
+				...(m.sources ? { sources: m.sources } : {})
 			})),
 			...(event ? { event: event } : {}),
 			chat_id: chatId,
@@ -888,11 +888,10 @@
 		await tick();
 
 		// Reset chat input textarea
-		const chatInputContainer = document.getElementById('chat-input-container');
+		const chatInputElement = document.getElementById('chat-input');
 
-		if (chatInputContainer) {
-			chatInputContainer.value = '';
-			chatInputContainer.style.height = '';
+		if (chatInputElement) {
+			chatInputElement.style.height = '';
 		}
 
 		const _files = JSON.parse(JSON.stringify(files));
@@ -1278,8 +1277,8 @@
 								console.log(line);
 								let data = JSON.parse(line);
 
-								if ('citations' in data) {
-									responseMessage.citations = data.citations;
+								if ('sources' in data) {
+									responseMessage.sources = data.sources;
 									// Only remove status if it was initially set
 									if (model?.info?.meta?.knowledge ?? false) {
 										responseMessage.statusHistory = responseMessage.statusHistory.filter(
@@ -1632,7 +1631,7 @@
 					const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
 
 					for await (const update of textStream) {
-						const { value, done, citations, selectedModelId, error, usage } = update;
+						const { value, done, sources, selectedModelId, error, usage } = update;
 						if (error) {
 							await handleOpenAIError(error, null, model, responseMessage);
 							break;
@@ -1658,8 +1657,8 @@
 							continue;
 						}
 
-						if (citations) {
-							responseMessage.citations = citations;
+						if (sources) {
+							responseMessage.sources = sources;
 							// Only remove status if it was initially set
 							if (model?.info?.meta?.knowledge ?? false) {
 								responseMessage.statusHistory = responseMessage.statusHistory.filter(
@@ -1938,7 +1937,7 @@
 			if (res && res.ok && res.body) {
 				const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
 				for await (const update of textStream) {
-					const { value, done, citations, error, usage } = update;
+					const { value, done, sources, error, usage } = update;
 					if (error || done) {
 						break;
 					}
@@ -1977,7 +1976,7 @@
 				}
 			);
 
-			return title;
+			return title ? title : (lastUserMessage?.content ?? 'New Chat');
 		} else {
 			return lastUserMessage?.content ?? 'New Chat';
 		}
@@ -2310,7 +2309,11 @@
 								on:submit={async (e) => {
 									if (e.detail) {
 										await tick();
-										submitPrompt(e.detail.replaceAll('\n\n', '\n'));
+										submitPrompt(
+											($settings?.richTextInput ?? true)
+												? e.detail.replaceAll('\n\n', '\n')
+												: e.detail
+										);
 									}
 								}}
 							/>
@@ -2347,7 +2350,11 @@
 								on:submit={async (e) => {
 									if (e.detail) {
 										await tick();
-										submitPrompt(e.detail.replaceAll('\n\n', '\n'));
+										submitPrompt(
+											($settings?.richTextInput ?? true)
+												? e.detail.replaceAll('\n\n', '\n')
+												: e.detail
+										);
 									}
 								}}
 							/>
