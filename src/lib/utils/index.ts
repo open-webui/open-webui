@@ -9,7 +9,7 @@ import { TTS_RESPONSE_SPLIT } from '$lib/types';
 //////////////////////////
 
 function escapeRegExp(string: string): string {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 export const replaceTokens = (content, sourceIds, char, user) => {
