@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { marked } from 'marked';
 	import TurndownService from 'turndown';
-	const turndownService = new TurndownService();
+	const turndownService = new TurndownService({
+		codeBlockStyle: 'fenced'
+	});
+	turndownService.escape = (string) => string;
 
 	import { onMount, onDestroy } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
@@ -154,7 +157,11 @@
 
 				const newValue = turndownService.turndown(editor.getHTML());
 				if (value !== newValue) {
-					value = newValue; // Trigger parent updates
+					value = newValue;
+
+					if (value === '') {
+						editor.commands.clearContent();
+					}
 				}
 			},
 			editorProps: {
@@ -164,11 +171,10 @@
 						eventDispatch('focus', { event });
 						return false;
 					},
-					keypress: (view, event) => {
-						eventDispatch('keypress', { event });
+					keyup: (view, event) => {
+						eventDispatch('keyup', { event });
 						return false;
 					},
-
 					keydown: (view, event) => {
 						// Handle Tab Key
 						if (event.key === 'Tab') {
@@ -210,22 +216,12 @@
 
 							// Handle shift + Enter for a line break
 							if (shiftEnter) {
-								if (event.key === 'Enter' && event.shiftKey) {
+								if (event.key === 'Enter' && event.shiftKey && !event.ctrlKey && !event.metaKey) {
 									editor.commands.setHardBreak(); // Insert a hard break
 									view.dispatch(view.state.tr.scrollIntoView()); // Move viewport to the cursor
 									event.preventDefault();
 									return true;
 								}
-								if (event.key === 'Enter') {
-									eventDispatch('enter', { event });
-									event.preventDefault();
-									return true;
-								}
-							}
-							if (event.key === 'Enter') {
-								eventDispatch('enter', { event });
-								event.preventDefault();
-								return true;
 							}
 						}
 						eventDispatch('keydown', { event });
