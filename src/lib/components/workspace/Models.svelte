@@ -8,6 +8,7 @@
 	const { saveAs } = fileSaver;
 
 	import { onMount, getContext, tick } from 'svelte';
+	import { base } from '$app/paths';
 	import { goto } from '$app/navigation';
 	const i18n = getContext('i18n');
 
@@ -75,7 +76,7 @@
 			id: `${model.id}-clone`,
 			name: `${model.name} (Clone)`
 		});
-		goto('/workspace/models/create');
+		goto(`${base}/workspace/models/create`);
 	};
 
 	const shareModelHandler = async (model) => {

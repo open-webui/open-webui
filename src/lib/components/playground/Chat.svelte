@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-
+	import { base } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { onMount, tick, getContext } from 'svelte';
 
@@ -173,7 +173,7 @@
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
-			await goto('/');
+			await goto(`${base}/`);
 		}
 
 		if ($settings?.models) {

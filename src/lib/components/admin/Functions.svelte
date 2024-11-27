@@ -2,6 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
+	import { base } from '$app/paths';
 
 	import { WEBUI_NAME, config, functions, models } from '$lib/stores';
 	import { onMount, getContext, tick } from 'svelte';
@@ -98,7 +99,7 @@
 				id: `${_function.id}_clone`,
 				name: `${_function.name} (Clone)`
 			});
-			goto('/admin/functions/create');
+			goto(`${base}/admin/functions/create`);
 		}
 	};
 
@@ -322,7 +323,7 @@
 					<FunctionMenu
 						{func}
 						editHandler={() => {
-							goto(`/admin/functions/edit?id=${encodeURIComponent(func.id)}`);
+							goto(`${base}/admin/functions/edit?id=${encodeURIComponent(func.id)}`);
 						}}
 						shareHandler={() => {
 							shareHandler(func);

@@ -9,7 +9,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { fade } from 'svelte/transition';
-
+	import { base } from '$app/paths';
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
 	import { getFunctions } from '$lib/apis/functions';
 	import { getModels, getVersionUpdates } from '$lib/apis';
@@ -54,7 +54,7 @@
 
 	onMount(async () => {
 		if ($user === undefined) {
-			await goto('/auth');
+			await goto(`${base}/auth`);
 		} else if (['user', 'admin'].includes($user.role)) {
 			try {
 				// Check if IndexedDB exists

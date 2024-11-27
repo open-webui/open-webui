@@ -9,7 +9,7 @@
 	import { compareVersion, extractFrontmatter } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-
+	import { base } from '$app/paths';
 	const i18n = getContext('i18n');
 
 	let tool = null;
@@ -47,7 +47,7 @@
 			toast.success($i18n.t('Tool updated successfully'));
 			tools.set(await getTools(localStorage.token));
 
-			// await goto('/workspace/tools');
+			// await goto(`${base}/workspace/tools`);
 		}
 	};
 
@@ -58,7 +58,7 @@
 		if (id) {
 			tool = await getToolById(localStorage.token, id).catch((error) => {
 				toast.error(error);
-				goto('/workspace/tools');
+				goto(`${base}/workspace/tools`);
 				return null;
 			});
 

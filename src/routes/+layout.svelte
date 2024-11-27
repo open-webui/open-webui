@@ -1,6 +1,7 @@
 <script>
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
+	import { base } from '$app/paths';
 
 	let loadingProgress = spring(0, {
 		stiffness: 0.05
@@ -44,7 +45,7 @@
 			reconnectionDelay: 1000,
 			reconnectionDelayMax: 5000,
 			randomizationFactor: 0.5,
-			path: '/ws/socket.io',
+			path: `${WEBUI_BASE_URL}/ws/socket.io`,
 			auth: { token: localStorage.token }
 		});
 
@@ -142,19 +143,19 @@
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
-						await goto('/auth');
+						await goto(`${base}/auth`);
 					}
 				} else {
 					// Don't redirect if we're already on the auth page
 					// Needed because we pass in tokens from OAuth logins via URL fragments
 					if ($page.url.pathname !== '/auth') {
-						await goto('/auth');
+						await goto(`${base}/auth`);
 					}
 				}
 			}
 		} else {
 			// Redirect to /error when Backend Not Detected
-			await goto(`/error`);
+			await goto(`${base}/error`);
 		}
 
 		await tick();
@@ -175,7 +176,7 @@
 
 			document.getElementById('splash-screen')?.remove();
 
-			const audio = new Audio(`/audio/greeting.mp3`);
+			const audio = new Audio(`${base}/audio/greeting.mp3`);
 			const playAudio = () => {
 				audio.play();
 				document.removeEventListener('click', playAudio);
@@ -197,7 +198,7 @@
 
 <svelte:head>
 	<title>{$WEBUI_NAME}</title>
-	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
+	<link crossorigin="anonymous" rel="icon" href="{base}/static/favicon.png" />
 
 	<!-- rosepine themes have been disabled as it's not up to date with our latest version. -->
 	<!-- feel free to make a PR to fix if anyone wants to see it return -->

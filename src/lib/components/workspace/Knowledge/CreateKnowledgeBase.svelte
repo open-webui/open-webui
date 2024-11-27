@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
-
+	import { base } from '$app/paths';
 	import { createNewKnowledge, getKnowledgeBases } from '$lib/apis/knowledge';
 	import { toast } from 'svelte-sonner';
 	import { knowledge } from '$lib/stores';
@@ -37,7 +37,7 @@
 		if (res) {
 			toast.success($i18n.t('Knowledge created successfully.'));
 			knowledge.set(await getKnowledgeBases(localStorage.token));
-			goto(`/workspace/knowledge/${res.id}`);
+			goto(`${base}/workspace/knowledge/${res.id}`);
 		}
 
 		loading = false;
@@ -48,7 +48,7 @@
 	<button
 		class="flex space-x-1"
 		on:click={() => {
-			goto('/workspace/knowledge');
+			goto(`${base}/workspace/knowledge`);
 		}}
 	>
 		<div class=" self-center">

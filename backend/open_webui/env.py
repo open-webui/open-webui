@@ -6,6 +6,7 @@ import pkgutil
 import sys
 import shutil
 from pathlib import Path
+from urllib.parse import urlparse
 
 import markdown
 from bs4 import BeautifulSoup
@@ -104,6 +105,10 @@ if WEBUI_NAME != "Open WebUI":
     WEBUI_NAME += " (Open WebUI)"
 
 WEBUI_URL = os.environ.get("WEBUI_URL", "http://localhost:3000")
+
+# Derive the base path from the WEBUI_URL directory path
+parsed_url = urlparse(WEBUI_URL)
+WEBUI_BASE_PATH = parsed_url.path
 
 WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
 

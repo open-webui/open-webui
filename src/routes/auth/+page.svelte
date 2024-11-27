@@ -4,7 +4,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-
+	import { base } from '$app/paths';
 	import { getBackendConfig } from '$lib/apis';
 	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
 
@@ -39,7 +39,7 @@
 			$socket.emit('user-join', { auth: { token: sessionUser.token } });
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
-			goto('/');
+			goto(`${base}/`);
 		}
 	};
 
@@ -109,7 +109,7 @@
 
 	onMount(async () => {
 		if ($user !== undefined) {
-			await goto('/');
+			await goto(`${base}/`);
 		}
 		await checkOauthCallback();
 

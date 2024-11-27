@@ -4,6 +4,7 @@
 	const { saveAs } = fileSaver;
 
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { onMount, getContext } from 'svelte';
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
 
@@ -59,7 +60,7 @@
 
 	const cloneHandler = async (prompt) => {
 		sessionStorage.prompt = JSON.stringify(prompt);
-		goto('/workspace/prompts/create');
+		goto(`${base}/workspace/prompts/create`);
 	};
 
 	const exportHandler = async (prompt) => {

@@ -752,6 +752,8 @@ export const updatePipelineValves = async (
 export const getBackendConfig = async () => {
 	let error = null;
 
+	console.log('Fetching backend config');
+	console.log(`${WEBUI_BASE_URL}/api/config`);
 	const res = await fetch(`${WEBUI_BASE_URL}/api/config`, {
 		method: 'GET',
 		credentials: 'include',

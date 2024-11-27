@@ -6,7 +6,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { WEBUI_NAME, config, prompts, tools as _tools, user } from '$lib/stores';
 	import { createNewPrompt, deletePromptByCommand, getPrompts } from '$lib/apis/prompts';
-
+	import { base } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import {
 		createNewTool,
@@ -98,7 +98,7 @@
 				id: `${_tool.id}_clone`,
 				name: `${_tool.name} (Clone)`
 			});
-			goto('/workspace/tools/create');
+			goto(`${base}/workspace/tools/create`);
 		}
 	};
 
@@ -328,7 +328,7 @@
 
 						<ToolMenu
 							editHandler={() => {
-								goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
+								goto(`${base}/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
 							}}
 							shareHandler={() => {
 								shareHandler(tool);

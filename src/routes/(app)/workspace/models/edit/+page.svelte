@@ -1,7 +1,7 @@
 <script>
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-
+	import { base } from '$app/paths';
 	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -23,10 +23,10 @@
 			});
 
 			if (!model) {
-				goto('/workspace/models');
+				goto(`${base}/workspace/models`);
 			}
 		} else {
-			goto('/workspace/models');
+			goto(`${base}/workspace/models`);
 		}
 	});
 
@@ -36,7 +36,7 @@
 		if (res) {
 			await models.set(await getModels(localStorage.token));
 			toast.success($i18n.t('Model updated successfully'));
-			await goto('/workspace/models');
+			await goto(`${base}/workspace/models`);
 		}
 	};
 </script>

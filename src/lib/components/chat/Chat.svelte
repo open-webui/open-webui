@@ -6,7 +6,8 @@
 
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	const i18n: Writable<i18nType> = getContext('i18n');
-
+	
+	import { base } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
@@ -138,7 +139,7 @@
 				const chatInput = document.getElementById('chat-input');
 				chatInput?.focus();
 			} else {
-				await goto('/');
+				await goto(`${base}/`);
 			}
 		})();
 	}
@@ -346,7 +347,7 @@
 			});
 		} else {
 			if ($temporaryChatEnabled) {
-				await goto('/');
+				await goto(`${base}/`);
 			}
 		}
 
@@ -580,7 +581,7 @@
 	const loadChat = async () => {
 		chatId.set(chatIdProp);
 		chat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
-			await goto('/');
+			await goto(`${base}/`);
 			return null;
 		});
 

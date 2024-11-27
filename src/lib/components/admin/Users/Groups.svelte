@@ -5,6 +5,7 @@
 	dayjs.extend(relativeTime);
 
 	import { onMount, getContext } from 'svelte';
+	import { base } from '$app/paths';
 	import { goto } from '$app/navigation';
 
 	import { WEBUI_NAME, config, user, showSidebar, knowledge } from '$lib/stores';
@@ -97,7 +98,7 @@
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
-			await goto('/');
+			await goto(`${base}/`);
 		} else {
 			await setGroups();
 			defaultPermissions = await getUserDefaultPermissions(localStorage.token);

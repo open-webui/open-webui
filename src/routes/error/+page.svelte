@@ -2,14 +2,14 @@
 	import { goto } from '$app/navigation';
 	import { WEBUI_NAME, config } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
-
+	import { base } from '$app/paths';
 	const i18n = getContext('i18n');
 
 	let loaded = false;
 
 	onMount(async () => {
 		if ($config) {
-			await goto('/');
+			await goto(`${base}/`);
 		}
 
 		loaded = true;

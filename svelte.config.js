@@ -14,7 +14,10 @@ const config = {
 			pages: 'build',
 			assets: 'build',
 			fallback: 'index.html'
-		})
+		}),
+		paths: {
+			base: '/assistant'
+		},
 	},
 	onwarn: (warning, handler) => {
 		const { code, _ } = warning;

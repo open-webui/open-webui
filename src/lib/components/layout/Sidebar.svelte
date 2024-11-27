@@ -2,6 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 
+	import { base } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import {
 		user,
@@ -422,7 +423,7 @@
 				draggable="false"
 				on:click={async () => {
 					selectedChatId = null;
-					await goto('/');
+					await goto(`${base}/`);
 					const newChatButton = document.getElementById('new-chat-button');
 					setTimeout(() => {
 						newChatButton?.click();

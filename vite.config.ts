@@ -26,5 +26,8 @@ export default defineConfig({
 	},
 	worker: {
 		format: 'es'
-	}
+	},
+	paths: {
+		base: '/assistant'
+	},
 });

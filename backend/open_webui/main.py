@@ -108,6 +108,7 @@ from open_webui.env import (
     WEBUI_URL,
     RESET_CONFIG_ON_START,
     OFFLINE_MODE,
+    WEBUI_BASE_PATH,
 )
 from open_webui.utils.misc import (
     add_or_update_system_message,
@@ -996,7 +997,7 @@ async def update_embedding_function(request: Request, call_next):
 @app.middleware("http")
 async def inspect_websocket(request: Request, call_next):
     if (
-        "/ws/socket.io" in request.url.path
+        "${WEBUI_BASE_PATH}/ws/socket.io" in request.url.path
         and request.query_params.get("transport") == "websocket"
     ):
         upgrade = (request.headers.get("Upgrade") or "").lower()
@@ -2600,7 +2601,7 @@ async def get_manifest_json():
         "name": WEBUI_NAME,
         "short_name": WEBUI_NAME,
         "description": "Open WebUI is an open, extensible, user-friendly interface for AI that adapts to your workflow.",
-        "start_url": "/",
+        "start_url": WEBUI_BASE_PATH,
         "display": "standalone",
         "background_color": "#343541",
         "orientation": "natural",

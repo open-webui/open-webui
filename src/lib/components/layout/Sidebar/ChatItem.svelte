@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { onMount, getContext, createEventDispatcher, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -112,7 +113,7 @@
 			if ($chatId === id) {
 				await chatId.set('');
 				await tick();
-				goto('/');
+				goto(`${base}/`);
 			}
 
 			dispatch('change');
