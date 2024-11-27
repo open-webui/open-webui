@@ -16,19 +16,29 @@
 	export let user;
 
 	let chats = [];
+	let loading = false;
 
 	const deleteChatHandler = async (chatId) => {
 		const res = await deleteChatById(localStorage.token, chatId).catch((error) => {
-			toast.error(error);
+			toast.error(error?.message || 'Failed to delete chat');
 		});
 
-		chats = await getChatListByUserId(localStorage.token, user.id);
+		chats = await getChatListByUserId(localStorage.token, user.id).catch((error) => {
+			toast.error(error?.message || 'Failed to refresh chat list');
+			return [];
+		});
 	};
 
 	$: if (show) {
 		(async () => {
 			if (user.id) {
-				chats = await getChatListByUserId(localStorage.token, user.id);
+				loading = true;
+				chats = []; // Clear previous chats
+				chats = await getChatListByUserId(localStorage.token, user.id).catch((error) => {
+					toast.error(error?.message || 'Failed to fetch user chats');
+					return [];
+				});
+				loading = false;
 			}
 		})();
 	}
@@ -73,7 +83,11 @@
 
 		<div class="flex flex-col md:flex-row w-full px-5 py-4 md:space-x-4 dark:text-gray-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
-				{#if chats.length > 0}
+				{#if loading}
+					<div class="text-left text-sm w-full mb-8">
+						{$i18n.t('Loading...')}
+					</div>
+				{:else if chats.length > 0}
 					<div class="text-left text-sm w-full mb-4 max-h-[22rem] overflow-y-scroll">
 						<div class="relative overflow-x-auto">
 							<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto">

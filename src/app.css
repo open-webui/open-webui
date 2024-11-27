@@ -231,7 +231,6 @@ input[type='number'] {
 	@apply dark:bg-gray-800 bg-gray-100;
 }
 
-
 .tiptap p code {
 	color: #eb5757;
 	border-width: 0px;
