@@ -14,3 +14,12 @@
 		white-space: pre-wrap;
 	}
 }
+
+/* Add these styles for the thought-output container */
+.thought-output-container {
+  @apply space-y-2;
+}
+
+.thought-output-container button {
+  @apply transition-colors duration-200;
+}
