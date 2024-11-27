@@ -711,6 +711,7 @@
 	"Reranking model disabled": "Samhail athrangú faoi mhíchumas",
 	"Reranking model set to \"{{reranking_model}}\"": "Samhail athrangú socraithe go \"{{reranking_model}}\"",
 	"Reset": "Athshocraigh",
+	"Reset All Models": "",
 	"Reset Upload Directory": "Athshocraigh Eolaire Uas",
 	"Reset Vector Storage/Knowledge": "Athshocraigh Stóráil/Eolas Veicteoir",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Ní féidir fógraí freagartha a ghníomhachtú toisc gur diúltaíodh ceadanna an tsuímh Ghréasáin. Tabhair cuairt ar do shocruithe brabhsálaí chun an rochtain riachtanach a dheonú.",

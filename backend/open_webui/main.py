@@ -531,9 +531,16 @@ async def chat_completion_files_handler(
             queries_response = queries_response["choices"][0]["message"]["content"]
 
             try:
+                bracket_start = queries_response.find("{")
+                bracket_end = queries_response.rfind("}") + 1
+
+                if bracket_start == -1 or bracket_end == -1:
+                    raise Exception("No JSON object found in the response")
+
+                queries_response = queries_response[bracket_start:bracket_end]
                 queries_response = json.loads(queries_response)
             except Exception as e:
-                queries_response = {"queries": []}
+                queries_response = {"queries": [queries_response]}
 
             queries = queries_response.get("queries", [])
         except Exception as e:

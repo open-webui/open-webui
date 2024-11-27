@@ -711,6 +711,7 @@
 	"Reranking model disabled": "Omarrangeringsmodel deaktiveret",
 	"Reranking model set to \"{{reranking_model}}\"": "Omarrangeringsmodel sat til \"{{reranking_model}}\"",
 	"Reset": "Nulstil",
+	"Reset All Models": "",
 	"Reset Upload Directory": "Nulstil uploadmappe",
 	"Reset Vector Storage/Knowledge": "",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Svarnotifikationer kan ikke aktiveres, da webstedets tilladelser er blevet nægtet. Besøg dine browserindstillinger for at give den nødvendige adgang.",

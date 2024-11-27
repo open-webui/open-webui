@@ -711,6 +711,7 @@
 	"Reranking model disabled": "Model pemeringkatan ulang dinonaktifkan",
 	"Reranking model set to \"{{reranking_model}}\"": "Model pemeringkatan diatur ke \"{{reranking_model}}\"",
 	"Reset": "Atur Ulang",
+	"Reset All Models": "",
 	"Reset Upload Directory": "Setel Ulang Direktori Unggahan",
 	"Reset Vector Storage/Knowledge": "",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Notifikasi respons tidak dapat diaktifkan karena izin situs web telah ditolak. Silakan kunjungi pengaturan browser Anda untuk memberikan akses yang diperlukan.",

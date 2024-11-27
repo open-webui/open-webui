@@ -1,10 +1,12 @@
-from open_webui.config import BannerModel
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
+
+from typing import Optional
+
 from open_webui.utils.utils import get_admin_user, get_verified_user
-
-
 from open_webui.config import get_config, save_config
+from open_webui.config import BannerModel
+
 
 router = APIRouter()
 
@@ -38,8 +40,8 @@ async def export_config(user=Depends(get_admin_user)):
 # SetDefaultModels
 ############################
 class ModelsConfigForm(BaseModel):
-    DEFAULT_MODELS: str
-    MODEL_ORDER_LIST: list[str]
+    DEFAULT_MODELS: Optional[str]
+    MODEL_ORDER_LIST: Optional[list[str]]
 
 
 @router.get("/models", response_model=ModelsConfigForm)

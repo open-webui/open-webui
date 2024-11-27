@@ -711,6 +711,7 @@
 	"Reranking model disabled": "Omrangeringsmodell deaktivert",
 	"Reranking model set to \"{{reranking_model}}\"": "Omrangeringsmodell er angitt til \"{{reranking_model}}\"",
 	"Reset": "Tilbakestill",
+	"Reset All Models": "",
 	"Reset Upload Directory": "Tilbakestill opplastingskatalog",
 	"Reset Vector Storage/Knowledge": "Tilbakestill Vector lagring/kunnskap",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Svar-varsler kan ikke aktiveres fordi tilgang til nettstedet er nektet. Gå til nettleserinnstillingene dine for å gi den nødvendige tilgangen.",

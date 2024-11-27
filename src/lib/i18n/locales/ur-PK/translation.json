@@ -711,6 +711,7 @@
 	"Reranking model disabled": "دوبارہ درجہ بندی کا ماڈل غیر فعال کر دیا گیا",
 	"Reranking model set to \"{{reranking_model}}\"": "دوبارہ درجہ بندی کا ماڈل \"{{reranking_model}}\" پر مقرر کر دیا گیا ہے",
 	"Reset": "ری سیٹ",
+	"Reset All Models": "",
 	"Reset Upload Directory": "اپلوڈ ڈائریکٹری کو ری سیٹ کریں",
 	"Reset Vector Storage/Knowledge": "ویكٹر اسٹوریج/علم کو ری سیٹ کریں",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "جواب کی اطلاعات کو فعال نہیں کیا جا سکتا کیونکہ ویب سائٹ کی اجازتیں مسترد کر دی گئی ہیں براہ کرم اپنے براؤزر کی سیٹنگز پر جائیں تاکہ ضروری رسائی کی اجازت دے سکیں",

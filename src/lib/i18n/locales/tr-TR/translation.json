@@ -711,6 +711,7 @@
 	"Reranking model disabled": "Yeniden sıralama modeli devre dışı bırakıldı",
 	"Reranking model set to \"{{reranking_model}}\"": "Yeniden sıralama modeli \"{{reranking_model}}\" olarak ayarlandı",
 	"Reset": "Sıfırla",
+	"Reset All Models": "",
 	"Reset Upload Directory": "Yükleme Dizinini Sıfırla",
 	"Reset Vector Storage/Knowledge": "",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Web sitesi izinleri reddedildiğinden yanıt bildirimleri etkinleştirilemiyor. Gerekli erişimi sağlamak için lütfen tarayıcı ayarlarınızı ziyaret edin.",

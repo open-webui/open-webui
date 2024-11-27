@@ -711,6 +711,7 @@
 	"Reranking model disabled": "Модель реранжирования отключена",
 	"Reranking model set to \"{{reranking_model}}\"": "Модель реранжирования установлена на \"{{reranking_model}}\"",
 	"Reset": "Сбросить",
+	"Reset All Models": "",
 	"Reset Upload Directory": "Сбросить каталог загрузок",
 	"Reset Vector Storage/Knowledge": "",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Уведомления об ответах не могут быть активированы, поскольку доступ к веб-сайту был заблокирован. Пожалуйста, перейдите к настройкам своего браузера, чтобы предоставить необходимый доступ.",

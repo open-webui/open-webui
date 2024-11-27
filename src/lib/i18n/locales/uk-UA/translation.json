@@ -711,6 +711,7 @@
 	"Reranking model disabled": "Модель переранжування вимкнена",
 	"Reranking model set to \"{{reranking_model}}\"": "Модель переранжування встановлено на \"{{reranking_model}}\"",
 	"Reset": "Скидання",
+	"Reset All Models": "",
 	"Reset Upload Directory": "Скинути каталог завантажень",
 	"Reset Vector Storage/Knowledge": "Скинути векторне сховище/Знання",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Сповіщення про відповіді не можуть бути активовані, оскільки вам було відмовлено в доступі до веб-сайту. Будь ласка, відвідайте налаштування вашого браузера, щоб надати необхідний доступ.",

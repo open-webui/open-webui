@@ -711,6 +711,7 @@
 	"Reranking model disabled": "再ランキングモデルが無効です",
 	"Reranking model set to \"{{reranking_model}}\"": "再ランキングモデルを \"{{reranking_model}}\" に設定しました",
 	"Reset": "",
+	"Reset All Models": "",
 	"Reset Upload Directory": "アップロードディレクトリをリセット",
 	"Reset Vector Storage/Knowledge": "",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "",
