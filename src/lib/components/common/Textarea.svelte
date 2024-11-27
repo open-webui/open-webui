@@ -10,18 +10,49 @@
 
 	let textareaElement;
 
+	$: if (textareaElement) {
+		if (textareaElement.innerText !== value) {
+			textareaElement.innerText = value;
+		}
+	}
+
 	// Adjust height on mount and after setting the element.
 	onMount(async () => {
 		await tick();
 	});
+
+	// Handle paste event to ensure only plaintext is pasted
+	function handlePaste(event: ClipboardEvent) {
+		event.preventDefault(); // Prevent the default paste action
+		const clipboardData = event.clipboardData?.getData('text/plain'); // Get plaintext from clipboard
+		document.execCommand('insertText', false, clipboardData); // Insert plaintext into contenteditable
+	}
 </script>
 
-<textarea
+<div
+	contenteditable="true"
 	bind:this={textareaElement}
-	bind:value
-	{placeholder}
-	class={className}
-	style="field-sizing: content;"
-	{rows}
-	{required}
+	class="{className} whitespace-pre-wrap relative {!value.trim() ? 'placeholder' : ''}"
+	style="field-sizing: content; -moz-user-select: text !important;"
+	on:input={() => {
+		value = textareaElement.innerText;
+		console.log(value);
+	}}
+	on:paste={handlePaste}
+	data-placeholder={placeholder}
 />
+
+<style>
+	.placeholder::before {
+		/* abolute */
+		position: absolute;
+		content: attr(data-placeholder);
+		color: #adb5bd;
+		overflow: hidden;
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 1;
+		pointer-events: none;
+		touch-action: none;
+	}
+</style>
