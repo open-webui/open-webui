@@ -711,6 +711,7 @@
 	"Reranking model disabled": "पुनर्रैंकिंग मॉडल अक्षम किया गया",
 	"Reranking model set to \"{{reranking_model}}\"": "रीरैंकिंग मॉडल को \"{{reranking_model}}\" पर \u200b\u200bसेट किया गया",
 	"Reset": "",
+	"Reset All Models": "",
 	"Reset Upload Directory": "",
 	"Reset Vector Storage/Knowledge": "",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "",

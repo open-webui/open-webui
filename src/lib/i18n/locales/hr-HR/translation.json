@@ -711,6 +711,7 @@
 	"Reranking model disabled": "Model za ponovno rangiranje onemogućen",
 	"Reranking model set to \"{{reranking_model}}\"": "Model za ponovno rangiranje postavljen na \"{{reranking_model}}\"",
 	"Reset": "",
+	"Reset All Models": "",
 	"Reset Upload Directory": "Poništi upload direktorij",
 	"Reset Vector Storage/Knowledge": "",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "",

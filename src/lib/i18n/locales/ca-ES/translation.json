@@ -711,6 +711,7 @@
 	"Reranking model disabled": "Model de reavaluació desactivat",
 	"Reranking model set to \"{{reranking_model}}\"": "Model de reavaluació establert a \"{{reranking_model}}\"",
 	"Reset": "Restableix",
+	"Reset All Models": "",
 	"Reset Upload Directory": "Restableix el directori de pujades",
 	"Reset Vector Storage/Knowledge": "Restableix el Repositori de vectors/Coneixement",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Les notifications de resposta no es poden activar perquè els permisos del lloc web han estat rebutjats. Comprova les preferències del navegador per donar l'accés necessari.",

@@ -711,6 +711,7 @@
 	"Reranking model disabled": "Reranking-Modell deaktiviert",
 	"Reranking model set to \"{{reranking_model}}\"": "Reranking-Modell \"{{reranking_model}}\" fesgelegt",
 	"Reset": "Zurücksetzen",
+	"Reset All Models": "",
 	"Reset Upload Directory": "Upload-Verzeichnis zurücksetzen",
 	"Reset Vector Storage/Knowledge": "Vektorspeicher/Wissen zurücksetzen",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Benachrichtigungen können nicht aktiviert werden, da die Website-Berechtigungen abgelehnt wurden. Bitte besuchen Sie Ihre Browser-Einstellungen, um den erforderlichen Zugriff zu gewähren.",

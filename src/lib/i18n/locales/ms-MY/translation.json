@@ -711,6 +711,7 @@
 	"Reranking model disabled": "Model 'Reranking' dilumpuhkan",
 	"Reranking model set to \"{{reranking_model}}\"": "Model 'Reranking' ditetapkan kepada \"{{reranking_model}}\"",
 	"Reset": "Tetapkan Semula",
+	"Reset All Models": "",
 	"Reset Upload Directory": "Tetapkan Semula Direktori Muat Naik",
 	"Reset Vector Storage/Knowledge": "",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Pemberitahuan respons tidak boleh diaktifkan kerana kebenaran tapak web tidak diberi. Sila lawati tetapan pelayar web anda untuk memberikan akses yang diperlukan.",

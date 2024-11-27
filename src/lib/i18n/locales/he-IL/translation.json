@@ -711,6 +711,7 @@
 	"Reranking model disabled": "מודל דירוג מחדש מושבת",
 	"Reranking model set to \"{{reranking_model}}\"": "מודל דירוג מחדש הוגדר ל-\"{{reranking_model}}\"",
 	"Reset": "",
+	"Reset All Models": "",
 	"Reset Upload Directory": "",
 	"Reset Vector Storage/Knowledge": "",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "",
