@@ -1259,6 +1259,12 @@ YOUTUBE_LOADER_LANGUAGE = PersistentConfig(
     os.getenv("YOUTUBE_LOADER_LANGUAGE", "en").split(","),
 )
 
+YOUTUBE_LOADER_PROXY_URL = PersistentConfig(
+    "YOUTUBE_LOADER_PROXY_URL",
+    "rag.youtube_loader_proxy_url",
+    os.getenv("YOUTUBE_LOADER_PROXY_URL", ""),
+)
+
 
 ENABLE_RAG_WEB_SEARCH = PersistentConfig(
     "ENABLE_RAG_WEB_SEARCH",
