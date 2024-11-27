@@ -367,10 +367,8 @@ export const generateQueries = async (
 		throw error;
 	}
 
-
 	// Step 1: Safely extract the response string
 	const response = res?.choices[0]?.message?.content ?? '';
-
 
 	try {
 		const jsonStartIndex = response.indexOf('{');
@@ -390,7 +388,7 @@ export const generateQueries = async (
 			}
 		}
 
-		// If no valid JSON block found, return an empty array
+		// If no valid JSON block found, return response as is
 		return [response];
 	} catch (e) {
 		// Catch and safely return empty array on any parsing errors
