@@ -711,6 +711,7 @@
 	"Reranking model disabled": "Reranking model uitgeschakeld",
 	"Reranking model set to \"{{reranking_model}}\"": "Reranking model ingesteld op \"{{reranking_model}}\"",
 	"Reset": "Herstellen",
+	"Reset All Models": "",
 	"Reset Upload Directory": "Herstel Uploadmap",
 	"Reset Vector Storage/Knowledge": "Herstel Vectoropslag/-kennis",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Antwoordmeldingen kunnen niet worden geactiveerd omdat de rechten voor de website zijn geweigerd. Ga naar de instellingen van uw browser om de benodigde toegang te verlenen.",

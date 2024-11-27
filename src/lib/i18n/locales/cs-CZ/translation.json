@@ -711,6 +711,7 @@
 	"Reranking model disabled": "Přeřazovací model je deaktivován",
 	"Reranking model set to \"{{reranking_model}}\"": "Model pro přeřazení nastaven na \"{{reranking_model}}\"",
 	"Reset": "režim Reset",
+	"Reset All Models": "",
 	"Reset Upload Directory": "Resetovat adresář nahrávání",
 	"Reset Vector Storage/Knowledge": "Resetování úložiště vektorů/znalostí",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Oznámení o odpovědích nelze aktivovat, protože oprávnění webu byla zamítnuta. Navštivte nastavení svého prohlížeče a udělte potřebný přístup.",

@@ -711,6 +711,7 @@
 	"Reranking model disabled": "Reranking 모델 비활성화",
 	"Reranking model set to \"{{reranking_model}}\"": "Reranking 모델을 \"{{reranking_model}}\"로 설정",
 	"Reset": "초기화",
+	"Reset All Models": "",
 	"Reset Upload Directory": "업로드 디렉토리 초기화",
 	"Reset Vector Storage/Knowledge": "벡터 저장 공간/지식 기반 초기화",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "웹사이트 권환과 같이 응답 알림이 활성화될 수 없습니다. 필요한 접근을 사용하기 위해 브라우져 설정을 확인 부탁드립니다.",

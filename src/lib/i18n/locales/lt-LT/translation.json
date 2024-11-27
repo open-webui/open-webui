@@ -711,6 +711,7 @@
 	"Reranking model disabled": "Reranking modelis neleidžiamas",
 	"Reranking model set to \"{{reranking_model}}\"": "Nustatytas rereanking modelis: \"{{reranking_model}}\"",
 	"Reset": "Atkurti",
+	"Reset All Models": "",
 	"Reset Upload Directory": "Atkurti įkėlimų direktoiją",
 	"Reset Vector Storage/Knowledge": "",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Naršyklė neleidžia siųsti pranešimų",

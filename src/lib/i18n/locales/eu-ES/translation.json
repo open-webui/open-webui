@@ -711,6 +711,7 @@
 	"Reranking model disabled": "Berrantolatze modeloa desgaituta",
 	"Reranking model set to \"{{reranking_model}}\"": "Berrantolatze modeloa \"{{reranking_model}}\"-era ezarrita",
 	"Reset": "Berrezarri",
+	"Reset All Models": "",
 	"Reset Upload Directory": "Berrezarri karga direktorioa",
 	"Reset Vector Storage/Knowledge": "Berrezarri bektore biltegia/ezagutza",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Erantzunen jakinarazpenak ezin dira aktibatu webgunearen baimenak ukatu direlako. Mesedez, bisitatu zure nabigatzailearen ezarpenak beharrezko sarbidea emateko.",

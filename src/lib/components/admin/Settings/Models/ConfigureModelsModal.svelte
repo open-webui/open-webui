@@ -72,7 +72,7 @@
 </script>
 
 <ConfirmDialog
-	title={$i18n.t('Delete All Models')}
+	title={$i18n.t('Reset All Models')}
 	message={$i18n.t('This will delete all models including custom models and cannot be undone.')}
 	bind:show={showResetModal}
 	onConfirm={async () => {

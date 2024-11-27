@@ -711,6 +711,7 @@
 	"Reranking model disabled": "রির্যাক্টিং মডেল নিষ্ক্রিয় করা",
 	"Reranking model set to \"{{reranking_model}}\"": "রির ্যাঙ্কিং মডেল \"{{reranking_model}}\" -এ সেট করা আছে",
 	"Reset": "",
+	"Reset All Models": "",
 	"Reset Upload Directory": "",
 	"Reset Vector Storage/Knowledge": "",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "",

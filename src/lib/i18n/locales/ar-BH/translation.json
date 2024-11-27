@@ -711,6 +711,7 @@
 	"Reranking model disabled": "تم تعطيل نموذج إعادة الترتيب",
 	"Reranking model set to \"{{reranking_model}}\"": "تم ضبط نموذج إعادة الترتيب على \"{{reranking_model}}\"",
 	"Reset": "",
+	"Reset All Models": "",
 	"Reset Upload Directory": "",
 	"Reset Vector Storage/Knowledge": "",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "",
