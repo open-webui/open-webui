@@ -25,7 +25,7 @@ from fastapi import (
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy import text
@@ -2674,9 +2674,17 @@ async def healthcheck_with_db():
     return {"status": True}
 
 
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-app.mount("/cache", StaticFiles(directory=CACHE_DIR), name="cache")
+class CORSStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if isinstance(response, FileResponse):
+            response.headers["Access-Control-Allow-Origin"] = "*"
+        return response
 
+
+# Use CORSStaticFiles for static content that needs CORS
+app.mount("/static", CORSStaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/cache", CORSStaticFiles(directory=CACHE_DIR), name="cache")
 
 if os.path.exists(FRONTEND_BUILD_DIR):
     mimetypes.add_type("text/javascript", ".js")
