@@ -6,7 +6,18 @@
   git add .
   git commit -m "backup: current state before reset"
   ```
-- [ ] Return to main branch and reset:
+
+- [x] Document important changes to keep:
+  - [x] Project renaming changes:
+    - package.json
+    - pyproject.toml
+    - docker-compose.yaml
+  - [x] Documentation:
+    - localsetup.md
+    - localsetupimplementation.md
+    - STRATEGY.md
+
+- [x] Return to main branch and reset:
   ```bash
   # Switch to main branch
   git checkout main
@@ -17,20 +28,30 @@
   git reset --hard origin/main
   ```
 - [ ] Reapply essential changes one by one:
-  - [ ] Rename project references:
-    1. Update package.json name
-    2. Update pyproject.toml name
-    3. Update Docker image names
-  - [ ] Environment configuration:
-    1. Copy .env.example to .env.development
-    2. Update essential environment variables
-  - [ ] Create fresh virtual environment:
-    ```bash
-    # Remove existing venv if present
-    rm -rf venv
-    # Create new virtual environment with Python 3.11
-    py -3.11 -m venv venv
-    ```
+  1. [x] Project renaming:
+     ```bash
+     # Create a new branch for clean implementation
+     git checkout -b clean-implementation
+     ```
+     - [x] Update package.json name
+     - [x] Update pyproject.toml name
+     - [x] Update Docker image names
+     - [x] Commit these changes:
+       ```bash
+       git add package.json pyproject.toml docker-compose.yaml
+       git commit -m "refactor: rename project to whatever"
+       ```
+  
+  2. [ ] Environment setup:
+     - [ ] Copy .env.example to .env.development
+     - [ ] Update essential environment variables
+     - [ ] Create fresh virtual environment:
+       ```bash
+       # Remove existing venv if present
+       rm -rf venv
+       # Create new virtual environment with Python 3.13
+       py -3.13 -m venv venv
+       ```
 
 ## Docker Reset Procedure
 
