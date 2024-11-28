@@ -367,15 +367,13 @@ export const generateQueries = async (
 		throw error;
 	}
 
-	try {
-		// Step 1: Safely extract the response string
-		const response = res?.choices[0]?.message?.content ?? '';
+	// Step 1: Safely extract the response string
+	const response = res?.choices[0]?.message?.content ?? '';
 
-		// Step 3: Find the relevant JSON block within the response
+	try {
 		const jsonStartIndex = response.indexOf('{');
 		const jsonEndIndex = response.lastIndexOf('}');
 
-		// Step 4: Check if we found a valid JSON block (with both `{` and `}`)
 		if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
 			const jsonResponse = response.substring(jsonStartIndex, jsonEndIndex + 1);
 
@@ -390,12 +388,12 @@ export const generateQueries = async (
 			}
 		}
 
-		// If no valid JSON block found, return an empty array
-		return [];
+		// If no valid JSON block found, return response as is
+		return [response];
 	} catch (e) {
 		// Catch and safely return empty array on any parsing errors
 		console.error('Failed to parse response: ', e);
-		return [];
+		return [response];
 	}
 };
 

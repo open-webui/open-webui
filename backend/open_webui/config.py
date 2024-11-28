@@ -103,15 +103,16 @@ if os.path.exists(f"{DATA_DIR}/config.json"):
 DEFAULT_CONFIG = {
     "version": 0,
     "ui": {
-        "default_locale": "",
+        "default_locale": "en-GB",
         "prompt_suggestions": [
+            # English prompts
             {
                 "title": [
                     "Help me study",
                     "vocabulary for a college entrance exam",
                 ],
                 "content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
-                "lang": "en-US",
+                "lang": "en-GB",
             },
             {
                 "title": [
@@ -119,12 +120,12 @@ DEFAULT_CONFIG = {
                     "for what to do with my kids' art",
                 ],
                 "content": "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
-                "lang": "en-US",
+                "lang": "en-GB",
             },
             {
                 "title": ["Tell me a fun fact", "about the Roman Empire"],
                 "content": "Tell me a random fun fact about the Roman Empire",
-                "lang": "en-US",
+                "lang": "en-GB",
             },
             {
                 "title": [
@@ -132,7 +133,7 @@ DEFAULT_CONFIG = {
                     "of a website's sticky header",
                 ],
                 "content": "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
-                "lang": "en-US",
+                "lang": "en-GB",
             },
             {
                 "title": [
@@ -140,12 +141,12 @@ DEFAULT_CONFIG = {
                     "if I'm familiar with buying and selling stocks",
                 ],
                 "content": "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
-                "lang": "en-US",
+                "lang": "en-GB",
             },
             {
                 "title": ["Overcome procrastination", "give me tips"],
                 "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
-                "lang": "en-US",
+                "lang": "en-GB",
             },
             {
                 "title": [
@@ -153,7 +154,58 @@ DEFAULT_CONFIG = {
                     "rewrite it for better readability ",
                 ],
                 "content": 'Check the following sentence for grammar and clarity: "[sentence]". Rewrite it for better readability while maintaining its original meaning.',
-                "lang": "en-US",
+                "lang": "en-GB",
+            },
+            # French prompts
+            {
+                "title": [
+                    "Aidez-moi à étudier",
+                    "le vocabulaire pour un examen d'entrée au CÉGEP",
+                ],
+                "content": "Aidez-moi à étudier le vocabulaire : écrivez une phrase avec un blanc à remplir, et je vais essayer de choisir la bonne option.",
+                "lang": "fr-CA",
+            },
+            {
+                "title": [
+                    "Donnez-moi des idées",
+                    "pour ce que je peux faire avec les dessins de mes enfants",
+                ],
+                "content": "Quelles sont 5 idées créatives pour utiliser les dessins de mes enfants ? Je ne veux pas les jeter, mais ils prennent beaucoup de place.",
+                "lang": "fr-CA",
+            },
+            {
+                "title": ["Dites-moi un fait intéressant", "sur l'Empire romain"],
+                "content": "Dites-moi un fait intéressant et aléatoire sur l'Empire romain.",
+                "lang": "fr-CA",
+            },
+            {
+                "title": [
+                    "Montrez-moi un extrait de code",
+                    "pour un en-tête fixe sur un site web",
+                ],
+                "content": "Montrez-moi un extrait de code pour un en-tête fixe sur un site web en CSS et JavaScript.",
+                "lang": "fr-CA",
+            },
+            {
+                "title": [
+                    "Expliquez les options de trading",
+                    "si je connais l'achat et la vente d'actions",
+                ],
+                "content": "Expliquez les options de trading en termes simples, sachant que je suis familier avec l'achat et la vente d'actions.",
+                "lang": "fr-CA",
+            },
+            {
+                "title": ["Surmonter la procrastination", "donnez-moi des conseils"],
+                "content": "Pourriez-vous commencer par me demander dans quelles situations je procrastine le plus, puis me donner des suggestions pour y remédier ?",
+                "lang": "fr-CA",
+            },
+            {
+                "title": [
+                    "Vérification grammaticale",
+                    "réécrivez pour une meilleure clarté",
+                ],
+                "content": 'Vérifiez la grammaire et la clarté de cette phrase : "[phrase]". Réécrivez-la pour une meilleure clarté tout en conservant son sens original.',
+                "lang": "fr-CA",
             },
         ],
     },
@@ -988,7 +1040,7 @@ QUERY_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
 )
 
 DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE = """### Task:
-Analyze the chat history to determine the necessity of generating search queries. By default, **prioritize generating 1-3 broad and relevant search queries** unless it is absolutely certain that no additional information is required. The aim is to retrieve comprehensive, updated, and valuable information even with minimal uncertainty. If no search is unequivocally needed, return an empty list.
+Analyze the chat history to determine the necessity of generating search queries, in the given language. By default, **prioritize generating 1-3 broad and relevant search queries** unless it is absolutely certain that no additional information is required. The aim is to retrieve comprehensive, updated, and valuable information even with minimal uncertainty. If no search is unequivocally needed, return an empty list.
 
 ### Guidelines:
 - Respond **EXCLUSIVELY** with a JSON object. Any form of extra commentary, explanation, or additional text is strictly prohibited.
@@ -996,7 +1048,7 @@ Analyze the chat history to determine the necessity of generating search queries
 - If and only if it is entirely certain that no useful results can be retrieved by a search, return: { "queries": [] }.
 - Err on the side of suggesting search queries if there is **any chance** they might provide useful or updated information.
 - Be concise and focused on composing high-quality search queries, avoiding unnecessary elaboration, commentary, or assumptions.
-- Assume today's date is: {{CURRENT_DATE}}.
+- Today's date is: {{CURRENT_DATE}}.
 - Always prioritize providing actionable and broad queries that maximize informational coverage.
 
 ### Output:

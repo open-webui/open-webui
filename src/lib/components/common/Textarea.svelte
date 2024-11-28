@@ -13,28 +13,15 @@
 	// Adjust height on mount and after setting the element.
 	onMount(async () => {
 		await tick();
-		adjustHeight();
 	});
-
-	// This reactive statement runs whenever `value` changes
-	$: adjustHeight();
-
-	// Adjust height to match content
-	const adjustHeight = () => {
-		if (textareaElement) {
-			// Reset height to calculate the correct scroll height
-			textareaElement.style.height = 'auto';
-			textareaElement.style.height = `${textareaElement.scrollHeight}px`;
-		}
-	};
 </script>
 
 <textarea
 	bind:this={textareaElement}
 	bind:value
 	{placeholder}
-	on:input={adjustHeight}
 	class={className}
+	style="field-sizing: content;"
 	{rows}
 	{required}
 />

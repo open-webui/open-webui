@@ -25,12 +25,14 @@ def prompt_template(
     # Format the date to YYYY-MM-DD
     formatted_date = current_date.strftime("%Y-%m-%d")
     formatted_time = current_date.strftime("%I:%M:%S %p")
+    formatted_weekday = current_date.strftime("%A")
 
     template = template.replace("{{CURRENT_DATE}}", formatted_date)
     template = template.replace("{{CURRENT_TIME}}", formatted_time)
     template = template.replace(
         "{{CURRENT_DATETIME}}", f"{formatted_date} {formatted_time}"
     )
+    template = template.replace("{{CURRENT_WEEKDAY}}", formatted_weekday)
 
     if user_name:
         # Replace {{USER_NAME}} in the template with the user's name
