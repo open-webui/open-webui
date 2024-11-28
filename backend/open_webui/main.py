@@ -1942,7 +1942,7 @@ async def generate_queries(form_data: dict, user=Depends(get_verified_user)):
         f"generating {type} queries using model {task_model_id} for user {user.email}"
     )
 
-    if app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE != "":
+    if (app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE).strip() != "":
         template = app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE
     else:
         template = DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE
