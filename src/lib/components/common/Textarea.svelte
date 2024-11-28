@@ -25,7 +25,8 @@
 	function handlePaste(event: ClipboardEvent) {
 		event.preventDefault(); // Prevent the default paste action
 		const clipboardData = event.clipboardData?.getData('text/plain'); // Get plaintext from clipboard
-		document.execCommand('insertText', false, clipboardData); // Insert plaintext into contenteditable
+
+		value = `${value}${clipboardData}`; // Append the plaintext to the current value
 	}
 </script>
 
@@ -35,8 +36,8 @@
 	class="{className} whitespace-pre-wrap relative {!value.trim() ? 'placeholder' : ''}"
 	style="field-sizing: content; -moz-user-select: text !important;"
 	on:input={() => {
-		value = textareaElement.innerText;
-		console.log(value);
+		const text = textareaElement.innerText;
+		value = text.trim();
 	}}
 	on:paste={handlePaste}
 	data-placeholder={placeholder}

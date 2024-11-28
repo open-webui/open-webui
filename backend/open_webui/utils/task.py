@@ -122,7 +122,7 @@ def replace_messages_variable(template: str, messages: list[str]) -> str:
 
 
 def rag_template(template: str, context: str, query: str):
-    if template == "":
+    if template.strip() == "":
         template = DEFAULT_RAG_TEMPLATE
 
     if "[context]" not in template and "{{CONTEXT}}" not in template:
