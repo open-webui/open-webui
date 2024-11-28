@@ -33,7 +33,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
-
+from open_webui.utils.check_model_access import check_model_access
 from open_webui.apps.audio.main import app as audio_app
 from open_webui.apps.images.main import app as images_app
 from open_webui.apps.ollama.main import (
@@ -627,7 +627,9 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                         content={"detail": "Model not found"},
                     )
                 elif not (
-                    user.id == model_info.user_id
+                        not check_model_access(user.role)
+                    or
+                        user.id == model_info.user_id
                     or has_access(
                         user.id, type="read", access_control=model_info.access_control
                     )
@@ -1210,7 +1212,7 @@ async def get_models(user=Depends(get_verified_user)):
         )
 
     # Filter out models that the user does not have access to
-    if user.role == "user":
+    if check_model_access(user.role):
         filtered_models = []
         for model in models:
             if model.get("arena"):
@@ -1265,7 +1267,7 @@ async def generate_chat_completions(
     model = models[model_id]
 
     # Check if user has access to the model
-    if not bypass_filter and user.role == "user":
+    if not bypass_filter and  user.role == "user":
         if model.get("arena"):
             if not has_access(
                 user.id,
@@ -1286,7 +1288,9 @@ async def generate_chat_completions(
                     detail="Model not found",
                 )
             elif not (
-                user.id == model_info.user_id
+                    not check_model_access(user.role)
+                or
+                    user.id == model_info.user_id
                 or has_access(
                     user.id, type="read", access_control=model_info.access_control
                 )

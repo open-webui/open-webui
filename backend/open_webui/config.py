@@ -706,6 +706,8 @@ DEFAULT_MODELS = PersistentConfig(
     "DEFAULT_MODELS", "ui.default_models", os.environ.get("DEFAULT_MODELS", None)
 )
 
+ALLOW_ALL_MODELS_TO_USERS = os.environ.get("ALLOW_ALL_MODELS_TO_USERS", "False").lower() == "true"
+
 DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
     "DEFAULT_PROMPT_SUGGESTIONS",
     "ui.prompt_suggestions",
