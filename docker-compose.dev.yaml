@@ -1,30 +1,53 @@
+name: whatever-dev
+
 services:
-  db:
-    image: postgres:16-alpine
+  ollama:
+    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+    container_name: ollama-dev
     environment:
-      POSTGRES_USER: whatever
-      POSTGRES_PASSWORD: whatever
-      POSTGRES_DB: whatever
-    ports:
-      - "5432:5432"
+      - DEV_MODE=true
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ollama-dev:/root/.ollama
+    networks:
+      - whatever_network_dev
+    ports:
+      - "11434:11434"  # Default Ollama API port
+      - "3001:8080"    # Web UI port
+    restart: unless-stopped
 
   whatever:
     build:
       context: .
       dockerfile: Dockerfile
-      target: development
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/backend/venv
+    image: ghcr.io/whatever/whatever:${WEBUI_DOCKER_TAG-main}
+    container_name: whatever-dev
     environment:
-      - DATABASE_URL=postgresql://whatever:whatever@db:5432/whatever
-      - PYTHONPATH=/app/backend
+      - NODE_ENV=development
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+    volumes:
+      - ./src:/app/src
+      - ./scripts:/app/scripts
+      - ./backend:/app/backend
+      - ./static:/app/static
+      - ./vite.config.ts:/app/vite.config.ts
+      - ./svelte.config.js:/app/svelte.config.js
+      - ./tailwind.config.js:/app/tailwind.config.js
+      - ./tsconfig.json:/app/tsconfig.json
+      - whatever-dev:/app/backend/data
+    ports:
+      - "3000:8080"
     depends_on:
-      - db
       - ollama
+    networks:
+      - whatever_network_dev
+    command: ["npm", "run", "dev"]
+    restart: unless-stopped
 
 volumes:
-  postgres_data:
+  ollama-dev: {}
+  whatever-dev: {}
+
+networks:
+  whatever_network_dev:
+    name: whatever_network_dev
+    driver: bridge

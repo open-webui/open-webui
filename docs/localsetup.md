@@ -11,86 +11,27 @@ Before starting, ensure you have the following installed:
 - Docker and Docker Compose
 - A code editor (VS Code recommended)
 
-## Step-by-Step Setup
+## Docker Development Strategy
 
-### 1. Repository Setup
+Due to local compatibility issues, development will be conducted entirely within Docker containers. This approach ensures consistency across environments and simplifies dependency management.
+
+### Docker Setup
+- Ensure Docker and Docker Compose are installed and configured.
+- Use Docker Compose to manage service orchestration.
+
+### Starting the Development Environment
+
+#### Start All Services
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd whatever
+# Start all services using Docker Compose
+# CPU only
+docker-compose up -d
 
-# Create a Python virtual environment
-python -m venv venv
-
-# Activate the virtual environment
-# On Windows:
-.\venv\Scripts\activate
-# On Unix or MacOS:
-source venv/bin/activate
+# For GPU support, add the gpu config:
+docker-compose -f docker-compose.yaml -f docker-compose.gpu.yaml up -d
 ```
 
-### 2. Environment Configuration
-```bash
-# Copy the example environment file
-cp .env.example .env.development
-
-# Open .env.development and configure the following required variables:
-# - OLLAMA_BASE_URL (default: http://localhost:11434)
-# - WEBUI_SECRET_KEY (generate a secure random key)
-
-# Optional environment variables:
-# - OPENAI_API_BASE_URL: For OpenAI API integration
-# - OPENAI_API_KEY: Your OpenAI API key
-# - AUTOMATIC1111_BASE_URL: For Stable Diffusion integration (default: http://localhost:7860)
-# - OLLAMA_GPU_DRIVER: GPU driver for Docker (default: nvidia)
-# - OLLAMA_GPU_COUNT: Number of GPUs to use (default: 1)
-
-# Analytics settings (all disabled by default):
-# - SCARF_NO_ANALYTICS=true
-# - DO_NOT_TRACK=true
-# - ANONYMIZED_TELEMETRY=false
-```
-
-### 3. Install Dependencies
-
-#### Python Dependencies
-```bash
-# Install Python packages with development dependencies
-pip install -e ".[dev]"
-```
-
-#### Node.js Dependencies
-```bash
-# Install Node.js packages
-npm install
-```
-
-### 4. Database Setup
-
-The application uses SQLAlchemy with support for multiple databases:
-- PostgreSQL (recommended for production)
-- SQLite (default for development)
-
-The database will be automatically initialized on first run.
-
-### 5. Starting the Development Environment
-
-#### Start Ollama Service
-```bash
-# Using Docker Compose
-docker-compose up ollama
-
-# Or if you have Ollama installed locally
-ollama serve
-```
-
-#### Start the Development Server
-```bash
-# Start the frontend development server
-npm run dev
-```
-
-The application will be available at `http://localhost:3000` by default.
+The application will be available at `http://localhost:3000` by default (configurable via OPEN_WEBUI_PORT).
 
 ## Development Workflow
 
@@ -122,24 +63,7 @@ npm run test:frontend
 npm run cy:open
 ```
 
-## Docker Development Environment
-
-If you prefer to run the entire stack in Docker:
-
-```bash
-# Start all services (CPU only)
-docker-compose up -d
-
-# For GPU support, add the gpu config:
-docker-compose -f docker-compose.yaml -f docker-compose.gpu.yaml up -d
-
-# View logs
-docker-compose logs -f
-```
-
-The application will be available at `http://localhost:3000` by default (configurable via OPEN_WEBUI_PORT).
-
-### Available Docker Images
+## Available Docker Images
 
 The project provides several Docker images to suit different needs:
 - Main image: Multi-platform support (amd64/arm64)

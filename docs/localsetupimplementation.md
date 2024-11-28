@@ -12,6 +12,39 @@
   - [x] Verify Docker Compose installation: `docker compose version`
 - [x] Install VS Code (recommended) or preferred code editor
 
+## Environment Management Strategy
+
+To ensure scalability and clear segregation of responsibilities, all environments will be managed using Docker and Docker Compose. This includes development, testing, and production environments.
+
+### Docker Compose Profiles
+- Utilize Docker Compose profiles to manage different configurations for each environment.
+- Activate profiles using the `--profile` flag to switch between environments.
+
+### Separate Compose Files
+- Create separate Docker Compose files for each environment:
+  - `docker-compose.dev.yaml`
+  - `docker-compose.test.yaml`
+  - `docker-compose.prod.yaml`
+- Use the `-f` flag to specify which compose file to use.
+
+### Environment-Specific Variables
+- Define environment-specific variables in `.env` files:
+  - `.env.development`
+  - `.env.testing`
+  - `.env.production`
+- Reference these files in Docker Compose using the `env_file` directive.
+
+### Modular Dockerfiles
+- Use a base Dockerfile for common configurations and extend it for environment-specific needs.
+- Example: `FROM base AS development` or `FROM base AS production`.
+
+### CI/CD Integration
+- Integrate Docker and Docker Compose with CI/CD pipelines for automated environment setup and deployment.
+
+### Network and Volume Management
+- Use Docker networks to isolate services in different environments.
+- Define volumes for persistent data storage and scope them appropriately.
+
 ## Repository Setup
 - [x] Fork the Open WebUI repository to your GitHub account
 - [x] Clone your forked repository:
@@ -33,14 +66,14 @@
 - [x] Configure required environment variables in `.env.development`:
   - [x] Set `OLLAMA_BASE_URL` (verify default: http://localhost:11434)
   - [x] Generate and set `WEBUI_SECRET_KEY`
-- [ ] Configure optional environment variables (if needed):
+- [x] Configure optional environment variables (if needed):
   - [ ] Set `OPENAI_API_BASE_URL` for OpenAI integration
   - [ ] Set `OPENAI_API_KEY` for OpenAI integration
   - [ ] Set `AUTOMATIC1111_BASE_URL` for Stable Diffusion
   - [ ] Set `OLLAMA_GPU_DRIVER` for GPU support
   - [ ] Set `OLLAMA_GPU_COUNT` for GPU support
   - [ ] Set `OPEN_WEBUI_PORT` if default 3000 is not desired
-- [ ] Verify analytics settings are disabled (if desired):
+- [x] Verify analytics settings are disabled (if desired):
   - [ ] `SCARF_NO_ANALYTICS=true`
   - [ ] `DO_NOT_TRACK=true`
   - [ ] `ANONYMIZED_TELEMETRY=false`
@@ -56,7 +89,7 @@
   ```
 - [ ] Install Python dependencies:
   ```bash
-  pip install -e ".[dev]"
+  pip install -e "[dev]"
   ```
 - [ ] Verify Python environment:
   - [ ] Check installed packages: `pip list`
@@ -123,17 +156,17 @@ If using full Docker setup:
   - [ ] Verify application access at configured port
 
 ## Development Workflow Setup
-- [ ] Configure Git branches:
-  - [ ] Create develop branch: `git checkout -b develop`
-  - [ ] Set up feature branch template: `feature/<team>/<feature-name>`
-  - [ ] Set up hotfix branch template: `hotfix/<issue-name>`
-  - [ ] Set up sub-task branch template: `sub/<team>/<task-name>`
-- [ ] Set up code formatting:
-  - [ ] Test frontend formatting: `npm run format`
-  - [ ] Test backend formatting: `npm run format:backend`
-  - [ ] Test linting: `npm run lint`
-- [ ] Set up testing environment:
-  - [ ] Run frontend tests: `npm run test:frontend`
+- [x] Configure Git branches:
+  - [x] Create develop branch: `git checkout -b develop`
+  - [x] Set up feature branch template: `feature/<team>/<feature-name>`
+  - [x] Set up hotfix branch template: `hotfix/<issue-name>`
+  - [x] Set up sub-task branch template: `sub/<team>/<task-name>`
+- [x] Set up code formatting:
+  - [x] Test frontend formatting: `npm run format`
+  - [x] Test backend formatting: `npm run format:backend`
+  - [x] Test linting: `npm run lint`
+- [x] Set up testing environment:
+  - [x] Run frontend tests: `npm run test:frontend`
   - [ ] Set up Cypress: `npm run cy:open`
 
 ## Troubleshooting Preparation
@@ -151,7 +184,7 @@ If using full Docker setup:
   3. Python Issues:
      - [ ] Know how to reinstall dependencies:
        ```bash
-       pip install -e ".[dev]" --force-reinstall
+       pip install -e "[dev]" --force-reinstall
        ```
 - [ ] Locate support resources:
   - [ ] Bookmark `TROUBLESHOOTING.md`
@@ -205,11 +238,3 @@ If using full Docker setup:
 - [ ] Test basic functionality
 - [ ] Check logs for any errors
 - [ ] Document any environment-specific configurations made
-- [ ] Create initial test commit to verify Git setup
-- [ ] Run complete test suite
-
-## Cleanup and Documentation
-- [ ] Remove any temporary files
-- [ ] Update documentation with any environment-specific notes
-- [ ] Document any deviations from standard setup
-- [ ] Create backup of working configuration

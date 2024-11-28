@@ -1,0 +1,56 @@
+name: whatever-prod
+
+services:
+  ollama:
+    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+    container_name: ollama-prod
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      - PROD_MODE=true
+    volumes:
+      - ollama-prod:/root/.ollama
+    networks:
+      - whatever_network_prod
+    ports:
+      - "11435:11434"  # Different port for prod Ollama API
+      - "8080:8080"    # Web UI port
+    restart: unless-stopped
+
+  whatever:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NODE_ENV=production
+    image: ghcr.io/whatever/whatever:${WEBUI_DOCKER_TAG-main}
+    container_name: whatever-prod
+    environment:
+      - NODE_ENV=production
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+    volumes:
+      - ./scripts:/app/scripts  # Needed for initial setup
+      - whatever-prod:/app/backend/data
+    ports:
+      - "80:8080"
+    depends_on:
+      - ollama
+    networks:
+      - whatever_network_prod
+    command: ["sh", "-c", "npm run pyodide:fetch && npm run preview"]
+    restart: unless-stopped
+
+volumes:
+  ollama-prod: {}
+  whatever-prod: {}
+
+networks:
+  whatever_network_prod:
+    name: whatever_network_prod
+    driver: bridge

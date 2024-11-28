@@ -1,0 +1,72 @@
+name: whatever-test
+
+services:
+  ollama:
+    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+    container_name: ollama-test
+    environment:
+      - TEST_MODE=true
+    volumes:
+      - ollama-test:/root/.ollama
+    networks:
+      - whatever_network_test
+    ports:
+      - "11436:11434"  # Different port for test Ollama API
+      - "3003:8080"    # Web UI port
+    restart: unless-stopped
+
+  whatever:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NODE_ENV=test
+    image: ghcr.io/whatever/whatever:${WEBUI_DOCKER_TAG-main}
+    container_name: whatever-test
+    environment:
+      - NODE_ENV=test
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+    volumes:
+      - ./scripts:/app/scripts  # Needed for initial setup
+      - ./cypress:/app/cypress  # Mount cypress tests
+      - whatever-test:/app/backend/data
+    ports:
+      - "3002:8080"
+    depends_on:
+      - ollama
+    networks:
+      - whatever_network_test
+    command: ["sh", "-c", "npm run pyodide:fetch && npm run preview"]
+    restart: unless-stopped
+
+  whatever-cypress:
+    image: cypress/included:latest
+    container_name: whatever-cypress-test
+    working_dir: /app
+    volumes:
+      - ./cypress:/app/cypress
+      - ./cypress.config.ts:/app/cypress.config.ts
+      - ./package.json:/app/package.json
+      - ./node_modules:/app/node_modules
+    depends_on:
+      - whatever
+    environment:
+      - CYPRESS_BASE_URL=http://whatever-test:8080
+      - DEBUG=cypress:*
+    entrypoint: []
+    command: >
+      /bin/sh -c "
+      npm install typescript@latest &&
+      cypress run --config-file /app/cypress.config.ts --headless
+      "
+    networks:
+      - whatever_network_test
+
+volumes:
+  ollama-test: {}
+  whatever-test: {}
+
+networks:
+  whatever_network_test:
+    name: whatever_network_test
+    driver: bridge

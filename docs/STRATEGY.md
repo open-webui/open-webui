@@ -93,10 +93,11 @@ Analytics (disabled by default):
 ## 3. Implementation Checklist
 
 ### Phase 1: Local Setup
-- [ ] Configure local development environment
-- [ ] Set up Docker containers
+- [x] Configure local development environment
+- [x] Set up Docker containers
 - [ ] Verify hot-reloading
 - [ ] Test local builds
+- [x] Configure PostgreSQL database
 
 ### Phase 2: Testing Pipeline
 - [ ] Configure GitHub Actions
@@ -118,11 +119,22 @@ Analytics (disabled by default):
    - Port: 11434
    - Volume: `ollama:/root/.ollama`
 
-2. WebUI Service
-   - Container: `open-webui`
+2. PostgreSQL Service
+   - Container: `whatever-db`
+   - Port: 5432
+   - Volume: `postgres_data:/var/lib/postgresql/data`
+   - Environment:
+     - POSTGRES_USER
+     - POSTGRES_PASSWORD
+     - POSTGRES_DB
+
+3. WebUI Service
+   - Container: `whatever`
    - Port: 3000 (configurable)
-   - Volume: `open-webui:/app/backend/data`
-   - Dependencies: Ollama service
+   - Volume: `whatever:/app/backend/data`
+   - Dependencies: 
+     - Ollama service
+     - PostgreSQL service
 
 ### Integration Points
 - Ollama API endpoint

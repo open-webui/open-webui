@@ -31,3 +31,22 @@
     # Create new virtual environment with Python 3.11
     py -3.11 -m venv venv
     ```
+
+## Docker Reset Procedure
+
+If you need to reset your Docker-based development environment:
+
+- [ ] Stop all running containers:
+  ```bash
+  docker-compose down
+  ```
+- [ ] Remove all Docker containers and images:
+  ```bash
+  docker system prune -a
+  ```
+- [ ] Rebuild and start containers:
+  ```bash
+  docker-compose up --build -d
+  ```
+
+This ensures a clean slate for your Docker environment and resolves any potential issues related to container states or images.
