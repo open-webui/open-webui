@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: whatever
+      POSTGRES_PASSWORD: whatever
+      POSTGRES_DB: whatever
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  whatever:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/backend/venv
+    environment:
+      - DATABASE_URL=postgresql://whatever:whatever@db:5432/whatever
+      - PYTHONPATH=/app/backend
+    depends_on:
+      - db
+      - ollama
+
+volumes:
+  postgres_data:

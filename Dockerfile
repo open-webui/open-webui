@@ -33,6 +33,41 @@ COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
 RUN npm run build
 
+######## Development stage ########
+FROM python:3.11-slim AS development
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    npm install -g npm@latest
+
+# Copy package files
+COPY package*.json ./
+COPY backend/requirements.txt ./backend/
+
+# Install dependencies
+RUN npm install
+RUN python -m venv backend/venv && \
+    . backend/venv/bin/activate && \
+    pip install --upgrade pip && \
+    pip install -r backend/requirements.txt
+
+# Set development environment
+ENV NODE_ENV=development
+ENV PYTHONUNBUFFERED=1
+
+# Start development server
+CMD ["npm", "run", "dev"]
+
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base
 
