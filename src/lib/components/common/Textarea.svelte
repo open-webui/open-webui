@@ -26,7 +26,8 @@
 		event.preventDefault(); // Prevent the default paste action
 		const clipboardData = event.clipboardData?.getData('text/plain'); // Get plaintext from clipboard
 
-		value = `${value}${clipboardData}`; // Append the plaintext to the current value
+		// Insert plaintext into the textarea
+		document.execCommand('insertText', false, clipboardData);
 	}
 </script>
 
@@ -37,6 +38,10 @@
 	style="field-sizing: content; -moz-user-select: text !important;"
 	on:input={() => {
 		const text = textareaElement.innerText;
+		if (text.trim() === '\n') {
+			value = '';
+			return;
+		}
 		value = text.trim();
 	}}
 	on:paste={handlePaste}
