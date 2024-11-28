@@ -18,7 +18,6 @@ from open_webui.apps.webui.models.auths import (
     UserResponse,
 )
 from open_webui.apps.webui.models.users import Users
-
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
     WEBUI_AUTH,

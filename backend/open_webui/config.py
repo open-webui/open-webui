@@ -772,18 +772,22 @@ DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
         {
             "title": ["Help me study", "vocabulary for a college entrance exam"],
             "content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
+            "lang": "en-US",
         },
         {
             "title": ["Give me ideas", "for what to do with my kids' art"],
             "content": "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
+            "lang": "en-US",
         },
         {
             "title": ["Tell me a fun fact", "about the Roman Empire"],
             "content": "Tell me a random fun fact about the Roman Empire",
+            "lang": "en-US",
         },
         {
             "title": ["Show me a code snippet", "of a website's sticky header"],
             "content": "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
+            "lang": "en-US",
         },
         {
             "title": [
@@ -791,10 +795,12 @@ DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
                 "if I'm familiar with buying and selling stocks",
             ],
             "content": "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
+            "lang": "en-US",
         },
         {
             "title": ["Overcome procrastination", "give me tips"],
             "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
+            "lang": "en-US",
         },
     ],
 )
@@ -1091,12 +1097,26 @@ CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (sentence-transformers/all-MiniLM-L6-v2)
 
 # Milvus
-
 MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
 
 # Qdrant
-QDRANT_URI = os.environ.get("QDRANT_URI", None)
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
+QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
+QDRANT_TIMEOUT_SECONDS = os.environ.get("QDRANT_TIMEOUT_SECONDS", 5)
+
+# OpenSearch
+OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
+OPENSEARCH_SSL = os.environ.get("OPENSEARCH_SSL", True)
+OPENSEARCH_CERT_VERIFY = os.environ.get("OPENSEARCH_CERT_VERIFY", False)
+OPENSEARCH_USERNAME = os.environ.get("OPENSEARCH_USERNAME", None)
+OPENSEARCH_PASSWORD = os.environ.get("OPENSEARCH_PASSWORD", None)
+
+# Pgvector
+PGVECTOR_DB_URL = os.environ.get("PGVECTOR_DB_URL", DATABASE_URL)
+if VECTOR_DB == "pgvector" and not PGVECTOR_DB_URL.startswith("postgres"):
+    raise ValueError(
+        "Pgvector requires setting PGVECTOR_DB_URL or using Postgres with vector extension as the primary database."
+    )
 
 # OpenSearch
 OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")

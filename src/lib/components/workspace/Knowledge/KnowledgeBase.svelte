@@ -760,6 +760,26 @@
 								{/if}
 							</div>
 						</div>
+
+						{#if filteredItems.length > 0}
+							<div class=" flex overflow-y-auto h-full w-full scrollbar-hidden text-xs">
+								<Files
+									files={filteredItems}
+									{selectedFileId}
+									on:click={(e) => {
+										selectedFileId = selectedFileId === e.detail ? null : e.detail;
+									}}
+									on:delete={(e) => {
+										console.log(e.detail);
+
+										selectedFileId = null;
+										deleteFileHandler(e.detail);
+									}}
+								/>
+							</div>
+						{:else}
+							<div class="m-auto text-gray-500 text-xs">{$i18n.t('No content found')}</div>
+						{/if}
 					</div>
 				</Pane>
 

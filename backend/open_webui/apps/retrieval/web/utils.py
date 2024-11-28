@@ -3,9 +3,7 @@ import urllib.parse
 import validators
 from typing import Union, Sequence, Iterator
 
-from langchain_community.document_loaders import (
-    WebBaseLoader,
-)
+from langchain_community.document_loaders import WebBaseLoader
 from langchain_core.documents import Document
 
 
