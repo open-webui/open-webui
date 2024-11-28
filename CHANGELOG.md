@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6-ccv2-1.0.1] - 2024-11-28
+
+### Fix
+
+- **🔧 Rebasing**: Rebasing to version v0.4.6, kept our qdrant client.
+
+## [0.4.5-ccv2-1.0.1] - 2024-11-27
+
+### Fix
+
+- **🔧 DockerFile**: provide group with same permissions as user for OpenShift
+
 ## [0.4.6] - 2024-11-26
 
 ### Added
@@ -17,6 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **⚙️ Model Configuration Modal**: Fixed the issue where the models configuration modal introduced in 0.4.5 wasn’t working for some users.
 - **🔍 Legacy Query Support**: Restored functionality for custom query generation in RAG when using legacy prompts, ensuring both default and custom templates now work seamlessly.
 - **⚡ Improved General Reliability**: Various minor fixes improve platform stability and ensure a smoother overall experience across workflows.
+
+## [0.4.5-ccv2-1.0.0] - 2024-11-26
+
+### Added
+
+- **🔧 Rebasing**: Rebasing to version v0.4.5, kept our qdrant client.
 
 ## [0.4.5] - 2024-11-26
 
@@ -31,6 +49,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🔑 Ollama Authentication**: Corrected an issue with Ollama’s authorization headers, guaranteeing reliable authentication across all endpoints.
 - **⚙️ Missing Min_P Save**: Resolved an issue where the 'min_p' parameter was not being saved in configurations.
 - **🛠️ Tools Description**: Fixed a key issue that omitted tool descriptions in tools payload.
+
+## [0.4.4-ccv2-1.0.0] - 2024-11-25
+
+### Added
+
+- **🔧 Rebasing**: Rebasing to version v0.4.4, kept our qdrant client.
 
 ## [0.4.4] - 2024-11-22
 
@@ -73,6 +97,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🔗 OpenAI Endpoint Prefix**: Fixed the issue where certain OpenAI connections that deviate from the official API spec weren’t working correctly with prefixes.
 - **⚔️ Arena Model Access Control**: Corrected an issue where arena model access control settings were not being saved.
 - **🔧 Usage Capability Selector**: Fixed the broken usage capabilities selector in the model editor.
+
+## [0.4.1-ccv2-1.0.0] - 2024-11-20
+
+### Added
+
+- **🔧 Rebasing**: Rebasing to version v0.4.1, kept our qdrant client.
 
 ## [0.4.1] - 2024-11-19
 
@@ -134,6 +164,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **📂 Model List Reordering**: Temporarily removed and will be reintroduced in upcoming user group settings improvements.
 - **⚙️ Default Model Setting**: Removed the ability to set a default model for users, will be reintroduced with user group settings in the future.
+
+## [0.3.35-ccv2-1.0.1] - 2024-11-07
+
+### Added
+
+- **🌍 Suggestions Prompts**: You can now add suggestions prompts for a specified language
+
+## [0.3.35-ccv2-1.0.0] - 2024-11-07
+
+### Added
+
+- **🔧 Rebasing**: Rebasing to version v0.3.35, kept our qdrant client for this version
+
+## [0.3.32-ccv2-1.0.3] - 2024-11-07
+
+### Fixed
+
+- **🔧 Qdrant Vector DB Timeout**: Cast config to int
+
+## [0.3.32-ccv2-1.0.2] - 2024-11-07
+
+### Fixed
+
+- **🔧 Qdrant Vector DB Timeout**: Adding Timeout to Qdrant Client
+- **🏷️ Header Name**: Removed (Open WebUI) from headers
+- **🎨 DSAI Logos**: Removed Open WebUI remaining logos
 
 ## [0.3.35] - 2024-10-26
 
@@ -202,6 +258,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - **👋 Goodbye Sidebar Tags**: Sidebar tag clutter is gone. We’ve shifted tag buttons to more effective query-based tag filtering for a sleeker, more agile interface.
+
+## [0.3.32-ccv2-1.0.1] - 2024-10-18
+
+### Fixed
+
+- **🔧Qdrant Vector DB Support**: fix missing query method and updated delete method to accept filters.
+
+## [0.3.32-ccv2-1.0.0] - 2024-10-10
+
+### Added
+
+- **🔗 Qdrant Vector DB Support**: Now supporting Qdrant as a vector database.
+
+### Fixed
+
+- **🔧Fix OPEN AI Dalle response type**: changed response type to an url.
+
+### Changed
+
+- **🌎 i18n Updates**: Only kept en-CA and fr-CA locales.
+- **🎨 Branding updates**: Changed branding to match SSC DSAI's branding.
 
 ## [0.3.32] - 2024-10-06
 
