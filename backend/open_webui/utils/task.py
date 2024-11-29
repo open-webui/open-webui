@@ -53,7 +53,9 @@ def prompt_template(
 
 def replace_prompt_variable(template: str, prompt: str) -> str:
     def replacement_function(match):
-        full_match = match.group(0)
+        full_match = match.group(
+            0
+        ).lower()  # Normalize to lowercase for consistent handling
         start_length = match.group(1)
         end_length = match.group(2)
         middle_length = match.group(3)
@@ -73,11 +75,9 @@ def replace_prompt_variable(template: str, prompt: str) -> str:
             return f"{start}...{end}"
         return ""
 
-    template = re.sub(
-        r"{{prompt}}|{{prompt:start:(\d+)}}|{{prompt:end:(\d+)}}|{{prompt:middletruncate:(\d+)}}",
-        replacement_function,
-        template,
-    )
+    # Updated regex pattern to make it case-insensitive with the `(?i)` flag
+    pattern = r"(?i){{prompt}}|{{prompt:start:(\d+)}}|{{prompt:end:(\d+)}}|{{prompt:middletruncate:(\d+)}}"
+    template = re.sub(pattern, replacement_function, template)
     return template
 
 
@@ -214,15 +214,12 @@ def emoji_generation_template(
 
 def autocomplete_generation_template(
     template: str,
-    messages: list[dict],
+    prompt: Optional[str] = None,
     context: Optional[str] = None,
     user: Optional[dict] = None,
 ) -> str:
-    prompt = get_last_user_message(messages)
     template = template.replace("{{CONTEXT}}", context if context else "")
-
     template = replace_prompt_variable(template, prompt)
-    template = replace_messages_variable(template, messages)
 
     template = prompt_template(
         template,

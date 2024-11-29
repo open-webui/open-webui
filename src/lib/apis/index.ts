@@ -397,6 +397,53 @@ export const generateQueries = async (
 	}
 };
 
+
+
+export const generateAutoCompletion = async (
+	token: string = '',
+	model: string,
+	prompt: string,
+	context: string = 'search',
+) => {
+	const controller = new AbortController();
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/task/auto/completions`, {
+		signal: controller.signal,
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			prompt: prompt,
+			context: context,
+			stream: false
+		})
+	})
+	.then(async (res) => {
+		if (!res.ok) throw await res.json();
+		return res.json();
+	})
+	.catch((err) => {
+		console.log(err);
+		if ('detail' in err) {
+			error = err.detail;
+		}
+		return null;
+	});
+
+	if (error) {
+		throw error;
+	}
+
+	const response = res?.choices[0]?.message?.content ?? '';
+	return response;
+};
+
+
 export const generateMoACompletion = async (
 	token: string = '',
 	model: string,

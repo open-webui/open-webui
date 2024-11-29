@@ -34,6 +34,7 @@
 	export let value = '';
 	export let id = '';
 
+	export let generateAutoCompletion: Function = async () => null;
 	export let autocomplete = false;
 	export let messageInput = false;
 	export let shiftEnter = false;
@@ -159,7 +160,12 @@
 										return null;
 									}
 
-									return 'AI-generated suggestion';
+									const suggestion = await generateAutoCompletion(text).catch(() => null);
+									if (!suggestion || suggestion.trim().length === 0) {
+										return null;
+									}
+
+									return suggestion;
 								}
 							})
 						]

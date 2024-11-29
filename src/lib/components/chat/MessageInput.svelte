@@ -34,6 +34,8 @@
 	import Commands from './MessageInput/Commands.svelte';
 	import XMark from '../icons/XMark.svelte';
 	import RichTextInput from '../common/RichTextInput.svelte';
+	import { generateAutoCompletion } from '$lib/apis';
+	import { error, text } from '@sveltejs/kit';
 
 	const i18n = getContext('i18n');
 
@@ -46,6 +48,9 @@
 
 	export let atSelectedModel: Model | undefined;
 	export let selectedModels: [''];
+
+	let selectedModelIds = [];
+	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 
 	export let history;
 
@@ -581,6 +586,7 @@
 										>
 											<RichTextInput
 												bind:this={chatInputElement}
+												bind:value={prompt}
 												id="chat-input"
 												messageInput={true}
 												shiftEnter={!$mobile ||
@@ -592,7 +598,25 @@
 												placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 												largeTextAsFile={$settings?.largeTextAsFile ?? false}
 												autocomplete={true}
-												bind:value={prompt}
+												generateAutoCompletion={async (text) => {
+													if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {
+														toast.error($i18n.t('Please select a model first.'));
+													}
+
+													const res = await generateAutoCompletion(
+														localStorage.token,
+														selectedModelIds.at(0),
+														text
+													).catch((error) => {
+														console.log(error);
+														toast.error(error);
+														return null;
+													});
+
+													console.log(res);
+
+													return res;
+												}}
 												on:keydown={async (e) => {
 													e = e.detail.event;
 

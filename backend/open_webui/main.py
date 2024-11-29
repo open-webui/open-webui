@@ -1991,7 +1991,6 @@ async def generate_queries(form_data: dict, user=Depends(get_verified_user)):
 
 @app.post("/api/task/auto/completions")
 async def generate_autocompletion(form_data: dict, user=Depends(get_verified_user)):
-    context = form_data.get("context")
 
     model_list = await get_all_models()
     models = {model["id"]: model for model in model_list}
@@ -2021,8 +2020,11 @@ async def generate_autocompletion(form_data: dict, user=Depends(get_verified_use
     else:
         template = DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE
 
+    context = form_data.get("context")
+    prompt = form_data.get("prompt")
+
     content = autocomplete_generation_template(
-        template, form_data["messages"], context, {"name": user.name}
+        template, prompt, context, {"name": user.name}
     )
 
     payload = {
@@ -2035,6 +2037,8 @@ async def generate_autocompletion(form_data: dict, user=Depends(get_verified_use
             "chat_id": form_data.get("chat_id", None),
         },
     }
+
+    print(payload)
 
     # Handle pipeline filters
     try:

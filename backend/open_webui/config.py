@@ -1037,6 +1037,12 @@ Only output a continuation. If you are unsure how to proceed, output nothing.
 <context>Search</context>
 <text>Best destinations for hiking in</text> 
 **Output**: Europe, such as the Alps or the Scottish Highlands.
+
+### Input:
+<context>{{CONTEXT}}</context>
+<text>
+{{PROMPT}}
+</text>
 """
 
 
