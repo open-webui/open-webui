@@ -1,0 +1,46 @@
+name: Dev to Test Merge
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_run:
+    workflows: ["Integration Test"]
+    types:
+      - completed
+
+jobs:
+  verify-tests:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Check test status
+        run: |
+          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
+            exit 1
+          fi
+
+  merge-to-test:
+    needs: verify-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Configure Git
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          
+      - name: Merge dev to test
+        run: |
+          git fetch origin
+          git checkout test
+          git pull origin test
+          git merge origin/dev --no-ff -m "chore: auto-merge dev to test"
+          git push origin test
+          
+      - name: Deploy to test environment
+        run: |
+          docker compose -f docker-compose.test.yaml up -d --build
