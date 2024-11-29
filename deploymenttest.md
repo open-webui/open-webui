@@ -99,18 +99,20 @@
   ```
 
 ### Test PR Process
-- [ ] Create PR to dev branch
+- [x] Push final documentation updates
+- [ ] Create PR to dev branch (Next step)
+  ```bash
+  # PR Title: feat: add deployment automation and documentation
+  # PR Description:
+  - Added deployment strategy documentation
+  - Configured automated test workflow
+  - Set up dev to test automation
+  ```
 - [ ] Verify automated checks run:
   - [ ] integration-test workflow
   - [ ] format-build-frontend workflow
 - [ ] Get PR approved
 - [ ] Merge to dev
-- [ ] Verify change in dev environment:
-  ```bash
-  git checkout dev
-  git pull
-  # Check http://localhost:3000
-  ```
 
 ### Verify Automated Flow
 - [ ] Watch GitHub Actions:
@@ -118,10 +120,6 @@
   - [ ] Cypress tests running on test
   - [ ] Automated merge to test
   - [ ] Test environment deployment
-- [ ] Verify changes propagate:
-  ```bash
-  # Should automatically appear at http://localhost:3002
-  ```
 
 ## 5. Test Production Deploy
 
