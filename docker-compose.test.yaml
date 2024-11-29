@@ -4,15 +4,12 @@ services:
   ollama:
     image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
     container_name: ollama-test
-    environment:
-      - TEST_MODE=true
     volumes:
       - ollama-test:/root/.ollama
     networks:
       - whatever_network_test
     ports:
       - "11436:11434"  # Different port for test Ollama API
-      - "3003:8080"    # Web UI port
     restart: unless-stopped
 
   whatever:
@@ -20,24 +17,45 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        - NODE_ENV=test
+        OLLAMA_BASE_URL: '/ollama'
+        NODE_ENV: test
     image: ghcr.io/whatever/whatever:${WEBUI_DOCKER_TAG-main}
     container_name: whatever-test
     environment:
       - NODE_ENV=test
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - OLLAMA_BASE_URL=http://ollama-test:11434
     volumes:
-      - ./scripts:/app/scripts  # Needed for initial setup
+      - whatever-test:/app/data
       - ./cypress:/app/cypress  # Mount cypress tests
-      - whatever-test:/app/backend/data
     ports:
       - "3002:8080"
     depends_on:
       - ollama
+      - backend
     networks:
       - whatever_network_test
-    command: ["sh", "-c", "npm run pyodide:fetch && npm run preview"]
     restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: whatever-backend-test
+    environment:
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - HOST=0.0.0.0
+      - PORT=8080
+      - OLLAMA_BASE_URL=http://ollama-test:11434
+    volumes:
+      - whatever-backend-test:/app/data
+    networks:
+      - whatever_network_test
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    entrypoint: ["/bin/bash"]
+    command: ["/app/backend/start.sh"]
 
   whatever-cypress:
     image: cypress/included:latest
@@ -50,6 +68,7 @@ services:
       - ./node_modules:/app/node_modules
     depends_on:
       - whatever
+      - backend
     environment:
       - CYPRESS_BASE_URL=http://whatever-test:8080
       - DEBUG=cypress:*
@@ -63,10 +82,10 @@ services:
       - whatever_network_test
 
 volumes:
-  ollama-test: {}
-  whatever-test: {}
+  ollama-test:
+  whatever-test:
+  whatever-backend-test:
 
 networks:
   whatever_network_test:
-    name: whatever_network_test
     driver: bridge

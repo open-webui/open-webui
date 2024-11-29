@@ -4,50 +4,67 @@ services:
   ollama:
     image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
     container_name: ollama-dev
-    environment:
-      - DEV_MODE=true
     volumes:
       - ollama-dev:/root/.ollama
     networks:
       - whatever_network_dev
     ports:
-      - "11434:11434"  # Default Ollama API port
-      - "3001:8080"    # Web UI port
+      - "11434:11434"
     restart: unless-stopped
 
   whatever:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        OLLAMA_BASE_URL: '/ollama'
     image: ghcr.io/whatever/whatever:${WEBUI_DOCKER_TAG-main}
     container_name: whatever-dev
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=${NODE_ENV}
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - OLLAMA_BASE_URL=http://ollama-dev:11434
     volumes:
-      - ./src:/app/src
-      - ./scripts:/app/scripts
-      - ./backend:/app/backend
-      - ./static:/app/static
-      - ./vite.config.ts:/app/vite.config.ts
-      - ./svelte.config.js:/app/svelte.config.js
-      - ./tailwind.config.js:/app/tailwind.config.js
-      - ./tsconfig.json:/app/tsconfig.json
-      - whatever-dev:/app/backend/data
+      - whatever-dev:/app/data
     ports:
       - "3000:8080"
     depends_on:
       - ollama
+      - backend
     networks:
       - whatever_network_dev
-    command: ["npm", "run", "dev"]
     restart: unless-stopped
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: whatever-backend-dev
+    environment:
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - HOST=0.0.0.0
+      - PORT=8080
+      - OLLAMA_BASE_URL=http://ollama-dev:11434
+      - SKIP_CHANGELOG=true
+      - SKIP_FFMPEG=true
+      - CHANGELOG_CONTENT="{}"
+    volumes:
+      - whatever-backend-dev:/app/data
+    ports:
+      - "8080:8080"
+    networks:
+      - whatever_network_dev
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    entrypoint: ["/bin/bash"]
+    command: ["start.sh"]
+
 volumes:
-  ollama-dev: {}
-  whatever-dev: {}
+  ollama-dev:
+  whatever-dev:
+  whatever-backend-dev:
 
 networks:
   whatever_network_dev:
-    name: whatever_network_dev
     driver: bridge
