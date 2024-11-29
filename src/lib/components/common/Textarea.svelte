@@ -32,7 +32,11 @@
 <div
 	contenteditable="true"
 	bind:this={textareaElement}
-	class="{className} whitespace-pre-wrap relative {!value.trim() ? 'placeholder' : ''}"
+	class="{className} whitespace-pre-wrap relative {value
+		? !value.trim()
+			? 'placeholder'
+			: ''
+		: 'placeholder'}"
 	style="field-sizing: content; -moz-user-select: text !important;"
 	on:input={() => {
 		const text = textareaElement.innerText;
