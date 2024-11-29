@@ -1005,46 +1005,45 @@ AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     os.environ.get("AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE", ""),
 )
 
+
 DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = """### Task:
-You are an **autocompletion system**. Your sole task is to generate concise, logical continuations for text provided within the `<text>` tag. Additional guidance on the purpose, tone, or format will be included in a `<context>` tag. 
+You are an autocompletion system. Continue the text in `<text>` based on the **completion type** in `<type>` and the given language.  
 
-Only output a continuation. If you are unsure how to proceed, output nothing.
+### **Instructions**:
+1. Analyze `<text>` for context and meaning.  
+2. Use `<type>` to guide your output:  
+   - **General**: Provide a natural, concise continuation.  
+   - **Search Query**: Complete as if generating a realistic search query.  
+3. Start as if you are directly continuing `<text>`. Do **not** repeat, paraphrase, or respond as a model. Simply complete the text.  
+4. Ensure the continuation:
+   - Flows naturally from `<text>`.  
+   - Avoids repetition, overexplaining, or unrelated ideas.  
+5. If unsure, return: `{ "text": "" }`.  
 
-### **Instructions**
-1. Analyze the `<text>` to understand its structure, context, and flow.
-2. Refer to the `<context>` for any specific purpose or format (e.g., search queries, general, etc.).
-3. Complete the text concisely and meaningfully without repeating or altering the original.
-4. Do not introduce unrelated ideas or elaborate unnecessarily.
+### **Output Rules**:
+- Respond only in JSON format: `{ "text": "<your_completion>" }`.
 
-### **Output Rules**
-- Respond *only* with the continuation—no preamble or explanation.
-- Ensure the continuation directly connects to the given text and adheres to the context.
-- If unsure about completing, provide no output.
+### **Examples**:
+#### Example 1:  
+Input:  
+<type>General</type>  
+<text>The sun was setting over the horizon, painting the sky</text>  
+Output:  
+{ "text": "with vibrant shades of orange and pink." }
 
-### **Examples**
+#### Example 2:  
+Input:  
+<type>Search Query</type>  
+<text>Top-rated restaurants in</text>  
+Output:  
+{ "text": "New York City for Italian cuisine." }  
 
-**Example 1**  
-<context>General</context>
-<text>The sun was dipping below the horizon, painting the sky in shades of pink and orange as the cool breeze began to set in.</text>
-**Output**: A sense of calm spread through the air, and the first stars started to shimmer faintly above.
-
-**Example 2**  
-<context>Search</context>
-<text>How to prepare for a job interview</text>
-**Output**: effectively, including researching the company and practicing common questions.
-
-**Example 3**  
-<context>Search</context>
-<text>Best destinations for hiking in</text> 
-**Output**: Europe, such as the Alps or the Scottish Highlands.
-
-### Input:
-<context>{{CONTEXT}}</context>
-<text>
-{{PROMPT}}
-</text>
+---
+### Input:  
+<type>{{TYPE}}</type>  
+<text>{{PROMPT}}</text>  
+#### Output:
 """
-
 
 TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
     "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE",

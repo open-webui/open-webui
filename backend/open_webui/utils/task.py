@@ -215,10 +215,10 @@ def emoji_generation_template(
 def autocomplete_generation_template(
     template: str,
     prompt: Optional[str] = None,
-    context: Optional[str] = None,
+    type: Optional[str] = None,
     user: Optional[dict] = None,
 ) -> str:
-    template = template.replace("{{CONTEXT}}", context if context else "")
+    template = template.replace("{{TYPE}}", type if type else "")
     template = replace_prompt_variable(template, prompt)
 
     template = prompt_template(

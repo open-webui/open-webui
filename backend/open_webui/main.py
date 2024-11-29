@@ -2020,11 +2020,11 @@ async def generate_autocompletion(form_data: dict, user=Depends(get_verified_use
     else:
         template = DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE
 
-    context = form_data.get("context")
+    type = form_data.get("type")
     prompt = form_data.get("prompt")
 
     content = autocomplete_generation_template(
-        template, prompt, context, {"name": user.name}
+        template, prompt, type, {"name": user.name}
     )
 
     payload = {
