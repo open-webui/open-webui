@@ -153,10 +153,10 @@
 				Placeholder.configure({ placeholder }),
 				AIAutocompletion.configure({
 					generateCompletion: async (text) => {
-						// Implement your AI text generation logic here
-						// This should return a Promise that resolves to the suggested text
+						if (text.trim().length === 0) {
+							return null;
+						}
 
-						console.log(text);
 						return 'AI-generated suggestion';
 					}
 				})
