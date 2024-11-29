@@ -591,6 +591,7 @@
 													)}
 												placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 												largeTextAsFile={$settings?.largeTextAsFile ?? false}
+												autocomplete={true}
 												bind:value={prompt}
 												on:keydown={async (e) => {
 													e = e.detail.event;

@@ -151,15 +151,19 @@
 				Highlight,
 				Typography,
 				Placeholder.configure({ placeholder }),
-				AIAutocompletion.configure({
-					generateCompletion: async (text) => {
-						if (text.trim().length === 0) {
-							return null;
-						}
+				...(autocomplete
+					? [
+							AIAutocompletion.configure({
+								generateCompletion: async (text) => {
+									if (text.trim().length === 0) {
+										return null;
+									}
 
-						return 'AI-generated suggestion';
-					}
-				})
+									return 'AI-generated suggestion';
+								}
+							})
+						]
+					: [])
 			],
 			content: content,
 			autofocus: true,
