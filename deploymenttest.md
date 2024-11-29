@@ -77,21 +77,39 @@
 ## 4. Test Development Workflow
 
 ### Make a Test Change
-- [ ] Create feature branch (optional):
+- [x] Create feature branch (optional):
   ```bash
   git checkout dev
   git pull
-  git checkout -b feature/test-change  # optional
+  git checkout -b feature/test-workflow
   ```
-- [ ] Make a visible UI change
-- [ ] Test locally:
+- [x] Add deployment documentation:
   ```bash
-  # View changes at http://localhost:3000
+  # Added:
+  - deployment.md: Main deployment strategy
+  - deploymenttest.md: Testing checklist
+  - debug.md: Issue tracking
+  - dev-to-test-merge.yml: Automation workflow
   ```
-- [ ] Push to dev:
+- [x] Push changes:
   ```bash
-  git commit -am "test: visible UI change"
-  git push origin dev  # or push feature branch and merge to dev
+  git add .
+  git commit -m "chore: add deployment documentation and automation workflow"
+  git push -u origin feature/test-workflow
+  ```
+
+### Test PR Process
+- [ ] Create PR to dev branch
+- [ ] Verify automated checks run:
+  - [ ] integration-test workflow
+  - [ ] format-build-frontend workflow
+- [ ] Get PR approved
+- [ ] Merge to dev
+- [ ] Verify change in dev environment:
+  ```bash
+  git checkout dev
+  git pull
+  # Check http://localhost:3000
   ```
 
 ### Verify Automated Flow
