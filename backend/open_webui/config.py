@@ -999,6 +999,47 @@ Strictly return in JSON format:
 """
 
 
+AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE",
+    "task.autocomplete.prompt_template",
+    os.environ.get("AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE", ""),
+)
+
+DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = """### Task:
+You are an **autocompletion system**. Your sole task is to generate concise, logical continuations for text provided within the `<text>` tag. Additional guidance on the purpose, tone, or format will be included in a `<context>` tag. 
+
+Only output a continuation. If you are unsure how to proceed, output nothing.
+
+### **Instructions**
+1. Analyze the `<text>` to understand its structure, context, and flow.
+2. Refer to the `<context>` for any specific purpose or format (e.g., search queries, general, etc.).
+3. Complete the text concisely and meaningfully without repeating or altering the original.
+4. Do not introduce unrelated ideas or elaborate unnecessarily.
+
+### **Output Rules**
+- Respond *only* with the continuation—no preamble or explanation.
+- Ensure the continuation directly connects to the given text and adheres to the context.
+- If unsure about completing, provide no output.
+
+### **Examples**
+
+**Example 1**  
+<context>General</context>
+<text>The sun was dipping below the horizon, painting the sky in shades of pink and orange as the cool breeze began to set in.</text>
+**Output**: A sense of calm spread through the air, and the first stars started to shimmer faintly above.
+
+**Example 2**  
+<context>Search</context>
+<text>How to prepare for a job interview</text>
+**Output**: effectively, including researching the company and practicing common questions.
+
+**Example 3**  
+<context>Search</context>
+<text>Best destinations for hiking in</text> 
+**Output**: Europe, such as the Alps or the Scottish Highlands.
+"""
+
+
 TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
     "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE",
     "task.tools.prompt_template",

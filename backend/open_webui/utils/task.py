@@ -212,6 +212,29 @@ def emoji_generation_template(
     return template
 
 
+def autocomplete_generation_template(
+    template: str,
+    messages: list[dict],
+    context: Optional[str] = None,
+    user: Optional[dict] = None,
+) -> str:
+    prompt = get_last_user_message(messages)
+    template = template.replace("{{CONTEXT}}", context if context else "")
+
+    template = replace_prompt_variable(template, prompt)
+    template = replace_messages_variable(template, messages)
+
+    template = prompt_template(
+        template,
+        **(
+            {"user_name": user.get("name"), "user_location": user.get("location")}
+            if user
+            else {}
+        ),
+    )
+    return template
+
+
 def query_generation_template(
     template: str, messages: list[dict], user: Optional[dict] = None
 ) -> str:
