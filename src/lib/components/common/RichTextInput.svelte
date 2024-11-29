@@ -10,16 +10,18 @@
 	import { createEventDispatcher } from 'svelte';
 	const eventDispatch = createEventDispatcher();
 
-	import { EditorState, Plugin, TextSelection } from 'prosemirror-state';
+	import { EditorState, Plugin, PluginKey, TextSelection } from 'prosemirror-state';
+	import { Decoration, DecorationSet } from 'prosemirror-view';
 
 	import { Editor } from '@tiptap/core';
+
+	import { AIAutocompletion } from './RichTextInput/AutoCompletion.js';
 
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 	import Placeholder from '@tiptap/extension-placeholder';
 	import Highlight from '@tiptap/extension-highlight';
 	import Typography from '@tiptap/extension-typography';
 	import StarterKit from '@tiptap/starter-kit';
-
 	import { all, createLowlight } from 'lowlight';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
@@ -32,6 +34,7 @@
 	export let value = '';
 	export let id = '';
 
+	export let autocomplete = false;
 	export let messageInput = false;
 	export let shiftEnter = false;
 	export let largeTextAsFile = false;
@@ -147,7 +150,16 @@
 				}),
 				Highlight,
 				Typography,
-				Placeholder.configure({ placeholder })
+				Placeholder.configure({ placeholder }),
+				AIAutocompletion.configure({
+					generateCompletion: async (text) => {
+						// Implement your AI text generation logic here
+						// This should return a Promise that resolves to the suggested text
+
+						console.log(text);
+						return 'AI-generated suggestion';
+					}
+				})
 			],
 			content: content,
 			autofocus: true,
@@ -292,3 +304,11 @@
 </script>
 
 <div bind:this={element} class="relative w-full min-w-full h-full min-h-fit {className}" />
+
+<style>
+	.ai-autocompletion::after {
+		content: attr(data-suggestion);
+		color: var(--gray-5);
+		pointer-events: none;
+	}
+</style>
