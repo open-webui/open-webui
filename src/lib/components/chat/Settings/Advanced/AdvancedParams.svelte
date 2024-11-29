@@ -12,6 +12,7 @@
 	export let params = {
 		// Advanced
 		stream_response: null, // Set stream responses for this model individually
+		native_tool_call: null,
 		seed: null,
 		stop: null,
 		temperature: null,
@@ -78,6 +79,34 @@
 				</button>
 			</div>
 		</Tooltip>
+	</div>
+	<div>
+		<div class=" py-0.5 flex w-full justify-between">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Native Tool Calls')}
+			</div>
+
+			<button
+				class="p-1 px-3 text-xs flex rounded transition"
+				on:click={() => {
+					params.native_tool_call =
+						(params?.native_tool_call ?? null) === null
+							? true
+							: params.native_tool_call
+								? false
+								: null;
+				}}
+				type="button"
+			>
+				{#if params.native_tool_call === true}
+					<span class="ml-2 self-center">{$i18n.t('On')}</span>
+				{:else if params.native_tool_call === false}
+					<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+				{:else}
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+				{/if}
+			</button>
+		</div>
 	</div>
 
 	<div class=" py-0.5 w-full justify-between">

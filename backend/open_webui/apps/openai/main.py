@@ -578,6 +578,10 @@ async def generate_chat_completion(
         if "max_tokens" in payload and "max_completion_tokens" in payload:
             del payload["max_tokens"]
 
+    # openai.com fails if it gets unknown arguments
+    if "native_tool_call" in payload:
+        del payload["native_tool_call"]
+
     # Fix: O1 does not support the "system" parameter, Modify "system" to "user"
     if is_o1 and payload["messages"][0]["role"] == "system":
         payload["messages"][0]["role"] = "user"
