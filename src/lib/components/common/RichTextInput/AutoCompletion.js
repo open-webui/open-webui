@@ -49,6 +49,9 @@ export const AIAutocompletion = Extension.create({
     let debounceTimer = null;
     let loading = false;
 
+    let touchStartX = 0;
+    let touchStartY = 0;
+
     return [
       new Plugin({
         key: new PluginKey('aiAutocompletion'),
@@ -143,6 +146,43 @@ export const AIAutocompletion = Extension.create({
               }
             }
             return false
+          },
+          handleDOMEvents: {
+            touchstart: (view, event) => {
+              touchStartX = event.touches[0].clientX;
+              touchStartY = event.touches[0].clientY;
+              return false;
+            },
+            touchend: (view, event) => {
+              const touchEndX = event.changedTouches[0].clientX;
+              const touchEndY = event.changedTouches[0].clientY;
+              
+              const deltaX = touchEndX - touchStartX;
+              const deltaY = touchEndY - touchStartY;
+              
+              // Check if the swipe was primarily horizontal and to the right
+              if (Math.abs(deltaX) > Math.abs(deltaY) && deltaX > 50) {
+                const { state, dispatch } = view;
+                const { selection } = state;
+                const { $head } = selection;
+                const node = $head.parent;
+                
+                if (node.type.name === 'paragraph' && node.attrs['data-suggestion']) {
+                  const suggestion = node.attrs['data-suggestion'];
+                  dispatch(state.tr
+                    .insertText(suggestion, $head.pos)
+                    .setNodeMarkup($head.before(), null, {
+                      ...node.attrs,
+                      class: null,
+                      'data-prompt': null,
+                      'data-suggestion': null,
+                    })
+                  );
+                  return true;
+                }
+              }
+              return false;
+            },
           },
         },
       }),
