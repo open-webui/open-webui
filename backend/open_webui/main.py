@@ -1991,7 +1991,6 @@ async def generate_queries(form_data: dict, user=Depends(get_verified_user)):
 
 @app.post("/api/task/auto/completions")
 async def generate_autocompletion(form_data: dict, user=Depends(get_verified_user)):
-
     model_list = await get_all_models()
     models = {model["id"]: model for model in model_list}
 
@@ -2022,9 +2021,10 @@ async def generate_autocompletion(form_data: dict, user=Depends(get_verified_use
 
     type = form_data.get("type")
     prompt = form_data.get("prompt")
+    messages = form_data.get("messages")
 
     content = autocomplete_generation_template(
-        template, prompt, type, {"name": user.name}
+        template, prompt, messages, type, {"name": user.name}
     )
 
     payload = {

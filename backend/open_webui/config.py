@@ -1039,7 +1039,10 @@ Output:
 { "text": "New York City for Italian cuisine." }  
 
 ---
-### Input:  
+### Context:
+<chat_history>
+{{MESSAGES:END:6}}
+</chat_history>
 <type>{{TYPE}}</type>  
 <text>{{PROMPT}}</text>  
 #### Output:

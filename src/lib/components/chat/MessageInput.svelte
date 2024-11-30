@@ -18,7 +18,7 @@
 		showControls
 	} from '$lib/stores';
 
-	import { blobToFile, findWordIndices } from '$lib/utils';
+	import { blobToFile, createMessagesList, findWordIndices } from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import { uploadFile } from '$lib/apis/files';
 	import { getTools } from '$lib/apis/tools';
@@ -606,7 +606,10 @@
 													const res = await generateAutoCompletion(
 														localStorage.token,
 														selectedModelIds.at(0),
-														text
+														text,
+														history?.currentId
+															? createMessagesList(history, history.currentId)
+															: null
 													).catch((error) => {
 														console.log(error);
 														toast.error(error);

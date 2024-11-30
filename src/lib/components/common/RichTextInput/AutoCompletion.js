@@ -7,6 +7,7 @@ export const AIAutocompletion = Extension.create({
   addOptions() {
     return {
       generateCompletion: () => Promise.resolve(''),
+      debounceTime: 1000,
     }
   },
 
@@ -45,6 +46,9 @@ export const AIAutocompletion = Extension.create({
   },
 
   addProseMirrorPlugins() {
+    let debounceTimer = null;
+    let loading = false;
+
     return [
       new Plugin({
         key: new PluginKey('aiAutocompletion'),
@@ -61,6 +65,8 @@ export const AIAutocompletion = Extension.create({
             if (event.key === 'Tab') {
               if (!node.attrs['data-suggestion']) {
                 // Generate completion
+                if (loading) return true
+                loading = true
                 const prompt = node.textContent
                 this.options.generateCompletion(prompt).then(suggestion => {
                   if (suggestion && suggestion.trim() !== '') {
@@ -72,6 +78,8 @@ export const AIAutocompletion = Extension.create({
                     }))
                   }
                   // If suggestion is empty or null, do nothing
+                }).finally(() => {
+                  loading = false
                 })
               } else {
                 // Accept suggestion
@@ -87,16 +95,53 @@ export const AIAutocompletion = Extension.create({
                 )
               }
               return true
-            } else if (node.attrs['data-suggestion']) {
-              // Reset suggestion on any other key press
-              dispatch(state.tr.setNodeMarkup($head.before(), null, {
-                ...node.attrs,
-                class: null,
-                'data-prompt': null,
-                'data-suggestion': null,
-              }))
-            }
+            } else {
 
+              if (node.attrs['data-suggestion']) {
+                // Reset suggestion on any other key press
+                dispatch(state.tr.setNodeMarkup($head.before(), null, {
+                  ...node.attrs,
+                  class: null,
+                  'data-prompt': null,
+                  'data-suggestion': null,
+                }))
+              }
+
+              // Set up debounce for AI generation
+              if (this.options.debounceTime !== null) {
+                clearTimeout(debounceTimer)
+                
+                // Capture current position
+                const currentPos = $head.before()
+
+                debounceTimer = setTimeout(() => {
+                  const newState = view.state
+                  const newNode = newState.doc.nodeAt(currentPos)
+                  
+                  // Check if the node still exists and is still a paragraph
+                  if (newNode && newNode.type.name === 'paragraph') {
+                    const prompt = newNode.textContent
+
+                    if (prompt.trim() !== ''){
+                      if (loading) return true
+                      loading = true
+                      this.options.generateCompletion(prompt).then(suggestion => {
+                        if (suggestion && suggestion.trim() !== '') {
+                          view.dispatch(newState.tr.setNodeMarkup(currentPos, null, {
+                            ...newNode.attrs,
+                            class: 'ai-autocompletion',
+                            'data-prompt': prompt,
+                            'data-suggestion': suggestion,
+                          }))
+                        }
+                      }).finally(() => {
+                        loading = false
+                      })
+                    }
+                  }
+                }, this.options.debounceTime)
+              }
+            }
             return false
           },
         },

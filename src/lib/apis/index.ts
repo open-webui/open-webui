@@ -403,6 +403,7 @@ export const generateAutoCompletion = async (
 	token: string = '',
 	model: string,
 	prompt: string,
+	messages?: object[],
 	type: string = 'search query',
 ) => {
 	const controller = new AbortController();
@@ -419,6 +420,7 @@ export const generateAutoCompletion = async (
 		body: JSON.stringify({
 			model: model,
 			prompt: prompt,
+			...(messages && { messages: messages }),
 			type: type,
 			stream: false
 		})
