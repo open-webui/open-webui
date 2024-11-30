@@ -100,11 +100,11 @@
 							{#each token.header as header, headerIdx}
 								<th
 									scope="col"
-									class="!px-3 !py-1.5 whitespace-nowrap break-words cursor-pointer select-none border border-gray-50 dark:border-gray-850"
+									class="!px-3 !py-1.5 cursor-pointer select-none border border-gray-50 dark:border-gray-850"
 									style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}
 								>
 									<div class="flex flex-col gap-1.5 text-left">
-										<div class="flex-shrink-0">
+										<div class="flex-shrink-0 break-normal">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-header-${headerIdx}`}
 												tokens={header.tokens}
