@@ -272,7 +272,7 @@
 {#if loaded}
 	<div class="w-full font-primary">
 		<div class=" -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
-			<div class="flex flex-col px-2.5 max-w-6xl w-full">
+			<div class="flex flex-col px-3 max-w-6xl w-full">
 				<div class="relative">
 					{#if autoScroll === false && history?.currentId}
 						<div
@@ -410,7 +410,7 @@
 		</div>
 
 		<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-gray-900'} ">
-			<div class="max-w-6xl px-4 mx-auto inset-x-0">
+			<div class="max-w-6xl px-2.5 mx-auto inset-x-0">
 				<div class="">
 					<input
 						bind:this={filesInputElement}
