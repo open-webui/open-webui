@@ -67,7 +67,11 @@
 					</div>
 
 					<div class=" flex-1 w-full h-full">
-						<RichTextInput bind:value={content} placeholder={$i18n.t('Write something...')} />
+						<RichTextInput
+							bind:value={content}
+							placeholder={$i18n.t('Write something...')}
+							preserveBreaks={true}
+						/>
 					</div>
 				</div>
 			</div>

@@ -35,6 +35,7 @@
 	export let value = '';
 	export let id = '';
 
+	export let preserveBreaks = false;
 	export let generateAutoCompletion: Function = async () => null;
 	export let autocomplete = false;
 	export let messageInput = false;
@@ -126,10 +127,22 @@
 
 	onMount(async () => {
 		console.log(value);
+
+		if (preserveBreaks) {
+			turndownService.addRule('preserveBreaks', {
+				filter: 'br', // Target <br> elements
+				replacement: function (content) {
+					return '<br/>';
+				}
+			});
+		}
+
 		async function tryParse(value, attempts = 3, interval = 100) {
 			try {
 				// Try parsing the value
-				return marked.parse(value);
+				return marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
+					breaks: false
+				});
 			} catch (error) {
 				// If no attempts remain, fallback to plain text
 				if (attempts <= 1) {
@@ -178,8 +191,10 @@
 			onTransaction: () => {
 				// force re-render so `editor.isActive` works as expected
 				editor = editor;
+				const newValue = turndownService.turndown(
+					preserveBreaks ? editor.getHTML().replace(/<p><\/p>/g, '<br/>') : editor.getHTML()
+				);
 
-				const newValue = turndownService.turndown(editor.getHTML());
 				if (value !== newValue) {
 					value = newValue;
 
@@ -312,18 +327,20 @@
 	});
 
 	// Update the editor content if the external `value` changes
-	$: if (editor && value !== turndownService.turndown(editor.getHTML())) {
-		editor.commands.setContent(marked.parse(value)); // Update editor content
+	$: if (
+		editor &&
+		value !==
+			turndownService.turndown(
+				preserveBreaks ? editor.getHTML().replace(/<p><\/p>/g, '<br/>') : editor.getHTML()
+			)
+	) {
+		editor.commands.setContent(
+			marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
+				breaks: false
+			})
+		); // Update editor content
 		selectTemplate();
 	}
 </script>
 
 <div bind:this={element} class="relative w-full min-w-full h-full min-h-fit {className}" />
-
-<style>
-	.ai-autocompletion::after {
-		content: attr(data-suggestion);
-		color: var(--gray-5);
-		pointer-events: none;
-	}
-</style>
