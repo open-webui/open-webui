@@ -2,7 +2,8 @@
 	import { marked } from 'marked';
 	import TurndownService from 'turndown';
 	const turndownService = new TurndownService({
-		codeBlockStyle: 'fenced'
+		codeBlockStyle: 'fenced',
+		headingStyle: 'atx'
 	});
 	turndownService.escape = (string) => string;
 
@@ -124,6 +125,7 @@
 	};
 
 	onMount(async () => {
+		console.log(value);
 		async function tryParse(value, attempts = 3, interval = 100) {
 			try {
 				// Try parsing the value
@@ -181,8 +183,11 @@
 				if (value !== newValue) {
 					value = newValue;
 
-					if (value === '') {
-						editor.commands.clearContent();
+					// check if the node is paragraph as well
+					if (editor.isActive('paragraph')) {
+						if (value === '') {
+							editor.commands.clearContent();
+						}
 					}
 				}
 			},
