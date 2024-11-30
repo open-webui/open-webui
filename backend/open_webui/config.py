@@ -605,6 +605,8 @@ if ENV == "prod":
     elif K8S_FLAG:
         OLLAMA_BASE_URL = "http://ollama-service.open-webui.svc.cluster.local:11434"
 
+# remove the ending slash due to an extra slash would cause 404 error, see https://github.com/open-webui/open-webui/discussions/6065#discussioncomment-11420989
+OLLAMA_BASE_URL = OLLAMA_BASE_URL.rstrip("/") if OLLAMA_BASE_URL else OLLAMA_BASE_URL
 
 OLLAMA_BASE_URLS = os.environ.get("OLLAMA_BASE_URLS", "")
 OLLAMA_BASE_URLS = OLLAMA_BASE_URLS if OLLAMA_BASE_URLS != "" else OLLAMA_BASE_URL
