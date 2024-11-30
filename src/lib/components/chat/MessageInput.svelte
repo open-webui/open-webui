@@ -582,7 +582,7 @@
 
 									{#if $settings?.richTextInput ?? true}
 										<div
-											class="scrollbar-hidden text-left bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-2.5 px-1 rounded-xl resize-none h-fit max-h-60 overflow-auto"
+											class="scrollbar-hidden text-left bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-2.5 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
 										>
 											<RichTextInput
 												bind:this={chatInputElement}
@@ -908,7 +908,7 @@
 													}
 
 													e.target.style.height = '';
-													e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+													e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
 												}
 
 												if (e.key === 'Escape') {
@@ -921,11 +921,11 @@
 											rows="1"
 											on:input={async (e) => {
 												e.target.style.height = '';
-												e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
 											}}
 											on:focus={async (e) => {
 												e.target.style.height = '';
-												e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
 											}}
 											on:paste={async (e) => {
 												const clipboardData = e.clipboardData || window.clipboardData;
