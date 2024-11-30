@@ -187,7 +187,7 @@
 					: [])
 			],
 			content: content,
-			autofocus: true,
+			autofocus: messageInput ? true : false,
 			onTransaction: () => {
 				// force re-render so `editor.isActive` works as expected
 				editor = editor;
@@ -218,16 +218,16 @@
 						return false;
 					},
 					keydown: (view, event) => {
-						// Handle Tab Key
-						if (event.key === 'Tab') {
-							const handled = selectNextTemplate(view.state, view.dispatch);
-							if (handled) {
-								event.preventDefault();
-								return true;
-							}
-						}
-
 						if (messageInput) {
+							// Handle Tab Key
+							if (event.key === 'Tab') {
+								const handled = selectNextTemplate(view.state, view.dispatch);
+								if (handled) {
+									event.preventDefault();
+									return true;
+								}
+							}
+
 							if (event.key === 'Enter') {
 								// Check if the current selection is inside a structured block (like codeBlock or list)
 								const { state } = view;
@@ -317,7 +317,9 @@
 			}
 		});
 
-		selectTemplate();
+		if (messageInput) {
+			selectTemplate();
+		}
 	});
 
 	onDestroy(() => {
