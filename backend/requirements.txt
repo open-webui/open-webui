@@ -17,7 +17,7 @@ aiocache
 aiofiles
 
 sqlalchemy==2.0.32
-alembic==1.13.2
+alembic==1.14.0
 peewee==3.17.6
 peewee-migrate==1.12.2
 psycopg2-binary==2.9.9
