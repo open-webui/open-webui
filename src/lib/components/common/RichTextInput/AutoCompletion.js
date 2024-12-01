@@ -112,39 +112,45 @@ export const AIAutocompletion = Extension.create({
                 }))
               }
 
-              // Set up debounce for AI generation
-              if (this.options.debounceTime !== null) {
-                clearTimeout(debounceTimer)
-                
-                // Capture current position
-                const currentPos = $head.before()
 
-                debounceTimer = setTimeout(() => {
-                  const newState = view.state
-                  const newNode = newState.doc.nodeAt(currentPos)
+              // Start debounce logic for AI generation only if the cursor is at the end of the paragraph
+              if (selection.empty && $head.pos === $head.end()) {
+
+                // Set up debounce for AI generation
+                if (this.options.debounceTime !== null) {
+                  clearTimeout(debounceTimer)
                   
-                  // Check if the node still exists and is still a paragraph
-                  if (newNode && newNode.type.name === 'paragraph') {
-                    const prompt = newNode.textContent
+                  // Capture current position
+                  const currentPos = $head.before()
 
-                    if (prompt.trim() !== ''){
-                      if (loading) return true
-                      loading = true
-                      this.options.generateCompletion(prompt).then(suggestion => {
-                        if (suggestion && suggestion.trim() !== '') {
-                          view.dispatch(newState.tr.setNodeMarkup(currentPos, null, {
-                            ...newNode.attrs,
-                            class: 'ai-autocompletion',
-                            'data-prompt': prompt,
-                            'data-suggestion': suggestion,
-                          }))
-                        }
-                      }).finally(() => {
-                        loading = false
-                      })
+                  debounceTimer = setTimeout(() => {
+                    const newState = view.state
+                    const newNode = newState.doc.nodeAt(currentPos)
+
+                    const currentIsAtEnd = newState.selection.$head.pos === newState.selection.$head.end()
+                    // Check if the node still exists and is still a paragraph
+                    if (newNode && newNode.type.name === 'paragraph' && currentIsAtEnd) {
+                      const prompt = newNode.textContent
+
+                      if (prompt.trim() !== ''){
+                        if (loading) return true
+                        loading = true
+                        this.options.generateCompletion(prompt).then(suggestion => {
+                          if (suggestion && suggestion.trim() !== '') {
+                            view.dispatch(newState.tr.setNodeMarkup(currentPos, null, {
+                              ...newNode.attrs,
+                              class: 'ai-autocompletion',
+                              'data-prompt': prompt,
+                              'data-suggestion': suggestion,
+                            }))
+                          }
+                        }).finally(() => {
+                          loading = false
+                        })
+                      }
                     }
-                  }
-                }, this.options.debounceTime)
+                  }, this.options.debounceTime)
+                }
               }
             }
             return false
@@ -184,6 +190,12 @@ export const AIAutocompletion = Extension.create({
                 }
               }
               return false;
+            },
+            
+            mousedown: () => {
+              // Reset debounce timer on mouse click
+              clearTimeout(debounceTimer)
+              return false
             },
           },
         },
