@@ -1,3 +1,16 @@
+/*
+Here we initialize the plugin with keyword mapping.
+Intended to handle user interactions seamlessly.
+
+Observe the keydown events for proactive suggestions.
+Provide a mechanism for accepting AI suggestions.
+Evaluate each input change with debounce logic.
+Next, we implement touch and mouse interactions.
+
+Anchor the user experience to intuitive behavior.
+Intelligently reset suggestions on new input.
+*/
+
 import { Extension } from '@tiptap/core'
 import { Plugin, PluginKey } from 'prosemirror-state'
 
@@ -203,3 +216,4 @@ export const AIAutocompletion = Extension.create({
     ]
   },
 })
+
