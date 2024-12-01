@@ -448,7 +448,7 @@ async def handle_streaming_response(
                 peek = await anext(generator)
                 peek_json = extract_json(peek)
                 if peek == b"data: [DONE]\n" and len(citations) > 0:
-                    yield wrap_item(json.dumps({"citations": citations}))
+                    yield wrap_item(json.dumps({"sources": citations}))
 
                 if (
                     peek_json is None
@@ -1000,7 +1000,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             body["metadata"]["native_tool_call"] = False
 
         if not body["metadata"]["native_tool_call"]:
-            del body["tools"]  # we won't use those
+            del body["tools"]  # we won't use those they are only for native_tool_call =True
             try:
                 body, flags = await chat_completion_tools_handler(
                     body, user, extra_params, models
