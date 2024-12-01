@@ -873,7 +873,7 @@ def save_docs_to_vector_db(
         return True
     except Exception as e:
         log.exception(e)
-        return False
+        raise e
 
 
 class ProcessFileForm(BaseModel):
@@ -903,7 +903,7 @@ def process_file(
 
             docs = [
                 Document(
-                    page_content=form_data.content,
+                    page_content=form_data.content.replace("<br/>", "\n"),
                     metadata={
                         **file.meta,
                         "name": file.filename,

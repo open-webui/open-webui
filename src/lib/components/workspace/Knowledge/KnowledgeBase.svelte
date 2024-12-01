@@ -446,7 +446,13 @@
 
 	const onDragOver = (e) => {
 		e.preventDefault();
-		dragged = true;
+
+		// Check if a file is being draggedOver.
+		if (e.dataTransfer?.types?.includes('Files')) {
+			dragged = true;
+		} else {
+			dragged = false;
+		}
 	};
 
 	const onDragLeave = () => {
@@ -457,15 +463,17 @@
 		e.preventDefault();
 		dragged = false;
 
-		if (e.dataTransfer?.files) {
-			const inputFiles = e.dataTransfer?.files;
+		if (e.dataTransfer?.types?.includes('Files')) {
+			if (e.dataTransfer?.files) {
+				const inputFiles = e.dataTransfer?.files;
 
-			if (inputFiles && inputFiles.length > 0) {
-				for (const file of inputFiles) {
-					await uploadFileHandler(file);
+				if (inputFiles && inputFiles.length > 0) {
+					for (const file of inputFiles) {
+						await uploadFileHandler(file);
+					}
+				} else {
+					toast.error($i18n.t(`File not found.`));
 				}
-			} else {
-				toast.error($i18n.t(`File not found.`));
 			}
 		}
 	};
