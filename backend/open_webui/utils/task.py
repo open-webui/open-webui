@@ -81,12 +81,17 @@ def replace_prompt_variable(template: str, prompt: str) -> str:
     return template
 
 
-def replace_messages_variable(template: str, messages: list[str]) -> str:
+def replace_messages_variable(
+    template: str, messages: Optional[list[str]] = None
+) -> str:
     def replacement_function(match):
         full_match = match.group(0)
         start_length = match.group(1)
         end_length = match.group(2)
         middle_length = match.group(3)
+        # If messages is None, handle it as an empty list
+        if messages is None:
+            return ""
 
         # Process messages based on the number of messages required
         if full_match == "{{MESSAGES}}":
@@ -221,9 +226,7 @@ def autocomplete_generation_template(
 ) -> str:
     template = template.replace("{{TYPE}}", type if type else "")
     template = replace_prompt_variable(template, prompt)
-
-    if messages:
-        template = replace_messages_variable(template, messages)
+    template = replace_messages_variable(template, messages)
 
     template = prompt_template(
         template,
