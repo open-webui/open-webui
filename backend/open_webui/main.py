@@ -2066,7 +2066,7 @@ async def generate_autocompletion(form_data: dict, user=Depends(get_verified_use
         "messages": [{"role": "user", "content": content}],
         "stream": False,
         "metadata": {
-            "task": str(TASKS.AUTOCOMPLETION_GENERATION),
+            "task": str(TASKS.AUTOCOMPLETE_GENERATION),
             "task_body": form_data,
             "chat_id": form_data.get("chat_id", None),
         },
