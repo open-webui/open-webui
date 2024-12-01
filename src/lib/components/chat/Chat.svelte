@@ -527,19 +527,22 @@
 		chatFiles = [];
 		params = {};
 
-		// check if the share indexdb is available
-		const shareDB = await openDB('share', 1, {
-			upgrade(db) {
-				db.createObjectStore('share');
+		// Check if PWA
+		if (window.matchMedia('(display-mode: standalone)').matches) {
+			// check if the share indexdb is available
+			const shareDB = await openDB('share', 1, {
+				upgrade(db) {
+					db.createObjectStore('share');
+				}
+			});
+
+			// check if the share indexdb is available
+			const shareData = await shareDB.get('share', 'share');
+
+			if (shareData) {
+				await handleShare(shareData);
+				await shareDB.delete('share', 'share');
 			}
-		});
-
-		// check if the share indexdb is available
-		const shareData = await shareDB.get('share', 'share');
-
-		if (shareData) {
-			await handleShare(shareData);
-			await shareDB.delete('share', 'share');
 		}
 
 		if ($page.url.searchParams.get('youtube')) {
@@ -2177,16 +2180,61 @@
 
 	interface ShareData {
 		images?: any[];
+		documents?: any[];
 		description?: string;
 		link?: string;
 		title?: string;
 	}
 
-	async function handleShare(shareData: any) {
-		if (shareData.images) {
-			// Handle images by adding them to the files array
-			const images = Array.isArray(shareData.images) ? shareData.images : [shareData.images];
+	async function addDocument(document: { name: string; type: string; size: number; data: string }) {
+		const tempItemId = uuidv4();
+		const fullContext = true;
 
+		const fileItem = {
+			type: 'file',
+			file: '',
+			id: null,
+			url: '',
+			name: document.name,
+			collection_name: '',
+			status: 'uploading',
+			size: document.size,
+			error: '',
+			itemId: tempItemId,
+			...(fullContext ? { context: 'full' } : {})
+		};
+		files = [...files, fileItem];
+
+		// convert the base64 back to binary
+		const base64Data = document.data.split(',')[1];
+		const byteArray = Uint8Array.from(atob(base64Data), (char) => char.charCodeAt(0));
+
+		const file = new File([byteArray], document.name, {
+			type: document.type
+		});
+
+		// Upload using the files api
+		uploadFile(localStorage.token, file).then((uploadedFile) => {
+			if (uploadedFile) {
+				if (uploadedFile.error) {
+					toast.warning(uploadedFile.error);
+				}
+
+				fileItem.status = 'uploaded';
+				fileItem.file = uploadedFile;
+				fileItem.id = uploadedFile.id;
+				fileItem.collection_name = uploadedFile?.meta?.collection_name;
+				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+				files = files.map((item) => (item.itemId === tempItemId ? fileItem : item));
+			} else {
+				files = files.filter((item) => item?.itemId !== tempItemId);
+			}
+		});
+	}
+
+	async function handleShare(shareData: ShareData) {
+		if (shareData.images) {
+			const images = Array.isArray(shareData.images) ? shareData.images : [shareData.images];
 			files = [
 				...files,
 				...images.map((image) => ({
@@ -2199,50 +2247,11 @@
 			return;
 		}
 
-		if(shareData.documents) {
-			const tempItemId = uuidv4();
-			const fullContext = true;
-
-			const fileItem = {
-				type: 'file',
-				file: '',
-				id: null,
-				url: '',
-				name: shareData.documents.name,
-				collection_name: '',
-				status: 'uploading',
-				size: shareData.documents.size,
-				error: '',
-				itemId: tempItemId,
-				...(fullContext ? { context: 'full' } : {})
-			};
-			files = [...files, fileItem];
-
-			// convert the base64 back to binary
-			const base64Data = shareData.documents.data.split(',')[1];
-			const byteArray = Uint8Array.from(atob(base64Data), char => char.charCodeAt(0));
-
-			const document = new File([byteArray], shareData.documents.name, {
-				type: shareData.documents.type
-			});
-
-			// Upload using the files api
-			const uploadedFile = await uploadFile(localStorage.token, document);
-			if (uploadedFile) {
-				if (uploadedFile.error) {
-					toast.warning(uploadedFile.error);
-				}
-
-				fileItem.status = 'uploaded';
-				fileItem.file = uploadedFile;
-				fileItem.id = uploadedFile.id;
-				fileItem.collection_name = uploadedFile?.meta?.collection_name;
-				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
-
-				files = files;
-			} else {
-				files = files.filter((item) => item?.itemId !== tempItemId);
-			}
+		if (shareData.documents) {
+			const documents = Array.isArray(shareData.documents)
+				? shareData.documents
+				: [shareData.documents];
+			documents.map(addDocument);
 			return;
 		}
 
@@ -2267,7 +2276,7 @@
 
 		// Handle all other shared text
 		if (shareData.description) {
-			//TODO: could prepend the prompt with a summary explanation of the shared content
+			//TODO could prepend the prompt with a summary explanation of the shared content
 			prompt = shareData.description;
 			await tick();
 			// Optional: Auto-submit the prompt

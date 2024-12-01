@@ -1,34 +1,37 @@
 /// <reference types="@sveltejs/kit" />
 import { openDB } from 'idb';
 
-function formDataToIndexDB(formData) {
-	return new Promise((resolve) => {
-		const data = {};
+async function formDataToIndexDB(formData) {
+	const data = {};
 
-		const entries = formData.entries();
-		// Iterate over the form data
-		for (const entry of entries) {
-			const [key, value] = entry;
-			// If the value is a file
-			if (value instanceof File) {
-				// Convert the file to base64
-				const reader = new FileReader();
+	const processValue = async (value) => {
+		if (Array.isArray(value)) {
+			return await Promise.all(value.map((item) => processValue(item)));
+		} else if (value instanceof File) {
+			const reader = new FileReader();
+			return new Promise((resolve) => {
 				reader.onload = () => {
-					data[key] = {
+					resolve({
 						name: value.name,
 						type: value.type,
 						size: value.size,
 						data: reader.result
-					};
+					});
 				};
 				reader.readAsDataURL(value);
-			} else {
-				data[key] = value;
-			}
+			});
+		} else if (value instanceof FormData) {
+			return await formDataToIndexDB(value);
+		} else {
+			return value;
 		}
+	};
 
-		resolve(data);
-	});
+	for (const [key, value] of formData.entries()) {
+		data[key] = await processValue(value);
+	}
+
+	return data;
 }
 
 self.addEventListener('fetch', (event) => {
