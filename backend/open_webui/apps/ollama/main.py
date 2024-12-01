@@ -706,7 +706,7 @@ async def generate_embeddings(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
-    return generate_ollama_batch_embeddings(form_data, url_idx)
+    return await generate_ollama_batch_embeddings(form_data, url_idx)
 
 
 @app.post("/api/embeddings")

@@ -53,7 +53,9 @@ def prompt_template(
 
 def replace_prompt_variable(template: str, prompt: str) -> str:
     def replacement_function(match):
-        full_match = match.group(0)
+        full_match = match.group(
+            0
+        ).lower()  # Normalize to lowercase for consistent handling
         start_length = match.group(1)
         end_length = match.group(2)
         middle_length = match.group(3)
@@ -73,20 +75,23 @@ def replace_prompt_variable(template: str, prompt: str) -> str:
             return f"{start}...{end}"
         return ""
 
-    template = re.sub(
-        r"{{prompt}}|{{prompt:start:(\d+)}}|{{prompt:end:(\d+)}}|{{prompt:middletruncate:(\d+)}}",
-        replacement_function,
-        template,
-    )
+    # Updated regex pattern to make it case-insensitive with the `(?i)` flag
+    pattern = r"(?i){{prompt}}|{{prompt:start:(\d+)}}|{{prompt:end:(\d+)}}|{{prompt:middletruncate:(\d+)}}"
+    template = re.sub(pattern, replacement_function, template)
     return template
 
 
-def replace_messages_variable(template: str, messages: list[str]) -> str:
+def replace_messages_variable(
+    template: str, messages: Optional[list[str]] = None
+) -> str:
     def replacement_function(match):
         full_match = match.group(0)
         start_length = match.group(1)
         end_length = match.group(2)
         middle_length = match.group(3)
+        # If messages is None, handle it as an empty list
+        if messages is None:
+            return ""
 
         # Process messages based on the number of messages required
         if full_match == "{{MESSAGES}}":
@@ -122,7 +127,7 @@ def replace_messages_variable(template: str, messages: list[str]) -> str:
 
 
 def rag_template(template: str, context: str, query: str):
-    if template == "":
+    if template.strip() == "":
         template = DEFAULT_RAG_TEMPLATE
 
     if "[context]" not in template and "{{CONTEXT}}" not in template:
@@ -209,6 +214,28 @@ def emoji_generation_template(
         ),
     )
 
+    return template
+
+
+def autocomplete_generation_template(
+    template: str,
+    prompt: str,
+    messages: Optional[list[dict]] = None,
+    type: Optional[str] = None,
+    user: Optional[dict] = None,
+) -> str:
+    template = template.replace("{{TYPE}}", type if type else "")
+    template = replace_prompt_variable(template, prompt)
+    template = replace_messages_variable(template, messages)
+
+    template = prompt_template(
+        template,
+        **(
+            {"user_name": user.get("name"), "user_location": user.get("location")}
+            if user
+            else {}
+        ),
+    )
     return template
 
 

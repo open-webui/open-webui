@@ -24,6 +24,8 @@
 		TASK_MODEL: '',
 		TASK_MODEL_EXTERNAL: '',
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
+		ENABLE_AUTOCOMPLETE_GENERATION: true,
+		AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH: -1,
 		TAGS_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_TAGS_GENERATION: true,
 		ENABLE_SEARCH_QUERY_GENERATION: true,
@@ -138,11 +140,42 @@
 					</Tooltip>
 				</div>
 
-				<hr class=" dark:border-gray-850 my-3" />
+				<hr class=" border-gray-50 dark:border-gray-850 my-3" />
 
 				<div class="my-3 flex w-full items-center justify-between">
 					<div class=" self-center text-xs font-medium">
-						{$i18n.t('Enable Tags Generation')}
+						{$i18n.t('Autocomplete Generation')}
+					</div>
+
+					<Tooltip content={$i18n.t('Enable autocomplete generation for chat messages')}>
+						<Switch bind:state={taskConfig.ENABLE_AUTOCOMPLETE_GENERATION} />
+					</Tooltip>
+				</div>
+
+				{#if taskConfig.ENABLE_AUTOCOMPLETE_GENERATION}
+					<div class="mt-3">
+						<div class=" mb-2.5 text-xs font-medium">
+							{$i18n.t('Autocomplete Generation Input Max Length')}
+						</div>
+
+						<Tooltip
+							content={$i18n.t('Character limit for autocomplete generation input')}
+							placement="top-start"
+						>
+							<input
+								class="w-full outline-none bg-transparent"
+								bind:value={taskConfig.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH}
+								placeholder={$i18n.t('-1 for no limit, or a positive integer for a specific limit')}
+							/>
+						</Tooltip>
+					</div>
+				{/if}
+
+				<hr class=" border-gray-50 dark:border-gray-850 my-3" />
+
+				<div class="my-3 flex w-full items-center justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Tags Generation')}
 					</div>
 
 					<Switch bind:state={taskConfig.ENABLE_TAGS_GENERATION} />
@@ -166,11 +199,11 @@
 					</div>
 				{/if}
 
-				<hr class=" dark:border-gray-850 my-3" />
+				<hr class=" border-gray-50 dark:border-gray-850 my-3" />
 
 				<div class="my-3 flex w-full items-center justify-between">
 					<div class=" self-center text-xs font-medium">
-						{$i18n.t('Enable Retrieval Query Generation')}
+						{$i18n.t('Retrieval Query Generation')}
 					</div>
 
 					<Switch bind:state={taskConfig.ENABLE_RETRIEVAL_QUERY_GENERATION} />
@@ -178,7 +211,7 @@
 
 				<div class="my-3 flex w-full items-center justify-between">
 					<div class=" self-center text-xs font-medium">
-						{$i18n.t('Enable Web Search Query Generation')}
+						{$i18n.t('Web Search Query Generation')}
 					</div>
 
 					<Switch bind:state={taskConfig.ENABLE_SEARCH_QUERY_GENERATION} />
@@ -201,7 +234,7 @@
 				</div>
 			</div>
 
-			<hr class=" dark:border-gray-850 my-3" />
+			<hr class=" border-gray-50 dark:border-gray-850 my-3" />
 
 			<div class=" space-y-3 {banners.length > 0 ? ' mb-3' : ''}">
 				<div class="flex w-full justify-between">

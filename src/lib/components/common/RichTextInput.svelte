@@ -2,7 +2,8 @@
 	import { marked } from 'marked';
 	import TurndownService from 'turndown';
 	const turndownService = new TurndownService({
-		codeBlockStyle: 'fenced'
+		codeBlockStyle: 'fenced',
+		headingStyle: 'atx'
 	});
 	turndownService.escape = (string) => string;
 
@@ -10,16 +11,18 @@
 	import { createEventDispatcher } from 'svelte';
 	const eventDispatch = createEventDispatcher();
 
-	import { EditorState, Plugin, TextSelection } from 'prosemirror-state';
+	import { EditorState, Plugin, PluginKey, TextSelection } from 'prosemirror-state';
+	import { Decoration, DecorationSet } from 'prosemirror-view';
 
 	import { Editor } from '@tiptap/core';
+
+	import { AIAutocompletion } from './RichTextInput/AutoCompletion.js';
 
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 	import Placeholder from '@tiptap/extension-placeholder';
 	import Highlight from '@tiptap/extension-highlight';
 	import Typography from '@tiptap/extension-typography';
 	import StarterKit from '@tiptap/starter-kit';
-
 	import { all, createLowlight } from 'lowlight';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
@@ -32,6 +35,9 @@
 	export let value = '';
 	export let id = '';
 
+	export let preserveBreaks = false;
+	export let generateAutoCompletion: Function = async () => null;
+	export let autocomplete = false;
 	export let messageInput = false;
 	export let shiftEnter = false;
 	export let largeTextAsFile = false;
@@ -120,10 +126,23 @@
 	};
 
 	onMount(async () => {
+		console.log(value);
+
+		if (preserveBreaks) {
+			turndownService.addRule('preserveBreaks', {
+				filter: 'br', // Target <br> elements
+				replacement: function (content) {
+					return '<br/>';
+				}
+			});
+		}
+
 		async function tryParse(value, attempts = 3, interval = 100) {
 			try {
 				// Try parsing the value
-				return marked.parse(value);
+				return marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
+					breaks: false
+				});
 			} catch (error) {
 				// If no attempts remain, fallback to plain text
 				if (attempts <= 1) {
@@ -147,20 +166,43 @@
 				}),
 				Highlight,
 				Typography,
-				Placeholder.configure({ placeholder })
+				Placeholder.configure({ placeholder }),
+				...(autocomplete
+					? [
+							AIAutocompletion.configure({
+								generateCompletion: async (text) => {
+									if (text.trim().length === 0) {
+										return null;
+									}
+
+									const suggestion = await generateAutoCompletion(text).catch(() => null);
+									if (!suggestion || suggestion.trim().length === 0) {
+										return null;
+									}
+
+									return suggestion;
+								}
+							})
+						]
+					: [])
 			],
 			content: content,
-			autofocus: true,
+			autofocus: messageInput ? true : false,
 			onTransaction: () => {
 				// force re-render so `editor.isActive` works as expected
 				editor = editor;
+				const newValue = turndownService.turndown(
+					preserveBreaks ? editor.getHTML().replace(/<p><\/p>/g, '<br/>') : editor.getHTML()
+				);
 
-				const newValue = turndownService.turndown(editor.getHTML());
 				if (value !== newValue) {
 					value = newValue;
 
-					if (value === '') {
-						editor.commands.clearContent();
+					// check if the node is paragraph as well
+					if (editor.isActive('paragraph')) {
+						if (value === '') {
+							editor.commands.clearContent();
+						}
 					}
 				}
 			},
@@ -176,16 +218,16 @@
 						return false;
 					},
 					keydown: (view, event) => {
-						// Handle Tab Key
-						if (event.key === 'Tab') {
-							const handled = selectNextTemplate(view.state, view.dispatch);
-							if (handled) {
-								event.preventDefault();
-								return true;
-							}
-						}
-
 						if (messageInput) {
+							// Handle Tab Key
+							if (event.key === 'Tab') {
+								const handled = selectNextTemplate(view.state, view.dispatch);
+								if (handled) {
+									event.preventDefault();
+									return true;
+								}
+							}
+
 							if (event.key === 'Enter') {
 								// Check if the current selection is inside a structured block (like codeBlock or list)
 								const { state } = view;
@@ -275,7 +317,9 @@
 			}
 		});
 
-		selectTemplate();
+		if (messageInput) {
+			selectTemplate();
+		}
 	});
 
 	onDestroy(() => {
@@ -285,8 +329,18 @@
 	});
 
 	// Update the editor content if the external `value` changes
-	$: if (editor && value !== turndownService.turndown(editor.getHTML())) {
-		editor.commands.setContent(marked.parse(value)); // Update editor content
+	$: if (
+		editor &&
+		value !==
+			turndownService.turndown(
+				preserveBreaks ? editor.getHTML().replace(/<p><\/p>/g, '<br/>') : editor.getHTML()
+			)
+	) {
+		editor.commands.setContent(
+			marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
+				breaks: false
+			})
+		); // Update editor content
 		selectTemplate();
 	}
 </script>

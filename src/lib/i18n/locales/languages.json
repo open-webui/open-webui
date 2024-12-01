@@ -64,6 +64,10 @@
 		"title": "French (France)"
 	},
 	{
+		"code": "el-GR",
+		"title": "Greek (Ἑλλάδα)"
+	},
+	{
 		"code": "he-IL",
 		"title": "Hebrew (עברית)"
 	},

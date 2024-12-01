@@ -76,6 +76,10 @@ class ToolModel(BaseModel):
 ####################
 
 
+class ToolUserModel(ToolModel):
+    user: Optional[UserResponse] = None
+
+
 class ToolResponse(BaseModel):
     id: str
     user_id: str
@@ -138,13 +142,13 @@ class ToolsTable:
         except Exception:
             return None
 
-    def get_tools(self) -> list[ToolUserResponse]:
+    def get_tools(self) -> list[ToolUserModel]:
         with get_db() as db:
             tools = []
             for tool in db.query(Tool).order_by(Tool.updated_at.desc()).all():
                 user = Users.get_user_by_id(tool.user_id)
                 tools.append(
-                    ToolUserResponse.model_validate(
+                    ToolUserModel.model_validate(
                         {
                             **ToolModel.model_validate(tool).model_dump(),
                             "user": user.model_dump() if user else None,
@@ -155,7 +159,7 @@ class ToolsTable:
 
     def get_tools_by_user_id(
         self, user_id: str, permission: str = "write"
-    ) -> list[ToolUserResponse]:
+    ) -> list[ToolUserModel]:
         tools = self.get_tools()
 
         return [

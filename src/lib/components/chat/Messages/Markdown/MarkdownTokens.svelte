@@ -89,11 +89,9 @@
 		{/if}
 	{:else if token.type === 'table'}
 		<div class="relative w-full group">
-			<div
-				class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-lg"
-			>
+			<div class="scrollbar-hidden relative overflow-x-auto max-w-full rounded-lg">
 				<table
-					class="table-auto w-full text-sm text-left text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
+					class=" w-full text-sm text-left text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
 				>
 					<thead
 						class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 border-none"
@@ -102,15 +100,17 @@
 							{#each token.header as header, headerIdx}
 								<th
 									scope="col"
-									class="!px-2 !py-1.5 cursor-pointer select-none border border-gray-50 dark:border-gray-850"
+									class="!px-3 !py-1.5 cursor-pointer select-none border border-gray-50 dark:border-gray-850"
 									style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}
 								>
-									<div class="flex gap-1.5 items-center">
-										<MarkdownInlineTokens
-											id={`${id}-${tokenIdx}-header-${headerIdx}`}
-											tokens={header.tokens}
-											{onSourceClick}
-										/>
+									<div class="flex flex-col gap-1.5 text-left">
+										<div class="flex-shrink-0 break-normal">
+											<MarkdownInlineTokens
+												id={`${id}-${tokenIdx}-header-${headerIdx}`}
+												tokens={header.tokens}
+												{onSourceClick}
+											/>
+										</div>
 									</div>
 								</th>
 							{/each}
@@ -121,10 +121,10 @@
 							<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
 								{#each row ?? [] as cell, cellIdx}
 									<td
-										class="!px-2 !py-1.5 font-medium text-gray-900 dark:text-white w-max border border-gray-50 dark:border-gray-850"
+										class="!px-3 !py-1.5 text-gray-900 dark:text-white w-max border border-gray-50 dark:border-gray-850"
 										style={token.align[cellIdx] ? '' : `text-align: ${token.align[cellIdx]}`}
 									>
-										<div class="flex">
+										<div class="flex flex-col break-normal">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
 												tokens={cell.tokens}

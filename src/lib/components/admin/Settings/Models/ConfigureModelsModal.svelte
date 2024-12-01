@@ -185,6 +185,10 @@
 										<button
 											type="button"
 											on:click={() => {
+												if (selectedModelId === '') {
+													return;
+												}
+
 												if (defaultModelIds.includes(selectedModelId)) {
 													return;
 												}
@@ -209,7 +213,8 @@
 										showResetModal = true;
 									}}
 								>
-									{$i18n.t('Delete All Models')}
+									<!-- {$i18n.t('Delete All Models')} -->
+									{$i18n.t('Reset All Models')}
 								</button>
 							</Tooltip>
 

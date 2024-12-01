@@ -105,6 +105,7 @@ from open_webui.config import (
     TIKA_SERVER_URL,
     UPLOAD_DIR,
     YOUTUBE_LOADER_LANGUAGE,
+    YOUTUBE_LOADER_PROXY_URL,
     DEFAULT_LOCALE,
     AppConfig,
 )
@@ -171,6 +172,7 @@ app.state.config.OLLAMA_API_KEY = RAG_OLLAMA_API_KEY
 app.state.config.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
 
 app.state.config.YOUTUBE_LOADER_LANGUAGE = YOUTUBE_LOADER_LANGUAGE
+app.state.config.YOUTUBE_LOADER_PROXY_URL = YOUTUBE_LOADER_PROXY_URL
 app.state.YOUTUBE_LOADER_TRANSLATION = None
 
 
@@ -471,6 +473,7 @@ async def get_rag_config(user=Depends(get_admin_user)):
         "youtube": {
             "language": app.state.config.YOUTUBE_LOADER_LANGUAGE,
             "translation": app.state.YOUTUBE_LOADER_TRANSLATION,
+            "proxy_url": app.state.config.YOUTUBE_LOADER_PROXY_URL,
         },
         "web": {
             "web_loader_ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
@@ -518,6 +521,7 @@ class ChunkParamUpdateForm(BaseModel):
 class YoutubeLoaderConfig(BaseModel):
     language: list[str]
     translation: Optional[str] = None
+    proxy_url: str = ""
 
 
 class WebSearchConfig(BaseModel):
@@ -580,6 +584,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
 
     if form_data.youtube is not None:
         app.state.config.YOUTUBE_LOADER_LANGUAGE = form_data.youtube.language
+        app.state.config.YOUTUBE_LOADER_PROXY_URL = form_data.youtube.proxy_url
         app.state.YOUTUBE_LOADER_TRANSLATION = form_data.youtube.translation
 
     if form_data.web is not None:
@@ -640,6 +645,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
         },
         "youtube": {
             "language": app.state.config.YOUTUBE_LOADER_LANGUAGE,
+            "proxy_url": app.state.config.YOUTUBE_LOADER_PROXY_URL,
             "translation": app.state.YOUTUBE_LOADER_TRANSLATION,
         },
         "web": {
@@ -867,7 +873,7 @@ def save_docs_to_vector_db(
         return True
     except Exception as e:
         log.exception(e)
-        return False
+        raise e
 
 
 class ProcessFileForm(BaseModel):
@@ -897,7 +903,7 @@ def process_file(
 
             docs = [
                 Document(
-                    page_content=form_data.content,
+                    page_content=form_data.content.replace("<br/>", "\n"),
                     metadata={
                         **file.meta,
                         "name": file.filename,
@@ -1081,7 +1087,9 @@ def process_youtube_video(form_data: ProcessUrlForm, user=Depends(get_verified_u
             collection_name = calculate_sha256_string(form_data.url)[:63]
 
         loader = YoutubeLoader(
-            form_data.url, language=app.state.config.YOUTUBE_LOADER_LANGUAGE
+            form_data.url,
+            language=app.state.config.YOUTUBE_LOADER_LANGUAGE,
+            proxy_url=app.state.config.YOUTUBE_LOADER_PROXY_URL,
         )
 
         docs = loader.load()
