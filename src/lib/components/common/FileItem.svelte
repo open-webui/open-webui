@@ -33,7 +33,9 @@
 {/if}
 
 <button
-	class="relative group p-1.5 {className} flex items-center gap-1 {colorClassName} rounded-xl text-left"
+	class="relative group p-1.5 {className} flex items-center gap-1 {colorClassName} {small
+		? 'rounded-xl'
+		: 'rounded-2xl'} text-left"
 	type="button"
 	on:click={async () => {
 		if (item?.file?.data?.content) {
