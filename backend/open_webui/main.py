@@ -32,7 +32,7 @@ from sqlalchemy import text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import Response, StreamingResponse
+from starlette.responses import AsyncContentStream, Response, StreamingResponse
 
 from open_webui.apps.audio.main import app as audio_app
 from open_webui.apps.images.main import app as images_app
@@ -402,9 +402,8 @@ def update_body_request(request: Request, body: dict) -> None:
     return None
 
 
-def extract_json(binary: bytes) -> Optional[dict]:
+def extract_json(s: str) -> Optional[dict]:
     try:
-        s = binary.decode("utf-8")
         return json.loads(s[s.find("{") : s.rfind("}") + 1])
     except Exception:
         return None
@@ -435,7 +434,7 @@ async def handle_streaming_response(
         return f"data: {item}\n\n" if is_openai else f"{item}\n"
 
     async def stream_wrapper(
-        original_generator: AsyncGenerator[bytes, None], data_items: list[dict]
+        original_generator: AsyncContentStream, data_items: list[dict]
     ):
         for item in data_items:
             yield wrap_item(json.dumps(item))
@@ -446,7 +445,9 @@ async def handle_streaming_response(
         try:
             while True:
                 peek = await anext(generator)
-                peek_json = extract_json(peek)
+                peek_json = extract_json(
+                    peek.decode("utf-8") if isinstance(peek, bytes) else peek
+                )
                 if peek == b"data: [DONE]\n" and len(citations) > 0:
                     yield wrap_item(json.dumps({"sources": citations}))
 
@@ -474,7 +475,9 @@ async def handle_streaming_response(
                 fill_with_delta(tool_calls[current_index], peek_json)
 
                 async for data in generator:
-                    delta = extract_json(data)
+                    delta = extract_json(
+                        data.decode("utf-8") if isinstance(data, bytes) else data
+                    )
 
                     if (
                         delta is None
@@ -588,7 +591,7 @@ async def handle_nonstreaming_response(
     content = ""
     # FIXME probably not needed
     async for data in response.body_iterator:
-        content += data.decode()
+        content += data.decode() if isinstance(data, bytes) else data
     citations = []
     response_dict = json.loads(content)
     body = json.loads(request._body)
