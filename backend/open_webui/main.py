@@ -9,7 +9,7 @@ import sys
 import time
 import random
 from contextlib import asynccontextmanager
-from typing import Optional, Callable
+from typing import Optional, AsyncGenerator
 
 from aiocache import cached
 import aiohttp
@@ -418,12 +418,12 @@ def fill_with_delta(fcall_dict: dict, delta: dict) -> None:
         fcall_dict["id"] += j.get("id", "")
     if "function" in j:
         fcall_dict["function"]["name"] += j["function"].get("name", "")
-        fcall_dict["function"]["arguments"] += j["function"].get("arguments","")
+        fcall_dict["function"]["arguments"] += j["function"].get("arguments", "")
 
 
 async def handle_streaming_response(
     request: Request,
-    response: Response,
+    response: StreamingResponse,
     tools: dict,
     data_items: list,
     user: UserModel,
@@ -434,7 +434,9 @@ async def handle_streaming_response(
     def wrap_item(item):
         return f"data: {item}\n\n" if is_openai else f"{item}\n"
 
-    async def stream_wrapper(original_generator, data_items):
+    async def stream_wrapper(
+        original_generator: AsyncGenerator[bytes, None], data_items: list[dict]
+    ):
         for item in data_items:
             yield wrap_item(json.dumps(item))
 
@@ -577,13 +579,14 @@ async def handle_streaming_response(
 
 async def handle_nonstreaming_response(
     request: Request,
-    response: Response,
+    response: StreamingResponse,
     tools: dict,
     user: UserModel,
     models,
 ) -> JSONResponse:
     # It only should be one response since we are in the non streaming scenario
     content = ""
+    # FIXME probably not needed
     async for data in response.body_iterator:
         content += data.decode()
     citations = []
@@ -998,7 +1001,9 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             body["metadata"]["native_tool_call"] = False
 
         if not body["metadata"]["native_tool_call"]:
-            del body["tools"]  # we won't use those they are only for native_tool_call =True
+            del body[
+                "tools"
+            ]  # we won't use those they are only for native_tool_call =True
             try:
                 body, flags = await chat_completion_tools_handler(
                     body, user, extra_params, models
