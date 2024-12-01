@@ -567,7 +567,7 @@ async def handle_streaming_response(
                 update_body_request(request, body)
                 response = await generate_chat_completions(form_data=body, user=user)
                 # body_iterator here does not have __anext_() so it has to be done this way
-                generator = response.body_iterator.__aiter__()
+                generator = (x async for x in response.body_iterator)
 
         except StopAsyncIteration:
             pass
