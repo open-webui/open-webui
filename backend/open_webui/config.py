@@ -1004,6 +1004,17 @@ Strictly return in JSON format:
 </chat_history>
 """
 
+ENABLE_AUTOCOMPLETE_GENERATION = PersistentConfig(
+    "ENABLE_AUTOCOMPLETE_GENERATION",
+    "task.autocomplete.enable",
+    os.environ.get("ENABLE_AUTOCOMPLETE_GENERATION", "True").lower() == "true",
+)
+
+AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = PersistentConfig(
+    "AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH",
+    "task.autocomplete.input_max_length",
+    int(os.environ.get("AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH", "-1")),
+)
 
 AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     "AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE",

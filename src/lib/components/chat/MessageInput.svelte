@@ -612,12 +612,11 @@
 															: null
 													).catch((error) => {
 														console.log(error);
-														toast.error(error);
+
 														return null;
 													});
 
 													console.log(res);
-
 													return res;
 												}}
 												on:keydown={async (e) => {

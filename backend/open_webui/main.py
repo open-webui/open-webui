@@ -89,6 +89,8 @@ from open_webui.config import (
     DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE,
     TITLE_GENERATION_PROMPT_TEMPLATE,
     TAGS_GENERATION_PROMPT_TEMPLATE,
+    ENABLE_AUTOCOMPLETE_GENERATION,
+    AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
     AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
@@ -209,6 +211,11 @@ app.state.config.TASK_MODEL = TASK_MODEL
 app.state.config.TASK_MODEL_EXTERNAL = TASK_MODEL_EXTERNAL
 
 app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE
+
+app.state.config.ENABLE_AUTOCOMPLETE_GENERATION = ENABLE_AUTOCOMPLETE_GENERATION
+app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = (
+    AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH
+)
 
 app.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION
 app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE
@@ -1672,6 +1679,8 @@ async def get_task_config(user=Depends(get_verified_user)):
         "TASK_MODEL": app.state.config.TASK_MODEL,
         "TASK_MODEL_EXTERNAL": app.state.config.TASK_MODEL_EXTERNAL,
         "TITLE_GENERATION_PROMPT_TEMPLATE": app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE,
+        "ENABLE_AUTOCOMPLETE_GENERATION": app.state.config.ENABLE_AUTOCOMPLETE_GENERATION,
+        "AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH": app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
         "TAGS_GENERATION_PROMPT_TEMPLATE": app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_TAGS_GENERATION": app.state.config.ENABLE_TAGS_GENERATION,
         "ENABLE_SEARCH_QUERY_GENERATION": app.state.config.ENABLE_SEARCH_QUERY_GENERATION,
@@ -1685,6 +1694,8 @@ class TaskConfigForm(BaseModel):
     TASK_MODEL: Optional[str]
     TASK_MODEL_EXTERNAL: Optional[str]
     TITLE_GENERATION_PROMPT_TEMPLATE: str
+    ENABLE_AUTOCOMPLETE_GENERATION: bool
+    AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH: int
     TAGS_GENERATION_PROMPT_TEMPLATE: str
     ENABLE_TAGS_GENERATION: bool
     ENABLE_SEARCH_QUERY_GENERATION: bool
@@ -1700,6 +1711,14 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
     app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = (
         form_data.TITLE_GENERATION_PROMPT_TEMPLATE
     )
+
+    app.state.config.ENABLE_AUTOCOMPLETE_GENERATION = (
+        form_data.ENABLE_AUTOCOMPLETE_GENERATION
+    )
+    app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = (
+        form_data.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH
+    )
+
     app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = (
         form_data.TAGS_GENERATION_PROMPT_TEMPLATE
     )
@@ -1722,6 +1741,8 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
         "TASK_MODEL": app.state.config.TASK_MODEL,
         "TASK_MODEL_EXTERNAL": app.state.config.TASK_MODEL_EXTERNAL,
         "TITLE_GENERATION_PROMPT_TEMPLATE": app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE,
+        "ENABLE_AUTOCOMPLETE_GENERATION": app.state.config.ENABLE_AUTOCOMPLETE_GENERATION,
+        "AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH": app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
         "TAGS_GENERATION_PROMPT_TEMPLATE": app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_TAGS_GENERATION": app.state.config.ENABLE_TAGS_GENERATION,
         "ENABLE_SEARCH_QUERY_GENERATION": app.state.config.ENABLE_SEARCH_QUERY_GENERATION,
@@ -1991,6 +2012,23 @@ async def generate_queries(form_data: dict, user=Depends(get_verified_user)):
 
 @app.post("/api/task/auto/completions")
 async def generate_autocompletion(form_data: dict, user=Depends(get_verified_user)):
+    if not app.state.config.ENABLE_AUTOCOMPLETE_GENERATION:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Autocompletion generation is disabled",
+        )
+
+    type = form_data.get("type")
+    prompt = form_data.get("prompt")
+    messages = form_data.get("messages")
+
+    if app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH > 0:
+        if len(prompt) > app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Input prompt exceeds maximum length of {app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH}",
+            )
+
     model_list = await get_all_models()
     models = {model["id"]: model for model in model_list}
 
@@ -2018,10 +2056,6 @@ async def generate_autocompletion(form_data: dict, user=Depends(get_verified_use
         template = app.state.config.AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE
     else:
         template = DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE
-
-    type = form_data.get("type")
-    prompt = form_data.get("prompt")
-    messages = form_data.get("messages")
 
     content = autocomplete_generation_template(
         template, prompt, messages, type, {"name": user.name}
