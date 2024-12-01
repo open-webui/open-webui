@@ -65,8 +65,6 @@ export const AIAutocompletion = Extension.create({
 		let touchStartX = 0;
 		let touchStartY = 0;
 
-    
-
 		return [
 			new Plugin({
 				key: new PluginKey('aiAutocompletion'),
@@ -153,14 +151,18 @@ export const AIAutocompletion = Extension.create({
 													.generateCompletion(prompt)
 													.then((suggestion) => {
 														if (suggestion && suggestion.trim() !== '') {
-															view.dispatch(
-																newState.tr.setNodeMarkup(currentPos, null, {
-																	...newNode.attrs,
-																	class: 'ai-autocompletion',
-																	'data-prompt': prompt,
-																	'data-suggestion': suggestion
-																})
-															);
+															if (
+																view.state.selection.$head.pos === view.state.selection.$head.end()
+															) {
+																view.dispatch(
+																	newState.tr.setNodeMarkup(currentPos, null, {
+																		...newNode.attrs,
+																		class: 'ai-autocompletion',
+																		'data-prompt': prompt,
+																		'data-suggestion': suggestion
+																	})
+																);
+															}
 														}
 													})
 													.finally(() => {
@@ -209,10 +211,32 @@ export const AIAutocompletion = Extension.create({
 							}
 							return false;
 						},
+						// Add mousedown behavior
+						mouseup: (view, event) => {
+							const { state, dispatch } = view;
+							const { selection } = state;
+							const { $head } = selection;
+							const node = $head.parent;
 
-						mousedown: () => {
 							// Reset debounce timer on mouse click
 							clearTimeout(debounceTimer);
+
+							// If a suggestion exists and the cursor moves, remove the suggestion
+							if (
+								node.type.name === 'paragraph' &&
+								node.attrs['data-suggestion'] &&
+								view.state.selection.$head.pos !== view.state.selection.$head.end()
+							) {
+								dispatch(
+									state.tr.setNodeMarkup($head.before(), null, {
+										...node.attrs,
+										class: null,
+										'data-prompt': null,
+										'data-suggestion': null
+									})
+								);
+							}
+
 							return false;
 						}
 					}
