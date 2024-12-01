@@ -219,7 +219,7 @@ input[type='number'] {
 
 	content: attr(data-suggestion);
 	pointer-events: none;
-  }
+}
 
 .tiptap > pre > code {
 	border-radius: 0.4rem;

@@ -127,6 +127,7 @@ def set_xpermitted_cross_domain_policies(value: str):
         value = "none"
     return {"X-Permitted-Cross-Domain-Policies": value}
 
+
 # Set Content-Security-Policy response header
 def set_content_security_policy(value: str):
     return {"Content-Security-Policy": value}

@@ -213,6 +213,7 @@
 										showResetModal = true;
 									}}
 								>
+									<!-- {$i18n.t('Delete All Models')} -->
 									{$i18n.t('Reset All Models')}
 								</button>
 							</Tooltip>

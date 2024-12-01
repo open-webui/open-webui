@@ -397,14 +397,12 @@ export const generateQueries = async (
 	}
 };
 
-
-
 export const generateAutoCompletion = async (
 	token: string = '',
 	model: string,
 	prompt: string,
 	messages?: object[],
-	type: string = 'search query',
+	type: string = 'search query'
 ) => {
 	const controller = new AbortController();
 	let error = null;
@@ -425,24 +423,23 @@ export const generateAutoCompletion = async (
 			stream: false
 		})
 	})
-	.then(async (res) => {
-		if (!res.ok) throw await res.json();
-		return res.json();
-	})
-	.catch((err) => {
-		console.log(err);
-		if ('detail' in err) {
-			error = err.detail;
-		}
-		return null;
-	});
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			}
+			return null;
+		});
 
 	if (error) {
 		throw error;
 	}
 
 	const response = res?.choices[0]?.message?.content ?? '';
-
 
 	try {
 		const jsonStartIndex = response.indexOf('{');
@@ -458,7 +455,7 @@ export const generateAutoCompletion = async (
 			if (parsed && parsed.text) {
 				return parsed.text;
 			} else {
-				return "";
+				return '';
 			}
 		}
 
@@ -469,9 +466,7 @@ export const generateAutoCompletion = async (
 		console.error('Failed to parse response: ', e);
 		return response;
 	}
-
 };
-
 
 export const generateMoACompletion = async (
 	token: string = '',

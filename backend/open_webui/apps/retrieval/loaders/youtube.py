@@ -85,8 +85,8 @@ class YoutubeLoader:
 
         if self.proxy_url:
             youtube_proxies = {
-                'http': self.proxy_url,
-                'https': self.proxy_url,
+                "http": self.proxy_url,
+                "https": self.proxy_url,
             }
             # Don't log complete URL because it might contain secrets
             log.debug(f"Using proxy URL: {self.proxy_url[:14]}...")
@@ -94,7 +94,9 @@ class YoutubeLoader:
             youtube_proxies = None
 
         try:
-            transcript_list = YouTubeTranscriptApi.list_transcripts(self.video_id, proxies=youtube_proxies)
+            transcript_list = YouTubeTranscriptApi.list_transcripts(
+                self.video_id, proxies=youtube_proxies
+            )
         except Exception as e:
             log.exception("Loading YouTube transcript failed")
             return []
