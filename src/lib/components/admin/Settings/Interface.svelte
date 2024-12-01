@@ -163,7 +163,7 @@
 							placement="top-start"
 						>
 							<input
-								class="w-full outline-none"
+								class="w-full outline-none bg-transparent"
 								bind:value={taskConfig.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH}
 								placeholder={$i18n.t('-1 for no limit, or a positive integer for a specific limit')}
 							/>

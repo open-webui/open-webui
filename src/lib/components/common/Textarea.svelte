@@ -10,7 +10,7 @@
 
 	$: if (textareaElement) {
 		if (textareaElement.innerText !== value && value !== '') {
-			textareaElement.innerText = value;
+			textareaElement.innerText = value ?? '';
 		}
 	}
 
