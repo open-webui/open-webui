@@ -100,7 +100,12 @@
 		<Tooltip content={name} className="flex flex-col w-full" placement="top-start">
 			<div class="flex flex-col justify-center -space-y-0.5 px-2.5 w-full">
 				<div class=" dark:text-gray-100 text-sm flex justify-between items-center">
-					<div class="font-medium line-clamp-1">{name}</div>
+					{#if loading}
+						<div class=" shrink-0 mr-2">
+							<Spinner className="size-4" />
+						</div>
+					{/if}
+					<div class="font-medium line-clamp-1 flex-1">{name}</div>
 					<div class="text-gray-500 text-xs capitalize shrink-0">{formatFileSize(size)}</div>
 				</div>
 			</div>
