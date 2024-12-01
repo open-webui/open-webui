@@ -12,7 +12,7 @@
 
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import {
 		chatId,
@@ -80,6 +80,7 @@
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
 	import { getTools } from '$lib/apis/tools';
+	import { uploadFile } from '$lib/apis/files';
 
 	import { openDB } from 'idb';
 
@@ -2195,6 +2196,53 @@
 					status: 'uploaded'
 				}))
 			];
+			return;
+		}
+
+		if(shareData.documents) {
+			const tempItemId = uuidv4();
+			const fullContext = true;
+
+			const fileItem = {
+				type: 'file',
+				file: '',
+				id: null,
+				url: '',
+				name: shareData.documents.name,
+				collection_name: '',
+				status: 'uploading',
+				size: shareData.documents.size,
+				error: '',
+				itemId: tempItemId,
+				...(fullContext ? { context: 'full' } : {})
+			};
+			files = [...files, fileItem];
+
+			// convert the base64 back to binary
+			const base64Data = shareData.documents.data.split(',')[1];
+			const byteArray = Uint8Array.from(atob(base64Data), char => char.charCodeAt(0));
+
+			const document = new File([byteArray], shareData.documents.name, {
+				type: shareData.documents.type
+			});
+
+			// Upload using the files api
+			const uploadedFile = await uploadFile(localStorage.token, document);
+			if (uploadedFile) {
+				if (uploadedFile.error) {
+					toast.warning(uploadedFile.error);
+				}
+
+				fileItem.status = 'uploaded';
+				fileItem.file = uploadedFile;
+				fileItem.id = uploadedFile.id;
+				fileItem.collection_name = uploadedFile?.meta?.collection_name;
+				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+
+				files = files;
+			} else {
+				files = files.filter((item) => item?.itemId !== tempItemId);
+			}
 			return;
 		}
 

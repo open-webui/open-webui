@@ -2721,6 +2721,27 @@ async def get_manifest_json():
                     {
                         "name": "images",
                         "accept": ["image/*", ".png", ".jpg", ".jpeg", ".gif"],
+                    },
+                    {
+                        "name": "documents",
+                        "accept": [
+                            ".pdf",
+                            ".doc",
+                            ".docx",
+                            ".txt",
+                            ".md",
+                            ".html",
+                            ".xml",
+                            ".json",
+                            ".csv",
+                            ".xls",
+                            ".xlsx",
+                            ".ppt",
+                            ".pptx",
+                            ".odt",
+                            ".ods",
+                            ".odp"
+                        ],
                     }
                 ]
             }

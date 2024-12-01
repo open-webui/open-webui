@@ -17,6 +17,7 @@ function formDataToIndexDB(formData) {
 					data[key] = {
 						name: value.name,
 						type: value.type,
+						size: value.size,
 						data: reader.result
 					};
 				};
