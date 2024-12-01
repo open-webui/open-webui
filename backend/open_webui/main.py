@@ -411,16 +411,14 @@ def extract_json(binary: bytes) -> Optional[dict]:
 
 
 def fill_with_delta(fcall_dict: dict, delta: dict) -> None:
-    if "delta" not in delta["choices"][0]:
+    if "delta" not in delta.get("choices", [{}])[0]:
         return
-    j = delta["choices"][0]["delta"]["tool_calls"][0]
+    j = delta["choices"][0].get("delta", {}).get("tool_calls", [{}])[0]
     if "id" in j:
-        fcall_dict["id"] += j["id"] or ""
+        fcall_dict["id"] += j.get("id", "")
     if "function" in j:
-        if "name" in j["function"]:
-            fcall_dict["function"]["name"] += j["function"]["name"] or ""
-        if "arguments" in j["function"]:
-            fcall_dict["function"]["arguments"] += j["function"]["arguments"] or ""
+        fcall_dict["function"]["name"] += j["function"].get("name", "")
+        fcall_dict["function"]["arguments"] += j["function"].get("arguments","")
 
 
 async def handle_streaming_response(
