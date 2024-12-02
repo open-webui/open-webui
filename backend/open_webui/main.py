@@ -410,6 +410,15 @@ def extract_json(s: str) -> Optional[dict]:
 
 
 def fill_with_delta(fcall_dict: dict, delta: dict) -> None:
+
+    if fcall_dict == {}:
+        fcall_dict.update(
+            {
+                "id": "",
+                "type": "function",
+                "function": {"name": "", "arguments": ""},
+            })
+
     if "delta" not in delta.get("choices", [{}])[0]:
         return
     j = delta["choices"][0].get("delta", {}).get("tool_calls", [{}])[0]
@@ -462,13 +471,7 @@ async def handle_streaming_response(
                 # We reached a tool call so we consume all the messages to assemble it
                 log.debug("async tool call detected")
                 tool_calls = []  # id, name, arguments
-                tool_calls.append(
-                    {
-                        "id": "",
-                        "type": "function",
-                        "function": {"name": "", "arguments": ""},
-                    }
-                )
+                tool_calls.append({})
                 current_index = peek_json["choices"][0]["delta"]["tool_calls"][0][
                     "index"
                 ]
@@ -489,13 +492,7 @@ async def handle_streaming_response(
 
                     i = delta["choices"][0]["delta"]["tool_calls"][0]["index"]
                     if i != current_index:
-                        tool_calls.append(
-                            {
-                                "id": "",
-                                "type": "function",
-                                "function": {"name": "", "arguments": ""},
-                            }
-                        )
+                        tool_calls.append({})
                         current_index = i
 
                     fill_with_delta(tool_calls[i], delta)
@@ -566,8 +563,11 @@ async def handle_streaming_response(
                 log.debug("calling the model again with tool output included")
                 update_body_request(request, body)
                 response = await generate_chat_completions(form_data=body, user=user)
-                # body_iterator here does not have __anext_() so it has to be done this way
-                generator = (x async for x in response.body_iterator)
+                if isinstance(response, StreamingResponse):
+                    # body_iterator here does not have __anext_() so it has to be done this way
+                    generator = (x async for x in response.body_iterator)
+                else:
+                    raise Exception(f"{response=} is not a StreamingResponse")
 
         except StopAsyncIteration:
             pass
