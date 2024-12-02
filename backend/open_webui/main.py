@@ -1073,9 +1073,10 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
         update_body_request(request, body)
         response = await call_next(request)
 
+        if not isinstance(response, StreamingResponse):
+            return response
+
         if not body["metadata"]["native_tool_call"]:
-            if not isinstance(response, StreamingResponse):
-                return response
             content_type = response.headers["Content-Type"]
             is_openai = "text/event-stream" in content_type
             is_ollama = "application/x-ndjson" in content_type
