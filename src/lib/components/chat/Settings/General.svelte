@@ -46,6 +46,7 @@
 	let params = {
 		// Advanced
 		stream_response: null,
+    native_tool_call: null,
 		seed: null,
 		temperature: null,
 		frequency_penalty: null,
@@ -329,6 +330,7 @@
 					system: system !== '' ? system : undefined,
 					params: {
 						stream_response: params.stream_response !== null ? params.stream_response : undefined,
+            native_tool_call: params.native_tool_call !== null ? params.native_tool_call : undefined,
 						seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
 						stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,
 						temperature: params.temperature !== null ? params.temperature : undefined,
