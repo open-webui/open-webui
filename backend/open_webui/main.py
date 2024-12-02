@@ -617,18 +617,20 @@ async def handle_nonstreaming_response(
         is_ollama = True
     is_openai = not is_ollama
 
-    while (is_ollama and "tool_calls" in response_dict.get("message", {})) or (
-        is_openai
-        and "tool_calls" in response_dict.get("choices", [{}])[0].get("message", {})
-    ):
-        if is_ollama:
-            message = response_dict.get("message", {})
-            tool_calls = message.get("tool_calls", [])
-            if message:
-                body["messages"].append(message)
-        else:
-            body["messages"].append(response_dict["choices"][0]["message"])
-            tool_calls = response_dict["choices"][0]["message"].get("tool_calls", [])
+    def get_message_ollama(d : dict) -> dict:
+        return d.get("message", {})
+    def get_message_openai(d : dict) -> dict:
+        return d.get("choices", [{}])[0].get("message", {})
+
+    get_message = get_message_ollama if is_ollama else get_message_openai
+
+    content = ""
+    while ("tool_calls" in get_message(response_dict)):
+        message = get_message(response_dict)
+        tool_calls = []
+        content += message.get("content", "") or ""
+        tool_calls = message.get("tool_calls", [])
+        body["messages"].append(message)
 
         for tool_call in tool_calls:
             # fix for cohere
@@ -637,13 +639,12 @@ async def handle_nonstreaming_response(
 
             tool_function_name = tool_call["function"]["name"]
             tool_function_params = {}
-            if tool_call["function"]["arguments"]:
-                if is_openai:
-                    tool_function_params = json.loads(
-                        tool_call["function"]["arguments"]
-                    )
-                if is_ollama:
-                    tool_function_params = tool_call["function"]["arguments"]
+            if isinstance(tool_call["function"]["arguments"], str):
+                tool_function_params = json.loads(
+                    tool_call["function"]["arguments"]
+                )
+            else:
+                tool_function_params = tool_call["function"]["arguments"]
 
             try:
                 tool_output = await tools[tool_function_name]["callable"](
@@ -675,12 +676,15 @@ async def handle_nonstreaming_response(
 
         # Make another request to the model with the updated context
         update_body_request(request, body)
-        response_dict = await generate_chat_completions(
+        untyped_response = await generate_chat_completions(
             form_data=body, user=user, as_openai=is_openai
         )
-        if not isinstance(response_dict, dict):
-            raise Exception(f"Expecting dict in generate_chat_completions_call, got {response_dict=}")
+        if not isinstance(untyped_response, dict):
+            raise Exception(f"Expecting dict from generate_chat_completions got {untyped_response=}")
+        response_dict = untyped_response
 
+    message = get_message(response_dict)
+    message["content"] = content + " " + message["content"]
     # FIXME: is it possible to handle citations?
     return JSONResponse(content=response_dict)
 
