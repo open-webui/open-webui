@@ -25,6 +25,8 @@
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
 	import Map from '../icons/Map.svelte';
 	import { stringify } from 'postcss';
+	import PencilSquare from '../icons/PencilSquare.svelte';
+	import Plus from '../icons/Plus.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -42,17 +44,17 @@
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 
-<div class="sticky top-0 z-30 w-full px-1 py-2 -mb-8 flex items-center">
+<div class="sticky top-0 z-30 w-full px-1.5 py-1.5 -mb-8 flex items-center">
 	<div
 		class=" bg-gradient-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1] blur"
 	></div>
 
-	<div class=" flex max-w-full w-full mx-auto px-2 pt-0.5 bg-transparent">
+	<div class=" flex max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent">
 		<div class="flex items-center w-full max-w-full">
 			<div
 				class="{$showSidebar
 					? 'md:hidden'
-					: ''} mr-2 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
+					: ''} mr-1 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
 			>
 				<button
 					id="sidebar-toggle-button"
@@ -68,7 +70,11 @@
 				</button>
 			</div>
 
-			<div class="flex-1 overflow-hidden max-w-full">
+			<div
+				class="flex-1 overflow-hidden max-w-full py-0.5
+			{$showSidebar ? 'ml-1' : ''}
+			"
+			>
 				{#if showModelSelector}
 					<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
 				{/if}
@@ -109,6 +115,20 @@
 							</div>
 						</button>
 					</Menu>
+				{:else if $mobile}
+					<Tooltip content={$i18n.t('Controls')}>
+						<button
+							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							on:click={async () => {
+								await showControls.set(!$showControls);
+							}}
+							aria-label="Controls"
+						>
+							<div class=" m-auto self-center">
+								<AdjustmentsHorizontal className=" size-5" strokeWidth="0.5" />
+							</div>
+						</button>
+					</Tooltip>
 				{/if}
 
 				{#if !$mobile}
@@ -139,19 +159,7 @@
 						aria-label="New Chat"
 					>
 						<div class=" m-auto self-center">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 20 20"
-								fill="currentColor"
-								class="w-5 h-5"
-							>
-								<path
-									d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z"
-								/>
-								<path
-									d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z"
-								/>
-							</svg>
+							<PencilSquare className=" size-5" strokeWidth="2" />
 						</div>
 					</button>
 				</Tooltip>

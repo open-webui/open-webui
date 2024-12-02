@@ -8,6 +8,8 @@ from pathlib import Path
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
 
+import aiohttp
+import aiofiles
 import requests
 from open_webui.config import (
     AUDIO_STT_ENGINE,
@@ -32,7 +34,13 @@ from open_webui.config import (
 )
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS, DEVICE_TYPE
+from open_webui.env import (
+    ENV,
+    SRC_LOG_LEVELS,
+    DEVICE_TYPE,
+    ENABLE_FORWARD_USER_INFO_HEADERS,
+)
+
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -47,7 +55,12 @@ MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["AUDIO"])
 
-app = FastAPI()
+app = FastAPI(
+    docs_url="/docs" if ENV == "dev" else None,
+    openapi_url="/openapi.json" if ENV == "dev" else None,
+    redoc_url=None,
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ALLOW_ORIGIN,
@@ -73,6 +86,10 @@ app.state.config.TTS_MODEL = AUDIO_TTS_MODEL
 app.state.config.TTS_VOICE = AUDIO_TTS_VOICE
 app.state.config.TTS_API_KEY = AUDIO_TTS_API_KEY
 app.state.config.TTS_SPLIT_ON = AUDIO_TTS_SPLIT_ON
+
+
+app.state.speech_synthesiser = None
+app.state.speech_speaker_embeddings_dataset = None
 
 app.state.config.TTS_AZURE_SPEECH_REGION = AUDIO_TTS_AZURE_SPEECH_REGION
 app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT
@@ -231,6 +248,21 @@ async def update_audio_config(
     }
 
 
+def load_speech_pipeline():
+    from transformers import pipeline
+    from datasets import load_dataset
+
+    if app.state.speech_synthesiser is None:
+        app.state.speech_synthesiser = pipeline(
+            "text-to-speech", "microsoft/speecht5_tts"
+        )
+
+    if app.state.speech_speaker_embeddings_dataset is None:
+        app.state.speech_speaker_embeddings_dataset = load_dataset(
+            "Matthijs/cmu-arctic-xvectors", split="validation"
+        )
+
+
 @app.post("/speech")
 async def speech(request: Request, user=Depends(get_verified_user)):
     body = await request.body()
@@ -248,6 +280,12 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         headers["Authorization"] = f"Bearer {app.state.config.TTS_OPENAI_API_KEY}"
         headers["Content-Type"] = "application/json"
 
+        if ENABLE_FORWARD_USER_INFO_HEADERS:
+            headers["X-OpenWebUI-User-Name"] = user.name
+            headers["X-OpenWebUI-User-Id"] = user.id
+            headers["X-OpenWebUI-User-Email"] = user.email
+            headers["X-OpenWebUI-User-Role"] = user.role
+
         try:
             body = body.decode("utf-8")
             body = json.loads(body)
@@ -256,46 +294,39 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         except Exception:
             pass
 
-        r = None
         try:
-            r = requests.post(
-                url=f"{app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech",
-                data=body,
-                headers=headers,
-                stream=True,
-            )
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    url=f"{app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech",
+                    data=body,
+                    headers=headers,
+                ) as r:
+                    r.raise_for_status()
+                    async with aiofiles.open(file_path, "wb") as f:
+                        await f.write(await r.read())
 
-            r.raise_for_status()
+                    async with aiofiles.open(file_body_path, "w") as f:
+                        await f.write(json.dumps(json.loads(body.decode("utf-8"))))
 
-            # Save the streaming content to a file
-            with open(file_path, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
-
-            with open(file_body_path, "w") as f:
-                json.dump(json.loads(body.decode("utf-8")), f)
-
-            # Return the saved file
             return FileResponse(file_path)
 
         except Exception as e:
             log.exception(e)
             error_detail = "Open WebUI: Server Connection Error"
-            if r is not None:
-                try:
-                    res = r.json()
+            try:
+                if r.status != 200:
+                    res = await r.json()
                     if "error" in res:
                         error_detail = f"External: {res['error']['message']}"
-                except Exception:
-                    error_detail = f"External: {e}"
+            except Exception:
+                error_detail = f"External: {e}"
 
             raise HTTPException(
-                status_code=r.status_code if r != None else 500,
+                status_code=getattr(r, "status", 500),
                 detail=error_detail,
             )
 
     elif app.state.config.TTS_ENGINE == "elevenlabs":
-        payload = None
         try:
             payload = json.loads(body.decode("utf-8"))
         except Exception as e:
@@ -303,7 +334,6 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
         voice_id = payload.get("voice", "")
-
         if voice_id not in get_available_voices():
             raise HTTPException(
                 status_code=400,
@@ -311,13 +341,11 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             )
 
         url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-
         headers = {
             "Accept": "audio/mpeg",
             "Content-Type": "application/json",
             "xi-api-key": app.state.config.TTS_API_KEY,
         }
-
         data = {
             "text": payload["input"],
             "model_id": app.state.config.TTS_MODEL,
@@ -325,39 +353,34 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         }
 
         try:
-            r = requests.post(url, json=data, headers=headers)
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=data, headers=headers) as r:
+                    r.raise_for_status()
+                    async with aiofiles.open(file_path, "wb") as f:
+                        await f.write(await r.read())
 
-            r.raise_for_status()
+                    async with aiofiles.open(file_body_path, "w") as f:
+                        await f.write(json.dumps(json.loads(body.decode("utf-8"))))
 
-            # Save the streaming content to a file
-            with open(file_path, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
-
-            with open(file_body_path, "w") as f:
-                json.dump(json.loads(body.decode("utf-8")), f)
-
-            # Return the saved file
             return FileResponse(file_path)
 
         except Exception as e:
             log.exception(e)
             error_detail = "Open WebUI: Server Connection Error"
-            if r is not None:
-                try:
-                    res = r.json()
+            try:
+                if r.status != 200:
+                    res = await r.json()
                     if "error" in res:
                         error_detail = f"External: {res['error']['message']}"
-                except Exception:
-                    error_detail = f"External: {e}"
+            except Exception:
+                error_detail = f"External: {e}"
 
             raise HTTPException(
-                status_code=r.status_code if r != None else 500,
+                status_code=getattr(r, "status", 500),
                 detail=error_detail,
             )
 
     elif app.state.config.TTS_ENGINE == "azure":
-        payload = None
         try:
             payload = json.loads(body.decode("utf-8"))
         except Exception as e:
@@ -380,17 +403,57 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 <voice name="{language}">{payload["input"]}</voice>
             </speak>"""
 
-        response = requests.post(url, headers=headers, data=data)
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, headers=headers, data=data) as response:
+                    if response.status == 200:
+                        async with aiofiles.open(file_path, "wb") as f:
+                            await f.write(await response.read())
+                        return FileResponse(file_path)
+                    else:
+                        error_msg = f"Error synthesizing speech - {response.reason}"
+                        log.error(error_msg)
+                        raise HTTPException(status_code=500, detail=error_msg)
+        except Exception as e:
+            log.exception(e)
+            raise HTTPException(status_code=500, detail=str(e))
+    elif app.state.config.TTS_ENGINE == "transformers":
+        payload = None
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except Exception as e:
+            log.exception(e)
+            raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
-        if response.status_code == 200:
-            with open(file_path, "wb") as f:
-                f.write(response.content)
-            return FileResponse(file_path)
-        else:
-            log.error(f"Error synthesizing speech - {response.reason}")
-            raise HTTPException(
-                status_code=500, detail=f"Error synthesizing speech - {response.reason}"
+        import torch
+        import soundfile as sf
+
+        load_speech_pipeline()
+
+        embeddings_dataset = app.state.speech_speaker_embeddings_dataset
+
+        speaker_index = 6799
+        try:
+            speaker_index = embeddings_dataset["filename"].index(
+                app.state.config.TTS_MODEL
             )
+        except Exception:
+            pass
+
+        speaker_embedding = torch.tensor(
+            embeddings_dataset[speaker_index]["xvector"]
+        ).unsqueeze(0)
+
+        speech = app.state.speech_synthesiser(
+            payload["input"],
+            forward_params={"speaker_embeddings": speaker_embedding},
+        )
+
+        sf.write(file_path, speech["audio"], samplerate=speech["sampling_rate"])
+        with open(file_body_path, "w") as f:
+            json.dump(json.loads(body.decode("utf-8")), f)
+
+        return FileResponse(file_path)
 
 
 def transcribe(file_path):

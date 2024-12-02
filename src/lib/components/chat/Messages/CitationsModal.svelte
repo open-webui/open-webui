@@ -13,9 +13,9 @@
 	let mergedDocuments = [];
 
 	function calculatePercentage(distance: number) {
-		if (distance < 0) return 100;
-		if (distance > 1) return 0;
-		return Math.round((1 - distance) * 10000) / 100;
+		if (distance < 0) return 0;
+		if (distance > 1) return 100;
+		return Math.round(distance * 10000) / 100;
 	}
 
 	function getRelevanceColor(percentage: number) {
@@ -38,7 +38,9 @@
 			};
 		});
 		if (mergedDocuments.every((doc) => doc.distance !== undefined)) {
-			mergedDocuments.sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
+			mergedDocuments = mergedDocuments.sort(
+				(a, b) => (b.distance ?? Infinity) - (a.distance ?? Infinity)
+			);
 		}
 	}
 </script>
@@ -148,9 +150,18 @@
 						<div class=" text-sm font-medium dark:text-gray-300 mt-2">
 							{$i18n.t('Content')}
 						</div>
-						<pre class="text-sm dark:text-gray-400 whitespace-pre-line">
-							{document.document}
-						</pre>
+						{#if document.metadata?.html}
+							<iframe
+								class="w-full border-0 h-auto rounded-none"
+								sandbox="allow-scripts allow-forms allow-same-origin"
+								srcdoc={document.document}
+								title={$i18n.t('Content')}
+							></iframe>
+						{:else}
+							<pre class="text-sm dark:text-gray-400 whitespace-pre-line">
+                {document.document}
+              </pre>
+						{/if}
 					</div>
 
 					{#if documentIdx !== mergedDocuments.length - 1}

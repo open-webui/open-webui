@@ -3,6 +3,7 @@ import os
 import uuid
 from typing import Optional, Union
 
+import asyncio
 import requests
 
 from huggingface_hub import snapshot_download
@@ -10,17 +11,10 @@ from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriev
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 
-
-from open_webui.apps.ollama.main import (
-    GenerateEmbedForm,
-    generate_ollama_batch_embeddings,
-)
 from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.misc import get_last_user_message
 
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.config import DEFAULT_RAG_TEMPLATE
-
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -76,7 +70,7 @@ def query_doc(
             limit=k,
         )
 
-        log.info(f"query_doc:result {result}")
+        log.info(f"query_doc:result {result.ids} {result.metadatas}")
         return result
     except Exception as e:
         print(e)
@@ -127,7 +121,10 @@ def query_doc_with_hybrid_search(
             "metadatas": [[d.metadata for d in result]],
         }
 
-        log.info(f"query_doc_with_hybrid_search:result {result}")
+        log.info(
+            "query_doc_with_hybrid_search:result "
+            + f'{result["metadatas"]} {result["distances"]}'
+        )
         return result
     except Exception as e:
         raise e
@@ -178,35 +175,34 @@ def merge_and_sort_query_results(
 
 def query_collection(
     collection_names: list[str],
-    query: str,
+    queries: list[str],
     embedding_function,
     k: int,
 ) -> dict:
-
     results = []
-    query_embedding = embedding_function(query)
-
-    for collection_name in collection_names:
-        if collection_name:
-            try:
-                result = query_doc(
-                    collection_name=collection_name,
-                    k=k,
-                    query_embedding=query_embedding,
-                )
-                if result is not None:
-                    results.append(result.model_dump())
-            except Exception as e:
-                log.exception(f"Error when querying the collection: {e}")
-        else:
-            pass
+    for query in queries:
+        query_embedding = embedding_function(query)
+        for collection_name in collection_names:
+            if collection_name:
+                try:
+                    result = query_doc(
+                        collection_name=collection_name,
+                        k=k,
+                        query_embedding=query_embedding,
+                    )
+                    if result is not None:
+                        results.append(result.model_dump())
+                except Exception as e:
+                    log.exception(f"Error when querying the collection: {e}")
+            else:
+                pass
 
     return merge_and_sort_query_results(results, k=k)
 
 
 def query_collection_with_hybrid_search(
     collection_names: list[str],
-    query: str,
+    queries: list[str],
     embedding_function,
     k: int,
     reranking_function,
@@ -216,15 +212,16 @@ def query_collection_with_hybrid_search(
     error = False
     for collection_name in collection_names:
         try:
-            result = query_doc_with_hybrid_search(
-                collection_name=collection_name,
-                query=query,
-                embedding_function=embedding_function,
-                k=k,
-                reranking_function=reranking_function,
-                r=r,
-            )
-            results.append(result)
+            for query in queries:
+                result = query_doc_with_hybrid_search(
+                    collection_name=collection_name,
+                    query=query,
+                    embedding_function=embedding_function,
+                    k=k,
+                    reranking_function=reranking_function,
+                    r=r,
+                )
+                results.append(result)
         except Exception as e:
             log.exception(
                 "Error when querying the collection with " f"hybrid_search: {e}"
@@ -239,50 +236,12 @@ def query_collection_with_hybrid_search(
     return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
-def rag_template(template: str, context: str, query: str):
-    if template == "":
-        template = DEFAULT_RAG_TEMPLATE
-
-    if "[context]" not in template and "{{CONTEXT}}" not in template:
-        log.debug(
-            "WARNING: The RAG template does not contain the '[context]' or '{{CONTEXT}}' placeholder."
-        )
-
-    if "<context>" in context and "</context>" in context:
-        log.debug(
-            "WARNING: Potential prompt injection attack: the RAG "
-            "context contains '<context>' and '</context>'. This might be "
-            "nothing, or the user might be trying to hack something."
-        )
-
-    query_placeholders = []
-    if "[query]" in context:
-        query_placeholder = "{{QUERY" + str(uuid.uuid4()) + "}}"
-        template = template.replace("[query]", query_placeholder)
-        query_placeholders.append(query_placeholder)
-
-    if "{{QUERY}}" in context:
-        query_placeholder = "{{QUERY" + str(uuid.uuid4()) + "}}"
-        template = template.replace("{{QUERY}}", query_placeholder)
-        query_placeholders.append(query_placeholder)
-
-    template = template.replace("[context]", context)
-    template = template.replace("{{CONTEXT}}", context)
-    template = template.replace("[query]", query)
-    template = template.replace("{{QUERY}}", query)
-
-    for query_placeholder in query_placeholders:
-        template = template.replace(query_placeholder, query)
-
-    return template
-
-
 def get_embedding_function(
     embedding_engine,
     embedding_model,
     embedding_function,
-    openai_key,
-    openai_url,
+    url,
+    key,
     embedding_batch_size,
 ):
     if embedding_engine == "":
@@ -292,8 +251,8 @@ def get_embedding_function(
             engine=embedding_engine,
             model=embedding_model,
             text=query,
-            key=openai_key if embedding_engine == "openai" else "",
-            url=openai_url if embedding_engine == "openai" else "",
+            url=url,
+            key=key,
         )
 
         def generate_multiple(query, func):
@@ -308,17 +267,16 @@ def get_embedding_function(
         return lambda query: generate_multiple(query, func)
 
 
-def get_rag_context(
+def get_sources_from_files(
     files,
-    messages,
+    queries,
     embedding_function,
     k,
     reranking_function,
     r,
     hybrid_search,
 ):
-    log.debug(f"files: {files} {messages} {embedding_function} {reranking_function}")
-    query = get_last_user_message(messages)
+    log.debug(f"files: {files} {queries} {embedding_function} {reranking_function}")
 
     extracted_collections = []
     relevant_contexts = []
@@ -360,7 +318,7 @@ def get_rag_context(
                         try:
                             context = query_collection_with_hybrid_search(
                                 collection_names=collection_names,
-                                query=query,
+                                queries=queries,
                                 embedding_function=embedding_function,
                                 k=k,
                                 reranking_function=reranking_function,
@@ -375,7 +333,7 @@ def get_rag_context(
                     if (not hybrid_search) or (context is None):
                         context = query_collection(
                             collection_names=collection_names,
-                            query=query,
+                            queries=queries,
                             embedding_function=embedding_function,
                             k=k,
                         )
@@ -389,43 +347,24 @@ def get_rag_context(
                 del file["data"]
             relevant_contexts.append({**context, "file": file})
 
-    contexts = []
-    citations = []
+    sources = []
     for context in relevant_contexts:
         try:
             if "documents" in context:
-                file_names = list(
-                    set(
-                        [
-                            metadata["name"]
-                            for metadata in context["metadatas"][0]
-                            if metadata is not None and "name" in metadata
-                        ]
-                    )
-                )
-                contexts.append(
-                    ((", ".join(file_names) + ":\n\n") if file_names else "")
-                    + "\n\n".join(
-                        [text for text in context["documents"][0] if text is not None]
-                    )
-                )
-
                 if "metadatas" in context:
-                    citation = {
+                    source = {
                         "source": context["file"],
                         "document": context["documents"][0],
                         "metadata": context["metadatas"][0],
                     }
                     if "distances" in context and context["distances"]:
-                        citation["distances"] = context["distances"][0]
-                    citations.append(citation)
+                        source["distances"] = context["distances"][0]
+
+                    sources.append(source)
         except Exception as e:
             log.exception(e)
 
-    print("contexts", contexts)
-    print("citations", citations)
-
-    return contexts, citations
+    return sources
 
 
 def get_model_path(model: str, update_model: bool = False):
@@ -467,7 +406,7 @@ def get_model_path(model: str, update_model: bool = False):
 
 
 def generate_openai_batch_embeddings(
-    model: str, texts: list[str], key: str, url: str = "https://api.openai.com/v1"
+    model: str, texts: list[str], url: str = "https://api.openai.com/v1", key: str = ""
 ) -> Optional[list[list[float]]]:
     try:
         r = requests.post(
@@ -489,29 +428,49 @@ def generate_openai_batch_embeddings(
         return None
 
 
+def generate_ollama_batch_embeddings(
+    model: str, texts: list[str], url: str, key: str = ""
+) -> Optional[list[list[float]]]:
+    try:
+        r = requests.post(
+            f"{url}/api/embed",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {key}",
+            },
+            json={"input": texts, "model": model},
+        )
+        r.raise_for_status()
+        data = r.json()
+
+        if "embeddings" in data:
+            return data["embeddings"]
+        else:
+            raise "Something went wrong :/"
+    except Exception as e:
+        print(e)
+        return None
+
+
 def generate_embeddings(engine: str, model: str, text: Union[str, list[str]], **kwargs):
+    url = kwargs.get("url", "")
+    key = kwargs.get("key", "")
+
     if engine == "ollama":
         if isinstance(text, list):
             embeddings = generate_ollama_batch_embeddings(
-                GenerateEmbedForm(**{"model": model, "input": text})
+                **{"model": model, "texts": text, "url": url, "key": key}
             )
         else:
             embeddings = generate_ollama_batch_embeddings(
-                GenerateEmbedForm(**{"model": model, "input": [text]})
+                **{"model": model, "texts": [text], "url": url, "key": key}
             )
-        return (
-            embeddings["embeddings"][0]
-            if isinstance(text, str)
-            else embeddings["embeddings"]
-        )
+        return embeddings[0] if isinstance(text, str) else embeddings
     elif engine == "openai":
-        key = kwargs.get("key", "")
-        url = kwargs.get("url", "https://api.openai.com/v1")
-
         if isinstance(text, list):
-            embeddings = generate_openai_batch_embeddings(model, text, key, url)
+            embeddings = generate_openai_batch_embeddings(model, text, url, key)
         else:
-            embeddings = generate_openai_batch_embeddings(model, [text], key, url)
+            embeddings = generate_openai_batch_embeddings(model, [text], url, key)
 
         return embeddings[0] if isinstance(text, str) else embeddings
 

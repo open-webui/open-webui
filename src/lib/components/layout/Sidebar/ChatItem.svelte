@@ -11,6 +11,7 @@
 		cloneChatById,
 		deleteChatById,
 		getAllTags,
+		getChatById,
 		getChatList,
 		getChatListByTagName,
 		getPinnedChatList,
@@ -46,7 +47,21 @@
 	export let selected = false;
 	export let shiftKey = false;
 
+	let chat = null;
+
 	let mouseOver = false;
+	let draggable = false;
+	$: if (mouseOver) {
+		loadChat();
+	}
+
+	const loadChat = async () => {
+		if (!chat) {
+			draggable = false;
+			chat = await getChatById(localStorage.token, id);
+			draggable = true;
+		}
+	};
 
 	let showShareChatModal = false;
 	let confirmEdit = false;
@@ -133,7 +148,8 @@
 			'text/plain',
 			JSON.stringify({
 				type: 'chat',
-				id: id
+				id: id,
+				item: chat
 			})
 		);
 
@@ -204,7 +220,7 @@
 	</DragGhost>
 {/if}
 
-<div bind:this={itemElement} class=" w-full {className} relative group" draggable="true">
+<div bind:this={itemElement} class=" w-full {className} relative group" {draggable}>
 	{#if confirmEdit}
 		<div
 			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||

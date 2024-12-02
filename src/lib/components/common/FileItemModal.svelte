@@ -26,7 +26,7 @@
 	});
 </script>
 
-<Modal bind:show size="md">
+<Modal bind:show size="lg">
 	<div class="font-primary px-6 py-5 w-full flex flex-col justify-center dark:text-gray-400">
 		<div class=" pb-2">
 			<div class="flex items-start justify-between">

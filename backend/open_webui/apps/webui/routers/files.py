@@ -56,7 +56,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
             FileForm(
                 **{
                     "id": id,
-                    "filename": filename,
+                    "filename": name,
                     "path": file_path,
                     "meta": {
                         "name": name,

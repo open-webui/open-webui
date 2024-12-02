@@ -12,6 +12,8 @@
 	export let cancelLabel = $i18n.t('Cancel');
 	export let confirmLabel = $i18n.t('Confirm');
 
+	export let onConfirm = () => {};
+
 	export let input = false;
 	export let inputPlaceholder = '';
 	export let inputValue = '';
@@ -29,9 +31,15 @@
 
 		if (event.key === 'Enter') {
 			console.log('Enter');
-			show = false;
-			dispatch('confirm', inputValue);
+			confirmHandler();
 		}
+	};
+
+	const confirmHandler = async () => {
+		show = false;
+
+		await onConfirm();
+		dispatch('confirm', inputValue);
 	};
 
 	onMount(() => {
@@ -54,7 +62,7 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		bind:this={modalElement}
-		class=" fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full h-screen max-h-[100dvh] flex justify-center z-[9999] overflow-hidden overscroll-contain"
+		class=" fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full h-screen max-h-[100dvh] flex justify-center z-[99999] overflow-hidden overscroll-contain"
 		in:fade={{ duration: 10 }}
 		on:mousedown={() => {
 			show = false;
@@ -110,8 +118,7 @@
 					<button
 						class="bg-gray-900 hover:bg-gray-850 text-gray-100 dark:bg-gray-100 dark:hover:bg-white dark:text-gray-800 font-medium w-full py-2.5 rounded-lg transition"
 						on:click={() => {
-							show = false;
-							dispatch('confirm', inputValue);
+							confirmHandler();
 						}}
 						type="button"
 					>

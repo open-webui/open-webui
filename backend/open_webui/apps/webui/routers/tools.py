@@ -1,51 +1,82 @@
-import os
 from pathlib import Path
 from typing import Optional
 
-from open_webui.apps.webui.models.tools import ToolForm, ToolModel, ToolResponse, Tools
-from open_webui.apps.webui.utils import load_toolkit_module_by_id, replace_imports
-from open_webui.config import CACHE_DIR, DATA_DIR
+from open_webui.apps.webui.models.tools import (
+    ToolForm,
+    ToolModel,
+    ToolResponse,
+    ToolUserResponse,
+    Tools,
+)
+from open_webui.apps.webui.utils import load_tools_module_by_id, replace_imports
+from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.utils.tools import get_tools_specs
 from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_access, has_permission
 
 
 router = APIRouter()
 
 ############################
-# GetToolkits
+# GetTools
 ############################
 
 
-@router.get("/", response_model=list[ToolResponse])
-async def get_toolkits(user=Depends(get_verified_user)):
-    toolkits = [toolkit for toolkit in Tools.get_tools()]
-    return toolkits
+@router.get("/", response_model=list[ToolUserResponse])
+async def get_tools(user=Depends(get_verified_user)):
+    if user.role == "admin":
+        tools = Tools.get_tools()
+    else:
+        tools = Tools.get_tools_by_user_id(user.id, "read")
+    return tools
 
 
 ############################
-# ExportToolKits
+# GetToolList
+############################
+
+
+@router.get("/list", response_model=list[ToolUserResponse])
+async def get_tool_list(user=Depends(get_verified_user)):
+    if user.role == "admin":
+        tools = Tools.get_tools()
+    else:
+        tools = Tools.get_tools_by_user_id(user.id, "write")
+    return tools
+
+
+############################
+# ExportTools
 ############################
 
 
 @router.get("/export", response_model=list[ToolModel])
-async def get_toolkits(user=Depends(get_admin_user)):
-    toolkits = [toolkit for toolkit in Tools.get_tools()]
-    return toolkits
+async def export_tools(user=Depends(get_admin_user)):
+    tools = Tools.get_tools()
+    return tools
 
 
 ############################
-# CreateNewToolKit
+# CreateNewTools
 ############################
 
 
 @router.post("/create", response_model=Optional[ToolResponse])
-async def create_new_toolkit(
+async def create_new_tools(
     request: Request,
     form_data: ToolForm,
-    user=Depends(get_admin_user),
+    user=Depends(get_verified_user),
 ):
+    if user.role != "admin" and not has_permission(
+        user.id, "workspace.knowledge", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
     if not form_data.id.isidentifier():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -54,30 +85,30 @@ async def create_new_toolkit(
 
     form_data.id = form_data.id.lower()
 
-    toolkit = Tools.get_tool_by_id(form_data.id)
-    if toolkit is None:
+    tools = Tools.get_tool_by_id(form_data.id)
+    if tools is None:
         try:
             form_data.content = replace_imports(form_data.content)
-            toolkit_module, frontmatter = load_toolkit_module_by_id(
+            tools_module, frontmatter = load_tools_module_by_id(
                 form_data.id, content=form_data.content
             )
             form_data.meta.manifest = frontmatter
 
             TOOLS = request.app.state.TOOLS
-            TOOLS[form_data.id] = toolkit_module
+            TOOLS[form_data.id] = tools_module
 
             specs = get_tools_specs(TOOLS[form_data.id])
-            toolkit = Tools.insert_new_tool(user.id, form_data, specs)
+            tools = Tools.insert_new_tool(user.id, form_data, specs)
 
             tool_cache_dir = Path(CACHE_DIR) / "tools" / form_data.id
             tool_cache_dir.mkdir(parents=True, exist_ok=True)
 
-            if toolkit:
-                return toolkit
+            if tools:
+                return tools
             else:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT("Error creating toolkit"),
+                    detail=ERROR_MESSAGES.DEFAULT("Error creating tools"),
                 )
         except Exception as e:
             print(e)
@@ -93,16 +124,21 @@ async def create_new_toolkit(
 
 
 ############################
-# GetToolkitById
+# GetToolsById
 ############################
 
 
 @router.get("/id/{id}", response_model=Optional[ToolModel])
-async def get_toolkit_by_id(id: str, user=Depends(get_admin_user)):
-    toolkit = Tools.get_tool_by_id(id)
+async def get_tools_by_id(id: str, user=Depends(get_verified_user)):
+    tools = Tools.get_tool_by_id(id)
 
-    if toolkit:
-        return toolkit
+    if tools:
+        if (
+            user.role == "admin"
+            or tools.user_id == user.id
+            or has_access(user.id, "read", tools.access_control)
+        ):
+            return tools
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -111,26 +147,39 @@ async def get_toolkit_by_id(id: str, user=Depends(get_admin_user)):
 
 
 ############################
-# UpdateToolkitById
+# UpdateToolsById
 ############################
 
 
 @router.post("/id/{id}/update", response_model=Optional[ToolModel])
-async def update_toolkit_by_id(
+async def update_tools_by_id(
     request: Request,
     id: str,
     form_data: ToolForm,
-    user=Depends(get_admin_user),
+    user=Depends(get_verified_user),
 ):
+    tools = Tools.get_tool_by_id(id)
+    if not tools:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if tools.user_id != user.id and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
     try:
         form_data.content = replace_imports(form_data.content)
-        toolkit_module, frontmatter = load_toolkit_module_by_id(
+        tools_module, frontmatter = load_tools_module_by_id(
             id, content=form_data.content
         )
         form_data.meta.manifest = frontmatter
 
         TOOLS = request.app.state.TOOLS
-        TOOLS[id] = toolkit_module
+        TOOLS[id] = tools_module
 
         specs = get_tools_specs(TOOLS[id])
 
@@ -140,14 +189,14 @@ async def update_toolkit_by_id(
         }
 
         print(updated)
-        toolkit = Tools.update_tool_by_id(id, updated)
+        tools = Tools.update_tool_by_id(id, updated)
 
-        if toolkit:
-            return toolkit
+        if tools:
+            return tools
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("Error updating toolkit"),
+                detail=ERROR_MESSAGES.DEFAULT("Error updating tools"),
             )
 
     except Exception as e:
@@ -158,14 +207,28 @@ async def update_toolkit_by_id(
 
 
 ############################
-# DeleteToolkitById
+# DeleteToolsById
 ############################
 
 
 @router.delete("/id/{id}/delete", response_model=bool)
-async def delete_toolkit_by_id(request: Request, id: str, user=Depends(get_admin_user)):
-    result = Tools.delete_tool_by_id(id)
+async def delete_tools_by_id(
+    request: Request, id: str, user=Depends(get_verified_user)
+):
+    tools = Tools.get_tool_by_id(id)
+    if not tools:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
 
+    if tools.user_id != user.id and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    result = Tools.delete_tool_by_id(id)
     if result:
         TOOLS = request.app.state.TOOLS
         if id in TOOLS:
@@ -180,9 +243,9 @@ async def delete_toolkit_by_id(request: Request, id: str, user=Depends(get_admin
 
 
 @router.get("/id/{id}/valves", response_model=Optional[dict])
-async def get_toolkit_valves_by_id(id: str, user=Depends(get_admin_user)):
-    toolkit = Tools.get_tool_by_id(id)
-    if toolkit:
+async def get_tools_valves_by_id(id: str, user=Depends(get_verified_user)):
+    tools = Tools.get_tool_by_id(id)
+    if tools:
         try:
             valves = Tools.get_tool_valves_by_id(id)
             return valves
@@ -204,19 +267,19 @@ async def get_toolkit_valves_by_id(id: str, user=Depends(get_admin_user)):
 
 
 @router.get("/id/{id}/valves/spec", response_model=Optional[dict])
-async def get_toolkit_valves_spec_by_id(
-    request: Request, id: str, user=Depends(get_admin_user)
+async def get_tools_valves_spec_by_id(
+    request: Request, id: str, user=Depends(get_verified_user)
 ):
-    toolkit = Tools.get_tool_by_id(id)
-    if toolkit:
+    tools = Tools.get_tool_by_id(id)
+    if tools:
         if id in request.app.state.TOOLS:
-            toolkit_module = request.app.state.TOOLS[id]
+            tools_module = request.app.state.TOOLS[id]
         else:
-            toolkit_module, _ = load_toolkit_module_by_id(id)
-            request.app.state.TOOLS[id] = toolkit_module
+            tools_module, _ = load_tools_module_by_id(id)
+            request.app.state.TOOLS[id] = tools_module
 
-        if hasattr(toolkit_module, "Valves"):
-            Valves = toolkit_module.Valves
+        if hasattr(tools_module, "Valves"):
+            Valves = tools_module.Valves
             return Valves.schema()
         return None
     else:
@@ -232,41 +295,38 @@ async def get_toolkit_valves_spec_by_id(
 
 
 @router.post("/id/{id}/valves/update", response_model=Optional[dict])
-async def update_toolkit_valves_by_id(
-    request: Request, id: str, form_data: dict, user=Depends(get_admin_user)
+async def update_tools_valves_by_id(
+    request: Request, id: str, form_data: dict, user=Depends(get_verified_user)
 ):
-    toolkit = Tools.get_tool_by_id(id)
-    if toolkit:
-        if id in request.app.state.TOOLS:
-            toolkit_module = request.app.state.TOOLS[id]
-        else:
-            toolkit_module, _ = load_toolkit_module_by_id(id)
-            request.app.state.TOOLS[id] = toolkit_module
-
-        if hasattr(toolkit_module, "Valves"):
-            Valves = toolkit_module.Valves
-
-            try:
-                form_data = {k: v for k, v in form_data.items() if v is not None}
-                valves = Valves(**form_data)
-                Tools.update_tool_valves_by_id(id, valves.model_dump())
-                return valves.model_dump()
-            except Exception as e:
-                print(e)
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT(str(e)),
-                )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=ERROR_MESSAGES.NOT_FOUND,
-            )
-
-    else:
+    tools = Tools.get_tool_by_id(id)
+    if not tools:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+    if id in request.app.state.TOOLS:
+        tools_module = request.app.state.TOOLS[id]
+    else:
+        tools_module, _ = load_tools_module_by_id(id)
+        request.app.state.TOOLS[id] = tools_module
+
+    if not hasattr(tools_module, "Valves"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+    Valves = tools_module.Valves
+
+    try:
+        form_data = {k: v for k, v in form_data.items() if v is not None}
+        valves = Valves(**form_data)
+        Tools.update_tool_valves_by_id(id, valves.model_dump())
+        return valves.model_dump()
+    except Exception as e:
+        print(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(str(e)),
         )
 
 
@@ -276,9 +336,9 @@ async def update_toolkit_valves_by_id(
 
 
 @router.get("/id/{id}/valves/user", response_model=Optional[dict])
-async def get_toolkit_user_valves_by_id(id: str, user=Depends(get_verified_user)):
-    toolkit = Tools.get_tool_by_id(id)
-    if toolkit:
+async def get_tools_user_valves_by_id(id: str, user=Depends(get_verified_user)):
+    tools = Tools.get_tool_by_id(id)
+    if tools:
         try:
             user_valves = Tools.get_user_valves_by_id_and_user_id(id, user.id)
             return user_valves
@@ -295,19 +355,19 @@ async def get_toolkit_user_valves_by_id(id: str, user=Depends(get_verified_user)
 
 
 @router.get("/id/{id}/valves/user/spec", response_model=Optional[dict])
-async def get_toolkit_user_valves_spec_by_id(
+async def get_tools_user_valves_spec_by_id(
     request: Request, id: str, user=Depends(get_verified_user)
 ):
-    toolkit = Tools.get_tool_by_id(id)
-    if toolkit:
+    tools = Tools.get_tool_by_id(id)
+    if tools:
         if id in request.app.state.TOOLS:
-            toolkit_module = request.app.state.TOOLS[id]
+            tools_module = request.app.state.TOOLS[id]
         else:
-            toolkit_module, _ = load_toolkit_module_by_id(id)
-            request.app.state.TOOLS[id] = toolkit_module
+            tools_module, _ = load_tools_module_by_id(id)
+            request.app.state.TOOLS[id] = tools_module
 
-        if hasattr(toolkit_module, "UserValves"):
-            UserValves = toolkit_module.UserValves
+        if hasattr(tools_module, "UserValves"):
+            UserValves = tools_module.UserValves
             return UserValves.schema()
         return None
     else:
@@ -318,20 +378,20 @@ async def get_toolkit_user_valves_spec_by_id(
 
 
 @router.post("/id/{id}/valves/user/update", response_model=Optional[dict])
-async def update_toolkit_user_valves_by_id(
+async def update_tools_user_valves_by_id(
     request: Request, id: str, form_data: dict, user=Depends(get_verified_user)
 ):
-    toolkit = Tools.get_tool_by_id(id)
+    tools = Tools.get_tool_by_id(id)
 
-    if toolkit:
+    if tools:
         if id in request.app.state.TOOLS:
-            toolkit_module = request.app.state.TOOLS[id]
+            tools_module = request.app.state.TOOLS[id]
         else:
-            toolkit_module, _ = load_toolkit_module_by_id(id)
-            request.app.state.TOOLS[id] = toolkit_module
+            tools_module, _ = load_tools_module_by_id(id)
+            request.app.state.TOOLS[id] = tools_module
 
-        if hasattr(toolkit_module, "UserValves"):
-            UserValves = toolkit_module.UserValves
+        if hasattr(tools_module, "UserValves"):
+            UserValves = tools_module.UserValves
 
             try:
                 form_data = {k: v for k, v in form_data.items() if v is not None}

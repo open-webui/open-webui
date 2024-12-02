@@ -19,7 +19,7 @@
 	} from '$lib/apis/retrieval';
 
 	import { knowledge, models } from '$lib/stores';
-	import { getKnowledgeItems } from '$lib/apis/knowledge';
+	import { getKnowledgeBases } from '$lib/apis/knowledge';
 	import { uploadDir, deleteAllFiles, deleteFileById } from '$lib/apis/files';
 
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -56,8 +56,11 @@
 	let chunkOverlap = 0;
 	let pdfExtractImages = true;
 
-	let OpenAIKey = '';
 	let OpenAIUrl = '';
+	let OpenAIKey = '';
+
+	let OllamaUrl = '';
+	let OllamaKey = '';
 
 	let querySettings = {
 		template: '',
@@ -104,19 +107,15 @@
 		const res = await updateEmbeddingConfig(localStorage.token, {
 			embedding_engine: embeddingEngine,
 			embedding_model: embeddingModel,
-			...(embeddingEngine === 'openai' || embeddingEngine === 'ollama'
-				? {
-						embedding_batch_size: embeddingBatchSize
-					}
-				: {}),
-			...(embeddingEngine === 'openai'
-				? {
-						openai_config: {
-							key: OpenAIKey,
-							url: OpenAIUrl
-						}
-					}
-				: {})
+			embedding_batch_size: embeddingBatchSize,
+			ollama_config: {
+				key: OllamaKey,
+				url: OllamaUrl
+			},
+			openai_config: {
+				key: OpenAIKey,
+				url: OpenAIUrl
+			}
 		}).catch(async (error) => {
 			toast.error(error);
 			await setEmbeddingConfig();
@@ -206,6 +205,9 @@
 
 			OpenAIKey = embeddingConfig.openai_config.key;
 			OpenAIUrl = embeddingConfig.openai_config.url;
+
+			OllamaKey = embeddingConfig.ollama_config.key;
+			OllamaUrl = embeddingConfig.ollama_config.url;
 		}
 	};
 
@@ -310,9 +312,9 @@
 			</div>
 
 			{#if embeddingEngine === 'openai'}
-				<div class="my-0.5 flex gap-2">
+				<div class="my-0.5 flex gap-2 pr-2">
 					<input
-						class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+						class="flex-1 w-full rounded-lg text-sm bg-transparent outline-none"
 						placeholder={$i18n.t('API Base URL')}
 						bind:value={OpenAIUrl}
 						required
@@ -320,7 +322,23 @@
 
 					<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={OpenAIKey} />
 				</div>
+			{:else if embeddingEngine === 'ollama'}
+				<div class="my-0.5 flex gap-2 pr-2">
+					<input
+						class="flex-1 w-full rounded-lg text-sm bg-transparent outline-none"
+						placeholder={$i18n.t('API Base URL')}
+						bind:value={OllamaUrl}
+						required
+					/>
+
+					<SensitiveInput
+						placeholder={$i18n.t('API Key')}
+						bind:value={OllamaKey}
+						required={false}
+					/>
+				</div>
 			{/if}
+
 			{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai'}
 				<div class="flex mt-0.5 space-x-2">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Embedding Batch Size')}</div>
@@ -376,19 +394,12 @@
 			{#if embeddingEngine === 'ollama'}
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
-						<select
+						<input
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							bind:value={embeddingModel}
-							placeholder={$i18n.t('Select a model')}
+							placeholder={$i18n.t('Set embedding model')}
 							required
-						>
-							{#if !embeddingModel}
-								<option value="" disabled selected>{$i18n.t('Select a model')}</option>
-							{/if}
-							{#each $models.filter((m) => m.id && m.ollama && !(m?.preset ?? false)) as model}
-								<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
-							{/each}
-						</select>
+						/>
 					</div>
 				</div>
 			{:else}

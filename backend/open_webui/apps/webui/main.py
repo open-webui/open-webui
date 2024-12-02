@@ -12,6 +12,7 @@ from open_webui.apps.webui.routers import (
     chats,
     folders,
     configs,
+    groups,
     files,
     functions,
     memories,
@@ -30,10 +31,12 @@ from open_webui.config import (
     DEFAULT_MODELS,
     DEFAULT_PROMPT_SUGGESTIONS,
     DEFAULT_USER_ROLE,
+    MODEL_ORDER_LIST,
     ENABLE_COMMUNITY_SHARING,
     ENABLE_LOGIN_FORM,
     ENABLE_MESSAGE_RATING,
     ENABLE_SIGNUP,
+    ENABLE_API_KEY,
     ENABLE_EVALUATION_ARENA_MODELS,
     EVALUATION_ARENA_MODELS,
     DEFAULT_ARENA_MODEL,
@@ -50,9 +53,23 @@ from open_webui.config import (
     WEBHOOK_URL,
     WEBUI_AUTH,
     WEBUI_BANNERS,
+    ENABLE_LDAP,
+    LDAP_SERVER_LABEL,
+    LDAP_SERVER_HOST,
+    LDAP_SERVER_PORT,
+    LDAP_ATTRIBUTE_FOR_USERNAME,
+    LDAP_SEARCH_FILTERS,
+    LDAP_SEARCH_BASE,
+    LDAP_APP_DN,
+    LDAP_APP_PASSWORD,
+    LDAP_USE_TLS,
+    LDAP_CA_CERT_FILE,
+    LDAP_CIPHERS,
     AppConfig,
 )
 from open_webui.env import (
+    ENV,
+    SRC_LOG_LEVELS,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
 )
@@ -72,14 +89,21 @@ from open_webui.utils.payload import (
 
 from open_webui.utils.tools import get_tools
 
-app = FastAPI()
+app = FastAPI(
+    docs_url="/docs" if ENV == "dev" else None,
+    openapi_url="/openapi.json" if ENV == "dev" else None,
+    redoc_url=None,
+)
 
 log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 app.state.config = AppConfig()
 
 app.state.config.ENABLE_SIGNUP = ENABLE_SIGNUP
 app.state.config.ENABLE_LOGIN_FORM = ENABLE_LOGIN_FORM
+app.state.config.ENABLE_API_KEY = ENABLE_API_KEY
+
 app.state.config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
 app.state.AUTH_TRUSTED_NAME_HEADER = WEBUI_AUTH_TRUSTED_NAME_HEADER
@@ -92,9 +116,12 @@ app.state.config.ADMIN_EMAIL = ADMIN_EMAIL
 app.state.config.DEFAULT_MODELS = DEFAULT_MODELS
 app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
 app.state.config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
+
+
 app.state.config.USER_PERMISSIONS = USER_PERMISSIONS
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
 app.state.config.BANNERS = WEBUI_BANNERS
+app.state.config.MODEL_ORDER_LIST = MODEL_ORDER_LIST
 
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 app.state.config.ENABLE_MESSAGE_RATING = ENABLE_MESSAGE_RATING
@@ -111,7 +138,19 @@ app.state.config.OAUTH_ROLES_CLAIM = OAUTH_ROLES_CLAIM
 app.state.config.OAUTH_ALLOWED_ROLES = OAUTH_ALLOWED_ROLES
 app.state.config.OAUTH_ADMIN_ROLES = OAUTH_ADMIN_ROLES
 
-app.state.MODELS = {}
+app.state.config.ENABLE_LDAP = ENABLE_LDAP
+app.state.config.LDAP_SERVER_LABEL = LDAP_SERVER_LABEL
+app.state.config.LDAP_SERVER_HOST = LDAP_SERVER_HOST
+app.state.config.LDAP_SERVER_PORT = LDAP_SERVER_PORT
+app.state.config.LDAP_ATTRIBUTE_FOR_USERNAME = LDAP_ATTRIBUTE_FOR_USERNAME
+app.state.config.LDAP_APP_DN = LDAP_APP_DN
+app.state.config.LDAP_APP_PASSWORD = LDAP_APP_PASSWORD
+app.state.config.LDAP_SEARCH_BASE = LDAP_SEARCH_BASE
+app.state.config.LDAP_SEARCH_FILTERS = LDAP_SEARCH_FILTERS
+app.state.config.LDAP_USE_TLS = LDAP_USE_TLS
+app.state.config.LDAP_CA_CERT_FILE = LDAP_CA_CERT_FILE
+app.state.config.LDAP_CIPHERS = LDAP_CIPHERS
+
 app.state.TOOLS = {}
 app.state.FUNCTIONS = {}
 
@@ -135,13 +174,15 @@ app.include_router(models.router, prefix="/models", tags=["models"])
 app.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])
 app.include_router(prompts.router, prefix="/prompts", tags=["prompts"])
 app.include_router(tools.router, prefix="/tools", tags=["tools"])
-app.include_router(functions.router, prefix="/functions", tags=["functions"])
 
 app.include_router(memories.router, prefix="/memories", tags=["memories"])
+app.include_router(folders.router, prefix="/folders", tags=["folders"])
+
+app.include_router(groups.router, prefix="/groups", tags=["groups"])
+app.include_router(files.router, prefix="/files", tags=["files"])
+app.include_router(functions.router, prefix="/functions", tags=["functions"])
 app.include_router(evaluations.router, prefix="/evaluations", tags=["evaluations"])
 
-app.include_router(folders.router, prefix="/folders", tags=["folders"])
-app.include_router(files.router, prefix="/files", tags=["files"])
 
 app.include_router(utils.router, prefix="/utils", tags=["utils"])
 
@@ -233,7 +274,9 @@ async def get_pipe_models():
                 log.exception(e)
                 sub_pipes = []
 
-            print(sub_pipes)
+            log.debug(
+                f"get_pipe_models: function '{pipe.id}' is a manifold of {sub_pipes}"
+            )
 
             for p in sub_pipes:
                 sub_pipe_id = f'{pipe.id}.{p["id"]}'
@@ -243,6 +286,7 @@ async def get_pipe_models():
                     sub_pipe_name = f"{function_module.name}{sub_pipe_name}"
 
                 pipe_flag = {"type": pipe.type}
+
                 pipe_models.append(
                     {
                         "id": sub_pipe_id,
@@ -255,6 +299,10 @@ async def get_pipe_models():
                 )
         else:
             pipe_flag = {"type": "pipe"}
+
+            log.debug(
+                f"get_pipe_models: function '{pipe.id}' is a single pipe {{ 'id': {pipe.id}, 'name': {pipe.name} }}"
+            )
 
             pipe_models.append(
                 {
@@ -309,7 +357,7 @@ def get_pipe_id(form_data: dict) -> str:
     pipe_id = form_data["model"]
     if "." in pipe_id:
         pipe_id, _ = pipe_id.split(".", 1)
-    print(pipe_id)
+
     return pipe_id
 
 
@@ -336,7 +384,7 @@ def get_function_params(function_module, form_data, user, extra_params=None):
     return params
 
 
-async def generate_function_chat_completion(form_data, user):
+async def generate_function_chat_completion(form_data, user, models: dict = {}):
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
 
@@ -372,6 +420,7 @@ async def generate_function_chat_completion(form_data, user):
             "name": user.name,
             "role": user.role,
         },
+        "__metadata__": metadata,
     }
     extra_params["__tools__"] = get_tools(
         app,
@@ -379,7 +428,7 @@ async def generate_function_chat_completion(form_data, user):
         user,
         {
             **extra_params,
-            "__model__": app.state.MODELS[form_data["model"]],
+            "__model__": models.get(form_data["model"], None),
             "__messages__": form_data["messages"],
             "__files__": files,
         },
@@ -415,7 +464,7 @@ async def generate_function_chat_completion(form_data, user):
                     return
 
             except Exception as e:
-                print(f"Error: {e}")
+                log.error(f"Error: {e}")
                 yield f"data: {json.dumps({'error': {'detail':str(e)}})}\n\n"
                 return
 
@@ -445,7 +494,7 @@ async def generate_function_chat_completion(form_data, user):
             res = await execute_pipe(pipe, params)
 
         except Exception as e:
-            print(f"Error: {e}")
+            log.error(f"Error: {e}")
             return {"error": {"detail": str(e)}}
 
         if isinstance(res, StreamingResponse) or isinstance(res, dict):

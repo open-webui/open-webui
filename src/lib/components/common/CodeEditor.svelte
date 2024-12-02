@@ -9,9 +9,6 @@
 	import { indentUnit } from '@codemirror/language';
 	import { languages } from '@codemirror/language-data';
 
-	// import { python } from '@codemirror/lang-python';
-	// import { javascript } from '@codemirror/lang-javascript';
-
 	import { oneDark } from '@codemirror/theme-one-dark';
 
 	import { onMount, createEventDispatcher, getContext, tick } from 'svelte';
@@ -101,7 +98,7 @@
 
 	const setLanguage = async () => {
 		const language = await getLang();
-		if (language) {
+		if (language && codeEditor) {
 			codeEditor.dispatch({
 				effects: editorLanguage.reconfigure(language)
 			});

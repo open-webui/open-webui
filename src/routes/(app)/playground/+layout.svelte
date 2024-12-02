@@ -16,13 +16,13 @@
 </svelte:head>
 
 <div
-	class=" flex flex-col w-full min-h-screen max-h-screen {$showSidebar
+	class=" flex flex-col w-full h-screen max-h-[100dvh] {$showSidebar
 		? 'md:max-w-[calc(100%-260px)]'
 		: ''}"
 >
-	<div class=" px-3.5 py-2">
-		<div class=" flex items-center gap-1">
-			<div class="{$showSidebar ? 'md:hidden' : ''} mr-1 flex flex-none items-center">
+	<div class=" px-2.5 py-1 backdrop-blur-xl">
+		<div class=" flex items-center">
+			<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
 				<button
 					id="sidebar-toggle-button"
 					class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
@@ -36,36 +36,33 @@
 					</div>
 				</button>
 			</div>
-			<!-- <div class="flex items-center text-xl font-semibold">{$i18n.t('Admin Panel')}</div> -->
 
 			<div class=" flex w-full">
 				<div
-					class="flex scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent/10 p-1"
+					class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent pt-1"
 				>
 					<a
-						class="min-w-fit rounded-full p-1.5 px-3 {['/playground', '/playground/'].includes(
+						class="min-w-fit rounded-full p-1.5 {['/playground', '/playground/'].includes(
 							$page.url.pathname
 						)
-							? 'bg-gray-50 dark:bg-gray-850'
-							: ''} transition"
+							? ''
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 						href="/playground">{$i18n.t('Chat')}</a
 					>
 
-					<a
-						class="min-w-fit rounded-full p-1.5 px-3 {$page.url.pathname.includes(
-							'/playground/notes'
-						)
-							? 'bg-gray-50 dark:bg-gray-850'
-							: ''} transition"
+					<!-- <a
+						class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/playground/notes')
+							? ''
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 						href="/playground/notes">{$i18n.t('Notes')}</a
-					>
+					> -->
 
 					<a
-						class="min-w-fit rounded-full p-1.5 px-3 {$page.url.pathname.includes(
+						class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
 							'/playground/completions'
 						)
-							? 'bg-gray-50 dark:bg-gray-850'
-							: ''} transition"
+							? ''
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 						href="/playground/completions">{$i18n.t('Completions')}</a
 					>
 				</div>

@@ -5,9 +5,14 @@ import sys
 from importlib import util
 import types
 import tempfile
+import logging
 
+from open_webui.env import SRC_LOG_LEVELS
 from open_webui.apps.webui.models.functions import Functions
 from open_webui.apps.webui.models.tools import Tools
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 def extract_frontmatter(content):
@@ -63,7 +68,7 @@ def replace_imports(content):
     return content
 
 
-def load_toolkit_module_by_id(toolkit_id, content=None):
+def load_tools_module_by_id(toolkit_id, content=None):
 
     if content is None:
         tool = Tools.get_tool_by_id(toolkit_id)
@@ -95,7 +100,7 @@ def load_toolkit_module_by_id(toolkit_id, content=None):
         # Executing the modified content in the created module's namespace
         exec(content, module.__dict__)
         frontmatter = extract_frontmatter(content)
-        print(f"Loaded module: {module.__name__}")
+        log.info(f"Loaded module: {module.__name__}")
 
         # Create and return the object if the class 'Tools' is found in the module
         if hasattr(module, "Tools"):
@@ -103,7 +108,7 @@ def load_toolkit_module_by_id(toolkit_id, content=None):
         else:
             raise Exception("No Tools class found in the module")
     except Exception as e:
-        print(f"Error loading module: {toolkit_id}: {e}")
+        log.error(f"Error loading module: {toolkit_id}: {e}")
         del sys.modules[module_name]  # Clean up
         raise e
     finally:
@@ -139,7 +144,7 @@ def load_function_module_by_id(function_id, content=None):
         # Execute the modified content in the created module's namespace
         exec(content, module.__dict__)
         frontmatter = extract_frontmatter(content)
-        print(f"Loaded module: {module.__name__}")
+        log.info(f"Loaded module: {module.__name__}")
 
         # Create appropriate object based on available class type in the module
         if hasattr(module, "Pipe"):
@@ -151,7 +156,7 @@ def load_function_module_by_id(function_id, content=None):
         else:
             raise Exception("No Function class found in the module")
     except Exception as e:
-        print(f"Error loading module: {function_id}: {e}")
+        log.error(f"Error loading module: {function_id}: {e}")
         del sys.modules[module_name]  # Cleanup by removing the module in case of error
 
         Functions.update_function_by_id(function_id, {"is_active": False})
@@ -164,7 +169,7 @@ def install_frontmatter_requirements(requirements):
     if requirements:
         req_list = [req.strip() for req in requirements.split(",")]
         for req in req_list:
-            print(f"Installing requirement: {req}")
+            log.info(f"Installing requirement: {req}")
             subprocess.check_call([sys.executable, "-m", "pip", "install", req])
     else:
-        print("No requirements found in frontmatter.")
+        log.info("No requirements found in frontmatter.")

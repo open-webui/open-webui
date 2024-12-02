@@ -18,7 +18,7 @@
 	let loading = false;
 </script>
 
-<div class="relative flex-1 w-full h-full flex justify-center overflow-auto px-5 py-1">
+<div class="relative flex-1 w-full h-full flex justify-center overflow-auto px-5">
 	{#if loading}
 		<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
 			<div class="m-auto">
