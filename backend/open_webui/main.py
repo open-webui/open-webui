@@ -606,11 +606,10 @@ async def handle_nonstreaming_response(
 ) -> JSONResponse:
     # It only should be one response since we are in the non streaming scenario
     content = ""
-    # FIXME probably not needed
     async for data in response.body_iterator:
-        content += data.decode() if isinstance(data, bytes) else data
+        content += data.decode("utf-8") if isinstance(data, bytes) else data
     citations = []
-    response_dict = json.loads(content)
+    response_dict:dict = json.loads(content)
     body = json.loads(request._body)
 
     is_ollama = False
@@ -637,9 +636,8 @@ async def handle_nonstreaming_response(
                 del tool_call["index"]
 
             tool_function_name = tool_call["function"]["name"]
-            if not tool_call["function"]["arguments"]:
-                tool_function_params = {}
-            else:
+            tool_function_params = {}
+            if tool_call["function"]["arguments"]:
                 if is_openai:
                     tool_function_params = json.loads(
                         tool_call["function"]["arguments"]
@@ -680,6 +678,8 @@ async def handle_nonstreaming_response(
         response_dict = await generate_chat_completions(
             form_data=body, user=user, as_openai=is_openai
         )
+        if not isinstance(response_dict, dict):
+            raise Exception(f"Expecting dict in generate_chat_completions_call, got {response_dict=}")
 
     # FIXME: is it possible to handle citations?
     return JSONResponse(content=response_dict)
