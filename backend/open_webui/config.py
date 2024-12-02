@@ -702,6 +702,7 @@ ENABLE_LOGIN_FORM = PersistentConfig(
     os.environ.get("ENABLE_LOGIN_FORM", "True").lower() == "true",
 )
 
+
 DEFAULT_LOCALE = PersistentConfig(
     "DEFAULT_LOCALE",
     "ui.default_locale",
@@ -757,7 +758,6 @@ DEFAULT_USER_ROLE = PersistentConfig(
     "ui.default_user_role",
     os.getenv("DEFAULT_USER_ROLE", "pending"),
 )
-
 
 USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS = (
     os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS", "False").lower()

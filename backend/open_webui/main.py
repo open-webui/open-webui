@@ -112,6 +112,7 @@ from open_webui.env import (
     WEBUI_SESSION_COOKIE_SAME_SITE,
     WEBUI_SESSION_COOKIE_SECURE,
     WEBUI_URL,
+    BYPASS_MODEL_ACCESS_CONTROL,
     RESET_CONFIG_ON_START,
     OFFLINE_MODE,
 )
@@ -621,7 +622,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             )
 
         model_info = Models.get_model_by_id(model["id"])
-        if user.role == "user":
+        if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
             if model.get("arena"):
                 if not has_access(
                     user.id,
@@ -1224,7 +1225,7 @@ async def get_models(user=Depends(get_verified_user)):
         )
 
     # Filter out models that the user does not have access to
-    if user.role == "user":
+    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
         filtered_models = []
         for model in models:
             if model.get("arena"):
