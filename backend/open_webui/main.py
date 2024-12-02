@@ -996,9 +996,9 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             body["metadata"]["native_tool_call"] = False
 
         if not body["metadata"]["native_tool_call"]:
-            del body[
-                "tools"
-            ]  # we won't use those they are only for native_tool_call =True
+            if "tools" in body:
+                # we won't use those they are only for native_tool_call =True
+                del body["tools"]
             try:
                 body, flags = await chat_completion_tools_handler(
                     body, user, extra_params, models
