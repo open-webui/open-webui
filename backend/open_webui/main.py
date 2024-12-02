@@ -347,7 +347,7 @@ async def get_content_from_response(response) -> Optional[str]:
         # Cleanup any remaining background tasks if necessary
         if response.background is not None:
             await response.background()
-    else:
+    elif hasattr(response, "choices"):
         content = response["choices"][0]["message"]["content"]
     return content
 
@@ -440,10 +440,13 @@ async def process_tool_calls(
 
         tool_function_name = tool_call["function"]["name"]
         tool_function_params = {}
-        if isinstance(tool_call["function"]["arguments"], str):
-            tool_function_params = json.loads(tool_call["function"]["arguments"])
+        args = tool_call["function"]["arguments"]
+        if isinstance(args, str):
+            tool_function_params = json.loads(args) if args else {}
+        elif isinstance(args, dict):
+            tool_function_params = args
         else:
-            tool_function_params = tool_call["function"]["arguments"]
+            raise Exception(f"Unexpected arguments {args=}")
 
         log.debug(f"calling {tool_function_name} with params {tool_function_params}")
         try:
@@ -652,7 +655,7 @@ async def handle_nonstreaming_response(
         response_dict = untyped_response
 
     message = get_message(response_dict)
-    message["content"] = content + " " + message["content"]
+    message["content"] = content + " " + message.get("content", "")
     # FIXME: is it possible to handle citations?
     return JSONResponse(content=response_dict)
 
