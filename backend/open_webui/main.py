@@ -417,7 +417,8 @@ def fill_with_delta(fcall_dict: dict, delta: dict) -> None:
                 "id": "",
                 "type": "function",
                 "function": {"name": "", "arguments": ""},
-            })
+            }
+        )
 
     if "delta" not in delta.get("choices", [{}])[0]:
         return
@@ -427,6 +428,51 @@ def fill_with_delta(fcall_dict: dict, delta: dict) -> None:
     if "function" in j:
         fcall_dict["function"]["name"] += j["function"].get("name", "")
         fcall_dict["function"]["arguments"] += j["function"].get("arguments", "")
+
+
+async def process_tool_calls(
+    tool_calls: list, citations: list, messages: list, tools: dict
+) -> None:
+    for tool_call in tool_calls:
+        # fix for cohere
+        if "index" in tool_call:
+            del tool_call["index"]
+
+        tool_function_name = tool_call["function"]["name"]
+        tool_function_params = {}
+        if isinstance(tool_call["function"]["arguments"], str):
+            tool_function_params = json.loads(tool_call["function"]["arguments"])
+        else:
+            tool_function_params = tool_call["function"]["arguments"]
+
+        log.debug(f"calling {tool_function_name} with params {tool_function_params}")
+        try:
+            tool_output = await tools[tool_function_name]["callable"](
+                **tool_function_params
+            )
+        except Exception as e:
+            tool_output = str(e)
+
+        if tools.get(tool_function_name, {}).get("citation", False):
+            citations.append(
+                {
+                    "source": {
+                        "name": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
+                    },
+                    "document": [tool_output],
+                    "metadata": [{"source": tool_function_name}],
+                }
+            )
+
+        # Append the tool output to the messages
+        messages.append(
+            {
+                "role": "tool",
+                "tool_call_id": tool_call.get("id", ""),
+                "name": tool_function_name,
+                "content": tool_output,
+            }
+        )
 
 
 async def handle_streaming_response(
@@ -467,9 +513,7 @@ async def handle_streaming_response(
                     yield peek
                     continue
 
-                if (
-                    "tool_calls" not in peek_json["choices"][0]["delta"]
-                ):
+                if "tool_calls" not in peek_json["choices"][0]["delta"]:
                     content = peek_json["choices"][0]["delta"].get("content", "")
                     buffered_content += content if content else ""
                     yield peek
@@ -527,55 +571,12 @@ async def handle_streaming_response(
                     }
                 )
 
-                for tool_call in tool_calls:
-                    tool_function_name = tool_call["function"]["name"]
-                    tool_function_params = extract_json(
-                        tool_call["function"]["arguments"]
-                    )
-
-                    if not tool_call["function"]["arguments"]:
-                        tool_function_params = {}
-                    else:
-                        tool_function_params = json.loads(
-                            tool_call["function"]["arguments"]
-                        )
-
-                    log.debug(
-                        f"calling {tool_function_name} with params {tool_function_params}"
-                    )
-                    try:
-                        tool_output = await tools[tool_function_name]["callable"](
-                            **tool_function_params
-                        )
-                    except Exception as e:
-                        tool_output = str(e)
-
-                    # With several tools potentially called together may be this doesn't make sense
-                    if tools[tool_function_name][
-                        "file_handler"
-                    ] and "files" in body.get("metadata", {}):
-                        del body["metadata"]["files"]
-
-                    if tools[tool_function_name]["citation"]:
-                        citations.append(
-                            {
-                                "source": {
-                                    "name": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
-                                },
-                                "document": [tool_output],
-                                "metadata": [{"source": tool_function_name}],
-                            }
-                        )
-                    # Append the tool output to the messages
-                    body["messages"].append(
-                        {
-                            "role": "tool",
-                            "tool_call_id": tool_call["id"],
-                            "name": tool_function_name,
-                            "content": tool_output,
-                        }
-                    )
-
+                await process_tool_calls(
+                    tool_calls=tool_calls,
+                    citations=citations,
+                    messages=body["messages"],
+                    tools=tools,
+                )
                 # Make another request to the model with the updated context
                 log.debug("calling the model again with tool output included")
                 update_body_request(request, body)
@@ -609,7 +610,7 @@ async def handle_nonstreaming_response(
     async for data in response.body_iterator:
         content += data.decode("utf-8") if isinstance(data, bytes) else data
     citations = []
-    response_dict:dict = json.loads(content)
+    response_dict: dict = json.loads(content)
     body = json.loads(request._body)
 
     is_ollama = False
@@ -617,70 +618,37 @@ async def handle_nonstreaming_response(
         is_ollama = True
     is_openai = not is_ollama
 
-    def get_message_ollama(d : dict) -> dict:
+    def get_message_ollama(d: dict) -> dict:
         return d.get("message", {})
-    def get_message_openai(d : dict) -> dict:
+
+    def get_message_openai(d: dict) -> dict:
         return d.get("choices", [{}])[0].get("message", {})
 
     get_message = get_message_ollama if is_ollama else get_message_openai
 
     content = ""
-    while ("tool_calls" in get_message(response_dict)):
+    while "tool_calls" in get_message(response_dict):
         message = get_message(response_dict)
         tool_calls = []
         content += message.get("content", "") or ""
         tool_calls = message.get("tool_calls", [])
         body["messages"].append(message)
 
-        for tool_call in tool_calls:
-            # fix for cohere
-            if "index" in tool_call:
-                del tool_call["index"]
-
-            tool_function_name = tool_call["function"]["name"]
-            tool_function_params = {}
-            if isinstance(tool_call["function"]["arguments"], str):
-                tool_function_params = json.loads(
-                    tool_call["function"]["arguments"]
-                )
-            else:
-                tool_function_params = tool_call["function"]["arguments"]
-
-            try:
-                tool_output = await tools[tool_function_name]["callable"](
-                    **tool_function_params
-                )
-            except Exception as e:
-                tool_output = str(e)
-
-            if tools.get(tool_function_name, {}).get("citation", False):
-                citations.append(
-                    {
-                        "source": {
-                            "name": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
-                        },
-                        "document": [tool_output],
-                        "metadata": [{"source": tool_function_name}],
-                    }
-                )
-
-            # Append the tool output to the messages
-            body["messages"].append(
-                {
-                    "role": "tool",
-                    "tool_call_id": tool_call.get("id", ""),
-                    "name": tool_function_name,
-                    "content": tool_output,
-                }
-            )
-
+        await process_tool_calls(
+            tool_calls=tool_calls,
+            citations=citations,
+            messages=body["messages"],
+            tools=tools,
+        )
         # Make another request to the model with the updated context
         update_body_request(request, body)
         untyped_response = await generate_chat_completions(
             form_data=body, user=user, as_openai=is_openai
         )
         if not isinstance(untyped_response, dict):
-            raise Exception(f"Expecting dict from generate_chat_completions got {untyped_response=}")
+            raise Exception(
+                f"Expecting dict from generate_chat_completions got {untyped_response=}"
+            )
         response_dict = untyped_response
 
     message = get_message(response_dict)
