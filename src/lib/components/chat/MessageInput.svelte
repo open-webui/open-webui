@@ -271,7 +271,7 @@
 
 {#if loaded}
 	<div class="w-full font-primary">
-		<div class=" -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
+		<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
 			<div class="flex flex-col px-3 max-w-6xl w-full">
 				<div class="relative">
 					{#if autoScroll === false && history?.currentId}
@@ -547,7 +547,7 @@
 								{/if}
 
 								<div class=" flex">
-									<div class=" ml-0.5 self-end mb-1.5 flex space-x-1">
+									<div class=" ml-1 mr-0.5 self-end mb-1.5 flex space-x-1">
 										<InputMenu
 											bind:webSearchEnabled
 											bind:selectedToolIds
@@ -562,7 +562,7 @@
 											}}
 										>
 											<button
-												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
+												class="bg-white dark:bg-gray-850 hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-none focus:outline-none"
 												type="button"
 												aria-label="More"
 											>
@@ -570,7 +570,7 @@
 													xmlns="http://www.w3.org/2000/svg"
 													viewBox="0 0 16 16"
 													fill="currentColor"
-													class="size-5"
+													class="size-6"
 												>
 													<path
 														d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
