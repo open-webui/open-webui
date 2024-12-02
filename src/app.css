@@ -211,7 +211,8 @@ input[type='number'] {
 	float: left;
 	color: #adb5bd;
 	pointer-events: none;
-	height: 0;
+	
+	@apply line-clamp-1 absolute
 }
 
 .ai-autocompletion::after {
