@@ -271,12 +271,12 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.sentence_transformer_ef,
     (
         app.state.config.OPENAI_API_BASE_URL
-        if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+        if app.state.config.RAG_EMBEDDING_ENGINE in ["openai", "nvidia"]
         else app.state.config.OLLAMA_BASE_URL
     ),
     (
         app.state.config.OPENAI_API_KEY
-        if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+        if app.state.config.RAG_EMBEDDING_ENGINE in ["openai", "nvidia"]
         else app.state.config.OLLAMA_API_KEY
     ),
     app.state.config.RAG_EMBEDDING_BATCH_SIZE,
@@ -372,7 +372,7 @@ async def update_embedding_config(
         app.state.config.RAG_EMBEDDING_ENGINE = form_data.embedding_engine
         app.state.config.RAG_EMBEDDING_MODEL = form_data.embedding_model
 
-        if app.state.config.RAG_EMBEDDING_ENGINE in ["ollama", "openai"]:
+        if app.state.config.RAG_EMBEDDING_ENGINE in ["ollama", "openai", "nvidia"]:
             if form_data.openai_config is not None:
                 app.state.config.OPENAI_API_BASE_URL = form_data.openai_config.url
                 app.state.config.OPENAI_API_KEY = form_data.openai_config.key
@@ -391,12 +391,12 @@ async def update_embedding_config(
             app.state.sentence_transformer_ef,
             (
                 app.state.config.OPENAI_API_BASE_URL
-                if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                if app.state.config.RAG_EMBEDDING_ENGINE in ["openai", "nvidia"]
                 else app.state.config.OLLAMA_BASE_URL
             ),
             (
                 app.state.config.OPENAI_API_KEY
-                if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                if app.state.config.RAG_EMBEDDING_ENGINE in ["openai", "nvidia"]
                 else app.state.config.OLLAMA_API_KEY
             ),
             app.state.config.RAG_EMBEDDING_BATCH_SIZE,
@@ -840,12 +840,12 @@ def save_docs_to_vector_db(
             app.state.sentence_transformer_ef,
             (
                 app.state.config.OPENAI_API_BASE_URL
-                if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                if app.state.config.RAG_EMBEDDING_ENGINE in ["openai", "nvidia"]
                 else app.state.config.OLLAMA_BASE_URL
             ),
             (
                 app.state.config.OPENAI_API_KEY
-                if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                if app.state.config.RAG_EMBEDDING_ENGINE in ["openai", "nvidia"]
                 else app.state.config.OLLAMA_API_KEY
             ),
             app.state.config.RAG_EMBEDDING_BATCH_SIZE,

@@ -96,8 +96,22 @@
 			return;
 		}
 
+		if (embeddingEngine === 'nvidia' && embeddingModel === '') {
+			toast.error(
+				$i18n.t(
+					'Model filesystem path detected. Model shortname is required for update, cannot continue.'
+				)
+			);
+			return;
+		}
+
 		if ((embeddingEngine === 'openai' && OpenAIKey === '') || OpenAIUrl === '') {
 			toast.error($i18n.t('OpenAI URL/Key required.'));
+			return;
+		}
+
+		if ((embeddingEngine === 'nvidia' && OpenAIKey === '') || OpenAIUrl === '') {
+			toast.error($i18n.t('Nvidia URL/Key required.'));
 			return;
 		}
 
@@ -299,6 +313,8 @@
 								embeddingModel = '';
 							} else if (e.target.value === 'openai') {
 								embeddingModel = 'text-embedding-3-small';
+							} else if (e.target.value === 'nvidia') {
+								embeddingModel = 'nv-embedqa-e5-v5';
 							} else if (e.target.value === '') {
 								embeddingModel = 'sentence-transformers/all-MiniLM-L6-v2';
 							}
@@ -307,11 +323,12 @@
 						<option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
 						<option value="ollama">{$i18n.t('Ollama')}</option>
 						<option value="openai">{$i18n.t('OpenAI')}</option>
+						<option value="nvidia">{$i18n.t('Nvidia')}</option>
 					</select>
 				</div>
 			</div>
 
-			{#if embeddingEngine === 'openai'}
+			{#if embeddingEngine === 'openai' || embeddingEngine === 'nvidia'}
 				<div class="my-0.5 flex gap-2 pr-2">
 					<input
 						class="flex-1 w-full rounded-lg text-sm bg-transparent outline-none"
@@ -339,7 +356,7 @@
 				</div>
 			{/if}
 
-			{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai'}
+			{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai' || embeddingEngine === 'nvidia'}
 				<div class="flex mt-0.5 space-x-2">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Embedding Batch Size')}</div>
 					<div class=" flex-1">
