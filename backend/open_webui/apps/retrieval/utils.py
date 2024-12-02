@@ -473,7 +473,7 @@ def generate_nvidia_batch_embeddings(
     data["truncate"] = "END"
 
     r = None
-    request_timeout = int(request_timeout)
+    request_timeout = int(5)
 
     try:
         r = requests.post(
