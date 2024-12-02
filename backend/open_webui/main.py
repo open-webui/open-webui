@@ -451,24 +451,31 @@ async def handle_streaming_response(
         citations = []
         body = json.loads(request._body)
         generator = original_generator
+        buffered_content = ""
         try:
             while True:
                 peek = await anext(generator)
-                peek_json = extract_json(
-                    peek.decode("utf-8") if isinstance(peek, bytes) else peek
-                )
-                if peek == b"data: [DONE]\n" and len(citations) > 0:
+                peek = peek.decode("utf-8") if isinstance(peek, bytes) else peek
+                if peek == "data: [DONE]\n" and len(citations) > 0:
                     yield wrap_item(json.dumps({"sources": citations}))
-
-                if (
-                    peek_json is None
-                    or "choices" not in peek_json
-                    or "tool_calls" not in peek_json["choices"][0]["delta"]
-                ):
                     yield peek
                     continue
 
-                # We reached a tool call so we consume all the messages to assemble it
+                peek_json = extract_json(peek)
+                if peek_json is None or "choices" not in peek_json:
+                    log.debug("Non json data received: {peek=}")
+                    yield peek
+                    continue
+
+                if (
+                    "tool_calls" not in peek_json["choices"][0]["delta"]
+                ):
+                    content = peek_json["choices"][0]["delta"].get("content", "")
+                    buffered_content += content if content else ""
+                    yield peek
+                    continue
+
+                # We reached a tool call so we have to consume all the messages to assemble it
                 log.debug("async tool call detected")
                 tool_calls = []  # id, name, arguments
                 tool_calls.append({})
@@ -501,10 +508,20 @@ async def handle_streaming_response(
                     f"tools to call { [ t['function']['name'] for t in tool_calls] }"
                 )
 
+                if buffered_content:
+                    body["messages"].append(
+                        {
+                            "role": "assistant",
+                            "content": buffered_content,
+                            "refusal": None,
+                        }
+                    )
+                    buffered_content = ""
+
                 body["messages"].append(
                     {
                         "role": "assistant",
-                        "content": None,
+                        "content": "",
                         "refusal": None,
                         "tool_calls": tool_calls,
                     }
