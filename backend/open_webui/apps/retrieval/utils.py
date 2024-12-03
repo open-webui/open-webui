@@ -485,13 +485,19 @@ def generate_nvidia_batch_embeddings(
         )
         r.raise_for_status()
         data = r.json()
+        
+        if "data" in data:
+            log.info([elem["embedding"] for elem in data["data"]])
+            return [elem["embedding"] for elem in data["data"]]
+        else:
+            raise "Something went wrong :/"
 
-        if r and r.json():
-            response_data = r.json().get("data", {})
-            if len(response_data):
-                return response_data[0].get("embedding", [])
-            else:
-                raise "Something went wrong :/"
+        # if r and r.json():
+        #     response_data = r.json().get("data", {})
+        #     if len(response_data):
+        #         return response_data[0].get("embedding", [])
+        #     else:
+        #         raise "Something went wrong :/"
     except Exception as e:
         print(e)
         return None
