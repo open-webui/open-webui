@@ -473,7 +473,7 @@ def generate_nvidia_batch_embeddings(
     data["truncate"] = "END"
 
     r = None
-    request_timeout = int(5)
+    request_timeout = int(10)
 
     try:
         r = requests.post(
@@ -481,23 +481,15 @@ def generate_nvidia_batch_embeddings(
             headers=headers,
             data=json.dumps(data),
             timeout=request_timeout,
-            json={"input": texts, "model": model},
+            # json={"input": texts, "model": model},
         )
         r.raise_for_status()
         data = r.json()
         
         if "data" in data:
-            log.info([elem["embedding"] for elem in data["data"]])
             return [elem["embedding"] for elem in data["data"]]
         else:
             raise "Something went wrong :/"
-
-        # if r and r.json():
-        #     response_data = r.json().get("data", {})
-        #     if len(response_data):
-        #         return response_data[0].get("embedding", [])
-        #     else:
-        #         raise "Something went wrong :/"
     except Exception as e:
         print(e)
         return None
