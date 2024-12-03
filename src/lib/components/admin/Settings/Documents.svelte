@@ -314,7 +314,7 @@
 							} else if (e.target.value === 'openai') {
 								embeddingModel = 'text-embedding-3-small';
 							} else if (e.target.value === 'nvidia') {
-								embeddingModel = 'nv-embedqa-e5-v5';
+								embeddingModel = 'nvidia/nv-embedqa-e5-v5';
 							} else if (e.target.value === '') {
 								embeddingModel = 'sentence-transformers/all-MiniLM-L6-v2';
 							}
