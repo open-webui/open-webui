@@ -148,7 +148,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         headers["Content-Type"] = "application/json"
         if "openrouter.ai" in app.state.config.OPENAI_API_BASE_URLS[idx]:
             headers["HTTP-Referer"] = "https://openwebui.com/"
-            headers["X-Title"] = "Open WebUI"
+            headers["X-Title"] = "BSDXR WebUI"
         if ENABLE_FORWARD_USER_INFO_HEADERS:
             headers["X-OpenWebUI-User-Name"] = user.name
             headers["X-OpenWebUI-User-Id"] = user.id
@@ -178,7 +178,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
         except Exception as e:
             log.exception(e)
-            error_detail = "Open WebUI: Server Connection Error"
+            error_detail = "BSDXR WebUI: Server Connection Error"
             if r is not None:
                 try:
                     res = r.json()
@@ -414,7 +414,7 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
                 log.exception(f"Client error: {str(e)}")
                 # Handle aiohttp-specific connection issues, timeout etc.
                 raise HTTPException(
-                    status_code=500, detail="Open WebUI: Server Connection Error"
+                    status_code=500, detail="BSDXR WebUI: Server Connection Error"
                 )
             except Exception as e:
                 log.exception(f"Unexpected error: {e}")
@@ -473,7 +473,7 @@ async def verify_connection(
             log.exception(f"Client error: {str(e)}")
             # Handle aiohttp-specific connection issues, timeout etc.
             raise HTTPException(
-                status_code=500, detail="Open WebUI: Server Connection Error"
+                status_code=500, detail="BSDXR WebUI: Server Connection Error"
             )
         except Exception as e:
             log.exception(f"Unexpected error: {e}")
@@ -590,7 +590,7 @@ async def generate_chat_completion(
     headers["Content-Type"] = "application/json"
     if "openrouter.ai" in app.state.config.OPENAI_API_BASE_URLS[idx]:
         headers["HTTP-Referer"] = "https://openwebui.com/"
-        headers["X-Title"] = "Open WebUI"
+        headers["X-Title"] = "BSDXR WebUI"
     if ENABLE_FORWARD_USER_INFO_HEADERS:
         headers["X-OpenWebUI-User-Name"] = user.name
         headers["X-OpenWebUI-User-Id"] = user.id
@@ -635,7 +635,7 @@ async def generate_chat_completion(
             return response
     except Exception as e:
         log.exception(e)
-        error_detail = "Open WebUI: Server Connection Error"
+        error_detail = "BSDXR WebUI: Server Connection Error"
         if isinstance(response, dict):
             if "error" in response:
                 error_detail = f"{response['error']['message'] if 'message' in response['error'] else response['error']}"
@@ -701,7 +701,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             return response_data
     except Exception as e:
         log.exception(e)
-        error_detail = "Open WebUI: Server Connection Error"
+        error_detail = "BSDXR WebUI: Server Connection Error"
         if r is not None:
             try:
                 res = await r.json()
