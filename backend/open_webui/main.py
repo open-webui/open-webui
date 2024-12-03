@@ -594,6 +594,7 @@ async def handle_streaming_response(
             pass
         except Exception as e:
             log.exception(f"Error: {e}")
+            raise e
 
     return StreamingResponse(
         stream_wrapper(response.body_iterator, data_items),
