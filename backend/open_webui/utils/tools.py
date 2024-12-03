@@ -58,9 +58,11 @@ def get_tools(
 
         for spec in tools.specs:
             # TODO: Fix hack for OpenAI API
-            for val in spec.get("parameters", {}).get("properties", {}).values():
-                if val["type"] == "str":
-                    val["type"] = "string"
+            # Some times breaks OpenAI but others don't. Leaving the comment
+            #for val in spec.get("parameters", {}).get("properties", {}).values():
+            #    if val["type"] == "str":
+            #        val["type"] = "string"
+
             # Remove internal parameters
             spec["parameters"]["properties"] = {
                 key: val
