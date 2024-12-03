@@ -484,10 +484,10 @@ def generate_nvidia_batch_embeddings(
             # json={"input": texts, "model": model},
         )
         r.raise_for_status()
-        data = r.json()
+        response = r.json()
         
-        if "data" in data:
-            return [elem["embedding"] for elem in data["data"]]
+        if "data" in response:
+            return [elem["embedding"] for elem in response["data"]]
         else:
             raise "Something went wrong :/"
     except Exception as e:
