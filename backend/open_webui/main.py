@@ -424,7 +424,7 @@ def fill_with_delta(fcall_dict: dict, delta: dict) -> None:
         return
     j = delta["choices"][0].get("delta", {}).get("tool_calls", [{}])[0]
     if "id" in j:
-        fcall_dict["id"] += (j.get("id", "") or "")
+        fcall_dict["id"] += j.get("id", "") or ""
     if "function" in j:
         fcall_dict["function"]["name"] += j["function"].get("name", "")
         fcall_dict["function"]["arguments"] += j["function"].get("arguments", "")
@@ -1098,13 +1098,19 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                 headers=dict(response.headers),
             )
         else:
+
+            skip_files = all(["file_handler" in t for t in tools])
+            if skip_files and "files" in body.get("metadata", {}):
+                del body["metadata"]["files"]
+
             if not body.get("stream", False):
                 return await handle_nonstreaming_response(
                     request, response, tools, user, models
                 )
-            return await handle_streaming_response(
-                request, response, tools, data_items, user
-            )
+            else:
+                return await handle_streaming_response(
+                    request, response, tools, data_items, user
+                )
 
     async def _receive(self, body: bytes):
         return {"type": "http.request", "body": body, "more_body": False}
