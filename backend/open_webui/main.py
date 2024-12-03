@@ -424,7 +424,7 @@ def fill_with_delta(fcall_dict: dict, delta: dict) -> None:
         return
     j = delta["choices"][0].get("delta", {}).get("tool_calls", [{}])[0]
     if "id" in j:
-        fcall_dict["id"] += j.get("id", "")
+        fcall_dict["id"] += (j.get("id", "") or "")
     if "function" in j:
         fcall_dict["function"]["name"] += j["function"].get("name", "")
         fcall_dict["function"]["arguments"] += j["function"].get("arguments", "")
