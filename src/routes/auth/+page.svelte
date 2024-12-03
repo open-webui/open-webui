@@ -28,6 +28,8 @@
 
 	let ldapUsername = '';
 
+  let logoURL = `../../../static/splash.png`;
+
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
 			console.log(sessionUser);
@@ -180,7 +182,10 @@
 								submitHandler();
 							}}
 						>
-							<div class="mb-1">
+							<div class="flex flex-col gap-5 mb-1">
+                <figure>
+                  <img src={logoURL} alt="BSDXR Logo"/>
+                </figure>
 								<div class=" text-2xl font-medium">
 									{#if $config?.onboarding ?? false}
 										{$i18n.t(`Get started with {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
