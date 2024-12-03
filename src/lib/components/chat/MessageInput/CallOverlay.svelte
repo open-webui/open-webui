@@ -733,11 +733,11 @@
 								: rmsLevel * 100 > 1
 									? 'size-14'
 									: 'size-12'}  transition-all rounded-full {(model?.info?.meta
-							?.profile_image_url ?? '/static/bsdIcon.png') !== '/static/bsdIcon.png'
+							?.profile_image_url ?? '/static/aero-spx-icon.png') !== '/static/aero-spx-icon.png'
 							? ' bg-cover bg-center bg-no-repeat'
 							: 'bg-black dark:bg-white'}  bg-black dark:bg-white"
-						style={(model?.info?.meta?.profile_image_url ?? '/static/bsdIcon.png') !==
-						'/static/bsdIcon.png'
+						style={(model?.info?.meta?.profile_image_url ?? '/static/aero-spx-icon.png') !==
+						'/static/aero-spx-icon.png'
 							? `background-image: url('${model?.info?.meta?.profile_image_url}');`
 							: ''}
 					/>
@@ -815,11 +815,11 @@
 									: rmsLevel * 100 > 1
 										? 'size-44'
 										: 'size-40'}  transition-all rounded-full {(model?.info?.meta
-								?.profile_image_url ?? '/static/bsdIcon.png') !== '/static/bsdIcon.png'
+								?.profile_image_url ?? '/static/aero-spx-icon.png') !== '/static/aero-spx-icon.png'
 								? ' bg-cover bg-center bg-no-repeat'
 								: 'bg-black dark:bg-white'} "
-							style={(model?.info?.meta?.profile_image_url ?? '/static/bsdIcon.png') !==
-							'/static/bsdIcon.png'
+							style={(model?.info?.meta?.profile_image_url ?? '/static/aero-spx-icon.png') !==
+							'/static/aero-spx-icon.png'
 								? `background-image: url('${model?.info?.meta?.profile_image_url}');`
 								: ''}
 						/>

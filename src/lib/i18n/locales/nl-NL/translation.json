@@ -633,9 +633,9 @@
 	"Open file": "Open bestand",
 	"Open in full screen": "Open in volledig scherm",
 	"Open new chat": "Open nieuwe chat",
-	"BSDXR WebUI uses faster-whisper internally.": "BSDXR WebUI gebruikt faster-whisper intern",
-	"BSDXR WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "BSDXR WebUI gebruikt SpeechT5 en CMU Arctic spreker-embeddings",
-	"BSDXR WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "BSDXR WebUI versie (v{{OPEN_WEBUI_VERSION}}) is kleiner dan de benodigde versie (v{{REQUIRED_VERSION}})",
+	"Aero SPX WebUI uses faster-whisper internally.": "Aero SPX WebUI gebruikt faster-whisper intern",
+	"Aero SPX WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "Aero SPX WebUI gebruikt SpeechT5 en CMU Arctic spreker-embeddings",
+	"Aero SPX WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Aero SPX WebUI versie (v{{OPEN_WEBUI_VERSION}}) is kleiner dan de benodigde versie (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "OpenAI API-configuratie",
@@ -1019,7 +1019,7 @@
 	"You're a helpful assistant.": "Je bent een behulpzame assistent.",
 	"You're now logged in.": "Je bent nu ingelogd.",
 	"Your account status is currently pending activation.": "Je accountstatus wacht nu op activatie",
-	"Your entire contribution will go directly to the plugin developer; BSDXR WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Je volledige bijdrage gaat direct naar de ontwikkelaar van de plugin; BSDXR WebUI neemt hier geen deel van. Het gekozen financieringsplatform kan echter wel zijn eigen kosten hebben.",
+	"Your entire contribution will go directly to the plugin developer; Aero SPX WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Je volledige bijdrage gaat direct naar de ontwikkelaar van de plugin; Aero SPX WebUI neemt hier geen deel van. Het gekozen financieringsplatform kan echter wel zijn eigen kosten hebben.",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Youtube-laderinstellingen"
 }

@@ -1,4 +1,4 @@
-# BSDXR WebUI 👋
+# Aero SPX WebUI 👋
 
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)
@@ -11,11 +11,11 @@
 [![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/tjbck)
 
-BSDXR WebUI is an [extensible](https://github.com/open-webui/pipelines), feature-rich, and user-friendly self-hosted WebUI designed to operate entirely offline. It supports various LLM runners, including Ollama and OpenAI-compatible APIs. For more information, be sure to check out our [BSDXR WebUI Documentation](https://docs.openwebui.com/).
+Aero SPX WebUI is an [extensible](https://github.com/open-webui/pipelines), feature-rich, and user-friendly self-hosted WebUI designed to operate entirely offline. It supports various LLM runners, including Ollama and OpenAI-compatible APIs. For more information, be sure to check out our [Aero SPX WebUI Documentation](https://docs.openwebui.com/).
 
-![BSDXR WebUI Demo](./demo.gif)
+![Aero SPX WebUI Demo](./demo.gif)
 
-## Key Features of BSDXR WebUI ⭐
+## Key Features of Aero SPX WebUI ⭐
 
 - 🚀 **Effortless Setup**: Install seamlessly using Docker or Kubernetes (kubectl, kustomize or helm) for a hassle-free experience with support for both `:ollama` and `:cuda` tagged images.
 
@@ -31,7 +31,7 @@ BSDXR WebUI is an [extensible](https://github.com/open-webui/pipelines), feature
 
 - 🎤📹 **Hands-Free Voice/Video Call**: Experience seamless communication with integrated hands-free voice and video call features, allowing for a more dynamic and interactive chat environment.
 
-- 🛠️ **Model Builder**: Easily create Ollama models via the Web UI. Create and add custom characters/agents, customize chat elements, and import models effortlessly through [BSDXR WebUI Community](https://openwebui.com/) integration.
+- 🛠️ **Model Builder**: Easily create Ollama models via the Web UI. Create and add custom characters/agents, customize chat elements, and import models effortlessly through [Aero SPX WebUI Community](https://openwebui.com/) integration.
 
 - 🐍 **Native Python Function Calling Tool**: Enhance your LLMs with built-in code editor support in the tools workspace. Bring Your Own Function (BYOF) by simply adding your pure Python functions, enabling seamless integration with LLMs.
 
@@ -47,50 +47,50 @@ BSDXR WebUI is an [extensible](https://github.com/open-webui/pipelines), feature
 
 - 🔐 **Role-Based Access Control (RBAC)**: Ensure secure access with restricted permissions; only authorized individuals can access your Ollama, and exclusive model creation/pulling rights are reserved for administrators.
 
-- 🌐🌍 **Multilingual Support**: Experience BSDXR WebUI in your preferred language with our internationalization (i18n) support. Join us in expanding our supported languages! We're actively seeking contributors!
+- 🌐🌍 **Multilingual Support**: Experience Aero SPX WebUI in your preferred language with our internationalization (i18n) support. Join us in expanding our supported languages! We're actively seeking contributors!
 
-- 🧩 **Pipelines, BSDXR WebUI Plugin Support**: Seamlessly integrate custom logic and Python libraries into BSDXR WebUI using [Pipelines Plugin Framework](https://github.com/open-webui/pipelines). Launch your Pipelines instance, set the OpenAI URL to the Pipelines URL, and explore endless possibilities. [Examples](https://github.com/open-webui/pipelines/tree/main/examples) include **Function Calling**, User **Rate Limiting** to control access, **Usage Monitoring** with tools like Langfuse, **Live Translation with LibreTranslate** for multilingual support, **Toxic Message Filtering** and much more.
+- 🧩 **Pipelines, Aero SPX WebUI Plugin Support**: Seamlessly integrate custom logic and Python libraries into Aero SPX WebUI using [Pipelines Plugin Framework](https://github.com/open-webui/pipelines). Launch your Pipelines instance, set the OpenAI URL to the Pipelines URL, and explore endless possibilities. [Examples](https://github.com/open-webui/pipelines/tree/main/examples) include **Function Calling**, User **Rate Limiting** to control access, **Usage Monitoring** with tools like Langfuse, **Live Translation with LibreTranslate** for multilingual support, **Toxic Message Filtering** and much more.
 
-- 🌟 **Continuous Updates**: We are committed to improving BSDXR WebUI with regular updates, fixes, and new features.
+- 🌟 **Continuous Updates**: We are committed to improving Aero SPX WebUI with regular updates, fixes, and new features.
 
-Want to learn more about BSDXR WebUI's features? Check out our [BSDXR WebUI documentation](https://docs.openwebui.com/features) for a comprehensive overview!
+Want to learn more about Aero SPX WebUI's features? Check out our [Aero SPX WebUI documentation](https://docs.openwebui.com/features) for a comprehensive overview!
 
-## 🔗 Also Check Out BSDXR WebUI Community!
+## 🔗 Also Check Out Aero SPX WebUI Community!
 
-Don't forget to explore our sibling project, [BSDXR WebUI Community](https://openwebui.com/), where you can discover, download, and explore customized Modelfiles. BSDXR WebUI Community offers a wide range of exciting possibilities for enhancing your chat interactions with BSDXR WebUI! 🚀
+Don't forget to explore our sibling project, [Aero SPX WebUI Community](https://openwebui.com/), where you can discover, download, and explore customized Modelfiles. Aero SPX WebUI Community offers a wide range of exciting possibilities for enhancing your chat interactions with Aero SPX WebUI! 🚀
 
 ## How to Install 🚀
 
 ### Installation via Python pip 🐍
 
-BSDXR WebUI can be installed using pip, the Python package installer. Before proceeding, ensure you're using **Python 3.11** to avoid compatibility issues.
+Aero SPX WebUI can be installed using pip, the Python package installer. Before proceeding, ensure you're using **Python 3.11** to avoid compatibility issues.
 
-1. **Install BSDXR WebUI**:
-   Open your terminal and run the following command to install BSDXR WebUI:
+1. **Install Aero SPX WebUI**:
+   Open your terminal and run the following command to install Aero SPX WebUI:
 
    ```bash
    pip install open-webui
    ```
 
-2. **Running BSDXR WebUI**:
-   After installation, you can start BSDXR WebUI by executing:
+2. **Running Aero SPX WebUI**:
+   After installation, you can start Aero SPX WebUI by executing:
 
    ```bash
    open-webui serve
    ```
 
-This will start the BSDXR WebUI server, which you can access at [http://localhost:8080](http://localhost:8080)
+This will start the Aero SPX WebUI server, which you can access at [http://localhost:8080](http://localhost:8080)
 
 ### Quick Start with Docker 🐳
 
 > [!NOTE]  
-> Please note that for certain Docker environments, additional configurations might be needed. If you encounter any connection issues, our detailed guide on [BSDXR WebUI Documentation](https://docs.openwebui.com/) is ready to assist you.
+> Please note that for certain Docker environments, additional configurations might be needed. If you encounter any connection issues, our detailed guide on [Aero SPX WebUI Documentation](https://docs.openwebui.com/) is ready to assist you.
 
 > [!WARNING]
-> When using Docker to install BSDXR WebUI, make sure to include the `-v open-webui:/app/backend/data` in your Docker command. This step is crucial as it ensures your database is properly mounted and prevents any loss of data.
+> When using Docker to install Aero SPX WebUI, make sure to include the `-v open-webui:/app/backend/data` in your Docker command. This step is crucial as it ensures your database is properly mounted and prevents any loss of data.
 
 > [!TIP]  
-> If you wish to utilize BSDXR WebUI with Ollama included or CUDA acceleration, we recommend utilizing our official images tagged with either `:cuda` or `:ollama`. To enable CUDA, you must install the [Nvidia CUDA container toolkit](https://docs.nvidia.com/dgx/nvidia-container-runtime-upgrade/) on your Linux/WSL system.
+> If you wish to utilize Aero SPX WebUI with Ollama included or CUDA acceleration, we recommend utilizing our official images tagged with either `:cuda` or `:ollama`. To enable CUDA, you must install the [Nvidia CUDA container toolkit](https://docs.nvidia.com/dgx/nvidia-container-runtime-upgrade/) on your Linux/WSL system.
 
 ### Installation with Default Configuration
 
@@ -108,7 +108,7 @@ This will start the BSDXR WebUI server, which you can access at [http://localhos
   docker run -d -p 3000:8080 -e OLLAMA_BASE_URL=https://example.com -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
   ```
 
-- **To run BSDXR WebUI with Nvidia GPU support**, use this command:
+- **To run Aero SPX WebUI with Nvidia GPU support**, use this command:
 
   ```bash
   docker run -d -p 3000:8080 --gpus all --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:cuda
@@ -122,9 +122,9 @@ This will start the BSDXR WebUI server, which you can access at [http://localhos
   docker run -d -p 3000:8080 -e OPENAI_API_KEY=your_secret_key -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
   ```
 
-### Installing BSDXR WebUI with Bundled Ollama Support
+### Installing Aero SPX WebUI with Bundled Ollama Support
 
-This installation method uses a single container image that bundles BSDXR WebUI with Ollama, allowing for a streamlined setup via a single command. Choose the appropriate command based on your hardware setup:
+This installation method uses a single container image that bundles Aero SPX WebUI with Ollama, allowing for a streamlined setup via a single command. Choose the appropriate command based on your hardware setup:
 
 - **With GPU Support**:
   Utilize GPU resources by running the following command:
@@ -140,19 +140,19 @@ This installation method uses a single container image that bundles BSDXR WebUI 
   docker run -d -p 3000:8080 -v ollama:/root/.ollama -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama
   ```
 
-Both commands facilitate a built-in, hassle-free installation of both BSDXR WebUI and Ollama, ensuring that you can get everything up and running swiftly.
+Both commands facilitate a built-in, hassle-free installation of both Aero SPX WebUI and Ollama, ensuring that you can get everything up and running swiftly.
 
-After installation, you can access BSDXR WebUI at [http://localhost:3000](http://localhost:3000). Enjoy! 😄
+After installation, you can access Aero SPX WebUI at [http://localhost:3000](http://localhost:3000). Enjoy! 😄
 
 ### Other Installation Methods
 
-We offer various installation alternatives, including non-Docker native installation methods, Docker Compose, Kustomize, and Helm. Visit our [BSDXR WebUI Documentation](https://docs.openwebui.com/getting-started/) or join our [Discord community](https://discord.gg/5rJgQTnV4s) for comprehensive guidance.
+We offer various installation alternatives, including non-Docker native installation methods, Docker Compose, Kustomize, and Helm. Visit our [Aero SPX WebUI Documentation](https://docs.openwebui.com/getting-started/) or join our [Discord community](https://discord.gg/5rJgQTnV4s) for comprehensive guidance.
 
 ### Troubleshooting
 
-Encountering connection issues? Our [BSDXR WebUI Documentation](https://docs.openwebui.com/troubleshooting/) has got you covered. For further assistance and to join our vibrant community, visit the [BSDXR WebUI Discord](https://discord.gg/5rJgQTnV4s).
+Encountering connection issues? Our [Aero SPX WebUI Documentation](https://docs.openwebui.com/troubleshooting/) has got you covered. For further assistance and to join our vibrant community, visit the [Aero SPX WebUI Discord](https://discord.gg/5rJgQTnV4s).
 
-#### BSDXR WebUI: Server Connection Error
+#### Aero SPX WebUI: Server Connection Error
 
 If you're experiencing connection issues, it’s often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container . Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
 
@@ -172,7 +172,7 @@ docker run --rm --volume /var/run/docker.sock:/var/run/docker.sock containrrr/wa
 
 In the last part of the command, replace `open-webui` with your container name if it is different.
 
-Check our Migration Guide available in our [BSDXR WebUI Documentation](https://docs.openwebui.com/tutorials/migration/).
+Check our Migration Guide available in our [Aero SPX WebUI Documentation](https://docs.openwebui.com/tutorials/migration/).
 
 ### Using the Dev Branch 🌙
 
@@ -187,7 +187,7 @@ docker run -d -p 3000:8080 -v open-webui:/app/backend/data --name open-webui --a
 
 ## What's Next? 🌟
 
-Discover upcoming features on our roadmap in the [BSDXR WebUI Documentation](https://docs.openwebui.com/roadmap/).
+Discover upcoming features on our roadmap in the [Aero SPX WebUI Documentation](https://docs.openwebui.com/roadmap/).
 
 ## License 📜
 
@@ -196,7 +196,7 @@ This project is licensed under the [MIT License](LICENSE) - see the [LICENSE](LI
 ## Support 💬
 
 If you have any questions, suggestions, or need assistance, please open an issue or join our
-[BSDXR WebUI Discord community](https://discord.gg/5rJgQTnV4s) to connect with us! 🤝
+[Aero SPX WebUI Discord community](https://discord.gg/5rJgQTnV4s) to connect with us! 🤝
 
 ## Star History
 
@@ -210,4 +210,4 @@ If you have any questions, suggestions, or need assistance, please open an issue
 
 ---
 
-Created by [Timothy Jaeryang Baek](https://github.com/tjbck) - Let's make BSDXR WebUI even more amazing together! 💪
+Created by [Timothy Jaeryang Baek](https://github.com/tjbck) - Let's make Aero SPX WebUI even more amazing together! 💪

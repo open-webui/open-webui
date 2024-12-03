@@ -477,11 +477,11 @@ load_oauth_providers()
 
 STATIC_DIR = Path(os.getenv("STATIC_DIR", OPEN_WEBUI_DIR / "static")).resolve()
 
-frontend_favicon = FRONTEND_BUILD_DIR / "static" / "bsdIcon.png"
+frontend_favicon = FRONTEND_BUILD_DIR / "static" / "aero-spx-icon.png"
 
 if frontend_favicon.exists():
     try:
-        shutil.copyfile(frontend_favicon, STATIC_DIR / "bsdIcon.png")
+        shutil.copyfile(frontend_favicon, STATIC_DIR / "aero-spx-icon.png")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
 else:
@@ -518,7 +518,7 @@ if CUSTOM_NAME:
 
                 r = requests.get(url, stream=True)
                 if r.status_code == 200:
-                    with open(f"{STATIC_DIR}/bsdIcon.png", "wb") as f:
+                    with open(f"{STATIC_DIR}/aero-spx-icon.png", "wb") as f:
                         r.raw.decode_content = True
                         shutil.copyfileobj(r.raw, f)
 
@@ -603,7 +603,7 @@ if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
 if ENV == "prod":
     if OLLAMA_BASE_URL == "/ollama" and not K8S_FLAG:
         if USE_OLLAMA_DOCKER.lower() == "true":
-            # if you use all-in-one docker container (BSDXR WebUI + Ollama)
+            # if you use all-in-one docker container (Aero SPX WebUI + Ollama)
             # with the docker build arg USE_OLLAMA=true (--build-arg="USE_OLLAMA=true") this only works with http://localhost:11434
             OLLAMA_BASE_URL = "http://localhost:11434"
         else:
@@ -829,7 +829,7 @@ DEFAULT_ARENA_MODEL = {
     "id": "arena-model",
     "name": "Arena Model",
     "meta": {
-        "profile_image_url": "/bsdIcon.png",
+        "profile_image_url": "/aero-spx-icon.png",
         "description": "Submit your questions to anonymous AI chatbots and vote on the best response.",
         "model_ids": None,
     },

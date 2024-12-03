@@ -30,7 +30,7 @@
 				...modelInfo,
 				meta: {
 					...modelInfo.meta,
-					profile_image_url: modelInfo.meta.profile_image_url ?? '/static/bsdIcon.png',
+					profile_image_url: modelInfo.meta.profile_image_url ?? '/static/aero-spx-icon.png',
 					suggestion_prompts: modelInfo.meta.suggestion_prompts
 						? modelInfo.meta.suggestion_prompts.filter((prompt) => prompt.content !== '')
 						: null

@@ -206,7 +206,7 @@
 						href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
 						target="_blank"
 					>
-						Help us translate BSDXR WebUI!
+						Help us translate Aero SPX WebUI!
 					</a>
 				</div>
 			{/if}

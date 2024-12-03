@@ -33,7 +33,7 @@
 		}
 	};
 
-	let profileImageUrl = '/bsdIcon.png';
+	let profileImageUrl = '/aero-spx-icon.png';
 	let description = '';
 
 	let selectedModelId = '';
@@ -88,7 +88,7 @@
 
 		name = '';
 		id = '';
-		profileImageUrl = '/bsdIcon.png';
+		profileImageUrl = '/aero-spx-icon.png';
 		description = '';
 		modelIds = [];
 		selectedModelId = '';

@@ -325,7 +325,7 @@
 												placement="top-start"
 											>
 												<img
-													src={item.model?.info?.meta?.profile_image_url ?? '/static/bsdIcon.png'}
+													src={item.model?.info?.meta?.profile_image_url ?? '/static/aero-spx-icon.png'}
 													alt="Model"
 													class="rounded-full size-5 flex items-center mr-2"
 												/>

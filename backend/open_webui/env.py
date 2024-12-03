@@ -99,13 +99,13 @@ for source in log_sources:
 log.setLevel(SRC_LOG_LEVELS["CONFIG"])
 
 
-WEBUI_NAME = os.environ.get("WEBUI_NAME", "BSDXR WebUI")
-if WEBUI_NAME != "BSDXR WebUI":
-    WEBUI_NAME += " (BSDXR WebUI)"
+WEBUI_NAME = os.environ.get("WEBUI_NAME", "Aero SPX WebUI")
+if WEBUI_NAME != "Aero SPX WebUI":
+    WEBUI_NAME += " (Aero SPX WebUI)"
 
 WEBUI_URL = os.environ.get("WEBUI_URL", "http://localhost:3000")
 
-WEBUI_FAVICON_URL = "https://openwebui.com/bsdIcon.png"
+WEBUI_FAVICON_URL = "https://openwebui.com/aero-spx-icon.png"
 
 
 ####################################
