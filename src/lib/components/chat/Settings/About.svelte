@@ -105,5 +105,15 @@
 		{/if}
 
 		<hr class=" dark:border-gray-850" />
+    
+    <div class="flex space-x-1">
+      {$i18n.t('For more information visit ')}
+      <br/>
+			<a
+				class=" text-gray-500 dark:text-gray-300 font-medium"
+				href="https://www.aerospx.com/"
+				target="_blank">https://www.aerospx.com/</a
+			>
+    </div>
 	</div>
 </div>
