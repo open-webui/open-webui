@@ -634,17 +634,18 @@ async def handle_streaming_response(
                         }
                     )
                     buffered_content = ""
+
                 tool_calls_text = (
-                    tool_calls
+                    extract_json(tool_calls)
                     if isinstance(tool_calls, str)
-                    else json.dumps(tool_calls)
+                    else tool_calls
                 )
                 body["messages"].append(
                     {
                         "role": "assistant",
                         "content": "",
                         "refusal": None,
-                        "tool_calls": tool_calls_text,
+                        "tool_calls": tool_calls,
                     }
                 )
 
