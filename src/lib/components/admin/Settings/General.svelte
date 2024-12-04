@@ -112,6 +112,12 @@
 					</div>
 				</div>
 
+				<div class="  flex w-full justify-between pr-2">
+					<div class=" self-center text-xs font-medium">{$i18n.t('Enable API Key Auth')}</div>
+
+					<Switch bind:state={adminConfig.ENABLE_API_KEY} />
+				</div>
+
 				<hr class=" border-gray-50 dark:border-gray-850 my-2" />
 
 				<div class="my-3 flex w-full items-center justify-between pr-2">

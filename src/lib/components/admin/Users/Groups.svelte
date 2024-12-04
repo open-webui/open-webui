@@ -7,15 +7,29 @@
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import { WEBUI_NAME, config, user, showSidebar } from '$lib/stores';
+	import { WEBUI_NAME, config, user, showSidebar, knowledge } from '$lib/stores';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
+	import Badge from '$lib/components/common/Badge.svelte';
+	import UsersSolid from '$lib/components/icons/UsersSolid.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import User from '$lib/components/icons/User.svelte';
+	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
+	import GroupModal from './Groups/EditGroupModal.svelte';
+	import Pencil from '$lib/components/icons/Pencil.svelte';
+	import GroupItem from './Groups/GroupItem.svelte';
+	import AddGroupModal from './Groups/AddGroupModal.svelte';
+	import { createNewGroup, getGroups } from '$lib/apis/groups';
+	import { getUserDefaultPermissions, updateUserDefaultPermissions } from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
 
 	let loaded = false;
+
+	export let users = [];
 
 	let groups = [];
 	let filteredGroups;
@@ -31,20 +45,69 @@
 	});
 
 	let search = '';
+	let defaultPermissions = {
+		workspace: {
+			models: false,
+			knowledge: false,
+			prompts: false,
+			tools: false
+		},
+		chat: {
+			file_upload: true,
+			delete: true,
+			edit: true,
+			temporary: true
+		}
+	};
 
 	let showCreateGroupModal = false;
+	let showDefaultPermissionsModal = false;
+
+	const setGroups = async () => {
+		groups = await getGroups(localStorage.token);
+	};
+
+	const addGroupHandler = async (group) => {
+		const res = await createNewGroup(localStorage.token, group).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Group created successfully'));
+			groups = await getGroups(localStorage.token);
+		}
+	};
+
+	const updateDefaultPermissionsHandler = async (group) => {
+		console.log(group.permissions);
+
+		const res = await updateUserDefaultPermissions(localStorage.token, group.permissions).catch(
+			(error) => {
+				toast.error(error);
+				return null;
+			}
+		);
+
+		if (res) {
+			toast.success($i18n.t('Default permissions updated successfully'));
+			defaultPermissions = await getUserDefaultPermissions(localStorage.token);
+		}
+	};
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
 			await goto('/');
 		} else {
-			groups = [];
+			await setGroups();
+			defaultPermissions = await getUserDefaultPermissions(localStorage.token);
 		}
 		loaded = true;
 	});
 </script>
 
 {#if loaded}
+	<AddGroupModal bind:show={showCreateGroupModal} onSubmit={addGroupHandler} />
 	<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
 		<div class="flex md:self-center text-lg font-medium px-0.5">
 			{$i18n.t('Groups')}
@@ -117,7 +180,58 @@
 				</div>
 			</div>
 		{:else}
-			<div></div>
+			<div>
+				<div class=" flex items-center gap-3 justify-between text-xs uppercase px-1 font-bold">
+					<div class="w-full">Group</div>
+
+					<div class="w-full">Users</div>
+
+					<div class="w-full"></div>
+				</div>
+
+				<hr class="mt-1.5 border-gray-50 dark:border-gray-850" />
+
+				{#each filteredGroups as group}
+					<div class="my-2">
+						<GroupItem {group} {users} {setGroups} />
+					</div>
+				{/each}
+			</div>
 		{/if}
+
+		<hr class="mb-2 border-gray-50 dark:border-gray-850" />
+
+		<GroupModal
+			bind:show={showDefaultPermissionsModal}
+			tabs={['permissions']}
+			bind:permissions={defaultPermissions}
+			custom={false}
+			onSubmit={updateDefaultPermissionsHandler}
+		/>
+
+		<button
+			class="flex items-center justify-between rounded-lg w-full transition pt-1"
+			on:click={() => {
+				showDefaultPermissionsModal = true;
+			}}
+		>
+			<div class="flex items-center gap-2.5">
+				<div class="p-1.5 bg-black/5 dark:bg-white/10 rounded-full">
+					<UsersSolid className="size-4" />
+				</div>
+
+				<div class="text-left">
+					<div class=" text-sm font-medium">{$i18n.t('Default permissions')}</div>
+
+					<div class="flex text-xs mt-0.5">
+						{$i18n.t('applies to all users with the "user" role')}
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<ChevronRight strokeWidth="2.5" />
+			</div>
+		</button>
 	</div>
 {/if}

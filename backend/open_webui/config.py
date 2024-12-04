@@ -265,6 +265,13 @@ class AppConfig:
 # WEBUI_AUTH (Required for security)
 ####################################
 
+ENABLE_API_KEY = PersistentConfig(
+    "ENABLE_API_KEY",
+    "auth.api_key.enable",
+    os.environ.get("ENABLE_API_KEY", "True").lower() == "true",
+)
+
+
 JWT_EXPIRES_IN = PersistentConfig(
     "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "-1")
 )
@@ -576,6 +583,12 @@ OLLAMA_API_BASE_URL = os.environ.get(
 )
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
+if OLLAMA_BASE_URL:
+    # Remove trailing slash
+    OLLAMA_BASE_URL = (
+        OLLAMA_BASE_URL[:-1] if OLLAMA_BASE_URL.endswith("/") else OLLAMA_BASE_URL
+    )
+
 
 K8S_FLAG = os.environ.get("K8S_FLAG", "")
 USE_OLLAMA_DOCKER = os.environ.get("USE_OLLAMA_DOCKER", "false")
@@ -689,6 +702,7 @@ ENABLE_LOGIN_FORM = PersistentConfig(
     os.environ.get("ENABLE_LOGIN_FORM", "True").lower() == "true",
 )
 
+
 DEFAULT_LOCALE = PersistentConfig(
     "DEFAULT_LOCALE",
     "ui.default_locale",
@@ -733,18 +747,47 @@ DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
     ],
 )
 
+MODEL_ORDER_LIST = PersistentConfig(
+    "MODEL_ORDER_LIST",
+    "ui.model_order_list",
+    [],
+)
+
 DEFAULT_USER_ROLE = PersistentConfig(
     "DEFAULT_USER_ROLE",
     "ui.default_user_role",
     os.getenv("DEFAULT_USER_ROLE", "pending"),
 )
 
-USER_PERMISSIONS_CHAT_DELETION = (
-    os.environ.get("USER_PERMISSIONS_CHAT_DELETION", "True").lower() == "true"
+USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS", "False").lower()
+    == "true"
 )
 
-USER_PERMISSIONS_CHAT_EDITING = (
-    os.environ.get("USER_PERMISSIONS_CHAT_EDITING", "True").lower() == "true"
+USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS", "False").lower()
+    == "true"
+)
+
+USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS", "False").lower()
+    == "true"
+)
+
+USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS", "False").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_FILE_UPLOAD = (
+    os.environ.get("USER_PERMISSIONS_CHAT_FILE_UPLOAD", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_DELETE = (
+    os.environ.get("USER_PERMISSIONS_CHAT_DELETE", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_EDIT = (
+    os.environ.get("USER_PERMISSIONS_CHAT_EDIT", "True").lower() == "true"
 )
 
 USER_PERMISSIONS_CHAT_TEMPORARY = (
@@ -753,13 +796,20 @@ USER_PERMISSIONS_CHAT_TEMPORARY = (
 
 USER_PERMISSIONS = PersistentConfig(
     "USER_PERMISSIONS",
-    "ui.user_permissions",
+    "user.permissions",
     {
+        "workspace": {
+            "models": USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS,
+            "knowledge": USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS,
+            "prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS,
+            "tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS,
+        },
         "chat": {
-            "deletion": USER_PERMISSIONS_CHAT_DELETION,
-            "editing": USER_PERMISSIONS_CHAT_EDITING,
+            "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
+            "delete": USER_PERMISSIONS_CHAT_DELETE,
+            "edit": USER_PERMISSIONS_CHAT_EDIT,
             "temporary": USER_PERMISSIONS_CHAT_TEMPORARY,
-        }
+        },
     },
 )
 
@@ -784,18 +834,6 @@ DEFAULT_ARENA_MODEL = {
         "model_ids": None,
     },
 }
-
-ENABLE_MODEL_FILTER = PersistentConfig(
-    "ENABLE_MODEL_FILTER",
-    "model_filter.enable",
-    os.environ.get("ENABLE_MODEL_FILTER", "False").lower() == "true",
-)
-MODEL_FILTER_LIST = os.environ.get("MODEL_FILTER_LIST", "")
-MODEL_FILTER_LIST = PersistentConfig(
-    "MODEL_FILTER_LIST",
-    "model_filter.list",
-    [model.strip() for model in MODEL_FILTER_LIST.split(";")],
-)
 
 WEBHOOK_URL = PersistentConfig(
     "WEBHOOK_URL", "webhook_url", os.environ.get("WEBHOOK_URL", "")
@@ -922,19 +960,110 @@ ENABLE_TAGS_GENERATION = PersistentConfig(
     os.environ.get("ENABLE_TAGS_GENERATION", "True").lower() == "true",
 )
 
-ENABLE_SEARCH_QUERY = PersistentConfig(
-    "ENABLE_SEARCH_QUERY",
-    "task.search.enable",
-    os.environ.get("ENABLE_SEARCH_QUERY", "True").lower() == "true",
+
+ENABLE_SEARCH_QUERY_GENERATION = PersistentConfig(
+    "ENABLE_SEARCH_QUERY_GENERATION",
+    "task.query.search.enable",
+    os.environ.get("ENABLE_SEARCH_QUERY_GENERATION", "True").lower() == "true",
+)
+
+ENABLE_RETRIEVAL_QUERY_GENERATION = PersistentConfig(
+    "ENABLE_RETRIEVAL_QUERY_GENERATION",
+    "task.query.retrieval.enable",
+    os.environ.get("ENABLE_RETRIEVAL_QUERY_GENERATION", "True").lower() == "true",
 )
 
 
-SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
-    "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE",
-    "task.search.prompt_template",
-    os.environ.get("SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE", ""),
+QUERY_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "QUERY_GENERATION_PROMPT_TEMPLATE",
+    "task.query.prompt_template",
+    os.environ.get("QUERY_GENERATION_PROMPT_TEMPLATE", ""),
 )
 
+DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE = """### Task:
+Analyze the chat history to determine the necessity of generating search queries, in the given language. By default, **prioritize generating 1-3 broad and relevant search queries** unless it is absolutely certain that no additional information is required. The aim is to retrieve comprehensive, updated, and valuable information even with minimal uncertainty. If no search is unequivocally needed, return an empty list.
+
+### Guidelines:
+- Respond **EXCLUSIVELY** with a JSON object. Any form of extra commentary, explanation, or additional text is strictly prohibited.
+- When generating search queries, respond in the format: { "queries": ["query1", "query2"] }, ensuring each query is distinct, concise, and relevant to the topic.
+- If and only if it is entirely certain that no useful results can be retrieved by a search, return: { "queries": [] }.
+- Err on the side of suggesting search queries if there is **any chance** they might provide useful or updated information.
+- Be concise and focused on composing high-quality search queries, avoiding unnecessary elaboration, commentary, or assumptions.
+- Today's date is: {{CURRENT_DATE}}.
+- Always prioritize providing actionable and broad queries that maximize informational coverage.
+
+### Output:
+Strictly return in JSON format: 
+{
+  "queries": ["query1", "query2"]
+}
+
+### Chat History:
+<chat_history>
+{{MESSAGES:END:6}}
+</chat_history>
+"""
+
+ENABLE_AUTOCOMPLETE_GENERATION = PersistentConfig(
+    "ENABLE_AUTOCOMPLETE_GENERATION",
+    "task.autocomplete.enable",
+    os.environ.get("ENABLE_AUTOCOMPLETE_GENERATION", "True").lower() == "true",
+)
+
+AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = PersistentConfig(
+    "AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH",
+    "task.autocomplete.input_max_length",
+    int(os.environ.get("AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH", "-1")),
+)
+
+AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE",
+    "task.autocomplete.prompt_template",
+    os.environ.get("AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE", ""),
+)
+
+
+DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = """### Task:
+You are an autocompletion system. Continue the text in `<text>` based on the **completion type** in `<type>` and the given language.  
+
+### **Instructions**:
+1. Analyze `<text>` for context and meaning.  
+2. Use `<type>` to guide your output:  
+   - **General**: Provide a natural, concise continuation.  
+   - **Search Query**: Complete as if generating a realistic search query.  
+3. Start as if you are directly continuing `<text>`. Do **not** repeat, paraphrase, or respond as a model. Simply complete the text.  
+4. Ensure the continuation:
+   - Flows naturally from `<text>`.  
+   - Avoids repetition, overexplaining, or unrelated ideas.  
+5. If unsure, return: `{ "text": "" }`.  
+
+### **Output Rules**:
+- Respond only in JSON format: `{ "text": "<your_completion>" }`.
+
+### **Examples**:
+#### Example 1:  
+Input:  
+<type>General</type>  
+<text>The sun was setting over the horizon, painting the sky</text>  
+Output:  
+{ "text": "with vibrant shades of orange and pink." }
+
+#### Example 2:  
+Input:  
+<type>Search Query</type>  
+<text>Top-rated restaurants in</text>  
+Output:  
+{ "text": "New York City for Italian cuisine." }  
+
+---
+### Context:
+<chat_history>
+{{MESSAGES:END:6}}
+</chat_history>
+<type>{{TYPE}}</type>  
+<text>{{PROMPT}}</text>  
+#### Output:
+"""
 
 TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
     "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE",
@@ -974,6 +1103,7 @@ MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
 
 # Qdrant
 QDRANT_URI = os.environ.get("QDRANT_URI", None)
+QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
 
 # OpenSearch
 OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
@@ -1124,20 +1254,31 @@ CHUNK_OVERLAP = PersistentConfig(
     int(os.environ.get("CHUNK_OVERLAP", "100")),
 )
 
-DEFAULT_RAG_TEMPLATE = """You are given a user query, some textual context and rules, all inside xml tags. You have to answer the query based on the context while respecting the rules.
+DEFAULT_RAG_TEMPLATE = """### Task:
+Respond to the user query using the provided context, incorporating inline citations in the format [source_id] **only when the <source_id> tag is explicitly provided** in the context.
+
+### Guidelines:
+- If you don't know the answer, clearly state that.
+- If uncertain, ask the user for clarification.
+- Respond in the same language as the user's query.
+- If the context is unreadable or of poor quality, inform the user and provide the best possible answer.
+- If the answer isn't present in the context but you possess the knowledge, explain this to the user and provide the answer using your own understanding.
+- **Only include inline citations using [source_id] when a <source_id> tag is explicitly provided in the context.**  
+- Do not cite if the <source_id> tag is not provided in the context.  
+- Do not use XML tags in your response.
+- Ensure citations are concise and directly related to the information provided.
+
+### Example of Citation:
+If the user asks about a specific topic and the information is found in "whitepaper.pdf" with a provided <source_id>, the response should include the citation like so:  
+* "According to the study, the proposed method increases efficiency by 20% [whitepaper.pdf]."
+If no <source_id> is present, the response should omit the citation.
+
+### Output:
+Provide a clear and direct response to the user's query, including inline citations in the format [source_id] only when the <source_id> tag is present in the context.
 
 <context>
 {{CONTEXT}}
 </context>
-
-<rules>
-- If you don't know, just say so.
-- If you are not sure, ask for clarification.
-- Answer in the same language as the user query.
-- If the context appears unreadable or of poor quality, tell the user then answer as best as you can.
-- If the answer is not in the context but you think you know the answer, explain that to the user then answer with your own knowledge.
-- Answer directly and without using xml tags.
-</rules>
 
 <user_query>
 {{QUERY}}
@@ -1161,6 +1302,19 @@ RAG_OPENAI_API_KEY = PersistentConfig(
     os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY),
 )
 
+RAG_OLLAMA_BASE_URL = PersistentConfig(
+    "RAG_OLLAMA_BASE_URL",
+    "rag.ollama.url",
+    os.getenv("RAG_OLLAMA_BASE_URL", OLLAMA_BASE_URL),
+)
+
+RAG_OLLAMA_API_KEY = PersistentConfig(
+    "RAG_OLLAMA_API_KEY",
+    "rag.ollama.key",
+    os.getenv("RAG_OLLAMA_API_KEY", ""),
+)
+
+
 ENABLE_RAG_LOCAL_WEB_FETCH = (
     os.getenv("ENABLE_RAG_LOCAL_WEB_FETCH", "False").lower() == "true"
 )
@@ -1169,6 +1323,12 @@ YOUTUBE_LOADER_LANGUAGE = PersistentConfig(
     "YOUTUBE_LOADER_LANGUAGE",
     "rag.youtube_loader_language",
     os.getenv("YOUTUBE_LOADER_LANGUAGE", "en").split(","),
+)
+
+YOUTUBE_LOADER_PROXY_URL = PersistentConfig(
+    "YOUTUBE_LOADER_PROXY_URL",
+    "rag.youtube_loader_proxy_url",
+    os.getenv("YOUTUBE_LOADER_PROXY_URL", ""),
 )
 
 
@@ -1218,6 +1378,12 @@ BRAVE_SEARCH_API_KEY = PersistentConfig(
     "BRAVE_SEARCH_API_KEY",
     "rag.web.search.brave_search_api_key",
     os.getenv("BRAVE_SEARCH_API_KEY", ""),
+)
+
+MOJEEK_SEARCH_API_KEY = PersistentConfig(
+    "MOJEEK_SEARCH_API_KEY",
+    "rag.web.search.mojeek_search_api_key",
+    os.getenv("MOJEEK_SEARCH_API_KEY", ""),
 )
 
 SERPSTACK_API_KEY = PersistentConfig(

@@ -64,7 +64,7 @@
 		};
 		done: boolean;
 		error?: boolean | { content: string };
-		citations?: string[];
+		sources?: string[];
 		code_executions?: {
 			uuid: string;
 			name: string;
@@ -340,19 +340,16 @@
 
 	let feedbackLoading = false;
 
-	const feedbackHandler = async (
-		rating: number | null = null,
-		annotation: object | null = null
-	) => {
+	const feedbackHandler = async (rating: number | null = null, details: object | null = null) => {
 		feedbackLoading = true;
-		console.log('Feedback', rating, annotation);
+		console.log('Feedback', rating, details);
 
 		const updatedMessage = {
 			...message,
 			annotation: {
 				...(message?.annotation ?? {}),
 				...(rating !== null ? { rating: rating } : {}),
-				...(annotation ? annotation : {})
+				...(details ? details : {})
 			}
 		};
 
@@ -429,7 +426,7 @@
 
 		await tick();
 
-		if (!annotation) {
+		if (!details) {
 			showRateComment = true;
 
 			if (!updatedMessage.annotation?.tags) {
@@ -624,9 +621,18 @@
 									<ContentRenderer
 										id={message.id}
 										content={message.content}
+										sources={message.sources}
 										floatingButtons={message?.done}
 										save={!readOnly}
 										{model}
+										onSourceClick={(e) => {
+											console.log(e);
+											const sourceButton = document.getElementById(`source-${e}`);
+
+											if (sourceButton) {
+												sourceButton.click();
+											}
+										}}
 										on:update={(e) => {
 											const { raw, oldContent, newContent } = e.detail;
 
@@ -652,12 +658,12 @@
 									/>
 								{/if}
 
-								{#if message.error}
+								{#if message?.error}
 									<Error content={message?.error?.content ?? message.content} />
 								{/if}
 
-								{#if message.citations}
-									<Citations citations={message.citations} />
+								{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
+									<Citations sources={message?.sources ?? message?.citations} />
 								{/if}
 
 								{#if message.code_executions}
@@ -729,7 +735,7 @@
 
 							{#if message.done}
 								{#if !readOnly}
-									{#if $user.role === 'user' ? ($config?.permissions?.chat?.editing ?? true) : true}
+									{#if $user.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
 										<Tooltip content={$i18n.t('Edit')} placement="bottom">
 											<button
 												class="{isLastMessage
@@ -1125,19 +1131,17 @@
 												showRateComment = false;
 												regenerateResponse(message);
 
-												(model?.actions ?? [])
-													.filter((action) => action?.__webui__ ?? false)
-													.forEach((action) => {
-														dispatch('action', {
-															id: action.id,
-															event: {
-																id: 'regenerate-response',
-																data: {
-																	messageId: message.id
-																}
+												(model?.actions ?? []).forEach((action) => {
+													dispatch('action', {
+														id: action.id,
+														event: {
+															id: 'regenerate-response',
+															data: {
+																messageId: message.id
 															}
-														});
+														}
 													});
+												});
 											}}
 										>
 											<svg
@@ -1166,7 +1170,7 @@
 														? 'visible'
 														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 													on:click={() => {
-														actionMessage(action.id);
+														actionMessage(action.id, message);
 													}}
 												>
 													{#if action.icon_url}
@@ -1196,9 +1200,7 @@
 							bind:show={showRateComment}
 							on:save={async (e) => {
 								await feedbackHandler(null, {
-									tags: e.detail.tags,
-									comment: e.detail.comment,
-									reason: e.detail.reason
+									...e.detail
 								});
 							}}
 						/>

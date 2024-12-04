@@ -5,11 +5,7 @@
 
 	import { models, settings } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
-	import {
-		copyToClipboard as _copyToClipboard,
-		processResponseContent,
-		replaceTokens
-	} from '$lib/utils';
+	import { copyToClipboard as _copyToClipboard } from '$lib/utils';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';

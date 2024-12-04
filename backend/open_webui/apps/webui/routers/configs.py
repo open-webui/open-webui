@@ -1,10 +1,12 @@
-from open_webui.config import BannerModel
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
+
+from typing import Optional
+
 from open_webui.utils.utils import get_admin_user, get_verified_user
-
-
 from open_webui.config import get_config, save_config
+from open_webui.config import BannerModel
+
 
 router = APIRouter()
 
@@ -34,8 +36,32 @@ async def export_config(user=Depends(get_admin_user)):
     return get_config()
 
 
-class SetDefaultModelsForm(BaseModel):
-    models: str
+############################
+# SetDefaultModels
+############################
+class ModelsConfigForm(BaseModel):
+    DEFAULT_MODELS: Optional[str]
+    MODEL_ORDER_LIST: Optional[list[str]]
+
+
+@router.get("/models", response_model=ModelsConfigForm)
+async def get_models_config(request: Request, user=Depends(get_admin_user)):
+    return {
+        "DEFAULT_MODELS": request.app.state.config.DEFAULT_MODELS,
+        "MODEL_ORDER_LIST": request.app.state.config.MODEL_ORDER_LIST,
+    }
+
+
+@router.post("/models", response_model=ModelsConfigForm)
+async def set_models_config(
+    request: Request, form_data: ModelsConfigForm, user=Depends(get_admin_user)
+):
+    request.app.state.config.DEFAULT_MODELS = form_data.DEFAULT_MODELS
+    request.app.state.config.MODEL_ORDER_LIST = form_data.MODEL_ORDER_LIST
+    return {
+        "DEFAULT_MODELS": request.app.state.config.DEFAULT_MODELS,
+        "MODEL_ORDER_LIST": request.app.state.config.MODEL_ORDER_LIST,
+    }
 
 
 class PromptSuggestion(BaseModel):
@@ -47,21 +73,8 @@ class SetDefaultSuggestionsForm(BaseModel):
     suggestions: list[PromptSuggestion]
 
 
-############################
-# SetDefaultModels
-############################
-
-
-@router.post("/default/models", response_model=str)
-async def set_global_default_models(
-    request: Request, form_data: SetDefaultModelsForm, user=Depends(get_admin_user)
-):
-    request.app.state.config.DEFAULT_MODELS = form_data.models
-    return request.app.state.config.DEFAULT_MODELS
-
-
-@router.post("/default/suggestions", response_model=list[PromptSuggestion])
-async def set_global_default_suggestions(
+@router.post("/suggestions", response_model=list[PromptSuggestion])
+async def set_default_suggestions(
     request: Request,
     form_data: SetDefaultSuggestionsForm,
     user=Depends(get_admin_user),

@@ -9,6 +9,7 @@
 	import Minus from '$lib/components/icons/Minus.svelte';
 	import PencilSolid from '$lib/components/icons/PencilSolid.svelte';
 	import { toast } from 'svelte-sonner';
+	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 
 	export let show = false;
 	export let edit = false;
@@ -38,6 +39,8 @@
 	let selectedModelId = '';
 	let modelIds = [];
 	let filterMode = 'include';
+
+	let accessControl = {};
 
 	let imageInputElement;
 	let loading = false;
@@ -74,7 +77,8 @@
 				profile_image_url: profileImageUrl,
 				description: description || null,
 				model_ids: modelIds.length > 0 ? modelIds : null,
-				filter_mode: modelIds.length > 0 ? (filterMode ? filterMode : null) : null
+				filter_mode: modelIds.length > 0 ? (filterMode ? filterMode : null) : null,
+				access_control: accessControl
 			}
 		};
 
@@ -98,6 +102,7 @@
 			description = model.meta.description;
 			modelIds = model.meta.model_ids || [];
 			filterMode = model.meta?.filter_mode ?? 'include';
+			accessControl = 'access_control' in model.meta ? model.meta.access_control : {};
 		}
 	};
 
@@ -283,6 +288,14 @@
 
 						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
+						<div class="my-2 -mx-2">
+							<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+								<AccessControl bind:accessControl />
+							</div>
+						</div>
+
+						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+
 						<div class="flex flex-col w-full">
 							<div class="mb-1 flex justify-between">
 								<div class="text-xs text-gray-500">{$i18n.t('Models')}</div>
@@ -362,7 +375,7 @@
 					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
 						{#if edit}
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-900 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+								class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-950 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
 								type="button"
 								on:click={() => {
 									dispatch('delete', model);
@@ -374,7 +387,7 @@
 						{/if}
 
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
+							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-950 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
 								? ' cursor-not-allowed'
 								: ''}"
 							type="submit"

@@ -203,15 +203,22 @@ class ChatTable:
     def update_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
         try:
             with get_db() as db:
-                print("update_shared_chat_by_id")
                 chat = db.get(Chat, chat_id)
-                print(chat)
-                chat.title = chat.title
-                chat.chat = chat.chat
-                db.commit()
-                db.refresh(chat)
+                shared_chat = (
+                    db.query(Chat).filter_by(user_id=f"shared-{chat_id}").first()
+                )
 
-                return self.get_chat_by_id(chat.share_id)
+                if shared_chat is None:
+                    return self.insert_shared_chat_by_chat_id(chat_id)
+
+                shared_chat.title = chat.title
+                shared_chat.chat = chat.chat
+
+                shared_chat.updated_at = int(time.time())
+                db.commit()
+                db.refresh(shared_chat)
+
+                return ChatModel.model_validate(shared_chat)
         except Exception:
             return None
 

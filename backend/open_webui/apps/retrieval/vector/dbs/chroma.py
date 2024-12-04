@@ -27,7 +27,9 @@ class ChromaClient:
         if CHROMA_CLIENT_AUTH_PROVIDER is not None:
             settings_dict["chroma_client_auth_provider"] = CHROMA_CLIENT_AUTH_PROVIDER
         if CHROMA_CLIENT_AUTH_CREDENTIALS is not None:
-            settings_dict["chroma_client_auth_credentials"] = CHROMA_CLIENT_AUTH_CREDENTIALS
+            settings_dict["chroma_client_auth_credentials"] = (
+                CHROMA_CLIENT_AUTH_CREDENTIALS
+            )
 
         if CHROMA_HTTP_HOST != "":
             self.client = chromadb.HttpClient(

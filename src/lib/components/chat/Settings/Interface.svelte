@@ -31,6 +31,7 @@
 	let defaultModelId = '';
 	let showUsername = false;
 	let richTextInput = true;
+	let largeTextAsFile = false;
 
 	let landingPageMode = '';
 	let chatBubble = true;
@@ -139,6 +140,11 @@
 		saveSettings({ richTextInput });
 	};
 
+	const toggleLargeTextAsFile = async () => {
+		largeTextAsFile = !largeTextAsFile;
+		saveSettings({ largeTextAsFile });
+	};
+
 	const toggleResponseAutoCopy = async () => {
 		const permission = await navigator.clipboard
 			.readText()
@@ -188,6 +194,8 @@
 		voiceInterruption = $settings.voiceInterruption ?? false;
 
 		richTextInput = $settings.richTextInput ?? true;
+		largeTextAsFile = $settings.largeTextAsFile ?? false;
+
 		landingPageMode = $settings.landingPageMode ?? '';
 		chatBubble = $settings.chatBubble ?? true;
 		widescreenMode = $settings.widescreenMode ?? false;
@@ -472,6 +480,28 @@
 						type="button"
 					>
 						{#if richTextInput === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">
+						{$i18n.t('Paste Large Text as File')}
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleLargeTextAsFile();
+						}}
+						type="button"
+					>
+						{#if largeTextAsFile === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>

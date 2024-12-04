@@ -38,7 +38,9 @@
 			};
 		});
 		if (mergedDocuments.every((doc) => doc.distance !== undefined)) {
-			mergedDocuments.sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
+			mergedDocuments = mergedDocuments.sort(
+				(a, b) => (b.distance ?? Infinity) - (a.distance ?? Infinity)
+			);
 		}
 	}
 </script>

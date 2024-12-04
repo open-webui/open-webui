@@ -44,7 +44,9 @@ class PgvectorClient:
 
             self.session = Session
         else:
-            engine = create_engine(PGVECTOR_DB_URL, pool_pre_ping=True, poolclass=NullPool)
+            engine = create_engine(
+                PGVECTOR_DB_URL, pool_pre_ping=True, poolclass=NullPool
+            )
             SessionLocal = sessionmaker(
                 autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
             )

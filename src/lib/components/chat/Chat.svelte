@@ -34,7 +34,8 @@
 		mobile,
 		showOverview,
 		chatTitle,
-		showArtifacts
+		showArtifacts,
+		tools
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -65,7 +66,7 @@
 	import {
 		chatCompleted,
 		generateTitle,
-		generateSearchQuery,
+		generateQueries,
 		chatAction,
 		generateMoACompletion,
 		generateTags
@@ -78,6 +79,7 @@
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
+	import { getTools } from '$lib/apis/tools';
 
 	export let chatIdProp = '';
 
@@ -153,6 +155,26 @@
 		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
 	};
 
+	$: if (selectedModels) {
+		setToolIds();
+	}
+
+	const setToolIds = async () => {
+		if (!$tools) {
+			tools.set(await getTools(localStorage.token));
+		}
+
+		if (selectedModels.length !== 1) {
+			return;
+		}
+		const model = $models.find((m) => m.id === selectedModels[0]);
+		if (model) {
+			selectedToolIds = (model?.info?.meta?.toolIds ?? []).filter((id) =>
+				$tools.find((t) => t.id === id)
+			);
+		}
+	};
+
 	const showMessage = async (message) => {
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 		let _messageId = JSON.parse(JSON.stringify(message.id));
@@ -194,7 +216,7 @@
 				} else {
 					message.statusHistory = [data];
 				}
-			} else if (type === 'citation') {
+			} else if (type === 'source' || type === 'citation') {
 				if (data?.type === 'code_execution') {
 					// Code execution; update existing code execution by ID, or add new one.
 					if (!message?.code_executions) {
@@ -213,11 +235,11 @@
 
 					message.code_executions = message.code_executions;
 				} else {
-					// Regular citation.
-					if (message?.citations) {
-						message.citations.push(data);
+					// Regular source.
+					if (message?.sources) {
+						message.sources.push(data);
 					} else {
-						message.citations = [data];
+						message.sources = [data];
 					}
 				}
 			} else if (type === 'message') {
@@ -480,8 +502,6 @@
 			}
 		}
 
-		console.log(selectedModels);
-
 		await showControls.set(false);
 		await showCallOverlay.set(false);
 		await showOverview.set(false);
@@ -643,7 +663,8 @@
 				role: m.role,
 				content: m.content,
 				info: m.info ? m.info : undefined,
-				timestamp: m.timestamp
+				timestamp: m.timestamp,
+				...(m.sources ? { sources: m.sources } : {})
 			})),
 			chat_id: chatId,
 			session_id: $socket?.id,
@@ -696,7 +717,8 @@
 				role: m.role,
 				content: m.content,
 				info: m.info ? m.info : undefined,
-				timestamp: m.timestamp
+				timestamp: m.timestamp,
+				...(m.sources ? { sources: m.sources } : {})
 			})),
 			...(event ? { event: event } : {}),
 			chat_id: chatId,
@@ -815,9 +837,12 @@
 		console.log('submitPrompt', userPrompt, $chatId);
 
 		const messages = createMessagesList(history.currentId);
-		selectedModels = selectedModels.map((modelId) =>
+		const _selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
+		if (JSON.stringify(selectedModels) !== JSON.stringify(_selectedModels)) {
+			selectedModels = _selectedModels;
+		}
 
 		if (userPrompt === '') {
 			toast.error($i18n.t('Please enter a prompt'));
@@ -863,11 +888,10 @@
 		await tick();
 
 		// Reset chat input textarea
-		const chatInputContainer = document.getElementById('chat-input-container');
+		const chatInputElement = document.getElementById('chat-input');
 
-		if (chatInputContainer) {
-			chatInputContainer.value = '';
-			chatInputContainer.style.height = '';
+		if (chatInputElement) {
+			chatInputElement.style.height = '';
 		}
 
 		const _files = JSON.parse(JSON.stringify(files));
@@ -1253,8 +1277,8 @@
 								console.log(line);
 								let data = JSON.parse(line);
 
-								if ('citations' in data) {
-									responseMessage.citations = data.citations;
+								if ('sources' in data) {
+									responseMessage.sources = data.sources;
 									// Only remove status if it was initially set
 									if (model?.info?.meta?.knowledge ?? false) {
 										responseMessage.statusHistory = responseMessage.statusHistory.filter(
@@ -1607,7 +1631,7 @@
 					const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
 
 					for await (const update of textStream) {
-						const { value, done, citations, selectedModelId, error, usage } = update;
+						const { value, done, sources, selectedModelId, error, usage } = update;
 						if (error) {
 							await handleOpenAIError(error, null, model, responseMessage);
 							break;
@@ -1633,8 +1657,8 @@
 							continue;
 						}
 
-						if (citations) {
-							responseMessage.citations = citations;
+						if (sources) {
+							responseMessage.sources = sources;
 							// Only remove status if it was initially set
 							if (model?.info?.meta?.knowledge ?? false) {
 								responseMessage.statusHistory = responseMessage.statusHistory.filter(
@@ -1913,7 +1937,7 @@
 			if (res && res.ok && res.body) {
 				const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
 				for await (const update of textStream) {
-					const { value, done, citations, error, usage } = update;
+					const { value, done, sources, error, usage } = update;
 					if (error || done) {
 						break;
 					}
@@ -1952,7 +1976,7 @@
 				}
 			);
 
-			return title;
+			return title ? title : (lastUserMessage?.content ?? 'New Chat');
 		} else {
 			return lastUserMessage?.content ?? 'New Chat';
 		}
@@ -2010,6 +2034,7 @@
 		parentId: string,
 		responseMessageId: string
 	) => {
+		// TODO: move this to the backend
 		const responseMessage = history.messages[responseMessageId];
 		const userMessage = history.messages[parentId];
 		const messages = createMessagesList(history.currentId);
@@ -2024,17 +2049,17 @@
 		history.messages[responseMessageId] = responseMessage;
 
 		const prompt = userMessage.content;
-		let searchQuery = await generateSearchQuery(
+		let queries = await generateQueries(
 			localStorage.token,
 			model,
 			messages.filter((message) => message?.content?.trim()),
 			prompt
 		).catch((error) => {
 			console.log(error);
-			return prompt;
+			return [prompt];
 		});
 
-		if (!searchQuery || searchQuery == '') {
+		if (queries.length === 0) {
 			responseMessage.statusHistory.push({
 				done: true,
 				error: true,
@@ -2044,6 +2069,8 @@
 			history.messages[responseMessageId] = responseMessage;
 			return;
 		}
+
+		const searchQuery = queries[0];
 
 		responseMessage.statusHistory.push({
 			done: false,
@@ -2257,7 +2284,7 @@
 							</div>
 						</div>
 
-						<div class=" pb-[1.6rem]">
+						<div class=" pb-[1rem]">
 							<MessageInput
 								{history}
 								{selectedModels}
@@ -2267,13 +2294,6 @@
 								bind:selectedToolIds
 								bind:webSearchEnabled
 								bind:atSelectedModel
-								availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
-									const model = $models.find((m) => m.id === e);
-									if (model?.info?.meta?.toolIds ?? false) {
-										return [...new Set([...a, ...model.info.meta.toolIds])];
-									}
-									return a;
-								}, [])}
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								{stopResponse}
 								{createMessagePair}
@@ -2289,15 +2309,19 @@
 								on:submit={async (e) => {
 									if (e.detail) {
 										await tick();
-										submitPrompt(e.detail.replaceAll('\n\n', '\n'));
+										submitPrompt(
+											($settings?.richTextInput ?? true)
+												? e.detail.replaceAll('\n\n', '\n')
+												: e.detail
+										);
 									}
 								}}
 							/>
 
 							<div
-								class="absolute bottom-1.5 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
+								class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
 							>
-								{$i18n.t('LLMs can make mistakes. Verify important information.')}
+								<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
 							</div>
 						</div>
 					{:else}
@@ -2311,13 +2335,6 @@
 								bind:selectedToolIds
 								bind:webSearchEnabled
 								bind:atSelectedModel
-								availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
-									const model = $models.find((m) => m.id === e);
-									if (model?.info?.meta?.toolIds ?? false) {
-										return [...new Set([...a, ...model.info.meta.toolIds])];
-									}
-									return a;
-								}, [])}
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								{stopResponse}
 								{createMessagePair}
@@ -2333,7 +2350,11 @@
 								on:submit={async (e) => {
 									if (e.detail) {
 										await tick();
-										submitPrompt(e.detail.replaceAll('\n\n', '\n'));
+										submitPrompt(
+											($settings?.richTextInput ?? true)
+												? e.detail.replaceAll('\n\n', '\n')
+												: e.detail
+										);
 									}
 								}}
 							/>

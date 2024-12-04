@@ -8,7 +8,11 @@ import { TTS_RESPONSE_SPLIT } from '$lib/types';
 // Helper functions
 //////////////////////////
 
-export const replaceTokens = (content, char, user) => {
+function escapeRegExp(string: string): string {
+	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export const replaceTokens = (content, sourceIds, char, user) => {
 	const charToken = /{{char}}/gi;
 	const userToken = /{{user}}/gi;
 	const videoIdToken = /{{VIDEO_FILE_ID_([a-f0-9-]+)}}/gi; // Regex to capture the video ID
@@ -35,6 +39,20 @@ export const replaceTokens = (content, char, user) => {
 		const htmlUrl = `${WEBUI_BASE_URL}/api/v1/files/${fileId}/content/html`;
 		return `<iframe src="${htmlUrl}" width="100%" frameborder="0" onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"></iframe>`;
 	});
+
+	// Remove sourceIds from the content and replace them with <source_id>...</source_id>
+	if (Array.isArray(sourceIds)) {
+		sourceIds.forEach((sourceId) => {
+			// Escape special characters in the sourceId
+			const escapedSourceId = escapeRegExp(sourceId);
+
+			// Create a token based on the exact `[sourceId]` string
+			const sourceToken = `\\[${escapedSourceId}\\]`; // Escape special characters for RegExp
+			const sourceRegex = new RegExp(sourceToken, 'g'); // Match all occurrences of [sourceId]
+
+			content = content.replace(sourceRegex, `<source_id data="${sourceId}" />`);
+		});
+	}
 
 	return content;
 };
