@@ -1642,7 +1642,6 @@ async def generate_chat_completions(
     model_list = await get_all_models()
     models = {model["id"]: model for model in model_list}
 
-    log.info(f"smonux: {form_data=}")
     model_id = form_data["model"]
     if model_id not in models:
         raise HTTPException(
