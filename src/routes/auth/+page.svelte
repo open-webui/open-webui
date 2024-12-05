@@ -40,10 +40,10 @@
 			let fetched_config = await getBackendConfig();
 			await config.set(fetched_config);
 
-			if (fetched_config.enable_user_count_websocket_updates){
+			if (fetched_config.enable_user_count_websocket_updates) {
 				$socket.emit('user-join', { auth: { token: sessionUser.token } });
 			}
-			
+
 			goto('/');
 		}
 	};

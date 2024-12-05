@@ -1853,6 +1853,5 @@ ENABLE_USAGE_WEBSOCKET_UPDATES = PersistentConfig(
 ENABLE_USER_COUNT_WEBSOCKET_UPDATES = PersistentConfig(
     "ENABLE_USER_COUNT_WEBSOCKET_UPDATES",
     "websocket.user_count.enable",
-    os.getenv("ENABLE_USER_COUNT_WEBSOCKET_UPDATES", "True").lower() == "true")
- 
+    os.getenv("ENABLE_USER_COUNT_WEBSOCKET_UPDATES", "True").lower() == "true",
 )

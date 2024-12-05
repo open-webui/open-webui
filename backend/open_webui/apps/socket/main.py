@@ -15,11 +15,13 @@ from open_webui.env import (
 from open_webui.utils.utils import decode_token
 from open_webui.apps.socket.utils import RedisDict
 
-from open_webui.config import ENABLE_USER_COUNT_WEBSOCKET_UPDATES, ENABLE_USAGE_WEBSOCKET_UPDATES
+from open_webui.config import (
+    ENABLE_USER_COUNT_WEBSOCKET_UPDATES,
+    ENABLE_USAGE_WEBSOCKET_UPDATES,
+)
 from open_webui.env import (
     GLOBAL_LOG_LEVEL,
     SRC_LOG_LEVELS,
-
 )
 
 
@@ -145,7 +147,6 @@ async def connect(sid, environ, auth):
                 await sio.emit("user-count", {"count": len(USER_POOL.items())})
             if ENABLE_USAGE_WEBSOCKET_UPDATES.value:
                 await sio.emit("usage", {"models": get_models_in_use()})
-
 
 
 @sio.on("user-join")

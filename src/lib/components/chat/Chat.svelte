@@ -1051,11 +1051,8 @@
 					config.subscribe(async (new_config) => {
 						if (new_config?.features.enable_usage_websocket_updates) {
 							chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
-						}
-						else {
-								if (chatEventEmitter) clearInterval(chatEventEmitter);
-						}
-					})
+						} else if (chatEventEmitter) clearInterval(chatEventEmitter);
+					});
 
 					scrollToBottom();
 					if (webSearchEnabled) {
@@ -1069,7 +1066,6 @@
 						_response = await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
 					}
 					_responses.push(_response);
-
 				} else {
 					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 				}
