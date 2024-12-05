@@ -146,6 +146,7 @@ from open_webui.utils.utils import (
     get_verified_user,
 )
 from open_webui.utils.access_control import has_access
+from open_webui.utils.cas import cas_manager
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -2731,6 +2732,20 @@ async def oauth_login(provider: str, request: Request):
 @app.get("/oauth/{provider}/callback")
 async def oauth_callback(provider: str, request: Request, response: Response):
     return await oauth_manager.handle_callback(provider, request, response)
+
+
+############################
+# CAS Login & Callback
+############################
+
+@app.get("/cas/login")
+async def cas_login(request: Request):
+    return cas_manager.handle_login(request)
+
+@app.get("/cas/callback")
+async def cas_callback(request: Request, response: Response):
+    return await cas_manager.handle_callback(request, response)
+
 
 
 @app.get("/manifest.json")

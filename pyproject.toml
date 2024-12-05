@@ -102,7 +102,9 @@ dependencies = [
 
     "googleapis-common-protos==1.63.2",
 
-    "ldap3==2.9.1"
+    "ldap3==2.9.1",
+
+    "python-cas==1.6.0"
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.12.0a1"

@@ -404,6 +404,32 @@
 							</div>
 						{/if}
 
+						<!-- CAS -->
+						{#if true}
+							<div class="inline-flex items-center justify-center w-full">
+								<hr class="w-32 h-px my-4 border-0 dark:bg-gray-100/10 bg-gray-700/10" />
+								{#if $config?.features.enable_login_form || $config?.features.enable_ldap}
+									<span
+										class="px-3 text-sm font-medium text-gray-900 dark:text-white bg-transparent"
+										>{$i18n.t('or')}</span
+									>
+								{/if}
+
+								<hr class="w-32 h-px my-4 border-0 dark:bg-gray-100/10 bg-gray-700/10" />
+							</div>
+							<div class="flex flex-col space-y-2">
+								<button
+									class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
+									on:click={() => {
+										window.location.href = `${WEBUI_BASE_URL}/cas/login`;
+									}}
+								>
+									
+									<span>{$i18n.t('Continue with {{provider}}', { provider: 'CAS' })}</span>
+								</button>
+							</div>
+						{/if}
+
 						{#if $config?.features.enable_ldap && $config?.features.enable_login_form}
 							<div class="mt-2">
 								<button
