@@ -8,24 +8,11 @@ import { TTS_RESPONSE_SPLIT } from '$lib/types';
 // Helper functions
 //////////////////////////
 
-const convertLatexToSingleLine = (content) => {
-	// Patterns to match multiline LaTeX blocks
-	const patterns = [
-		/(\$\$\s[\s\S]*?\s\$\$)/g, // Match $$ ... $$
-		/(\\\[[\s\S]*?\\\])/g, // Match \[ ... \]
-		/(\\begin\{[a-z]+\}[\s\S]*?\\end\{[a-z]+\})/g // Match \begin{...} ... \end{...}
-	];
+function escapeRegExp(string: string): string {
+	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
-	patterns.forEach((pattern) => {
-		content = content.replace(pattern, (match) => {
-			return match.replace(/\s*\n\s*/g, ' ').trim();
-		});
-	});
-
-	return content;
-};
-
-export const replaceTokens = (content, char, user) => {
+export const replaceTokens = (content, sourceIds, char, user) => {
 	const charToken = /{{char}}/gi;
 	const userToken = /{{user}}/gi;
 	const videoIdToken = /{{VIDEO_FILE_ID_([a-f0-9-]+)}}/gi; // Regex to capture the video ID
@@ -49,9 +36,23 @@ export const replaceTokens = (content, char, user) => {
 
 	// Replace HTML ID tags with corresponding HTML content
 	content = content.replace(htmlIdToken, (match, fileId) => {
-		const htmlUrl = `${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`;
+		const htmlUrl = `${WEBUI_BASE_URL}/api/v1/files/${fileId}/content/html`;
 		return `<iframe src="${htmlUrl}" width="100%" frameborder="0" onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"></iframe>`;
 	});
+
+	// Remove sourceIds from the content and replace them with <source_id>...</source_id>
+	if (Array.isArray(sourceIds)) {
+		sourceIds.forEach((sourceId) => {
+			// Escape special characters in the sourceId
+			const escapedSourceId = escapeRegExp(sourceId);
+
+			// Create a token based on the exact `[sourceId]` string
+			const sourceToken = `\\[${escapedSourceId}\\]`; // Escape special characters for RegExp
+			const sourceRegex = new RegExp(sourceToken, 'g'); // Match all occurrences of [sourceId]
+
+			content = content.replace(sourceRegex, `<source_id data="${sourceId}" />`);
+		});
+	}
 
 	return content;
 };
@@ -68,7 +69,6 @@ export const sanitizeResponseContent = (content: string) => {
 };
 
 export const processResponseContent = (content: string) => {
-	content = convertLatexToSingleLine(content);
 	return content.trim();
 };
 
@@ -291,18 +291,34 @@ export const findWordIndices = (text) => {
 };
 
 export const removeLastWordFromString = (inputString, wordString) => {
-	// Split the string into an array of words
-	const words = inputString.split(' ');
+	console.log('inputString', inputString);
+	// Split the string by newline characters to handle lines separately
+	const lines = inputString.split('\n');
 
-	if (words.at(-1) === wordString) {
-		words.pop();
+	// Take the last line to operate only on it
+	const lastLine = lines.pop();
+
+	// Split the last line into an array of words
+	const words = lastLine.split(' ');
+
+	// Conditional to check for the last word removal
+	if (words.at(-1) === wordString || (wordString === '' && words.at(-1) === '\\#')) {
+		words.pop(); // Remove last word if condition is satisfied
 	}
 
-	// Join the remaining words back into a string
-	let resultString = words.join(' ');
-	if (resultString !== '') {
-		resultString += ' ';
+	// Join the remaining words back into a string and handle space correctly
+	let updatedLastLine = words.join(' ');
+
+	// Add a trailing space to the updated last line if there are still words
+	if (updatedLastLine !== '') {
+		updatedLastLine += ' ';
 	}
+
+	// Combine the lines together again, placing the updated last line back in
+	const resultString = [...lines, updatedLastLine].join('\n');
+
+	// Return the final string
+	console.log('resultString', resultString);
 
 	return resultString;
 };
@@ -462,7 +478,7 @@ const convertOpenAIMessages = (convo) => {
 };
 
 const validateChat = (chat) => {
-	// Because ChatGPT sometimes has features we can't use like DALL-E or migh have corrupted messages, need to validate
+	// Because ChatGPT sometimes has features we can't use like DALL-E or might have corrupted messages, need to validate
 	const messages = chat.messages;
 
 	// Check if messages array is empty
@@ -664,6 +680,15 @@ export const promptTemplate = (
 		hour12: true
 	});
 
+	// Get the current weekday
+	const currentWeekday = getWeekday();
+
+	// Get the user's timezone
+	const currentTimezone = getUserTimezone();
+
+	// Get the user's language
+	const userLanguage = localStorage.getItem('locale') || 'en-US';
+
 	// Replace {{CURRENT_DATETIME}} in the template with the formatted datetime
 	template = template.replace('{{CURRENT_DATETIME}}', `${formattedDate} ${currentTime}`);
 
@@ -672,6 +697,15 @@ export const promptTemplate = (
 
 	// Replace {{CURRENT_TIME}} in the template with the formatted time
 	template = template.replace('{{CURRENT_TIME}}', currentTime);
+
+	// Replace {{CURRENT_WEEKDAY}} in the template with the current weekday
+	template = template.replace('{{CURRENT_WEEKDAY}}', currentWeekday);
+
+	// Replace {{CURRENT_TIMEZONE}} in the template with the user's timezone
+	template = template.replace('{{CURRENT_TIMEZONE}}', currentTimezone);
+
+	// Replace {{USER_LANGUAGE}} in the template with the user's language
+	template = template.replace('{{USER_LANGUAGE}}', userLanguage);
 
 	if (user_name) {
 		// Replace {{USER_NAME}} in the template with the user's name
@@ -829,6 +863,66 @@ export const bestMatchingLanguage = (supportedLanguages, preferredLanguages, def
 		.map((prefLang) => languages.find((lang) => lang.startsWith(prefLang)))
 		.find(Boolean);
 
-	console.log(languages, preferredLanguages, match, defaultLocale);
 	return match || defaultLocale;
+};
+
+// Get the date in the format YYYY-MM-DD
+export const getFormattedDate = () => {
+	const date = new Date();
+	return date.toISOString().split('T')[0];
+};
+
+// Get the time in the format HH:MM:SS
+export const getFormattedTime = () => {
+	const date = new Date();
+	return date.toTimeString().split(' ')[0];
+};
+
+// Get the current date and time in the format YYYY-MM-DD HH:MM:SS
+export const getCurrentDateTime = () => {
+	return `${getFormattedDate()} ${getFormattedTime()}`;
+};
+
+// Get the user's timezone
+export const getUserTimezone = () => {
+	return Intl.DateTimeFormat().resolvedOptions().timeZone;
+};
+
+// Get the weekday
+export const getWeekday = () => {
+	const date = new Date();
+	const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+	return weekdays[date.getDay()];
+};
+
+export const createMessagesList = (history, messageId) => {
+	if (messageId === null) {
+		return [];
+	}
+
+	const message = history.messages[messageId];
+	if (message?.parentId) {
+		return [...createMessagesList(history, message.parentId), message];
+	} else {
+		return [message];
+	}
+};
+
+export const formatFileSize = (size) => {
+	if (size == null) return 'Unknown size';
+	if (typeof size !== 'number' || size < 0) return 'Invalid size';
+	if (size === 0) return '0 B';
+	const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+	let unitIndex = 0;
+
+	while (size >= 1024 && unitIndex < units.length - 1) {
+		size /= 1024;
+		unitIndex++;
+	}
+	return `${size.toFixed(1)} ${units[unitIndex]}`;
+};
+
+export const getLineCount = (text) => {
+	console.log(typeof text);
+	return text ? text.split('\n').length : 0;
 };

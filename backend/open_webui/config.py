@@ -20,6 +20,7 @@ from open_webui.env import (
     WEBUI_FAVICON_URL,
     WEBUI_NAME,
     log,
+    DATABASE_URL,
 )
 from pydantic import BaseModel
 from sqlalchemy import JSON, Column, DateTime, Integer, func
@@ -84,6 +85,12 @@ def save_to_db(data):
             existing_config.data = data
             existing_config.updated_at = datetime.now()
             db.add(existing_config)
+        db.commit()
+
+
+def reset_config():
+    with get_db() as db:
+        db.query(Config).delete()
         db.commit()
 
 
@@ -258,6 +265,13 @@ class AppConfig:
 # WEBUI_AUTH (Required for security)
 ####################################
 
+ENABLE_API_KEY = PersistentConfig(
+    "ENABLE_API_KEY",
+    "auth.api_key.enable",
+    os.environ.get("ENABLE_API_KEY", "True").lower() == "true",
+)
+
+
 JWT_EXPIRES_IN = PersistentConfig(
     "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "-1")
 )
@@ -377,7 +391,7 @@ OAUTH_USERNAME_CLAIM = PersistentConfig(
 )
 
 OAUTH_PICTURE_CLAIM = PersistentConfig(
-    "OAUTH_USERNAME_CLAIM",
+    "OAUTH_PICTURE_CLAIM",
     "oauth.oidc.avatar_claim",
     os.environ.get("OAUTH_PICTURE_CLAIM", "picture"),
 )
@@ -386,6 +400,33 @@ OAUTH_EMAIL_CLAIM = PersistentConfig(
     "OAUTH_EMAIL_CLAIM",
     "oauth.oidc.email_claim",
     os.environ.get("OAUTH_EMAIL_CLAIM", "email"),
+)
+
+ENABLE_OAUTH_ROLE_MANAGEMENT = PersistentConfig(
+    "ENABLE_OAUTH_ROLE_MANAGEMENT",
+    "oauth.enable_role_mapping",
+    os.environ.get("ENABLE_OAUTH_ROLE_MANAGEMENT", "False").lower() == "true",
+)
+
+OAUTH_ROLES_CLAIM = PersistentConfig(
+    "OAUTH_ROLES_CLAIM",
+    "oauth.roles_claim",
+    os.environ.get("OAUTH_ROLES_CLAIM", "roles"),
+)
+
+OAUTH_ALLOWED_ROLES = PersistentConfig(
+    "OAUTH_ALLOWED_ROLES",
+    "oauth.allowed_roles",
+    [
+        role.strip()
+        for role in os.environ.get("OAUTH_ALLOWED_ROLES", "user,admin").split(",")
+    ],
+)
+
+OAUTH_ADMIN_ROLES = PersistentConfig(
+    "OAUTH_ADMIN_ROLES",
+    "oauth.admin_roles",
+    [role.strip() for role in os.environ.get("OAUTH_ADMIN_ROLES", "admin").split(",")],
 )
 
 
@@ -501,6 +542,18 @@ if CUSTOM_NAME:
 
 
 ####################################
+# STORAGE PROVIDER
+####################################
+
+STORAGE_PROVIDER = os.environ.get("STORAGE_PROVIDER", "")  # defaults to local, s3
+
+S3_ACCESS_KEY_ID = os.environ.get("S3_ACCESS_KEY_ID", None)
+S3_SECRET_ACCESS_KEY = os.environ.get("S3_SECRET_ACCESS_KEY", None)
+S3_REGION_NAME = os.environ.get("S3_REGION_NAME", None)
+S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", None)
+S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", None)
+
+####################################
 # File Upload DIR
 ####################################
 
@@ -515,34 +568,9 @@ Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 CACHE_DIR = f"{DATA_DIR}/cache"
 Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
 
-
-####################################
-# Docs DIR
-####################################
-
-DOCS_DIR = os.getenv("DOCS_DIR", f"{DATA_DIR}/docs")
-Path(DOCS_DIR).mkdir(parents=True, exist_ok=True)
-
-
-####################################
-# Tools DIR
-####################################
-
-TOOLS_DIR = os.getenv("TOOLS_DIR", f"{DATA_DIR}/tools")
-Path(TOOLS_DIR).mkdir(parents=True, exist_ok=True)
-
-
-####################################
-# Functions DIR
-####################################
-
-FUNCTIONS_DIR = os.getenv("FUNCTIONS_DIR", f"{DATA_DIR}/functions")
-Path(FUNCTIONS_DIR).mkdir(parents=True, exist_ok=True)
-
 ####################################
 # OLLAMA_BASE_URL
 ####################################
-
 
 ENABLE_OLLAMA_API = PersistentConfig(
     "ENABLE_OLLAMA_API",
@@ -555,15 +583,11 @@ OLLAMA_API_BASE_URL = os.environ.get(
 )
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
-AIOHTTP_CLIENT_TIMEOUT = os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "")
-
-if AIOHTTP_CLIENT_TIMEOUT == "":
-    AIOHTTP_CLIENT_TIMEOUT = None
-else:
-    try:
-        AIOHTTP_CLIENT_TIMEOUT = int(AIOHTTP_CLIENT_TIMEOUT)
-    except Exception:
-        AIOHTTP_CLIENT_TIMEOUT = 300
+if OLLAMA_BASE_URL:
+    # Remove trailing slash
+    OLLAMA_BASE_URL = (
+        OLLAMA_BASE_URL[:-1] if OLLAMA_BASE_URL.endswith("/") else OLLAMA_BASE_URL
+    )
 
 
 K8S_FLAG = os.environ.get("K8S_FLAG", "")
@@ -594,6 +618,12 @@ OLLAMA_BASE_URLS = OLLAMA_BASE_URLS if OLLAMA_BASE_URLS != "" else OLLAMA_BASE_U
 OLLAMA_BASE_URLS = [url.strip() for url in OLLAMA_BASE_URLS.split(";")]
 OLLAMA_BASE_URLS = PersistentConfig(
     "OLLAMA_BASE_URLS", "ollama.base_urls", OLLAMA_BASE_URLS
+)
+
+OLLAMA_API_CONFIGS = PersistentConfig(
+    "OLLAMA_API_CONFIGS",
+    "ollama.api_configs",
+    {},
 )
 
 ####################################
@@ -636,15 +666,20 @@ OPENAI_API_BASE_URLS = PersistentConfig(
     "OPENAI_API_BASE_URLS", "openai.api_base_urls", OPENAI_API_BASE_URLS
 )
 
-OPENAI_API_KEY = ""
+OPENAI_API_CONFIGS = PersistentConfig(
+    "OPENAI_API_CONFIGS",
+    "openai.api_configs",
+    {},
+)
 
+# Get the actual OpenAI API key based on the base URL
+OPENAI_API_KEY = ""
 try:
     OPENAI_API_KEY = OPENAI_API_KEYS.value[
         OPENAI_API_BASE_URLS.value.index("https://api.openai.com/v1")
     ]
 except Exception:
     pass
-
 OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
 ####################################
@@ -666,6 +701,7 @@ ENABLE_LOGIN_FORM = PersistentConfig(
     "ui.ENABLE_LOGIN_FORM",
     os.environ.get("ENABLE_LOGIN_FORM", "True").lower() == "true",
 )
+
 
 DEFAULT_LOCALE = PersistentConfig(
     "DEFAULT_LOCALE",
@@ -711,18 +747,47 @@ DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
     ],
 )
 
+MODEL_ORDER_LIST = PersistentConfig(
+    "MODEL_ORDER_LIST",
+    "ui.model_order_list",
+    [],
+)
+
 DEFAULT_USER_ROLE = PersistentConfig(
     "DEFAULT_USER_ROLE",
     "ui.default_user_role",
     os.getenv("DEFAULT_USER_ROLE", "pending"),
 )
 
-USER_PERMISSIONS_CHAT_DELETION = (
-    os.environ.get("USER_PERMISSIONS_CHAT_DELETION", "True").lower() == "true"
+USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS", "False").lower()
+    == "true"
 )
 
-USER_PERMISSIONS_CHAT_EDITING = (
-    os.environ.get("USER_PERMISSIONS_CHAT_EDITING", "True").lower() == "true"
+USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS", "False").lower()
+    == "true"
+)
+
+USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS", "False").lower()
+    == "true"
+)
+
+USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS", "False").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_FILE_UPLOAD = (
+    os.environ.get("USER_PERMISSIONS_CHAT_FILE_UPLOAD", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_DELETE = (
+    os.environ.get("USER_PERMISSIONS_CHAT_DELETE", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_EDIT = (
+    os.environ.get("USER_PERMISSIONS_CHAT_EDIT", "True").lower() == "true"
 )
 
 USER_PERMISSIONS_CHAT_TEMPORARY = (
@@ -731,27 +796,44 @@ USER_PERMISSIONS_CHAT_TEMPORARY = (
 
 USER_PERMISSIONS = PersistentConfig(
     "USER_PERMISSIONS",
-    "ui.user_permissions",
+    "user.permissions",
     {
+        "workspace": {
+            "models": USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS,
+            "knowledge": USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS,
+            "prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS,
+            "tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS,
+        },
         "chat": {
-            "deletion": USER_PERMISSIONS_CHAT_DELETION,
-            "editing": USER_PERMISSIONS_CHAT_EDITING,
+            "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
+            "delete": USER_PERMISSIONS_CHAT_DELETE,
+            "edit": USER_PERMISSIONS_CHAT_EDIT,
             "temporary": USER_PERMISSIONS_CHAT_TEMPORARY,
-        }
+        },
     },
 )
 
-ENABLE_MODEL_FILTER = PersistentConfig(
-    "ENABLE_MODEL_FILTER",
-    "model_filter.enable",
-    os.environ.get("ENABLE_MODEL_FILTER", "False").lower() == "true",
+
+ENABLE_EVALUATION_ARENA_MODELS = PersistentConfig(
+    "ENABLE_EVALUATION_ARENA_MODELS",
+    "evaluation.arena.enable",
+    os.environ.get("ENABLE_EVALUATION_ARENA_MODELS", "True").lower() == "true",
 )
-MODEL_FILTER_LIST = os.environ.get("MODEL_FILTER_LIST", "")
-MODEL_FILTER_LIST = PersistentConfig(
-    "MODEL_FILTER_LIST",
-    "model_filter.list",
-    [model.strip() for model in MODEL_FILTER_LIST.split(";")],
+EVALUATION_ARENA_MODELS = PersistentConfig(
+    "EVALUATION_ARENA_MODELS",
+    "evaluation.arena.models",
+    [],
 )
+
+DEFAULT_ARENA_MODEL = {
+    "id": "arena-model",
+    "name": "Arena Model",
+    "meta": {
+        "profile_image_url": "/favicon.png",
+        "description": "Submit your questions to anonymous AI chatbots and vote on the best response.",
+        "model_ids": None,
+    },
+}
 
 WEBHOOK_URL = PersistentConfig(
     "WEBHOOK_URL", "webhook_url", os.environ.get("WEBHOOK_URL", "")
@@ -866,19 +948,122 @@ TITLE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     os.environ.get("TITLE_GENERATION_PROMPT_TEMPLATE", ""),
 )
 
-ENABLE_SEARCH_QUERY = PersistentConfig(
-    "ENABLE_SEARCH_QUERY",
-    "task.search.enable",
-    os.environ.get("ENABLE_SEARCH_QUERY", "True").lower() == "true",
+TAGS_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "TAGS_GENERATION_PROMPT_TEMPLATE",
+    "task.tags.prompt_template",
+    os.environ.get("TAGS_GENERATION_PROMPT_TEMPLATE", ""),
+)
+
+ENABLE_TAGS_GENERATION = PersistentConfig(
+    "ENABLE_TAGS_GENERATION",
+    "task.tags.enable",
+    os.environ.get("ENABLE_TAGS_GENERATION", "True").lower() == "true",
 )
 
 
-SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
-    "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE",
-    "task.search.prompt_template",
-    os.environ.get("SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE", ""),
+ENABLE_SEARCH_QUERY_GENERATION = PersistentConfig(
+    "ENABLE_SEARCH_QUERY_GENERATION",
+    "task.query.search.enable",
+    os.environ.get("ENABLE_SEARCH_QUERY_GENERATION", "True").lower() == "true",
 )
 
+ENABLE_RETRIEVAL_QUERY_GENERATION = PersistentConfig(
+    "ENABLE_RETRIEVAL_QUERY_GENERATION",
+    "task.query.retrieval.enable",
+    os.environ.get("ENABLE_RETRIEVAL_QUERY_GENERATION", "True").lower() == "true",
+)
+
+
+QUERY_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "QUERY_GENERATION_PROMPT_TEMPLATE",
+    "task.query.prompt_template",
+    os.environ.get("QUERY_GENERATION_PROMPT_TEMPLATE", ""),
+)
+
+DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE = """### Task:
+Analyze the chat history to determine the necessity of generating search queries, in the given language. By default, **prioritize generating 1-3 broad and relevant search queries** unless it is absolutely certain that no additional information is required. The aim is to retrieve comprehensive, updated, and valuable information even with minimal uncertainty. If no search is unequivocally needed, return an empty list.
+
+### Guidelines:
+- Respond **EXCLUSIVELY** with a JSON object. Any form of extra commentary, explanation, or additional text is strictly prohibited.
+- When generating search queries, respond in the format: { "queries": ["query1", "query2"] }, ensuring each query is distinct, concise, and relevant to the topic.
+- If and only if it is entirely certain that no useful results can be retrieved by a search, return: { "queries": [] }.
+- Err on the side of suggesting search queries if there is **any chance** they might provide useful or updated information.
+- Be concise and focused on composing high-quality search queries, avoiding unnecessary elaboration, commentary, or assumptions.
+- Today's date is: {{CURRENT_DATE}}.
+- Always prioritize providing actionable and broad queries that maximize informational coverage.
+
+### Output:
+Strictly return in JSON format: 
+{
+  "queries": ["query1", "query2"]
+}
+
+### Chat History:
+<chat_history>
+{{MESSAGES:END:6}}
+</chat_history>
+"""
+
+ENABLE_AUTOCOMPLETE_GENERATION = PersistentConfig(
+    "ENABLE_AUTOCOMPLETE_GENERATION",
+    "task.autocomplete.enable",
+    os.environ.get("ENABLE_AUTOCOMPLETE_GENERATION", "True").lower() == "true",
+)
+
+AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = PersistentConfig(
+    "AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH",
+    "task.autocomplete.input_max_length",
+    int(os.environ.get("AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH", "-1")),
+)
+
+AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE",
+    "task.autocomplete.prompt_template",
+    os.environ.get("AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE", ""),
+)
+
+
+DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = """### Task:
+You are an autocompletion system. Continue the text in `<text>` based on the **completion type** in `<type>` and the given language.  
+
+### **Instructions**:
+1. Analyze `<text>` for context and meaning.  
+2. Use `<type>` to guide your output:  
+   - **General**: Provide a natural, concise continuation.  
+   - **Search Query**: Complete as if generating a realistic search query.  
+3. Start as if you are directly continuing `<text>`. Do **not** repeat, paraphrase, or respond as a model. Simply complete the text.  
+4. Ensure the continuation:
+   - Flows naturally from `<text>`.  
+   - Avoids repetition, overexplaining, or unrelated ideas.  
+5. If unsure, return: `{ "text": "" }`.  
+
+### **Output Rules**:
+- Respond only in JSON format: `{ "text": "<your_completion>" }`.
+
+### **Examples**:
+#### Example 1:  
+Input:  
+<type>General</type>  
+<text>The sun was setting over the horizon, painting the sky</text>  
+Output:  
+{ "text": "with vibrant shades of orange and pink." }
+
+#### Example 2:  
+Input:  
+<type>Search Query</type>  
+<text>Top-rated restaurants in</text>  
+Output:  
+{ "text": "New York City for Italian cuisine." }  
+
+---
+### Context:
+<chat_history>
+{{MESSAGES:END:6}}
+</chat_history>
+<type>{{TYPE}}</type>  
+<text>{{PROMPT}}</text>  
+#### Output:
+"""
 
 TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
     "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE",
@@ -899,6 +1084,8 @@ CHROMA_TENANT = os.environ.get("CHROMA_TENANT", chromadb.DEFAULT_TENANT)
 CHROMA_DATABASE = os.environ.get("CHROMA_DATABASE", chromadb.DEFAULT_DATABASE)
 CHROMA_HTTP_HOST = os.environ.get("CHROMA_HTTP_HOST", "")
 CHROMA_HTTP_PORT = int(os.environ.get("CHROMA_HTTP_PORT", "8000"))
+CHROMA_CLIENT_AUTH_PROVIDER = os.environ.get("CHROMA_CLIENT_AUTH_PROVIDER", "")
+CHROMA_CLIENT_AUTH_CREDENTIALS = os.environ.get("CHROMA_CLIENT_AUTH_CREDENTIALS", "")
 # Comma-separated list of header=value pairs
 CHROMA_HTTP_HEADERS = os.environ.get("CHROMA_HTTP_HEADERS", "")
 if CHROMA_HTTP_HEADERS:
@@ -914,8 +1101,26 @@ CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 
 MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
 
+# Qdrant
+QDRANT_URI = os.environ.get("QDRANT_URI", None)
+QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
+
+# OpenSearch
+OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
+OPENSEARCH_SSL = os.environ.get("OPENSEARCH_SSL", True)
+OPENSEARCH_CERT_VERIFY = os.environ.get("OPENSEARCH_CERT_VERIFY", False)
+OPENSEARCH_USERNAME = os.environ.get("OPENSEARCH_USERNAME", None)
+OPENSEARCH_PASSWORD = os.environ.get("OPENSEARCH_PASSWORD", None)
+
+# Pgvector
+PGVECTOR_DB_URL = os.environ.get("PGVECTOR_DB_URL", DATABASE_URL)
+if VECTOR_DB == "pgvector" and not PGVECTOR_DB_URL.startswith("postgres"):
+    raise ValueError(
+        "Pgvector requires setting PGVECTOR_DB_URL or using Postgres with vector extension as the primary database."
+    )
+
 ####################################
-# RAG
+# Information Retrieval (RAG)
 ####################################
 
 # RAG Content Extraction
@@ -992,17 +1197,20 @@ RAG_EMBEDDING_MODEL = PersistentConfig(
 log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL.value}")
 
 RAG_EMBEDDING_MODEL_AUTO_UPDATE = (
-    os.environ.get("RAG_EMBEDDING_MODEL_AUTO_UPDATE", "").lower() == "true"
+    os.environ.get("RAG_EMBEDDING_MODEL_AUTO_UPDATE", "True").lower() == "true"
 )
 
 RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
-    os.environ.get("RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
+    os.environ.get("RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE", "True").lower() == "true"
 )
 
-RAG_EMBEDDING_OPENAI_BATCH_SIZE = PersistentConfig(
-    "RAG_EMBEDDING_OPENAI_BATCH_SIZE",
-    "rag.embedding_openai_batch_size",
-    int(os.environ.get("RAG_EMBEDDING_OPENAI_BATCH_SIZE", "1")),
+RAG_EMBEDDING_BATCH_SIZE = PersistentConfig(
+    "RAG_EMBEDDING_BATCH_SIZE",
+    "rag.embedding_batch_size",
+    int(
+        os.environ.get("RAG_EMBEDDING_BATCH_SIZE")
+        or os.environ.get("RAG_EMBEDDING_OPENAI_BATCH_SIZE", "1")
+    ),
 )
 
 RAG_RERANKING_MODEL = PersistentConfig(
@@ -1014,12 +1222,28 @@ if RAG_RERANKING_MODEL.value != "":
     log.info(f"Reranking model set: {RAG_RERANKING_MODEL.value}")
 
 RAG_RERANKING_MODEL_AUTO_UPDATE = (
-    os.environ.get("RAG_RERANKING_MODEL_AUTO_UPDATE", "").lower() == "true"
+    os.environ.get("RAG_RERANKING_MODEL_AUTO_UPDATE", "True").lower() == "true"
 )
 
 RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
-    os.environ.get("RAG_RERANKING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
+    os.environ.get("RAG_RERANKING_MODEL_TRUST_REMOTE_CODE", "True").lower() == "true"
 )
+
+
+RAG_TEXT_SPLITTER = PersistentConfig(
+    "RAG_TEXT_SPLITTER",
+    "rag.text_splitter",
+    os.environ.get("RAG_TEXT_SPLITTER", ""),
+)
+
+
+TIKTOKEN_CACHE_DIR = os.environ.get("TIKTOKEN_CACHE_DIR", f"{CACHE_DIR}/tiktoken")
+TIKTOKEN_ENCODING_NAME = PersistentConfig(
+    "TIKTOKEN_ENCODING_NAME",
+    "rag.tiktoken_encoding_name",
+    os.environ.get("TIKTOKEN_ENCODING_NAME", "cl100k_base"),
+)
+
 
 CHUNK_SIZE = PersistentConfig(
     "CHUNK_SIZE", "rag.chunk_size", int(os.environ.get("CHUNK_SIZE", "1000"))
@@ -1030,23 +1254,34 @@ CHUNK_OVERLAP = PersistentConfig(
     int(os.environ.get("CHUNK_OVERLAP", "100")),
 )
 
-DEFAULT_RAG_TEMPLATE = """You are given a user query, some textual context and rules, all inside xml tags. You have to answer the query based on the context while respecting the rules.
+DEFAULT_RAG_TEMPLATE = """### Task:
+Respond to the user query using the provided context, incorporating inline citations in the format [source_id] **only when the <source_id> tag is explicitly provided** in the context.
+
+### Guidelines:
+- If you don't know the answer, clearly state that.
+- If uncertain, ask the user for clarification.
+- Respond in the same language as the user's query.
+- If the context is unreadable or of poor quality, inform the user and provide the best possible answer.
+- If the answer isn't present in the context but you possess the knowledge, explain this to the user and provide the answer using your own understanding.
+- **Only include inline citations using [source_id] when a <source_id> tag is explicitly provided in the context.**  
+- Do not cite if the <source_id> tag is not provided in the context.  
+- Do not use XML tags in your response.
+- Ensure citations are concise and directly related to the information provided.
+
+### Example of Citation:
+If the user asks about a specific topic and the information is found in "whitepaper.pdf" with a provided <source_id>, the response should include the citation like so:  
+* "According to the study, the proposed method increases efficiency by 20% [whitepaper.pdf]."
+If no <source_id> is present, the response should omit the citation.
+
+### Output:
+Provide a clear and direct response to the user's query, including inline citations in the format [source_id] only when the <source_id> tag is present in the context.
 
 <context>
-[context]
+{{CONTEXT}}
 </context>
 
-<rules>
-- If you don't know, just say so.
-- If you are not sure, ask for clarification.
-- Answer in the same language as the user query.
-- If the context appears unreadable or of poor quality, tell the user then answer as best as you can.
-- If the answer is not in the context but you think you know the answer, explain that to the user then answer with your own knowledge.
-- Answer directly and without using xml tags.
-</rules>
-
 <user_query>
-[query]
+{{QUERY}}
 </user_query>
 """
 
@@ -1067,6 +1302,19 @@ RAG_OPENAI_API_KEY = PersistentConfig(
     os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY),
 )
 
+RAG_OLLAMA_BASE_URL = PersistentConfig(
+    "RAG_OLLAMA_BASE_URL",
+    "rag.ollama.url",
+    os.getenv("RAG_OLLAMA_BASE_URL", OLLAMA_BASE_URL),
+)
+
+RAG_OLLAMA_API_KEY = PersistentConfig(
+    "RAG_OLLAMA_API_KEY",
+    "rag.ollama.key",
+    os.getenv("RAG_OLLAMA_API_KEY", ""),
+)
+
+
 ENABLE_RAG_LOCAL_WEB_FETCH = (
     os.getenv("ENABLE_RAG_LOCAL_WEB_FETCH", "False").lower() == "true"
 )
@@ -1075,6 +1323,12 @@ YOUTUBE_LOADER_LANGUAGE = PersistentConfig(
     "YOUTUBE_LOADER_LANGUAGE",
     "rag.youtube_loader_language",
     os.getenv("YOUTUBE_LOADER_LANGUAGE", "en").split(","),
+)
+
+YOUTUBE_LOADER_PROXY_URL = PersistentConfig(
+    "YOUTUBE_LOADER_PROXY_URL",
+    "rag.youtube_loader_proxy_url",
+    os.getenv("YOUTUBE_LOADER_PROXY_URL", ""),
 )
 
 
@@ -1126,6 +1380,12 @@ BRAVE_SEARCH_API_KEY = PersistentConfig(
     os.getenv("BRAVE_SEARCH_API_KEY", ""),
 )
 
+MOJEEK_SEARCH_API_KEY = PersistentConfig(
+    "MOJEEK_SEARCH_API_KEY",
+    "rag.web.search.mojeek_search_api_key",
+    os.getenv("MOJEEK_SEARCH_API_KEY", ""),
+)
+
 SERPSTACK_API_KEY = PersistentConfig(
     "SERPSTACK_API_KEY",
     "rag.web.search.serpstack_api_key",
@@ -1156,6 +1416,12 @@ TAVILY_API_KEY = PersistentConfig(
     os.getenv("TAVILY_API_KEY", ""),
 )
 
+JINA_API_KEY = PersistentConfig(
+    "JINA_API_KEY",
+    "rag.web.search.jina_api_key",
+    os.getenv("JINA_API_KEY", ""),
+)
+
 SEARCHAPI_API_KEY = PersistentConfig(
     "SEARCHAPI_API_KEY",
     "rag.web.search.searchapi_api_key",
@@ -1168,6 +1434,21 @@ SEARCHAPI_ENGINE = PersistentConfig(
     os.getenv("SEARCHAPI_ENGINE", ""),
 )
 
+BING_SEARCH_V7_ENDPOINT = PersistentConfig(
+    "BING_SEARCH_V7_ENDPOINT",
+    "rag.web.search.bing_search_v7_endpoint",
+    os.environ.get(
+        "BING_SEARCH_V7_ENDPOINT", "https://api.bing.microsoft.com/v7.0/search"
+    ),
+)
+
+BING_SEARCH_V7_SUBSCRIPTION_KEY = PersistentConfig(
+    "BING_SEARCH_V7_SUBSCRIPTION_KEY",
+    "rag.web.search.bing_search_v7_subscription_key",
+    os.environ.get("BING_SEARCH_V7_SUBSCRIPTION_KEY", ""),
+)
+
+
 RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(
     "RAG_WEB_SEARCH_RESULT_COUNT",
     "rag.web.search.result_count",
@@ -1178,17 +1459,6 @@ RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
     "RAG_WEB_SEARCH_CONCURRENT_REQUESTS",
     "rag.web.search.concurrent_requests",
     int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
-)
-
-
-####################################
-# Transcribe
-####################################
-
-WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")
-WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models")
-WHISPER_MODEL_AUTO_UPDATE = (
-    os.environ.get("WHISPER_MODEL_AUTO_UPDATE", "").lower() == "true"
 )
 
 
@@ -1230,7 +1500,7 @@ AUTOMATIC1111_CFG_SCALE = PersistentConfig(
 
 
 AUTOMATIC1111_SAMPLER = PersistentConfig(
-    "AUTOMATIC1111_SAMPLERE",
+    "AUTOMATIC1111_SAMPLER",
     "image_generation.automatic1111.sampler",
     (
         os.environ.get("AUTOMATIC1111_SAMPLER")
@@ -1407,6 +1677,19 @@ IMAGE_GENERATION_MODEL = PersistentConfig(
 # Audio
 ####################################
 
+# Transcription
+WHISPER_MODEL = PersistentConfig(
+    "WHISPER_MODEL",
+    "audio.stt.whisper_model",
+    os.getenv("WHISPER_MODEL", "base"),
+)
+
+WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models")
+WHISPER_MODEL_AUTO_UPDATE = (
+    os.environ.get("WHISPER_MODEL_AUTO_UPDATE", "").lower() == "true"
+)
+
+
 AUDIO_STT_OPENAI_API_BASE_URL = PersistentConfig(
     "AUDIO_STT_OPENAI_API_BASE_URL",
     "audio.stt.openai.api_base_url",
@@ -1428,7 +1711,7 @@ AUDIO_STT_ENGINE = PersistentConfig(
 AUDIO_STT_MODEL = PersistentConfig(
     "AUDIO_STT_MODEL",
     "audio.stt.model",
-    os.getenv("AUDIO_STT_MODEL", "whisper-1"),
+    os.getenv("AUDIO_STT_MODEL", ""),
 )
 
 AUDIO_TTS_OPENAI_API_BASE_URL = PersistentConfig(
@@ -1488,6 +1771,76 @@ AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
 )
 
 ####################################
+# LDAP
+####################################
+
+ENABLE_LDAP = PersistentConfig(
+    "ENABLE_LDAP",
+    "ldap.enable",
+    os.environ.get("ENABLE_LDAP", "false").lower() == "true",
+)
+
+LDAP_SERVER_LABEL = PersistentConfig(
+    "LDAP_SERVER_LABEL",
+    "ldap.server.label",
+    os.environ.get("LDAP_SERVER_LABEL", "LDAP Server"),
+)
+
+LDAP_SERVER_HOST = PersistentConfig(
+    "LDAP_SERVER_HOST",
+    "ldap.server.host",
+    os.environ.get("LDAP_SERVER_HOST", "localhost"),
+)
+
+LDAP_SERVER_PORT = PersistentConfig(
+    "LDAP_SERVER_PORT",
+    "ldap.server.port",
+    int(os.environ.get("LDAP_SERVER_PORT", "389")),
+)
+
+LDAP_ATTRIBUTE_FOR_USERNAME = PersistentConfig(
+    "LDAP_ATTRIBUTE_FOR_USERNAME",
+    "ldap.server.attribute_for_username",
+    os.environ.get("LDAP_ATTRIBUTE_FOR_USERNAME", "uid"),
+)
+
+LDAP_APP_DN = PersistentConfig(
+    "LDAP_APP_DN", "ldap.server.app_dn", os.environ.get("LDAP_APP_DN", "")
+)
+
+LDAP_APP_PASSWORD = PersistentConfig(
+    "LDAP_APP_PASSWORD",
+    "ldap.server.app_password",
+    os.environ.get("LDAP_APP_PASSWORD", ""),
+)
+
+LDAP_SEARCH_BASE = PersistentConfig(
+    "LDAP_SEARCH_BASE", "ldap.server.users_dn", os.environ.get("LDAP_SEARCH_BASE", "")
+)
+
+LDAP_SEARCH_FILTERS = PersistentConfig(
+    "LDAP_SEARCH_FILTER",
+    "ldap.server.search_filter",
+    os.environ.get("LDAP_SEARCH_FILTER", ""),
+)
+
+LDAP_USE_TLS = PersistentConfig(
+    "LDAP_USE_TLS",
+    "ldap.server.use_tls",
+    os.environ.get("LDAP_USE_TLS", "True").lower() == "true",
+)
+
+LDAP_CA_CERT_FILE = PersistentConfig(
+    "LDAP_CA_CERT_FILE",
+    "ldap.server.ca_cert_file",
+    os.environ.get("LDAP_CA_CERT_FILE", ""),
+)
+
+LDAP_CIPHERS = PersistentConfig(
+    "LDAP_CIPHERS", "ldap.server.ciphers", os.environ.get("LDAP_CIPHERS", "ALL")
+)
+
+####################################
 # Websocket
 ####################################
 
@@ -1500,5 +1853,6 @@ ENABLE_USAGE_WEBSOCKET_UPDATES = PersistentConfig(
 ENABLE_USER_COUNT_WEBSOCKET_UPDATES = PersistentConfig(
     "ENABLE_USER_COUNT_WEBSOCKET_UPDATES",
     "websocket.user_count.enable",
-    os.getenv("ENABLE_USER_COUNT_WEBSOCKET_UPDATES", "True").lower() == "true",
+    os.getenv("ENABLE_USER_COUNT_WEBSOCKET_UPDATES", "True").lower() == "true")
+ 
 )

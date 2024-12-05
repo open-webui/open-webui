@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { getRAGConfig, updateRAGConfig } from '$lib/apis/rag';
+	import { getRAGConfig, updateRAGConfig } from '$lib/apis/retrieval';
 	import Switch from '$lib/components/common/Switch.svelte';
 
-	import { documents, models } from '$lib/stores';
+	import { models } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
@@ -16,24 +16,28 @@
 		'searxng',
 		'google_pse',
 		'brave',
+		'mojeek',
 		'serpstack',
 		'serper',
 		'serply',
 		'searchapi',
 		'duckduckgo',
 		'tavily',
-		'jina'
+		'jina',
+		'bing'
 	];
 
 	let youtubeLanguage = 'en';
 	let youtubeTranslation = null;
+	let youtubeProxyUrl = '';
 
 	const submitHandler = async () => {
 		const res = await updateRAGConfig(localStorage.token, {
 			web: webConfig,
 			youtube: {
 				language: youtubeLanguage.split(',').map((lang) => lang.trim()),
-				translation: youtubeTranslation
+				translation: youtubeTranslation,
+				proxy_url: youtubeProxyUrl
 			}
 		});
 	};
@@ -46,6 +50,7 @@
 
 			youtubeLanguage = res.youtube.language.join(',');
 			youtubeTranslation = res.youtube.translation;
+			youtubeProxyUrl = res.youtube.proxy_url;
 		}
 	});
 </script>
@@ -150,6 +155,17 @@
 									bind:value={webConfig.search.brave_search_api_key}
 								/>
 							</div>
+						{:else if webConfig.search.engine === 'mojeek'}
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Mojeek Search API Key')}
+								</div>
+
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Mojeek Search API Key')}
+									bind:value={webConfig.search.mojeek_search_api_key}
+								/>
+							</div>
 						{:else if webConfig.search.engine === 'serpstack'}
 							<div>
 								<div class=" self-center text-xs font-medium mb-1">
@@ -222,6 +238,46 @@
 									bind:value={webConfig.search.tavily_api_key}
 								/>
 							</div>
+						{:else if webConfig.search.engine === 'jina'}
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Jina API Key')}
+								</div>
+
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Jina API Key')}
+									bind:value={webConfig.search.jina_api_key}
+								/>
+							</div>
+						{:else if webConfig.search.engine === 'bing'}
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Bing Search V7 Endpoint')}
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1">
+										<input
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+											type="text"
+											placeholder={$i18n.t('Enter Bing Search V7 Endpoint')}
+											bind:value={webConfig.search.bing_search_v7_endpoint}
+											autocomplete="off"
+										/>
+									</div>
+								</div>
+							</div>
+
+							<div class="mt-2">
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Bing Search V7 Subscription Key')}
+								</div>
+
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Bing Search V7 Subscription Key')}
+									bind:value={webConfig.search.bing_search_v7_subscription_key}
+								/>
+							</div>
 						{/if}
 					</div>
 				{/if}
@@ -273,12 +329,12 @@
 						<button
 							class="p-1 px-3 text-xs flex rounded transition"
 							on:click={() => {
-								webConfig.ssl_verification = !webConfig.ssl_verification;
+								webConfig.web_loader_ssl_verification = !webConfig.web_loader_ssl_verification;
 								submitHandler();
 							}}
 							type="button"
 						>
-							{#if webConfig.ssl_verification === true}
+							{#if webConfig.web_loader_ssl_verification === false}
 								<span class="ml-2 self-center">{$i18n.t('On')}</span>
 							{:else}
 								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
@@ -305,12 +361,27 @@
 						</div>
 					</div>
 				</div>
+
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" w-20 text-xs font-medium self-center">{$i18n.t('Proxy URL')}</div>
+						<div class=" flex-1 self-center">
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								type="text"
+								placeholder={$i18n.t('Enter proxy URL (e.g. https://user:password@host:port)')}
+								bind:value={youtubeProxyUrl}
+								autocomplete="off"
+							/>
+						</div>
+					</div>
+				</div>
 			</div>
 		{/if}
 	</div>
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
-			class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}

@@ -16,6 +16,12 @@
 	font-display: swap;
 }
 
+@font-face {
+	font-family: 'InstrumentSerif';
+	src: url('/assets/fonts/InstrumentSerif-Regular.ttf');
+	font-display: swap;
+}
+
 html {
 	word-break: break-word;
 }
@@ -26,6 +32,10 @@ code {
 	width: auto;
 }
 
+.font-secondary {
+	font-family: 'InstrumentSerif', sans-serif;
+}
+
 math {
 	margin-top: 1rem;
 }
@@ -34,8 +44,16 @@ math {
 	@apply rounded-lg;
 }
 
+.input-prose {
+	@apply prose dark:prose-invert prose-headings:font-semibold prose-hr:my-4 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+}
+
+.input-prose-sm {
+	@apply prose dark:prose-invert prose-headings:font-semibold prose-hr:my-4 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line text-sm;
+}
+
 .markdown-prose {
-	@apply prose dark:prose-invert prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply prose dark:prose-invert prose-headings:font-semibold prose-hr:my-4 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown a {
@@ -56,10 +74,16 @@ li p {
 
 ::-webkit-scrollbar-thumb {
 	--tw-border-opacity: 1;
-	background-color: rgba(217, 217, 227, 0.8);
+	background-color: rgba(236, 236, 236, 0.8);
 	border-color: rgba(255, 255, 255, var(--tw-border-opacity));
 	border-radius: 9999px;
 	border-width: 1px;
+}
+
+/* Dark theme scrollbar styles */
+.dark ::-webkit-scrollbar-thumb {
+	background-color: rgba(33, 33, 33, 0.8); /* Darker color for dark theme */
+	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
 }
 
 ::-webkit-scrollbar {
@@ -172,4 +196,106 @@ input[type='number'] {
 
 .bg-gray-950-90 {
 	background-color: rgba(var(--color-gray-950, #0d0d0d), 0.9);
+}
+
+.ProseMirror {
+	@apply h-full min-h-fit max-h-full whitespace-pre-wrap;
+}
+
+.ProseMirror:focus {
+	outline: none;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+	content: attr(data-placeholder);
+	float: left;
+	color: #adb5bd;
+	pointer-events: none;
+	
+	@apply line-clamp-1 absolute
+}
+
+.ai-autocompletion::after {
+	color: #a0a0a0;
+
+	content: attr(data-suggestion);
+	pointer-events: none;
+}
+
+.tiptap > pre > code {
+	border-radius: 0.4rem;
+	font-size: 0.85rem;
+	padding: 0.25em 0.3em;
+
+	@apply dark:bg-gray-800 bg-gray-100;
+}
+
+.tiptap > pre {
+	border-radius: 0.5rem;
+	font-family: 'JetBrainsMono', monospace;
+	margin: 1.5rem 0;
+	padding: 0.75rem 1rem;
+
+	@apply dark:bg-gray-800 bg-gray-100;
+}
+
+.tiptap p code {
+	color: #eb5757;
+	border-width: 0px;
+	padding: 3px 8px;
+	font-size: 0.8em;
+	font-weight: 600;
+	@apply rounded-md dark:bg-gray-800 bg-gray-100 mx-0.5;
+}
+
+/* Code styling */
+.hljs-comment,
+.hljs-quote {
+	color: #616161;
+}
+
+.hljs-variable,
+.hljs-template-variable,
+.hljs-attribute,
+.hljs-tag,
+.hljs-regexp,
+.hljs-link,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class {
+	color: #f98181;
+}
+
+.hljs-number,
+.hljs-meta,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params {
+	color: #fbbc88;
+}
+
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet {
+	color: #b9f18d;
+}
+
+.hljs-title,
+.hljs-section {
+	color: #faf594;
+}
+
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #70cff8;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: 700;
 }

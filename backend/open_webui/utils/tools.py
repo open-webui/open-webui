@@ -1,11 +1,14 @@
 import inspect
 import logging
-from typing import Awaitable, Callable, get_type_hints
+import re
+from typing import Any, Awaitable, Callable, get_type_hints
+from functools import update_wrapper, partial
 
+from langchain_core.utils.function_calling import convert_to_openai_function
 from open_webui.apps.webui.models.tools import Tools
 from open_webui.apps.webui.models.users import UserModel
-from open_webui.apps.webui.utils import load_toolkit_module_by_id
-from open_webui.utils.schemas import json_schema_to_model
+from open_webui.apps.webui.utils import load_tools_module_by_id
+from pydantic import BaseModel, Field, create_model
 
 log = logging.getLogger(__name__)
 
@@ -14,17 +17,16 @@ def apply_extra_params_to_tool_function(
     function: Callable, extra_params: dict
 ) -> Callable[..., Awaitable]:
     sig = inspect.signature(function)
-    extra_params = {
-        key: value for key, value in extra_params.items() if key in sig.parameters
-    }
-    is_coroutine = inspect.iscoroutinefunction(function)
+    extra_params = {k: v for k, v in extra_params.items() if k in sig.parameters}
+    partial_func = partial(function, **extra_params)
+    if inspect.iscoroutinefunction(function):
+        update_wrapper(partial_func, function)
+        return partial_func
 
-    async def new_function(**kwargs):
-        extra_kwargs = kwargs | extra_params
-        if is_coroutine:
-            return await function(**extra_kwargs)
-        return function(**extra_kwargs)
+    async def new_function(*args, **kwargs):
+        return partial_func(*args, **kwargs)
 
+    update_wrapper(new_function, function)
     return new_function
 
 
@@ -32,15 +34,16 @@ def apply_extra_params_to_tool_function(
 def get_tools(
     webui_app, tool_ids: list[str], user: UserModel, extra_params: dict
 ) -> dict[str, dict]:
-    tools = {}
+    tools_dict = {}
+
     for tool_id in tool_ids:
-        toolkit = Tools.get_tool_by_id(tool_id)
-        if toolkit is None:
+        tools = Tools.get_tool_by_id(tool_id)
+        if tools is None:
             continue
 
         module = webui_app.state.TOOLS.get(tool_id, None)
         if module is None:
-            module, _ = load_toolkit_module_by_id(tool_id)
+            module, _ = load_tools_module_by_id(tool_id)
             webui_app.state.TOOLS[tool_id] = module
 
         extra_params["__id__"] = tool_id
@@ -53,111 +56,143 @@ def get_tools(
                 **Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
             )
 
-        for spec in toolkit.specs:
-            # TODO: Fix hack for OpenAI API
-            for val in spec.get("parameters", {}).get("properties", {}).values():
-                if val["type"] == "str":
-                    val["type"] = "string"
+        for spec in tools.specs:
+            # Remove internal parameters
+            spec["parameters"]["properties"] = {
+                key: val
+                for key, val in spec["parameters"]["properties"].items()
+                if not key.startswith("__")
+            }
+
             function_name = spec["name"]
 
             # convert to function that takes only model params and inserts custom params
             original_func = getattr(module, function_name)
             callable = apply_extra_params_to_tool_function(original_func, extra_params)
-            if hasattr(original_func, "__doc__"):
-                callable.__doc__ = original_func.__doc__
-
             # TODO: This needs to be a pydantic model
             tool_dict = {
                 "toolkit_id": tool_id,
                 "callable": callable,
                 "spec": spec,
-                "pydantic_model": json_schema_to_model(spec),
+                "pydantic_model": function_to_pydantic_model(callable),
                 "file_handler": hasattr(module, "file_handler") and module.file_handler,
                 "citation": hasattr(module, "citation") and module.citation,
             }
 
             # TODO: if collision, prepend toolkit name
-            if function_name in tools:
-                log.warning(f"Tool {function_name} already exists in another toolkit!")
-                log.warning(f"Collision between {toolkit} and {tool_id}.")
-                log.warning(f"Discarding {toolkit}.{function_name}")
+            if function_name in tools_dict:
+                log.warning(f"Tool {function_name} already exists in another tools!")
+                log.warning(f"Collision between {tools} and {tool_id}.")
+                log.warning(f"Discarding {tools}.{function_name}")
             else:
-                tools[function_name] = tool_dict
-    return tools
+                tools_dict[function_name] = tool_dict
+
+    return tools_dict
 
 
-def doc_to_dict(docstring):
-    lines = docstring.split("\n")
-    description = lines[1].strip()
-    param_dict = {}
+def parse_description(docstring: str | None) -> str:
+    """
+    Parse a function's docstring to extract the description.
+
+    Args:
+        docstring (str): The docstring to parse.
+
+    Returns:
+        str: The description.
+    """
+
+    if not docstring:
+        return ""
+
+    lines = [line.strip() for line in docstring.strip().split("\n")]
+    description_lines: list[str] = []
 
     for line in lines:
-        if ":param" in line:
-            line = line.replace(":param", "").strip()
-            param, desc = line.split(":", 1)
-            param_dict[param.strip()] = desc.strip()
-    ret_dict = {"description": description, "params": param_dict}
-    return ret_dict
+        if re.match(r":param", line) or re.match(r":return", line):
+            break
+
+        description_lines.append(line)
+
+    return "\n".join(description_lines)
 
 
-def get_tools_specs(tools) -> list[dict]:
-    function_list = [
-        {"name": func, "function": getattr(tools, func)}
-        for func in dir(tools)
-        if callable(getattr(tools, func))
+def parse_docstring(docstring):
+    """
+    Parse a function's docstring to extract parameter descriptions in reST format.
+
+    Args:
+        docstring (str): The docstring to parse.
+
+    Returns:
+        dict: A dictionary where keys are parameter names and values are descriptions.
+    """
+    if not docstring:
+        return {}
+
+    # Regex to match `:param name: description` format
+    param_pattern = re.compile(r":param (\w+):\s*(.+)")
+    param_descriptions = {}
+
+    for line in docstring.splitlines():
+        match = param_pattern.match(line.strip())
+        if not match:
+            continue
+        param_name, param_description = match.groups()
+        if param_name.startswith("__"):
+            continue
+        param_descriptions[param_name] = param_description
+
+    return param_descriptions
+
+
+def function_to_pydantic_model(func: Callable) -> type[BaseModel]:
+    """
+    Converts a Python function's type hints and docstring to a Pydantic model,
+    including support for nested types, default values, and descriptions.
+
+    Args:
+        func: The function whose type hints and docstring should be converted.
+        model_name: The name of the generated Pydantic model.
+
+    Returns:
+        A Pydantic model class.
+    """
+    type_hints = get_type_hints(func)
+    signature = inspect.signature(func)
+    parameters = signature.parameters
+
+    docstring = func.__doc__
+    descriptions = parse_docstring(docstring)
+
+    tool_description = parse_description(docstring)
+
+    field_defs = {}
+    for name, param in parameters.items():
+        type_hint = type_hints.get(name, Any)
+        default_value = param.default if param.default is not param.empty else ...
+        description = descriptions.get(name, None)
+        if not description:
+            field_defs[name] = type_hint, default_value
+            continue
+        field_defs[name] = type_hint, Field(default_value, description=description)
+
+    model = create_model(func.__name__, **field_defs)
+    model.__doc__ = tool_description
+
+    return model
+
+
+def get_callable_attributes(tool: object) -> list[Callable]:
+    return [
+        getattr(tool, func)
+        for func in dir(tool)
+        if callable(getattr(tool, func))
         and not func.startswith("__")
-        and not inspect.isclass(getattr(tools, func))
+        and not inspect.isclass(getattr(tool, func))
     ]
 
-    specs = []
-    for function_item in function_list:
-        function_name = function_item["name"]
-        function = function_item["function"]
 
-        function_doc = doc_to_dict(function.__doc__ or function_name)
-        specs.append(
-            {
-                "name": function_name,
-                # TODO: multi-line desc?
-                "description": function_doc.get("description", function_name),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        param_name: {
-                            "type": param_annotation.__name__.lower(),
-                            **(
-                                {
-                                    "enum": (
-                                        str(param_annotation.__args__)
-                                        if hasattr(param_annotation, "__args__")
-                                        else None
-                                    )
-                                }
-                                if hasattr(param_annotation, "__args__")
-                                else {}
-                            ),
-                            "description": function_doc.get("params", {}).get(
-                                param_name, param_name
-                            ),
-                        }
-                        for param_name, param_annotation in get_type_hints(
-                            function
-                        ).items()
-                        if param_name != "return"
-                        and not (
-                            param_name.startswith("__") and param_name.endswith("__")
-                        )
-                    },
-                    "required": [
-                        name
-                        for name, param in inspect.signature(
-                            function
-                        ).parameters.items()
-                        if param.default is param.empty
-                        and not (name.startswith("__") and name.endswith("__"))
-                    ],
-                },
-            }
-        )
-
-    return specs
+def get_tools_specs(tool_class: object) -> list[dict]:
+    function_list = get_callable_attributes(tool_class)
+    models = map(function_to_pydantic_model, function_list)
+    return [convert_to_openai_function(tool) for tool in models]

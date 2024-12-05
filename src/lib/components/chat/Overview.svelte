@@ -15,6 +15,7 @@
 	import CustomNode from './Overview/Node.svelte';
 	import Flow from './Overview/Flow.svelte';
 	import XMark from '../icons/XMark.svelte';
+	import ArrowLeft from '../icons/ArrowLeft.svelte';
 
 	const { width, height } = useStore();
 
@@ -22,6 +23,8 @@
 	const nodesInitialized = useNodesInitialized();
 
 	export let history;
+
+	let selectedMessageId = null;
 
 	const nodes = writable([]);
 	const edges = writable([]);
@@ -34,9 +37,19 @@
 		drawFlow();
 	}
 
-	$: if (history?.currentId) {
-		fitView({ nodes: [{ id: history.currentId }] });
+	$: if (history && history.currentId) {
+		focusNode();
 	}
+
+	const focusNode = async () => {
+		if (selectedMessageId === null) {
+			await fitView({ nodes: [{ id: history.currentId }] });
+		} else {
+			await fitView({ nodes: [{ id: selectedMessageId }] });
+		}
+
+		selectedMessageId = null;
+	};
 
 	const drawFlow = async () => {
 		const nodeList = [];
@@ -147,16 +160,26 @@
 </script>
 
 <div class="w-full h-full relative">
-	<div class=" absolute z-50 w-full flex justify-between dark:text-gray-100 px-5 py-4">
-		<div class=" text-lg font-medium self-center font-primary">{$i18n.t('Chat Overview')}</div>
+	<div class=" absolute z-50 w-full flex justify-between dark:text-gray-100 px-4 py-3.5">
+		<div class="flex items-center gap-2.5">
+			<button
+				class="self-center p-0.5"
+				on:click={() => {
+					showOverview.set(false);
+				}}
+			>
+				<ArrowLeft className="size-3.5" />
+			</button>
+			<div class=" text-lg font-medium self-center font-primary">{$i18n.t('Chat Overview')}</div>
+		</div>
 		<button
-			class="self-center"
+			class="self-center p-0.5"
 			on:click={() => {
 				dispatch('close');
 				showOverview.set(false);
 			}}
 		>
-			<XMark className="size-4" />
+			<XMark className="size-3.5" />
 		</button>
 	</div>
 
@@ -168,6 +191,8 @@
 			on:nodeclick={(e) => {
 				console.log(e.detail.node.data);
 				dispatch('nodeclick', e.detail);
+				selectedMessageId = e.detail.node.data.message.id;
+				fitView({ nodes: [{ id: selectedMessageId }] });
 			}}
 		/>
 	{/if}

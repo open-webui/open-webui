@@ -16,16 +16,16 @@
 </svelte:head>
 
 <div
-	class=" flex flex-col w-full min-h-screen max-h-screen {$showSidebar
+	class=" flex flex-col w-full h-screen max-h-[100dvh] {$showSidebar
 		? 'md:max-w-[calc(100%-260px)]'
 		: ''}"
 >
-	<div class=" px-4 pt-3 mt-0.5 mb-1">
-		<div class=" flex items-center gap-1">
-			<div class="{$showSidebar ? 'md:hidden' : ''} mr-1 self-start flex flex-none items-center">
+	<div class=" px-2.5 py-1 backdrop-blur-xl">
+		<div class=" flex items-center">
+			<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
 				<button
 					id="sidebar-toggle-button"
-					class="cursor-pointer p-1 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+					class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 					on:click={() => {
 						showSidebar.set(!$showSidebar);
 					}}
@@ -36,13 +36,41 @@
 					</div>
 				</button>
 			</div>
-			<div class="flex items-center text-xl font-semibold">{$i18n.t('Playground')}</div>
+
+			<div class=" flex w-full">
+				<div
+					class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent pt-1"
+				>
+					<a
+						class="min-w-fit rounded-full p-1.5 {['/playground', '/playground/'].includes(
+							$page.url.pathname
+						)
+							? ''
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+						href="/playground">{$i18n.t('Chat')}</a
+					>
+
+					<!-- <a
+						class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/playground/notes')
+							? ''
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+						href="/playground/notes">{$i18n.t('Notes')}</a
+					> -->
+
+					<a
+						class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
+							'/playground/completions'
+						)
+							? ''
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+						href="/playground/completions">{$i18n.t('Completions')}</a
+					>
+				</div>
+			</div>
 		</div>
 	</div>
 
-	<hr class=" my-2 dark:border-gray-850" />
-
-	<div class=" py-1 px-5 flex-1 max-h-full overflow-y-auto">
+	<div class=" flex-1 max-h-full overflow-y-auto">
 		<slot />
 	</div>
 </div>
