@@ -630,7 +630,6 @@ async def handle_streaming_response(
                         {
                             "role": "assistant",
                             "content": buffered_content,
-                            "refusal": None,
                         }
                     )
                     buffered_content = ""
@@ -644,7 +643,6 @@ async def handle_streaming_response(
                     {
                         "role": "assistant",
                         "content": "",
-                        "refusal": None,
                         "tool_calls": tool_calls,
                     }
                 )
