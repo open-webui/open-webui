@@ -5,6 +5,8 @@ from open_webui.apps.webui.models.users import Users
 from open_webui.env import ENABLE_WEBSOCKET_SUPPORT
 from open_webui.utils.utils import decode_token
 
+from open_webui.config import ENABLE_USER_COUNT_WEBSOCKET_UPDATES, ENABLE_USAGE_WEBSOCKET_UPDATES
+
 sio = socketio.AsyncServer(
     cors_allowed_origins=[],
     async_mode="asgi",
@@ -26,6 +28,7 @@ TIMEOUT_DURATION = 3
 @sio.event
 async def connect(sid, environ, auth):
     user = None
+    print("connected")
     if auth and "token" in auth:
         data = decode_token(auth["token"])
 
@@ -38,11 +41,11 @@ async def connect(sid, environ, auth):
                 USER_POOL[user.id].append(sid)
             else:
                 USER_POOL[user.id] = [sid]
-
             # print(f"user {user.name}({user.id}) connected with session ID {sid}")
-
-            await sio.emit("user-count", {"count": len(set(USER_POOL))})
-            await sio.emit("usage", {"models": get_models_in_use()})
+            if ENABLE_USER_COUNT_WEBSOCKET_UPDATES.value:
+                await sio.emit("user-count", {"count": len(set(USER_POOL))})
+            if ENABLE_USAGE_WEBSOCKET_UPDATES.value:
+                await sio.emit("usage", {"models": get_models_in_use()})
 
 
 @sio.on("user-join")
@@ -68,13 +71,14 @@ async def user_join(sid, data):
         USER_POOL[user.id] = [sid]
 
     # print(f"user {user.name}({user.id}) connected with session ID {sid}")
-
-    await sio.emit("user-count", {"count": len(set(USER_POOL))})
+    if ENABLE_USER_COUNT_WEBSOCKET_UPDATES.value:
+        await sio.emit("user-count", {"count": len(set(USER_POOL))})
 
 
 @sio.on("user-count")
 async def user_count(sid):
-    await sio.emit("user-count", {"count": len(set(USER_POOL))})
+    if ENABLE_USER_COUNT_WEBSOCKET_UPDATES.value:
+        await sio.emit("user-count", {"count": len(set(USER_POOL))})
 
 
 def get_models_in_use():
@@ -109,7 +113,8 @@ async def usage(sid, data):
     )
 
     # Broadcast the usage data to all clients
-    await sio.emit("usage", {"models": get_models_in_use()})
+    if ENABLE_USAGE_WEBSOCKET_UPDATES.value:
+        await sio.emit("usage", {"models": get_models_in_use()})
 
 
 async def remove_after_timeout(sid, model_id):
@@ -124,7 +129,8 @@ async def remove_after_timeout(sid, model_id):
                 del USAGE_POOL[model_id]
 
             # Broadcast the usage data to all clients
-            await sio.emit("usage", {"models": get_models_in_use()})
+            if ENABLE_USAGE_WEBSOCKET_UPDATES.value:
+                await sio.emit("usage", {"models": get_models_in_use()})
     except asyncio.CancelledError:
         # Task was cancelled due to new 'usage' event
         pass
@@ -140,8 +146,8 @@ async def disconnect(sid):
 
         if len(USER_POOL[user_id]) == 0:
             del USER_POOL[user_id]
-
-        await sio.emit("user-count", {"count": len(USER_POOL)})
+        if ENABLE_USER_COUNT_WEBSOCKET_UPDATES.value:
+            await sio.emit("user-count", {"count": len(USER_POOL)})
     else:
         pass
         # print(f"Unknown session ID {sid} disconnected")

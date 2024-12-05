@@ -1486,3 +1486,19 @@ AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
         "AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT", "audio-24khz-160kbitrate-mono-mp3"
     ),
 )
+
+####################################
+# Websocket
+####################################
+
+ENABLE_USAGE_WEBSOCKET_UPDATES = PersistentConfig(
+    "ENABLE_USAGE_WEBSOCKET_UPDATES",
+    "websocket.usage.enable",
+    os.getenv("ENABLE_USAGE_WEBSOCKET_UPDATES", "True").lower() == "true",
+)
+
+ENABLE_USER_COUNT_WEBSOCKET_UPDATES = PersistentConfig(
+    "ENABLE_USER_COUNT_WEBSOCKET_UPDATES",
+    "websocket.user_count.enable",
+    os.getenv("ENABLE_USER_COUNT_WEBSOCKET_UPDATES", "True").lower() == "true",
+)

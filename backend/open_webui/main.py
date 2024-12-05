@@ -2024,6 +2024,8 @@ async def get_app_config(request: Request):
             "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
             "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
             "enable_login_form": webui_app.state.config.ENABLE_LOGIN_FORM,
+            "enable_usage_websocket_updates": webui_app.state.config.ENABLE_USAGE_WEBSOCKET_UPDATES,
+            "enable_user_count_websocket_updates": webui_app.state.config.ENABLE_USER_COUNT_WEBSOCKET_UPDATES,
             **(
                 {
                     "enable_web_search": rag_app.state.config.ENABLE_RAG_WEB_SEARCH,
