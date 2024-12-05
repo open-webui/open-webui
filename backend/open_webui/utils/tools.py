@@ -75,6 +75,9 @@ def get_tools(
             # convert to function that takes only model params and inserts custom params
             original_func = getattr(module, function_name)
             callable = apply_extra_params_to_tool_function(original_func, extra_params)
+            spec["description"] = function_name
+            if "\n:" in callable.__doc__:
+                spec["description"] = callable.__doc__.split("\n:")[0]
             # TODO: This needs to be a pydantic model
             tool_dict = {
                 "toolkit_id": tool_id,
