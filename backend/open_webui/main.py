@@ -2608,6 +2608,8 @@ async def get_app_config(request: Request):
             "enable_api_key": webui_app.state.config.ENABLE_API_KEY,
             "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
             "enable_login_form": webui_app.state.config.ENABLE_LOGIN_FORM,
+            "enable_usage_websocket_updates": webui_app.state.config.ENABLE_USAGE_WEBSOCKET_UPDATES,
+            "enable_user_count_websocket_updates": webui_app.state.config.ENABLE_USER_COUNT_WEBSOCKET_UPDATES,
             **(
                 {
                     "enable_web_search": retrieval_app.state.config.ENABLE_RAG_WEB_SEARCH,
