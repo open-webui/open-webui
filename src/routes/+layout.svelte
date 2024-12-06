@@ -38,13 +38,15 @@
 	let loaded = false;
 	const BREAKPOINT = 768;
 
-	const setupSocket = () => {
+	const setupSocket = (disableWebSocketPolling) => {
+		console.log('Disabled websocket polling', disableWebSocketPolling);
 		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
 			reconnection: true,
 			reconnectionDelay: 1000,
 			reconnectionDelayMax: 5000,
 			randomizationFactor: 0.5,
 			path: '/ws/socket.io',
+			transports: disableWebSocketPolling ? ['websocket'] : ['polling', 'websocket'],
 			auth: { token: localStorage.token }
 		});
 
@@ -125,8 +127,9 @@
 			await config.set(backendConfig);
 			await WEBUI_NAME.set(backendConfig.name);
 
+			const disableWebSocketPolling = backendConfig.features.disable_websocket_polling === true;
 			if ($config) {
-				setupSocket();
+				setupSocket(disableWebSocketPolling);
 
 				if (localStorage.token) {
 					// Get Session User Info

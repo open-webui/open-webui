@@ -11,7 +11,7 @@ from open_webui.env import (
     WEBSOCKET_REDIS_URL,
 )
 from open_webui.utils.auth import decode_token
-from open_webui.socket.utils import RedisDict
+from open_webui.socket.utils import RedisDict, RedisLock
 
 from open_webui.env import (
     GLOBAL_LOG_LEVEL,
@@ -29,9 +29,7 @@ if WEBSOCKET_MANAGER == "redis":
     sio = socketio.AsyncServer(
         cors_allowed_origins=[],
         async_mode="asgi",
-        transports=(
-            ["polling", "websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]
-        ),
+        transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
         always_connect=True,
         client_manager=mgr,
@@ -40,54 +38,78 @@ else:
     sio = socketio.AsyncServer(
         cors_allowed_origins=[],
         async_mode="asgi",
-        transports=(
-            ["polling", "websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]
-        ),
+        transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
         always_connect=True,
     )
 
 
+# Timeout duration in seconds
+TIMEOUT_DURATION = 3
+
 # Dictionary to maintain the user pool
 
+run_cleanup = True
 if WEBSOCKET_MANAGER == "redis":
+    log.debug("Using Redis to manage websockets.")
     SESSION_POOL = RedisDict("open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL)
     USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL)
     USAGE_POOL = RedisDict("open-webui:usage_pool", redis_url=WEBSOCKET_REDIS_URL)
+
+    clean_up_lock = RedisLock(
+        redis_url=WEBSOCKET_REDIS_URL,
+        lock_name="usage_cleanup_lock",
+        timeout_secs=TIMEOUT_DURATION * 2,
+    )
+    run_cleanup = clean_up_lock.aquire_lock()
+    renew_func = clean_up_lock.renew_lock
+    release_func = clean_up_lock.release_lock
 else:
     SESSION_POOL = {}
     USER_POOL = {}
     USAGE_POOL = {}
-
-
-# Timeout duration in seconds
-TIMEOUT_DURATION = 3
+    release_func = renew_func = lambda: True
 
 
 async def periodic_usage_pool_cleanup():
-    while True:
-        now = int(time.time())
-        for model_id, connections in list(USAGE_POOL.items()):
-            # Creating a list of sids to remove if they have timed out
-            expired_sids = [
-                sid
-                for sid, details in connections.items()
-                if now - details["updated_at"] > TIMEOUT_DURATION
-            ]
+    if not run_cleanup:
+        log.debug("Usage pool cleanup lock already exists. Not running it.")
+        return
+    log.debug("Running periodic_usage_pool_cleanup")
+    try:
+        while True:
+            if not renew_func():
+                log.error(f"Unable to renew cleanup lock. Exiting usage pool cleanup.")
+                raise Exception("Unable to renew usage pool cleanup lock.")
 
-            for sid in expired_sids:
-                del connections[sid]
+            now = int(time.time())
+            send_usage = False
+            for model_id, connections in list(USAGE_POOL.items()):
+                # Creating a list of sids to remove if they have timed out
+                expired_sids = [
+                    sid
+                    for sid, details in connections.items()
+                    if now - details["updated_at"] > TIMEOUT_DURATION
+                ]
 
-            if not connections:
-                log.debug(f"Cleaning up model {model_id} from usage pool")
-                del USAGE_POOL[model_id]
-            else:
-                USAGE_POOL[model_id] = connections
+                for sid in expired_sids:
+                    del connections[sid]
 
-            # Emit updated usage information after cleaning
-            await sio.emit("usage", {"models": get_models_in_use()})
+                if not connections:
+                    log.debug(f"Cleaning up model {model_id} from usage pool")
+                    del USAGE_POOL[model_id]
+                else:
+                    USAGE_POOL[model_id] = connections
 
-        await asyncio.sleep(TIMEOUT_DURATION)
+                send_usage = True
+
+            if send_usage:
+                # Emit updated usage information after cleaning
+                await sio.emit("usage", {"models": get_models_in_use()})
+
+            await asyncio.sleep(TIMEOUT_DURATION)
+    finally:
+        release_func()
 
 
 app = socketio.ASGIApp(
