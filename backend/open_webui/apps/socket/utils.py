@@ -1,6 +1,30 @@
 import json
 import redis
+import uuid
 
+class RedisLock:
+    def __init__(self, redis_url, lock_name, timeout_secs):
+        self.lock_name = lock_name
+        self.lock_id = str(uuid.uuid4())
+        self.timeout_secs = timeout_secs
+        self.lock_obtained = False
+        self.redis = redis.Redis.from_url(redis_url, decode_responses=True)
+
+    def aquire_lock(self):
+        # nx=True will only set this key if it _hasn't_ already been set
+        self.lock_obtained = self.redis.set(
+            self.lock_name, self.lock_id, nx=True, ex=self.timeout_secs)
+        return self.lock_obtained
+
+    def renew_lock(self):
+        # xx=True will only set this key if it _has_ already been set
+        return self.redis.set(
+            self.lock_name, self.lock_id, xx=True, ex=self.timeout_secs)
+
+    def release_lock(self):
+        lock_value = self.redis.get(self.lock_name)
+        if lock_value and lock_value.decode('utf-8') == self.lock_id:
+            self.redis.delete(self.lock_name)
 
 class RedisDict:
     def __init__(self, name, redis_url):
