@@ -81,7 +81,7 @@
 			>
 				<div class="">
 					{#if voiceInput}
-						<div class=" max-w-full w-64">
+						<div class=" max-w-full w-full">
 							<VoiceRecording
 								bind:recording={voiceInput}
 								className="p-1"
