@@ -429,6 +429,12 @@ OAUTH_ADMIN_ROLES = PersistentConfig(
     [role.strip() for role in os.environ.get("OAUTH_ADMIN_ROLES", "admin").split(",")],
 )
 
+OAUTH_ALLOWED_DOMAINS = PersistentConfig(
+    "OAUTH_ALLOWED_DOMAINS",
+    "oauth.allowed_domains",
+    [domain.strip() for domain in os.environ.get("OAUTH_ALLOWED_DOMAINS", "*").split(",")],
+)
+
 
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()

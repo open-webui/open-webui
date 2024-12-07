@@ -26,6 +26,7 @@ from open_webui.config import (
     OAUTH_USERNAME_CLAIM,
     OAUTH_ALLOWED_ROLES,
     OAUTH_ADMIN_ROLES,
+    OAUTH_ALLOWED_DOMAINS,
     WEBHOOK_URL,
     JWT_EXPIRES_IN,
     AppConfig,
@@ -49,6 +50,7 @@ auth_manager_config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
 auth_manager_config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
 auth_manager_config.OAUTH_ALLOWED_ROLES = OAUTH_ALLOWED_ROLES
 auth_manager_config.OAUTH_ADMIN_ROLES = OAUTH_ADMIN_ROLES
+auth_manager_config.OAUTH_ALLOWED_DOMAINS = OAUTH_ALLOWED_DOMAINS
 auth_manager_config.WEBHOOK_URL = WEBHOOK_URL
 auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 
@@ -155,6 +157,9 @@ class OAuthManager:
         # We currently mandate that email addresses are provided
         if not email:
             log.warning(f"OAuth callback failed, email is missing: {user_data}")
+            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+        if "*" not in auth_manager_config.OAUTH_ALLOWED_DOMAINS and email.split("@")[-1] not in auth_manager_config.OAUTH_ALLOWED_DOMAINS:
+            log.warning(f"OAuth callback failed, e-mail domain is not in the list of allowed domains: {user_data}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
         # Check if the user exists
