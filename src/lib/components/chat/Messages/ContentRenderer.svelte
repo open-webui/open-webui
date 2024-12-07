@@ -8,6 +8,7 @@
 	import { chatId, mobile, showArtifacts, showControls, showOverview } from '$lib/stores';
 	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
 	import { stringify } from 'postcss';
+	import ThoughtOutput from './ThoughtOutput.svelte';
 
 	export let id;
 	export let content;
@@ -24,6 +25,19 @@
 	let selectedText = '';
 	let floatingInput = false;
 	let floatingInputValue = '';
+
+	// Add function to parse thought/output content
+	function parseContent(content) {
+		const thoughtMatch = content.match(/<Thought>([\s\S]*?)<\/Thought>/);
+		const outputMatch = content.match(/<Output>([\s\S]*?)<\/Output>/);
+
+		return {
+			thought: thoughtMatch ? thoughtMatch[1].trim() : null,
+			output: outputMatch ? outputMatch[1].trim() : content
+		};
+	}
+
+	$: parsedContent = parseContent(content);
 
 	const updateButtonPosition = (event) => {
 		if (
@@ -127,53 +141,156 @@
 </script>
 
 <div bind:this={contentContainerElement}>
-	<Markdown
-		{id}
-		{content}
-		{model}
-		{save}
-		sourceIds={(sources ?? []).reduce((acc, s) => {
-			let ids = [];
-			s.document.forEach((document, index) => {
-				const metadata = s.metadata?.[index];
-				const id = metadata?.source ?? 'N/A';
+	{#if parsedContent.thought}
+		<ThoughtOutput thought={parsedContent.thought} output={parsedContent.output}>
+			<div slot="thought">
+				<Markdown
+					{id}
+					content={parsedContent.thought}
+					{model}
+					{save}
+					sourceIds={(sources ?? []).reduce((acc, s) => {
+						let ids = [];
+						s.document.forEach((document, index) => {
+							const metadata = s.metadata?.[index];
+							const id = metadata?.source ?? 'N/A';
 
-				if (metadata?.name) {
-					ids.push(metadata.name);
+							if (metadata?.name) {
+								ids.push(metadata.name);
+								return ids;
+							}
+
+							if (id.startsWith('http://') || id.startsWith('https://')) {
+								ids.push(id);
+							} else {
+								ids.push(s?.source?.name ?? id);
+							}
+
+							return ids;
+						});
+
+						acc = [...acc, ...ids];
+
+						// remove duplicates
+						return acc.filter((item, index) => acc.indexOf(item) === index);
+					}, [])}
+					{onSourceClick}
+					on:update={(e) => {
+						dispatch('update', e.detail);
+					}}
+					on:code={(e) => {
+						const { lang, code } = e.detail;
+
+						if (
+							(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
+							!$mobile &&
+							$chatId
+						) {
+							showArtifacts.set(true);
+							showControls.set(true);
+						}
+					}}
+				/>
+			</div>
+			<div slot="output">
+				<Markdown
+					{id}
+					content={parsedContent.output}
+					{model}
+					{save}
+					sourceIds={(sources ?? []).reduce((acc, s) => {
+						let ids = [];
+						s.document.forEach((document, index) => {
+							const metadata = s.metadata?.[index];
+							const id = metadata?.source ?? 'N/A';
+
+							if (metadata?.name) {
+								ids.push(metadata.name);
+								return ids;
+							}
+
+							if (id.startsWith('http://') || id.startsWith('https://')) {
+								ids.push(id);
+							} else {
+								ids.push(s?.source?.name ?? id);
+							}
+
+							return ids;
+						});
+
+						acc = [...acc, ...ids];
+
+						// remove duplicates
+						return acc.filter((item, index) => acc.indexOf(item) === index);
+					}, [])}
+					{onSourceClick}
+					on:update={(e) => {
+						dispatch('update', e.detail);
+					}}
+					on:code={(e) => {
+						const { lang, code } = e.detail;
+
+						if (
+							(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
+							!$mobile &&
+							$chatId
+						) {
+							showArtifacts.set(true);
+							showControls.set(true);
+						}
+					}}
+				/>
+			</div>
+		</ThoughtOutput>
+	{:else}
+		<Markdown
+			{id}
+			{content}
+			{model}
+			{save}
+			sourceIds={(sources ?? []).reduce((acc, s) => {
+				let ids = [];
+				s.document.forEach((document, index) => {
+					const metadata = s.metadata?.[index];
+					const id = metadata?.source ?? 'N/A';
+
+					if (metadata?.name) {
+						ids.push(metadata.name);
+						return ids;
+					}
+
+					if (id.startsWith('http://') || id.startsWith('https://')) {
+						ids.push(id);
+					} else {
+						ids.push(s?.source?.name ?? id);
+					}
+
 					return ids;
+				});
+
+				acc = [...acc, ...ids];
+
+				// remove duplicates
+				return acc.filter((item, index) => acc.indexOf(item) === index);
+			}, [])}
+			{onSourceClick}
+			on:update={(e) => {
+				dispatch('update', e.detail);
+			}}
+			on:code={(e) => {
+				const { lang, code } = e.detail;
+
+				if (
+					(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
+					!$mobile &&
+					$chatId
+				) {
+					showArtifacts.set(true);
+					showControls.set(true);
 				}
-
-				if (id.startsWith('http://') || id.startsWith('https://')) {
-					ids.push(id);
-				} else {
-					ids.push(s?.source?.name ?? id);
-				}
-
-				return ids;
-			});
-
-			acc = [...acc, ...ids];
-
-			// remove duplicates
-			return acc.filter((item, index) => acc.indexOf(item) === index);
-		}, [])}
-		{onSourceClick}
-		on:update={(e) => {
-			dispatch('update', e.detail);
-		}}
-		on:code={(e) => {
-			const { lang, code } = e.detail;
-
-			if (
-				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
-				!$mobile &&
-				$chatId
-			) {
-				showArtifacts.set(true);
-				showControls.set(true);
-			}
-		}}
-	/>
+			}}
+		/>
+	{/if}
 </div>
 
 {#if floatingButtons}
