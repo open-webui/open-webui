@@ -1399,7 +1399,7 @@ def query_collection_handler(
         if app.state.config.ENABLE_RAG_HYBRID_SEARCH:
             return query_collection_with_hybrid_search(
                 collection_names=form_data.collection_names,
-                query=form_data.query,
+                queries=[form_data.query],
                 embedding_function=app.state.EMBEDDING_FUNCTION,
                 k=form_data.k if form_data.k else app.state.config.TOP_K,
                 reranking_function=app.state.sentence_transformer_rf,
@@ -1410,7 +1410,7 @@ def query_collection_handler(
         else:
             return query_collection(
                 collection_names=form_data.collection_names,
-                query=form_data.query,
+                queries=[form_data.query],
                 embedding_function=app.state.EMBEDDING_FUNCTION,
                 k=form_data.k if form_data.k else app.state.config.TOP_K,
             )

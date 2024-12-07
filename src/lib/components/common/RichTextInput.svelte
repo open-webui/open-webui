@@ -191,9 +191,14 @@
 			onTransaction: () => {
 				// force re-render so `editor.isActive` works as expected
 				editor = editor;
-				const newValue = turndownService.turndown(
-					preserveBreaks ? editor.getHTML().replace(/<p><\/p>/g, '<br/>') : editor.getHTML()
-				);
+				const newValue = turndownService
+					.turndown(
+						(preserveBreaks
+							? editor.getHTML().replace(/<p><\/p>/g, '<br/>')
+							: editor.getHTML()
+						).replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+					)
+					.replace(/\u00a0/g, ' ');
 
 				if (value !== newValue) {
 					value = newValue;
@@ -332,9 +337,14 @@
 	$: if (
 		editor &&
 		value !==
-			turndownService.turndown(
-				preserveBreaks ? editor.getHTML().replace(/<p><\/p>/g, '<br/>') : editor.getHTML()
-			)
+			turndownService
+				.turndown(
+					(preserveBreaks
+						? editor.getHTML().replace(/<p><\/p>/g, '<br/>')
+						: editor.getHTML()
+					).replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+				)
+				.replace(/\u00a0/g, ' ')
 	) {
 		editor.commands.setContent(
 			marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
