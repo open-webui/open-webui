@@ -20,7 +20,6 @@ from open_webui.config import (
     OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
     OAUTH_PROVIDERS,
     ENABLE_OAUTH_ROLE_MANAGEMENT,
-    OAUTH_PROVIDER_NAME,
     OAUTH_ROLES_CLAIM,
     OAUTH_EMAIL_CLAIM,
     OAUTH_PICTURE_CLAIM,
@@ -254,7 +253,7 @@ class OAuthManager:
             secure=WEBUI_SESSION_COOKIE_SECURE,
         )
         
-        if OAUTH_PROVIDER_NAME.value:
+        if ENABLE_OAUTH_SIGNUP.value:
             id_token = token.get("id_token")
             response.set_cookie(
                 key="id_token",
