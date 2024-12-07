@@ -254,7 +254,7 @@ class OAuthManager:
             secure=WEBUI_SESSION_COOKIE_SECURE,
         )
         
-        if OAUTH_PROVIDER_NAME.value == "keycloak":
+        if OAUTH_PROVIDER_NAME.value:
             id_token = token.get("id_token")
             response.set_cookie(
                 key="id_token",
