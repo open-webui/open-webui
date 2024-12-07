@@ -29,7 +29,11 @@ from open_webui.env import (
     SRC_LOG_LEVELS,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import Response
+from fastapi.responses import RedirectResponse, Response
+from open_webui.config import (
+    OAUTH_PROVIDER_NAME,
+    OAUTH_LOGOUT_URL,
+)
 from pydantic import BaseModel
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.utils import (
@@ -498,8 +502,17 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
 
 @router.get("/signout")
-async def signout(response: Response):
+async def signout(request: Request, response: Response):
     response.delete_cookie("token")
+    
+    if OAUTH_PROVIDER_NAME.value == "keycloak" and OAUTH_LOGOUT_URL:
+        id_token = request.cookies.get("id_token", None)
+        if id_token:
+            logout_url = f"{OAUTH_LOGOUT_URL}?id_token_hint={id_token}"
+            response.delete_cookie("id_token")
+            return RedirectResponse(url=logout_url)
+
+    # Fall back to the default signout
     return {"status": True}
 
 

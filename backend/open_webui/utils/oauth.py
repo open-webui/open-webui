@@ -20,6 +20,7 @@ from open_webui.config import (
     OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
     OAUTH_PROVIDERS,
     ENABLE_OAUTH_ROLE_MANAGEMENT,
+    OAUTH_PROVIDER_NAME,
     OAUTH_ROLES_CLAIM,
     OAUTH_EMAIL_CLAIM,
     OAUTH_PICTURE_CLAIM,
@@ -252,10 +253,19 @@ class OAuthManager:
             samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
             secure=WEBUI_SESSION_COOKIE_SECURE,
         )
-
+        
+        if OAUTH_PROVIDER_NAME.value == "keycloak":
+            id_token = token.get("id_token")
+            response.set_cookie(
+                key="id_token",
+                value=id_token,
+                httponly=True,
+                samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
+                secure=WEBUI_SESSION_COOKIE_SECURE,
+            )
         # Redirect back to the frontend with the JWT token
         redirect_url = f"{request.base_url}auth#token={jwt_token}"
-        return RedirectResponse(url=redirect_url)
+        return RedirectResponse(url=redirect_url, headers=response.headers)
 
 
 oauth_manager = OAuthManager()

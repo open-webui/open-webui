@@ -384,6 +384,12 @@ OAUTH_PROVIDER_NAME = PersistentConfig(
     os.environ.get("OAUTH_PROVIDER_NAME", "SSO"),
 )
 
+OAUTH_LOGOUT_URL = PersistentConfig(
+    "OAUTH_LOGOUT_URL",
+    "oauth.oidc.logout_url",
+    os.environ.get("OAUTH_LOGOUT_URL", ""),
+)
+
 OAUTH_USERNAME_CLAIM = PersistentConfig(
     "OAUTH_USERNAME_CLAIM",
     "oauth.oidc.username_claim",
