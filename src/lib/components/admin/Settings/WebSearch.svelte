@@ -16,6 +16,7 @@
 		'searxng',
 		'google_pse',
 		'brave',
+		'kagi',
 		'mojeek',
 		'serpstack',
 		'serper',
@@ -153,6 +154,17 @@
 								<SensitiveInput
 									placeholder={$i18n.t('Enter Brave Search API Key')}
 									bind:value={webConfig.search.brave_search_api_key}
+								/>
+							</div>
+						{:else if webConfig.search.engine === 'kagi'}
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Kagi Search API Key')}
+								</div>
+
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Kagi Search API Key')}
+									bind:value={webConfig.search.kagi_search_api_key}
 								/>
 							</div>
 						{:else if webConfig.search.engine === 'mojeek'}

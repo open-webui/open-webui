@@ -29,6 +29,7 @@ from open_webui.apps.retrieval.loaders.youtube import YoutubeLoader
 from open_webui.apps.retrieval.web.main import SearchResult
 from open_webui.apps.retrieval.web.utils import get_web_loader
 from open_webui.apps.retrieval.web.brave import search_brave
+from open_webui.apps.retrieval.web.kagi import search_kagi
 from open_webui.apps.retrieval.web.mojeek import search_mojeek
 from open_webui.apps.retrieval.web.duckduckgo import search_duckduckgo
 from open_webui.apps.retrieval.web.google_pse import search_google_pse
@@ -54,6 +55,7 @@ from open_webui.apps.retrieval.utils import (
 from open_webui.apps.webui.models.files import Files
 from open_webui.config import (
     BRAVE_SEARCH_API_KEY,
+    KAGI_SEARCH_API_KEY,
     MOJEEK_SEARCH_API_KEY,
     TIKTOKEN_ENCODING_NAME,
     RAG_TEXT_SPLITTER,
@@ -184,6 +186,7 @@ app.state.config.SEARXNG_QUERY_URL = SEARXNG_QUERY_URL
 app.state.config.GOOGLE_PSE_API_KEY = GOOGLE_PSE_API_KEY
 app.state.config.GOOGLE_PSE_ENGINE_ID = GOOGLE_PSE_ENGINE_ID
 app.state.config.BRAVE_SEARCH_API_KEY = BRAVE_SEARCH_API_KEY
+app.state.config.KAGI_SEARCH_API_KEY = KAGI_SEARCH_API_KEY
 app.state.config.MOJEEK_SEARCH_API_KEY = MOJEEK_SEARCH_API_KEY
 app.state.config.SERPSTACK_API_KEY = SERPSTACK_API_KEY
 app.state.config.SERPSTACK_HTTPS = SERPSTACK_HTTPS
@@ -484,6 +487,7 @@ async def get_rag_config(user=Depends(get_admin_user)):
                 "google_pse_api_key": app.state.config.GOOGLE_PSE_API_KEY,
                 "google_pse_engine_id": app.state.config.GOOGLE_PSE_ENGINE_ID,
                 "brave_search_api_key": app.state.config.BRAVE_SEARCH_API_KEY,
+                "kagi_search_api_key": app.state.config.KAGI_SEARCH_API_KEY,
                 "mojeek_search_api_key": app.state.config.MOJEEK_SEARCH_API_KEY,
                 "serpstack_api_key": app.state.config.SERPSTACK_API_KEY,
                 "serpstack_https": app.state.config.SERPSTACK_HTTPS,
@@ -531,6 +535,7 @@ class WebSearchConfig(BaseModel):
     google_pse_api_key: Optional[str] = None
     google_pse_engine_id: Optional[str] = None
     brave_search_api_key: Optional[str] = None
+    kagi_search_api_key: Optional[str] = None
     mojeek_search_api_key: Optional[str] = None
     serpstack_api_key: Optional[str] = None
     serpstack_https: Optional[bool] = None
@@ -603,6 +608,9 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
         app.state.config.BRAVE_SEARCH_API_KEY = (
             form_data.web.search.brave_search_api_key
         )
+        app.state.config.KAGI_SEARCH_API_KEY = (
+            form_data.web.search.kagi_search_api_key
+        )
         app.state.config.MOJEEK_SEARCH_API_KEY = (
             form_data.web.search.mojeek_search_api_key
         )
@@ -657,6 +665,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
                 "google_pse_api_key": app.state.config.GOOGLE_PSE_API_KEY,
                 "google_pse_engine_id": app.state.config.GOOGLE_PSE_ENGINE_ID,
                 "brave_search_api_key": app.state.config.BRAVE_SEARCH_API_KEY,
+                "kagi_search_api_key": app.state.config.KAGI_SEARCH_API_KEY,
                 "mojeek_search_api_key": app.state.config.MOJEEK_SEARCH_API_KEY,
                 "serpstack_api_key": app.state.config.SERPSTACK_API_KEY,
                 "serpstack_https": app.state.config.SERPSTACK_HTTPS,
@@ -1162,6 +1171,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
     - SEARXNG_QUERY_URL
     - GOOGLE_PSE_API_KEY + GOOGLE_PSE_ENGINE_ID
     - BRAVE_SEARCH_API_KEY
+    - KAGI_SEARCH_API_KEY
     - MOJEEK_SEARCH_API_KEY
     - SERPSTACK_API_KEY
     - SERPER_API_KEY
@@ -1209,6 +1219,16 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
             )
         else:
             raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
+    elif engine == "kagi":
+        if app.state.config.KAGI_SEARCH_API_KEY:
+            return search_kagi(
+                app.state.config.KAGI_SEARCH_API_KEY,
+                query,
+                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception("No KAGI_SEARCH_API_KEY found in environment variables")
     elif engine == "mojeek":
         if app.state.config.MOJEEK_SEARCH_API_KEY:
             return search_mojeek(

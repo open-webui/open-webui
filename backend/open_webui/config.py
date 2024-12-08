@@ -1380,6 +1380,12 @@ BRAVE_SEARCH_API_KEY = PersistentConfig(
     os.getenv("BRAVE_SEARCH_API_KEY", ""),
 )
 
+KAGI_SEARCH_API_KEY = PersistentConfig(
+    "KAGI_SEARCH_API_KEY",
+    "rag.web.search.kagi_search_api_key",
+    os.getenv("KAGI_SEARCH_API_KEY", ""),
+)
+
 MOJEEK_SEARCH_API_KEY = PersistentConfig(
     "MOJEEK_SEARCH_API_KEY",
     "rag.web.search.mojeek_search_api_key",
