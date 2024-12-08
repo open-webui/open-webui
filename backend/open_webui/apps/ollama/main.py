@@ -431,6 +431,25 @@ async def get_ollama_versions(url_idx: Optional[int] = None):
     else:
         return {"version": False}
 
+@app.get("/api/ps")
+async def get_ollama_loaded_models(user=Depends(get_verified_user)):
+    """
+    List models that are currently loaded into Ollama memory, and which node they are loaded on.
+    """
+    if app.state.config.ENABLE_OLLAMA_API:
+        tasks = [
+            aiohttp_get(
+                f"{url}/api/ps",
+                app.state.config.OLLAMA_API_CONFIGS.get(url, {}).get("key", None),
+            )
+            for url in app.state.config.OLLAMA_BASE_URLS
+        ]
+        responses = await asyncio.gather(*tasks)
+
+        return dict(zip(app.state.config.OLLAMA_BASE_URLS, responses))
+    else:
+        return {}
+
 
 class ModelNameForm(BaseModel):
     name: str
