@@ -3,7 +3,7 @@ import uuid
 import time
 import datetime
 import logging
-import httpx
+from aiohttp import ClientSession
 
 from open_webui.apps.webui.models.auths import (
     AddUserForm,
@@ -507,24 +507,25 @@ async def signout(request: Request, response: Response):
     response.delete_cookie("token")
 
     if ENABLE_OAUTH_SIGNUP.value:
-        id_token = request.cookies.get("id_token", None)
+        id_token = request.cookies.get("id_token")
         if id_token:
-            async with httpx.AsyncClient() as client:
-                try:
-                    openid_config = await client.get(OPENID_PROVIDER_URL.value)
-                    openid_config.raise_for_status()
-                    openid_data = openid_config.json()
-                    end_session_endpoint = openid_data.get("end_session_endpoint")
-                    if end_session_endpoint:
-                        logout_url = f"{end_session_endpoint}?id_token_hint={id_token}"
-                        response.delete_cookie("id_token")
-                        return RedirectResponse(url=logout_url)
-                except httpx.HTTPStatusError as e:
-                    raise HTTPException(status_code=e.response.status_code, detail="Failed to fetch OpenID configuration")
-                except Exception as e:
-                    raise HTTPException(status_code=500, detail=str(e))
+            try:
+                async with ClientSession() as session:
+                    async with session.get(OPENID_PROVIDER_URL.value) as resp:
+                        if resp.status == 200:
+                            openid_data = await resp.json()
+                            logout_url = openid_data.get("end_session_endpoint")
+                            if logout_url:
+                                response.delete_cookie("id_token")
+                                return RedirectResponse(url=f"{logout_url}?id_token_hint={id_token}")
+                        else:
+                            raise HTTPException(
+                                status_code=resp.status,
+                                detail="Failed to fetch OpenID configuration"
+                            )
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
 
-    # Fall back to the default signout
     return {"status": True}
 
 
