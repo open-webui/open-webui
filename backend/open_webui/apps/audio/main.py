@@ -45,7 +45,7 @@ from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile, 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user
 
 # Constants
 MAX_FILE_SIZE_MB = 25

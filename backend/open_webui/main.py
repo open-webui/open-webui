@@ -139,7 +139,7 @@ from open_webui.utils.task import (
     tools_function_calling_generation_template,
 )
 from open_webui.utils.tools import get_tools
-from open_webui.utils.utils import (
+from open_webui.utils.auth import (
     decode_token,
     get_admin_user,
     get_current_user,

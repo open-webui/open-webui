@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.8] - 2024-12-07
+
+### Added
+
+- **🔓 Bypass Model Access Control**: Introduced the 'BYPASS_MODEL_ACCESS_CONTROL' environment variable. Easily bypass model access controls for user roles when access control isn't required, simplifying workflows for trusted environments.
+- **📝 Markdown in Banners**: Now supports markdown for banners, enabling richer, more visually engaging announcements.
+- **🌐 Internationalization Updates**: Enhanced translations across multiple languages, further improving accessibility and global user experience.
+- **🎨 Styling Enhancements**: General UI style refinements for a cleaner and more polished interface.
+- **📋 Rich Text Reliability**: Improved the reliability and stability of rich text input across chats for smoother interactions.
+
+### Fixed
+
+- **💡 Tailwind Build Issue**: Resolved a breaking bug caused by Tailwind, ensuring smoother builds and overall system reliability.
+- **📚 Knowledge Collection Query Fix**: Addressed API endpoint issues with querying knowledge collections, ensuring accurate and reliable information retrieval.
+
 ## [0.4.7] - 2024-12-01
 
 ### Added

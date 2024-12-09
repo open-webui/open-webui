@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from starlette.responses import FileResponse
 from open_webui.utils.misc import get_gravatar_url
 from open_webui.utils.pdf_generator import PDFGenerator
-from open_webui.utils.utils import get_admin_user
+from open_webui.utils.auth import get_admin_user
 
 router = APIRouter()
 
