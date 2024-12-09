@@ -40,6 +40,7 @@ type ContentExtractConfigForm = {
 type YoutubeConfigForm = {
 	language: string[];
 	translation?: string | null;
+	proxy_url: string;
 };
 
 type RAGConfigForm = {

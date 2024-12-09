@@ -13,7 +13,7 @@ def mock_webui_user(**kwargs):
 
 @contextmanager
 def mock_user(app: FastAPI, **kwargs):
-    from open_webui.utils.utils import (
+    from open_webui.utils.auth import (
         get_current_user,
         get_verified_user,
         get_admin_user,

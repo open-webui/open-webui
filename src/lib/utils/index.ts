@@ -8,6 +8,10 @@ import { TTS_RESPONSE_SPLIT } from '$lib/types';
 // Helper functions
 //////////////////////////
 
+function escapeRegExp(string: string): string {
+	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export const replaceTokens = (content, sourceIds, char, user) => {
 	const charToken = /{{char}}/gi;
 	const userToken = /{{user}}/gi;
@@ -39,8 +43,11 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 	// Remove sourceIds from the content and replace them with <source_id>...</source_id>
 	if (Array.isArray(sourceIds)) {
 		sourceIds.forEach((sourceId) => {
+			// Escape special characters in the sourceId
+			const escapedSourceId = escapeRegExp(sourceId);
+
 			// Create a token based on the exact `[sourceId]` string
-			const sourceToken = `\\[${sourceId}\\]`; // Escape special characters for RegExp
+			const sourceToken = `\\[${escapedSourceId}\\]`; // Escape special characters for RegExp
 			const sourceRegex = new RegExp(sourceToken, 'g'); // Match all occurrences of [sourceId]
 
 			content = content.replace(sourceRegex, `<source_id data="${sourceId}" />`);

@@ -15,6 +15,7 @@
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
 	import AccessControl from '../common/AccessControl.svelte';
 	import { stringify } from 'postcss';
+	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
 
@@ -68,7 +69,9 @@
 		}
 	};
 
-	let params = {};
+	let params = {
+		system: ''
+	};
 	let capabilities = {
 		vision: true,
 		usage: undefined,
@@ -100,6 +103,14 @@
 
 		info.id = id;
 		info.name = name;
+
+		if (id === '') {
+			toast.error('Model ID is required.');
+		}
+
+		if (name === '') {
+			toast.error('Model Name is required.');
+		}
 
 		info.access_control = accessControl;
 		info.meta.capabilities = capabilities;
@@ -317,6 +328,7 @@
 						info.meta.profile_image_url = compressedSrc;
 
 						inputFiles = null;
+						filesInputElement.value = '';
 					};
 				};
 
@@ -345,7 +357,7 @@
 				<div class="self-center md:self-start flex justify-center my-2 flex-shrink-0">
 					<div class="self-center">
 						<button
-							class="rounded-2xl flex flex-shrink-0 items-center {info.meta.profile_image_url !==
+							class="rounded-xl flex flex-shrink-0 items-center {info.meta.profile_image_url !==
 							'/static/favicon.png'
 								? 'bg-transparent'
 								: 'bg-white'} shadow-xl group relative"
@@ -358,13 +370,13 @@
 								<img
 									src={info.meta.profile_image_url}
 									alt="model profile"
-									class="rounded-lg size-72 md:size-60 object-cover shrink-0"
+									class="rounded-xl size-72 md:size-60 object-cover shrink-0"
 								/>
 							{:else}
 								<img
 									src="/static/favicon.png"
 									alt="model profile"
-									class=" rounded-lg size-72 md:size-60 object-cover shrink-0"
+									class=" rounded-xl size-72 md:size-60 object-cover shrink-0"
 								/>
 							{/if}
 
@@ -393,6 +405,18 @@
 								class="absolute top-0 bottom-0 left-0 right-0 bg-white dark:bg-black rounded-lg opacity-0 group-hover:opacity-20 transition"
 							></div>
 						</button>
+
+						<div class="flex w-full mt-1 justify-end">
+							<button
+								class="px-2 py-1 text-gray-500 rounded-lg text-xs"
+								on:click={() => {
+									info.meta.profile_image_url = '/static/favicon.png';
+								}}
+								type="button"
+							>
+								Reset Image</button
+							>
+						</div>
 					</div>
 				</div>
 
@@ -410,12 +434,11 @@
 						</div>
 
 						<div class="flex-1">
-							<!-- <div class=" text-sm font-semibold">{$i18n.t('Model ID')}*</div> -->
 							<div>
 								<input
 									class="text-xs w-full bg-transparent text-gray-500 outline-none"
 									placeholder={$i18n.t('Model ID')}
-									value={id}
+									bind:value={id}
 									disabled={edit}
 									required
 								/>
