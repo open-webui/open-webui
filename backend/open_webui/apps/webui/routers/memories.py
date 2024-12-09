@@ -5,7 +5,7 @@ from typing import Optional
 
 from open_webui.apps.webui.models.memories import Memories, MemoryModel
 from open_webui.apps.retrieval.vector.connector import VECTOR_DB_CLIENT
-from open_webui.utils.utils import get_verified_user
+from open_webui.utils.auth import get_verified_user
 from open_webui.env import SRC_LOG_LEVELS
 
 

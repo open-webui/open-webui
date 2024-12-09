@@ -11,7 +11,7 @@ from open_webui.apps.webui.models.feedbacks import (
 )
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user
 
 router = APIRouter()
 

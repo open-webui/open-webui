@@ -121,7 +121,7 @@ from open_webui.utils.misc import (
     extract_folders_after_data_docs,
     sanitize_filename,
 )
-from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from langchain_core.documents import Document

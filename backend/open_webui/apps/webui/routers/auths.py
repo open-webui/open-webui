@@ -32,7 +32,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import Response
 from pydantic import BaseModel
 from open_webui.utils.misc import parse_duration, validate_email_format
-from open_webui.utils.utils import (
+from open_webui.utils.auth import (
     create_api_key,
     create_token,
     get_admin_user,

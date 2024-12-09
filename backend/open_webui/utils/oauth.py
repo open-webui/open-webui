@@ -33,7 +33,7 @@ from open_webui.config import (
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import WEBUI_SESSION_COOKIE_SAME_SITE, WEBUI_SESSION_COOKIE_SECURE
 from open_webui.utils.misc import parse_duration
-from open_webui.utils.utils import get_password_hash, create_token
+from open_webui.utils.auth import get_password_hash, create_token
 from open_webui.utils.webhook import post_webhook
 
 log = logging.getLogger(__name__)
