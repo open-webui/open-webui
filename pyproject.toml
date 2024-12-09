@@ -9,7 +9,7 @@ dependencies = [
     "fastapi==0.111.0",
     "uvicorn[standard]==0.30.6",
     "pydantic==2.9.2",
-    "python-multipart==0.0.17",
+    "python-multipart==0.0.18",
 
     "Flask==3.0.3",
     "Flask-Cors==5.0.0",
@@ -19,13 +19,13 @@ dependencies = [
     "passlib[bcrypt]==1.7.4",
 
     "requests==2.32.3",
-    "aiohttp==3.10.8",
+    "aiohttp==3.11.8",
     "async-timeout",
     "aiocache",
     "aiofiles",
 
     "sqlalchemy==2.0.32",
-    "alembic==1.13.2",
+    "alembic==1.14.0",
     "peewee==3.17.6",
     "peewee-migrate==1.12.2",
     "psycopg2-binary==2.9.9",
@@ -51,11 +51,11 @@ dependencies = [
 
     "fake-useragent==1.5.1",
     "chromadb==0.5.15",
-    "pymilvus==2.4.9",
+    "pymilvus==2.5.0",
     "qdrant-client~=1.12.0",
     "opensearch-py==2.7.1",
 
-    "sentence-transformers==3.2.0",
+    "sentence-transformers==3.3.1",
     "colbert-ai==0.2.21",
     "einops==0.8.0",
 

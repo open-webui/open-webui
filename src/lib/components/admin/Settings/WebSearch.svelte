@@ -29,13 +29,15 @@
 
 	let youtubeLanguage = 'en';
 	let youtubeTranslation = null;
+	let youtubeProxyUrl = '';
 
 	const submitHandler = async () => {
 		const res = await updateRAGConfig(localStorage.token, {
 			web: webConfig,
 			youtube: {
 				language: youtubeLanguage.split(',').map((lang) => lang.trim()),
-				translation: youtubeTranslation
+				translation: youtubeTranslation,
+				proxy_url: youtubeProxyUrl
 			}
 		});
 	};
@@ -48,6 +50,7 @@
 
 			youtubeLanguage = res.youtube.language.join(',');
 			youtubeTranslation = res.youtube.translation;
+			youtubeProxyUrl = res.youtube.proxy_url;
 		}
 	});
 </script>
@@ -353,6 +356,21 @@
 								type="text"
 								placeholder={$i18n.t('Enter language codes')}
 								bind:value={youtubeLanguage}
+								autocomplete="off"
+							/>
+						</div>
+					</div>
+				</div>
+
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" w-20 text-xs font-medium self-center">{$i18n.t('Proxy URL')}</div>
+						<div class=" flex-1 self-center">
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								type="text"
+								placeholder={$i18n.t('Enter proxy URL (e.g. https://user:password@host:port)')}
+								bind:value={youtubeProxyUrl}
 								autocomplete="off"
 							/>
 						</div>
