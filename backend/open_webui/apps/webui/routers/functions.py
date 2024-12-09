@@ -12,7 +12,7 @@ from open_webui.apps.webui.utils import load_function_module_by_id, replace_impo
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user
 
 router = APIRouter()
 

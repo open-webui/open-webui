@@ -12,7 +12,7 @@ from open_webui.env import (
     WEBSOCKET_MANAGER,
     WEBSOCKET_REDIS_URL,
 )
-from open_webui.utils.utils import decode_token
+from open_webui.utils.auth import decode_token
 from open_webui.apps.socket.utils import RedisDict
 
 from open_webui.config import (
