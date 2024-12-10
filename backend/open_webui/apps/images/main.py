@@ -117,7 +117,7 @@ class OpenAIConfigForm(BaseModel):
 class Automatic1111ConfigForm(BaseModel):
     AUTOMATIC1111_BASE_URL: str
     AUTOMATIC1111_API_AUTH: str
-    AUTOMATIC1111_CFG_SCALE: Optional[str]
+    AUTOMATIC1111_CFG_SCALE: Optional[str | float | int]
     AUTOMATIC1111_SAMPLER: Optional[str]
     AUTOMATIC1111_SCHEDULER: Optional[str]
 
