@@ -252,12 +252,12 @@ class OAuthManager:
             samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
             secure=WEBUI_SESSION_COOKIE_SECURE,
         )
-        
+
         if ENABLE_OAUTH_SIGNUP.value:
-            id_token = token.get("id_token")
+            oauth_id_token = token.get("id_token")
             response.set_cookie(
-                key="id_token",
-                value=id_token,
+                key="oauth_id_token",
+                value=oauth_id_token,
                 httponly=True,
                 samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
                 secure=WEBUI_SESSION_COOKIE_SECURE,
