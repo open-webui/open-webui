@@ -432,6 +432,7 @@ async def get_ollama_versions(url_idx: Optional[int] = None):
     else:
         return {"version": False}
 
+
 @app.get("/api/ps")
 async def get_ollama_loaded_models(user=Depends(get_verified_user)):
     """
@@ -966,6 +967,9 @@ async def generate_chat_completion(
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
 ):
+    if BYPASS_MODEL_ACCESS_CONTROL:
+        bypass_filter = True
+
     payload = {**form_data.model_dump(exclude_none=True)}
     log.debug(f"generate_chat_completion() - 1.payload = {payload}")
     if "metadata" in payload:
@@ -1090,7 +1094,7 @@ async def generate_openai_completion(
             payload = apply_model_params_to_body_openai(params, payload)
 
         # Check if user has access to the model
-        if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+        if user.role == "user":
             if not (
                 user.id == model_info.user_id
                 or has_access(
@@ -1163,7 +1167,7 @@ async def generate_openai_chat_completion(
             payload = apply_model_system_prompt_to_body(params, payload, user)
 
         # Check if user has access to the model
-        if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+        if user.role == "user":
             if not (
                 user.id == model_info.user_id
                 or has_access(

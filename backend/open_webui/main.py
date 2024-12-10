@@ -1265,6 +1265,9 @@ async def get_base_models(user=Depends(get_admin_user)):
 async def generate_chat_completions(
     form_data: dict, user=Depends(get_verified_user), bypass_filter: bool = False
 ):
+    if BYPASS_MODEL_ACCESS_CONTROL:
+        bypass_filter = True
+
     model_list = await get_all_models()
     models = {model["id"]: model for model in model_list}
 
