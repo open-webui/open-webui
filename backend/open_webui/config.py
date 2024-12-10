@@ -478,6 +478,55 @@ def load_oauth_providers():
 load_oauth_providers()
 
 ####################################
+# CAS config
+####################################
+
+ENABLE_CAS_SIGNUP = PersistentConfig(
+    "ENABLE_CAS_SIGNUP",
+    "cas.enable_signup",
+    os.environ.get("ENABLE_CAS_SIGNUP", "False").lower() == "true",
+)
+
+CAS_PROVIDER = None
+
+CAS_SERVER_VERSION = PersistentConfig(
+    "CAS_SERVER_VERSION",
+    "cas.server_version",
+    os.environ.get("CAS_SERVER_VERSION", "3"),
+)
+
+CAS_SERVER_URL = PersistentConfig(
+    "CAS_SERVER_URL",
+    "cas.server_url",
+    os.environ.get("CAS_SERVER_URL", ""),
+)
+
+CAS_USERNAME_CLAIM = PersistentConfig(
+    "CAS_USERNAME_CLAIM",
+    "cas.username_claim",
+    os.environ.get("CAS_USERNAME_CLAIM", "displayName"),
+)
+
+CAS_EMAIL_CLAIM = PersistentConfig(
+    "CAS_EMAIL_CLAIM",
+    "cas.email_claim",
+    os.environ.get("CAS_EMAIL_CLAIM", "mail"),
+)
+
+
+if (
+        CAS_SERVER_VERSION.value
+        and CAS_SERVER_URL.value
+    ):
+        CAS_PROVIDER = {
+            "version": CAS_SERVER_VERSION.value,
+            "server_url": CAS_SERVER_URL.value,
+        }
+else:
+    CAS_PROVIDER = None
+
+
+####################################
 # Static DIR
 ####################################
 
