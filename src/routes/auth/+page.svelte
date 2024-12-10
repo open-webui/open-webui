@@ -36,9 +36,14 @@
 				localStorage.token = sessionUser.token;
 			}
 
-			$socket.emit('user-join', { auth: { token: sessionUser.token } });
 			await user.set(sessionUser);
-			await config.set(await getBackendConfig());
+			let fetched_config = await getBackendConfig();
+			await config.set(fetched_config);
+
+			if (fetched_config.enable_user_count_websocket_updates) {
+				$socket.emit('user-join', { auth: { token: sessionUser.token } });
+			}
+
 			goto('/');
 		}
 	};

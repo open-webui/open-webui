@@ -1782,7 +1782,6 @@ AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
     ),
 )
 
-
 ####################################
 # LDAP
 ####################################
@@ -1851,4 +1850,20 @@ LDAP_CA_CERT_FILE = PersistentConfig(
 
 LDAP_CIPHERS = PersistentConfig(
     "LDAP_CIPHERS", "ldap.server.ciphers", os.environ.get("LDAP_CIPHERS", "ALL")
+)
+
+####################################
+# Websocket
+####################################
+
+ENABLE_USAGE_WEBSOCKET_UPDATES = PersistentConfig(
+    "ENABLE_USAGE_WEBSOCKET_UPDATES",
+    "websocket.usage.enable",
+    os.getenv("ENABLE_USAGE_WEBSOCKET_UPDATES", "True").lower() == "true",
+)
+
+ENABLE_USER_COUNT_WEBSOCKET_UPDATES = PersistentConfig(
+    "ENABLE_USER_COUNT_WEBSOCKET_UPDATES",
+    "websocket.user_count.enable",
+    os.getenv("ENABLE_USER_COUNT_WEBSOCKET_UPDATES", "True").lower() == "true",
 )
