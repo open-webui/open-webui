@@ -3,6 +3,7 @@ import uuid
 import time
 import datetime
 import logging
+from aiohttp import ClientSession
 
 from open_webui.apps.webui.models.auths import (
     AddUserForm,
@@ -29,7 +30,11 @@ from open_webui.env import (
     SRC_LOG_LEVELS,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import Response
+from fastapi.responses import RedirectResponse, Response
+from open_webui.config import (
+    OPENID_PROVIDER_URL,
+    ENABLE_OAUTH_SIGNUP,
+)
 from pydantic import BaseModel
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.auth import (
@@ -498,8 +503,31 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
 
 @router.get("/signout")
-async def signout(response: Response):
+async def signout(request: Request, response: Response):
     response.delete_cookie("token")
+
+    if ENABLE_OAUTH_SIGNUP.value:
+        oauth_id_token = request.cookies.get("oauth_id_token")
+        if oauth_id_token:
+            try:
+                async with ClientSession() as session:
+                    async with session.get(OPENID_PROVIDER_URL.value) as resp:
+                        if resp.status == 200:
+                            openid_data = await resp.json()
+                            logout_url = openid_data.get("end_session_endpoint")
+                            if logout_url:
+                                response.delete_cookie("oauth_id_token")
+                                return RedirectResponse(
+                                    url=f"{logout_url}?id_token_hint={oauth_id_token}"
+                                )
+                        else:
+                            raise HTTPException(
+                                status_code=resp.status,
+                                detail="Failed to fetch OpenID configuration",
+                            )
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+
     return {"status": True}
 
 
