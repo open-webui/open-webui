@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 import chromadb
 import requests
 import yaml
-from open_webui.apps.webui.internal.db import Base, get_db
+from open_webui.internal.db import Base, get_db
 from open_webui.env import (
     OPEN_WEBUI_DIR,
     DATA_DIR,
@@ -432,7 +432,10 @@ OAUTH_ADMIN_ROLES = PersistentConfig(
 OAUTH_ALLOWED_DOMAINS = PersistentConfig(
     "OAUTH_ALLOWED_DOMAINS",
     "oauth.allowed_domains",
-    [domain.strip() for domain in os.environ.get("OAUTH_ALLOWED_DOMAINS", "*").split(",")],
+    [
+        domain.strip()
+        for domain in os.environ.get("OAUTH_ALLOWED_DOMAINS", "*").split(",")
+    ],
 )
 
 

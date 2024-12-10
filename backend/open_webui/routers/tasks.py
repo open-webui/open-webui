@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status, Request
 from pydantic import BaseModel
 from starlette.responses import FileResponse
 from typing import Optional
+import logging
+
 
 from open_webui.utils.task import (
     title_generation_template,
@@ -12,6 +14,17 @@ from open_webui.utils.task import (
     moa_response_generation_template,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.constants import TASKS
+
+from open_webui.config import (
+    DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE,
+    DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
+)
+from open_webui.env import SRC_LOG_LEVELS
+
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
 
@@ -197,7 +210,9 @@ Artificial Intelligence in Healthcare
 
 
 @router.post("/tags/completions")
-async def generate_chat_tags(form_data: dict, user=Depends(get_verified_user)):
+async def generate_chat_tags(
+    request: Request, form_data: dict, user=Depends(get_verified_user)
+):
 
     if not request.app.state.config.ENABLE_TAGS_GENERATION:
         return JSONResponse(

@@ -9,8 +9,11 @@ import sys
 import time
 import random
 from contextlib import asynccontextmanager
-from typing import Optional
+from urllib.parse import urlencode, parse_qs, urlparse
+from pydantic import BaseModel
+from sqlalchemy import text
 
+from typing import Optional
 from aiocache import cached
 import aiohttp
 import requests
@@ -27,112 +30,201 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
-from sqlalchemy import text
+
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
 
-from open_webui.apps.audio.main import app as audio_app
-from open_webui.apps.images.main import app as images_app
-from open_webui.apps.ollama.main import (
-    app as ollama_app,
-    get_all_models as get_ollama_models,
-    generate_chat_completion as generate_ollama_chat_completion,
-    GenerateChatCompletionForm,
+
+from open_webui.routers import (
+    audio,
+    chat,
+    images,
+    ollama,
+    openai,
+    retrieval,
+    pipelines,
+    tasks,
 )
-from open_webui.apps.openai.main import (
-    app as openai_app,
-    generate_chat_completion as generate_openai_chat_completion,
-    get_all_models as get_openai_models,
-    get_all_models_responses as get_openai_models_responses,
-)
-from open_webui.apps.retrieval.main import app as retrieval_app
-from open_webui.apps.retrieval.utils import get_sources_from_files
+
+from open_webui.retrieval.utils import get_sources_from_files
 
 
-from open_webui.apps.socket.main import (
+from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
     get_event_call,
     get_event_emitter,
 )
-from open_webui.apps.webui.internal.db import Session
-from open_webui.apps.webui.main import (
+
+
+from open_webui.internal.db import Session
+
+
+from backend.open_webui.routers.webui import (
     app as webui_app,
     generate_function_chat_completion,
     get_all_models as get_open_webui_models,
 )
-from open_webui.apps.webui.models.functions import Functions
-from open_webui.apps.webui.models.models import Models
-from open_webui.apps.webui.models.users import UserModel, Users
-from open_webui.apps.webui.utils import load_function_module_by_id
+from open_webui.models.functions import Functions
+from open_webui.models.models import Models
+from open_webui.models.users import UserModel, Users
+from backend.open_webui.utils.plugin import load_function_module_by_id
+
+
+from open_webui.constants import TASKS
 from open_webui.config import (
-    CACHE_DIR,
-    CORS_ALLOW_ORIGIN,
-    DEFAULT_LOCALE,
-    ENABLE_ADMIN_CHAT_ACCESS,
-    ENABLE_ADMIN_EXPORT,
+    # Ollama
     ENABLE_OLLAMA_API,
+    OLLAMA_BASE_URLS,
+    OLLAMA_API_CONFIGS,
+    # OpenAI
     ENABLE_OPENAI_API,
-    ENABLE_TAGS_GENERATION,
-    ENV,
-    FRONTEND_BUILD_DIR,
-    OAUTH_PROVIDERS,
-    STATIC_DIR,
-    TASK_MODEL,
-    TASK_MODEL_EXTERNAL,
-    ENABLE_SEARCH_QUERY_GENERATION,
-    ENABLE_RETRIEVAL_QUERY_GENERATION,
-    QUERY_GENERATION_PROMPT_TEMPLATE,
-    DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE,
-    TITLE_GENERATION_PROMPT_TEMPLATE,
-    TAGS_GENERATION_PROMPT_TEMPLATE,
-    ENABLE_AUTOCOMPLETE_GENERATION,
-    AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
-    AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
-    DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
-    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
-    WEBHOOK_URL,
+    OPENAI_API_BASE_URLS,
+    OPENAI_API_KEYS,
+    OPENAI_API_CONFIGS,
+    # Image
+    AUTOMATIC1111_API_AUTH,
+    AUTOMATIC1111_BASE_URL,
+    AUTOMATIC1111_CFG_SCALE,
+    AUTOMATIC1111_SAMPLER,
+    AUTOMATIC1111_SCHEDULER,
+    COMFYUI_BASE_URL,
+    COMFYUI_WORKFLOW,
+    COMFYUI_WORKFLOW_NODES,
+    ENABLE_IMAGE_GENERATION,
+    IMAGE_GENERATION_ENGINE,
+    IMAGE_GENERATION_MODEL,
+    IMAGE_SIZE,
+    IMAGE_STEPS,
+    IMAGES_OPENAI_API_BASE_URL,
+    IMAGES_OPENAI_API_KEY,
+    # Audio
+    AUDIO_STT_ENGINE,
+    AUDIO_STT_MODEL,
+    AUDIO_STT_OPENAI_API_BASE_URL,
+    AUDIO_STT_OPENAI_API_KEY,
+    AUDIO_TTS_API_KEY,
+    AUDIO_TTS_ENGINE,
+    AUDIO_TTS_MODEL,
+    AUDIO_TTS_OPENAI_API_BASE_URL,
+    AUDIO_TTS_OPENAI_API_KEY,
+    AUDIO_TTS_SPLIT_ON,
+    AUDIO_TTS_VOICE,
+    AUDIO_TTS_AZURE_SPEECH_REGION,
+    AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+    WHISPER_MODEL,
+    WHISPER_MODEL_AUTO_UPDATE,
+    WHISPER_MODEL_DIR,
+    # WebUI
     WEBUI_AUTH,
     WEBUI_NAME,
+    WEBUI_BANNERS,
+    WEBHOOK_URL,
+    ADMIN_EMAIL,
+    SHOW_ADMIN_DETAILS,
+    JWT_EXPIRES_IN,
+    ENABLE_SIGNUP,
+    ENABLE_LOGIN_FORM,
+    ENABLE_API_KEY,
+    ENABLE_COMMUNITY_SHARING,
+    ENABLE_MESSAGE_RATING,
+    ENABLE_EVALUATION_ARENA_MODELS,
+    USER_PERMISSIONS,
+    DEFAULT_USER_ROLE,
+    DEFAULT_PROMPT_SUGGESTIONS,
+    DEFAULT_MODELS,
+    DEFAULT_ARENA_MODEL,
+    MODEL_ORDER_LIST,
+    EVALUATION_ARENA_MODELS,
+    # WebUI (OAuth)
+    ENABLE_OAUTH_ROLE_MANAGEMENT,
+    OAUTH_ROLES_CLAIM,
+    OAUTH_EMAIL_CLAIM,
+    OAUTH_PICTURE_CLAIM,
+    OAUTH_USERNAME_CLAIM,
+    OAUTH_ALLOWED_ROLES,
+    OAUTH_ADMIN_ROLES,
+    # WebUI (LDAP)
+    ENABLE_LDAP,
+    LDAP_SERVER_LABEL,
+    LDAP_SERVER_HOST,
+    LDAP_SERVER_PORT,
+    LDAP_ATTRIBUTE_FOR_USERNAME,
+    LDAP_SEARCH_FILTERS,
+    LDAP_SEARCH_BASE,
+    LDAP_APP_DN,
+    LDAP_APP_PASSWORD,
+    LDAP_USE_TLS,
+    LDAP_CA_CERT_FILE,
+    LDAP_CIPHERS,
+    # Misc
+    ENV,
+    CACHE_DIR,
+    STATIC_DIR,
+    FRONTEND_BUILD_DIR,
+    CORS_ALLOW_ORIGIN,
+    DEFAULT_LOCALE,
+    OAUTH_PROVIDERS,
+    # Admin
+    ENABLE_ADMIN_CHAT_ACCESS,
+    ENABLE_ADMIN_EXPORT,
+    # Tasks
+    TASK_MODEL,
+    TASK_MODEL_EXTERNAL,
+    ENABLE_TAGS_GENERATION,
+    ENABLE_SEARCH_QUERY_GENERATION,
+    ENABLE_RETRIEVAL_QUERY_GENERATION,
+    ENABLE_AUTOCOMPLETE_GENERATION,
+    TITLE_GENERATION_PROMPT_TEMPLATE,
+    TAGS_GENERATION_PROMPT_TEMPLATE,
+    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+    QUERY_GENERATION_PROMPT_TEMPLATE,
+    AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
+    AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
     AppConfig,
     reset_config,
 )
-from open_webui.constants import TASKS
 from open_webui.env import (
     CHANGELOG,
     GLOBAL_LOG_LEVEL,
     SAFE_MODE,
     SRC_LOG_LEVELS,
     VERSION,
+    WEBUI_URL,
     WEBUI_BUILD_HASH,
     WEBUI_SECRET_KEY,
     WEBUI_SESSION_COOKIE_SAME_SITE,
     WEBUI_SESSION_COOKIE_SECURE,
-    WEBUI_URL,
+    WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
+    WEBUI_AUTH_TRUSTED_NAME_HEADER,
     BYPASS_MODEL_ACCESS_CONTROL,
     RESET_CONFIG_ON_START,
     OFFLINE_MODE,
 )
+
+
 from open_webui.utils.misc import (
     add_or_update_system_message,
     get_last_user_message,
     prepend_to_first_user_message_content,
 )
-from open_webui.utils.oauth import oauth_manager
+
+
 from open_webui.utils.payload import convert_payload_openai_to_ollama
 from open_webui.utils.response import (
     convert_response_ollama_to_openai,
     convert_streaming_response_ollama_to_openai,
 )
-from open_webui.utils.security_headers import SecurityHeadersMiddleware
+
 from open_webui.utils.task import (
     rag_template,
     tools_function_calling_generation_template,
 )
 from open_webui.utils.tools import get_tools
+from open_webui.utils.access_control import has_access
+
 from open_webui.utils.auth import (
     decode_token,
     get_admin_user,
@@ -140,7 +232,9 @@ from open_webui.utils.auth import (
     get_http_authorization_cred,
     get_verified_user,
 )
-from open_webui.utils.access_control import has_access
+from open_webui.utils.oauth import oauth_manager
+from open_webui.utils.security_headers import SecurityHeadersMiddleware
+
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -197,36 +291,186 @@ app = FastAPI(
 
 app.state.config = AppConfig()
 
-app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
-app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
 
+########################################
+#
+# OLLAMA
+#
+########################################
+
+
+app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
+app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
+app.state.config.OLLAMA_API_CONFIGS = OLLAMA_API_CONFIGS
+
+
+########################################
+#
+# OPENAI
+#
+########################################
+
+app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
+app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
+app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
+app.state.config.OPENAI_API_CONFIGS = OPENAI_API_CONFIGS
+
+
+########################################
+#
+# WEBUI
+#
+########################################
+
+app.state.config.ENABLE_SIGNUP = ENABLE_SIGNUP
+app.state.config.ENABLE_LOGIN_FORM = ENABLE_LOGIN_FORM
+app.state.config.ENABLE_API_KEY = ENABLE_API_KEY
+
+app.state.config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
+
+app.state.config.SHOW_ADMIN_DETAILS = SHOW_ADMIN_DETAILS
+app.state.config.ADMIN_EMAIL = ADMIN_EMAIL
+
+
+app.state.config.DEFAULT_MODELS = DEFAULT_MODELS
+app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
+app.state.config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
+
+app.state.config.USER_PERMISSIONS = USER_PERMISSIONS
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
+app.state.config.BANNERS = WEBUI_BANNERS
+app.state.config.MODEL_ORDER_LIST = MODEL_ORDER_LIST
+
+app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
+app.state.config.ENABLE_MESSAGE_RATING = ENABLE_MESSAGE_RATING
+
+app.state.config.ENABLE_EVALUATION_ARENA_MODELS = ENABLE_EVALUATION_ARENA_MODELS
+app.state.config.EVALUATION_ARENA_MODELS = EVALUATION_ARENA_MODELS
+
+app.state.config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
+app.state.config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
+app.state.config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM
+
+app.state.config.ENABLE_OAUTH_ROLE_MANAGEMENT = ENABLE_OAUTH_ROLE_MANAGEMENT
+app.state.config.OAUTH_ROLES_CLAIM = OAUTH_ROLES_CLAIM
+app.state.config.OAUTH_ALLOWED_ROLES = OAUTH_ALLOWED_ROLES
+app.state.config.OAUTH_ADMIN_ROLES = OAUTH_ADMIN_ROLES
+
+app.state.config.ENABLE_LDAP = ENABLE_LDAP
+app.state.config.LDAP_SERVER_LABEL = LDAP_SERVER_LABEL
+app.state.config.LDAP_SERVER_HOST = LDAP_SERVER_HOST
+app.state.config.LDAP_SERVER_PORT = LDAP_SERVER_PORT
+app.state.config.LDAP_ATTRIBUTE_FOR_USERNAME = LDAP_ATTRIBUTE_FOR_USERNAME
+app.state.config.LDAP_APP_DN = LDAP_APP_DN
+app.state.config.LDAP_APP_PASSWORD = LDAP_APP_PASSWORD
+app.state.config.LDAP_SEARCH_BASE = LDAP_SEARCH_BASE
+app.state.config.LDAP_SEARCH_FILTERS = LDAP_SEARCH_FILTERS
+app.state.config.LDAP_USE_TLS = LDAP_USE_TLS
+app.state.config.LDAP_CA_CERT_FILE = LDAP_CA_CERT_FILE
+app.state.config.LDAP_CIPHERS = LDAP_CIPHERS
+
+
+app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
+app.state.AUTH_TRUSTED_NAME_HEADER = WEBUI_AUTH_TRUSTED_NAME_HEADER
+
+app.state.TOOLS = {}
+app.state.FUNCTIONS = {}
+
+
+########################################
+#
+# RETRIEVAL
+#
+########################################
+
+########################################
+#
+# IMAGES
+#
+########################################
+
+app.state.config.IMAGE_GENERATION_ENGINE = IMAGE_GENERATION_ENGINE
+app.state.config.ENABLE_IMAGE_GENERATION = ENABLE_IMAGE_GENERATION
+
+app.state.config.IMAGES_OPENAI_API_BASE_URL = IMAGES_OPENAI_API_BASE_URL
+app.state.config.IMAGES_OPENAI_API_KEY = IMAGES_OPENAI_API_KEY
+
+app.state.config.IMAGE_GENERATION_MODEL = IMAGE_GENERATION_MODEL
+
+app.state.config.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
+app.state.config.AUTOMATIC1111_API_AUTH = AUTOMATIC1111_API_AUTH
+app.state.config.AUTOMATIC1111_CFG_SCALE = AUTOMATIC1111_CFG_SCALE
+app.state.config.AUTOMATIC1111_SAMPLER = AUTOMATIC1111_SAMPLER
+app.state.config.AUTOMATIC1111_SCHEDULER = AUTOMATIC1111_SCHEDULER
+app.state.config.COMFYUI_BASE_URL = COMFYUI_BASE_URL
+app.state.config.COMFYUI_WORKFLOW = COMFYUI_WORKFLOW
+app.state.config.COMFYUI_WORKFLOW_NODES = COMFYUI_WORKFLOW_NODES
+
+app.state.config.IMAGE_SIZE = IMAGE_SIZE
+app.state.config.IMAGE_STEPS = IMAGE_STEPS
+
+
+########################################
+#
+# AUDIO
+#
+########################################
+
+app.state.config.STT_OPENAI_API_BASE_URL = AUDIO_STT_OPENAI_API_BASE_URL
+app.state.config.STT_OPENAI_API_KEY = AUDIO_STT_OPENAI_API_KEY
+app.state.config.STT_ENGINE = AUDIO_STT_ENGINE
+app.state.config.STT_MODEL = AUDIO_STT_MODEL
+
+app.state.config.WHISPER_MODEL = WHISPER_MODEL
+
+app.state.config.TTS_OPENAI_API_BASE_URL = AUDIO_TTS_OPENAI_API_BASE_URL
+app.state.config.TTS_OPENAI_API_KEY = AUDIO_TTS_OPENAI_API_KEY
+app.state.config.TTS_ENGINE = AUDIO_TTS_ENGINE
+app.state.config.TTS_MODEL = AUDIO_TTS_MODEL
+app.state.config.TTS_VOICE = AUDIO_TTS_VOICE
+app.state.config.TTS_API_KEY = AUDIO_TTS_API_KEY
+app.state.config.TTS_SPLIT_ON = AUDIO_TTS_SPLIT_ON
+
+
+app.state.config.TTS_AZURE_SPEECH_REGION = AUDIO_TTS_AZURE_SPEECH_REGION
+app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT
+
+
+app.state.faster_whisper_model = None
+app.state.speech_synthesiser = None
+app.state.speech_speaker_embeddings_dataset = None
+
+
+########################################
+#
+# TASKS
+#
+########################################
+
 
 app.state.config.TASK_MODEL = TASK_MODEL
 app.state.config.TASK_MODEL_EXTERNAL = TASK_MODEL_EXTERNAL
 
-app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE
 
+app.state.config.ENABLE_SEARCH_QUERY_GENERATION = ENABLE_SEARCH_QUERY_GENERATION
+app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = ENABLE_RETRIEVAL_QUERY_GENERATION
 app.state.config.ENABLE_AUTOCOMPLETE_GENERATION = ENABLE_AUTOCOMPLETE_GENERATION
+app.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION
+
+
+app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE
+app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE
+app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
+    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
+)
+app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE = QUERY_GENERATION_PROMPT_TEMPLATE
+app.state.config.AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = (
+    AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE
+)
 app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = (
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH
 )
 
-app.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION
-app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE
-
-
-app.state.config.ENABLE_SEARCH_QUERY_GENERATION = ENABLE_SEARCH_QUERY_GENERATION
-app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = ENABLE_RETRIEVAL_QUERY_GENERATION
-app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE = QUERY_GENERATION_PROMPT_TEMPLATE
-
-app.state.config.AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = (
-    AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE
-)
-
-app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
-    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
-)
 
 ##################################
 #
@@ -570,13 +814,6 @@ async def chat_completion_files_handler(
     return body, {"sources": sources}
 
 
-def is_chat_completion_request(request):
-    return request.method == "POST" and any(
-        endpoint in request.url.path
-        for endpoint in ["/ollama/api/chat", "/chat/completions"]
-    )
-
-
 async def get_body_and_model_and_user(request, models):
     # Read the original request body
     body = await request.body()
@@ -598,7 +835,10 @@ async def get_body_and_model_and_user(request, models):
 
 class ChatCompletionMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        if not is_chat_completion_request(request):
+        if not request.method == "POST" and any(
+            endpoint in request.url.path
+            for endpoint in ["/ollama/api/chat", "/chat/completions"]
+        ):
             return await call_next(request)
         log.debug(f"request.url.path: {request.url.path}")
 
@@ -875,7 +1115,10 @@ def filter_pipeline(payload, user, models):
 
 class PipelineMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        if not is_chat_completion_request(request):
+        if not request.method == "POST" and any(
+            endpoint in request.url.path
+            for endpoint in ["/ollama/api/chat", "/chat/completions"]
+        ):
             return await call_next(request)
 
         log.debug(f"request.url.path: {request.url.path}")
@@ -945,9 +1188,6 @@ class PipelineMiddleware(BaseHTTPMiddleware):
 app.add_middleware(PipelineMiddleware)
 
 
-from urllib.parse import urlencode, parse_qs, urlparse
-
-
 class RedirectMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         # Check if the request is a GET request
@@ -969,16 +1209,6 @@ class RedirectMiddleware(BaseHTTPMiddleware):
 
 # Add the middleware to the app
 app.add_middleware(RedirectMiddleware)
-
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=CORS_ALLOW_ORIGIN,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 app.add_middleware(SecurityHeadersMiddleware)
 
 
@@ -1000,12 +1230,12 @@ async def check_url(request: Request, call_next):
     return response
 
 
-@app.middleware("http")
-async def update_embedding_function(request: Request, call_next):
-    response = await call_next(request)
-    if "/embedding/update" in request.url.path:
-        webui_app.state.EMBEDDING_FUNCTION = retrieval_app.state.EMBEDDING_FUNCTION
-    return response
+# @app.middleware("http")
+# async def update_embedding_function(request: Request, call_next):
+#     response = await call_next(request)
+#     if "/embedding/update" in request.url.path:
+#         webui_app.state.EMBEDDING_FUNCTION = retrieval_app.state.EMBEDDING_FUNCTION
+#     return response
 
 
 @app.middleware("http")
@@ -1026,17 +1256,30 @@ async def inspect_websocket(request: Request, call_next):
     return await call_next(request)
 
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ALLOW_ORIGIN,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 app.mount("/ws", socket_app)
+
+
 app.mount("/ollama", ollama_app)
 app.mount("/openai", openai_app)
 
 app.mount("/images/api/v1", images_app)
 app.mount("/audio/api/v1", audio_app)
+
+
 app.mount("/retrieval/api/v1", retrieval_app)
 
 app.mount("/api/v1", webui_app)
 
-webui_app.state.EMBEDDING_FUNCTION = retrieval_app.state.EMBEDDING_FUNCTION
+app.state.EMBEDDING_FUNCTION = retrieval_app.state.EMBEDDING_FUNCTION
 
 
 async def get_all_base_models():
@@ -1045,7 +1288,7 @@ async def get_all_base_models():
     ollama_models = []
 
     if app.state.config.ENABLE_OPENAI_API:
-        openai_models = await get_openai_models()
+        openai_models = await openai.get_all_models()
         openai_models = openai_models["data"]
 
     if app.state.config.ENABLE_OLLAMA_API:
@@ -1255,740 +1498,6 @@ async def get_base_models(user=Depends(get_admin_user)):
     return {"data": models}
 
 
-@app.post("/api/chat/completions")
-async def generate_chat_completions(
-    request: Request,
-    form_data: dict,
-    user=Depends(get_verified_user),
-    bypass_filter: bool = False,
-):
-    if BYPASS_MODEL_ACCESS_CONTROL:
-        bypass_filter = True
-
-    model_list = request.state.models
-    models = {model["id"]: model for model in model_list}
-
-    model_id = form_data["model"]
-    if model_id not in models:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Model not found",
-        )
-
-    model = models[model_id]
-
-    # Check if user has access to the model
-    if not bypass_filter and user.role == "user":
-        if model.get("arena"):
-            if not has_access(
-                user.id,
-                type="read",
-                access_control=model.get("info", {})
-                .get("meta", {})
-                .get("access_control", {}),
-            ):
-                raise HTTPException(
-                    status_code=403,
-                    detail="Model not found",
-                )
-        else:
-            model_info = Models.get_model_by_id(model_id)
-            if not model_info:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Model not found",
-                )
-            elif not (
-                user.id == model_info.user_id
-                or has_access(
-                    user.id, type="read", access_control=model_info.access_control
-                )
-            ):
-                raise HTTPException(
-                    status_code=403,
-                    detail="Model not found",
-                )
-
-    if model["owned_by"] == "arena":
-        model_ids = model.get("info", {}).get("meta", {}).get("model_ids")
-        filter_mode = model.get("info", {}).get("meta", {}).get("filter_mode")
-        if model_ids and filter_mode == "exclude":
-            model_ids = [
-                model["id"]
-                for model in await get_all_models()
-                if model.get("owned_by") != "arena" and model["id"] not in model_ids
-            ]
-
-        selected_model_id = None
-        if isinstance(model_ids, list) and model_ids:
-            selected_model_id = random.choice(model_ids)
-        else:
-            model_ids = [
-                model["id"]
-                for model in await get_all_models()
-                if model.get("owned_by") != "arena"
-            ]
-            selected_model_id = random.choice(model_ids)
-
-        form_data["model"] = selected_model_id
-
-        if form_data.get("stream") == True:
-
-            async def stream_wrapper(stream):
-                yield f"data: {json.dumps({'selected_model_id': selected_model_id})}\n\n"
-                async for chunk in stream:
-                    yield chunk
-
-            response = await generate_chat_completions(
-                form_data, user, bypass_filter=True
-            )
-            return StreamingResponse(
-                stream_wrapper(response.body_iterator), media_type="text/event-stream"
-            )
-        else:
-            return {
-                **(
-                    await generate_chat_completions(form_data, user, bypass_filter=True)
-                ),
-                "selected_model_id": selected_model_id,
-            }
-
-    if model.get("pipe"):
-        # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter
-        return await generate_function_chat_completion(
-            form_data, user=user, models=models
-        )
-    if model["owned_by"] == "ollama":
-        # Using /ollama/api/chat endpoint
-        form_data = convert_payload_openai_to_ollama(form_data)
-        form_data = GenerateChatCompletionForm(**form_data)
-        response = await generate_ollama_chat_completion(
-            form_data=form_data, user=user, bypass_filter=bypass_filter
-        )
-        if form_data.stream:
-            response.headers["content-type"] = "text/event-stream"
-            return StreamingResponse(
-                convert_streaming_response_ollama_to_openai(response),
-                headers=dict(response.headers),
-            )
-        else:
-            return convert_response_ollama_to_openai(response)
-    else:
-        return await generate_openai_chat_completion(
-            form_data, user=user, bypass_filter=bypass_filter
-        )
-
-
-@app.post("/api/chat/completed")
-async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
-    model_list = await get_all_models()
-    models = {model["id"]: model for model in model_list}
-
-    data = form_data
-    model_id = data["model"]
-    if model_id not in models:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Model not found",
-        )
-
-    model = models[model_id]
-    sorted_filters = get_sorted_filters(model_id, models)
-    if "pipeline" in model:
-        sorted_filters = [model] + sorted_filters
-
-    for filter in sorted_filters:
-        r = None
-        try:
-            urlIdx = filter["urlIdx"]
-
-            url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
-            key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
-
-            if key != "":
-                headers = {"Authorization": f"Bearer {key}"}
-                r = requests.post(
-                    f"{url}/{filter['id']}/filter/outlet",
-                    headers=headers,
-                    json={
-                        "user": {
-                            "id": user.id,
-                            "name": user.name,
-                            "email": user.email,
-                            "role": user.role,
-                        },
-                        "body": data,
-                    },
-                )
-
-                r.raise_for_status()
-                data = r.json()
-        except Exception as e:
-            # Handle connection error here
-            print(f"Connection error: {e}")
-
-            if r is not None:
-                try:
-                    res = r.json()
-                    if "detail" in res:
-                        return JSONResponse(
-                            status_code=r.status_code,
-                            content=res,
-                        )
-                except Exception:
-                    pass
-
-            else:
-                pass
-
-    __event_emitter__ = get_event_emitter(
-        {
-            "chat_id": data["chat_id"],
-            "message_id": data["id"],
-            "session_id": data["session_id"],
-        }
-    )
-
-    __event_call__ = get_event_call(
-        {
-            "chat_id": data["chat_id"],
-            "message_id": data["id"],
-            "session_id": data["session_id"],
-        }
-    )
-
-    def get_priority(function_id):
-        function = Functions.get_function_by_id(function_id)
-        if function is not None and hasattr(function, "valves"):
-            # TODO: Fix FunctionModel to include vavles
-            return (function.valves if function.valves else {}).get("priority", 0)
-        return 0
-
-    filter_ids = [function.id for function in Functions.get_global_filter_functions()]
-    if "info" in model and "meta" in model["info"]:
-        filter_ids.extend(model["info"]["meta"].get("filterIds", []))
-        filter_ids = list(set(filter_ids))
-
-    enabled_filter_ids = [
-        function.id
-        for function in Functions.get_functions_by_type("filter", active_only=True)
-    ]
-    filter_ids = [
-        filter_id for filter_id in filter_ids if filter_id in enabled_filter_ids
-    ]
-
-    # Sort filter_ids by priority, using the get_priority function
-    filter_ids.sort(key=get_priority)
-
-    for filter_id in filter_ids:
-        filter = Functions.get_function_by_id(filter_id)
-        if not filter:
-            continue
-
-        if filter_id in webui_app.state.FUNCTIONS:
-            function_module = webui_app.state.FUNCTIONS[filter_id]
-        else:
-            function_module, _, _ = load_function_module_by_id(filter_id)
-            webui_app.state.FUNCTIONS[filter_id] = function_module
-
-        if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
-            valves = Functions.get_function_valves_by_id(filter_id)
-            function_module.valves = function_module.Valves(
-                **(valves if valves else {})
-            )
-
-        if not hasattr(function_module, "outlet"):
-            continue
-        try:
-            outlet = function_module.outlet
-
-            # Get the signature of the function
-            sig = inspect.signature(outlet)
-            params = {"body": data}
-
-            # Extra parameters to be passed to the function
-            extra_params = {
-                "__model__": model,
-                "__id__": filter_id,
-                "__event_emitter__": __event_emitter__,
-                "__event_call__": __event_call__,
-            }
-
-            # Add extra params in contained in function signature
-            for key, value in extra_params.items():
-                if key in sig.parameters:
-                    params[key] = value
-
-            if "__user__" in sig.parameters:
-                __user__ = {
-                    "id": user.id,
-                    "email": user.email,
-                    "name": user.name,
-                    "role": user.role,
-                }
-
-                try:
-                    if hasattr(function_module, "UserValves"):
-                        __user__["valves"] = function_module.UserValves(
-                            **Functions.get_user_valves_by_id_and_user_id(
-                                filter_id, user.id
-                            )
-                        )
-                except Exception as e:
-                    print(e)
-
-                params = {**params, "__user__": __user__}
-
-            if inspect.iscoroutinefunction(outlet):
-                data = await outlet(**params)
-            else:
-                data = outlet(**params)
-
-        except Exception as e:
-            print(f"Error: {e}")
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": str(e)},
-            )
-
-    return data
-
-
-@app.post("/api/chat/actions/{action_id}")
-async def chat_action(action_id: str, form_data: dict, user=Depends(get_verified_user)):
-    if "." in action_id:
-        action_id, sub_action_id = action_id.split(".")
-    else:
-        sub_action_id = None
-
-    action = Functions.get_function_by_id(action_id)
-    if not action:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Action not found",
-        )
-
-    model_list = await get_all_models()
-    models = {model["id"]: model for model in model_list}
-
-    data = form_data
-    model_id = data["model"]
-
-    if model_id not in models:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Model not found",
-        )
-    model = models[model_id]
-
-    __event_emitter__ = get_event_emitter(
-        {
-            "chat_id": data["chat_id"],
-            "message_id": data["id"],
-            "session_id": data["session_id"],
-        }
-    )
-    __event_call__ = get_event_call(
-        {
-            "chat_id": data["chat_id"],
-            "message_id": data["id"],
-            "session_id": data["session_id"],
-        }
-    )
-
-    if action_id in webui_app.state.FUNCTIONS:
-        function_module = webui_app.state.FUNCTIONS[action_id]
-    else:
-        function_module, _, _ = load_function_module_by_id(action_id)
-        webui_app.state.FUNCTIONS[action_id] = function_module
-
-    if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
-        valves = Functions.get_function_valves_by_id(action_id)
-        function_module.valves = function_module.Valves(**(valves if valves else {}))
-
-    if hasattr(function_module, "action"):
-        try:
-            action = function_module.action
-
-            # Get the signature of the function
-            sig = inspect.signature(action)
-            params = {"body": data}
-
-            # Extra parameters to be passed to the function
-            extra_params = {
-                "__model__": model,
-                "__id__": sub_action_id if sub_action_id is not None else action_id,
-                "__event_emitter__": __event_emitter__,
-                "__event_call__": __event_call__,
-            }
-
-            # Add extra params in contained in function signature
-            for key, value in extra_params.items():
-                if key in sig.parameters:
-                    params[key] = value
-
-            if "__user__" in sig.parameters:
-                __user__ = {
-                    "id": user.id,
-                    "email": user.email,
-                    "name": user.name,
-                    "role": user.role,
-                }
-
-                try:
-                    if hasattr(function_module, "UserValves"):
-                        __user__["valves"] = function_module.UserValves(
-                            **Functions.get_user_valves_by_id_and_user_id(
-                                action_id, user.id
-                            )
-                        )
-                except Exception as e:
-                    print(e)
-
-                params = {**params, "__user__": __user__}
-
-            if inspect.iscoroutinefunction(action):
-                data = await action(**params)
-            else:
-                data = action(**params)
-
-        except Exception as e:
-            print(f"Error: {e}")
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": str(e)},
-            )
-
-    return data
-
-
-##################################
-#
-# Pipelines Endpoints
-#
-##################################
-
-
-# TODO: Refactor pipelines API endpoints below into a separate file
-
-
-@app.get("/api/pipelines/list")
-async def get_pipelines_list(user=Depends(get_admin_user)):
-    responses = await get_openai_models_responses()
-
-    log.debug(f"get_pipelines_list: get_openai_models_responses returned {responses}")
-    urlIdxs = [
-        idx
-        for idx, response in enumerate(responses)
-        if response is not None and "pipelines" in response
-    ]
-
-    return {
-        "data": [
-            {
-                "url": openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx],
-                "idx": urlIdx,
-            }
-            for urlIdx in urlIdxs
-        ]
-    }
-
-
-@app.post("/api/pipelines/upload")
-async def upload_pipeline(
-    urlIdx: int = Form(...), file: UploadFile = File(...), user=Depends(get_admin_user)
-):
-    print("upload_pipeline", urlIdx, file.filename)
-    # Check if the uploaded file is a python file
-    if not (file.filename and file.filename.endswith(".py")):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only Python (.py) files are allowed.",
-        )
-
-    upload_folder = f"{CACHE_DIR}/pipelines"
-    os.makedirs(upload_folder, exist_ok=True)
-    file_path = os.path.join(upload_folder, file.filename)
-
-    r = None
-    try:
-        # Save the uploaded file
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-
-        url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
-        key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
-
-        headers = {"Authorization": f"Bearer {key}"}
-
-        with open(file_path, "rb") as f:
-            files = {"file": f}
-            r = requests.post(f"{url}/pipelines/upload", headers=headers, files=files)
-
-        r.raise_for_status()
-        data = r.json()
-
-        return {**data}
-    except Exception as e:
-        # Handle connection error here
-        print(f"Connection error: {e}")
-
-        detail = "Pipeline not found"
-        status_code = status.HTTP_404_NOT_FOUND
-        if r is not None:
-            status_code = r.status_code
-            try:
-                res = r.json()
-                if "detail" in res:
-                    detail = res["detail"]
-            except Exception:
-                pass
-
-        raise HTTPException(
-            status_code=status_code,
-            detail=detail,
-        )
-    finally:
-        # Ensure the file is deleted after the upload is completed or on failure
-        if os.path.exists(file_path):
-            os.remove(file_path)
-
-
-class AddPipelineForm(BaseModel):
-    url: str
-    urlIdx: int
-
-
-@app.post("/api/pipelines/add")
-async def add_pipeline(form_data: AddPipelineForm, user=Depends(get_admin_user)):
-    r = None
-    try:
-        urlIdx = form_data.urlIdx
-
-        url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
-        key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
-
-        headers = {"Authorization": f"Bearer {key}"}
-        r = requests.post(
-            f"{url}/pipelines/add", headers=headers, json={"url": form_data.url}
-        )
-
-        r.raise_for_status()
-        data = r.json()
-
-        return {**data}
-    except Exception as e:
-        # Handle connection error here
-        print(f"Connection error: {e}")
-
-        detail = "Pipeline not found"
-        if r is not None:
-            try:
-                res = r.json()
-                if "detail" in res:
-                    detail = res["detail"]
-            except Exception:
-                pass
-
-        raise HTTPException(
-            status_code=(r.status_code if r is not None else status.HTTP_404_NOT_FOUND),
-            detail=detail,
-        )
-
-
-class DeletePipelineForm(BaseModel):
-    id: str
-    urlIdx: int
-
-
-@app.delete("/api/pipelines/delete")
-async def delete_pipeline(form_data: DeletePipelineForm, user=Depends(get_admin_user)):
-    r = None
-    try:
-        urlIdx = form_data.urlIdx
-
-        url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
-        key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
-
-        headers = {"Authorization": f"Bearer {key}"}
-        r = requests.delete(
-            f"{url}/pipelines/delete", headers=headers, json={"id": form_data.id}
-        )
-
-        r.raise_for_status()
-        data = r.json()
-
-        return {**data}
-    except Exception as e:
-        # Handle connection error here
-        print(f"Connection error: {e}")
-
-        detail = "Pipeline not found"
-        if r is not None:
-            try:
-                res = r.json()
-                if "detail" in res:
-                    detail = res["detail"]
-            except Exception:
-                pass
-
-        raise HTTPException(
-            status_code=(r.status_code if r is not None else status.HTTP_404_NOT_FOUND),
-            detail=detail,
-        )
-
-
-@app.get("/api/pipelines")
-async def get_pipelines(urlIdx: Optional[int] = None, user=Depends(get_admin_user)):
-    r = None
-    try:
-        url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
-        key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
-
-        headers = {"Authorization": f"Bearer {key}"}
-        r = requests.get(f"{url}/pipelines", headers=headers)
-
-        r.raise_for_status()
-        data = r.json()
-
-        return {**data}
-    except Exception as e:
-        # Handle connection error here
-        print(f"Connection error: {e}")
-
-        detail = "Pipeline not found"
-        if r is not None:
-            try:
-                res = r.json()
-                if "detail" in res:
-                    detail = res["detail"]
-            except Exception:
-                pass
-
-        raise HTTPException(
-            status_code=(r.status_code if r is not None else status.HTTP_404_NOT_FOUND),
-            detail=detail,
-        )
-
-
-@app.get("/api/pipelines/{pipeline_id}/valves")
-async def get_pipeline_valves(
-    urlIdx: Optional[int],
-    pipeline_id: str,
-    user=Depends(get_admin_user),
-):
-    r = None
-    try:
-        url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
-        key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
-
-        headers = {"Authorization": f"Bearer {key}"}
-        r = requests.get(f"{url}/{pipeline_id}/valves", headers=headers)
-
-        r.raise_for_status()
-        data = r.json()
-
-        return {**data}
-    except Exception as e:
-        # Handle connection error here
-        print(f"Connection error: {e}")
-
-        detail = "Pipeline not found"
-
-        if r is not None:
-            try:
-                res = r.json()
-                if "detail" in res:
-                    detail = res["detail"]
-            except Exception:
-                pass
-
-        raise HTTPException(
-            status_code=(r.status_code if r is not None else status.HTTP_404_NOT_FOUND),
-            detail=detail,
-        )
-
-
-@app.get("/api/pipelines/{pipeline_id}/valves/spec")
-async def get_pipeline_valves_spec(
-    urlIdx: Optional[int],
-    pipeline_id: str,
-    user=Depends(get_admin_user),
-):
-    r = None
-    try:
-        url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
-        key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
-
-        headers = {"Authorization": f"Bearer {key}"}
-        r = requests.get(f"{url}/{pipeline_id}/valves/spec", headers=headers)
-
-        r.raise_for_status()
-        data = r.json()
-
-        return {**data}
-    except Exception as e:
-        # Handle connection error here
-        print(f"Connection error: {e}")
-
-        detail = "Pipeline not found"
-        if r is not None:
-            try:
-                res = r.json()
-                if "detail" in res:
-                    detail = res["detail"]
-            except Exception:
-                pass
-
-        raise HTTPException(
-            status_code=(r.status_code if r is not None else status.HTTP_404_NOT_FOUND),
-            detail=detail,
-        )
-
-
-@app.post("/api/pipelines/{pipeline_id}/valves/update")
-async def update_pipeline_valves(
-    urlIdx: Optional[int],
-    pipeline_id: str,
-    form_data: dict,
-    user=Depends(get_admin_user),
-):
-    r = None
-    try:
-        url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
-        key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
-
-        headers = {"Authorization": f"Bearer {key}"}
-        r = requests.post(
-            f"{url}/{pipeline_id}/valves/update",
-            headers=headers,
-            json={**form_data},
-        )
-
-        r.raise_for_status()
-        data = r.json()
-
-        return {**data}
-    except Exception as e:
-        # Handle connection error here
-        print(f"Connection error: {e}")
-
-        detail = "Pipeline not found"
-
-        if r is not None:
-            try:
-                res = r.json()
-                if "detail" in res:
-                    detail = res["detail"]
-            except Exception:
-                pass
-
-        raise HTTPException(
-            status_code=(r.status_code if r is not None else status.HTTP_404_NOT_FOUND),
-            detail=detail,
-        )
-
-
 ##################################
 #
 # Config Endpoints
@@ -2075,7 +1584,8 @@ async def get_app_config(request: Request):
     }
 
 
-# TODO: webhook endpoint should be under config endpoints
+class UrlForm(BaseModel):
+    url: str
 
 
 @app.get("/api/webhook")
@@ -2083,10 +1593,6 @@ async def get_webhook_url(user=Depends(get_admin_user)):
     return {
         "url": app.state.config.WEBHOOK_URL,
     }
-
-
-class UrlForm(BaseModel):
-    url: str
 
 
 @app.post("/api/webhook")
@@ -2101,11 +1607,6 @@ async def get_app_version():
     return {
         "version": VERSION,
     }
-
-
-@app.get("/api/changelog")
-async def get_app_changelog():
-    return {key: CHANGELOG[key] for idx, key in enumerate(CHANGELOG) if idx < 5}
 
 
 @app.get("/api/version/updates")
@@ -2129,6 +1630,11 @@ async def get_app_latest_release_version():
     except Exception as e:
         log.debug(e)
         return {"current": VERSION, "latest": VERSION}
+
+
+@app.get("/api/changelog")
+async def get_app_changelog():
+    return {key: CHANGELOG[key] for idx, key in enumerate(CHANGELOG) if idx < 5}
 
 
 ############################
@@ -2217,7 +1723,6 @@ async def healthcheck_with_db():
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/cache", StaticFiles(directory=CACHE_DIR), name="cache")
-
 
 if os.path.exists(FRONTEND_BUILD_DIR):
     mimetypes.add_type("text/javascript", ".js")

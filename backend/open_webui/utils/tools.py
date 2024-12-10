@@ -5,9 +5,9 @@ from typing import Any, Awaitable, Callable, get_type_hints
 from functools import update_wrapper, partial
 
 from langchain_core.utils.function_calling import convert_to_openai_function
-from open_webui.apps.webui.models.tools import Tools
-from open_webui.apps.webui.models.users import UserModel
-from open_webui.apps.webui.utils import load_tools_module_by_id
+from open_webui.models.tools import Tools
+from open_webui.models.users import UserModel
+from backend.open_webui.utils.plugin import load_tools_module_by_id
 from pydantic import BaseModel, Field, create_model
 
 log = logging.getLogger(__name__)

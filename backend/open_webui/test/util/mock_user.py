@@ -5,7 +5,7 @@ from fastapi import FastAPI
 
 @contextmanager
 def mock_webui_user(**kwargs):
-    from open_webui.apps.webui.main import app
+    from backend.open_webui.routers.webui import app
 
     with mock_user(app, **kwargs):
         yield
@@ -19,7 +19,7 @@ def mock_user(app: FastAPI, **kwargs):
         get_admin_user,
         get_current_user_by_api_key,
     )
-    from open_webui.apps.webui.models.users import User
+    from open_webui.models.users import User
 
     def create_user():
         user_parameters = {
