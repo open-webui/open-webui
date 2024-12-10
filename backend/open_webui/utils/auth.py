@@ -5,7 +5,7 @@ import jwt
 from datetime import UTC, datetime, timedelta
 from typing import Optional, Union, List, Dict
 
-from open_webui.apps.webui.models.users import Users
+from open_webui.models.users import Users
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import WEBUI_SECRET_KEY

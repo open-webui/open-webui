@@ -12,8 +12,8 @@ from fastapi import (
 )
 from starlette.responses import RedirectResponse
 
-from open_webui.apps.webui.models.auths import Auths
-from open_webui.apps.webui.models.users import Users
+from open_webui.models.auths import Auths
+from open_webui.models.users import Users
 from open_webui.config import (
     DEFAULT_USER_ROLE,
     ENABLE_OAUTH_SIGNUP,
@@ -158,8 +158,13 @@ class OAuthManager:
         if not email:
             log.warning(f"OAuth callback failed, email is missing: {user_data}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
-        if "*" not in auth_manager_config.OAUTH_ALLOWED_DOMAINS and email.split("@")[-1] not in auth_manager_config.OAUTH_ALLOWED_DOMAINS:
-            log.warning(f"OAuth callback failed, e-mail domain is not in the list of allowed domains: {user_data}")
+        if (
+            "*" not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
+            and email.split("@")[-1] not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
+        ):
+            log.warning(
+                f"OAuth callback failed, e-mail domain is not in the list of allowed domains: {user_data}"
+            )
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
         # Check if the user exists

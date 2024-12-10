@@ -9,7 +9,7 @@ import site
 from fpdf import FPDF
 
 from open_webui.env import STATIC_DIR, FONTS_DIR
-from open_webui.apps.webui.models.chats import ChatTitleMessagesForm
+from open_webui.models.chats import ChatTitleMessagesForm
 
 
 class PDFGenerator:
