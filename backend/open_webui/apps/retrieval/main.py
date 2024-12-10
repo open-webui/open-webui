@@ -608,9 +608,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
         app.state.config.BRAVE_SEARCH_API_KEY = (
             form_data.web.search.brave_search_api_key
         )
-        app.state.config.KAGI_SEARCH_API_KEY = (
-            form_data.web.search.kagi_search_api_key
-        )
+        app.state.config.KAGI_SEARCH_API_KEY = form_data.web.search.kagi_search_api_key
         app.state.config.MOJEEK_SEARCH_API_KEY = (
             form_data.web.search.mojeek_search_api_key
         )
@@ -1390,8 +1388,7 @@ def query_doc_handler(
         else:
             return query_doc(
                 collection_name=form_data.collection_name,
-                query=form_data.query,
-                embedding_function=app.state.EMBEDDING_FUNCTION,
+                query_embedding=app.state.EMBEDDING_FUNCTION(form_data.query),
                 k=form_data.k if form_data.k else app.state.config.TOP_K,
             )
     except Exception as e:
