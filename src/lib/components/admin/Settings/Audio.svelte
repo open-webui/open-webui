@@ -485,7 +485,19 @@
 							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('TTS Voice')}</div>
 							<div class="flex w-full">
 								<div class="flex-1">
-									<input
+									<select
+										name="voiceselected"
+										id="voiceselector"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										bind:value={TTS_VOICE}
+									>
+										<!--TEMP CSS-->
+										<option value="">Select A Voice</option>
+										{#each voices as voice}
+											<option value={voice.id}>{voice.name}</option>
+										{/each}
+									</select>
+									<!-- <input
 										list="voice-list"
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 										bind:value={TTS_VOICE}
@@ -496,7 +508,7 @@
 										{#each voices as voice}
 											<option value={voice.id}>{voice.name}</option>
 										{/each}
-									</datalist>
+									</datalist> -->
 								</div>
 							</div>
 						</div>
@@ -504,7 +516,19 @@
 							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('TTS Model')}</div>
 							<div class="flex w-full">
 								<div class="flex-1">
-									<input
+									<select
+										name="voiceModel"
+										id="voicemodel"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										bind:value={TTS_MODEL}
+									>
+										<!--TEMP CSS-->
+										<option value="">Select A Voice</option>
+										{#each models as model}
+											<option value={model.id}>{model.id.replaceAll('_', ' ')}</option>
+										{/each}
+									</select>
+									<!-- <input
 										list="tts-model-list"
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 										bind:value={TTS_MODEL}
@@ -515,7 +539,7 @@
 										{#each models as model}
 											<option value={model.id} class="bg-gray-50 dark:bg-gray-700" />
 										{/each}
-									</datalist>
+									</datalist> -->
 								</div>
 							</div>
 						</div>
