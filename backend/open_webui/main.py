@@ -480,8 +480,6 @@ async def chat_completion_tools_handler(
             except Exception as e:
                 tool_output = str(e)
 
-            print(tools[tool_function_name]["citation"])
-
             if isinstance(tool_output, str):
                 if tools[tool_function_name]["citation"]:
                     sources.append(
