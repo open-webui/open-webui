@@ -2073,8 +2073,6 @@ async def generate_autocompletion(form_data: dict, user=Depends(get_verified_use
         },
     }
 
-    print(payload)
-
     # Handle pipeline filters
     try:
         payload = filter_pipeline(payload, user, models)
