@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 
 
-from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_permission
 
 log = logging.getLogger(__name__)
@@ -607,7 +607,6 @@ async def add_tag_by_id_and_tag_name(
                 detail=ERROR_MESSAGES.DEFAULT("Tag name cannot be 'None'"),
             )
 
-        print(tags, tag_id)
         if tag_id not in tags:
             Chats.add_chat_tag_by_id_and_user_id_and_tag_name(
                 id, user.id, form_data.name

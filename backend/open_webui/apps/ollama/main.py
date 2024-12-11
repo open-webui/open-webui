@@ -24,6 +24,7 @@ from open_webui.config import (
 from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST,
+    BYPASS_MODEL_ACCESS_CONTROL,
 )
 
 
@@ -44,7 +45,7 @@ from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
 )
-from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
 
 log = logging.getLogger(__name__)
@@ -359,7 +360,7 @@ async def get_ollama_tags(
                 detail=error_detail,
             )
 
-    if user.role == "user":
+    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
         # Filter models based on user access control
         filtered_models = []
         for model in models.get("models", []):
@@ -430,6 +431,26 @@ async def get_ollama_versions(url_idx: Optional[int] = None):
                 )
     else:
         return {"version": False}
+
+
+@app.get("/api/ps")
+async def get_ollama_loaded_models(user=Depends(get_verified_user)):
+    """
+    List models that are currently loaded into Ollama memory, and which node they are loaded on.
+    """
+    if app.state.config.ENABLE_OLLAMA_API:
+        tasks = [
+            aiohttp_get(
+                f"{url}/api/ps",
+                app.state.config.OLLAMA_API_CONFIGS.get(url, {}).get("key", None),
+            )
+            for url in app.state.config.OLLAMA_BASE_URLS
+        ]
+        responses = await asyncio.gather(*tasks)
+
+        return dict(zip(app.state.config.OLLAMA_BASE_URLS, responses))
+    else:
+        return {}
 
 
 class ModelNameForm(BaseModel):
@@ -706,7 +727,7 @@ async def generate_embeddings(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
-    return generate_ollama_batch_embeddings(form_data, url_idx)
+    return await generate_ollama_batch_embeddings(form_data, url_idx)
 
 
 @app.post("/api/embeddings")
@@ -946,6 +967,9 @@ async def generate_chat_completion(
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
 ):
+    if BYPASS_MODEL_ACCESS_CONTROL:
+        bypass_filter = True
+
     payload = {**form_data.model_dump(exclude_none=True)}
     log.debug(f"generate_chat_completion() - 1.payload = {payload}")
     if "metadata" in payload:
@@ -1029,6 +1053,82 @@ class OpenAIChatCompletionForm(BaseModel):
     messages: list[OpenAIChatMessage]
 
     model_config = ConfigDict(extra="allow")
+
+
+class OpenAICompletionForm(BaseModel):
+    model: str
+    prompt: str
+
+    model_config = ConfigDict(extra="allow")
+
+
+@app.post("/v1/completions")
+@app.post("/v1/completions/{url_idx}")
+async def generate_openai_completion(
+    form_data: dict, url_idx: Optional[int] = None, user=Depends(get_verified_user)
+):
+    try:
+        form_data = OpenAICompletionForm(**form_data)
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        )
+
+    payload = {**form_data.model_dump(exclude_none=True, exclude=["metadata"])}
+    if "metadata" in payload:
+        del payload["metadata"]
+
+    model_id = form_data.model
+    if ":" not in model_id:
+        model_id = f"{model_id}:latest"
+
+    model_info = Models.get_model_by_id(model_id)
+    if model_info:
+        if model_info.base_model_id:
+            payload["model"] = model_info.base_model_id
+        params = model_info.params.model_dump()
+
+        if params:
+            payload = apply_model_params_to_body_openai(params, payload)
+
+        # Check if user has access to the model
+        if user.role == "user":
+            if not (
+                user.id == model_info.user_id
+                or has_access(
+                    user.id, type="read", access_control=model_info.access_control
+                )
+            ):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Model not found",
+                )
+    else:
+        if user.role != "admin":
+            raise HTTPException(
+                status_code=403,
+                detail="Model not found",
+            )
+
+    if ":" not in payload["model"]:
+        payload["model"] = f"{payload['model']}:latest"
+
+    url = await get_ollama_url(url_idx, payload["model"])
+    log.info(f"url: {url}")
+
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    prefix_id = api_config.get("prefix_id", None)
+
+    if prefix_id:
+        payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
+
+    return await post_streaming_url(
+        f"{url}/v1/completions",
+        json.dumps(payload),
+        stream=payload.get("stream", False),
+    )
 
 
 @app.post("/v1/chat/completions")
@@ -1156,7 +1256,7 @@ async def get_openai_models(
                 detail=error_detail,
             )
 
-    if user.role == "user":
+    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
         # Filter models based on user access control
         filtered_models = []
         for model in models:

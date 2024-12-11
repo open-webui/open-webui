@@ -7,7 +7,7 @@ from open_webui.apps.webui.models.users import UserModel, Users
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel
 from sqlalchemy import Boolean, Column, String, Text
-from open_webui.utils.utils import verify_password
+from open_webui.utils.auth import verify_password
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])

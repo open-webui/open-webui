@@ -15,6 +15,7 @@
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
 	import AccessControl from '../common/AccessControl.svelte';
 	import { stringify } from 'postcss';
+	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
 
@@ -68,7 +69,9 @@
 		}
 	};
 
-	let params = {};
+	let params = {
+		system: ''
+	};
 	let capabilities = {
 		vision: true,
 		usage: undefined,
@@ -100,6 +103,14 @@
 
 		info.id = id;
 		info.name = name;
+
+		if (id === '') {
+			toast.error('Model ID is required.');
+		}
+
+		if (name === '') {
+			toast.error('Model Name is required.');
+		}
 
 		info.access_control = accessControl;
 		info.meta.capabilities = capabilities;
@@ -423,12 +434,11 @@
 						</div>
 
 						<div class="flex-1">
-							<!-- <div class=" text-sm font-semibold">{$i18n.t('Model ID')}*</div> -->
 							<div>
 								<input
 									class="text-xs w-full bg-transparent text-gray-500 outline-none"
 									placeholder={$i18n.t('Model ID')}
-									value={id}
+									bind:value={id}
 									disabled={edit}
 									required
 								/>

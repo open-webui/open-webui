@@ -105,10 +105,15 @@
 	};
 
 	const updateConfigHandler = async () => {
-		const res = await updateConfig(localStorage.token, config).catch((error) => {
-			toast.error(error);
-			return null;
-		});
+		const res = await updateConfig(localStorage.token, config)
+			.catch((error) => {
+				toast.error(error);
+				return null;
+			})
+			.catch((error) => {
+				toast.error(error);
+				return null;
+			});
 
 		if (res) {
 			config = res;

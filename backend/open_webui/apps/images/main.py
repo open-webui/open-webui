@@ -40,7 +40,7 @@ from open_webui.env import ENV, SRC_LOG_LEVELS, ENABLE_FORWARD_USER_INFO_HEADERS
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from open_webui.utils.utils import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["IMAGES"])
@@ -117,7 +117,7 @@ class OpenAIConfigForm(BaseModel):
 class Automatic1111ConfigForm(BaseModel):
     AUTOMATIC1111_BASE_URL: str
     AUTOMATIC1111_API_AUTH: str
-    AUTOMATIC1111_CFG_SCALE: Optional[str]
+    AUTOMATIC1111_CFG_SCALE: Optional[str | float | int]
     AUTOMATIC1111_SAMPLER: Optional[str]
     AUTOMATIC1111_SCHEDULER: Optional[str]
 

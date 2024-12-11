@@ -446,7 +446,13 @@
 
 	const onDragOver = (e) => {
 		e.preventDefault();
-		dragged = true;
+
+		// Check if a file is being draggedOver.
+		if (e.dataTransfer?.types?.includes('Files')) {
+			dragged = true;
+		} else {
+			dragged = false;
+		}
 	};
 
 	const onDragLeave = () => {
@@ -457,15 +463,17 @@
 		e.preventDefault();
 		dragged = false;
 
-		if (e.dataTransfer?.files) {
-			const inputFiles = e.dataTransfer?.files;
+		if (e.dataTransfer?.types?.includes('Files')) {
+			if (e.dataTransfer?.files) {
+				const inputFiles = e.dataTransfer?.files;
 
-			if (inputFiles && inputFiles.length > 0) {
-				for (const file of inputFiles) {
-					await uploadFileHandler(file);
+				if (inputFiles && inputFiles.length > 0) {
+					for (const file of inputFiles) {
+						await uploadFileHandler(file);
+					}
+				} else {
+					toast.error($i18n.t(`File not found.`));
 				}
-			} else {
-				toast.error($i18n.t(`File not found.`));
 			}
 		}
 	};
@@ -600,7 +608,7 @@
 	}}
 />
 
-<div class="flex flex-col w-full h-full max-h-[100dvh] translate-y-1" id="collection-container">
+<div class="flex flex-col w-full translate-y-1" id="collection-container">
 	{#if id && knowledge}
 		<AccessControlModal
 			bind:show={showAccessControlModal}
@@ -657,228 +665,205 @@
 			</div>
 		</div>
 
-		<div class="flex flex-row flex-1 h-full max-h-full pb-2.5">
-			<PaneGroup direction="horizontal">
-				<Pane
-					bind:pane
-					defaultSize={minSize}
-					collapsible={true}
-					maxSize={50}
-					{minSize}
-					class="h-full"
-					onExpand={() => {
-						showSidepanel = true;
-					}}
-					onCollapse={() => {
-						showSidepanel = false;
-					}}
-				>
-					<div
-						class="{largeScreen ? 'flex-shrink-0' : 'flex-1'}
-						flex
-						py-2
-						rounded-2xl
-						border
-						border-gray-50
-						h-full
-						dark:border-gray-850"
-					>
-						<div class=" flex flex-col w-full space-x-2 rounded-lg h-full">
-							<div class="w-full h-full flex flex-col">
-								<div class=" px-3">
-									<div class="flex py-1">
-										<div class=" self-center ml-1 mr-3">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 20 20"
-												fill="currentColor"
-												class="w-4 h-4"
-											>
-												<path
-													fill-rule="evenodd"
-													d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-													clip-rule="evenodd"
-												/>
-											</svg>
-										</div>
-										<input
-											class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
-											bind:value={query}
-											placeholder={$i18n.t('Search Collection')}
-											on:focus={() => {
-												selectedFileId = null;
-											}}
-										/>
-
-										<div>
-											<AddContentMenu
-												on:upload={(e) => {
-													if (e.detail.type === 'directory') {
-														uploadDirectoryHandler();
-													} else if (e.detail.type === 'text') {
-														showAddTextContentModal = true;
-													} else {
-														document.getElementById('files-input').click();
-													}
-												}}
-												on:sync={(e) => {
-													showSyncConfirmModal = true;
-												}}
-											/>
-										</div>
-									</div>
-								</div>
-
-								{#if filteredItems.length > 0}
-									<div class=" flex overflow-y-auto h-full w-full scrollbar-hidden text-xs">
-										<Files
-											files={filteredItems}
-											{selectedFileId}
-											on:click={(e) => {
-												selectedFileId = selectedFileId === e.detail ? null : e.detail;
-											}}
-											on:delete={(e) => {
-												console.log(e.detail);
-
-												selectedFileId = null;
-												deleteFileHandler(e.detail);
-											}}
-										/>
-									</div>
-								{:else}
-									<div
-										class="m-auto flex flex-col justify-center text-center text-gray-500 text-xs"
-									>
-										<div>
-											{$i18n.t('No content found')}
-										</div>
-
-										<div class="mx-12 mt-2 text-center text-gray-200 dark:text-gray-700">
-											{$i18n.t('Drag and drop a file to upload or select a file to view')}
-										</div>
-									</div>
-								{/if}
-							</div>
-						</div>
-					</div>
-				</Pane>
-
-				{#if largeScreen}
-					<PaneResizer class="relative flex w-2 items-center justify-center bg-background group">
-						<div class="z-10 flex h-7 w-5 items-center justify-center rounded-sm">
-							<EllipsisVertical className="size-4 invisible group-hover:visible" />
-						</div>
-					</PaneResizer>
-					<Pane>
-						<div class="flex-1 flex justify-start h-full max-h-full">
-							{#if selectedFile}
-								<div class=" flex flex-col w-full h-full max-h-full ml-2.5">
-									<div class="flex-shrink-0 mb-2 flex items-center">
-										{#if !showSidepanel}
-											<div class="-translate-x-2">
-												<button
-													class="w-full text-left text-sm p-1.5 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
-													on:click={() => {
-														pane.expand();
-													}}
-												>
-													<ChevronLeft strokeWidth="2.5" />
-												</button>
-											</div>
-										{/if}
-
-										<div class=" flex-1 text-2xl font-medium">
-											<a
-												class="hover:text-gray-500 hover:dark:text-gray-100 hover:underline flex-grow line-clamp-1"
-												href={selectedFile.id ? `/api/v1/files/${selectedFile.id}/content` : '#'}
-												target="_blank"
-											>
-												{selectedFile?.meta?.name}
-											</a>
-										</div>
-
-										<div>
-											<button
-												class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
-												on:click={() => {
-													updateFileContentHandler();
-												}}
-											>
-												{$i18n.t('Save')}
-											</button>
-										</div>
-									</div>
-
-									<div
-										class=" flex-1 w-full h-full max-h-full text-sm bg-transparent outline-none overflow-y-auto scrollbar-hidden"
-									>
-										{#key selectedFile.id}
-											<RichTextInput
-												className="input-prose-sm"
-												bind:value={selectedFile.data.content}
-												placeholder={$i18n.t('Add content here')}
-											/>
-										{/key}
-									</div>
-								</div>
-							{:else}
-								<div></div>
-							{/if}
-						</div>
-					</Pane>
-				{:else if !largeScreen && selectedFileId !== null}
-					<Drawer
-						className="h-full"
-						show={selectedFileId !== null}
-						on:close={() => {
-							selectedFileId = null;
-						}}
-					>
-						<div class="flex flex-col justify-start h-full max-h-full p-2">
-							<div class=" flex flex-col w-full h-full max-h-full">
-								<div class="flex-shrink-0 mt-1 mb-2 flex items-center">
-									<div class="mr-2">
+		<div class="flex flex-row flex-1 h-full max-h-full pb-2.5 gap-3">
+			{#if largeScreen}
+				<div class="flex-1 flex justify-start w-full h-full max-h-full">
+					{#if selectedFile}
+						<div class=" flex flex-col w-full h-full max-h-full">
+							<div class="flex-shrink-0 mb-2 flex items-center">
+								{#if !showSidepanel}
+									<div class="-translate-x-2">
 										<button
 											class="w-full text-left text-sm p-1.5 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
 											on:click={() => {
-												selectedFileId = null;
+												pane.expand();
 											}}
 										>
 											<ChevronLeft strokeWidth="2.5" />
 										</button>
 									</div>
-									<div class=" flex-1 text-xl line-clamp-1">
-										{selectedFile?.meta?.name}
-									</div>
+								{/if}
 
-									<div>
-										<button
-											class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
-											on:click={() => {
-												updateFileContentHandler();
-											}}
-										>
-											{$i18n.t('Save')}
-										</button>
-									</div>
+								<div class=" flex-1 text-xl font-medium">
+									<a
+										class="hover:text-gray-500 hover:dark:text-gray-100 hover:underline flex-grow line-clamp-1"
+										href={selectedFile.id ? `/api/v1/files/${selectedFile.id}/content` : '#'}
+										target="_blank"
+									>
+										{selectedFile?.meta?.name}
+									</a>
 								</div>
 
-								<div
-									class=" flex-1 w-full h-full max-h-full py-2.5 px-3.5 rounded-lg text-sm bg-transparent overflow-y-auto scrollbar-hidden"
-								>
-									{#key selectedFile.id}
-										<RichTextInput
-											className="input-prose-sm"
-											bind:value={selectedFile.data.content}
-											placeholder={$i18n.t('Add content here')}
+								<div>
+									<button
+										class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+										on:click={() => {
+											updateFileContentHandler();
+										}}
+									>
+										{$i18n.t('Save')}
+									</button>
+								</div>
+							</div>
+
+							<div
+								class=" flex-1 w-full h-full max-h-full text-sm bg-transparent outline-none overflow-y-auto scrollbar-hidden"
+							>
+								{#key selectedFile.id}
+									<RichTextInput
+										className="input-prose-sm"
+										bind:value={selectedFile.data.content}
+										placeholder={$i18n.t('Add content here')}
+										preserveBreaks={true}
+									/>
+								{/key}
+							</div>
+						</div>
+					{:else}
+						<div class="h-full flex w-full">
+							<div class="m-auto text-xs text-center text-gray-200 dark:text-gray-700">
+								{$i18n.t('Drag and drop a file to upload or select a file to view')}
+							</div>
+						</div>
+					{/if}
+				</div>
+			{:else if !largeScreen && selectedFileId !== null}
+				<Drawer
+					className="h-full"
+					show={selectedFileId !== null}
+					on:close={() => {
+						selectedFileId = null;
+					}}
+				>
+					<div class="flex flex-col justify-start h-full max-h-full p-2">
+						<div class=" flex flex-col w-full h-full max-h-full">
+							<div class="flex-shrink-0 mt-1 mb-2 flex items-center">
+								<div class="mr-2">
+									<button
+										class="w-full text-left text-sm p-1.5 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
+										on:click={() => {
+											selectedFileId = null;
+										}}
+									>
+										<ChevronLeft strokeWidth="2.5" />
+									</button>
+								</div>
+								<div class=" flex-1 text-xl line-clamp-1">
+									{selectedFile?.meta?.name}
+								</div>
+
+								<div>
+									<button
+										class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+										on:click={() => {
+											updateFileContentHandler();
+										}}
+									>
+										{$i18n.t('Save')}
+									</button>
+								</div>
+							</div>
+
+							<div
+								class=" flex-1 w-full h-full max-h-full py-2.5 px-3.5 rounded-lg text-sm bg-transparent overflow-y-auto scrollbar-hidden"
+							>
+								{#key selectedFile.id}
+									<RichTextInput
+										className="input-prose-sm"
+										bind:value={selectedFile.data.content}
+										placeholder={$i18n.t('Add content here')}
+										preserveBreaks={true}
+									/>
+								{/key}
+							</div>
+						</div>
+					</div>
+				</Drawer>
+			{/if}
+
+			<div
+				class="{largeScreen ? 'flex-shrink-0 w-72 max-w-72' : 'flex-1'}
+			flex
+			py-2
+			rounded-2xl
+			border
+			border-gray-50
+			h-full
+			dark:border-gray-850"
+			>
+				<div class=" flex flex-col w-full space-x-2 rounded-lg h-full">
+					<div class="w-full h-full flex flex-col">
+						<div class=" px-3">
+							<div class="flex mb-0.5">
+								<div class=" self-center ml-1 mr-3">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 20 20"
+										fill="currentColor"
+										class="w-4 h-4"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+											clip-rule="evenodd"
 										/>
-									{/key}
+									</svg>
+								</div>
+								<input
+									class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
+									bind:value={query}
+									placeholder={$i18n.t('Search Collection')}
+									on:focus={() => {
+										selectedFileId = null;
+									}}
+								/>
+
+								<div>
+									<AddContentMenu
+										on:upload={(e) => {
+											if (e.detail.type === 'directory') {
+												uploadDirectoryHandler();
+											} else if (e.detail.type === 'text') {
+												showAddTextContentModal = true;
+											} else {
+												document.getElementById('files-input').click();
+											}
+										}}
+										on:sync={(e) => {
+											showSyncConfirmModal = true;
+										}}
+									/>
 								</div>
 							</div>
 						</div>
-					</Drawer>
-				{/if}
-			</PaneGroup>
+
+						{#if filteredItems.length > 0}
+							<div class=" flex overflow-y-auto h-full w-full scrollbar-hidden text-xs">
+								<Files
+									small
+									files={filteredItems}
+									{selectedFileId}
+									on:click={(e) => {
+										selectedFileId = selectedFileId === e.detail ? null : e.detail;
+									}}
+									on:delete={(e) => {
+										console.log(e.detail);
+
+										selectedFileId = null;
+										deleteFileHandler(e.detail);
+									}}
+								/>
+							</div>
+						{:else}
+							<div class="my-3 flex flex-col justify-center text-center text-gray-500 text-xs">
+								<div>
+									{$i18n.t('No content found')}
+								</div>
+							</div>
+						{/if}
+					</div>
+				</div>
+			</div>
 		</div>
 	{:else}
 		<Spinner />
