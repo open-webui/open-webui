@@ -197,16 +197,20 @@
 						<div class=" mb-1.5 text-sm font-medium">{$i18n.t('STT Model')}</div>
 						<div class="flex w-full">
 							<div class="flex-1">
-								<input
-									list="model-list"
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								<select
 									bind:value={STT_MODEL}
-									placeholder="Select a model"
-								/>
-
-								<datalist id="model-list">
-									<option value="whisper-1" />
-								</datalist>
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								>
+									<option value="" selected disabled>Select a model</option>
+									<option value="whisper-1">Whisper 1</option>
+								</select>
+								<!-- <select
+									bind:value={STT_MODEL}
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								>
+									<option value=""><Select>a model</Select></option>
+									<option value="whisper-1">whisper-1</option>
+								</select> -->
 							</div>
 						</div>
 					</div>
@@ -296,7 +300,7 @@
 			</div>
 
 			<hr class=" dark:border-gray-800" />
-
+			<!-- TTS -->
 			<div>
 				<div class=" mb-1 text-sm font-medium">{$i18n.t('TTS Settings')}</div>
 
