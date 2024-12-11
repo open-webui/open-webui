@@ -420,7 +420,7 @@
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 									bind:value={TTS_VOICE}
 								>
-									<option value="" disabled selected>Select A Voice</option>
+									<option value="" disabled selected>CMU ARCTIC speaker embedding name</option>
 									{#each voices as voice}
 										<option value={voice.id}>{voice.name}</option>
 									{/each}
