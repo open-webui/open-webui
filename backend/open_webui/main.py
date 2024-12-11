@@ -372,6 +372,7 @@ app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
 app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 app.state.config.OLLAMA_API_CONFIGS = OLLAMA_API_CONFIGS
 
+app.state.OLLAMA_MODELS = {}
 
 ########################################
 #
@@ -384,6 +385,7 @@ app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 app.state.config.OPENAI_API_CONFIGS = OPENAI_API_CONFIGS
 
+app.state.OPENAI_MODELS = {}
 
 ########################################
 #
@@ -606,6 +608,14 @@ app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = (
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH
 )
 
+
+########################################
+#
+# WEBUI
+#
+########################################
+
+app.state.MODELS = {}
 
 ##################################
 #
@@ -1437,7 +1447,7 @@ async def get_all_base_models():
         openai_models = openai_models["data"]
 
     if app.state.config.ENABLE_OLLAMA_API:
-        ollama_models = await get_ollama_models()
+        ollama_models = await ollama.get_all_models()
         ollama_models = [
             {
                 "id": model["model"],
