@@ -492,7 +492,7 @@
 										bind:value={TTS_VOICE}
 									>
 										<!--TEMP CSS-->
-										<option value="">Select A Voice</option>
+										<option value="" disabled selected>Select A Voice</option>
 										{#each voices as voice}
 											<option value={voice.id}>{voice.name}</option>
 										{/each}
@@ -523,7 +523,7 @@
 										bind:value={TTS_MODEL}
 									>
 										<!--TEMP CSS-->
-										<option value="">Select A Voice</option>
+										<option value="" disabled>Select A Voice</option>
 										{#each models as model}
 											<option value={model.id}>{model.id.replaceAll('_', ' ')}</option>
 										{/each}
