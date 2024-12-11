@@ -133,5 +133,22 @@ class CASManager:
         redirect_url = f"{WEBUI_URL}/auth#token={jwt_token}"
         return RedirectResponse(url=redirect_url)
 
+    def get_logout_url(self, base_url="http://localhost:8080"):
+        """Generate the CAS logout URL."""
+        if not CAS_PROVIDER:
+            raise HTTPException(400, detail="CAS is not configured")
+
+        cas_logout_url = urljoin(CAS_PROVIDER.get("server_url"), "./logout")
+        service_url = urljoin(base_url, "/auth")
+
+        return f"{cas_logout_url}?service={service_url}"
+
+    def handle_logout(self, request: Request, response: Response) -> RedirectResponse:
+        """Log out the user by clearing the session and redirecting to CAS logout."""
+
+        response.delete_cookie("token", samesite=WEBUI_SESSION_COOKIE_SAME_SITE)
+        logout_url = self.get_logout_url(str(request.base_url))
+        return RedirectResponse(url=logout_url)
+
 
 cas_manager = CASManager()

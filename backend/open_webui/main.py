@@ -80,6 +80,7 @@ from open_webui.config import (
     ENV,
     FRONTEND_BUILD_DIR,
     OAUTH_PROVIDERS,
+    CAS_PROVIDER,
     STATIC_DIR,
     TASK_MODEL,
     TASK_MODEL_EXTERNAL,
@@ -2605,6 +2606,7 @@ async def get_app_config(request: Request):
             "auth": WEBUI_AUTH,
             "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
             "enable_ldap": webui_app.state.config.ENABLE_LDAP,
+            "enable_cas": CAS_PROVIDER is not None,
             "enable_api_key": webui_app.state.config.ENABLE_API_KEY,
             "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
             "enable_login_form": webui_app.state.config.ENABLE_LOGIN_FORM,
@@ -2746,7 +2748,9 @@ async def cas_login(request: Request):
 async def cas_callback(request: Request, response: Response):
     return await cas_manager.handle_callback(request, response)
 
-
+@app.get("/cas/logout")
+async def cas_logout(request: Request, response: Response):
+    return cas_manager.handle_logout(request, response)
 
 @app.get("/manifest.json")
 async def get_manifest_json():

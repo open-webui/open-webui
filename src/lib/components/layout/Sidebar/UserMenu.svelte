@@ -158,7 +158,7 @@
 				on:click={async () => {
 					await userSignOut();
 					localStorage.removeItem('token');
-					location.href = '/auth';
+					location.href = $config.enable_cas ? '/cas/logout' : '/auth';
 					show = false;
 				}}
 			>
