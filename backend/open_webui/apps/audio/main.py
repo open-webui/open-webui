@@ -307,7 +307,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
         if is_markdown:
             # Convert Markdown to HTML
-            html_text = markdown2.markdown(input_text)
+            html_text = markdown2.markdown(body["input"])
             
             # Strip HTML tags to get plain text
             body["input"] = re.sub(r'<[^>]+>', '', html_text)
