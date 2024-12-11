@@ -365,7 +365,7 @@ async def get_content_from_response(response) -> Optional[str]:
         # Cleanup any remaining background tasks if necessary
         if response.background is not None:
             await response.background()
-    elif hasattr(response, "choices"):
+    elif "choices" in response:
         content = response["choices"][0]["message"]["content"]
     return content
 
@@ -1088,9 +1088,6 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
         body, tools = get_tools_body(body, user, extra_params, models)
 
         if not body["metadata"]["native_tool_call"]:
-            if "tools" in body:
-                # we won't use those they are only for native_tool_call =True
-                del body["tools"]
             try:
                 body, flags = await chat_completion_tools_handler(
                     body, user, extra_params, models
@@ -1099,6 +1096,9 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             except Exception as e:
                 log.exception(e)
 
+            if "tools" in body:
+                # we won't use those they are only for native_tool_call =True
+                del body["tools"]
         try:
             body, flags = await chat_completion_files_handler(body, user)
             sources.extend(flags.get("sources", []))
