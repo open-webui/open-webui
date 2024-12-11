@@ -46,6 +46,21 @@ from open_webui.routers import (
     retrieval,
     pipelines,
     tasks,
+    auths,
+    chats,
+    folders,
+    configs,
+    groups,
+    files,
+    functions,
+    memories,
+    models,
+    knowledge,
+    prompts,
+    evaluations,
+    tools,
+    users,
+    utils,
 )
 
 from open_webui.retrieval.utils import get_sources_from_files
@@ -117,6 +132,60 @@ from open_webui.config import (
     WHISPER_MODEL,
     WHISPER_MODEL_AUTO_UPDATE,
     WHISPER_MODEL_DIR,
+    # Retrieval
+    RAG_TEMPLATE,
+    DEFAULT_RAG_TEMPLATE,
+    RAG_EMBEDDING_MODEL,
+    RAG_EMBEDDING_MODEL_AUTO_UPDATE,
+    RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
+    RAG_RERANKING_MODEL,
+    RAG_RERANKING_MODEL_AUTO_UPDATE,
+    RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
+    RAG_EMBEDDING_ENGINE,
+    RAG_EMBEDDING_BATCH_SIZE,
+    RAG_RELEVANCE_THRESHOLD,
+    RAG_FILE_MAX_COUNT,
+    RAG_FILE_MAX_SIZE,
+    RAG_OPENAI_API_BASE_URL,
+    RAG_OPENAI_API_KEY,
+    RAG_OLLAMA_BASE_URL,
+    RAG_OLLAMA_API_KEY,
+    CHUNK_OVERLAP,
+    CHUNK_SIZE,
+    CONTENT_EXTRACTION_ENGINE,
+    TIKA_SERVER_URL,
+    RAG_TOP_K,
+    RAG_TEXT_SPLITTER,
+    TIKTOKEN_ENCODING_NAME,
+    PDF_EXTRACT_IMAGES,
+    YOUTUBE_LOADER_LANGUAGE,
+    YOUTUBE_LOADER_PROXY_URL,
+    # Retrieval (Web Search)
+    RAG_WEB_SEARCH_ENGINE,
+    RAG_WEB_SEARCH_RESULT_COUNT,
+    RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+    RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+    JINA_API_KEY,
+    SEARCHAPI_API_KEY,
+    SEARCHAPI_ENGINE,
+    SEARXNG_QUERY_URL,
+    SERPER_API_KEY,
+    SERPLY_API_KEY,
+    SERPSTACK_API_KEY,
+    SERPSTACK_HTTPS,
+    TAVILY_API_KEY,
+    BING_SEARCH_V7_ENDPOINT,
+    BING_SEARCH_V7_SUBSCRIPTION_KEY,
+    BRAVE_SEARCH_API_KEY,
+    KAGI_SEARCH_API_KEY,
+    MOJEEK_SEARCH_API_KEY,
+    GOOGLE_PSE_API_KEY,
+    GOOGLE_PSE_ENGINE_ID,
+    ENABLE_RAG_HYBRID_SEARCH,
+    ENABLE_RAG_LOCAL_WEB_FETCH,
+    ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+    ENABLE_RAG_WEB_SEARCH,
+    UPLOAD_DIR,
     # WebUI
     WEBUI_AUTH,
     WEBUI_NAME,
@@ -382,6 +451,72 @@ app.state.FUNCTIONS = {}
 # RETRIEVAL
 #
 ########################################
+
+
+app.state.config.TOP_K = RAG_TOP_K
+app.state.config.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
+app.state.config.FILE_MAX_SIZE = RAG_FILE_MAX_SIZE
+app.state.config.FILE_MAX_COUNT = RAG_FILE_MAX_COUNT
+
+app.state.config.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH
+app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
+    ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
+)
+
+app.state.config.CONTENT_EXTRACTION_ENGINE = CONTENT_EXTRACTION_ENGINE
+app.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL
+
+app.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER
+app.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME
+
+app.state.config.CHUNK_SIZE = CHUNK_SIZE
+app.state.config.CHUNK_OVERLAP = CHUNK_OVERLAP
+
+app.state.config.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE
+app.state.config.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
+app.state.config.RAG_EMBEDDING_BATCH_SIZE = RAG_EMBEDDING_BATCH_SIZE
+app.state.config.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
+app.state.config.RAG_TEMPLATE = RAG_TEMPLATE
+
+app.state.config.RAG_OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
+app.state.config.RAG_OPENAI_API_KEY = RAG_OPENAI_API_KEY
+
+app.state.config.RAG_OLLAMA_BASE_URL = RAG_OLLAMA_BASE_URL
+app.state.config.RAG_OLLAMA_API_KEY = RAG_OLLAMA_API_KEY
+
+app.state.config.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
+
+app.state.config.YOUTUBE_LOADER_LANGUAGE = YOUTUBE_LOADER_LANGUAGE
+app.state.config.YOUTUBE_LOADER_PROXY_URL = YOUTUBE_LOADER_PROXY_URL
+
+
+app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
+app.state.config.RAG_WEB_SEARCH_ENGINE = RAG_WEB_SEARCH_ENGINE
+app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = RAG_WEB_SEARCH_DOMAIN_FILTER_LIST
+
+app.state.config.SEARXNG_QUERY_URL = SEARXNG_QUERY_URL
+app.state.config.GOOGLE_PSE_API_KEY = GOOGLE_PSE_API_KEY
+app.state.config.GOOGLE_PSE_ENGINE_ID = GOOGLE_PSE_ENGINE_ID
+app.state.config.BRAVE_SEARCH_API_KEY = BRAVE_SEARCH_API_KEY
+app.state.config.KAGI_SEARCH_API_KEY = KAGI_SEARCH_API_KEY
+app.state.config.MOJEEK_SEARCH_API_KEY = MOJEEK_SEARCH_API_KEY
+app.state.config.SERPSTACK_API_KEY = SERPSTACK_API_KEY
+app.state.config.SERPSTACK_HTTPS = SERPSTACK_HTTPS
+app.state.config.SERPER_API_KEY = SERPER_API_KEY
+app.state.config.SERPLY_API_KEY = SERPLY_API_KEY
+app.state.config.TAVILY_API_KEY = TAVILY_API_KEY
+app.state.config.SEARCHAPI_API_KEY = SEARCHAPI_API_KEY
+app.state.config.SEARCHAPI_ENGINE = SEARCHAPI_ENGINE
+app.state.config.JINA_API_KEY = JINA_API_KEY
+app.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT
+app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY
+
+app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
+app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
+
+
+app.state.YOUTUBE_LOADER_TRANSLATION = None
+app.state.EMBEDDING_FUNCTION = None
 
 ########################################
 #
@@ -1083,8 +1218,8 @@ def filter_pipeline(payload, user, models):
         try:
             urlIdx = filter["urlIdx"]
 
-            url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
-            key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
+            url = app.state.config.OPENAI_API_BASE_URLS[urlIdx]
+            key = app.state.config.OPENAI_API_KEYS[urlIdx]
 
             if key == "":
                 continue
@@ -1230,14 +1365,6 @@ async def check_url(request: Request, call_next):
     return response
 
 
-# @app.middleware("http")
-# async def update_embedding_function(request: Request, call_next):
-#     response = await call_next(request)
-#     if "/embedding/update" in request.url.path:
-#         webui_app.state.EMBEDDING_FUNCTION = retrieval_app.state.EMBEDDING_FUNCTION
-#     return response
-
-
 @app.middleware("http")
 async def inspect_websocket(request: Request, call_next):
     if (
@@ -1268,18 +1395,36 @@ app.add_middleware(
 app.mount("/ws", socket_app)
 
 
-app.mount("/ollama", ollama_app)
-app.mount("/openai", openai_app)
-
-app.mount("/images/api/v1", images_app)
-app.mount("/audio/api/v1", audio_app)
+app.include_router(ollama.router, prefix="/ollama")
+app.include_router(openai.router, prefix="/openai")
 
 
-app.mount("/retrieval/api/v1", retrieval_app)
+app.include_router(images.router, prefix="/api/v1/images")
+app.include_router(audio.router, prefix="/api/v1/audio")
+app.include_router(retrieval.router, prefix="/api/v1/retrieval")
 
-app.mount("/api/v1", webui_app)
 
-app.state.EMBEDDING_FUNCTION = retrieval_app.state.EMBEDDING_FUNCTION
+app.include_router(configs.router, prefix="/api/v1/configs", tags=["configs"])
+
+app.include_router(auths.router, prefix="/api/v1/auths", tags=["auths"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
+
+app.include_router(chats.router, prefix="/api/v1/chats", tags=["chats"])
+
+app.include_router(models.router, prefix="/api/v1/models", tags=["models"])
+app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["knowledge"])
+app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
+app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
+
+app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
+app.include_router(folders.router, prefix="/api/v1/folders", tags=["folders"])
+app.include_router(groups.router, prefix="/api/v1/groups", tags=["groups"])
+app.include_router(files.router, prefix="/api/v1/files", tags=["files"])
+app.include_router(functions.router, prefix="/api/v1/functions", tags=["functions"])
+app.include_router(
+    evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
+)
+app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 
 
 async def get_all_base_models():
