@@ -404,7 +404,7 @@ async def get_models(
     }
 
     if url_idx is None:
-        models = await get_all_models()
+        models = await get_all_models(request)
     else:
         url = request.app.state.config.OPENAI_API_BASE_URLS[url_idx]
         key = request.app.state.config.OPENAI_API_KEYS[url_idx]
