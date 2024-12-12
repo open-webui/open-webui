@@ -183,7 +183,7 @@ class ContentForm(BaseModel):
 
 @router.post("/{id}/data/content/update")
 async def update_file_data_content_by_id(
-    id: str, form_data: ContentForm, user=Depends(get_verified_user)
+        id: str, form_data: ContentForm, user=Depends(get_verified_user)
 ):
     file = Files.get_file_by_id(id)
 
@@ -219,10 +219,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
             # Check if the file already exists in the cache
             if file_path.is_file():
                 print(f"file_path: {file_path}")
-                headers = {
-                    "Content-Disposition": f'attachment; filename="{file.meta.get("name", file.filename)}"'
-                }
-                return FileResponse(file_path, headers=headers)
+                return FileResponse(file_path, filename=file.meta.get("name", file.filename))
             else:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -286,10 +283,8 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
             # Check if the file already exists in the cache
             if file_path.is_file():
                 print(f"file_path: {file_path}")
-                headers = {
-                    "Content-Disposition": f'attachment; filename="{file.meta.get("name", file.filename)}"'
-                }
-                return FileResponse(file_path, headers=headers)
+                return FileResponse(file_path, filename=file.meta.get("name", file.filename))
+
             else:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -307,7 +302,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
             return StreamingResponse(
                 generator(),
                 media_type="text/plain",
-                headers={"Content-Disposition": f"attachment; filename={file_name}"},
+                headers={"Content-Disposition": f"attachment; filename*=utf-8''{file_name}"},
             )
     else:
         raise HTTPException(
