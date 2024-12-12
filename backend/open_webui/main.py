@@ -1409,9 +1409,9 @@ app.include_router(ollama.router, prefix="/ollama")
 app.include_router(openai.router, prefix="/openai")
 
 
-app.include_router(images.router, prefix="/api/v1/images")
-app.include_router(audio.router, prefix="/api/v1/audio")
-app.include_router(retrieval.router, prefix="/api/v1/retrieval")
+app.include_router(images.router, prefix="/api/v1/images", tags=["images"])
+app.include_router(audio.router, prefix="/api/v1/audio", tags=["audio"])
+app.include_router(retrieval.router, prefix="/api/v1/retrieval", tags=["retrieval"])
 
 
 app.include_router(configs.router, prefix="/api/v1/configs", tags=["configs"])

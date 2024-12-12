@@ -317,6 +317,9 @@ async def get_all_models(request: Request):
     else:
         models = {"models": []}
 
+    request.app.state.OLLAMA_MODELS = {
+        model["model"]: model for model in models["models"]
+    }
     return models
 
 
