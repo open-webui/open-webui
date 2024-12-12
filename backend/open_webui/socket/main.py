@@ -13,7 +13,7 @@ from open_webui.env import (
     WEBSOCKET_REDIS_URL,
 )
 from open_webui.utils.auth import decode_token
-from open_webui.apps.socket.utils import RedisDict
+from open_webui.socket.utils import RedisDict
 
 from open_webui.env import (
     GLOBAL_LOG_LEVEL,

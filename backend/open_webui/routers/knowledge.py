@@ -12,7 +12,7 @@ from open_webui.models.knowledge import (
 )
 from open_webui.models.files import Files, FileModel
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
-from backend.open_webui.routers.retrieval import process_file, ProcessFileForm
+from open_webui.routers.retrieval import process_file, ProcessFileForm
 
 
 from open_webui.constants import ERROR_MESSAGES
