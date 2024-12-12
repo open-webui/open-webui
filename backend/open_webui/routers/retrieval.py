@@ -155,17 +155,6 @@ def update_reranking_model(
         request.app.state.sentence_transformer_rf = None
 
 
-update_embedding_model(
-    request.app.state.config.RAG_EMBEDDING_MODEL,
-    RAG_EMBEDDING_MODEL_AUTO_UPDATE,
-)
-
-update_reranking_model(
-    request.app.state.config.RAG_RERANKING_MODEL,
-    RAG_RERANKING_MODEL_AUTO_UPDATE,
-)
-
-
 ##########################################
 #
 # API routes
@@ -174,24 +163,6 @@ update_reranking_model(
 
 
 router = APIRouter()
-
-
-request.app.state.EMBEDDING_FUNCTION = get_embedding_function(
-    request.app.state.config.RAG_EMBEDDING_ENGINE,
-    request.app.state.config.RAG_EMBEDDING_MODEL,
-    request.app.state.sentence_transformer_ef,
-    (
-        request.app.state.config.OPENAI_API_BASE_URL
-        if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-        else request.app.state.config.OLLAMA_BASE_URL
-    ),
-    (
-        request.app.state.config.OPENAI_API_KEY
-        if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-        else request.app.state.config.OLLAMA_API_KEY
-    ),
-    request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
-)
 
 
 class CollectionNameForm(BaseModel):
