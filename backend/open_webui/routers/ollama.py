@@ -941,13 +941,22 @@ async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = 
 @router.post("/api/chat/{url_idx}")
 async def generate_chat_completion(
     request: Request,
-    form_data: GenerateChatCompletionForm,
+    form_data: dict,
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
 ):
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
+
+    try:
+        form_data = GenerateChatCompletionForm(**form_data)
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        )
 
     payload = {**form_data.model_dump(exclude_none=True)}
     if "metadata" in payload:
