@@ -1914,8 +1914,8 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
 
 
 @app.get("/api/models/base")
-async def get_base_models(user=Depends(get_admin_user)):
-    models = await get_all_base_models()
+async def get_base_models(request: Request, user=Depends(get_admin_user)):
+    models = await get_all_base_models(request)
 
     # Filter out arena models
     models = [model for model in models if not model.get("arena", False)]
