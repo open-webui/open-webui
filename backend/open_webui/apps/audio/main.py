@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import uuid
+import re
 from functools import lru_cache
 from pathlib import Path
 from pydub import AudioSegment
@@ -46,10 +47,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from open_webui.utils.auth import get_admin_user, get_verified_user
+import markdown2
 
 # Constants
 MAX_FILE_SIZE_MB = 25
 MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
+
+# Markdown Patterns to detect Markdown for audio output.
+markdown_patterns = ['#', '-', '*', '_', '`', '[', '![']
 
 
 log = logging.getLogger(__name__)
@@ -291,6 +296,23 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             body = json.loads(body)
             body["model"] = app.state.config.TTS_MODEL
             body = json.dumps(body).encode("utf-8")
+        except Exception:
+            pass
+
+
+        # Check if the Input is markdown or normal word if its markdown convert markdown to normal word format.
+        # Simple heuristic to detect Markdown (checks for common Markdown characters)
+        try:
+            is_markdown = any(pattern in body["input"] for pattern in markdown_patterns)
+
+            if is_markdown:
+                # Convert Markdown to HTML
+                html_text = markdown2.markdown(body["input"])
+                
+                # Strip HTML tags to get plain text
+                body["input"] = re.sub(r'<[^>]+>', '', html_text)
+            else:
+                pass
         except Exception:
             pass
 

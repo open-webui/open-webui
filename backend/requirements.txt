@@ -88,6 +88,7 @@ pytube==15.0.0
 
 extract_msg
 pydub
+markdown2==2.5.2
 duckduckgo-search~=6.3.5
 
 ## Tests
