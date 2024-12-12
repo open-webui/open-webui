@@ -2037,8 +2037,7 @@ async def generate_chat_completions(
         # Using /ollama/api/chat endpoint
         form_data = convert_payload_openai_to_ollama(form_data)
         response = await generate_ollama_chat_completion(
-            request=request,
-            form_data=form_data, user=user, bypass_filter=bypass_filter
+            request=request, form_data=form_data, user=user, bypass_filter=bypass_filter
         )
         if form_data.stream:
             response.headers["content-type"] = "text/event-stream"
@@ -2050,9 +2049,7 @@ async def generate_chat_completions(
             return convert_response_ollama_to_openai(response)
     else:
         return await generate_openai_chat_completion(
-            request=request,
-
-            form_data, user=user, bypass_filter=bypass_filter
+            request=request, form_data=form_data, user=user, bypass_filter=bypass_filter
         )
 
 
