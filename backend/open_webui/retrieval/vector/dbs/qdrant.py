@@ -4,7 +4,7 @@ from qdrant_client import QdrantClient as Qclient
 from qdrant_client.http.models import PointStruct
 from qdrant_client.models import models
 
-from open_webui.apps.retrieval.vector.main import VectorItem, SearchResult, GetResult
+from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import QDRANT_URI, QDRANT_API_KEY
 
 NO_LIMIT = 999999999

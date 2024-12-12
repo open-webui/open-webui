@@ -18,7 +18,7 @@ from sqlalchemy.dialects.postgresql import JSONB, array
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.ext.mutable import MutableDict
 
-from open_webui.apps.retrieval.vector.main import VectorItem, SearchResult, GetResult
+from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import PGVECTOR_DB_URL
 
 VECTOR_LENGTH = 1536

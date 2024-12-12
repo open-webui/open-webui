@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 import requests
-from open_webui.apps.retrieval.web.main import SearchResult, get_filtered_results
+from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
@@ -31,17 +31,15 @@ def search_kagi(
     response.raise_for_status()
     json_response = response.json()
     search_results = json_response.get("data", [])
-    
+
     results = [
         SearchResult(
-            link=result["url"],
-            title=result["title"],
-            snippet=result.get("snippet")
+            link=result["url"], title=result["title"], snippet=result.get("snippet")
         )
         for result in search_results
         if result["t"] == 0
     ]
-    
+
     print(results)
 
     if filter_list:
