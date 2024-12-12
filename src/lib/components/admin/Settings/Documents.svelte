@@ -66,7 +66,8 @@
 		template: '',
 		r: 0.0,
 		k: 4,
-		hybrid: false
+		hybrid: false,
+		smartPreProcessing: true
 	};
 
 	const embeddingModelUpdateHandler = async () => {
@@ -224,6 +225,11 @@
 		querySettings = await updateQuerySettings(localStorage.token, querySettings);
 	};
 
+	const toggleSmartPreprocessing = async () => {
+		querySettings.smartPreProcessing = !querySettings.smartPreProcessing;
+		querySettings = await updateQuerySettings(localStorage.token, querySettings);
+	};
+
 	onMount(async () => {
 		await setEmbeddingConfig();
 		await setRerankingConfig();
@@ -377,6 +383,24 @@
 					type="button"
 				>
 					{#if querySettings.hybrid === true}
+						<span class="ml-2 self-center">{$i18n.t('On')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+					{/if}
+				</button>
+			</div>
+
+			<div class=" flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('Smart Pre-Processing')}</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded transition"
+					on:click={() => {
+						toggleSmartPreprocessing();
+					}}
+					type="button"
+				>
+					{#if querySettings.smartPreProcessing === true}
 						<span class="ml-2 self-center">{$i18n.t('On')}</span>
 					{:else}
 						<span class="ml-2 self-center">{$i18n.t('Off')}</span>

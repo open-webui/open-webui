@@ -1157,6 +1157,12 @@ ENABLE_RAG_HYBRID_SEARCH = PersistentConfig(
     os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "").lower() == "true",
 )
 
+ENABLE_RAG_SMART_PRE_PROCESSING = PersistentConfig(
+    "ENABLE_RAG_SMART_PRE_PROCESSING",
+    "rag.enable_smart_pre_processing",
+    os.environ.get("ENABLE_RAG_SMART_PRE_PROCESSING", "true").lower() == "true",
+)
+
 RAG_FILE_MAX_COUNT = PersistentConfig(
     "RAG_FILE_MAX_COUNT",
     "rag.file.max_count",

@@ -64,6 +64,7 @@ from open_webui.config import (
     CONTENT_EXTRACTION_ENGINE,
     CORS_ALLOW_ORIGIN,
     ENABLE_RAG_HYBRID_SEARCH,
+    ENABLE_RAG_SMART_PRE_PROCESSING,
     ENABLE_RAG_LOCAL_WEB_FETCH,
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     ENABLE_RAG_WEB_SEARCH,
@@ -146,6 +147,7 @@ app.state.config.FILE_MAX_SIZE = RAG_FILE_MAX_SIZE
 app.state.config.FILE_MAX_COUNT = RAG_FILE_MAX_COUNT
 
 app.state.config.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH
+app.state.config.ENABLE_RAG_SMART_PRE_PROCESSING = ENABLE_RAG_SMART_PRE_PROCESSING
 app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
 )
@@ -698,6 +700,7 @@ async def get_query_settings(user=Depends(get_admin_user)):
         "k": app.state.config.TOP_K,
         "r": app.state.config.RELEVANCE_THRESHOLD,
         "hybrid": app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+        "smartPreProcessing": app.state.config.ENABLE_RAG_SMART_PRE_PROCESSING,
     }
 
 
@@ -706,6 +709,7 @@ class QuerySettingsForm(BaseModel):
     r: Optional[float] = None
     template: Optional[str] = None
     hybrid: Optional[bool] = None
+    smartPreProcessing: Optional[bool] = None
 
 
 @app.post("/query/settings/update")
@@ -715,10 +719,8 @@ async def update_query_settings(
     app.state.config.RAG_TEMPLATE = form_data.template
     app.state.config.TOP_K = form_data.k if form_data.k else 4
     app.state.config.RELEVANCE_THRESHOLD = form_data.r if form_data.r else 0.0
-
-    app.state.config.ENABLE_RAG_HYBRID_SEARCH = (
-        form_data.hybrid if form_data.hybrid else False
-    )
+    app.state.config.ENABLE_RAG_HYBRID_SEARCH = form_data.hybrid if form_data.hybrid else False
+    app.state.config.ENABLE_RAG_SMART_PRE_PROCESSING = form_data.smartPreProcessing if form_data.smartPreProcessing else False
 
     return {
         "status": True,
@@ -726,6 +728,7 @@ async def update_query_settings(
         "k": app.state.config.TOP_K,
         "r": app.state.config.RELEVANCE_THRESHOLD,
         "hybrid": app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+        "smartPreProcessing": app.state.config.ENABLE_RAG_SMART_PRE_PROCESSING,
     }
 
 
