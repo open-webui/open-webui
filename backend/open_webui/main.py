@@ -812,6 +812,8 @@ async def chat_completion(
     user=Depends(get_verified_user),
     bypass_filter: bool = False,
 ):
+    if not request.app.state.MODELS:
+        await get_all_models(request)
 
     try:
         model_id = form_data.get("model", None)

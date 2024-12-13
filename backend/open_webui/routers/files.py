@@ -21,7 +21,7 @@ from open_webui.env import SRC_LOG_LEVELS
 from open_webui.constants import ERROR_MESSAGES
 
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Request
 from fastapi.responses import FileResponse, StreamingResponse
 
 
@@ -39,7 +39,9 @@ router = APIRouter()
 
 
 @router.post("/", response_model=FileModelResponse)
-def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
+def upload_file(
+    request: Request, file: UploadFile = File(...), user=Depends(get_verified_user)
+):
     log.info(f"file.content_type: {file.content_type}")
     try:
         unsanitized_filename = file.filename
@@ -68,7 +70,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
         )
 
         try:
-            process_file(ProcessFileForm(file_id=id))
+            process_file(request, ProcessFileForm(file_id=id))
             file_item = Files.get_file_by_id(id=id)
         except Exception as e:
             log.exception(e)
@@ -183,13 +185,15 @@ class ContentForm(BaseModel):
 
 @router.post("/{id}/data/content/update")
 async def update_file_data_content_by_id(
-    id: str, form_data: ContentForm, user=Depends(get_verified_user)
+    request: Request, id: str, form_data: ContentForm, user=Depends(get_verified_user)
 ):
     file = Files.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
         try:
-            process_file(ProcessFileForm(file_id=id, content=form_data.content))
+            process_file(
+                request, ProcessFileForm(file_id=id, content=form_data.content)
+            )
             file = Files.get_file_by_id(id=id)
         except Exception as e:
             log.exception(e)
