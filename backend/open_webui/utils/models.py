@@ -14,6 +14,7 @@ from open_webui.models.models import Models
 
 
 from open_webui.utils.plugin import load_function_module_by_id
+from open_webui.utils.access_control import has_access
 
 
 from open_webui.config import (
@@ -220,3 +221,26 @@ async def get_all_models(request):
 
     request.app.state.MODELS = {model["id"]: model for model in models}
     return models
+
+
+def check_model_access(user, model):
+    if model.get("arena"):
+        if not has_access(
+            user.id,
+            type="read",
+            access_control=model.get("info", {})
+            .get("meta", {})
+            .get("access_control", {}),
+        ):
+            raise Exception("Model not found")
+    else:
+        model_info = Models.get_model_by_id(model.get("id"))
+        if not model_info:
+            raise Exception("Model not found")
+        elif not (
+            user.id == model_info.user_id
+            or has_access(
+                user.id, type="read", access_control=model_info.access_control
+            )
+        ):
+            raise Exception("Model not found")

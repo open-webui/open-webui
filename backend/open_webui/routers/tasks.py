@@ -21,8 +21,12 @@ from open_webui.routers.pipelines import process_pipeline_inlet_filter
 from open_webui.utils.task import get_task_model_id
 
 from open_webui.config import (
+    DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE,
+    DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
+    DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE,
+    DEFAULT_MOA_GENERATION_PROMPT_TEMPLATE,
 )
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -150,19 +154,7 @@ async def generate_title(
     if request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE != "":
         template = request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE
     else:
-        template = """Create a concise, 3-5 word title with an emoji as a title for the chat history, in the given language. Suitable Emojis for the summary can be used to enhance understanding but avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
-
-Examples of titles:
-📉 Stock Market Trends
-🍪 Perfect Chocolate Chip Recipe
-Evolution of Music Streaming
-Remote Work Productivity Tips
-Artificial Intelligence in Healthcare
-🎮 Video Game Development Insights
-
-<chat_history>
-{{MESSAGES:END:2}}
-</chat_history>"""
+        template = DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE
 
     content = title_generation_template(
         template,
@@ -191,24 +183,13 @@ Artificial Intelligence in Healthcare
         },
     }
 
-    # Handle pipeline filters
     try:
-        payload = process_pipeline_inlet_filter(request, payload, user, models)
+        return await generate_chat_completion(request, form_data=payload, user=user)
     except Exception as e:
-        if len(e.args) > 1:
-            return JSONResponse(
-                status_code=e.args[0],
-                content={"detail": e.args[1]},
-            )
-        else:
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": str(e)},
-            )
-    if "chat_id" in payload:
-        del payload["chat_id"]
-
-    return await generate_chat_completion(request, form_data=payload, user=user)
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": str(e)},
+        )
 
 
 @router.post("/tags/completions")
@@ -247,23 +228,7 @@ async def generate_chat_tags(
     if request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE != "":
         template = request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE
     else:
-        template = """### Task:
-Generate 1-3 broad tags categorizing the main themes of the chat history, along with 1-3 more specific subtopic tags.
-
-### Guidelines:
-- Start with high-level domains (e.g. Science, Technology, Philosophy, Arts, Politics, Business, Health, Sports, Entertainment, Education)
-- Consider including relevant subfields/subdomains if they are strongly represented throughout the conversation
-- If content is too short (less than 3 messages) or too diverse, use only ["General"]
-- Use the chat's primary language; default to English if multilingual
-- Prioritize accuracy over specificity
-
-### Output:
-JSON format: { "tags": ["tag1", "tag2", "tag3"] }
-
-### Chat History:
-<chat_history>
-{{MESSAGES:END:6}}
-</chat_history>"""
+        template = DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE
 
     content = tags_generation_template(
         template, form_data["messages"], {"name": user.name}
@@ -280,24 +245,13 @@ JSON format: { "tags": ["tag1", "tag2", "tag3"] }
         },
     }
 
-    # Handle pipeline filters
     try:
-        payload = process_pipeline_inlet_filter(request, payload, user, models)
+        return await generate_chat_completion(request, form_data=payload, user=user)
     except Exception as e:
-        if len(e.args) > 1:
-            return JSONResponse(
-                status_code=e.args[0],
-                content={"detail": e.args[1]},
-            )
-        else:
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": str(e)},
-            )
-    if "chat_id" in payload:
-        del payload["chat_id"]
-
-    return await generate_chat_completion(request, form_data=payload, user=user)
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": str(e)},
+        )
 
 
 @router.post("/queries/completions")
@@ -361,24 +315,13 @@ async def generate_queries(
         },
     }
 
-    # Handle pipeline filters
     try:
-        payload = process_pipeline_inlet_filter(request, payload, user, models)
+        return await generate_chat_completion(request, form_data=payload, user=user)
     except Exception as e:
-        if len(e.args) > 1:
-            return JSONResponse(
-                status_code=e.args[0],
-                content={"detail": e.args[1]},
-            )
-        else:
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": str(e)},
-            )
-    if "chat_id" in payload:
-        del payload["chat_id"]
-
-    return await generate_chat_completion(request, form_data=payload, user=user)
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": str(e)},
+        )
 
 
 @router.post("/auto/completions")
@@ -447,24 +390,13 @@ async def generate_autocompletion(
         },
     }
 
-    # Handle pipeline filters
     try:
-        payload = process_pipeline_inlet_filter(request, payload, user, models)
+        return await generate_chat_completion(request, form_data=payload, user=user)
     except Exception as e:
-        if len(e.args) > 1:
-            return JSONResponse(
-                status_code=e.args[0],
-                content={"detail": e.args[1]},
-            )
-        else:
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": str(e)},
-            )
-    if "chat_id" in payload:
-        del payload["chat_id"]
-
-    return await generate_chat_completion(request, form_data=payload, user=user)
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": str(e)},
+        )
 
 
 @router.post("/emoji/completions")
@@ -492,11 +424,8 @@ async def generate_emoji(
 
     log.debug(f"generating emoji using model {task_model_id} for user {user.email} ")
 
-    template = '''
-Your task is to reflect the speaker's likely facial expression through a fitting emoji. Interpret emotions from the message and reflect their facial expression using fitting, diverse emojis (e.g., 😊, 😢, 😡, 😱).
+    template = DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE
 
-Message: """{{prompt}}"""
-'''
     content = emoji_generation_template(
         template,
         form_data["prompt"],
@@ -521,24 +450,13 @@ Message: """{{prompt}}"""
         "metadata": {"task": str(TASKS.EMOJI_GENERATION), "task_body": form_data},
     }
 
-    # Handle pipeline filters
     try:
-        payload = process_pipeline_inlet_filter(request, payload, user, models)
+        return await generate_chat_completion(request, form_data=payload, user=user)
     except Exception as e:
-        if len(e.args) > 1:
-            return JSONResponse(
-                status_code=e.args[0],
-                content={"detail": e.args[1]},
-            )
-        else:
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": str(e)},
-            )
-    if "chat_id" in payload:
-        del payload["chat_id"]
-
-    return await generate_chat_completion(request, form_data=payload, user=user)
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": str(e)},
+        )
 
 
 @router.post("/moa/completions")
@@ -566,11 +484,7 @@ async def generate_moa_response(
 
     log.debug(f"generating MOA model {task_model_id} for user {user.email} ")
 
-    template = """You have been provided with a set of responses from various models to the latest user query: "{{prompt}}"
-
-Your task is to synthesize these responses into a single, high-quality response. It is crucial to critically evaluate the information provided in these responses, recognizing that some of it may be biased or incorrect. Your response should not simply replicate the given answers but should offer a refined, accurate, and comprehensive reply to the instruction. Ensure your response is well-structured, coherent, and adheres to the highest standards of accuracy and reliability.
-
-Responses from models: {{responses}}"""
+    template = DEFAULT_MOA_GENERATION_PROMPT_TEMPLATE
 
     content = moa_response_generation_template(
         template,
@@ -590,19 +504,9 @@ Responses from models: {{responses}}"""
     }
 
     try:
-        payload = process_pipeline_inlet_filter(request, payload, user, models)
+        return await generate_chat_completion(request, form_data=payload, user=user)
     except Exception as e:
-        if len(e.args) > 1:
-            return JSONResponse(
-                status_code=e.args[0],
-                content={"detail": e.args[1]},
-            )
-        else:
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": str(e)},
-            )
-    if "chat_id" in payload:
-        del payload["chat_id"]
-
-    return await generate_chat_completion(request, form_data=payload, user=user)
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": str(e)},
+        )

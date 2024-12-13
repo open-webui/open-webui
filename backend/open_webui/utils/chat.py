@@ -3,7 +3,7 @@ import logging
 import sys
 
 from aiocache import cached
-from typing import Any
+from typing import Any, Optional
 import random
 import json
 import inspect
@@ -11,11 +11,13 @@ import inspect
 from fastapi import Request
 from starlette.responses import Response, StreamingResponse
 
+
+from open_webui.models.users import UserModel
+
 from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
 )
-
 from open_webui.functions import generate_function_chat_completion
 
 from open_webui.routers.openai import (
@@ -27,22 +29,22 @@ from open_webui.routers.ollama import (
 )
 
 from open_webui.routers.pipelines import (
+    process_pipeline_inlet_filter,
     process_pipeline_outlet_filter,
 )
-
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
 
 from open_webui.utils.plugin import load_function_module_by_id
-from open_webui.utils.access_control import has_access
-from open_webui.utils.models import get_all_models
+from open_webui.utils.models import get_all_models, check_model_access
 from open_webui.utils.payload import convert_payload_openai_to_ollama
 from open_webui.utils.response import (
     convert_response_ollama_to_openai,
     convert_streaming_response_ollama_to_openai,
 )
+
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
 
 
@@ -66,30 +68,20 @@ async def generate_chat_completion(
     if model_id not in models:
         raise Exception("Model not found")
 
+    # Process the form_data through the pipeline
+    try:
+        form_data = process_pipeline_inlet_filter(request, form_data, user, models)
+    except Exception as e:
+        raise e
+
     model = models[model_id]
 
     # Check if user has access to the model
     if not bypass_filter and user.role == "user":
-        if model.get("arena"):
-            if not has_access(
-                user.id,
-                type="read",
-                access_control=model.get("info", {})
-                .get("meta", {})
-                .get("access_control", {}),
-            ):
-                raise Exception("Model not found")
-        else:
-            model_info = Models.get_model_by_id(model_id)
-            if not model_info:
-                raise Exception("Model not found")
-            elif not (
-                user.id == model_info.user_id
-                or has_access(
-                    user.id, type="read", access_control=model_info.access_control
-                )
-            ):
-                raise Exception("Model not found")
+        try:
+            check_model_access(user, model)
+        except Exception as e:
+            raise e
 
     if model["owned_by"] == "arena":
         model_ids = model.get("info", {}).get("meta", {}).get("model_ids")
