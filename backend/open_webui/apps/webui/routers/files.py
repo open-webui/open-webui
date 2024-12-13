@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
 import mimetypes
+from urllib.parse import quote
 
 from open_webui.storage.provider import Storage
 
@@ -216,18 +217,48 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
             file_path = Storage.get_file(file.path)
             file_path = Path(file_path)
 
-            # Check if the file already exists in the cache
             if file_path.is_file():
-                print(f"file_path: {file_path}")
+                # Get the mime type
+                content_type, _ = mimetypes.guess_type(file_path)
+                if not content_type:
+                    content_type = 'application/octet-stream'
+
+                def iterfile():
+                    with open(file_path, 'rb') as f:
+                        yield from f
+
+                # URL encode the filename
+                filename = file.meta.get("name", file.filename)
+                encoded_filename = quote(filename)
+                
+                # Add both standard filename and RFC 5987 encoded filename
+                # Some browsers will use one or the other
                 headers = {
-                    "Content-Disposition": f'attachment; filename="{file.meta.get("name", file.filename)}"'
+                    'Content-Type': content_type,
+                    'Content-Disposition': f'attachment; filename="{encoded_filename}"; filename*=UTF-8\'\'{encoded_filename}'
                 }
-                return FileResponse(file_path, headers=headers)
+
+                return StreamingResponse(iterfile(), headers=headers)
             else:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=ERROR_MESSAGES.NOT_FOUND,
-                )
+                # File path doesn't exist, return the content as .txt if possible
+                if file.data and "content" in file.data:
+                    def generator():
+                        yield file.data["content"].encode("utf-8")
+
+                    filename = f"{file.filename}.txt" if not file.filename.endswith('.txt') else file.filename
+                    encoded_filename = quote(filename)
+                    
+                    headers = {
+                        'Content-Type': 'text/plain',
+                        'Content-Disposition': f'attachment; filename="{encoded_filename}"; filename*=UTF-8\'\'{encoded_filename}'
+                    }
+                    
+                    return StreamingResponse(generator(), headers=headers)
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=ERROR_MESSAGES.NOT_FOUND,
+                    )
         except Exception as e:
             log.exception(e)
             log.error(f"Error getting file content")
@@ -272,22 +303,23 @@ async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-
 @router.get("/{id}/content/{file_name}")
 async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
-
     if file and (file.user_id == user.id or user.role == "admin"):
-        file_path = file.path
-        if file_path:
-            file_path = Storage.get_file(file_path)
+        try:
+            file_path = Storage.get_file(file.path)
             file_path = Path(file_path)
 
-            # Check if the file already exists in the cache
             if file_path.is_file():
-                print(f"file_path: {file_path}")
+                # URL encode the filename and wrap in quotes if it contains special characters
+                filename = file.meta.get("name", file.filename)
+                encoded_filename = quote(filename)
+                if any(c in filename for c in ' ,;'):
+                    encoded_filename = f'"{encoded_filename}"'
+                
                 headers = {
-                    "Content-Disposition": f'attachment; filename="{file.meta.get("name", file.filename)}"'
+                    "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
                 }
                 return FileResponse(file_path, headers=headers)
             else:
@@ -295,19 +327,12 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=ERROR_MESSAGES.NOT_FOUND,
                 )
-        else:
-            # File path doesn’t exist, return the content as .txt if possible
-            file_content = file.content.get("content", "")
-            file_name = file.filename
-
-            # Create a generator that encodes the file content
-            def generator():
-                yield file_content.encode("utf-8")
-
-            return StreamingResponse(
-                generator(),
-                media_type="text/plain",
-                headers={"Content-Disposition": f"attachment; filename={file_name}"},
+        except Exception as e:
+            log.exception(e)
+            log.error(f"Error getting file content")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error getting file content"),
             )
     else:
         raise HTTPException(
