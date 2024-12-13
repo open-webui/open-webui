@@ -136,7 +136,7 @@ async def generate_chat_completion(
         response = await generate_ollama_chat_completion(
             request=request, form_data=form_data, user=user, bypass_filter=bypass_filter
         )
-        if form_data.stream:
+        if form_data.get("stream"):
             response.headers["content-type"] = "text/event-stream"
             return StreamingResponse(
                 convert_streaming_response_ollama_to_openai(response),
