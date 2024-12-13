@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from typing import Optional
 import logging
 
-
+from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.task import (
     title_generation_template,
     query_generation_template,
@@ -193,7 +193,7 @@ Artificial Intelligence in Healthcare
 
     # Handle pipeline filters
     try:
-        payload = process_pipeline_inlet_filter(payload, user, models)
+        payload = process_pipeline_inlet_filter(request, payload, user, models)
     except Exception as e:
         if len(e.args) > 1:
             return JSONResponse(
@@ -208,7 +208,7 @@ Artificial Intelligence in Healthcare
     if "chat_id" in payload:
         del payload["chat_id"]
 
-    return await generate_chat_completions(form_data=payload, user=user)
+    return await generate_chat_completion(request, form_data=payload, user=user)
 
 
 @router.post("/tags/completions")
@@ -282,7 +282,7 @@ JSON format: { "tags": ["tag1", "tag2", "tag3"] }
 
     # Handle pipeline filters
     try:
-        payload = process_pipeline_inlet_filter(payload, user, models)
+        payload = process_pipeline_inlet_filter(request, payload, user, models)
     except Exception as e:
         if len(e.args) > 1:
             return JSONResponse(
@@ -297,7 +297,7 @@ JSON format: { "tags": ["tag1", "tag2", "tag3"] }
     if "chat_id" in payload:
         del payload["chat_id"]
 
-    return await generate_chat_completions(form_data=payload, user=user)
+    return await generate_chat_completion(request, form_data=payload, user=user)
 
 
 @router.post("/queries/completions")
@@ -363,7 +363,7 @@ async def generate_queries(
 
     # Handle pipeline filters
     try:
-        payload = process_pipeline_inlet_filter(payload, user, models)
+        payload = process_pipeline_inlet_filter(request, payload, user, models)
     except Exception as e:
         if len(e.args) > 1:
             return JSONResponse(
@@ -378,7 +378,7 @@ async def generate_queries(
     if "chat_id" in payload:
         del payload["chat_id"]
 
-    return await generate_chat_completions(form_data=payload, user=user)
+    return await generate_chat_completion(request, form_data=payload, user=user)
 
 
 @router.post("/auto/completions")
@@ -449,7 +449,7 @@ async def generate_autocompletion(
 
     # Handle pipeline filters
     try:
-        payload = process_pipeline_inlet_filter(payload, user, models)
+        payload = process_pipeline_inlet_filter(request, payload, user, models)
     except Exception as e:
         if len(e.args) > 1:
             return JSONResponse(
@@ -464,7 +464,7 @@ async def generate_autocompletion(
     if "chat_id" in payload:
         del payload["chat_id"]
 
-    return await generate_chat_completions(form_data=payload, user=user)
+    return await generate_chat_completion(request, form_data=payload, user=user)
 
 
 @router.post("/emoji/completions")
@@ -523,7 +523,7 @@ Message: """{{prompt}}"""
 
     # Handle pipeline filters
     try:
-        payload = process_pipeline_inlet_filter(payload, user, models)
+        payload = process_pipeline_inlet_filter(request, payload, user, models)
     except Exception as e:
         if len(e.args) > 1:
             return JSONResponse(
@@ -538,7 +538,7 @@ Message: """{{prompt}}"""
     if "chat_id" in payload:
         del payload["chat_id"]
 
-    return await generate_chat_completions(form_data=payload, user=user)
+    return await generate_chat_completion(request, form_data=payload, user=user)
 
 
 @router.post("/moa/completions")
@@ -590,7 +590,7 @@ Responses from models: {{responses}}"""
     }
 
     try:
-        payload = process_pipeline_inlet_filter(payload, user, models)
+        payload = process_pipeline_inlet_filter(request, payload, user, models)
     except Exception as e:
         if len(e.args) > 1:
             return JSONResponse(
@@ -605,4 +605,4 @@ Responses from models: {{responses}}"""
     if "chat_id" in payload:
         del payload["chat_id"]
 
-    return await generate_chat_completions(form_data=payload, user=user)
+    return await generate_chat_completion(request, form_data=payload, user=user)

@@ -8,7 +8,6 @@ import shutil
 import sys
 import time
 import random
-from typing import AsyncGenerator, Generator, Iterator
 
 from contextlib import asynccontextmanager
 from urllib.parse import urlencode, parse_qs, urlparse
@@ -45,7 +44,6 @@ from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
 )
-
 from open_webui.routers import (
     audio,
     images,
@@ -71,14 +69,6 @@ from open_webui.routers import (
     utils,
 )
 
-from open_webui.routers.openai import (
-    generate_chat_completion as generate_openai_chat_completion,
-)
-
-from open_webui.routers.ollama import (
-    generate_chat_completion as generate_ollama_chat_completion,
-)
-
 from open_webui.routers.retrieval import (
     get_embedding_function,
     get_ef,
@@ -86,7 +76,6 @@ from open_webui.routers.retrieval import (
 )
 from open_webui.routers.pipelines import (
     process_pipeline_inlet_filter,
-    process_pipeline_outlet_filter,
 )
 
 from open_webui.retrieval.utils import get_sources_from_files
@@ -284,6 +273,15 @@ from open_webui.env import (
     OFFLINE_MODE,
 )
 
+
+from open_webui.utils.models import get_all_models, get_all_base_models
+from open_webui.utils.chat import (
+    generate_chat_completion as chat_completion_handler,
+    chat_completed as chat_completed_handler,
+    chat_action as chat_action_handler,
+)
+
+
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.misc import (
     add_or_update_system_message,
@@ -292,10 +290,7 @@ from open_webui.utils.misc import (
     openai_chat_chunk_message_template,
     openai_chat_completion_message_template,
 )
-from open_webui.utils.payload import (
-    apply_model_params_to_body_openai,
-    apply_model_system_prompt_to_body,
-)
+
 
 from open_webui.utils.payload import convert_payload_openai_to_ollama
 from open_webui.utils.response import (
@@ -772,44 +767,42 @@ async def chat_completion_filter_functions_handler(body, model, extra_params):
     return body, {}
 
 
-def get_tools_function_calling_payload(messages, task_model_id, content):
-    user_message = get_last_user_message(messages)
-    history = "\n".join(
-        f"{message['role'].upper()}: \"\"\"{message['content']}\"\"\""
-        for message in messages[::-1][:4]
-    )
-
-    prompt = f"History:\n{history}\nQuery: {user_message}"
-
-    return {
-        "model": task_model_id,
-        "messages": [
-            {"role": "system", "content": content},
-            {"role": "user", "content": f"Query: {prompt}"},
-        ],
-        "stream": False,
-        "metadata": {"task": str(TASKS.FUNCTION_CALLING)},
-    }
-
-
-async def get_content_from_response(response) -> Optional[str]:
-    content = None
-    if hasattr(response, "body_iterator"):
-        async for chunk in response.body_iterator:
-            data = json.loads(chunk.decode("utf-8"))
-            content = data["choices"][0]["message"]["content"]
-
-        # Cleanup any remaining background tasks if necessary
-        if response.background is not None:
-            await response.background()
-    else:
-        content = response["choices"][0]["message"]["content"]
-    return content
-
-
 async def chat_completion_tools_handler(
-    body: dict, user: UserModel, models, extra_params: dict
+    request: Request, body: dict, user: UserModel, models, extra_params: dict
 ) -> tuple[dict, dict]:
+    async def get_content_from_response(response) -> Optional[str]:
+        content = None
+        if hasattr(response, "body_iterator"):
+            async for chunk in response.body_iterator:
+                data = json.loads(chunk.decode("utf-8"))
+                content = data["choices"][0]["message"]["content"]
+
+            # Cleanup any remaining background tasks if necessary
+            if response.background is not None:
+                await response.background()
+        else:
+            content = response["choices"][0]["message"]["content"]
+        return content
+
+    def get_tools_function_calling_payload(messages, task_model_id, content):
+        user_message = get_last_user_message(messages)
+        history = "\n".join(
+            f"{message['role'].upper()}: \"\"\"{message['content']}\"\"\""
+            for message in messages[::-1][:4]
+        )
+
+        prompt = f"History:\n{history}\nQuery: {user_message}"
+
+        return {
+            "model": task_model_id,
+            "messages": [
+                {"role": "system", "content": content},
+                {"role": "user", "content": f"Query: {prompt}"},
+            ],
+            "stream": False,
+            "metadata": {"task": str(TASKS.FUNCTION_CALLING)},
+        }
+
     # If tool_ids field is present, call the functions
     metadata = body.get("metadata", {})
 
@@ -823,12 +816,12 @@ async def chat_completion_tools_handler(
 
     task_model_id = get_task_model_id(
         body["model"],
-        app.state.config.TASK_MODEL,
-        app.state.config.TASK_MODEL_EXTERNAL,
+        request.app.state.config.TASK_MODEL,
+        request.app.state.config.TASK_MODEL_EXTERNAL,
         models,
     )
     tools = get_tools(
-        app,
+        request,
         tool_ids,
         user,
         {
@@ -948,7 +941,7 @@ async def chat_completion_tools_handler(
 
 
 async def chat_completion_files_handler(
-    body: dict, user: UserModel
+    request: Request, body: dict, user: UserModel
 ) -> tuple[dict, dict[str, list]]:
     sources = []
 
@@ -986,34 +979,15 @@ async def chat_completion_files_handler(
         sources = get_sources_from_files(
             files=files,
             queries=queries,
-            embedding_function=app.state.EMBEDDING_FUNCTION,
-            k=app.state.config.TOP_K,
-            reranking_function=app.state.rf,
-            r=app.state.config.RELEVANCE_THRESHOLD,
-            hybrid_search=app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+            embedding_function=request.app.state.EMBEDDING_FUNCTION,
+            k=request.app.state.config.TOP_K,
+            reranking_function=request.app.state.rf,
+            r=request.app.state.config.RELEVANCE_THRESHOLD,
+            hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
         )
 
         log.debug(f"rag_contexts:sources: {sources}")
     return body, {"sources": sources}
-
-
-async def get_body_and_model_and_user(request, models):
-    # Read the original request body
-    body = await request.body()
-    body_str = body.decode("utf-8")
-    body = json.loads(body_str) if body_str else {}
-
-    model_id = body["model"]
-    if model_id not in models:
-        raise Exception("Model not found")
-    model = models[model_id]
-
-    user = get_current_user(
-        request,
-        get_http_authorization_cred(request.headers.get("Authorization")),
-    )
-
-    return body, model, user
 
 
 class ChatCompletionMiddleware(BaseHTTPMiddleware):
@@ -1030,6 +1004,24 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
 
         await get_all_models(request)
         models = app.state.MODELS
+
+        async def get_body_and_model_and_user(request, models):
+            # Read the original request body
+            body = await request.body()
+            body_str = body.decode("utf-8")
+            body = json.loads(body_str) if body_str else {}
+
+            model_id = body["model"]
+            if model_id not in models:
+                raise Exception("Model not found")
+            model = models[model_id]
+
+            user = get_current_user(
+                request,
+                get_http_authorization_cred(request.headers.get("Authorization")),
+            )
+
+            return body, model, user
 
         try:
             body, model, user = await get_body_and_model_and_user(request, models)
@@ -1118,14 +1110,14 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
 
         try:
             body, flags = await chat_completion_tools_handler(
-                body, user, models, extra_params
+                request, body, user, models, extra_params
             )
             sources.extend(flags.get("sources", []))
         except Exception as e:
             log.exception(e)
 
         try:
-            body, flags = await chat_completion_files_handler(body, user)
+            body, flags = await chat_completion_files_handler(request, body, user)
             sources.extend(flags.get("sources", []))
         except Exception as e:
             log.exception(e)
@@ -1378,14 +1370,11 @@ app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
 
 
-app.include_router(pipelines.router, prefix="/api/pipelines", tags=["pipelines"])
-app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
-
-
+app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])
+app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["tasks"])
 app.include_router(images.router, prefix="/api/v1/images", tags=["images"])
 app.include_router(audio.router, prefix="/api/v1/audio", tags=["audio"])
 app.include_router(retrieval.router, prefix="/api/v1/retrieval", tags=["retrieval"])
-
 
 app.include_router(configs.router, prefix="/api/v1/configs", tags=["configs"])
 
@@ -1417,483 +1406,9 @@ app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 ##################################
 
 
-def get_function_module(pipe_id: str):
-    # Check if function is already loaded
-    if pipe_id not in app.state.FUNCTIONS:
-        function_module, _, _ = load_function_module_by_id(pipe_id)
-        app.state.FUNCTIONS[pipe_id] = function_module
-    else:
-        function_module = app.state.FUNCTIONS[pipe_id]
-
-    if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
-        valves = Functions.get_function_valves_by_id(pipe_id)
-        function_module.valves = function_module.Valves(**(valves if valves else {}))
-    return function_module
-
-
-async def get_function_models():
-    pipes = Functions.get_functions_by_type("pipe", active_only=True)
-    pipe_models = []
-
-    for pipe in pipes:
-        function_module = get_function_module(pipe.id)
-
-        # Check if function is a manifold
-        if hasattr(function_module, "pipes"):
-            sub_pipes = []
-
-            # Check if pipes is a function or a list
-
-            try:
-                if callable(function_module.pipes):
-                    sub_pipes = function_module.pipes()
-                else:
-                    sub_pipes = function_module.pipes
-            except Exception as e:
-                log.exception(e)
-                sub_pipes = []
-
-            log.debug(
-                f"get_function_models: function '{pipe.id}' is a manifold of {sub_pipes}"
-            )
-
-            for p in sub_pipes:
-                sub_pipe_id = f'{pipe.id}.{p["id"]}'
-                sub_pipe_name = p["name"]
-
-                if hasattr(function_module, "name"):
-                    sub_pipe_name = f"{function_module.name}{sub_pipe_name}"
-
-                pipe_flag = {"type": pipe.type}
-
-                pipe_models.append(
-                    {
-                        "id": sub_pipe_id,
-                        "name": sub_pipe_name,
-                        "object": "model",
-                        "created": pipe.created_at,
-                        "owned_by": "openai",
-                        "pipe": pipe_flag,
-                    }
-                )
-        else:
-            pipe_flag = {"type": "pipe"}
-
-            log.debug(
-                f"get_function_models: function '{pipe.id}' is a single pipe {{ 'id': {pipe.id}, 'name': {pipe.name} }}"
-            )
-
-            pipe_models.append(
-                {
-                    "id": pipe.id,
-                    "name": pipe.name,
-                    "object": "model",
-                    "created": pipe.created_at,
-                    "owned_by": "openai",
-                    "pipe": pipe_flag,
-                }
-            )
-
-    return pipe_models
-
-
-async def generate_function_chat_completion(form_data, user, models: dict = {}):
-    async def execute_pipe(pipe, params):
-        if inspect.iscoroutinefunction(pipe):
-            return await pipe(**params)
-        else:
-            return pipe(**params)
-
-    async def get_message_content(res: str | Generator | AsyncGenerator) -> str:
-        if isinstance(res, str):
-            return res
-        if isinstance(res, Generator):
-            return "".join(map(str, res))
-        if isinstance(res, AsyncGenerator):
-            return "".join([str(stream) async for stream in res])
-
-    def process_line(form_data: dict, line):
-        if isinstance(line, BaseModel):
-            line = line.model_dump_json()
-            line = f"data: {line}"
-        if isinstance(line, dict):
-            line = f"data: {json.dumps(line)}"
-
-        try:
-            line = line.decode("utf-8")
-        except Exception:
-            pass
-
-        if line.startswith("data:"):
-            return f"{line}\n\n"
-        else:
-            line = openai_chat_chunk_message_template(form_data["model"], line)
-            return f"data: {json.dumps(line)}\n\n"
-
-    def get_pipe_id(form_data: dict) -> str:
-        pipe_id = form_data["model"]
-        if "." in pipe_id:
-            pipe_id, _ = pipe_id.split(".", 1)
-        return pipe_id
-
-    def get_function_params(function_module, form_data, user, extra_params=None):
-        if extra_params is None:
-            extra_params = {}
-
-        pipe_id = get_pipe_id(form_data)
-
-        # Get the signature of the function
-        sig = inspect.signature(function_module.pipe)
-        params = {"body": form_data} | {
-            k: v for k, v in extra_params.items() if k in sig.parameters
-        }
-
-        if "__user__" in params and hasattr(function_module, "UserValves"):
-            user_valves = Functions.get_user_valves_by_id_and_user_id(pipe_id, user.id)
-            try:
-                params["__user__"]["valves"] = function_module.UserValves(**user_valves)
-            except Exception as e:
-                log.exception(e)
-                params["__user__"]["valves"] = function_module.UserValves()
-
-        return params
-
-    model_id = form_data.get("model")
-    model_info = Models.get_model_by_id(model_id)
-
-    metadata = form_data.pop("metadata", {})
-
-    files = metadata.get("files", [])
-    tool_ids = metadata.get("tool_ids", [])
-    # Check if tool_ids is None
-    if tool_ids is None:
-        tool_ids = []
-
-    __event_emitter__ = None
-    __event_call__ = None
-    __task__ = None
-    __task_body__ = None
-
-    if metadata:
-        if all(k in metadata for k in ("session_id", "chat_id", "message_id")):
-            __event_emitter__ = get_event_emitter(metadata)
-            __event_call__ = get_event_call(metadata)
-        __task__ = metadata.get("task", None)
-        __task_body__ = metadata.get("task_body", None)
-
-    extra_params = {
-        "__event_emitter__": __event_emitter__,
-        "__event_call__": __event_call__,
-        "__task__": __task__,
-        "__task_body__": __task_body__,
-        "__files__": files,
-        "__user__": {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-        },
-        "__metadata__": metadata,
-    }
-    extra_params["__tools__"] = get_tools(
-        app,
-        tool_ids,
-        user,
-        {
-            **extra_params,
-            "__model__": models.get(form_data["model"], None),
-            "__messages__": form_data["messages"],
-            "__files__": files,
-        },
-    )
-
-    if model_info:
-        if model_info.base_model_id:
-            form_data["model"] = model_info.base_model_id
-
-        params = model_info.params.model_dump()
-        form_data = apply_model_params_to_body_openai(params, form_data)
-        form_data = apply_model_system_prompt_to_body(params, form_data, user)
-
-    pipe_id = get_pipe_id(form_data)
-    function_module = get_function_module(pipe_id)
-
-    pipe = function_module.pipe
-    params = get_function_params(function_module, form_data, user, extra_params)
-
-    if form_data.get("stream", False):
-
-        async def stream_content():
-            try:
-                res = await execute_pipe(pipe, params)
-
-                # Directly return if the response is a StreamingResponse
-                if isinstance(res, StreamingResponse):
-                    async for data in res.body_iterator:
-                        yield data
-                    return
-                if isinstance(res, dict):
-                    yield f"data: {json.dumps(res)}\n\n"
-                    return
-
-            except Exception as e:
-                log.error(f"Error: {e}")
-                yield f"data: {json.dumps({'error': {'detail':str(e)}})}\n\n"
-                return
-
-            if isinstance(res, str):
-                message = openai_chat_chunk_message_template(form_data["model"], res)
-                yield f"data: {json.dumps(message)}\n\n"
-
-            if isinstance(res, Iterator):
-                for line in res:
-                    yield process_line(form_data, line)
-
-            if isinstance(res, AsyncGenerator):
-                async for line in res:
-                    yield process_line(form_data, line)
-
-            if isinstance(res, str) or isinstance(res, Generator):
-                finish_message = openai_chat_chunk_message_template(
-                    form_data["model"], ""
-                )
-                finish_message["choices"][0]["finish_reason"] = "stop"
-                yield f"data: {json.dumps(finish_message)}\n\n"
-                yield "data: [DONE]"
-
-        return StreamingResponse(stream_content(), media_type="text/event-stream")
-    else:
-        try:
-            res = await execute_pipe(pipe, params)
-
-        except Exception as e:
-            log.error(f"Error: {e}")
-            return {"error": {"detail": str(e)}}
-
-        if isinstance(res, StreamingResponse) or isinstance(res, dict):
-            return res
-        if isinstance(res, BaseModel):
-            return res.model_dump()
-
-        message = await get_message_content(res)
-        return openai_chat_completion_message_template(form_data["model"], message)
-
-
-async def get_all_base_models(request):
-    function_models = []
-    openai_models = []
-    ollama_models = []
-
-    if app.state.config.ENABLE_OPENAI_API:
-        openai_models = await openai.get_all_models(request)
-        openai_models = openai_models["data"]
-
-    if app.state.config.ENABLE_OLLAMA_API:
-        ollama_models = await ollama.get_all_models(request)
-        ollama_models = [
-            {
-                "id": model["model"],
-                "name": model["name"],
-                "object": "model",
-                "created": int(time.time()),
-                "owned_by": "ollama",
-                "ollama": model,
-            }
-            for model in ollama_models["models"]
-        ]
-
-    function_models = await get_function_models()
-    models = function_models + openai_models + ollama_models
-
-    # Add arena models
-    if app.state.config.ENABLE_EVALUATION_ARENA_MODELS:
-        arena_models = []
-        if len(app.state.config.EVALUATION_ARENA_MODELS) > 0:
-            arena_models = [
-                {
-                    "id": model["id"],
-                    "name": model["name"],
-                    "info": {
-                        "meta": model["meta"],
-                    },
-                    "object": "model",
-                    "created": int(time.time()),
-                    "owned_by": "arena",
-                    "arena": True,
-                }
-                for model in app.state.config.EVALUATION_ARENA_MODELS
-            ]
-        else:
-            # Add default arena model
-            arena_models = [
-                {
-                    "id": DEFAULT_ARENA_MODEL["id"],
-                    "name": DEFAULT_ARENA_MODEL["name"],
-                    "info": {
-                        "meta": DEFAULT_ARENA_MODEL["meta"],
-                    },
-                    "object": "model",
-                    "created": int(time.time()),
-                    "owned_by": "arena",
-                    "arena": True,
-                }
-            ]
-        models = models + arena_models
-
-    return models
-
-
-@cached(ttl=3)
-async def get_all_models(request):
-    models = await get_all_base_models(request)
-
-    # If there are no models, return an empty list
-    if len([model for model in models if not model.get("arena", False)]) == 0:
-        return []
-
-    global_action_ids = [
-        function.id for function in Functions.get_global_action_functions()
-    ]
-    enabled_action_ids = [
-        function.id
-        for function in Functions.get_functions_by_type("action", active_only=True)
-    ]
-
-    custom_models = Models.get_all_models()
-    for custom_model in custom_models:
-        if custom_model.base_model_id is None:
-            for model in models:
-                if (
-                    custom_model.id == model["id"]
-                    or custom_model.id == model["id"].split(":")[0]
-                ):
-                    if custom_model.is_active:
-                        model["name"] = custom_model.name
-                        model["info"] = custom_model.model_dump()
-
-                        action_ids = []
-                        if "info" in model and "meta" in model["info"]:
-                            action_ids.extend(
-                                model["info"]["meta"].get("actionIds", [])
-                            )
-
-                        model["action_ids"] = action_ids
-                    else:
-                        models.remove(model)
-
-        elif custom_model.is_active and (
-            custom_model.id not in [model["id"] for model in models]
-        ):
-            owned_by = "openai"
-            pipe = None
-            action_ids = []
-
-            for model in models:
-                if (
-                    custom_model.base_model_id == model["id"]
-                    or custom_model.base_model_id == model["id"].split(":")[0]
-                ):
-                    owned_by = model["owned_by"]
-                    if "pipe" in model:
-                        pipe = model["pipe"]
-                    break
-
-            if custom_model.meta:
-                meta = custom_model.meta.model_dump()
-                if "actionIds" in meta:
-                    action_ids.extend(meta["actionIds"])
-
-            models.append(
-                {
-                    "id": f"{custom_model.id}",
-                    "name": custom_model.name,
-                    "object": "model",
-                    "created": custom_model.created_at,
-                    "owned_by": owned_by,
-                    "info": custom_model.model_dump(),
-                    "preset": True,
-                    **({"pipe": pipe} if pipe is not None else {}),
-                    "action_ids": action_ids,
-                }
-            )
-
-    # Process action_ids to get the actions
-    def get_action_items_from_module(function, module):
-        actions = []
-        if hasattr(module, "actions"):
-            actions = module.actions
-            return [
-                {
-                    "id": f"{function.id}.{action['id']}",
-                    "name": action.get("name", f"{function.name} ({action['id']})"),
-                    "description": function.meta.description,
-                    "icon_url": action.get(
-                        "icon_url", function.meta.manifest.get("icon_url", None)
-                    ),
-                }
-                for action in actions
-            ]
-        else:
-            return [
-                {
-                    "id": function.id,
-                    "name": function.name,
-                    "description": function.meta.description,
-                    "icon_url": function.meta.manifest.get("icon_url", None),
-                }
-            ]
-
-    def get_function_module_by_id(function_id):
-        if function_id in app.state.FUNCTIONS:
-            function_module = app.state.FUNCTIONS[function_id]
-        else:
-            function_module, _, _ = load_function_module_by_id(function_id)
-            app.state.FUNCTIONS[function_id] = function_module
-
-    for model in models:
-        action_ids = [
-            action_id
-            for action_id in list(set(model.pop("action_ids", []) + global_action_ids))
-            if action_id in enabled_action_ids
-        ]
-
-        model["actions"] = []
-        for action_id in action_ids:
-            action_function = Functions.get_function_by_id(action_id)
-            if action_function is None:
-                raise Exception(f"Action not found: {action_id}")
-
-            function_module = get_function_module_by_id(action_id)
-            model["actions"].extend(
-                get_action_items_from_module(action_function, function_module)
-            )
-    log.debug(f"get_all_models() returned {len(models)} models")
-
-    app.state.MODELS = {model["id"]: model for model in models}
-    return models
-
-
 @app.get("/api/models")
 async def get_models(request: Request, user=Depends(get_verified_user)):
-    models = await get_all_models(request)
-
-    # Filter out filter pipelines
-    models = [
-        model
-        for model in models
-        if "pipeline" not in model or model["pipeline"].get("type", None) != "filter"
-    ]
-
-    model_order_list = app.state.config.MODEL_ORDER_LIST
-    if model_order_list:
-        model_order_dict = {model_id: i for i, model_id in enumerate(model_order_list)}
-        # Sort models by order list priority, with fallback for those not in the list
-        models.sort(
-            key=lambda x: (model_order_dict.get(x["id"], float("inf")), x["name"])
-        )
-
-    # Filter out models that the user does not have access to
-    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+    def get_filtered_models(models, user):
         filtered_models = []
         for model in models:
             if model.get("arena"):
@@ -1913,392 +1428,86 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
                     user.id, type="read", access_control=model_info.access_control
                 ):
                     filtered_models.append(model)
-        models = filtered_models
+
+        return filtered_models
+
+    models = await get_all_models(request)
+
+    # Filter out filter pipelines
+    models = [
+        model
+        for model in models
+        if "pipeline" not in model or model["pipeline"].get("type", None) != "filter"
+    ]
+
+    model_order_list = request.app.state.config.MODEL_ORDER_LIST
+    if model_order_list:
+        model_order_dict = {model_id: i for i, model_id in enumerate(model_order_list)}
+        # Sort models by order list priority, with fallback for those not in the list
+        models.sort(
+            key=lambda x: (model_order_dict.get(x["id"], float("inf")), x["name"])
+        )
+
+    # Filter out models that the user does not have access to
+    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+        models = get_filtered_models(models, user)
 
     log.debug(
         f"/api/models returned filtered models accessible to the user: {json.dumps([model['id'] for model in models])}"
     )
-
     return {"data": models}
 
 
 @app.get("/api/models/base")
 async def get_base_models(request: Request, user=Depends(get_admin_user)):
     models = await get_all_base_models(request)
-
-    # Filter out arena models
-    models = [model for model in models if not model.get("arena", False)]
     return {"data": models}
 
 
 @app.post("/api/chat/completions")
-async def generate_chat_completions(
+async def chat_completion(
     request: Request,
     form_data: dict,
     user=Depends(get_verified_user),
     bypass_filter: bool = False,
 ):
-    if BYPASS_MODEL_ACCESS_CONTROL:
-        bypass_filter = True
-
-    models = app.state.MODELS
-
-    model_id = form_data["model"]
-    if model_id not in models:
+    try:
+        return await chat_completion_handler(request, form_data, user, bypass_filter)
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Model not found",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
         )
 
-    model = models[model_id]
 
-    # Check if user has access to the model
-    if not bypass_filter and user.role == "user":
-        if model.get("arena"):
-            if not has_access(
-                user.id,
-                type="read",
-                access_control=model.get("info", {})
-                .get("meta", {})
-                .get("access_control", {}),
-            ):
-                raise HTTPException(
-                    status_code=403,
-                    detail="Model not found",
-                )
-        else:
-            model_info = Models.get_model_by_id(model_id)
-            if not model_info:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Model not found",
-                )
-            elif not (
-                user.id == model_info.user_id
-                or has_access(
-                    user.id, type="read", access_control=model_info.access_control
-                )
-            ):
-                raise HTTPException(
-                    status_code=403,
-                    detail="Model not found",
-                )
-
-    if model["owned_by"] == "arena":
-        model_ids = model.get("info", {}).get("meta", {}).get("model_ids")
-        filter_mode = model.get("info", {}).get("meta", {}).get("filter_mode")
-        if model_ids and filter_mode == "exclude":
-            model_ids = [
-                model["id"]
-                for model in await get_all_models(request)
-                if model.get("owned_by") != "arena" and model["id"] not in model_ids
-            ]
-
-        selected_model_id = None
-        if isinstance(model_ids, list) and model_ids:
-            selected_model_id = random.choice(model_ids)
-        else:
-            model_ids = [
-                model["id"]
-                for model in await get_all_models(request)
-                if model.get("owned_by") != "arena"
-            ]
-            selected_model_id = random.choice(model_ids)
-
-        form_data["model"] = selected_model_id
-
-        if form_data.get("stream") == True:
-
-            async def stream_wrapper(stream):
-                yield f"data: {json.dumps({'selected_model_id': selected_model_id})}\n\n"
-                async for chunk in stream:
-                    yield chunk
-
-            response = await generate_chat_completions(
-                form_data, user, bypass_filter=True
-            )
-            return StreamingResponse(
-                stream_wrapper(response.body_iterator), media_type="text/event-stream"
-            )
-        else:
-            return {
-                **(
-                    await generate_chat_completions(form_data, user, bypass_filter=True)
-                ),
-                "selected_model_id": selected_model_id,
-            }
-
-    if model.get("pipe"):
-        # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter
-        return await generate_function_chat_completion(
-            form_data, user=user, models=models
-        )
-    if model["owned_by"] == "ollama":
-        # Using /ollama/api/chat endpoint
-        form_data = convert_payload_openai_to_ollama(form_data)
-        response = await generate_ollama_chat_completion(
-            request=request, form_data=form_data, user=user, bypass_filter=bypass_filter
-        )
-        if form_data.stream:
-            response.headers["content-type"] = "text/event-stream"
-            return StreamingResponse(
-                convert_streaming_response_ollama_to_openai(response),
-                headers=dict(response.headers),
-            )
-        else:
-            return convert_response_ollama_to_openai(response)
-    else:
-        return await generate_openai_chat_completion(
-            request=request, form_data=form_data, user=user, bypass_filter=bypass_filter
-        )
+generate_chat_completions = chat_completion
+generate_chat_completion = chat_completion
 
 
 @app.post("/api/chat/completed")
 async def chat_completed(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
-    await get_all_models(request)
-    models = app.state.MODELS
-
-    data = form_data
-    model_id = data["model"]
-    if model_id not in models:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Model not found",
-        )
-
-    model = models[model_id]
-
     try:
-        data = process_pipeline_outlet_filter(request, data, user, models)
+        return await chat_completed_handler(request, form_data, user)
     except Exception as e:
-        return HTTPException(
+        raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
-
-    __event_emitter__ = get_event_emitter(
-        {
-            "chat_id": data["chat_id"],
-            "message_id": data["id"],
-            "session_id": data["session_id"],
-        }
-    )
-
-    __event_call__ = get_event_call(
-        {
-            "chat_id": data["chat_id"],
-            "message_id": data["id"],
-            "session_id": data["session_id"],
-        }
-    )
-
-    def get_priority(function_id):
-        function = Functions.get_function_by_id(function_id)
-        if function is not None and hasattr(function, "valves"):
-            # TODO: Fix FunctionModel to include vavles
-            return (function.valves if function.valves else {}).get("priority", 0)
-        return 0
-
-    filter_ids = [function.id for function in Functions.get_global_filter_functions()]
-    if "info" in model and "meta" in model["info"]:
-        filter_ids.extend(model["info"]["meta"].get("filterIds", []))
-        filter_ids = list(set(filter_ids))
-
-    enabled_filter_ids = [
-        function.id
-        for function in Functions.get_functions_by_type("filter", active_only=True)
-    ]
-    filter_ids = [
-        filter_id for filter_id in filter_ids if filter_id in enabled_filter_ids
-    ]
-
-    # Sort filter_ids by priority, using the get_priority function
-    filter_ids.sort(key=get_priority)
-
-    for filter_id in filter_ids:
-        filter = Functions.get_function_by_id(filter_id)
-        if not filter:
-            continue
-
-        if filter_id in app.state.FUNCTIONS:
-            function_module = app.state.FUNCTIONS[filter_id]
-        else:
-            function_module, _, _ = load_function_module_by_id(filter_id)
-            app.state.FUNCTIONS[filter_id] = function_module
-
-        if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
-            valves = Functions.get_function_valves_by_id(filter_id)
-            function_module.valves = function_module.Valves(
-                **(valves if valves else {})
-            )
-
-        if not hasattr(function_module, "outlet"):
-            continue
-        try:
-            outlet = function_module.outlet
-
-            # Get the signature of the function
-            sig = inspect.signature(outlet)
-            params = {"body": data}
-
-            # Extra parameters to be passed to the function
-            extra_params = {
-                "__model__": model,
-                "__id__": filter_id,
-                "__event_emitter__": __event_emitter__,
-                "__event_call__": __event_call__,
-            }
-
-            # Add extra params in contained in function signature
-            for key, value in extra_params.items():
-                if key in sig.parameters:
-                    params[key] = value
-
-            if "__user__" in sig.parameters:
-                __user__ = {
-                    "id": user.id,
-                    "email": user.email,
-                    "name": user.name,
-                    "role": user.role,
-                }
-
-                try:
-                    if hasattr(function_module, "UserValves"):
-                        __user__["valves"] = function_module.UserValves(
-                            **Functions.get_user_valves_by_id_and_user_id(
-                                filter_id, user.id
-                            )
-                        )
-                except Exception as e:
-                    print(e)
-
-                params = {**params, "__user__": __user__}
-
-            if inspect.iscoroutinefunction(outlet):
-                data = await outlet(**params)
-            else:
-                data = outlet(**params)
-
-        except Exception as e:
-            print(f"Error: {e}")
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": str(e)},
-            )
-
-    return data
 
 
 @app.post("/api/chat/actions/{action_id}")
 async def chat_action(
     request: Request, action_id: str, form_data: dict, user=Depends(get_verified_user)
 ):
-    if "." in action_id:
-        action_id, sub_action_id = action_id.split(".")
-    else:
-        sub_action_id = None
-
-    action = Functions.get_function_by_id(action_id)
-    if not action:
+    try:
+        return await chat_action_handler(request, action_id, form_data, user)
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Action not found",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
         )
-
-    await get_all_models(request)
-    models = app.state.MODELS
-
-    data = form_data
-    model_id = data["model"]
-
-    if model_id not in models:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Model not found",
-        )
-    model = models[model_id]
-
-    __event_emitter__ = get_event_emitter(
-        {
-            "chat_id": data["chat_id"],
-            "message_id": data["id"],
-            "session_id": data["session_id"],
-        }
-    )
-    __event_call__ = get_event_call(
-        {
-            "chat_id": data["chat_id"],
-            "message_id": data["id"],
-            "session_id": data["session_id"],
-        }
-    )
-
-    if action_id in app.state.FUNCTIONS:
-        function_module = app.state.FUNCTIONS[action_id]
-    else:
-        function_module, _, _ = load_function_module_by_id(action_id)
-        app.state.FUNCTIONS[action_id] = function_module
-
-    if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
-        valves = Functions.get_function_valves_by_id(action_id)
-        function_module.valves = function_module.Valves(**(valves if valves else {}))
-
-    if hasattr(function_module, "action"):
-        try:
-            action = function_module.action
-
-            # Get the signature of the function
-            sig = inspect.signature(action)
-            params = {"body": data}
-
-            # Extra parameters to be passed to the function
-            extra_params = {
-                "__model__": model,
-                "__id__": sub_action_id if sub_action_id is not None else action_id,
-                "__event_emitter__": __event_emitter__,
-                "__event_call__": __event_call__,
-            }
-
-            # Add extra params in contained in function signature
-            for key, value in extra_params.items():
-                if key in sig.parameters:
-                    params[key] = value
-
-            if "__user__" in sig.parameters:
-                __user__ = {
-                    "id": user.id,
-                    "email": user.email,
-                    "name": user.name,
-                    "role": user.role,
-                }
-
-                try:
-                    if hasattr(function_module, "UserValves"):
-                        __user__["valves"] = function_module.UserValves(
-                            **Functions.get_user_valves_by_id_and_user_id(
-                                action_id, user.id
-                            )
-                        )
-                except Exception as e:
-                    print(e)
-
-                params = {**params, "__user__": __user__}
-
-            if inspect.iscoroutinefunction(action):
-                data = await action(**params)
-            else:
-                data = action(**params)
-
-        except Exception as e:
-            print(f"Error: {e}")
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": str(e)},
-            )
-
-    return data
 
 
 ##################################

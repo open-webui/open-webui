@@ -41,7 +41,7 @@ router = APIRouter()
 @router.get("/config")
 async def get_config(request: Request, user=Depends(get_admin_user)):
     return {
-        "enabled": request.app.state.config.ENABLED,
+        "enabled": request.app.state.config.ENABLE_IMAGE_GENERATION,
         "engine": request.app.state.config.ENGINE,
         "openai": {
             "OPENAI_API_BASE_URL": request.app.state.config.OPENAI_API_BASE_URL,
@@ -94,7 +94,7 @@ async def update_config(
     request: Request, form_data: ConfigForm, user=Depends(get_admin_user)
 ):
     request.app.state.config.ENGINE = form_data.engine
-    request.app.state.config.ENABLED = form_data.enabled
+    request.app.state.config.ENABLE_IMAGE_GENERATION = form_data.enabled
 
     request.app.state.config.OPENAI_API_BASE_URL = form_data.openai.OPENAI_API_BASE_URL
     request.app.state.config.OPENAI_API_KEY = form_data.openai.OPENAI_API_KEY
@@ -131,7 +131,7 @@ async def update_config(
     )
 
     return {
-        "enabled": request.app.state.config.ENABLED,
+        "enabled": request.app.state.config.ENABLE_IMAGE_GENERATION,
         "engine": request.app.state.config.ENGINE,
         "openai": {
             "OPENAI_API_BASE_URL": request.app.state.config.OPENAI_API_BASE_URL,
@@ -175,7 +175,7 @@ async def verify_url(request: Request, user=Depends(get_admin_user)):
             r.raise_for_status()
             return True
         except Exception:
-            request.app.state.config.ENABLED = False
+            request.app.state.config.ENABLE_IMAGE_GENERATION = False
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
     elif request.app.state.config.ENGINE == "comfyui":
         try:
@@ -185,7 +185,7 @@ async def verify_url(request: Request, user=Depends(get_admin_user)):
             r.raise_for_status()
             return True
         except Exception:
-            request.app.state.config.ENABLED = False
+            request.app.state.config.ENABLE_IMAGE_GENERATION = False
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
     else:
         return True
@@ -232,7 +232,7 @@ def get_image_model():
             options = r.json()
             return options["sd_model_checkpoint"]
         except Exception as e:
-            request.app.state.config.ENABLED = False
+            request.app.state.config.ENABLE_IMAGE_GENERATION = False
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
 
 
@@ -351,7 +351,7 @@ def get_models(request: Request, user=Depends(get_verified_user)):
                 )
             )
     except Exception as e:
-        request.app.state.config.ENABLED = False
+        request.app.state.config.ENABLE_IMAGE_GENERATION = False
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
 
 
