@@ -237,6 +237,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
                 "__id__": filter_id,
                 "__event_emitter__": __event_emitter__,
                 "__event_call__": __event_call__,
+                "__request__": request,
             }
 
             # Add extra params in contained in function signature
@@ -334,6 +335,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
                 "__id__": sub_action_id if sub_action_id is not None else action_id,
                 "__event_emitter__": __event_emitter__,
                 "__event_call__": __event_call__,
+                "__request__": request,
             }
 
             # Add extra params in contained in function signature

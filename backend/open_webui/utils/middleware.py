@@ -382,6 +382,7 @@ async def process_chat_payload(request, form_data, user, model):
             "role": user.role,
         },
         "__metadata__": metadata,
+        "__request__": request,
     }
 
     # Initialize events to store additional event to be sent to the client

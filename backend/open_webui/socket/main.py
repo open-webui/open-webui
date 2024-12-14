@@ -173,6 +173,11 @@ async def user_count(sid):
     await sio.emit("user-count", {"count": len(USER_POOL.items())})
 
 
+@sio.on("chat")
+async def chat(sid, data):
+    print("chat", sid, SESSION_POOL[sid], data)
+
+
 @sio.event
 async def disconnect(sid):
     if sid in SESSION_POOL:

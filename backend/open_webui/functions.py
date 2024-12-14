@@ -230,6 +230,7 @@ async def generate_function_chat_completion(
             "role": user.role,
         },
         "__metadata__": metadata,
+        "__request__": request,
     }
     extra_params["__tools__"] = get_tools(
         request,
