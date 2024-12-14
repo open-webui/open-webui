@@ -548,10 +548,17 @@ def add_files_to_knowledge_batch(
         files.append(file)
 
     # Process files
-    result = process_files_batch(BatchProcessFilesForm(
-        files=files,
-        collection_name=id
-    ))
+    try:
+        result = process_files_batch(BatchProcessFilesForm(
+            files=files,
+            collection_name=id
+        ))
+    except Exception as e:
+        log.error(f"add_files_to_knowledge_batch: Exception occurred: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
     
     # Add successful files to knowledge base
     data = knowledge.data or {}

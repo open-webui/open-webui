@@ -1062,30 +1062,24 @@ def process_files_batch(
     Process a batch of files and save them to the vector database.
     """
     results: List[BatchProcessFilesResult] = []
-    errors: List[BatchProcessFilesResult]   = []
+    errors: List[BatchProcessFilesResult] = []
     collection_name = form_data.collection_name
-    
 
     # Prepare all documents first
     all_docs: List[Document] = []
-    for file_request in form_data.files:
+    for file in form_data.files:
         try:
-            file = Files.get_file_by_id(file_request.file_id)
-            if not file:
-                log.error(f"process_files_batch: File {file_request.file_id} not found")
-                raise ValueError(f"File {file_request.file_id} not found")
-
-            text_content = file_request.content
+            text_content = file.data.get("content", "")
             
             docs: List[Document] = [
                 Document(
                     page_content=text_content.replace("<br/>", "\n"),
                     metadata={
                         **file.meta,
-                        "name": file_request.filename,
+                        "name": file.filename,
                         "created_by": file.user_id,
                         "file_id": file.id,
-                        "source": file_request.filename,
+                        "source": file.filename,
                     },
                 )
             ]
@@ -1101,9 +1095,9 @@ def process_files_batch(
             ))
 
         except Exception as e:
-            log.error(f"process_files_batch: Error processing file {file_request.file_id}: {str(e)}")
+            log.error(f"process_files_batch: Error processing file {file.id}: {str(e)}")
             errors.append(BatchProcessFilesResult(
-                file_id=file_request.file_id,
+                file_id=file.id,
                 status="failed",
                 error=str(e)
             ))
@@ -1138,7 +1132,6 @@ def process_files_batch(
         results=results,
         errors=errors
     )
-
 
 class ProcessTextForm(BaseModel):
     name: str
