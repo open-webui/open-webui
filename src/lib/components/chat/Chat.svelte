@@ -9,6 +9,7 @@
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { loadGoogleAuthApi, loadGoogleDriveApi, createPicker } from '$lib/utils/google-drive-picker';
 
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -300,6 +301,12 @@
 	};
 
 	onMount(async () => {
+		// Initialize Google APIs
+		await Promise.all([
+			loadGoogleAuthApi(),
+			loadGoogleDriveApi()
+		]);
+		
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
 
@@ -348,6 +355,47 @@
 	});
 
 	// File upload functions
+
+	const uploadGoogleDriveFile = async (fileData) => {
+		const fileItem = {
+			type: 'doc',
+			name: fileData.name,
+			collection_name: '',
+			status: 'uploading',
+			url: fileData.url,
+			error: ''
+		};
+
+		try {
+			files = [...files, fileItem];
+			const res = await processWeb(localStorage.token, '', fileData.url);
+
+			if (res) {
+				fileItem.status = 'uploaded';
+				fileItem.collection_name = res.collection_name;
+				fileItem.file = {
+					...res.file,
+					...fileItem.file
+				};
+
+				files = files;
+			}
+		} catch (e) {
+			files = files.filter((f) => f.name !== fileData.name);
+			toast.error(JSON.stringify(e));
+		}
+	};
+
+	const handleGoogleDrivePicker = async () => {
+		try {
+			const fileData = await createPicker();
+			if (fileData) {
+				await uploadGoogleDriveFile(fileData);
+			}
+		} catch (error) {
+			toast.error('Error accessing Google Drive: ' + error.message);
+		}
+	};
 
 	const uploadWeb = async (url) => {
 		console.log(url);
