@@ -3,6 +3,13 @@ const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const SCOPE = ['https://www.googleapis.com/auth/drive.readonly'];
 
+// Validate required credentials
+const validateCredentials = () => {
+    if (!API_KEY || !CLIENT_ID) {
+        throw new Error('Google Drive API credentials not configured. Please set VITE_GOOGLE_API_KEY and VITE_GOOGLE_CLIENT_ID environment variables.');
+    }
+};
+
 let pickerApiLoaded = false;
 let oauthToken: string | null = null;
 let initialized = false;
@@ -65,6 +72,7 @@ export const getAuthToken = async () => {
 
 const initialize = async () => {
     if (!initialized) {
+        validateCredentials();
         await Promise.all([loadGoogleDriveApi(), loadGoogleAuthApi()]);
         initialized = true;
     }
