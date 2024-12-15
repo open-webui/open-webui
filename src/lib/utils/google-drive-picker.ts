@@ -23,20 +23,24 @@ export const loadGoogleDriveApi = () => {
             const script = document.createElement('script');
             script.src = 'https://apis.google.com/js/api.js';
             script.onload = () => {
-                gapi.load('picker', {
+                gapi.load('client:picker', {
                     callback: () => {
-                        pickerApiLoaded = true;
-                        resolve(true);
+                        gapi.client.load('picker', 'v1').then(() => {
+                            pickerApiLoaded = true;
+                            resolve(true);
+                        });
                     }
                 });
             };
             script.onerror = reject;
             document.body.appendChild(script);
         } else {
-            gapi.load('picker', {
+            gapi.load('client:picker', {
                 callback: () => {
-                    pickerApiLoaded = true;
-                    resolve(true);
+                    gapi.client.load('picker', 'v1').then(() => {
+                        pickerApiLoaded = true;
+                        resolve(true);
+                    });
                 }
             });
         }
@@ -112,11 +116,13 @@ export const createPicker = () => {
                         const fileUrl = doc[google.picker.Document.URL];
                         
                         // Get the downloadUrl using the alt=media parameter
-                        const downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+                        // Construct download URL with access token
+                        const downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&access_token=${oauthToken}`;
                         resolve({
                             id: fileId,
                             name: fileName,
-                            url: downloadUrl
+                            url: downloadUrl,
+                            token: oauthToken // Include token for future use
                         });
                     } else if (data[google.picker.Response.ACTION] === google.picker.Action.CANCEL) {
                         resolve(null);
