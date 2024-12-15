@@ -59,16 +59,24 @@ export const loadGoogleAuthApi = () => {
 
 export const getAuthToken = async () => {
     if (!oauthToken) {
-        const tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: CLIENT_ID,
-            scope: SCOPE.join(' '),
-            callback: (response: any) => {
-                if (response.access_token) {
-                    oauthToken = response.access_token;
+        return new Promise((resolve, reject) => {
+            const tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPE.join(' '),
+                callback: (response: any) => {
+                    if (response.access_token) {
+                        oauthToken = response.access_token;
+                        resolve(oauthToken);
+                    } else {
+                        reject(new Error('Failed to get access token'));
+                    }
+                },
+                error_callback: (error: any) => {
+                    reject(new Error(error.message || 'OAuth error occurred'));
                 }
-            },
+            });
+            tokenClient.requestAccessToken();
         });
-        await tokenClient.requestAccessToken();
     }
     return oauthToken;
 };
