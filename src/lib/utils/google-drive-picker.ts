@@ -5,6 +5,7 @@ const SCOPE = ['https://www.googleapis.com/auth/drive.readonly'];
 
 let pickerApiLoaded = false;
 let oauthToken: string | null = null;
+let initialized = false;
 
 export const loadGoogleDriveApi = () => {
     return new Promise((resolve, reject) => {
@@ -62,13 +63,17 @@ export const getAuthToken = async () => {
     return oauthToken;
 };
 
+const initialize = async () => {
+    if (!initialized) {
+        await Promise.all([loadGoogleDriveApi(), loadGoogleAuthApi()]);
+        initialized = true;
+    }
+};
+
 export const createPicker = () => {
     return new Promise(async (resolve, reject) => {
         try {
-            if (!pickerApiLoaded) {
-                await loadGoogleDriveApi();
-            }
-
+            await initialize();
             const token = await getAuthToken();
             if (!token) {
                 throw new Error('Unable to get OAuth token');

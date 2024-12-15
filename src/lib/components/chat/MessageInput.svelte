@@ -498,11 +498,15 @@
 										}}
 										uploadGoogleDriveHandler={async () => {
 											try {
+												if (!import.meta.env.VITE_GOOGLE_API_KEY || !import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+													throw new Error('Google Drive API credentials not configured');
+												}
 												const fileData = await createPicker();
 												if (fileData) {
 													dispatch('upload', { type: 'google-drive', data: fileData });
 												}
 											} catch (error) {
+												console.error('Google Drive Error:', error);
 												toast.error('Error accessing Google Drive: ' + error.message);
 											}
 										}}
