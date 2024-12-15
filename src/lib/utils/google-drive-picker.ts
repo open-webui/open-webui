@@ -1,6 +1,6 @@
 // Google Drive Picker API configuration
-const API_KEY = 'YOUR_API_KEY';
-const CLIENT_ID = 'YOUR_CLIENT_ID';
+const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const SCOPE = ['https://www.googleapis.com/auth/drive.readonly'];
 
 let pickerApiLoaded = false;
@@ -8,26 +8,41 @@ let oauthToken: string | null = null;
 
 export const loadGoogleDriveApi = () => {
     return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://apis.google.com/js/api.js';
-        script.onload = () => {
-            gapi.load('picker', () => {
-                pickerApiLoaded = true;
-                resolve(true);
+        if (typeof gapi === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://apis.google.com/js/api.js';
+            script.onload = () => {
+                gapi.load('picker', {
+                    callback: () => {
+                        pickerApiLoaded = true;
+                        resolve(true);
+                    }
+                });
+            };
+            script.onerror = reject;
+            document.body.appendChild(script);
+        } else {
+            gapi.load('picker', {
+                callback: () => {
+                    pickerApiLoaded = true;
+                    resolve(true);
+                }
             });
-        };
-        script.onerror = reject;
-        document.body.appendChild(script);
+        }
     });
 };
 
 export const loadGoogleAuthApi = () => {
     return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://accounts.google.com/gsi/client';
-        script.onload = resolve;
-        script.onerror = reject;
-        document.body.appendChild(script);
+        if (typeof google === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://accounts.google.com/gsi/client';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.body.appendChild(script);
+        } else {
+            resolve(true);
+        }
     });
 };
 
