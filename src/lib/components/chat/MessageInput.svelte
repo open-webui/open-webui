@@ -501,7 +501,14 @@
 											try {
 												const fileData = await createPicker();
 												if (fileData) {
-													dispatch('upload', { type: 'google-drive', data: fileData });
+													dispatch('upload', { 
+														type: 'google-drive', 
+														data: {
+															name: fileData.name,
+															url: fileData.url,
+															id: fileData.id
+														}
+													});
 												}
 											} catch (error) {
 												console.error('Google Drive Error:', error);
