@@ -23,25 +23,17 @@ export const loadGoogleDriveApi = () => {
             const script = document.createElement('script');
             script.src = 'https://apis.google.com/js/api.js';
             script.onload = () => {
-                gapi.load('client:picker', {
-                    callback: () => {
-                        gapi.client.load('picker', 'v1').then(() => {
-                            pickerApiLoaded = true;
-                            resolve(true);
-                        });
-                    }
+                gapi.load('picker', () => {
+                    pickerApiLoaded = true;
+                    resolve(true);
                 });
             };
             script.onerror = reject;
             document.body.appendChild(script);
         } else {
-            gapi.load('client:picker', {
-                callback: () => {
-                    gapi.client.load('picker', 'v1').then(() => {
-                        pickerApiLoaded = true;
-                        resolve(true);
-                    });
-                }
+            gapi.load('picker', () => {
+                pickerApiLoaded = true;
+                resolve(true);
             });
         }
     });
