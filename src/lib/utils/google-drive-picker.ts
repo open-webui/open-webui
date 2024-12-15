@@ -88,11 +88,15 @@ const initialize = async () => {
 export const createPicker = () => {
     return new Promise(async (resolve, reject) => {
         try {
+            console.log('Initializing Google Drive Picker...');
             await initialize();
+            console.log('Getting auth token...');
             const token = await getAuthToken();
             if (!token) {
+                console.error('Failed to get OAuth token');
                 throw new Error('Unable to get OAuth token');
             }
+            console.log('Auth token obtained successfully');
 
             const picker = new google.picker.PickerBuilder()
                 .addView(google.picker.ViewId.DOCS)
@@ -101,21 +105,31 @@ export const createPicker = () => {
                 .setDeveloperKey(API_KEY)
                 .setAppId(CLIENT_ID.split('-')[0]) // Extract app ID from client ID
                 .setCallback((data: any) => {
+                    console.log('Picker callback received:', data);
                     if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
+                        console.log('File picked from Google Drive');
                         const doc = data[google.picker.Response.DOCUMENTS][0];
                         const fileId = doc[google.picker.Document.ID];
                         const fileName = doc[google.picker.Document.NAME];
                         const fileUrl = doc[google.picker.Document.URL];
                         
+                        console.log('Selected file details:', {
+                            id: fileId,
+                            name: fileName,
+                            url: fileUrl
+                        });
+                        
                         // Get the downloadUrl using the alt=media parameter
                         // Construct download URL with access token
                         const downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&access_token=${oauthToken}`;
-                        resolve({
+                        const result = {
                             id: fileId,
                             name: fileName,
                             url: downloadUrl,
                             token: oauthToken // Include token for future use
-                        });
+                        };
+                        console.log('Resolving picker with:', result);
+                        resolve(result);
                     } else if (data[google.picker.Response.ACTION] === google.picker.Action.CANCEL) {
                         resolve(null);
                     }
@@ -123,6 +137,7 @@ export const createPicker = () => {
                 .build();
             picker.setVisible(true);
         } catch (error) {
+            console.error('Google Drive Picker error:', error);
             reject(error);
         }
     });

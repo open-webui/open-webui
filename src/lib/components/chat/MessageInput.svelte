@@ -522,12 +522,17 @@
 										}}
 										uploadGoogleDriveHandler={async () => {
 											try {
+												console.log('Starting Google Drive file selection...');
 												const fileData = await createPicker();
+												console.log('Picker returned file data:', fileData);
 												if (fileData) {
+													console.log('Dispatching upload event with file data');
 													dispatch('upload', { 
 														type: 'google-drive', 
 														data: fileData // fileData now includes token
 													});
+												} else {
+													console.log('No file was selected');
 												}
 											} catch (error) {
 												console.error('Google Drive Error:', error);
