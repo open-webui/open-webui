@@ -2316,6 +2316,8 @@
 										await uploadWeb(data);
 									} else if (type === 'youtube') {
 										await uploadYoutubeTranscription(data);
+									} else if (type === 'google-drive') {
+										await uploadGoogleDriveFile(data);
 									}
 								}}
 								on:submit={async (e) => {

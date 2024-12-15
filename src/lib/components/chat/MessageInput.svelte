@@ -496,6 +496,16 @@
 										uploadFilesHandler={() => {
 											filesInputElement.click();
 										}}
+										uploadGoogleDriveHandler={async () => {
+											try {
+												const fileData = await createPicker();
+												if (fileData) {
+													dispatch('upload', { type: 'google-drive', data: fileData });
+												}
+											} catch (error) {
+												toast.error('Error accessing Google Drive: ' + error.message);
+											}
+										}}
 										onClose={async () => {
 											await tick();
 
