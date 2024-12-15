@@ -90,7 +90,11 @@
 	};
 
 	const uploadFileHandler = async (file) => {
-		console.log(file);
+		console.log('Upload file handler called with:', {
+			name: file.name,
+			type: file.type,
+			size: file.size
+		});
 
 		const tempItemId = uuidv4();
 		const fileItem = {
@@ -107,10 +111,12 @@
 		};
 
 		if (fileItem.size == 0) {
+			console.log('Attempted to upload empty file:', fileItem.name);
 			toast.error($i18n.t('You cannot upload an empty file.'));
 			return null;
 		}
 
+		console.log('Adding file to upload queue:', fileItem);
 		files = [...files, fileItem];
 		// Check if the file is an audio file and transcribe/convert it to text file
 		if (['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'].includes(file['type'])) {
@@ -155,13 +161,23 @@
 	};
 
 	const inputFilesHandler = async (inputFiles) => {
+		console.log('Input files handler called with:', inputFiles);
 		inputFiles.forEach((file) => {
-			console.log(file, file.name.split('.').at(-1));
+			console.log('Processing file:', {
+				name: file.name,
+				type: file.type,
+				size: file.size,
+				extension: file.name.split('.').at(-1)
+			});
 
 			if (
 				($config?.file?.max_size ?? null) !== null &&
 				file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
 			) {
+				console.log('File exceeds max size limit:', {
+					fileSize: file.size,
+					maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
+				});
 				toast.error(
 					$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
 						maxSize: $config?.file?.max_size
