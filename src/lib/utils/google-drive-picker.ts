@@ -119,14 +119,15 @@ export const createPicker = () => {
                             url: fileUrl
                         });
                         
-                        // Get the downloadUrl using the alt=media parameter
-                        // Construct download URL with access token
-                        const downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&access_token=${oauthToken}`;
+                        // Construct download URL without embedding token
+                        const downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
                         const result = {
                             id: fileId,
                             name: fileName,
                             url: downloadUrl,
-                            token: oauthToken // Include token for future use
+                            headers: {
+                                'Authorization': `Bearer ${oauthToken}`
+                            }
                         };
                         console.log('Resolving picker with:', result);
                         resolve(result);

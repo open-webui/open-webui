@@ -356,12 +356,13 @@
 			collection_name: '',
 			status: 'uploading',
 			url: fileData.url,
+			headers: fileData.headers,
 			error: ''
 		};
 
 		try {
 			files = [...files, fileItem];
-			const res = await processWeb(localStorage.token, '', fileData.url);
+			const res = await processWeb(localStorage.token, '', fileData.url, fileData.headers);
 
 			if (res) {
 				fileItem.status = 'uploaded';
