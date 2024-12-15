@@ -9,7 +9,6 @@
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { loadGoogleAuthApi, loadGoogleDriveApi, createPicker } from '$lib/utils/google-drive-picker';
 
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -301,12 +300,6 @@
 	};
 
 	onMount(async () => {
-		// Initialize Google APIs
-		await Promise.all([
-			loadGoogleAuthApi(),
-			loadGoogleDriveApi()
-		]);
-		
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
 
