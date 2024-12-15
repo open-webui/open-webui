@@ -6,7 +6,10 @@ const SCOPE = ['https://www.googleapis.com/auth/drive.readonly'];
 // Validate required credentials
 const validateCredentials = () => {
     if (!API_KEY || !CLIENT_ID) {
-        throw new Error('Google Drive API credentials not configured. Please set VITE_GOOGLE_API_KEY and VITE_GOOGLE_CLIENT_ID environment variables.');
+        throw new Error('Google Drive API credentials not configured');
+    }
+    if (API_KEY === 'your-api-key' || CLIENT_ID === 'your-client-id') {
+        throw new Error('Please configure valid Google Drive API credentials');
     }
 };
 
