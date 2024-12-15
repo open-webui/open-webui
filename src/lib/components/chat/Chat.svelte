@@ -362,7 +362,10 @@
 
 		try {
 			files = [...files, fileItem];
-			const res = await processWeb(localStorage.token, '', fileData.url, fileData.headers);
+			// Pass both URL and headers to processWeb
+			const res = await processWeb(localStorage.token, '', fileData.url, {
+				headers: fileData.headers
+			});
 
 			if (res) {
 				fileItem.status = 'uploaded';
