@@ -501,12 +501,14 @@
 											try {
 												const fileData = await createPicker();
 												if (fileData) {
+													// Pass the OAuth token along with the file data
 													dispatch('upload', { 
 														type: 'google-drive', 
 														data: {
 															name: fileData.name,
 															url: fileData.url,
-															id: fileData.id
+															id: fileData.id,
+															token: await getAuthToken() // Include OAuth token for download
 														}
 													});
 												}

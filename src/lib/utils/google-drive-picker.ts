@@ -111,10 +111,12 @@ export const createPicker = () => {
                         const fileName = doc[google.picker.Document.NAME];
                         const fileUrl = doc[google.picker.Document.URL];
                         
+                        // Get the downloadUrl using the alt=media parameter
+                        const downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
                         resolve({
                             id: fileId,
                             name: fileName,
-                            url: fileUrl
+                            url: downloadUrl
                         });
                     } else if (data[google.picker.Response.ACTION] === google.picker.Action.CANCEL) {
                         resolve(null);
