@@ -140,7 +140,14 @@
 			const uploadedFile = await uploadFile(localStorage.token, file);
 
 			if (uploadedFile) {
+				console.log('File upload completed:', {
+					id: uploadedFile.id,
+					name: fileItem.name,
+					collection: uploadedFile?.meta?.collection_name
+				});
+				
 				if (uploadedFile.error) {
+					console.warn('File upload warning:', uploadedFile.error);
 					toast.warning(uploadedFile.error);
 				}
 
