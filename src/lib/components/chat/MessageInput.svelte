@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
-	import { createPicker } from '$lib/utils/google-drive-picker';
+	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
 
 	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
 	const dispatch = createEventDispatcher();
