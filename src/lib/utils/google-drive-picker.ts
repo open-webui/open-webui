@@ -47,34 +47,42 @@ export const getAuthToken = async () => {
     return oauthToken;
 };
 
-export const createPicker = async () => {
-    if (!pickerApiLoaded) {
-        await loadGoogleDriveApi();
-    }
-
-    const token = await getAuthToken();
-    if (!token) {
-        throw new Error('Unable to get OAuth token');
-    }
-
-    const picker = new google.picker.PickerBuilder()
-        .addView(google.picker.ViewId.DOCS)
-        .setOAuthToken(token)
-        .setDeveloperKey(API_KEY)
-        .setCallback((data: any) => {
-            if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
-                const doc = data[google.picker.Response.DOCUMENTS][0];
-                const fileId = doc[google.picker.Document.ID];
-                const fileName = doc[google.picker.Document.NAME];
-                const fileUrl = doc[google.picker.Document.URL];
-                
-                return {
-                    id: fileId,
-                    name: fileName,
-                    url: fileUrl
-                };
+export const createPicker = () => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!pickerApiLoaded) {
+                await loadGoogleDriveApi();
             }
-        })
-        .build();
-    picker.setVisible(true);
+
+            const token = await getAuthToken();
+            if (!token) {
+                throw new Error('Unable to get OAuth token');
+            }
+
+            const picker = new google.picker.PickerBuilder()
+                .addView(google.picker.ViewId.DOCS)
+                .setOAuthToken(token)
+                .setDeveloperKey(API_KEY)
+                .setCallback((data: any) => {
+                    if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
+                        const doc = data[google.picker.Response.DOCUMENTS][0];
+                        const fileId = doc[google.picker.Document.ID];
+                        const fileName = doc[google.picker.Document.NAME];
+                        const fileUrl = doc[google.picker.Document.URL];
+                        
+                        resolve({
+                            id: fileId,
+                            name: fileName,
+                            url: fileUrl
+                        });
+                    } else if (data[google.picker.Response.ACTION] === google.picker.Action.CANCEL) {
+                        resolve(null);
+                    }
+                })
+                .build();
+            picker.setVisible(true);
+        } catch (error) {
+            reject(error);
+        }
+    });
 };
