@@ -100,8 +100,10 @@ export const createPicker = () => {
 
             const picker = new google.picker.PickerBuilder()
                 .addView(google.picker.ViewId.DOCS)
+                .addView(google.picker.ViewId.FOLDERS)
                 .setOAuthToken(token)
                 .setDeveloperKey(API_KEY)
+                .setAppId(CLIENT_ID.split('-')[0]) // Extract app ID from client ID
                 .setCallback((data: any) => {
                     if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
                         const doc = data[google.picker.Response.DOCUMENTS][0];
