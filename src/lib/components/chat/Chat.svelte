@@ -391,18 +391,51 @@
 				throw new Error(`Failed to fetch file: ${fileResponse.statusText}`);
 			}
 
+			console.log('Response received, converting to blob...');
 			const fileBlob = await fileResponse.blob();
+			console.log('Blob created:', {
+				size: fileBlob.size,
+				type: fileBlob.type
+			});
+			
 			const file = new File([fileBlob], fileData.name, { type: fileBlob.type });
+			console.log('File object created:', {
+				name: file.name,
+				size: file.size,
+				type: file.type
+			});
 
-			// Create a download link for debugging
-			const downloadUrl = URL.createObjectURL(fileBlob);
-			const downloadLink = document.createElement('a');
-			downloadLink.href = downloadUrl;
-			downloadLink.download = fileData.name;
-			document.body.appendChild(downloadLink);
-			downloadLink.click();
-			document.body.removeChild(downloadLink);
-			URL.revokeObjectURL(downloadUrl);
+			// Create and trigger download
+			try {
+				console.log('Creating download URL...');
+				const downloadUrl = URL.createObjectURL(fileBlob);
+				console.log('Download URL created:', downloadUrl);
+				
+				const downloadLink = document.createElement('a');
+				downloadLink.href = downloadUrl;
+				downloadLink.download = fileData.name;
+				console.log('Download link created with:', {
+					href: downloadLink.href,
+					download: downloadLink.download
+				});
+				
+				// Force the download to happen in the foreground
+				downloadLink.style.display = 'none';
+				document.body.appendChild(downloadLink);
+				console.log('Link added to document');
+				
+				downloadLink.click();
+				console.log('Download triggered');
+				
+				// Cleanup
+				setTimeout(() => {
+					document.body.removeChild(downloadLink);
+					URL.revokeObjectURL(downloadUrl);
+					console.log('Cleanup completed');
+				}, 100);
+			} catch (error) {
+				console.error('Download failed:', error);
+			}
 
 			console.log('File fetched successfully, uploading to server...');
 			const uploadedFile = await uploadFile(localStorage.token, file);
