@@ -351,14 +351,17 @@
 
 	const uploadGoogleDriveFile = async (fileData) => {
 		console.log('Uploading Google Drive file:', fileData);
+		const tempItemId = uuidv4();
 		const fileItem = {
-			type: 'doc',
+			type: 'file',
+			file: '',
+			id: null,
+			url: fileData.url,
 			name: fileData.name,
 			collection_name: '',
 			status: 'uploading',
-			url: fileData.url,
 			error: '',
-			itemId: uuidv4()
+			itemId: tempItemId
 		};
 
 		try {
@@ -381,20 +384,21 @@
 			if (res && res.collection_name) {
 				console.log('File processed successfully:', res);
 				fileItem.status = 'uploaded';
+				fileItem.file = res.file;
+				fileItem.id = res.file.id;
 				fileItem.collection_name = res.collection_name;
-				fileItem.file = {
-					...res.file,
-					...fileItem.file
-				};
+				fileItem.url = `${WEBUI_API_BASE_URL}/files/${res.file.id}`;
+				
 				files = files;
 				toast.success($i18n.t('File uploaded successfully'));
 			} else {
 				console.error('Invalid response from processWeb:', res);
+				files = files.filter((f) => f.itemId !== tempItemId);
 				throw new Error('Failed to process file: Invalid server response');
 			}
 		} catch (e) {
 			console.error('Error uploading file:', e);
-			files = files.filter((f) => f.itemId !== fileItem.itemId);
+			files = files.filter((f) => f.itemId !== tempItemId);
 			toast.error($i18n.t('Error uploading file: {{error}}', {
 				error: e.message || 'Unknown error'
 			}));
