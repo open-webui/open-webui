@@ -364,16 +364,21 @@
 		try {
 			files = [...files, fileItem];
 			console.log('Processing web file with URL:', fileData.url);
+			
+			// Create headers with the Authorization token
+			const headers = {
+				'Authorization': fileData.headers.Authorization,
+				'Accept': 'application/json'
+			};
+
 			const res = await processWeb(
 				localStorage.token,
 				'',
 				fileData.url,
-				{
-					'Authorization': fileData.headers.Authorization
-				}
+				headers
 			);
 
-			if (res) {
+			if (res && res.collection_name) {
 				console.log('File processed successfully:', res);
 				fileItem.status = 'uploaded';
 				fileItem.collection_name = res.collection_name;
@@ -382,14 +387,17 @@
 					...fileItem.file
 				};
 				files = files;
+				toast.success($i18n.t('File uploaded successfully'));
 			} else {
-				console.error('No response from processWeb');
-				throw new Error('Failed to process file');
+				console.error('Invalid response from processWeb:', res);
+				throw new Error('Failed to process file: Invalid server response');
 			}
 		} catch (e) {
 			console.error('Error uploading file:', e);
 			files = files.filter((f) => f.itemId !== fileItem.itemId);
-			toast.error(e.toString());
+			toast.error($i18n.t('Error uploading file: {{error}}', {
+				error: e.message || 'Unknown error'
+			}));
 		}
 	};
 
