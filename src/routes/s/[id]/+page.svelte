@@ -8,7 +8,7 @@
 	import { settings, chatId, WEBUI_NAME, models } from '$lib/stores';
 	import { convertMessagesToHistory, createMessagesList } from '$lib/utils';
 
-	import { getChatByShareId } from '$lib/apis/chats';
+	import { getChatByShareId, getPublicSharedChatById } from '$lib/apis/chats';
 
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
@@ -58,18 +58,33 @@
 	//////////////////////////
 
 	const loadSharedChat = async () => {
-		await models.set(await getModels(localStorage.token));
+		try {
+			await models.set(await getModels(localStorage.token));
+		} catch (error) {
+			console.log('Failed to get models, probably not logged in');
+		}
 		await chatId.set($page.params.id);
-		chat = await getChatByShareId(localStorage.token, $chatId).catch(async (error) => {
-			await goto('/');
-			return null;
+		
+		// First try to get the chat using the public endpoint
+		chat = await getPublicSharedChatById($chatId).catch(async (error) => {
+			console.log('Failed to get chat using public endpoint, trying authenticated endpoint');
+			// If that fails, try the authenticated endpoint
+			return await getChatByShareId(localStorage.token, $chatId).catch(async (error) => {
+				await goto('/');
+				return null;
+			});
 		});
 
 		if (chat) {
-			user = await getUserById(localStorage.token, chat.user_id).catch((error) => {
-				console.error(error);
-				return null;
-			});
+			try {
+				user = await getUserById(localStorage.token, chat.user_id).catch((error) => {
+					console.error(error);
+					return null;
+				});
+			} catch (error) {
+				console.log('Failed to get user info, probably not logged in');
+				user = null;
+			}
 
 			const chatContent = chat.chat;
 
@@ -84,7 +99,8 @@
 					(chatContent?.history ?? undefined) !== undefined
 						? chatContent.history
 						: convertMessagesToHistory(chatContent.messages);
-				title = chatContent.title;
+				
+				title = chatContent.title || '';
 
 				autoScroll = true;
 				await tick();

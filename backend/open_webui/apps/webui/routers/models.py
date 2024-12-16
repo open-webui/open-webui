@@ -31,6 +31,12 @@ async def get_models(id: Optional[str] = None, user=Depends(get_verified_user)):
         return Models.get_models_by_user_id(user.id)
 
 
+@router.get("/public", response_model=list[ModelUserResponse])
+async def get_public_models(id: Optional[str] = None):
+    """Get models without requiring authentication."""
+    return Models.get_models()
+
+
 ###########################
 # GetBaseModels
 ###########################

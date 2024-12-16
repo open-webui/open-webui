@@ -1,8 +1,10 @@
 import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
-export const getModels = async (token: string = '', base: boolean = false) => {
+export const getModels = async (token: string) => {
 	let error = null;
-	const res = await fetch(`${WEBUI_BASE_URL}/api/models${base ? '/base' : ''}`, {
+
+	// First try to get models using the authenticated endpoint
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -14,18 +16,32 @@ export const getModels = async (token: string = '', base: boolean = false) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
-		.catch((err) => {
-			error = err;
-			console.log(err);
-			return null;
+		.catch(async (err) => {
+			console.log('Failed to get models using authenticated endpoint, trying public endpoint');
+			// If that fails, try the public endpoint
+			return await fetch(`${WEBUI_API_BASE_URL}/models/public`, {
+				method: 'GET',
+				headers: {
+					Accept: 'application/json',
+					'Content-Type': 'application/json'
+				}
+			})
+				.then(async (res) => {
+					if (!res.ok) throw await res.json();
+					return res.json();
+				})
+				.catch((err) => {
+					error = err;
+					console.log(err);
+					return null;
+				});
 		});
 
 	if (error) {
 		throw error;
 	}
 
-	let models = res?.data ?? [];
-	return models;
+	return res;
 };
 
 type ChatCompletedForm = {

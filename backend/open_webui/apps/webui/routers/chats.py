@@ -667,3 +667,20 @@ async def delete_all_tags_by_id(id: str, user=Depends(get_verified_user)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
         )
+
+
+############################
+# GetPublicSharedChatById
+############################
+
+
+@router.get("/share/{share_id}/public", response_model=Optional[ChatResponse])
+async def get_public_shared_chat_by_id(share_id: str):
+    """Get a shared chat without requiring authentication."""
+    chat = Chats.get_chat_by_share_id(share_id)
+    if chat:
+        return ChatResponse(**chat.model_dump())
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
