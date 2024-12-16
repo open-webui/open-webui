@@ -125,7 +125,6 @@ export const createPicker = () => {
 
                             let downloadUrl;
                             let exportFormat;
-                            let finalFileName = fileName; // Initialize with original filename
                             
                             if (mimeType.includes('google-apps')) {
                                 // Handle Google Workspace files
@@ -133,8 +132,6 @@ export const createPicker = () => {
                                     exportFormat = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
                                 } else if (mimeType.includes('spreadsheet')) {
                                     exportFormat = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-                                    // Update filename with .xlsx extension for spreadsheets if needed
-                                    finalFileName = fileName.endsWith('.xlsx') ? fileName : `${fileName}.xlsx`;
                                 } else if (mimeType.includes('presentation')) {
                                     exportFormat = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
                                 } else {
@@ -166,7 +163,7 @@ export const createPicker = () => {
                             const blob = await response.blob();
                             const result = {
                                 id: fileId,
-                                name: finalFileName || fileName, // Use modified filename if available
+                                name: fileName,
                                 url: downloadUrl,
                                 blob: blob,
                                 headers: {
