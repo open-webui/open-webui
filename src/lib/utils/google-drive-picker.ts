@@ -109,7 +109,7 @@ export const createPicker = () => {
 						.setIncludeFolders(false)
 						.setSelectFolderEnabled(false)
 						.setMimeTypes(
-							'application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.google-apps.document,application/vnd.google-apps.spreadsheet'
+							'application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.google-apps.document,application/vnd.google-apps.spreadsheet,application/vnd.google-apps.presentation'
 						)
 				)
 				.setOAuthToken(token)
@@ -141,6 +141,7 @@ export const createPicker = () => {
 								} else if (mimeType.includes('spreadsheet')) {
 									exportFormat = 'text/csv';
 								} else if (mimeType.includes('presentation')) {
+									exportFormat = 'text/plain';
 									exportFormat =
 										'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 								} else {
