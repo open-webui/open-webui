@@ -136,7 +136,7 @@ export const createPicker = () => {
 							if (mimeType.includes('google-apps')) {
 								// Handle Google Workspace files
 								if (mimeType.includes('document')) {
-									exportFormat = 'text/markdown';
+									exportFormat = 'text/plain';
 								} else if (mimeType.includes('spreadsheet')) {
 									exportFormat = 'text/csv';
 								} else if (mimeType.includes('presentation')) {
