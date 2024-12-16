@@ -932,82 +932,45 @@
 									</Tooltip>
 								{/if}
 
-								{#if message.info}
+								{#if message.usage}
 									<Tooltip
-										content={message.info.openai
-											? message.info.usage
-												? `<pre>${sanitizeResponseContent(
-														JSON.stringify(message.info.usage, null, 2)
-															.replace(/"([^(")"]+)":/g, '$1:')
-															.slice(1, -1)
-															.split('\n')
-															.map((line) => line.slice(2))
-															.map((line) => (line.endsWith(',') ? line.slice(0, -1) : line))
-															.join('\n')
-													)}</pre>`
-												: `prompt_tokens: ${message.info.prompt_tokens ?? 'N/A'}<br/>
-													completion_tokens: ${message.info.completion_tokens ?? 'N/A'}<br/>
-													total_tokens: ${message.info.total_tokens ?? 'N/A'}`
-											: `response_token/s: ${
-													`${
-														Math.round(
-															((message.info.eval_count ?? 0) /
-																((message.info.eval_duration ?? 0) / 1000000000)) *
-																100
-														) / 100
-													} tokens` ?? 'N/A'
-												}<br/>
-					prompt_token/s: ${
-						Math.round(
-							((message.info.prompt_eval_count ?? 0) /
-								((message.info.prompt_eval_duration ?? 0) / 1000000000)) *
-								100
-						) / 100 ?? 'N/A'
-					} tokens<br/>
-		            total_duration: ${
-									Math.round(((message.info.total_duration ?? 0) / 1000000) * 100) / 100 ?? 'N/A'
-								}ms<br/>
-		            load_duration: ${
-									Math.round(((message.info.load_duration ?? 0) / 1000000) * 100) / 100 ?? 'N/A'
-								}ms<br/>
-		            prompt_eval_count: ${message.info.prompt_eval_count ?? 'N/A'}<br/>
-		            prompt_eval_duration: ${
-									Math.round(((message.info.prompt_eval_duration ?? 0) / 1000000) * 100) / 100 ??
-									'N/A'
-								}ms<br/>
-		            eval_count: ${message.info.eval_count ?? 'N/A'}<br/>
-		            eval_duration: ${
-									Math.round(((message.info.eval_duration ?? 0) / 1000000) * 100) / 100 ?? 'N/A'
-								}ms<br/>
-		            approximate_total: ${approximateToHumanReadable(message.info.total_duration ?? 0)}`}
-										placement="top"
+										content={message.usage
+											? `<pre>${sanitizeResponseContent(
+													JSON.stringify(message.usage, null, 2)
+														.replace(/"([^(")"]+)":/g, '$1:')
+														.slice(1, -1)
+														.split('\n')
+														.map((line) => line.slice(2))
+														.map((line) => (line.endsWith(',') ? line.slice(0, -1) : line))
+														.join('\n')
+												)}</pre>`
+											: ''}
+										placement="bottom"
 									>
-										<Tooltip content={$i18n.t('Generation Info')} placement="bottom">
-											<button
-												class=" {isLastMessage
-													? 'visible'
-													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition whitespace-pre-wrap"
-												on:click={() => {
-													console.log(message);
-												}}
-												id="info-{message.id}"
+										<button
+											class=" {isLastMessage
+												? 'visible'
+												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition whitespace-pre-wrap"
+											on:click={() => {
+												console.log(message);
+											}}
+											id="info-{message.id}"
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke-width="2.3"
+												stroke="currentColor"
+												class="w-4 h-4"
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="2.3"
-													stroke="currentColor"
-													class="w-4 h-4"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
-													/>
-												</svg>
-											</button>
-										</Tooltip>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
+												/>
+											</svg>
+										</button>
 									</Tooltip>
 								{/if}
 

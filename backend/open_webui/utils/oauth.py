@@ -12,8 +12,8 @@ from fastapi import (
 )
 from starlette.responses import RedirectResponse
 
-from open_webui.apps.webui.models.auths import Auths
-from open_webui.apps.webui.models.users import Users
+from open_webui.models.auths import Auths
+from open_webui.models.users import Users
 from open_webui.config import (
     DEFAULT_USER_ROLE,
     ENABLE_OAUTH_SIGNUP,
@@ -26,6 +26,7 @@ from open_webui.config import (
     OAUTH_USERNAME_CLAIM,
     OAUTH_ALLOWED_ROLES,
     OAUTH_ADMIN_ROLES,
+    OAUTH_ALLOWED_DOMAINS,
     WEBHOOK_URL,
     JWT_EXPIRES_IN,
     AppConfig,
@@ -33,7 +34,7 @@ from open_webui.config import (
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import WEBUI_SESSION_COOKIE_SAME_SITE, WEBUI_SESSION_COOKIE_SECURE
 from open_webui.utils.misc import parse_duration
-from open_webui.utils.utils import get_password_hash, create_token
+from open_webui.utils.auth import get_password_hash, create_token
 from open_webui.utils.webhook import post_webhook
 
 log = logging.getLogger(__name__)
@@ -49,6 +50,7 @@ auth_manager_config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
 auth_manager_config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
 auth_manager_config.OAUTH_ALLOWED_ROLES = OAUTH_ALLOWED_ROLES
 auth_manager_config.OAUTH_ADMIN_ROLES = OAUTH_ADMIN_ROLES
+auth_manager_config.OAUTH_ALLOWED_DOMAINS = OAUTH_ALLOWED_DOMAINS
 auth_manager_config.WEBHOOK_URL = WEBHOOK_URL
 auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 
@@ -156,6 +158,14 @@ class OAuthManager:
         if not email:
             log.warning(f"OAuth callback failed, email is missing: {user_data}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+        if (
+            "*" not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
+            and email.split("@")[-1] not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
+        ):
+            log.warning(
+                f"OAuth callback failed, e-mail domain is not in the list of allowed domains: {user_data}"
+            )
+            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
         # Check if the user exists
         user = Users.get_user_by_oauth_sub(provider_sub)
@@ -253,9 +263,18 @@ class OAuthManager:
             secure=WEBUI_SESSION_COOKIE_SECURE,
         )
 
+        if ENABLE_OAUTH_SIGNUP.value:
+            oauth_id_token = token.get("id_token")
+            response.set_cookie(
+                key="oauth_id_token",
+                value=oauth_id_token,
+                httponly=True,
+                samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
+                secure=WEBUI_SESSION_COOKIE_SECURE,
+            )
         # Redirect back to the frontend with the JWT token
         redirect_url = f"{request.base_url}auth#token={jwt_token}"
-        return RedirectResponse(url=redirect_url)
+        return RedirectResponse(url=redirect_url, headers=response.headers)
 
 
 oauth_manager = OAuthManager()

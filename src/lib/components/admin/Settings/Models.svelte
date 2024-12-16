@@ -137,7 +137,7 @@
 	});
 </script>
 
-<ConfigureModelsModal bind:show={showConfigModal} {init} />
+<ConfigureModelsModal bind:show={showConfigModal} initHandler={init} />
 
 {#if models !== null}
 	{#if selectedModelId === null}
