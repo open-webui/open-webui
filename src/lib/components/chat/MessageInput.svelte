@@ -116,7 +116,6 @@
 			return null;
 		}
 
-		console.log('Adding file to upload queue:', fileItem);
 		files = [...files, fileItem];
 		// Check if the file is an audio file and transcribe/convert it to text file
 		if (['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'].includes(file['type'])) {

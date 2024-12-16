@@ -109,31 +109,19 @@ export const createPicker = () => {
                 .setDeveloperKey(API_KEY)
                 // Remove app ID setting as it's not needed and can cause 404 errors
                 .setCallback(async (data: any) => {
-                    console.log('Picker callback received:', data);
                     if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
                         try {
-                            console.log('File picked from Google Drive');
                             const doc = data[google.picker.Response.DOCUMENTS][0];
-                            console.log('Document object:', doc);
-                            
                             const fileId = doc[google.picker.Document.ID];
                             const fileName = doc[google.picker.Document.NAME];
                             const fileUrl = doc[google.picker.Document.URL];
-                            
-                            console.log('Extracted file details:', {
-                                id: fileId,
-                                name: fileName,
-                                url: fileUrl
-                            });
                             
                             if (!fileId || !fileName) {
                                 throw new Error('Required file details missing');
                             }
                         
                             // Construct download URL based on MIME type
-                            console.log('Constructing download URL for fileId:', fileId);
                             const mimeType = doc[google.picker.Document.MIME_TYPE];
-                            console.log('File MIME type:', mimeType);
 
                             let downloadUrl;
                             let exportFormat;
@@ -154,11 +142,7 @@ export const createPicker = () => {
                                 // Regular files use direct download URL
                                 downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
                             }
-                            console.log('Download URL constructed:', downloadUrl);
-
-                            console.log('Current token value:', token ? 'Token exists' : 'No token');
                             // Create a Blob from the file download
-                            console.log('Fetching file content...');
                             const response = await fetch(downloadUrl, {
                                 headers: {
                                     'Authorization': `Bearer ${token}`,
@@ -177,8 +161,6 @@ export const createPicker = () => {
                             }
 
                             const blob = await response.blob();
-                            console.log('File downloaded, size:', blob.size);
-
                             const result = {
                                 id: fileId,
                                 name: fileName,
@@ -189,10 +171,8 @@ export const createPicker = () => {
                                     'Accept': '*/*'
                                 }
                             };
-                            console.log('Created result object with blob');
                             resolve(result);
                         } catch (error) {
-                            console.error('Error in picker callback:', error);
                             reject(error);
                         }
                     } else if (data[google.picker.Response.ACTION] === google.picker.Action.CANCEL) {
