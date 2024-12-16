@@ -132,8 +132,9 @@ export const createPicker = () => {
                                     exportFormat = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
                                 } else if (mimeType.includes('spreadsheet')) {
                                     exportFormat = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-                                    // Update filename to have .xlsx extension for spreadsheets
-                                    fileName = fileName.endsWith('.xlsx') ? fileName : `${fileName}.xlsx`;
+                                    // Create new filename with .xlsx extension for spreadsheets
+                                    const modifiedFileName = fileName.endsWith('.xlsx') ? fileName : `${fileName}.xlsx`;
+                                    fileName = modifiedFileName;
                                 } else if (mimeType.includes('presentation')) {
                                     exportFormat = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
                                 } else {
