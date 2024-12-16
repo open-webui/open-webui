@@ -287,15 +287,27 @@ OAUTH_MERGE_ACCOUNTS_BY_EMAIL = PersistentConfig(
 OAUTH_PROVIDERS = {}
 
 GOOGLE_CLIENT_ID = PersistentConfig(
-    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_ID", 
     "oauth.google.client_id",
     os.environ.get("GOOGLE_CLIENT_ID", ""),
 )
 
 GOOGLE_CLIENT_SECRET = PersistentConfig(
     "GOOGLE_CLIENT_SECRET",
-    "oauth.google.client_secret",
+    "oauth.google.client_secret", 
     os.environ.get("GOOGLE_CLIENT_SECRET", ""),
+)
+
+GOOGLE_DRIVE_CLIENT_ID = PersistentConfig(
+    "GOOGLE_DRIVE_CLIENT_ID",
+    "google_drive.client_id",
+    os.environ.get("GOOGLE_DRIVE_CLIENT_ID", ""),
+)
+
+GOOGLE_DRIVE_API_KEY = PersistentConfig(
+    "GOOGLE_DRIVE_API_KEY",
+    "google_drive.api_key",
+    os.environ.get("GOOGLE_DRIVE_API_KEY", ""),
 )
 
 GOOGLE_OAUTH_SCOPE = PersistentConfig(
