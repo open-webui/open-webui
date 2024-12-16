@@ -88,6 +88,8 @@ from open_webui.config import (
     WEBHOOK_URL,
     WEBUI_AUTH,
     WEBUI_NAME,
+    GOOGLE_DRIVE_CLIENT_ID,
+    GOOGLE_DRIVE_API_KEY,
     AppConfig,
     reset_config,
 )
