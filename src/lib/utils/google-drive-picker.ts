@@ -111,31 +111,49 @@ export const createPicker = () => {
                 .setCallback((data: any) => {
                     console.log('Picker callback received:', data);
                     if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
-                        console.log('File picked from Google Drive');
-                        const doc = data[google.picker.Response.DOCUMENTS][0];
-                        const fileId = doc[google.picker.Document.ID];
-                        const fileName = doc[google.picker.Document.NAME];
-                        const fileUrl = doc[google.picker.Document.URL];
-                        
-                        console.log('Selected file details:', {
-                            id: fileId,
-                            name: fileName,
-                            url: fileUrl
-                        });
-                        
-                        // Construct download URL without embedding token
-                        const downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
-                        const result = {
-                            id: fileId,
-                            name: fileName,
-                            url: downloadUrl,
-                            headers: {
-                                'Authorization': `Bearer ${token}`, // Use the current valid token
-                                'Accept': 'application/json'
+                        try {
+                            console.log('File picked from Google Drive');
+                            const doc = data[google.picker.Response.DOCUMENTS][0];
+                            console.log('Document object:', doc);
+                            
+                            const fileId = doc[google.picker.Document.ID];
+                            const fileName = doc[google.picker.Document.NAME];
+                            const fileUrl = doc[google.picker.Document.URL];
+                            
+                            console.log('Extracted file details:', {
+                                id: fileId,
+                                name: fileName,
+                                url: fileUrl
+                            });
+                            
+                            if (!fileId || !fileName) {
+                                throw new Error('Required file details missing');
                             }
-                        };
-                        console.log('Resolving picker with:', result);
-                        resolve(result);
+                        
+                            // Construct download URL without embedding token
+                            console.log('Constructing download URL for fileId:', fileId);
+                            const downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+                            console.log('Download URL constructed:', downloadUrl);
+
+                            console.log('Current token value:', token ? 'Token exists' : 'No token');
+                            const result = {
+                                id: fileId,
+                                name: fileName,
+                                url: downloadUrl,
+                                headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Accept': 'application/json'
+                                }
+                            };
+                            console.log('Created result object:', {
+                                ...result,
+                                headers: { ...result.headers, Authorization: '[REDACTED]' }
+                            });
+                            resolve(result);
+                        } catch (error) {
+                            console.error('Error in picker callback:', error);
+                            reject(error);
+                        }
                     } else if (data[google.picker.Response.ACTION] === google.picker.Action.CANCEL) {
                         resolve(null);
                     }
