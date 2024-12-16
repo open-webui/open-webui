@@ -535,6 +535,7 @@ async def image_generations(
                 form_data,
                 user.id,
                 app.state.config.COMFYUI_BASE_URL,
+                app.state.config.COMFYUI_API_KEY
             )
             log.debug(f"res: {res}")
 

@@ -113,7 +113,7 @@ class ComfyUIGenerateImageForm(BaseModel):
 
 
 async def comfyui_generate_image(
-    model: str, payload: ComfyUIGenerateImageForm, client_id, base_url
+    model: str, payload: ComfyUIGenerateImageForm, client_id, base_url, api_key
 ):
     ws_url = base_url.replace("http://", "ws://").replace("https://", "wss://")
     workflow = json.loads(payload.workflow.workflow)
@@ -167,7 +167,8 @@ async def comfyui_generate_image(
 
     try:
         ws = websocket.WebSocket()
-        ws.connect(f"{ws_url}/ws?clientId={client_id}")
+        headers = {"Authorization": f"Bearer {api_key}"}
+        ws.connect(f"{ws_url}/ws?clientId={client_id}", header=headers)
         log.info("WebSocket connection established.")
     except Exception as e:
         log.exception(f"Failed to connect to WebSocket server: {e}")
