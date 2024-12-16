@@ -4,7 +4,7 @@ let CLIENT_ID = '';
 
 // Function to fetch credentials from backend config
 async function getCredentials() {
-    const response = await fetch('/api/retrieval/config');
+    const response = await fetch('/api/google-drive/config');
     if (!response.ok) {
         throw new Error('Failed to fetch Google Drive credentials');
     }
