@@ -147,7 +147,7 @@ export const createPicker = () => {
                             };
                             console.log('Created result object:', {
                                 ...result,
-                                headers: { ...result.headers, Authorization: '[REDACTED]' }
+                                headers: { ...result.headers, Authorization: `Bearer ${token}` }
                             });
                             resolve(result);
                         } catch (error) {
