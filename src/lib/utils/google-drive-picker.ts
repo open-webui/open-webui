@@ -104,7 +104,7 @@ export const createPicker = () => {
                 .addView(new google.picker.DocsView()
                     .setIncludeFolders(false)
                     .setSelectFolderEnabled(false)
-                    .setMimeTypes('application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.google-apps.document,application/vnd.google-apps.spreadsheet'))
+                    .setMimeTypes('application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.google-apps.document'))
                 .setOAuthToken(token)
                 .setDeveloperKey(API_KEY)
                 // Remove app ID setting as it's not needed and can cause 404 errors
