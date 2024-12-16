@@ -381,35 +381,36 @@
 				'Accept': 'application/json'
 			};
 
-			console.log('Calling processWeb with:', {
-				url: fileData.url,
-				headers: {
-					Authorization: 'Bearer [REDACTED]',
-					Accept: 'application/json'
-				}
+			// First try to fetch the file content directly
+			console.log('Fetching file content from Google Drive...');
+			const fileResponse = await fetch(fileData.url, {
+				headers: headers
 			});
-			const res = await processWeb(
-				localStorage.token,
-				'',
-				fileData.url,
-				headers
-			);
-			console.log('processWeb response:', res);
 
-			if (res && res.collection_name) {
-				console.log('File processed successfully:', res);
+			if (!fileResponse.ok) {
+				throw new Error(`Failed to fetch file: ${fileResponse.statusText}`);
+			}
+
+			const fileBlob = await fileResponse.blob();
+			const file = new File([fileBlob], fileData.name, { type: fileBlob.type });
+
+			console.log('File fetched successfully, uploading to server...');
+			const uploadedFile = await uploadFile(localStorage.token, file);
+
+			if (uploadedFile) {
+				console.log('File uploaded successfully:', uploadedFile);
 				fileItem.status = 'uploaded';
-				fileItem.file = res.file;
-				fileItem.id = res.file.id;
-				fileItem.collection_name = res.collection_name;
-				fileItem.url = `${WEBUI_API_BASE_URL}/files/${res.file.id}`;
+				fileItem.file = uploadedFile;
+				fileItem.id = uploadedFile.id;
+				fileItem.collection_name = uploadedFile?.meta?.collection_name;
+				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
 				
 				files = files;
 				toast.success($i18n.t('File uploaded successfully'));
 			} else {
-				console.error('Invalid response from processWeb:', res);
+				console.error('Failed to upload file to server');
 				files = files.filter((f) => f.itemId !== tempItemId);
-				throw new Error('Failed to process file: Invalid server response');
+				throw new Error('Failed to upload file to server');
 			}
 		} catch (e) {
 			console.error('Error uploading file:', e);
