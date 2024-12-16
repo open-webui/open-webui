@@ -40,6 +40,7 @@
 	import { createNewFeedback, getFeedbackById, updateFeedbackById } from '$lib/apis/evaluations';
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
+	import Artifacts from '../Artifacts.svelte';
 
 	interface MessageType {
 		id: string;
@@ -620,13 +621,13 @@
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 									<ContentRenderer
 										id={message.id}
+										{history}
 										content={message.content}
 										sources={message.sources}
 										floatingButtons={message?.done}
 										save={!readOnly}
 										{model}
 										onSourceClick={(e) => {
-											console.log(e);
 											const sourceButton = document.getElementById(`source-${e}`);
 
 											if (sourceButton) {

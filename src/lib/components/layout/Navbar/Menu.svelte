@@ -13,6 +13,8 @@
 		showOverview,
 		showControls,
 		showArtifacts,
+		showBottomArtifacts,
+		showLeftArtifacts,
 		mobile,
 		temporaryChatEnabled
 	} from '$lib/stores';
@@ -145,6 +147,8 @@
 						await showControls.set(true);
 						await showOverview.set(false);
 						await showArtifacts.set(false);
+						await showBottomArtifacts.set(false);
+						await showLeftArtifacts.set(false);
 					}}
 				>
 					<AdjustmentsHorizontal className=" size-4" strokeWidth="0.5" />
@@ -183,6 +187,8 @@
 					await showControls.set(true);
 					await showOverview.set(true);
 					await showArtifacts.set(false);
+					// await showBottomArtifacts.set(false);
+					// await showLeftArtifacts.set(false);
 				}}
 			>
 				<Map className=" size-4" strokeWidth="1.5" />
@@ -194,8 +200,10 @@
 				id="chat-overview-button"
 				on:click={async () => {
 					await showControls.set(true);
-					await showArtifacts.set(true);
 					await showOverview.set(false);
+					await showArtifacts.set(true);
+					// await showBottomArtifacts.set(true);
+					// await showLeftArtifacts.set(true);
 				}}
 			>
 				<Cube className=" size-4" strokeWidth="1.5" />

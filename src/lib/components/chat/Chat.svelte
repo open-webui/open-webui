@@ -35,6 +35,8 @@
 		showOverview,
 		chatTitle,
 		showArtifacts,
+		showBottomArtifacts,
+		showLeftArtifacts,
 		tools
 	} from '$lib/stores';
 	import {
@@ -80,6 +82,8 @@
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
 	import { getTools } from '$lib/apis/tools';
+	import BottomArtifacts from './BottomArtifacts.svelte';
+	import LeftArtifact from './LeftArtifact.svelte';
 
 	export let chatIdProp = '';
 
@@ -129,7 +133,6 @@
 
 	$: if (chatIdProp) {
 		(async () => {
-			console.log(chatIdProp);
 			if (chatIdProp && (await loadChat())) {
 				await tick();
 				loaded = true;
@@ -152,7 +155,6 @@
 			return;
 		}
 		sessionStorage.selectedModels = JSON.stringify(selectedModels);
-		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
 	};
 
 	$: if (selectedModels) {
@@ -204,7 +206,6 @@
 	const chatEventHandler = async (event, cb) => {
 		if (event.chat_id === $chatId) {
 			await tick();
-			console.log(event);
 			let message = history.messages[event.message_id];
 
 			const type = event?.data?.type ?? null;
@@ -367,6 +368,8 @@
 				showCallOverlay.set(false);
 				showOverview.set(false);
 				showArtifacts.set(false);
+				showBottomArtifacts.set(false);
+				showLeftArtifacts.set(false);
 			}
 		});
 
@@ -506,6 +509,8 @@
 		await showCallOverlay.set(false);
 		await showOverview.set(false);
 		await showArtifacts.set(false);
+		await showBottomArtifacts.set(false);
+		await showLeftArtifacts.set(false);
 
 		if ($page.url.pathname.includes('/c/')) {
 			window.history.replaceState(history.state, '', `/`);
@@ -549,7 +554,6 @@
 
 		if ($page.url.searchParams.get('call') === 'true') {
 			showCallOverlay.set(true);
-			showControls.set(true);
 		}
 
 		if ($page.url.searchParams.get('q')) {
@@ -592,8 +596,6 @@
 			const chatContent = chat.chat;
 
 			if (chatContent) {
-				console.log(chatContent);
-
 				selectedModels =
 					(chatContent?.models ?? undefined) !== undefined
 						? chatContent.models
@@ -2186,7 +2188,6 @@
 		eventCallback(false);
 	}}
 />
-
 {#if !chatIdProp || (loaded && chatIdProp)}
 	<div
 		class="h-screen max-h-[100dvh] {$showSidebar
@@ -2227,6 +2228,11 @@
 		/>
 
 		<PaneGroup direction="horizontal" class="w-full h-full">
+			{#if $showLeftArtifacts}
+				<div id="LeftArtifact">
+					<LeftArtifact {history} />
+				</div>
+			{/if}
 			<Pane defaultSize={50} class="h-full flex w-full relative">
 				{#if $banners.length > 0 && !history.currentId && !$chatId && selectedModels.length <= 1}
 					<div class="absolute top-12 left-0 right-0 w-full z-30">
@@ -2283,8 +2289,10 @@
 								/>
 							</div>
 						</div>
-
-						<div class=" pb-[1rem]">
+						<div
+							class="flex flex-col justify-start"
+							style={$showBottomArtifacts ? 'height: 65%;' : ''}
+						>
 							<MessageInput
 								{history}
 								{selectedModels}
@@ -2317,6 +2325,13 @@
 									}
 								}}
 							/>
+							{#if $showBottomArtifacts}
+								<div id="BottomArtifact">
+									<BottomArtifacts {history} />
+								</div>
+							{/if}
+							<br />
+							<br />
 
 							<div
 								class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
@@ -2362,7 +2377,6 @@
 					{/if}
 				</div>
 			</Pane>
-
 			<ChatControls
 				bind:this={controlPaneComponent}
 				bind:history

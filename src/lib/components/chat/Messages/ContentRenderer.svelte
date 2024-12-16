@@ -5,14 +5,22 @@
 
 	import Markdown from './Markdown.svelte';
 	import LightBlub from '$lib/components/icons/LightBlub.svelte';
-	import { chatId, mobile, showArtifacts, showControls, showOverview } from '$lib/stores';
+	import {
+		chatId,
+		mobile,
+		showArtifacts,
+		showControls,
+		showBottomArtifacts,
+		showLeftArtifacts
+	} from '$lib/stores';
 	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
-	import { stringify } from 'postcss';
+	import Message from './Message.svelte';
 
 	export let id;
 	export let content;
 	export let model = null;
 	export let sources = null;
+	export let history = [];
 
 	export let save = false;
 	export let floatingButtons = true;
@@ -164,13 +172,30 @@
 		on:code={(e) => {
 			const { lang, code } = e.detail;
 
+			if (history?.messages[history.currentId].content?.includes('OpenBottomArtifact')) {
+				showBottomArtifacts.set(true);
+				showLeftArtifacts.set(false);
+				showArtifacts.set(false);
+				showControls.set(false);
+				return;
+			}
+			if (history?.messages[history.currentId].content?.includes('OpenLeftArtifact')) {
+				showLeftArtifacts.set(true);
+				showBottomArtifacts.set(false);
+				showArtifacts.set(false);
+				showControls.set(false);
+				return;
+			}
 			if (
 				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
 				!$mobile &&
 				$chatId
 			) {
+				showBottomArtifacts.set(false);
+				showLeftArtifacts.set(false);
 				showArtifacts.set(true);
 				showControls.set(true);
+				return;
 			}
 		}}
 	/>

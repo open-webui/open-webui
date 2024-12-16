@@ -216,7 +216,7 @@
 		<div class="flex-1 w-full h-full">
 			<div class=" h-full flex flex-col">
 				{#if contents.length > 0}
-					<div class="max-w-full w-full h-full">
+					<div class="max-w-full w-full h-full" style="background-color: #fff;padding-top: 40px">
 						{#if contents[selectedContentIdx].type === 'iframe'}
 							<iframe
 								bind:this={iframeElement}
