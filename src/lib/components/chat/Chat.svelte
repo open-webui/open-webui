@@ -385,8 +385,8 @@
 			// Configure fetch options with proper headers
 			const fetchOptions = {
 				headers: {
-					'Authorization': fileData.headers.Authorization,
-					'Accept': '*/*'
+					Authorization: fileData.headers.Authorization,
+					Accept: '*/*'
 				},
 				method: 'GET'
 			};
@@ -407,7 +407,7 @@
 			// Convert response to blob
 			console.log('Converting response to blob...');
 			const fileBlob = await fileResponse.blob();
-			
+
 			if (fileBlob.size === 0) {
 				throw new Error('Retrieved file is empty');
 			}
@@ -418,7 +418,7 @@
 			});
 
 			// Create File object with proper MIME type
-			const file = new File([fileBlob], fileData.name, { 
+			const file = new File([fileBlob], fileData.name, {
 				type: fileBlob.type || contentType
 			});
 
@@ -441,7 +441,7 @@
 			}
 
 			console.log('File uploaded successfully:', uploadedFile);
-			
+
 			// Update file item with upload results
 			fileItem.status = 'uploaded';
 			fileItem.file = uploadedFile;
@@ -449,15 +449,17 @@
 			fileItem.size = file.size;
 			fileItem.collection_name = uploadedFile?.meta?.collection_name;
 			fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
-			
+
 			files = files;
 			toast.success($i18n.t('File uploaded successfully'));
 		} catch (e) {
 			console.error('Error uploading file:', e);
 			files = files.filter((f) => f.itemId !== tempItemId);
-			toast.error($i18n.t('Error uploading file: {{error}}', {
-				error: e.message || 'Unknown error'
-			}));
+			toast.error(
+				$i18n.t('Error uploading file: {{error}}', {
+					error: e.message || 'Unknown error'
+				})
+			);
 		}
 	};
 

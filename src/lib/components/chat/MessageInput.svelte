@@ -90,7 +90,6 @@
 	};
 
 	const uploadFileHandler = async (file) => {
-
 		const tempItemId = uuidv4();
 		const fileItem = {
 			type: 'file',
@@ -138,7 +137,7 @@
 					name: fileItem.name,
 					collection: uploadedFile?.meta?.collection_name
 				});
-				
+
 				if (uploadedFile.error) {
 					console.warn('File upload warning:', uploadedFile.error);
 					toast.warning(uploadedFile.error);
@@ -147,7 +146,8 @@
 				fileItem.status = 'uploaded';
 				fileItem.file = uploadedFile;
 				fileItem.id = uploadedFile.id;
-				fileItem.collection_name = uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
+				fileItem.collection_name =
+					uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
 				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
 
 				files = files;
@@ -526,9 +526,11 @@
 												}
 											} catch (error) {
 												console.error('Google Drive Error:', error);
-												toast.error($i18n.t('Error accessing Google Drive: {{error}}', {
-													error: error.message
-												}));
+												toast.error(
+													$i18n.t('Error accessing Google Drive: {{error}}', {
+														error: error.message
+													})
+												);
 											}
 										}}
 										onClose={async () => {
