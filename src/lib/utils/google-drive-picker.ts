@@ -130,9 +130,22 @@ export const createPicker = () => {
                                 throw new Error('Required file details missing');
                             }
                         
-                            // Construct download URL using usercontent format
+                            // Construct download URL based on MIME type
                             console.log('Constructing download URL for fileId:', fileId);
-                            const downloadUrl = `https://drive.usercontent.google.com/u/0/uc?id=${fileId}&export=download`;
+                            const mimeType = doc[google.picker.Document.MIME_TYPE];
+                            console.log('File MIME type:', mimeType);
+
+                            let downloadUrl;
+                            if (mimeType.includes('google-apps')) {
+                                // Google Docs/Sheets/etc need export URL
+                                const exportFormat = mimeType.includes('document') ? 'docx' : 
+                                                   mimeType.includes('spreadsheet') ? 'xlsx' : 
+                                                   mimeType.includes('presentation') ? 'pptx' : 'pdf';
+                                downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=application/${exportFormat}`;
+                            } else {
+                                // Regular files use direct download URL
+                                downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+                            }
                             console.log('Download URL constructed:', downloadUrl);
 
                             console.log('Current token value:', token ? 'Token exists' : 'No token');
