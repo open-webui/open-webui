@@ -104,7 +104,7 @@ export const createPicker = () => {
                 .addView(new google.picker.DocsView()
                     .setIncludeFolders(false)
                     .setSelectFolderEnabled(false)
-                    .setMimeTypes('application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.google-apps.document'))
+                    .setMimeTypes('application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.google-apps.document,application/vnd.google-apps.spreadsheet'))
                 .setOAuthToken(token)
                 .setDeveloperKey(API_KEY)
                 // Remove app ID setting as it's not needed and can cause 404 errors
@@ -132,6 +132,8 @@ export const createPicker = () => {
                                     exportFormat = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
                                 } else if (mimeType.includes('spreadsheet')) {
                                     exportFormat = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                                    // Update filename to have .xlsx extension for spreadsheets
+                                    fileName = fileName.endsWith('.xlsx') ? fileName : `${fileName}.xlsx`;
                                 } else if (mimeType.includes('presentation')) {
                                     exportFormat = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
                                 } else {
