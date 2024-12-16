@@ -350,7 +350,14 @@
 	// File upload functions
 
 	const uploadGoogleDriveFile = async (fileData) => {
-		console.log('Uploading Google Drive file:', fileData);
+		console.log('Starting uploadGoogleDriveFile with:', {
+			id: fileData.id,
+			name: fileData.name,
+			url: fileData.url,
+			headers: {
+				Authorization: 'Bearer [REDACTED]'
+			}
+		});
 		const tempItemId = uuidv4();
 		const fileItem = {
 			type: 'file',
@@ -374,12 +381,20 @@
 				'Accept': 'application/json'
 			};
 
+			console.log('Calling processWeb with:', {
+				url: fileData.url,
+				headers: {
+					Authorization: 'Bearer [REDACTED]',
+					Accept: 'application/json'
+				}
+			});
 			const res = await processWeb(
 				localStorage.token,
 				'',
 				fileData.url,
 				headers
 			);
+			console.log('processWeb response:', res);
 
 			if (res && res.collection_name) {
 				console.log('File processed successfully:', res);

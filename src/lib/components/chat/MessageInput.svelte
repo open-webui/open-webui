@@ -526,13 +526,23 @@
 												const fileData = await createPicker();
 												console.log('Picker returned file data:', fileData);
 												if (fileData) {
-													console.log('Dispatching upload event with file data');
-													dispatch('upload', { 
-														type: 'google-drive', 
-														data: fileData // fileData now includes token
+													console.log('Preparing to dispatch upload event with:', {
+														id: fileData.id,
+														name: fileData.name,
+														url: fileData.url,
+														headers: {
+															Authorization: 'Bearer [REDACTED]'
+														}
 													});
+													const uploadEvent = { 
+														type: 'google-drive', 
+														data: fileData
+													};
+													console.log('Dispatching upload event:', uploadEvent);
+													dispatch('upload', uploadEvent);
+													console.log('Upload event dispatched');
 												} else {
-													console.log('No file was selected');
+													console.log('No file was selected from Google Drive');
 												}
 											} catch (error) {
 												console.error('Google Drive Error:', error);
