@@ -136,14 +136,11 @@ export const createPicker = () => {
 							if (mimeType.includes('google-apps')) {
 								// Handle Google Workspace files
 								if (mimeType.includes('document')) {
-									exportFormat =
-										'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+									exportFormat = 'text/markdown';
 								} else if (mimeType.includes('spreadsheet')) {
 									exportFormat = 'text/csv';
 								} else if (mimeType.includes('presentation')) {
 									exportFormat = 'text/plain';
-									exportFormat =
-										'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 								} else {
 									exportFormat = 'application/pdf';
 								}
