@@ -130,8 +130,6 @@ export const createPicker = () => {
                                 // Handle Google Workspace files
                                 if (mimeType.includes('document')) {
                                     exportFormat = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-                                } else if (mimeType.includes('spreadsheet')) {
-                                    exportFormat = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
                                 } else if (mimeType.includes('presentation')) {
                                     exportFormat = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
                                 } else {
