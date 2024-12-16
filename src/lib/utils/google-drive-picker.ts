@@ -130,8 +130,8 @@ export const createPicker = () => {
                             name: fileName,
                             url: downloadUrl,
                             headers: {
-                                'Authorization': `Bearer ${oauthToken}`,
-                                'Content-Type': 'application/json'
+                                'Authorization': `Bearer ${token}`, // Use the current valid token
+                                'Accept': 'application/json'
                             }
                         };
                         console.log('Resolving picker with:', result);

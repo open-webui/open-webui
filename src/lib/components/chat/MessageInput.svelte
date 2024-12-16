@@ -530,9 +530,7 @@
 														id: fileData.id,
 														name: fileData.name,
 														url: fileData.url,
-														headers: {
-															Authorization: 'Bearer [REDACTED]'
-														}
+														headers: fileData.headers // Use the actual headers from the picker
 													});
 													const uploadEvent = { 
 														type: 'google-drive', 
