@@ -1,5 +1,3 @@
-# TODO: move socket to webui app
-
 import asyncio
 import socketio
 import logging

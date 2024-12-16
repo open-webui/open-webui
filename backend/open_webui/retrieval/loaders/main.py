@@ -1,6 +1,7 @@
 import requests
 import logging
 import ftfy
+import sys
 
 from langchain_community.document_loaders import (
     BSHTMLLoader,
@@ -18,7 +19,7 @@ from langchain_community.document_loaders import (
     YoutubeLoader,
 )
 from langchain_core.documents import Document
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
