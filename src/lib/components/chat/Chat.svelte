@@ -358,6 +358,12 @@
 				Authorization: 'Bearer [REDACTED]'
 			}
 		});
+
+		// Validate input
+		if (!fileData?.id || !fileData?.name || !fileData?.url || !fileData?.headers?.Authorization) {
+			throw new Error('Invalid file data provided');
+		}
+
 		const tempItemId = uuidv4();
 		const fileItem = {
 			type: 'file',
@@ -368,63 +374,84 @@
 			collection_name: '',
 			status: 'uploading',
 			error: '',
-			itemId: tempItemId
+			itemId: tempItemId,
+			size: 0
 		};
 
 		try {
 			files = [...files, fileItem];
 			console.log('Processing web file with URL:', fileData.url);
-			
-			// Create headers with the Authorization token
-			const headers = {
-				'Authorization': fileData.headers.Authorization,
-				'Accept': 'application/json'
+
+			// Configure fetch options with proper headers
+			const fetchOptions = {
+				headers: {
+					'Authorization': fileData.headers.Authorization,
+					'Accept': '*/*'
+				},
+				method: 'GET'
 			};
 
-			// First try to fetch the file content directly
+			// Attempt to fetch the file
 			console.log('Fetching file content from Google Drive...');
-			const fileResponse = await fetch(fileData.url, {
-				headers: headers
-			});
+			const fileResponse = await fetch(fileData.url, fetchOptions);
 
 			if (!fileResponse.ok) {
-				throw new Error(`Failed to fetch file: ${fileResponse.statusText}`);
+				const errorText = await fileResponse.text();
+				throw new Error(`Failed to fetch file (${fileResponse.status}): ${errorText}`);
 			}
 
-			console.log('Response received, converting to blob...');
+			// Get content type from response
+			const contentType = fileResponse.headers.get('content-type') || 'application/octet-stream';
+			console.log('Response received with content-type:', contentType);
+
+			// Convert response to blob
+			console.log('Converting response to blob...');
 			const fileBlob = await fileResponse.blob();
+			
+			if (fileBlob.size === 0) {
+				throw new Error('Retrieved file is empty');
+			}
+
 			console.log('Blob created:', {
 				size: fileBlob.size,
-				type: fileBlob.type
+				type: fileBlob.type || contentType
 			});
-			
-			// Create a File object with the correct MIME type based on the filename
-			const mimeType = fileBlob.type || 'application/octet-stream';
-			const file = new File([fileBlob], fileData.name, { type: mimeType });
+
+			// Create File object with proper MIME type
+			const file = new File([fileBlob], fileData.name, { 
+				type: fileBlob.type || contentType
+			});
+
 			console.log('File object created:', {
 				name: file.name,
 				size: file.size,
 				type: file.type
 			});
 
-			console.log('File fetched successfully, uploading to server...');
+			if (file.size === 0) {
+				throw new Error('Created file is empty');
+			}
+
+			// Upload file to server
+			console.log('Uploading file to server...');
 			const uploadedFile = await uploadFile(localStorage.token, file);
 
-			if (uploadedFile) {
-				console.log('File uploaded successfully:', uploadedFile);
-				fileItem.status = 'uploaded';
-				fileItem.file = uploadedFile;
-				fileItem.id = uploadedFile.id;
-				fileItem.collection_name = uploadedFile?.meta?.collection_name;
-				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
-				
-				files = files;
-				toast.success($i18n.t('File uploaded successfully'));
-			} else {
-				console.error('Failed to upload file to server');
-				files = files.filter((f) => f.itemId !== tempItemId);
-				throw new Error('Failed to upload file to server');
+			if (!uploadedFile) {
+				throw new Error('Server returned null response for file upload');
 			}
+
+			console.log('File uploaded successfully:', uploadedFile);
+			
+			// Update file item with upload results
+			fileItem.status = 'uploaded';
+			fileItem.file = uploadedFile;
+			fileItem.id = uploadedFile.id;
+			fileItem.size = file.size;
+			fileItem.collection_name = uploadedFile?.meta?.collection_name;
+			fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+			
+			files = files;
+			toast.success($i18n.t('File uploaded successfully'));
 		} catch (e) {
 			console.error('Error uploading file:', e);
 			files = files.filter((f) => f.itemId !== tempItemId);
