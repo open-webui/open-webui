@@ -90,11 +90,6 @@
 	};
 
 	const uploadFileHandler = async (file) => {
-		console.log('Upload file handler called with:', {
-			name: file.name,
-			type: file.type,
-			size: file.size
-		});
 
 		const tempItemId = uuidv4();
 		const fileItem = {
@@ -111,7 +106,6 @@
 		};
 
 		if (fileItem.size == 0) {
-			console.log('Attempted to upload empty file:', fileItem.name);
 			toast.error($i18n.t('You cannot upload an empty file.'));
 			return null;
 		}
@@ -521,27 +515,12 @@
 										}}
 										uploadGoogleDriveHandler={async () => {
 											try {
-												console.log('Starting Google Drive file selection...');
 												const fileData = await createPicker();
-												console.log('Picker returned file data:', fileData);
 												if (fileData) {
-													console.log('Preparing to dispatch upload event with:', {
-														id: fileData.id,
-														name: fileData.name,
-														url: fileData.url,
-														headers: fileData.headers // Use the actual headers from the picker
-													});
-													// Create a File object from the blob with proper name
 													const file = new File([fileData.blob], fileData.name, {
 														type: fileData.blob.type
 													});
-													console.log('Created File object:', {
-														name: file.name,
-														size: file.size,
-														type: file.type
-													});
 													await uploadFileHandler(file);
-													console.log('Upload event dispatched');
 												} else {
 													console.log('No file was selected from Google Drive');
 												}
