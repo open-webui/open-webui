@@ -287,14 +287,14 @@ OAUTH_MERGE_ACCOUNTS_BY_EMAIL = PersistentConfig(
 OAUTH_PROVIDERS = {}
 
 GOOGLE_CLIENT_ID = PersistentConfig(
-    "GOOGLE_CLIENT_ID", 
+    "GOOGLE_CLIENT_ID",
     "oauth.google.client_id",
     os.environ.get("GOOGLE_CLIENT_ID", ""),
 )
 
 GOOGLE_CLIENT_SECRET = PersistentConfig(
     "GOOGLE_CLIENT_SECRET",
-    "oauth.google.client_secret", 
+    "oauth.google.client_secret",
     os.environ.get("GOOGLE_CLIENT_SECRET", ""),
 )
 
