@@ -55,6 +55,7 @@
 		mirostat_tau: null,
 		top_k: null,
 		top_p: null,
+		min_p: null,
 		stop: null,
 		tfs_z: null,
 		num_ctx: null,
@@ -156,7 +157,7 @@
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
-	<div class="  pr-1.5 overflow-y-scroll max-h-[25rem]">
+	<div class="  overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div class="">
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('WebUI Settings')}</div>
 
@@ -340,6 +341,7 @@
 						mirostat_tau: params.mirostat_tau !== null ? params.mirostat_tau : undefined,
 						top_k: params.top_k !== null ? params.top_k : undefined,
 						top_p: params.top_p !== null ? params.top_p : undefined,
+						min_p: params.min_p !== null ? params.min_p : undefined,
 						tfs_z: params.tfs_z !== null ? params.tfs_z : undefined,
 						num_ctx: params.num_ctx !== null ? params.num_ctx : undefined,
 						num_batch: params.num_batch !== null ? params.num_batch : undefined,

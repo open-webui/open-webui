@@ -10,9 +10,9 @@
 	import { page } from '$app/stores';
 	import { fade } from 'svelte/transition';
 
-	import { getKnowledgeItems } from '$lib/apis/knowledge';
+	import { getKnowledgeBases } from '$lib/apis/knowledge';
 	import { getFunctions } from '$lib/apis/functions';
-	import { getModels as _getModels, getVersionUpdates } from '$lib/apis';
+	import { getModels, getVersionUpdates } from '$lib/apis';
 	import { getAllTags } from '$lib/apis/chats';
 	import { getPrompts } from '$lib/apis/prompts';
 	import { getTools } from '$lib/apis/tools';
@@ -51,10 +51,6 @@
 	let localDBChats = [];
 
 	let version;
-
-	const getModels = async () => {
-		return _getModels(localStorage.token);
-	};
 
 	onMount(async () => {
 		if ($user === undefined) {
@@ -97,31 +93,11 @@
 				settings.set(localStorageSettings);
 			}
 
-			await Promise.all([
-				(async () => {
-					models.set(await getModels());
-				})(),
-				(async () => {
-					prompts.set(await getPrompts(localStorage.token));
-				})(),
-				(async () => {
-					knowledge.set(await getKnowledgeItems(localStorage.token));
-				})(),
-				(async () => {
-					tools.set(await getTools(localStorage.token));
-				})(),
-				(async () => {
-					functions.set(await getFunctions(localStorage.token));
-				})(),
-				(async () => {
-					banners.set(await getBanners(localStorage.token));
-				})(),
-				(async () => {
-					tags.set(await getAllTags(localStorage.token));
-				})()
-			]);
+			models.set(await getModels(localStorage.token));
+			banners.set(await getBanners(localStorage.token));
+			tools.set(await getTools(localStorage.token));
 
-			document.addEventListener('keydown', function (event) {
+			document.addEventListener('keydown', async function (event) {
 				const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
 				// Check if the Shift key is pressed
 				const isShiftPressed = event.shiftKey;
@@ -188,9 +164,21 @@
 					console.log('showShortcuts');
 					document.getElementById('show-shortcuts-button')?.click();
 				}
+
+				// Check if Ctrl + Shift + ' is pressed
+				if (isCtrlPressed && isShiftPressed && event.key.toLowerCase() === `'`) {
+					event.preventDefault();
+					console.log('temporaryChat');
+					temporaryChatEnabled.set(!$temporaryChatEnabled);
+					await goto('/');
+					const newChatButton = document.getElementById('new-chat-button');
+					setTimeout(() => {
+						newChatButton?.click();
+					}, 0);
+				}
 			});
 
-			if ($user.role === 'admin') {
+			if ($user.role === 'admin' && ($settings?.showChangelog ?? true)) {
 				showChangelog.set($settings?.version !== $config.version);
 			}
 

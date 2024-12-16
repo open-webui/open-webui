@@ -1,11 +1,13 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export const createNewPrompt = async (
-	token: string,
-	command: string,
-	title: string,
-	content: string
-) => {
+type PromptItem = {
+	command: string;
+	title: string;
+	content: string;
+	access_control: null | object;
+};
+
+export const createNewPrompt = async (token: string, prompt: PromptItem) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/create`, {
@@ -16,9 +18,8 @@ export const createNewPrompt = async (
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			command: `/${command}`,
-			title: title,
-			content: content
+			...prompt,
+			command: `/${prompt.command}`
 		})
 	})
 		.then(async (res) => {
@@ -42,6 +43,37 @@ export const getPrompts = async (token: string = '') => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getPromptList = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/list`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -101,15 +133,10 @@ export const getPromptByCommand = async (token: string, command: string) => {
 	return res;
 };
 
-export const updatePromptByCommand = async (
-	token: string,
-	command: string,
-	title: string,
-	content: string
-) => {
+export const updatePromptByCommand = async (token: string, prompt: PromptItem) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${command}/update`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${prompt.command}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -117,9 +144,8 @@ export const updatePromptByCommand = async (
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			command: `/${command}`,
-			title: title,
-			content: content
+			...prompt,
+			command: `/${prompt.command}`
 		})
 	})
 		.then(async (res) => {
