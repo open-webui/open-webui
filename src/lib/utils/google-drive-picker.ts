@@ -1,6 +1,17 @@
-// Google Drive Picker API configuration
-const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+// Google Drive Picker API configuration 
+let API_KEY = '';
+let CLIENT_ID = '';
+
+// Function to fetch credentials from backend config
+async function getCredentials() {
+    const response = await fetch('/api/retrieval/config');
+    if (!response.ok) {
+        throw new Error('Failed to fetch Google Drive credentials');
+    }
+    const config = await response.json();
+    API_KEY = config.google_drive?.api_key;
+    CLIENT_ID = config.google_drive?.client_id;
+}
 const SCOPE = [
 	'https://www.googleapis.com/auth/drive.readonly',
 	'https://www.googleapis.com/auth/drive.file'
@@ -11,7 +22,7 @@ const validateCredentials = () => {
 	if (!API_KEY || !CLIENT_ID) {
 		throw new Error('Google Drive API credentials not configured');
 	}
-	if (API_KEY === 'your-api-key' || CLIENT_ID === 'your-client-id') {
+	if (API_KEY === '' || CLIENT_ID === '') {
 		throw new Error('Please configure valid Google Drive API credentials');
 	}
 };
@@ -82,6 +93,7 @@ export const getAuthToken = async () => {
 
 const initialize = async () => {
 	if (!initialized) {
+		await getCredentials();
 		validateCredentials();
 		await Promise.all([loadGoogleDriveApi(), loadGoogleAuthApi()]);
 		initialized = true;
