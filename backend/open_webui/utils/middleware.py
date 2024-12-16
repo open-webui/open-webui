@@ -362,7 +362,39 @@ async def chat_completion_files_handler(
     return body, {"sources": sources}
 
 
+def apply_params_to_form_data(form_data, model):
+    params = form_data.pop("params", {})
+    if model.get("ollama"):
+        form_data["options"] = params
+
+        if "format" in params:
+            form_data["format"] = params["format"]
+
+        if "keep_alive" in params:
+            form_data["keep_alive"] = params["keep_alive"]
+    else:
+        if "seed" in params:
+            form_data["seed"] = params["seed"]
+
+        if "stop" in params:
+            form_data["stop"] = params["stop"]
+
+        if "temperature" in params:
+            form_data["temperature"] = params["temperature"]
+
+        if "top_p" in params:
+            form_data["top_p"] = params["top_p"]
+
+        if "frequency_penalty" in params:
+            form_data["frequency_penalty"] = params["frequency_penalty"]
+
+    return form_data
+
+
 async def process_chat_payload(request, form_data, user, model):
+    form_data = apply_params_to_form_data(form_data, model)
+    log.debug(f"form_data: {form_data}")
+
     metadata = {
         "chat_id": form_data.pop("chat_id", None),
         "message_id": form_data.pop("id", None),
