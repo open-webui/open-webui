@@ -2246,6 +2246,10 @@ async def get_app_config(request: Request):
                 else {}
             ),
         },
+        "google_drive": {
+            "client_id": GOOGLE_DRIVE_CLIENT_ID.value,
+            "api_key": GOOGLE_DRIVE_API_KEY.value
+        },
         **(
             {
                 "default_models": webui_app.state.config.DEFAULT_MODELS,
