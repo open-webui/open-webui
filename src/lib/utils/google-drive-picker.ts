@@ -136,19 +136,33 @@ export const createPicker = () => {
                             console.log('Download URL constructed:', downloadUrl);
 
                             console.log('Current token value:', token ? 'Token exists' : 'No token');
+                            // Create a Blob from the file download
+                            console.log('Fetching file content...');
+                            const response = await fetch(downloadUrl, {
+                                headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Accept': '*/*'
+                                }
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`Failed to download file: ${response.statusText}`);
+                            }
+
+                            const blob = await response.blob();
+                            console.log('File downloaded, size:', blob.size);
+
                             const result = {
                                 id: fileId,
                                 name: fileName,
                                 url: downloadUrl,
+                                blob: blob,
                                 headers: {
                                     'Authorization': `Bearer ${token}`,
-                                    'Accept': 'application/json'
+                                    'Accept': '*/*'
                                 }
                             };
-                            console.log('Created result object:', {
-                                ...result,
-                                headers: { ...result.headers, Authorization: `Bearer ${token}` }
-                            });
+                            console.log('Created result object with blob');
                             resolve(result);
                         } catch (error) {
                             console.error('Error in picker callback:', error);
