@@ -20,6 +20,7 @@ from langchain_community.document_loaders import (
 from langchain_core.documents import Document
 from open_webui.env import SRC_LOG_LEVELS
 
+logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
@@ -106,7 +107,7 @@ class TikaLoader:
             if "Content-Type" in raw_metadata:
                 headers["Content-Type"] = raw_metadata["Content-Type"]
 
-            log.info("Tika extracted text: %s", text)
+            log.debug("Tika extracted text: %s", text)
 
             return [Document(page_content=text, metadata=headers)]
         else:
