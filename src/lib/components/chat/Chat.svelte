@@ -394,6 +394,16 @@
 			const fileBlob = await fileResponse.blob();
 			const file = new File([fileBlob], fileData.name, { type: fileBlob.type });
 
+			// Create a download link for debugging
+			const downloadUrl = URL.createObjectURL(fileBlob);
+			const downloadLink = document.createElement('a');
+			downloadLink.href = downloadUrl;
+			downloadLink.download = fileData.name;
+			document.body.appendChild(downloadLink);
+			downloadLink.click();
+			document.body.removeChild(downloadLink);
+			URL.revokeObjectURL(downloadUrl);
+
 			console.log('File fetched successfully, uploading to server...');
 			const uploadedFile = await uploadFile(localStorage.token, file);
 
