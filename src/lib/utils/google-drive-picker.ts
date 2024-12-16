@@ -130,9 +130,9 @@ export const createPicker = () => {
                                 throw new Error('Required file details missing');
                             }
                         
-                            // Construct download URL without embedding token
+                            // Construct download URL using usercontent format
                             console.log('Constructing download URL for fileId:', fileId);
-                            const downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+                            const downloadUrl = `https://drive.usercontent.google.com/u/0/uc?id=${fileId}&export=download`;
                             console.log('Download URL constructed:', downloadUrl);
 
                             console.log('Current token value:', token ? 'Token exists' : 'No token');
