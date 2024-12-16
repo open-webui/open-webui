@@ -532,12 +532,16 @@
 														url: fileData.url,
 														headers: fileData.headers // Use the actual headers from the picker
 													});
-													const uploadEvent = { 
-														type: 'google-drive', 
-														data: fileData
-													};
-													console.log('Dispatching upload event:', uploadEvent);
-													dispatch('upload', uploadEvent);
+													// Create a File object from the blob with proper name
+													const file = new File([fileData.blob], fileData.name, {
+														type: fileData.blob.type
+													});
+													console.log('Created File object:', {
+														name: file.name,
+														size: file.size,
+														type: file.type
+													});
+													await uploadFileHandler(file);
 													console.log('Upload event dispatched');
 												} else {
 													console.log('No file was selected from Google Drive');
