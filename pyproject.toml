@@ -105,13 +105,14 @@ dependencies = [
     "ldap3==2.9.1"
 ]
 readme = "README.md"
-requires-python = ">= 3.11, < 3.12.0a1"
+requires-python = ">= 3.11, < 3.13.0a1"
 dynamic = ["version"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Communications :: Chat",
     "Topic :: Multimedia",
 ]
