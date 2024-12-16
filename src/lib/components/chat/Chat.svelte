@@ -350,33 +350,46 @@
 	// File upload functions
 
 	const uploadGoogleDriveFile = async (fileData) => {
+		console.log('Uploading Google Drive file:', fileData);
 		const fileItem = {
 			type: 'doc',
 			name: fileData.name,
 			collection_name: '',
 			status: 'uploading',
 			url: fileData.url,
-			headers: fileData.headers,
-			error: ''
+			error: '',
+			itemId: uuidv4()
 		};
 
 		try {
 			files = [...files, fileItem];
-			const res = await processWeb(localStorage.token, '', fileData.url, fileData.headers);
+			console.log('Processing web file with URL:', fileData.url);
+			const res = await processWeb(
+				localStorage.token,
+				'',
+				fileData.url,
+				{
+					'Authorization': fileData.headers.Authorization
+				}
+			);
 
 			if (res) {
+				console.log('File processed successfully:', res);
 				fileItem.status = 'uploaded';
 				fileItem.collection_name = res.collection_name;
 				fileItem.file = {
 					...res.file,
 					...fileItem.file
 				};
-
 				files = files;
+			} else {
+				console.error('No response from processWeb');
+				throw new Error('Failed to process file');
 			}
 		} catch (e) {
-			files = files.filter((f) => f.name !== fileData.name);
-			toast.error(JSON.stringify(e));
+			console.error('Error uploading file:', e);
+			files = files.filter((f) => f.itemId !== fileItem.itemId);
+			toast.error(e.toString());
 		}
 	};
 
