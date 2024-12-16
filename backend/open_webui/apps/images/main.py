@@ -22,6 +22,7 @@ from open_webui.config import (
     AUTOMATIC1111_SCHEDULER,
     CACHE_DIR,
     COMFYUI_BASE_URL,
+    COMFYUI_API_KEY,
     COMFYUI_WORKFLOW,
     COMFYUI_WORKFLOW_NODES,
     CORS_ALLOW_ORIGIN,
@@ -78,6 +79,7 @@ app.state.config.AUTOMATIC1111_CFG_SCALE = AUTOMATIC1111_CFG_SCALE
 app.state.config.AUTOMATIC1111_SAMPLER = AUTOMATIC1111_SAMPLER
 app.state.config.AUTOMATIC1111_SCHEDULER = AUTOMATIC1111_SCHEDULER
 app.state.config.COMFYUI_BASE_URL = COMFYUI_BASE_URL
+app.state.config.COMFYUI_API_KEY = COMFYUI_API_KEY
 app.state.config.COMFYUI_WORKFLOW = COMFYUI_WORKFLOW
 app.state.config.COMFYUI_WORKFLOW_NODES = COMFYUI_WORKFLOW_NODES
 
@@ -103,6 +105,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
         },
         "comfyui": {
             "COMFYUI_BASE_URL": app.state.config.COMFYUI_BASE_URL,
+            "COMFYUI_API_KEY": app.state.config.COMFYUI_API_KEY,
             "COMFYUI_WORKFLOW": app.state.config.COMFYUI_WORKFLOW,
             "COMFYUI_WORKFLOW_NODES": app.state.config.COMFYUI_WORKFLOW_NODES,
         },
@@ -124,6 +127,7 @@ class Automatic1111ConfigForm(BaseModel):
 
 class ComfyUIConfigForm(BaseModel):
     COMFYUI_BASE_URL: str
+    COMFYUI_API_KEY: str
     COMFYUI_WORKFLOW: str
     COMFYUI_WORKFLOW_NODES: list[dict]
 
@@ -168,6 +172,7 @@ async def update_config(form_data: ConfigForm, user=Depends(get_admin_user)):
     )
 
     app.state.config.COMFYUI_BASE_URL = form_data.comfyui.COMFYUI_BASE_URL.strip("/")
+    app.state.config.COMFYUI_API_KEY = form_data.comfyui.COMFYUI_API_KEY
     app.state.config.COMFYUI_WORKFLOW = form_data.comfyui.COMFYUI_WORKFLOW
     app.state.config.COMFYUI_WORKFLOW_NODES = form_data.comfyui.COMFYUI_WORKFLOW_NODES
 
@@ -187,6 +192,7 @@ async def update_config(form_data: ConfigForm, user=Depends(get_admin_user)):
         },
         "comfyui": {
             "COMFYUI_BASE_URL": app.state.config.COMFYUI_BASE_URL,
+            "COMFYUI_API_KEY": app.state.config.COMFYUI_API_KEY,
             "COMFYUI_WORKFLOW": app.state.config.COMFYUI_WORKFLOW,
             "COMFYUI_WORKFLOW_NODES": app.state.config.COMFYUI_WORKFLOW_NODES,
         },
@@ -320,7 +326,8 @@ def get_models(user=Depends(get_verified_user)):
             ]
         elif app.state.config.ENGINE == "comfyui":
             # TODO - get models from comfyui
-            r = requests.get(url=f"{app.state.config.COMFYUI_BASE_URL}/object_info")
+            headers = {"Authorization": f"Bearer {app.state.config.COMFYUI_API_KEY}"}
+            r = requests.get(url=f"{app.state.config.COMFYUI_BASE_URL}/object_info", headers=headers)
             info = r.json()
 
             workflow = json.loads(app.state.config.COMFYUI_WORKFLOW)
@@ -423,7 +430,7 @@ def save_b64_image(b64_str):
 def save_url_image(url):
     image_id = str(uuid.uuid4())
     try:
-        r = requests.get(url)
+        r = requests.get(url, headers={'Authorization': f'Bearer {app.state.config.COMFYUI_API_KEY}'})
         r.raise_for_status()
         if r.headers["content-type"].split("/")[0] == "image":
             mime_type = r.headers["content-type"]
