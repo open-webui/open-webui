@@ -455,41 +455,43 @@
 	//////////////////////////
 
 	const initNewChat = async () => {
-		if (sessionStorage.selectedModels) {
-			selectedModels = JSON.parse(sessionStorage.selectedModels);
-			sessionStorage.removeItem('selectedModels');
-		} else {
-			if ($page.url.searchParams.get('models')) {
-				selectedModels = $page.url.searchParams.get('models')?.split(',');
-			} else if ($page.url.searchParams.get('model')) {
-				const urlModels = $page.url.searchParams.get('model')?.split(',');
+		if ($page.url.searchParams.get('models')) {
+			selectedModels = $page.url.searchParams.get('models')?.split(',');
+		} else if ($page.url.searchParams.get('model')) {
+			const urlModels = $page.url.searchParams.get('model')?.split(',');
 
-				if (urlModels.length === 1) {
-					const m = $models.find((m) => m.id === urlModels[0]);
-					if (!m) {
-						const modelSelectorButton = document.getElementById('model-selector-0-button');
-						if (modelSelectorButton) {
-							modelSelectorButton.click();
-							await tick();
+			if (urlModels.length === 1) {
+				const m = $models.find((m) => m.id === urlModels[0]);
+				if (!m) {
+					const modelSelectorButton = document.getElementById('model-selector-0-button');
+					if (modelSelectorButton) {
+						modelSelectorButton.click();
+						await tick();
 
-							const modelSelectorInput = document.getElementById('model-search-input');
-							if (modelSelectorInput) {
-								modelSelectorInput.focus();
-								modelSelectorInput.value = urlModels[0];
-								modelSelectorInput.dispatchEvent(new Event('input'));
-							}
+						const modelSelectorInput = document.getElementById('model-search-input');
+						if (modelSelectorInput) {
+							modelSelectorInput.focus();
+							modelSelectorInput.value = urlModels[0];
+							modelSelectorInput.dispatchEvent(new Event('input'));
 						}
-					} else {
-						selectedModels = urlModels;
 					}
 				} else {
 					selectedModels = urlModels;
 				}
-			} else if ($settings?.models) {
-				selectedModels = $settings?.models;
-			} else if ($config?.default_models) {
-				console.log($config?.default_models.split(',') ?? '');
-				selectedModels = $config?.default_models.split(',');
+			} else {
+				selectedModels = urlModels;
+			}
+		} else {
+			if (sessionStorage.selectedModels) {
+				selectedModels = JSON.parse(sessionStorage.selectedModels);
+				sessionStorage.removeItem('selectedModels');
+			} else {
+				if ($settings?.models) {
+					selectedModels = $settings?.models;
+				} else if ($config?.default_models) {
+					console.log($config?.default_models.split(',') ?? '');
+					selectedModels = $config?.default_models.split(',');
+				}
 			}
 		}
 
@@ -1056,11 +1058,14 @@
 					}
 
 					let _response = null;
-					if (model?.owned_by === 'ollama') {
-						_response = await sendPromptOllama(model, prompt, responseMessageId, _chatId);
-					} else if (model) {
-						_response = await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
-					}
+
+					// if (model?.owned_by === 'ollama') {
+					// 	_response = await sendPromptOllama(model, prompt, responseMessageId, _chatId);
+					// } else if (model) {
+					// }
+
+					_response = await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
+
 					_responses.push(_response);
 
 					if (chatEventEmitter) clearInterval(chatEventEmitter);
@@ -1207,24 +1212,14 @@
 			$settings?.params?.stream_response ??
 			params?.stream_response ??
 			true;
+
 		const [res, controller] = await generateChatCompletion(localStorage.token, {
 			stream: stream,
 			model: model.id,
 			messages: messagesBody,
-			options: {
-				...{ ...($settings?.params ?? {}), ...params },
-				stop:
-					(params?.stop ?? $settings?.params?.stop ?? undefined)
-						? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
-								(str) => decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
-							)
-						: undefined,
-				num_predict: params?.max_tokens ?? $settings?.params?.max_tokens ?? undefined,
-				repeat_penalty:
-					params?.frequency_penalty ?? $settings?.params?.frequency_penalty ?? undefined
-			},
 			format: $settings.requestFormat ?? undefined,
 			keep_alive: $settings.keepAlive ?? undefined,
+
 			tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 			files: files.length > 0 ? files : undefined,
 			session_id: $socket?.id,
@@ -1542,13 +1537,6 @@
 				{
 					stream: stream,
 					model: model.id,
-					...(stream && (model.info?.meta?.capabilities?.usage ?? false)
-						? {
-								stream_options: {
-									include_usage: true
-								}
-							}
-						: {}),
 					messages: [
 						params?.system || $settings.system || (responseMessage?.userContext ?? null)
 							? {
@@ -1593,23 +1581,36 @@
 										content: message?.merged?.content ?? message.content
 									})
 						})),
-					seed: params?.seed ?? $settings?.params?.seed ?? undefined,
-					stop:
-						(params?.stop ?? $settings?.params?.stop ?? undefined)
-							? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
-									(str) => decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
-								)
-							: undefined,
-					temperature: params?.temperature ?? $settings?.params?.temperature ?? undefined,
-					top_p: params?.top_p ?? $settings?.params?.top_p ?? undefined,
-					frequency_penalty:
-						params?.frequency_penalty ?? $settings?.params?.frequency_penalty ?? undefined,
-					max_tokens: params?.max_tokens ?? $settings?.params?.max_tokens ?? undefined,
+
+					// params: {
+					// 	...$settings?.params,
+					// 	...params,
+
+					// 	format: $settings.requestFormat ?? undefined,
+					// 	keep_alive: $settings.keepAlive ?? undefined,
+					// 	stop:
+					// 		(params?.stop ?? $settings?.params?.stop ?? undefined)
+					// 			? (
+					// 					params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop
+					// 				).map((str) =>
+					// 					decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
+					// 				)
+					// 			: undefined
+					// },
+
 					tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 					files: files.length > 0 ? files : undefined,
 					session_id: $socket?.id,
 					chat_id: $chatId,
-					id: responseMessageId
+					id: responseMessageId,
+
+					...(stream && (model.info?.meta?.capabilities?.usage ?? false)
+						? {
+								stream_options: {
+									include_usage: true
+								}
+							}
+						: {})
 				},
 				`${WEBUI_BASE_URL}/api`
 			);
@@ -1636,6 +1637,7 @@
 							await handleOpenAIError(error, null, model, responseMessage);
 							break;
 						}
+
 						if (done || stopResponseFlag || _chatId !== $chatId) {
 							responseMessage.done = true;
 							history.messages[responseMessageId] = responseMessage;
@@ -1648,7 +1650,7 @@
 						}
 
 						if (usage) {
-							responseMessage.info = { ...usage, openai: true, usage };
+							responseMessage.usage = usage;
 						}
 
 						if (selectedModelId) {
