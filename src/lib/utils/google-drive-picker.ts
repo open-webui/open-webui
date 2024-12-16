@@ -136,12 +136,20 @@ export const createPicker = () => {
                             console.log('File MIME type:', mimeType);
 
                             let downloadUrl;
+                            let exportFormat;
+                            
                             if (mimeType.includes('google-apps')) {
-                                // Google Docs/Sheets/etc need export URL
-                                const exportFormat = mimeType.includes('document') ? 'docx' : 
-                                                   mimeType.includes('spreadsheet') ? 'xlsx' : 
-                                                   mimeType.includes('presentation') ? 'pptx' : 'pdf';
-                                downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=application/${exportFormat}`;
+                                // Handle Google Workspace files
+                                if (mimeType.includes('document')) {
+                                    exportFormat = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                                } else if (mimeType.includes('spreadsheet')) {
+                                    exportFormat = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                                } else if (mimeType.includes('presentation')) {
+                                    exportFormat = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+                                } else {
+                                    exportFormat = 'application/pdf';
+                                }
+                                downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=${encodeURIComponent(exportFormat)}`;
                             } else {
                                 // Regular files use direct download URL
                                 downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
@@ -159,7 +167,13 @@ export const createPicker = () => {
                             });
 
                             if (!response.ok) {
-                                throw new Error(`Failed to download file: ${response.statusText}`);
+                                const errorText = await response.text();
+                                console.error('Download failed:', {
+                                    status: response.status,
+                                    statusText: response.statusText,
+                                    error: errorText
+                                });
+                                throw new Error(`Failed to download file (${response.status}): ${errorText}`);
                             }
 
                             const blob = await response.blob();
