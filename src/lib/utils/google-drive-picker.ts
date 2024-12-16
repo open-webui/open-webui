@@ -108,7 +108,7 @@ export const createPicker = () => {
                 .setOAuthToken(token)
                 .setDeveloperKey(API_KEY)
                 // Remove app ID setting as it's not needed and can cause 404 errors
-                .setCallback((data: any) => {
+                .setCallback(async (data: any) => {
                     console.log('Picker callback received:', data);
                     if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
                         try {
