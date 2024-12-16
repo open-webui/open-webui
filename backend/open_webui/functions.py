@@ -65,12 +65,12 @@ def get_function_module_by_id(request: Request, pipe_id: str):
     return function_module
 
 
-async def get_function_models():
+async def get_function_models(request):
     pipes = Functions.get_functions_by_type("pipe", active_only=True)
     pipe_models = []
 
     for pipe in pipes:
-        function_module = get_function_module_by_id(pipe.id)
+        function_module = get_function_module_by_id(request, pipe.id)
 
         # Check if function is a manifold
         if hasattr(function_module, "pipes"):
@@ -253,7 +253,7 @@ async def generate_function_chat_completion(
         form_data = apply_model_system_prompt_to_body(params, form_data, user)
 
     pipe_id = get_pipe_id(form_data)
-    function_module = get_function_module_by_id(pipe_id)
+    function_module = get_function_module_by_id(request, pipe_id)
 
     pipe = function_module.pipe
     params = get_function_params(function_module, form_data, user, extra_params)
