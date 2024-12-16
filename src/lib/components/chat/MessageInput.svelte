@@ -147,7 +147,7 @@
 				fileItem.status = 'uploaded';
 				fileItem.file = uploadedFile;
 				fileItem.id = uploadedFile.id;
-				fileItem.collection_name = uploadedFile?.meta?.collection_name;
+				fileItem.collection_name = uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
 				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
 
 				files = files;
