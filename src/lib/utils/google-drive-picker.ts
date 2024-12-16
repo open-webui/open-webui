@@ -1,7 +1,7 @@
 // Google Drive Picker API configuration
 const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-const SCOPE = ['https://www.googleapis.com/auth/drive.readonly'];
+const SCOPE = ['https://www.googleapis.com/auth/drive.readonly', 'https://www.googleapis.com/auth/drive.file'];
 
 // Validate required credentials
 const validateCredentials = () => {
@@ -99,11 +99,14 @@ export const createPicker = () => {
             console.log('Auth token obtained successfully');
 
             const picker = new google.picker.PickerBuilder()
-                .addView(google.picker.ViewId.DOCS)
-                .addView(google.picker.ViewId.FOLDERS)
+                .enableFeature(google.picker.Feature.NAV_HIDDEN)
+                .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+                .addView(new google.picker.DocsView()
+                    .setIncludeFolders(true)
+                    .setSelectFolderEnabled(true))
                 .setOAuthToken(token)
                 .setDeveloperKey(API_KEY)
-                .setAppId(CLIENT_ID.split('-')[0]) // Extract app ID from client ID
+                // Remove app ID setting as it's not needed and can cause 404 errors
                 .setCallback((data: any) => {
                     console.log('Picker callback received:', data);
                     if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
