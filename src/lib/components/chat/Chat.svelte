@@ -355,7 +355,7 @@
 			name: fileData.name,
 			url: fileData.url,
 			headers: {
-				Authorization: 'Bearer [REDACTED]'
+				Authorization: `Bearer ${token}`
 			}
 		});
 
