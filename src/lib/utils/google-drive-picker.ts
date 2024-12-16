@@ -4,13 +4,17 @@ let CLIENT_ID = '';
 
 // Function to fetch credentials from backend config
 async function getCredentials() {
-    const response = await fetch('/api/google-drive/config');
+    const response = await fetch('/api/config');
     if (!response.ok) {
         throw new Error('Failed to fetch Google Drive credentials');
     }
     const config = await response.json();
     API_KEY = config.google_drive?.api_key;
     CLIENT_ID = config.google_drive?.client_id;
+    
+    if (!API_KEY || !CLIENT_ID) {
+        throw new Error('Google Drive API credentials not configured');
+    }
 }
 const SCOPE = [
 	'https://www.googleapis.com/auth/drive.readonly',
