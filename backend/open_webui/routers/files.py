@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
 import mimetypes
+from urllib.parse import quote
 
 from open_webui.storage.provider import Storage
 
@@ -222,11 +223,15 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
 
             # Check if the file already exists in the cache
             if file_path.is_file():
-                print(f"file_path: {file_path}")
+                # Handle Unicode filenames
+                filename = file.meta.get("name", file.filename)
+                encoded_filename = quote(filename)  # RFC5987 encoding
                 headers = {
-                    "Content-Disposition": f'attachment; filename="{file.meta.get("name", file.filename)}"'
+                    "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
                 }
+
                 return FileResponse(file_path, headers=headers)
+
             else:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -283,16 +288,20 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
 
     if file and (file.user_id == user.id or user.role == "admin"):
         file_path = file.path
+
+        # Handle Unicode filenames
+        filename = file.meta.get("name", file.filename)
+        encoded_filename = quote(filename)  # RFC5987 encoding
+        headers = {
+            "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
+        }
+
         if file_path:
             file_path = Storage.get_file(file_path)
             file_path = Path(file_path)
 
             # Check if the file already exists in the cache
             if file_path.is_file():
-                print(f"file_path: {file_path}")
-                headers = {
-                    "Content-Disposition": f'attachment; filename="{file.meta.get("name", file.filename)}"'
-                }
                 return FileResponse(file_path, headers=headers)
             else:
                 raise HTTPException(
@@ -311,7 +320,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
             return StreamingResponse(
                 generator(),
                 media_type="text/plain",
-                headers={"Content-Disposition": f"attachment; filename={file_name}"},
+                headers=headers,
             )
     else:
         raise HTTPException(
