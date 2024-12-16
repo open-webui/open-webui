@@ -398,44 +398,14 @@
 				type: fileBlob.type
 			});
 			
-			const file = new File([fileBlob], fileData.name, { type: fileBlob.type });
+			// Create a File object with the correct MIME type based on the filename
+			const mimeType = fileBlob.type || 'application/octet-stream';
+			const file = new File([fileBlob], fileData.name, { type: mimeType });
 			console.log('File object created:', {
 				name: file.name,
 				size: file.size,
 				type: file.type
 			});
-
-			// Create and trigger download
-			try {
-				console.log('Creating download URL...');
-				const downloadUrl = URL.createObjectURL(fileBlob);
-				console.log('Download URL created:', downloadUrl);
-				
-				const downloadLink = document.createElement('a');
-				downloadLink.href = downloadUrl;
-				downloadLink.download = fileData.name;
-				console.log('Download link created with:', {
-					href: downloadLink.href,
-					download: downloadLink.download
-				});
-				
-				// Force the download to happen in the foreground
-				downloadLink.style.display = 'none';
-				document.body.appendChild(downloadLink);
-				console.log('Link added to document');
-				
-				downloadLink.click();
-				console.log('Download triggered');
-				
-				// Cleanup
-				setTimeout(() => {
-					document.body.removeChild(downloadLink);
-					URL.revokeObjectURL(downloadUrl);
-					console.log('Cleanup completed');
-				}, 100);
-			} catch (error) {
-				console.error('Download failed:', error);
-			}
 
 			console.log('File fetched successfully, uploading to server...');
 			const uploadedFile = await uploadFile(localStorage.token, file);
