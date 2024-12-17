@@ -917,7 +917,7 @@ class ChatMessage(BaseModel):
 class GenerateChatCompletionForm(BaseModel):
     model: str
     messages: list[ChatMessage]
-    format: Optional[str] = None
+    format: Optional[dict] = None
     options: Optional[dict] = None
     template: Optional[str] = None
     stream: Optional[bool] = True
