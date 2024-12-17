@@ -1509,10 +1509,13 @@
 			...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
 		);
 		// Remove duplicates
-		files = files.filter(
-			(item, index, array) =>
-				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
-		);
+		files = files
+			.filter(
+				(item, index, array) =>
+					array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
+			)
+			// Use only non empty collections
+			.filter((item) => item.type !== 'collection' || item.files.length > 0);
 
 		scrollToBottom();
 
