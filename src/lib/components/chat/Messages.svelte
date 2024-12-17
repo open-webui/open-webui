@@ -7,6 +7,10 @@
 	import { toast } from 'svelte-sonner';
 	import { getChatList, updateChatById } from '$lib/apis/chats';
 	import { copyToClipboard, findWordIndices } from '$lib/utils';
+	import { renderLatex } from '$lib/utils/latex';
+	import { createCopyCodeBlockButton } from '$lib/utils/codeblock';
+	import hljs from 'highlight.js';
+	import type { Message, ChatHistory } from '$lib/types/chat';
 
 	import Message from './Messages/Message.svelte';
 	import Loader from '../common/Loader.svelte';
@@ -20,10 +24,10 @@
 	export let user = $_user;
 
 	export let prompt;
-	export let history = {};
+	export let history: ChatHistory = { messages: {}, currentId: '' };
 	export let selectedModels;
 
-	let messages = [];
+	let messages: Message[] = [];
 
 	export let sendPrompt: Function;
 	export let continueResponse: Function;
@@ -41,18 +45,46 @@
 
 	let messagesCount = 20;
 	let messagesLoading = false;
+	let loadingTimeout: NodeJS.Timeout | null = null;
+	let isLoadingMore = false;
 
 	const loadMoreMessages = async () => {
-		// scroll slightly down to disable continuous loading
-		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollTop + 100;
-
-		messagesLoading = true;
-		messagesCount += 20;
-
-		await tick();
-
-		messagesLoading = false;
+		if (isLoadingMore) return;
+		
+		try {
+			isLoadingMore = true;
+			const element = document.getElementById('messages-container');
+			if (!element) return;
+			
+			// Store current scroll position
+			const scrollHeight = element.scrollHeight;
+			const scrollTop = element.scrollTop;
+			
+			// Clear any pending load requests
+			if (loadingTimeout) {
+				clearTimeout(loadingTimeout);
+			}
+			
+			// Debounce the load request
+			loadingTimeout = setTimeout(async () => {
+				messagesLoading = true;
+				messagesCount += 20;
+				
+				// Wait for DOM update
+				await tick();
+				
+				// Restore scroll position
+				element.scrollTop = scrollTop + (element.scrollHeight - scrollHeight);
+				messagesLoading = false;
+				isLoadingMore = false;
+			}, 250);
+			
+		} catch (error) {
+			console.error('Error loading more messages:', error);
+			toast.error($i18n.t('Error loading messages'));
+			messagesLoading = false;
+			isLoadingMore = false;
+		}
 	};
 
 	$: if (history.currentId) {
@@ -282,42 +314,115 @@
 		await updateChat();
 	};
 
-	const deleteMessage = async (messageId) => {
-		const messageToDelete = history.messages[messageId];
-		const parentMessageId = messageToDelete.parentId;
-		const childMessageIds = messageToDelete.childrenIds ?? [];
-
-		// Collect all grandchildren
-		const grandchildrenIds = childMessageIds.flatMap(
-			(childId) => history.messages[childId]?.childrenIds ?? []
-		);
-
-		// Update parent's children
-		if (parentMessageId && history.messages[parentMessageId]) {
-			history.messages[parentMessageId].childrenIds = [
-				...history.messages[parentMessageId].childrenIds.filter((id) => id !== messageId),
-				...grandchildrenIds
-			];
-		}
-
-		// Update grandchildren's parent
-		grandchildrenIds.forEach((grandchildId) => {
-			if (history.messages[grandchildId]) {
-				history.messages[grandchildId].parentId = parentMessageId;
+	const deleteMessage = async (messageId: string) => {
+		try {
+			const messageToDelete = history.messages[messageId];
+			if (!messageToDelete) return;
+			
+			// Remove message from parent's children
+			if (messageToDelete.parentId !== null) {
+				const parentMessage = history.messages[messageToDelete.parentId];
+				if (parentMessage) {
+					parentMessage.childrenIds = parentMessage.childrenIds.filter(id => id !== messageId);
+				}
 			}
-		});
 
-		// Delete the message and its children
-		[messageId, ...childMessageIds].forEach((id) => {
-			delete history.messages[id];
-		});
+			// Recursively delete all child messages
+			const deleteChildren = (childIds: string[]) => {
+				for (const childId of childIds) {
+					const childMessage = history.messages[childId];
+					if (childMessage && childMessage.childrenIds.length > 0) {
+						deleteChildren(childMessage.childrenIds);
+					}
+					delete history.messages[childId];
+				}
+			};
 
-		await tick();
+			if (messageToDelete.childrenIds.length > 0) {
+				deleteChildren(messageToDelete.childrenIds);
+			}
 
-		showMessage({ id: parentMessageId });
+			// Delete the message itself
+			delete history.messages[messageId];
 
-		// Update the chat
-		await updateChat();
+			// Update chat history in backend
+			await updateChatById(localStorage.token, chatId, {
+				messages: messages,
+				history: history
+			});
+
+			// Update chat list
+			await chats.set(await getChatList(localStorage.token));
+
+			toast.success('Message deleted successfully');
+		} catch (error) {
+			console.error('Error deleting message:', error);
+			toast.error('Failed to delete message');
+		}
+	};
+
+	const mergeMessages = async (messageIds: string[]) => {
+		try {
+			if (messageIds.length < 2) {
+				throw new Error('At least two messages are required for merging');
+			}
+
+			// Sort messages by timestamp to maintain chronological order
+			messageIds.sort((a, b) => {
+				const msgA = history.messages[a];
+				const msgB = history.messages[b];
+				return msgA.timestamp - msgB.timestamp;
+			});
+
+			const baseMessage = history.messages[messageIds[0]];
+			if (!baseMessage) throw new Error('Base message not found');
+
+			// Merge content from subsequent messages
+			let mergedContent = baseMessage.content;
+			for (let i = 1; i < messageIds.length; i++) {
+				const msgId = messageIds[i];
+				const msg = history.messages[msgId];
+				if (!msg) continue;
+				
+				mergedContent += '\n\n' + msg.content;
+				
+				// Clean up relationships
+				if (msg.parentId) {
+					const parent = history.messages[msg.parentId];
+					if (parent) {
+						parent.childrenIds = parent.childrenIds.filter(id => id !== msgId);
+					}
+				}
+				
+				// Transfer any children to the base message
+				if (msg.childrenIds.length > 0) {
+					baseMessage.childrenIds = [...baseMessage.childrenIds, ...msg.childrenIds];
+					msg.childrenIds.forEach(childId => {
+						const child = history.messages[childId];
+						if (child) child.parentId = baseMessage.id;
+					});
+				}
+
+				delete history.messages[msgId];
+			}
+
+			// Update base message
+			baseMessage.content = mergedContent;
+			baseMessage.updated = new Date().toISOString();
+
+			// Update chat in backend
+			await updateChatById(localStorage.token, chatId, {
+				messages: Object.values(history.messages)
+			});
+
+			history = { ...history };
+			await tick();
+			toast.success('Messages merged successfully');
+
+		} catch (error) {
+			console.error('Error merging messages:', error);
+			toast.error(error.message || 'Failed to merge messages');
+		}
 	};
 
 	const triggerScroll = () => {
@@ -329,6 +434,48 @@
 			}, 100);
 		}
 	};
+
+	$: if (messages && messages.length > 0 && (messages.at(-1).done ?? false)) {
+		(async () => {
+			await tick();
+
+			// Clean up existing tooltips to prevent memory leaks
+			[...document.querySelectorAll('*')].forEach((node) => {
+				if (node._tippy) {
+					node._tippy.destroy();
+				}
+			});
+
+			renderLatex();
+			hljs.highlightAll();
+			createCopyCodeBlockButton();
+
+			// Debounced loading of tooltips
+			if (loadingTimeout) {
+				clearTimeout(loadingTimeout);
+			}
+
+			loadingTimeout = setTimeout(() => {
+				for (const message of messages) {
+					if (message.info) {
+						tippy(`#info-${message.id}`, {
+							content: `<span class="text-xs" id="tooltip-${message.id}">token/s: ${
+								Math.round(((message.info.eval_count ?? 0) / (message.info.eval_duration / 1000000000)) * 100) / 100
+							} tokens<br/>
+							total_duration: ${Math.round(((message.info.total_duration ?? 0) / 1000000) * 100) / 100}ms<br/>
+							load_duration: ${Math.round(((message.info.load_duration ?? 0) / 1000000) * 100) / 100}ms<br/>
+							prompt_eval_count: ${message.info.prompt_eval_count ?? 'N/A'}<br/>
+							prompt_eval_duration: ${Math.round(((message.info.prompt_eval_duration ?? 0) / 1000000) * 100) / 100}ms<br/>
+							eval_count: ${message.info.eval_count ?? 'N/A'}<br/>
+							eval_duration: ${Math.round(((message.info.eval_duration ?? 0) / 1000000) * 100) / 100}ms</span>`,
+							allowHTML: true,
+							placement: 'right'
+						});
+					}
+				}
+			}, 100);
+		})();
+	}
 </script>
 
 <div class="h-full flex pt-8">
@@ -402,7 +549,7 @@
 							{submitMessage}
 							{regenerateResponse}
 							{continueResponse}
-							{mergeResponses}
+							{mergeMessages}
 							{triggerScroll}
 							{readOnly}
 						/>
