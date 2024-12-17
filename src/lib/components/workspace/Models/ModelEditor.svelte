@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { onMount, getContext, tick } from 'svelte';
 	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
-
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
+	import favicon from '$lib/components/icons/favicon.png';
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
@@ -59,7 +61,7 @@
 		base_model_id: null,
 		name: '',
 		meta: {
-			profile_image_url: '/static/favicon.png',
+			profile_image_url: favicon,
 			description: '',
 			suggestion_prompts: null,
 			tags: []
@@ -357,8 +359,13 @@
 				<div class="self-center md:self-start flex justify-center my-2 flex-shrink-0">
 					<div class="self-center">
 						<button
+<<<<<<< HEAD
+							class="rounded-2xl flex flex-shrink-0 items-center {info.meta.profile_image_url !==
+							favicon
+=======
 							class="rounded-xl flex flex-shrink-0 items-center {info.meta.profile_image_url !==
 							'/static/favicon.png'
+>>>>>>> temp-main
 								? 'bg-transparent'
 								: 'bg-white'} shadow-xl group relative"
 							type="button"
@@ -374,7 +381,7 @@
 								/>
 							{:else}
 								<img
-									src="/static/favicon.png"
+									src={favicon}
 									alt="model profile"
 									class=" rounded-xl size-72 md:size-60 object-cover shrink-0"
 								/>
@@ -668,7 +675,7 @@
 													class="w-4 h-4"
 												>
 													<path
-														d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+														d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L10 8.94 6.28 5.22z"
 													/>
 												</svg>
 											</button>

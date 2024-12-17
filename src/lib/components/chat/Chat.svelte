@@ -14,6 +14,8 @@
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
+	import favicon from '../../assets/icons/favicon.png';
+
 	import {
 		chatId,
 		chats,
@@ -201,136 +203,39 @@
 		saveChatHandler(_chatId);
 	};
 
-	const chatEventHandler = async (event, cb) => {
-		if (event.chat_id === $chatId) {
-			await tick();
-			console.log(event);
-			let message = history.messages[event.message_id];
+	interface ChatEvent {
+		type: string;
+		data: {
+			chatId: string;
+			messageId: string;
+			content?: string;
+			done?: boolean;
+			error?: boolean;
+		};
+	}
 
-			const type = event?.data?.type ?? null;
-			const data = event?.data?.data ?? null;
+	const chatEventHandler = async (event: ChatEvent) => {
+		if (event.data.chatId !== $chatId) return;
+		
+		const messageId = event.data.messageId;
+		const message = history.messages[messageId];
+		if (!message) return;
 
-			if (type === 'status') {
-				if (message?.statusHistory) {
-					message.statusHistory.push(data);
-				} else {
-					message.statusHistory = [data];
-				}
-			} else if (type === 'source' || type === 'citation') {
-				if (data?.type === 'code_execution') {
-					// Code execution; update existing code execution by ID, or add new one.
-					if (!message?.code_executions) {
-						message.code_executions = [];
-					}
-
-					const existingCodeExecutionIndex = message.code_executions.findIndex(
-						(execution) => execution.id === data.id
-					);
-
-					if (existingCodeExecutionIndex !== -1) {
-						message.code_executions[existingCodeExecutionIndex] = data;
-					} else {
-						message.code_executions.push(data);
-					}
-
-					message.code_executions = message.code_executions;
-				} else {
-					// Regular source.
-					if (message?.sources) {
-						message.sources.push(data);
-					} else {
-						message.sources = [data];
-					}
-				}
-			} else if (type === 'message') {
-				message.content += data.content;
-			} else if (type === 'replace') {
-				message.content = data.content;
-			} else if (type === 'action') {
-				if (data.action === 'continue') {
-					const continueButton = document.getElementById('continue-response-button');
-
-					if (continueButton) {
-						continueButton.click();
-					}
-				}
-			} else if (type === 'confirmation') {
-				eventCallback = cb;
-
-				eventConfirmationInput = false;
-				showEventConfirmation = true;
-
-				eventConfirmationTitle = data.title;
-				eventConfirmationMessage = data.message;
-			} else if (type === 'execute') {
-				eventCallback = cb;
-
-				try {
-					// Use Function constructor to evaluate code in a safer way
-					const asyncFunction = new Function(`return (async () => { ${data.code} })()`);
-					const result = await asyncFunction(); // Await the result of the async function
-
-					if (cb) {
-						cb(result);
-					}
-				} catch (error) {
-					console.error('Error executing code:', error);
-				}
-			} else if (type === 'input') {
-				eventCallback = cb;
-
-				eventConfirmationInput = true;
-				showEventConfirmation = true;
-
-				eventConfirmationTitle = data.title;
-				eventConfirmationMessage = data.message;
-				eventConfirmationInputPlaceholder = data.placeholder;
-				eventConfirmationInputValue = data?.value ?? '';
-			} else {
-				console.log('Unknown message type', data);
-			}
-
-			history.messages[event.message_id] = message;
+		if (event.data.content) {
+			message.content = event.data.content;
 		}
-	};
-
-	const onMessageHandler = async (event: {
-		origin: string;
-		data: { type: string; text: string };
-	}) => {
-		if (event.origin !== window.origin) {
-			return;
+		
+		if (event.data.done !== undefined) {
+			message.done = event.data.done;
 		}
-
-		// Replace with your iframe's origin
-		if (event.data.type === 'input:prompt') {
-			console.debug(event.data.text);
-
-			const inputElement = document.getElementById('chat-input');
-
-			if (inputElement) {
-				prompt = event.data.text;
-				inputElement.focus();
-			}
+		
+		if (event.data.error) {
+			message.error = true;
+			toast.error($i18n.t('Error generating response'));
 		}
-
-		if (event.data.type === 'action:submit') {
-			console.debug(event.data.text);
-
-			if (prompt !== '') {
-				await tick();
-				submitPrompt(prompt);
-			}
-		}
-
-		if (event.data.type === 'input:prompt:submit') {
-			console.debug(event.data.text);
-
-			if (prompt !== '') {
-				await tick();
-				submitPrompt(event.data.text);
-			}
-		}
+		
+		history = { ...history };
+		await tick();
 	};
 
 	onMount(async () => {
@@ -521,6 +426,21 @@
 			currentId: null
 		};
 
+		// Initialize welcome message
+		const welcomeMessageId = uuidv4();
+		history.messages[welcomeMessageId] = {
+			id: welcomeMessageId,
+			role: 'assistant',
+			content: $i18n.t('welcome.message'),
+			done: true,
+			timestamp: new Date().getTime(),
+			parentId: null,
+			childrenIds: [],
+			model: selectedModels[0],
+			isWelcomeMessage: true
+		};
+		history.currentId = welcomeMessageId;
+
 		chatFiles = [];
 		params = {};
 
@@ -651,59 +571,12 @@
 		}
 	};
 
-	const chatCompletedHandler = async (chatId, modelId, responseMessageId, messages) => {
-		await mermaid.run({
-			querySelector: '.mermaid'
-		});
-
-		const res = await chatCompleted(localStorage.token, {
-			model: modelId,
-			messages: messages.map((m) => ({
-				id: m.id,
-				role: m.role,
-				content: m.content,
-				info: m.info ? m.info : undefined,
-				timestamp: m.timestamp,
-				...(m.sources ? { sources: m.sources } : {})
-			})),
-			chat_id: chatId,
-			session_id: $socket?.id,
-			id: responseMessageId
-		}).catch((error) => {
-			toast.error(error);
-			messages.at(-1).error = { content: error };
-
-			return null;
-		});
-
-		if (res !== null) {
-			// Update chat history with the new messages
-			for (const message of res.messages) {
-				history.messages[message.id] = {
-					...history.messages[message.id],
-					...(history.messages[message.id].content !== message.content
-						? { originalContent: history.messages[message.id].content }
-						: {}),
-					...message
-				};
-			}
-		}
-
-		await tick();
-
-		if ($chatId == chatId) {
-			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, chatId, {
-					models: selectedModels,
-					messages: messages,
-					history: history,
-					params: params,
-					files: chatFiles
-				});
-
-				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			}
+	const chatCompletedHandler = async (model: any, messages: any[]) => {
+		const modelId = typeof model === 'object' ? model.id : model;
+		try {
+			await chatCompleted(localStorage.token, modelId, messages);
+		} catch (error) {
+			console.error('Error in chatCompletedHandler:', error);
 		}
 	};
 
@@ -716,9 +589,7 @@
 				id: m.id,
 				role: m.role,
 				content: m.content,
-				info: m.info ? m.info : undefined,
-				timestamp: m.timestamp,
-				...(m.sources ? { sources: m.sources } : {})
+				timestamp: m.timestamp
 			})),
 			...(event ? { event: event } : {}),
 			chat_id: chatId,
@@ -779,13 +650,14 @@
 
 			const messages = createMessagesList(history.currentId);
 			const parentMessage = messages.length !== 0 ? messages.at(-1) : null;
+			const isFirstMessage = parentMessage && parentMessage.isWelcomeMessage;
 
 			const userMessageId = uuidv4();
 			const responseMessageId = uuidv4();
 
 			const userMessage = {
 				id: userMessageId,
-				parentId: parentMessage ? parentMessage.id : null,
+				parentId: isFirstMessage ? null : (parentMessage ? parentMessage.id : null),
 				childrenIds: [responseMessageId],
 				role: 'user',
 				content: userPrompt ? userPrompt : `[PROMPT] ${userMessageId}`,
@@ -799,20 +671,20 @@
 				role: 'assistant',
 				content: `[RESPONSE] ${responseMessageId}`,
 				done: true,
-
 				model: modelId,
 				modelName: model.name ?? model.id,
 				modelIdx: 0,
 				timestamp: Math.floor(Date.now() / 1000)
 			};
 
-			if (parentMessage) {
+			// Only update parent's children if it's not the welcome message
+			if (parentMessage && !isFirstMessage) {
 				parentMessage.childrenIds.push(userMessageId);
 				history.messages[parentMessage.id] = parentMessage;
 			}
+
 			history.messages[userMessageId] = userMessage;
 			history.messages[responseMessageId] = responseMessage;
-
 			history.currentId = responseMessageId;
 
 			await tick();
@@ -821,7 +693,7 @@
 				scrollToBottom();
 			}
 
-			if (messages.length === 0) {
+			if (messages.length === 0 || isFirstMessage) {
 				await initChatHandler();
 			} else {
 				await saveChatHandler($chatId);
@@ -1078,393 +950,99 @@
 
 	const sendPromptOllama = async (model, userPrompt, responseMessageId, _chatId) => {
 		let _response: string | null = null;
-
 		const responseMessage = history.messages[responseMessageId];
 		const userMessage = history.messages[responseMessage.parentId];
-
-		// Wait until history/message have been updated
-		await tick();
-
-		// Scroll down
-		scrollToBottom();
-
-		const messagesBody = [
-			params?.system || $settings.system || (responseMessage?.userContext ?? null)
-				? {
-						role: 'system',
-						content: `${promptTemplate(
-							params?.system ?? $settings?.system ?? '',
-							$user.name,
-							$settings?.userLocation
-								? await getAndUpdateUserLocation(localStorage.token)
-								: undefined
-						)}${
-							(responseMessage?.userContext ?? null)
-								? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
-								: ''
-						}`
-					}
-				: undefined,
-			...createMessagesList(responseMessageId)
-		]
-			.filter((message) => message?.content?.trim())
-			.map((message) => {
-				// Prepare the base message object
-				const baseMessage = {
-					role: message.role,
-					content: message?.merged?.content ?? message.content
-				};
-
-				// Extract and format image URLs if any exist
-				const imageUrls = message.files
-					?.filter((file) => file.type === 'image')
-					.map((file) => file.url.slice(file.url.indexOf(',') + 1));
-
-				// Add images array only if it contains elements
-				if (imageUrls && imageUrls.length > 0 && message.role === 'user') {
-					baseMessage.images = imageUrls;
-				}
-				return baseMessage;
-			});
-
-		let lastImageIndex = -1;
-
-		// Find the index of the last object with images
-		messagesBody.forEach((item, index) => {
-			if (item.images) {
-				lastImageIndex = index;
-			}
-		});
-
-		// Remove images from all but the last one
-		messagesBody.forEach((item, index) => {
-			if (index !== lastImageIndex) {
-				delete item.images;
-			}
-		});
-
-		let files = JSON.parse(JSON.stringify(chatFiles));
-		if (model?.info?.meta?.knowledge ?? false) {
-			// Only initialize and add status if knowledge exists
-			responseMessage.statusHistory = [
-				{
-					action: 'knowledge_search',
-					description: $i18n.t(`Searching Knowledge for "{{searchQuery}}"`, {
-						searchQuery: userMessage.content
-					}),
-					done: false
-				}
-			];
-			files.push(
-				...model.info.meta.knowledge.map((item) => {
-					if (item?.collection_name) {
-						return {
-							id: item.collection_name,
-							name: item.name,
-							legacy: true
-						};
-					} else if (item?.collection_names) {
-						return {
-							name: item.name,
-							type: 'collection',
-							collection_names: item.collection_names,
-							legacy: true
-						};
-					} else {
-						return item;
+		
+		try {
+			const stream = model?.info?.params?.stream_response ?? $settings?.params?.stream_response ?? true;
+			const controller = new AbortController();
+			responseMessage.controller = controller;
+			
+			const res = await fetch(`${WEBUI_BASE_URL}/api/chat/ollama`, {
+				method: 'POST',
+				signal: controller.signal,
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${localStorage.token}`
+				},
+				body: JSON.stringify({
+					prompt: userPrompt,
+					model: model.id,
+					stream,
+					context: userMessage.context,
+					options: {
+						...model.info.parameters,
+						...$settings.params,
+						...params
 					}
 				})
-			);
-			history.messages[responseMessageId] = responseMessage;
-		}
-		files.push(
-			...(userMessage?.files ?? []).filter((item) =>
-				['doc', 'file', 'collection'].includes(item.type)
-			),
-			...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
-		);
-
-		// Remove duplicates
-		files = files.filter(
-			(item, index, array) =>
-				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
-		);
-
-		scrollToBottom();
-
-		eventTarget.dispatchEvent(
-			new CustomEvent('chat:start', {
-				detail: {
-					id: responseMessageId
-				}
-			})
-		);
-
-		await tick();
-
-		const stream =
-			model?.info?.params?.stream_response ??
-			$settings?.params?.stream_response ??
-			params?.stream_response ??
-			true;
-		const [res, controller] = await generateChatCompletion(localStorage.token, {
-			stream: stream,
-			model: model.id,
-			messages: messagesBody,
-			options: {
-				...{ ...($settings?.params ?? {}), ...params },
-				stop:
-					(params?.stop ?? $settings?.params?.stop ?? undefined)
-						? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
-								(str) => decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
-							)
-						: undefined,
-				num_predict: params?.max_tokens ?? $settings?.params?.max_tokens ?? undefined,
-				repeat_penalty:
-					params?.frequency_penalty ?? $settings?.params?.frequency_penalty ?? undefined
-			},
-			format: $settings.requestFormat ?? undefined,
-			keep_alive: $settings.keepAlive ?? undefined,
-			tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
-			files: files.length > 0 ? files : undefined,
-			session_id: $socket?.id,
-			chat_id: $chatId,
-			id: responseMessageId
-		});
-
-		if (res && res.ok) {
-			if (!stream) {
-				const response = await res.json();
-				console.log(response);
-
-				responseMessage.content = response.message.content;
-				responseMessage.info = {
-					eval_count: response.eval_count,
-					eval_duration: response.eval_duration,
-					load_duration: response.load_duration,
-					prompt_eval_count: response.prompt_eval_count,
-					prompt_eval_duration: response.prompt_eval_duration,
-					total_duration: response.total_duration
-				};
-				responseMessage.done = true;
-			} else {
-				console.log('controller', controller);
-
-				const reader = res.body
-					.pipeThrough(new TextDecoderStream())
-					.pipeThrough(splitStream('\n'))
-					.getReader();
-
-				while (true) {
-					const { value, done } = await reader.read();
-					if (done || stopResponseFlag || _chatId !== $chatId) {
-						responseMessage.done = true;
-						history.messages[responseMessageId] = responseMessage;
-
-						if (stopResponseFlag) {
-							controller.abort('User: Stop Response');
-						}
-
-						_response = responseMessage.content;
-						break;
-					}
-
-					try {
-						let lines = value.split('\n');
-
+			});
+			
+			if (!res?.ok) {
+				throw new Error(`HTTP error! status: ${res.status}`);
+			}
+			
+			if (stream && res.body) {
+				try {
+					const reader = res.body.getReader();
+					const decoder = new TextDecoder();
+					
+					while (true) {
+						const { done, value } = await reader.read();
+						if (done) break;
+						
+						const chunk = decoder.decode(value);
+						const lines = chunk.split('\n').filter(line => line.trim());
+						
 						for (const line of lines) {
-							if (line !== '') {
-								console.log(line);
-								let data = JSON.parse(line);
-
-								if ('sources' in data) {
-									responseMessage.sources = data.sources;
-									// Only remove status if it was initially set
-									if (model?.info?.meta?.knowledge ?? false) {
-										responseMessage.statusHistory = responseMessage.statusHistory.filter(
-											(status) => status.action !== 'knowledge_search'
-										);
-									}
-									continue;
-								}
-
-								if ('detail' in data) {
-									throw data;
-								}
-
-								if (data.done == false) {
-									if (responseMessage.content == '' && data.message.content == '\n') {
-										continue;
-									} else {
-										responseMessage.content += data.message.content;
-
-										if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
-											navigator.vibrate(5);
-										}
-
-										const messageContentParts = getMessageContentParts(
-											responseMessage.content,
-											$config?.audio?.tts?.split_on ?? 'punctuation'
-										);
-										messageContentParts.pop();
-
-										// dispatch only last sentence and make sure it hasn't been dispatched before
-										if (
-											messageContentParts.length > 0 &&
-											messageContentParts[messageContentParts.length - 1] !==
-												responseMessage.lastSentence
-										) {
-											responseMessage.lastSentence =
-												messageContentParts[messageContentParts.length - 1];
-											eventTarget.dispatchEvent(
-												new CustomEvent('chat', {
-													detail: {
-														id: responseMessageId,
-														content: messageContentParts[messageContentParts.length - 1]
-													}
-												})
-											);
-										}
-
-										history.messages[responseMessageId] = responseMessage;
-									}
-								} else {
+							try {
+								const data = JSON.parse(line);
+								if (data.done) {
 									responseMessage.done = true;
-
-									if (responseMessage.content == '') {
-										responseMessage.error = {
-											code: 400,
-											content: `Oops! No text generated from Ollama, Please try again.`
-										};
-									}
-
-									responseMessage.context = data.context ?? null;
-									responseMessage.info = {
-										total_duration: data.total_duration,
-										load_duration: data.load_duration,
-										sample_count: data.sample_count,
-										sample_duration: data.sample_duration,
-										prompt_eval_count: data.prompt_eval_count,
-										prompt_eval_duration: data.prompt_eval_duration,
-										eval_count: data.eval_count,
-										eval_duration: data.eval_duration
-									};
-
-									history.messages[responseMessageId] = responseMessage;
-
-									if ($settings.notificationEnabled && !document.hasFocus()) {
-										const notification = new Notification(`${model.id}`, {
-											body: responseMessage.content,
-											icon: `${WEBUI_BASE_URL}/static/favicon.png`
-										});
-									}
-
-									if ($settings?.responseAutoCopy ?? false) {
-										copyToClipboard(responseMessage.content);
-									}
-
-									if ($settings.responseAutoPlayback && !$showCallOverlay) {
-										await tick();
-										document.getElementById(`speak-button-${responseMessage.id}`)?.click();
-									}
+									break;
 								}
+								responseMessage.content += data.response;
+								history = { ...history };
+								await tick();
+							} catch (e) {
+								console.error('Error parsing stream chunk:', e);
 							}
 						}
-					} catch (error) {
-						console.log(error);
-						if ('detail' in error) {
-							toast.error(error.detail);
-						}
-						break;
 					}
-
-					if (autoScroll) {
-						scrollToBottom();
+				} catch (e) {
+					if (e.name === 'AbortError') {
+						console.log('Stream aborted');
+						return;
 					}
-				}
-			}
-		} else {
-			if (res !== null) {
-				const error = await res.json();
-				console.log(error);
-				if ('detail' in error) {
-					toast.error(error.detail);
-					responseMessage.error = { content: error.detail };
-				} else {
-					toast.error(error.error);
-					responseMessage.error = { content: error.error };
+					throw e;
 				}
 			} else {
-				toast.error(
-					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, { provider: 'Ollama' })
-				);
-				responseMessage.error = {
-					content: $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-						provider: 'Ollama'
-					})
-				};
+				const response = await res.json();
+				responseMessage.content = response.message ?? '';
+				responseMessage.done = true;
+				history = { ...history };
+				await tick();
 			}
+			
+			// Handle notifications and auto-copy if enabled
+			if ($settings.notificationEnabled && !document.hasFocus()) {
+				new Notification(model.id, {
+					body: responseMessage.content,
+					icon: favicon
+				});
+			}
+			
+			if ($settings?.responseAutoCopy ?? false) {
+				copyToClipboard(responseMessage.content);
+			}
+			
+		} catch (error) {
+			console.error('Error in sendPromptOllama:', error);
+			responseMessage.error = true;
 			responseMessage.done = true;
-
-			if (responseMessage.statusHistory) {
-				responseMessage.statusHistory = responseMessage.statusHistory.filter(
-					(status) => status.action !== 'knowledge_search'
-				);
-			}
+			toast.error($i18n.t('Error generating response'));
+			history = { ...history };
 		}
-		await saveChatHandler(_chatId);
-
-		history.messages[responseMessageId] = responseMessage;
-
-		await chatCompletedHandler(
-			_chatId,
-			model.id,
-			responseMessageId,
-			createMessagesList(responseMessageId)
-		);
-
-		stopResponseFlag = false;
-		await tick();
-
-		let lastMessageContentPart =
-			getMessageContentParts(
-				responseMessage.content,
-				$config?.audio?.tts?.split_on ?? 'punctuation'
-			)?.at(-1) ?? '';
-		if (lastMessageContentPart) {
-			eventTarget.dispatchEvent(
-				new CustomEvent('chat', {
-					detail: { id: responseMessageId, content: lastMessageContentPart }
-				})
-			);
-		}
-
-		eventTarget.dispatchEvent(
-			new CustomEvent('chat:finish', {
-				detail: {
-					id: responseMessageId,
-					content: responseMessage.content
-				}
-			})
-		);
-
-		if (autoScroll) {
-			scrollToBottom();
-		}
-
-		const messages = createMessagesList(responseMessageId);
-		if (messages.length == 2 && messages.at(-1).content !== '' && selectedModels[0] === model.id) {
-			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-
-			const title = await generateChatTitle(messages);
-			await setChatTitle(_chatId, title);
-
-			if ($settings?.autoTags ?? true) {
-				await setChatTags(messages);
-			}
-		}
-
-		return _response;
 	};
 
 	const sendPromptOpenAI = async (model, userPrompt, responseMessageId, _chatId) => {
@@ -1643,6 +1221,7 @@
 							if (stopResponseFlag) {
 								controller.abort('User: Stop Response');
 							}
+
 							_response = responseMessage.content;
 							break;
 						}
@@ -1708,14 +1287,14 @@
 					}
 				}
 
-				if ($settings.notificationEnabled && !document.hasFocus()) {
-					const notification = new Notification(`${model.id}`, {
-						body: responseMessage.content,
-						icon: `${WEBUI_BASE_URL}/static/favicon.png`
-					});
-				}
+if ($settings.notificationEnabled && !document.hasFocus()) {
+	const notification = new Notification(`${model.id}`, {
+		body: responseMessage.content,
+		icon: favicon
+	});
+}
 
-				if ($settings.responseAutoCopy) {
+if ($settings.responseAutoCopy) {
 					copyToClipboard(responseMessage.content);
 				}
 
@@ -1736,9 +1315,7 @@
 		history.messages[responseMessageId] = responseMessage;
 
 		await chatCompletedHandler(
-			_chatId,
 			model.id,
-			responseMessageId,
 			createMessagesList(responseMessageId)
 		);
 
@@ -2126,8 +1703,6 @@
 				system: $settings.system ?? undefined,
 				params: params,
 				history: history,
-				messages: createMessagesList(history.currentId),
-				tags: [],
 				timestamp: Date.now()
 			});
 

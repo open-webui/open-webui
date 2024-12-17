@@ -1,0 +1,30 @@
+:root {
+    --background: #ffffff;
+    --foreground: #000000;
+    --surface-primary: #000000;
+    --text-primary: #ffffff;
+    --red-light: #FF4D4D;
+    --red-dark: #CD0003;
+}
+
+:root.dark {
+    --background: #000000;
+    --foreground: #ffffff;
+    --surface-primary: #ffffff;
+    --text-primary: #000000;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--background);
+    color: var(--foreground);
+}
+
+.font-ClashDisplay {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+}
+
+.font-Inter {
+    font-family: 'Inter', sans-serif;
+}

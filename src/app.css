@@ -26,8 +26,22 @@ html {
 	word-break: break-word;
 }
 
+/* Scroll container for landing page */
+.scroll-container {
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+}
+
+.scroll-content {
+    min-height: 100%;
+    position: relative;
+}
+
 code {
-	/* white-space-collapse: preserve !important; */
 	overflow-x: auto;
 	width: auto;
 }
@@ -82,7 +96,7 @@ li p {
 
 /* Dark theme scrollbar styles */
 .dark ::-webkit-scrollbar-thumb {
-	background-color: rgba(33, 33, 33, 0.8); /* Darker color for dark theme */
+	background-color: rgba(33, 33, 33, 0.8);
 	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
 }
 
@@ -104,9 +118,7 @@ select {
 	padding-right: 2.5rem;
 	-webkit-print-color-adjust: exact;
 	print-color-adjust: exact;
-	/* for Firefox */
 	-moz-appearance: none;
-	/* for Chrome */
 	-webkit-appearance: none;
 }
 
@@ -128,7 +140,7 @@ select {
 }
 
 .scrollbar-none::-webkit-scrollbar {
-	display: none; /* for Chrome, Safari and Opera */
+	display: none;
 }
 
 .scrollbar-none::-webkit-scrollbar-corner {
@@ -136,19 +148,18 @@ select {
 }
 
 .scrollbar-none {
-	-ms-overflow-style: none; /* IE and Edge */
-	scrollbar-width: none; /* Firefox */
+	-ms-overflow-style: none;
+	scrollbar-width: none;
 }
 
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
-	/* display: none; <- Crashes Chrome on hover */
 	-webkit-appearance: none;
-	margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+	margin: 0;
 }
 
 input[type='number'] {
-	-moz-appearance: textfield; /* Firefox */
+	-moz-appearance: textfield;
 }
 
 .cm-editor {
@@ -226,7 +237,6 @@ input[type='number'] {
 	border-radius: 0.4rem;
 	font-size: 0.85rem;
 	padding: 0.25em 0.3em;
-
 	@apply dark:bg-gray-800 bg-gray-100;
 }
 
@@ -235,7 +245,6 @@ input[type='number'] {
 	font-family: 'JetBrainsMono', monospace;
 	margin: 1.5rem 0;
 	padding: 0.75rem 1rem;
-
 	@apply dark:bg-gray-800 bg-gray-100;
 }
 

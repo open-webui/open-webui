@@ -190,6 +190,7 @@
 						placeholder="Select a language"
 						on:change={(e) => {
 							$i18n.changeLanguage(lang);
+							localStorage.setItem('preferredLanguage', lang);
 						}}
 					>
 						{#each languages as language}

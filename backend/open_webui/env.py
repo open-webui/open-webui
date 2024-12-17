@@ -99,9 +99,9 @@ for source in log_sources:
 log.setLevel(SRC_LOG_LEVELS["CONFIG"])
 
 
-WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
-if WEBUI_NAME != "Open WebUI":
-    WEBUI_NAME += " (Open WebUI)"
+WEBUI_NAME = os.environ.get("WEBUI_NAME", "Cicero")
+if WEBUI_NAME != "Cicero":
+    WEBUI_NAME += " (Cicero)"
 
 WEBUI_URL = os.environ.get("WEBUI_URL", "http://localhost:3000")
 

@@ -1,6 +1,7 @@
 <script>
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
+	import favicon from '$lib/assets/icons/favicon.png';
 
 	let loadingProgress = spring(0, {
 		stiffness: 0.05
@@ -140,15 +141,22 @@
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());
 					} else {
-						// Redirect Invalid Session User to /auth Page
+						// Redirect Invalid Session User to landing page
 						localStorage.removeItem('token');
-						await goto('/auth');
+						if ($page.url.pathname === '/auth') {
+							// Stay on auth if we're already there
+							await goto('/auth');
+						} else {
+							await goto('/landing');
+						}
 					}
 				} else {
-					// Don't redirect if we're already on the auth page
-					// Needed because we pass in tokens from OAuth logins via URL fragments
-					if ($page.url.pathname !== '/auth') {
-						await goto('/auth');
+					// Handle unauthenticated redirects
+					if ($page.url.pathname === '/auth') {
+						// Stay on auth if we're already there
+					} else if ($page.url.pathname === '/' || !$page.url.pathname.startsWith('/auth')) {
+						// Go to landing for root or any non-auth path
+						await goto('/landing');
 					}
 				}
 			}
@@ -197,7 +205,7 @@
 
 <svelte:head>
 	<title>{$WEBUI_NAME}</title>
-	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
+	<link rel="icon" href={favicon} />
 
 	<!-- rosepine themes have been disabled as it's not up to date with our latest version. -->
 	<!-- feel free to make a PR to fix if anyone wants to see it return -->

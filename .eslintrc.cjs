@@ -4,7 +4,6 @@ module.exports = {
 		'eslint:recommended',
 		'plugin:@typescript-eslint/recommended',
 		'plugin:svelte/recommended',
-		'plugin:cypress/recommended',
 		'prettier'
 	],
 	parser: '@typescript-eslint/parser',
@@ -19,6 +18,16 @@ module.exports = {
 		es2017: true,
 		node: true
 	},
+	rules: {
+		// Only warn on severe issues
+		'@typescript-eslint/no-explicit-any': 'off',
+		'@typescript-eslint/no-unused-vars': 'warn',
+		'no-unused-vars': 'warn',
+		'@typescript-eslint/no-empty-function': 'off',
+		'@typescript-eslint/ban-ts-comment': 'off',
+		'@typescript-eslint/no-non-null-assertion': 'off',
+		'no-mixed-spaces-and-tabs': 'off'
+	},
 	overrides: [
 		{
 			files: ['*.svelte'],
@@ -27,5 +36,8 @@ module.exports = {
 				parser: '@typescript-eslint/parser'
 			}
 		}
-	]
+	],
+	settings: {
+		'svelte3/typescript': () => require('typescript')
+	}
 };

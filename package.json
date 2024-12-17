@@ -1,6 +1,11 @@
 {
+<<<<<<< HEAD
+	"name": "cicero",
+	"version": "0.4.4",
+=======
 	"name": "open-webui",
 	"version": "0.4.8",
+>>>>>>> temp-main
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
@@ -67,6 +72,7 @@
 		"@xyflow/svelte": "^0.1.19",
 		"async": "^3.2.5",
 		"bits-ui": "^0.19.7",
+		"caniuse-lite": "^1.0.30001684",
 		"codemirror": "^6.0.1",
 		"crc-32": "^1.2.2",
 		"dayjs": "^1.11.10",

@@ -24,8 +24,24 @@ export const getModels = async (token: string = '', base: boolean = false) => {
 		throw error;
 	}
 
+<<<<<<< HEAD
+	// Return only the Cicero model in the format expected by the store
+	return [{
+		id: 'arthrod/cicerollamatry8',
+		name: 'Cicero-Pt-BR',
+		object: 'model',
+		created: 1677649963,
+		owned_by: 'vllm',
+		info: {
+			meta: {
+				tags: []
+			}
+		}
+	}];
+=======
 	let models = res?.data ?? [];
 	return models;
+>>>>>>> temp-main
 };
 
 type ChatCompletedForm = {
@@ -529,7 +545,7 @@ export const getPipelinesList = async (token: string = '') => {
 		throw error;
 	}
 
-	let pipelines = res?.data ?? [];
+	const pipelines = res?.data ?? [];
 	return pipelines;
 };
 
@@ -672,7 +688,7 @@ export const getPipelines = async (token: string, urlIdx?: string) => {
 		throw error;
 	}
 
-	let pipelines = res?.data ?? [];
+	const pipelines = res?.data ?? [];
 	return pipelines;
 };
 

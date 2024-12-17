@@ -38,5 +38,10 @@ export default {
 			}
 		}
 	},
+<<<<<<< HEAD
+	plugins: [require('@tailwindcss/typography')]
+};
+=======
 	plugins: [typography]
 };
+>>>>>>> temp-main

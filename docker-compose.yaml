@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   ollama:
     volumes:
@@ -7,28 +9,61 @@ services:
     tty: true
     restart: unless-stopped
     image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  open-webui:
+  cicero:
     build:
-      context: .
-      args:
-        OLLAMA_BASE_URL: '/ollama'
+      context: https://github.com/arthrod/cicero.git#main
       dockerfile: Dockerfile
-    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
-    container_name: open-webui
+      args:
+        - VITE_WEBUI_BASE_URL=${VITE_WEBUI_BASE_URL}
+        - VITE_WEBUI_API_BASE_URL=${VITE_WEBUI_API_BASE_URL}
+        - WEBUI_BASE_URL=${WEBUI_BASE_URL}
+        - WEBUI_API_BASE_URL=${WEBUI_API_BASE_URL}
+        - CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN}
+        - CORS_ALLOW_CREDENTIALS=${CORS_ALLOW_CREDENTIALS}
+        - OPENAI_API_BASE_URL=${OPENAI_API_BASE_URL}
+        - OPENAI_API_KEY=${OPENAI_API_KEY}
+        - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL}
+        - SCARF_NO_ANALYTICS=${SCARF_NO_ANALYTICS}
+        - DO_NOT_TRACK=${DO_NOT_TRACK}
+        - ANONYMIZED_TELEMETRY=${ANONYMIZED_TELEMETRY}
+        - OLLAMA_BASE_URL=/ollama
+    container_name: cicero
     volumes:
-      - open-webui:/app/backend/data
+      - cicero:/app/backend/data
     depends_on:
       - ollama
     ports:
-      - ${OPEN_WEBUI_PORT-3000}:8080
+      - 3080:8080
     environment:
-      - 'OLLAMA_BASE_URL=http://ollama:11434'
-      - 'WEBUI_SECRET_KEY='
+      - VITE_WEBUI_BASE_URL=${VITE_WEBUI_BASE_URL}
+      - VITE_WEBUI_API_BASE_URL=${VITE_WEBUI_API_BASE_URL}
+      - WEBUI_BASE_URL=${WEBUI_BASE_URL}
+      - WEBUI_API_BASE_URL=${WEBUI_API_BASE_URL}
+      - CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN}
+      - CORS_ALLOW_CREDENTIALS=${CORS_ALLOW_CREDENTIALS}
+      - OPENAI_API_BASE_URL=${OPENAI_API_BASE_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL}
+      - SCARF_NO_ANALYTICS=${SCARF_NO_ANALYTICS}
+      - DO_NOT_TRACK=${DO_NOT_TRACK}
+      - ANONYMIZED_TELEMETRY=${ANONYMIZED_TELEMETRY}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_SECRET_KEY=
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   ollama: {}
-  open-webui: {}
+  cicero: {}

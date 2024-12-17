@@ -7,7 +7,7 @@
 	import Marquee from './common/Marquee.svelte';
 	import SlideShow from './common/SlideShow.svelte';
 	import ArrowRightCircle from './icons/ArrowRightCircle.svelte';
-
+	import favicon from '$lib/components/icons/favicon.png';
 	export let show = true;
 	export let getStartedHandler = () => {};
 </script>
@@ -19,7 +19,7 @@
 				<div class=" self-center">
 					<img
 						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/favicon.png"
+						src={favicon}
 						class=" w-6 rounded-full"
 						alt="logo"
 					/>
