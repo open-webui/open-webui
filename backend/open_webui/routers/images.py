@@ -56,6 +56,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
         },
         "comfyui": {
             "COMFYUI_BASE_URL": request.app.state.config.COMFYUI_BASE_URL,
+            "COMFYUI_API_KEY": request.app.state.config.COMFYUI_API_KEY,
             "COMFYUI_WORKFLOW": request.app.state.config.COMFYUI_WORKFLOW,
             "COMFYUI_WORKFLOW_NODES": request.app.state.config.COMFYUI_WORKFLOW_NODES,
         },
@@ -77,6 +78,7 @@ class Automatic1111ConfigForm(BaseModel):
 
 class ComfyUIConfigForm(BaseModel):
     COMFYUI_BASE_URL: str
+    COMFYUI_API_KEY: str
     COMFYUI_WORKFLOW: str
     COMFYUI_WORKFLOW_NODES: list[dict]
 
@@ -148,6 +150,7 @@ async def update_config(
         },
         "comfyui": {
             "COMFYUI_BASE_URL": request.app.state.config.COMFYUI_BASE_URL,
+            "COMFYUI_API_KEY": request.app.state.config.COMFYUI_API_KEY,
             "COMFYUI_WORKFLOW": request.app.state.config.COMFYUI_WORKFLOW,
             "COMFYUI_WORKFLOW_NODES": request.app.state.config.COMFYUI_WORKFLOW_NODES,
         },
@@ -298,9 +301,8 @@ def get_models(request: Request, user=Depends(get_verified_user)):
             ]
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == "comfyui":
             # TODO - get models from comfyui
-            r = requests.get(
-                url=f"{request.app.state.config.COMFYUI_BASE_URL}/object_info"
-            )
+            headers = {"Authorization": f"Bearer {request.app.state.config.COMFYUI_API_KEY}"}
+            r = requests.get(url=f"{request.app.state.config.COMFYUI_BASE_URL}/object_info", headers=headers)
             info = r.json()
 
             workflow = json.loads(request.app.state.config.COMFYUI_WORKFLOW)
@@ -521,6 +523,7 @@ async def image_generations(
                 form_data,
                 user.id,
                 request.app.state.config.COMFYUI_BASE_URL,
+                request.app.state.config.COMFYUI_API_KEY,
             )
             log.debug(f"res: {res}")
 
