@@ -131,18 +131,10 @@ class OAuthManager:
         user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
         all_available_groups: list[GroupModel] = Groups.get_groups()
 
-        print(user_oauth_groups)
-        print()
-        print(user_current_groups)
-        print()
-        print(all_available_groups)
-
-
         # Remove groups that user is no longer a part of
         for group_model in user_current_groups:
             if group_model.name not in user_oauth_groups:
                 # Remove group from user
-                print(f"Found group to remove from user: {group_model.name}")
 
                 user_ids = group_model.user_ids
                 user_ids = [i for i in user_ids if i != user.id]
@@ -162,7 +154,6 @@ class OAuthManager:
         for group_model in all_available_groups:
             if group_model.name in user_oauth_groups and not any(gm.name == group_model.name for gm in user_current_groups):
                 # Add user to group
-                print(f"Found group to add to user: {group_model.name}")
 
                 user_ids = group_model.user_ids
                 user_ids.append(user.id)
@@ -313,7 +304,6 @@ class OAuthManager:
         )
 
         if auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT:
-            print("OAUTH GROUP MANAGEMENT ACTIVE\n\n\n\n\n\n\n")
             self.update_user_groups(user=user, user_data=user_data, 
                                     default_permissions=request.app.state.config.USER_PERMISSIONS)
 
