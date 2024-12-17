@@ -1003,8 +1003,6 @@ async def generate_chat_completion(
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
         payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
-    
-    log.warning(json.dumps(payload))
 
     return await post_streaming_url(
         f"{url}/api/chat",
