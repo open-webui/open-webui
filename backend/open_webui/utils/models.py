@@ -52,7 +52,7 @@ async def get_all_base_models(request: Request):
             for model in ollama_models["models"]
         ]
 
-    function_models = await get_function_models()
+    function_models = await get_function_models(request)
     models = function_models + openai_models + ollama_models
 
     return models

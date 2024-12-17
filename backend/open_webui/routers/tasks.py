@@ -186,9 +186,10 @@ async def generate_title(
     try:
         return await generate_chat_completion(request, form_data=payload, user=user)
     except Exception as e:
+        log.error("Exception occurred", exc_info=True)
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content={"detail": str(e)},
+            content={"detail": "An internal error has occurred."},
         )
 
 
@@ -248,9 +249,10 @@ async def generate_chat_tags(
     try:
         return await generate_chat_completion(request, form_data=payload, user=user)
     except Exception as e:
+        log.error(f"Error generating chat completion: {e}")
         return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"detail": str(e)},
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "An internal error has occurred."},
         )
 
 
