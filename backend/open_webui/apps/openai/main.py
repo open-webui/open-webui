@@ -255,7 +255,10 @@ def merge_models_lists(model_lists):
 
 
 async def get_all_models_responses() -> list:
-   # if not app.state.config.ENABLE_OPENAI_API:
+    # Original implementation commented out
+    # if not app.state.config.ENABLE_OPENAI_API:
+    #     return []
+    
     # Return a list with just the Cicero model
     return [{
         "object": "list",
@@ -267,10 +270,6 @@ async def get_all_models_responses() -> list:
             "owned_by": "vllm"
         }]
     }]
-
-    # Original implementation commented out below
-    # if not app.state.config.ENABLE_OPENAI_API:
-    #     return []
 
     # # Check if API KEYS length is same than API URLS length
     # num_urls = len(app.state.config.OPENAI_API_BASE_URLS)
@@ -319,14 +318,27 @@ async def get_all_models_responses() -> list:
     #                     ],
     #                 }
 
-    #                 tasks.append(asyncio.sleep(0, result=model_list))
+    #                 tasks.append(asyncio.ensure_future(asyncio.sleep(0, model_list)))
     #         else:
-    #             tasks.append(asyncio.sleep(0))
+    #             tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
 
-    # responses = await asyncio.gather(*tasks, return_exceptions=True)
-    # responses = [r for r in responses if r is not None and not isinstance(r, Exception)]
+    # responses = await asyncio.gather(*tasks)
+
+    # for idx, response in enumerate(responses):
+    #     if response:
+    #         url = app.state.config.OPENAI_API_BASE_URLS[idx]
+    #         api_config = app.state.config.OPENAI_API_CONFIGS.get(url, {})
+
+    #         prefix_id = api_config.get("prefix_id", None)
+
+    #         if prefix_id:
+    #             for model in (
+    #                 response if isinstance(response, list) else response.get("data", [])
+    #             ):
+    #                 model["id"] = f"{prefix_id}.{model['id']}"
 
     # log.debug(f"get_all_models:responses() {responses}")
+
     # return responses
 
 
@@ -368,99 +380,98 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
         "data": [
             {
                 "id": "arthrod/cicerollamatry8",
+                "name": "Cicero-Pt-BR",
                 "object": "model",
                 "created": 1677649963,
-                "owned_by": "openai"
+                "owned_by": "vllm"
             }
         ],
         "object": "list"
     }
 
     # Original implementation commented out
-    """
-    models = {
-        "data": [],
-    }
+    # models = {
+    #     "data": [],
+    # }
 
-    if url_idx is None:
-        models = await get_all_models()
-    else:
-        url = app.state.config.OPENAI_API_BASE_URLS[url_idx]
-        key = app.state.config.OPENAI_API_KEYS[url_idx]
+    # if url_idx is None:
+    #     models = await get_all_models()
+    # else:
+    #     url = app.state.config.OPENAI_API_BASE_URLS[url_idx]
+    #     key = app.state.config.OPENAI_API_KEYS[url_idx]
 
-        headers = {}
-        headers["Authorization"] = f"Bearer {key}"
-        headers["Content-Type"] = "application/json"
+    #     headers = {}
+    #     headers["Authorization"] = f"Bearer {key}"
+    #     headers["Content-Type"] = "application/json"
 
-        if ENABLE_FORWARD_USER_INFO_HEADERS:
-            headers["X-OpenWebUI-User-Name"] = user.name
-            headers["X-OpenWebUI-User-Id"] = user.id
-            headers["X-OpenWebUI-User-Email"] = user.email
-            headers["X-OpenWebUI-User-Role"] = user.role
+    #     if ENABLE_FORWARD_USER_INFO_HEADERS:
+    #         headers["X-OpenWebUI-User-Name"] = user.name
+    #         headers["X-OpenWebUI-User-Id"] = user.id
+    #         headers["X-OpenWebUI-User-Email"] = user.email
+    #         headers["X-OpenWebUI-User-Role"] = user.role
 
-        r = None
+    #     r = None
 
-        timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            try:
-                async with session.get(f"{url}/models", headers=headers) as r:
-                    if r.status != 200:
-                        # Extract response error details if available
-                        error_detail = f"HTTP Error: {r.status}"
-                        res = await r.json()
-                        if "error" in res:
-                            error_detail = f"External Error: {res['error']}"
-                        raise Exception(error_detail)
+    #     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
+    #     async with aiohttp.ClientSession(timeout=timeout) as session:
+    #         try:
+    #             async with session.get(f"{url}/models", headers=headers) as r:
+    #                 if r.status != 200:
+    #                     # Extract response error details if available
+    #                     error_detail = f"HTTP Error: {r.status}"
+    #                     res = await r.json()
+    #                     if "error" in res:
+    #                         error_detail = f"External Error: {res['error']}"
+    #                     raise Exception(error_detail)
 
-                    response_data = await r.json()
+    #                 response_data = await r.json()
 
-                    # Check if we're calling OpenAI API based on the URL
-                    if "api.openai.com" in url:
-                        # Filter models according to the specified conditions
-                        response_data["data"] = [
-                            model
-                            for model in response_data.get("data", [])
-                            if not any(
-                                name in model["id"]
-                                for name in [
-                                    "babbage",
-                                    "dall-e",
-                                    "davinci",
-                                    "embedding",
-                                    "tts",
-                                    "whisper",
-                                ]
-                            )
-                        ]
+    #                 # Check if we're calling OpenAI API based on the URL
+    #                 if "api.openai.com" in url:
+    #                     # Filter models according to the specified conditions
+    #                     response_data["data"] = [
+    #                         model
+    #                         for model in response_data.get("data", [])
+    #                         if not any(
+    #                             name in model["id"]
+    #                             for name in [
+    #                                 "babbage",
+    #                                 "dall-e",
+    #                                 "davinci",
+    #                                 "embedding",
+    #                                 "tts",
+    #                                 "whisper",
+    #                             ]
+    #                         )
+    #                     ]
 
-                    models = response_data
-            except aiohttp.ClientError as e:
-                # ClientError covers all aiohttp requests issues
-                log.exception(f"Client error: {str(e)}")
-                # Handle aiohttp-specific connection issues, timeout etc.
-                raise HTTPException(
-                    status_code=500, detail="Open WebUI: Server Connection Error"
-                )
-            except Exception as e:
-                log.exception(f"Unexpected error: {e}")
-                # Generic error handler in case parsing JSON or other steps fail
-                error_detail = f"Unexpected error: {str(e)}"
-                raise HTTPException(status_code=500, detail=error_detail)
+    #                 models = response_data
+    #         except aiohttp.ClientError as e:
+    #             # ClientError covers all aiohttp requests issues
+    #             log.exception(f"Client error: {str(e)}")
+    #             # Handle aiohttp-specific connection issues, timeout etc.
+    #             raise HTTPException(
+    #                 status_code=500, detail="Open WebUI: Server Connection Error"
+    #             )
+    #         except Exception as e:
+    #             log.exception(f"Unexpected error: {e}")
+    #             # Generic error handler in case parsing JSON or other steps fail
+    #             error_detail = f"Unexpected error: {str(e)}"
+    #             raise HTTPException(status_code=500, detail=error_detail)
 
-    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
-        # Filter models based on user access control
-        filtered_models = []
-        for model in models.get("data", []):
-            model_info = Models.get_model_by_id(model["id"])
-            if model_info:
-                if user.id == model_info.user_id or has_access(
-                    user.id, type="read", access_control=model_info.access_control
-                ):
-                    filtered_models.append(model)
-        models["data"] = filtered_models
+    # if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+    #     # Filter models based on user access control
+    #     filtered_models = []
+    #     for model in models.get("data", []):
+    #         model_info = Models.get_model_by_id(model["id"])
+    #         if model_info:
+    #             if user.id == model_info.user_id or has_access(
+    #                 user.id, type="read", access_control=model_info.access_control
+    #             ):
+    #                 filtered_models.append(model)
+    #     models["data"] = filtered_models
 
-    return models
-    """
+    # return models
 
 class ConnectionVerificationForm(BaseModel):
     url: str
