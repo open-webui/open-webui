@@ -917,7 +917,7 @@ class ChatMessage(BaseModel):
 class GenerateChatCompletionForm(BaseModel):
     model: str
     messages: list[ChatMessage]
-    format: Optional[str] = None
+    format: Optional[dict] = None
     options: Optional[dict] = None
     template: Optional[str] = None
     stream: Optional[bool] = True
@@ -1003,6 +1003,8 @@ async def generate_chat_completion(
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
         payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
+    
+    log.warning(json.dumps(payload))
 
     return await post_streaming_url(
         f"{url}/api/chat",
