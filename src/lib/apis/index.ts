@@ -24,7 +24,6 @@ export const getModels = async (token: string = '', base: boolean = false) => {
 		throw error;
 	}
 
-<<<<<<< HEAD
 	// Return only the Cicero model in the format expected by the store
 	return [{
 		id: 'arthrod/cicerollamatry8',
@@ -38,10 +37,6 @@ export const getModels = async (token: string = '', base: boolean = false) => {
 			}
 		}
 	}];
-=======
-	let models = res?.data ?? [];
-	return models;
->>>>>>> temp-main
 };
 
 type ChatCompletedForm = {
