@@ -1587,6 +1587,12 @@ COMFYUI_BASE_URL = PersistentConfig(
     os.getenv("COMFYUI_BASE_URL", ""),
 )
 
+COMFYUI_API_KEY = PersistentConfig(
+    "COMFYUI_API_KEY",
+    "image_generation.comfyui.api_key",
+    os.getenv("COMFYUI_API_KEY", ""),
+)
+
 COMFYUI_DEFAULT_WORKFLOW = """
 {
   "3": {
