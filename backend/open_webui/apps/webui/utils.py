@@ -172,4 +172,8 @@ def install_frontmatter_requirements(requirements):
             log.info(f"Installing requirement: {req}")
             subprocess.check_call([sys.executable, "-m", "pip", "install", req])
     else:
+<<<<<<< HEAD
         log.info("No requirements found in frontmatter.")
+=======
+        log.info("No requirements found in frontmatter.")
+>>>>>>> temp-main

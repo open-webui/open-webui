@@ -2,6 +2,8 @@
 	import type { Banner } from '$lib/types';
 	import { onMount, createEventDispatcher } from 'svelte';
 	import { fade } from 'svelte/transition';
+	import DOMPurify from 'dompurify';
+	import { marked } from 'marked';
 
 	const dispatch = createEventDispatcher();
 
@@ -81,7 +83,7 @@
 				</div>
 
 				<div class="flex-1 text-xs text-gray-700 dark:text-white">
-					{banner.content}
+					{@html marked.parse(DOMPurify.sanitize(banner.content))}
 				</div>
 			</div>
 

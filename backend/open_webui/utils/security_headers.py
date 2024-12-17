@@ -27,6 +27,7 @@ def set_security_headers() -> Dict[str, str]:
     - x-download-options
     - x-frame-options
     - x-permitted-cross-domain-policies
+    - content-security-policy
 
     Each environment variable is associated with a specific setter function
     that constructs the header. If the environment variable is set, the
@@ -45,6 +46,7 @@ def set_security_headers() -> Dict[str, str]:
         "XDOWNLOAD_OPTIONS": set_xdownload_options,
         "XFRAME_OPTIONS": set_xframe,
         "XPERMITTED_CROSS_DOMAIN_POLICIES": set_xpermitted_cross_domain_policies,
+        "CONTENT_SECURITY_POLICY": set_content_security_policy,
     }
 
     for env_var, setter in header_setters.items():
@@ -124,3 +126,8 @@ def set_xpermitted_cross_domain_policies(value: str):
     if not match:
         value = "none"
     return {"X-Permitted-Cross-Domain-Policies": value}
+
+
+# Set Content-Security-Policy response header
+def set_content_security_policy(value: str):
+    return {"Content-Security-Policy": value}

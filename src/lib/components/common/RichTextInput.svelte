@@ -1,22 +1,28 @@
 <script lang="ts">
 	import { marked } from 'marked';
 	import TurndownService from 'turndown';
-	const turndownService = new TurndownService();
+	const turndownService = new TurndownService({
+		codeBlockStyle: 'fenced',
+		headingStyle: 'atx'
+	});
+	turndownService.escape = (string) => string;
 
 	import { onMount, onDestroy } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 	const eventDispatch = createEventDispatcher();
 
-	import { EditorState, Plugin, TextSelection } from 'prosemirror-state';
+	import { EditorState, Plugin, PluginKey, TextSelection } from 'prosemirror-state';
+	import { Decoration, DecorationSet } from 'prosemirror-view';
 
 	import { Editor } from '@tiptap/core';
+
+	import { AIAutocompletion } from './RichTextInput/AutoCompletion.js';
 
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 	import Placeholder from '@tiptap/extension-placeholder';
 	import Highlight from '@tiptap/extension-highlight';
 	import Typography from '@tiptap/extension-typography';
 	import StarterKit from '@tiptap/starter-kit';
-
 	import { all, createLowlight } from 'lowlight';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
@@ -29,6 +35,9 @@
 	export let value = '';
 	export let id = '';
 
+	export let preserveBreaks = false;
+	export let generateAutoCompletion: Function = async () => null;
+	export let autocomplete = false;
 	export let messageInput = false;
 	export let shiftEnter = false;
 	export let largeTextAsFile = false;
@@ -117,10 +126,23 @@
 	};
 
 	onMount(async () => {
+		console.log(value);
+
+		if (preserveBreaks) {
+			turndownService.addRule('preserveBreaks', {
+				filter: 'br', // Target <br> elements
+				replacement: function (content) {
+					return '<br/>';
+				}
+			});
+		}
+
 		async function tryParse(value, attempts = 3, interval = 100) {
 			try {
 				// Try parsing the value
-				return marked.parse(value);
+				return marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
+					breaks: false
+				});
 			} catch (error) {
 				// If no attempts remain, fallback to plain text
 				if (attempts <= 1) {
@@ -144,17 +166,49 @@
 				}),
 				Highlight,
 				Typography,
-				Placeholder.configure({ placeholder })
+				Placeholder.configure({ placeholder }),
+				...(autocomplete
+					? [
+							AIAutocompletion.configure({
+								generateCompletion: async (text) => {
+									if (text.trim().length === 0) {
+										return null;
+									}
+
+									const suggestion = await generateAutoCompletion(text).catch(() => null);
+									if (!suggestion || suggestion.trim().length === 0) {
+										return null;
+									}
+
+									return suggestion;
+								}
+							})
+						]
+					: [])
 			],
 			content: content,
-			autofocus: true,
+			autofocus: messageInput ? true : false,
 			onTransaction: () => {
 				// force re-render so `editor.isActive` works as expected
 				editor = editor;
+				const newValue = turndownService
+					.turndown(
+						(preserveBreaks
+							? editor.getHTML().replace(/<p><\/p>/g, '<br/>')
+							: editor.getHTML()
+						).replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+					)
+					.replace(/\u00a0/g, ' ');
 
-				const newValue = turndownService.turndown(editor.getHTML());
 				if (value !== newValue) {
-					value = newValue; // Trigger parent updates
+					value = newValue;
+
+					// check if the node is paragraph as well
+					if (editor.isActive('paragraph')) {
+						if (value === '') {
+							editor.commands.clearContent();
+						}
+					}
 				}
 			},
 			editorProps: {
@@ -164,22 +218,21 @@
 						eventDispatch('focus', { event });
 						return false;
 					},
-					keypress: (view, event) => {
-						eventDispatch('keypress', { event });
+					keyup: (view, event) => {
+						eventDispatch('keyup', { event });
 						return false;
 					},
-
 					keydown: (view, event) => {
-						// Handle Tab Key
-						if (event.key === 'Tab') {
-							const handled = selectNextTemplate(view.state, view.dispatch);
-							if (handled) {
-								event.preventDefault();
-								return true;
-							}
-						}
-
 						if (messageInput) {
+							// Handle Tab Key
+							if (event.key === 'Tab') {
+								const handled = selectNextTemplate(view.state, view.dispatch);
+								if (handled) {
+									event.preventDefault();
+									return true;
+								}
+							}
+
 							if (event.key === 'Enter') {
 								// Check if the current selection is inside a structured block (like codeBlock or list)
 								const { state } = view;
@@ -210,22 +263,12 @@
 
 							// Handle shift + Enter for a line break
 							if (shiftEnter) {
-								if (event.key === 'Enter' && event.shiftKey) {
+								if (event.key === 'Enter' && event.shiftKey && !event.ctrlKey && !event.metaKey) {
 									editor.commands.setHardBreak(); // Insert a hard break
 									view.dispatch(view.state.tr.scrollIntoView()); // Move viewport to the cursor
 									event.preventDefault();
 									return true;
 								}
-								if (event.key === 'Enter') {
-									eventDispatch('enter', { event });
-									event.preventDefault();
-									return true;
-								}
-							}
-							if (event.key === 'Enter') {
-								eventDispatch('enter', { event });
-								event.preventDefault();
-								return true;
 							}
 						}
 						eventDispatch('keydown', { event });
@@ -279,7 +322,9 @@
 			}
 		});
 
-		selectTemplate();
+		if (messageInput) {
+			selectTemplate();
+		}
 	});
 
 	onDestroy(() => {
@@ -289,8 +334,23 @@
 	});
 
 	// Update the editor content if the external `value` changes
-	$: if (editor && value !== turndownService.turndown(editor.getHTML())) {
-		editor.commands.setContent(marked.parse(value)); // Update editor content
+	$: if (
+		editor &&
+		value !==
+			turndownService
+				.turndown(
+					(preserveBreaks
+						? editor.getHTML().replace(/<p><\/p>/g, '<br/>')
+						: editor.getHTML()
+					).replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+				)
+				.replace(/\u00a0/g, ' ')
+	) {
+		editor.commands.setContent(
+			marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
+				breaks: false
+			})
+		); // Update editor content
 		selectTemplate();
 	}
 </script>

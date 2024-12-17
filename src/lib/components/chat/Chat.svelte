@@ -760,11 +760,10 @@
 		await tick();
 
 		// Reset chat input textarea
-		const chatInputContainer = document.getElementById('chat-input-container');
+		const chatInputElement = document.getElementById('chat-input');
 
-		if (chatInputContainer) {
-			chatInputContainer.value = '';
-			chatInputContainer.style.height = '';
+		if (chatInputElement) {
+			chatInputElement.style.height = '';
 		}
 
 		const _files = JSON.parse(JSON.stringify(files));
@@ -1554,7 +1553,7 @@ if ($settings.responseAutoCopy) {
 				}
 			);
 
-			return title;
+			return title ? title : (lastUserMessage?.content ?? 'New Chat');
 		} else {
 			return lastUserMessage?.content ?? 'New Chat';
 		}
@@ -1860,7 +1859,7 @@ if ($settings.responseAutoCopy) {
 							</div>
 						</div>
 
-						<div class=" pb-[1.6rem]">
+						<div class=" pb-[1rem]">
 							<MessageInput
 								{history}
 								{selectedModels}
@@ -1885,15 +1884,19 @@ if ($settings.responseAutoCopy) {
 								on:submit={async (e) => {
 									if (e.detail) {
 										await tick();
-										submitPrompt(e.detail.replaceAll('\n\n', '\n'));
+										submitPrompt(
+											($settings?.richTextInput ?? true)
+												? e.detail.replaceAll('\n\n', '\n')
+												: e.detail
+										);
 									}
 								}}
 							/>
 
 							<div
-								class="absolute bottom-1.5 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
+								class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
 							>
-								{$i18n.t('LLMs can make mistakes. Verify important information.')}
+								<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
 							</div>
 						</div>
 					{:else}
@@ -1922,7 +1925,11 @@ if ($settings.responseAutoCopy) {
 								on:submit={async (e) => {
 									if (e.detail) {
 										await tick();
-										submitPrompt(e.detail.replaceAll('\n\n', '\n'));
+										submitPrompt(
+											($settings?.richTextInput ?? true)
+												? e.detail.replaceAll('\n\n', '\n')
+												: e.detail
+										);
 									}
 								}}
 							/>

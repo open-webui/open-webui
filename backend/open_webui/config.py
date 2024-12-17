@@ -583,6 +583,12 @@ OLLAMA_API_BASE_URL = os.environ.get(
 )
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
+if OLLAMA_BASE_URL:
+    # Remove trailing slash
+    OLLAMA_BASE_URL = (
+        OLLAMA_BASE_URL[:-1] if OLLAMA_BASE_URL.endswith("/") else OLLAMA_BASE_URL
+    )
+
 
 K8S_FLAG = os.environ.get("K8S_FLAG", "")
 USE_OLLAMA_DOCKER = os.environ.get("USE_OLLAMA_DOCKER", "false")
@@ -696,6 +702,7 @@ ENABLE_LOGIN_FORM = PersistentConfig(
     os.environ.get("ENABLE_LOGIN_FORM", "True").lower() == "true",
 )
 
+
 DEFAULT_LOCALE = PersistentConfig(
     "DEFAULT_LOCALE",
     "ui.default_locale",
@@ -740,12 +747,17 @@ DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
     ],
 )
 
+MODEL_ORDER_LIST = PersistentConfig(
+    "MODEL_ORDER_LIST",
+    "ui.model_order_list",
+    [],
+)
+
 DEFAULT_USER_ROLE = PersistentConfig(
     "DEFAULT_USER_ROLE",
     "ui.default_user_role",
     os.getenv("DEFAULT_USER_ROLE", "pending"),
 )
-
 
 USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS = (
     os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS", "False").lower()
@@ -969,19 +981,20 @@ QUERY_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
 )
 
 DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE = """### Task:
-Based on the chat history, determine whether a search is necessary, and if so, generate a 1-3 broad search queries to retrieve comprehensive and updated information. If no search is required, return an empty list.
+Analyze the chat history to determine the necessity of generating search queries, in the given language. By default, **prioritize generating 1-3 broad and relevant search queries** unless it is absolutely certain that no additional information is required. The aim is to retrieve comprehensive, updated, and valuable information even with minimal uncertainty. If no search is unequivocally needed, return an empty list.
 
 ### Guidelines:
-- Respond exclusively with a JSON object.
-- If a search query is needed, return an object like: { "queries": ["query1", "query2"] } where each query is distinct and concise.
-- If no search query is necessary, output should be: { "queries": [] }
-- Default to suggesting a search query to ensure accurate and updated information, unless it is definitively clear no search is required.
-- Be concise, focusing strictly on composing search queries with no additional commentary or text.
-- When in doubt, prefer to suggest a search for comprehensiveness.
-- Today's date is: {{CURRENT_DATE}}
+- Respond **EXCLUSIVELY** with a JSON object. Any form of extra commentary, explanation, or additional text is strictly prohibited.
+- When generating search queries, respond in the format: { "queries": ["query1", "query2"] }, ensuring each query is distinct, concise, and relevant to the topic.
+- If and only if it is entirely certain that no useful results can be retrieved by a search, return: { "queries": [] }.
+- Err on the side of suggesting search queries if there is **any chance** they might provide useful or updated information.
+- Be concise and focused on composing high-quality search queries, avoiding unnecessary elaboration, commentary, or assumptions.
+- Today's date is: {{CURRENT_DATE}}.
+- Always prioritize providing actionable and broad queries that maximize informational coverage.
 
 ### Output:
-JSON format: {
+Strictly return in JSON format: 
+{
   "queries": ["query1", "query2"]
 }
 
@@ -991,6 +1004,66 @@ JSON format: {
 </chat_history>
 """
 
+ENABLE_AUTOCOMPLETE_GENERATION = PersistentConfig(
+    "ENABLE_AUTOCOMPLETE_GENERATION",
+    "task.autocomplete.enable",
+    os.environ.get("ENABLE_AUTOCOMPLETE_GENERATION", "True").lower() == "true",
+)
+
+AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = PersistentConfig(
+    "AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH",
+    "task.autocomplete.input_max_length",
+    int(os.environ.get("AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH", "-1")),
+)
+
+AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE",
+    "task.autocomplete.prompt_template",
+    os.environ.get("AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE", ""),
+)
+
+
+DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = """### Task:
+You are an autocompletion system. Continue the text in `<text>` based on the **completion type** in `<type>` and the given language.  
+
+### **Instructions**:
+1. Analyze `<text>` for context and meaning.  
+2. Use `<type>` to guide your output:  
+   - **General**: Provide a natural, concise continuation.  
+   - **Search Query**: Complete as if generating a realistic search query.  
+3. Start as if you are directly continuing `<text>`. Do **not** repeat, paraphrase, or respond as a model. Simply complete the text.  
+4. Ensure the continuation:
+   - Flows naturally from `<text>`.  
+   - Avoids repetition, overexplaining, or unrelated ideas.  
+5. If unsure, return: `{ "text": "" }`.  
+
+### **Output Rules**:
+- Respond only in JSON format: `{ "text": "<your_completion>" }`.
+
+### **Examples**:
+#### Example 1:  
+Input:  
+<type>General</type>  
+<text>The sun was setting over the horizon, painting the sky</text>  
+Output:  
+{ "text": "with vibrant shades of orange and pink." }
+
+#### Example 2:  
+Input:  
+<type>Search Query</type>  
+<text>Top-rated restaurants in</text>  
+Output:  
+{ "text": "New York City for Italian cuisine." }  
+
+---
+### Context:
+<chat_history>
+{{MESSAGES:END:6}}
+</chat_history>
+<type>{{TYPE}}</type>  
+<text>{{PROMPT}}</text>  
+#### Output:
+"""
 
 TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
     "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE",
@@ -1250,6 +1323,12 @@ YOUTUBE_LOADER_LANGUAGE = PersistentConfig(
     "YOUTUBE_LOADER_LANGUAGE",
     "rag.youtube_loader_language",
     os.getenv("YOUTUBE_LOADER_LANGUAGE", "en").split(","),
+)
+
+YOUTUBE_LOADER_PROXY_URL = PersistentConfig(
+    "YOUTUBE_LOADER_PROXY_URL",
+    "rag.youtube_loader_proxy_url",
+    os.getenv("YOUTUBE_LOADER_PROXY_URL", ""),
 )
 
 

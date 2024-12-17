@@ -97,7 +97,7 @@
 			banners.set(await getBanners(localStorage.token));
 			tools.set(await getTools(localStorage.token));
 
-			document.addEventListener('keydown', function (event) {
+			document.addEventListener('keydown', async function (event) {
 				const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
 				// Check if the Shift key is pressed
 				const isShiftPressed = event.shiftKey;
@@ -163,6 +163,18 @@
 					event.preventDefault();
 					console.log('showShortcuts');
 					document.getElementById('show-shortcuts-button')?.click();
+				}
+
+				// Check if Ctrl + Shift + ' is pressed
+				if (isCtrlPressed && isShiftPressed && event.key.toLowerCase() === `'`) {
+					event.preventDefault();
+					console.log('temporaryChat');
+					temporaryChatEnabled.set(!$temporaryChatEnabled);
+					await goto('/');
+					const newChatButton = document.getElementById('new-chat-button');
+					setTimeout(() => {
+						newChatButton?.click();
+					}, 0);
 				}
 			});
 

@@ -1,3 +1,5 @@
+import typography from '@tailwindcss/typography';
+
 /** @type {import('tailwindcss').Config} */
 export default {
 	darkMode: 'class',
@@ -36,5 +38,10 @@ export default {
 			}
 		}
 	},
+<<<<<<< HEAD
 	plugins: [require('@tailwindcss/typography')]
 };
+=======
+	plugins: [typography]
+};
+>>>>>>> temp-main

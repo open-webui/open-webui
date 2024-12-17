@@ -5,9 +5,7 @@
 	import Selector from './ModelSelector/Selector.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 
-	import { setDefaultModels } from '$lib/apis/configs';
 	import { updateUserSettings } from '$lib/apis/users';
-
 	const i18n = getContext('i18n');
 
 	export let selectedModels = [''];

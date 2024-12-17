@@ -20,7 +20,7 @@
 	let voiceInput = false;
 </script>
 
-<Modal size="full" className="h-full bg-white dark:bg-gray-900" bind:show>
+<Modal size="full" containerClassName="" className="h-full bg-white dark:bg-gray-900" bind:show>
 	<div class="absolute top-0 right-0 p-5">
 		<button
 			class="self-center dark:text-white"
@@ -67,7 +67,11 @@
 					</div>
 
 					<div class=" flex-1 w-full h-full">
-						<RichTextInput bind:value={content} placeholder={$i18n.t('Write something...')} />
+						<RichTextInput
+							bind:value={content}
+							placeholder={$i18n.t('Write something...')}
+							preserveBreaks={true}
+						/>
 					</div>
 				</div>
 			</div>
@@ -77,7 +81,7 @@
 			>
 				<div class="">
 					{#if voiceInput}
-						<div class=" max-w-full w-64">
+						<div class=" max-w-full w-full">
 							<VoiceRecording
 								bind:recording={voiceInput}
 								className="p-1"

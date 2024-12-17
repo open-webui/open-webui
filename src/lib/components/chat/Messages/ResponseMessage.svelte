@@ -656,7 +656,7 @@
 									/>
 								{/if}
 
-								{#if message.error}
+								{#if message?.error}
 									<Error content={message?.error?.content ?? message.content} />
 								{/if}
 

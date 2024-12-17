@@ -44,6 +44,10 @@
 		"title": "Spanish (Español)"
 	},
 	{
+		"code": "eu-ES",
+		"title": "Basque (Euskara)"
+	},
+	{
 		"code": "fa-IR",
 		"title": "Persian (فارسی)"
 	},
@@ -58,6 +62,10 @@
 	{
 		"code": "fr-FR",
 		"title": "French (France)"
+	},
+	{
+		"code": "el-GR",
+		"title": "Greek (Ἑλλάδα)"
 	},
 	{
 		"code": "he-IL",

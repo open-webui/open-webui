@@ -6,6 +6,8 @@
 
 	export let selectedFileId = null;
 	export let files = [];
+
+	export let small = false;
 </script>
 
 <div class=" max-h-full flex flex-col w-full">
@@ -16,6 +18,7 @@
 				colorClassName="{selectedFileId === file.id
 					? ' bg-gray-50 dark:bg-gray-850'
 					: 'bg-transparent'} hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+				{small}
 				{file}
 				name={file?.name ?? file?.meta?.name}
 				type="file"

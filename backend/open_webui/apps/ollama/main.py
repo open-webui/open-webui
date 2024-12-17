@@ -24,6 +24,7 @@ from open_webui.config import (
 from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST,
+    BYPASS_MODEL_ACCESS_CONTROL,
 )
 
 
@@ -195,7 +196,10 @@ async def post_streaming_url(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         )
 
-        api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+        parsed_url = urlparse(url)
+        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+        api_config = app.state.config.OLLAMA_API_CONFIGS.get(base_url, {})
         key = api_config.get("key", None)
 
         headers = {"Content-Type": "application/json"}
@@ -210,13 +214,13 @@ async def post_streaming_url(
         r.raise_for_status()
 
         if stream:
-            headers = dict(r.headers)
+            response_headers = dict(r.headers)
             if content_type:
-                headers["Content-Type"] = content_type
+                response_headers["Content-Type"] = content_type
             return StreamingResponse(
                 r.content,
                 status_code=r.status,
-                headers=headers,
+                headers=response_headers,
                 background=BackgroundTask(
                     cleanup_response, response=r, session=session
                 ),
@@ -324,7 +328,10 @@ async def get_ollama_tags(
     else:
         url = app.state.config.OLLAMA_BASE_URLS[url_idx]
 
-        api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+        parsed_url = urlparse(url)
+        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+        api_config = app.state.config.OLLAMA_API_CONFIGS.get(base_url, {})
         key = api_config.get("key", None)
 
         headers = {}
@@ -353,7 +360,7 @@ async def get_ollama_tags(
                 detail=error_detail,
             )
 
-    if user.role == "user":
+    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
         # Filter models based on user access control
         filtered_models = []
         for model in models.get("models", []):
@@ -525,7 +532,10 @@ async def copy_model(
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
-    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    parsed_url = urlparse(url)
+    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(base_url, {})
     key = api_config.get("key", None)
 
     headers = {"Content-Type": "application/json"}
@@ -584,7 +594,10 @@ async def delete_model(
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
-    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    parsed_url = urlparse(url)
+    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(base_url, {})
     key = api_config.get("key", None)
 
     headers = {"Content-Type": "application/json"}
@@ -635,7 +648,10 @@ async def show_model_info(form_data: ModelNameForm, user=Depends(get_verified_us
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
-    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    parsed_url = urlparse(url)
+    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(base_url, {})
     key = api_config.get("key", None)
 
     headers = {"Content-Type": "application/json"}
@@ -691,7 +707,7 @@ async def generate_embeddings(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
-    return generate_ollama_batch_embeddings(form_data, url_idx)
+    return await generate_ollama_batch_embeddings(form_data, url_idx)
 
 
 @app.post("/api/embeddings")
@@ -730,7 +746,10 @@ async def generate_ollama_embeddings(
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
-    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    parsed_url = urlparse(url)
+    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(base_url, {})
     key = api_config.get("key", None)
 
     headers = {"Content-Type": "application/json"}
@@ -797,7 +816,10 @@ async def generate_ollama_batch_embeddings(
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
-    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    parsed_url = urlparse(url)
+    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(base_url, {})
     key = api_config.get("key", None)
 
     headers = {"Content-Type": "application/json"}
@@ -974,7 +996,10 @@ async def generate_chat_completion(
     log.info(f"url: {url}")
     log.debug(f"generate_chat_completion() - 2.payload = {payload}")
 
-    api_config = app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    parsed_url = urlparse(url)
+    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+    api_config = app.state.config.OLLAMA_API_CONFIGS.get(base_url, {})
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
         payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
@@ -1043,7 +1068,7 @@ async def generate_openai_chat_completion(
             payload = apply_model_system_prompt_to_body(params, payload, user)
 
         # Check if user has access to the model
-        if user.role == "user":
+        if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
             if not (
                 user.id == model_info.user_id
                 or has_access(
@@ -1132,7 +1157,7 @@ async def get_openai_models(
                 detail=error_detail,
             )
 
-    if user.role == "user":
+    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
         # Filter models based on user access control
         filtered_models = []
         for model in models:

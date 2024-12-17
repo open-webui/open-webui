@@ -24,6 +24,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST,
     ENABLE_FORWARD_USER_INFO_HEADERS,
+    BYPASS_MODEL_ACCESS_CONTROL,
 )
 
 from open_webui.constants import ERROR_MESSAGES
@@ -446,7 +447,7 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
                 error_detail = f"Unexpected error: {str(e)}"
                 raise HTTPException(status_code=500, detail=error_detail)
 
-    if user.role == "user":
+    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
         # Filter models based on user access control
         filtered_models = []
         for model in models.get("data", []):
@@ -607,8 +608,6 @@ async def generate_chat_completion(
 
     # Convert the modified body back to JSON
     payload = json.dumps(payload)
-
-    log.debug(payload)
 
     headers = {}
     headers["Authorization"] = f"Bearer {key}"

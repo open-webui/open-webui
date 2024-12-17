@@ -90,6 +90,32 @@ def get_tools(
     return tools_dict
 
 
+def parse_description(docstring: str | None) -> str:
+    """
+    Parse a function's docstring to extract the description.
+
+    Args:
+        docstring (str): The docstring to parse.
+
+    Returns:
+        str: The description.
+    """
+
+    if not docstring:
+        return ""
+
+    lines = [line.strip() for line in docstring.strip().split("\n")]
+    description_lines: list[str] = []
+
+    for line in lines:
+        if re.match(r":param", line) or re.match(r":return", line):
+            break
+
+        description_lines.append(line)
+
+    return "\n".join(description_lines)
+
+
 def parse_docstring(docstring):
     """
     Parse a function's docstring to extract parameter descriptions in reST format.
@@ -138,6 +164,8 @@ def function_to_pydantic_model(func: Callable) -> type[BaseModel]:
     docstring = func.__doc__
     descriptions = parse_docstring(docstring)
 
+    tool_description = parse_description(docstring)
+
     field_defs = {}
     for name, param in parameters.items():
         type_hint = type_hints.get(name, Any)
@@ -148,7 +176,10 @@ def function_to_pydantic_model(func: Callable) -> type[BaseModel]:
             continue
         field_defs[name] = type_hint, Field(default_value, description=description)
 
-    return create_model(func.__name__, **field_defs)
+    model = create_model(func.__name__, **field_defs)
+    model.__doc__ = tool_description
+
+    return model
 
 
 def get_callable_attributes(tool: object) -> list[Callable]:
