@@ -301,8 +301,13 @@ def get_models(request: Request, user=Depends(get_verified_user)):
             ]
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == "comfyui":
             # TODO - get models from comfyui
-            headers = {"Authorization": f"Bearer {request.app.state.config.COMFYUI_API_KEY}"}
-            r = requests.get(url=f"{request.app.state.config.COMFYUI_BASE_URL}/object_info", headers=headers)
+            headers = {
+                "Authorization": f"Bearer {request.app.state.config.COMFYUI_API_KEY}"
+            }
+            r = requests.get(
+                url=f"{request.app.state.config.COMFYUI_BASE_URL}/object_info",
+                headers=headers,
+            )
             info = r.json()
 
             workflow = json.loads(request.app.state.config.COMFYUI_WORKFLOW)

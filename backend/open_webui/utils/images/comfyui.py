@@ -16,14 +16,16 @@ log.setLevel(SRC_LOG_LEVELS["COMFYUI"])
 default_headers = {"User-Agent": "Mozilla/5.0"}
 
 
-def queue_prompt(prompt, client_id, base_url,api_key):
+def queue_prompt(prompt, client_id, base_url, api_key):
     log.info("queue_prompt")
     p = {"prompt": prompt, "client_id": client_id}
     data = json.dumps(p).encode("utf-8")
     log.debug(f"queue_prompt data: {data}")
     try:
         req = urllib.request.Request(
-            f"{base_url}/prompt", data=data, headers={**default_headers, "Authorization": f"Bearer {api_key}"}
+            f"{base_url}/prompt",
+            data=data,
+            headers={**default_headers, "Authorization": f"Bearer {api_key}"},
         )
         response = urllib.request.urlopen(req).read()
         return json.loads(response)
@@ -37,7 +39,8 @@ def get_image(filename, subfolder, folder_type, base_url, api_key):
     data = {"filename": filename, "subfolder": subfolder, "type": folder_type}
     url_values = urllib.parse.urlencode(data)
     req = urllib.request.Request(
-        f"{base_url}/view?{url_values}", headers={**default_headers, "Authorization": f"Bearer {api_key}"}
+        f"{base_url}/view?{url_values}",
+        headers={**default_headers, "Authorization": f"Bearer {api_key}"},
     )
     with urllib.request.urlopen(req) as response:
         return response.read()
@@ -54,7 +57,8 @@ def get_history(prompt_id, base_url, api_key):
     log.info("get_history")
 
     req = urllib.request.Request(
-        f"{base_url}/history/{prompt_id}", headers={**default_headers, "Authorization": f"Bearer {api_key}"}
+        f"{base_url}/history/{prompt_id}",
+        headers={**default_headers, "Authorization": f"Bearer {api_key}"},
     )
     with urllib.request.urlopen(req) as response:
         return json.loads(response.read())
@@ -177,7 +181,9 @@ async def comfyui_generate_image(
     try:
         log.info("Sending workflow to WebSocket server.")
         log.info(f"Workflow: {workflow}")
-        images = await asyncio.to_thread(get_images, ws, workflow, client_id, base_url, api_key)
+        images = await asyncio.to_thread(
+            get_images, ws, workflow, client_id, base_url, api_key
+        )
     except Exception as e:
         log.exception(f"Error while receiving images: {e}")
         images = None

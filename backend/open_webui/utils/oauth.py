@@ -123,7 +123,7 @@ class OAuthManager:
                 role = user.role
 
         return role
-    
+
     def update_user_groups(self, user, user_data, default_permissions):
         oauth_claim = auth_manager_config.OAUTH_GROUPS_CLAIM
 
@@ -144,15 +144,21 @@ class OAuthManager:
                 if not group_permissions:
                     group_permissions = default_permissions
 
-                update_form = GroupUpdateForm(name=group_model.name, description=group_model.description, 
-                                              permissions=group_permissions,
-                                              user_ids=user_ids)
-                Groups.update_group_by_id(id=group_model.id, form_data=update_form, overwrite=False)
-
+                update_form = GroupUpdateForm(
+                    name=group_model.name,
+                    description=group_model.description,
+                    permissions=group_permissions,
+                    user_ids=user_ids,
+                )
+                Groups.update_group_by_id(
+                    id=group_model.id, form_data=update_form, overwrite=False
+                )
 
         # Add user to new groups
         for group_model in all_available_groups:
-            if group_model.name in user_oauth_groups and not any(gm.name == group_model.name for gm in user_current_groups):
+            if group_model.name in user_oauth_groups and not any(
+                gm.name == group_model.name for gm in user_current_groups
+            ):
                 # Add user to group
 
                 user_ids = group_model.user_ids
@@ -163,10 +169,15 @@ class OAuthManager:
                 if not group_permissions:
                     group_permissions = default_permissions
 
-                update_form = GroupUpdateForm(name=group_model.name, description=group_model.description, 
-                                              permissions=group_permissions,
-                                              user_ids=user_ids)
-                Groups.update_group_by_id(id=group_model.id, form_data=update_form, overwrite=False)
+                update_form = GroupUpdateForm(
+                    name=group_model.name,
+                    description=group_model.description,
+                    permissions=group_permissions,
+                    user_ids=user_ids,
+                )
+                Groups.update_group_by_id(
+                    id=group_model.id, form_data=update_form, overwrite=False
+                )
 
     async def handle_login(self, provider, request):
         if provider not in OAUTH_PROVIDERS:
@@ -304,8 +315,11 @@ class OAuthManager:
         )
 
         if auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT:
-            self.update_user_groups(user=user, user_data=user_data, 
-                                    default_permissions=request.app.state.config.USER_PERMISSIONS)
+            self.update_user_groups(
+                user=user,
+                user_data=user_data,
+                default_permissions=request.app.state.config.USER_PERMISSIONS,
+            )
 
         # Set the cookie token
         response.set_cookie(
