@@ -183,12 +183,20 @@
 			});
 		}
 	}
+
+	$: {
+		if ($showSidebar) {
+			leftPx = '260px';
+		} else {
+			leftPx = '4px';
+		}
+	}
 </script>
 
 <div
 	id="LeftArtifact"
 	class="absolute bg-gray-50 dark:bg-gray-850 flex flex-col rounded-lg shadow-lg"
-	style="bottom: 4px; left: 4px; max-height: 100svh; max-width: 260px; overflow-y: auto; z-index: 30; padding: 6px; z-index: 100;"
+	style="bottom: 4px; left: {leftPx}; max-height: 100svh; max-width: 360px; overflow-y: auto; z-index: 30; padding: 6px; z-index: 100;"
 >
 	<div class="relative flex flex-col" style="">
 		<div class="w-full h-full flex-1 relative">
