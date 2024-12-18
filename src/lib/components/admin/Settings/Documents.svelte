@@ -56,6 +56,8 @@
 	let chunkOverlap = 0;
 	let pdfExtractImages = true;
 
+	let enableGoogleDrive = false;
+
 	let OpenAIUrl = '';
 	let OpenAIKey = '';
 
@@ -175,6 +177,7 @@
 		}
 		const res = await updateRAGConfig(localStorage.token, {
 			pdf_extract_images: pdfExtractImages,
+			enable_google_drive: enableGoogleDrive,
 			file: {
 				max_size: fileMaxSize === '' ? null : fileMaxSize,
 				max_count: fileMaxCount === '' ? null : fileMaxCount
@@ -187,7 +190,7 @@
 			content_extraction: {
 				engine: contentExtractionEngine,
 				tika_server_url: tikaServerUrl
-			}
+			},
 		});
 
 		await updateQuerySettings(localStorage.token, querySettings);
@@ -245,6 +248,8 @@
 
 			fileMaxSize = res?.file.max_size ?? '';
 			fileMaxCount = res?.file.max_count ?? '';
+
+			enableGoogleDrive = res.enable_google_drive;
 		}
 	});
 </script>
@@ -571,7 +576,9 @@
 				</div>
 			</div>
 
-			{#if showTikaServerUrl}
+			<hr class=" dark:border-gray-850" />
+
+						{#if showTikaServerUrl}
 				<div class="flex w-full mt-1">
 					<div class="flex-1 mr-2">
 						<input
@@ -583,6 +590,21 @@
 				</div>
 			{/if}
 		</div>
+		
+		<div class="">
+			<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
+
+			<div class="text-sm font-medium mb-1">{$i18n.t('Google Drive')}</div>
+
+			<div class=" flex gap-1.5">
+				<div class="my-2">
+						<div class="flex justify-between items-center text-xs">{$i18n.t('Enable Google Drive')}</div>
+						<div class="flex justify-between items-center text-xs">
+							<Switch bind:state={enableGoogleDrive} />
+						</div>
+					</div>
+			</div>
+			</div>
 
 		<hr class=" dark:border-gray-850" />
 
