@@ -409,6 +409,8 @@
         "
 	data-state={$showSidebar}
 >
+	<img src="/assets/images/NBG_Logo.png" style="width: 100%; padding: 8px 16px" alt="logo" />
+
 	<div
 		class="py-2 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
 			? ''
