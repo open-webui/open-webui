@@ -36,6 +36,7 @@
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { error, text } from '@sveltejs/kit';
+	import Image from '../common/Image.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -86,6 +87,43 @@
 			top: element.scrollHeight,
 			behavior: 'smooth'
 		});
+	};
+
+	const screenCaptureHandler = async () => {
+		try {
+			// Request screen media
+			const mediaStream = await navigator.mediaDevices.getDisplayMedia({
+				video: { cursor: 'never' },
+				audio: false
+			});
+			// Once the user selects a screen, temporarily create a video element
+			const video = document.createElement('video');
+			video.srcObject = mediaStream;
+			// Ensure the video loads without affecting user experience or tab switching
+			await video.play();
+			// Set up the canvas to match the video dimensions
+			const canvas = document.createElement('canvas');
+			canvas.width = video.videoWidth;
+			canvas.height = video.videoHeight;
+			// Grab a single frame from the video stream using the canvas
+			const context = canvas.getContext('2d');
+			context.drawImage(video, 0, 0, canvas.width, canvas.height);
+			// Stop all video tracks (stop screen sharing) after capturing the image
+			mediaStream.getTracks().forEach((track) => track.stop());
+
+			// bring back focus to this current tab, so that the user can see the screen capture
+			window.focus();
+
+			// Convert the canvas to a Base64 image URL
+			const imageUrl = canvas.toDataURL('image/png');
+			// Add the captured image to the files array to render it
+			files = [...files, { type: 'image', url: imageUrl }];
+			// Clean memory: Clear video srcObject
+			video.srcObject = null;
+		} catch (error) {
+			// Handle any errors (e.g., user cancels screen sharing)
+			console.error('Error capturing screen:', error);
+		}
 	};
 
 	const uploadFileHandler = async (file, fullContext: boolean = false) => {
@@ -471,10 +509,10 @@
 											{#if file.type === 'image'}
 												<div class=" relative group">
 													<div class="relative">
-														<img
+														<Image
 															src={file.url}
 															alt="input"
-															class=" h-16 w-16 rounded-xl object-cover"
+															imageClassName=" h-16 w-16 rounded-xl object-cover"
 														/>
 														{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
 															<Tooltip
@@ -551,6 +589,7 @@
 										<InputMenu
 											bind:webSearchEnabled
 											bind:selectedToolIds
+											{screenCaptureHandler}
 											uploadFilesHandler={() => {
 												filesInputElement.click();
 											}}

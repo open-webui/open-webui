@@ -3,7 +3,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { getContext, onMount, tick } from 'svelte';
 
-	import { config, user, tools as _tools } from '$lib/stores';
+	import { config, user, tools as _tools, mobile } from '$lib/stores';
 	import { getTools } from '$lib/apis/tools';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -12,9 +12,11 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import GlobeAltSolid from '$lib/components/icons/GlobeAltSolid.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
+	import CameraSolid from '$lib/components/icons/CameraSolid.svelte';
 
 	const i18n = getContext('i18n');
 
+	export let screenCaptureHandler: Function;
 	export let uploadFilesHandler: Function;
 	export let selectedToolIds: string[] = [];
 
@@ -125,6 +127,18 @@
 				</button>
 
 				<hr class="border-black/5 dark:border-white/5 my-1" />
+			{/if}
+
+			{#if !$mobile}
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl"
+					on:click={() => {
+						screenCaptureHandler();
+					}}
+				>
+					<CameraSolid />
+					<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
+				</DropdownMenu.Item>
 			{/if}
 
 			<DropdownMenu.Item
