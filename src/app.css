@@ -1,24 +1,12 @@
 @font-face {
-	font-family: 'Inter';
-	src: url('/assets/fonts/Inter-Variable.ttf');
+	font-family: 'Work Sans';
+	src: url('/assets/fonts/WorkSans-Regular.ttf');
 	font-display: swap;
 }
 
 @font-face {
-	font-family: 'Archivo';
-	src: url('/assets/fonts/Archivo-Variable.ttf');
-	font-display: swap;
-}
-
-@font-face {
-	font-family: 'Mona Sans';
-	src: url('/assets/fonts/Mona-Sans.woff2');
-	font-display: swap;
-}
-
-@font-face {
-	font-family: 'InstrumentSerif';
-	src: url('/assets/fonts/InstrumentSerif-Regular.ttf');
+	font-family: 'Fira Code';
+	src: url('/assets/fonts/FiraCode-Regular.ttf');
 	font-display: swap;
 }
 
@@ -33,7 +21,7 @@ code {
 }
 
 .font-secondary {
-	font-family: 'InstrumentSerif', sans-serif;
+	font-family: 'Fira Code', sans-serif;
 }
 
 math {
@@ -61,7 +49,7 @@ math {
 }
 
 .font-primary {
-	font-family: 'Archivo', sans-serif;
+	font-family: 'Work Sans', sans-serif;
 }
 
 iframe {
@@ -173,7 +161,7 @@ input[type='number'] {
 }
 
 .codespan {
-	color: #eb5757;
+	color: #dedede;
 	border-width: 0px;
 	padding: 3px 8px;
 	font-size: 0.8em;
