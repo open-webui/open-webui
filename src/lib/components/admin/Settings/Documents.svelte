@@ -592,7 +592,6 @@
 		</div>
 		
 		<div class="">
-			<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 
 			<div class="text-sm font-medium mb-1">{$i18n.t('Google Drive')}</div>
 
@@ -603,7 +602,6 @@
 						<Switch bind:state={enableGoogleDrive} />
 					</div>
 				</div>
-			</div>
 			</div>
 
 		<hr class=" dark:border-gray-850" />
