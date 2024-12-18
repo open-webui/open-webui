@@ -190,7 +190,7 @@
 			content_extraction: {
 				engine: contentExtractionEngine,
 				tika_server_url: tikaServerUrl
-			},
+			}
 		});
 
 		await updateQuerySettings(localStorage.token, querySettings);
@@ -578,7 +578,7 @@
 
 			<hr class=" dark:border-gray-850" />
 
-						{#if showTikaServerUrl}
+			{#if showTikaServerUrl}
 				<div class="flex w-full mt-1">
 					<div class="flex-1 mr-2">
 						<input
@@ -590,9 +590,8 @@
 				</div>
 			{/if}
 		</div>
-		
-		<div class="">
 
+		<div class="">
 			<div class="text-sm font-medium mb-1">{$i18n.t('Google Drive')}</div>
 
 			<div class="my-2">
@@ -604,251 +603,256 @@
 				</div>
 			</div>
 
-		<hr class=" dark:border-gray-850" />
+			<hr class=" dark:border-gray-850" />
 
-		<div class=" ">
-			<div class=" text-sm font-medium mb-1">{$i18n.t('Query Params')}</div>
+			<div class=" ">
+				<div class=" text-sm font-medium mb-1">{$i18n.t('Query Params')}</div>
 
-			<div class=" flex gap-1.5">
-				<div class="flex flex-col w-full gap-1">
-					<div class=" text-xs font-medium w-full">{$i18n.t('Top K')}</div>
-
-					<div class="w-full">
-						<input
-							class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-							type="number"
-							placeholder={$i18n.t('Enter Top K')}
-							bind:value={querySettings.k}
-							autocomplete="off"
-							min="0"
-						/>
-					</div>
-				</div>
-
-				{#if querySettings.hybrid === true}
-					<div class=" flex flex-col w-full gap-1">
-						<div class="text-xs font-medium w-full">
-							{$i18n.t('Minimum Score')}
-						</div>
+				<div class=" flex gap-1.5">
+					<div class="flex flex-col w-full gap-1">
+						<div class=" text-xs font-medium w-full">{$i18n.t('Top K')}</div>
 
 						<div class="w-full">
 							<input
 								class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 								type="number"
-								step="0.01"
-								placeholder={$i18n.t('Enter Score')}
-								bind:value={querySettings.r}
+								placeholder={$i18n.t('Enter Top K')}
+								bind:value={querySettings.k}
 								autocomplete="off"
-								min="0.0"
-								title={$i18n.t('The score should be a value between 0.0 (0%) and 1.0 (100%).')}
+								min="0"
 							/>
 						</div>
 					</div>
+
+					{#if querySettings.hybrid === true}
+						<div class=" flex flex-col w-full gap-1">
+							<div class="text-xs font-medium w-full">
+								{$i18n.t('Minimum Score')}
+							</div>
+
+							<div class="w-full">
+								<input
+									class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+									type="number"
+									step="0.01"
+									placeholder={$i18n.t('Enter Score')}
+									bind:value={querySettings.r}
+									autocomplete="off"
+									min="0.0"
+									title={$i18n.t('The score should be a value between 0.0 (0%) and 1.0 (100%).')}
+								/>
+							</div>
+						</div>
+					{/if}
+				</div>
+
+				{#if querySettings.hybrid === true}
+					<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+						{$i18n.t(
+							'Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.'
+						)}
+					</div>
 				{/if}
-			</div>
 
-			{#if querySettings.hybrid === true}
-				<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-					{$i18n.t(
-						'Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.'
-					)}
-				</div>
-			{/if}
-
-			<div class="mt-2">
-				<div class=" mb-1 text-xs font-medium">{$i18n.t('RAG Template')}</div>
-				<Tooltip
-					content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
-					placement="top-start"
-				>
-					<Textarea
-						bind:value={querySettings.template}
-						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
-					/>
-				</Tooltip>
-			</div>
-		</div>
-
-		<hr class=" dark:border-gray-850" />
-
-		<div class=" ">
-			<div class="mb-1 text-sm font-medium">{$i18n.t('Chunk Params')}</div>
-
-			<div class="flex w-full justify-between mb-1.5">
-				<div class="self-center text-xs font-medium">{$i18n.t('Text Splitter')}</div>
-				<div class="flex items-center relative">
-					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 text-xs bg-transparent outline-none text-right"
-						bind:value={textSplitter}
+				<div class="mt-2">
+					<div class=" mb-1 text-xs font-medium">{$i18n.t('RAG Template')}</div>
+					<Tooltip
+						content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+						placement="top-start"
 					>
-						<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
-						<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
-					</select>
-				</div>
-			</div>
-
-			<div class=" flex gap-1.5">
-				<div class="  w-full justify-between">
-					<div class="self-center text-xs font-medium min-w-fit mb-1">{$i18n.t('Chunk Size')}</div>
-					<div class="self-center">
-						<input
-							class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-							type="number"
-							placeholder={$i18n.t('Enter Chunk Size')}
-							bind:value={chunkSize}
-							autocomplete="off"
-							min="0"
-						/>
-					</div>
-				</div>
-
-				<div class="w-full">
-					<div class=" self-center text-xs font-medium min-w-fit mb-1">
-						{$i18n.t('Chunk Overlap')}
-					</div>
-
-					<div class="self-center">
-						<input
-							class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-							type="number"
-							placeholder={$i18n.t('Enter Chunk Overlap')}
-							bind:value={chunkOverlap}
-							autocomplete="off"
-							min="0"
-						/>
-					</div>
-				</div>
-			</div>
-
-			<div class="my-2">
-				<div class="flex justify-between items-center text-xs">
-					<div class=" text-xs font-medium">{$i18n.t('PDF Extract Images (OCR)')}</div>
-
-					<div>
-						<Switch bind:state={pdfExtractImages} />
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<hr class=" dark:border-gray-850" />
-
-		<div class="">
-			<div class="text-sm font-medium mb-1">{$i18n.t('Files')}</div>
-
-			<div class=" flex gap-1.5">
-				<div class="w-full">
-					<div class=" self-center text-xs font-medium min-w-fit mb-1">
-						{$i18n.t('Max Upload Size')}
-					</div>
-
-					<div class="self-center">
-						<Tooltip
-							content={$i18n.t(
-								'The maximum file size in MB. If the file size exceeds this limit, the file will not be uploaded.'
+						<Textarea
+							bind:value={querySettings.template}
+							placeholder={$i18n.t(
+								'Leave empty to use the default prompt, or enter a custom prompt'
 							)}
-							placement="top-start"
+						/>
+					</Tooltip>
+				</div>
+			</div>
+
+			<hr class=" dark:border-gray-850" />
+
+			<div class=" ">
+				<div class="mb-1 text-sm font-medium">{$i18n.t('Chunk Params')}</div>
+
+				<div class="flex w-full justify-between mb-1.5">
+					<div class="self-center text-xs font-medium">{$i18n.t('Text Splitter')}</div>
+					<div class="flex items-center relative">
+						<select
+							class="dark:bg-gray-900 w-fit pr-8 rounded px-2 text-xs bg-transparent outline-none text-right"
+							bind:value={textSplitter}
 						>
-							<input
-								class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-								type="number"
-								placeholder={$i18n.t('Leave empty for unlimited')}
-								bind:value={fileMaxSize}
-								autocomplete="off"
-								min="0"
-							/>
-						</Tooltip>
+							<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
+							<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
+						</select>
 					</div>
 				</div>
 
-				<div class="  w-full">
-					<div class="self-center text-xs font-medium min-w-fit mb-1">
-						{$i18n.t('Max Upload Count')}
-					</div>
-					<div class="self-center">
-						<Tooltip
-							content={$i18n.t(
-								'The maximum number of files that can be used at once in chat. If the number of files exceeds this limit, the files will not be uploaded.'
-							)}
-							placement="top-start"
-						>
+				<div class=" flex gap-1.5">
+					<div class="  w-full justify-between">
+						<div class="self-center text-xs font-medium min-w-fit mb-1">
+							{$i18n.t('Chunk Size')}
+						</div>
+						<div class="self-center">
 							<input
 								class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 								type="number"
-								placeholder={$i18n.t('Leave empty for unlimited')}
-								bind:value={fileMaxCount}
+								placeholder={$i18n.t('Enter Chunk Size')}
+								bind:value={chunkSize}
 								autocomplete="off"
 								min="0"
 							/>
-						</Tooltip>
+						</div>
+					</div>
+
+					<div class="w-full">
+						<div class=" self-center text-xs font-medium min-w-fit mb-1">
+							{$i18n.t('Chunk Overlap')}
+						</div>
+
+						<div class="self-center">
+							<input
+								class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								type="number"
+								placeholder={$i18n.t('Enter Chunk Overlap')}
+								bind:value={chunkOverlap}
+								autocomplete="off"
+								min="0"
+							/>
+						</div>
+					</div>
+				</div>
+
+				<div class="my-2">
+					<div class="flex justify-between items-center text-xs">
+						<div class=" text-xs font-medium">{$i18n.t('PDF Extract Images (OCR)')}</div>
+
+						<div>
+							<Switch bind:state={pdfExtractImages} />
+						</div>
 					</div>
 				</div>
 			</div>
+
+			<hr class=" dark:border-gray-850" />
+
+			<div class="">
+				<div class="text-sm font-medium mb-1">{$i18n.t('Files')}</div>
+
+				<div class=" flex gap-1.5">
+					<div class="w-full">
+						<div class=" self-center text-xs font-medium min-w-fit mb-1">
+							{$i18n.t('Max Upload Size')}
+						</div>
+
+						<div class="self-center">
+							<Tooltip
+								content={$i18n.t(
+									'The maximum file size in MB. If the file size exceeds this limit, the file will not be uploaded.'
+								)}
+								placement="top-start"
+							>
+								<input
+									class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+									type="number"
+									placeholder={$i18n.t('Leave empty for unlimited')}
+									bind:value={fileMaxSize}
+									autocomplete="off"
+									min="0"
+								/>
+							</Tooltip>
+						</div>
+					</div>
+
+					<div class="  w-full">
+						<div class="self-center text-xs font-medium min-w-fit mb-1">
+							{$i18n.t('Max Upload Count')}
+						</div>
+						<div class="self-center">
+							<Tooltip
+								content={$i18n.t(
+									'The maximum number of files that can be used at once in chat. If the number of files exceeds this limit, the files will not be uploaded.'
+								)}
+								placement="top-start"
+							>
+								<input
+									class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+									type="number"
+									placeholder={$i18n.t('Leave empty for unlimited')}
+									bind:value={fileMaxCount}
+									autocomplete="off"
+									min="0"
+								/>
+							</Tooltip>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<hr class=" dark:border-gray-850" />
+
+			<div>
+				<button
+					class=" flex rounded-xl py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+					on:click={() => {
+						showResetUploadDirConfirm = true;
+					}}
+					type="button"
+				>
+					<div class=" self-center mr-3">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 24 24"
+							fill="currentColor"
+							class="size-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M5.625 1.5H9a3.75 3.75 0 0 1 3.75 3.75v1.875c0 1.036.84 1.875 1.875 1.875H16.5a3.75 3.75 0 0 1 3.75 3.75v7.875c0 1.035-.84 1.875-1.875 1.875H5.625a1.875 1.875 0 0 1-1.875-1.875V3.375c0-1.036.84-1.875 1.875-1.875ZM9.75 14.25a.75.75 0 0 0 0 1.5H15a.75.75 0 0 0 0-1.5H9.75Z"
+								clip-rule="evenodd"
+							/>
+							<path
+								d="M14.25 5.25a5.23 5.23 0 0 0-1.279-3.434 9.768 9.768 0 0 1 6.963 6.963A5.23 5.23 0 0 0 16.5 7.5h-1.875a.375.375 0 0 1-.375-.375V5.25Z"
+							/>
+						</svg>
+					</div>
+					<div class=" self-center text-sm font-medium">{$i18n.t('Reset Upload Directory')}</div>
+				</button>
+
+				<button
+					class=" flex rounded-xl py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+					on:click={() => {
+						showResetConfirm = true;
+					}}
+					type="button"
+				>
+					<div class=" self-center mr-3">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M3.5 2A1.5 1.5 0 0 0 2 3.5v9A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 12.5 4H9.621a1.5 1.5 0 0 1-1.06-.44L7.439 2.44A1.5 1.5 0 0 0 6.38 2H3.5Zm6.75 7.75a.75.75 0 0 0 0-1.5h-4.5a.75.75 0 0 0 0 1.5h4.5Z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</div>
+					<div class=" self-center text-sm font-medium">
+						{$i18n.t('Reset Vector Storage/Knowledge')}
+					</div>
+				</button>
+			</div>
 		</div>
-
-		<hr class=" dark:border-gray-850" />
-
-		<div>
+		<div class="flex justify-end pt-3 text-sm font-medium">
 			<button
-				class=" flex rounded-xl py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
-				on:click={() => {
-					showResetUploadDirConfirm = true;
-				}}
-				type="button"
+				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+				type="submit"
 			>
-				<div class=" self-center mr-3">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 24 24"
-						fill="currentColor"
-						class="size-4"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M5.625 1.5H9a3.75 3.75 0 0 1 3.75 3.75v1.875c0 1.036.84 1.875 1.875 1.875H16.5a3.75 3.75 0 0 1 3.75 3.75v7.875c0 1.035-.84 1.875-1.875 1.875H5.625a1.875 1.875 0 0 1-1.875-1.875V3.375c0-1.036.84-1.875 1.875-1.875ZM9.75 14.25a.75.75 0 0 0 0 1.5H15a.75.75 0 0 0 0-1.5H9.75Z"
-							clip-rule="evenodd"
-						/>
-						<path
-							d="M14.25 5.25a5.23 5.23 0 0 0-1.279-3.434 9.768 9.768 0 0 1 6.963 6.963A5.23 5.23 0 0 0 16.5 7.5h-1.875a.375.375 0 0 1-.375-.375V5.25Z"
-						/>
-					</svg>
-				</div>
-				<div class=" self-center text-sm font-medium">{$i18n.t('Reset Upload Directory')}</div>
-			</button>
-
-			<button
-				class=" flex rounded-xl py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
-				on:click={() => {
-					showResetConfirm = true;
-				}}
-				type="button"
-			>
-				<div class=" self-center mr-3">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 16 16"
-						fill="currentColor"
-						class="w-4 h-4"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M3.5 2A1.5 1.5 0 0 0 2 3.5v9A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 12.5 4H9.621a1.5 1.5 0 0 1-1.06-.44L7.439 2.44A1.5 1.5 0 0 0 6.38 2H3.5Zm6.75 7.75a.75.75 0 0 0 0-1.5h-4.5a.75.75 0 0 0 0 1.5h4.5Z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				</div>
-				<div class=" self-center text-sm font-medium">
-					{$i18n.t('Reset Vector Storage/Knowledge')}
-				</div>
+				{$i18n.t('Save')}
 			</button>
 		</div>
-	</div>
-	<div class="flex justify-end pt-3 text-sm font-medium">
-		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-			type="submit"
-		>
-			{$i18n.t('Save')}
-		</button>
 	</div>
 </form>
