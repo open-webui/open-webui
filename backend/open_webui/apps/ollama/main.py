@@ -24,6 +24,7 @@ from open_webui.config import (
 from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST,
+    BYPASS_MODEL_ACCESS_CONTROL,
 )
 
 
@@ -359,7 +360,7 @@ async def get_ollama_tags(
                 detail=error_detail,
             )
 
-    if user.role == "user":
+    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
         # Filter models based on user access control
         filtered_models = []
         for model in models.get("models", []):
@@ -1067,7 +1068,7 @@ async def generate_openai_chat_completion(
             payload = apply_model_system_prompt_to_body(params, payload, user)
 
         # Check if user has access to the model
-        if user.role == "user":
+        if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
             if not (
                 user.id == model_info.user_id
                 or has_access(
@@ -1156,7 +1157,7 @@ async def get_openai_models(
                 detail=error_detail,
             )
 
-    if user.role == "user":
+    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
         # Filter models based on user access control
         filtered_models = []
         for model in models:

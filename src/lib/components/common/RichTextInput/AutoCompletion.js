@@ -136,12 +136,16 @@ export const AIAutocompletion = Extension.create({
 
 									debounceTimer = setTimeout(() => {
 										const newState = view.state;
+										const newSelection = newState.selection;
 										const newNode = newState.doc.nodeAt(currentPos);
 
-										const currentIsAtEnd =
-											newState.selection.$head.pos === newState.selection.$head.end();
 										// Check if the node still exists and is still a paragraph
-										if (newNode && newNode.type.name === 'paragraph' && currentIsAtEnd) {
+										if (
+											newNode &&
+											newNode.type.name === 'paragraph' &&
+											newSelection.$head.pos === newSelection.$head.end() &&
+											newSelection.$head.pos === currentPos + newNode.nodeSize - 1
+										) {
 											const prompt = newNode.textContent;
 
 											if (prompt.trim() !== '') {
@@ -212,29 +216,56 @@ export const AIAutocompletion = Extension.create({
 							return false;
 						},
 						// Add mousedown behavior
+						// mouseup: (view, event) => {
+						// 	const { state, dispatch } = view;
+						// 	const { selection } = state;
+						// 	const { $head } = selection;
+						// 	const node = $head.parent;
+
+						// 	// Reset debounce timer on mouse click
+						// 	clearTimeout(debounceTimer);
+
+						// 	// If a suggestion exists and the cursor moves, remove the suggestion
+						// 	if (
+						// 		node.type.name === 'paragraph' &&
+						// 		node.attrs['data-suggestion'] &&
+						// 		view.state.selection.$head.pos !== view.state.selection.$head.end()
+						// 	) {
+						// 		dispatch(
+						// 			state.tr.setNodeMarkup($head.before(), null, {
+						// 				...node.attrs,
+						// 				class: null,
+						// 				'data-prompt': null,
+						// 				'data-suggestion': null
+						// 			})
+						// 		);
+						// 	}
+
+						// 	return false;
+						// }
 						mouseup: (view, event) => {
 							const { state, dispatch } = view;
-							const { selection } = state;
-							const { $head } = selection;
-							const node = $head.parent;
 
 							// Reset debounce timer on mouse click
 							clearTimeout(debounceTimer);
 
-							// If a suggestion exists and the cursor moves, remove the suggestion
-							if (
-								node.type.name === 'paragraph' &&
-								node.attrs['data-suggestion'] &&
-								view.state.selection.$head.pos !== view.state.selection.$head.end()
-							) {
-								dispatch(
-									state.tr.setNodeMarkup($head.before(), null, {
+							// Iterate over all nodes in the document
+							const tr = state.tr;
+							state.doc.descendants((node, pos) => {
+								if (node.type.name === 'paragraph' && node.attrs['data-suggestion']) {
+									// Remove suggestion from this paragraph
+									tr.setNodeMarkup(pos, null, {
 										...node.attrs,
 										class: null,
 										'data-prompt': null,
 										'data-suggestion': null
-									})
-								);
+									});
+								}
+							});
+
+							// Apply the transaction if any changes were made
+							if (tr.docChanged) {
+								dispatch(tr);
 							}
 
 							return false;

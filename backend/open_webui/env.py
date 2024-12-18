@@ -329,6 +329,9 @@ WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
 )
 WEBUI_AUTH_TRUSTED_NAME_HEADER = os.environ.get("WEBUI_AUTH_TRUSTED_NAME_HEADER", None)
 
+BYPASS_MODEL_ACCESS_CONTROL = (
+    os.environ.get("BYPASS_MODEL_ACCESS_CONTROL", "False").lower() == "true"
+)
 
 ####################################
 # WEBUI_SECRET_KEY
