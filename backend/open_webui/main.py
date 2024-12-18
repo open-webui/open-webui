@@ -951,7 +951,7 @@ async def get_app_config(request: Request):
         },
         "google_drive": {
             "client_id": GOOGLE_DRIVE_CLIENT_ID.value,
-            "api_key": GOOGLE_DRIVE_API_KEY.value
+            "api_key": GOOGLE_DRIVE_API_KEY.value,
         },
         **(
             {

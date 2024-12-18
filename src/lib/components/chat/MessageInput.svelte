@@ -630,7 +630,6 @@
 													);
 												}
 											}}
-											
 											onClose={async () => {
 												await tick();
 
