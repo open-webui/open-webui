@@ -410,11 +410,7 @@
 	data-state={$showSidebar}
 >
 	<div class="flex justify-center">
-		<img
-			src="/assets/images/NBG_Logo.png"
-			style="object-fit: cover; object-position: center; padding: 8px;"
-			alt="logo"
-		/>
+		<img src="/assets/images/logoNBG.svg" style="padding: 8px 16px;" alt="logo NBG" />
 	</div>
 
 	<div
