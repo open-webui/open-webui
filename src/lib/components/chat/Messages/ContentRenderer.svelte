@@ -7,13 +7,16 @@
 	import LightBlub from '$lib/components/icons/LightBlub.svelte';
 	import { chatId, mobile, showArtifacts, showControls, showOverview } from '$lib/stores';
 	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
+	import { stringify } from 'postcss';
 
 	export let id;
 	export let content;
 	export let model = null;
+	export let sources = null;
 
 	export let save = false;
 	export let floatingButtons = true;
+	export let onSourceClick = () => {};
 
 	let contentContainerElement;
 	let buttonsContainerElement;
@@ -129,6 +132,32 @@
 		{content}
 		{model}
 		{save}
+		sourceIds={(sources ?? []).reduce((acc, s) => {
+			let ids = [];
+			s.document.forEach((document, index) => {
+				const metadata = s.metadata?.[index];
+				const id = metadata?.source ?? 'N/A';
+
+				if (metadata?.name) {
+					ids.push(metadata.name);
+					return ids;
+				}
+
+				if (id.startsWith('http://') || id.startsWith('https://')) {
+					ids.push(id);
+				} else {
+					ids.push(s?.source?.name ?? id);
+				}
+
+				return ids;
+			});
+
+			acc = [...acc, ...ids];
+
+			// remove duplicates
+			return acc.filter((item, index) => acc.indexOf(item) === index);
+		}, [])}
+		{onSourceClick}
 		on:update={(e) => {
 			dispatch('update', e.detail);
 		}}
