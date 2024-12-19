@@ -307,6 +307,18 @@ GOOGLE_CLIENT_SECRET = PersistentConfig(
     os.environ.get("GOOGLE_CLIENT_SECRET", ""),
 )
 
+GOOGLE_DRIVE_CLIENT_ID = PersistentConfig(
+    "GOOGLE_DRIVE_CLIENT_ID",
+    "google_drive.client_id",
+    os.environ.get("GOOGLE_DRIVE_CLIENT_ID", ""),
+)
+
+GOOGLE_DRIVE_API_KEY = PersistentConfig(
+    "GOOGLE_DRIVE_API_KEY",
+    "google_drive.api_key",
+    os.environ.get("GOOGLE_DRIVE_API_KEY", ""),
+)
+
 GOOGLE_OAUTH_SCOPE = PersistentConfig(
     "GOOGLE_OAUTH_SCOPE",
     "oauth.google.scope",
@@ -1424,6 +1436,13 @@ RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
         # "wikimedia.org",
         # "wikidata.org",
     ],
+)
+
+# If configured, Google Drive will be available as an upload option.
+ENABLE_GOOGLE_DRIVE = PersistentConfig(
+    "ENABLE_GOOGLE_DRIVE",
+    "rag.drive.enable",
+    os.getenv("ENABLE_GOOGLE_DRIVE", "False").lower() == "true",
 )
 
 SEARXNG_QUERY_URL = PersistentConfig(

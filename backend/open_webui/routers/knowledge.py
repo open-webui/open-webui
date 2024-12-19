@@ -11,7 +11,12 @@ from open_webui.models.knowledge import (
 )
 from open_webui.models.files import Files, FileModel
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
-from open_webui.routers.retrieval import process_file, ProcessFileForm, process_files_batch, BatchProcessFilesForm
+from open_webui.routers.retrieval import (
+    process_file,
+    ProcessFileForm,
+    process_files_batch,
+    BatchProcessFilesForm,
+)
 
 
 from open_webui.constants import ERROR_MESSAGES
@@ -519,6 +524,7 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 # AddFilesToKnowledge
 ############################
 
+
 @router.post("/{id}/files/batch/add", response_model=Optional[KnowledgeFilesResponse])
 def add_files_to_knowledge_batch(
     id: str,
@@ -555,27 +561,25 @@ def add_files_to_knowledge_batch(
 
     # Process files
     try:
-        result = process_files_batch(BatchProcessFilesForm(
-            files=files,
-            collection_name=id
-        ))
-    except Exception as e:
-        log.error(f"add_files_to_knowledge_batch: Exception occurred: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+        result = process_files_batch(
+            BatchProcessFilesForm(files=files, collection_name=id)
         )
-    
+    except Exception as e:
+        log.error(
+            f"add_files_to_knowledge_batch: Exception occurred: {e}", exc_info=True
+        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
     # Add successful files to knowledge base
     data = knowledge.data or {}
     existing_file_ids = data.get("file_ids", [])
-    
+
     # Only add files that were successfully processed
     successful_file_ids = [r.file_id for r in result.results if r.status == "completed"]
     for file_id in successful_file_ids:
         if file_id not in existing_file_ids:
             existing_file_ids.append(file_id)
-    
+
     data["file_ids"] = existing_file_ids
     knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
 
@@ -587,11 +591,10 @@ def add_files_to_knowledge_batch(
             files=Files.get_files_by_ids(existing_file_ids),
             warnings={
                 "message": "Some files failed to process",
-                "errors": error_details
-            }
+                "errors": error_details,
+            },
         )
 
     return KnowledgeFilesResponse(
-        **knowledge.model_dump(),
-        files=Files.get_files_by_ids(existing_file_ids)
+        **knowledge.model_dump(), files=Files.get_files_by_ids(existing_file_ids)
     )

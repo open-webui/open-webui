@@ -347,6 +347,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
     return {
         "status": True,
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
+        "enable_google_drive": request.app.state.config.ENABLE_GOOGLE_DRIVE,
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
@@ -369,6 +370,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "web_loader_ssl_verification": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             "search": {
                 "enabled": request.app.state.config.ENABLE_RAG_WEB_SEARCH,
+                "drive": request.app.state.config.ENABLE_GOOGLE_DRIVE,
                 "engine": request.app.state.config.RAG_WEB_SEARCH_ENGINE,
                 "searxng_query_url": request.app.state.config.SEARXNG_QUERY_URL,
                 "google_pse_api_key": request.app.state.config.GOOGLE_PSE_API_KEY,
@@ -445,6 +447,7 @@ class WebConfig(BaseModel):
 
 class ConfigUpdateForm(BaseModel):
     pdf_extract_images: Optional[bool] = None
+    enable_google_drive: Optional[bool] = None
     file: Optional[FileConfig] = None
     content_extraction: Optional[ContentExtractionConfig] = None
     chunk: Optional[ChunkParamUpdateForm] = None
@@ -460,6 +463,12 @@ async def update_rag_config(
         form_data.pdf_extract_images
         if form_data.pdf_extract_images is not None
         else request.app.state.config.PDF_EXTRACT_IMAGES
+    )
+
+    request.app.state.config.ENABLE_GOOGLE_DRIVE = (
+        form_data.enable_google_drive
+        if form_data.enable_google_drive is not None
+        else request.app.state.config.ENABLE_GOOGLE_DRIVE
     )
 
     if form_data.file is not None:

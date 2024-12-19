@@ -37007,16 +37007,14 @@
 								Pe.createElement('span', { className: 'brace-close' }, '}')
 							),
 							pe.size
-								? pe
-										.entrySeq()
-										.map(([s, o]) =>
-											Pe.createElement(xe, {
-												key: `${s}-${o}`,
-												propKey: s,
-												propVal: o,
-												propClass: 'property'
-											})
-										)
+								? pe.entrySeq().map(([s, o]) =>
+										Pe.createElement(xe, {
+											key: `${s}-${o}`,
+											propKey: s,
+											propVal: o,
+											propClass: 'property'
+										})
+									)
 								: null
 						);
 					}
@@ -37167,16 +37165,14 @@
 											)
 										: null,
 									C && z.size
-										? z
-												.entrySeq()
-												.map(([s, o]) =>
-													Pe.createElement(le, {
-														key: `${s}-${o}`,
-														propKey: s,
-														propVal: o,
-														propClass: rs
-													})
-												)
+										? z.entrySeq().map(([s, o]) =>
+												Pe.createElement(le, {
+													key: `${s}-${o}`,
+													propKey: s,
+													propVal: o,
+													propClass: rs
+												})
+											)
 										: null,
 									U ? Pe.createElement(ie, { source: U }) : null,
 									Z &&
@@ -57290,20 +57286,18 @@
 										Pe.createElement(
 											'div',
 											{ className: 'modal-ux-content' },
-											x
-												.valueSeq()
-												.map((x, j) =>
-													Pe.createElement(C, {
-														key: j,
-														AST: w,
-														definitions: x,
-														getComponent: i,
-														errSelectors: u,
-														authSelectors: s,
-														authActions: o,
-														specSelectors: _
-													})
-												)
+											x.valueSeq().map((x, j) =>
+												Pe.createElement(C, {
+													key: j,
+													AST: w,
+													definitions: x,
+													getComponent: i,
+													errSelectors: u,
+													authSelectors: s,
+													authActions: o,
+													specSelectors: _
+												})
+											)
 										)
 									)
 								)

@@ -177,10 +177,13 @@ from open_webui.config import (
     MOJEEK_SEARCH_API_KEY,
     GOOGLE_PSE_API_KEY,
     GOOGLE_PSE_ENGINE_ID,
+    GOOGLE_DRIVE_CLIENT_ID,
+    GOOGLE_DRIVE_API_KEY,
     ENABLE_RAG_HYBRID_SEARCH,
     ENABLE_RAG_LOCAL_WEB_FETCH,
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     ENABLE_RAG_WEB_SEARCH,
+    ENABLE_GOOGLE_DRIVE,
     UPLOAD_DIR,
     # WebUI
     WEBUI_AUTH,
@@ -483,6 +486,7 @@ app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
 app.state.config.RAG_WEB_SEARCH_ENGINE = RAG_WEB_SEARCH_ENGINE
 app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = RAG_WEB_SEARCH_DOMAIN_FILTER_LIST
 
+app.state.config.ENABLE_GOOGLE_DRIVE = ENABLE_GOOGLE_DRIVE
 app.state.config.SEARXNG_QUERY_URL = SEARXNG_QUERY_URL
 app.state.config.GOOGLE_PSE_API_KEY = GOOGLE_PSE_API_KEY
 app.state.config.GOOGLE_PSE_ENGINE_ID = GOOGLE_PSE_ENGINE_ID
@@ -935,6 +939,7 @@ async def get_app_config(request: Request):
             **(
                 {
                     "enable_web_search": app.state.config.ENABLE_RAG_WEB_SEARCH,
+                    "enable_google_drive": app.state.config.ENABLE_GOOGLE_DRIVE,
                     "enable_image_generation": app.state.config.ENABLE_IMAGE_GENERATION,
                     "enable_community_sharing": app.state.config.ENABLE_COMMUNITY_SHARING,
                     "enable_message_rating": app.state.config.ENABLE_MESSAGE_RATING,
@@ -944,6 +949,10 @@ async def get_app_config(request: Request):
                 if user is not None
                 else {}
             ),
+        },
+        "google_drive": {
+            "client_id": GOOGLE_DRIVE_CLIENT_ID.value,
+            "api_key": GOOGLE_DRIVE_API_KEY.value,
         },
         **(
             {
