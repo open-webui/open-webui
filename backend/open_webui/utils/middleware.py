@@ -541,7 +541,7 @@ async def process_chat_response(request, response, user, events, metadata, tasks
                 for event in events:
                     await event_emitter(
                         {
-                            "type": "chat-completion",
+                            "type": "chat:completion",
                             "data": event,
                         }
                     )
@@ -590,7 +590,7 @@ async def process_chat_response(request, response, user, events, metadata, tasks
 
                     await event_emitter(
                         {
-                            "type": "chat-completion",
+                            "type": "chat:completion",
                             "data": data,
                         }
                     )
@@ -623,7 +623,7 @@ async def process_chat_response(request, response, user, events, metadata, tasks
 
                             await event_emitter(
                                 {
-                                    "type": "chat-title",
+                                    "type": "chat:title",
                                     "data": title,
                                 }
                             )
@@ -658,7 +658,7 @@ async def process_chat_response(request, response, user, events, metadata, tasks
 
                                 await event_emitter(
                                     {
-                                        "type": "chat-tags",
+                                        "type": "chat:tags",
                                         "data": tags,
                                     }
                                 )

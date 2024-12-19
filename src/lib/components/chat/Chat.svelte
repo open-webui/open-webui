@@ -244,13 +244,13 @@
 							message.sources = [data];
 						}
 					}
-				} else if (type === 'chat-completion') {
+				} else if (type === 'chat:completion') {
 					chatCompletionEventHandler(data, message, event.chat_id);
-				} else if (type === 'chat-title') {
+				} else if (type === 'chat:title') {
 					chatTitle.set(data);
 					currentChatPage.set(1);
 					await chats.set(await getChatList(localStorage.token, $currentChatPage));
-				} else if (type === 'chat-tags') {
+				} else if (type === 'chat:tags') {
 					chat = await getChatById(localStorage.token, $chatId);
 					allTags.set(await getAllTags(localStorage.token));
 				} else if (type === 'message') {
@@ -302,6 +302,17 @@
 				}
 
 				history.messages[event.message_id] = message;
+			}
+		} else {
+			await tick();
+			const type = event?.data?.type ?? null;
+			const data = event?.data?.data ?? null;
+
+			if (type === 'chat:title') {
+				currentChatPage.set(1);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			} else if (type === 'chat:tags') {
+				allTags.set(await getAllTags(localStorage.token));
 			}
 		}
 	};
