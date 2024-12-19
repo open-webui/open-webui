@@ -183,7 +183,7 @@ from open_webui.config import (
     ENABLE_RAG_LOCAL_WEB_FETCH,
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     ENABLE_RAG_WEB_SEARCH,
-    ENABLE_GOOGLE_DRIVE,
+    ENABLE_GOOGLE_DRIVE_INTEGRATION,
     UPLOAD_DIR,
     # WebUI
     WEBUI_AUTH,
@@ -486,7 +486,7 @@ app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
 app.state.config.RAG_WEB_SEARCH_ENGINE = RAG_WEB_SEARCH_ENGINE
 app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = RAG_WEB_SEARCH_DOMAIN_FILTER_LIST
 
-app.state.config.ENABLE_GOOGLE_DRIVE = ENABLE_GOOGLE_DRIVE
+app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
 app.state.config.SEARXNG_QUERY_URL = SEARXNG_QUERY_URL
 app.state.config.GOOGLE_PSE_API_KEY = GOOGLE_PSE_API_KEY
 app.state.config.GOOGLE_PSE_ENGINE_ID = GOOGLE_PSE_ENGINE_ID
@@ -839,7 +839,18 @@ async def chat_completion(
             except Exception as e:
                 raise e
 
-        form_data, events = await process_chat_payload(request, form_data, user, model)
+        metadata = {
+            "chat_id": form_data.pop("chat_id", None),
+            "message_id": form_data.pop("id", None),
+            "session_id": form_data.pop("session_id", None),
+            "tool_ids": form_data.get("tool_ids", None),
+            "files": form_data.get("files", None),
+        }
+        form_data["metadata"] = metadata
+
+        form_data, events = await process_chat_payload(
+            request, form_data, metadata, user, model
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -850,7 +861,7 @@ async def chat_completion(
         response = await chat_completion_handler(
             request, form_data, user, bypass_filter
         )
-        return await process_chat_response(response, events)
+        return await process_chat_response(response, events, metadata)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -939,7 +950,7 @@ async def get_app_config(request: Request):
             **(
                 {
                     "enable_web_search": app.state.config.ENABLE_RAG_WEB_SEARCH,
-                    "enable_google_drive": app.state.config.ENABLE_GOOGLE_DRIVE,
+                    "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                     "enable_image_generation": app.state.config.ENABLE_IMAGE_GENERATION,
                     "enable_community_sharing": app.state.config.ENABLE_COMMUNITY_SHARING,
                     "enable_message_rating": app.state.config.ENABLE_MESSAGE_RATING,

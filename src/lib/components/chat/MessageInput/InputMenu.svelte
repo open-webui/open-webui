@@ -154,7 +154,7 @@
 				<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
 			</DropdownMenu.Item>
 
-			{#if $config?.features?.enable_google_drive}
+			{#if $config?.features?.enable_google_drive_integration}
 				<DropdownMenu.Item
 					class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 					on:click={() => {

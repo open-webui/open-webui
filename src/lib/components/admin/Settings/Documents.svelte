@@ -56,7 +56,7 @@
 	let chunkOverlap = 0;
 	let pdfExtractImages = true;
 
-	let enableGoogleDrive = false;
+	let enableGoogleDriveIntegration = false;
 
 	let OpenAIUrl = '';
 	let OpenAIKey = '';
@@ -177,7 +177,7 @@
 		}
 		const res = await updateRAGConfig(localStorage.token, {
 			pdf_extract_images: pdfExtractImages,
-			enable_google_drive: enableGoogleDrive,
+			enable_google_drive_integration: enableGoogleDriveIntegration,
 			file: {
 				max_size: fileMaxSize === '' ? null : fileMaxSize,
 				max_count: fileMaxCount === '' ? null : fileMaxCount
@@ -249,7 +249,7 @@
 			fileMaxSize = res?.file.max_size ?? '';
 			fileMaxCount = res?.file.max_count ?? '';
 
-			enableGoogleDrive = res.enable_google_drive;
+			enableGoogleDrive = res.enable_google_drive_integration;
 		}
 	});
 </script>
@@ -598,7 +598,7 @@
 				<div class="flex justify-between items-center text-xs">
 					<div class="text-xs font-medium">{$i18n.t('Enable Google Drive')}</div>
 					<div>
-						<Switch bind:state={enableGoogleDrive} />
+						<Switch bind:state={enableGoogleDriveIntegration} />
 					</div>
 				</div>
 			</div>

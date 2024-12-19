@@ -391,18 +391,9 @@ def apply_params_to_form_data(form_data, model):
     return form_data
 
 
-async def process_chat_payload(request, form_data, user, model):
+async def process_chat_payload(request, form_data, metadata, user, model):
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
-
-    metadata = {
-        "chat_id": form_data.pop("chat_id", None),
-        "message_id": form_data.pop("id", None),
-        "session_id": form_data.pop("session_id", None),
-        "tool_ids": form_data.get("tool_ids", None),
-        "files": form_data.get("files", None),
-    }
-    form_data["metadata"] = metadata
 
     extra_params = {
         "__event_emitter__": get_event_emitter(metadata),
@@ -513,7 +504,7 @@ async def process_chat_payload(request, form_data, user, model):
     return form_data, events
 
 
-async def process_chat_response(response, events):
+async def process_chat_response(response, events, metadata):
     if not isinstance(response, StreamingResponse):
         return response
 

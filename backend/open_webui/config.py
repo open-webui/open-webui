@@ -1203,6 +1203,15 @@ if VECTOR_DB == "pgvector" and not PGVECTOR_DB_URL.startswith("postgres"):
 # Information Retrieval (RAG)
 ####################################
 
+
+# If configured, Google Drive will be available as an upload option.
+ENABLE_GOOGLE_DRIVE_INTEGRATION = PersistentConfig(
+    "ENABLE_GOOGLE_DRIVE_INTEGRATION",
+    "google_drive.enable",
+    os.getenv("ENABLE_GOOGLE_DRIVE_INTEGRATION", "False").lower() == "true",
+)
+
+
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = PersistentConfig(
     "CONTENT_EXTRACTION_ENGINE",
@@ -1438,12 +1447,6 @@ RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
     ],
 )
 
-# If configured, Google Drive will be available as an upload option.
-ENABLE_GOOGLE_DRIVE = PersistentConfig(
-    "ENABLE_GOOGLE_DRIVE",
-    "rag.drive.enable",
-    os.getenv("ENABLE_GOOGLE_DRIVE", "False").lower() == "true",
-)
 
 SEARXNG_QUERY_URL = PersistentConfig(
     "SEARXNG_QUERY_URL",
