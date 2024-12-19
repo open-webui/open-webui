@@ -4,7 +4,7 @@
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
-	import { showBottomArtifacts, showControls } from '$lib/stores';
+	import { showBottomArtifacts, showControls, bottomHistory } from '$lib/stores';
 	import XMark from '../icons/XMark.svelte';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 	import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
@@ -13,7 +13,6 @@
 	import ArrowLeft from '../icons/ArrowLeft.svelte';
 
 	export let overlay = false;
-	export let history;
 	let messages = [];
 
 	let contents: Array<{ type: string; content: string }> = [];
@@ -21,8 +20,12 @@
 
 	let copied = false;
 
-	$: if (history) {
-		messages = createMessagesList(history, history.currentId);
+	// TODO
+	// if you write a lot of context in RichInputText or textarea with id chat-input, the max-height is 320px,
+	// i tried to catch this height and set the max-height of the bottom artifact to 500px - chatInputHeight
+	// but is does not change unless i close and open again the BottomArtifact. WIP!!!
+	$: if ($bottomHistory) {
+		messages = createMessagesList($bottomHistory, $bottomHistory.currentId);
 		getContents();
 	} else {
 		messages = [];
@@ -91,13 +94,7 @@
                             <meta charset="UTF-8">
                             <meta name="viewport" content="width=device-width, initial-scale=1.0">
 							<${''}style>
-								html {
-									background-color: black;
-									color: white;
-									overflow: auto;
-									height: 400px;
-								}
-
+								
 								${cssContent}
 							</${''}style>
                         </head>
@@ -159,9 +156,8 @@
 		if (bottomArtifact) {
 			const links = bottomArtifact.querySelectorAll('a'); // Select all links inside BottomArtifact
 			links.forEach((link) => {
-				console.log({ links });
 				link.addEventListener('click', (e) => {
-					if (history.messages[history.currentId].done) {
+					if ($bottomHistory.messages[$bottomHistory.currentId].done) {
 						submitHref(e); // Trigger the function when a link is clicked
 					}
 				});
@@ -173,21 +169,31 @@
 		if (bottomArtifact) {
 			const links = bottomArtifact.querySelectorAll('a'); // Select all links inside BottomArtifact
 			links.forEach((link) => {
-				console.log({ links });
 				link.addEventListener('click', (e) => {
-					if (history.messages[history.currentId].done) {
+					if ($bottomHistory.messages[$bottomHistory.currentId].done) {
 						submitHref(e); // Trigger the function when a link is clicked
 					}
 				});
 			});
 		}
 	}
+	let maxHeight = 500;
+	let chatInputHeight = 0;
+
+	$: {
+		const chatInputElement = document.getElementById('chat-input');
+		if (chatInputElement && chatInputElement.clientHeight) {
+			chatInputHeight = chatInputElement.clientHeight; // Capture the height of the input
+		}
+		maxHeight = 500 - chatInputHeight; // Recalculate maxHeight based on chat input height
+		console.log({ maxHeight, chatInputHeight, chatInputElement });
+	}
 </script>
 
 <div
-	id="BottomArtifact"
+	id="bottom-artifact"
 	class="absolute bg-gray-50 dark:bg-gray-850 z-50 w-full max-w-full flex flex-col rounded-md shadow-lg"
-	style="bottom:5px;left:5px;right:15px;max-height:50%;overflow-y:auto;padding: 6px;"
+	style="bottom:5px;left:5px;right:15px;max-height:{maxHeight}px;overflow-y:auto;padding: 6px;transition: all 0.3s ease-in-out;"
 >
 	<div class="relative flex flex-col" style="">
 		<div class="w-full h-full flex-1 relative">
@@ -200,7 +206,6 @@
 					class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
 					on:click={() => {
 						showBottomArtifacts.set(false);
-						showLeftArtifacts.set(false);
 					}}
 				>
 					<ArrowLeft className="size-3.5 text-gray-900 dark:text-white" />
@@ -214,7 +219,6 @@
 						dispatch('close');
 						showControls.set(false);
 						showBottomArtifacts.set(false);
-						showLeftArtifacts.set(false);
 					}}
 				>
 					<XMark className="size-3.5 text-gray-900 dark:text-white" />
@@ -226,7 +230,6 @@
 					{#if contents.length > 0}
 						<div
 							class="max-w-full w-full h-full"
-							style="background-color: rgba(255, 255, 255, 0.9);"
 							role="button"
 							tabindex="0"
 							on:click={() => {

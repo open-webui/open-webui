@@ -11,7 +11,9 @@
 		showArtifacts,
 		showControls,
 		showBottomArtifacts,
-		showLeftArtifacts
+		showLeftArtifacts,
+		leftHistory,
+		bottomHistory
 	} from '$lib/stores';
 	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
 	import Message from './Message.svelte';
@@ -20,7 +22,10 @@
 	export let content;
 	export let model = null;
 	export let sources = null;
-	export let history = [];
+	export let history = {
+		currentId: '',
+		messages: {}
+	};
 
 	export let save = false;
 	export let floatingButtons = true;
@@ -132,6 +137,9 @@
 			document.removeEventListener('keydown', keydownHandler);
 		}
 	});
+	console.log(1111, $leftHistory);
+	console.log(2222, $bottomHistory);
+	console.log(3333, history);
 </script>
 
 <div bind:this={contentContainerElement}>
@@ -171,31 +179,89 @@
 		}}
 		on:code={(e) => {
 			const { lang, code } = e.detail;
+			const { currentId, messages } = history;
+			const currentMessage = messages[currentId];
 
-			if (history?.messages[history.currentId].content?.includes('OpenBottomArtifact')) {
-				showBottomArtifacts.set(true);
-				showLeftArtifacts.set(false);
-				showArtifacts.set(false);
-				showControls.set(false);
-				return;
-			}
-			if (history?.messages[history.currentId].content?.includes('OpenLeftArtifact')) {
+			// Case 1: Check if the message includes 'OpenLeftArtifacts' & 'OpenBottomArtifacts'
+			if (currentId && currentMessage.content.includes('OpenAllArtifacts')) {
+				console.log('OpenAllArtifacts');
+				leftHistory.set({
+					currentId,
+					messages: {
+						...$leftHistory?.messages,
+						...Object.fromEntries(
+							Object.entries(history.messages).filter(([id, message]) =>
+								message.content.includes('OpenAllArtifacts')
+							)
+						)
+					}
+				});
+				bottomHistory.set({
+					currentId,
+					messages: {
+						...$bottomHistory?.messages,
+						...Object.fromEntries(
+							Object.entries(history.messages).filter(([id, message]) =>
+								message.content.includes('OpenAllArtifacts')
+							)
+						)
+					}
+				});
 				showLeftArtifacts.set(true);
-				showBottomArtifacts.set(false);
-				showArtifacts.set(false);
-				showControls.set(false);
-				return;
+				showBottomArtifacts.set(true);
+				showControls.set(true);
+				showArtifacts.set(true);
 			}
-			if (
+
+			// Case 2: Check if the message includes 'OpenBottomArtifacts'
+			else if (currentId && currentMessage.content.includes('OpenBottomArtifacts')) {
+				console.log('OpenBottomArtifacts only');
+				bottomHistory.set({
+					currentId,
+					messages: {
+						...$bottomHistory?.messages,
+						...Object.fromEntries(
+							Object.entries(history.messages).filter(([id, message]) =>
+								message.content.includes('OpenBottomArtifacts')
+							)
+						)
+					}
+				});
+				showBottomArtifacts.set(true);
+				showArtifacts.set(false);
+			}
+
+			// Case 3: Check if the message includes 'OpenLeftArtifacts'
+			else if (currentId && currentMessage.content.includes('OpenLeftArtifacts')) {
+				console.log('OpenLeftArtifacts only');
+				leftHistory.set({
+					currentId,
+					messages: {
+						...$leftHistory?.messages,
+						...Object.fromEntries(
+							Object.entries(history.messages).filter(([id, message]) =>
+								message.content.includes('OpenLeftArtifacts')
+							)
+						)
+					}
+				});
+				showLeftArtifacts.set(true);
+				showArtifacts.set(false);
+			}
+
+			// Case 4: Handle html, svg, and xml content for artifacts
+			else if (
+				currentId &&
 				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
 				!$mobile &&
-				$chatId
+				$chatId &&
+				currentMessage.parentId &&
+				currentMessage.done
 			) {
+				console.log('HTML, SVG, XML content');
 				showBottomArtifacts.set(false);
 				showLeftArtifacts.set(false);
 				showArtifacts.set(true);
-				showControls.set(true);
-				return;
 			}
 		}}
 	/>

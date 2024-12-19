@@ -2234,7 +2234,7 @@
 		>
 			{#if $showLeftArtifacts}
 				<div id="LeftArtifact">
-					<LeftArtifact {history} />
+					<LeftArtifact />
 				</div>
 			{/if}
 			<Pane defaultSize={50} class="h-full flex w-full relative">
@@ -2295,7 +2295,7 @@
 						</div>
 						<div
 							class="flex flex-col justify-start"
-							style={$showBottomArtifacts ? 'height: 65%;' : ''}
+							style={$showBottomArtifacts ? 'height: 65%;' : 'auto'}
 						>
 							<MessageInput
 								{history}
@@ -2331,7 +2331,7 @@
 							/>
 							{#if $showBottomArtifacts}
 								<div id="BottomArtifact">
-									<BottomArtifacts {history} />
+									<BottomArtifacts />
 								</div>
 							{/if}
 							<br />

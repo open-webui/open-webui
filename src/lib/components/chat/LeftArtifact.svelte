@@ -4,7 +4,7 @@
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
-	import { showLeftArtifacts, showSidebar } from '$lib/stores';
+	import { showLeftArtifacts, showSidebar, leftHistory } from '$lib/stores';
 	import XMark from '../icons/XMark.svelte';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 	import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
@@ -13,7 +13,6 @@
 	import ArrowLeft from '../icons/ArrowLeft.svelte';
 
 	export let overlay = false;
-	export let history;
 	let messages = [];
 	let leftPx = '10px';
 
@@ -22,8 +21,8 @@
 
 	let copied = false;
 	4;
-	$: if (history) {
-		messages = createMessagesList(history, history.currentId);
+	$: if ($leftHistory) {
+		messages = createMessagesList($leftHistory, $leftHistory.currentId);
 		getContents();
 	} else {
 		messages = [];
@@ -92,13 +91,6 @@
                             <meta charset="UTF-8">
                             <meta name="viewport" content="width=device-width, initial-scale=1.0">
 							<${''}style>
-								html {
-									background-color: black;
-									color: white;
-									overflow: auto;
-									height: 400px;
-								}
-
 								${cssContent}
 							</${''}style>
                         </head>
@@ -162,7 +154,7 @@
 			links.forEach((link) => {
 				console.log({ links });
 				link.addEventListener('click', (e) => {
-					if (history.messages[history.currentId].done) {
+					if ($leftHistory.messages[$leftHistory.currentId].done) {
 						submitHref(e); // Trigger the function when a link is clicked
 					}
 				});
@@ -176,7 +168,7 @@
 			links.forEach((link) => {
 				console.log({ links });
 				link.addEventListener('click', (e) => {
-					if (history.messages[history.currentId].done) {
+					if ($leftHistory.messages[$leftHistory.currentId].done) {
 						submitHref(e); // Trigger the function when a link is clicked
 					}
 				});
@@ -196,7 +188,7 @@
 <div
 	id="LeftArtifact"
 	class="absolute bg-gray-50 dark:bg-gray-850 flex flex-col rounded-lg shadow-lg"
-	style="bottom: 4px; left: {leftPx}; max-height: 100svh; max-width: 360px; overflow-y: auto; z-index: 30; padding: 6px; z-index: 100;"
+	style="bottom: 4px; left: {leftPx}; max-height: 100svh; max-width: 360px; overflow-y: auto; z-index: 2; padding: 6px;"
 >
 	<div class="relative flex flex-col" style="">
 		<div class="w-full h-full flex-1 relative">
@@ -208,7 +200,6 @@
 				<button
 					class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
 					on:click={() => {
-						showLeftArtifacts.set(false);
 						showLeftArtifacts.set(false);
 					}}
 				>
@@ -222,7 +213,6 @@
 					on:click={() => {
 						dispatch('close');
 						showLeftArtifacts.set(false);
-						showLeftArtifacts.set(false);
 					}}
 				>
 					<XMark className="size-3.5 text-gray-900 dark:text-white" />
@@ -234,7 +224,7 @@
 					{#if contents.length > 0}
 						<div
 							class="max-w-full w-full h-full"
-							style="background-color: rgba(255, 255, 255, 0.9);padding-top: 40px"
+							style="padding-top: 40px"
 							role="button"
 							tabindex="0"
 							on:click={() => {
