@@ -198,6 +198,13 @@ class ChatTable:
             self.add_chat_tag_by_id_and_user_id_and_tag_name(id, user.id, tag_name)
         return self.get_chat_by_id(id)
 
+    def get_chat_title_by_id(self, id: str) -> Optional[str]:
+        chat = self.get_chat_by_id(id)
+        if chat is None:
+            return None
+
+        return chat.chat.get("title", "New Chat")
+
     def get_messages_by_chat_id(self, id: str) -> Optional[dict]:
         chat = self.get_chat_by_id(id)
         if chat is None:

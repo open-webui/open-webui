@@ -219,5 +219,5 @@
 				: 'light'
 			: 'light'}
 	richColors
-	position="top-center"
+	position="top-right"
 />

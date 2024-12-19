@@ -79,6 +79,7 @@
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
 	import { getTools } from '$lib/apis/tools';
+	import NotificationToast from '../NotificationToast.svelte';
 
 	export let chatIdProp = '';
 
@@ -308,7 +309,23 @@
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
 
-			if (type === 'chat:title') {
+			if (type === 'chat:completion') {
+				const { done, content, title } = data;
+
+				if (done) {
+					toast.custom(NotificationToast, {
+						componentProps: {
+							onClick: () => {
+								goto(`/c/${event.chat_id}`);
+							},
+							content: content,
+							title: title
+						},
+						duration: 15000,
+						unstyled: true
+					});
+				}
+			} else if (type === 'chat:title') {
 				currentChatPage.set(1);
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			} else if (type === 'chat:tags') {
