@@ -933,7 +933,7 @@ async def get_app_config(request: Request):
             "enable_api_key": app.state.config.ENABLE_API_KEY,
             "enable_signup": app.state.config.ENABLE_SIGNUP,
             "enable_login_form": app.state.config.ENABLE_LOGIN_FORM,
-            "disable_websocket_polling": ENABLE_WEBSOCKET_SUPPORT,
+            "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
             **(
                 {
                     "enable_web_search": app.state.config.ENABLE_RAG_WEB_SEARCH,
