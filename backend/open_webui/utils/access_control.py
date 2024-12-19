@@ -1,5 +1,5 @@
 from typing import Optional, Union, List, Dict, Any
-from open_webui.apps.webui.models.groups import Groups
+from open_webui.models.groups import Groups
 import json
 
 

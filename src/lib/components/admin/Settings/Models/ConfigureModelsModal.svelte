@@ -18,7 +18,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 
 	export let show = false;
-	export let init = () => {};
+	export let initHandler = () => {};
 
 	let config = null;
 
@@ -29,26 +29,11 @@
 	let loading = false;
 	let showResetModal = false;
 
-	const submitHandler = async () => {
-		loading = true;
+	$: if (show) {
+		init();
+	}
 
-		const res = await setModelsConfig(localStorage.token, {
-			DEFAULT_MODELS: defaultModelIds.join(','),
-			MODEL_ORDER_LIST: modelIds
-		});
-
-		if (res) {
-			toast.success($i18n.t('Models configuration saved successfully'));
-			init();
-			show = false;
-		} else {
-			toast.error($i18n.t('Failed to save models configuration'));
-		}
-
-		loading = false;
-	};
-
-	onMount(async () => {
+	const init = async () => {
 		config = await getModelsConfig(localStorage.token);
 
 		if (config?.DEFAULT_MODELS) {
@@ -68,6 +53,28 @@
 			// Add remaining IDs not in MODEL_ORDER_LIST, sorted alphabetically
 			...allModelIds.filter((id) => !orderedSet.has(id)).sort((a, b) => a.localeCompare(b))
 		];
+	};
+	const submitHandler = async () => {
+		loading = true;
+
+		const res = await setModelsConfig(localStorage.token, {
+			DEFAULT_MODELS: defaultModelIds.join(','),
+			MODEL_ORDER_LIST: modelIds
+		});
+
+		if (res) {
+			toast.success($i18n.t('Models configuration saved successfully'));
+			initHandler();
+			show = false;
+		} else {
+			toast.error($i18n.t('Failed to save models configuration'));
+		}
+
+		loading = false;
+	};
+
+	onMount(async () => {
+		init();
 	});
 </script>
 
@@ -79,7 +86,7 @@
 		const res = deleteAllModels(localStorage.token);
 		if (res) {
 			toast.success($i18n.t('All models deleted successfully'));
-			init();
+			initHandler();
 		}
 	}}
 />
