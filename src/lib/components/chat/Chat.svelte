@@ -12,7 +12,7 @@
 
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import {
 		chatId,
@@ -79,6 +79,9 @@
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
 	import { getTools } from '$lib/apis/tools';
+	import { uploadFile } from '$lib/apis/files';
+
+	import { openDB } from 'idb';
 
 	export let chatIdProp = '';
 
@@ -673,6 +676,24 @@
 
 		chatFiles = [];
 		params = {};
+
+		// Check if PWA
+		if (window.matchMedia('(display-mode: standalone)').matches) {
+			// check if the share indexdb is available
+			const shareDB = await openDB('share', 1, {
+				upgrade(db) {
+					db.createObjectStore('share');
+				}
+			});
+
+			// check if the share indexdb is available
+			const shareData = await shareDB.get('share', 'share');
+
+			if (shareData) {
+				await handleShare(shareData);
+				await shareDB.delete('share', 'share');
+			}
+		}
 
 		if ($page.url.searchParams.get('youtube')) {
 			uploadYoutubeTranscription(
@@ -1799,6 +1820,112 @@
 			}
 		}
 	};
+
+	interface ShareData {
+		images?: any[];
+		documents?: any[];
+		description?: string;
+		link?: string;
+		title?: string;
+	}
+
+	async function addDocument(document: { name: string; type: string; size: number; data: string }) {
+		const tempItemId = uuidv4();
+		const fullContext = true;
+
+		const fileItem = {
+			type: 'file',
+			file: '',
+			id: null,
+			url: '',
+			name: document.name,
+			collection_name: '',
+			status: 'uploading',
+			size: document.size,
+			error: '',
+			itemId: tempItemId,
+			...(fullContext ? { context: 'full' } : {})
+		};
+		files = [...files, fileItem];
+
+		// convert the base64 back to binary
+		const base64Data = document.data.split(',')[1];
+		const byteArray = Uint8Array.from(atob(base64Data), (char) => char.charCodeAt(0));
+
+		const file = new File([byteArray], document.name, {
+			type: document.type
+		});
+
+		// Upload using the files api
+		uploadFile(localStorage.token, file).then((uploadedFile) => {
+			if (uploadedFile) {
+				if (uploadedFile.error) {
+					toast.warning(uploadedFile.error);
+				}
+
+				fileItem.status = 'uploaded';
+				fileItem.file = uploadedFile;
+				fileItem.id = uploadedFile.id;
+				fileItem.collection_name = uploadedFile?.meta?.collection_name;
+				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+				files = files.map((item) => (item.itemId === tempItemId ? fileItem : item));
+			} else {
+				files = files.filter((item) => item?.itemId !== tempItemId);
+			}
+		});
+	}
+
+	async function handleShare(shareData: ShareData) {
+		if (shareData.images) {
+			const images = Array.isArray(shareData.images) ? shareData.images : [shareData.images];
+			files = [
+				...files,
+				...images.map((image) => ({
+					type: 'image',
+					name: image.name,
+					url: `data:${image.data}`,
+					status: 'uploaded'
+				}))
+			];
+			return;
+		}
+
+		if (shareData.documents) {
+			const documents = Array.isArray(shareData.documents)
+				? shareData.documents
+				: [shareData.documents];
+			documents.map(addDocument);
+			return;
+		}
+
+		// Handle shared URL
+		if (shareData.description && shareData.description.startsWith('http')) {
+			if (
+				shareData.description.includes('youtube.com') ||
+				shareData.description.includes('youtu.be')
+			) {
+				await uploadYoutubeTranscription(shareData.description);
+			} else {
+				await uploadWeb(shareData.description);
+			}
+			return;
+		}
+
+		// Handle shared link
+		if (shareData.link && shareData.link.startsWith('http')) {
+			await uploadWeb(shareData.link);
+			return;
+		}
+
+		// Handle all other shared text
+		if (shareData.description) {
+			//TODO could prepend the prompt with a summary explanation of the shared content
+			prompt = shareData.description;
+			await tick();
+			// Optional: Auto-submit the prompt
+			// submitPrompt(prompt);
+		}
+	}
 </script>
 
 <svelte:head>
