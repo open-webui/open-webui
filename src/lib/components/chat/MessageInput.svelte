@@ -365,9 +365,7 @@
 											class="size-3.5 max-w-[28px] object-cover rounded-full"
 											src={$models.find((model) => model.id === atSelectedModel.id)?.info?.meta
 												?.profile_image_url ??
-												($i18n.language === 'dg-DG'
-													? `/doge.png`
-													: `${WEBUI_BASE_URL}/static/favicon.png`)}
+												($i18n.language === 'dg-DG' ? `/doge.png` : `/static/favicon.png`)}
 										/>
 										<div class="translate-y-[0.5px]">
 											Talking to <span class=" font-medium">{atSelectedModel.name}</span>
