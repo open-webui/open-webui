@@ -226,9 +226,16 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
                 # Handle Unicode filenames
                 filename = file.meta.get("name", file.filename)
                 encoded_filename = quote(filename)  # RFC5987 encoding
-                headers = {
-                    "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
-                }
+
+                headers = {}
+                if file.meta.get("content_type") not in [
+                    "application/pdf",
+                    "text/plain",
+                ]:
+                    headers = {
+                        **headers,
+                        "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}",
+                    }
 
                 return FileResponse(file_path, headers=headers)
 
