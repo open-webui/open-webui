@@ -152,7 +152,7 @@ async def connect(sid, environ, auth):
         if user:
             SESSION_POOL[sid] = user.id
             if user.id in USER_POOL:
-                USER_POOL[user.id].append(sid)
+                USER_POOL[user.id] = USER_POOL[user.id] + [sid]
             else:
                 USER_POOL[user.id] = [sid]
 
@@ -179,7 +179,7 @@ async def user_join(sid, data):
 
     SESSION_POOL[sid] = user.id
     if user.id in USER_POOL:
-        USER_POOL[user.id].append(sid)
+        USER_POOL[user.id] = USER_POOL[user.id] + [sid]
     else:
         USER_POOL[user.id] = [sid]
 
