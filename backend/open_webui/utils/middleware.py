@@ -616,7 +616,7 @@ async def process_chat_response(request, response, user, events, metadata, tasks
                                 user,
                             )
 
-                            if res:
+                            if res and isinstance(res, dict):
                                 title = (
                                     res.get("choices", [])[0]
                                     .get("message", {})
@@ -648,7 +648,7 @@ async def process_chat_response(request, response, user, events, metadata, tasks
                                 user,
                             )
 
-                            if res:
+                            if res and isinstance(res, dict):
                                 tags_string = (
                                     res.get("choices", [])[0]
                                     .get("message", {})
