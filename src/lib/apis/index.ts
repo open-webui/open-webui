@@ -107,8 +107,6 @@ export const chatAction = async (token: string, action_id: string, body: ChatAct
 	return res;
 };
 
-
-
 export const stopTask = async (token: string, id: string) => {
 	let error = null;
 
@@ -140,8 +138,6 @@ export const stopTask = async (token: string, id: string) => {
 
 	return res;
 };
-
-
 
 export const getTaskConfig = async (token: string = '') => {
 	let error = null;

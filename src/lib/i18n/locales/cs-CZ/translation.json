@@ -940,7 +940,7 @@
 	"TTS Voice": "TTS hlas",
 	"Type": "Napište",
 	"Type Hugging Face Resolve (Download) URL": "Zadejte URL pro úspěšné stažení z Hugging Face.",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "Jejda! Došlo k problému s připojením k poskytovateli {{provider}}.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "UI",
 	"Unarchive All": "Odarchivovat všechny",
 	"Unarchive All Archived Chats": "",

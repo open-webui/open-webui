@@ -938,7 +938,7 @@
 	"TTS Voice": "Text-till-tal-röst",
 	"Type": "Typ",
 	"Type Hugging Face Resolve (Download) URL": "Skriv Hugging Face Resolve (nedladdning) URL",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "Oj då! Det uppstod ett problem med anslutningen till {{provider}}.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "",
 	"Unarchive All": "",
 	"Unarchive All Archived Chats": "",

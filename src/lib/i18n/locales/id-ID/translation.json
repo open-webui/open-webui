@@ -938,7 +938,7 @@
 	"TTS Voice": "Suara TTS",
 	"Type": "Ketik",
 	"Type Hugging Face Resolve (Download) URL": "Ketik Hugging Face Resolve (Unduh) URL",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "Uh-oh! Ada masalah saat menyambung ke {{provider}}.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "UI",
 	"Unarchive All": "",
 	"Unarchive All Archived Chats": "",

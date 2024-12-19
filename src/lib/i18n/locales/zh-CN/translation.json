@@ -937,7 +937,7 @@
 	"TTS Voice": "文本转语音音色",
 	"Type": "类型",
 	"Type Hugging Face Resolve (Download) URL": "输入 Hugging Face 解析（下载）URL",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "糟糕！连接到 {{provider}} 时出现问题。",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "界面",
 	"Unarchive All": "取消所有存档",
 	"Unarchive All Archived Chats": "取消所有已存档的对话",

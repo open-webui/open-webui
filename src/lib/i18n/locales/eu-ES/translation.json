@@ -938,7 +938,7 @@
 	"TTS Voice": "TTS ahotsa",
 	"Type": "Mota",
 	"Type Hugging Face Resolve (Download) URL": "Idatzi Hugging Face Resolve (Deskarga) URLa",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "Ui! Arazoa egon da {{provider}}-era konektatzean.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "Erabiltzaile interfazea",
 	"Unarchive All": "Desartxibatu guztiak",
 	"Unarchive All Archived Chats": "Desartxibatu artxibatutako txat guztiak",

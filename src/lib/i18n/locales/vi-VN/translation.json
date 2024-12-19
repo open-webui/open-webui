@@ -937,7 +937,7 @@
 	"TTS Voice": "",
 	"Type": "Kiểu",
 	"Type Hugging Face Resolve (Download) URL": "Nhập URL Hugging Face Resolve (Tải xuống)",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "Ồ! Đã xảy ra sự cố khi kết nối với {{provider}}.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "Giao diện",
 	"Unarchive All": "",
 	"Unarchive All Archived Chats": "",

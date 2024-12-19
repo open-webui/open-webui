@@ -939,7 +939,7 @@
 	"TTS Voice": "Voce TTS",
 	"Type": "Tip",
 	"Type Hugging Face Resolve (Download) URL": "Introduceți URL-ul de Rezolvare (Descărcare) Hugging Face",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "Uh-oh! A apărut o problemă la conectarea la {{provider}}.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "Interfață Utilizator",
 	"Unarchive All": "",
 	"Unarchive All Archived Chats": "",

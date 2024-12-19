@@ -938,7 +938,7 @@
 	"TTS Voice": "Φωνή TTS",
 	"Type": "Τύπος",
 	"Type Hugging Face Resolve (Download) URL": "Τύπος URL Ανάλυσης Hugging Face Resolve (Λήψη)",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "Ωχ! Υπήρξε πρόβλημα στη σύνδεση με το {{provider}}.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "Διεπαφή Χρήστη (UI)",
 	"Unarchive All": "Απο-αρχειοθέτηση Όλων",
 	"Unarchive All Archived Chats": "Απο-αρχειοθέτηση Όλων των Αρχειοθετημένων Συνομιλιών",

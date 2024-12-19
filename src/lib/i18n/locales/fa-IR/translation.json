@@ -938,7 +938,7 @@
 	"TTS Voice": "",
 	"Type": "نوع",
 	"Type Hugging Face Resolve (Download) URL": "مقدار URL دانلود (Resolve) Hugging Face را وارد کنید",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "اوه اوه! مشکلی در اتصال به {{provider}} وجود داشت.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "",
 	"Unarchive All": "",
 	"Unarchive All Archived Chats": "",

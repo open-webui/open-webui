@@ -938,7 +938,7 @@
 	"TTS Voice": "เสียงแปลงข้อความเป็นเสียง",
 	"Type": "ประเภท",
 	"Type Hugging Face Resolve (Download) URL": "พิมพ์ URL ของ Hugging Face Resolve (Download)",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "อุ๊ย! มีปัญหาในการเชื่อมต่อกับ {{provider}}",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "ส่วนติดต่อผู้ใช้",
 	"Unarchive All": "",
 	"Unarchive All Archived Chats": "",

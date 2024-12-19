@@ -938,7 +938,7 @@
 	"TTS Voice": "",
 	"Type": "",
 	"Type Hugging Face Resolve (Download) URL": "Pagsulod sa resolusyon (pag-download) URL Hugging Face",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "Uh-oh!  {{provider}}.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "",
 	"Unarchive All": "",
 	"Unarchive All Archived Chats": "",

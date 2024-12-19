@@ -938,7 +938,7 @@
 	"TTS Voice": "TTS-Stimme",
 	"Type": "Art",
 	"Type Hugging Face Resolve (Download) URL": "Geben Sie die Hugging Face Resolve-URL ein",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "Ups! Es gab ein Problem bei der Verbindung mit {{provider}}.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "Oberfläche",
 	"Unarchive All": "Alle wiederherstellen",
 	"Unarchive All Archived Chats": "Alle archivierten Unterhaltungen wiederherstellen",

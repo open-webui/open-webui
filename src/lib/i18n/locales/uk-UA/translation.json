@@ -940,7 +940,7 @@
 	"TTS Voice": "Голос TTS",
 	"Type": "Тип",
 	"Type Hugging Face Resolve (Download) URL": "Введіть URL ресурсу Hugging Face Resolve (завантаження)",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "Ой! Виникла проблема при підключенні до {{provider}}.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "Користувацький інтерфейс",
 	"Unarchive All": "Розархівувати все",
 	"Unarchive All Archived Chats": "Розархівувати всі архівовані чати",

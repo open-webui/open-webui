@@ -938,7 +938,7 @@
 	"TTS Voice": "文字轉語音 (TTS) 聲音",
 	"Type": "類型",
 	"Type Hugging Face Resolve (Download) URL": "輸入 Hugging Face 的解析（下載）URL",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "哎呀！連線到 {{provider}} 時出現問題。",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "使用者介面",
 	"Unarchive All": "解除封存全部",
 	"Unarchive All Archived Chats": "解除封存全部已封存對話",

@@ -938,7 +938,7 @@
 	"TTS Voice": "",
 	"Type": "ტიპი",
 	"Type Hugging Face Resolve (Download) URL": "სცადე გადმოწერო Hugging Face Resolve URL",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "{{provider}}-თან დაკავშირების პრობლემა წარმოიშვა.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "",
 	"Unarchive All": "",
 	"Unarchive All Archived Chats": "",

@@ -938,7 +938,7 @@
 	"TTS Voice": "ٹی ٹی ایس آواز",
 	"Type": "ٹائپ کریں",
 	"Type Hugging Face Resolve (Download) URL": "قسم ہگنگ فیس ری زولو (ڈاؤن لوڈ) یو آر ایل",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "اوہ-اوہ! {{provider}} سے جڑنے میں مسئلہ پیش آیا",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "صارف انٹرفیس",
 	"Unarchive All": "",
 	"Unarchive All Archived Chats": "",

@@ -938,7 +938,7 @@
 	"TTS Voice": "TTS hang",
 	"Type": "Típus",
 	"Type Hugging Face Resolve (Download) URL": "Adja meg a Hugging Face Resolve (Letöltési) URL-t",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "Hoppá! Probléma merült fel a {{provider}} kapcsolódás során.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "Felhasználói felület",
 	"Unarchive All": "",
 	"Unarchive All Archived Chats": "",

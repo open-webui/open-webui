@@ -940,7 +940,7 @@
 	"TTS Voice": "",
 	"Type": "",
 	"Type Hugging Face Resolve (Download) URL": "Type Hugging Face Resolve (Download) URL much download",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "Uh-oh! There was an issue connecting to {{provider}}. Much uh-oh!",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "",
 	"Unarchive All": "",
 	"Unarchive All Archived Chats": "",

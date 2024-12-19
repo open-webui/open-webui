@@ -937,7 +937,7 @@
 	"TTS Voice": "TTSボイス",
 	"Type": "種類",
 	"Type Hugging Face Resolve (Download) URL": "Hugging Face Resolve (ダウンロード) URL を入力してください",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "おっと！ {{provider}} への接続に問題が発生しました。",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "",
 	"Unarchive All": "",
 	"Unarchive All Archived Chats": "",

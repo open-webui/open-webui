@@ -939,7 +939,7 @@
 	"TTS Voice": "Voz TTS",
 	"Type": "Tipo",
 	"Type Hugging Face Resolve (Download) URL": "Digite o URL de download do Hugging Face",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "Ops! Houve um problema ao conectar-se ao {{provider}}.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "Interface",
 	"Unarchive All": "Desarquivar tudo",
 	"Unarchive All Archived Chats": "Desarquivar Todos os Chats Arquivados",

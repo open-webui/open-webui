@@ -939,7 +939,7 @@
 	"TTS Voice": "",
 	"Type": "סוג",
 	"Type Hugging Face Resolve (Download) URL": "הקלד כתובת URL של פתרון פנים מחבק (הורד)",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "או-הו! אירעה בעיה בהתחברות ל- {{provider}}.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "",
 	"Unarchive All": "",
 	"Unarchive All Archived Chats": "",

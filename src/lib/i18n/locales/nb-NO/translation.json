@@ -938,7 +938,7 @@
 	"TTS Voice": "TTS-stemme",
 	"Type": "Type",
 	"Type Hugging Face Resolve (Download) URL": "Angi nedlastings-Resolve-URL for Hugging Face",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "Oi! Det oppsto et problem med tilkobling til {{provider}}.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "UI",
 	"Unarchive All": "Opphev arkiveringen av alle",
 	"Unarchive All Archived Chats": "Opphev arkiveringen av alle arkiverte chatter",

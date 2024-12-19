@@ -938,7 +938,7 @@
 	"TTS Voice": "TTS Sesi",
 	"Type": "Tür",
 	"Type Hugging Face Resolve (Download) URL": "HuggingFace Çözümleme (İndirme) URL'sini Yazın",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "Ah! {{provider}}'a bağlanırken bir sorun oluştu.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "Arayüz",
 	"Unarchive All": "",
 	"Unarchive All Archived Chats": "",

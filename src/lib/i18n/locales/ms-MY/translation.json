@@ -938,7 +938,7 @@
 	"TTS Voice": "Suara TTS",
 	"Type": "jenis",
 	"Type Hugging Face Resolve (Download) URL": "Taip URL 'Hugging Face Resolve (Download)'",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "Maaf! Terdapat masalah menyambung ke {{provider}}.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "UI",
 	"Unarchive All": "",
 	"Unarchive All Archived Chats": "",

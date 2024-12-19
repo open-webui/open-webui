@@ -938,7 +938,7 @@
 	"TTS Voice": "Puhesynteesiääni",
 	"Type": "Tyyppi",
 	"Type Hugging Face Resolve (Download) URL": "Kirjoita Hugging Face -resolve-latausosoite",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "Voi ei! Yhteysongelma {{provider}}:n kanssa.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "Käyttöliittymä",
 	"Unarchive All": "Pura kaikkien arkistointi",
 	"Unarchive All Archived Chats": "Pura kaikkien arkistoitujen keskustelujen arkistointi",

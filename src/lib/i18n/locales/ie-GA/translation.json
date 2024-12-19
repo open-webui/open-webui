@@ -938,7 +938,7 @@
 	"TTS Voice": "Guth TTS",
 	"Type": "Cineál",
 	"Type Hugging Face Resolve (Download) URL": "Cineál Hugging Face Resolve (Íoslódáil) URL",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "Uh-oh! Bhí ceist ann ag nascadh le {{provider}}.",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "UI",
 	"Unarchive All": "Díchartlannaigh Uile",
 	"Unarchive All Archived Chats": "Díchartlannaigh Gach Comhrá Cartlainne",

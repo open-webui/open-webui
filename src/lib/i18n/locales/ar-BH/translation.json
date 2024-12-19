@@ -942,7 +942,7 @@
 	"TTS Voice": "",
 	"Type": "نوع",
 	"Type Hugging Face Resolve (Download) URL": "اكتب عنوان URL لحل مشكلة الوجه (تنزيل).",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "{{provider}}خطاء أوه! حدثت مشكلة في الاتصال بـ ",
+	"Uh-oh! There was an issue with the response.": "",
 	"UI": "",
 	"Unarchive All": "",
 	"Unarchive All Archived Chats": "",
