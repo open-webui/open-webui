@@ -1569,6 +1569,15 @@
 
 			if (res) {
 				taskId = null;
+
+				const responseMessage = history.messages[history.currentId];
+				responseMessage.done = true;
+
+				history.messages[history.currentId] = responseMessage;
+
+				if (autoScroll) {
+					scrollToBottom();
+				}
 			}
 		}
 	};
