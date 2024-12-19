@@ -65,11 +65,9 @@
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
 	import {
 		chatCompleted,
-		generateTitle,
 		generateQueries,
 		chatAction,
 		generateMoACompletion,
-		generateTags,
 		stopTask
 	} from '$lib/apis';
 
@@ -1492,14 +1490,8 @@
 			taskId = res.task_id;
 		}
 
-		// Wait until history/message have been updated
 		await tick();
 		scrollToBottom();
-
-		// 	if ($settings?.autoTags ?? true) {
-		// 		await setChatTags(messages);
-		// 	}
-		// }
 	};
 
 	const handleOpenAIError = async (error, responseMessage) => {
@@ -1664,40 +1656,6 @@
 			}
 		} catch (e) {
 			console.error(e);
-		}
-	};
-
-	const setChatTags = async (messages) => {
-		if (!$temporaryChatEnabled) {
-			const currentTags = await getTagsById(localStorage.token, $chatId);
-			if (currentTags.length > 0) {
-				const res = await deleteTagsById(localStorage.token, $chatId);
-				if (res) {
-					allTags.set(await getAllTags(localStorage.token));
-				}
-			}
-
-			const lastMessage = messages.at(-1);
-			const modelId = selectedModels[0];
-
-			let generatedTags = await generateTags(localStorage.token, modelId, messages, $chatId).catch(
-				(error) => {
-					console.error(error);
-					return [];
-				}
-			);
-
-			generatedTags = generatedTags.filter(
-				(tag) => !currentTags.find((t) => t.id === tag.replaceAll(' ', '_').toLowerCase())
-			);
-			console.log(generatedTags);
-
-			for (const tag of generatedTags) {
-				await addTagById(localStorage.token, $chatId, tag);
-			}
-
-			chat = await getChatById(localStorage.token, $chatId);
-			allTags.set(await getAllTags(localStorage.token));
 		}
 	};
 
