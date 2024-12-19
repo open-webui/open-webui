@@ -49,7 +49,6 @@ TIMEOUT_DURATION = 3
 
 # Dictionary to maintain the user pool
 
-run_cleanup = True
 if WEBSOCKET_MANAGER == "redis":
     log.debug("Using Redis to manage websockets.")
     SESSION_POOL = RedisDict("open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL)
@@ -61,18 +60,18 @@ if WEBSOCKET_MANAGER == "redis":
         lock_name="usage_cleanup_lock",
         timeout_secs=TIMEOUT_DURATION * 2,
     )
-    run_cleanup = clean_up_lock.aquire_lock()
+    aquire_func = clean_up_lock.aquire_lock
     renew_func = clean_up_lock.renew_lock
     release_func = clean_up_lock.release_lock
 else:
     SESSION_POOL = {}
     USER_POOL = {}
     USAGE_POOL = {}
-    release_func = renew_func = lambda: True
+    aquire_func = release_func = renew_func = lambda: True
 
 
 async def periodic_usage_pool_cleanup():
-    if not run_cleanup:
+    if not aquire_func():
         log.debug("Usage pool cleanup lock already exists. Not running it.")
         return
     log.debug("Running periodic_usage_pool_cleanup")
