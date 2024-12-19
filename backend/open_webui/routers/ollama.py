@@ -82,6 +82,16 @@ async def send_get_request(url, key=None):
         return None
 
 
+async def cleanup_response(
+    response: Optional[aiohttp.ClientResponse],
+    session: Optional[aiohttp.ClientSession],
+):
+    if response:
+        response.close()
+    if session:
+        await session.close()
+
+
 async def send_post_request(
     url: str,
     payload: Union[str, bytes],
@@ -89,14 +99,6 @@ async def send_post_request(
     key: Optional[str] = None,
     content_type: Optional[str] = None,
 ):
-    async def cleanup_response(
-        response: Optional[aiohttp.ClientResponse],
-        session: Optional[aiohttp.ClientSession],
-    ):
-        if response:
-            response.close()
-        if session:
-            await session.close()
 
     r = None
     try:

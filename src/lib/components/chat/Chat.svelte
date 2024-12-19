@@ -69,7 +69,8 @@
 		generateQueries,
 		chatAction,
 		generateMoACompletion,
-		generateTags
+		generateTags,
+		stopTask
 	} from '$lib/apis';
 
 	import Banner from '../common/Banner.svelte';
@@ -88,7 +89,6 @@
 	let controlPane;
 	let controlPaneComponent;
 
-	let stopResponseFlag = false;
 	let autoScroll = true;
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
@@ -120,6 +120,8 @@
 		messages: {},
 		currentId: null
 	};
+
+	let taskId = null;
 
 	// Chat Input
 	let prompt = '';
@@ -202,95 +204,107 @@
 	};
 
 	const chatEventHandler = async (event, cb) => {
+		console.log(event);
+
 		if (event.chat_id === $chatId) {
 			await tick();
-			console.log(event);
 			let message = history.messages[event.message_id];
 
-			const type = event?.data?.type ?? null;
-			const data = event?.data?.data ?? null;
+			if (message) {
+				const type = event?.data?.type ?? null;
+				const data = event?.data?.data ?? null;
 
-			if (type === 'status') {
-				if (message?.statusHistory) {
-					message.statusHistory.push(data);
-				} else {
-					message.statusHistory = [data];
-				}
-			} else if (type === 'source' || type === 'citation') {
-				if (data?.type === 'code_execution') {
-					// Code execution; update existing code execution by ID, or add new one.
-					if (!message?.code_executions) {
-						message.code_executions = [];
-					}
-
-					const existingCodeExecutionIndex = message.code_executions.findIndex(
-						(execution) => execution.id === data.id
-					);
-
-					if (existingCodeExecutionIndex !== -1) {
-						message.code_executions[existingCodeExecutionIndex] = data;
+				if (type === 'status') {
+					if (message?.statusHistory) {
+						message.statusHistory.push(data);
 					} else {
-						message.code_executions.push(data);
+						message.statusHistory = [data];
 					}
+				} else if (type === 'source' || type === 'citation') {
+					if (data?.type === 'code_execution') {
+						// Code execution; update existing code execution by ID, or add new one.
+						if (!message?.code_executions) {
+							message.code_executions = [];
+						}
 
-					message.code_executions = message.code_executions;
-				} else {
-					// Regular source.
-					if (message?.sources) {
-						message.sources.push(data);
+						const existingCodeExecutionIndex = message.code_executions.findIndex(
+							(execution) => execution.id === data.id
+						);
+
+						if (existingCodeExecutionIndex !== -1) {
+							message.code_executions[existingCodeExecutionIndex] = data;
+						} else {
+							message.code_executions.push(data);
+						}
+
+						message.code_executions = message.code_executions;
 					} else {
-						message.sources = [data];
+						// Regular source.
+						if (message?.sources) {
+							message.sources.push(data);
+						} else {
+							message.sources = [data];
+						}
 					}
-				}
-			} else if (type === 'message') {
-				message.content += data.content;
-			} else if (type === 'replace') {
-				message.content = data.content;
-			} else if (type === 'action') {
-				if (data.action === 'continue') {
-					const continueButton = document.getElementById('continue-response-button');
+				} else if (type === 'chat-completion') {
+					chatCompletionEventHandler(data, message, event.chat_id);
+				} else if (type === 'chat-title') {
+					chatTitle.set(data);
+					currentChatPage.set(1);
+					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				} else if (type === 'chat-tags') {
+					chat = await getChatById(localStorage.token, $chatId);
+					allTags.set(await getAllTags(localStorage.token));
+				} else if (type === 'message') {
+					message.content += data.content;
+				} else if (type === 'replace') {
+					message.content = data.content;
+				} else if (type === 'action') {
+					if (data.action === 'continue') {
+						const continueButton = document.getElementById('continue-response-button');
 
-					if (continueButton) {
-						continueButton.click();
+						if (continueButton) {
+							continueButton.click();
+						}
 					}
-				}
-			} else if (type === 'confirmation') {
-				eventCallback = cb;
+				} else if (type === 'confirmation') {
+					eventCallback = cb;
 
-				eventConfirmationInput = false;
-				showEventConfirmation = true;
+					eventConfirmationInput = false;
+					showEventConfirmation = true;
 
-				eventConfirmationTitle = data.title;
-				eventConfirmationMessage = data.message;
-			} else if (type === 'execute') {
-				eventCallback = cb;
+					eventConfirmationTitle = data.title;
+					eventConfirmationMessage = data.message;
+				} else if (type === 'execute') {
+					eventCallback = cb;
 
-				try {
-					// Use Function constructor to evaluate code in a safer way
-					const asyncFunction = new Function(`return (async () => { ${data.code} })()`);
-					const result = await asyncFunction(); // Await the result of the async function
+					try {
+						// Use Function constructor to evaluate code in a safer way
+						const asyncFunction = new Function(`return (async () => { ${data.code} })()`);
+						const result = await asyncFunction(); // Await the result of the async function
 
-					if (cb) {
-						cb(result);
+						if (cb) {
+							cb(result);
+						}
+					} catch (error) {
+						console.error('Error executing code:', error);
 					}
-				} catch (error) {
-					console.error('Error executing code:', error);
+				} else if (type === 'input') {
+					eventCallback = cb;
+
+					eventConfirmationInput = true;
+					showEventConfirmation = true;
+
+					eventConfirmationTitle = data.title;
+					eventConfirmationMessage = data.message;
+					eventConfirmationInputPlaceholder = data.placeholder;
+					eventConfirmationInputValue = data?.value ?? '';
+				} else {
+					console.log('Unknown message type', data);
 				}
-			} else if (type === 'input') {
-				eventCallback = cb;
 
-				eventConfirmationInput = true;
-				showEventConfirmation = true;
-
-				eventConfirmationTitle = data.title;
-				eventConfirmationMessage = data.message;
-				eventConfirmationInputPlaceholder = data.placeholder;
-				eventConfirmationInputValue = data?.value ?? '';
-			} else {
-				console.log('Unknown message type', data);
+				history.messages[event.message_id] = message;
 			}
-
-			history.messages[event.message_id] = message;
 		}
 	};
 
@@ -956,6 +970,119 @@
 		}
 	};
 
+	const chatCompletionEventHandler = async (data, message, chatId) => {
+		const { id, done, choices, sources, selectedModelId, error, usage } = data;
+
+		if (error) {
+			await handleOpenAIError(error, message);
+		}
+
+		if (sources) {
+			message.sources = sources;
+			// Only remove status if it was initially set
+			if (model?.info?.meta?.knowledge ?? false) {
+				message.statusHistory = message.statusHistory.filter(
+					(status) => status.action !== 'knowledge_search'
+				);
+			}
+		}
+
+		if (choices) {
+			const value = choices[0]?.delta?.content ?? '';
+			if (message.content == '' && value == '\n') {
+				console.log('Empty response');
+			} else {
+				message.content += value;
+
+				if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+					navigator.vibrate(5);
+				}
+
+				// Emit chat event for TTS
+				const messageContentParts = getMessageContentParts(
+					message.content,
+					$config?.audio?.tts?.split_on ?? 'punctuation'
+				);
+				messageContentParts.pop();
+				// dispatch only last sentence and make sure it hasn't been dispatched before
+				if (
+					messageContentParts.length > 0 &&
+					messageContentParts[messageContentParts.length - 1] !== message.lastSentence
+				) {
+					message.lastSentence = messageContentParts[messageContentParts.length - 1];
+					eventTarget.dispatchEvent(
+						new CustomEvent('chat', {
+							detail: {
+								id: message.id,
+								content: messageContentParts[messageContentParts.length - 1]
+							}
+						})
+					);
+				}
+			}
+		}
+
+		if (selectedModelId) {
+			message.selectedModelId = selectedModelId;
+			message.arena = true;
+		}
+
+		if (usage) {
+			message.usage = usage;
+		}
+
+		if (done) {
+			message.done = true;
+
+			if ($settings.notificationEnabled && !document.hasFocus()) {
+				new Notification(`${message.model}`, {
+					body: message.content,
+					icon: `${WEBUI_BASE_URL}/static/favicon.png`
+				});
+			}
+
+			if ($settings.responseAutoCopy) {
+				copyToClipboard(message.content);
+			}
+
+			if ($settings.responseAutoPlayback && !$showCallOverlay) {
+				await tick();
+				document.getElementById(`speak-button-${message.id}`)?.click();
+			}
+
+			// Emit chat event for TTS
+			let lastMessageContentPart =
+				getMessageContentParts(message.content, $config?.audio?.tts?.split_on ?? 'punctuation')?.at(
+					-1
+				) ?? '';
+			if (lastMessageContentPart) {
+				eventTarget.dispatchEvent(
+					new CustomEvent('chat', {
+						detail: { id: message.id, content: lastMessageContentPart }
+					})
+				);
+			}
+			eventTarget.dispatchEvent(
+				new CustomEvent('chat:finish', {
+					detail: {
+						id: message.id,
+						content: message.content
+					}
+				})
+			);
+
+			history.messages[message.id] = message;
+			await chatCompletedHandler(chatId, message.model, message.id, createMessagesList(message.id));
+		}
+
+		history.messages[message.id] = message;
+
+		console.log(data);
+		if (autoScroll) {
+			scrollToBottom();
+		}
+	};
+
 	//////////////////////////
 	// Chat functions
 	//////////////////////////
@@ -1061,6 +1188,7 @@
 		chatInput?.focus();
 
 		saveSessionSelectedModels();
+
 		await sendPrompt(userPrompt, userMessageId, { newChat: true });
 	};
 
@@ -1076,6 +1204,8 @@
 			history.messages[history.currentId].role === 'user'
 		) {
 			await initChatHandler();
+		} else {
+			await saveChatHandler($chatId);
 		}
 
 		// If modelId is provided, use it, else use selected model
@@ -1121,6 +1251,9 @@
 			}
 		}
 		await tick();
+
+		// Save chat after all messages have been created
+		await saveChatHandler($chatId);
 
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 		await Promise.all(
@@ -1178,7 +1311,7 @@
 						await getWebSearchResults(model.id, parentId, responseMessageId);
 					}
 
-					await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
+					await sendPromptSocket(model, responseMessageId, _chatId);
 					if (chatEventEmitter) clearInterval(chatEventEmitter);
 				} else {
 					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
@@ -1190,9 +1323,7 @@
 		chats.set(await getChatList(localStorage.token, $currentChatPage));
 	};
 
-	const sendPromptOpenAI = async (model, userPrompt, responseMessageId, _chatId) => {
-		let _response = null;
-
+	const sendPromptSocket = async (model, responseMessageId, _chatId) => {
 		const responseMessage = history.messages[responseMessageId];
 		const userMessage = history.messages[responseMessage.parentId];
 
@@ -1243,7 +1374,6 @@
 		);
 
 		scrollToBottom();
-
 		eventTarget.dispatchEvent(
 			new CustomEvent('chat:start', {
 				detail: {
@@ -1253,278 +1383,133 @@
 		);
 		await tick();
 
-		try {
-			const stream =
-				model?.info?.params?.stream_response ??
-				$settings?.params?.stream_response ??
-				params?.stream_response ??
-				true;
+		const stream =
+			model?.info?.params?.stream_response ??
+			$settings?.params?.stream_response ??
+			params?.stream_response ??
+			true;
 
-			const [res, controller] = await generateOpenAIChatCompletion(
-				localStorage.token,
-				{
-					stream: stream,
-					model: model.id,
-					messages: [
-						params?.system || $settings.system || (responseMessage?.userContext ?? null)
-							? {
-									role: 'system',
-									content: `${promptTemplate(
-										params?.system ?? $settings?.system ?? '',
-										$user.name,
-										$settings?.userLocation
-											? await getAndUpdateUserLocation(localStorage.token)
-											: undefined
-									)}${
-										(responseMessage?.userContext ?? null)
-											? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
-											: ''
-									}`
-								}
-							: undefined,
-						...createMessagesList(responseMessageId)
-					]
-						.filter((message) => message?.content?.trim())
-						.map((message, idx, arr) => ({
-							role: message.role,
-							...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
-							message.role === 'user'
-								? {
-										content: [
-											{
-												type: 'text',
-												text: message?.merged?.content ?? message.content
-											},
-											...message.files
-												.filter((file) => file.type === 'image')
-												.map((file) => ({
-													type: 'image_url',
-													image_url: {
-														url: file.url
-													}
-												}))
-										]
-									}
-								: {
-										content: message?.merged?.content ?? message.content
-									})
-						})),
-
-					params: {
-						...$settings?.params,
-						...params,
-
-						format: $settings.requestFormat ?? undefined,
-						keep_alive: $settings.keepAlive ?? undefined,
-						stop:
-							(params?.stop ?? $settings?.params?.stop ?? undefined)
-								? (
-										params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop
-									).map((str) =>
-										decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
-									)
+		const messages = [
+			params?.system || $settings.system || (responseMessage?.userContext ?? null)
+				? {
+						role: 'system',
+						content: `${promptTemplate(
+							params?.system ?? $settings?.system ?? '',
+							$user.name,
+							$settings?.userLocation
+								? await getAndUpdateUserLocation(localStorage.token)
 								: undefined
-					},
-
-					tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
-					files: files.length > 0 ? files : undefined,
-					session_id: $socket?.id,
-					chat_id: $chatId,
-					id: responseMessageId,
-
-					...(stream && (model.info?.meta?.capabilities?.usage ?? false)
-						? {
-								stream_options: {
-									include_usage: true
-								}
-							}
-						: {})
-				},
-				`${WEBUI_BASE_URL}/api`
-			);
-
-			// Wait until history/message have been updated
-			await tick();
-
-			scrollToBottom();
-
-			if (res && res.ok && res.body) {
-				if (!stream) {
-					const response = await res.json();
-					console.log(response);
-
-					responseMessage.content = response.choices[0].message.content;
-					responseMessage.info = { ...response.usage, openai: true };
-					responseMessage.done = true;
-				} else {
-					const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
-
-					for await (const update of textStream) {
-						const { value, done, sources, selectedModelId, error, usage } = update;
-						if (error) {
-							await handleOpenAIError(error, null, model, responseMessage);
-							break;
-						}
-
-						if (done || stopResponseFlag || _chatId !== $chatId) {
-							responseMessage.done = true;
-							history.messages[responseMessageId] = responseMessage;
-
-							if (stopResponseFlag) {
-								controller.abort('User: Stop Response');
-							}
-							_response = responseMessage.content;
-							break;
-						}
-
-						if (usage) {
-							responseMessage.usage = usage;
-						}
-
-						if (selectedModelId) {
-							responseMessage.selectedModelId = selectedModelId;
-							responseMessage.arena = true;
-							continue;
-						}
-
-						if (sources) {
-							responseMessage.sources = sources;
-							// Only remove status if it was initially set
-							if (model?.info?.meta?.knowledge ?? false) {
-								responseMessage.statusHistory = responseMessage.statusHistory.filter(
-									(status) => status.action !== 'knowledge_search'
-								);
-							}
-							continue;
-						}
-
-						if (responseMessage.content == '' && value == '\n') {
-							continue;
-						} else {
-							responseMessage.content += value;
-
-							if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
-								navigator.vibrate(5);
-							}
-
-							const messageContentParts = getMessageContentParts(
-								responseMessage.content,
-								$config?.audio?.tts?.split_on ?? 'punctuation'
-							);
-							messageContentParts.pop();
-
-							// dispatch only last sentence and make sure it hasn't been dispatched before
-							if (
-								messageContentParts.length > 0 &&
-								messageContentParts[messageContentParts.length - 1] !== responseMessage.lastSentence
-							) {
-								responseMessage.lastSentence = messageContentParts[messageContentParts.length - 1];
-								eventTarget.dispatchEvent(
-									new CustomEvent('chat', {
-										detail: {
-											id: responseMessageId,
-											content: messageContentParts[messageContentParts.length - 1]
-										}
-									})
-								);
-							}
-
-							history.messages[responseMessageId] = responseMessage;
-						}
-
-						if (autoScroll) {
-							scrollToBottom();
-						}
+						)}${
+							(responseMessage?.userContext ?? null)
+								? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
+								: ''
+						}`
 					}
-				}
+				: undefined,
+			...createMessagesList(responseMessageId)
+		]
+			.filter((message) => message?.content?.trim())
+			.map((message, idx, arr) => ({
+				role: message.role,
+				...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
+				message.role === 'user'
+					? {
+							content: [
+								{
+									type: 'text',
+									text: message?.merged?.content ?? message.content
+								},
+								...message.files
+									.filter((file) => file.type === 'image')
+									.map((file) => ({
+										type: 'image_url',
+										image_url: {
+											url: file.url
+										}
+									}))
+							]
+						}
+					: {
+							content: message?.merged?.content ?? message.content
+						})
+			}));
 
-				if ($settings.notificationEnabled && !document.hasFocus()) {
-					const notification = new Notification(`${model.id}`, {
-						body: responseMessage.content,
-						icon: `${WEBUI_BASE_URL}/static/favicon.png`
-					});
-				}
+		const res = await generateOpenAIChatCompletion(
+			localStorage.token,
+			{
+				stream: stream,
+				model: model.id,
+				messages: messages,
+				params: {
+					...$settings?.params,
+					...params,
 
-				if ($settings.responseAutoCopy) {
-					copyToClipboard(responseMessage.content);
-				}
+					format: $settings.requestFormat ?? undefined,
+					keep_alive: $settings.keepAlive ?? undefined,
+					stop:
+						(params?.stop ?? $settings?.params?.stop ?? undefined)
+							? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
+									(str) => decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
+								)
+							: undefined
+				},
 
-				if ($settings.responseAutoPlayback && !$showCallOverlay) {
-					await tick();
+				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
+				files: files.length > 0 ? files : undefined,
+				session_id: $socket?.id,
+				chat_id: $chatId,
+				id: responseMessageId,
 
-					document.getElementById(`speak-button-${responseMessage.id}`)?.click();
-				}
-			} else {
-				await handleOpenAIError(null, res, model, responseMessage);
-			}
-		} catch (error) {
-			await handleOpenAIError(error, null, model, responseMessage);
+				...(!$temporaryChatEnabled && messages.length == 1 && selectedModels[0] === model.id
+					? {
+							background_tasks: {
+								title_generation: $settings?.title?.auto ?? true,
+								tags_generation: $settings?.autoTags ?? true
+							}
+						}
+					: {}),
+
+				...(stream && (model.info?.meta?.capabilities?.usage ?? false)
+					? {
+							stream_options: {
+								include_usage: true
+							}
+						}
+					: {})
+			},
+			`${WEBUI_BASE_URL}/api`
+		).catch((error) => {
+			responseMessage.error = {
+				content: error
+			};
+			responseMessage.done = true;
+			return null;
+		});
+
+		console.log(res);
+
+		if (res) {
+			taskId = res.task_id;
 		}
 
-		await saveChatHandler(_chatId);
-
-		history.messages[responseMessageId] = responseMessage;
-
-		await chatCompletedHandler(
-			_chatId,
-			model.id,
-			responseMessageId,
-			createMessagesList(responseMessageId)
-		);
-
-		stopResponseFlag = false;
+		// Wait until history/message have been updated
 		await tick();
+		scrollToBottom();
 
-		let lastMessageContentPart =
-			getMessageContentParts(
-				responseMessage.content,
-				$config?.audio?.tts?.split_on ?? 'punctuation'
-			)?.at(-1) ?? '';
-		if (lastMessageContentPart) {
-			eventTarget.dispatchEvent(
-				new CustomEvent('chat', {
-					detail: { id: responseMessageId, content: lastMessageContentPart }
-				})
-			);
-		}
-
-		eventTarget.dispatchEvent(
-			new CustomEvent('chat:finish', {
-				detail: {
-					id: responseMessageId,
-					content: responseMessage.content
-				}
-			})
-		);
-
-		if (autoScroll) {
-			scrollToBottom();
-		}
-
-		const messages = createMessagesList(responseMessageId);
-		if (messages.length == 2 && selectedModels[0] === model.id) {
-			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-
-			const title = await generateChatTitle(messages);
-			await setChatTitle(_chatId, title);
-
-			if ($settings?.autoTags ?? true) {
-				await setChatTags(messages);
-			}
-		}
-
-		return _response;
+		// 	if ($settings?.autoTags ?? true) {
+		// 		await setChatTags(messages);
+		// 	}
+		// }
 	};
 
-	const handleOpenAIError = async (error, res: Response | null, model, responseMessage) => {
+	const handleOpenAIError = async (error, responseMessage) => {
 		let errorMessage = '';
 		let innerError;
 
 		if (error) {
 			innerError = error;
-		} else if (res !== null) {
-			innerError = await res.json();
 		}
+
 		console.error(innerError);
 		if ('detail' in innerError) {
 			toast.error(innerError.detail);
@@ -1543,12 +1528,7 @@
 		}
 
 		responseMessage.error = {
-			content:
-				$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-					provider: model.name ?? model.id
-				}) +
-				'\n' +
-				errorMessage
+			content: $i18n.t(`Uh-oh! There was an issue with the response.`) + '\n' + errorMessage
 		};
 		responseMessage.done = true;
 
@@ -1562,8 +1542,15 @@
 	};
 
 	const stopResponse = () => {
-		stopResponseFlag = true;
-		console.log('stopResponse');
+		if (taskId) {
+			const res = stopTask(localStorage.token, taskId).catch((error) => {
+				return null;
+			});
+
+			if (res) {
+				taskId = null;
+			}
+		}
 	};
 
 	const submitMessage = async (parentId, prompt) => {
@@ -1628,12 +1615,7 @@
 				.at(0);
 
 			if (model) {
-				await sendPromptOpenAI(
-					model,
-					history.messages[responseMessage.parentId].content,
-					responseMessage.id,
-					_chatId
-				);
+				await sendPromptSocket(model, responseMessage.id, _chatId);
 			}
 		}
 	};
@@ -1682,38 +1664,6 @@
 			}
 		} catch (e) {
 			console.error(e);
-		}
-	};
-
-	const generateChatTitle = async (messages) => {
-		const lastUserMessage = messages.filter((message) => message.role === 'user').at(-1);
-
-		if ($settings?.title?.auto ?? true) {
-			const modelId = selectedModels[0];
-
-			const title = await generateTitle(localStorage.token, modelId, messages, $chatId).catch(
-				(error) => {
-					console.error(error);
-					return lastUserMessage?.content ?? 'New Chat';
-				}
-			);
-
-			return title ? title : (lastUserMessage?.content ?? 'New Chat');
-		} else {
-			return lastUserMessage?.content ?? 'New Chat';
-		}
-	};
-
-	const setChatTitle = async (_chatId, title) => {
-		if (_chatId === $chatId) {
-			chatTitle.set(title);
-		}
-
-		if (!$temporaryChatEnabled) {
-			chat = await updateChatById(localStorage.token, _chatId, { title: title });
-
-			currentChatPage.set(1);
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 		}
 	};
 
@@ -1856,6 +1806,8 @@
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			await chatId.set(chat.id);
+
+			window.history.replaceState(history.state, '', `/c/${chat.id}`);
 		} else {
 			await chatId.set('local');
 		}

@@ -117,7 +117,9 @@ async def generate_chat_completion(
                 form_data, user, bypass_filter=True
             )
             return StreamingResponse(
-                stream_wrapper(response.body_iterator), media_type="text/event-stream"
+                stream_wrapper(response.body_iterator),
+                media_type="text/event-stream",
+                background=response.background,
             )
         else:
             return {
@@ -141,6 +143,7 @@ async def generate_chat_completion(
             return StreamingResponse(
                 convert_streaming_response_ollama_to_openai(response),
                 headers=dict(response.headers),
+                background=response.background,
             )
         else:
             return convert_response_ollama_to_openai(response)

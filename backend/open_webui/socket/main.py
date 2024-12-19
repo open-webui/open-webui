@@ -217,15 +217,19 @@ async def disconnect(sid):
 
 def get_event_emitter(request_info):
     async def __event_emitter__(event_data):
-        await sio.emit(
-            "chat-events",
-            {
-                "chat_id": request_info["chat_id"],
-                "message_id": request_info["message_id"],
-                "data": event_data,
-            },
-            to=request_info["session_id"],
-        )
+        user_id = request_info["user_id"]
+        session_ids = USER_POOL.get(user_id, [])
+
+        for session_id in session_ids:
+            await sio.emit(
+                "chat-events",
+                {
+                    "chat_id": request_info["chat_id"],
+                    "message_id": request_info["message_id"],
+                    "data": event_data,
+                },
+                to=session_id,
+            )
 
     return __event_emitter__
 
