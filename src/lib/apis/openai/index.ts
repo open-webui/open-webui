@@ -277,29 +277,31 @@ export const generateOpenAIChatCompletion = async (
 	token: string = '',
 	body: object,
 	url: string = OPENAI_API_BASE_URL
-): Promise<[Response | null, AbortController]> => {
-	const controller = new AbortController();
+) => {
 	let error = null;
 
 	const res = await fetch(`${url}/chat/completions`, {
-		signal: controller.signal,
 		method: 'POST',
 		headers: {
 			Authorization: `Bearer ${token}`,
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify(body)
-	}).catch((err) => {
-		console.log(err);
-		error = err;
-		return null;
-	});
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = `OpenAI: ${err?.detail ?? 'Network Problem'}`;
+			return null;
+		});
 
 	if (error) {
 		throw error;
 	}
 
-	return [res, controller];
+	return res;
 };
 
 export const synthesizeOpenAISpeech = async (

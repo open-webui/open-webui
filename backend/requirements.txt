@@ -90,6 +90,11 @@ extract_msg
 pydub
 duckduckgo-search~=6.3.5
 
+## Google Drive
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+
 ## Tests
 docker~=7.1.0
 pytest~=8.3.2
