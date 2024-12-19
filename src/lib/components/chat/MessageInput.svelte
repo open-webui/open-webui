@@ -727,14 +727,14 @@
 															...document.getElementsByClassName('user-message')
 														]?.at(-1);
 
-														const editButton = [
-															...document.getElementsByClassName('edit-user-message-button')
-														]?.at(-1);
+														if (userMessageElement) {
+															userMessageElement.scrollIntoView({ block: 'center' });
+															const editButton = [
+																...document.getElementsByClassName('edit-user-message-button')
+															]?.at(-1);
 
-														console.log(userMessageElement);
-
-														userMessageElement.scrollIntoView({ block: 'center' });
-														editButton?.click();
+															editButton?.click();
+														}
 													}
 
 													if (commandsContainerElement) {
