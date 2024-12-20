@@ -70,7 +70,9 @@ def query_doc(
             limit=k,
         )
 
-        log.info(f"query_doc:result {result.ids} {result.metadatas}")
+        if result:
+            log.info(f"query_doc:result {result.ids} {result.metadatas}")
+
         return result
     except Exception as e:
         print(e)
