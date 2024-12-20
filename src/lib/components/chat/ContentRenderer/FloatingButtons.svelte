@@ -79,9 +79,14 @@
 									if (data.choices && data.choices[0]?.delta?.content) {
 										responseContent += data.choices[0].delta.content;
 
-										// Scroll to bottom
+										// Scroll to bottom only if the scroll is at the bottom give 50px buffer
 										const responseContainer = document.getElementById('response-container');
-										responseContainer.scrollTop = responseContainer.scrollHeight;
+										if (
+											responseContainer.scrollHeight - responseContainer.clientHeight <=
+											responseContainer.scrollTop + 50
+										) {
+											responseContainer.scrollTop = responseContainer.scrollHeight;
+										}
 									}
 								} catch (e) {
 									console.error(e);
@@ -152,7 +157,12 @@
 
 										// Scroll to bottom
 										const responseContainer = document.getElementById('response-container');
-										responseContainer.scrollTop = responseContainer.scrollHeight;
+										if (
+											responseContainer.scrollHeight - responseContainer.clientHeight <=
+											responseContainer.scrollTop + 50
+										) {
+											responseContainer.scrollTop = responseContainer.scrollHeight;
+										}
 									}
 								} catch (e) {
 									console.error(e);
