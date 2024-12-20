@@ -466,8 +466,8 @@ async def update_rag_config(
     )
 
     request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = (
-        form_data.ENABLE_GOOGLE_DRIVE_INTEGRATION
-        if form_data.ENABLE_GOOGLE_DRIVE_INTEGRATION is not None
+        form_data.enable_google_drive_integration
+        if form_data.enable_google_drive_integration is not None
         else request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION
     )
 
