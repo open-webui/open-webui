@@ -620,6 +620,7 @@
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 									<ContentRenderer
 										id={message.id}
+										{history}
 										content={message.content}
 										sources={message.sources}
 										floatingButtons={message?.done}

@@ -273,6 +273,38 @@ export const verifyOpenAIConnection = async (
 	return res;
 };
 
+
+export const chatCompletion = async (
+	token: string = '',
+	body: object,
+	url: string = OPENAI_API_BASE_URL
+): Promise<[Response | null, AbortController]> => {
+	const controller = new AbortController();
+	let error = null;
+
+	const res = await fetch(`${url}/chat/completions`, {
+		signal: controller.signal,
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify(body)
+	}).catch((err) => {
+		console.log(err);
+		error = err;
+		return null;
+	});
+
+	if (error) {
+		throw error;
+	}
+
+	return [res, controller];
+};
+
+
+
 export const generateOpenAIChatCompletion = async (
 	token: string = '',
 	body: object,
