@@ -985,19 +985,18 @@
 		}
 	};
 
-	const addMessages = async ({ modelId, messages }) => {
+	const addMessages = async ({ modelId, parentId, messages }) => {
 		const model = $models.filter((m) => m.id === modelId).at(0);
-		const messageList = createMessagesList(history.currentId);
 
-		let parentMessage = messageList.length !== 0 ? messageList.at(-1) : null;
-		let parentId = parentMessage ? parentMessage.id : null;
+		let parentMessage = history.messages[parentId];
+		let currentParentId = parentMessage ? parentMessage.id : null;
 		for (const message of messages) {
 			let messageId = uuidv4();
 
 			if (message.role === 'user') {
 				const userMessage = {
 					id: messageId,
-					parentId: parentId,
+					parentId: currentParentId,
 					childrenIds: [],
 					timestamp: Math.floor(Date.now() / 1000),
 					...message
@@ -1010,11 +1009,11 @@
 
 				history.messages[messageId] = userMessage;
 				parentMessage = userMessage;
-				parentId = messageId;
+				currentParentId = messageId;
 			} else {
 				const responseMessage = {
 					id: messageId,
-					parentId: parentId,
+					parentId: currentParentId,
 					childrenIds: [],
 					done: true,
 					model: model.id,
@@ -1031,11 +1030,11 @@
 
 				history.messages[messageId] = responseMessage;
 				parentMessage = responseMessage;
-				parentId = messageId;
+				currentParentId = messageId;
 			}
 		}
 
-		history.currentId = parentId;
+		history.currentId = currentParentId;
 		await tick();
 
 		if (autoScroll) {

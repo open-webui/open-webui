@@ -197,6 +197,7 @@
 
 		onAdd({
 			modelId: model,
+			parentId: id,
 			messages: messages
 		});
 	};

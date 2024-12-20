@@ -636,8 +636,8 @@
 												sourceButton.click();
 											}
 										}}
-										onAddMessages={({ modelId, messages }) => {
-											addMessages({ modelId, messages });
+										onAddMessages={({ modelId, parentId, messages }) => {
+											addMessages({ modelId, parentId, messages });
 										}}
 										on:update={(e) => {
 											const { raw, oldContent, newContent } = e.detail;

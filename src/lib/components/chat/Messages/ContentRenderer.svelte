@@ -165,9 +165,9 @@
 		{id}
 		model={model?.id}
 		messages={createMessagesList(history, id)}
-		onAdd={({ modelId, messages }) => {
-			console.log(modelId, messages);
-			onAddMessages({ modelId, messages });
+		onAdd={({ modelId, parentId, messages }) => {
+			console.log(modelId, parentId, messages);
+			onAddMessages({ modelId, parentId, messages });
 			closeFloatingButtons();
 		}}
 	/>
