@@ -28,6 +28,17 @@
 	let responseContent = null;
 	let responseDone = false;
 
+	const autoScroll = async () => {
+		// Scroll to bottom only if the scroll is at the bottom give 50px buffer
+		const responseContainer = document.getElementById('response-container');
+		if (
+			responseContainer.scrollHeight - responseContainer.clientHeight <=
+			responseContainer.scrollTop + 50
+		) {
+			responseContainer.scrollTop = responseContainer.scrollHeight;
+		}
+	};
+
 	const askHandler = async () => {
 		if (!model) {
 			toast.error('Model not selected');
@@ -71,6 +82,9 @@
 						if (line.startsWith('data: ')) {
 							if (line.startsWith('data: [DONE]')) {
 								responseDone = true;
+
+								await tick();
+								autoScroll();
 								continue;
 							} else {
 								// Parse the JSON chunk
@@ -81,14 +95,7 @@
 									if (data.choices && data.choices[0]?.delta?.content) {
 										responseContent += data.choices[0].delta.content;
 
-										// Scroll to bottom only if the scroll is at the bottom give 50px buffer
-										const responseContainer = document.getElementById('response-container');
-										if (
-											responseContainer.scrollHeight - responseContainer.clientHeight <=
-											responseContainer.scrollTop + 50
-										) {
-											responseContainer.scrollTop = responseContainer.scrollHeight;
-										}
+										autoScroll();
 									}
 								} catch (e) {
 									console.error(e);
@@ -148,6 +155,9 @@
 						if (line.startsWith('data: ')) {
 							if (line.startsWith('data: [DONE]')) {
 								responseDone = true;
+
+								await tick();
+								autoScroll();
 								continue;
 							} else {
 								// Parse the JSON chunk
@@ -158,14 +168,7 @@
 									if (data.choices && data.choices[0]?.delta?.content) {
 										responseContent += data.choices[0].delta.content;
 
-										// Scroll to bottom
-										const responseContainer = document.getElementById('response-container');
-										if (
-											responseContainer.scrollHeight - responseContainer.clientHeight <=
-											responseContainer.scrollTop + 50
-										) {
-											responseContainer.scrollTop = responseContainer.scrollHeight;
-										}
+										autoScroll();
 									}
 								} catch (e) {
 									console.error(e);
