@@ -51,7 +51,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
-async def chat_completion_filter_functions_handler(request, body, model, extra_params):
+async def chat_completion_filter_functions_handler(request, body, model, extra_params, files):
     skip_files = None
 
     def get_filter_function_ids(model):
@@ -138,10 +138,10 @@ async def chat_completion_filter_functions_handler(request, body, model, extra_p
                 print(f"Error: {e}")
                 raise e
 
-    if skip_files and "files" in body.get("metadata", {}):
-        del body["metadata"]["files"]
+    if skip_files and files:
+        return body, {}, None
 
-    return body, {}
+    return body, {}, files
 
 
 async def chat_completion_tools_handler(
@@ -395,12 +395,22 @@ async def process_chat_payload(request, form_data, user, model):
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
 
+    def filter_files(files):
+        if files:
+            return [
+                item for item in files
+                if item["type"] != "collection" or ("files" in item and item["files"] and len(item["files"]) > 0)
+            ]
+        return None
+
+    files = filter_files(form_data.pop("files", None))
+    
     metadata = {
         "chat_id": form_data.pop("chat_id", None),
         "message_id": form_data.pop("id", None),
         "session_id": form_data.pop("session_id", None),
         "tool_ids": form_data.get("tool_ids", None),
-        "files": form_data.get("files", None),
+        "files": files,
     }
     form_data["metadata"] = metadata
 
@@ -424,14 +434,13 @@ async def process_chat_payload(request, form_data, user, model):
     sources = []
 
     try:
-        form_data, flags = await chat_completion_filter_functions_handler(
-            request, form_data, model, extra_params
+        form_data, flags, files = await chat_completion_filter_functions_handler(
+            request, form_data, model, extra_params, files
         )
     except Exception as e:
         return Exception(f"Error: {e}")
 
     tool_ids = form_data.pop("tool_ids", None)
-    files = form_data.pop("files", None)
 
     metadata = {
         **metadata,
