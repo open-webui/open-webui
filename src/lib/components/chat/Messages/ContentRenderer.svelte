@@ -137,9 +137,6 @@
 			document.removeEventListener('keydown', keydownHandler);
 		}
 	});
-	console.log(1111, $leftHistory);
-	console.log(2222, $bottomHistory);
-	console.log(3333, history);
 </script>
 
 <div bind:this={contentContainerElement}>

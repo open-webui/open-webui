@@ -15,8 +15,7 @@
 		showCallOverlay,
 		tools,
 		user as _user,
-		showControls,
-		showLeftArtifacts
+		showControls
 	} from '$lib/stores';
 
 	import { blobToFile, createMessagesList, findWordIndices } from '$lib/utils';

@@ -313,7 +313,7 @@ __builtins__.input = input`);
 			{:else}
 				<pre class="mermaid">{code}</pre>
 			{/if}
-		{:else}
+			<!-- {:else}
 			<div class="text-text-300 absolute pl-4 py-1.5 text-xs font-medium dark:text-white">
 				{lang}
 			</div>
@@ -389,7 +389,7 @@ __builtins__.input = input`);
 					<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
 					<div class="text-sm">{stdout || stderr || result}</div>
 				</div>
-			{/if}
+			{/if} -->
 		{/if}
 	</div>
 </div>

@@ -13,13 +13,22 @@
 	import Image from '$lib/components/common/Image.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
 	import Source from './Source.svelte';
+	import { isFinishGenRes, socket } from '$lib/stores';
 
 	export let id: string;
 	export let tokens: Token[];
 	export let onSourceClick: Function = () => {};
+	let isFinishGenResLocal = false;
+	$: {
+		if ($isFinishGenRes) {
+			isFinishGenResLocal = true;
+		} else {
+			isFinishGenResLocal = false;
+		}
+	}
 </script>
 
-{#each tokens as token}
+{#each tokens as token, tokenIdx (tokenIdx)}
 	{#if token.type === 'escape'}
 		{unescapeHtml(token.text)}
 	{:else if token.type === 'html'}
@@ -80,6 +89,18 @@
 			onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
 		></iframe>
 	{:else if token.type === 'text'}
-		{token.raw}
+		{#if token.raw === 'OpenBottomArtifacts' || token.raw === 'OpenLeftArtifacts' || token.raw === 'OpenAllArtifacts'}
+			{#if isFinishGenResLocal}
+				<span>Please choose an option from the popup window</span>
+			{:else}
+				<img
+					style="width: 300px;border-radius: 10px;"
+					src="https://media.giphy.com/media/wypKXPQggwaCA/giphy.gif?cid=790b7611k3lxamfufuuxl5hadq30352m642vnivn2f7gvq0h&ep=v1_gifs_search&rid=giphy.gif&ct=g"
+					alt="thinking"
+				/>
+			{/if}
+		{:else}
+			{token.raw}
+		{/if}
 	{/if}
 {/each}

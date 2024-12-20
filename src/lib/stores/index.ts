@@ -51,6 +51,7 @@ export const bottomHistory = writable<History | undefined>(undefined);
 export const showLeftArtifacts = writable(false);
 export const leftHistory = writable<History | undefined>(undefined);
 export const showCallOverlay = writable(false);
+export const isFinishGenRes = writable(false);
 
 export const temporaryChatEnabled = writable(false);
 export const scrollPaginationEnabled = writable(false);

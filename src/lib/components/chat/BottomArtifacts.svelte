@@ -217,7 +217,6 @@
 					class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
 					on:click={() => {
 						dispatch('close');
-						showControls.set(false);
 						showBottomArtifacts.set(false);
 					}}
 				>

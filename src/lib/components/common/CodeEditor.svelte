@@ -180,4 +180,4 @@
 	});
 </script>
 
-<div id="code-textarea-{id}" class="h-full w-full" />
+<!-- <div id="code-textarea-{id}" class="h-full w-full" /> -->
