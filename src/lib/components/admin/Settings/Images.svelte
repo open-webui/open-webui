@@ -475,9 +475,9 @@
 						<div class="flex w-full">
 							<div class="flex-1 mr-2">
 								<SensitiveInput
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 									placeholder={$i18n.t('sk-1234')}
 									bind:value={config.comfyui.COMFYUI_API_KEY}
+									required={false}
 								/>
 							</div>
 						</div>
