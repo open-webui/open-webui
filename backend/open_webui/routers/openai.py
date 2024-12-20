@@ -604,10 +604,10 @@ async def generate_chat_completion(
     if is_o1:
         payload = openai_o1_handler(payload)
     elif "api.openai.com" not in url:
-        # Remove "max_tokens" from the payload for backward compatibility
-        if "max_tokens" in payload:
-            payload["max_completion_tokens"] = payload["max_tokens"]
-            del payload["max_tokens"]
+        # Remove "max_completion_tokens" from the payload for backward compatibility
+        if "max_completion_tokens" in payload:
+            payload["max_tokens"] = payload["max_completion_tokens"]
+            del payload["max_completion_tokens"]
 
     # TODO: check if below is needed
     # if "max_tokens" in payload and "max_completion_tokens" in payload:
