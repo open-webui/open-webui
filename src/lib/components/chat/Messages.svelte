@@ -33,6 +33,7 @@
 	export let chatActionHandler: Function;
 	export let showMessage: Function = () => {};
 	export let submitMessage: Function = () => {};
+	export let addMessages: Function = () => {};
 
 	export let readOnly = false;
 
@@ -404,6 +405,7 @@
 							{regenerateResponse}
 							{continueResponse}
 							{mergeResponses}
+							{addMessages}
 							{triggerScroll}
 							{readOnly}
 						/>

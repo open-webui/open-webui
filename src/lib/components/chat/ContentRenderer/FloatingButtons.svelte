@@ -26,6 +26,7 @@
 
 	let prompt = '';
 	let responseContent = null;
+	let responseDone = false;
 
 	const askHandler = async () => {
 		if (!model) {
@@ -69,6 +70,7 @@
 					for (const line of lines) {
 						if (line.startsWith('data: ')) {
 							if (line.startsWith('data: [DONE]')) {
+								responseDone = true;
 								continue;
 							} else {
 								// Parse the JSON chunk
@@ -145,6 +147,7 @@
 					for (const line of lines) {
 						if (line.startsWith('data: ')) {
 							if (line.startsWith('data: [DONE]')) {
+								responseDone = true;
 								continue;
 							} else {
 								// Parse the JSON chunk
@@ -181,7 +184,7 @@
 	};
 
 	const addHandler = async () => {
-		newMessages = [
+		const messages = [
 			{
 				role: 'user',
 				content: prompt
@@ -192,13 +195,15 @@
 			}
 		];
 
-		responseContent = null;
-
-		onAdd();
+		onAdd({
+			modelId: model,
+			messages: messages
+		});
 	};
 
 	export const closeHandler = () => {
 		responseContent = null;
+		responseDone = false;
 		floatingInput = false;
 		floatingInputValue = '';
 	};
@@ -305,6 +310,17 @@
 						<Skeleton size="sm" />
 					{:else}
 						<Markdown id={`${id}-float-response`} content={responseContent} />
+					{/if}
+
+					{#if responseDone}
+						<div class="flex justify-end pt-3 text-sm font-medium">
+							<button
+								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+								on:click={addHandler}
+							>
+								{$i18n.t('Add')}
+							</button>
+						</div>
 					{/if}
 				</div>
 			</div>

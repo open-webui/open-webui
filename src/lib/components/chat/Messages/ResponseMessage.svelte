@@ -118,6 +118,8 @@
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
 
+	export let addMessages: Function;
+
 	export let isLastMessage = true;
 	export let readOnly = false;
 
@@ -633,6 +635,9 @@
 											if (sourceButton) {
 												sourceButton.click();
 											}
+										}}
+										onAddMessages={({ modelId, messages }) => {
+											addMessages({ modelId, messages });
 										}}
 										on:update={(e) => {
 											const { raw, oldContent, newContent } = e.detail;

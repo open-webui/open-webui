@@ -36,6 +36,8 @@
 	export let regenerateResponse: Function;
 	export let mergeResponses: Function;
 
+	export let addMessages: Function;
+
 	export let triggerScroll: Function;
 
 	const dispatch = createEventDispatcher();
@@ -233,6 +235,7 @@
 										groupedMessageIdsIdx[modelIdx] =
 											groupedMessageIds[modelIdx].messageIds.length - 1;
 									}}
+									{addMessages}
 									{readOnly}
 								/>
 							{/if}

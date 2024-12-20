@@ -16,7 +16,9 @@
 
 	export let save = false;
 	export let floatingButtons = true;
+
 	export let onSourceClick = () => {};
+	export let onAddMessages = () => {};
 
 	let contentContainerElement;
 
@@ -163,7 +165,9 @@
 		{id}
 		model={model?.id}
 		messages={createMessagesList(history, id)}
-		onSave={() => {
+		onAdd={({ modelId, messages }) => {
+			console.log(modelId, messages);
+			onAddMessages({ modelId, messages });
 			closeFloatingButtons();
 		}}
 	/>
