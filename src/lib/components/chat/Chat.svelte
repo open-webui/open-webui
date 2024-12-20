@@ -538,17 +538,6 @@
 		}
 	};
 
-	const handleGoogleDrivePicker = async () => {
-		try {
-			const fileData = await createPicker();
-			if (fileData) {
-				await uploadGoogleDriveFile(fileData);
-			}
-		} catch (error) {
-			toast.error('Error accessing Google Drive: ' + error.message);
-		}
-	};
-
 	const uploadWeb = async (url) => {
 		console.log(url);
 
