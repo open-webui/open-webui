@@ -1,6 +1,7 @@
 <script>
   // Assuming you have a way to get environment variables
   import { getEnvVariables } from '$lib/utils/env';
+  import { onMount } from 'svelte';
 
   let envVariables = [];
 
