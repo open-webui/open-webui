@@ -1,4 +1,4 @@
-import { console } from 'node:console';
+import { onMount } from 'svelte';
 
 export async function getEnvVariables() {
   // Assuming you are running this in a Node.js environment
