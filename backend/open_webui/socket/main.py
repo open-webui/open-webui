@@ -249,3 +249,9 @@ def get_event_call(request_info):
         return response
 
     return __event_call__
+
+
+def get_user_id_from_session_pool(sid):
+    print("get_user_id_from_session_pool", sid)
+    print(SESSION_POOL.get(sid))
+    return SESSION_POOL.get(sid)

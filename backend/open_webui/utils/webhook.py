@@ -11,6 +11,7 @@ log.setLevel(SRC_LOG_LEVELS["WEBHOOK"])
 
 def post_webhook(url: str, message: str, event_data: dict) -> bool:
     try:
+        log.debug(f"post_webhook: {url}, {message}, {event_data}")
         payload = {}
 
         # Slack and Google Chat Webhooks

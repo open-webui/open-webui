@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
 
-	import { user, config } from '$lib/stores';
+	import { user, config, settings } from '$lib/stores';
 	import { updateUserProfile, createAPIKey, getAPIKey } from '$lib/apis/auths';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
@@ -16,10 +16,12 @@
 	const i18n = getContext('i18n');
 
 	export let saveHandler: Function;
+	export let saveSettings: Function;
 
 	let profileImageUrl = '';
 	let name = '';
 
+	let webhookUrl = '';
 	let showAPIKeys = false;
 
 	let JWTTokenCopied = false;
@@ -33,6 +35,15 @@
 			if (profileImageUrl === generateInitialsImage($user.name) || profileImageUrl === '') {
 				profileImageUrl = generateInitialsImage(name);
 			}
+		}
+
+		if (webhookUrl !== $settings?.notifications?.webhook_url) {
+			saveSettings({
+				notifications: {
+					...$settings.notifications,
+					webhook_url: webhookUrl
+				}
+			});
 		}
 
 		const updatedUser = await updateUserProfile(localStorage.token, name, profileImageUrl).catch(
@@ -60,6 +71,7 @@
 	onMount(async () => {
 		name = $user.name;
 		profileImageUrl = $user.profile_image_url;
+		webhookUrl = $settings?.notifications?.webhook_url ?? '';
 
 		APIKey = await getAPIKey(localStorage.token).catch((error) => {
 			console.log(error);
@@ -221,6 +233,22 @@
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							type="text"
 							bind:value={name}
+							required
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div class="pt-2">
+				<div class="flex flex-col w-full">
+					<div class=" mb-1 text-xs font-medium">{$i18n.t('Notification Webhook')}</div>
+
+					<div class="flex-1">
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							type="url"
+							placeholder={$i18n.t('Enter your webhook URL')}
+							bind:value={webhookUrl}
 							required
 						/>
 					</div>
