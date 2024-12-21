@@ -10,6 +10,7 @@
 	import Pipelines from './Settings/Pipelines.svelte';
 	import Audio from './Settings/Audio.svelte';
 	import Images from './Settings/Images.svelte';
+	import Environment from './Settings/Environment.svelte';
 	import Interface from './Settings/Interface.svelte';
 	import Models from './Settings/Models.svelte';
 	import Connections from './Settings/Connections.svelte';
@@ -269,6 +270,28 @@
 
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			'environment'
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => {
+				selectedTab = 'environment';
+			}}
+		>
+			<div class=" self-center mr-2">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 16 16"
+					fill="currentColor"
+					class="w-4 h-4"
+				>
+					<path d="M8.5 4.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM10.9 12.006c.11.542-.348.994-.9.994H2c-.553 0-1.01-.452-.902-.994a5.002 5.002 0 0 1 9.803 0ZM14.002 12h-1.59a2.5 2.5 0 0 0-4.82 0H6.907a4.501 4.501 0 0 1 8.779 0c.108.542-.349.994-.902.994h-.782ZM11 5.5a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z" />
+				</svg>
+			</div>
+			<div class=" self-center">{$i18n.t('Environment')}</div>
+		</button>
+
+		<button
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'pipelines'
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -378,6 +401,12 @@
 			/>
 		{:else if selectedTab === 'images'}
 			<Images
+				on:save={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'environment'}
+			<Environment
 				on:save={() => {
 					toast.success($i18n.t('Settings saved successfully!'));
 				}}

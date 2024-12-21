@@ -704,3 +704,73 @@
 		</button>
 	</div>
 </form>
+<script lang="ts">
+	import { toast } from 'svelte-sonner';
+	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { config as backendConfig } from '$lib/stores';
+	import Switch from '$lib/components/common/Switch.svelte';
+
+	const dispatch = createEventDispatcher();
+	const i18n = getContext('i18n');
+
+	let loading = false;
+	let config = {
+		enabled: false,
+		settings: {}
+	};
+
+	const saveHandler = async () => {
+		loading = true;
+		// Add your environment config save logic here
+		dispatch('save');
+		loading = false;
+	};
+
+	onMount(async () => {
+		// Add your environment config load logic here
+	});
+</script>
+
+<form
+	class="flex flex-col h-full justify-between space-y-3 text-sm"
+	on:submit|preventDefault={async () => {
+		saveHandler();
+	}}
+>
+	<div class="space-y-3 overflow-y-scroll scrollbar-hidden pr-2">
+		<div>
+			<div class="mb-1 text-sm font-medium">{$i18n.t('Environment Settings')}</div>
+
+			<div>
+				<div class="py-0.5 flex w-full justify-between">
+					<div class="self-center text-xs font-medium">
+						{$i18n.t('Enable Environment Settings')}
+					</div>
+
+					<div class="px-1">
+						<Switch
+							bind:state={config.enabled}
+							on:change={() => {
+								// Add your enable/disable logic here
+							}}
+						/>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="flex justify-end pt-4">
+		<button
+			type="submit"
+			class="bg-primary hover:bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition"
+			disabled={loading}
+		>
+			{#if loading}
+				{$i18n.t('Saving...')}
+			{:else}
+				{$i18n.t('Save')}
+			{/if}
+		</button>
+	</div>
+</form>
