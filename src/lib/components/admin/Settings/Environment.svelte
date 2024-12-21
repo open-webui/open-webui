@@ -1,10 +1,12 @@
 <script>
   import { getEnvVariables } from '$lib/utils/env';
-  import { onMount } from 'svelte';
+  import { onMount, getContext } from 'svelte';
 
   let envVariables = [];
   let error = null;
   let enableGoogleDriveIntegration = false; // Add this line
+
+  const i18n = getContext('i18n');
 
   onMount(async () => {
     try {
