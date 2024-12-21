@@ -131,9 +131,28 @@
 	$: if (chatIdProp) {
 		(async () => {
 			console.log(chatIdProp);
+
+			prompt = '';
+			files = [];
+			selectedToolIds = [];
+			webSearchEnabled = false;
+
+			loaded = false;
+
 			if (chatIdProp && (await loadChat())) {
 				await tick();
 				loaded = true;
+
+				if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
+					try {
+						const input = JSON.parse(localStorage.getItem(`chat-input-${chatIdProp}`));
+
+						prompt = input.prompt;
+						files = input.files;
+						selectedToolIds = input.selectedToolIds;
+						webSearchEnabled = input.webSearchEnabled;
+					} catch (e) {}
+				}
 
 				window.setTimeout(() => scrollToBottom(), 0);
 				const chatInput = document.getElementById('chat-input');
@@ -387,6 +406,21 @@
 		} else {
 			if ($temporaryChatEnabled) {
 				await goto('/');
+			}
+		}
+
+		if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
+			try {
+				const input = JSON.parse(localStorage.getItem(`chat-input-${chatIdProp}`));
+				prompt = input.prompt;
+				files = input.files;
+				selectedToolIds = input.selectedToolIds;
+				webSearchEnabled = input.webSearchEnabled;
+			} catch (e) {
+				prompt = '';
+				files = [];
+				selectedToolIds = [];
+				webSearchEnabled = false;
 			}
 		}
 
@@ -2019,6 +2053,13 @@
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								{stopResponse}
 								{createMessagePair}
+								onChange={(input) => {
+									if (input.prompt) {
+										localStorage.setItem(`chat-input-${$chatId}`, JSON.stringify(input));
+									} else {
+										localStorage.removeItem(`chat-input-${$chatId}`);
+									}
+								}}
 								on:upload={async (e) => {
 									const { type, data } = e.detail;
 

@@ -43,6 +43,7 @@
 
 	export let transparentBackground = false;
 
+	export let onChange: Function = () => {};
 	export let createMessagePair: Function;
 	export let stopResponse: Function;
 
@@ -61,6 +62,13 @@
 
 	export let selectedToolIds = [];
 	export let webSearchEnabled = false;
+
+	$: onChange({
+		prompt,
+		files,
+		selectedToolIds,
+		webSearchEnabled
+	});
 
 	let loaded = false;
 	let recording = false;
