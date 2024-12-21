@@ -249,7 +249,7 @@
 			fileMaxSize = res?.file.max_size ?? '';
 			fileMaxCount = res?.file.max_count ?? '';
 
-			enableGoogleDrive = res.enable_google_drive_integration;
+			enableGoogleDriveIntegration = res.enable_google_drive_integration;
 		}
 	});
 </script>
