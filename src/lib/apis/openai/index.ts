@@ -273,7 +273,6 @@ export const verifyOpenAIConnection = async (
 	return res;
 };
 
-
 export const chatCompletion = async (
 	token: string = '',
 	body: object,
@@ -302,8 +301,6 @@ export const chatCompletion = async (
 
 	return [res, controller];
 };
-
-
 
 export const generateOpenAIChatCompletion = async (
 	token: string = '',
