@@ -1,12 +1,7 @@
-import dotenv from 'dotenv';
-
 export async function getEnvVariables() {
   try {
-    // Load environment variables from .env file
-    dotenv.config();
-    
-    // Filter and map environment variables
-    const envVariables = Object.entries(process.env)
+    // Get all environment variables from import.meta.env
+    const envVariables = Object.entries(import.meta.env)
       .filter(([key]) => key.startsWith('VITE_')) // Only show VITE_ prefixed vars for security
       .map(([key, value]) => ({
         key,
