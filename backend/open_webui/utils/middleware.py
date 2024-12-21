@@ -602,12 +602,12 @@ async def process_chat_response(request, response, user, events, metadata, tasks
                         if done:
                             data = {"done": True, "content": content, "title": title}
 
+                            # Send a webhook notification if the user is not active
                             if (
                                 get_user_id_from_session_pool(metadata["session_id"])
                                 is None
                             ):
                                 webhook_url = Users.get_user_webhook_url_by_id(user.id)
-                                print(f"webhook_url: {webhook_url}")
                                 if webhook_url:
                                     post_webhook(
                                         webhook_url,
