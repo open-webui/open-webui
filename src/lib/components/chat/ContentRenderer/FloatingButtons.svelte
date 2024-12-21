@@ -56,7 +56,10 @@
 					role: 'user',
 					content: prompt
 				}
-			],
+			].map((message) => ({
+				role: message.role,
+				content: message.content
+			})),
 			stream: true // Enable streaming
 		});
 
@@ -129,7 +132,10 @@
 					role: 'user',
 					content: prompt
 				}
-			],
+			].map((message) => ({
+				role: message.role,
+				content: message.content
+			})),
 			stream: true // Enable streaming
 		});
 
