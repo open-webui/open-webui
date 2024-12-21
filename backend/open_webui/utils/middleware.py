@@ -561,6 +561,15 @@ async def process_chat_response(request, response, user, events, metadata, tasks
                         }
                     )
 
+                    # Save message in the database
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
+                        {
+                            **event,
+                        },
+                    )
+
                 content = ""
                 async for line in response.body_iterator:
                     line = line.decode("utf-8") if isinstance(line, bytes) else line
