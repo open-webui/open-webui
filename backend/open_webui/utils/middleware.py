@@ -608,15 +608,16 @@ async def process_chat_response(request, response, user, events, metadata, tasks
                                 is None
                             ):
                                 webhook_url = Users.get_user_webhook_url_by_id(user.id)
+                                webui_url = f"{request.headers.get('x-forwarded-proto', request.url.scheme)}://{request.headers.get('x-forwarded-host', f'{request.client.host}:{request.url.port}')}"
                                 if webhook_url:
                                     post_webhook(
                                         webhook_url,
-                                        f"{title} - {WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
+                                        f"{title} - {webui_url}/c/{metadata['chat_id']}\n\n{content}",
                                         {
                                             "action": "chat",
                                             "message": content,
                                             "title": title,
-                                            "url": f"{WEBUI_URL}/c/{metadata['chat_id']}",
+                                            "url": f"{webui_url}/c/{metadata['chat_id']}",
                                         },
                                     )
 
