@@ -611,12 +611,12 @@ async def process_chat_response(request, response, user, events, metadata, tasks
                                 if webhook_url:
                                     post_webhook(
                                         webhook_url,
-                                        f"{title} - {WEBUI_URL}/{metadata['chat_id']}\n\n{content}",
+                                        f"{title} - {WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
                                         {
                                             "action": "chat",
                                             "message": content,
                                             "title": title,
-                                            "url": f"{WEBUI_URL}/{metadata['chat_id']}",
+                                            "url": f"{WEBUI_URL}/c/{metadata['chat_id']}",
                                         },
                                     )
 
