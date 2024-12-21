@@ -56,7 +56,7 @@
 
 					// Calculate space available on the right
 					const spaceOnRight = parentRect.width - left;
-					let halfScreenWidth = window.innerWidth / 2;
+					let halfScreenWidth = $mobile ? window.innerWidth / 2 : window.innerWidth / 3;
 
 					if (spaceOnRight < halfScreenWidth) {
 						const right = parentRect.right - rect.right;
