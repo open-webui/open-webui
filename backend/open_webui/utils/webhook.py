@@ -19,7 +19,11 @@ def post_webhook(url: str, message: str, event_data: dict) -> bool:
             payload["text"] = message
         # Discord Webhooks
         elif "https://discord.com/api/webhooks" in url:
-            payload["content"] = message
+            payload["content"] = (
+                message
+                if len(message) > 2000
+                else f"{message[: 2000 - 14]}... (truncated)"
+            )
         # Microsoft Teams Webhooks
         elif "webhook.office.com" in url:
             action = event_data.get("action", "undefined")
