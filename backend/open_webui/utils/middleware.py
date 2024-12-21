@@ -528,7 +528,14 @@ async def process_chat_response(request, response, user, events, metadata, tasks
         return response
 
     event_emitter = None
-    if "session_id" in metadata:
+    if (
+        "session_id" in metadata
+        and metadata["session_id"]
+        and "chat_id" in metadata
+        and metadata["chat_id"]
+        and "message_id" in metadata
+        and metadata["message_id"]
+    ):
         event_emitter = get_event_emitter(metadata)
 
     if event_emitter:
@@ -701,6 +708,7 @@ async def process_chat_response(request, response, user, events, metadata, tasks
         return {"status": True, "task_id": task_id}
 
     else:
+
         # Fallback to the original response
         async def stream_wrapper(original_generator, events):
             def wrap_item(item):
