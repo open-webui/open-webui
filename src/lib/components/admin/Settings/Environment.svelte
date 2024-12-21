@@ -15,17 +15,11 @@
 </script>
 
 <style>
-  .settings-section {
-    @apply space-y-4;
-  }
-  .settings-header {
-    @apply text-xl font-semibold text-gray-900 dark:text-gray-100;
-  }
   .env-list {
     @apply space-y-2;
   }
   .env-item {
-    @apply p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700;
+    @apply p-3 bg-gray-50 dark:bg-gray-850 rounded-lg;
   }
   .env-key {
     @apply font-medium text-gray-700 dark:text-gray-300;
@@ -41,25 +35,29 @@
   }
 </style>
 
-<div class="settings-section">
-  <h2 class="settings-header">Environment Settings</h2>
-  
-  {#if error}
-    <div class="error">
-      Error loading environment variables: {error}
-    </div>
-  {/if}
-
-  {#if envVariables.length === 0}
-    <p class="no-vars">No environment variables found.</p>
-  {:else}
-    <div class="env-list">
-      {#each envVariables as { key, value }}
-        <div class="env-item">
-          <span class="env-key">{key}:</span>
-          <span class="env-value">{value}</span>
+<form class="flex flex-col h-full justify-between space-y-3 text-sm">
+  <div class="space-y-3 overflow-y-scroll scrollbar-hidden pr-2">
+    <div>
+      <div class="mb-1 text-sm font-medium">Environment Settings</div>
+      
+      {#if error}
+        <div class="error">
+          Error loading environment variables: {error}
         </div>
-      {/each}
+      {/if}
+
+      {#if envVariables.length === 0}
+        <p class="no-vars">No environment variables found.</p>
+      {:else}
+        <div class="env-list">
+          {#each envVariables as { key, value }}
+            <div class="env-item">
+              <span class="env-key">{key}:</span>
+              <span class="env-value">{value}</span>
+            </div>
+          {/each}
+        </div>
+      {/if}
     </div>
-  {/if}
-</div>
+  </div>
+</form>
