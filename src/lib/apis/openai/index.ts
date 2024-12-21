@@ -1,4 +1,4 @@
-import { OPENAI_API_BASE_URL } from '$lib/constants';
+import { OPENAI_API_BASE_URL, WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 export const getOpenAIConfig = async (token: string = '') => {
 	let error = null;
@@ -308,7 +308,7 @@ export const chatCompletion = async (
 export const generateOpenAIChatCompletion = async (
 	token: string = '',
 	body: object,
-	url: string = OPENAI_API_BASE_URL
+	url: string = `${WEBUI_BASE_URL}/api`
 ) => {
 	let error = null;
 
