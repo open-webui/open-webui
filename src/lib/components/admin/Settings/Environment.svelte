@@ -4,6 +4,7 @@
 
   let envVariables = [];
   let error = null;
+  let enableGoogleDriveIntegration = false; // Add this line
 
   onMount(async () => {
     try {
