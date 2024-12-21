@@ -89,7 +89,7 @@ async def generate_chat_completion(
         if model_ids and filter_mode == "exclude":
             model_ids = [
                 model["id"]
-                for model in await get_all_models(request)
+                for model in list(request.app.state.MODELS.values())
                 if model.get("owned_by") != "arena" and model["id"] not in model_ids
             ]
 
@@ -99,7 +99,7 @@ async def generate_chat_completion(
         else:
             model_ids = [
                 model["id"]
-                for model in await get_all_models(request)
+                for model in list(request.app.state.MODELS.values())
                 if model.get("owned_by") != "arena"
             ]
             selected_model_id = random.choice(model_ids)
@@ -154,7 +154,8 @@ async def generate_chat_completion(
 
 
 async def chat_completed(request: Request, form_data: dict, user: Any):
-    await get_all_models(request)
+    if not request.app.state.MODELS:
+        await get_all_models(request)
     models = request.app.state.MODELS
 
     data = form_data
@@ -289,7 +290,8 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
     if not action:
         raise Exception(f"Action not found: {action_id}")
 
-    await get_all_models(request)
+    if not request.app.state.MODELS:
+        await get_all_models(request)
     models = request.app.state.MODELS
 
     data = form_data
