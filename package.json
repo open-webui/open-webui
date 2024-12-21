@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.4.8",
+	"version": "0.5.0",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
@@ -50,6 +50,7 @@
 	"type": "module",
 	"dependencies": {
 		"@codemirror/lang-javascript": "^6.2.2",
+		"codemirror-lang-hcl": "^0.0.0-beta.2",
 		"@codemirror/lang-python": "^6.1.6",
 		"@codemirror/language-data": "^6.5.1",
 		"@codemirror/theme-one-dark": "^6.1.2",

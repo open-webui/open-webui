@@ -60,9 +60,10 @@
 
 				<div class="flex-1">
 					<input
-						class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+						class="w-full bg-transparent dark:text-gray-300 outline-none placeholder:opacity-30"
 						type="password"
 						bind:value={currentPassword}
+						placeholder={$i18n.t('Enter your current password')}
 						autocomplete="current-password"
 						required
 					/>
@@ -74,9 +75,10 @@
 
 				<div class="flex-1">
 					<input
-						class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+						class="w-full bg-transparent text-sm dark:text-gray-300 outline-none placeholder:opacity-30"
 						type="password"
 						bind:value={newPassword}
+						placeholder={$i18n.t('Enter your new password')}
 						autocomplete="new-password"
 						required
 					/>
@@ -88,9 +90,10 @@
 
 				<div class="flex-1">
 					<input
-						class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+						class="w-full bg-transparent text-sm dark:text-gray-300 outline-none placeholder:opacity-30"
 						type="password"
 						bind:value={newPasswordConfirm}
+						placeholder={$i18n.t('Confirm your new password')}
 						autocomplete="off"
 						required
 					/>
@@ -100,7 +103,7 @@
 
 		<div class="mt-3 flex justify-end">
 			<button
-				class=" px-4 py-2 text-xs bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-800 text-gray-100 transition rounded-md font-medium"
+				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			>
 				{$i18n.t('Update password')}
 			</button>

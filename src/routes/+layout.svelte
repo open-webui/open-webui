@@ -38,13 +38,14 @@
 	let loaded = false;
 	const BREAKPOINT = 768;
 
-	const setupSocket = () => {
+	const setupSocket = (enableWebsocket) => {
 		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
 			reconnection: true,
 			reconnectionDelay: 1000,
 			reconnectionDelayMax: 5000,
 			randomizationFactor: 0.5,
 			path: '/ws/socket.io',
+			transports: enableWebsocket ? ['websocket'] : ['polling', 'websocket'],
 			auth: { token: localStorage.token }
 		});
 
@@ -126,7 +127,7 @@
 			await WEBUI_NAME.set(backendConfig.name);
 
 			if ($config) {
-				setupSocket();
+				setupSocket($config.features?.enable_websocket ?? true);
 
 				if (localStorage.token) {
 					// Get Session User Info
@@ -218,5 +219,5 @@
 				: 'light'
 			: 'light'}
 	richColors
-	position="top-center"
+	position="top-right"
 />

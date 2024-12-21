@@ -552,7 +552,33 @@ export const removeEmojis = (str: string) => {
 };
 
 export const removeFormattings = (str: string) => {
-	return str.replace(/(\*)(.*?)\1/g, '').replace(/(```)(.*?)\1/gs, '');
+	return (
+		str
+			// Block elements (remove completely)
+			.replace(/(```[\s\S]*?```)/g, '') // Code blocks
+			.replace(/^\|.*\|$/gm, '') // Tables
+			// Inline elements (preserve content)
+			.replace(/(?:\*\*|__)(.*?)(?:\*\*|__)/g, '$1') // Bold
+			.replace(/(?:[*_])(.*?)(?:[*_])/g, '$1') // Italic
+			.replace(/~~(.*?)~~/g, '$1') // Strikethrough
+			.replace(/`([^`]+)`/g, '$1') // Inline code
+
+			// Links and images
+			.replace(/!?\[([^\]]*)\](?:\([^)]+\)|\[[^\]]*\])/g, '$1') // Links & images
+			.replace(/^\[[^\]]+\]:\s*.*$/gm, '') // Reference definitions
+
+			// Block formatting
+			.replace(/^#{1,6}\s+/gm, '') // Headers
+			.replace(/^\s*[-*+]\s+/gm, '') // Lists
+			.replace(/^\s*(?:\d+\.)\s+/gm, '') // Numbered lists
+			.replace(/^\s*>[> ]*/gm, '') // Blockquotes
+			.replace(/^\s*:\s+/gm, '') // Definition lists
+
+			// Cleanup
+			.replace(/\[\^[^\]]*\]/g, '') // Footnotes
+			.replace(/[-*_~]/g, '') // Remaining markers
+			.replace(/\n{2,}/g, '\n')
+	); // Multiple newlines
 };
 
 export const cleanText = (content: string) => {

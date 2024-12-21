@@ -33,6 +33,7 @@
 	export let chatActionHandler: Function;
 	export let showMessage: Function = () => {};
 	export let submitMessage: Function = () => {};
+	export let addMessages: Function = () => {};
 
 	export let readOnly = false;
 
@@ -248,6 +249,7 @@
 					id: responseMessageId,
 					parentId: parentId,
 					childrenIds: [],
+					files: undefined,
 					content: content,
 					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 				};
@@ -403,6 +405,7 @@
 							{regenerateResponse}
 							{continueResponse}
 							{mergeResponses}
+							{addMessages}
 							{triggerScroll}
 							{readOnly}
 						/>
