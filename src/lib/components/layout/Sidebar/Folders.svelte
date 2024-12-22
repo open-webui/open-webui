@@ -19,7 +19,7 @@
 
 {#each folderList as folderId (folderId)}
 	<RecursiveFolder
-		className="px-2"
+		className="pl-1"
 		{folders}
 		{folderId}
 		on:import={(e) => {

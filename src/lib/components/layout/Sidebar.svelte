@@ -519,19 +519,6 @@
 				on:input={searchDebounceHandler}
 				placeholder={$i18n.t('Search')}
 			/>
-
-			<div class="absolute z-40 right-3.5 top-1">
-				<Tooltip content={$i18n.t('New folder')}>
-					<button
-						class="p-1 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-gray-950 dark:hover:bg-gray-900 transition"
-						on:click={() => {
-							createFolder();
-						}}
-					>
-						<Plus />
-					</button>
-				</Tooltip>
-			</div>
 		</div>
 
 		<div
@@ -539,156 +526,157 @@
 				? 'opacity-20'
 				: ''}"
 		>
-			{#if $temporaryChatEnabled}
-				<div class="absolute z-40 w-full h-full flex justify-center"></div>
-			{/if}
+			<Folder
+				collapsible={!search}
+				className="px-2 mt-0.5"
+				name={$i18n.t('Chats')}
+				onCreateFolder={createFolder}
+				on:import={(e) => {
+					importChatHandler(e.detail);
+				}}
+				on:drop={async (e) => {
+					const { type, id, item } = e.detail;
 
-			{#if !search && $pinnedChats.length > 0}
-				<div class="flex flex-col space-y-1 rounded-xl">
-					<Folder
-						className="px-2"
-						bind:open={showPinnedChat}
-						on:change={(e) => {
-							localStorage.setItem('showPinnedChat', e.detail);
-							console.log(e.detail);
-						}}
-						on:import={(e) => {
-							importChatHandler(e.detail, true);
-						}}
-						on:drop={async (e) => {
-							const { type, id, item } = e.detail;
+					if (type === 'chat') {
+						let chat = await getChatById(localStorage.token, id).catch((error) => {
+							return null;
+						});
+						if (!chat && item) {
+							chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+						}
 
-							if (type === 'chat') {
-								let chat = await getChatById(localStorage.token, id).catch((error) => {
-									return null;
-								});
-								if (!chat && item) {
-									chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
-								}
-
-								if (chat) {
-									console.log(chat);
-									if (chat.folder_id) {
-										const res = await updateChatFolderIdById(
-											localStorage.token,
-											chat.id,
-											null
-										).catch((error) => {
-											toast.error(error);
-											return null;
-										});
+						if (chat) {
+							console.log(chat);
+							if (chat.folder_id) {
+								const res = await updateChatFolderIdById(localStorage.token, chat.id, null).catch(
+									(error) => {
+										toast.error(error);
+										return null;
 									}
-
-									if (!chat.pinned) {
-										const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
-									}
-
-									initChatList();
-								}
+								);
 							}
-						}}
-						name={$i18n.t('Pinned')}
-					>
-						<div
-							class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
-						>
-							{#each $pinnedChats as chat, idx}
-								<ChatItem
-									className=""
-									id={chat.id}
-									title={chat.title}
-									{shiftKey}
-									selected={selectedChatId === chat.id}
-									on:select={() => {
-										selectedChatId = chat.id;
-									}}
-									on:unselect={() => {
-										selectedChatId = null;
-									}}
-									on:change={async () => {
-										initChatList();
-									}}
-									on:tag={(e) => {
-										const { type, name } = e.detail;
-										tagEventHandler(type, name, chat.id);
-									}}
-								/>
-							{/each}
-						</div>
-					</Folder>
-				</div>
-			{/if}
 
-			<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
-				{#if !search && folders}
-					<Folders
-						{folders}
-						on:import={(e) => {
-							const { folderId, items } = e.detail;
-							importChatHandler(items, false, folderId);
-						}}
-						on:update={async (e) => {
+							if (chat.pinned) {
+								const res = await toggleChatPinnedStatusById(localStorage.token, chat, id);
+							}
+
 							initChatList();
-						}}
-						on:change={async () => {
-							initChatList();
-						}}
-					/>
+						}
+					} else if (type === 'folder') {
+						if (folders[id].parent_id === null) {
+							return;
+						}
+
+						const res = await updateFolderParentIdById(localStorage.token, id, null).catch(
+							(error) => {
+								toast.error(error);
+								return null;
+							}
+						);
+
+						if (res) {
+							await initFolders();
+						}
+					}
+				}}
+			>
+				{#if $temporaryChatEnabled}
+					<div class="absolute z-40 w-full h-full flex justify-center"></div>
 				{/if}
 
-				<Folder
-					collapsible={!search}
-					className="px-2 mt-0.5"
-					name={$i18n.t('All chats')}
-					on:import={(e) => {
-						importChatHandler(e.detail);
-					}}
-					on:drop={async (e) => {
-						const { type, id, item } = e.detail;
+				{#if !search && $pinnedChats.length > 0}
+					<div class="flex flex-col space-y-1 rounded-xl">
+						<Folder
+							className="pl-1"
+							bind:open={showPinnedChat}
+							on:change={(e) => {
+								localStorage.setItem('showPinnedChat', e.detail);
+								console.log(e.detail);
+							}}
+							on:import={(e) => {
+								importChatHandler(e.detail, true);
+							}}
+							on:drop={async (e) => {
+								const { type, id, item } = e.detail;
 
-						if (type === 'chat') {
-							let chat = await getChatById(localStorage.token, id).catch((error) => {
-								return null;
-							});
-							if (!chat && item) {
-								chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
-							}
+								if (type === 'chat') {
+									let chat = await getChatById(localStorage.token, id).catch((error) => {
+										return null;
+									});
+									if (!chat && item) {
+										chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+									}
 
-							if (chat) {
-								console.log(chat);
-								if (chat.folder_id) {
-									const res = await updateChatFolderIdById(localStorage.token, chat.id, null).catch(
-										(error) => {
-											toast.error(error);
-											return null;
+									if (chat) {
+										console.log(chat);
+										if (chat.folder_id) {
+											const res = await updateChatFolderIdById(
+												localStorage.token,
+												chat.id,
+												null
+											).catch((error) => {
+												toast.error(error);
+												return null;
+											});
 										}
-									);
-								}
 
-								if (chat.pinned) {
-									const res = await toggleChatPinnedStatusById(localStorage.token, chat, id);
-								}
+										if (!chat.pinned) {
+											const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
+										}
 
+										initChatList();
+									}
+								}
+							}}
+							name={$i18n.t('Pinned')}
+						>
+							<div
+								class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
+							>
+								{#each $pinnedChats as chat, idx}
+									<ChatItem
+										className=""
+										id={chat.id}
+										title={chat.title}
+										{shiftKey}
+										selected={selectedChatId === chat.id}
+										on:select={() => {
+											selectedChatId = chat.id;
+										}}
+										on:unselect={() => {
+											selectedChatId = null;
+										}}
+										on:change={async () => {
+											initChatList();
+										}}
+										on:tag={(e) => {
+											const { type, name } = e.detail;
+											tagEventHandler(type, name, chat.id);
+										}}
+									/>
+								{/each}
+							</div>
+						</Folder>
+					</div>
+				{/if}
+
+				<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
+					{#if !search && folders}
+						<Folders
+							{folders}
+							on:import={(e) => {
+								const { folderId, items } = e.detail;
+								importChatHandler(items, false, folderId);
+							}}
+							on:update={async (e) => {
 								initChatList();
-							}
-						} else if (type === 'folder') {
-							if (folders[id].parent_id === null) {
-								return;
-							}
+							}}
+							on:change={async () => {
+								initChatList();
+							}}
+						/>
+					{/if}
 
-							const res = await updateFolderParentIdById(localStorage.token, id, null).catch(
-								(error) => {
-									toast.error(error);
-									return null;
-								}
-							);
-
-							if (res) {
-								await initFolders();
-							}
-						}
-					}}
-				>
 					<div class="pt-1.5">
 						{#if $chats}
 							{#each $chats as chat, idx}
@@ -701,23 +689,23 @@
 									>
 										{$i18n.t(chat.time_range)}
 										<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
-							{$i18n.t('Today')}
-							{$i18n.t('Yesterday')}
-							{$i18n.t('Previous 7 days')}
-							{$i18n.t('Previous 30 days')}
-							{$i18n.t('January')}
-							{$i18n.t('February')}
-							{$i18n.t('March')}
-							{$i18n.t('April')}
-							{$i18n.t('May')}
-							{$i18n.t('June')}
-							{$i18n.t('July')}
-							{$i18n.t('August')}
-							{$i18n.t('September')}
-							{$i18n.t('October')}
-							{$i18n.t('November')}
-							{$i18n.t('December')}
-							-->
+						{$i18n.t('Today')}
+						{$i18n.t('Yesterday')}
+						{$i18n.t('Previous 7 days')}
+						{$i18n.t('Previous 30 days')}
+						{$i18n.t('January')}
+						{$i18n.t('February')}
+						{$i18n.t('March')}
+						{$i18n.t('April')}
+						{$i18n.t('May')}
+						{$i18n.t('June')}
+						{$i18n.t('July')}
+						{$i18n.t('August')}
+						{$i18n.t('September')}
+						{$i18n.t('October')}
+						{$i18n.t('November')}
+						{$i18n.t('December')}
+						-->
 									</div>
 								{/if}
 
@@ -766,8 +754,8 @@
 							</div>
 						{/if}
 					</div>
-				</Folder>
-			</div>
+				</div>
+			</Folder>
 		</div>
 
 		<div class="px-2">
