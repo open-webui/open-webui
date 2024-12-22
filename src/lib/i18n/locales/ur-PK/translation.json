@@ -633,9 +633,9 @@
 	"Open file": "فائل کھولیں",
 	"Open in full screen": "پوری اسکرین میں کھولیں",
 	"Open new chat": "نیا چیٹ کھولیں",
-	"Open WebUI uses faster-whisper internally.": "اوپن ویب یو آئی اندرونی طور پر فاسٹر وِسپر استعمال کرتا ہے",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "اوپن WebUI ورژن (v{{OPEN_WEBUI_VERSION}}) مطلوبہ ورژن (v{{REQUIRED_VERSION}}) سے کم ہے",
+	"QXLI uses faster-whisper internally.": "اوپن ویب یو آئی اندرونی طور پر فاسٹر وِسپر استعمال کرتا ہے",
+	"QXLI uses SpeechT5 and CMU Arctic speaker embeddings.": "",
+	"QXLI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "اوپن WebUI ورژن (v{{OPEN_WEBUI_VERSION}}) مطلوبہ ورژن (v{{REQUIRED_VERSION}}) سے کم ہے",
 	"OpenAI": "اوپن اے آئی",
 	"OpenAI API": "اوپن اے آئی اے پی آئی\n",
 	"OpenAI API Config": "اوپن اے آئی API ترتیب",
@@ -1019,7 +1019,7 @@
 	"You're a helpful assistant.": "آپ ایک معاون معاون ہیں",
 	"You're now logged in.": "آپ اب لاگ ان ہو چکے ہیں",
 	"Your account status is currently pending activation.": "آپ کے اکاؤنٹ کی حالت فی الحال فعال ہونے کے منتظر ہے",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "آپ کی پوری شراکت براہ راست پلگ ان ڈیولپر کو جائے گی؛ اوپن ویب یو آئی کوئی فیصد نہیں لیتی تاہم، منتخب کردہ فنڈنگ پلیٹ فارم کی اپنی فیس ہو سکتی ہیں",
+	"Your entire contribution will go directly to the plugin developer; QXLI does not take any percentage. However, the chosen funding platform might have its own fees.": "آپ کی پوری شراکت براہ راست پلگ ان ڈیولپر کو جائے گی؛ اوپن ویب یو آئی کوئی فیصد نہیں لیتی تاہم، منتخب کردہ فنڈنگ پلیٹ فارم کی اپنی فیس ہو سکتی ہیں",
 	"Youtube": "یوٹیوب",
 	"Youtube Loader Settings": "یوٹیوب لوڈر کی ترتیبات"
 }

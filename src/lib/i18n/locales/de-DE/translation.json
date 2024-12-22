@@ -633,9 +633,9 @@
 	"Open file": "Datei öffnen",
 	"Open in full screen": "Im Vollbildmodus öffnen",
 	"Open new chat": "Neuen Chat öffnen",
-	"Open WebUI uses faster-whisper internally.": "Open WebUI verwendet intern faster-whisper.",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "Open WebUI verwendet SpeechT5 und CMU Arctic-Sprecher-Embeddings.",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Die installierte Open-WebUI-Version (v{{OPEN_WEBUI_VERSION}}) ist niedriger als die erforderliche Version (v{{REQUIRED_VERSION}})",
+	"QXLI uses faster-whisper internally.": "QXLI verwendet intern faster-whisper.",
+	"QXLI uses SpeechT5 and CMU Arctic speaker embeddings.": "QXLI verwendet SpeechT5 und CMU Arctic-Sprecher-Embeddings.",
+	"QXLI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Die installierte Open-WebUI-Version (v{{OPEN_WEBUI_VERSION}}) ist niedriger als die erforderliche Version (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI-API",
 	"OpenAI API Config": "OpenAI-API-Konfiguration",
@@ -1019,7 +1019,7 @@
 	"You're a helpful assistant.": "Du bist ein hilfreicher Assistent.",
 	"You're now logged in.": "Sie sind jetzt eingeloggt.",
 	"Your account status is currently pending activation.": "Ihr Kontostatus ist derzeit ausstehend und wartet auf Aktivierung.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Ihr gesamter Beitrag geht direkt an den Plugin-Entwickler; Open WebUI behält keinen Prozentsatz ein. Die gewählte Finanzierungsplattform kann jedoch eigene Gebühren haben.",
+	"Your entire contribution will go directly to the plugin developer; QXLI does not take any percentage. However, the chosen funding platform might have its own fees.": "Ihr gesamter Beitrag geht direkt an den Plugin-Entwickler; QXLI behält keinen Prozentsatz ein. Die gewählte Finanzierungsplattform kann jedoch eigene Gebühren haben.",
 	"Youtube": "YouTube",
 	"Youtube Loader Settings": "YouTube-Ladeeinstellungen"
 }

@@ -633,9 +633,9 @@
 	"Open file": "Відкрити файл",
 	"Open in full screen": "Відкрити на весь екран",
 	"Open new chat": "Відкрити новий чат",
-	"Open WebUI uses faster-whisper internally.": "Open WebUI використовує faster-whisper внутрішньо.",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "Open WebUI використовує вбудовування голосів SpeechT5 та CMU Arctic.",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Open WebUI версія (v{{OPEN_WEBUI_VERSION}}) нижча за необхідну версію (v{{REQUIRED_VERSION}})",
+	"QXLI uses faster-whisper internally.": "QXLI використовує faster-whisper внутрішньо.",
+	"QXLI uses SpeechT5 and CMU Arctic speaker embeddings.": "QXLI використовує вбудовування голосів SpeechT5 та CMU Arctic.",
+	"QXLI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "QXLI версія (v{{OPEN_WEBUI_VERSION}}) нижча за необхідну версію (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "Конфігурація OpenAI API",
@@ -1021,7 +1021,7 @@
 	"You're a helpful assistant.": "Ви корисний асистент.",
 	"You're now logged in.": "Ви увійшли в систему.",
 	"Your account status is currently pending activation.": "Статус вашого облікового запису наразі очікує на активацію.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Весь ваш внесок піде безпосередньо розробнику плагіна; Open WebUI не бере жодних відсотків. Однак, обрана платформа фінансування може мати свої власні збори.",
+	"Your entire contribution will go directly to the plugin developer; QXLI does not take any percentage. However, the chosen funding platform might have its own fees.": "Весь ваш внесок піде безпосередньо розробнику плагіна; QXLI не бере жодних відсотків. Однак, обрана платформа фінансування може мати свої власні збори.",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Налаштування завантажувача Youtube"
 }

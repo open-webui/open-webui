@@ -633,9 +633,9 @@
 	"Open file": "打开文件",
 	"Open in full screen": "全屏打开",
 	"Open new chat": "打开新对话",
-	"Open WebUI uses faster-whisper internally.": "Open WebUI 使用内置 faster-whisper。",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "Open WebUI 使用 SpeechT5 和 CMU Arctic speaker embedding。",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "当前 Open WebUI 版本 (v{{OPEN_WEBUI_VERSION}}) 低于所需的版本 (v{{REQUIRED_VERSION}})",
+	"QXLI uses faster-whisper internally.": "QXLI 使用内置 faster-whisper。",
+	"QXLI uses SpeechT5 and CMU Arctic speaker embeddings.": "QXLI 使用 SpeechT5 和 CMU Arctic speaker embedding。",
+	"QXLI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "当前 QXLI 版本 (v{{OPEN_WEBUI_VERSION}}) 低于所需的版本 (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "OpenAI API 配置",
@@ -1018,7 +1018,7 @@
 	"You're a helpful assistant.": "你是一个有帮助的助手。",
 	"You're now logged in.": "已登录。",
 	"Your account status is currently pending activation.": "您的账号当前状态为待激活。",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "您的全部捐款将直接给到插件开发者，Open WebUI 不会收取任何比例。但众筹平台可能会有服务费、抽成。",
+	"Your entire contribution will go directly to the plugin developer; QXLI does not take any percentage. However, the chosen funding platform might have its own fees.": "您的全部捐款将直接给到插件开发者，QXLI 不会收取任何比例。但众筹平台可能会有服务费、抽成。",
 	"Youtube": "YouTube",
 	"Youtube Loader Settings": "YouTube 爬取设置"
 }

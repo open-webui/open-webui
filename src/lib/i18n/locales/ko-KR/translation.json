@@ -633,9 +633,9 @@
 	"Open file": "파일 열기",
 	"Open in full screen": "전체화면으로 열기",
 	"Open new chat": "새 채팅 열기",
-	"Open WebUI uses faster-whisper internally.": "Open WebUI는 내부적으로 패스트 위스퍼를 사용합니다.",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "열린 WebUI 버젼(v{{OPEN_WEBUI_VERSION}})은 최소 버젼 (v{{REQUIRED_VERSION}})보다 낮습니다",
+	"QXLI uses faster-whisper internally.": "QXLI는 내부적으로 패스트 위스퍼를 사용합니다.",
+	"QXLI uses SpeechT5 and CMU Arctic speaker embeddings.": "",
+	"QXLI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "열린 WebUI 버젼(v{{OPEN_WEBUI_VERSION}})은 최소 버젼 (v{{REQUIRED_VERSION}})보다 낮습니다",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "OpenAI API 설정",
@@ -1019,7 +1019,7 @@
 	"You're a helpful assistant.": "당신은 유용한 어시스턴트입니다.",
 	"You're now logged in.": "로그인되었습니다.",
 	"Your account status is currently pending activation.": "현재 계정은 아직 활성화되지 않았습니다.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "당신의 모든 기여는 곧바로 플러그인 개발자에게 갑니다; Open WebUI는 일절 가져가지 않습니다 하지만, 선택한 후원 플랫폼은 수수료를 가져갈 수 있습니다.",
+	"Your entire contribution will go directly to the plugin developer; QXLI does not take any percentage. However, the chosen funding platform might have its own fees.": "당신의 모든 기여는 곧바로 플러그인 개발자에게 갑니다; QXLI는 일절 가져가지 않습니다 하지만, 선택한 후원 플랫폼은 수수료를 가져갈 수 있습니다.",
 	"Youtube": "유튜브",
 	"Youtube Loader Settings": "유튜브 로더 설정"
 }

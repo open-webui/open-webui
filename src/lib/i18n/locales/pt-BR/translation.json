@@ -633,9 +633,9 @@
 	"Open file": "Abrir arquivo",
 	"Open in full screen": "Abrir em tela cheia",
 	"Open new chat": "Abrir novo chat",
-	"Open WebUI uses faster-whisper internally.": "Open WebUI usa faster-whisper internamente.",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "A Open WebUI usa os embeddings de voz do SpeechT5 e do CMU Arctic.",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "A versão do Open WebUI (v{{OPEN_WEBUI_VERSION}}) é inferior à versão necessária (v{{REQUIRED_VERSION}})",
+	"QXLI uses faster-whisper internally.": "QXLI usa faster-whisper internamente.",
+	"QXLI uses SpeechT5 and CMU Arctic speaker embeddings.": "A QXLI usa os embeddings de voz do SpeechT5 e do CMU Arctic.",
+	"QXLI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "A versão do QXLI (v{{OPEN_WEBUI_VERSION}}) é inferior à versão necessária (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "API OpenAI",
 	"OpenAI API Config": "Configuração da API OpenAI",
@@ -1020,7 +1020,7 @@
 	"You're a helpful assistant.": "Você é um assistente útil.",
 	"You're now logged in.": "Você agora está logado.",
 	"Your account status is currently pending activation.": "O status da sua conta está atualmente aguardando ativação.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Toda a sua contribuição irá diretamente para o desenvolvedor do plugin; o Open WebUI não retém nenhuma porcentagem. No entanto, a plataforma de financiamento escolhida pode ter suas próprias taxas.",
+	"Your entire contribution will go directly to the plugin developer; QXLI does not take any percentage. However, the chosen funding platform might have its own fees.": "Toda a sua contribuição irá diretamente para o desenvolvedor do plugin; o QXLI não retém nenhuma porcentagem. No entanto, a plataforma de financiamento escolhida pode ter suas próprias taxas.",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Configurações do Carregador Youtube"
 }

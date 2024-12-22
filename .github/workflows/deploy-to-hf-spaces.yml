@@ -37,7 +37,7 @@ jobs:
       - name: Prepend YAML front matter to README.md
         run: |
           echo "---" > temp_readme.md
-          echo "title: Open WebUI" >> temp_readme.md
+          echo "title: QXLI" >> temp_readme.md
           echo "emoji: 🐳" >> temp_readme.md
           echo "colorFrom: purple" >> temp_readme.md
           echo "colorTo: gray" >> temp_readme.md

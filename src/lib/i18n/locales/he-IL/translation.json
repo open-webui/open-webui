@@ -633,9 +633,9 @@
 	"Open file": "",
 	"Open in full screen": "",
 	"Open new chat": "פתח צ'אט חדש",
-	"Open WebUI uses faster-whisper internally.": "",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "",
+	"QXLI uses faster-whisper internally.": "",
+	"QXLI uses SpeechT5 and CMU Arctic speaker embeddings.": "",
+	"QXLI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "API של OpenAI",
 	"OpenAI API Config": "תצורת API של OpenAI",
@@ -1020,7 +1020,7 @@
 	"You're a helpful assistant.": "אתה עוזר מועיל.",
 	"You're now logged in.": "כעת אתה מחובר.",
 	"Your account status is currently pending activation.": "",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
+	"Your entire contribution will go directly to the plugin developer; QXLI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "הגדרות Youtube Loader"
 }

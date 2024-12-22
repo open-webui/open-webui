@@ -633,9 +633,9 @@
 	"Open file": "Ouvrir le fichier",
 	"Open in full screen": "Ouvrir en plein écran",
 	"Open new chat": "Ouvrir une nouvelle conversation",
-	"Open WebUI uses faster-whisper internally.": "Open WebUI utilise faster-whisper en interne.",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "Open WebUI utilise SpeechT5 et les embeddings de locuteur CMU Arctic.",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "La version Open WebUI (v{{OPEN_WEBUI_VERSION}}) est inférieure à la version requise (v{{REQUIRED_VERSION}})",
+	"QXLI uses faster-whisper internally.": "QXLI utilise faster-whisper en interne.",
+	"QXLI uses SpeechT5 and CMU Arctic speaker embeddings.": "QXLI utilise SpeechT5 et les embeddings de locuteur CMU Arctic.",
+	"QXLI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "La version QXLI (v{{OPEN_WEBUI_VERSION}}) est inférieure à la version requise (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "API compatibles OpenAI",
 	"OpenAI API Config": "Configuration de l'API OpenAI",
@@ -1020,7 +1020,7 @@
 	"You're a helpful assistant.": "Vous êtes un assistant efficace.",
 	"You're now logged in.": "Vous êtes désormais connecté.",
 	"Your account status is currently pending activation.": "Votre statut de compte est actuellement en attente d'activation.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "L'intégralité de votre contribution ira directement au développeur du plugin ; Open WebUI ne prend aucun pourcentage. Cependant, la plateforme de financement choisie peut avoir ses propres frais.",
+	"Your entire contribution will go directly to the plugin developer; QXLI does not take any percentage. However, the chosen funding platform might have its own fees.": "L'intégralité de votre contribution ira directement au développeur du plugin ; QXLI ne prend aucun pourcentage. Cependant, la plateforme de financement choisie peut avoir ses propres frais.",
 	"Youtube": "YouTube",
 	"Youtube Loader Settings": "Paramètres de l'outil de téléchargement YouTube"
 }

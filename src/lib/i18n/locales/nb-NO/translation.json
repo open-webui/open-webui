@@ -633,9 +633,9 @@
 	"Open file": "Åpne fil",
 	"Open in full screen": "Åpne i fullskjerm",
 	"Open new chat": "Åpne ny chat",
-	"Open WebUI uses faster-whisper internally.": "Open WebUI bruker faster-whisper internt.",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "Open WebUI bruker SpeechT5 og CMU Arctic-høytalerinnbygginger",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Open WebUI-versjonen (v{{OPEN_WEBUI_VERSION}}) er lavere enn den påkrevde versjonen (v{{REQUIRED_VERSION}})",
+	"QXLI uses faster-whisper internally.": "QXLI bruker faster-whisper internt.",
+	"QXLI uses SpeechT5 and CMU Arctic speaker embeddings.": "QXLI bruker SpeechT5 og CMU Arctic-høytalerinnbygginger",
+	"QXLI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "QXLI-versjonen (v{{OPEN_WEBUI_VERSION}}) er lavere enn den påkrevde versjonen (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "API-konfigurasjon for OpenAI",
@@ -1019,7 +1019,7 @@
 	"You're a helpful assistant.": "Du er en nyttig assistent.",
 	"You're now logged in.": "Du er nå logget inn.",
 	"Your account status is currently pending activation.": "Status på kontoen er for øyeblikket ventende på aktivering.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Hele beløpet går uavkortet til utvikleren av tillegget. Open WebUI mottar ikke deler av beløpet. Den valgte betalingsplattformen kan ha gebyrer.",
+	"Your entire contribution will go directly to the plugin developer; QXLI does not take any percentage. However, the chosen funding platform might have its own fees.": "Hele beløpet går uavkortet til utvikleren av tillegget. QXLI mottar ikke deler av beløpet. Den valgte betalingsplattformen kan ha gebyrer.",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Innstillinger for YouTube-laster"
 }

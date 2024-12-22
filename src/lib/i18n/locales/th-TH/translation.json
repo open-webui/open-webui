@@ -633,9 +633,9 @@
 	"Open file": "",
 	"Open in full screen": "",
 	"Open new chat": "เปิดแชทใหม่",
-	"Open WebUI uses faster-whisper internally.": "",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "เวอร์ชั่น Open WebUI (v{{OPEN_WEBUI_VERSION}}) ต่ำกว่าเวอร์ชั่นที่ต้องการ (v{{REQUIRED_VERSION}})",
+	"QXLI uses faster-whisper internally.": "",
+	"QXLI uses SpeechT5 and CMU Arctic speaker embeddings.": "",
+	"QXLI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "เวอร์ชั่น QXLI (v{{OPEN_WEBUI_VERSION}}) ต่ำกว่าเวอร์ชั่นที่ต้องการ (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "การตั้งค่า OpenAI API",
@@ -1019,7 +1019,7 @@
 	"You're a helpful assistant.": "คุณคือผู้ช่วยที่มีประโยชน์",
 	"You're now logged in.": "คุณเข้าสู่ระบบแล้ว",
 	"Your account status is currently pending activation.": "สถานะบัญชีของคุณกำลังรอการเปิดใช้งาน",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "การสนับสนุนทั้งหมดของคุณจะไปยังนักพัฒนาปลั๊กอินโดยตรง; Open WebUI ไม่รับส่วนแบ่งใด ๆ อย่างไรก็ตาม แพลตฟอร์มการระดมทุนที่เลือกอาจมีค่าธรรมเนียมของตัวเอง",
+	"Your entire contribution will go directly to the plugin developer; QXLI does not take any percentage. However, the chosen funding platform might have its own fees.": "การสนับสนุนทั้งหมดของคุณจะไปยังนักพัฒนาปลั๊กอินโดยตรง; QXLI ไม่รับส่วนแบ่งใด ๆ อย่างไรก็ตาม แพลตฟอร์มการระดมทุนที่เลือกอาจมีค่าธรรมเนียมของตัวเอง",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "การตั้งค่าโหลดเดอร์ Youtube"
 }

@@ -633,9 +633,9 @@
 	"Open file": "Otevřít soubor",
 	"Open in full screen": "Otevřít na celou obrazovku",
 	"Open new chat": "Otevřít nový chat",
-	"Open WebUI uses faster-whisper internally.": "Open WebUI interně používá faster-whisper.",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Verze Open WebUI (v{{OPEN_WEBUI_VERSION}}) je nižší než požadovaná verze (v{{REQUIRED_VERSION}})",
+	"QXLI uses faster-whisper internally.": "QXLI interně používá faster-whisper.",
+	"QXLI uses SpeechT5 and CMU Arctic speaker embeddings.": "",
+	"QXLI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Verze QXLI (v{{OPEN_WEBUI_VERSION}}) je nižší než požadovaná verze (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI je výzkumná organizace zaměřená na umělou inteligenci, která je známá vývojem pokročilých jazykových modelů, jako je například GPT. Tyto modely se využívají v různých aplikacích, včetně konverzačních agentů a jazykových nástrojů.",
 	"OpenAI API": "OpenAI API je rozhraní aplikačního programování, které umožňuje vývojářům integrovat pokročilé jazykové modely do svých aplikací.",
 	"OpenAI API Config": "Konfigurace API OpenAI",
@@ -1021,7 +1021,7 @@
 	"You're a helpful assistant.": "Jste užitečný asistent.",
 	"You're now logged in.": "Nyní jste přihlášen(a).",
 	"Your account status is currently pending activation.": "Stav vašeho účtu je nyní čekající na aktivaci.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Váš celý příspěvek půjde přímo vývojáři pluginu; Open WebUI si nebere žádné procento. Vybraná platforma pro financování však může mít vlastní poplatky.",
+	"Your entire contribution will go directly to the plugin developer; QXLI does not take any percentage. However, the chosen funding platform might have its own fees.": "Váš celý příspěvek půjde přímo vývojáři pluginu; QXLI si nebere žádné procento. Vybraná platforma pro financování však může mít vlastní poplatky.",
 	"Youtube": "YouTube",
 	"Youtube Loader Settings": "Nastavení YouTube loaderu"
 }

@@ -633,9 +633,9 @@
 	"Open file": "Открыть файл",
 	"Open in full screen": "Открыть на весь экран",
 	"Open new chat": "Открыть новый чат",
-	"Open WebUI uses faster-whisper internally.": "",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Версия Open WebUI (v{{OPEN_WEBUI_VERSION}}) ниже требуемой версии (v{{REQUIRED_VERSION}})",
+	"QXLI uses faster-whisper internally.": "",
+	"QXLI uses SpeechT5 and CMU Arctic speaker embeddings.": "",
+	"QXLI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Версия QXLI (v{{OPEN_WEBUI_VERSION}}) ниже требуемой версии (v{{REQUIRED_VERSION}})",
 	"OpenAI": "Open AI",
 	"OpenAI API": "API OpenAI",
 	"OpenAI API Config": "Конфигурация API OpenAI",
@@ -1021,7 +1021,7 @@
 	"You're a helpful assistant.": "Вы полезный ассистент.",
 	"You're now logged in.": "Вы вошли в систему.",
 	"Your account status is currently pending activation.": "В настоящее время ваша учетная запись ожидает активации.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Весь ваш взнос будет направлен непосредственно разработчику плагина; Open WebUI не взимает никаких процентов. Однако выбранная платформа финансирования может иметь свои собственные сборы.",
+	"Your entire contribution will go directly to the plugin developer; QXLI does not take any percentage. However, the chosen funding platform might have its own fees.": "Весь ваш взнос будет направлен непосредственно разработчику плагина; QXLI не взимает никаких процентов. Однако выбранная платформа финансирования может иметь свои собственные сборы.",
 	"Youtube": "YouTube",
 	"Youtube Loader Settings": "Настройки загрузчика YouTube"
 }

@@ -633,9 +633,9 @@
 	"Open file": "Άνοιγμα αρχείου",
 	"Open in full screen": "Άνοιγμα σε πλήρη οθόνη",
 	"Open new chat": "Άνοιγμα νέας συνομιλίας",
-	"Open WebUI uses faster-whisper internally.": "Το Open WebUI χρησιμοποιεί το faster-whisper εσωτερικά.",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "Το Open WebUI χρησιμοποιεί τα SpeechT5 και CMU Arctic embeddings ομιλητών.",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Η έκδοση Open WebUI (v{{OPEN_WEBUI_VERSION}}) είναι χαμηλότερη από την απαιτούμενη έκδοση (v{{REQUIRED_VERSION}})",
+	"QXLI uses faster-whisper internally.": "Το QXLI χρησιμοποιεί το faster-whisper εσωτερικά.",
+	"QXLI uses SpeechT5 and CMU Arctic speaker embeddings.": "Το QXLI χρησιμοποιεί τα SpeechT5 και CMU Arctic embeddings ομιλητών.",
+	"QXLI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Η έκδοση QXLI (v{{OPEN_WEBUI_VERSION}}) είναι χαμηλότερη από την απαιτούμενη έκδοση (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "API OpenAI",
 	"OpenAI API Config": "Διαμόρφωση API OpenAI",
@@ -1019,7 +1019,7 @@
 	"You're a helpful assistant.": "Είστε ένας βοηθητικός βοηθός.",
 	"You're now logged in.": "Τώρα είστε συνδεδεμένοι.",
 	"Your account status is currently pending activation.": "Η κατάσταση του λογαριασμού σας είναι αυτή τη στιγμή σε εκκρεμότητα ενεργοποίησης.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Η ολόκληρη η συνεισφορά σας θα πάει απευθείας στον προγραμματιστή του plugin· το Open WebUI δεν παίρνει κανένα ποσοστό. Ωστόσο, η επιλεγμένη πλατφόρμα χρηματοδότησης μπορεί να έχει τα δικά της τέλη.",
+	"Your entire contribution will go directly to the plugin developer; QXLI does not take any percentage. However, the chosen funding platform might have its own fees.": "Η ολόκληρη η συνεισφορά σας θα πάει απευθείας στον προγραμματιστή του plugin· το QXLI δεν παίρνει κανένα ποσοστό. Ωστόσο, η επιλεγμένη πλατφόρμα χρηματοδότησης μπορεί να έχει τα δικά της τέλη.",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Ρυθμίσεις Φόρτωσης Youtube"
 }

@@ -633,9 +633,9 @@
 	"Open file": "Oscail comhad",
 	"Open in full screen": "Oscail i scáileán iomlán",
 	"Open new chat": "Oscail comhrá nua",
-	"Open WebUI uses faster-whisper internally.": "Úsáideann Open WebUI cogar níos tapúla go hinmheánach.",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "Úsáideann Open WebUI úsáidí SpeechT5 agus CMU leabaithe cainteoir Artach.",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Tá leagan WebUI oscailte (v{{OPEN_WEBUI_VERSION}}) níos ísle ná an leagan riachtanach (v{{REQUIRED_VERSION}})",
+	"QXLI uses faster-whisper internally.": "Úsáideann QXLI cogar níos tapúla go hinmheánach.",
+	"QXLI uses SpeechT5 and CMU Arctic speaker embeddings.": "Úsáideann QXLI úsáidí SpeechT5 agus CMU leabaithe cainteoir Artach.",
+	"QXLI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Tá leagan WebUI oscailte (v{{OPEN_WEBUI_VERSION}}) níos ísle ná an leagan riachtanach (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "API OpenAI",
 	"OpenAI API Config": "Cumraíocht API OpenAI",
@@ -1019,7 +1019,7 @@
 	"You're a helpful assistant.": "Is cúntóir cabhrach tú.",
 	"You're now logged in.": "Tá tú logáilte isteach anois.",
 	"Your account status is currently pending activation.": "Tá stádas do chuntais ar feitheamh faoi ghníomhachtú.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Rachaidh do ranníocaíocht iomlán go díreach chuig an bhforbróir breiseán; Ní ghlacann Open WebUI aon chéatadán. Mar sin féin, d'fhéadfadh a tháillí féin a bheith ag an ardán maoinithe roghnaithe.",
+	"Your entire contribution will go directly to the plugin developer; QXLI does not take any percentage. However, the chosen funding platform might have its own fees.": "Rachaidh do ranníocaíocht iomlán go díreach chuig an bhforbróir breiseán; Ní ghlacann QXLI aon chéatadán. Mar sin féin, d'fhéadfadh a tháillí féin a bheith ag an ardán maoinithe roghnaithe.",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Socruithe Luchtaire Youtube"
 }

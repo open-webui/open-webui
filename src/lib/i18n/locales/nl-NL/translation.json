@@ -633,9 +633,9 @@
 	"Open file": "Open bestand",
 	"Open in full screen": "Open in volledig scherm",
 	"Open new chat": "Open nieuwe chat",
-	"Open WebUI uses faster-whisper internally.": "Open WebUI gebruikt faster-whisper intern",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "Open WebUI gebruikt SpeechT5 en CMU Arctic spreker-embeddings",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Open WebUI versie (v{{OPEN_WEBUI_VERSION}}) is kleiner dan de benodigde versie (v{{REQUIRED_VERSION}})",
+	"QXLI uses faster-whisper internally.": "QXLI gebruikt faster-whisper intern",
+	"QXLI uses SpeechT5 and CMU Arctic speaker embeddings.": "QXLI gebruikt SpeechT5 en CMU Arctic spreker-embeddings",
+	"QXLI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "QXLI versie (v{{OPEN_WEBUI_VERSION}}) is kleiner dan de benodigde versie (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "OpenAI API-configuratie",
@@ -1019,7 +1019,7 @@
 	"You're a helpful assistant.": "Je bent een behulpzame assistent.",
 	"You're now logged in.": "Je bent nu ingelogd.",
 	"Your account status is currently pending activation.": "Je accountstatus wacht nu op activatie",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Je volledige bijdrage gaat direct naar de ontwikkelaar van de plugin; Open WebUI neemt hier geen deel van. Het gekozen financieringsplatform kan echter wel zijn eigen kosten hebben.",
+	"Your entire contribution will go directly to the plugin developer; QXLI does not take any percentage. However, the chosen funding platform might have its own fees.": "Je volledige bijdrage gaat direct naar de ontwikkelaar van de plugin; QXLI neemt hier geen deel van. Het gekozen financieringsplatform kan echter wel zijn eigen kosten hebben.",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Youtube-laderinstellingen"
 }

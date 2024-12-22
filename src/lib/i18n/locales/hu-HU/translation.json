@@ -633,9 +633,9 @@
 	"Open file": "Fájl megnyitása",
 	"Open in full screen": "Megnyitás teljes képernyőn",
 	"Open new chat": "Új beszélgetés megnyitása",
-	"Open WebUI uses faster-whisper internally.": "Az Open WebUI belsőleg a faster-whispert használja.",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Az Open WebUI verzió (v{{OPEN_WEBUI_VERSION}}) alacsonyabb, mint a szükséges verzió (v{{REQUIRED_VERSION}})",
+	"QXLI uses faster-whisper internally.": "Az QXLI belsőleg a faster-whispert használja.",
+	"QXLI uses SpeechT5 and CMU Arctic speaker embeddings.": "",
+	"QXLI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Az QXLI verzió (v{{OPEN_WEBUI_VERSION}}) alacsonyabb, mint a szükséges verzió (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "OpenAI API konfiguráció",
@@ -1019,7 +1019,7 @@
 	"You're a helpful assistant.": "Ön egy segítőkész asszisztens.",
 	"You're now logged in.": "Sikeresen bejelentkezett.",
 	"Your account status is currently pending activation.": "Fiókja jelenleg aktiválásra vár.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "A teljes hozzájárulása közvetlenül a bővítmény fejlesztőjéhez kerül; az Open WebUI nem vesz le százalékot. Azonban a választott támogatási platformnak lehetnek saját díjai.",
+	"Your entire contribution will go directly to the plugin developer; QXLI does not take any percentage. However, the chosen funding platform might have its own fees.": "A teljes hozzájárulása közvetlenül a bővítmény fejlesztőjéhez kerül; az QXLI nem vesz le százalékot. Azonban a választott támogatási platformnak lehetnek saját díjai.",
 	"Youtube": "YouTube",
 	"Youtube Loader Settings": "YouTube betöltő beállítások"
 }

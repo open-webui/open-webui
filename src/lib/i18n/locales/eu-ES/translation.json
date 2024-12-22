@@ -633,9 +633,9 @@
 	"Open file": "Ireki fitxategia",
 	"Open in full screen": "Ireki pantaila osoan",
 	"Open new chat": "Ireki txat berria",
-	"Open WebUI uses faster-whisper internally.": "Open WebUI-k faster-whisper erabiltzen du barnean.",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "Open WebUI-k SpeechT5 eta CMU Arctic hiztun txertaketak erabiltzen ditu.",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Open WebUI bertsioa (v{{OPEN_WEBUI_VERSION}}) beharrezko bertsioa (v{{REQUIRED_VERSION}}) baino baxuagoa da",
+	"QXLI uses faster-whisper internally.": "QXLI-k faster-whisper erabiltzen du barnean.",
+	"QXLI uses SpeechT5 and CMU Arctic speaker embeddings.": "QXLI-k SpeechT5 eta CMU Arctic hiztun txertaketak erabiltzen ditu.",
+	"QXLI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "QXLI bertsioa (v{{OPEN_WEBUI_VERSION}}) beharrezko bertsioa (v{{REQUIRED_VERSION}}) baino baxuagoa da",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "OpenAI API konfigurazioa",
@@ -1019,7 +1019,7 @@
 	"You're a helpful assistant.": "Laguntzaile baliagarri bat zara.",
 	"You're now logged in.": "Orain saioa hasita duzu.",
 	"Your account status is currently pending activation.": "Zure kontuaren egoera aktibazio zain dago.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Zure ekarpen osoa zuzenean plugin garatzaileari joango zaio; Open WebUI-k ez du ehunekorik hartzen. Hala ere, aukeratutako finantzaketa plataformak bere komisioak izan ditzake.",
+	"Your entire contribution will go directly to the plugin developer; QXLI does not take any percentage. However, the chosen funding platform might have its own fees.": "Zure ekarpen osoa zuzenean plugin garatzaileari joango zaio; QXLI-k ez du ehunekorik hartzen. Hala ere, aukeratutako finantzaketa plataformak bere komisioak izan ditzake.",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Youtube kargatzailearen ezarpenak"
 }

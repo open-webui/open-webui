@@ -633,9 +633,9 @@
 	"Open file": "",
 	"Open in full screen": "",
 	"Open new chat": "Mở nội dung chat mới",
-	"Open WebUI uses faster-whisper internally.": "",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Phiên bản Open WebUI (v{{OPEN_WEBUI_VERSION}}) hiện thấp hơn phiên bản bắt buộc (v{{REQUIRED_VERSION}})",
+	"QXLI uses faster-whisper internally.": "",
+	"QXLI uses SpeechT5 and CMU Arctic speaker embeddings.": "",
+	"QXLI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Phiên bản QXLI (v{{OPEN_WEBUI_VERSION}}) hiện thấp hơn phiên bản bắt buộc (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "API OpenAI",
 	"OpenAI API Config": "Cấu hình API OpenAI",
@@ -1018,7 +1018,7 @@
 	"You're a helpful assistant.": "Bạn là một trợ lý hữu ích.",
 	"You're now logged in.": "Bạn đã đăng nhập.",
 	"Your account status is currently pending activation.": "Tài khoản của bạn hiện đang ở trạng thái chờ kích hoạt.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Toàn bộ đóng góp của bạn sẽ được chuyển trực tiếp đến nhà phát triển plugin; Open WebUI không lấy bất kỳ tỷ lệ phần trăm nào. Tuy nhiên, nền tảng được chọn tài trợ có thể có phí riêng.",
+	"Your entire contribution will go directly to the plugin developer; QXLI does not take any percentage. However, the chosen funding platform might have its own fees.": "Toàn bộ đóng góp của bạn sẽ được chuyển trực tiếp đến nhà phát triển plugin; QXLI không lấy bất kỳ tỷ lệ phần trăm nào. Tuy nhiên, nền tảng được chọn tài trợ có thể có phí riêng.",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Cài đặt Youtube Loader"
 }

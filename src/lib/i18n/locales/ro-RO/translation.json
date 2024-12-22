@@ -633,9 +633,9 @@
 	"Open file": "Deschide fișierul",
 	"Open in full screen": "Deschide în ecran complet",
 	"Open new chat": "Deschide conversație nouă",
-	"Open WebUI uses faster-whisper internally.": "Open WebUI folosește faster-whisper intern.",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Versiunea Open WebUI (v{{OPEN_WEBUI_VERSION}}) este mai mică decât versiunea necesară (v{{REQUIRED_VERSION}})",
+	"QXLI uses faster-whisper internally.": "QXLI folosește faster-whisper intern.",
+	"QXLI uses SpeechT5 and CMU Arctic speaker embeddings.": "",
+	"QXLI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Versiunea QXLI (v{{OPEN_WEBUI_VERSION}}) este mai mică decât versiunea necesară (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "API OpenAI",
 	"OpenAI API Config": "Configurația API OpenAI",
@@ -1020,7 +1020,7 @@
 	"You're a helpful assistant.": "Ești un asistent util.",
 	"You're now logged in.": "Acum ești autentificat.",
 	"Your account status is currently pending activation.": "Statusul contului dvs. este în așteptare pentru activare.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Întreaga dvs. contribuție va merge direct la dezvoltatorul plugin-ului; Open WebUI nu ia niciun procent. Cu toate acestea, platforma de finanțare aleasă ar putea avea propriile taxe.",
+	"Your entire contribution will go directly to the plugin developer; QXLI does not take any percentage. However, the chosen funding platform might have its own fees.": "Întreaga dvs. contribuție va merge direct la dezvoltatorul plugin-ului; QXLI nu ia niciun procent. Cu toate acestea, platforma de finanțare aleasă ar putea avea propriile taxe.",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Setări Încărcător Youtube"
 }
