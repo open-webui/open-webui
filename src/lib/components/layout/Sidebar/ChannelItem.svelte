@@ -5,7 +5,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { mobile, showSidebar } from '$lib/stores';
+	import { mobile, showSidebar, user } from '$lib/stores';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 
 	export let className = '';
@@ -50,14 +50,16 @@
 		</div>
 	</a>
 
-	<button
-		class="absolute z-10 right-2.5 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
-		on:pointerup={(e) => {
-			e.stopPropagation();
-		}}
-	>
-		<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto" on:click={(e) => {}}>
-			<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
+	{#if $user?.role === 'admin'}
+		<button
+			class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+			on:pointerup={(e) => {
+				e.stopPropagation();
+			}}
+		>
+			<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto" on:click={(e) => {}}>
+				<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
+			</button>
 		</button>
-	</button>
+	{/if}
 </div>

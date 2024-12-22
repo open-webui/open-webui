@@ -544,20 +544,24 @@
 				? 'opacity-20'
 				: ''}"
 		>
-			<Folder
-				collapsible={!search}
-				className="px-2 mt-0.5"
-				name={$i18n.t('Channels')}
-				dragAndDrop={false}
-				onAdd={() => {
-					showCreateChannel = true;
-				}}
-				onAddLabel={$i18n.t('Create Channel')}
-			>
-				{#each $channels as channel}
-					<ChannelItem id={channel.id} name={channel.name} />
-				{/each}
-			</Folder>
+			{#if $user.role === 'admin' || $channels.length > 0}
+				<Folder
+					collapsible={!search}
+					className="px-2 mt-0.5"
+					name={$i18n.t('Channels')}
+					dragAndDrop={false}
+					onAdd={$user.role === 'admin'
+						? () => {
+								showCreateChannel = true;
+							}
+						: null}
+					onAddLabel={$i18n.t('Create Channel')}
+				>
+					{#each $channels as channel}
+						<ChannelItem id={channel.id} name={channel.name} />
+					{/each}
+				</Folder>
+			{/if}
 
 			<Folder
 				collapsible={!search}
@@ -621,7 +625,7 @@
 				{#if !search && $pinnedChats.length > 0}
 					<div class="flex flex-col space-y-1 rounded-xl">
 						<Folder
-							className="pl-1"
+							className=""
 							bind:open={showPinnedChat}
 							on:change={(e) => {
 								localStorage.setItem('showPinnedChat', e.detail);
