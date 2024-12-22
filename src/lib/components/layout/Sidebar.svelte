@@ -544,9 +544,8 @@
 				? 'opacity-20'
 				: ''}"
 		>
-			{#if $user.role === 'admin' || $channels.length > 0}
+			{#if ($user.role === 'admin' || $channels.length > 0) && !search}
 				<Folder
-					collapsible={!search}
 					className="px-2 mt-0.5"
 					name={$i18n.t('Channels')}
 					dragAndDrop={false}
