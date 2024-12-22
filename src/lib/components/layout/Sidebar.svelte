@@ -67,6 +67,8 @@
 
 	let folders = {};
 
+	const createChannel = async () => {};
+
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
 			toast.error(error);
@@ -521,6 +523,19 @@
 			/>
 		</div>
 
+		<div class="relative flex flex-col overflow-y-auto">
+			<Folder
+				collapsible={!search}
+				className="px-2 mt-0.5"
+				name={$i18n.t('Channels')}
+				dragAndDrop={false}
+				onAdd={createChannel}
+				onAddLabel={$i18n.t('New Channel')}
+			>
+				channels
+			</Folder>
+		</div>
+
 		<div
 			class="relative flex flex-col flex-1 overflow-y-auto {$temporaryChatEnabled
 				? 'opacity-20'
@@ -530,7 +545,8 @@
 				collapsible={!search}
 				className="px-2 mt-0.5"
 				name={$i18n.t('Chats')}
-				onCreateFolder={createFolder}
+				onAdd={createFolder}
+				onAddLabel={$i18n.t('New Folder')}
 				on:import={(e) => {
 					importChatHandler(e.detail);
 				}}

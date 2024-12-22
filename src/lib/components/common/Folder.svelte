@@ -15,7 +15,11 @@
 	export let id = '';
 	export let name = '';
 	export let collapsible = true;
-	export let onCreateFolder: null | Function = null;
+
+	export let onAddLabel: string = '';
+	export let onAdd: null | Function = null;
+
+	export let dragAndDrop = true;
 
 	export let className = '';
 
@@ -87,12 +91,18 @@
 	};
 
 	onMount(() => {
+		if (!dragAndDrop) {
+			return;
+		}
 		folderElement.addEventListener('dragover', onDragOver);
 		folderElement.addEventListener('drop', onDrop);
 		folderElement.addEventListener('dragleave', onDragLeave);
 	});
 
 	onDestroy(() => {
+		if (!dragAndDrop) {
+			return;
+		}
 		folderElement.addEventListener('dragover', onDragOver);
 		folderElement.removeEventListener('drop', onDrop);
 		folderElement.removeEventListener('dragleave', onDragLeave);
@@ -133,15 +143,15 @@
 					</div>
 				</button>
 
-				{#if onCreateFolder}
+				{#if onAdd}
 					<button
 						class="absolute z-10 right-2 self-center flex items-center"
 						on:pointerup={(e) => {
 							e.stopPropagation();
-							onCreateFolder();
+							onAdd();
 						}}
 					>
-						<Tooltip content={$i18n.t('New folder')}>
+						<Tooltip content={onAddLabel}>
 							<button
 								class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
 								on:click={(e) => {}}
