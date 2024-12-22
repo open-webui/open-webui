@@ -16,7 +16,8 @@
 		pinnedChats,
 		scrollPaginationEnabled,
 		currentChatPage,
-		temporaryChatEnabled
+		temporaryChatEnabled,
+		channels
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -49,6 +50,9 @@
 	import Plus from '../icons/Plus.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Folders from './Sidebar/Folders.svelte';
+	import { getChannels, createNewChannel } from '$lib/apis/channels';
+	import CreateChannelModal from './Sidebar/CreateChannelModal.svelte';
+	import ChannelItem from './Sidebar/ChannelItem.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -61,13 +65,13 @@
 	let showDropdown = false;
 	let showPinnedChat = true;
 
+	let showCreateChannel = false;
+
 	// Pagination variables
 	let chatListLoading = false;
 	let allChatsLoaded = false;
 
 	let folders = {};
-
-	const createChannel = async () => {};
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
@@ -143,6 +147,10 @@
 		if (res) {
 			await initFolders();
 		}
+	};
+
+	const initChannels = async () => {
+		channels.set(await getChannels(localStorage.token));
 	};
 
 	const initChatList = async () => {
@@ -348,6 +356,7 @@
 			localStorage.sidebar = value;
 		});
 
+		await initChannels();
 		await initChatList();
 
 		window.addEventListener('keydown', onKeyDown);
@@ -388,6 +397,13 @@
 	bind:show={$showArchivedChats}
 	on:change={async () => {
 		await initChatList();
+	}}
+/>
+
+<CreateChannelModal
+	bind:show={showCreateChannel}
+	onChange={async () => {
+		await initChannels();
 	}}
 />
 
@@ -533,10 +549,14 @@
 				className="px-2 mt-0.5"
 				name={$i18n.t('Channels')}
 				dragAndDrop={false}
-				onAdd={createChannel}
-				onAddLabel={$i18n.t('New Channel')}
+				onAdd={() => {
+					showCreateChannel = true;
+				}}
+				onAddLabel={$i18n.t('Create Channel')}
 			>
-				channels
+				{#each $channels as channel}
+					<ChannelItem id={channel.id} name={channel.name} />
+				{/each}
 			</Folder>
 
 			<Folder

@@ -64,9 +64,9 @@ class ChannelTable:
         self, form_data: ChannelForm, user_id: str
     ) -> Optional[ChannelModel]:
         with get_db() as db:
-            new_channel = Channel(
+            channel = ChannelModel(
                 **{
-                    **form_data.model_dump(),
+                    **form_data.dict(),
                     "id": str(uuid.uuid4()),
                     "user_id": user_id,
                     "created_at": int(time.time()),
@@ -74,9 +74,11 @@ class ChannelTable:
                 }
             )
 
+            new_channel = Channel(**channel.model_dump())
+
             db.add(new_channel)
             db.commit()
-            return new_channel
+            return channel
 
     def get_channels(self) -> list[ChannelModel]:
         with get_db() as db:
