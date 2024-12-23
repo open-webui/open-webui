@@ -20,6 +20,10 @@
 		initHandler();
 	}
 
+	const scrollToBottom = () => {
+		messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+	};
+
 	const initHandler = async () => {
 		top = false;
 		page = 1;
@@ -80,13 +84,11 @@
 
 <div class="h-full md:max-w-[calc(100%-260px)] w-full max-w-full flex flex-col">
 	<div
-		class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
+		class=" pb-2.5 max-w-full z-10 scrollbar-hidden w-full h-full pt-6 flex-1 flex flex-col-reverse overflow-auto"
 		id="messages-container"
 		bind:this={messagesContainerElement}
 		on:scroll={(e) => {
-			scrollEnd =
-				messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
-				messagesContainerElement.clientHeight + 5;
+			scrollEnd = Math.abs(messagesContainerElement.scrollTop) <= 50;
 		}}
 	>
 		{#key id}
@@ -110,6 +112,6 @@
 	</div>
 
 	<div class=" pb-[1rem]">
-		<MessageInput onSubmit={submitHandler} />
+		<MessageInput onSubmit={submitHandler} {scrollToBottom} {scrollEnd} />
 	</div>
 </div>

@@ -9,7 +9,6 @@
 	import Message from './Messages/Message.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import { getChannelMessages } from '$lib/apis/channels';
 
 	const i18n = getContext('i18n');
 
@@ -35,28 +34,32 @@
 </script>
 
 {#if messages}
-	<div class="w-full h-full pt-2 flex-1 flex flex-col-reverse overflow-auto">
-		<div>
-			{#if !top}
-				<Loader
-					on:visible={(e) => {
-						console.log('visible');
-						if (!messagesLoading) {
-							loadMoreMessages();
-						}
-					}}
-				>
-					<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
-						<Spinner className=" size-4" />
-						<div class=" ">Loading...</div>
-					</div>
-				</Loader>
-			{/if}
+	{@const messageList = messages.slice().reverse()}
+	<div>
+		{#if !top}
+			<Loader
+				on:visible={(e) => {
+					console.log('visible');
+					if (!messagesLoading) {
+						loadMoreMessages();
+					}
+				}}
+			>
+				<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
+					<Spinner className=" size-4" />
+					<div class=" ">Loading...</div>
+				</div>
+			</Loader>
+		{/if}
 
-			{#each messages.slice().reverse() as message, messageIdx (message.id)}
-				<Message {message} />
-			{/each}
-		</div>
+		{#each messageList as message, messageIdx (message.id)}
+			<Message
+				{message}
+				showUserProfile={messageIdx === 0 ||
+					messageList.at(messageIdx + 1)?.user_id !== message.user_id}
+			/>
+		{/each}
+
+		<div class="pb-6" />
 	</div>
-	<div class="pb-6" />
 {/if}
