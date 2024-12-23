@@ -18,7 +18,8 @@
 		currentChatPage,
 		temporaryChatEnabled,
 		channels,
-		socket
+		socket,
+		config
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -628,7 +629,7 @@
 				</div>
 			{/if}
 
-			{#if ($user.role === 'admin' || $channels.length > 0) && !search}
+			{#if $config?.features?.enable_channels && ($user.role === 'admin' || $channels.length > 0) && !search}
 				<Folder
 					className="px-2 mt-0.5"
 					name={$i18n.t('Channels')}

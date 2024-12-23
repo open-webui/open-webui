@@ -616,6 +616,7 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
         "ENABLE_SIGNUP": request.app.state.config.ENABLE_SIGNUP,
         "ENABLE_API_KEY": request.app.state.config.ENABLE_API_KEY,
+        "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
         "DEFAULT_USER_ROLE": request.app.state.config.DEFAULT_USER_ROLE,
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
@@ -627,6 +628,7 @@ class AdminConfig(BaseModel):
     SHOW_ADMIN_DETAILS: bool
     ENABLE_SIGNUP: bool
     ENABLE_API_KEY: bool
+    ENABLE_CHANNELS: bool
     DEFAULT_USER_ROLE: str
     JWT_EXPIRES_IN: str
     ENABLE_COMMUNITY_SHARING: bool
@@ -640,6 +642,7 @@ async def update_admin_config(
     request.app.state.config.SHOW_ADMIN_DETAILS = form_data.SHOW_ADMIN_DETAILS
     request.app.state.config.ENABLE_SIGNUP = form_data.ENABLE_SIGNUP
     request.app.state.config.ENABLE_API_KEY = form_data.ENABLE_API_KEY
+    request.app.state.config.ENABLE_CHANNELS = form_data.ENABLE_CHANNELS
 
     if form_data.DEFAULT_USER_ROLE in ["pending", "user", "admin"]:
         request.app.state.config.DEFAULT_USER_ROLE = form_data.DEFAULT_USER_ROLE

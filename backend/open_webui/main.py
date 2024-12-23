@@ -199,6 +199,7 @@ from open_webui.config import (
     ENABLE_SIGNUP,
     ENABLE_LOGIN_FORM,
     ENABLE_API_KEY,
+    ENABLE_CHANNELS,
     ENABLE_COMMUNITY_SHARING,
     ENABLE_MESSAGE_RATING,
     ENABLE_EVALUATION_ARENA_MODELS,
@@ -407,6 +408,8 @@ app.state.config.WEBHOOK_URL = WEBHOOK_URL
 app.state.config.BANNERS = WEBUI_BANNERS
 app.state.config.MODEL_ORDER_LIST = MODEL_ORDER_LIST
 
+
+app.state.config.ENABLE_CHANNELS = ENABLE_CHANNELS
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 app.state.config.ENABLE_MESSAGE_RATING = ENABLE_MESSAGE_RATING
 
@@ -972,6 +975,7 @@ async def get_app_config(request: Request):
             "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
             **(
                 {
+                    "enable_channels": app.state.config.ENABLE_CHANNELS,
                     "enable_web_search": app.state.config.ENABLE_RAG_WEB_SEARCH,
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                     "enable_image_generation": app.state.config.ENABLE_IMAGE_GENERATION,

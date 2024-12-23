@@ -847,6 +847,12 @@ USER_PERMISSIONS = PersistentConfig(
     },
 )
 
+ENABLE_CHANNELS = PersistentConfig(
+    "ENABLE_CHANNELS",
+    "channels.enable",
+    os.environ.get("ENABLE_CHANNELS", "False").lower() == "true",
+)
+
 
 ENABLE_EVALUATION_ARENA_MODELS = PersistentConfig(
     "ENABLE_EVALUATION_ARENA_MODELS",
