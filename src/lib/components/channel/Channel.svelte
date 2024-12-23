@@ -66,6 +66,16 @@
 				if (scrollEnd) {
 					messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
 				}
+			} else if (type === 'message:update') {
+				console.log('message:update', data);
+				const idx = messages.findIndex((message) => message.id === data.id);
+
+				if (idx !== -1) {
+					messages[idx] = data;
+				}
+			} else if (type === 'message:delete') {
+				console.log('message:delete', data);
+				messages = messages.filter((message) => message.id !== data.id);
 			}
 		}
 	};

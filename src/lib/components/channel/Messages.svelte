@@ -16,6 +16,7 @@
 	import Message from './Messages/Message.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import { deleteMessage, updateMessage } from '$lib/apis/channels';
 
 	const i18n = getContext('i18n');
 
@@ -92,6 +93,22 @@
 				{message}
 				showUserProfile={messageIdx === 0 ||
 					messageList.at(messageIdx - 1)?.user_id !== message.user_id}
+				onDelete={() => {
+					const res = deleteMessage(localStorage.token, message.channel_id, message.id).catch(
+						(error) => {
+							toast.error(error);
+							return null;
+						}
+					);
+				}}
+				onEdit={(content) => {
+					const res = updateMessage(localStorage.token, message.channel_id, message.id, {
+						content: content
+					}).catch((error) => {
+						toast.error(error);
+						return null;
+					});
+				}}
 			/>
 		{/each}
 

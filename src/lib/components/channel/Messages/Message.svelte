@@ -53,7 +53,7 @@
 	title={$i18n.t('Delete Message')}
 	message={$i18n.t('Are you sure you want to delete this message?')}
 	onConfirm={async () => {
-		await onDelete(message.id);
+		await onDelete();
 	}}
 />
 
@@ -177,7 +177,7 @@
 									id="confirm-edit-message-button"
 									class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
 									on:click={async () => {
-										onEdit(message.id, editedContent);
+										onEdit(editedContent);
 										edit = false;
 										editedContent = null;
 									}}
