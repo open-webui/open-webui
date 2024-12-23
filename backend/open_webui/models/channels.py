@@ -70,6 +70,7 @@ class ChannelTable:
             channel = ChannelModel(
                 **{
                     **form_data.model_dump(),
+                    "name": form_data.name.lower(),
                     "id": str(uuid.uuid4()),
                     "user_id": user_id,
                     "created_at": int(time.time_ns()),

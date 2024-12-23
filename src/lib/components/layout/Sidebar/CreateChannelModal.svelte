@@ -17,7 +17,7 @@
 	let loading = false;
 
 	$: if (name) {
-		name = name.replace(/\s/g, '-');
+		name = name.replace(/\s/g, '-').toLocaleLowerCase();
 	}
 
 	const submitHandler = async () => {

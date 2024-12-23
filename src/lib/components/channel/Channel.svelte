@@ -2,12 +2,13 @@
 	import { toast } from 'svelte-sonner';
 	import { onDestroy, onMount, tick } from 'svelte';
 
-	import { socket } from '$lib/stores';
+	import { showSidebar, socket } from '$lib/stores';
 	import { getChannelById, getChannelMessages, sendMessage } from '$lib/apis/channels';
 
 	import Messages from './Messages.svelte';
 	import MessageInput from './MessageInput.svelte';
 	import { goto } from '$app/navigation';
+	import Navbar from './Navbar.svelte';
 
 	export let id = '';
 
@@ -95,35 +96,42 @@
 	});
 </script>
 
-<div class="h-full md:max-w-[calc(100%-260px)] w-full max-w-full flex flex-col">
-	<div
-		class=" pb-2.5 max-w-full z-10 scrollbar-hidden w-full h-full pt-6 flex-1 flex flex-col-reverse overflow-auto"
-		id="messages-container"
-		bind:this={messagesContainerElement}
-		on:scroll={(e) => {
-			scrollEnd = Math.abs(messagesContainerElement.scrollTop) <= 50;
-		}}
-	>
-		{#key id}
-			<Messages
-				{channel}
-				{messages}
-				{top}
-				onLoad={async () => {
-					page += 1;
+<div
+	class="h-screen max-h-[100dvh] {$showSidebar
+		? 'md:max-w-[calc(100%-260px)]'
+		: ''} w-full max-w-full flex flex-col"
+>
+	{#if channel}
+		<Navbar {channel} />
+		<div
+			class=" pb-2.5 max-w-full z-10 scrollbar-hidden w-full h-full pt-6 flex-1 flex flex-col-reverse overflow-auto"
+			id="messages-container"
+			bind:this={messagesContainerElement}
+			on:scroll={(e) => {
+				scrollEnd = Math.abs(messagesContainerElement.scrollTop) <= 50;
+			}}
+		>
+			{#key id}
+				<Messages
+					{channel}
+					{messages}
+					{top}
+					onLoad={async () => {
+						page += 1;
 
-					const newMessages = await getChannelMessages(localStorage.token, id, page);
+						const newMessages = await getChannelMessages(localStorage.token, id, page);
 
-					if (newMessages.length === 0) {
-						top = true;
-						return;
-					}
+						if (newMessages.length === 0) {
+							top = true;
+							return;
+						}
 
-					messages = [...messages, ...newMessages];
-				}}
-			/>
-		{/key}
-	</div>
+						messages = [...messages, ...newMessages];
+					}}
+				/>
+			{/key}
+		</div>
+	{/if}
 
 	<div class=" pb-[1rem]">
 		<MessageInput onSubmit={submitHandler} {scrollToBottom} {scrollEnd} />
