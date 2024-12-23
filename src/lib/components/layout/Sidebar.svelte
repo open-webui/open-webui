@@ -53,7 +53,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import Folders from './Sidebar/Folders.svelte';
 	import { getChannels, createNewChannel } from '$lib/apis/channels';
-	import CreateChannelModal from './Sidebar/CreateChannelModal.svelte';
+	import ChannelModal from './Sidebar/ChannelModal.svelte';
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 
@@ -403,10 +403,21 @@
 	}}
 />
 
-<CreateChannelModal
+<ChannelModal
 	bind:show={showCreateChannel}
-	onChange={async () => {
-		await initChannels();
+	onSubmit={async ({ name, access_control }) => {
+		const res = await createNewChannel(localStorage.token, {
+			name: name,
+			access_control: access_control
+		}).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res) {
+			await initChannels();
+			showCreateChannel = false;
+		}
 	}}
 />
 
@@ -642,7 +653,12 @@
 					onAddLabel={$i18n.t('Create Channel')}
 				>
 					{#each $channels as channel}
-						<ChannelItem id={channel.id} name={channel.name} />
+						<ChannelItem
+							{channel}
+							onUpdate={async () => {
+								await initChannels();
+							}}
+						/>
 					{/each}
 				</Folder>
 			{/if}

@@ -1,33 +1,55 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext, createEventDispatcher, tick, onDestroy } from 'svelte';
+	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
-	const dispatch = createEventDispatcher();
-
 	import { page } from '$app/stores';
-
 	import { mobile, showSidebar, user } from '$lib/stores';
-	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import { updateChannelById } from '$lib/apis/channels';
+
+	import Cog6 from '$lib/components/icons/Cog6.svelte';
+	import ChannelModal from './ChannelModal.svelte';
+
+	export let onUpdate: Function = () => {};
 
 	export let className = '';
+	export let channel;
 
-	export let id;
-	export let name;
+	let showEditChannelModal = false;
 
 	let itemElement;
 </script>
 
+<ChannelModal
+	bind:show={showEditChannelModal}
+	{channel}
+	edit={true}
+	onSubmit={async ({ name, access_control }) => {
+		const res = await updateChannelById(localStorage.token, channel.id, {
+			name,
+			access_control
+		}).catch((error) => {
+			toast.error(error.message);
+		});
+
+		if (res) {
+			toast.success('Channel updated successfully');
+		}
+
+		onUpdate();
+	}}
+/>
+
 <div
 	bind:this={itemElement}
 	class=" w-full {className} rounded-lg flex relative group hover:bg-gray-100 dark:hover:bg-gray-900 {$page
-		.url.pathname === `/channels/${id}`
+		.url.pathname === `/channels/${channel.id}`
 		? 'bg-gray-100 dark:bg-gray-900'
 		: ''} px-2.5 py-1"
 >
 	<a
 		class=" w-full flex justify-between"
-		href="/channels/{id}"
+		href="/channels/{channel.id}"
 		on:click={() => {
 			if ($mobile) {
 				showSidebar.set(false);
@@ -50,7 +72,7 @@
 			</svg>
 
 			<div class=" text-left self-center overflow-hidden w-full line-clamp-1">
-				{name}
+				{channel.name}
 			</div>
 		</div>
 	</a>
@@ -60,10 +82,12 @@
 			class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
 			on:pointerup={(e) => {
 				e.stopPropagation();
+
+				showEditChannelModal = true;
 			}}
 		>
 			<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto" on:click={(e) => {}}>
-				<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
+				<Cog6 className="size-3.5" />
 			</button>
 		</button>
 	{/if}

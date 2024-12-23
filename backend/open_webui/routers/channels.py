@@ -79,6 +79,31 @@ async def get_channel_by_id(id: str, user=Depends(get_verified_user)):
 
 
 ############################
+# UpdateChannelById
+############################
+
+
+@router.post("/{id}/update", response_model=Optional[ChannelModel])
+async def update_channel_by_id(
+    id: str, form_data: ChannelForm, user=Depends(get_admin_user)
+):
+    channel = Channels.get_channel_by_id(id)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    try:
+        channel = Channels.update_channel_by_id(id, form_data)
+        return ChannelModel(**channel.model_dump())
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+############################
 # GetChannelMessages
 ############################
 

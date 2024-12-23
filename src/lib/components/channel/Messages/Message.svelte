@@ -70,7 +70,7 @@
 
 						{#if message.created_at}
 							<span
-								class=" self-center invisible group-hover:visible text-gray-400 text-xs font-medium capitalize ml-0.5 -mt-0.5"
+								class=" self-center invisible group-hover:visible text-gray-400 text-xs font-medium first-letter:capitalize ml-0.5 -mt-0.5"
 							>
 								{formatDate(message.created_at / 1000000)}
 							</span>
