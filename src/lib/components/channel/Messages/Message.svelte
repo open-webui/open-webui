@@ -145,7 +145,7 @@
 				{#if edit}
 					<div class="py-2">
 						<Textarea
-							class=" bg-transparent outline-none w-full resize-none"
+							className=" bg-transparent outline-none w-full resize-none"
 							bind:value={editedContent}
 							onKeydown={(e) => {
 								if (e.key === 'Escape') {
