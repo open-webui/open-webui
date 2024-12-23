@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
 	import { flyAndScale } from '$lib/utils/transitions';
-	import { getContext } from 'svelte';
+	import { getContext, createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher();
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
@@ -10,10 +12,15 @@
 	import Tags from '$lib/components/chat/Tags.svelte';
 	import Share from '$lib/components/icons/Share.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
+	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
+	import Bookmark from '$lib/components/icons/Bookmark.svelte';
+	import BookmarkSlash from '$lib/components/icons/BookmarkSlash.svelte';
+	import { addTagById, deleteTagById, getTagsById } from '$lib/apis/chats';
 
 	const i18n = getContext('i18n');
 
 	export let shareHandler: Function;
+	export let cloneChatHandler: Function;
 	export let archiveChatHandler: Function;
 	export let renameHandler: Function;
 	export let deleteHandler: Function;
@@ -22,6 +29,28 @@
 	export let chatId = '';
 
 	let show = false;
+	let pinned = false;
+
+	const pinHandler = async () => {
+		if (pinned) {
+			await deleteTagById(localStorage.token, chatId, 'pinned');
+		} else {
+			await addTagById(localStorage.token, chatId, 'pinned');
+		}
+		dispatch('change');
+	};
+
+	const checkPinned = async () => {
+		pinned = (
+			await getTagsById(localStorage.token, chatId).catch(async (error) => {
+				return [];
+			})
+		).find((tag) => tag.name === 'pinned');
+	};
+
+	$: if (show) {
+		checkPinned();
+	}
 </script>
 
 <Dropdown
@@ -38,20 +67,25 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[160px] rounded-xl px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow"
+			class="w-full max-w-[180px] rounded-xl px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow"
 			sideOffset={-2}
 			side="bottom"
 			align="start"
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-md"
+				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
-					shareHandler();
+					pinHandler();
 				}}
 			>
-				<Share />
-				<div class="flex items-center">{$i18n.t('Share')}</div>
+				{#if pinned}
+					<BookmarkSlash strokeWidth="2" />
+					<div class="flex items-center">{$i18n.t('Unpin')}</div>
+				{:else}
+					<Bookmark strokeWidth="2" />
+					<div class="flex items-center">{$i18n.t('Pin')}</div>
+				{/if}
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
@@ -67,11 +101,31 @@
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
+					cloneChatHandler();
+				}}
+			>
+				<DocumentDuplicate strokeWidth="2" />
+				<div class="flex items-center">{$i18n.t('Clone')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				on:click={() => {
 					archiveChatHandler();
 				}}
 			>
 				<ArchiveBox strokeWidth="2" />
 				<div class="flex items-center">{$i18n.t('Archive')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-md"
+				on:click={() => {
+					shareHandler();
+				}}
+			>
+				<Share />
+				<div class="flex items-center">{$i18n.t('Share')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item

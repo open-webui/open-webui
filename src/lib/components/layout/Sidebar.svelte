@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import {
 		user,
@@ -9,12 +10,20 @@
 		tags,
 		showSidebar,
 		mobile,
-		showArchivedChats
+		showArchivedChats,
+		pinnedChats,
+		scrollPaginationEnabled,
+		currentChatPage,
+		temporaryChatEnabled,
+		showArtifacts,
+		showOverview,
+		showControls
 	} from '$lib/stores';
-	import { onMount, getContext } from 'svelte';
+	import { onMount, getContext, tick } from 'svelte';
 
 	const i18n = getContext('i18n');
 
+	import { updateUserSettings } from '$lib/apis/users';
 	import {
 		deleteChatById,
 		getChatList,
@@ -22,39 +31,38 @@
 		getChatListByTagName,
 		updateChatById,
 		getAllChatTags,
-		archiveChatById
+		archiveChatById,
+		cloneChatById
 	} from '$lib/apis/chats';
-	import { toast } from 'svelte-sonner';
-	import { fade, slide } from 'svelte/transition';
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	import Tooltip from '../common/Tooltip.svelte';
-	import ChatMenu from './Sidebar/ChatMenu.svelte';
-	import ShareChatModal from '../chat/ShareChatModal.svelte';
-	import ArchiveBox from '../icons/ArchiveBox.svelte';
+
 	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
+	import ChatItem from './Sidebar/ChatItem.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Spinner from '../common/Spinner.svelte';
+	import Loader from '../common/Loader.svelte';
 
 	const BREAKPOINT = 768;
 
-	let show = false;
 	let navElement;
-
-	let title: string = 'UI';
 	let search = '';
 
-	let shareChatId = null;
+	let shiftKey = false;
 
 	let selectedChatId = null;
+	let deleteChat = null;
 
-	let chatDeleteId = null;
-	let chatTitleEditId = null;
-	let chatTitle = '';
-
-	let showShareChatModal = false;
+	let showDeleteConfirm = false;
 	let showDropdown = false;
-	let isEditing = false;
+
+	let selectedTagName = null;
 
 	let filteredChatList = [];
+
+	// Pagination variables
+	let chatListLoading = false;
+	let allChatsLoaded = false;
 
 	$: filteredChatList = $chats.filter((chat) => {
 		if (search === '') {
@@ -76,11 +84,27 @@
 		}
 	});
 
-	mobile;
-	const onResize = () => {
-		if ($showSidebar && window.innerWidth < BREAKPOINT) {
-			showSidebar.set(false);
-		}
+	const enablePagination = async () => {
+		// Reset pagination variables
+		currentChatPage.set(1);
+		allChatsLoaded = false;
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+
+		// Enable pagination
+		scrollPaginationEnabled.set(true);
+	};
+
+	const loadMoreChats = async () => {
+		chatListLoading = true;
+
+		currentChatPage.set($currentChatPage + 1);
+		const newChatList = await getChatList(localStorage.token, $currentChatPage);
+
+		// once the bottom of the list has been reached (no results) there is no need to continue querying
+		allChatsLoaded = newChatList.length === 0;
+		await chats.set([...$chats, ...newChatList]);
+
+		chatListLoading = false;
 	};
 
 	onMount(async () => {
@@ -94,8 +118,13 @@
 			}
 		});
 
-		showSidebar.set(window.innerWidth > BREAKPOINT);
-		await chats.set(await getChatList(localStorage.token));
+		showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
+		showSidebar.subscribe((value) => {
+			localStorage.sidebar = value;
+		});
+
+		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
+		await enablePagination();
 
 		let touchstart;
 		let touchend;
@@ -123,12 +152,43 @@
 			checkDirection();
 		};
 
+		const onKeyDown = (e) => {
+			if (e.key === 'Shift') {
+				shiftKey = true;
+			}
+		};
+
+		const onKeyUp = (e) => {
+			if (e.key === 'Shift') {
+				shiftKey = false;
+			}
+		};
+
+		const onFocus = () => {};
+
+		const onBlur = () => {
+			shiftKey = false;
+			selectedChatId = null;
+		};
+
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('keyup', onKeyUp);
+
 		window.addEventListener('touchstart', onTouchStart);
 		window.addEventListener('touchend', onTouchEnd);
 
+		window.addEventListener('focus', onFocus);
+		window.addEventListener('blur', onBlur);
+
 		return () => {
+			window.removeEventListener('keydown', onKeyDown);
+			window.removeEventListener('keyup', onKeyUp);
+
 			window.removeEventListener('touchstart', onTouchStart);
 			window.removeEventListener('touchend', onTouchEnd);
+
+			window.removeEventListener('focus', onFocus);
+			window.removeEventListener('blur', onBlur);
 		};
 	});
 
@@ -147,59 +207,52 @@
 		await chats.set(enrichedChats);
 	};
 
-	const loadChat = async (id) => {
-		goto(`/c/${id}`);
+	const saveSettings = async (updated) => {
+		await settings.set({ ...$settings, ...updated });
+		await updateUserSettings(localStorage.token, { ui: $settings });
+		location.href = '/';
 	};
 
-	const editChatTitle = async (id, _title) => {
-		if (_title === '') {
-			toast.error($i18n.t('Title cannot be an empty string.'));
-		} else {
-			title = _title;
-
-			await updateChatById(localStorage.token, id, {
-				title: _title
-			});
-			await chats.set(await getChatList(localStorage.token));
-		}
-	};
-
-	const deleteChat = async (id) => {
+	const deleteChatHandler = async (id) => {
 		const res = await deleteChatById(localStorage.token, id).catch((error) => {
 			toast.error(error);
-			chatDeleteId = null;
-
 			return null;
 		});
 
 		if (res) {
 			if ($chatId === id) {
+				await chatId.set('');
+				await tick();
 				goto('/');
 			}
 
-			await chats.set(await getChatList(localStorage.token));
+			allChatsLoaded = false;
+			currentChatPage.set(1);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+
+			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}
-	};
-
-	const saveSettings = async (updated) => {
-		await settings.set({ ...$settings, ...updated });
-		localStorage.setItem('settings', JSON.stringify($settings));
-		location.href = '/';
-	};
-
-	const archiveChatHandler = async (id) => {
-		await archiveChatById(localStorage.token, id);
-		await chats.set(await getChatList(localStorage.token));
 	};
 </script>
 
-<ShareChatModal bind:show={showShareChatModal} chatId={shareChatId} />
 <ArchivedChatsModal
 	bind:show={$showArchivedChats}
 	on:change={async () => {
 		await chats.set(await getChatList(localStorage.token));
 	}}
 />
+
+<DeleteConfirmDialog
+	bind:show={showDeleteConfirm}
+	title={$i18n.t('Delete chat?')}
+	on:confirm={() => {
+		deleteChatHandler(deleteChat.id);
+	}}
+>
+	<div class=" text-sm text-gray-500 flex-1 line-clamp-3">
+		{$i18n.t('This will delete')} <span class="  font-semibold">{deleteChat.title}</span>.
+	</div>
+</DeleteConfirmDialog>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 
@@ -217,7 +270,7 @@
 	id="sidebar"
 	class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
 		? 'md:relative w-[260px]'
-		: '-translate-x-[260px] w-[0px]'} bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0 rounded-r-2xl
+		: '-translate-x-[260px] w-[0px]'} bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0
         "
 	data-state={$showSidebar}
 >
@@ -229,17 +282,15 @@
 		<div class="px-2.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
 			<a
 				id="sidebar-new-chat-button"
-				class="flex flex-1 justify-between rounded-xl px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+				class="flex flex-1 justify-between rounded-xl px-2 h-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 				href="/"
 				draggable="false"
 				on:click={async () => {
 					selectedChatId = null;
-
 					await goto('/');
 					const newChatButton = document.getElementById('new-chat-button');
 					setTimeout(() => {
 						newChatButton?.click();
-
 						if ($mobile) {
 							showSidebar.set(false);
 						}
@@ -254,7 +305,7 @@
 						alt="logo"
 					/>
 				</div>
-				<div class=" self-center font-medium text-sm text-gray-850 dark:text-white">
+				<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
 					{$i18n.t('New Chat')}
 				</div>
 				<div class="self-center ml-auto">
@@ -275,7 +326,7 @@
 			</a>
 
 			<button
-				class=" cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+				class=" cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
 				}}
@@ -307,6 +358,10 @@
 					on:click={() => {
 						selectedChatId = null;
 						chatId.set('');
+
+						if ($mobile) {
+							showSidebar.set(false);
+						}
 					}}
 					draggable="false"
 				>
@@ -328,54 +383,19 @@
 					</div>
 
 					<div class="flex self-center">
-						<div class=" self-center font-medium text-sm">{$i18n.t('Workspace')}</div>
+						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Workspace')}</div>
 					</div>
 				</a>
 			</div>
 		{/if}
 
-		<div class="relative flex flex-col flex-1 overflow-y-auto">
-			{#if !($settings.saveChatHistory ?? true)}
-				<div class="absolute z-40 w-full h-full bg-gray-50/90 dark:bg-black/90 flex justify-center">
-					<div class=" text-left px-5 py-2">
-						<div class=" font-medium">{$i18n.t('Chat History is off for this browser.')}</div>
-						<div class="text-xs mt-2">
-							{$i18n.t(
-								"When history is turned off, new chats on this browser won't appear in your history on any of your devices."
-							)}
-							<span class=" font-semibold"
-								>{$i18n.t('This setting does not sync across browsers or devices.')}</span
-							>
-						</div>
-
-						<div class="mt-3">
-							<button
-								class="flex justify-center items-center space-x-1.5 px-3 py-2.5 rounded-lg text-xs bg-gray-100 hover:bg-gray-200 transition text-gray-800 font-medium w-full"
-								type="button"
-								on:click={() => {
-									saveSettings({
-										saveChatHistory: true
-									});
-								}}
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 16 16"
-									fill="currentColor"
-									class="w-3 h-3"
-								>
-									<path
-										fill-rule="evenodd"
-										d="M8 1a.75.75 0 0 1 .75.75v6.5a.75.75 0 0 1-1.5 0v-6.5A.75.75 0 0 1 8 1ZM4.11 3.05a.75.75 0 0 1 0 1.06 5.5 5.5 0 1 0 7.78 0 .75.75 0 0 1 1.06-1.06 7 7 0 1 1-9.9 0 .75.75 0 0 1 1.06 0Z"
-										clip-rule="evenodd"
-									/>
-								</svg>
-
-								<div>{$i18n.t('Enable Chat History')}</div>
-							</button>
-						</div>
-					</div>
-				</div>
+		<div
+			class="relative flex flex-col flex-1 overflow-y-auto {$temporaryChatEnabled
+				? 'opacity-20'
+				: ''}"
+		>
+			{#if $temporaryChatEnabled}
+				<div class="absolute z-40 w-full h-full flex justify-center"></div>
 			{/if}
 
 			<div class="px-2 mt-0.5 mb-2 flex justify-center space-x-2">
@@ -399,38 +419,84 @@
 						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm bg-transparent dark:text-gray-300 outline-none"
 						placeholder={$i18n.t('Search')}
 						bind:value={search}
-						on:focus={() => {
+						on:focus={async () => {
+							// TODO: migrate backend for more scalable search mechanism
+							scrollPaginationEnabled.set(false);
+							await chats.set(await getChatList(localStorage.token)); // when searching, load all chats
 							enrichChatsWithContent($chats);
 						}}
 					/>
 				</div>
 			</div>
 
-			{#if $tags.length > 0}
-				<div class="px-2.5 mb-2 flex gap-1 flex-wrap">
+			{#if $tags.filter((t) => t.name !== 'pinned').length > 0}
+				<div class="px-3.5 mb-1 flex gap-0.5 flex-wrap">
 					<button
-						class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
+						class="px-2.5 py-[1px] text-xs transition {selectedTagName === null
+							? 'bg-gray-100 dark:bg-gray-900'
+							: ' '} rounded-md font-medium"
 						on:click={async () => {
-							await chats.set(await getChatList(localStorage.token));
+							selectedTagName = null;
+							await enablePagination();
 						}}
 					>
 						{$i18n.t('all')}
 					</button>
-					{#each $tags as tag}
+					{#each $tags.filter((t) => t.name !== 'pinned') as tag}
 						<button
-							class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
+							class="px-2.5 py-[1px] text-xs transition {selectedTagName === tag.name
+								? 'bg-gray-100 dark:bg-gray-900'
+								: ''}  rounded-md font-medium"
 							on:click={async () => {
+								selectedTagName = tag.name;
+								scrollPaginationEnabled.set(false);
 								let chatIds = await getChatListByTagName(localStorage.token, tag.name);
 								if (chatIds.length === 0) {
 									await tags.set(await getAllChatTags(localStorage.token));
-									chatIds = await getChatList(localStorage.token);
+
+									// if the tag we deleted is no longer a valid tag, return to main chat list view
+									await enablePagination();
 								}
 								await chats.set(chatIds);
+
+								chatListLoading = false;
 							}}
 						>
 							{tag.name}
 						</button>
 					{/each}
+				</div>
+			{/if}
+
+			{#if !search && $pinnedChats.length > 0}
+				<div class="pl-2 py-2 flex flex-col space-y-1">
+					<div class="">
+						<div class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium pb-1.5">
+							{$i18n.t('Pinned')}
+						</div>
+
+						{#each $pinnedChats as chat, idx}
+							<ChatItem
+								{chat}
+								{shiftKey}
+								selected={selectedChatId === chat.id}
+								on:select={() => {
+									selectedChatId = chat.id;
+								}}
+								on:unselect={() => {
+									selectedChatId = null;
+								}}
+								on:delete={(e) => {
+									if ((e?.detail ?? '') === 'shift') {
+										deleteChatHandler(chat.id);
+									} else {
+										deleteChat = chat;
+										showDeleteConfirm = true;
+									}
+								}}
+							/>
+						{/each}
+					</div>
 				</div>
 			{/if}
 
@@ -464,212 +530,48 @@
 						</div>
 					{/if}
 
-					<div class=" w-full pr-2 relative group">
-						{#if chatTitleEditId === chat.id}
-							<div
-								class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId ||
-								chat.id === chatTitleEditId ||
-								chat.id === chatDeleteId
-									? 'bg-gray-200 dark:bg-gray-900'
-									: chat.id === selectedChatId
-									? 'bg-gray-100 dark:bg-gray-950'
-									: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
-							>
-								<input bind:value={chatTitle} class=" bg-transparent w-full outline-none mr-10" />
-							</div>
-						{:else}
-							<a
-								class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId ||
-								chat.id === chatTitleEditId ||
-								chat.id === chatDeleteId
-									? 'bg-gray-200 dark:bg-gray-900'
-									: chat.id === selectedChatId
-									? 'bg-gray-100 dark:bg-gray-950'
-									: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
-								href="/c/{chat.id}"
-								on:click={() => {
-									selectedChatId = chat.id;
-									if ($mobile) {
-										showSidebar.set(false);
-									}
-								}}
-								draggable="false"
-							>
-								<div class=" flex self-center flex-1 w-full">
-									<div class=" text-left self-center overflow-hidden w-full h-[20px]">
-										{chat.title}
-									</div>
-								</div>
-							</a>
-						{/if}
-
-						<div
-							class="
-
-							{chat.id === $chatId || chat.id === chatTitleEditId || chat.id === chatDeleteId
-								? 'from-gray-200 dark:from-gray-900'
-								: chat.id === selectedChatId
-								? 'from-gray-100 dark:from-gray-950'
-								: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
-								absolute right-[10px] top-[10px] pr-2 pl-5 bg-gradient-to-l from-80%
-
-								  to-transparent"
-						>
-							{#if chatTitleEditId === chat.id}
-								<div class="flex self-center space-x-1.5 z-10">
-									<button
-										class=" self-center dark:hover:text-white transition"
-										on:click={() => {
-											editChatTitle(chat.id, chatTitle);
-											chatTitleEditId = null;
-											chatTitle = '';
-										}}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-									</button>
-									<button
-										class=" self-center dark:hover:text-white transition"
-										on:click={() => {
-											chatTitleEditId = null;
-											chatTitle = '';
-										}}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-											/>
-										</svg>
-									</button>
-								</div>
-							{:else if chatDeleteId === chat.id}
-								<div class="flex self-center space-x-1.5 z-10">
-									<button
-										class=" self-center dark:hover:text-white transition"
-										on:click={() => {
-											deleteChat(chat.id);
-										}}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-									</button>
-									<button
-										class=" self-center dark:hover:text-white transition"
-										on:click={() => {
-											chatDeleteId = null;
-										}}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-											/>
-										</svg>
-									</button>
-								</div>
-							{:else}
-								<div class="flex self-center space-x-1 z-10">
-									<ChatMenu
-										chatId={chat.id}
-										shareHandler={() => {
-											shareChatId = selectedChatId;
-											showShareChatModal = true;
-										}}
-										archiveChatHandler={() => {
-											archiveChatHandler(chat.id);
-										}}
-										renameHandler={() => {
-											chatTitle = chat.title;
-											chatTitleEditId = chat.id;
-										}}
-										deleteHandler={() => {
-											chatDeleteId = chat.id;
-										}}
-										onClose={() => {
-											selectedChatId = null;
-										}}
-									>
-										<button
-											aria-label="Chat Menu"
-											class=" self-center dark:hover:text-white transition"
-											on:click={() => {
-												selectedChatId = chat.id;
-											}}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 16 16"
-												fill="currentColor"
-												class="w-4 h-4"
-											>
-												<path
-													d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
-												/>
-											</svg>
-										</button>
-									</ChatMenu>
-
-									{#if chat.id === $chatId}
-										<button
-											id="delete-chat-button"
-											class="hidden"
-											on:click={() => {
-												chatDeleteId = chat.id;
-											}}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 16 16"
-												fill="currentColor"
-												class="w-4 h-4"
-											>
-												<path
-													d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
-												/>
-											</svg>
-										</button>
-									{/if}
-								</div>
-							{/if}
-						</div>
-					</div>
+					<ChatItem
+						{chat}
+						{shiftKey}
+						selected={selectedChatId === chat.id}
+						on:select={() => {
+							selectedChatId = chat.id;
+						}}
+						on:unselect={() => {
+							selectedChatId = null;
+						}}
+						on:delete={(e) => {
+							if ((e?.detail ?? '') === 'shift') {
+								deleteChatHandler(chat.id);
+							} else {
+								deleteChat = chat;
+								showDeleteConfirm = true;
+							}
+						}}
+					/>
 				{/each}
+
+				{#if $scrollPaginationEnabled && !allChatsLoaded}
+					<Loader
+						on:visible={(e) => {
+							if (!chatListLoading) {
+								loadMoreChats();
+							}
+						}}
+					>
+						<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
+							<Spinner className=" size-4" />
+							<div class=" ">Loading...</div>
+						</div>
+					</Loader>
+				{/if}
 			</div>
 		</div>
 
-		<div class="px-2.5">
+		<div class="px-2.5 pb-safe-bottom">
 			<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
 
-			<div class="flex flex-col">
+			<div class="flex flex-col font-primary">
 				{#if $user !== undefined}
 					<UserMenu
 						role={$user.role}
@@ -692,50 +594,13 @@
 									alt="User profile"
 								/>
 							</div>
-							<div class=" self-center font-semibold">{$user.name}</div>
+							<div class=" self-center font-medium">{$user.name}</div>
 						</button>
 					</UserMenu>
 				{/if}
 			</div>
 		</div>
 	</div>
-
-	<!-- <div
-		id="sidebar-handle"
-		class=" hidden md:fixed left-0 top-[50dvh] -translate-y-1/2 transition-transform translate-x-[255px] md:translate-x-[260px] rotate-0"
-	>
-		<Tooltip
-			placement="right"
-			content={`${$showSidebar ? $i18n.t('Close') : $i18n.t('Open')} ${$i18n.t('sidebar')}`}
-			touch={false}
-		>
-			<button
-				id="sidebar-toggle-button"
-				class=" group"
-				on:click={() => {
-					showSidebar.set(!$showSidebar);
-				}}
-				><span class="" data-state="closed"
-					><div
-						class="flex h-[72px] w-8 items-center justify-center opacity-50 group-hover:opacity-100 transition"
-					>
-						<div class="flex h-6 w-6 flex-col items-center">
-							<div
-								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[0.15rem] {$showSidebar
-									? 'group-hover:rotate-[15deg]'
-									: 'group-hover:rotate-[-15deg]'}"
-							/>
-							<div
-								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[-0.15rem] {$showSidebar
-									? 'group-hover:rotate-[-15deg]'
-									: 'group-hover:rotate-[15deg]'}"
-							/>
-						</div>
-					</div>
-				</span>
-			</button>
-		</Tooltip>
-	</div> -->
 </div>
 
 <style>
