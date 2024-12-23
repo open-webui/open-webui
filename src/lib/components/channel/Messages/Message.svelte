@@ -64,28 +64,30 @@
 			? 'max-w-full'
 			: 'max-w-5xl'} mx-auto group hover:bg-gray-500/5 transition relative"
 	>
-		<div class=" absolute invisible group-hover:visible right-1 -top-2 z-30">
-			<div
-				class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100 dark:border-gray-800"
-			>
-				<button
-					class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-					on:click={() => {
-						edit = true;
-						editedContent = message.content;
-					}}
+		{#if !edit}
+			<div class=" absolute invisible group-hover:visible right-1 -top-2 z-30">
+				<div
+					class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100 dark:border-gray-800"
 				>
-					<Pencil />
-				</button>
+					<button
+						class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+						on:click={() => {
+							edit = true;
+							editedContent = message.content;
+						}}
+					>
+						<Pencil />
+					</button>
 
-				<button
-					class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-					on:click={() => (showDeleteConfirmDialog = true)}
-				>
-					<GarbageBin />
-				</button>
+					<button
+						class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+						on:click={() => (showDeleteConfirmDialog = true)}
+					>
+						<GarbageBin />
+					</button>
+				</div>
 			</div>
-		</div>
+		{/if}
 
 		<div
 			class=" flex w-full message-{message.id}"
