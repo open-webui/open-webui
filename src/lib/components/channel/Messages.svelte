@@ -11,6 +11,8 @@
 	dayjs.extend(isYesterday);
 	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
 
+	import { settings } from '$lib/stores';
+
 	import Message from './Messages/Message.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -57,12 +59,16 @@
 				</div>
 			</Loader>
 		{:else}
-			<div class="px-5">
+			<div
+				class="px-5 py-5
+			
+			{($settings?.widescreenMode ?? null) ? 'max-w-full' : 'max-w-5xl'} mx-auto"
+			>
 				{#if channel}
 					<div class="flex flex-col py-1 gap-1.5">
-						<div class="text-xl font-medium">{channel.name}</div>
+						<div class="text-2xl font-medium capitalize">{channel.name}</div>
 
-						<div class="text-sm text-gray-500">
+						<div class=" text-gray-500">
 							This channel was created on {dayjs(channel.created_at / 1000000).format(
 								'MMMM D, YYYY'
 							)}. This is the very beginning of the {channel.name}
@@ -75,6 +81,10 @@
 					</div>
 				{/if}
 			</div>
+
+			{#if messageList.length > 0}
+				<hr class=" border-gray-50 dark:border-gray-700/20 py-2.5 w-full" />
+			{/if}
 		{/if}
 
 		{#each messageList as message, messageIdx (message.id)}
