@@ -69,11 +69,11 @@ class ChannelTable:
         with get_db() as db:
             channel = ChannelModel(
                 **{
-                    **form_data.dict(),
+                    **form_data.model_dump(),
                     "id": str(uuid.uuid4()),
                     "user_id": user_id,
-                    "created_at": int(time.time()),
-                    "updated_at": int(time.time()),
+                    "created_at": int(time.time_ns()),
+                    "updated_at": int(time.time_ns()),
                 }
             )
 
@@ -116,7 +116,7 @@ class ChannelTable:
             channel.data = form_data.data
             channel.meta = form_data.meta
             channel.access_control = form_data.access_control
-            channel.updated_at = int(time.time())
+            channel.updated_at = int(time.time_ns())
 
             db.commit()
             return ChannelModel.model_validate(channel) if channel else None

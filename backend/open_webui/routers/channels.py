@@ -58,6 +58,27 @@ async def create_new_channel(form_data: ChannelForm, user=Depends(get_admin_user
 
 
 ############################
+# GetChannelById
+############################
+
+
+@router.get("/{id}", response_model=Optional[ChannelModel])
+async def get_channel_by_id(id: str, user=Depends(get_verified_user)):
+    channel = Channels.get_channel_by_id(id)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if not has_access(user.id, type="read", access_control=channel.access_control):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    return ChannelModel(**channel.model_dump())
+
+
+############################
 # GetChannelMessages
 ############################
 

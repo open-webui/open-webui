@@ -1,10 +1,13 @@
 <script lang="ts">
-	import { getChannelMessages, sendMessage } from '$lib/apis/channels';
 	import { toast } from 'svelte-sonner';
-	import MessageInput from './MessageInput.svelte';
-	import Messages from './Messages.svelte';
-	import { socket } from '$lib/stores';
 	import { onDestroy, onMount, tick } from 'svelte';
+
+	import { socket } from '$lib/stores';
+	import { getChannelById, getChannelMessages, sendMessage } from '$lib/apis/channels';
+
+	import Messages from './Messages.svelte';
+	import MessageInput from './MessageInput.svelte';
+	import { goto } from '$app/navigation';
 
 	export let id = '';
 
@@ -14,6 +17,7 @@
 	let top = false;
 	let page = 1;
 
+	let channel = null;
 	let messages = null;
 
 	$: if (id) {
@@ -28,15 +32,24 @@
 		top = false;
 		page = 1;
 		messages = null;
+		channel = null;
 
-		messages = await getChannelMessages(localStorage.token, id, page);
+		channel = await getChannelById(localStorage.token, id).catch((error) => {
+			return null;
+		});
 
-		if (messages) {
-			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+		if (channel) {
+			messages = await getChannelMessages(localStorage.token, id, page);
 
-			if (messages.length < 50) {
-				top = true;
+			if (messages) {
+				messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+
+				if (messages.length < 50) {
+					top = true;
+				}
 			}
+		} else {
+			goto('/');
 		}
 	};
 
@@ -93,6 +106,7 @@
 	>
 		{#key id}
 			<Messages
+				{channel}
 				{messages}
 				{top}
 				onLoad={async () => {
