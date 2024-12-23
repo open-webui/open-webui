@@ -22,6 +22,7 @@
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 
 	export let message;
 	export let showUserProfile = true;
@@ -142,16 +143,11 @@
 				{/if}
 
 				{#if edit}
-					<div class="py-1">
-						<textarea
-							id="message-edit-{message.id}"
+					<div class="py-2">
+						<Textarea
 							class=" bg-transparent outline-none w-full resize-none"
 							bind:value={editedContent}
-							on:input={(e) => {
-								e.target.style.height = '';
-								e.target.style.height = `${e.target.scrollHeight}px`;
-							}}
-							on:keydown={(e) => {
+							onKeydown={(e) => {
 								if (e.key === 'Escape') {
 									document.getElementById('close-edit-message-button')?.click();
 								}
