@@ -60,12 +60,12 @@
 			</Loader>
 		{:else}
 			<div
-				class="px-5 py-5
+				class="px-5
 			
 			{($settings?.widescreenMode ?? null) ? 'max-w-full' : 'max-w-5xl'} mx-auto"
 			>
 				{#if channel}
-					<div class="flex flex-col py-1 gap-1.5">
+					<div class="flex flex-col py-1 gap-1.5 py-5">
 						<div class="text-2xl font-medium capitalize">{channel.name}</div>
 
 						<div class=" text-gray-500">
@@ -76,15 +76,15 @@
 						</div>
 					</div>
 				{:else}
-					<div class="flex justify-center py-1 text-xs items-center gap-2">
+					<div class="flex justify-center py-1 text-xs items-center gap-2 py-5">
 						<div class=" ">Start of the channel</div>
 					</div>
 				{/if}
-			</div>
 
-			{#if messageList.length > 0}
-				<hr class=" border-gray-50 dark:border-gray-700/20 py-2.5 w-full" />
-			{/if}
+				{#if messageList.length > 0}
+					<hr class=" border-gray-50 dark:border-gray-700/20 py-2.5 w-full" />
+				{/if}
+			</div>
 		{/if}
 
 		{#each messageList as message, messageIdx (message.id)}
