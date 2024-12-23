@@ -217,3 +217,120 @@ async def post_new_message(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
+
+
+############################
+# UpdateMessageById
+############################
+
+
+@router.post(
+    "/{id}/messages/{message_id}/update", response_model=Optional[MessageModel]
+)
+async def update_message_by_id(
+    id: str, message_id: str, form_data: MessageForm, user=Depends(get_verified_user)
+):
+    channel = Channels.get_channel_by_id(id)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if not has_access(user.id, type="read", access_control=channel.access_control):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    message = Messages.get_message_by_id(message_id)
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if message.channel_id != id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    try:
+        message = Messages.update_message_by_id(message_id, form_data)
+        if message:
+            await sio.emit(
+                "channel-events",
+                {
+                    "channel_id": channel.id,
+                    "message_id": message.id,
+                    "data": {
+                        "type": "message:update",
+                        "data": {
+                            **message.model_dump(),
+                            "user": UserNameResponse(**user.model_dump()).model_dump(),
+                        },
+                    },
+                },
+                to=f"channel:{channel.id}",
+            )
+
+        return MessageModel(**message.model_dump())
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+############################
+# DeleteMessageById
+############################
+
+
+@router.delete("/{id}/messages/{message_id}/delete", response_model=bool)
+async def delete_message_by_id(
+    id: str, message_id: str, user=Depends(get_verified_user)
+):
+    channel = Channels.get_channel_by_id(id)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if not has_access(user.id, type="read", access_control=channel.access_control):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    message = Messages.get_message_by_id(message_id)
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if message.channel_id != id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    try:
+        Messages.delete_message_by_id(message_id)
+        await sio.emit(
+            "channel-events",
+            {
+                "channel_id": channel.id,
+                "message_id": message.id,
+                "data": {
+                    "type": "message:delete",
+                    "data": {
+                        **message.model_dump(),
+                        "user": UserNameResponse(**user.model_dump()).model_dump(),
+                    },
+                },
+            },
+            to=f"channel:{channel.id}",
+        )
+
+        return True
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )

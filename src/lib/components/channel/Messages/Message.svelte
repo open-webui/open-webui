@@ -18,9 +18,19 @@
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import Name from '$lib/components/chat/Messages/Name.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
+	import Pencil from '$lib/components/icons/Pencil.svelte';
 
 	export let message;
 	export let showUserProfile = true;
+
+	export let onDelete: Function = () => {};
+	export let onEdit: Function = () => {};
+
+	let edit = false;
+	let editedContent = null;
+	let showDeleteConfirmDialog = false;
 
 	const formatDate = (inputDate) => {
 		const date = dayjs(inputDate);
@@ -36,14 +46,46 @@
 	};
 </script>
 
+<ConfirmDialog
+	bind:show={showDeleteConfirmDialog}
+	title={$i18n.t('Delete Message')}
+	message={$i18n.t('Are you sure you want to delete this message?')}
+	onConfirm={async () => {
+		await onDelete(message.id);
+	}}
+/>
+
 {#if message}
 	<div
 		class="flex flex-col justify-between px-5 {showUserProfile
 			? 'pt-1.5 pb-0.5'
 			: ''} w-full {($settings?.widescreenMode ?? null)
 			? 'max-w-full'
-			: 'max-w-5xl'} mx-auto group hover:bg-gray-500/5 transition"
+			: 'max-w-5xl'} mx-auto group hover:bg-gray-500/5 transition relative"
 	>
+		<div class=" absolute invisible group-hover:visible right-1 -top-2">
+			<div
+				class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100 dark:border-gray-800"
+			>
+				<button
+					class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+					on:click={() => {
+						edit = true;
+						editedContent = message.content;
+					}}
+				>
+					<Pencil />
+				</button>
+
+				<button
+					class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+					on:click={() => (showDeleteConfirmDialog = true)}
+				>
+					<GarbageBin />
+				</button>
+			</div>
+		</div>
+
 		<div
 			class=" flex w-full message-{message.id}"
 			id="message-{message.id}"
@@ -88,9 +130,61 @@
 					</Name>
 				{/if}
 
-				<div class="markdown-prose">
-					<Markdown id={message.id} content={message.content} />
-				</div>
+				{#if edit}
+					<div class="py-1">
+						<textarea
+							id="message-edit-{message.id}"
+							class=" bg-transparent outline-none w-full resize-none"
+							bind:value={editedContent}
+							on:input={(e) => {
+								e.target.style.height = '';
+								e.target.style.height = `${e.target.scrollHeight}px`;
+							}}
+							on:keydown={(e) => {
+								if (e.key === 'Escape') {
+									document.getElementById('close-edit-message-button')?.click();
+								}
+
+								const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
+								const isEnterPressed = e.key === 'Enter';
+
+								if (isCmdOrCtrlPressed && isEnterPressed) {
+									document.getElementById('confirm-edit-message-button')?.click();
+								}
+							}}
+						/>
+						<div class=" mt-2 mb-1 flex justify-end text-sm font-medium">
+							<div class="flex space-x-1.5">
+								<button
+									id="close-edit-message-button"
+									class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
+									on:click={() => {
+										edit = false;
+										editedContent = null;
+									}}
+								>
+									{$i18n.t('Cancel')}
+								</button>
+
+								<button
+									id="confirm-edit-message-button"
+									class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+									on:click={async () => {
+										onEdit(message.id, editedContent);
+										edit = false;
+										editedContent = null;
+									}}
+								>
+									{$i18n.t('Save')}
+								</button>
+							</div>
+						</div>
+					</div>
+				{:else}
+					<div class="markdown-prose">
+						<Markdown id={message.id} content={message.content} />
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>
