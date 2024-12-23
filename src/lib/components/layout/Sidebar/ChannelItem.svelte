@@ -24,6 +24,7 @@
 	bind:show={showEditChannelModal}
 	{channel}
 	edit={true}
+	{onUpdate}
 	onSubmit={async ({ name, access_control }) => {
 		const res = await updateChannelById(localStorage.token, channel.id, {
 			name,

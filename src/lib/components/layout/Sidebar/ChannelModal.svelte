@@ -1,16 +1,19 @@
 <script lang="ts">
 	import { getContext, createEventDispatcher, onMount } from 'svelte';
-	import { createNewChannel } from '$lib/apis/channels';
+	import { createNewChannel, deleteChannelById } from '$lib/apis/channels';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	import { toast } from 'svelte-sonner';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	const i18n = getContext('i18n');
 
 	export let show = false;
 	export let onSubmit: Function = () => {};
+	export let onUpdate: Function = () => {};
 
 	export let channel = null;
 	export let edit = false;
@@ -47,6 +50,20 @@
 
 	const deleteHandler = async () => {
 		showDeleteConfirmDialog = false;
+
+		const res = await deleteChannelById(localStorage.token, channel.id).catch((error) => {
+			toast.error(error.message);
+		});
+
+		if (res) {
+			toast.success('Channel deleted successfully');
+			onUpdate();
+
+			if ($page.url.pathname === `/channels/${channel.id}`) {
+				goto('/');
+			}
+		}
+
 		show = false;
 	};
 </script>
