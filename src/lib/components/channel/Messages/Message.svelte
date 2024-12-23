@@ -39,10 +39,10 @@
 {#if message}
 	<div
 		class="flex flex-col justify-between px-5 {showUserProfile
-			? 'mt-3'
+			? 'pt-1.5 pb-0.5'
 			: ''} w-full {($settings?.widescreenMode ?? null)
 			? 'max-w-full'
-			: 'max-w-5xl'} mx-auto rounded-lg group"
+			: 'max-w-5xl'} mx-auto group hover:bg-gray-500/5 transition"
 	>
 		<div
 			class=" flex w-full message-{message.id}"
@@ -56,17 +56,27 @@
 					<ProfileImage
 						src={message.user?.profile_image_url ??
 							($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
-						className={'size-7'}
+						className={'size-8 translate-y-1 mr-0.5'}
 					/>
 				{:else}
-					<div class="w-7 h-7 rounded-full bg-transparent" />
+					<!-- <div class="w-7 h-7 rounded-full bg-transparent" /> -->
+
+					{#if message.created_at}
+						<span
+							class=" text-xs self-center invisible group-hover:visible text-gray-500 font-medium first-letter:capitalize"
+						>
+							{dayjs(message.created_at / 1000000).format('HH:mm')}
+						</span>
+					{/if}
 				{/if}
 			</div>
 
 			<div class="flex-auto w-0 pl-1">
 				{#if showUserProfile}
 					<Name>
-						{message?.user?.name}
+						<span class="text-sm">
+							{message?.user?.name}
+						</span>
 
 						{#if message.created_at}
 							<span
