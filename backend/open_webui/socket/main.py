@@ -193,6 +193,27 @@ async def user_join(sid, data):
     await sio.emit("user-count", {"count": len(USER_POOL.items())})
 
 
+@sio.on("join-channels")
+async def join_channel(sid, data):
+    auth = data["auth"] if "auth" in data else None
+    if not auth or "token" not in auth:
+        return
+
+    data = decode_token(auth["token"])
+    if data is None or "id" not in data:
+        return
+
+    user = Users.get_user_by_id(data["id"])
+    if not user:
+        return
+
+    # Join all the channels
+    channels = Channels.get_channels_by_user_id(user.id)
+    log.debug(f"{channels=}")
+    for channel in channels:
+        await sio.enter_room(sid, f"channel:{channel.id}")
+
+
 @sio.on("user-count")
 async def user_count(sid):
     await sio.emit("user-count", {"count": len(USER_POOL.items())})
