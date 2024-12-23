@@ -136,7 +136,9 @@ class MessageUserModel(MessageModel):
 
 
 @router.get("/{id}/messages", response_model=list[MessageUserModel])
-async def get_channel_messages(id: str, page: int = 1, user=Depends(get_verified_user)):
+async def get_channel_messages(
+    id: str, skip: int = 0, limit: int = 50, user=Depends(get_verified_user)
+):
     channel = Channels.get_channel_by_id(id)
     if not channel:
         raise HTTPException(
@@ -147,9 +149,6 @@ async def get_channel_messages(id: str, page: int = 1, user=Depends(get_verified
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
-
-    limit = 50
-    skip = (page - 1) * limit
 
     message_list = Messages.get_messages_by_channel_id(id, skip, limit)
     users = {}

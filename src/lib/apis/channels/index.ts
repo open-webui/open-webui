@@ -166,10 +166,10 @@ export const deleteChannelById = async (token: string = '', channel_id: string) 
 }
 
 
-export const getChannelMessages = async (token: string = '', channel_id: string, page: number = 1) => {
+export const getChannelMessages = async (token: string = '', channel_id: string, skip: number = 0, limit: number = 50) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages?page=${page}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages?skip=${skip}&limit=${limit}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',

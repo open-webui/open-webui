@@ -16,7 +16,6 @@
 	let messagesContainerElement = null;
 
 	let top = false;
-	let page = 1;
 
 	let channel = null;
 	let messages = null;
@@ -31,7 +30,6 @@
 
 	const initHandler = async () => {
 		top = false;
-		page = 1;
 		messages = null;
 		channel = null;
 
@@ -40,7 +38,7 @@
 		});
 
 		if (channel) {
-			messages = await getChannelMessages(localStorage.token, id, page);
+			messages = await getChannelMessages(localStorage.token, id, 0);
 
 			if (messages) {
 				messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
@@ -117,16 +115,14 @@
 					{messages}
 					{top}
 					onLoad={async () => {
-						page += 1;
+						const newMessages = await getChannelMessages(localStorage.token, id, messages.length);
 
-						const newMessages = await getChannelMessages(localStorage.token, id, page);
+						messages = [...messages, ...newMessages];
 
-						if (newMessages.length === 0) {
+						if (newMessages.length < 50) {
 							top = true;
 							return;
 						}
-
-						messages = [...messages, ...newMessages];
 					}}
 				/>
 			{/key}
