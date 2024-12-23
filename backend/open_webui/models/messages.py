@@ -95,7 +95,7 @@ class MessageTable:
             all_messages = (
                 db.query(Message)
                 .filter_by(channel_id=channel_id)
-                .order_by(Message.updated_at.desc())
+                .order_by(Message.updated_at.asc())
                 .limit(limit)
                 .offset(skip)
                 .all()
@@ -109,7 +109,7 @@ class MessageTable:
             all_messages = (
                 db.query(Message)
                 .filter_by(user_id=user_id)
-                .order_by(Message.updated_at.desc())
+                .order_by(Message.updated_at.asc())
                 .limit(limit)
                 .offset(skip)
                 .all()

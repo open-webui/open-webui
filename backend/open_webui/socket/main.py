@@ -5,6 +5,7 @@ import sys
 import time
 
 from open_webui.models.users import Users
+from open_webui.models.channels import Channels
 from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
     WEBSOCKET_MANAGER,
@@ -162,7 +163,6 @@ async def connect(sid, environ, auth):
 
 @sio.on("user-join")
 async def user_join(sid, data):
-    # print("user-join", sid, data)
 
     auth = data["auth"] if "auth" in data else None
     if not auth or "token" not in auth:
@@ -181,6 +181,12 @@ async def user_join(sid, data):
         USER_POOL[user.id] = USER_POOL[user.id] + [sid]
     else:
         USER_POOL[user.id] = [sid]
+
+    # Join all the channels
+    channels = Channels.get_channels_by_user_id(user.id)
+    log.debug(f"{channels=}")
+    for channel in channels:
+        await sio.enter_room(sid, f"channel:{channel.id}")
 
     # print(f"user {user.name}({user.id}) connected with session ID {sid}")
 

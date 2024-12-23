@@ -17,7 +17,8 @@
 		scrollPaginationEnabled,
 		currentChatPage,
 		temporaryChatEnabled,
-		channels
+		channels,
+		socket
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -151,7 +152,7 @@
 	};
 
 	const initChannels = async () => {
-		channels.set(await getChannels(localStorage.token));
+		await channels.set(await getChannels(localStorage.token));
 	};
 
 	const initChatList = async () => {

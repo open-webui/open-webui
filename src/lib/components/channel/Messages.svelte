@@ -9,14 +9,15 @@
 	import Message from './Messages/Message.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import { getChannelMessages } from '$lib/apis/channels';
 
 	const i18n = getContext('i18n');
 
-	export let channelId;
+	export let messages = [];
+	export let top = false;
 
-	let messages = null;
+	export let onLoad: Function = () => {};
 
-	let messagesCount = 50;
 	let messagesLoading = false;
 
 	const loadMoreMessages = async () => {
@@ -25,19 +26,19 @@
 		element.scrollTop = element.scrollTop + 100;
 
 		messagesLoading = true;
-		messagesCount += 50;
+
+		await onLoad();
 
 		await tick();
-
 		messagesLoading = false;
 	};
 </script>
 
-<div class="h-full flex pt-8">
-	<div class="w-full pt-2">
-		{#key channelId}
+{#if messages}
+	<div class="h-full w-full flex-1 flex">
+		<div class="w-full pt-2">
 			<div class="w-full">
-				{#if messages.at(0)?.parentId !== null}
+				{#if !top}
 					<Loader
 						on:visible={(e) => {
 							console.log('visible');
@@ -54,10 +55,10 @@
 				{/if}
 
 				{#each messages as message, messageIdx (message.id)}
-					<Message {channelId} id={message.id} content={message.content} />
+					<Message {message} />
 				{/each}
 			</div>
-			<div class="pb-12" />
-		{/key}
+			<div class="pb-6" />
+		</div>
 	</div>
-</div>
+{/if}

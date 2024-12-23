@@ -2,6 +2,12 @@ import json
 import logging
 from typing import Optional
 
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel
+
+
+from open_webui.socket.main import sio
 from open_webui.models.channels import Channels, ChannelModel, ChannelForm
 from open_webui.models.messages import Messages, MessageModel, MessageForm
 
@@ -9,12 +15,10 @@ from open_webui.models.messages import Messages, MessageModel, MessageForm
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control import has_access
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -53,7 +57,7 @@ async def create_new_channel(form_data: ChannelForm, user=Depends(get_admin_user
 ############################
 
 
-@router.post("/{id}/messages", response_model=list[MessageModel])
+@router.get("/{id}/messages", response_model=list[MessageModel])
 async def get_channel_messages(id: str, page: int = 1, user=Depends(get_verified_user)):
     channel = Channels.get_channel_by_id(id)
     if not channel:
@@ -61,7 +65,7 @@ async def get_channel_messages(id: str, page: int = 1, user=Depends(get_verified
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if not has_permission(channel.access_control, user):
+    if not has_access(user.id, type="read", access_control=channel.access_control):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
@@ -87,13 +91,25 @@ async def post_new_message(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if not has_permission(channel.access_control, user):
+    if not has_access(user.id, type="read", access_control=channel.access_control):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
     try:
         message = Messages.insert_new_message(form_data, channel.id, user.id)
+
+        if message:
+            await sio.emit(
+                "channel-events",
+                {
+                    "channel_id": channel.id,
+                    "message_id": message.id,
+                    "data": {"message": message.model_dump()},
+                },
+                to=f"channel:{channel.id}",
+            )
+
         return MessageModel(**message.model_dump())
     except Exception as e:
         log.exception(e)
