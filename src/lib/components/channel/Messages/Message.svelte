@@ -11,7 +11,7 @@
 	import { getContext } from 'svelte';
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
-	import { settings } from '$lib/stores';
+	import { settings, user } from '$lib/stores';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -65,7 +65,7 @@
 			? 'max-w-full'
 			: 'max-w-5xl'} mx-auto group hover:bg-gray-500/5 transition relative"
 	>
-		{#if !edit}
+		{#if message.user_id === $user.id && !edit}
 			<div class=" absolute invisible group-hover:visible right-1 -top-2 z-30">
 				<div
 					class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100 dark:border-gray-800"
@@ -96,20 +96,20 @@
 			dir={$settings.chatDirection}
 		>
 			<div
-				class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'} w-8`}
+				class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'} w-9`}
 			>
 				{#if showUserProfile}
 					<ProfileImage
 						src={message.user?.profile_image_url ??
 							($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
-						className={'size-8 translate-y-1 mr-0.5'}
+						className={'size-8 translate-y-1 ml-0.5'}
 					/>
 				{:else}
 					<!-- <div class="w-7 h-7 rounded-full bg-transparent" /> -->
 
 					{#if message.created_at}
 						<div
-							class="mt-1.5 flex items-center text-xs self-center invisible group-hover:visible text-gray-500 font-medium first-letter:capitalize"
+							class="mt-1.5 flex flex-shrink-0 items-center text-xs self-center invisible group-hover:visible text-gray-500 font-medium first-letter:capitalize"
 						>
 							<Tooltip
 								content={dayjs(message.created_at / 1000000).format('dddd, DD MMMM YYYY HH:mm')}
