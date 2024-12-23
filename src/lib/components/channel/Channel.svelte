@@ -109,35 +109,38 @@
 		? 'md:max-w-[calc(100%-260px)]'
 		: ''} w-full max-w-full flex flex-col"
 >
-	{#if channel}
-		<Navbar {channel} />
-		<div
-			class=" pb-2.5 max-w-full z-10 scrollbar-hidden w-full h-full pt-6 flex-1 flex flex-col-reverse overflow-auto"
-			id="messages-container"
-			bind:this={messagesContainerElement}
-			on:scroll={(e) => {
-				scrollEnd = Math.abs(messagesContainerElement.scrollTop) <= 50;
-			}}
-		>
-			{#key id}
-				<Messages
-					{channel}
-					{messages}
-					{top}
-					onLoad={async () => {
-						const newMessages = await getChannelMessages(localStorage.token, id, messages.length);
+	<Navbar {channel} />
 
-						messages = [...messages, ...newMessages];
+	<div class="flex-1">
+		{#if channel}
+			<div
+				class=" pb-2.5 max-w-full z-10 scrollbar-hidden w-full h-full pt-6 flex-1 flex flex-col-reverse overflow-auto"
+				id="messages-container"
+				bind:this={messagesContainerElement}
+				on:scroll={(e) => {
+					scrollEnd = Math.abs(messagesContainerElement.scrollTop) <= 50;
+				}}
+			>
+				{#key id}
+					<Messages
+						{channel}
+						{messages}
+						{top}
+						onLoad={async () => {
+							const newMessages = await getChannelMessages(localStorage.token, id, messages.length);
 
-						if (newMessages.length < 50) {
-							top = true;
-							return;
-						}
-					}}
-				/>
-			{/key}
-		</div>
-	{/if}
+							messages = [...messages, ...newMessages];
+
+							if (newMessages.length < 50) {
+								top = true;
+								return;
+							}
+						}}
+					/>
+				{/key}
+			</div>
+		{/if}
+	</div>
 
 	<div class=" pb-[1rem]">
 		<MessageInput onSubmit={submitHandler} {scrollToBottom} {scrollEnd} />

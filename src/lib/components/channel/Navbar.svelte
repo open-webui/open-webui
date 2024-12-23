@@ -47,9 +47,11 @@
 			{$showSidebar ? 'ml-1' : ''}
 			"
 			>
-				<div class="line-clamp-1 capitalize font-medium font-primary text-lg">
-					{channel.name}
-				</div>
+				{#if channel}
+					<div class="line-clamp-1 capitalize font-medium font-primary text-lg">
+						{channel.name}
+					</div>
+				{/if}
 			</div>
 
 			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
