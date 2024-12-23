@@ -56,7 +56,7 @@
 			<Message
 				{message}
 				showUserProfile={messageIdx === 0 ||
-					messageList.at(messageIdx + 1)?.user_id !== message.user_id}
+					messageList.at(messageIdx - 1)?.user_id !== message.user_id}
 			/>
 		{/each}
 
