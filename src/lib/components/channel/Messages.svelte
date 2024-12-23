@@ -35,30 +35,28 @@
 </script>
 
 {#if messages}
-	<div class="h-full w-full flex-1 flex">
-		<div class="w-full pt-2">
-			<div class="w-full">
-				{#if !top}
-					<Loader
-						on:visible={(e) => {
-							console.log('visible');
-							if (!messagesLoading) {
-								loadMoreMessages();
-							}
-						}}
-					>
-						<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
-							<Spinner className=" size-4" />
-							<div class=" ">Loading...</div>
-						</div>
-					</Loader>
-				{/if}
+	<div class="w-full h-full pt-2 flex-1 flex flex-col-reverse overflow-auto">
+		<div>
+			{#if !top}
+				<Loader
+					on:visible={(e) => {
+						console.log('visible');
+						if (!messagesLoading) {
+							loadMoreMessages();
+						}
+					}}
+				>
+					<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
+						<Spinner className=" size-4" />
+						<div class=" ">Loading...</div>
+					</div>
+				</Loader>
+			{/if}
 
-				{#each messages as message, messageIdx (message.id)}
-					<Message {message} />
-				{/each}
-			</div>
-			<div class="pb-6" />
+			{#each messages.slice().reverse() as message, messageIdx (message.id)}
+				<Message {message} />
+			{/each}
 		</div>
 	</div>
+	<div class="pb-6" />
 {/if}

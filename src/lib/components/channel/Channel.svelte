@@ -27,13 +27,31 @@
 
 		messages = await getChannelMessages(localStorage.token, id, page);
 
-		if (messages.length < 50) {
-			top = true;
+		if (messages) {
+			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+
+			if (messages.length < 50) {
+				top = true;
+			}
 		}
 	};
 
-	const channelEventHandler = async (data) => {
-		console.log(data);
+	const channelEventHandler = async (event) => {
+		console.log(event);
+
+		if (event.channel_id === id) {
+			const type = event?.data?.type ?? null;
+			const data = event?.data?.data ?? null;
+
+			if (type === 'message') {
+				console.log('message', data);
+				messages = [data, ...messages];
+				await tick();
+				if (scrollEnd) {
+					messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+				}
+			}
+		}
 	};
 
 	const submitHandler = async ({ content }) => {
@@ -74,6 +92,7 @@
 		{#key id}
 			<Messages
 				{messages}
+				{top}
 				onLoad={async () => {
 					page += 1;
 
@@ -84,7 +103,7 @@
 						return;
 					}
 
-					messages = [...newMessages, ...messages];
+					messages = [...messages, ...newMessages];
 				}}
 			/>
 		{/key}

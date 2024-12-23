@@ -5,6 +5,8 @@
 
 	const dispatch = createEventDispatcher();
 
+	import { page } from '$app/stores';
+
 	import { mobile, showSidebar, user } from '$lib/stores';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 
@@ -18,7 +20,10 @@
 
 <div
 	bind:this={itemElement}
-	class=" w-full {className} rounded-lg flex relative group hover:bg-gray-100 dark:hover:bg-gray-900 px-2.5 py-1"
+	class=" w-full {className} rounded-lg flex relative group hover:bg-gray-100 dark:hover:bg-gray-900 {$page
+		.url.pathname === `/channels/${id}`
+		? 'bg-gray-100 dark:bg-gray-900'
+		: ''} px-2.5 py-1"
 >
 	<a
 		class=" w-full flex justify-between"

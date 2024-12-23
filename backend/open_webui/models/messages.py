@@ -28,8 +28,8 @@ class Message(Base):
     data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
 
-    created_at = Column(BigInteger)
-    updated_at = Column(BigInteger)
+    created_at = Column(BigInteger)  # time_ns
+    updated_at = Column(BigInteger)  # time_ns
 
 
 class MessageModel(BaseModel):
@@ -72,8 +72,8 @@ class MessageTable:
                     "content": form_data.content,
                     "data": form_data.data,
                     "meta": form_data.meta,
-                    "created_at": int(time.time()),
-                    "updated_at": int(time.time()),
+                    "created_at": int(time.time_ns()),
+                    "updated_at": int(time.time_ns()),
                 }
             )
 
@@ -95,9 +95,9 @@ class MessageTable:
             all_messages = (
                 db.query(Message)
                 .filter_by(channel_id=channel_id)
-                .order_by(Message.updated_at.asc())
-                .limit(limit)
+                .order_by(Message.created_at.desc())
                 .offset(skip)
+                .limit(limit)
                 .all()
             )
             return [MessageModel.model_validate(message) for message in all_messages]
@@ -109,9 +109,9 @@ class MessageTable:
             all_messages = (
                 db.query(Message)
                 .filter_by(user_id=user_id)
-                .order_by(Message.updated_at.asc())
-                .limit(limit)
+                .order_by(Message.created_at.desc())
                 .offset(skip)
+                .limit(limit)
                 .all()
             )
             return [MessageModel.model_validate(message) for message in all_messages]
@@ -124,7 +124,7 @@ class MessageTable:
             message.content = form_data.content
             message.data = form_data.data
             message.meta = form_data.meta
-            message.updated_at = int(time.time())
+            message.updated_at = int(time.time_ns())
             db.commit()
             db.refresh(message)
             return MessageModel.model_validate(message) if message else None

@@ -108,7 +108,7 @@ async def post_new_message(
                 {
                     "channel_id": channel.id,
                     "message_id": message.id,
-                    "data": {"message": message.model_dump()},
+                    "data": {"type": "message", "data": message.model_dump()},
                 },
                 to=f"channel:{channel.id}",
             )
