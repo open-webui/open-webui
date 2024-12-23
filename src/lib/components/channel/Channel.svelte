@@ -80,15 +80,17 @@
 		}
 	};
 
-	const submitHandler = async ({ content }) => {
+	const submitHandler = async ({ content, data }) => {
 		if (!content) {
 			return;
 		}
 
-		const res = await sendMessage(localStorage.token, id, { content: content }).catch((error) => {
-			toast.error(error);
-			return null;
-		});
+		const res = await sendMessage(localStorage.token, id, { content: content, data: data }).catch(
+			(error) => {
+				toast.error(error);
+				return null;
+			}
+		);
 
 		if (res) {
 			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
@@ -108,6 +110,7 @@
 	class="h-screen max-h-[100dvh] {$showSidebar
 		? 'md:max-w-[calc(100%-260px)]'
 		: ''} w-full max-w-full flex flex-col"
+	id="channel-container"
 >
 	<Navbar {channel} />
 

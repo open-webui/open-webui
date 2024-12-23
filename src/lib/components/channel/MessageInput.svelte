@@ -1,42 +1,281 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { tick, getContext } from 'svelte';
+	import { v4 as uuidv4 } from 'uuid';
+
+	import { tick, getContext, onMount, onDestroy } from 'svelte';
 
 	const i18n = getContext('i18n');
 
-	import { mobile, settings } from '$lib/stores';
+	import { config, mobile, settings } from '$lib/stores';
+	import { blobToFile } from '$lib/utils';
 
 	import Tooltip from '../common/Tooltip.svelte';
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
+	import InputMenu from './MessageInput/InputMenu.svelte';
+	import { uploadFile } from '$lib/apis/files';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import FileItem from '../common/FileItem.svelte';
+	import Image from '../common/Image.svelte';
+	import { transcribeAudio } from '$lib/apis/audio';
+	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 
 	export let placeholder = $i18n.t('Send a Message');
 	export let transparentBackground = false;
 
-	let recording = false;
+	let draggedOver = false;
 
+	let recording = false;
 	let content = '';
+	let files = [];
+
+	let filesInputElement;
+	let inputFiles;
 
 	export let onSubmit: Function;
 	export let scrollEnd = true;
 	export let scrollToBottom: Function;
 
-	let submitHandler = async () => {
+	const screenCaptureHandler = async () => {
+		try {
+			// Request screen media
+			const mediaStream = await navigator.mediaDevices.getDisplayMedia({
+				video: { cursor: 'never' },
+				audio: false
+			});
+			// Once the user selects a screen, temporarily create a video element
+			const video = document.createElement('video');
+			video.srcObject = mediaStream;
+			// Ensure the video loads without affecting user experience or tab switching
+			await video.play();
+			// Set up the canvas to match the video dimensions
+			const canvas = document.createElement('canvas');
+			canvas.width = video.videoWidth;
+			canvas.height = video.videoHeight;
+			// Grab a single frame from the video stream using the canvas
+			const context = canvas.getContext('2d');
+			context.drawImage(video, 0, 0, canvas.width, canvas.height);
+			// Stop all video tracks (stop screen sharing) after capturing the image
+			mediaStream.getTracks().forEach((track) => track.stop());
+
+			// bring back focus to this current tab, so that the user can see the screen capture
+			window.focus();
+
+			// Convert the canvas to a Base64 image URL
+			const imageUrl = canvas.toDataURL('image/png');
+			// Add the captured image to the files array to render it
+			files = [...files, { type: 'image', url: imageUrl }];
+			// Clean memory: Clear video srcObject
+			video.srcObject = null;
+		} catch (error) {
+			// Handle any errors (e.g., user cancels screen sharing)
+			console.error('Error capturing screen:', error);
+		}
+	};
+
+	const inputFilesHandler = async (inputFiles) => {
+		inputFiles.forEach((file) => {
+			console.log('Processing file:', {
+				name: file.name,
+				type: file.type,
+				size: file.size,
+				extension: file.name.split('.').at(-1)
+			});
+
+			if (
+				($config?.file?.max_size ?? null) !== null &&
+				file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
+			) {
+				console.log('File exceeds max size limit:', {
+					fileSize: file.size,
+					maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
+				});
+				toast.error(
+					$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
+						maxSize: $config?.file?.max_size
+					})
+				);
+				return;
+			}
+
+			if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
+				let reader = new FileReader();
+				reader.onload = (event) => {
+					files = [
+						...files,
+						{
+							type: 'image',
+							url: `${event.target.result}`
+						}
+					];
+				};
+				reader.readAsDataURL(file);
+			} else {
+				uploadFileHandler(file);
+			}
+		});
+	};
+
+	const uploadFileHandler = async (file) => {
+		const tempItemId = uuidv4();
+		const fileItem = {
+			type: 'file',
+			file: '',
+			id: null,
+			url: '',
+			name: file.name,
+			collection_name: '',
+			status: 'uploading',
+			size: file.size,
+			error: '',
+			itemId: tempItemId
+		};
+
+		if (fileItem.size == 0) {
+			toast.error($i18n.t('You cannot upload an empty file.'));
+			return null;
+		}
+
+		files = [...files, fileItem];
+		// Check if the file is an audio file and transcribe/convert it to text file
+		if (['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'].includes(file['type'])) {
+			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
+				toast.error(error);
+				return null;
+			});
+
+			if (res) {
+				console.log(res);
+				const blob = new Blob([res.text], { type: 'text/plain' });
+				file = blobToFile(blob, `${file.name}.txt`);
+
+				fileItem.name = file.name;
+				fileItem.size = file.size;
+			}
+		}
+
+		try {
+			// During the file upload, file content is automatically extracted.
+			const uploadedFile = await uploadFile(localStorage.token, file);
+
+			if (uploadedFile) {
+				console.log('File upload completed:', {
+					id: uploadedFile.id,
+					name: fileItem.name,
+					collection: uploadedFile?.meta?.collection_name
+				});
+
+				if (uploadedFile.error) {
+					console.warn('File upload warning:', uploadedFile.error);
+					toast.warning(uploadedFile.error);
+				}
+
+				fileItem.status = 'uploaded';
+				fileItem.file = uploadedFile;
+				fileItem.id = uploadedFile.id;
+				fileItem.collection_name =
+					uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
+				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+
+				files = files;
+			} else {
+				files = files.filter((item) => item?.itemId !== tempItemId);
+			}
+		} catch (e) {
+			toast.error(e);
+			files = files.filter((item) => item?.itemId !== tempItemId);
+		}
+	};
+
+	const handleKeyDown = (event: KeyboardEvent) => {
+		if (event.key === 'Escape') {
+			console.log('Escape');
+			draggedOver = false;
+		}
+	};
+
+	const onDragOver = (e) => {
+		e.preventDefault();
+
+		// Check if a file is being draggedOver.
+		if (e.dataTransfer?.types?.includes('Files')) {
+			draggedOver = true;
+		} else {
+			draggedOver = false;
+		}
+	};
+
+	const onDragLeave = () => {
+		draggedOver = false;
+	};
+
+	const onDrop = async (e) => {
+		e.preventDefault();
+		console.log(e);
+
+		if (e.dataTransfer?.files) {
+			const inputFiles = Array.from(e.dataTransfer?.files);
+			if (inputFiles && inputFiles.length > 0) {
+				console.log(inputFiles);
+				inputFilesHandler(inputFiles);
+			}
+		}
+
+		draggedOver = false;
+	};
+
+	const submitHandler = async () => {
 		if (content === '') {
 			return;
 		}
 
 		onSubmit({
-			content
+			content,
+			data: {
+				files: files
+			}
 		});
 
 		content = '';
+		files = [];
+
 		await tick();
 
 		const chatInputElement = document.getElementById('chat-input');
 		chatInputElement?.focus();
 	};
+
+	onMount(async () => {
+		window.setTimeout(() => {
+			const chatInput = document.getElementById('chat-input');
+			chatInput?.focus();
+		}, 0);
+
+		window.addEventListener('keydown', handleKeyDown);
+		await tick();
+
+		const dropzoneElement = document.getElementById('channel-container');
+
+		dropzoneElement?.addEventListener('dragover', onDragOver);
+		dropzoneElement?.addEventListener('drop', onDrop);
+		dropzoneElement?.addEventListener('dragleave', onDragLeave);
+	});
+
+	onDestroy(() => {
+		console.log('destroy');
+		window.removeEventListener('keydown', handleKeyDown);
+
+		const dropzoneElement = document.getElementById('channel-container');
+
+		if (dropzoneElement) {
+			dropzoneElement?.removeEventListener('dragover', onDragOver);
+			dropzoneElement?.removeEventListener('drop', onDrop);
+			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
+		}
+	});
 </script>
+
+<FilesOverlay show={draggedOver} />
 
 <div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
 	<div class="flex flex-col px-3 max-w-6xl w-full">
@@ -69,6 +308,22 @@
 	</div>
 </div>
 
+<input
+	bind:this={filesInputElement}
+	bind:files={inputFiles}
+	type="file"
+	hidden
+	multiple
+	on:change={async () => {
+		if (inputFiles && inputFiles.length > 0) {
+			inputFilesHandler(Array.from(inputFiles));
+		} else {
+			toast.error($i18n.t(`File not found.`));
+		}
+
+		filesInputElement.value = '';
+	}}
+/>
 <div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-gray-900'} ">
 	<div class="max-w-6xl px-2.5 mx-auto inset-x-0">
 		<div class="">
@@ -101,24 +356,87 @@
 						class="flex-1 flex flex-col relative w-full rounded-3xl px-1 bg-gray-50 dark:bg-gray-400/5 dark:text-gray-100"
 						dir={$settings?.chatDirection ?? 'LTR'}
 					>
+						{#if files.length > 0}
+							<div class="mx-1 mt-2.5 mb-1 flex flex-wrap gap-2">
+								{#each files as file, fileIdx}
+									{#if file.type === 'image'}
+										<div class=" relative group">
+											<div class="relative">
+												<Image
+													src={file.url}
+													alt="input"
+													imageClassName=" h-16 w-16 rounded-xl object-cover"
+												/>
+											</div>
+											<div class=" absolute -top-1 -right-1">
+												<button
+													class=" bg-gray-400 text-white border border-white rounded-full group-hover:visible invisible transition"
+													type="button"
+													on:click={() => {
+														files.splice(fileIdx, 1);
+														files = files;
+													}}
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 20 20"
+														fill="currentColor"
+														class="w-4 h-4"
+													>
+														<path
+															d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+														/>
+													</svg>
+												</button>
+											</div>
+										</div>
+									{:else}
+										<FileItem
+											item={file}
+											name={file.name}
+											type={file.type}
+											size={file?.size}
+											loading={file.status === 'uploading'}
+											dismissible={true}
+											edit={true}
+											on:dismiss={() => {
+												files.splice(fileIdx, 1);
+												files = files;
+											}}
+											on:click={() => {
+												console.log(file);
+											}}
+										/>
+									{/if}
+								{/each}
+							</div>
+						{/if}
+
 						<div class=" flex">
 							<div class="ml-1 self-end mb-1.5 flex space-x-1">
-								<button
-									class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
-									type="button"
-									aria-label="More"
+								<InputMenu
+									{screenCaptureHandler}
+									uploadFilesHandler={() => {
+										filesInputElement.click();
+									}}
 								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="size-5"
+									<button
+										class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
+										type="button"
+										aria-label="More"
 									>
-										<path
-											d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
-										/>
-									</svg>
-								</button>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="size-5"
+										>
+											<path
+												d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
+											/>
+										</svg>
+									</button>
+								</InputMenu>
 							</div>
 
 							{#if $settings?.richTextInput ?? true}
