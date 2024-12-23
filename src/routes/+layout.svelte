@@ -38,7 +38,7 @@
 	let loaded = false;
 	const BREAKPOINT = 768;
 
-	const setupSocket = (enableWebsocket) => {
+	const setupSocket = async (enableWebsocket) => {
 		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
 			reconnection: true,
 			reconnectionDelay: 1000,
@@ -49,7 +49,7 @@
 			auth: { token: localStorage.token }
 		});
 
-		socket.set(_socket);
+		await socket.set(_socket);
 
 		_socket.on('connect_error', (err) => {
 			console.log('connect_error', err);
@@ -127,7 +127,7 @@
 			await WEBUI_NAME.set(backendConfig.name);
 
 			if ($config) {
-				setupSocket($config.features?.enable_websocket ?? true);
+				await setupSocket($config.features?.enable_websocket ?? true);
 
 				if (localStorage.token) {
 					// Get Session User Info
@@ -138,6 +138,8 @@
 
 					if (sessionUser) {
 						// Save Session User to Store
+						$socket.emit('user-join', { auth: { token: sessionUser.token } });
+
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());
 					} else {

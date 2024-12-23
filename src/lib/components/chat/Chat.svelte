@@ -70,15 +70,15 @@
 		generateMoACompletion,
 		stopTask
 	} from '$lib/apis';
+	import { getTools } from '$lib/apis/tools';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
-	import Navbar from '$lib/components/layout/Navbar.svelte';
+	import Navbar from '$lib/components/chat/Navbar.svelte';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
-	import { getTools } from '$lib/apis/tools';
 	import NotificationToast from '../NotificationToast.svelte';
 
 	export let chatIdProp = '';

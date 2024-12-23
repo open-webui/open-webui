@@ -19,6 +19,7 @@
 	on:click={() => {
 		showImagePreview = true;
 	}}
+	type="button"
 >
 	<img src={_src} {alt} class={imageClassName} draggable="false" data-cy="image" />
 </button>

@@ -70,6 +70,13 @@ class UserResponse(BaseModel):
     profile_image_url: str
 
 
+class UserNameResponse(BaseModel):
+    id: str
+    name: str
+    role: str
+    profile_image_url: str
+
+
 class UserRoleUpdateForm(BaseModel):
     id: str
     role: str

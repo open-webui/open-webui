@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { getContext, createEventDispatcher, onMount, onDestroy } from 'svelte';
 
 	const i18n = getContext('i18n');
@@ -7,12 +7,19 @@
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Collapsible from './Collapsible.svelte';
+	import Tooltip from './Tooltip.svelte';
+	import Plus from '../icons/Plus.svelte';
 
 	export let open = true;
 
 	export let id = '';
 	export let name = '';
 	export let collapsible = true;
+
+	export let onAddLabel: string = '';
+	export let onAdd: null | Function = null;
+
+	export let dragAndDrop = true;
 
 	export let className = '';
 
@@ -84,12 +91,18 @@
 	};
 
 	onMount(() => {
+		if (!dragAndDrop) {
+			return;
+		}
 		folderElement.addEventListener('dragover', onDragOver);
 		folderElement.addEventListener('drop', onDrop);
 		folderElement.addEventListener('dragleave', onDragLeave);
 	});
 
 	onDestroy(() => {
+		if (!dragAndDrop) {
+			return;
+		}
 		folderElement.addEventListener('dragover', onDragOver);
 		folderElement.removeEventListener('drop', onDrop);
 		folderElement.removeEventListener('dragleave', onDragLeave);
@@ -113,10 +126,10 @@
 			}}
 		>
 			<!-- svelte-ignore a11y-no-static-element-interactions -->
-			<div class="w-full">
-				<button
-					class="w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-				>
+			<div
+				class="w-full group rounded-md relative flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-900 text-gray-500 dark:text-gray-500 transition"
+			>
+				<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-medium">
 					<div class="text-gray-300 dark:text-gray-600">
 						{#if open}
 							<ChevronDown className=" size-3" strokeWidth="2.5" />
@@ -129,6 +142,25 @@
 						{name}
 					</div>
 				</button>
+
+				{#if onAdd}
+					<button
+						class="absolute z-10 right-2 self-center flex items-center"
+						on:pointerup={(e) => {
+							e.stopPropagation();
+							onAdd();
+						}}
+					>
+						<Tooltip content={onAddLabel}>
+							<button
+								class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
+								on:click={(e) => {}}
+							>
+								<Plus className=" size-3" strokeWidth="2.5" />
+							</button>
+						</Tooltip>
+					</button>
+				{/if}
 			</div>
 
 			<div slot="content" class="w-full">
