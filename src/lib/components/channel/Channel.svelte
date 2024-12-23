@@ -111,7 +111,7 @@
 >
 	<Navbar {channel} />
 
-	<div class="flex-1">
+	<div class="flex-1 overflow-y-auto">
 		{#if channel}
 			<div
 				class=" pb-2.5 max-w-full z-10 scrollbar-hidden w-full h-full pt-6 flex-1 flex flex-col-reverse overflow-auto"
