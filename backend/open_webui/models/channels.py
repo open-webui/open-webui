@@ -23,6 +23,8 @@ class Channel(Base):
     user_id = Column(Text)
 
     name = Column(Text)
+    description = Column(Text, nullable=True)
+
     data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
     access_control = Column(JSON, nullable=True)
@@ -36,6 +38,7 @@ class ChannelModel(BaseModel):
 
     id: str
     user_id: str
+    description: Optional[str] = None
 
     name: str
     data: Optional[dict] = None
@@ -53,6 +56,7 @@ class ChannelModel(BaseModel):
 
 class ChannelForm(BaseModel):
     name: str
+    description: Optional[str] = None
     data: Optional[dict] = None
     meta: Optional[dict] = None
     access_control: Optional[dict] = None
