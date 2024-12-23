@@ -64,6 +64,8 @@ class MessageTable:
     ) -> Optional[MessageModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
+
+            ts = int(time.time_ns())
             message = MessageModel(
                 **{
                     "id": id,
@@ -72,8 +74,8 @@ class MessageTable:
                     "content": form_data.content,
                     "data": form_data.data,
                     "meta": form_data.meta,
-                    "created_at": int(time.time_ns()),
-                    "updated_at": int(time.time_ns()),
+                    "created_at": ts,
+                    "updated_at": ts,
                 }
             )
 

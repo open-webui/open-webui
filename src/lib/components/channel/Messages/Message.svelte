@@ -96,7 +96,7 @@
 			dir={$settings.chatDirection}
 		>
 			<div
-				class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}
+				class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'} w-8`}
 			>
 				{#if showUserProfile}
 					<ProfileImage
@@ -189,7 +189,12 @@
 					</div>
 				{:else}
 					<div class=" min-w-full markdown-prose">
-						<Markdown id={message.id} content={message.content} />
+						<Markdown
+							id={message.id}
+							content={message.content}
+						/>{#if message.created_at !== message.updated_at}<span class="text-gray-500 text-[10px]"
+								>(edited)</span
+							>{/if}
 					</div>
 				{/if}
 			</div>
