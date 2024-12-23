@@ -21,6 +21,7 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	export let message;
 	export let showUserProfile = true;
@@ -63,7 +64,7 @@
 			? 'max-w-full'
 			: 'max-w-5xl'} mx-auto group hover:bg-gray-500/5 transition relative"
 	>
-		<div class=" absolute invisible group-hover:visible right-1 -top-2">
+		<div class=" absolute invisible group-hover:visible right-1 -top-2 z-30">
 			<div
 				class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100 dark:border-gray-800"
 			>
@@ -104,11 +105,15 @@
 					<!-- <div class="w-7 h-7 rounded-full bg-transparent" /> -->
 
 					{#if message.created_at}
-						<span
-							class=" text-xs self-center invisible group-hover:visible text-gray-500 font-medium first-letter:capitalize"
+						<div
+							class="mt-1.5 flex items-center text-xs self-center invisible group-hover:visible text-gray-500 font-medium first-letter:capitalize"
 						>
-							{dayjs(message.created_at / 1000000).format('HH:mm')}
-						</span>
+							<Tooltip
+								content={dayjs(message.created_at / 1000000).format('dddd, DD MMMM YYYY HH:mm')}
+							>
+								{dayjs(message.created_at / 1000000).format('HH:mm')}
+							</Tooltip>
+						</div>
 					{/if}
 				{/if}
 			</div>
@@ -116,16 +121,20 @@
 			<div class="flex-auto w-0 pl-1">
 				{#if showUserProfile}
 					<Name>
-						<span class="text-sm">
+						<div class="text-sm">
 							{message?.user?.name}
-						</span>
+						</div>
 
 						{#if message.created_at}
-							<span
-								class=" self-center invisible group-hover:visible text-gray-400 text-xs font-medium first-letter:capitalize ml-0.5 -mt-0.5"
+							<div
+								class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 -mt-0.5"
 							>
-								{formatDate(message.created_at / 1000000)}
-							</span>
+								<Tooltip
+									content={dayjs(message.created_at / 1000000).format('dddd, DD MMMM YYYY HH:mm')}
+								>
+									{formatDate(message.created_at / 1000000)}
+								</Tooltip>
+							</div>
 						{/if}
 					</Name>
 				{/if}
@@ -181,7 +190,7 @@
 						</div>
 					</div>
 				{:else}
-					<div class="markdown-prose">
+					<div class=" min-w-full markdown-prose">
 						<Markdown id={message.id} content={message.content} />
 					</div>
 				{/if}
