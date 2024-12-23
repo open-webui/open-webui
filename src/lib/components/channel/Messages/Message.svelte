@@ -65,7 +65,7 @@
 			? 'max-w-full'
 			: 'max-w-5xl'} mx-auto group hover:bg-gray-500/5 transition relative"
 	>
-		{#if message.user_id === $user.id && !edit}
+		{#if (message.user_id === $user.id || $user.role === 'admin') && !edit}
 			<div class=" absolute invisible group-hover:visible right-1 -top-2 z-30">
 				<div
 					class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100 dark:border-gray-800"
