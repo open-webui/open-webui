@@ -13,8 +13,6 @@ app = typer.Typer()
 KEY_FILE = Path.cwd() / ".webui_secret_key"
 
 
-
-
 @app.command()
 def serve(
     host: str = "0.0.0.0",
