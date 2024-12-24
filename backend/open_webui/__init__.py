@@ -6,9 +6,13 @@ from pathlib import Path
 import typer
 import uvicorn
 
+from open_webui.env import (GLOBAL_LOG_LEVEL)
+
 app = typer.Typer()
 
 KEY_FILE = Path.cwd() / ".webui_secret_key"
+
+
 
 
 @app.command()
@@ -55,7 +59,7 @@ def serve(
 
     import open_webui.main  # we need set environment variables before importing main
 
-    uvicorn.run(open_webui.main.app, host=host, port=port, forwarded_allow_ips="*")
+    uvicorn.run(open_webui.main.app, host=host, port=port, forwarded_allow_ips="*", log_level=GLOBAL_LOG_LEVEL.lower())
 
 
 @app.command()
