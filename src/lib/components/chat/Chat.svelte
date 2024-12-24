@@ -1440,39 +1440,6 @@
 		const userMessage = history.messages[responseMessage.parentId];
 
 		let files = JSON.parse(JSON.stringify(chatFiles));
-		if (model?.info?.meta?.knowledge ?? false) {
-			// Only initialize and add status if knowledge exists
-			responseMessage.statusHistory = [
-				{
-					action: 'knowledge_search',
-					description: $i18n.t(`Searching Knowledge for "{{searchQuery}}"`, {
-						searchQuery: userMessage.content
-					}),
-					done: false
-				}
-			];
-			files.push(
-				...model.info.meta.knowledge.map((item) => {
-					if (item?.collection_name) {
-						return {
-							id: item.collection_name,
-							name: item.name,
-							legacy: true
-						};
-					} else if (item?.collection_names) {
-						return {
-							name: item.name,
-							type: 'collection',
-							collection_names: item.collection_names,
-							legacy: true
-						};
-					} else {
-						return item;
-					}
-				})
-			);
-			history.messages[responseMessageId] = responseMessage;
-		}
 		files.push(
 			...(userMessage?.files ?? []).filter((item) =>
 				['doc', 'file', 'collection'].includes(item.type)

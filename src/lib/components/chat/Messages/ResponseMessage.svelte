@@ -519,37 +519,51 @@
 							{@const status = (
 								message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]
 							).at(-1)}
-							<div class="status-description flex items-center gap-2 py-0.5">
-								{#if status?.done === false}
-									<div class="">
-										<Spinner className="size-4" />
-									</div>
-								{/if}
+							{#if !status?.hidden}
+								<div class="status-description flex items-center gap-2 py-0.5">
+									{#if status?.done === false}
+										<div class="">
+											<Spinner className="size-4" />
+										</div>
+									{/if}
 
-								{#if status?.action === 'web_search' && status?.urls}
-									<WebSearchResults {status}>
+									{#if status?.action === 'web_search' && status?.urls}
+										<WebSearchResults {status}>
+											<div class="flex flex-col justify-center -space-y-0.5">
+												<div
+													class="{status?.done === false
+														? 'shimmer'
+														: ''} text-base line-clamp-1 text-wrap"
+												>
+													{status?.description}
+												</div>
+											</div>
+										</WebSearchResults>
+									{:else if status?.action === 'knowledge_search'}
 										<div class="flex flex-col justify-center -space-y-0.5">
 											<div
 												class="{status?.done === false
 													? 'shimmer'
-													: ''} text-base line-clamp-1 text-wrap"
+													: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
+											>
+												{$i18n.t(`Searching Knowledge for "{{searchQuery}}"`, {
+													searchQuery: status.query
+												})}
+											</div>
+										</div>
+									{:else}
+										<div class="flex flex-col justify-center -space-y-0.5">
+											<div
+												class="{status?.done === false
+													? 'shimmer'
+													: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
 											>
 												{status?.description}
 											</div>
 										</div>
-									</WebSearchResults>
-								{:else}
-									<div class="flex flex-col justify-center -space-y-0.5">
-										<div
-											class="{status?.done === false
-												? 'shimmer'
-												: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
-										>
-											{status?.description}
-										</div>
-									</div>
-								{/if}
-							</div>
+									{/if}
+								</div>
+							{/if}
 						{/if}
 
 						{#if edit === true}

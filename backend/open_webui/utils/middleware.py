@@ -416,9 +416,12 @@ async def process_chat_payload(request, form_data, metadata, user, model):
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
 
+    event_emitter = get_event_emitter(metadata)
+    event_call = get_event_call(metadata)
+
     extra_params = {
-        "__event_emitter__": get_event_emitter(metadata),
-        "__event_call__": get_event_call(metadata),
+        "__event_emitter__": event_emitter,
+        "__event_call__": event_call,
         "__user__": {
             "id": user.id,
             "email": user.email,
@@ -432,8 +435,51 @@ async def process_chat_payload(request, form_data, metadata, user, model):
     # Initialize events to store additional event to be sent to the client
     # Initialize contexts and citation
     models = request.app.state.MODELS
+
     events = []
     sources = []
+
+    user_message = get_last_user_message(form_data["messages"])
+    model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", False)
+
+    if model_knowledge:
+        await event_emitter(
+            {
+                "type": "status",
+                "data": {
+                    "action": "knowledge_search",
+                    "query": user_message,
+                    "done": False,
+                },
+            }
+        )
+
+        knowledge_files = []
+        for item in model_knowledge:
+            print(item)
+            if item.get("collection_name"):
+                knowledge_files.append(
+                    {
+                        "id": item.get("collection_name"),
+                        "name": item.get("name"),
+                        "legacy": True,
+                    }
+                )
+            elif item.get("collection_names"):
+                knowledge_files.append(
+                    {
+                        "name": item.get("name"),
+                        "type": "collection",
+                        "collection_names": item.get("collection_names"),
+                        "legacy": True,
+                    }
+                )
+            else:
+                knowledge_files.append(item)
+
+        files = form_data.get("files", [])
+        files.extend(knowledge_files)
+        form_data["files"] = files
 
     try:
         form_data, flags = await chat_completion_filter_functions_handler(
@@ -444,6 +490,9 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
     tool_ids = form_data.pop("tool_ids", None)
     files = form_data.pop("files", None)
+
+    # Remove files duplicates
+    files = list({json.dumps(f, sort_keys=True): f for f in files}.values())
 
     metadata = {
         **metadata,
@@ -521,6 +570,19 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
     if len(sources) > 0:
         events.append({"sources": sources})
+
+    if model_knowledge:
+        await event_emitter(
+            {
+                "type": "status",
+                "data": {
+                    "action": "knowledge_search",
+                    "query": user_message,
+                    "done": True,
+                    "hidden": True,
+                },
+            }
+        )
 
     return form_data, events
 
