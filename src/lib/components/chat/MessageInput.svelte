@@ -710,6 +710,10 @@
 													const commandsContainerElement =
 														document.getElementById('commands-container');
 
+													if (e.key === 'Escape') {
+														stopResponse();
+													}
+
 													// Command/Ctrl + Shift + Enter to submit a message pair
 													if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
 														e.preventDefault();
@@ -893,6 +897,9 @@
 												const commandsContainerElement =
 													document.getElementById('commands-container');
 
+												if (e.key === 'Escape') {
+													stopResponse();
+												}
 												// Command/Ctrl + Shift + Enter to submit a message pair
 												if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
 													e.preventDefault();
