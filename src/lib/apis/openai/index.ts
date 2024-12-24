@@ -322,7 +322,7 @@ export const generateOpenAIChatCompletion = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = `OpenAI: ${err?.detail ?? 'Network Problem'}`;
+			error = `${err?.detail ?? 'Network Problem'}`;
 			return null;
 		});
 

@@ -1558,10 +1558,12 @@
 			},
 			`${WEBUI_BASE_URL}/api`
 		).catch((error) => {
+			console.log(error);
 			responseMessage.error = {
 				content: error
 			};
 			responseMessage.done = true;
+			history.messages[responseMessageId] = responseMessage;
 			return null;
 		});
 
