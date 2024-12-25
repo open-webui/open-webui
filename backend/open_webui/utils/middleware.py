@@ -490,9 +490,9 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
     tool_ids = form_data.pop("tool_ids", None)
     files = form_data.pop("files", None)
-
     # Remove files duplicates
-    files = list({json.dumps(f, sort_keys=True): f for f in files}.values())
+    if files:
+        files = list({json.dumps(f, sort_keys=True): f for f in files}.values())
 
     metadata = {
         **metadata,
@@ -583,6 +583,8 @@ async def process_chat_payload(request, form_data, metadata, user, model):
                 },
             }
         )
+
+    print(f"form_data, events")
 
     return form_data, events
 
