@@ -6,6 +6,8 @@ import time
 
 from open_webui.models.users import Users
 from open_webui.models.channels import Channels
+from open_webui.models.chats import Chats
+
 from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
     WEBSOCKET_MANAGER,
@@ -257,6 +259,13 @@ def get_event_emitter(request_info):
                     "data": event_data,
                 },
                 to=session_id,
+            )
+
+        if "type" in event_data and event_data["type"] == "status":
+            Chats.add_message_status_to_chat_by_id_and_message_id(
+                request_info["chat_id"],
+                request_info["message_id"],
+                event_data.get("data", {}),
             )
 
     return __event_emitter__
