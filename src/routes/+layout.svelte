@@ -92,7 +92,7 @@
 	};
 
 	const chatEventHandler = async (event) => {
-		if (event.chat_id !== $chatId) {
+		if (event.chat_id !== $chatId || document.visibilityState !== 'visible') {
 			await tick();
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
@@ -126,7 +126,7 @@
 		// check url path
 		const channel = $page.url.pathname.includes(`/channels/${event.channel_id}`);
 
-		if (!channel && event?.user?.id !== $user?.id) {
+		if ((!channel || document.visibilityState !== 'visible') && event?.user?.id !== $user?.id) {
 			await tick();
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
