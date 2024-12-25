@@ -19,7 +19,8 @@
 		chatId,
 		chats,
 		currentChatPage,
-		tags
+		tags,
+		temporaryChatEnabled
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -94,7 +95,10 @@
 	const chatEventHandler = async (event) => {
 		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
 
-		if (!chat || document.visibilityState !== 'visible') {
+		if (
+			(!(chat || event.chat_id === $chatId) && !$temporaryChatEnabled) ||
+			document.visibilityState !== 'visible'
+		) {
 			await tick();
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
