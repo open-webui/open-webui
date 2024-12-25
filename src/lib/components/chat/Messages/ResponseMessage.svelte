@@ -535,7 +535,14 @@
 														? 'shimmer'
 														: ''} text-base line-clamp-1 text-wrap"
 												>
-													{status?.description}
+													<!-- $i18n.t('Searched {{count}} sites') -->
+													{#if status?.description.includes('{{count}}')}
+														{$i18n.t(status?.description, {
+															count: status?.urls.length
+														})}
+													{:else}
+														{$i18n.t(status?.description)}
+													{/if}
 												</div>
 											</div>
 										</WebSearchResults>
@@ -558,7 +565,14 @@
 													? 'shimmer'
 													: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
 											>
-												{status?.description}
+												<!-- $i18n.t(`Searching "{{searchQuery}}"`) -->
+												{#if status?.description.includes('{{searchQuery}}')}
+													{$i18n.t(status?.description, {
+														searchQuery: status?.query
+													})}
+												{:else}
+													{$i18n.t(status?.description)}
+												{/if}
 											</div>
 										</div>
 									{/if}

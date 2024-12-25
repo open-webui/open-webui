@@ -1419,11 +1419,8 @@
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();
-					if (webSearchEnabled) {
-						await getWebSearchResults(model.id, parentId, responseMessageId);
-					}
-
 					await sendPromptSocket(model, responseMessageId, _chatId);
+
 					if (chatEventEmitter) clearInterval(chatEventEmitter);
 				} else {
 					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
@@ -1533,8 +1530,12 @@
 							: undefined
 				},
 
-				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 				files: files.length > 0 ? files : undefined,
+				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
+				features: {
+					web_search: webSearchEnabled
+				},
+
 				session_id: $socket?.id,
 				chat_id: $chatId,
 				id: responseMessageId,
@@ -1748,94 +1749,6 @@
 			}
 		} catch (e) {
 			console.error(e);
-		}
-	};
-
-	const getWebSearchResults = async (
-		model: string,
-		parentId: string,
-		responseMessageId: string
-	) => {
-		// TODO: move this to the backend
-		const responseMessage = history.messages[responseMessageId];
-		const userMessage = history.messages[parentId];
-		const messages = createMessagesList(history.currentId);
-
-		responseMessage.statusHistory = [
-			{
-				done: false,
-				action: 'web_search',
-				description: $i18n.t('Generating search query')
-			}
-		];
-		history.messages[responseMessageId] = responseMessage;
-
-		const prompt = userMessage.content;
-		let queries = await generateQueries(
-			localStorage.token,
-			model,
-			messages.filter((message) => message?.content?.trim()),
-			prompt
-		).catch((error) => {
-			console.log(error);
-			return [prompt];
-		});
-
-		if (queries.length === 0) {
-			responseMessage.statusHistory.push({
-				done: true,
-				error: true,
-				action: 'web_search',
-				description: $i18n.t('No search query generated')
-			});
-			history.messages[responseMessageId] = responseMessage;
-			return;
-		}
-
-		const searchQuery = queries[0];
-
-		responseMessage.statusHistory.push({
-			done: false,
-			action: 'web_search',
-			description: $i18n.t(`Searching "{{searchQuery}}"`, { searchQuery })
-		});
-		history.messages[responseMessageId] = responseMessage;
-
-		const results = await processWebSearch(localStorage.token, searchQuery).catch((error) => {
-			console.log(error);
-			toast.error(error);
-
-			return null;
-		});
-
-		if (results) {
-			responseMessage.statusHistory.push({
-				done: true,
-				action: 'web_search',
-				description: $i18n.t('Searched {{count}} sites', { count: results.filenames.length }),
-				query: searchQuery,
-				urls: results.filenames
-			});
-
-			if (responseMessage?.files ?? undefined === undefined) {
-				responseMessage.files = [];
-			}
-
-			responseMessage.files.push({
-				collection_name: results.collection_name,
-				name: searchQuery,
-				type: 'web_search_results',
-				urls: results.filenames
-			});
-			history.messages[responseMessageId] = responseMessage;
-		} else {
-			responseMessage.statusHistory.push({
-				done: true,
-				error: true,
-				action: 'web_search',
-				description: 'No search results found'
-			});
-			history.messages[responseMessageId] = responseMessage;
 		}
 	};
 

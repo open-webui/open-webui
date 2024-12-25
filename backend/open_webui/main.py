@@ -856,6 +856,7 @@ async def chat_completion(
             "session_id": form_data.pop("session_id", None),
             "tool_ids": form_data.get("tool_ids", None),
             "files": form_data.get("files", None),
+            "features": form_data.get("features", None),
         }
         form_data["metadata"] = metadata
 
