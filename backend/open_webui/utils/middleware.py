@@ -9,6 +9,7 @@ import random
 import json
 import inspect
 from uuid import uuid4
+from concurrent.futures import ThreadPoolExecutor
 
 
 from fastapi import Request
@@ -412,15 +413,22 @@ async def chat_web_search_handler(
     )
 
     try:
-        results = await process_web_search(
-            request,
-            SearchForm(
-                **{
-                    "query": searchQuery,
-                }
-            ),
-            user,
-        )
+
+        # Offload process_web_search to a separate thread
+        loop = asyncio.get_running_loop()
+        with ThreadPoolExecutor() as executor:
+            results = await loop.run_in_executor(
+                executor,
+                lambda: process_web_search(
+                    request,
+                    SearchForm(
+                        **{
+                            "query": searchQuery,
+                        }
+                    ),
+                    user,
+                ),
+            )
 
         if results:
             await event_emitter(
