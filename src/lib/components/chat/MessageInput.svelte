@@ -335,7 +335,11 @@
 {#if loaded}
 	<div class="w-full font-primary">
 		<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
-			<div class="flex flex-col px-3 max-w-6xl w-full">
+			<div
+				class="flex flex-col px-3 {($settings?.widescreenMode ?? null)
+					? 'max-w-full'
+					: 'max-w-6xl'} w-full"
+			>
 				<div class="relative">
 					{#if autoScroll === false && history?.currentId}
 						<div
