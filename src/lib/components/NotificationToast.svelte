@@ -2,13 +2,18 @@
 	import DOMPurify from 'dompurify';
 
 	import { marked } from 'marked';
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 
 	const dispatch = createEventDispatcher();
 
 	export let onClick: Function = () => {};
 	export let title: string = 'HI';
 	export let content: string;
+
+	onMount(() => {
+		const audio = new Audio(`/audio/notification.mp3`);
+		audio.play();
+	});
 </script>
 
 <button
