@@ -43,7 +43,8 @@
 		getMessageContentParts,
 		extractSentencesForAudio,
 		promptTemplate,
-		splitStream
+		splitStream,
+		sleep
 	} from '$lib/utils';
 
 	import { generateChatCompletion } from '$lib/apis/ollama';
@@ -1063,11 +1064,33 @@
 		}
 
 		if (choices) {
-			const value = choices[0]?.delta?.content ?? '';
+			let value = choices[0]?.delta?.content ?? '';
 			if (message.content == '' && value == '\n') {
 				console.log('Empty response');
 			} else {
-				message.content += value;
+				if ($settings?.splitLargeDeltas ?? false) {
+					if (value.length < 5) {
+						message.content += value;
+					} else {
+						while (value != '') {
+							const chunkSize = Math.min(Math.floor(Math.random() * 3) + 1, value.length);
+							const chunk = value.slice(0, chunkSize);
+
+							message.content += chunk;
+							history.messages[message.id] = message;
+
+							// Do not sleep if the tab is hidden
+							// Timers are throttled to 1s in hidden tabs
+							if (document?.visibilityState !== 'hidden') {
+								await sleep(5);
+							}
+
+							value = value.slice(chunkSize);
+						}
+					}
+				} else {
+					message.content += value;
+				}
 
 				if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 					navigator.vibrate(5);
@@ -1079,6 +1102,7 @@
 					$config?.audio?.tts?.split_on ?? 'punctuation'
 				);
 				messageContentParts.pop();
+
 				// dispatch only last sentence and make sure it hasn't been dispatched before
 				if (
 					messageContentParts.length > 0 &&
