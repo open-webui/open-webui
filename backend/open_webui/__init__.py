@@ -6,7 +6,7 @@ from pathlib import Path
 import typer
 import uvicorn
 
-from open_webui.env import (GLOBAL_LOG_LEVEL)
+from open_webui.env import GLOBAL_LOG_LEVEL
 
 app = typer.Typer()
 
@@ -57,7 +57,13 @@ def serve(
 
     import open_webui.main  # we need set environment variables before importing main
 
-    uvicorn.run(open_webui.main.app, host=host, port=port, forwarded_allow_ips="*", log_level=GLOBAL_LOG_LEVEL.lower())
+    uvicorn.run(
+        open_webui.main.app,
+        host=host,
+        port=port,
+        forwarded_allow_ips="*",
+        log_level=GLOBAL_LOG_LEVEL.lower(),
+    )
 
 
 @app.command()
