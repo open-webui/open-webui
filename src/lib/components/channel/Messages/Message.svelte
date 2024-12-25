@@ -126,13 +126,13 @@
 			<div class="flex-auto w-0 pl-1">
 				{#if showUserProfile}
 					<Name>
-						<div class="text-sm">
+						<div class=" self-end text-base font-medium">
 							{message?.user?.name}
 						</div>
 
 						{#if message.created_at}
 							<div
-								class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 -mt-0.5"
+								class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 							>
 								<Tooltip
 									content={dayjs(message.created_at / 1000000).format('dddd, DD MMMM YYYY HH:mm')}
