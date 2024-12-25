@@ -1068,29 +1068,7 @@
 			if (message.content == '' && value == '\n') {
 				console.log('Empty response');
 			} else {
-				if ($settings?.splitLargeDeltas ?? false) {
-					if (value.length < 5) {
-						message.content += value;
-					} else {
-						while (value != '') {
-							const chunkSize = Math.min(Math.floor(Math.random() * 3) + 1, value.length);
-							const chunk = value.slice(0, chunkSize);
-
-							message.content += chunk;
-							history.messages[message.id] = message;
-
-							// Do not sleep if the tab is hidden
-							// Timers are throttled to 1s in hidden tabs
-							if (document?.visibilityState !== 'hidden') {
-								await sleep(5);
-							}
-
-							value = value.slice(chunkSize);
-						}
-					}
-				} else {
-					message.content += value;
-				}
+				message.content += value;
 
 				if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 					navigator.vibrate(5);
