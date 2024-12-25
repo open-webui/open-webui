@@ -146,6 +146,13 @@ class GroupTable:
         except Exception:
             return None
 
+    def get_group_user_ids_by_id(self, id: str) -> Optional[str]:
+        group = self.get_group_by_id(id)
+        if group:
+            return group.user_ids
+        else:
+            return None
+
     def update_group_by_id(
         self, id: str, form_data: GroupUpdateForm, overwrite: bool = False
     ) -> Optional[GroupModel]:

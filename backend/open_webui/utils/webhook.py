@@ -21,7 +21,7 @@ def post_webhook(url: str, message: str, event_data: dict) -> bool:
         elif "https://discord.com/api/webhooks" in url:
             payload["content"] = (
                 message
-                if len(message) > 2000
+                if len(message) < 2000
                 else f"{message[: 2000 - 20]}... (truncated)"
             )
         # Microsoft Teams Webhooks
