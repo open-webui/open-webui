@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { onDestroy, onMount, tick } from 'svelte';
 
-	import { showSidebar, socket } from '$lib/stores';
+	import { chatId, showSidebar, socket } from '$lib/stores';
 	import { getChannelById, getChannelMessages, sendMessage } from '$lib/apis/channels';
 
 	import Messages from './Messages.svelte';
@@ -98,6 +98,10 @@
 	};
 
 	onMount(() => {
+		if ($chatId) {
+			chatId.set('');
+		}
+
 		$socket?.on('channel-events', channelEventHandler);
 	});
 

@@ -96,7 +96,7 @@
 		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
 
 		if (
-			(!(chat || event.chat_id === $chatId) && !$temporaryChatEnabled) ||
+			(event.chat_id !== $chatId && !$temporaryChatEnabled) ||
 			document.visibilityState !== 'visible'
 		) {
 			await tick();
