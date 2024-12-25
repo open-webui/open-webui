@@ -535,6 +535,9 @@
 														? 'shimmer'
 														: ''} text-base line-clamp-1 text-wrap"
 												>
+													<!-- $i18n.t("Generating search query") -->
+													<!-- $i18n.t("No search query generated") -->
+
 													<!-- $i18n.t('Searched {{count}} sites') -->
 													{#if status?.description.includes('{{count}}')}
 														{$i18n.t(status?.description, {

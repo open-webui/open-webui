@@ -10,7 +10,6 @@ import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-
 function escapeRegExp(string: string): string {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
