@@ -193,6 +193,7 @@ async def user_join(sid, data):
     # print(f"user {user.name}({user.id}) connected with session ID {sid}")
 
     await sio.emit("user-count", {"count": len(USER_POOL.items())})
+    return {"id": user.id, "name": user.name}
 
 
 @sio.on("join-channels")
