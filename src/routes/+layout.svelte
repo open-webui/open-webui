@@ -15,7 +15,11 @@
 		mobile,
 		socket,
 		activeUserCount,
-		USAGE_POOL
+		USAGE_POOL,
+		chatId,
+		chats,
+		currentChatPage,
+		tags
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -32,6 +36,8 @@
 	import { WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
 	import i18n, { initI18n, getLanguages } from '$lib/i18n';
 	import { bestMatchingLanguage } from '$lib/utils';
+	import { getAllTags, getChatList } from '$lib/apis/chats';
+	import NotificationToast from '$lib/components/NotificationToast.svelte';
 
 	setContext('i18n', i18n);
 
@@ -83,6 +89,62 @@
 			console.log('usage', data);
 			USAGE_POOL.set(data['models']);
 		});
+	};
+
+	const chatEventHandler = async (event) => {
+		if (event.chat_id !== $chatId) {
+			await tick();
+			const type = event?.data?.type ?? null;
+			const data = event?.data?.data ?? null;
+
+			if (type === 'chat:completion') {
+				const { done, content, title } = data;
+
+				if (done) {
+					toast.custom(NotificationToast, {
+						componentProps: {
+							onClick: () => {
+								goto(`/c/${event.chat_id}`);
+							},
+							content: content,
+							title: title
+						},
+						duration: 15000,
+						unstyled: true
+					});
+				}
+			} else if (type === 'chat:title') {
+				currentChatPage.set(1);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			} else if (type === 'chat:tags') {
+				tags.set(await getAllTags(localStorage.token));
+			}
+		}
+	};
+
+	const channelEventHandler = async (event) => {
+		// check url path
+		const channel = $page.url.pathname.includes(`/channels/${event.channel_id}`);
+
+		if (!channel && event?.user?.id !== $user?.id) {
+			await tick();
+			const type = event?.data?.type ?? null;
+			const data = event?.data?.data ?? null;
+
+			if (type === 'message') {
+				toast.custom(NotificationToast, {
+					componentProps: {
+						onClick: () => {
+							goto(`/channels/${event.channel_id}`);
+						},
+						content: data?.content,
+						title: event?.channel?.name
+					},
+					duration: 15000,
+					unstyled: true
+				});
+			}
+		}
 	};
 
 	onMount(async () => {
@@ -139,6 +201,9 @@
 					if (sessionUser) {
 						// Save Session User to Store
 						$socket.emit('user-join', { auth: { token: sessionUser.token } });
+
+						$socket?.on('chat-events', chatEventHandler);
+						$socket?.on('channel-events', channelEventHandler);
 
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());

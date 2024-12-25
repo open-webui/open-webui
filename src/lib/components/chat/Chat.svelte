@@ -323,33 +323,6 @@
 
 				history.messages[event.message_id] = message;
 			}
-		} else {
-			await tick();
-			const type = event?.data?.type ?? null;
-			const data = event?.data?.data ?? null;
-
-			if (type === 'chat:completion') {
-				const { done, content, title } = data;
-
-				if (done) {
-					toast.custom(NotificationToast, {
-						componentProps: {
-							onClick: () => {
-								goto(`/c/${event.chat_id}`);
-							},
-							content: content,
-							title: title
-						},
-						duration: 15000,
-						unstyled: true
-					});
-				}
-			} else if (type === 'chat:title') {
-				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			} else if (type === 'chat:tags') {
-				allTags.set(await getAllTags(localStorage.token));
-			}
 		}
 	};
 
@@ -453,7 +426,7 @@
 	onDestroy(() => {
 		chatIdUnsubscriber?.();
 		window.removeEventListener('message', onMessageHandler);
-		$socket?.off('chat-events');
+		// $socket?.off('chat-events');
 	});
 
 	// File upload functions

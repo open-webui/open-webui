@@ -213,6 +213,8 @@ async def post_new_message(
                             "user": UserNameResponse(**user.model_dump()).model_dump(),
                         },
                     },
+                    "user": UserNameResponse(**user.model_dump()).model_dump(),
+                    "channel": channel.model_dump(),
                 },
                 to=f"channel:{channel.id}",
             )
@@ -275,6 +277,8 @@ async def update_message_by_id(
                             "user": UserNameResponse(**user.model_dump()).model_dump(),
                         },
                     },
+                    "user": UserNameResponse(**user.model_dump()).model_dump(),
+                    "channel": channel.model_dump(),
                 },
                 to=f"channel:{channel.id}",
             )
@@ -334,6 +338,8 @@ async def delete_message_by_id(
                         "user": UserNameResponse(**user.model_dump()).model_dump(),
                     },
                 },
+                "user": UserNameResponse(**user.model_dump()).model_dump(),
+                "channel": channel.model_dump(),
             },
             to=f"channel:{channel.id}",
         )
