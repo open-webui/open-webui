@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status, Backgrou
 from pydantic import BaseModel
 
 
-from open_webui.socket.main import sio, SESSION_POOL
+from open_webui.socket.main import sio, get_user_ids_from_room
 from open_webui.models.users import Users, UserNameResponse
 
 from open_webui.models.channels import Channels, ChannelModel, ChannelForm
@@ -182,8 +182,6 @@ async def get_channel_messages(
 
 
 async def send_notification(channel, message, active_user_ids):
-
-    print(f"Sending notification to {channel=}, {message=}, {active_user_ids=}")
     users = get_users_with_access("read", channel.access_control)
 
     for user in users:
@@ -252,19 +250,7 @@ async def post_new_message(
                 to=f"channel:{channel.id}",
             )
 
-            active_session_ids = sio.manager.get_participants(
-                namespace="/",
-                room=f"channel:{channel.id}",
-            )
-
-            active_user_ids = list(
-                set(
-                    [
-                        SESSION_POOL.get(session_id[0])
-                        for session_id in active_session_ids
-                    ]
-                )
-            )
+            active_user_ids = get_user_ids_from_room(f"channel:{channel.id}")
 
             background_tasks.add_task(
                 send_notification, channel, message, active_user_ids

@@ -289,3 +289,15 @@ def get_event_call(request_info):
 
 def get_user_id_from_session_pool(sid):
     return SESSION_POOL.get(sid)
+
+
+def get_user_ids_from_room(room):
+    active_session_ids = sio.manager.get_participants(
+        namespace="/",
+        room=room,
+    )
+
+    active_user_ids = list(
+        set([SESSION_POOL.get(session_id[0]) for session_id in active_session_ids])
+    )
+    return active_user_ids
