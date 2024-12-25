@@ -114,7 +114,7 @@ async def generate_chat_completion(
                     yield chunk
 
             response = await generate_chat_completion(
-                form_data, user, bypass_filter=True
+                request, form_data, user, bypass_filter=True
             )
             return StreamingResponse(
                 stream_wrapper(response.body_iterator),
@@ -123,14 +123,18 @@ async def generate_chat_completion(
             )
         else:
             return {
-                **(await generate_chat_completion(form_data, user, bypass_filter=True)),
+                **(
+                    await generate_chat_completion(
+                        request, form_data, user, bypass_filter=True
+                    )
+                ),
                 "selected_model_id": selected_model_id,
             }
 
     if model.get("pipe"):
         # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter
         return await generate_function_chat_completion(
-            form_data, user=user, models=models
+            request, form_data, user=user, models=models
         )
     if model["owned_by"] == "ollama":
         # Using /ollama/api/chat endpoint
