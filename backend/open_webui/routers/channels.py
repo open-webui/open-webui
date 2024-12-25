@@ -198,12 +198,12 @@ async def send_notification(channel, message, active_user_ids):
                 if webhook_url:
                     post_webhook(
                         webhook_url,
-                        f"#{channel.name} - {WEBUI_URL}/c/{channel.id}\n\n{message.content}",
+                        f"#{channel.name} - {WEBUI_URL}/channels/{channel.id}\n\n{message.content}",
                         {
                             "action": "channel",
                             "message": message.content,
                             "title": channel.name,
-                            "url": f"{WEBUI_URL}/c/{channel.id}",
+                            "url": f"{WEBUI_URL}/channels/{channel.id}",
                         },
                     )
 
