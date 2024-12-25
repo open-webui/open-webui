@@ -51,6 +51,7 @@ from open_webui.utils.misc import (
     get_message_list,
     add_or_update_system_message,
     get_last_user_message,
+    get_last_assistant_message,
     prepend_to_first_user_message_content,
 )
 from open_webui.utils.tools import get_tools
@@ -745,7 +746,9 @@ async def process_chat_payload(request, form_data, metadata, user, model):
     return form_data, events
 
 
-async def process_chat_response(request, response, user, events, metadata, tasks):
+async def process_chat_response(
+    request, response, form_data, user, events, metadata, tasks
+):
     if not isinstance(response, StreamingResponse):
         return response
 
@@ -790,7 +793,9 @@ async def process_chat_response(request, response, user, events, metadata, tasks
                         },
                     )
 
-                content = ""
+                assistant_message = get_last_assistant_message(form_data["messages"])
+                content = assistant_message if assistant_message else ""
+
                 async for line in response.body_iterator:
                     line = line.decode("utf-8") if isinstance(line, bytes) else line
                     data = line

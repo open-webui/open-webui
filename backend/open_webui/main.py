@@ -873,7 +873,7 @@ async def chat_completion(
     try:
         response = await chat_completion_handler(request, form_data, user)
         return await process_chat_response(
-            request, response, user, events, metadata, tasks
+            request, response, form_data, user, events, metadata, tasks
         )
     except Exception as e:
         raise HTTPException(
