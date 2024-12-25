@@ -473,7 +473,11 @@
 		</div>
 
 		<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-gray-900'} ">
-			<div class="max-w-6xl px-2.5 mx-auto inset-x-0">
+			<div
+				class="{($settings?.widescreenMode ?? null)
+					? 'max-w-full'
+					: 'max-w-6xl'} px-2.5 mx-auto inset-x-0"
+			>
 				<div class="">
 					<input
 						bind:this={filesInputElement}
