@@ -1052,7 +1052,7 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		const { id, done, choices, sources, selectedModelId, error, usage } = data;
+		const { id, done, choices, sources, selected_model_id, error, usage } = data;
 
 		if (error) {
 			await handleOpenAIError(error, message);
@@ -1060,12 +1060,6 @@
 
 		if (sources) {
 			message.sources = sources;
-			// Only remove status if it was initially set
-			if (model?.info?.meta?.knowledge ?? false) {
-				message.statusHistory = message.statusHistory.filter(
-					(status) => status.action !== 'knowledge_search'
-				);
-			}
 		}
 
 		if (choices) {
@@ -1103,8 +1097,8 @@
 			}
 		}
 
-		if (selectedModelId) {
-			message.selectedModelId = selectedModelId;
+		if (selected_model_id) {
+			message.selectedModelId = selected_model_id;
 			message.arena = true;
 		}
 

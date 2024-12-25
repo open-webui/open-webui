@@ -742,8 +742,6 @@ async def process_chat_payload(request, form_data, metadata, user, model):
             }
         )
 
-    print(f"form_data, events")
-
     return form_data, events
 
 
@@ -810,21 +808,35 @@ async def process_chat_response(request, response, user, events, metadata, tasks
 
                     try:
                         data = json.loads(data)
-                        value = (
-                            data.get("choices", [])[0].get("delta", {}).get("content")
-                        )
 
-                        if value:
-                            content = f"{content}{value}"
-
-                            # Save message in the database
+                        if "selected_model_id" in data:
                             Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata["chat_id"],
                                 metadata["message_id"],
                                 {
-                                    "content": content,
+                                    "selectedModelId": data["selected_model_id"],
                                 },
                             )
+
+                        else:
+
+                            value = (
+                                data.get("choices", [])[0]
+                                .get("delta", {})
+                                .get("content")
+                            )
+
+                            if value:
+                                content = f"{content}{value}"
+
+                                # Save message in the database
+                                Chats.upsert_message_to_chat_by_id_and_message_id(
+                                    metadata["chat_id"],
+                                    metadata["message_id"],
+                                    {
+                                        "content": content,
+                                    },
+                                )
 
                     except Exception as e:
                         done = "data: [DONE]" in line
