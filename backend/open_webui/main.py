@@ -522,6 +522,22 @@ app.state.rf = None
 app.state.YOUTUBE_LOADER_TRANSLATION = None
 
 
+try:
+    app.state.ef = get_ef(
+        app.state.config.RAG_EMBEDDING_ENGINE,
+        app.state.config.RAG_EMBEDDING_MODEL,
+        RAG_EMBEDDING_MODEL_AUTO_UPDATE,
+    )
+
+    app.state.rf = get_rf(
+        app.state.config.RAG_RERANKING_MODEL,
+        RAG_RERANKING_MODEL_AUTO_UPDATE,
+    )
+except Exception as e:
+    log.error(f"Error updating models: {e}")
+    pass
+
+
 app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.config.RAG_EMBEDDING_ENGINE,
     app.state.config.RAG_EMBEDDING_MODEL,
@@ -538,21 +554,6 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
     ),
     app.state.config.RAG_EMBEDDING_BATCH_SIZE,
 )
-
-try:
-    app.state.ef = get_ef(
-        app.state.config.RAG_EMBEDDING_ENGINE,
-        app.state.config.RAG_EMBEDDING_MODEL,
-        RAG_EMBEDDING_MODEL_AUTO_UPDATE,
-    )
-
-    app.state.rf = get_rf(
-        app.state.config.RAG_RERANKING_MODEL,
-        RAG_RERANKING_MODEL_AUTO_UPDATE,
-    )
-except Exception as e:
-    log.error(f"Error updating models: {e}")
-    pass
 
 
 ########################################
