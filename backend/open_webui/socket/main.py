@@ -5,6 +5,9 @@ import sys
 import time
 
 from open_webui.models.users import Users
+from open_webui.models.channels import Channels
+from open_webui.models.chats import Chats
+
 from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
     WEBSOCKET_MANAGER,
@@ -162,7 +165,6 @@ async def connect(sid, environ, auth):
 
 @sio.on("user-join")
 async def user_join(sid, data):
-    # print("user-join", sid, data)
 
     auth = data["auth"] if "auth" in data else None
     if not auth or "token" not in auth:
@@ -182,9 +184,37 @@ async def user_join(sid, data):
     else:
         USER_POOL[user.id] = [sid]
 
+    # Join all the channels
+    channels = Channels.get_channels_by_user_id(user.id)
+    log.debug(f"{channels=}")
+    for channel in channels:
+        await sio.enter_room(sid, f"channel:{channel.id}")
+
     # print(f"user {user.name}({user.id}) connected with session ID {sid}")
 
     await sio.emit("user-count", {"count": len(USER_POOL.items())})
+    return {"id": user.id, "name": user.name}
+
+
+@sio.on("join-channels")
+async def join_channel(sid, data):
+    auth = data["auth"] if "auth" in data else None
+    if not auth or "token" not in auth:
+        return
+
+    data = decode_token(auth["token"])
+    if data is None or "id" not in data:
+        return
+
+    user = Users.get_user_by_id(data["id"])
+    if not user:
+        return
+
+    # Join all the channels
+    channels = Channels.get_channels_by_user_id(user.id)
+    log.debug(f"{channels=}")
+    for channel in channels:
+        await sio.enter_room(sid, f"channel:{channel.id}")
 
 
 @sio.on("user-count")
@@ -232,6 +262,13 @@ def get_event_emitter(request_info):
                 to=session_id,
             )
 
+        if "type" in event_data and event_data["type"] == "status":
+            Chats.add_message_status_to_chat_by_id_and_message_id(
+                request_info["chat_id"],
+                request_info["message_id"],
+                event_data.get("data", {}),
+            )
+
     return __event_emitter__
 
 
@@ -253,3 +290,15 @@ def get_event_call(request_info):
 
 def get_user_id_from_session_pool(sid):
     return SESSION_POOL.get(sid)
+
+
+def get_user_ids_from_room(room):
+    active_session_ids = sio.manager.get_participants(
+        namespace="/",
+        room=room,
+    )
+
+    active_user_ids = list(
+        set([SESSION_POOL.get(session_id[0]) for session_id in active_session_ids])
+    )
+    return active_user_ids

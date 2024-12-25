@@ -112,7 +112,7 @@
 					</div>
 				</div>
 
-				<div class="  flex w-full justify-between pr-2">
+				<div class=" flex w-full justify-between pr-2">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Enable API Key Auth')}</div>
 
 					<Switch bind:state={adminConfig.ENABLE_API_KEY} />
@@ -138,6 +138,29 @@
 					<div class=" self-center text-xs font-medium">{$i18n.t('Enable Message Rating')}</div>
 
 					<Switch bind:state={adminConfig.ENABLE_MESSAGE_RATING} />
+				</div>
+
+				<hr class=" border-gray-50 dark:border-gray-850 my-2" />
+
+				<div class=" w-full justify-between">
+					<div class="flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('WebUI URL')}</div>
+					</div>
+
+					<div class="flex mt-2 space-x-2">
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							type="text"
+							placeholder={`e.g.) "http://localhost:3000"`}
+							bind:value={adminConfig.WEBUI_URL}
+						/>
+					</div>
+
+					<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+						{$i18n.t(
+							'Enter the public URL of your WebUI. This URL will be used to generate links in the notifications.'
+						)}
+					</div>
 				</div>
 
 				<hr class=" border-gray-50 dark:border-gray-850 my-2" />
@@ -179,6 +202,16 @@
 							bind:value={webhookUrl}
 						/>
 					</div>
+				</div>
+
+				<hr class=" border-gray-50 dark:border-gray-850 my-2" />
+
+				<div class="pt-1 flex w-full justify-between pr-2">
+					<div class=" self-center text-sm font-medium">
+						{$i18n.t('Channels')} ({$i18n.t('Beta')})
+					</div>
+
+					<Switch bind:state={adminConfig.ENABLE_CHANNELS} />
 				</div>
 			</div>
 		{/if}

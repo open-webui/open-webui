@@ -68,6 +68,13 @@ def get_last_user_message(messages: list[dict]) -> Optional[str]:
     return get_content_from_message(message)
 
 
+def get_last_assistant_message_item(messages: list[dict]) -> Optional[dict]:
+    for message in reversed(messages):
+        if message["role"] == "assistant":
+            return message
+    return None
+
+
 def get_last_assistant_message(messages: list[dict]) -> Optional[str]:
     for message in reversed(messages):
         if message["role"] == "assistant":

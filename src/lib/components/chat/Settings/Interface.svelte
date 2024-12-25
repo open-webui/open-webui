@@ -37,6 +37,12 @@
 	let chatBubble = true;
 	let chatDirection: 'LTR' | 'RTL' = 'LTR';
 
+	let imageCompression = false;
+	let imageCompressionSize = {
+		width: '',
+		height: ''
+	};
+
 	// Admin - Show Update Available Toast
 	let showUpdateToast = true;
 	let showChangelog = true;
@@ -93,6 +99,11 @@
 	const toggleVoiceInterruption = async () => {
 		voiceInterruption = !voiceInterruption;
 		saveSettings({ voiceInterruption: voiceInterruption });
+	};
+
+	const toggleImageCompression = async () => {
+		imageCompression = !imageCompression;
+		saveSettings({ imageCompression });
 	};
 
 	const toggleHapticFeedback = async () => {
@@ -176,7 +187,8 @@
 
 	const updateInterfaceHandler = async () => {
 		saveSettings({
-			models: [defaultModelId]
+			models: [defaultModelId],
+			imageCompressionSize: imageCompressionSize
 		});
 	};
 
@@ -205,6 +217,9 @@
 		userLocation = $settings.userLocation ?? false;
 
 		hapticFeedback = $settings.hapticFeedback ?? false;
+
+		imageCompression = $settings.imageCompression ?? false;
+		imageCompressionSize = $settings.imageCompressionSize ?? { width: '', height: '' };
 
 		defaultModelId = $settings?.models?.at(0) ?? '';
 		if ($config?.default_models) {
@@ -577,7 +592,7 @@
 				</div>
 			</div>
 
-			<div>
+			<!-- <div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs">
 						{$i18n.t('Fluidly stream large external response chunks')}
@@ -597,7 +612,7 @@
 						{/if}
 					</button>
 				</div>
-			</div>
+			</div> -->
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -662,6 +677,53 @@
 					</button>
 				</div>
 			</div>
+
+			<div class=" my-1.5 text-sm font-medium">{$i18n.t('File')}</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('Image Compression')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleImageCompression();
+						}}
+						type="button"
+					>
+						{#if imageCompression === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			{#if imageCompression}
+				<div>
+					<div class=" py-0.5 flex w-full justify-between text-xs">
+						<div class=" self-center text-xs">{$i18n.t('Image Max Compression Size')}</div>
+
+						<div>
+							<input
+								bind:value={imageCompressionSize.width}
+								type="number"
+								class="w-20 bg-transparent outline-none text-center"
+								min="0"
+								placeholder="Width"
+							/>x
+							<input
+								bind:value={imageCompressionSize.height}
+								type="number"
+								class="w-20 bg-transparent outline-none text-center"
+								min="0"
+								placeholder="Height"
+							/>
+						</div>
+					</div>
+				</div>
+			{/if}
 		</div>
 	</div>
 

@@ -19,7 +19,7 @@
 		showControls
 	} from '$lib/stores';
 
-	import { blobToFile, createMessagesList, findWordIndices } from '$lib/utils';
+	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import { uploadFile } from '$lib/apis/files';
 	import { getTools } from '$lib/apis/tools';
@@ -49,7 +49,7 @@
 
 	export let autoScroll = false;
 
-	export let atSelectedModel: Model | undefined;
+	export let atSelectedModel: Model | undefined = undefined;
 	export let selectedModels: [''];
 
 	let selectedModelIds = [];
@@ -244,12 +244,23 @@
 					return;
 				}
 				let reader = new FileReader();
-				reader.onload = (event) => {
+				reader.onload = async (event) => {
+					let imageUrl = event.target.result;
+
+					if ($settings?.imageCompression ?? false) {
+						const width = $settings?.imageCompressionSize?.width ?? null;
+						const height = $settings?.imageCompressionSize?.height ?? null;
+
+						if (width || height) {
+							imageUrl = await compressImage(imageUrl, width, height);
+						}
+					}
+
 					files = [
 						...files,
 						{
 							type: 'image',
-							url: `${event.target.result}`
+							url: `${imageUrl}`
 						}
 					];
 				};
@@ -335,7 +346,11 @@
 {#if loaded}
 	<div class="w-full font-primary">
 		<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
-			<div class="flex flex-col px-3 max-w-6xl w-full">
+			<div
+				class="flex flex-col px-3 {($settings?.widescreenMode ?? null)
+					? 'max-w-full'
+					: 'max-w-6xl'} w-full"
+			>
 				<div class="relative">
 					{#if autoScroll === false && history?.currentId}
 						<div
@@ -473,7 +488,11 @@
 		</div>
 
 		<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-gray-900'} ">
-			<div class="max-w-6xl px-2.5 mx-auto inset-x-0">
+			<div
+				class="{($settings?.widescreenMode ?? null)
+					? 'max-w-full'
+					: 'max-w-6xl'} px-2.5 mx-auto inset-x-0"
+			>
 				<div class="">
 					<input
 						bind:this={filesInputElement}
@@ -710,6 +729,10 @@
 													const commandsContainerElement =
 														document.getElementById('commands-container');
 
+													if (e.key === 'Escape') {
+														stopResponse();
+													}
+
 													// Command/Ctrl + Shift + Enter to submit a message pair
 													if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
 														e.preventDefault();
@@ -893,6 +916,9 @@
 												const commandsContainerElement =
 													document.getElementById('commands-container');
 
+												if (e.key === 'Escape') {
+													stopResponse();
+												}
 												// Command/Ctrl + Shift + Enter to submit a message pair
 												if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
 													e.preventDefault();

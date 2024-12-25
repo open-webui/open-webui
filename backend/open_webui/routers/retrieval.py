@@ -1256,9 +1256,11 @@ def process_web_search(
             detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
         )
 
+    log.debug(f"web_results: {web_results}")
+
     try:
         collection_name = form_data.collection_name
-        if collection_name == "":
+        if collection_name == "" or collection_name is None:
             collection_name = f"web-search-{calculate_sha256_string(form_data.query)}"[
                 :63
             ]
@@ -1269,8 +1271,7 @@ def process_web_search(
             verify_ssl=request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
         )
-        docs = loader.aload()
-
+        docs = loader.load()
         save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
 
         return {

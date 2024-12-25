@@ -533,6 +533,9 @@ async def generate_chat_completion(
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
 ):
+    if BYPASS_MODEL_ACCESS_CONTROL:
+        bypass_filter = True
+
     idx = 0
     payload = {**form_data}
     if "metadata" in payload:
@@ -545,6 +548,7 @@ async def generate_chat_completion(
     if model_info:
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
+            model_id = model_info.base_model_id
 
         params = model_info.params.model_dump()
         payload = apply_model_params_to_body_openai(params, payload)

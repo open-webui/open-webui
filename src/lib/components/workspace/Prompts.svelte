@@ -239,12 +239,12 @@
 							console.log(savedPrompts);
 
 							for (const prompt of savedPrompts) {
-								await createNewPrompt(
-									localStorage.token,
-									prompt.command.charAt(0) === '/' ? prompt.command.slice(1) : prompt.command,
-									prompt.title,
-									prompt.content
-								).catch((error) => {
+								await createNewPrompt(localStorage.token, {
+									command:
+										prompt.command.charAt(0) === '/' ? prompt.command.slice(1) : prompt.command,
+									title: prompt.title,
+									content: prompt.content
+								}).catch((error) => {
 									toast.error(error);
 									return null;
 								});
@@ -252,6 +252,9 @@
 
 							prompts = await getPromptList(localStorage.token);
 							await _prompts.set(await getPrompts(localStorage.token));
+
+							importFiles = [];
+							promptsImportInputElement.value = '';
 						};
 
 						reader.readAsText(importFiles[0]);

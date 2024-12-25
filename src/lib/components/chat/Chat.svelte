@@ -43,7 +43,8 @@
 		getMessageContentParts,
 		extractSentencesForAudio,
 		promptTemplate,
-		splitStream
+		splitStream,
+		sleep
 	} from '$lib/utils';
 
 	import { generateChatCompletion } from '$lib/apis/ollama';
@@ -70,15 +71,15 @@
 		generateMoACompletion,
 		stopTask
 	} from '$lib/apis';
+	import { getTools } from '$lib/apis/tools';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
-	import Navbar from '$lib/components/layout/Navbar.svelte';
+	import Navbar from '$lib/components/chat/Navbar.svelte';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
-	import { getTools } from '$lib/apis/tools';
 	import NotificationToast from '../NotificationToast.svelte';
 
 	export let chatIdProp = '';
@@ -323,33 +324,6 @@
 
 				history.messages[event.message_id] = message;
 			}
-		} else {
-			await tick();
-			const type = event?.data?.type ?? null;
-			const data = event?.data?.data ?? null;
-
-			if (type === 'chat:completion') {
-				const { done, content, title } = data;
-
-				if (done) {
-					toast.custom(NotificationToast, {
-						componentProps: {
-							onClick: () => {
-								goto(`/c/${event.chat_id}`);
-							},
-							content: content,
-							title: title
-						},
-						duration: 15000,
-						unstyled: true
-					});
-				}
-			} else if (type === 'chat:title') {
-				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			} else if (type === 'chat:tags') {
-				allTags.set(await getAllTags(localStorage.token));
-			}
 		}
 	};
 
@@ -453,7 +427,7 @@
 	onDestroy(() => {
 		chatIdUnsubscriber?.();
 		window.removeEventListener('message', onMessageHandler);
-		$socket?.off('chat-events');
+		// $socket?.off('chat-events');
 	});
 
 	// File upload functions
@@ -842,10 +816,6 @@
 	};
 
 	const chatCompletedHandler = async (chatId, modelId, responseMessageId, messages) => {
-		await mermaid.run({
-			querySelector: '.mermaid'
-		});
-
 		const res = await chatCompleted(localStorage.token, {
 			model: modelId,
 			messages: messages.map((m) => ({
@@ -1083,7 +1053,7 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		const { id, done, choices, sources, selectedModelId, error, usage } = data;
+		const { id, done, choices, sources, selected_model_id, error, usage } = data;
 
 		if (error) {
 			await handleOpenAIError(error, message);
@@ -1091,16 +1061,10 @@
 
 		if (sources) {
 			message.sources = sources;
-			// Only remove status if it was initially set
-			if (model?.info?.meta?.knowledge ?? false) {
-				message.statusHistory = message.statusHistory.filter(
-					(status) => status.action !== 'knowledge_search'
-				);
-			}
 		}
 
 		if (choices) {
-			const value = choices[0]?.delta?.content ?? '';
+			let value = choices[0]?.delta?.content ?? '';
 			if (message.content == '' && value == '\n') {
 				console.log('Empty response');
 			} else {
@@ -1116,6 +1080,7 @@
 					$config?.audio?.tts?.split_on ?? 'punctuation'
 				);
 				messageContentParts.pop();
+
 				// dispatch only last sentence and make sure it hasn't been dispatched before
 				if (
 					messageContentParts.length > 0 &&
@@ -1134,8 +1099,8 @@
 			}
 		}
 
-		if (selectedModelId) {
-			message.selectedModelId = selectedModelId;
+		if (selected_model_id) {
+			message.selectedModelId = selected_model_id;
 			message.arena = true;
 		}
 
@@ -1419,11 +1384,8 @@
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();
-					if (webSearchEnabled) {
-						await getWebSearchResults(model.id, parentId, responseMessageId);
-					}
-
 					await sendPromptSocket(model, responseMessageId, _chatId);
+
 					if (chatEventEmitter) clearInterval(chatEventEmitter);
 				} else {
 					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
@@ -1440,39 +1402,6 @@
 		const userMessage = history.messages[responseMessage.parentId];
 
 		let files = JSON.parse(JSON.stringify(chatFiles));
-		if (model?.info?.meta?.knowledge ?? false) {
-			// Only initialize and add status if knowledge exists
-			responseMessage.statusHistory = [
-				{
-					action: 'knowledge_search',
-					description: $i18n.t(`Searching Knowledge for "{{searchQuery}}"`, {
-						searchQuery: userMessage.content
-					}),
-					done: false
-				}
-			];
-			files.push(
-				...model.info.meta.knowledge.map((item) => {
-					if (item?.collection_name) {
-						return {
-							id: item.collection_name,
-							name: item.name,
-							legacy: true
-						};
-					} else if (item?.collection_names) {
-						return {
-							name: item.name,
-							type: 'collection',
-							collection_names: item.collection_names,
-							legacy: true
-						};
-					} else {
-						return item;
-					}
-				})
-			);
-			history.messages[responseMessageId] = responseMessage;
-		}
 		files.push(
 			...(userMessage?.files ?? []).filter((item) =>
 				['doc', 'file', 'collection'].includes(item.type)
@@ -1566,8 +1495,12 @@
 							: undefined
 				},
 
-				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 				files: files.length > 0 ? files : undefined,
+				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
+				features: {
+					web_search: webSearchEnabled
+				},
+
 				session_id: $socket?.id,
 				chat_id: $chatId,
 				id: responseMessageId,
@@ -1591,10 +1524,12 @@
 			},
 			`${WEBUI_BASE_URL}/api`
 		).catch((error) => {
+			console.log(error);
 			responseMessage.error = {
 				content: error
 			};
 			responseMessage.done = true;
+			history.messages[responseMessageId] = responseMessage;
 			return null;
 		});
 
@@ -1779,94 +1714,6 @@
 			}
 		} catch (e) {
 			console.error(e);
-		}
-	};
-
-	const getWebSearchResults = async (
-		model: string,
-		parentId: string,
-		responseMessageId: string
-	) => {
-		// TODO: move this to the backend
-		const responseMessage = history.messages[responseMessageId];
-		const userMessage = history.messages[parentId];
-		const messages = createMessagesList(history.currentId);
-
-		responseMessage.statusHistory = [
-			{
-				done: false,
-				action: 'web_search',
-				description: $i18n.t('Generating search query')
-			}
-		];
-		history.messages[responseMessageId] = responseMessage;
-
-		const prompt = userMessage.content;
-		let queries = await generateQueries(
-			localStorage.token,
-			model,
-			messages.filter((message) => message?.content?.trim()),
-			prompt
-		).catch((error) => {
-			console.log(error);
-			return [prompt];
-		});
-
-		if (queries.length === 0) {
-			responseMessage.statusHistory.push({
-				done: true,
-				error: true,
-				action: 'web_search',
-				description: $i18n.t('No search query generated')
-			});
-			history.messages[responseMessageId] = responseMessage;
-			return;
-		}
-
-		const searchQuery = queries[0];
-
-		responseMessage.statusHistory.push({
-			done: false,
-			action: 'web_search',
-			description: $i18n.t(`Searching "{{searchQuery}}"`, { searchQuery })
-		});
-		history.messages[responseMessageId] = responseMessage;
-
-		const results = await processWebSearch(localStorage.token, searchQuery).catch((error) => {
-			console.log(error);
-			toast.error(error);
-
-			return null;
-		});
-
-		if (results) {
-			responseMessage.statusHistory.push({
-				done: true,
-				action: 'web_search',
-				description: $i18n.t('Searched {{count}} sites', { count: results.filenames.length }),
-				query: searchQuery,
-				urls: results.filenames
-			});
-
-			if (responseMessage?.files ?? undefined === undefined) {
-				responseMessage.files = [];
-			}
-
-			responseMessage.files.push({
-				collection_name: results.collection_name,
-				name: searchQuery,
-				type: 'web_search_results',
-				urls: results.filenames
-			});
-			history.messages[responseMessageId] = responseMessage;
-		} else {
-			responseMessage.statusHistory.push({
-				done: true,
-				error: true,
-				action: 'web_search',
-				description: 'No search results found'
-			});
-			history.messages[responseMessageId] = responseMessage;
 		}
 	};
 
