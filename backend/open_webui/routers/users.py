@@ -27,7 +27,11 @@ router = APIRouter()
 
 
 @router.get("/", response_model=list[UserModel])
-async def get_users(skip: int = 0, limit: int = 50, user=Depends(get_admin_user)):
+async def get_users(
+    skip: Optional[int] = None,
+    limit: Optional[int] = None,
+    user=Depends(get_admin_user),
+):
     return Users.get_users(skip, limit)
 
 
