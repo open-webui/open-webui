@@ -92,7 +92,9 @@
 	};
 
 	const chatEventHandler = async (event) => {
-		if (event.chat_id !== $chatId || document.visibilityState !== 'visible') {
+		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
+
+		if (!chat || document.visibilityState !== 'visible') {
 			await tick();
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
