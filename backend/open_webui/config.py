@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 import chromadb
 import requests
 import yaml
-from open_webui.apps.webui.internal.db import Base, get_db
+from open_webui.internal.db import Base, get_db
 from open_webui.env import (
     OPEN_WEBUI_DIR,
     DATA_DIR,
@@ -21,6 +21,7 @@ from open_webui.env import (
     WEBUI_NAME,
     log,
     DATABASE_URL,
+    OFFLINE_MODE,
 )
 from pydantic import BaseModel
 from sqlalchemy import JSON, Column, DateTime, Integer, func
@@ -306,6 +307,18 @@ GOOGLE_CLIENT_SECRET = PersistentConfig(
     os.environ.get("GOOGLE_CLIENT_SECRET", ""),
 )
 
+GOOGLE_DRIVE_CLIENT_ID = PersistentConfig(
+    "GOOGLE_DRIVE_CLIENT_ID",
+    "google_drive.client_id",
+    os.environ.get("GOOGLE_DRIVE_CLIENT_ID", ""),
+)
+
+GOOGLE_DRIVE_API_KEY = PersistentConfig(
+    "GOOGLE_DRIVE_API_KEY",
+    "google_drive.api_key",
+    os.environ.get("GOOGLE_DRIVE_API_KEY", ""),
+)
+
 GOOGLE_OAUTH_SCOPE = PersistentConfig(
     "GOOGLE_OAUTH_SCOPE",
     "oauth.google.scope",
@@ -402,10 +415,22 @@ OAUTH_EMAIL_CLAIM = PersistentConfig(
     os.environ.get("OAUTH_EMAIL_CLAIM", "email"),
 )
 
+OAUTH_GROUPS_CLAIM = PersistentConfig(
+    "OAUTH_GROUPS_CLAIM",
+    "oauth.oidc.group_claim",
+    os.environ.get("OAUTH_GROUP_CLAIM", "groups"),
+)
+
 ENABLE_OAUTH_ROLE_MANAGEMENT = PersistentConfig(
     "ENABLE_OAUTH_ROLE_MANAGEMENT",
     "oauth.enable_role_mapping",
     os.environ.get("ENABLE_OAUTH_ROLE_MANAGEMENT", "False").lower() == "true",
+)
+
+ENABLE_OAUTH_GROUP_MANAGEMENT = PersistentConfig(
+    "ENABLE_OAUTH_GROUP_MANAGEMENT",
+    "oauth.enable_group_mapping",
+    os.environ.get("ENABLE_OAUTH_GROUP_MANAGEMENT", "False").lower() == "true",
 )
 
 OAUTH_ROLES_CLAIM = PersistentConfig(
@@ -427,6 +452,15 @@ OAUTH_ADMIN_ROLES = PersistentConfig(
     "OAUTH_ADMIN_ROLES",
     "oauth.admin_roles",
     [role.strip() for role in os.environ.get("OAUTH_ADMIN_ROLES", "admin").split(",")],
+)
+
+OAUTH_ALLOWED_DOMAINS = PersistentConfig(
+    "OAUTH_ALLOWED_DOMAINS",
+    "oauth.allowed_domains",
+    [
+        domain.strip()
+        for domain in os.environ.get("OAUTH_ALLOWED_DOMAINS", "*").split(",")
+    ],
 )
 
 
@@ -686,6 +720,12 @@ OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 # WEBUI
 ####################################
 
+
+WEBUI_URL = PersistentConfig(
+    "WEBUI_URL", "webui.url", os.environ.get("WEBUI_URL", "http://localhost:3000")
+)
+
+
 ENABLE_SIGNUP = PersistentConfig(
     "ENABLE_SIGNUP",
     "ui.enable_signup",
@@ -811,6 +851,12 @@ USER_PERMISSIONS = PersistentConfig(
             "temporary": USER_PERMISSIONS_CHAT_TEMPORARY,
         },
     },
+)
+
+ENABLE_CHANNELS = PersistentConfig(
+    "ENABLE_CHANNELS",
+    "channels.enable",
+    os.environ.get("ENABLE_CHANNELS", "False").lower() == "true",
 )
 
 
@@ -948,11 +994,44 @@ TITLE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     os.environ.get("TITLE_GENERATION_PROMPT_TEMPLATE", ""),
 )
 
+DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = """Create a concise, 3-5 word title with an emoji as a title for the chat history, in the given language. Suitable Emojis for the summary can be used to enhance understanding but avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
+
+Examples of titles:
+📉 Stock Market Trends
+🍪 Perfect Chocolate Chip Recipe
+Evolution of Music Streaming
+Remote Work Productivity Tips
+Artificial Intelligence in Healthcare
+🎮 Video Game Development Insights
+
+<chat_history>
+{{MESSAGES:END:2}}
+</chat_history>"""
+
+
 TAGS_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     "TAGS_GENERATION_PROMPT_TEMPLATE",
     "task.tags.prompt_template",
     os.environ.get("TAGS_GENERATION_PROMPT_TEMPLATE", ""),
 )
+
+DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE = """### Task:
+Generate 1-3 broad tags categorizing the main themes of the chat history, along with 1-3 more specific subtopic tags.
+
+### Guidelines:
+- Start with high-level domains (e.g. Science, Technology, Philosophy, Arts, Politics, Business, Health, Sports, Entertainment, Education)
+- Consider including relevant subfields/subdomains if they are strongly represented throughout the conversation
+- If content is too short (less than 3 messages) or too diverse, use only ["General"]
+- Use the chat's primary language; default to English if multilingual
+- Prioritize accuracy over specificity
+
+### Output:
+JSON format: { "tags": ["tag1", "tag2", "tag3"] }
+
+### Chat History:
+<chat_history>
+{{MESSAGES:END:6}}
+</chat_history>"""
 
 ENABLE_TAGS_GENERATION = PersistentConfig(
     "ENABLE_TAGS_GENERATION",
@@ -1072,6 +1151,19 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
 )
 
 
+DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = """Available Tools: {{TOOLS}}\nReturn an empty string if no tools match the query. If a function tool matches, construct and return a JSON object in the format {\"name\": \"functionName\", \"parameters\": {\"requiredFunctionParamKey\": \"requiredFunctionParamValue\"}} using the appropriate tool and its parameters. Only return the object and limit the response to the JSON object without additional text."""
+
+
+DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE = """Your task is to reflect the speaker's likely facial expression through a fitting emoji. Interpret emotions from the message and reflect their facial expression using fitting, diverse emojis (e.g., 😊, 😢, 😡, 😱).
+
+Message: ```{{prompt}}```"""
+
+DEFAULT_MOA_GENERATION_PROMPT_TEMPLATE = """You have been provided with a set of responses from various models to the latest user query: "{{prompt}}"
+
+Your task is to synthesize these responses into a single, high-quality response. It is crucial to critically evaluate the information provided in these responses, recognizing that some of it may be biased or incorrect. Your response should not simply replicate the given answers but should offer a refined, accurate, and comprehensive reply to the instruction. Ensure your response is well-structured, coherent, and adheres to the highest standards of accuracy and reliability.
+
+Responses from models: {{responses}}"""
+
 ####################################
 # Vector Database
 ####################################
@@ -1122,6 +1214,15 @@ if VECTOR_DB == "pgvector" and not PGVECTOR_DB_URL.startswith("postgres"):
 ####################################
 # Information Retrieval (RAG)
 ####################################
+
+
+# If configured, Google Drive will be available as an upload option.
+ENABLE_GOOGLE_DRIVE_INTEGRATION = PersistentConfig(
+    "ENABLE_GOOGLE_DRIVE_INTEGRATION",
+    "google_drive.enable",
+    os.getenv("ENABLE_GOOGLE_DRIVE_INTEGRATION", "False").lower() == "true",
+)
+
 
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = PersistentConfig(
@@ -1197,7 +1298,8 @@ RAG_EMBEDDING_MODEL = PersistentConfig(
 log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL.value}")
 
 RAG_EMBEDDING_MODEL_AUTO_UPDATE = (
-    os.environ.get("RAG_EMBEDDING_MODEL_AUTO_UPDATE", "True").lower() == "true"
+    not OFFLINE_MODE
+    and os.environ.get("RAG_EMBEDDING_MODEL_AUTO_UPDATE", "True").lower() == "true"
 )
 
 RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
@@ -1222,7 +1324,8 @@ if RAG_RERANKING_MODEL.value != "":
     log.info(f"Reranking model set: {RAG_RERANKING_MODEL.value}")
 
 RAG_RERANKING_MODEL_AUTO_UPDATE = (
-    os.environ.get("RAG_RERANKING_MODEL_AUTO_UPDATE", "True").lower() == "true"
+    not OFFLINE_MODE
+    and os.environ.get("RAG_RERANKING_MODEL_AUTO_UPDATE", "True").lower() == "true"
 )
 
 RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
@@ -1356,6 +1459,7 @@ RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
     ],
 )
 
+
 SEARXNG_QUERY_URL = PersistentConfig(
     "SEARXNG_QUERY_URL",
     "rag.web.search.searxng_query_url",
@@ -1378,6 +1482,12 @@ BRAVE_SEARCH_API_KEY = PersistentConfig(
     "BRAVE_SEARCH_API_KEY",
     "rag.web.search.brave_search_api_key",
     os.getenv("BRAVE_SEARCH_API_KEY", ""),
+)
+
+KAGI_SEARCH_API_KEY = PersistentConfig(
+    "KAGI_SEARCH_API_KEY",
+    "rag.web.search.kagi_search_api_key",
+    os.getenv("KAGI_SEARCH_API_KEY", ""),
 )
 
 MOJEEK_SEARCH_API_KEY = PersistentConfig(
@@ -1523,6 +1633,12 @@ COMFYUI_BASE_URL = PersistentConfig(
     "COMFYUI_BASE_URL",
     "image_generation.comfyui.base_url",
     os.getenv("COMFYUI_BASE_URL", ""),
+)
+
+COMFYUI_API_KEY = PersistentConfig(
+    "COMFYUI_API_KEY",
+    "image_generation.comfyui.api_key",
+    os.getenv("COMFYUI_API_KEY", ""),
 )
 
 COMFYUI_DEFAULT_WORKFLOW = """
@@ -1686,7 +1802,8 @@ WHISPER_MODEL = PersistentConfig(
 
 WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models")
 WHISPER_MODEL_AUTO_UPDATE = (
-    os.environ.get("WHISPER_MODEL_AUTO_UPDATE", "").lower() == "true"
+    not OFFLINE_MODE
+    and os.environ.get("WHISPER_MODEL_AUTO_UPDATE", "").lower() == "true"
 )
 
 

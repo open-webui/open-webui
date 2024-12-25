@@ -43,7 +43,8 @@
 		getMessageContentParts,
 		extractSentencesForAudio,
 		promptTemplate,
-		splitStream
+		splitStream,
+		sleep
 	} from '$lib/utils';
 
 	import { generateChatCompletion } from '$lib/apis/ollama';
@@ -65,21 +66,21 @@
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
 	import {
 		chatCompleted,
-		generateTitle,
 		generateQueries,
 		chatAction,
 		generateMoACompletion,
-		generateTags
+		stopTask
 	} from '$lib/apis';
+	import { getTools } from '$lib/apis/tools';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
-	import Navbar from '$lib/components/layout/Navbar.svelte';
+	import Navbar from '$lib/components/chat/Navbar.svelte';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
-	import { getTools } from '$lib/apis/tools';
+	import NotificationToast from '../NotificationToast.svelte';
 
 	export let chatIdProp = '';
 
@@ -88,7 +89,6 @@
 	let controlPane;
 	let controlPaneComponent;
 
-	let stopResponseFlag = false;
 	let autoScroll = true;
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
@@ -121,6 +121,8 @@
 		currentId: null
 	};
 
+	let taskId = null;
+
 	// Chat Input
 	let prompt = '';
 	let chatFiles = [];
@@ -130,9 +132,28 @@
 	$: if (chatIdProp) {
 		(async () => {
 			console.log(chatIdProp);
+
+			prompt = '';
+			files = [];
+			selectedToolIds = [];
+			webSearchEnabled = false;
+
+			loaded = false;
+
 			if (chatIdProp && (await loadChat())) {
 				await tick();
 				loaded = true;
+
+				if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
+					try {
+						const input = JSON.parse(localStorage.getItem(`chat-input-${chatIdProp}`));
+
+						prompt = input.prompt;
+						files = input.files;
+						selectedToolIds = input.selectedToolIds;
+						webSearchEnabled = input.webSearchEnabled;
+					} catch (e) {}
+				}
 
 				window.setTimeout(() => scrollToBottom(), 0);
 				const chatInput = document.getElementById('chat-input');
@@ -202,95 +223,107 @@
 	};
 
 	const chatEventHandler = async (event, cb) => {
+		console.log(event);
+
 		if (event.chat_id === $chatId) {
 			await tick();
-			console.log(event);
 			let message = history.messages[event.message_id];
 
-			const type = event?.data?.type ?? null;
-			const data = event?.data?.data ?? null;
+			if (message) {
+				const type = event?.data?.type ?? null;
+				const data = event?.data?.data ?? null;
 
-			if (type === 'status') {
-				if (message?.statusHistory) {
-					message.statusHistory.push(data);
-				} else {
-					message.statusHistory = [data];
-				}
-			} else if (type === 'source' || type === 'citation') {
-				if (data?.type === 'code_execution') {
-					// Code execution; update existing code execution by ID, or add new one.
-					if (!message?.code_executions) {
-						message.code_executions = [];
-					}
-
-					const existingCodeExecutionIndex = message.code_executions.findIndex(
-						(execution) => execution.id === data.id
-					);
-
-					if (existingCodeExecutionIndex !== -1) {
-						message.code_executions[existingCodeExecutionIndex] = data;
+				if (type === 'status') {
+					if (message?.statusHistory) {
+						message.statusHistory.push(data);
 					} else {
-						message.code_executions.push(data);
+						message.statusHistory = [data];
 					}
+				} else if (type === 'source' || type === 'citation') {
+					if (data?.type === 'code_execution') {
+						// Code execution; update existing code execution by ID, or add new one.
+						if (!message?.code_executions) {
+							message.code_executions = [];
+						}
 
-					message.code_executions = message.code_executions;
-				} else {
-					// Regular source.
-					if (message?.sources) {
-						message.sources.push(data);
+						const existingCodeExecutionIndex = message.code_executions.findIndex(
+							(execution) => execution.id === data.id
+						);
+
+						if (existingCodeExecutionIndex !== -1) {
+							message.code_executions[existingCodeExecutionIndex] = data;
+						} else {
+							message.code_executions.push(data);
+						}
+
+						message.code_executions = message.code_executions;
 					} else {
-						message.sources = [data];
+						// Regular source.
+						if (message?.sources) {
+							message.sources.push(data);
+						} else {
+							message.sources = [data];
+						}
 					}
-				}
-			} else if (type === 'message') {
-				message.content += data.content;
-			} else if (type === 'replace') {
-				message.content = data.content;
-			} else if (type === 'action') {
-				if (data.action === 'continue') {
-					const continueButton = document.getElementById('continue-response-button');
+				} else if (type === 'chat:completion') {
+					chatCompletionEventHandler(data, message, event.chat_id);
+				} else if (type === 'chat:title') {
+					chatTitle.set(data);
+					currentChatPage.set(1);
+					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				} else if (type === 'chat:tags') {
+					chat = await getChatById(localStorage.token, $chatId);
+					allTags.set(await getAllTags(localStorage.token));
+				} else if (type === 'message') {
+					message.content += data.content;
+				} else if (type === 'replace') {
+					message.content = data.content;
+				} else if (type === 'action') {
+					if (data.action === 'continue') {
+						const continueButton = document.getElementById('continue-response-button');
 
-					if (continueButton) {
-						continueButton.click();
+						if (continueButton) {
+							continueButton.click();
+						}
 					}
-				}
-			} else if (type === 'confirmation') {
-				eventCallback = cb;
+				} else if (type === 'confirmation') {
+					eventCallback = cb;
 
-				eventConfirmationInput = false;
-				showEventConfirmation = true;
+					eventConfirmationInput = false;
+					showEventConfirmation = true;
 
-				eventConfirmationTitle = data.title;
-				eventConfirmationMessage = data.message;
-			} else if (type === 'execute') {
-				eventCallback = cb;
+					eventConfirmationTitle = data.title;
+					eventConfirmationMessage = data.message;
+				} else if (type === 'execute') {
+					eventCallback = cb;
 
-				try {
-					// Use Function constructor to evaluate code in a safer way
-					const asyncFunction = new Function(`return (async () => { ${data.code} })()`);
-					const result = await asyncFunction(); // Await the result of the async function
+					try {
+						// Use Function constructor to evaluate code in a safer way
+						const asyncFunction = new Function(`return (async () => { ${data.code} })()`);
+						const result = await asyncFunction(); // Await the result of the async function
 
-					if (cb) {
-						cb(result);
+						if (cb) {
+							cb(result);
+						}
+					} catch (error) {
+						console.error('Error executing code:', error);
 					}
-				} catch (error) {
-					console.error('Error executing code:', error);
+				} else if (type === 'input') {
+					eventCallback = cb;
+
+					eventConfirmationInput = true;
+					showEventConfirmation = true;
+
+					eventConfirmationTitle = data.title;
+					eventConfirmationMessage = data.message;
+					eventConfirmationInputPlaceholder = data.placeholder;
+					eventConfirmationInputValue = data?.value ?? '';
+				} else {
+					console.log('Unknown message type', data);
 				}
-			} else if (type === 'input') {
-				eventCallback = cb;
 
-				eventConfirmationInput = true;
-				showEventConfirmation = true;
-
-				eventConfirmationTitle = data.title;
-				eventConfirmationMessage = data.message;
-				eventConfirmationInputPlaceholder = data.placeholder;
-				eventConfirmationInputValue = data?.value ?? '';
-			} else {
-				console.log('Unknown message type', data);
+				history.messages[event.message_id] = message;
 			}
-
-			history.messages[event.message_id] = message;
 		}
 	};
 
@@ -350,6 +383,21 @@
 			}
 		}
 
+		if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
+			try {
+				const input = JSON.parse(localStorage.getItem(`chat-input-${chatIdProp}`));
+				prompt = input.prompt;
+				files = input.files;
+				selectedToolIds = input.selectedToolIds;
+				webSearchEnabled = input.webSearchEnabled;
+			} catch (e) {
+				prompt = '';
+				files = [];
+				selectedToolIds = [];
+				webSearchEnabled = false;
+			}
+		}
+
 		showControls.subscribe(async (value) => {
 			if (controlPane && !$mobile) {
 				try {
@@ -379,10 +427,124 @@
 	onDestroy(() => {
 		chatIdUnsubscriber?.();
 		window.removeEventListener('message', onMessageHandler);
-		$socket?.off('chat-events');
+		// $socket?.off('chat-events');
 	});
 
 	// File upload functions
+
+	const uploadGoogleDriveFile = async (fileData) => {
+		console.log('Starting uploadGoogleDriveFile with:', {
+			id: fileData.id,
+			name: fileData.name,
+			url: fileData.url,
+			headers: {
+				Authorization: `Bearer ${token}`
+			}
+		});
+
+		// Validate input
+		if (!fileData?.id || !fileData?.name || !fileData?.url || !fileData?.headers?.Authorization) {
+			throw new Error('Invalid file data provided');
+		}
+
+		const tempItemId = uuidv4();
+		const fileItem = {
+			type: 'file',
+			file: '',
+			id: null,
+			url: fileData.url,
+			name: fileData.name,
+			collection_name: '',
+			status: 'uploading',
+			error: '',
+			itemId: tempItemId,
+			size: 0
+		};
+
+		try {
+			files = [...files, fileItem];
+			console.log('Processing web file with URL:', fileData.url);
+
+			// Configure fetch options with proper headers
+			const fetchOptions = {
+				headers: {
+					Authorization: fileData.headers.Authorization,
+					Accept: '*/*'
+				},
+				method: 'GET'
+			};
+
+			// Attempt to fetch the file
+			console.log('Fetching file content from Google Drive...');
+			const fileResponse = await fetch(fileData.url, fetchOptions);
+
+			if (!fileResponse.ok) {
+				const errorText = await fileResponse.text();
+				throw new Error(`Failed to fetch file (${fileResponse.status}): ${errorText}`);
+			}
+
+			// Get content type from response
+			const contentType = fileResponse.headers.get('content-type') || 'application/octet-stream';
+			console.log('Response received with content-type:', contentType);
+
+			// Convert response to blob
+			console.log('Converting response to blob...');
+			const fileBlob = await fileResponse.blob();
+
+			if (fileBlob.size === 0) {
+				throw new Error('Retrieved file is empty');
+			}
+
+			console.log('Blob created:', {
+				size: fileBlob.size,
+				type: fileBlob.type || contentType
+			});
+
+			// Create File object with proper MIME type
+			const file = new File([fileBlob], fileData.name, {
+				type: fileBlob.type || contentType
+			});
+
+			console.log('File object created:', {
+				name: file.name,
+				size: file.size,
+				type: file.type
+			});
+
+			if (file.size === 0) {
+				throw new Error('Created file is empty');
+			}
+
+			// Upload file to server
+			console.log('Uploading file to server...');
+			const uploadedFile = await uploadFile(localStorage.token, file);
+
+			if (!uploadedFile) {
+				throw new Error('Server returned null response for file upload');
+			}
+
+			console.log('File uploaded successfully:', uploadedFile);
+
+			// Update file item with upload results
+			fileItem.status = 'uploaded';
+			fileItem.file = uploadedFile;
+			fileItem.id = uploadedFile.id;
+			fileItem.size = file.size;
+			fileItem.collection_name = uploadedFile?.meta?.collection_name;
+			fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+
+			files = files;
+			toast.success($i18n.t('File uploaded successfully'));
+		} catch (e) {
+			console.error('Error uploading file:', e);
+			files = files.filter((f) => f.itemId !== tempItemId);
+			toast.error(
+				$i18n.t('Error uploading file: {{error}}', {
+					error: e.message || 'Unknown error'
+				})
+			);
+		}
+	};
 
 	const uploadWeb = async (url) => {
 		console.log(url);
@@ -455,41 +617,43 @@
 	//////////////////////////
 
 	const initNewChat = async () => {
-		if (sessionStorage.selectedModels) {
-			selectedModels = JSON.parse(sessionStorage.selectedModels);
-			sessionStorage.removeItem('selectedModels');
-		} else {
-			if ($page.url.searchParams.get('models')) {
-				selectedModels = $page.url.searchParams.get('models')?.split(',');
-			} else if ($page.url.searchParams.get('model')) {
-				const urlModels = $page.url.searchParams.get('model')?.split(',');
+		if ($page.url.searchParams.get('models')) {
+			selectedModels = $page.url.searchParams.get('models')?.split(',');
+		} else if ($page.url.searchParams.get('model')) {
+			const urlModels = $page.url.searchParams.get('model')?.split(',');
 
-				if (urlModels.length === 1) {
-					const m = $models.find((m) => m.id === urlModels[0]);
-					if (!m) {
-						const modelSelectorButton = document.getElementById('model-selector-0-button');
-						if (modelSelectorButton) {
-							modelSelectorButton.click();
-							await tick();
+			if (urlModels.length === 1) {
+				const m = $models.find((m) => m.id === urlModels[0]);
+				if (!m) {
+					const modelSelectorButton = document.getElementById('model-selector-0-button');
+					if (modelSelectorButton) {
+						modelSelectorButton.click();
+						await tick();
 
-							const modelSelectorInput = document.getElementById('model-search-input');
-							if (modelSelectorInput) {
-								modelSelectorInput.focus();
-								modelSelectorInput.value = urlModels[0];
-								modelSelectorInput.dispatchEvent(new Event('input'));
-							}
+						const modelSelectorInput = document.getElementById('model-search-input');
+						if (modelSelectorInput) {
+							modelSelectorInput.focus();
+							modelSelectorInput.value = urlModels[0];
+							modelSelectorInput.dispatchEvent(new Event('input'));
 						}
-					} else {
-						selectedModels = urlModels;
 					}
 				} else {
 					selectedModels = urlModels;
 				}
-			} else if ($settings?.models) {
-				selectedModels = $settings?.models;
-			} else if ($config?.default_models) {
-				console.log($config?.default_models.split(',') ?? '');
-				selectedModels = $config?.default_models.split(',');
+			} else {
+				selectedModels = urlModels;
+			}
+		} else {
+			if (sessionStorage.selectedModels) {
+				selectedModels = JSON.parse(sessionStorage.selectedModels);
+				sessionStorage.removeItem('selectedModels');
+			} else {
+				if ($settings?.models) {
+					selectedModels = $settings?.models;
+				} else if ($config?.default_models) {
+					console.log($config?.default_models.split(',') ?? '');
+					selectedModels = $config?.default_models.split(',');
+				}
 			}
 		}
 
@@ -652,10 +816,6 @@
 	};
 
 	const chatCompletedHandler = async (chatId, modelId, responseMessageId, messages) => {
-		await mermaid.run({
-			querySelector: '.mermaid'
-		});
-
 		const res = await chatCompleted(localStorage.token, {
 			model: modelId,
 			messages: messages.map((m) => ({
@@ -829,6 +989,177 @@
 		}
 	};
 
+	const addMessages = async ({ modelId, parentId, messages }) => {
+		const model = $models.filter((m) => m.id === modelId).at(0);
+
+		let parentMessage = history.messages[parentId];
+		let currentParentId = parentMessage ? parentMessage.id : null;
+		for (const message of messages) {
+			let messageId = uuidv4();
+
+			if (message.role === 'user') {
+				const userMessage = {
+					id: messageId,
+					parentId: currentParentId,
+					childrenIds: [],
+					timestamp: Math.floor(Date.now() / 1000),
+					...message
+				};
+
+				if (parentMessage) {
+					parentMessage.childrenIds.push(messageId);
+					history.messages[parentMessage.id] = parentMessage;
+				}
+
+				history.messages[messageId] = userMessage;
+				parentMessage = userMessage;
+				currentParentId = messageId;
+			} else {
+				const responseMessage = {
+					id: messageId,
+					parentId: currentParentId,
+					childrenIds: [],
+					done: true,
+					model: model.id,
+					modelName: model.name ?? model.id,
+					modelIdx: 0,
+					timestamp: Math.floor(Date.now() / 1000),
+					...message
+				};
+
+				if (parentMessage) {
+					parentMessage.childrenIds.push(messageId);
+					history.messages[parentMessage.id] = parentMessage;
+				}
+
+				history.messages[messageId] = responseMessage;
+				parentMessage = responseMessage;
+				currentParentId = messageId;
+			}
+		}
+
+		history.currentId = currentParentId;
+		await tick();
+
+		if (autoScroll) {
+			scrollToBottom();
+		}
+
+		if (messages.length === 0) {
+			await initChatHandler();
+		} else {
+			await saveChatHandler($chatId);
+		}
+	};
+
+	const chatCompletionEventHandler = async (data, message, chatId) => {
+		const { id, done, choices, sources, selected_model_id, error, usage } = data;
+
+		if (error) {
+			await handleOpenAIError(error, message);
+		}
+
+		if (sources) {
+			message.sources = sources;
+		}
+
+		if (choices) {
+			let value = choices[0]?.delta?.content ?? '';
+			if (message.content == '' && value == '\n') {
+				console.log('Empty response');
+			} else {
+				message.content += value;
+
+				if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+					navigator.vibrate(5);
+				}
+
+				// Emit chat event for TTS
+				const messageContentParts = getMessageContentParts(
+					message.content,
+					$config?.audio?.tts?.split_on ?? 'punctuation'
+				);
+				messageContentParts.pop();
+
+				// dispatch only last sentence and make sure it hasn't been dispatched before
+				if (
+					messageContentParts.length > 0 &&
+					messageContentParts[messageContentParts.length - 1] !== message.lastSentence
+				) {
+					message.lastSentence = messageContentParts[messageContentParts.length - 1];
+					eventTarget.dispatchEvent(
+						new CustomEvent('chat', {
+							detail: {
+								id: message.id,
+								content: messageContentParts[messageContentParts.length - 1]
+							}
+						})
+					);
+				}
+			}
+		}
+
+		if (selected_model_id) {
+			message.selectedModelId = selected_model_id;
+			message.arena = true;
+		}
+
+		if (usage) {
+			message.usage = usage;
+		}
+
+		if (done) {
+			message.done = true;
+
+			if ($settings.notificationEnabled && !document.hasFocus()) {
+				new Notification(`${message.model}`, {
+					body: message.content,
+					icon: `${WEBUI_BASE_URL}/static/favicon.png`
+				});
+			}
+
+			if ($settings.responseAutoCopy) {
+				copyToClipboard(message.content);
+			}
+
+			if ($settings.responseAutoPlayback && !$showCallOverlay) {
+				await tick();
+				document.getElementById(`speak-button-${message.id}`)?.click();
+			}
+
+			// Emit chat event for TTS
+			let lastMessageContentPart =
+				getMessageContentParts(message.content, $config?.audio?.tts?.split_on ?? 'punctuation')?.at(
+					-1
+				) ?? '';
+			if (lastMessageContentPart) {
+				eventTarget.dispatchEvent(
+					new CustomEvent('chat', {
+						detail: { id: message.id, content: lastMessageContentPart }
+					})
+				);
+			}
+			eventTarget.dispatchEvent(
+				new CustomEvent('chat:finish', {
+					detail: {
+						id: message.id,
+						content: message.content
+					}
+				})
+			);
+
+			history.messages[message.id] = message;
+			await chatCompletedHandler(chatId, message.model, message.id, createMessagesList(message.id));
+		}
+
+		history.messages[message.id] = message;
+
+		console.log(data);
+		if (autoScroll) {
+			scrollToBottom();
+		}
+	};
+
 	//////////////////////////
 	// Chat functions
 	//////////////////////////
@@ -883,7 +1214,6 @@
 			return;
 		}
 
-		let _responses = [];
 		prompt = '';
 		await tick();
 
@@ -935,9 +1265,8 @@
 		chatInput?.focus();
 
 		saveSessionSelectedModels();
-		_responses = await sendPrompt(userPrompt, userMessageId, { newChat: true });
 
-		return _responses;
+		await sendPrompt(userPrompt, userMessageId, { newChat: true });
 	};
 
 	const sendPrompt = async (
@@ -952,9 +1281,10 @@
 			history.messages[history.currentId].role === 'user'
 		) {
 			await initChatHandler();
+		} else {
+			await saveChatHandler($chatId);
 		}
 
-		let _responses: string[] = [];
 		// If modelId is provided, use it, else use selected model
 		let selectedModelIds = modelId
 			? [modelId]
@@ -998,6 +1328,9 @@
 			}
 		}
 		await tick();
+
+		// Save chat after all messages have been created
+		await saveChatHandler($chatId);
 
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 		await Promise.all(
@@ -1051,17 +1384,7 @@
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();
-					if (webSearchEnabled) {
-						await getWebSearchResults(model.id, parentId, responseMessageId);
-					}
-
-					let _response = null;
-					if (model?.owned_by === 'ollama') {
-						_response = await sendPromptOllama(model, prompt, responseMessageId, _chatId);
-					} else if (model) {
-						_response = await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
-					}
-					_responses.push(_response);
+					await sendPromptSocket(model, responseMessageId, _chatId);
 
 					if (chatEventEmitter) clearInterval(chatEventEmitter);
 				} else {
@@ -1072,23 +1395,42 @@
 
 		currentChatPage.set(1);
 		chats.set(await getChatList(localStorage.token, $currentChatPage));
-
-		return _responses;
 	};
 
-	const sendPromptOllama = async (model, userPrompt, responseMessageId, _chatId) => {
-		let _response: string | null = null;
-
+	const sendPromptSocket = async (model, responseMessageId, _chatId) => {
 		const responseMessage = history.messages[responseMessageId];
 		const userMessage = history.messages[responseMessage.parentId];
 
-		// Wait until history/message have been updated
+		let files = JSON.parse(JSON.stringify(chatFiles));
+		files.push(
+			...(userMessage?.files ?? []).filter((item) =>
+				['doc', 'file', 'collection'].includes(item.type)
+			),
+			...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
+		);
+		// Remove duplicates
+		files = files.filter(
+			(item, index, array) =>
+				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
+		);
+
+		scrollToBottom();
+		eventTarget.dispatchEvent(
+			new CustomEvent('chat:start', {
+				detail: {
+					id: responseMessageId
+				}
+			})
+		);
 		await tick();
 
-		// Scroll down
-		scrollToBottom();
+		const stream =
+			model?.info?.params?.stream_response ??
+			$settings?.params?.stream_response ??
+			params?.stream_response ??
+			true;
 
-		const messagesBody = [
+		const messages = [
 			params?.system || $settings.system || (responseMessage?.userContext ?? null)
 				? {
 						role: 'system',
@@ -1108,693 +1450,107 @@
 			...createMessagesList(responseMessageId)
 		]
 			.filter((message) => message?.content?.trim())
-			.map((message) => {
-				// Prepare the base message object
-				const baseMessage = {
-					role: message.role,
-					content: message?.merged?.content ?? message.content
-				};
-
-				// Extract and format image URLs if any exist
-				const imageUrls = message.files
-					?.filter((file) => file.type === 'image')
-					.map((file) => file.url.slice(file.url.indexOf(',') + 1));
-
-				// Add images array only if it contains elements
-				if (imageUrls && imageUrls.length > 0 && message.role === 'user') {
-					baseMessage.images = imageUrls;
-				}
-				return baseMessage;
-			});
-
-		let lastImageIndex = -1;
-
-		// Find the index of the last object with images
-		messagesBody.forEach((item, index) => {
-			if (item.images) {
-				lastImageIndex = index;
-			}
-		});
-
-		// Remove images from all but the last one
-		messagesBody.forEach((item, index) => {
-			if (index !== lastImageIndex) {
-				delete item.images;
-			}
-		});
-
-		let files = JSON.parse(JSON.stringify(chatFiles));
-		if (model?.info?.meta?.knowledge ?? false) {
-			// Only initialize and add status if knowledge exists
-			responseMessage.statusHistory = [
-				{
-					action: 'knowledge_search',
-					description: $i18n.t(`Searching Knowledge for "{{searchQuery}}"`, {
-						searchQuery: userMessage.content
-					}),
-					done: false
-				}
-			];
-			files.push(
-				...model.info.meta.knowledge.map((item) => {
-					if (item?.collection_name) {
-						return {
-							id: item.collection_name,
-							name: item.name,
-							legacy: true
-						};
-					} else if (item?.collection_names) {
-						return {
-							name: item.name,
-							type: 'collection',
-							collection_names: item.collection_names,
-							legacy: true
-						};
-					} else {
-						return item;
-					}
-				})
-			);
-			history.messages[responseMessageId] = responseMessage;
-		}
-		files.push(
-			...(userMessage?.files ?? []).filter((item) =>
-				['doc', 'file', 'collection'].includes(item.type)
-			),
-			...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
-		);
-
-		// Remove duplicates
-		files = files.filter(
-			(item, index, array) =>
-				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
-		);
-
-		scrollToBottom();
-
-		eventTarget.dispatchEvent(
-			new CustomEvent('chat:start', {
-				detail: {
-					id: responseMessageId
-				}
-			})
-		);
-
-		await tick();
-
-		const stream =
-			model?.info?.params?.stream_response ??
-			$settings?.params?.stream_response ??
-			params?.stream_response ??
-			true;
-		const [res, controller] = await generateChatCompletion(localStorage.token, {
-			stream: stream,
-			model: model.id,
-			messages: messagesBody,
-			options: {
-				...{ ...($settings?.params ?? {}), ...params },
-				stop:
-					(params?.stop ?? $settings?.params?.stop ?? undefined)
-						? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
-								(str) => decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
-							)
-						: undefined,
-				num_predict: params?.max_tokens ?? $settings?.params?.max_tokens ?? undefined,
-				repeat_penalty:
-					params?.frequency_penalty ?? $settings?.params?.frequency_penalty ?? undefined
-			},
-			format: $settings.requestFormat ?? undefined,
-			keep_alive: $settings.keepAlive ?? undefined,
-			tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
-			files: files.length > 0 ? files : undefined,
-			session_id: $socket?.id,
-			chat_id: $chatId,
-			id: responseMessageId
-		});
-
-		if (res && res.ok) {
-			if (!stream) {
-				const response = await res.json();
-				console.log(response);
-
-				responseMessage.content = response.message.content;
-				responseMessage.info = {
-					eval_count: response.eval_count,
-					eval_duration: response.eval_duration,
-					load_duration: response.load_duration,
-					prompt_eval_count: response.prompt_eval_count,
-					prompt_eval_duration: response.prompt_eval_duration,
-					total_duration: response.total_duration
-				};
-				responseMessage.done = true;
-			} else {
-				console.log('controller', controller);
-
-				const reader = res.body
-					.pipeThrough(new TextDecoderStream())
-					.pipeThrough(splitStream('\n'))
-					.getReader();
-
-				while (true) {
-					const { value, done } = await reader.read();
-					if (done || stopResponseFlag || _chatId !== $chatId) {
-						responseMessage.done = true;
-						history.messages[responseMessageId] = responseMessage;
-
-						if (stopResponseFlag) {
-							controller.abort('User: Stop Response');
-						}
-
-						_response = responseMessage.content;
-						break;
-					}
-
-					try {
-						let lines = value.split('\n');
-
-						for (const line of lines) {
-							if (line !== '') {
-								console.log(line);
-								let data = JSON.parse(line);
-
-								if ('sources' in data) {
-									responseMessage.sources = data.sources;
-									// Only remove status if it was initially set
-									if (model?.info?.meta?.knowledge ?? false) {
-										responseMessage.statusHistory = responseMessage.statusHistory.filter(
-											(status) => status.action !== 'knowledge_search'
-										);
-									}
-									continue;
-								}
-
-								if ('detail' in data) {
-									throw data;
-								}
-
-								if (data.done == false) {
-									if (responseMessage.content == '' && data.message.content == '\n') {
-										continue;
-									} else {
-										responseMessage.content += data.message.content;
-
-										if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
-											navigator.vibrate(5);
+			.map((message, idx, arr) => ({
+				role: message.role,
+				...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
+				message.role === 'user'
+					? {
+							content: [
+								{
+									type: 'text',
+									text: message?.merged?.content ?? message.content
+								},
+								...message.files
+									.filter((file) => file.type === 'image')
+									.map((file) => ({
+										type: 'image_url',
+										image_url: {
+											url: file.url
 										}
-
-										const messageContentParts = getMessageContentParts(
-											responseMessage.content,
-											$config?.audio?.tts?.split_on ?? 'punctuation'
-										);
-										messageContentParts.pop();
-
-										// dispatch only last sentence and make sure it hasn't been dispatched before
-										if (
-											messageContentParts.length > 0 &&
-											messageContentParts[messageContentParts.length - 1] !==
-												responseMessage.lastSentence
-										) {
-											responseMessage.lastSentence =
-												messageContentParts[messageContentParts.length - 1];
-											eventTarget.dispatchEvent(
-												new CustomEvent('chat', {
-													detail: {
-														id: responseMessageId,
-														content: messageContentParts[messageContentParts.length - 1]
-													}
-												})
-											);
-										}
-
-										history.messages[responseMessageId] = responseMessage;
-									}
-								} else {
-									responseMessage.done = true;
-
-									if (responseMessage.content == '') {
-										responseMessage.error = {
-											code: 400,
-											content: `Oops! No text generated from Ollama, Please try again.`
-										};
-									}
-
-									responseMessage.context = data.context ?? null;
-									responseMessage.info = {
-										total_duration: data.total_duration,
-										load_duration: data.load_duration,
-										sample_count: data.sample_count,
-										sample_duration: data.sample_duration,
-										prompt_eval_count: data.prompt_eval_count,
-										prompt_eval_duration: data.prompt_eval_duration,
-										eval_count: data.eval_count,
-										eval_duration: data.eval_duration
-									};
-
-									history.messages[responseMessageId] = responseMessage;
-
-									if ($settings.notificationEnabled && !document.hasFocus()) {
-										const notification = new Notification(`${model.id}`, {
-											body: responseMessage.content,
-											icon: `${WEBUI_BASE_URL}/static/favicon.png`
-										});
-									}
-
-									if ($settings?.responseAutoCopy ?? false) {
-										copyToClipboard(responseMessage.content);
-									}
-
-									if ($settings.responseAutoPlayback && !$showCallOverlay) {
-										await tick();
-										document.getElementById(`speak-button-${responseMessage.id}`)?.click();
-									}
-								}
-							}
+									}))
+							]
 						}
-					} catch (error) {
-						console.log(error);
-						if ('detail' in error) {
-							toast.error(error.detail);
-						}
-						break;
-					}
+					: {
+							content: message?.merged?.content ?? message.content
+						})
+			}));
 
-					if (autoScroll) {
-						scrollToBottom();
-					}
-				}
-			}
-		} else {
-			if (res !== null) {
-				const error = await res.json();
-				console.log(error);
-				if ('detail' in error) {
-					toast.error(error.detail);
-					responseMessage.error = { content: error.detail };
-				} else {
-					toast.error(error.error);
-					responseMessage.error = { content: error.error };
-				}
-			} else {
-				toast.error(
-					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, { provider: 'Ollama' })
-				);
-				responseMessage.error = {
-					content: $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-						provider: 'Ollama'
-					})
-				};
-			}
-			responseMessage.done = true;
+		const res = await generateOpenAIChatCompletion(
+			localStorage.token,
+			{
+				stream: stream,
+				model: model.id,
+				messages: messages,
+				params: {
+					...$settings?.params,
+					...params,
 
-			if (responseMessage.statusHistory) {
-				responseMessage.statusHistory = responseMessage.statusHistory.filter(
-					(status) => status.action !== 'knowledge_search'
-				);
-			}
-		}
-		await saveChatHandler(_chatId);
-
-		history.messages[responseMessageId] = responseMessage;
-
-		await chatCompletedHandler(
-			_chatId,
-			model.id,
-			responseMessageId,
-			createMessagesList(responseMessageId)
-		);
-
-		stopResponseFlag = false;
-		await tick();
-
-		let lastMessageContentPart =
-			getMessageContentParts(
-				responseMessage.content,
-				$config?.audio?.tts?.split_on ?? 'punctuation'
-			)?.at(-1) ?? '';
-		if (lastMessageContentPart) {
-			eventTarget.dispatchEvent(
-				new CustomEvent('chat', {
-					detail: { id: responseMessageId, content: lastMessageContentPart }
-				})
-			);
-		}
-
-		eventTarget.dispatchEvent(
-			new CustomEvent('chat:finish', {
-				detail: {
-					id: responseMessageId,
-					content: responseMessage.content
-				}
-			})
-		);
-
-		if (autoScroll) {
-			scrollToBottom();
-		}
-
-		const messages = createMessagesList(responseMessageId);
-		if (messages.length == 2 && messages.at(-1).content !== '' && selectedModels[0] === model.id) {
-			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-
-			const title = await generateChatTitle(messages);
-			await setChatTitle(_chatId, title);
-
-			if ($settings?.autoTags ?? true) {
-				await setChatTags(messages);
-			}
-		}
-
-		return _response;
-	};
-
-	const sendPromptOpenAI = async (model, userPrompt, responseMessageId, _chatId) => {
-		let _response = null;
-
-		const responseMessage = history.messages[responseMessageId];
-		const userMessage = history.messages[responseMessage.parentId];
-
-		let files = JSON.parse(JSON.stringify(chatFiles));
-		if (model?.info?.meta?.knowledge ?? false) {
-			// Only initialize and add status if knowledge exists
-			responseMessage.statusHistory = [
-				{
-					action: 'knowledge_search',
-					description: $i18n.t(`Searching Knowledge for "{{searchQuery}}"`, {
-						searchQuery: userMessage.content
-					}),
-					done: false
-				}
-			];
-			files.push(
-				...model.info.meta.knowledge.map((item) => {
-					if (item?.collection_name) {
-						return {
-							id: item.collection_name,
-							name: item.name,
-							legacy: true
-						};
-					} else if (item?.collection_names) {
-						return {
-							name: item.name,
-							type: 'collection',
-							collection_names: item.collection_names,
-							legacy: true
-						};
-					} else {
-						return item;
-					}
-				})
-			);
-			history.messages[responseMessageId] = responseMessage;
-		}
-		files.push(
-			...(userMessage?.files ?? []).filter((item) =>
-				['doc', 'file', 'collection'].includes(item.type)
-			),
-			...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
-		);
-		// Remove duplicates
-		files = files.filter(
-			(item, index, array) =>
-				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
-		);
-
-		scrollToBottom();
-
-		eventTarget.dispatchEvent(
-			new CustomEvent('chat:start', {
-				detail: {
-					id: responseMessageId
-				}
-			})
-		);
-		await tick();
-
-		try {
-			const stream =
-				model?.info?.params?.stream_response ??
-				$settings?.params?.stream_response ??
-				params?.stream_response ??
-				true;
-
-			const [res, controller] = await generateOpenAIChatCompletion(
-				localStorage.token,
-				{
-					stream: stream,
-					model: model.id,
-					...(stream && (model.info?.meta?.capabilities?.usage ?? false)
-						? {
-								stream_options: {
-									include_usage: true
-								}
-							}
-						: {}),
-					messages: [
-						params?.system || $settings.system || (responseMessage?.userContext ?? null)
-							? {
-									role: 'system',
-									content: `${promptTemplate(
-										params?.system ?? $settings?.system ?? '',
-										$user.name,
-										$settings?.userLocation
-											? await getAndUpdateUserLocation(localStorage.token)
-											: undefined
-									)}${
-										(responseMessage?.userContext ?? null)
-											? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
-											: ''
-									}`
-								}
-							: undefined,
-						...createMessagesList(responseMessageId)
-					]
-						.filter((message) => message?.content?.trim())
-						.map((message, idx, arr) => ({
-							role: message.role,
-							...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
-							message.role === 'user'
-								? {
-										content: [
-											{
-												type: 'text',
-												text: message?.merged?.content ?? message.content
-											},
-											...message.files
-												.filter((file) => file.type === 'image')
-												.map((file) => ({
-													type: 'image_url',
-													image_url: {
-														url: file.url
-													}
-												}))
-										]
-									}
-								: {
-										content: message?.merged?.content ?? message.content
-									})
-						})),
-					seed: params?.seed ?? $settings?.params?.seed ?? undefined,
+					format: $settings.requestFormat ?? undefined,
+					keep_alive: $settings.keepAlive ?? undefined,
 					stop:
 						(params?.stop ?? $settings?.params?.stop ?? undefined)
 							? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
 									(str) => decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
 								)
-							: undefined,
-					temperature: params?.temperature ?? $settings?.params?.temperature ?? undefined,
-					top_p: params?.top_p ?? $settings?.params?.top_p ?? undefined,
-					frequency_penalty:
-						params?.frequency_penalty ?? $settings?.params?.frequency_penalty ?? undefined,
-					max_tokens: params?.max_tokens ?? $settings?.params?.max_tokens ?? undefined,
-					tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
-					files: files.length > 0 ? files : undefined,
-					session_id: $socket?.id,
-					chat_id: $chatId,
-					id: responseMessageId
+							: undefined
 				},
-				`${WEBUI_BASE_URL}/api`
-			);
 
-			// Wait until history/message have been updated
-			await tick();
+				files: files.length > 0 ? files : undefined,
+				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
+				features: {
+					web_search: webSearchEnabled
+				},
 
-			scrollToBottom();
+				session_id: $socket?.id,
+				chat_id: $chatId,
+				id: responseMessageId,
 
-			if (res && res.ok && res.body) {
-				if (!stream) {
-					const response = await res.json();
-					console.log(response);
-
-					responseMessage.content = response.choices[0].message.content;
-					responseMessage.info = { ...response.usage, openai: true };
-					responseMessage.done = true;
-				} else {
-					const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
-
-					for await (const update of textStream) {
-						const { value, done, sources, selectedModelId, error, usage } = update;
-						if (error) {
-							await handleOpenAIError(error, null, model, responseMessage);
-							break;
-						}
-						if (done || stopResponseFlag || _chatId !== $chatId) {
-							responseMessage.done = true;
-							history.messages[responseMessageId] = responseMessage;
-
-							if (stopResponseFlag) {
-								controller.abort('User: Stop Response');
+				...(!$temporaryChatEnabled && messages.length == 1 && selectedModels[0] === model.id
+					? {
+							background_tasks: {
+								title_generation: $settings?.title?.auto ?? true,
+								tags_generation: $settings?.autoTags ?? true
 							}
-							_response = responseMessage.content;
-							break;
 						}
+					: {}),
 
-						if (usage) {
-							responseMessage.info = { ...usage, openai: true, usage };
-						}
-
-						if (selectedModelId) {
-							responseMessage.selectedModelId = selectedModelId;
-							responseMessage.arena = true;
-							continue;
-						}
-
-						if (sources) {
-							responseMessage.sources = sources;
-							// Only remove status if it was initially set
-							if (model?.info?.meta?.knowledge ?? false) {
-								responseMessage.statusHistory = responseMessage.statusHistory.filter(
-									(status) => status.action !== 'knowledge_search'
-								);
+				...(stream && (model.info?.meta?.capabilities?.usage ?? false)
+					? {
+							stream_options: {
+								include_usage: true
 							}
-							continue;
 						}
+					: {})
+			},
+			`${WEBUI_BASE_URL}/api`
+		).catch((error) => {
+			console.log(error);
+			responseMessage.error = {
+				content: error
+			};
+			responseMessage.done = true;
+			history.messages[responseMessageId] = responseMessage;
+			return null;
+		});
 
-						if (responseMessage.content == '' && value == '\n') {
-							continue;
-						} else {
-							responseMessage.content += value;
+		console.log(res);
 
-							if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
-								navigator.vibrate(5);
-							}
-
-							const messageContentParts = getMessageContentParts(
-								responseMessage.content,
-								$config?.audio?.tts?.split_on ?? 'punctuation'
-							);
-							messageContentParts.pop();
-
-							// dispatch only last sentence and make sure it hasn't been dispatched before
-							if (
-								messageContentParts.length > 0 &&
-								messageContentParts[messageContentParts.length - 1] !== responseMessage.lastSentence
-							) {
-								responseMessage.lastSentence = messageContentParts[messageContentParts.length - 1];
-								eventTarget.dispatchEvent(
-									new CustomEvent('chat', {
-										detail: {
-											id: responseMessageId,
-											content: messageContentParts[messageContentParts.length - 1]
-										}
-									})
-								);
-							}
-
-							history.messages[responseMessageId] = responseMessage;
-						}
-
-						if (autoScroll) {
-							scrollToBottom();
-						}
-					}
-				}
-
-				if ($settings.notificationEnabled && !document.hasFocus()) {
-					const notification = new Notification(`${model.id}`, {
-						body: responseMessage.content,
-						icon: `${WEBUI_BASE_URL}/static/favicon.png`
-					});
-				}
-
-				if ($settings.responseAutoCopy) {
-					copyToClipboard(responseMessage.content);
-				}
-
-				if ($settings.responseAutoPlayback && !$showCallOverlay) {
-					await tick();
-
-					document.getElementById(`speak-button-${responseMessage.id}`)?.click();
-				}
-			} else {
-				await handleOpenAIError(null, res, model, responseMessage);
-			}
-		} catch (error) {
-			await handleOpenAIError(error, null, model, responseMessage);
+		if (res) {
+			taskId = res.task_id;
 		}
 
-		await saveChatHandler(_chatId);
-
-		history.messages[responseMessageId] = responseMessage;
-
-		await chatCompletedHandler(
-			_chatId,
-			model.id,
-			responseMessageId,
-			createMessagesList(responseMessageId)
-		);
-
-		stopResponseFlag = false;
 		await tick();
-
-		let lastMessageContentPart =
-			getMessageContentParts(
-				responseMessage.content,
-				$config?.audio?.tts?.split_on ?? 'punctuation'
-			)?.at(-1) ?? '';
-		if (lastMessageContentPart) {
-			eventTarget.dispatchEvent(
-				new CustomEvent('chat', {
-					detail: { id: responseMessageId, content: lastMessageContentPart }
-				})
-			);
-		}
-
-		eventTarget.dispatchEvent(
-			new CustomEvent('chat:finish', {
-				detail: {
-					id: responseMessageId,
-					content: responseMessage.content
-				}
-			})
-		);
-
-		if (autoScroll) {
-			scrollToBottom();
-		}
-
-		const messages = createMessagesList(responseMessageId);
-		if (messages.length == 2 && selectedModels[0] === model.id) {
-			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-
-			const title = await generateChatTitle(messages);
-			await setChatTitle(_chatId, title);
-
-			if ($settings?.autoTags ?? true) {
-				await setChatTags(messages);
-			}
-		}
-
-		return _response;
+		scrollToBottom();
 	};
 
-	const handleOpenAIError = async (error, res: Response | null, model, responseMessage) => {
+	const handleOpenAIError = async (error, responseMessage) => {
 		let errorMessage = '';
 		let innerError;
 
 		if (error) {
 			innerError = error;
-		} else if (res !== null) {
-			innerError = await res.json();
 		}
+
 		console.error(innerError);
 		if ('detail' in innerError) {
 			toast.error(innerError.detail);
@@ -1813,12 +1569,7 @@
 		}
 
 		responseMessage.error = {
-			content:
-				$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-					provider: model.name ?? model.id
-				}) +
-				'\n' +
-				errorMessage
+			content: $i18n.t(`Uh-oh! There was an issue with the response.`) + '\n' + errorMessage
 		};
 		responseMessage.done = true;
 
@@ -1832,8 +1583,24 @@
 	};
 
 	const stopResponse = () => {
-		stopResponseFlag = true;
-		console.log('stopResponse');
+		if (taskId) {
+			const res = stopTask(localStorage.token, taskId).catch((error) => {
+				return null;
+			});
+
+			if (res) {
+				taskId = null;
+
+				const responseMessage = history.messages[history.currentId];
+				responseMessage.done = true;
+
+				history.messages[history.currentId] = responseMessage;
+
+				if (autoScroll) {
+					scrollToBottom();
+				}
+			}
+		}
 	};
 
 	const submitMessage = async (parentId, prompt) => {
@@ -1898,20 +1665,7 @@
 				.at(0);
 
 			if (model) {
-				if (model?.owned_by === 'openai') {
-					await sendPromptOpenAI(
-						model,
-						history.messages[responseMessage.parentId].content,
-						responseMessage.id,
-						_chatId
-					);
-				} else
-					await sendPromptOllama(
-						model,
-						history.messages[responseMessage.parentId].content,
-						responseMessage.id,
-						_chatId
-					);
+				await sendPromptSocket(model, responseMessage.id, _chatId);
 			}
 		}
 	};
@@ -1963,160 +1717,6 @@
 		}
 	};
 
-	const generateChatTitle = async (messages) => {
-		const lastUserMessage = messages.filter((message) => message.role === 'user').at(-1);
-
-		if ($settings?.title?.auto ?? true) {
-			const modelId = selectedModels[0];
-
-			const title = await generateTitle(localStorage.token, modelId, messages, $chatId).catch(
-				(error) => {
-					console.error(error);
-					return lastUserMessage?.content ?? 'New Chat';
-				}
-			);
-
-			return title ? title : (lastUserMessage?.content ?? 'New Chat');
-		} else {
-			return lastUserMessage?.content ?? 'New Chat';
-		}
-	};
-
-	const setChatTitle = async (_chatId, title) => {
-		if (_chatId === $chatId) {
-			chatTitle.set(title);
-		}
-
-		if (!$temporaryChatEnabled) {
-			chat = await updateChatById(localStorage.token, _chatId, { title: title });
-
-			currentChatPage.set(1);
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		}
-	};
-
-	const setChatTags = async (messages) => {
-		if (!$temporaryChatEnabled) {
-			const currentTags = await getTagsById(localStorage.token, $chatId);
-			if (currentTags.length > 0) {
-				const res = await deleteTagsById(localStorage.token, $chatId);
-				if (res) {
-					allTags.set(await getAllTags(localStorage.token));
-				}
-			}
-
-			const lastMessage = messages.at(-1);
-			const modelId = selectedModels[0];
-
-			let generatedTags = await generateTags(localStorage.token, modelId, messages, $chatId).catch(
-				(error) => {
-					console.error(error);
-					return [];
-				}
-			);
-
-			generatedTags = generatedTags.filter(
-				(tag) => !currentTags.find((t) => t.id === tag.replaceAll(' ', '_').toLowerCase())
-			);
-			console.log(generatedTags);
-
-			for (const tag of generatedTags) {
-				await addTagById(localStorage.token, $chatId, tag);
-			}
-
-			chat = await getChatById(localStorage.token, $chatId);
-			allTags.set(await getAllTags(localStorage.token));
-		}
-	};
-
-	const getWebSearchResults = async (
-		model: string,
-		parentId: string,
-		responseMessageId: string
-	) => {
-		// TODO: move this to the backend
-		const responseMessage = history.messages[responseMessageId];
-		const userMessage = history.messages[parentId];
-		const messages = createMessagesList(history.currentId);
-
-		responseMessage.statusHistory = [
-			{
-				done: false,
-				action: 'web_search',
-				description: $i18n.t('Generating search query')
-			}
-		];
-		history.messages[responseMessageId] = responseMessage;
-
-		const prompt = userMessage.content;
-		let queries = await generateQueries(
-			localStorage.token,
-			model,
-			messages.filter((message) => message?.content?.trim()),
-			prompt
-		).catch((error) => {
-			console.log(error);
-			return [prompt];
-		});
-
-		if (queries.length === 0) {
-			responseMessage.statusHistory.push({
-				done: true,
-				error: true,
-				action: 'web_search',
-				description: $i18n.t('No search query generated')
-			});
-			history.messages[responseMessageId] = responseMessage;
-			return;
-		}
-
-		const searchQuery = queries[0];
-
-		responseMessage.statusHistory.push({
-			done: false,
-			action: 'web_search',
-			description: $i18n.t(`Searching "{{searchQuery}}"`, { searchQuery })
-		});
-		history.messages[responseMessageId] = responseMessage;
-
-		const results = await processWebSearch(localStorage.token, searchQuery).catch((error) => {
-			console.log(error);
-			toast.error(error);
-
-			return null;
-		});
-
-		if (results) {
-			responseMessage.statusHistory.push({
-				done: true,
-				action: 'web_search',
-				description: $i18n.t('Searched {{count}} sites', { count: results.filenames.length }),
-				query: searchQuery,
-				urls: results.filenames
-			});
-
-			if (responseMessage?.files ?? undefined === undefined) {
-				responseMessage.files = [];
-			}
-
-			responseMessage.files.push({
-				collection_name: results.collection_name,
-				name: searchQuery,
-				type: 'web_search_results',
-				urls: results.filenames
-			});
-			history.messages[responseMessageId] = responseMessage;
-		} else {
-			responseMessage.statusHistory.push({
-				done: true,
-				error: true,
-				action: 'web_search',
-				description: 'No search results found'
-			});
-			history.messages[responseMessageId] = responseMessage;
-		}
-	};
-
 	const initChatHandler = async () => {
 		if (!$temporaryChatEnabled) {
 			chat = await createNewChat(localStorage.token, {
@@ -2134,6 +1734,8 @@
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			await chatId.set(chat.id);
+
+			window.history.replaceState(history.state, '', `/c/${chat.id}`);
 		} else {
 			await chatId.set('local');
 		}
@@ -2279,6 +1881,7 @@
 									{regenerateResponse}
 									{mergeResponses}
 									{chatActionHandler}
+									{addMessages}
 									bottomPadding={files.length > 0}
 								/>
 							</div>
@@ -2297,6 +1900,13 @@
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								{stopResponse}
 								{createMessagePair}
+								onChange={(input) => {
+									if (input.prompt) {
+										localStorage.setItem(`chat-input-${$chatId}`, JSON.stringify(input));
+									} else {
+										localStorage.removeItem(`chat-input-${$chatId}`);
+									}
+								}}
 								on:upload={async (e) => {
 									const { type, data } = e.detail;
 
@@ -2304,6 +1914,8 @@
 										await uploadWeb(data);
 									} else if (type === 'youtube') {
 										await uploadYoutubeTranscription(data);
+									} else if (type === 'google-drive') {
+										await uploadGoogleDriveFile(data);
 									}
 								}}
 								on:submit={async (e) => {

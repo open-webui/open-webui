@@ -23,6 +23,7 @@ export const theme = writable('system');
 export const chatId = writable('');
 export const chatTitle = writable('');
 
+export const channels = writable([]);
 export const chats = writable([]);
 export const pinnedChats = writable([]);
 export const tags = writable([]);
@@ -176,6 +177,7 @@ type Config = {
 		enable_signup: boolean;
 		enable_login_form: boolean;
 		enable_web_search?: boolean;
+		enable_google_drive_integration: boolean;
 		enable_image_generation: boolean;
 		enable_admin_export: boolean;
 		enable_admin_chat_access: boolean;

@@ -15,7 +15,12 @@
 		mobile,
 		socket,
 		activeUserCount,
-		USAGE_POOL
+		USAGE_POOL,
+		chatId,
+		chats,
+		currentChatPage,
+		tags,
+		temporaryChatEnabled
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -32,23 +37,26 @@
 	import { WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
 	import i18n, { initI18n, getLanguages } from '$lib/i18n';
 	import { bestMatchingLanguage } from '$lib/utils';
+	import { getAllTags, getChatList } from '$lib/apis/chats';
+	import NotificationToast from '$lib/components/NotificationToast.svelte';
 
 	setContext('i18n', i18n);
 
 	let loaded = false;
 	const BREAKPOINT = 768;
 
-	const setupSocket = () => {
+	const setupSocket = async (enableWebsocket) => {
 		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
 			reconnection: true,
 			reconnectionDelay: 1000,
 			reconnectionDelayMax: 5000,
 			randomizationFactor: 0.5,
 			path: '/ws/socket.io',
+			transports: enableWebsocket ? ['websocket'] : ['polling', 'websocket'],
 			auth: { token: localStorage.token }
 		});
 
-		socket.set(_socket);
+		await socket.set(_socket);
 
 		_socket.on('connect_error', (err) => {
 			console.log('connect_error', err);
@@ -82,6 +90,67 @@
 			console.log('usage', data);
 			USAGE_POOL.set(data['models']);
 		});
+	};
+
+	const chatEventHandler = async (event) => {
+		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
+
+		if (
+			(event.chat_id !== $chatId && !$temporaryChatEnabled) ||
+			document.visibilityState !== 'visible'
+		) {
+			await tick();
+			const type = event?.data?.type ?? null;
+			const data = event?.data?.data ?? null;
+
+			if (type === 'chat:completion') {
+				const { done, content, title } = data;
+
+				if (done) {
+					toast.custom(NotificationToast, {
+						componentProps: {
+							onClick: () => {
+								goto(`/c/${event.chat_id}`);
+							},
+							content: content,
+							title: title
+						},
+						duration: 15000,
+						unstyled: true
+					});
+				}
+			} else if (type === 'chat:title') {
+				currentChatPage.set(1);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			} else if (type === 'chat:tags') {
+				tags.set(await getAllTags(localStorage.token));
+			}
+		}
+	};
+
+	const channelEventHandler = async (event) => {
+		// check url path
+		const channel = $page.url.pathname.includes(`/channels/${event.channel_id}`);
+
+		if ((!channel || document.visibilityState !== 'visible') && event?.user?.id !== $user?.id) {
+			await tick();
+			const type = event?.data?.type ?? null;
+			const data = event?.data?.data ?? null;
+
+			if (type === 'message') {
+				toast.custom(NotificationToast, {
+					componentProps: {
+						onClick: () => {
+							goto(`/channels/${event.channel_id}`);
+						},
+						content: data?.content,
+						title: event?.channel?.name
+					},
+					duration: 15000,
+					unstyled: true
+				});
+			}
+		}
 	};
 
 	onMount(async () => {
@@ -126,7 +195,7 @@
 			await WEBUI_NAME.set(backendConfig.name);
 
 			if ($config) {
-				setupSocket();
+				await setupSocket($config.features?.enable_websocket ?? true);
 
 				if (localStorage.token) {
 					// Get Session User Info
@@ -137,6 +206,11 @@
 
 					if (sessionUser) {
 						// Save Session User to Store
+						$socket.emit('user-join', { auth: { token: sessionUser.token } });
+
+						$socket?.on('chat-events', chatEventHandler);
+						$socket?.on('channel-events', channelEventHandler);
+
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());
 					} else {
@@ -218,5 +292,5 @@
 				: 'light'
 			: 'light'}
 	richColors
-	position="top-center"
+	position="top-right"
 />
