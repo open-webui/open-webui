@@ -16,7 +16,7 @@ from open_webui.models.messages import Messages, MessageModel, MessageForm
 
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS, WEBUI_URL
+from open_webui.env import SRC_LOG_LEVELS
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -181,7 +181,7 @@ async def get_channel_messages(
 ############################
 
 
-async def send_notification(channel, message, active_user_ids):
+async def send_notification(webui_url, channel, message, active_user_ids):
     users = get_users_with_access("read", channel.access_control)
 
     for user in users:
@@ -196,18 +196,19 @@ async def send_notification(channel, message, active_user_ids):
                 if webhook_url:
                     post_webhook(
                         webhook_url,
-                        f"#{channel.name} - {WEBUI_URL}/channels/{channel.id}\n\n{message.content}",
+                        f"#{channel.name} - {webui_url}/channels/{channel.id}\n\n{message.content}",
                         {
                             "action": "channel",
                             "message": message.content,
                             "title": channel.name,
-                            "url": f"{WEBUI_URL}/channels/{channel.id}",
+                            "url": f"{webui_url}/channels/{channel.id}",
                         },
                     )
 
 
 @router.post("/{id}/messages/post", response_model=Optional[MessageModel])
 async def post_new_message(
+    request: Request,
     id: str,
     form_data: MessageForm,
     background_tasks: BackgroundTasks,
@@ -253,7 +254,11 @@ async def post_new_message(
             active_user_ids = get_user_ids_from_room(f"channel:{channel.id}")
 
             background_tasks.add_task(
-                send_notification, channel, message, active_user_ids
+                send_notification,
+                request.app.state.config.WEBUI_URL,
+                channel,
+                message,
+                active_user_ids,
             )
 
         return MessageModel(**message.model_dump())

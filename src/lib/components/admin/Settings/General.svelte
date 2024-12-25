@@ -144,6 +144,29 @@
 
 				<div class=" w-full justify-between">
 					<div class="flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('WebUI URL')}</div>
+					</div>
+
+					<div class="flex mt-2 space-x-2">
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							type="text"
+							placeholder={`e.g.) "http://localhost:3000"`}
+							bind:value={adminConfig.WEBUI_URL}
+						/>
+					</div>
+
+					<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+						{$i18n.t(
+							'Enter the public URL of your WebUI. This URL will be used to generate links in the notifications.'
+						)}
+					</div>
+				</div>
+
+				<hr class=" border-gray-50 dark:border-gray-850 my-2" />
+
+				<div class=" w-full justify-between">
+					<div class="flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">{$i18n.t('JWT Expiration')}</div>
 					</div>
 

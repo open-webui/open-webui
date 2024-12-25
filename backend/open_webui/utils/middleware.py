@@ -65,7 +65,6 @@ from open_webui.env import (
     SRC_LOG_LEVELS,
     GLOBAL_LOG_LEVEL,
     BYPASS_MODEL_ACCESS_CONTROL,
-    WEBUI_URL,
 )
 from open_webui.constants import TASKS
 
@@ -859,12 +858,12 @@ async def process_chat_response(
                                 if webhook_url:
                                     post_webhook(
                                         webhook_url,
-                                        f"{title} - {WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
+                                        f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
                                         {
                                             "action": "chat",
                                             "message": content,
                                             "title": title,
-                                            "url": f"{WEBUI_URL}/c/{metadata['chat_id']}",
+                                            "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
                                         },
                                     )
 

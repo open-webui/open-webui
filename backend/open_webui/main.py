@@ -239,6 +239,7 @@ from open_webui.config import (
     CORS_ALLOW_ORIGIN,
     DEFAULT_LOCALE,
     OAUTH_PROVIDERS,
+    WEBUI_URL,
     # Admin
     ENABLE_ADMIN_CHAT_ACCESS,
     ENABLE_ADMIN_EXPORT,
@@ -264,7 +265,6 @@ from open_webui.env import (
     SAFE_MODE,
     SRC_LOG_LEVELS,
     VERSION,
-    WEBUI_URL,
     WEBUI_BUILD_HASH,
     WEBUI_SECRET_KEY,
     WEBUI_SESSION_COOKIE_SAME_SITE,
@@ -389,6 +389,7 @@ app.state.OPENAI_MODELS = {}
 #
 ########################################
 
+app.state.config.WEBUI_URL = WEBUI_URL
 app.state.config.ENABLE_SIGNUP = ENABLE_SIGNUP
 app.state.config.ENABLE_LOGIN_FORM = ENABLE_LOGIN_FORM
 app.state.config.ENABLE_API_KEY = ENABLE_API_KEY
@@ -1138,9 +1139,9 @@ async def get_opensearch_xml():
     <ShortName>{WEBUI_NAME}</ShortName>
     <Description>Search {WEBUI_NAME}</Description>
     <InputEncoding>UTF-8</InputEncoding>
-    <Image width="16" height="16" type="image/x-icon">{WEBUI_URL}/static/favicon.png</Image>
-    <Url type="text/html" method="get" template="{WEBUI_URL}/?q={"{searchTerms}"}"/>
-    <moz:SearchForm>{WEBUI_URL}</moz:SearchForm>
+    <Image width="16" height="16" type="image/x-icon">{app.state.config.WEBUI_URL}/static/favicon.png</Image>
+    <Url type="text/html" method="get" template="{app.state.config.WEBUI_URL}/?q={"{searchTerms}"}"/>
+    <moz:SearchForm>{app.state.config.WEBUI_URL}</moz:SearchForm>
     </OpenSearchDescription>
     """
     return Response(content=xml_content, media_type="application/xml")
