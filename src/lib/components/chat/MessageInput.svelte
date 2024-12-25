@@ -19,7 +19,7 @@
 		showControls
 	} from '$lib/stores';
 
-	import { blobToFile, createMessagesList, findWordIndices } from '$lib/utils';
+	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import { uploadFile } from '$lib/apis/files';
 	import { getTools } from '$lib/apis/tools';
@@ -244,12 +244,23 @@
 					return;
 				}
 				let reader = new FileReader();
-				reader.onload = (event) => {
+				reader.onload = async (event) => {
+					let imageUrl = event.target.result;
+
+					if ($settings?.imageCompression ?? false) {
+						const width = $settings?.imageCompressionSize?.width ?? null;
+						const height = $settings?.imageCompressionSize?.height ?? null;
+
+						if (width || height) {
+							imageUrl = await compressImage(imageUrl, width, height);
+						}
+					}
+
 					files = [
 						...files,
 						{
 							type: 'image',
-							url: `${event.target.result}`
+							url: `${imageUrl}`
 						}
 					];
 				};

@@ -7,7 +7,7 @@
 	const i18n = getContext('i18n');
 
 	import { config, mobile, settings } from '$lib/stores';
-	import { blobToFile } from '$lib/utils';
+	import { blobToFile, compressImage } from '$lib/utils';
 
 	import Tooltip from '../common/Tooltip.svelte';
 	import RichTextInput from '../common/RichTextInput.svelte';
@@ -100,15 +100,28 @@
 
 			if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
 				let reader = new FileReader();
-				reader.onload = (event) => {
+
+				reader.onload = async (event) => {
+					let imageUrl = event.target.result;
+
+					if ($settings?.imageCompression ?? false) {
+						const width = $settings?.imageCompressionSize?.width ?? null;
+						const height = $settings?.imageCompressionSize?.height ?? null;
+
+						if (width || height) {
+							imageUrl = await compressImage(imageUrl, width, height);
+						}
+					}
+
 					files = [
 						...files,
 						{
 							type: 'image',
-							url: `${event.target.result}`
+							url: `${imageUrl}`
 						}
 					];
 				};
+
 				reader.readAsDataURL(file);
 			} else {
 				uploadFileHandler(file);
