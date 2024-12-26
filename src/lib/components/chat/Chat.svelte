@@ -1511,7 +1511,12 @@
 				chat_id: $chatId,
 				id: responseMessageId,
 
-				...(!$temporaryChatEnabled && messages.length == 1 && selectedModels[0] === model.id
+				...(!$temporaryChatEnabled &&
+				(messages.length == 1 ||
+					(messages.length == 2 &&
+						messages.at(0)?.role === 'system' &&
+						messages.at(1)?.role === 'user')) &&
+				selectedModels[0] === model.id
 					? {
 							background_tasks: {
 								title_generation: $settings?.title?.auto ?? true,
