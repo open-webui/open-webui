@@ -630,6 +630,7 @@
 	"Not helpful": "Nu este de ajutor",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Notă: Dacă setați un scor minim, căutarea va returna doar documente cu un scor mai mare sau egal cu scorul minim.",
 	"Notes": "Note",
+	"Notification Sound": "",
 	"Notification Webhook": "",
 	"Notifications": "Notificări",
 	"November": "Noiembrie",

@@ -630,6 +630,7 @@
 	"Not helpful": "",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Lưu ý: Nếu bạn đặt điểm (Score) tối thiểu thì tìm kiếm sẽ chỉ trả về những tài liệu có điểm lớn hơn hoặc bằng điểm tối thiểu.",
 	"Notes": "",
+	"Notification Sound": "",
 	"Notification Webhook": "",
 	"Notifications": "Thông báo trên máy tính (Notification)",
 	"November": "Tháng 11",

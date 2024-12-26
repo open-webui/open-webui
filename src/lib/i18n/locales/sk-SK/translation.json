@@ -630,6 +630,7 @@
 	"Not helpful": "Nepomocné",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Poznámka: Ak nastavíte minimálne skóre, vyhľadávanie vráti iba dokumenty s hodnotením, ktoré je väčšie alebo rovné zadanému minimálnemu skóre.",
 	"Notes": "Poznámky",
+	"Notification Sound": "",
 	"Notification Webhook": "",
 	"Notifications": "Oznámenia",
 	"November": "November",

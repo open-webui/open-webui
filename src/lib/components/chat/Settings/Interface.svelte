@@ -32,6 +32,7 @@
 	let showUsername = false;
 	let richTextInput = true;
 	let largeTextAsFile = false;
+	let notificationSound = true;
 
 	let landingPageMode = '';
 	let chatBubble = true;
@@ -79,6 +80,11 @@
 	const toggleShowUpdateToast = async () => {
 		showUpdateToast = !showUpdateToast;
 		saveSettings({ showUpdateToast: showUpdateToast });
+	};
+
+	const toggleNotificationSound = async () => {
+		notificationSound = !notificationSound;
+		saveSettings({ notificationSound: notificationSound });
 	};
 
 	const toggleShowChangelog = async () => {
@@ -215,6 +221,8 @@
 		scrollOnBranchChange = $settings.scrollOnBranchChange ?? true;
 		chatDirection = $settings.chatDirection ?? 'LTR';
 		userLocation = $settings.userLocation ?? false;
+
+		notificationSound = $settings.notificationSound ?? true;
 
 		hapticFeedback = $settings.hapticFeedback ?? false;
 
@@ -366,6 +374,28 @@
 							<span class="ml-2 self-center">{$i18n.t('LTR')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('RTL')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">
+						{$i18n.t('Notification Sound')}
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleNotificationSound();
+						}}
+						type="button"
+					>
+						{#if notificationSound === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 						{/if}
 					</button>
 				</div>

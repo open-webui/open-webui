@@ -630,6 +630,7 @@
 	"Not helpful": "沒有幫助",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "注意：如果您設定了最低分數，則搜尋只會回傳分數大於或等於最低分數的文件。",
 	"Notes": "注意",
+	"Notification Sound": "",
 	"Notification Webhook": "",
 	"Notifications": "通知",
 	"November": "11 月",
