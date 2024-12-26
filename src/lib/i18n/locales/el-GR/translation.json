@@ -630,6 +630,7 @@
 	"Not helpful": "Δεν είναι χρήσιμο",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Σημείωση: Αν ορίσετε ένα ελάχιστο score, η αναζήτηση θα επιστρέψει μόνο έγγραφα με score μεγαλύτερο ή ίσο με το ελάχιστο score.",
 	"Notes": "Σημειώσεις",
+	"Notification Sound": "",
 	"Notification Webhook": "",
 	"Notifications": "Ειδοποιήσεις",
 	"November": "Νοέμβριος",

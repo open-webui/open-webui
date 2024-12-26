@@ -630,6 +630,7 @@
 	"Not helpful": "",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "ध्यान दें: यदि आप न्यूनतम स्कोर निर्धारित करते हैं, तो खोज केवल न्यूनतम स्कोर से अधिक या उसके बराबर स्कोर वाले दस्तावेज़ वापस लाएगी।",
 	"Notes": "",
+	"Notification Sound": "",
 	"Notification Webhook": "",
 	"Notifications": "सूचनाएं",
 	"November": "नवंबर",

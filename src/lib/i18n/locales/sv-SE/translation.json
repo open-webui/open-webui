@@ -630,6 +630,7 @@
 	"Not helpful": "",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Obs: Om du anger en tröskel kommer sökningen endast att returnera dokument med ett betyg som är större än eller lika med tröskeln.",
 	"Notes": "",
+	"Notification Sound": "",
 	"Notification Webhook": "",
 	"Notifications": "Notifikationer",
 	"November": "november",

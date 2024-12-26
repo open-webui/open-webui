@@ -630,6 +630,7 @@
 	"Not helpful": "Ez da lagungarria",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Oharra: Gutxieneko puntuazio bat ezartzen baduzu, bilaketak gutxieneko puntuazioa baino handiagoa edo berdina duten dokumentuak soilik itzuliko ditu.",
 	"Notes": "Oharrak",
+	"Notification Sound": "",
 	"Notification Webhook": "",
 	"Notifications": "Jakinarazpenak",
 	"November": "Azaroa",

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { settings } from '$lib/stores';
 	import DOMPurify from 'dompurify';
 
 	import { marked } from 'marked';
@@ -11,8 +12,10 @@
 	export let content: string;
 
 	onMount(() => {
-		const audio = new Audio(`/audio/notification.mp3`);
-		audio.play();
+		if ($settings?.notificationSound ?? true) {
+			const audio = new Audio(`/audio/notification.mp3`);
+			audio.play();
+		}
 	});
 </script>
 

@@ -1064,37 +1064,43 @@
 		}
 
 		if (choices) {
-			let value = choices[0]?.delta?.content ?? '';
-			if (message.content == '' && value == '\n') {
-				console.log('Empty response');
+			if (choices[0]?.message?.content) {
+				// Non-stream response
+				message.content += choices[0]?.message?.content;
 			} else {
-				message.content += value;
+				// Stream response
+				let value = choices[0]?.delta?.content ?? '';
+				if (message.content == '' && value == '\n') {
+					console.log('Empty response');
+				} else {
+					message.content += value;
 
-				if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
-					navigator.vibrate(5);
-				}
+					if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+						navigator.vibrate(5);
+					}
 
-				// Emit chat event for TTS
-				const messageContentParts = getMessageContentParts(
-					message.content,
-					$config?.audio?.tts?.split_on ?? 'punctuation'
-				);
-				messageContentParts.pop();
-
-				// dispatch only last sentence and make sure it hasn't been dispatched before
-				if (
-					messageContentParts.length > 0 &&
-					messageContentParts[messageContentParts.length - 1] !== message.lastSentence
-				) {
-					message.lastSentence = messageContentParts[messageContentParts.length - 1];
-					eventTarget.dispatchEvent(
-						new CustomEvent('chat', {
-							detail: {
-								id: message.id,
-								content: messageContentParts[messageContentParts.length - 1]
-							}
-						})
+					// Emit chat event for TTS
+					const messageContentParts = getMessageContentParts(
+						message.content,
+						$config?.audio?.tts?.split_on ?? 'punctuation'
 					);
+					messageContentParts.pop();
+
+					// dispatch only last sentence and make sure it hasn't been dispatched before
+					if (
+						messageContentParts.length > 0 &&
+						messageContentParts[messageContentParts.length - 1] !== message.lastSentence
+					) {
+						message.lastSentence = messageContentParts[messageContentParts.length - 1];
+						eventTarget.dispatchEvent(
+							new CustomEvent('chat', {
+								detail: {
+									id: message.id,
+									content: messageContentParts[messageContentParts.length - 1]
+								}
+							})
+						);
+					}
 				}
 			}
 		}

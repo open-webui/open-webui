@@ -630,6 +630,7 @@
 	"Not helpful": "مددگار نہیں ہے",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "نوٹ: اگر آپ کم از کم سکور سیٹ کرتے ہیں، تو تلاش صرف ان دستاویزات کو واپس کرے گی جن کا سکور کم از کم سکور کے برابر یا اس سے زیادہ ہوگا",
 	"Notes": "نوٹس",
+	"Notification Sound": "",
 	"Notification Webhook": "",
 	"Notifications": "اطلاعات",
 	"November": "نومبر",
