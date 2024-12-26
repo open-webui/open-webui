@@ -236,7 +236,7 @@ def get_image_model(request):
         try:
             r = requests.get(
                 url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options",
-                headers={"authorization": get_automatic1111_api_auth()},
+                headers={"authorization": get_automatic1111_api_auth(request)},
             )
             options = r.json()
             return options["sd_model_checkpoint"]
@@ -354,7 +354,7 @@ def get_models(request: Request, user=Depends(get_verified_user)):
         ):
             r = requests.get(
                 url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/sd-models",
-                headers={"authorization": get_automatic1111_api_auth()},
+                headers={"authorization": get_automatic1111_api_auth(request)},
             )
             models = r.json()
             return list(
@@ -578,7 +578,7 @@ async def image_generations(
                 requests.post,
                 url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/txt2img",
                 json=data,
-                headers={"authorization": get_automatic1111_api_auth()},
+                headers={"authorization": get_automatic1111_api_auth(request)},
             )
 
             res = r.json()
