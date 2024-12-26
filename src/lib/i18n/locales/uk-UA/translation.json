@@ -630,6 +630,7 @@
 	"Not helpful": "Не корисно",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Примітка: Якщо ви встановите мінімальну кількість балів, пошук поверне лише документи з кількістю балів, більшою або рівною мінімальній кількості балів.",
 	"Notes": "Примітки",
+	"Notification Sound": "",
 	"Notification Webhook": "Вебхук для сповіщень",
 	"Notifications": "Сповіщення",
 	"November": "Листопад",

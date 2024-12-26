@@ -630,6 +630,7 @@
 	"Not helpful": "No ajuda",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Nota: Si s'estableix una puntuació mínima, la cerca només retornarà documents amb una puntuació major o igual a la puntuació mínima.",
 	"Notes": "Notes",
+	"Notification Sound": "",
 	"Notification Webhook": "",
 	"Notifications": "Notificacions",
 	"November": "Novembre",

@@ -630,6 +630,7 @@
 	"Not helpful": "Ikke nyttig",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Merk: Hvis du setter en minimumspoengsum, returnerer søket kun dokumenter med en poengsum som er større enn eller lik minimumspoengsummen.",
 	"Notes": "Notater",
+	"Notification Sound": "",
 	"Notification Webhook": "",
 	"Notifications": "Varsler",
 	"November": "november",

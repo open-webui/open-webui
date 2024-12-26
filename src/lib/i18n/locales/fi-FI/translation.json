@@ -630,6 +630,7 @@
 	"Not helpful": "Ei hyödyllinen",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Huomautus: Jos asetat vähimmäispistemäärän, haku palauttaa vain sellaiset asiakirjat, joiden pistemäärä on vähintään vähimmäismäärä.",
 	"Notes": "Muistiinpanot",
+	"Notification Sound": "",
 	"Notification Webhook": "",
 	"Notifications": "Ilmoitukset",
 	"November": "marraskuu",

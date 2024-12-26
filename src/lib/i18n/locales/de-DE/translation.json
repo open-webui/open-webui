@@ -630,6 +630,7 @@
 	"Not helpful": "Nich hilfreich",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Hinweis: Wenn Sie eine Mindestpunktzahl festlegen, werden in der Suche nur Dokumente mit einer Punktzahl größer oder gleich der Mindestpunktzahl zurückgegeben.",
 	"Notes": "Notizen",
+	"Notification Sound": "",
 	"Notification Webhook": "",
 	"Notifications": "Benachrichtigungen",
 	"November": "November",

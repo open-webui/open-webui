@@ -630,6 +630,7 @@
 	"Not helpful": "",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "ملاحظة: إذا قمت بتعيين الحد الأدنى من النقاط، فلن يؤدي البحث إلا إلى إرجاع المستندات التي لها نقاط أكبر من أو تساوي الحد الأدنى من النقاط.",
 	"Notes": "",
+	"Notification Sound": "",
 	"Notification Webhook": "",
 	"Notifications": "إشعارات",
 	"November": "نوفمبر",
