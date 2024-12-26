@@ -311,7 +311,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         voice_id = payload.get("voice", "")
 
-        if voice_id not in get_available_voices():
+        if voice_id not in get_available_voices(request):
             raise HTTPException(
                 status_code=400,
                 detail="Invalid voice id",
