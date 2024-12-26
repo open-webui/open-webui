@@ -192,6 +192,7 @@
 				tika_server_url: tikaServerUrl
 			}
 		});
+		console.log(res)
 
 		await updateQuerySettings(localStorage.token, querySettings);
 
@@ -234,7 +235,7 @@
 		querySettings = await getQuerySettings(localStorage.token);
 
 		const res = await getRAGConfig(localStorage.token);
-
+		console.log(res)
 		if (res) {
 			pdfExtractImages = res.pdf_extract_images;
 
@@ -248,8 +249,7 @@
 
 			fileMaxSize = res?.file.max_size ?? '';
 			fileMaxCount = res?.file.max_count ?? '';
-
-			enableGoogleDriveIntegration = res.enable_google_drive_integration ?? false;
+			enableGoogleDriveIntegration = res.enable_google_drive_integration;
 			console.log('Google Drive Integration onMount:', enableGoogleDriveIntegration);
 			if (enableGoogleDriveIntegration === undefined) {
 			    console.error('enableGoogleDriveIntegration is undefined onMount');
@@ -603,11 +603,7 @@
 			<div class="flex justify-between items-center text-xs">
 				<div class="text-xs font-medium">{$i18n.t('Enable Google Drive')}</div>
 				<div>
-					<Switch bind:state={enableGoogleDriveIntegration} on:change={() => {
-					    console.log('Google Drive Integration before change:', enableGoogleDriveIntegration);
-					    enableGoogleDriveIntegration = !enableGoogleDriveIntegration;
-					    console.log('Google Drive Integration after change:', enableGoogleDriveIntegration);
-					}} />
+					<Switch bind:state={enableGoogleDriveIntegration} />
 				</div>
 			</div>
 		</div>
