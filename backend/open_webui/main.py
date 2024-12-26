@@ -466,9 +466,12 @@ async def process_tool_calls(
 
         log.debug(f"calling {tool_function_name} with params {tool_function_params}")
         try:
-            tool_output = await tools[tool_function_name]["callable"](
-                **tool_function_params
-            )
+            func = tools[tool_function_name]["callable"]
+            all_params = tool_function_params
+            if "__messages__" in inspect.signature(func).parameters:
+                all_params = tool_function_params | {"__messages__": messages}
+
+            tool_output = await func(**all_params)
         except Exception as e:
             tool_output = str(e)
 
@@ -511,7 +514,6 @@ async def handle_streaming_response(
     user: UserModel,
     models: dict,
 ) -> StreamingResponse:
-
     body = json.loads(request._body)
     is_ollama = False
     if models[body["model"]]["owned_by"] == "ollama":
@@ -916,7 +918,6 @@ async def chat_completion_tools_handler(
 async def chat_completion_files_handler(
     body: dict, user: UserModel
 ) -> tuple[dict, dict[str, list]]:
-
     sources = []
 
     if files := body.get("metadata", {}).get("files", None):
@@ -1190,7 +1191,6 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                 headers=dict(response.headers),
             )
         else:
-
             skip_files = all(["file_handler" in t for t in tools])
             if skip_files and "files" in body.get("metadata", {}):
                 del body["metadata"]["files"]
@@ -2164,7 +2164,6 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
 
 @app.post("/api/task/title/completions")
 async def generate_title(form_data: dict, user=Depends(get_verified_user)):
-
     model_list = await get_all_models()
     models = {model["id"]: model for model in model_list}
 
@@ -2254,7 +2253,6 @@ Artificial Intelligence in Healthcare
 
 @app.post("/api/task/tags/completions")
 async def generate_chat_tags(form_data: dict, user=Depends(get_verified_user)):
-
     if not app.state.config.ENABLE_TAGS_GENERATION:
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -2342,7 +2340,6 @@ JSON format: { "tags": ["tag1", "tag2", "tag3"] }
 
 @app.post("/api/task/queries/completions")
 async def generate_queries(form_data: dict, user=Depends(get_verified_user)):
-
     type = form_data.get("type")
     if type == "web_search":
         if not app.state.config.ENABLE_SEARCH_QUERY_GENERATION:
@@ -2506,7 +2503,6 @@ async def generate_autocompletion(form_data: dict, user=Depends(get_verified_use
 
 @app.post("/api/task/emoji/completions")
 async def generate_emoji(form_data: dict, user=Depends(get_verified_user)):
-
     model_list = await get_all_models()
     models = {model["id"]: model for model in model_list}
 
@@ -2579,7 +2575,6 @@ Message: """{{prompt}}"""
 
 @app.post("/api/task/moa/completions")
 async def generate_moa_response(form_data: dict, user=Depends(get_verified_user)):
-
     model_list = await get_all_models()
     models = {model["id"]: model for model in model_list}
 
