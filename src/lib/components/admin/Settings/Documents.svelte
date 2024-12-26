@@ -250,6 +250,7 @@
 			fileMaxCount = res?.file.max_count ?? '';
 
 			enableGoogleDriveIntegration = res.enable_google_drive_integration;
+			console.log('Google Drive Integration onMount:', enableGoogleDriveIntegration);
 		}
 	});
 </script>
@@ -597,7 +598,7 @@
 			<div class="flex justify-between items-center text-xs">
 				<div class="text-xs font-medium">{$i18n.t('Enable Google Drive')}</div>
 				<div>
-					<Switch bind:state={enableGoogleDriveIntegration} />
+					<Switch bind:state={enableGoogleDriveIntegration} on:change={() => console.log('Google Drive Integration:', enableGoogleDriveIntegration)} />
 				</div>
 			</div>
 		</div>
