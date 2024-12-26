@@ -251,6 +251,11 @@
 
 			enableGoogleDriveIntegration = res.enable_google_drive_integration;
 			console.log('Google Drive Integration onMount:', enableGoogleDriveIntegration);
+			if (enableGoogleDriveIntegration === undefined) {
+			    console.error('enableGoogleDriveIntegration is undefined onMount');
+			} else {
+			    console.log('Google Drive Integration onMount:', enableGoogleDriveIntegration);
+			}
 		}
 	});
 </script>
@@ -598,7 +603,11 @@
 			<div class="flex justify-between items-center text-xs">
 				<div class="text-xs font-medium">{$i18n.t('Enable Google Drive')}</div>
 				<div>
-					<Switch bind:state={enableGoogleDriveIntegration} on:change={() => console.log('Google Drive Integration:', enableGoogleDriveIntegration)} />
+					<Switch bind:state={enableGoogleDriveIntegration} on:change={() => {
+					    console.log('Google Drive Integration before change:', enableGoogleDriveIntegration);
+					    enableGoogleDriveIntegration = !enableGoogleDriveIntegration;
+					    console.log('Google Drive Integration after change:', enableGoogleDriveIntegration);
+					}} />
 				</div>
 			</div>
 		</div>
