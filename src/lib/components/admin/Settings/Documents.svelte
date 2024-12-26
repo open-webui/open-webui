@@ -234,6 +234,7 @@
 		querySettings = await getQuerySettings(localStorage.token);
 
 		const res = await getRAGConfig(localStorage.token);
+
 		if (res) {
 			pdfExtractImages = res.pdf_extract_images;
 
@@ -247,6 +248,7 @@
 
 			fileMaxSize = res?.file.max_size ?? '';
 			fileMaxCount = res?.file.max_count ?? '';
+			
 			enableGoogleDriveIntegration = res.enable_google_drive_integration;
 		}
 	});
