@@ -1065,8 +1065,10 @@
 
 		if (choices) {
 			if (choices[0]?.message?.content) {
+				// Non-stream response
 				message.content += choices[0]?.message?.content;
 			} else {
+				// Stream response
 				let value = choices[0]?.delta?.content ?? '';
 				if (message.content == '' && value == '\n') {
 					console.log('Empty response');
