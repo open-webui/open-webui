@@ -2,10 +2,12 @@ import os
 import re
 import subprocess
 import sys
+import venv
 from importlib import util
 import types
 import tempfile
 import logging
+from pathlib import Path
 
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.functions import Functions
@@ -82,7 +84,7 @@ def load_tools_module_by_id(toolkit_id, content=None):
     else:
         frontmatter = extract_frontmatter(content)
         # Install required packages found within the frontmatter
-        install_frontmatter_requirements(frontmatter.get("requirements", ""))
+        install_frontmatter_requirements(frontmatter.get("requirements", ""), toolkit_id)
 
     module_name = f"tool_{toolkit_id}"
     module = types.ModuleType(module_name)
@@ -126,7 +128,7 @@ def load_function_module_by_id(function_id, content=None):
         Functions.update_function_by_id(function_id, {"content": content})
     else:
         frontmatter = extract_frontmatter(content)
-        install_frontmatter_requirements(frontmatter.get("requirements", ""))
+        install_frontmatter_requirements(frontmatter.get("requirements", ""), function_id)
 
     module_name = f"function_{function_id}"
     module = types.ModuleType(module_name)
@@ -165,11 +167,35 @@ def load_function_module_by_id(function_id, content=None):
         os.unlink(temp_file.name)
 
 
-def install_frontmatter_requirements(requirements):
+def get_venv_path(module_id):
+    """Get the path to the virtual environment for a specific module"""
+    venv_base = Path(tempfile.gettempdir()) / "open-webui-venvs"
+    return venv_base / f"venv_{module_id}"
+
+def create_venv(module_id):
+    """Create a virtual environment for a specific module"""
+    venv_path = get_venv_path(module_id)
+    if not venv_path.exists():
+        venv.create(venv_path, with_pip=True)
+    return venv_path
+
+def get_venv_python(venv_path):
+    """Get the Python executable path from the virtual environment"""
+    if sys.platform == "win32":
+        python_path = venv_path / "Scripts" / "python.exe"
+    else:
+        python_path = venv_path / "bin" / "python"
+    return str(python_path)
+
+def install_frontmatter_requirements(requirements, module_id):
+    """Install requirements in the module's virtual environment"""
     if requirements:
+        venv_path = create_venv(module_id)
+        python_path = get_venv_python(venv_path)
         req_list = [req.strip() for req in requirements.split(",")]
+        
         for req in req_list:
-            log.info(f"Installing requirement: {req}")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", req])
+            log.info(f"Installing requirement in venv: {req}")
+            subprocess.check_call([python_path, "-m", "pip", "install", req])
     else:
         log.info("No requirements found in frontmatter.")
