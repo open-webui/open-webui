@@ -192,7 +192,6 @@
 				tika_server_url: tikaServerUrl
 			}
 		});
-		console.log(res)
 
 		await updateQuerySettings(localStorage.token, querySettings);
 
@@ -235,7 +234,6 @@
 		querySettings = await getQuerySettings(localStorage.token);
 
 		const res = await getRAGConfig(localStorage.token);
-		console.log(res)
 		if (res) {
 			pdfExtractImages = res.pdf_extract_images;
 
