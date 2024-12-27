@@ -96,10 +96,12 @@ def get_current_user(
                 status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
             )
 
-        if request.app.state.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS:
+        if request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS:
             allowed_paths = [
                 path.strip()
-                for path in str(request.app.state.API_KEY_ALLOWED_PATHS).split(",")
+                for path in str(request.app.state.config.API_KEY_ALLOWED_PATHS).split(
+                    ","
+                )
             ]
 
             if request.url.path not in allowed_paths:
