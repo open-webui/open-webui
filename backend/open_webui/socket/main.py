@@ -159,7 +159,7 @@ async def connect(sid, environ, auth):
                 USER_POOL[user.id] = [sid]
 
             # print(f"user {user.name}({user.id}) connected with session ID {sid}")
-            await sio.emit("user-count", {"count": len(USER_POOL.items())})
+            await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
             await sio.emit("usage", {"models": get_models_in_use()})
 
 
@@ -192,7 +192,7 @@ async def user_join(sid, data):
 
     # print(f"user {user.name}({user.id}) connected with session ID {sid}")
 
-    await sio.emit("user-count", {"count": len(USER_POOL.items())})
+    await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
     return {"id": user.id, "name": user.name}
 
 
@@ -244,9 +244,9 @@ async def channel_events(sid, data):
         )
 
 
-@sio.on("user-count")
-async def user_count(sid):
-    await sio.emit("user-count", {"count": len(USER_POOL.items())})
+@sio.on("user-list")
+async def user_list(sid):
+    await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
 
 
 @sio.event
@@ -261,7 +261,7 @@ async def disconnect(sid):
         if len(USER_POOL[user_id]) == 0:
             del USER_POOL[user_id]
 
-        await sio.emit("user-count", {"count": len(USER_POOL)})
+        await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
     else:
         pass
         # print(f"Unknown session ID {sid} disconnected")
@@ -330,3 +330,9 @@ def get_user_ids_from_room(room):
         )
     )
     return active_user_ids
+
+
+def get_active_status_by_user_id(user_id):
+    if user_id in USER_POOL:
+        return True
+    return False

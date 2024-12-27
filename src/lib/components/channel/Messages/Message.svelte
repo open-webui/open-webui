@@ -25,6 +25,7 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Image from '$lib/components/common/Image.svelte';
 	import FileItem from '$lib/components/common/FileItem.svelte';
+	import ProfilePreview from './Message/ProfilePreview.svelte';
 
 	export let message;
 	export let showUserProfile = true;
@@ -101,11 +102,13 @@
 				class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'} w-9`}
 			>
 				{#if showUserProfile}
-					<ProfileImage
-						src={message.user?.profile_image_url ??
-							($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
-						className={'size-8 translate-y-1 ml-0.5'}
-					/>
+					<ProfilePreview user={message.user}>
+						<ProfileImage
+							src={message.user?.profile_image_url ??
+								($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
+							className={'size-8 translate-y-1 ml-0.5'}
+						/>
+					</ProfilePreview>
 				{:else}
 					<!-- <div class="w-7 h-7 rounded-full bg-transparent" /> -->
 
