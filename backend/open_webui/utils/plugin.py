@@ -203,6 +203,7 @@ def create_venv(module_id):
 
 def get_venv_python(venv_path):
     """Get the Python executable path from the virtual environment"""
+    log.info(f"Invoked get_venv_python for {sys.platform}")
     if sys.platform == "win32":
         python_path = venv_path / "Scripts" / "python.exe"
     else:
@@ -213,8 +214,10 @@ def install_frontmatter_requirements(requirements, module_id):
     """Install requirements in the module's virtual environment"""
     log.info(f"install_frontmatter_requirements @ {module_id}")
     if requirements:
+        log.info(f"Installing requirements {requirements}")
         venv_path = create_venv(module_id)
         python_path = get_venv_python(venv_path)
+        log.info(f"venv_path {venv_path}, python_path {python_path}")
         req_list = [req.strip() for req in requirements.split(",")]
         
         for req in req_list:
