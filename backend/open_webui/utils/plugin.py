@@ -86,13 +86,16 @@ def load_tools_module_by_id(toolkit_id, content=None):
         # Install required packages found within the frontmatter
         install_frontmatter_requirements(frontmatter.get("requirements", ""), toolkit_id)
 
+    # Ensure venv exists
+    venv_path = create_venv(toolkit_id)
+    python_path = get_venv_python(venv_path)
+    
     module_name = f"tool_{toolkit_id}"
     module = types.ModuleType(module_name)
     sys.modules[module_name] = module
 
-    # Create a temporary file and use it to define `__file__` so
-    # that it works as expected from the module's perspective.
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
+    # Create a temporary file for the module
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.py')
     temp_file.close()
     try:
         with open(temp_file.name, "w", encoding="utf-8") as f:
@@ -130,20 +133,30 @@ def load_function_module_by_id(function_id, content=None):
         frontmatter = extract_frontmatter(content)
         install_frontmatter_requirements(frontmatter.get("requirements", ""), function_id)
 
+    # Ensure venv exists
+    venv_path = create_venv(function_id)
+    python_path = get_venv_python(venv_path)
+    
     module_name = f"function_{function_id}"
     module = types.ModuleType(module_name)
     sys.modules[module_name] = module
 
-    # Create a temporary file and use it to define `__file__` so
-    # that it works as expected from the module's perspective.
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
+    # Create a temporary file for the module
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.py')
     temp_file.close()
     try:
         with open(temp_file.name, "w", encoding="utf-8") as f:
             f.write(content)
         module.__dict__["__file__"] = temp_file.name
 
-        # Execute the modified content in the created module's namespace
+        # Execute the content using the venv's Python interpreter
+        result = subprocess.run(
+            [python_path, temp_file.name],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        # Execute the content in the module namespace
         exec(content, module.__dict__)
         frontmatter = extract_frontmatter(content)
         log.info(f"Loaded module: {module.__name__}")
