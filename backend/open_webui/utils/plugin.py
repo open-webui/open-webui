@@ -7,6 +7,7 @@ from importlib import util
 import types
 import tempfile
 import logging
+import json
 from pathlib import Path
 
 from open_webui.env import SRC_LOG_LEVELS
