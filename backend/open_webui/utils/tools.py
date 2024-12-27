@@ -41,14 +41,17 @@ def get_tools(
     tools_dict = {}
 
     for tool_id in tool_ids:
-        tools = Tools.get_tool_by_id(tool_id)
-        if tools is None:
-            continue
+        try:
+            tools = Tools.get_tool_by_id(tool_id)
+            if tools is None:
+                log.warning(f"Tool {tool_id} not found in database")
+                continue
 
-        module = request.app.state.TOOLS.get(tool_id, None)
-        if module is None:
-            module, _ = load_tools_module_by_id(tool_id)
-            request.app.state.TOOLS[tool_id] = module
+            module = request.app.state.TOOLS.get(tool_id, None)
+            if module is None:
+                module, _ = load_tools_module_by_id(tool_id)
+                request.app.state.TOOLS[tool_id] = module
+                log.info(f"Loaded tool module {tool_id}")
 
         extra_params["__id__"] = tool_id
         if hasattr(module, "valves") and hasattr(module, "Valves"):

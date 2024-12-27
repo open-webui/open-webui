@@ -206,9 +206,9 @@ async def chat_completion_tools_handler(
     # If tool_ids field is present, call the functions
     metadata = body.get("metadata", {})
 
-    tool_ids = metadata.get("tool_ids", None)
+    tool_ids = metadata.get("tool_ids", [])
     log.debug(f"{tool_ids=}")
-    if not tool_ids:
+    if not tool_ids or not isinstance(tool_ids, list):
         return body, {}
 
     skip_files = False
