@@ -156,6 +156,10 @@
 	});
 </script>
 
+<svelte:head>
+	<title>#{channel?.name ?? 'Channel'} | Open WebUI</title>
+</svelte:head>
+
 <div
 	class="h-screen max-h-[100dvh] {$showSidebar
 		? 'md:max-w-[calc(100%-260px)]'
