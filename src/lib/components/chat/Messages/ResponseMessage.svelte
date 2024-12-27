@@ -543,8 +543,12 @@
 														{$i18n.t(status?.description, {
 															count: status?.urls.length
 														})}
+													{:else if status?.description === 'No search query generated'}
+														{$i18n.t('No search query generated')}
+													{:else if status?.description === 'Generating search query'}
+														{$i18n.t('Generating search query')}
 													{:else}
-														{$i18n.t(status?.description)}
+														{status?.description}
 													{/if}
 												</div>
 											</div>
@@ -573,8 +577,12 @@
 													{$i18n.t(status?.description, {
 														searchQuery: status?.query
 													})}
+												{:else if status?.description === 'No search query generated'}
+													{$i18n.t('No search query generated')}
+												{:else if status?.description === 'Generating search query'}
+													{$i18n.t('Generating search query')}
 												{:else}
-													{$i18n.t(status?.description)}
+													{status?.description}
 												{/if}
 											</div>
 										</div>
