@@ -29,7 +29,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
                         (
                             (
                                 data.get("eval_count", 0)
-                                / ((data.get("eval_duration", 0) / 1_000_000_000))
+                                / ((data.get("eval_duration", 0) / 1_000_000))
                             )
                             * 100
                         ),
@@ -43,12 +43,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
                         (
                             (
                                 data.get("prompt_eval_count", 0)
-                                / (
-                                    (
-                                        data.get("prompt_eval_duration", 0)
-                                        / 1_000_000_000
-                                    )
-                                )
+                                / ((data.get("prompt_eval_duration", 0) / 1_000_000))
                             )
                             * 100
                         ),
@@ -57,20 +52,12 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
                     if data.get("prompt_eval_duration", 0) > 0
                     else "N/A"
                 ),
-                "total_duration": round(
-                    ((data.get("total_duration", 0) / 1_000_000) * 100), 2
-                ),
-                "load_duration": round(
-                    ((data.get("load_duration", 0) / 1_000_000) * 100), 2
-                ),
+                "total_duration": data.get("total_duration", 0),
+                "load_duration": data.get("load_duration", 0),
                 "prompt_eval_count": data.get("prompt_eval_count", 0),
-                "prompt_eval_duration": round(
-                    ((data.get("prompt_eval_duration", 0) / 1_000_000) * 100), 2
-                ),
+                "prompt_eval_duration": data.get("prompt_eval_duration", 0),
                 "eval_count": data.get("eval_count", 0),
-                "eval_duration": round(
-                    ((data.get("eval_duration", 0) / 1_000_000) * 100), 2
-                ),
+                "eval_duration": data.get("eval_duration", 0),
                 "approximate_total": (
                     lambda s: f"{s // 3600}h{(s % 3600) // 60}m{s % 60}s"
                 )((data.get("total_duration", 0) or 0) // 1_000_000_000),
