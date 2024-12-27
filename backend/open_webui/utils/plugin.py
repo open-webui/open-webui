@@ -168,12 +168,7 @@ def load_tools_module_by_id(toolkit_id, content=None):
         proxy = ToolProxy(python_path, temp_file.name, tool_info['methods'])
         frontmatter = extract_frontmatter(content)
         log.info(f"Loaded module: {module.__name__}")
-
-        # Create and return the object if the class 'Tools' is found in the module
-        if hasattr(module, "Tools"):
-            return module.Tools(), frontmatter
-        else:
-            raise Exception("No Tools class found in the module")
+        return proxy, frontmatter
     except Exception as e:
         log.error(f"Error loading module: {toolkit_id}: {e}")
         del sys.modules[module_name]  # Clean up
