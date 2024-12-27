@@ -6,7 +6,7 @@
 
 	const i18n = getContext('i18n');
 
-	import { config, mobile, settings } from '$lib/stores';
+	import { config, mobile, settings, socket } from '$lib/stores';
 	import { blobToFile, compressImage } from '$lib/utils';
 
 	import Tooltip from '../common/Tooltip.svelte';
@@ -32,7 +32,10 @@
 	let filesInputElement;
 	let inputFiles;
 
+	export let typingUsers = [];
+
 	export let onSubmit: Function;
+	export let onChange: Function;
 	export let scrollEnd = true;
 	export let scrollToBottom: Function;
 
@@ -258,6 +261,10 @@
 		chatInputElement?.focus();
 	};
 
+	$: if (content) {
+		onChange();
+	}
+
 	onMount(async () => {
 		window.setTimeout(() => {
 			const chatInput = document.getElementById('chat-input');
@@ -290,37 +297,6 @@
 
 <FilesOverlay show={draggedOver} />
 
-<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
-	<div class="flex flex-col px-3 max-w-6xl w-full">
-		<div class="relative">
-			{#if scrollEnd === false}
-				<div class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none">
-					<button
-						class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
-						on:click={() => {
-							scrollEnd = true;
-							scrollToBottom();
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-5 h-5"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M10 3a.75.75 0 01.75.75v10.638l3.96-4.158a.75.75 0 111.08 1.04l-5.25 5.5a.75.75 0 01-1.08 0l-5.25-5.5a.75.75 0 111.08-1.04l3.96 4.158V3.75A.75.75 0 0110 3z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</button>
-				</div>
-			{/if}
-		</div>
-	</div>
-</div>
-
 <input
 	bind:this={filesInputElement}
 	bind:files={inputFiles}
@@ -341,8 +317,54 @@
 	<div
 		class="{($settings?.widescreenMode ?? null)
 			? 'max-w-full'
-			: 'max-w-6xl'} px-2.5 mx-auto inset-x-0"
+			: 'max-w-6xl'} px-2.5 mx-auto inset-x-0 relative"
 	>
+		<div class="absolute top-0 left-0 right-0 mx-auto inset-x-0 bg-transparent flex justify-center">
+			<div class="flex flex-col px-3 w-full">
+				<div class="relative">
+					{#if scrollEnd === false}
+						<div
+							class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none"
+						>
+							<button
+								class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
+								on:click={() => {
+									scrollEnd = true;
+									scrollToBottom();
+								}}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="w-5 h-5"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M10 3a.75.75 0 01.75.75v10.638l3.96-4.158a.75.75 0 111.08 1.04l-5.25 5.5a.75.75 0 01-1.08 0l-5.25-5.5a.75.75 0 111.08-1.04l3.96 4.158V3.75A.75.75 0 0110 3z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							</button>
+						</div>
+					{/if}
+				</div>
+
+				<div class="relative">
+					<div class=" -mt-5 bg-gradient-to-t from-white dark:from-gray-900">
+						{#if typingUsers.length > 0}
+							<div class=" text-xs px-4 mb-1">
+								<span class=" font-medium text-black dark:text-white">
+									{typingUsers.map((user) => user.name).join(', ')}
+								</span>
+								{$i18n.t('is typing...')}
+							</div>
+						{/if}
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<div class="">
 			{#if recording}
 				<VoiceRecording
