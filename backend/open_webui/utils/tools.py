@@ -53,7 +53,10 @@ def get_tools(
                 request.app.state.TOOLS[tool_id] = module
                 log.info(f"Loaded tool module {tool_id}")
 
-        extra_params["__id__"] = tool_id
+            extra_params["__id__"] = tool_id
+        except Exception as e:
+            log.error(f"Error loading tool {tool_id}: {e}")
+            continue
         if hasattr(module, "valves") and hasattr(module, "Valves"):
             valves = Tools.get_tool_valves_by_id(tool_id) or {}
             module.valves = module.Valves(**valves)
