@@ -1056,4 +1056,5 @@ async def process_chat_response(
         return StreamingResponse(
             stream_wrapper(response.body_iterator, events),
             headers=dict(response.headers),
+            background=response.background,
         )
