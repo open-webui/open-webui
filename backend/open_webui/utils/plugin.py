@@ -102,7 +102,14 @@ def load_tools_module_by_id(toolkit_id, content=None):
             f.write(content)
         module.__dict__["__file__"] = temp_file.name
 
-        # Executing the modified content in the created module's namespace
+        # Execute the content using the venv's Python interpreter
+        result = subprocess.run(
+            [python_path, temp_file.name],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        # Execute the content in the module namespace
         exec(content, module.__dict__)
         frontmatter = extract_frontmatter(content)
         log.info(f"Loaded module: {module.__name__}")
