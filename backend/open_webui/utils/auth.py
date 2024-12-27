@@ -97,7 +97,10 @@ def get_current_user(
             )
 
         if request.app.state.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS:
-            allowed_paths = str(request.app.state.API_KEY_ALLOWED_ENDPOINTS).split(",")
+            allowed_paths = [
+                path.strip()
+                for path in str(request.app.state.API_KEY_ALLOWED_PATHS).split(",")
+            ]
 
             if request.url.path not in allowed_paths:
                 raise HTTPException(
