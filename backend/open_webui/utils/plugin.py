@@ -169,12 +169,14 @@ def load_function_module_by_id(function_id, content=None):
 
 def get_venv_path(module_id):
     """Get the path to the virtual environment for a specific module"""
+    log.info("Invoked get_venv_path")
     venv_base = Path(tempfile.gettempdir()) / "open-webui-venvs"
     return venv_base / f"venv_{module_id}"
 
 def create_venv(module_id):
     """Create a virtual environment for a specific module"""
     venv_path = get_venv_path(module_id)
+    log.info(f"Invoked create_venv @ {venv_path}")
     if not venv_path.exists():
         venv.create(venv_path, with_pip=True)
     return venv_path
@@ -189,6 +191,7 @@ def get_venv_python(venv_path):
 
 def install_frontmatter_requirements(requirements, module_id):
     """Install requirements in the module's virtual environment"""
+    log.info(f"install_frontmatter_requirements @ {module_id}")
     if requirements:
         venv_path = create_venv(module_id)
         python_path = get_venv_python(venv_path)
