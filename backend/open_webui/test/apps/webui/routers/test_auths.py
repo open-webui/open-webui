@@ -7,8 +7,8 @@ class TestAuths(AbstractPostgresTest):
 
     def setup_class(cls):
         super().setup_class()
-        from open_webui.apps.webui.models.auths import Auths
-        from open_webui.apps.webui.models.users import Users
+        from open_webui.models.auths import Auths
+        from open_webui.models.users import Users
 
         cls.users = Users
         cls.auths = Auths
@@ -26,7 +26,7 @@ class TestAuths(AbstractPostgresTest):
         }
 
     def test_update_profile(self):
-        from open_webui.utils.utils import get_password_hash
+        from open_webui.utils.auth import get_password_hash
 
         user = self.auths.insert_new_auth(
             email="john.doe@openwebui.com",
@@ -47,7 +47,7 @@ class TestAuths(AbstractPostgresTest):
         assert db_user.profile_image_url == "/user2.png"
 
     def test_update_password(self):
-        from open_webui.utils.utils import get_password_hash
+        from open_webui.utils.auth import get_password_hash
 
         user = self.auths.insert_new_auth(
             email="john.doe@openwebui.com",
@@ -74,7 +74,7 @@ class TestAuths(AbstractPostgresTest):
         assert new_auth is not None
 
     def test_signin(self):
-        from open_webui.utils.utils import get_password_hash
+        from open_webui.utils.auth import get_password_hash
 
         user = self.auths.insert_new_auth(
             email="john.doe@openwebui.com",

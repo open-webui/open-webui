@@ -6,6 +6,8 @@
 	export let className =
 		'w-full rounded-lg px-3 py-2 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none h-full';
 
+	export let onKeydown: Function = () => {};
+
 	let textareaElement;
 
 	$: if (textareaElement) {
@@ -48,6 +50,7 @@
 		value = text;
 	}}
 	on:paste={handlePaste}
+	on:keydown={onKeydown}
 	data-placeholder={placeholder}
 />
 

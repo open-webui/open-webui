@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
+	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
 
 	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
 	const dispatch = createEventDispatcher();
@@ -18,7 +19,7 @@
 		showControls
 	} from '$lib/stores';
 
-	import { blobToFile, createMessagesList, findWordIndices } from '$lib/utils';
+	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import { uploadFile } from '$lib/apis/files';
 	import { getTools } from '$lib/apis/tools';
@@ -36,17 +37,19 @@
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { error, text } from '@sveltejs/kit';
+	import Image from '../common/Image.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let transparentBackground = false;
 
+	export let onChange: Function = () => {};
 	export let createMessagePair: Function;
 	export let stopResponse: Function;
 
 	export let autoScroll = false;
 
-	export let atSelectedModel: Model | undefined;
+	export let atSelectedModel: Model | undefined = undefined;
 	export let selectedModels: [''];
 
 	let selectedModelIds = [];
@@ -59,6 +62,13 @@
 
 	export let selectedToolIds = [];
 	export let webSearchEnabled = false;
+
+	$: onChange({
+		prompt,
+		files,
+		selectedToolIds,
+		webSearchEnabled
+	});
 
 	let loaded = false;
 	let recording = false;
@@ -88,13 +98,48 @@
 		});
 	};
 
+	const screenCaptureHandler = async () => {
+		try {
+			// Request screen media
+			const mediaStream = await navigator.mediaDevices.getDisplayMedia({
+				video: { cursor: 'never' },
+				audio: false
+			});
+			// Once the user selects a screen, temporarily create a video element
+			const video = document.createElement('video');
+			video.srcObject = mediaStream;
+			// Ensure the video loads without affecting user experience or tab switching
+			await video.play();
+			// Set up the canvas to match the video dimensions
+			const canvas = document.createElement('canvas');
+			canvas.width = video.videoWidth;
+			canvas.height = video.videoHeight;
+			// Grab a single frame from the video stream using the canvas
+			const context = canvas.getContext('2d');
+			context.drawImage(video, 0, 0, canvas.width, canvas.height);
+			// Stop all video tracks (stop screen sharing) after capturing the image
+			mediaStream.getTracks().forEach((track) => track.stop());
+
+			// bring back focus to this current tab, so that the user can see the screen capture
+			window.focus();
+
+			// Convert the canvas to a Base64 image URL
+			const imageUrl = canvas.toDataURL('image/png');
+			// Add the captured image to the files array to render it
+			files = [...files, { type: 'image', url: imageUrl }];
+			// Clean memory: Clear video srcObject
+			video.srcObject = null;
+		} catch (error) {
+			// Handle any errors (e.g., user cancels screen sharing)
+			console.error('Error capturing screen:', error);
+		}
+	};
+
 	const uploadFileHandler = async (file, fullContext: boolean = false) => {
 		if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true)) {
 			toast.error($i18n.t('You do not have permission to upload files.'));
 			return null;
 		}
-
-		console.log(file);
 
 		const tempItemId = uuidv4();
 		const fileItem = {
@@ -139,14 +184,22 @@
 			const uploadedFile = await uploadFile(localStorage.token, file);
 
 			if (uploadedFile) {
+				console.log('File upload completed:', {
+					id: uploadedFile.id,
+					name: fileItem.name,
+					collection: uploadedFile?.meta?.collection_name
+				});
+
 				if (uploadedFile.error) {
+					console.warn('File upload warning:', uploadedFile.error);
 					toast.warning(uploadedFile.error);
 				}
 
 				fileItem.status = 'uploaded';
 				fileItem.file = uploadedFile;
 				fileItem.id = uploadedFile.id;
-				fileItem.collection_name = uploadedFile?.meta?.collection_name;
+				fileItem.collection_name =
+					uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
 				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
 
 				files = files;
@@ -160,13 +213,23 @@
 	};
 
 	const inputFilesHandler = async (inputFiles) => {
+		console.log('Input files handler called with:', inputFiles);
 		inputFiles.forEach((file) => {
-			console.log(file, file.name.split('.').at(-1));
+			console.log('Processing file:', {
+				name: file.name,
+				type: file.type,
+				size: file.size,
+				extension: file.name.split('.').at(-1)
+			});
 
 			if (
 				($config?.file?.max_size ?? null) !== null &&
 				file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
 			) {
+				console.log('File exceeds max size limit:', {
+					fileSize: file.size,
+					maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
+				});
 				toast.error(
 					$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
 						maxSize: $config?.file?.max_size
@@ -181,12 +244,23 @@
 					return;
 				}
 				let reader = new FileReader();
-				reader.onload = (event) => {
+				reader.onload = async (event) => {
+					let imageUrl = event.target.result;
+
+					if ($settings?.imageCompression ?? false) {
+						const width = $settings?.imageCompressionSize?.width ?? null;
+						const height = $settings?.imageCompressionSize?.height ?? null;
+
+						if (width || height) {
+							imageUrl = await compressImage(imageUrl, width, height);
+						}
+					}
+
 					files = [
 						...files,
 						{
 							type: 'image',
-							url: `${event.target.result}`
+							url: `${imageUrl}`
 						}
 					];
 				};
@@ -271,8 +345,12 @@
 
 {#if loaded}
 	<div class="w-full font-primary">
-		<div class=" -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
-			<div class="flex flex-col px-3 max-w-6xl w-full">
+		<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
+			<div
+				class="flex flex-col px-3 {($settings?.widescreenMode ?? null)
+					? 'max-w-full'
+					: 'max-w-6xl'} w-full"
+			>
 				<div class="relative">
 					{#if autoScroll === false && history?.currentId}
 						<div
@@ -305,7 +383,7 @@
 				<div class="w-full relative">
 					{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || webSearchEnabled}
 						<div
-							class="px-4 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10"
+							class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10"
 						>
 							{#if selectedToolIds.length > 0}
 								<div class="flex items-center justify-between w-full">
@@ -410,7 +488,11 @@
 		</div>
 
 		<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-gray-900'} ">
-			<div class="max-w-6xl px-2.5 mx-auto inset-x-0">
+			<div
+				class="{($settings?.widescreenMode ?? null)
+					? 'max-w-full'
+					: 'max-w-6xl'} px-2.5 mx-auto inset-x-0"
+			>
 				<div class="">
 					<input
 						bind:this={filesInputElement}
@@ -462,7 +544,7 @@
 							}}
 						>
 							<div
-								class="flex-1 flex flex-col relative w-full rounded-3xl px-1.5 bg-gray-50 dark:bg-gray-400/5 dark:text-gray-100"
+								class="flex-1 flex flex-col relative w-full rounded-3xl px-1 bg-gray-50 dark:bg-gray-400/5 dark:text-gray-100"
 								dir={$settings?.chatDirection ?? 'LTR'}
 							>
 								{#if files.length > 0}
@@ -471,10 +553,10 @@
 											{#if file.type === 'image'}
 												<div class=" relative group">
 													<div class="relative">
-														<img
+														<Image
 															src={file.url}
 															alt="input"
-															class=" h-16 w-16 rounded-xl object-cover"
+															imageClassName=" h-16 w-16 rounded-xl object-cover"
 														/>
 														{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
 															<Tooltip
@@ -547,12 +629,33 @@
 								{/if}
 
 								<div class=" flex">
-									<div class=" ml-0.5 self-end mb-1.5 flex space-x-1">
+									<div class="ml-1 self-end mb-1.5 flex space-x-1">
 										<InputMenu
 											bind:webSearchEnabled
 											bind:selectedToolIds
+											{screenCaptureHandler}
 											uploadFilesHandler={() => {
 												filesInputElement.click();
+											}}
+											uploadGoogleDriveHandler={async () => {
+												try {
+													const fileData = await createPicker();
+													if (fileData) {
+														const file = new File([fileData.blob], fileData.name, {
+															type: fileData.blob.type
+														});
+														await uploadFileHandler(file);
+													} else {
+														console.log('No file was selected from Google Drive');
+													}
+												} catch (error) {
+													console.error('Google Drive Error:', error);
+													toast.error(
+														$i18n.t('Error accessing Google Drive: {{error}}', {
+															error: error.message
+														})
+													);
+												}
 											}}
 											onClose={async () => {
 												await tick();
@@ -562,18 +665,18 @@
 											}}
 										>
 											<button
-												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
+												class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
 												type="button"
 												aria-label="More"
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 16 16"
+													viewBox="0 0 20 20"
 													fill="currentColor"
 													class="size-5"
 												>
 													<path
-														d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
+														d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
 													/>
 												</svg>
 											</button>
@@ -626,6 +729,10 @@
 													const commandsContainerElement =
 														document.getElementById('commands-container');
 
+													if (e.key === 'Escape') {
+														stopResponse();
+													}
+
 													// Command/Ctrl + Shift + Enter to submit a message pair
 													if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
 														e.preventDefault();
@@ -651,14 +758,14 @@
 															...document.getElementsByClassName('user-message')
 														]?.at(-1);
 
-														const editButton = [
-															...document.getElementsByClassName('edit-user-message-button')
-														]?.at(-1);
+														if (userMessageElement) {
+															userMessageElement.scrollIntoView({ block: 'center' });
+															const editButton = [
+																...document.getElementsByClassName('edit-user-message-button')
+															]?.at(-1);
 
-														console.log(userMessageElement);
-
-														userMessageElement.scrollIntoView({ block: 'center' });
-														editButton?.click();
+															editButton?.click();
+														}
 													}
 
 													if (commandsContainerElement) {
@@ -781,7 +888,7 @@
 										<textarea
 											id="chat-input"
 											bind:this={chatInputElement}
-											class="scrollbar-hidden bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-3 px-1 rounded-xl resize-none h-[48px]"
+											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-none w-full py-3 px-1 rounded-xl resize-none h-[48px]"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 											bind:value={prompt}
 											on:keypress={(e) => {
@@ -809,6 +916,9 @@
 												const commandsContainerElement =
 													document.getElementById('commands-container');
 
+												if (e.key === 'Escape') {
+													stopResponse();
+												}
 												// Command/Ctrl + Shift + Enter to submit a message pair
 												if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
 													e.preventDefault();
@@ -967,12 +1077,12 @@
 										/>
 									{/if}
 
-									<div class="self-end mb-2 flex space-x-1 mr-1">
+									<div class="self-end mb-1.5 flex space-x-1 mr-1">
 										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
 											<Tooltip content={$i18n.t('Record voice')}>
 												<button
 													id="voice-input-button"
-													class=" text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-full p-1.5 mr-0.5 self-center"
+													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
 													type="button"
 													on:click={async () => {
 														try {
@@ -1016,112 +1126,113 @@
 												</button>
 											</Tooltip>
 										{/if}
+
+										{#if !history.currentId || history.messages[history.currentId]?.done == true}
+											{#if prompt === ''}
+												<div class=" flex items-center">
+													<Tooltip content={$i18n.t('Call')}>
+														<button
+															class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-2 self-center"
+															type="button"
+															on:click={async () => {
+																if (selectedModels.length > 1) {
+																	toast.error($i18n.t('Select only one model to call'));
+
+																	return;
+																}
+
+																if ($config.audio.stt.engine === 'web') {
+																	toast.error(
+																		$i18n.t(
+																			'Call feature is not supported when using Web STT engine'
+																		)
+																	);
+
+																	return;
+																}
+																// check if user has access to getUserMedia
+																try {
+																	let stream = await navigator.mediaDevices.getUserMedia({
+																		audio: true
+																	});
+																	// If the user grants the permission, proceed to show the call overlay
+
+																	if (stream) {
+																		const tracks = stream.getTracks();
+																		tracks.forEach((track) => track.stop());
+																	}
+
+																	stream = null;
+
+																	showCallOverlay.set(true);
+																	showControls.set(true);
+																} catch (err) {
+																	// If the user denies the permission or an error occurs, show an error message
+																	toast.error(
+																		$i18n.t('Permission denied when accessing media devices')
+																	);
+																}
+															}}
+															aria-label="Call"
+														>
+															<Headphone className="size-5" />
+														</button>
+													</Tooltip>
+												</div>
+											{:else}
+												<div class=" flex items-center">
+													<Tooltip content={$i18n.t('Send message')}>
+														<button
+															id="send-message-button"
+															class="{prompt !== ''
+																? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+															type="submit"
+															disabled={prompt === ''}
+														>
+															<svg
+																xmlns="http://www.w3.org/2000/svg"
+																viewBox="0 0 16 16"
+																fill="currentColor"
+																class="size-6"
+															>
+																<path
+																	fill-rule="evenodd"
+																	d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+																	clip-rule="evenodd"
+																/>
+															</svg>
+														</button>
+													</Tooltip>
+												</div>
+											{/if}
+										{:else}
+											<div class=" flex items-center">
+												<Tooltip content={$i18n.t('Stop')}>
+													<button
+														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+														on:click={() => {
+															stopResponse();
+														}}
+													>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 24 24"
+															fill="currentColor"
+															class="size-6"
+														>
+															<path
+																fill-rule="evenodd"
+																d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
+																clip-rule="evenodd"
+															/>
+														</svg>
+													</button>
+												</Tooltip>
+											</div>
+										{/if}
 									</div>
 								</div>
-							</div>
-							<div class="flex items-end w-10">
-								{#if !history.currentId || history.messages[history.currentId]?.done == true}
-									{#if prompt === ''}
-										<div class=" flex items-center mb-1">
-											<Tooltip content={$i18n.t('Call')}>
-												<button
-													class=" text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-full p-2 self-center"
-													type="button"
-													on:click={async () => {
-														if (selectedModels.length > 1) {
-															toast.error($i18n.t('Select only one model to call'));
-
-															return;
-														}
-
-														if ($config.audio.stt.engine === 'web') {
-															toast.error(
-																$i18n.t('Call feature is not supported when using Web STT engine')
-															);
-
-															return;
-														}
-														// check if user has access to getUserMedia
-														try {
-															let stream = await navigator.mediaDevices.getUserMedia({
-																audio: true
-															});
-															// If the user grants the permission, proceed to show the call overlay
-
-															if (stream) {
-																const tracks = stream.getTracks();
-																tracks.forEach((track) => track.stop());
-															}
-
-															stream = null;
-
-															showCallOverlay.set(true);
-															showControls.set(true);
-														} catch (err) {
-															// If the user denies the permission or an error occurs, show an error message
-															toast.error(
-																$i18n.t('Permission denied when accessing media devices')
-															);
-														}
-													}}
-													aria-label="Call"
-												>
-													<Headphone className="size-6" />
-												</button>
-											</Tooltip>
-										</div>
-									{:else}
-										<div class=" flex items-center mb-1">
-											<Tooltip content={$i18n.t('Send message')}>
-												<button
-													id="send-message-button"
-													class="{prompt !== ''
-														? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-														: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 m-0.5 self-center"
-													type="submit"
-													disabled={prompt === ''}
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 16 16"
-														fill="currentColor"
-														class="size-6"
-													>
-														<path
-															fill-rule="evenodd"
-															d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-															clip-rule="evenodd"
-														/>
-													</svg>
-												</button>
-											</Tooltip>
-										</div>
-									{/if}
-								{:else}
-									<div class=" flex items-center mb-1.5">
-										<Tooltip content={$i18n.t('Stop')}>
-											<button
-												class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
-												on:click={() => {
-													stopResponse();
-												}}
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 24 24"
-													fill="currentColor"
-													class="size-6"
-												>
-													<path
-														fill-rule="evenodd"
-														d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
-														clip-rule="evenodd"
-													/>
-												</svg>
-											</button>
-										</Tooltip>
-									</div>
-								{/if}
 							</div>
 						</form>
 					{/if}

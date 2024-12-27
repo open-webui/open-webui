@@ -44,10 +44,10 @@
 		filteredModels = models
 			.filter((m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase()))
 			.sort((a, b) => {
-				// Check if either model is inactive and push them to the bottom
-				if ((a.is_active ?? true) !== (b.is_active ?? true)) {
-					return (b.is_active ?? true) - (a.is_active ?? true);
-				}
+				// // Check if either model is inactive and push them to the bottom
+				// if ((a.is_active ?? true) !== (b.is_active ?? true)) {
+				// 	return (b.is_active ?? true) - (a.is_active ?? true);
+				// }
 				// If both models' active states are the same, sort alphabetically
 				return a.name.localeCompare(b.name);
 			});
@@ -137,7 +137,7 @@
 	});
 </script>
 
-<ConfigureModelsModal bind:show={showConfigModal} {init} />
+<ConfigureModelsModal bind:show={showConfigModal} initHandler={init} />
 
 {#if models !== null}
 	{#if selectedModelId === null}

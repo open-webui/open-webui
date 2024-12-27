@@ -101,8 +101,6 @@ log.setLevel(SRC_LOG_LEVELS["CONFIG"])
 
 WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
 
-WEBUI_URL = os.environ.get("WEBUI_URL", "http://localhost:3000")
-
 WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
 
 
@@ -327,6 +325,9 @@ WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
 )
 WEBUI_AUTH_TRUSTED_NAME_HEADER = os.environ.get("WEBUI_AUTH_TRUSTED_NAME_HEADER", None)
 
+BYPASS_MODEL_ACCESS_CONTROL = (
+    os.environ.get("BYPASS_MODEL_ACCESS_CONTROL", "False").lower() == "true"
+)
 
 ####################################
 # WEBUI_SECRET_KEY
@@ -371,7 +372,7 @@ else:
         AIOHTTP_CLIENT_TIMEOUT = 300
 
 AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = os.environ.get(
-    "AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST", "5"
+    "AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST", ""
 )
 
 if AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST == "":

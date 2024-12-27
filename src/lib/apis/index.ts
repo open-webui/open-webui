@@ -107,10 +107,42 @@ export const chatAction = async (token: string, action_id: string, body: ChatAct
 	return res;
 };
 
+export const stopTask = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/tasks/stop/${id}`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getTaskConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/task/config`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/config`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -138,7 +170,7 @@ export const getTaskConfig = async (token: string = '') => {
 export const updateTaskConfig = async (token: string, config: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/task/config/update`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/config/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -176,7 +208,7 @@ export const generateTitle = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/task/title/completions`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/title/completions`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -216,7 +248,7 @@ export const generateTags = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/task/tags/completions`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/tags/completions`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -288,7 +320,7 @@ export const generateEmoji = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/task/emoji/completions`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/emoji/completions`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -337,7 +369,7 @@ export const generateQueries = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/task/queries/completions`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/queries/completions`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -407,7 +439,7 @@ export const generateAutoCompletion = async (
 	const controller = new AbortController();
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/task/auto/completions`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/auto/completions`, {
 		signal: controller.signal,
 		method: 'POST',
 		headers: {
@@ -477,7 +509,7 @@ export const generateMoACompletion = async (
 	const controller = new AbortController();
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/task/moa/completions`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/moa/completions`, {
 		signal: controller.signal,
 		method: 'POST',
 		headers: {
@@ -507,7 +539,7 @@ export const generateMoACompletion = async (
 export const getPipelinesList = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/pipelines/list`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/pipelines/list`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -541,7 +573,7 @@ export const uploadPipeline = async (token: string, file: File, urlIdx: string) 
 	formData.append('file', file);
 	formData.append('urlIdx', urlIdx);
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/pipelines/upload`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/pipelines/upload`, {
 		method: 'POST',
 		headers: {
 			...(token && { authorization: `Bearer ${token}` })
@@ -573,7 +605,7 @@ export const uploadPipeline = async (token: string, file: File, urlIdx: string) 
 export const downloadPipeline = async (token: string, url: string, urlIdx: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/pipelines/add`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/pipelines/add`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -609,7 +641,7 @@ export const downloadPipeline = async (token: string, url: string, urlIdx: strin
 export const deletePipeline = async (token: string, id: string, urlIdx: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/pipelines/delete`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/pipelines/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -650,7 +682,7 @@ export const getPipelines = async (token: string, urlIdx?: string) => {
 		searchParams.append('urlIdx', urlIdx);
 	}
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/pipelines?${searchParams.toString()}`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/pipelines/?${searchParams.toString()}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -685,7 +717,7 @@ export const getPipelineValves = async (token: string, pipeline_id: string, urlI
 	}
 
 	const res = await fetch(
-		`${WEBUI_BASE_URL}/api/pipelines/${pipeline_id}/valves?${searchParams.toString()}`,
+		`${WEBUI_BASE_URL}/api/v1/pipelines/${pipeline_id}/valves?${searchParams.toString()}`,
 		{
 			method: 'GET',
 			headers: {
@@ -721,7 +753,7 @@ export const getPipelineValvesSpec = async (token: string, pipeline_id: string, 
 	}
 
 	const res = await fetch(
-		`${WEBUI_BASE_URL}/api/pipelines/${pipeline_id}/valves/spec?${searchParams.toString()}`,
+		`${WEBUI_BASE_URL}/api/v1/pipelines/${pipeline_id}/valves/spec?${searchParams.toString()}`,
 		{
 			method: 'GET',
 			headers: {
@@ -762,7 +794,7 @@ export const updatePipelineValves = async (
 	}
 
 	const res = await fetch(
-		`${WEBUI_BASE_URL}/api/pipelines/${pipeline_id}/valves/update?${searchParams.toString()}`,
+		`${WEBUI_BASE_URL}/api/v1/pipelines/${pipeline_id}/valves/update?${searchParams.toString()}`,
 		{
 			method: 'POST',
 			headers: {

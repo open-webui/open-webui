@@ -8,6 +8,8 @@ import { TTS_RESPONSE_SPLIT } from '$lib/types';
 // Helper functions
 //////////////////////////
 
+export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 function escapeRegExp(string: string): string {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -187,6 +189,67 @@ export const canvasPixelTest = () => {
 	return true;
 };
 
+export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
+	return new Promise((resolve, reject) => {
+		const img = new Image();
+		img.onload = () => {
+			const canvas = document.createElement('canvas');
+			let width = img.width;
+			let height = img.height;
+
+			// Maintain aspect ratio while resizing
+
+			if (maxWidth && maxHeight) {
+				// Resize with both dimensions defined (preserves aspect ratio)
+
+				if (width <= maxWidth && height <= maxHeight) {
+					resolve(imageUrl);
+					return;
+				}
+
+				if (width / height > maxWidth / maxHeight) {
+					height = Math.round((maxWidth * height) / width);
+					width = maxWidth;
+				} else {
+					width = Math.round((maxHeight * width) / height);
+					height = maxHeight;
+				}
+			} else if (maxWidth) {
+				// Only maxWidth defined
+
+				if (width <= maxWidth) {
+					resolve(imageUrl);
+					return;
+				}
+
+				height = Math.round((maxWidth * height) / width);
+				width = maxWidth;
+			} else if (maxHeight) {
+				// Only maxHeight defined
+
+				if (height <= maxHeight) {
+					resolve(imageUrl);
+					return;
+				}
+
+				width = Math.round((maxHeight * width) / height);
+				height = maxHeight;
+			}
+
+			canvas.width = width;
+			canvas.height = height;
+
+			const context = canvas.getContext('2d');
+			context.drawImage(img, 0, 0, width, height);
+
+			// Get compressed image URL
+			const compressedUrl = canvas.toDataURL();
+			resolve(compressedUrl);
+		};
+		img.onerror = (error) => reject(error);
+		img.src = imageUrl;
+	});
+};
 export const generateInitialsImage = (name) => {
 	const canvas = document.createElement('canvas');
 	const ctx = canvas.getContext('2d');
@@ -552,7 +615,33 @@ export const removeEmojis = (str: string) => {
 };
 
 export const removeFormattings = (str: string) => {
-	return str.replace(/(\*)(.*?)\1/g, '').replace(/(```)(.*?)\1/gs, '');
+	return (
+		str
+			// Block elements (remove completely)
+			.replace(/(```[\s\S]*?```)/g, '') // Code blocks
+			.replace(/^\|.*\|$/gm, '') // Tables
+			// Inline elements (preserve content)
+			.replace(/(?:\*\*|__)(.*?)(?:\*\*|__)/g, '$1') // Bold
+			.replace(/(?:[*_])(.*?)(?:[*_])/g, '$1') // Italic
+			.replace(/~~(.*?)~~/g, '$1') // Strikethrough
+			.replace(/`([^`]+)`/g, '$1') // Inline code
+
+			// Links and images
+			.replace(/!?\[([^\]]*)\](?:\([^)]+\)|\[[^\]]*\])/g, '$1') // Links & images
+			.replace(/^\[[^\]]+\]:\s*.*$/gm, '') // Reference definitions
+
+			// Block formatting
+			.replace(/^#{1,6}\s+/gm, '') // Headers
+			.replace(/^\s*[-*+]\s+/gm, '') // Lists
+			.replace(/^\s*(?:\d+\.)\s+/gm, '') // Numbered lists
+			.replace(/^\s*>[> ]*/gm, '') // Blockquotes
+			.replace(/^\s*:\s+/gm, '') // Definition lists
+
+			// Cleanup
+			.replace(/\[\^[^\]]*\]/g, '') // Footnotes
+			.replace(/[-*_~]/g, '') // Remaining markers
+			.replace(/\n{2,}/g, '\n')
+	); // Multiple newlines
 };
 
 export const cleanText = (content: string) => {
