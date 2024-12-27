@@ -272,6 +272,18 @@ ENABLE_API_KEY = PersistentConfig(
     os.environ.get("ENABLE_API_KEY", "True").lower() == "true",
 )
 
+ENABLE_API_KEY_ENDPOINT_RESTRICTIONS = PersistentConfig(
+    "ENABLE_API_KEY_ENDPOINT_RESTRICTIONS",
+    "auth.api_key.endpoint_restrictions",
+    os.environ.get("ENABLE_API_KEY_ENDPOINT_RESTRICTIONS", "False").lower() == "true",
+)
+
+API_KEY_ALLOWED_ENDPOINTS = PersistentConfig(
+    "API_KEY_ALLOWED_ENDPOINTS",
+    "auth.api_key.allowed_endpoints",
+    os.environ.get("API_KEY_ALLOWED_ENDPOINTS", ""),
+)
+
 
 JWT_EXPIRES_IN = PersistentConfig(
     "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "-1")
@@ -307,17 +319,6 @@ GOOGLE_CLIENT_SECRET = PersistentConfig(
     os.environ.get("GOOGLE_CLIENT_SECRET", ""),
 )
 
-GOOGLE_DRIVE_CLIENT_ID = PersistentConfig(
-    "GOOGLE_DRIVE_CLIENT_ID",
-    "google_drive.client_id",
-    os.environ.get("GOOGLE_DRIVE_CLIENT_ID", ""),
-)
-
-GOOGLE_DRIVE_API_KEY = PersistentConfig(
-    "GOOGLE_DRIVE_API_KEY",
-    "google_drive.api_key",
-    os.environ.get("GOOGLE_DRIVE_API_KEY", ""),
-)
 
 GOOGLE_OAUTH_SCOPE = PersistentConfig(
     "GOOGLE_OAUTH_SCOPE",
@@ -1223,6 +1224,17 @@ ENABLE_GOOGLE_DRIVE_INTEGRATION = PersistentConfig(
     os.getenv("ENABLE_GOOGLE_DRIVE_INTEGRATION", "False").lower() == "true",
 )
 
+GOOGLE_DRIVE_CLIENT_ID = PersistentConfig(
+    "GOOGLE_DRIVE_CLIENT_ID",
+    "google_drive.client_id",
+    os.environ.get("GOOGLE_DRIVE_CLIENT_ID", ""),
+)
+
+GOOGLE_DRIVE_API_KEY = PersistentConfig(
+    "GOOGLE_DRIVE_API_KEY",
+    "google_drive.api_key",
+    os.environ.get("GOOGLE_DRIVE_API_KEY", ""),
+)
 
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = PersistentConfig(

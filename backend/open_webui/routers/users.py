@@ -10,6 +10,9 @@ from open_webui.models.users import (
     UserSettings,
     UserUpdateForm,
 )
+
+
+from open_webui.socket.main import get_active_status_by_user_id
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -196,6 +199,7 @@ async def update_user_info_by_session_user(
 class UserResponse(BaseModel):
     name: str
     profile_image_url: str
+    active: Optional[bool] = None
 
 
 @router.get("/{user_id}", response_model=UserResponse)
@@ -216,7 +220,13 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
     user = Users.get_user_by_id(user_id)
 
     if user:
-        return UserResponse(name=user.name, profile_image_url=user.profile_image_url)
+        return UserResponse(
+            **{
+                "name": user.name,
+                "profile_image_url": user.profile_image_url,
+                "active": get_active_status_by_user_id(user_id),
+            }
+        )
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

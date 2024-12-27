@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { onDestroy, onMount, tick } from 'svelte';
 
-	import { chatId, showSidebar, socket } from '$lib/stores';
+	import { chatId, showSidebar, socket, user } from '$lib/stores';
 	import { getChannelById, getChannelMessages, sendMessage } from '$lib/apis/channels';
 
 	import Messages from './Messages.svelte';
@@ -19,6 +19,9 @@
 
 	let channel = null;
 	let messages = null;
+
+	let typingUsers = [];
+	let typingUsersTimeout = {};
 
 	$: if (id) {
 		initHandler();
@@ -62,6 +65,11 @@
 			if (type === 'message') {
 				console.log('message', data);
 				messages = [data, ...messages];
+
+				if (typingUsers.find((user) => user.id === event.user.id)) {
+					typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
+				}
+
 				await tick();
 				if (scrollEnd) {
 					messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
@@ -76,6 +84,32 @@
 			} else if (type === 'message:delete') {
 				console.log('message:delete', data);
 				messages = messages.filter((message) => message.id !== data.id);
+			} else if (type === 'typing') {
+				if (event.user.id === $user.id) {
+					return;
+				}
+
+				typingUsers = data.typing
+					? [
+							...typingUsers,
+							...(typingUsers.find((user) => user.id === event.user.id)
+								? []
+								: [
+										{
+											id: event.user.id,
+											name: event.user.name
+										}
+									])
+						]
+					: typingUsers.filter((user) => user.id !== event.user.id);
+
+				if (typingUsersTimeout[event.user.id]) {
+					clearTimeout(typingUsersTimeout[event.user.id]);
+				}
+
+				typingUsersTimeout[event.user.id] = setTimeout(() => {
+					typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
+				}, 5000);
 			}
 		}
 	};
@@ -97,6 +131,18 @@
 		}
 	};
 
+	const onChange = async () => {
+		$socket?.emit('channel-events', {
+			channel_id: id,
+			data: {
+				type: 'typing',
+				data: {
+					typing: true
+				}
+			}
+		});
+	};
+
 	onMount(() => {
 		if ($chatId) {
 			chatId.set('');
@@ -109,6 +155,10 @@
 		// $socket?.off('channel-events', channelEventHandler);
 	});
 </script>
+
+<svelte:head>
+	<title>#{channel?.name ?? 'Channel'} | Open WebUI</title>
+</svelte:head>
 
 <div
 	class="h-screen max-h-[100dvh] {$showSidebar
@@ -150,6 +200,6 @@
 	</div>
 
 	<div class=" pb-[1rem]">
-		<MessageInput onSubmit={submitHandler} {scrollToBottom} {scrollEnd} />
+		<MessageInput {typingUsers} {onChange} onSubmit={submitHandler} {scrollToBottom} {scrollEnd} />
 	</div>
 </div>

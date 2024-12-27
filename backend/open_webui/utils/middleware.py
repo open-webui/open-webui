@@ -776,7 +776,10 @@ async def process_chat_response(
                                     "content",
                                     message.get("content", "New Chat"),
                                 )
-                            )
+                            ).strip()
+
+                            if not title:
+                                title = messages[0].get("content", "New Chat")
 
                             Chats.update_chat_title_by_id(metadata["chat_id"], title)
 
@@ -1056,4 +1059,5 @@ async def process_chat_response(
         return StreamingResponse(
             stream_wrapper(response.body_iterator, events),
             headers=dict(response.headers),
+            background=response.background,
         )
