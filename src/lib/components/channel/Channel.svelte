@@ -65,6 +65,11 @@
 			if (type === 'message') {
 				console.log('message', data);
 				messages = [data, ...messages];
+
+				if (typingUsers.find((user) => user.id === event.user.id)) {
+					typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
+				}
+
 				await tick();
 				if (scrollEnd) {
 					messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
