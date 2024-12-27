@@ -54,6 +54,46 @@ def get_tools(
                 log.info(f"Loaded tool module {tool_id}")
 
             extra_params["__id__"] = tool_id
+
+            if hasattr(module, "valves") and hasattr(module, "Valves"):
+                valves = Tools.get_tool_valves_by_id(tool_id) or {}
+                module.valves = module.Valves(**valves)
+
+            if hasattr(module, "UserValves"):
+                extra_params["__user__"]["valves"] = module.UserValves(
+                    **Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
+                )
+
+            for spec in tools.specs:
+                # Remove internal parameters
+                spec["parameters"]["properties"] = {
+                    key: val
+                    for key, val in spec["parameters"]["properties"].items()
+                    if not key.startswith("__")
+                }
+
+                function_name = spec["name"]
+
+                # convert to function that takes only model params and inserts custom params
+                original_func = getattr(module, function_name)
+                callable = apply_extra_params_to_tool_function(original_func, extra_params)
+
+                tool_dict = {
+                    "toolkit_id": tool_id,
+                    "callable": callable,
+                    "spec": spec,
+                    "pydantic_model": function_to_pydantic_model(callable),
+                    "file_handler": hasattr(module, "file_handler") and module.file_handler,
+                    "citation": hasattr(module, "citation") and module.citation,
+                }
+
+                if function_name in tools_dict:
+                    log.warning(f"Tool {function_name} already exists in another tools!")
+                    log.warning(f"Collision between {tools} and {tool_id}.")
+                    log.warning(f"Discarding {tools}.{function_name}")
+                else:
+                    tools_dict[function_name] = tool_dict
+
         except Exception as e:
             log.error(f"Error loading tool {tool_id}: {e}")
             continue
