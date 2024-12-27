@@ -949,6 +949,31 @@ async def process_chat_response(
                 assistant_message = get_last_assistant_message(form_data["messages"])
                 content = assistant_message if assistant_message else ""
 
+                # Event to signal the background task to stop
+                stop_event = asyncio.Event()
+
+                async def background_save():
+                    loop = asyncio.get_running_loop()
+                    with ThreadPoolExecutor() as pool:
+                        while not stop_event.is_set():
+                            try:
+                                await loop.run_in_executor(
+                                    pool,
+                                    lambda: Chats.upsert_message_to_chat_by_id_and_message_id(
+                                        metadata["chat_id"],
+                                        metadata["message_id"],
+                                        {
+                                            "content": content,
+                                        },
+                                    )
+                                )
+                            except Exception as e:
+                                print(f"Error saving content: {e}")
+                            await asyncio.sleep(1)
+
+                # Start background save task
+                save_bg_task = asyncio.create_task(background_save())
+
                 async for line in response.body_iterator:
                     line = line.decode("utf-8") if isinstance(line, bytes) else line
                     data = line
@@ -986,15 +1011,6 @@ async def process_chat_response(
 
                             if value:
                                 content = f"{content}{value}"
-
-                                # Save message in the database
-                                Chats.upsert_message_to_chat_by_id_and_message_id(
-                                    metadata["chat_id"],
-                                    metadata["message_id"],
-                                    {
-                                        "content": content,
-                                    },
-                                )
 
                     except Exception as e:
                         done = "data: [DONE]" in line
@@ -1035,6 +1051,17 @@ async def process_chat_response(
             except asyncio.CancelledError:
                 print("Task was cancelled!")
                 await event_emitter({"type": "task-cancelled"})
+            finally:
+                # Signal the background save task to stop
+                stop_event.set()
+                # Save message in the database
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    metadata["chat_id"],
+                    metadata["message_id"],
+                    {
+                        "content": content,
+                    },
+                )
 
             if response.background is not None:
                 await response.background()
