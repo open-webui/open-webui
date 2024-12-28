@@ -11,13 +11,13 @@ from open_webui.models.knowledge import (
 )
 from open_webui.models.files import Files, FileModel
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.routers.files import delete_file_by_id
 from open_webui.routers.retrieval import (
     process_file,
     ProcessFileForm,
     process_files_batch,
     BatchProcessFilesForm,
 )
-
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user
@@ -389,7 +389,7 @@ def update_file_from_knowledge_by_id(
 
 
 @router.post("/{id}/file/remove", response_model=Optional[KnowledgeFilesResponse])
-def remove_file_from_knowledge_by_id(
+async def remove_file_from_knowledge_by_id(
     id: str,
     form_data: KnowledgeFileIdForm,
     user=Depends(get_verified_user),
@@ -419,12 +419,7 @@ def remove_file_from_knowledge_by_id(
         collection_name=knowledge.id, filter={"file_id": form_data.file_id}
     )
 
-    result = VECTOR_DB_CLIENT.query(
-        collection_name=knowledge.id,
-        filter={"file_id": form_data.file_id},
-    )
-
-    Files.delete_file_by_id(form_data.file_id)
+    await delete_file_by_id(form_data.file_id, user)
 
     if knowledge:
         data = knowledge.data or {}
