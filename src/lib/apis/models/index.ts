@@ -12,6 +12,7 @@ export const getModels = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -43,6 +44,7 @@ export const getBaseModels = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -75,6 +77,7 @@ export const createNewModel = async (token: string, model: object) => {
 		body: JSON.stringify(model)
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -106,6 +109,7 @@ export const getModelById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -141,6 +145,7 @@ export const toggleModelById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -177,6 +182,7 @@ export const updateModelById = async (token: string, id: string, model: object) 
 		body: JSON.stringify(model)
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -212,6 +218,7 @@ export const deleteModelById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -244,6 +251,7 @@ export const deleteAllModels = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})

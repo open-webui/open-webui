@@ -15,6 +15,7 @@ export const createNewGroup = async (token: string, group: object) => {
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -43,6 +44,7 @@ export const getGroups = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -74,6 +76,7 @@ export const getGroupById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -109,6 +112,7 @@ export const updateGroupById = async (token: string, id: string, group: object) 
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -141,6 +145,7 @@ export const deleteGroupById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})

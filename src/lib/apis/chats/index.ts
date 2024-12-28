@@ -16,6 +16,7 @@ export const createNewChat = async (token: string, chat: object) => {
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -56,6 +57,7 @@ export const importChat = async (
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -89,6 +91,7 @@ export const getChatList = async (token: string = '', page: number | null = null
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -123,6 +126,7 @@ export const getChatListByUserId = async (token: string = '', userId: string) =>
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -157,6 +161,7 @@ export const getArchivedChatList = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -188,6 +193,7 @@ export const getAllChats = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -223,6 +229,7 @@ export const getChatListBySearchText = async (token: string, text: string, page:
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -257,6 +264,7 @@ export const getChatsByFolderId = async (token: string, folderId: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -288,6 +296,7 @@ export const getAllArchivedChats = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -319,6 +328,7 @@ export const getAllUserChats = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -350,6 +360,7 @@ export const getAllTags = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -381,6 +392,7 @@ export const getPinnedChatList = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -418,6 +430,7 @@ export const getChatListByTagName = async (token: string = '', tagName: string) 
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -452,6 +465,7 @@ export const getChatById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -484,6 +498,7 @@ export const getChatByShareId = async (token: string, share_id: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -516,6 +531,7 @@ export const getChatPinnedStatusById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -554,6 +570,7 @@ export const toggleChatPinnedStatusById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -592,6 +609,7 @@ export const cloneChatById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -630,6 +648,7 @@ export const shareChatById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -665,6 +684,7 @@ export const updateChatFolderIdById = async (token: string, id: string, folderId
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -697,6 +717,7 @@ export const archiveChatById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -729,6 +750,7 @@ export const deleteSharedChatById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -764,6 +786,7 @@ export const updateChatById = async (token: string, id: string, chat: object) =>
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -796,6 +819,7 @@ export const deleteChatById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -828,6 +852,7 @@ export const getTagsById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -863,6 +888,7 @@ export const addTagById = async (token: string, id: string, tagName: string) => 
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -897,6 +923,7 @@ export const deleteTagById = async (token: string, id: string, tagName: string) 
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -928,6 +955,7 @@ export const deleteTagsById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -960,6 +988,7 @@ export const deleteAllChats = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -992,6 +1021,7 @@ export const archiveAllChats = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})

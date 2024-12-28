@@ -12,6 +12,7 @@ export const getUserGroups = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -39,6 +40,7 @@ export const getUserDefaultPermissions = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -69,6 +71,7 @@ export const updateUserDefaultPermissions = async (token: string, permissions: o
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -100,6 +103,7 @@ export const updateUserRole = async (token: string, id: string, role: string) =>
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -127,6 +131,7 @@ export const getUsers = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -153,6 +158,7 @@ export const getUserSettings = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -183,6 +189,7 @@ export const updateUserSettings = async (token: string, settings: object) => {
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -210,6 +217,7 @@ export const getUserById = async (token: string, userId: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -236,6 +244,7 @@ export const getUserInfo = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -266,6 +275,7 @@ export const updateUserInfo = async (token: string, info: object) => {
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -306,6 +316,7 @@ export const deleteUserById = async (token: string, userId: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -346,6 +357,7 @@ export const updateUserById = async (token: string, userId: string, user: UserUp
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})

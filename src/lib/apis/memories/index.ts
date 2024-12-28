@@ -12,6 +12,7 @@ export const getMemories = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -43,6 +44,7 @@ export const addNewMemory = async (token: string, content: string) => {
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -74,6 +76,7 @@ export const updateMemoryById = async (token: string, id: string, content: strin
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -105,6 +108,7 @@ export const queryMemory = async (token: string, content: string) => {
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -133,6 +137,7 @@ export const deleteMemoryById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -165,6 +170,7 @@ export const deleteMemoriesByUserId = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})

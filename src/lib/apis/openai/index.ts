@@ -12,6 +12,7 @@ export const getOpenAIConfig = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -54,6 +55,7 @@ export const updateOpenAIConfig = async (token: string = '', config: OpenAIConfi
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -86,6 +88,7 @@ export const getOpenAIUrls = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -121,6 +124,7 @@ export const updateOpenAIUrls = async (token: string = '', urls: string[]) => {
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -153,6 +157,7 @@ export const getOpenAIKeys = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -188,6 +193,7 @@ export const updateOpenAIKeys = async (token: string = '', keys: string[]) => {
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -223,6 +229,7 @@ export const getOpenAIModels = async (token: string, urlIdx?: number) => {
 		}
 	)
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -258,6 +265,7 @@ export const verifyOpenAIConnection = async (
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -318,6 +326,7 @@ export const generateOpenAIChatCompletion = async (
 		body: JSON.stringify(body)
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})

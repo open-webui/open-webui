@@ -20,6 +20,7 @@ export const verifyOllamaConnection = async (
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -47,6 +48,7 @@ export const getOllamaConfig = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -88,6 +90,7 @@ export const updateOllamaConfig = async (token: string = '', config: OllamaConfi
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -120,6 +123,7 @@ export const getOllamaUrls = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -155,6 +159,7 @@ export const updateOllamaUrls = async (token: string = '', urls: string[]) => {
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -187,6 +192,7 @@ export const getOllamaVersion = async (token: string, urlIdx?: number) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -219,6 +225,7 @@ export const getOllamaModels = async (token: string = '', urlIdx: null | number 
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -412,6 +419,7 @@ export const deleteModel = async (token: string, tagName: string, urlIdx: string
 		}
 	)
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})

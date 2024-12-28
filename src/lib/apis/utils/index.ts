@@ -10,6 +10,7 @@ export const getGravatarUrl = async (email: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -35,6 +36,7 @@ export const formatPythonCode = async (code: string) => {
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -69,6 +71,7 @@ export const downloadChatAsPDF = async (title: string, messages: object[]) => {
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.blob();
 		})
@@ -94,6 +97,7 @@ export const getHTMLFromMarkdown = async (md: string) => {
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})

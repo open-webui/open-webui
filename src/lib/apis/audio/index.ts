@@ -11,6 +11,7 @@ export const getAudioConfig = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -48,6 +49,7 @@ export const updateAudioConfig = async (token: string, payload: OpenAIConfigForm
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -78,6 +80,7 @@ export const transcribeAudio = async (token: string, file: File) => {
 		body: data
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -115,6 +118,7 @@ export const synthesizeOpenAISpeech = async (
 		})
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res;
 		})
@@ -147,6 +151,7 @@ export const getModels = async (token: string = ''): Promise<AvailableModelsResp
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -175,6 +180,7 @@ export const getVoices = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})

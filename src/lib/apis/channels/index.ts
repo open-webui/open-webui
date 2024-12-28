@@ -20,6 +20,7 @@ export const createNewChannel = async (token: string = '', channel: ChannelForm)
 		body: JSON.stringify({ ...channel })
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -51,6 +52,7 @@ export const getChannels = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -82,6 +84,7 @@ export const getChannelById = async (token: string = '', channel_id: string) => 
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -118,6 +121,7 @@ export const updateChannelById = async (
 		body: JSON.stringify({ ...channel })
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -149,6 +153,7 @@ export const deleteChannelById = async (token: string = '', channel_id: string) 
 		}
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -188,6 +193,7 @@ export const getChannelMessages = async (
 		}
 	)
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -226,6 +232,7 @@ export const sendMessage = async (token: string = '', channel_id: string, messag
 		body: JSON.stringify({ ...message })
 	})
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -266,6 +273,7 @@ export const updateMessage = async (
 		}
 	)
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -300,6 +308,7 @@ export const deleteMessage = async (token: string = '', channel_id: string, mess
 		}
 	)
 		.then(async (res) => {
+			if(res.status === 401) location.href = '/auth';
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
