@@ -65,6 +65,7 @@ from open_webui.env import (
     SRC_LOG_LEVELS,
     GLOBAL_LOG_LEVEL,
     BYPASS_MODEL_ACCESS_CONTROL,
+    ENABLE_REALTIME_CHAT_SAVE,
 )
 from open_webui.constants import TASKS
 
@@ -977,7 +978,6 @@ async def process_chat_response(
                             )
 
                         else:
-
                             value = (
                                 data.get("choices", [])[0]
                                 .get("delta", {})
@@ -987,6 +987,28 @@ async def process_chat_response(
                             if value:
                                 content = f"{content}{value}"
 
+                                if ENABLE_REALTIME_CHAT_SAVE:
+                                    # Save message in the database
+                                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                                        metadata["chat_id"],
+                                        metadata["message_id"],
+                                        {
+                                            "content": content,
+                                        },
+                                    )
+                                else:
+                                    data = {
+                                        "content": content,
+                                    }
+
+                    except Exception as e:
+                        done = "data: [DONE]" in line
+                        title = Chats.get_chat_title_by_id(metadata["chat_id"])
+
+                        if done:
+                            data = {"done": True, "content": content, "title": title}
+
+                            if not ENABLE_REALTIME_CHAT_SAVE:
                                 # Save message in the database
                                 Chats.upsert_message_to_chat_by_id_and_message_id(
                                     metadata["chat_id"],
@@ -995,13 +1017,6 @@ async def process_chat_response(
                                         "content": content,
                                     },
                                 )
-
-                    except Exception as e:
-                        done = "data: [DONE]" in line
-                        title = Chats.get_chat_title_by_id(metadata["chat_id"])
-
-                        if done:
-                            data = {"done": True, "content": content, "title": title}
 
                             # Send a webhook notification if the user is not active
                             if (
