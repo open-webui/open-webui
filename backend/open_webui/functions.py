@@ -108,6 +108,7 @@ async def get_function_models(request):
                         "created": pipe.created_at,
                         "owned_by": "openai",
                         "pipe": pipe_flag,
+                        "loaded": True,
                     }
                 )
         else:
@@ -125,6 +126,7 @@ async def get_function_models(request):
                     "created": pipe.created_at,
                     "owned_by": "openai",
                     "pipe": pipe_flag,
+                    "loaded": True,
                 }
             )
 
