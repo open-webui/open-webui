@@ -747,6 +747,7 @@
 	"Reset All Models": "",
 	"Reset Upload Directory": "Tilbakestill opplastingskatalog",
 	"Reset Vector Storage/Knowledge": "Tilbakestill Vector-lagring/kunnskap",
+	"Reset view": "",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Svar-varsler kan ikke aktiveres fordi tilgang til nettstedet er nektet. Gå til nettleserinnstillingene dine for å gi den nødvendige tilgangen.",
 	"Response splitting": "Oppdeling av svar",
 	"Result": "Resultat",
