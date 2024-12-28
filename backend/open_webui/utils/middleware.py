@@ -929,6 +929,10 @@ async def process_chat_response(
 
         # Handle as a background task
         async def post_response_handler(response, events):
+
+            assistant_message = get_last_assistant_message(form_data["messages"])
+            content = assistant_message if assistant_message else ""
+
             try:
                 for event in events:
                     await event_emitter(
@@ -946,9 +950,6 @@ async def process_chat_response(
                             **event,
                         },
                     )
-
-                assistant_message = get_last_assistant_message(form_data["messages"])
-                content = assistant_message if assistant_message else ""
 
                 async for line in response.body_iterator:
                     line = line.decode("utf-8") if isinstance(line, bytes) else line
@@ -1050,6 +1051,16 @@ async def process_chat_response(
             except asyncio.CancelledError:
                 print("Task was cancelled!")
                 await event_emitter({"type": "task-cancelled"})
+
+                if not ENABLE_REALTIME_CHAT_SAVE:
+                    # Save message in the database
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
+                        {
+                            "content": content,
+                        },
+                    )
 
             if response.background is not None:
                 await response.background()
