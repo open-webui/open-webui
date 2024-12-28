@@ -65,6 +65,7 @@ from open_webui.env import (
     SRC_LOG_LEVELS,
     GLOBAL_LOG_LEVEL,
     BYPASS_MODEL_ACCESS_CONTROL,
+    ASYNC_CHAT_SAVING_ENABLED,
 )
 from open_webui.constants import TASKS
 
@@ -971,8 +972,18 @@ async def process_chat_response(
                                 print(f"Error saving content: {e}")
                             await asyncio.sleep(1)
 
+                        # Save message in the database
+                        Chats.upsert_message_to_chat_by_id_and_message_id(
+                            metadata["chat_id"],
+                            metadata["message_id"],
+                            {
+                                "content": content,
+                            },
+                        )
+
                 # Start background save task
-                save_bg_task = asyncio.create_task(background_save())
+                if ASYNC_CHAT_SAVING_ENABLED:
+                    asyncio.create_task(background_save())
 
                 async for line in response.body_iterator:
                     line = line.decode("utf-8") if isinstance(line, bytes) else line
@@ -1011,6 +1022,16 @@ async def process_chat_response(
 
                             if value:
                                 content = f"{content}{value}"
+
+                                if not ASYNC_CHAT_SAVING_ENABLED:
+                                    # Save message in the database
+                                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                                        metadata["chat_id"],
+                                        metadata["message_id"],
+                                        {
+                                            "content": content,
+                                        },
+                                    )
 
                     except Exception as e:
                         done = "data: [DONE]" in line
@@ -1054,14 +1075,6 @@ async def process_chat_response(
             finally:
                 # Signal the background save task to stop
                 stop_event.set()
-                # Save message in the database
-                Chats.upsert_message_to_chat_by_id_and_message_id(
-                    metadata["chat_id"],
-                    metadata["message_id"],
-                    {
-                        "content": content,
-                    },
-                )
 
             if response.background is not None:
                 await response.background()

@@ -267,6 +267,11 @@ DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
 if "postgres://" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")
 
+# Enable background saving for chat messages
+ASYNC_CHAT_SAVING_ENABLED = (
+    os.environ.get("ASYNC_CHAT_SAVING_ENABLED", "false").lower() == "true"
+)
+
 DATABASE_POOL_SIZE = os.environ.get("DATABASE_POOL_SIZE", 0)
 
 if DATABASE_POOL_SIZE == "":
