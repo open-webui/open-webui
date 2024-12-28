@@ -66,7 +66,7 @@
 			{($settings?.widescreenMode ?? null) ? 'max-w-full' : 'max-w-5xl'} mx-auto"
 			>
 				{#if channel}
-					<div class="flex flex-col gap-1.5 py-5">
+					<div class="flex flex-col gap-1.5 pb-5 pt-10">
 						<div class="text-2xl font-medium capitalize">{channel.name}</div>
 
 						<div class=" text-gray-500">
