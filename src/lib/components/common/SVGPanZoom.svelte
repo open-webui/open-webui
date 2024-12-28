@@ -29,12 +29,12 @@
 			zoomSpeed: 0.065
 		});
 	}
-	function resetPanZoomViewport() {
-		console.log('Reset View');
-		instance.moveTo(0, 0);
-		instance.zoomAbs(0, 0, 1);
-		console.log(instance.getTransform());
-	}
+function resetPanZoomViewport() {
+    console.log('Reset View');
+    instance.moveTo(0, 0);
+    instance.zoomAbs(0, 0, 1);
+    console.log(instance.getTransform());
+}
 </script>
 
 <div bind:this={sceneParentElement} class="relative {className}">
