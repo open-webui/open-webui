@@ -1,0 +1,68 @@
+{
+    "name": "comfyui-agent",
+    "version": "1.0.0",
+    "description": "Intelligent image generation using ComfyUI with CLIP-guided refinement",
+    "author": "OpenHands",
+    "type": "function",
+    "functions": [
+        {
+            "name": "generate_image",
+            "description": "Generate an image that matches the description using ComfyUI with CLIP-guided refinement",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "description": "Detailed description of the image to generate"
+                    },
+                    "max_attempts": {
+                        "type": "integer",
+                        "description": "Maximum number of generation attempts",
+                        "default": 5
+                    },
+                    "cfg_scale": {
+                        "type": "number",
+                        "description": "Initial CFG scale",
+                        "default": 7.0
+                    },
+                    "steps": {
+                        "type": "integer",
+                        "description": "Initial number of steps",
+                        "default": 20
+                    },
+                    "width": {
+                        "type": "integer",
+                        "description": "Image width",
+                        "default": 512
+                    },
+                    "height": {
+                        "type": "integer",
+                        "description": "Image height",
+                        "default": 512
+                    }
+                },
+                "required": ["description"]
+            },
+            "python_function": "generate_image"
+        },
+        {
+            "name": "analyze_image",
+            "description": "Analyze how well an image matches a description using CLIP",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "image_path": {
+                        "type": "string",
+                        "description": "Path to the image file to analyze"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Description to compare the image against"
+                    }
+                },
+                "required": ["image_path", "description"]
+            },
+            "python_function": "analyze_image"
+        }
+    ]
+}

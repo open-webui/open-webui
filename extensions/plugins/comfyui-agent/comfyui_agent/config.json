@@ -1,0 +1,98 @@
+{
+    "plugin_name": "comfyui-agent",
+    "display_name": "ComfyUI Intelligent Image Generation",
+    "description": "Generate and analyze images using ComfyUI with CLIP-guided refinement",
+    "version": "1.0.0",
+    "author": "OpenHands",
+    "homepage": "https://github.com/yourusername/comfyui-agent",
+    "settings": {
+        "comfyui_url": {
+            "type": "string",
+            "default": "http://127.0.0.1:8188",
+            "description": "ComfyUI API URL"
+        },
+        "max_attempts": {
+            "type": "integer",
+            "default": 5,
+            "description": "Default maximum generation attempts"
+        },
+        "default_cfg": {
+            "type": "float",
+            "default": 7.0,
+            "description": "Default CFG scale"
+        },
+        "default_steps": {
+            "type": "integer",
+            "default": 20,
+            "description": "Default number of steps"
+        },
+        "output_dir": {
+            "type": "string",
+            "default": "outputs",
+            "description": "Directory for generated images"
+        },
+        "save_metadata": {
+            "type": "boolean",
+            "default": true,
+            "description": "Save generation metadata"
+        },
+        "save_history": {
+            "type": "boolean",
+            "default": true,
+            "description": "Save generation history"
+        }
+    },
+    "requirements": {
+        "python": ">=3.8.0",
+        "cuda": "recommended",
+        "ram": ">=8GB",
+        "disk": ">=10GB"
+    },
+    "dependencies": {
+        "comfyui": {
+            "required": true,
+            "version": ">=1.0.0"
+        },
+        "open_webui": {
+            "required": true,
+            "version": ">=1.0.0"
+        }
+    },
+    "functions": [
+        {
+            "name": "generate_image",
+            "description": "Generate an image using ComfyUI with CLIP-guided refinement",
+            "example": {
+                "description": "A beautiful sunset over mountains",
+                "max_attempts": 5,
+                "cfg_scale": 7.0,
+                "steps": 20
+            }
+        },
+        {
+            "name": "analyze_image",
+            "description": "Analyze how well an image matches a description using CLIP",
+            "example": {
+                "image_path": "/path/to/image.png",
+                "description": "A beautiful sunset over mountains"
+            }
+        }
+    ],
+    "llm_examples": [
+        {
+            "role": "user",
+            "content": "Generate an image of a beautiful sunset over mountains."
+        },
+        {
+            "role": "assistant",
+            "content": "I'll help you generate that image using ComfyUI.",
+            "function_call": {
+                "name": "generate_image",
+                "parameters": {
+                    "description": "A beautiful sunset over mountains with warm golden light, majestic peaks, and a peaceful atmosphere",
+                    "max_attempts": 5
+                }
+            }
+        }
+    ]
+}

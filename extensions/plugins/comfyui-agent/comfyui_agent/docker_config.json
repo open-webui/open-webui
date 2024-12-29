@@ -1,0 +1,56 @@
+{
+    "docker": {
+        "comfyui_url": "http://comfyui:8188",
+        "output_dir": "/app/data/outputs",
+        "cache_dir": "/app/data/cache",
+        "model_dir": "/app/comfyui/models",
+        "volumes": {
+            "data": "/app/data",
+            "plugins": "/app/extensions/plugins",
+            "comfyui": "/app/comfyui"
+        },
+        "environment_variables": {
+            "COMFYUI_API_URL": "URL of the ComfyUI API (default: http://comfyui:8188)",
+            "COMFYUI_OUTPUT_DIR": "Directory for generated images (default: /app/data/outputs)",
+            "PLUGIN_CACHE_DIR": "Directory for plugin cache (default: /app/data/cache)",
+            "COMFYUI_MODEL_DIR": "Directory for ComfyUI models (default: /app/comfyui/models)"
+        },
+        "required_packages": [
+            "torch>=2.0.0",
+            "transformers>=4.36.0",
+            "Pillow>=11.0.0",
+            "requests>=2.31.0",
+            "numpy>=1.24.0",
+            "tqdm>=4.66.0",
+            "huggingface-hub>=0.19.0"
+        ],
+        "gpu_requirements": {
+            "cuda": ">=11.8",
+            "driver": ">=470.0"
+        }
+    },
+    "paths": {
+        "workflows": "/app/comfyui/workflows",
+        "outputs": "/app/data/outputs",
+        "cache": "/app/data/cache",
+        "logs": "/app/data/logs"
+    },
+    "api": {
+        "timeout": 30,
+        "max_retries": 3,
+        "retry_delay": 1
+    },
+    "generation": {
+        "max_attempts": 5,
+        "default_width": 512,
+        "default_height": 512,
+        "default_steps": 20,
+        "default_cfg": 7.0,
+        "timeout": 300
+    },
+    "clip": {
+        "model": "openai/clip-vit-base-patch32",
+        "cache_dir": "/app/data/cache/clip",
+        "score_threshold": 0.8
+    }
+}
