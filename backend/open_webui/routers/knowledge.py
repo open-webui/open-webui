@@ -419,13 +419,6 @@ def remove_file_from_knowledge_by_id(
         collection_name=knowledge.id, filter={"file_id": form_data.file_id}
     )
 
-    result = VECTOR_DB_CLIENT.query(
-        collection_name=knowledge.id,
-        filter={"file_id": form_data.file_id},
-    )
-
-    Files.delete_file_by_id(form_data.file_id)
-
     if knowledge:
         data = knowledge.data or {}
         file_ids = data.get("file_ids", [])
