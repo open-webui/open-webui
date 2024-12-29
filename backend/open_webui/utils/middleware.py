@@ -65,6 +65,7 @@ from open_webui.env import (
     SRC_LOG_LEVELS,
     GLOBAL_LOG_LEVEL,
     BYPASS_MODEL_ACCESS_CONTROL,
+    ENABLE_REALTIME_CHAT_SAVE,
 )
 from open_webui.constants import TASKS
 
@@ -928,6 +929,10 @@ async def process_chat_response(
 
         # Handle as a background task
         async def post_response_handler(response, events):
+
+            assistant_message = get_last_assistant_message(form_data["messages"])
+            content = assistant_message if assistant_message else ""
+
             try:
                 for event in events:
                     await event_emitter(
@@ -945,9 +950,6 @@ async def process_chat_response(
                             **event,
                         },
                     )
-
-                assistant_message = get_last_assistant_message(form_data["messages"])
-                content = assistant_message if assistant_message else ""
 
                 async for line in response.body_iterator:
                     line = line.decode("utf-8") if isinstance(line, bytes) else line
@@ -977,7 +979,6 @@ async def process_chat_response(
                             )
 
                         else:
-
                             value = (
                                 data.get("choices", [])[0]
                                 .get("delta", {})
@@ -987,6 +988,28 @@ async def process_chat_response(
                             if value:
                                 content = f"{content}{value}"
 
+                                if ENABLE_REALTIME_CHAT_SAVE:
+                                    # Save message in the database
+                                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                                        metadata["chat_id"],
+                                        metadata["message_id"],
+                                        {
+                                            "content": content,
+                                        },
+                                    )
+                                else:
+                                    data = {
+                                        "content": content,
+                                    }
+
+                    except Exception as e:
+                        done = "data: [DONE]" in line
+                        title = Chats.get_chat_title_by_id(metadata["chat_id"])
+
+                        if done:
+                            data = {"done": True, "content": content, "title": title}
+
+                            if not ENABLE_REALTIME_CHAT_SAVE:
                                 # Save message in the database
                                 Chats.upsert_message_to_chat_by_id_and_message_id(
                                     metadata["chat_id"],
@@ -995,13 +1018,6 @@ async def process_chat_response(
                                         "content": content,
                                     },
                                 )
-
-                    except Exception as e:
-                        done = "data: [DONE]" in line
-                        title = Chats.get_chat_title_by_id(metadata["chat_id"])
-
-                        if done:
-                            data = {"done": True, "content": content, "title": title}
 
                             # Send a webhook notification if the user is not active
                             if (
@@ -1035,6 +1051,16 @@ async def process_chat_response(
             except asyncio.CancelledError:
                 print("Task was cancelled!")
                 await event_emitter({"type": "task-cancelled"})
+
+                if not ENABLE_REALTIME_CHAT_SAVE:
+                    # Save message in the database
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
+                        {
+                            "content": content,
+                        },
+                    )
 
             if response.background is not None:
                 await response.background()
