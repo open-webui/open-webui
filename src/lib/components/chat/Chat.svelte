@@ -1146,6 +1146,8 @@
 			message.usage = usage;
 		}
 
+		history.messages[message.id] = message;
+
 		if (done) {
 			message.done = true;
 
@@ -1189,8 +1191,6 @@
 			history.messages[message.id] = message;
 			await chatCompletedHandler(chatId, message.model, message.id, createMessagesList(message.id));
 		}
-
-		history.messages[message.id] = message;
 
 		console.log(data);
 		if (autoScroll) {
