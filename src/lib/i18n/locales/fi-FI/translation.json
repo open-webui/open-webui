@@ -747,6 +747,7 @@
 	"Reset All Models": "Palauta kaikki mallit",
 	"Reset Upload Directory": "Palauta latauspolku",
 	"Reset Vector Storage/Knowledge": "Tyhjennä vektoritallennukset/tietämys",
+	"Reset view": "",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "Vastausilmoituksia ei voida ottaa käyttöön, koska verkkosivuston käyttöoikeudet on evätty. Myönnä tarvittavat käyttöoikeudet selaimesi asetuksista.",
 	"Response splitting": "Vastauksen jakaminen",
 	"Result": "Tulos",

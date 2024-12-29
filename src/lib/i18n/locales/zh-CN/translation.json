@@ -747,6 +747,7 @@
 	"Reset All Models": "重置所有模型",
 	"Reset Upload Directory": "重置上传目录",
 	"Reset Vector Storage/Knowledge": "重置向量存储/知识",
+	"Reset view": "",
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "无法激活回复时发送通知。请检查浏览器设置，并授予必要的访问权限。",
 	"Response splitting": "拆分回复",
 	"Result": "结果",
