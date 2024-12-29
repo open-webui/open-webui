@@ -212,6 +212,15 @@ class ChatTable:
 
         return chat.chat.get("history", {}).get("messages", {}) or {}
 
+    def get_message_by_id_and_message_id(
+        self, id: str, message_id: str
+    ) -> Optional[dict]:
+        chat = self.get_chat_by_id(id)
+        if chat is None:
+            return None
+
+        return chat.chat.get("history", {}).get("messages", {}).get(message_id, {})
+
     def upsert_message_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, message: dict
     ) -> Optional[ChatModel]:

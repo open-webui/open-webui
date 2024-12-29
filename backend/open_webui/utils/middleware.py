@@ -929,9 +929,10 @@ async def process_chat_response(
 
         # Handle as a background task
         async def post_response_handler(response, events):
-
-            assistant_message = get_last_assistant_message(form_data["messages"])
-            content = assistant_message if assistant_message else ""
+            message = Chats.get_message_by_id_and_message_id(
+                metadata["chat_id"], metadata["message_id"]
+            )
+            content = message.get("content", "") if message else ""
 
             try:
                 for event in events:
