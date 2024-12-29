@@ -1,0 +1,17 @@
+[
+  {
+    "role": "user",
+    "content": "Generate an image of a beautiful sunset over mountains."
+  },
+  {
+    "role": "assistant",
+    "content": "I'll help you generate an image of a beautiful sunset over mountains using ComfyUI.",
+    "function_call": {
+      "name": "generate_image",
+      "parameters": {
+        "description": "A beautiful sunset over mountains with warm golden light, majestic peaks, and a peaceful atmosphere",
+        "max_attempts": 3
+      }
+    }
+  }
+]

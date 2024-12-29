@@ -1,0 +1,20 @@
+{
+    "paths": {
+        "outputs": "/app/backend/data/outputs/comfyui",
+        "cache": "/app/backend/data/cache/comfyui",
+        "logs": "/app/backend/data/logs/comfyui",
+        "models": "/app/backend/data/models/comfyui"
+    },
+    "api": {
+        "url": "http://comfyui:8188",
+        "timeout": 30,
+        "max_retries": 3
+    },
+    "generation": {
+        "max_attempts": 5,
+        "default_width": 512,
+        "default_height": 512,
+        "default_steps": 20,
+        "default_cfg": 7.0
+    }
+}

@@ -1,0 +1,7 @@
+Pillow>=11.0.0
+requests>=2.31.0
+torch>=2.0.0
+transformers>=4.36.0
+numpy>=1.24.0
+tqdm>=4.66.0
+huggingface-hub>=0.19.0
