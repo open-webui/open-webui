@@ -14,7 +14,7 @@ from langchain_core.documents import Document
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.misc import get_last_user_message
 
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, OFFLINE_MODE
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -374,6 +374,9 @@ def get_model_path(model: str, update_model: bool = False):
     cache_dir = os.getenv("SENTENCE_TRANSFORMERS_HOME")
 
     local_files_only = not update_model
+
+    if OFFLINE_MODE:
+        local_files_only = True
 
     snapshot_kwargs = {
         "cache_dir": cache_dir,
