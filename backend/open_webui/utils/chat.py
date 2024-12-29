@@ -182,6 +182,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
             "chat_id": data["chat_id"],
             "message_id": data["id"],
             "session_id": data["session_id"],
+            "user_id": user.id,
         }
     )
 
@@ -190,6 +191,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
             "chat_id": data["chat_id"],
             "message_id": data["id"],
             "session_id": data["session_id"],
+            "user_id": user.id,
         }
     )
 
