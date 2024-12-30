@@ -558,7 +558,7 @@ def add_files_to_knowledge_batch(
         result = process_files_batch(
             request=request,
             form_data=BatchProcessFilesForm(files=files, collection_name=id),
-            user=user
+            user=user,
         )
     except Exception as e:
         log.error(
