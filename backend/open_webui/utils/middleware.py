@@ -750,7 +750,7 @@ async def process_chat_response(
 ):
     async def background_tasks_handler():
         message_map = Chats.get_messages_by_chat_id(metadata["chat_id"])
-        message = message_map.get(metadata["message_id"])
+        message = message_map.get(metadata["message_id"]) if message_map else None
 
         if message:
             messages = get_message_list(message_map, message.get("id"))
