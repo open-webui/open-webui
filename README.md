@@ -66,7 +66,7 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
 Open WebUI can be installed using pip, the Python package installer. Before proceeding, ensure you're using **Python 3.11** to avoid compatibility issues and setup a virtual environment to make sure you don't mess up any existing Python installations.
 
 0. **Prerequisites**:
-  A. You can use [uv] for setting up a python virtual environment with python 3.11 very easily. You can check out this [link](https://docs.astral.sh/uv/getting-started/installation/) for how to install `uv`.
+  A. You can use [uv](https://github.com/astral-sh/uv) for setting up a python virtual environment with python 3.11 very easily. You can check out this [link](https://docs.astral.sh/uv/getting-started/installation/) for how to install `uv`.
 
   ```bash
    # navigate to the directory where you want to create the virtual environment
