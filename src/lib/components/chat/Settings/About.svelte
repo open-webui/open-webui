@@ -106,6 +106,12 @@
 
 		<hr class=" dark:border-gray-850" />
 
+		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+			Emoji graphics provided by
+			<a href="https://github.com/jdecked/twemoji" target="_blank">Twemoji</a>, licensed under
+			<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC-BY 4.0</a>.
+		</div>
+
 		<div class="flex space-x-1">
 			<a href="https://discord.gg/5rJgQTnV4s" target="_blank">
 				<img
