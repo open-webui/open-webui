@@ -26,6 +26,8 @@
 	import Image from '$lib/components/common/Image.svelte';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import ProfilePreview from './Message/ProfilePreview.svelte';
+	import ChatBubbleOvalEllipsis from '$lib/components/icons/ChatBubbleOvalEllipsis.svelte';
+	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
 
 	export let message;
 	export let showUserProfile = true;
@@ -66,29 +68,57 @@
 			? 'pt-1.5 pb-0.5'
 			: ''} w-full {($settings?.widescreenMode ?? null)
 			? 'max-w-full'
-			: 'max-w-5xl'} mx-auto group hover:bg-gray-500/5 transition relative"
+			: 'max-w-5xl'} mx-auto group hover:bg-gray-300/5 dark:hover:bg-gray-700/5 transition relative"
 	>
 		{#if (message.user_id === $user.id || $user.role === 'admin') && !edit}
 			<div class=" absolute invisible group-hover:visible right-1 -top-2 z-30">
 				<div
 					class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100 dark:border-gray-800"
 				>
-					<button
-						class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-						on:click={() => {
-							edit = true;
-							editedContent = message.content;
-						}}
-					>
-						<Pencil />
-					</button>
+					<Tooltip content={$i18n.t('Reactions')}>
+						<button
+							class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+							on:click={() => {
+								edit = true;
+								editedContent = message.content;
+							}}
+						>
+							<FaceSmile />
+						</button>
+					</Tooltip>
 
-					<button
-						class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-						on:click={() => (showDeleteConfirmDialog = true)}
-					>
-						<GarbageBin />
-					</button>
+					<Tooltip content={$i18n.t('Reply in thread')}>
+						<button
+							class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+							on:click={() => {
+								edit = true;
+								editedContent = message.content;
+							}}
+						>
+							<ChatBubbleOvalEllipsis />
+						</button>
+					</Tooltip>
+
+					<Tooltip content={$i18n.t('Edit')}>
+						<button
+							class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+							on:click={() => {
+								edit = true;
+								editedContent = message.content;
+							}}
+						>
+							<Pencil />
+						</button>
+					</Tooltip>
+
+					<Tooltip content={$i18n.t('Delete')}>
+						<button
+							class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+							on:click={() => (showDeleteConfirmDialog = true)}
+						>
+							<GarbageBin />
+						</button>
+					</Tooltip>
 				</div>
 			</div>
 		{/if}
