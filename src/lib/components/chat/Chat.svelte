@@ -890,7 +890,7 @@
 			return null;
 		});
 
-		if (res !== null) {
+		if (res !== null && res.messages) {
 			// Update chat history with the new messages
 			for (const message of res.messages) {
 				history.messages[message.id] = {
