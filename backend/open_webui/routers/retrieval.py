@@ -7,7 +7,7 @@ import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, List, Optional, Sequence, Union
+from typing import Iterator, Optional, Sequence, Union, List, Dict, Any, Tuple
 
 from fastapi import (
     Depends,
@@ -28,7 +28,9 @@ import tiktoken
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from langchain_core.documents import Document
 
-from open_webui.models.files import FileModel, Files
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+
+from open_webui.models.files import FileModel, Files, FileForm
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
 
@@ -149,6 +151,14 @@ def get_rf(
                 log.error("CrossEncoder error")
                 raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
     return rf
+
+def add_timestamp_to_youtube_url(url: str, timestamp: int) -> str:
+    parsed = urlparse(url)
+    query_dict = parse_qs(parsed.query)
+    query_dict['t'] = [str(timestamp)]
+    new_query = urlencode(query_dict, doseq=True)
+    return urlunparse(parsed._replace(query=new_query))
+
 
 
 ##########################################
@@ -652,6 +662,33 @@ async def update_query_settings(
 ####################################
 
 
+def interpolate_timestamp(chunk_start: int, chunk_end: int, timestamp_map: List[dict]) -> Tuple[float, float]:
+    """
+    Find the appropriate timestamp for a chunk based on its character position
+    Returns (start_time, end_time) as floats in seconds
+    """
+    # Find the timestamp entry that contains the start of our chunk
+    for entry in timestamp_map:
+        if entry["start"] <= chunk_start <= entry["end"]:
+            start_time = entry["time"]
+            break
+    else:
+        # If not found, use the closest previous timestamp
+        start_time = min(
+            [e["time"] for e in timestamp_map if e["start"] <= chunk_start], default=0)
+
+    # Find the timestamp entry that contains the end of our chunk
+    for entry in reversed(timestamp_map):
+        if entry["start"] <= chunk_end <= entry["end"]:
+            end_time = entry["time"] + entry["duration"]
+            break
+    else:
+        # If not found, use the closest next timestamp
+        end_time = max([e["time"] + e["duration"]
+                       for e in timestamp_map if e["end"] >= chunk_end], default=start_time)
+
+    return start_time, end_time
+
 def save_docs_to_vector_db(
     request: Request,
     docs,
@@ -695,6 +732,14 @@ def save_docs_to_vector_db(
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
+        # Check if this is a YouTube document by looking at the first doc's metadata
+        is_youtube = (len(docs) == 1 and
+                      docs[0].metadata.get("type") == "youtube")
+
+        # Store timestamp_map before splitting if it's a YouTube document
+        original_timestamp_map = docs[0].metadata.get(
+            "timestamp_map") if is_youtube else None
+
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=request.app.state.config.CHUNK_SIZE,
@@ -718,27 +763,64 @@ def save_docs_to_vector_db(
 
         docs = text_splitter.split_documents(docs)
 
+        # Only process timestamps for YouTube documents
+        if is_youtube and original_timestamp_map:
+            for doc in docs:
+                start_index = doc.metadata.get("start_index", 0)
+                end_index = start_index + len(doc.page_content)
+
+                start_time, end_time = interpolate_timestamp(
+                    start_index,
+                    end_index,
+                    original_timestamp_map
+                )
+
+                doc.metadata.update({
+                    "start_time": start_time,
+                    "source_url": add_timestamp_to_youtube_url(doc.metadata['source_url'], int(start_time))
+                })
+
+                # Remove the timestamp_map from individual chunks
+                doc.metadata.pop("timestamp_map", None)
+
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
     texts = [doc.page_content for doc in docs]
-    metadatas = [
-        {
-            **doc.metadata,
-            **(metadata if metadata else {}),
-            "embedding_config": json.dumps(
-                {
-                    "engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
-                    "model": request.app.state.config.RAG_EMBEDDING_MODEL,
-                }
-            ),
-        }
-        for doc in docs
-    ]
+    metadatas = []
 
-    # ChromaDB does not like datetime formats
-    # for meta-data so convert them to string.
+    for doc in docs:
+        # Preserve the original metadata
+        doc_metadata = doc.metadata.copy()
+
+        # Add any additional metadata
+        if metadata:
+            doc_metadata.update(metadata)
+
+        # Ensure source and source_url are preserved
+        if "source_url" in doc_metadata:
+            doc_metadata["source"] = doc_metadata["source_url"]
+
+        # Add embedding config
+        doc_metadata["embedding_config"] = json.dumps(
+            {
+                "engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
+                "model": request.app.state.config.RAG_EMBEDDING_MODEL,
+            }
+        )
+
+        # Convert datetime objects to strings
+        for key, value in doc_metadata.items():
+            if isinstance(value, datetime):
+                doc_metadata[key] = str(value)
+
+        # Debug log for final metadata
+        log.info(f"Final document metadata for ChromaDB: {doc_metadata}")
+        metadatas.append(doc_metadata)
+
     for metadata in metadatas:
+        # ChromaDB does not like datetime formats
+        # for meta-data so convert them to string.
         for key, value in metadata.items():
             if isinstance(value, datetime):
                 metadata[key] = str(value)
@@ -803,6 +885,8 @@ class ProcessFileForm(BaseModel):
     file_id: str
     content: Optional[str] = None
     collection_name: Optional[str] = None
+    type: Optional[str] = "file"  # Default to 'file' if not specified
+    url: Optional[str] = None  # URL for web content
 
 
 @router.post("/process/file")
@@ -813,11 +897,40 @@ def process_file(
 ):
     try:
         file = Files.get_file_by_id(form_data.file_id)
+        content = file.data.get("content", "")
+
+        # Create base metadata
+        metadata = {
+            **file.meta,  # Original file metadata
+            "name": file.filename,
+            "created_by": file.user_id,
+            "file_id": file.id,
+            "source": file.filename,
+        }
+
+        # For YouTube content, we skip embedding but still process the file association
+        if "type" in metadata and metadata["type"] == "youtube":
+            log.info("Processing YouTube content - skipping embedding")
+            return {
+                "status": True,
+                "collection_name": form_data.collection_name,
+                "content": content,
+                "file": {
+                    "id": file.id,
+                    "meta": metadata
+                }
+            }
 
         collection_name = form_data.collection_name
 
         if collection_name is None:
             collection_name = f"file-{file.id}"
+
+        # Get the document type, default to 'file' if not specified
+        doc_type = form_data.type if form_data.type else "file"
+
+        # Get source URL if available
+        source = form_data.url if form_data.url else file.filename
 
         if form_data.content:
             # Update the content in the file
@@ -833,11 +946,11 @@ def process_file(
                         "name": file.filename,
                         "created_by": file.user_id,
                         "file_id": file.id,
-                        "source": file.filename,
+                        "source": source,
+                        "type": doc_type,
                     },
                 )
             ]
-
             text_content = form_data.content
         elif form_data.collection_name:
             # Check if the file has already been processed and save the content
@@ -851,7 +964,11 @@ def process_file(
                 docs = [
                     Document(
                         page_content=result.documents[0][idx],
-                        metadata=result.metadatas[0][idx],
+                        metadata={
+                            **result.metadatas[0][idx],
+                            "type": doc_type,
+                            "source": source,
+                        },
                     )
                     for idx, id in enumerate(result.ids[0])
                 ]
@@ -864,7 +981,8 @@ def process_file(
                             "name": file.filename,
                             "created_by": file.user_id,
                             "file_id": file.id,
-                            "source": file.filename,
+                            "source": source,
+                            "type": doc_type,
                         },
                     )
                 ]
@@ -893,7 +1011,8 @@ def process_file(
                             "name": file.filename,
                             "created_by": file.user_id,
                             "file_id": file.id,
-                            "source": file.filename,
+                            "source": source,
+                            "type": doc_type,
                         },
                     )
                     for doc in docs
@@ -907,13 +1026,19 @@ def process_file(
                             "name": file.filename,
                             "created_by": file.user_id,
                             "file_id": file.id,
-                            "source": file.filename,
+                            "source": source,
+                            "type": doc_type,
                         },
                     )
                 ]
             text_content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {text_content}")
+        Files.update_file_data_by_id(
+            file.id,
+            {"content": text_content},
+        )
+
         Files.update_file_data_by_id(
             file.id,
             {"content": text_content},
@@ -1023,19 +1148,64 @@ def process_youtube_video(
         content = " ".join([doc.page_content for doc in docs])
         log.debug(f"text_content: {content}")
 
-        save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
+                # Get video title from metadata or fallback to URL
+        video_title = docs[0].metadata.get("title", form_data.url)
+
+        # Create a unique file ID for this video
+        file_id = str(uuid.uuid4())
+
+        # Create a file record
+        file_item = Files.insert_new_file(
+            user.id if user else None,
+            FileForm(
+                **{
+                    "id": file_id,
+                    "filename": video_title,
+                    "path": form_data.url,  # Use the video URL as the path
+                    "meta": {
+                        "name": video_title,
+                        "content_type": "text/plain",
+                        "size": len(content),
+                        "source": form_data.url,
+                        "source_url": add_timestamp_to_youtube_url(form_data.url, 0),
+                        "type": "youtube"
+                    },
+                    "data": {
+                        "content": content
+                    }
+                }
+            ),
+        )
+
+        # Add file-specific metadata
+        file_metadata = {
+            "source": form_data.url,
+            "source_url": add_timestamp_to_youtube_url(form_data.url, 0),
+            "title": video_title,
+            "type": "youtube",
+            "name": video_title,
+            "file_id": file_id,
+            "created_by": user.id if user else None
+        }
+
+        # Update all docs with the file metadata
+        for doc in docs:
+            doc.metadata.update(file_metadata)
+            # Debug log
+            log.info(f"Document metadata before saving: {doc.metadata}")
+
+        save_docs_to_vector_db(request, docs, collection_name, overwrite=False, add=True)
 
         return {
             "status": True,
             "collection_name": collection_name,
-            "filename": form_data.url,
+            "id": file_id,  # Return the file ID directly
+             "filename": video_title,
             "file": {
                 "data": {
                     "content": content,
                 },
-                "meta": {
-                    "name": form_data.url,
-                },
+                "meta": file_metadata
             },
         }
     except Exception as e:
