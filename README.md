@@ -63,12 +63,25 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
 
 ### Installation via Python pip 🐍
 
-Open WebUI can be installed using pip, the Python package installer. Before proceeding, ensure you're using **Python 3.11** to avoid compatibility issues.
+Open WebUI can be installed using pip, the Python package installer. Before proceeding, ensure you're using **Python 3.11** to avoid compatibility issues and setup a virtual environment to make sure you don't mess up any existing Python installations.
+
+0. **Prerequisites**:
+  A. You can use [uv] for setting up a python virtual environment with python 3.11 very easily. You can check out this [link](https://docs.astral.sh/uv/getting-started/installation/) for how to install `uv`.
+
+  ```bash
+   # navigate to the directory where you want to create the virtual environment
+   # this will create a folder named `.venv` in your current directory using python 3.11
+   uv venv -p 3.11 
+   ```
+  B. Or if you have python 3.11 installed and do not want to use `uv` then create your virtual environment using `python3.11 -m venv .venv`
+     You can double check what version of python you are using by default with `python -V`
 
 1. **Install Open WebUI**:
    Open your terminal and run the following command to install Open WebUI:
 
    ```bash
+   # activate the virtual environment to ensure you pip install into it and not the global environment
+   source .venv/bin/activate
    pip install open-webui
    ```
 
@@ -76,10 +89,14 @@ Open WebUI can be installed using pip, the Python package installer. Before proc
    After installation, you can start Open WebUI by executing:
 
    ```bash
+   # Be sure to activate the environment you installed Open WebUI into
    open-webui serve
    ```
 
 This will start the Open WebUI server, which you can access at [http://localhost:8080](http://localhost:8080)
+
+> NOTE: You can also use `pipx` or `uvx` if you are familiar with these tools - for example `uvx -p 3.11.9 open-webui serve`
+
 
 ### Quick Start with Docker 🐳
 
