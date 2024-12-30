@@ -57,7 +57,7 @@
 
 	<slot name="content">
 		<DropdownMenu.Content
-			class="max-w-full  w-80  bg-gray-100 dark:bg-gray-850 rounded-lg z-50 shadow-lg text-white"
+			class="max-w-full  w-80  bg-gray-50 dark:bg-gray-850 rounded-lg z-50 shadow-lg text-white"
 			sideOffset={8}
 			{side}
 			{align}
@@ -96,7 +96,7 @@
 												placement="top"
 											>
 												<div
-													class="p-1.5 rounded-lg cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-700 transition"
+													class="p-1.5 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition"
 												>
 													<img
 														src="/assets/emojis/{emoji.toLowerCase()}.svg"
