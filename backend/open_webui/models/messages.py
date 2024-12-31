@@ -251,12 +251,34 @@ class MessageTable:
             db.commit()
             return True
 
+    def delete_reactions_by_id(self, id: str) -> bool:
+        with get_db() as db:
+            db.query(MessageReaction).filter_by(message_id=id).delete()
+            db.commit()
+            return True
+
+    def delete_replies_by_id(self, id: str) -> bool:
+        with get_db() as db:
+            db.query(Message).filter_by(parent_id=id).delete()
+            db.commit()
+            return True
+
     def delete_message_by_id(self, id: str) -> bool:
         with get_db() as db:
             db.query(Message).filter_by(id=id).delete()
 
             # Delete all reactions to this message
             db.query(MessageReaction).filter_by(message_id=id).delete()
+
+            # List all replies to this message
+            replies = db.query(Message).filter_by(parent_id=id).all()
+
+            # Delete all reactions to each reply
+            for reply in replies:
+                db.query(MessageReaction).filter_by(message_id=reply.id).delete()
+
+            # Delete all replies to this message
+            db.query(Message).filter_by(parent_id=id).delete()
 
             db.commit()
             return True
