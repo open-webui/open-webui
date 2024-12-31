@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
+	import { Pane, PaneGroup, PaneResizer } from 'paneforge';
+
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 
@@ -9,6 +11,9 @@
 	import Messages from './Messages.svelte';
 	import MessageInput from './MessageInput.svelte';
 	import Navbar from './Navbar.svelte';
+	import Drawer from '../common/Drawer.svelte';
+	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
+	import Thread from './Messages/Thread.svelte';
 
 	export let id = '';
 
@@ -19,6 +24,8 @@
 
 	let channel = null;
 	let messages = null;
+
+	let threadId = null;
 
 	let typingUsers = [];
 	let typingUsersTimeout = {};
@@ -150,12 +157,28 @@
 		});
 	};
 
+	let mediaQuery;
+	let largeScreen = false;
+
 	onMount(() => {
 		if ($chatId) {
 			chatId.set('');
 		}
 
 		$socket?.on('channel-events', channelEventHandler);
+
+		mediaQuery = window.matchMedia('(min-width: 1024px)');
+
+		const handleMediaQuery = async (e) => {
+			if (e.matches) {
+				largeScreen = true;
+			} else {
+				largeScreen = false;
+			}
+		};
+
+		mediaQuery.addEventListener('change', handleMediaQuery);
+		handleMediaQuery(mediaQuery);
 	});
 
 	onDestroy(() => {
@@ -173,40 +196,98 @@
 		: ''} w-full max-w-full flex flex-col"
 	id="channel-container"
 >
-	<Navbar {channel} />
+	<PaneGroup direction="horizontal" class="w-full h-full">
+		<Pane defaultSize={50} minSize={50} class="h-full flex flex-col w-full relative">
+			<Navbar {channel} />
 
-	<div class="flex-1 overflow-y-auto">
-		{#if channel}
-			<div
-				class=" pb-2.5 max-w-full z-10 scrollbar-hidden w-full h-full pt-6 flex-1 flex flex-col-reverse overflow-auto"
-				id="messages-container"
-				bind:this={messagesContainerElement}
-				on:scroll={(e) => {
-					scrollEnd = Math.abs(messagesContainerElement.scrollTop) <= 50;
-				}}
+			<div class="flex-1 overflow-y-auto">
+				{#if channel}
+					<div
+						class=" pb-2.5 max-w-full z-10 scrollbar-hidden w-full h-full pt-6 flex-1 flex flex-col-reverse overflow-auto"
+						id="messages-container"
+						bind:this={messagesContainerElement}
+						on:scroll={(e) => {
+							scrollEnd = Math.abs(messagesContainerElement.scrollTop) <= 50;
+						}}
+					>
+						{#key id}
+							<Messages
+								{channel}
+								{messages}
+								{top}
+								onThread={(id) => {
+									threadId = id;
+								}}
+								onLoad={async () => {
+									const newMessages = await getChannelMessages(
+										localStorage.token,
+										id,
+										messages.length
+									);
+
+									messages = [...messages, ...newMessages];
+
+									if (newMessages.length < 50) {
+										top = true;
+										return;
+									}
+								}}
+							/>
+						{/key}
+					</div>
+				{/if}
+			</div>
+
+			<div class=" pb-[1rem]">
+				<MessageInput
+					{typingUsers}
+					{onChange}
+					onSubmit={submitHandler}
+					{scrollToBottom}
+					{scrollEnd}
+				/>
+			</div>
+		</Pane>
+
+		{#if !largeScreen}
+			{#if threadId !== null}
+				<Drawer
+					show={threadId !== null}
+					on:close={() => {
+						threadId = null;
+					}}
+				>
+					<div class=" {threadId !== null ? ' h-screen  w-screen' : 'px-6 py-4'} h-full">
+						<Thread
+							{threadId}
+							{channel}
+							onClose={() => {
+								threadId = null;
+							}}
+						/>
+					</div>
+				</Drawer>
+			{/if}
+		{:else if threadId !== null}
+			<PaneResizer
+				class="relative flex w-[3px] items-center justify-center bg-background group bg-gray-50 dark:bg-gray-850"
 			>
-				{#key id}
-					<Messages
+				<div class="z-10 flex h-7 w-5 items-center justify-center rounded-sm">
+					<EllipsisVertical className="size-4 invisible group-hover:visible" />
+				</div>
+			</PaneResizer>
+
+			<Pane defaultSize={50} minSize={20} class="h-full w-full">
+				<div class="h-full w-full shadow-xl">
+					<Thread
+						{threadId}
 						{channel}
-						{messages}
-						{top}
-						onLoad={async () => {
-							const newMessages = await getChannelMessages(localStorage.token, id, messages.length);
-
-							messages = [...messages, ...newMessages];
-
-							if (newMessages.length < 50) {
-								top = true;
-								return;
-							}
+						onClose={() => {
+							threadId = null;
 						}}
 					/>
-				{/key}
-			</div>
+				</div>
+			</Pane>
 		{/if}
-	</div>
-
-	<div class=" pb-[1rem]">
-		<MessageInput {typingUsers} {onChange} onSubmit={submitHandler} {scrollToBottom} {scrollEnd} />
-	</div>
+	</PaneGroup>
 </div>

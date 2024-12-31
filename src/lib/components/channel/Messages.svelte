@@ -25,6 +25,7 @@
 	export let top = false;
 
 	export let onLoad: Function = () => {};
+	export let onThread: Function = () => {};
 
 	let messagesLoading = false;
 
@@ -118,6 +119,9 @@
 						return null;
 					});
 				}}
+				onThread={(id) => {
+					onThread(id);
+				}}
 				onReaction={(name) => {
 					if (
 						(message?.reactions ?? [])
@@ -127,7 +131,16 @@
 					) {
 						messages = messages.map((m) => {
 							if (m.id === message.id) {
-								m.reactions = m.reactions.filter((reaction) => reaction.name !== name);
+								const reaction = m.reactions.find((reaction) => reaction.name === name);
+
+								if (reaction) {
+									reaction.user_ids = reaction.user_ids.filter((id) => id !== $user.id);
+									reaction.count = reaction.user_ids.length;
+
+									if (reaction.count === 0) {
+										m.reactions = m.reactions.filter((r) => r.name !== name);
+									}
+								}
 							}
 							return m;
 						});

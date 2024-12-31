@@ -35,6 +35,7 @@
 
 	export let onDelete: Function = () => {};
 	export let onEdit: Function = () => {};
+	export let onThread: Function = () => {};
 	export let onReaction: Function = () => {};
 
 	let showButtons = false;
@@ -100,17 +101,18 @@
 						</Tooltip>
 					</ReactionPicker>
 
-					<Tooltip content={$i18n.t('Reply in Thread')}>
-						<button
-							class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-							on:click={() => {
-								edit = true;
-								editedContent = message.content;
-							}}
-						>
-							<ChatBubbleOvalEllipsis />
-						</button>
-					</Tooltip>
+					{#if message?.parent_id === null}
+						<Tooltip content={$i18n.t('Reply in Thread')}>
+							<button
+								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+								on:click={() => {
+									onThread(message.id);
+								}}
+							>
+								<ChatBubbleOvalEllipsis />
+							</button>
+						</Tooltip>
+					{/if}
 
 					<Tooltip content={$i18n.t('Edit')}>
 						<button
@@ -288,6 +290,7 @@
 													].toLowerCase()}.svg"
 													alt={reaction.name}
 													class=" size-4"
+													loading="lazy"
 												/>
 											{:else}
 												<div>
