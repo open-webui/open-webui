@@ -1458,6 +1458,7 @@ class BatchProcessFilesResponse(BaseModel):
 
 @router.post("/process/files/batch")
 def process_files_batch(
+    request: Request,
     form_data: BatchProcessFilesForm,
     user=Depends(get_verified_user),
 ) -> BatchProcessFilesResponse:
@@ -1504,7 +1505,10 @@ def process_files_batch(
     if all_docs:
         try:
             save_docs_to_vector_db(
-                docs=all_docs, collection_name=collection_name, add=True
+                request=request,
+                docs=all_docs,
+                collection_name=collection_name,
+                add=True,
             )
 
             # Update all files with collection name

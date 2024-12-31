@@ -23,7 +23,7 @@ from open_webui.models.users import Users
 from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
-    get_user_id_from_session_pool,
+    get_active_status_by_user_id,
 )
 from open_webui.routers.tasks import (
     generate_queries,
@@ -750,7 +750,7 @@ async def process_chat_response(
 ):
     async def background_tasks_handler():
         message_map = Chats.get_messages_by_chat_id(metadata["chat_id"])
-        message = message_map.get(metadata["message_id"])
+        message = message_map.get(metadata["message_id"]) if message_map else None
 
         if message:
             messages = get_message_list(message_map, message.get("id"))
@@ -896,7 +896,7 @@ async def process_chat_response(
                     )
 
                     # Send a webhook notification if the user is not active
-                    if get_user_id_from_session_pool(metadata["session_id"]) is None:
+                    if get_active_status_by_user_id(user.id) is None:
                         webhook_url = Users.get_user_webhook_url_by_id(user.id)
                         if webhook_url:
                             post_webhook(
@@ -1002,50 +1002,55 @@ async def process_chat_response(
                                         "content": content,
                                     }
 
+                        await event_emitter(
+                            {
+                                "type": "chat:completion",
+                                "data": data,
+                            }
+                        )
+
                     except Exception as e:
                         done = "data: [DONE]" in line
-                        title = Chats.get_chat_title_by_id(metadata["chat_id"])
 
                         if done:
-                            data = {"done": True, "content": content, "title": title}
-
-                            if not ENABLE_REALTIME_CHAT_SAVE:
-                                # Save message in the database
-                                Chats.upsert_message_to_chat_by_id_and_message_id(
-                                    metadata["chat_id"],
-                                    metadata["message_id"],
-                                    {
-                                        "content": content,
-                                    },
-                                )
-
-                            # Send a webhook notification if the user is not active
-                            if (
-                                get_user_id_from_session_pool(metadata["session_id"])
-                                is None
-                            ):
-                                webhook_url = Users.get_user_webhook_url_by_id(user.id)
-                                if webhook_url:
-                                    post_webhook(
-                                        webhook_url,
-                                        f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
-                                        {
-                                            "action": "chat",
-                                            "message": content,
-                                            "title": title,
-                                            "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
-                                        },
-                                    )
-
+                            pass
                         else:
                             continue
 
-                    await event_emitter(
+                title = Chats.get_chat_title_by_id(metadata["chat_id"])
+                data = {"done": True, "content": content, "title": title}
+
+                if not ENABLE_REALTIME_CHAT_SAVE:
+                    # Save message in the database
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
                         {
-                            "type": "chat:completion",
-                            "data": data,
-                        }
+                            "content": content,
+                        },
                     )
+
+                # Send a webhook notification if the user is not active
+                if get_active_status_by_user_id(user.id) is None:
+                    webhook_url = Users.get_user_webhook_url_by_id(user.id)
+                    if webhook_url:
+                        post_webhook(
+                            webhook_url,
+                            f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
+                            {
+                                "action": "chat",
+                                "message": content,
+                                "title": title,
+                                "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
+                            },
+                        )
+
+                await event_emitter(
+                    {
+                        "type": "chat:completion",
+                        "data": data,
+                    }
+                )
 
                 await background_tasks_handler()
             except asyncio.CancelledError:
