@@ -8,7 +8,7 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import MessageInput from './MessageInput.svelte';
 	import Messages from './Messages.svelte';
-	import { onMount, tick } from 'svelte';
+	import { onDestroy, onMount, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	export let threadId = null;
@@ -54,6 +54,7 @@
 	};
 
 	const channelEventHandler = async (event) => {
+		console.log(event);
 		if (event.channel_id === channel.id) {
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
@@ -147,6 +148,10 @@
 
 	onMount(() => {
 		$socket?.on('channel-events', channelEventHandler);
+	});
+
+	onDestroy(() => {
+		$socket?.off('channel-events', channelEventHandler);
 	});
 </script>
 
