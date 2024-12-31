@@ -22,9 +22,15 @@
 	let typingUsers = [];
 	let typingUsersTimeout = {};
 
+	let messagesContainerElement = null;
+
 	$: if (threadId) {
 		initHandler();
 	}
+
+	const scrollToBottom = () => {
+		messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+	};
 
 	const initHandler = async () => {
 		messages = null;
@@ -39,6 +45,9 @@
 			if (messages.length < 50) {
 				top = true;
 			}
+
+			await tick();
+			scrollToBottom();
 		} else {
 			goto('/');
 		}
@@ -152,7 +161,7 @@
 			</div>
 		</div>
 
-		<div class=" max-h-full w-full overflow-y-auto">
+		<div class=" max-h-full w-full overflow-y-auto" bind:this={messagesContainerElement}>
 			<Messages
 				id={threadId}
 				{channel}
