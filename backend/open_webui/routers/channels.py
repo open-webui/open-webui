@@ -673,6 +673,35 @@ async def delete_message_by_id(
             to=f"channel:{channel.id}",
         )
 
+        if message.parent_id:
+            # If this message is a reply, emit to the parent message as well
+            parent_message = Messages.get_message_by_id(message.parent_id)
+
+            if parent_message:
+                await sio.emit(
+                    "channel-events",
+                    {
+                        "channel_id": channel.id,
+                        "message_id": parent_message.id,
+                        "data": {
+                            "type": "message:reply",
+                            "data": MessageUserResponse(
+                                **{
+                                    **parent_message.model_dump(),
+                                    "user": UserNameResponse(
+                                        **Users.get_user_by_id(
+                                            parent_message.user_id
+                                        ).model_dump()
+                                    ),
+                                }
+                            ).model_dump(),
+                        },
+                        "user": UserNameResponse(**user.model_dump()).model_dump(),
+                        "channel": channel.model_dump(),
+                    },
+                    to=f"channel:{channel.id}",
+                )
+
         return True
     except Exception as e:
         log.exception(e)
