@@ -67,8 +67,6 @@
 	};
 
 	const channelEventHandler = async (event) => {
-		console.log(event);
-
 		if (event.channel_id === id) {
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
