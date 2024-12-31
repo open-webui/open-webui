@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 
-	import { socket } from '$lib/stores';
+	import { socket, user } from '$lib/stores';
 
 	import { getChannelThreadMessages, sendMessage } from '$lib/apis/channels';
 
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import MessageInput from './MessageInput.svelte';
 	import Messages from './Messages.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	export let threadId = null;
@@ -44,6 +44,64 @@
 		}
 	};
 
+	const channelEventHandler = async (event) => {
+		console.log(event);
+
+		if (event.channel_id === channel.id) {
+			const type = event?.data?.type ?? null;
+			const data = event?.data?.data ?? null;
+
+			if (type === 'message') {
+				if ((data?.parent_id ?? null) === threadId) {
+					messages = [data, ...messages];
+
+					if (typingUsers.find((user) => user.id === event.user.id)) {
+						typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
+					}
+				}
+			} else if (type === 'message:update') {
+				const idx = messages.findIndex((message) => message.id === data.id);
+
+				if (idx !== -1) {
+					messages[idx] = data;
+				}
+			} else if (type === 'message:delete') {
+				messages = messages.filter((message) => message.id !== data.id);
+			} else if (type.includes('message:reaction')) {
+				const idx = messages.findIndex((message) => message.id === data.id);
+				if (idx !== -1) {
+					messages[idx] = data;
+				}
+			} else if (type === 'typing' && event.message_id === threadId) {
+				if (event.user.id === $user.id) {
+					return;
+				}
+
+				typingUsers = data.typing
+					? [
+							...typingUsers,
+							...(typingUsers.find((user) => user.id === event.user.id)
+								? []
+								: [
+										{
+											id: event.user.id,
+											name: event.user.name
+										}
+									])
+						]
+					: typingUsers.filter((user) => user.id !== event.user.id);
+
+				if (typingUsersTimeout[event.user.id]) {
+					clearTimeout(typingUsersTimeout[event.user.id]);
+				}
+
+				typingUsersTimeout[event.user.id] = setTimeout(() => {
+					typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
+				}, 5000);
+			}
+		}
+	};
+
 	const submitHandler = async ({ content, data }) => {
 		if (!content) {
 			return;
@@ -71,6 +129,10 @@
 			}
 		});
 	};
+
+	onMount(() => {
+		$socket?.on('channel-events', channelEventHandler);
+	});
 </script>
 
 {#if channel}
@@ -113,6 +175,6 @@
 			}}
 		/>
 
-		<MessageInput {typingUsers} {onChange} onSubmit={submitHandler} />
+		<MessageInput id={threadId} {typingUsers} {onChange} onSubmit={submitHandler} />
 	</div>
 {/if}

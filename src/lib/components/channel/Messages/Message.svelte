@@ -77,7 +77,7 @@
 			? 'max-w-full'
 			: 'max-w-5xl'} mx-auto group hover:bg-gray-300/5 dark:hover:bg-gray-700/5 transition relative"
 	>
-		{#if (message.user_id === $user.id || $user.role === 'admin') && !edit}
+		{#if !edit}
 			<div
 				class=" absolute {showButtons ? '' : 'invisible group-hover:visible'} right-1 -top-2 z-30"
 			>
@@ -116,26 +116,28 @@
 						</Tooltip>
 					{/if}
 
-					<Tooltip content={$i18n.t('Edit')}>
-						<button
-							class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-							on:click={() => {
-								edit = true;
-								editedContent = message.content;
-							}}
-						>
-							<Pencil />
-						</button>
-					</Tooltip>
+					{#if message.user_id === $user.id || $user.role === 'admin'}
+						<Tooltip content={$i18n.t('Edit')}>
+							<button
+								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+								on:click={() => {
+									edit = true;
+									editedContent = message.content;
+								}}
+							>
+								<Pencil />
+							</button>
+						</Tooltip>
 
-					<Tooltip content={$i18n.t('Delete')}>
-						<button
-							class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-							on:click={() => (showDeleteConfirmDialog = true)}
-						>
-							<GarbageBin />
-						</button>
-					</Tooltip>
+						<Tooltip content={$i18n.t('Delete')}>
+							<button
+								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+								on:click={() => (showDeleteConfirmDialog = true)}
+							>
+								<GarbageBin />
+							</button>
+						</Tooltip>
+					{/if}
 				</div>
 			</div>
 		{/if}
@@ -326,7 +328,7 @@
 						</div>
 					{/if}
 
-					{#if message.reply_count > 0}
+					{#if !thread && message.reply_count > 0}
 						<div class="flex items-center gap-1.5 -mt-0.5 mb-1.5">
 							<button
 								class="flex items-center text-xs py-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"

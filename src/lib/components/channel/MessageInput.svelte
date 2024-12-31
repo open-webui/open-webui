@@ -23,6 +23,8 @@
 	export let placeholder = $i18n.t('Send a Message');
 	export let transparentBackground = false;
 
+	export let id = null;
+
 	let draggedOver = false;
 
 	let recording = false;
@@ -257,7 +259,7 @@
 
 		await tick();
 
-		const chatInputElement = document.getElementById('chat-input');
+		const chatInputElement = document.getElementById(`chat-input-${id}`);
 		chatInputElement?.focus();
 	};
 
@@ -267,7 +269,7 @@
 
 	onMount(async () => {
 		window.setTimeout(() => {
-			const chatInput = document.getElementById('chat-input');
+			const chatInput = document.getElementById(`chat-input-${id}`);
 			chatInput?.focus();
 		}, 0);
 
@@ -373,7 +375,7 @@
 						recording = false;
 
 						await tick();
-						document.getElementById('chat-input')?.focus();
+						document.getElementById(`chat-input-${id}`)?.focus();
 					}}
 					on:confirm={async (e) => {
 						const { text, filename } = e.detail;
@@ -381,7 +383,7 @@
 						recording = false;
 
 						await tick();
-						document.getElementById('chat-input')?.focus();
+						document.getElementById(`chat-input-${id}`)?.focus();
 					}}
 				/>
 			{:else}
@@ -478,61 +480,21 @@
 								</InputMenu>
 							</div>
 
-							{#if $settings?.richTextInput ?? true}
-								<div
-									class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full py-2.5 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
-								>
-									<RichTextInput
-										bind:value={content}
-										id="chat-input"
-										messageInput={true}
-										shiftEnter={!$mobile ||
-											!(
-												'ontouchstart' in window ||
-												navigator.maxTouchPoints > 0 ||
-												navigator.msMaxTouchPoints > 0
-											)}
-										{placeholder}
-										largeTextAsFile={$settings?.largeTextAsFile ?? false}
-										on:keydown={async (e) => {
-											e = e.detail.event;
-											const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
-											if (
-												!$mobile ||
-												!(
-													'ontouchstart' in window ||
-													navigator.maxTouchPoints > 0 ||
-													navigator.msMaxTouchPoints > 0
-												)
-											) {
-												// Prevent Enter key from creating a new line
-												// Uses keyCode '13' for Enter key for chinese/japanese keyboards
-												if (e.keyCode === 13 && !e.shiftKey) {
-													e.preventDefault();
-												}
-
-												// Submit the content when Enter key is pressed
-												if (content !== '' && e.keyCode === 13 && !e.shiftKey) {
-													submitHandler();
-												}
-											}
-
-											if (e.key === 'Escape') {
-												console.log('Escape');
-											}
-										}}
-										on:paste={async (e) => {
-											e = e.detail.event;
-											console.log(e);
-										}}
-									/>
-								</div>
-							{:else}
-								<textarea
-									id="chat-input"
-									class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-none w-full py-3 px-1 rounded-xl resize-none h-[48px]"
-									{placeholder}
+							<div
+								class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full py-2.5 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
+							>
+								<RichTextInput
 									bind:value={content}
+									id={`chat-input-${id}`}
+									messageInput={true}
+									shiftEnter={!$mobile ||
+										!(
+											'ontouchstart' in window ||
+											navigator.maxTouchPoints > 0 ||
+											navigator.msMaxTouchPoints > 0
+										)}
+									{placeholder}
+									largeTextAsFile={$settings?.largeTextAsFile ?? false}
 									on:keydown={async (e) => {
 										e = e.detail.event;
 										const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
@@ -560,17 +522,12 @@
 											console.log('Escape');
 										}
 									}}
-									rows="1"
-									on:input={async (e) => {
-										e.target.style.height = '';
-										e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
-									}}
-									on:focus={async (e) => {
-										e.target.style.height = '';
-										e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
+									on:paste={async (e) => {
+										e = e.detail.event;
+										console.log(e);
 									}}
 								/>
-							{/if}
+							</div>
 
 							<div class="self-end mb-1.5 flex space-x-1 mr-1">
 								{#if content === ''}

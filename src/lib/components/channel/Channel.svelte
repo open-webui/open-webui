@@ -94,12 +94,18 @@
 				}
 			} else if (type === 'message:delete') {
 				messages = messages.filter((message) => message.id !== data.id);
+			} else if (type === 'message:reply') {
+				const idx = messages.findIndex((message) => message.id === data.id);
+
+				if (idx !== -1) {
+					messages[idx] = data;
+				}
 			} else if (type.includes('message:reaction')) {
 				const idx = messages.findIndex((message) => message.id === data.id);
 				if (idx !== -1) {
 					messages[idx] = data;
 				}
-			} else if (type === 'typing') {
+			} else if (type === 'typing' && event.message_id === null) {
 				if (event.user.id === $user.id) {
 					return;
 				}
@@ -242,6 +248,7 @@
 
 			<div class=" pb-[1rem]">
 				<MessageInput
+					id="root"
 					{typingUsers}
 					{onChange}
 					onSubmit={submitHandler}
