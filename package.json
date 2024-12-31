@@ -50,7 +50,6 @@
 	"type": "module",
 	"dependencies": {
 		"@codemirror/lang-javascript": "^6.2.2",
-		"codemirror-lang-hcl": "^0.0.0-beta.2",
 		"@codemirror/lang-python": "^6.1.6",
 		"@codemirror/language-data": "^6.5.1",
 		"@codemirror/theme-one-dark": "^6.1.2",
@@ -69,6 +68,7 @@
 		"async": "^3.2.5",
 		"bits-ui": "^0.19.7",
 		"codemirror": "^6.0.1",
+		"codemirror-lang-hcl": "^0.0.0-beta.2",
 		"crc-32": "^1.2.2",
 		"dayjs": "^1.11.10",
 		"dompurify": "^3.1.6",

@@ -237,6 +237,7 @@ async def channel_events(sid, data):
             "channel-events",
             {
                 "channel_id": data["channel_id"],
+                "message_id": data.get("message_id", None),
                 "data": event_data,
                 "user": UserNameResponse(**SESSION_POOL[sid]).model_dump(),
             },
