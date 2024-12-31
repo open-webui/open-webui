@@ -42,6 +42,10 @@
 		top = false;
 		messages = null;
 		channel = null;
+		threadId = null;
+
+		typingUsers = [];
+		typingUsersTimeout = {};
 
 		channel = await getChannelById(localStorage.token, id).catch((error) => {
 			return null;

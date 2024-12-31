@@ -7,7 +7,7 @@
 	export let onClose = () => {};
 </script>
 
-<div class="flex flex-col w-full h-full bg-gray-50 dark:bg-gray-900 px-3.5 py-3">
+<div class="flex flex-col w-full h-full bg-gray-50 dark:bg-gray-850 px-3.5 py-3">
 	<div class="flex items-center justify-between">
 		<div class=" font-medium text-lg">Thread</div>
 

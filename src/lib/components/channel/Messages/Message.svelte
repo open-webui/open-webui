@@ -32,6 +32,7 @@
 
 	export let message;
 	export let showUserProfile = true;
+	export let thread = false;
 
 	export let onDelete: Function = () => {};
 	export let onEdit: Function = () => {};
@@ -101,7 +102,7 @@
 						</Tooltip>
 					</ReactionPicker>
 
-					{#if message?.parent_id === null}
+					{#if !thread}
 						<Tooltip content={$i18n.t('Reply in Thread')}>
 							<button
 								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
