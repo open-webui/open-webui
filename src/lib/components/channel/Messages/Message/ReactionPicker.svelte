@@ -95,7 +95,7 @@
 						{#if Object.keys(emojis).length === 0}
 							<div class="text-center text-xs text-gray-500 dark:text-gray-400">No results</div>
 						{:else}
-							{#each Object.keys(emojiGroups) as group}
+							{#each Object.keys(emojiGroups) as group (group)}
 								{@const groupEmojis = emojiGroups[group].filter((emoji) => emojis[emoji])}
 								{#if groupEmojis.length > 0}
 									<div class="flex flex-col">

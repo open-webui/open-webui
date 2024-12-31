@@ -353,10 +353,10 @@
 				</div>
 
 				<div class="relative">
-					<div class=" -mt-5 bg-gradient-to-t from-white dark:from-gray-900">
+					<div class=" -mt-5">
 						{#if typingUsers.length > 0}
 							<div class=" text-xs px-4 mb-1">
-								<span class=" font-medium text-black dark:text-white">
+								<span class=" font-normal text-black dark:text-white">
 									{typingUsers.map((user) => user.name).join(', ')}
 								</span>
 								{$i18n.t('is typing...')}
