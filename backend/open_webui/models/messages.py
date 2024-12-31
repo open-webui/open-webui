@@ -270,16 +270,6 @@ class MessageTable:
             # Delete all reactions to this message
             db.query(MessageReaction).filter_by(message_id=id).delete()
 
-            # List all replies to this message
-            replies = db.query(Message).filter_by(parent_id=id).all()
-
-            # Delete all reactions to each reply
-            for reply in replies:
-                db.query(MessageReaction).filter_by(message_id=reply.id).delete()
-
-            # Delete all replies to this message
-            db.query(Message).filter_by(parent_id=id).delete()
-
             db.commit()
             return True
 
