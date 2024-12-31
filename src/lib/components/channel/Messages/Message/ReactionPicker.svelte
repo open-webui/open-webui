@@ -14,7 +14,7 @@
 	export let user = null;
 	let show = false;
 
-	let emojis = emojiShortCodes;
+	let emojis = {};
 	let search = '';
 
 	$: if (search) {
@@ -39,6 +39,21 @@
 	} else {
 		emojis = emojiShortCodes;
 	}
+
+	$: if (show) {
+		init();
+	} else {
+		destroy();
+	}
+
+	const init = () => {
+		emojis = emojiShortCodes;
+	};
+
+	const destroy = () => {
+		search = '';
+		emojis = {};
+	};
 </script>
 
 <DropdownMenu.Root
@@ -86,7 +101,7 @@
 									</div>
 
 									<div class="flex mb-2 flex-wrap gap-1">
-										{#each groupEmojis as emoji}
+										{#each groupEmojis as emoji (emoji)}
 											<Tooltip
 												content={(typeof emojiShortCodes[emoji] === 'string'
 													? [emojiShortCodes[emoji]]
