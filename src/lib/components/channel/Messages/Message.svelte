@@ -275,8 +275,8 @@
 											class="flex items-center gap-1.5 transition rounded-xl px-2 py-1 cursor-pointer {reaction.user_ids.includes(
 												$user.id
 											)
-												? ' bg-blue-500/10 outline outline-blue-500/50 outline-1'
-												: 'bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1'}"
+												? ' bg-blue-300/10 outline outline-blue-500/50 outline-1'
+												: 'bg-gray-300/10 dark:bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1'}"
 											on:click={() => {
 												onReaction(reaction.name);
 											}}
