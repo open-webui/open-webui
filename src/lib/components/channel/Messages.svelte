@@ -94,6 +94,8 @@
 				showUserProfile={messageIdx === 0 ||
 					messageList.at(messageIdx - 1)?.user_id !== message.user_id}
 				onDelete={() => {
+					messages = messages.filter((m) => m.id !== message.id);
+
 					const res = deleteMessage(localStorage.token, message.channel_id, message.id).catch(
 						(error) => {
 							toast.error(error);
@@ -102,6 +104,13 @@
 					);
 				}}
 				onEdit={(content) => {
+					messages = messages.map((m) => {
+						if (m.id === message.id) {
+							m.content = content;
+						}
+						return m;
+					});
+
 					const res = updateMessage(localStorage.token, message.channel_id, message.id, {
 						content: content
 					}).catch((error) => {
@@ -111,11 +120,18 @@
 				}}
 				onReaction={(name) => {
 					if (
-						message.reactions
+						(message?.reactions ?? [])
 							.find((reaction) => reaction.name === name)
 							?.user_ids?.includes($user.id) ??
 						false
 					) {
+						messages = messages.map((m) => {
+							if (m.id === message.id) {
+								m.reactions = m.reactions.filter((reaction) => reaction.name !== name);
+							}
+							return m;
+						});
+
 						const res = removeReaction(
 							localStorage.token,
 							message.channel_id,
@@ -126,6 +142,26 @@
 							return null;
 						});
 					} else {
+						messages = messages.map((m) => {
+							if (m.id === message.id) {
+								if (m.reactions) {
+									const reaction = m.reactions.find((reaction) => reaction.name === name);
+
+									if (reaction) {
+										reaction.user_ids.push($user.id);
+										reaction.count = reaction.user_ids.length;
+									} else {
+										m.reactions.push({
+											name: name,
+											user_ids: [$user.id],
+											count: 1
+										});
+									}
+								}
+							}
+							return m;
+						});
+
 						const res = addReaction(localStorage.token, message.channel_id, message.id, name).catch(
 							(error) => {
 								toast.error(error);

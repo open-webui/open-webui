@@ -312,6 +312,8 @@ async def update_message_by_id(
 
     try:
         message = Messages.update_message_by_id(message_id, form_data)
+        message = Messages.get_message_by_id(message_id)
+
         if message:
             await sio.emit(
                 "channel-events",
@@ -446,6 +448,7 @@ async def remove_reaction_by_id_and_user_id_and_name(
         )
 
         message = Messages.get_message_by_id(message_id)
+
         await sio.emit(
             "channel-events",
             {

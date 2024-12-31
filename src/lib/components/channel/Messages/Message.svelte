@@ -266,9 +266,9 @@
 							>{/if}
 					</div>
 
-					{#if message.reactions.length > 0}
+					{#if (message?.reactions ?? []).length > 0}
 						<div>
-							<div class="flex items-center gap-1 mt-1 mb-2">
+							<div class="flex items-center flex-wrap gap-y-1.5 gap-1 mt-1 mb-2">
 								{#each message.reactions as reaction}
 									<Tooltip content={`:${reaction.name}:`}>
 										<button
