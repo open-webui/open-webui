@@ -190,7 +190,7 @@
 	});
 
 	onDestroy(() => {
-		// $socket?.off('channel-events', channelEventHandler);
+		$socket?.off('channel-events', channelEventHandler);
 	});
 </script>
 

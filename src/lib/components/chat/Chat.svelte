@@ -427,7 +427,7 @@
 	onDestroy(() => {
 		chatIdUnsubscriber?.();
 		window.removeEventListener('message', onMessageHandler);
-		// $socket?.off('chat-events');
+		$socket?.off('chat-events', chatEventHandler);
 	});
 
 	// File upload functions
