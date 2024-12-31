@@ -29,6 +29,7 @@
 	import ChatBubbleOvalEllipsis from '$lib/components/icons/ChatBubbleOvalEllipsis.svelte';
 	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
 	import ReactionPicker from './Message/ReactionPicker.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 
 	export let message;
 	export let showUserProfile = true;
@@ -322,6 +323,29 @@
 									</Tooltip>
 								</ReactionPicker>
 							</div>
+						</div>
+					{/if}
+
+					{#if message.reply_count > 0}
+						<div class="flex items-center gap-1.5 -mt-0.5 mb-1.5">
+							<button
+								class="flex items-center text-xs py-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
+								on:click={() => {
+									onThread(message.id);
+								}}
+							>
+								<span class="font-medium mr-1">
+									{$i18n.t('{{COUNT}} Replies', { COUNT: message.reply_count })}</span
+								><span>
+									{' - '}{$i18n.t('Last reply')}
+									{dayjs.unix(message.latest_reply_at / 1000000000).fromNow()}</span
+								>
+
+								<span class="ml-1">
+									<ChevronRight className="size-2.5" strokeWidth="3" />
+								</span>
+								<!-- {$i18n.t('View Replies')} -->
+							</button>
 						</div>
 					{/if}
 				{/if}

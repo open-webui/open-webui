@@ -74,15 +74,17 @@
 			const data = event?.data?.data ?? null;
 
 			if (type === 'message') {
-				messages = [data, ...messages];
+				if ((data?.parent_id ?? null) === null) {
+					messages = [data, ...messages];
 
-				if (typingUsers.find((user) => user.id === event.user.id)) {
-					typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
-				}
+					if (typingUsers.find((user) => user.id === event.user.id)) {
+						typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
+					}
 
-				await tick();
-				if (scrollEnd) {
-					messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+					await tick();
+					if (scrollEnd) {
+						messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+					}
 				}
 			} else if (type === 'message:update') {
 				const idx = messages.findIndex((message) => message.id === data.id);
@@ -92,7 +94,7 @@
 				}
 			} else if (type === 'message:delete') {
 				messages = messages.filter((message) => message.id !== data.id);
-			} else if (type === 'message:reaction') {
+			} else if (type.includes('message:reaction')) {
 				const idx = messages.findIndex((message) => message.id === data.id);
 				if (idx !== -1) {
 					messages[idx] = data;

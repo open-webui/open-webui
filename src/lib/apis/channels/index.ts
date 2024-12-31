@@ -250,6 +250,7 @@ export const getChannelThreadMessages = async (
 }
 
 type MessageForm = {
+	parent_id?: string;
 	content: string;
 	data?: object;
 	meta?: object;

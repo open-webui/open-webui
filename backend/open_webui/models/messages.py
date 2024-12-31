@@ -89,6 +89,8 @@ class Reactions(BaseModel):
 
 
 class MessageResponse(MessageModel):
+    latest_reply_at: Optional[int]
+    reply_count: int
     reactions: list[Reactions]
 
 
@@ -127,12 +129,33 @@ class MessageTable:
                 return None
 
             reactions = self.get_reactions_by_message_id(id)
+            replies = self.get_replies_by_message_id(id)
+
             return MessageResponse(
                 **{
                     **MessageModel.model_validate(message).model_dump(),
+                    "latest_reply_at": replies[0].created_at if replies else None,
+                    "reply_count": len(replies),
                     "reactions": reactions,
                 }
             )
+
+    def get_replies_by_message_id(self, id: str) -> list[MessageModel]:
+        with get_db() as db:
+            all_messages = (
+                db.query(Message)
+                .filter_by(parent_id=id)
+                .order_by(Message.created_at.desc())
+                .all()
+            )
+            return [MessageModel.model_validate(message) for message in all_messages]
+
+    def get_reply_user_ids_by_message_id(self, id: str) -> list[str]:
+        with get_db() as db:
+            return [
+                message.user_id
+                for message in db.query(Message).filter_by(parent_id=id).all()
+            ]
 
     def get_messages_by_channel_id(
         self, channel_id: str, skip: int = 0, limit: int = 50
@@ -166,9 +189,9 @@ class MessageTable:
                 .all()
             )
 
-            return [MessageModel.model_validate(message)] + [
+            return [
                 MessageModel.model_validate(message) for message in all_messages
-            ]
+            ] + [MessageModel.model_validate(message)]
 
     def update_message_by_id(
         self, id: str, form_data: MessageForm

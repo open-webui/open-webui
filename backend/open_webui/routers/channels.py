@@ -169,10 +169,15 @@ async def get_channel_messages(
             user = Users.get_user_by_id(message.user_id)
             users[message.user_id] = user
 
+        replies = Messages.get_replies_by_message_id(message.id)
+        latest_reply_at = replies[0].created_at if replies else None
+
         messages.append(
             MessageUserResponse(
                 **{
                     **message.model_dump(),
+                    "reply_count": len(replies),
+                    "latest_reply_at": latest_reply_at,
                     "reactions": Messages.get_reactions_by_message_id(message.id),
                     "user": UserNameResponse(**users[message.user_id].model_dump()),
                 }
@@ -242,10 +247,17 @@ async def post_new_message(
                 "message_id": message.id,
                 "data": {
                     "type": "message",
-                    "data": {
-                        **message.model_dump(),
-                        "user": UserNameResponse(**user.model_dump()).model_dump(),
-                    },
+                    "data": MessageUserResponse(
+                        **{
+                            **message.model_dump(),
+                            "reply_count": 0,
+                            "latest_reply_at": None,
+                            "reactions": Messages.get_reactions_by_message_id(
+                                message.id
+                            ),
+                            "user": UserNameResponse(**user.model_dump()),
+                        }
+                    ).model_dump(),
                 },
                 "user": UserNameResponse(**user.model_dump()).model_dump(),
                 "channel": channel.model_dump(),
@@ -256,6 +268,35 @@ async def post_new_message(
                 event_data,
                 to=f"channel:{channel.id}",
             )
+
+            if message.parent_id:
+                # If this message is a reply, emit to the parent message as well
+                parent_message = Messages.get_message_by_id(message.parent_id)
+
+                if parent_message:
+                    await sio.emit(
+                        "channel-events",
+                        {
+                            "channel_id": channel.id,
+                            "message_id": parent_message.id,
+                            "data": {
+                                "type": "message:reply",
+                                "data": MessageUserResponse(
+                                    **{
+                                        **parent_message.model_dump(),
+                                        "user": UserNameResponse(
+                                            **Users.get_user_by_id(
+                                                parent_message.user_id
+                                            ).model_dump()
+                                        ),
+                                    }
+                                ).model_dump(),
+                            },
+                            "user": UserNameResponse(**user.model_dump()).model_dump(),
+                            "channel": channel.model_dump(),
+                        },
+                        to=f"channel:{channel.id}",
+                    )
 
             active_user_ids = get_user_ids_from_room(f"channel:{channel.id}")
 
@@ -273,6 +314,49 @@ async def post_new_message(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
+
+
+############################
+# GetChannelMessage
+############################
+
+
+@router.get("/{id}/messages/{message_id}", response_model=Optional[MessageUserResponse])
+async def get_channel_message(
+    id: str, message_id: str, user=Depends(get_verified_user)
+):
+    channel = Channels.get_channel_by_id(id)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if user.role != "admin" and not has_access(
+        user.id, type="read", access_control=channel.access_control
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    message = Messages.get_message_by_id(message_id)
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if message.channel_id != id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    return MessageUserResponse(
+        **{
+            **message.model_dump(),
+            "user": UserNameResponse(
+                **Users.get_user_by_id(message.user_id).model_dump()
+            ),
+        }
+    )
 
 
 ############################
@@ -316,6 +400,8 @@ async def get_channel_thread_messages(
             MessageUserResponse(
                 **{
                     **message.model_dump(),
+                    "reply_count": 0,
+                    "latest_reply_at": None,
                     "reactions": Messages.get_reactions_by_message_id(message.id),
                     "user": UserNameResponse(**users[message.user_id].model_dump()),
                 }
@@ -372,10 +458,14 @@ async def update_message_by_id(
                     "message_id": message.id,
                     "data": {
                         "type": "message:update",
-                        "data": {
-                            **message.model_dump(),
-                            "user": UserNameResponse(**user.model_dump()).model_dump(),
-                        },
+                        "data": MessageUserResponse(
+                            **{
+                                **message.model_dump(),
+                                "user": UserNameResponse(
+                                    **user.model_dump()
+                                ).model_dump(),
+                            }
+                        ).model_dump(),
                     },
                     "user": UserNameResponse(**user.model_dump()).model_dump(),
                     "channel": channel.model_dump(),
@@ -430,18 +520,17 @@ async def add_reaction_to_message(
 
     try:
         Messages.add_reaction_to_message(message_id, user.id, form_data.name)
-
         message = Messages.get_message_by_id(message_id)
+
         await sio.emit(
             "channel-events",
             {
                 "channel_id": channel.id,
                 "message_id": message.id,
                 "data": {
-                    "type": "message:reaction",
+                    "type": "message:reaction:add",
                     "data": {
                         **message.model_dump(),
-                        "user": UserNameResponse(**user.model_dump()).model_dump(),
                         "name": form_data.name,
                     },
                 },
@@ -505,10 +594,9 @@ async def remove_reaction_by_id_and_user_id_and_name(
                 "channel_id": channel.id,
                 "message_id": message.id,
                 "data": {
-                    "type": "message:reaction",
+                    "type": "message:reaction:remove",
                     "data": {
                         **message.model_dump(),
-                        "user": UserNameResponse(**user.model_dump()).model_dump(),
                         "name": form_data.name,
                     },
                 },

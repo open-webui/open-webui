@@ -3,12 +3,13 @@
 
 	import { socket } from '$lib/stores';
 
-	import { getChannelThreadMessages } from '$lib/apis/channels';
+	import { getChannelThreadMessages, sendMessage } from '$lib/apis/channels';
 
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import MessageInput from './MessageInput.svelte';
 	import Messages from './Messages.svelte';
 	import { onMount } from 'svelte';
+	import { toast } from 'svelte-sonner';
 
 	export let threadId = null;
 	export let channel = null;
@@ -43,10 +44,19 @@
 		}
 	};
 
-	const submitHandler = async (message) => {
-		// if (message) {
-		// 	await sendMessage(localStorage.token, channel.id, message, threadId);
-		// }
+	const submitHandler = async ({ content, data }) => {
+		if (!content) {
+			return;
+		}
+
+		const res = await sendMessage(localStorage.token, channel.id, {
+			parent_id: threadId,
+			content: content,
+			data: data
+		}).catch((error) => {
+			toast.error(error);
+			return null;
+		});
 	};
 
 	const onChange = async () => {

@@ -75,7 +75,7 @@
 
 	<slot name="content">
 		<DropdownMenu.Content
-			class="max-w-full  w-80  bg-gray-50 dark:bg-gray-850 rounded-lg z-50 shadow-lg text-white"
+			class="max-w-full  w-80  bg-gray-50 dark:bg-gray-850 rounded-lg z-50 shadow-lg dark:text-white"
 			sideOffset={8}
 			{side}
 			{align}
@@ -90,54 +90,56 @@
 				/>
 			</div>
 			<div class=" w-full flex justify-start h-96 overflow-y-auto px-3 pb-3 text-sm">
-				<div>
-					{#if Object.keys(emojis).length === 0}
-						<div class="text-center text-xs text-gray-500 dark:text-gray-400">No results</div>
-					{:else}
-						{#each Object.keys(emojiGroups) as group}
-							{@const groupEmojis = emojiGroups[group].filter((emoji) => emojis[emoji])}
-							{#if groupEmojis.length > 0}
-								<div class="flex flex-col">
-									<div class="text-xs font-medium mb-2 text-gray-500 dark:text-gray-400">
-										{group}
-									</div>
+				{#if show}
+					<div>
+						{#if Object.keys(emojis).length === 0}
+							<div class="text-center text-xs text-gray-500 dark:text-gray-400">No results</div>
+						{:else}
+							{#each Object.keys(emojiGroups) as group}
+								{@const groupEmojis = emojiGroups[group].filter((emoji) => emojis[emoji])}
+								{#if groupEmojis.length > 0}
+									<div class="flex flex-col">
+										<div class="text-xs font-medium mb-2 text-gray-500 dark:text-gray-400">
+											{group}
+										</div>
 
-									<div class="flex mb-2 flex-wrap gap-1">
-										{#each groupEmojis as emoji (emoji)}
-											<Tooltip
-												content={(typeof emojiShortCodes[emoji] === 'string'
-													? [emojiShortCodes[emoji]]
-													: emojiShortCodes[emoji]
-												)
-													.map((code) => `:${code}:`)
-													.join(', ')}
-												placement="top"
-											>
-												<button
-													class="p-1.5 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-													on:click={() => {
-														typeof emojiShortCodes[emoji] === 'string'
-															? onSubmit(emojiShortCodes[emoji])
-															: onSubmit(emojiShortCodes[emoji][0]);
-
-														show = false;
-													}}
+										<div class="flex mb-2 flex-wrap gap-1">
+											{#each groupEmojis as emoji (emoji)}
+												<Tooltip
+													content={(typeof emojiShortCodes[emoji] === 'string'
+														? [emojiShortCodes[emoji]]
+														: emojiShortCodes[emoji]
+													)
+														.map((code) => `:${code}:`)
+														.join(', ')}
+													placement="top"
 												>
-													<img
-														src="/assets/emojis/{emoji.toLowerCase()}.svg"
-														alt={emoji}
-														class="size-5"
-														loading="lazy"
-													/>
-												</button>
-											</Tooltip>
-										{/each}
+													<button
+														class="p-1.5 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+														on:click={() => {
+															typeof emojiShortCodes[emoji] === 'string'
+																? onSubmit(emojiShortCodes[emoji])
+																: onSubmit(emojiShortCodes[emoji][0]);
+
+															show = false;
+														}}
+													>
+														<img
+															src="/assets/emojis/{emoji.toLowerCase()}.svg"
+															alt={emoji}
+															class="size-5"
+															loading="lazy"
+														/>
+													</button>
+												</Tooltip>
+											{/each}
+										</div>
 									</div>
-								</div>
-							{/if}
-						{/each}
-					{/if}
-				</div>
+								{/if}
+							{/each}
+						{/if}
+					</div>
+				{/if}
 			</div>
 		</DropdownMenu.Content>
 	</slot>
