@@ -276,6 +276,56 @@ async def post_new_message(
 
 
 ############################
+# GetChannelThreadMessages
+############################
+
+
+@router.get(
+    "/{id}/messages/{message_id}/thread", response_model=list[MessageUserResponse]
+)
+async def get_channel_thread_messages(
+    id: str,
+    message_id: str,
+    skip: int = 0,
+    limit: int = 50,
+    user=Depends(get_verified_user),
+):
+    channel = Channels.get_channel_by_id(id)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if user.role != "admin" and not has_access(
+        user.id, type="read", access_control=channel.access_control
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    message_list = Messages.get_messages_by_parent_id(id, message_id, skip, limit)
+    users = {}
+
+    messages = []
+    for message in message_list:
+        if message.user_id not in users:
+            user = Users.get_user_by_id(message.user_id)
+            users[message.user_id] = user
+
+        messages.append(
+            MessageUserResponse(
+                **{
+                    **message.model_dump(),
+                    "reactions": Messages.get_reactions_by_message_id(message.id),
+                    "user": UserNameResponse(**users[message.user_id].model_dump()),
+                }
+            )
+        )
+
+    return messages
+
+
+############################
 # UpdateMessageById
 ############################
 

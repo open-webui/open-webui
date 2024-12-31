@@ -13,7 +13,7 @@
 	import Navbar from './Navbar.svelte';
 	import Drawer from '../common/Drawer.svelte';
 	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
-	import Thread from './Messages/Thread.svelte';
+	import Thread from './Thread.svelte';
 
 	export let id = '';
 
@@ -147,6 +147,7 @@
 	const onChange = async () => {
 		$socket?.emit('channel-events', {
 			channel_id: id,
+			message_id: null,
 			data: {
 				type: 'typing',
 				data: {
@@ -276,7 +277,7 @@
 				</div>
 			</PaneResizer>
 
-			<Pane defaultSize={50} minSize={20} class="h-full w-full">
+			<Pane defaultSize={50} minSize={30} class="h-full w-full">
 				<div class="h-full w-full shadow-xl">
 					<Thread
 						{threadId}

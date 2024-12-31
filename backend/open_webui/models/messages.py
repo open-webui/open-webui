@@ -140,13 +140,35 @@ class MessageTable:
         with get_db() as db:
             all_messages = (
                 db.query(Message)
-                .filter_by(channel_id=channel_id)
+                .filter_by(channel_id=channel_id, parent_id=None)
                 .order_by(Message.created_at.desc())
                 .offset(skip)
                 .limit(limit)
                 .all()
             )
             return [MessageModel.model_validate(message) for message in all_messages]
+
+    def get_messages_by_parent_id(
+        self, channel_id: str, parent_id: str, skip: int = 0, limit: int = 50
+    ) -> list[MessageModel]:
+        with get_db() as db:
+            message = db.get(Message, parent_id)
+
+            if not message:
+                return []
+
+            all_messages = (
+                db.query(Message)
+                .filter_by(channel_id=channel_id, parent_id=parent_id)
+                .order_by(Message.created_at.desc())
+                .offset(skip)
+                .limit(limit)
+                .all()
+            )
+
+            return [MessageModel.model_validate(message)] + [
+                MessageModel.model_validate(message) for message in all_messages
+            ]
 
     def update_message_by_id(
         self, id: str, form_data: MessageForm

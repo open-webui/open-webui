@@ -56,6 +56,8 @@
 	};
 </script>
 
+<!-- TODO: Rendering Optimisation, This works but it's slow af -->
+
 <DropdownMenu.Root
 	bind:open={show}
 	closeFocus={false}

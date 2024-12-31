@@ -20,9 +20,11 @@
 
 	const i18n = getContext('i18n');
 
+	export let id = null;
 	export let channel = null;
 	export let messages = [];
 	export let top = false;
+	export let thread = false;
 
 	export let onLoad: Function = () => {};
 	export let onThread: Function = () => {};
@@ -60,7 +62,7 @@
 					<div class=" ">Loading...</div>
 				</div>
 			</Loader>
-		{:else}
+		{:else if !thread}
 			<div
 				class="px-5
 			
@@ -89,9 +91,10 @@
 			</div>
 		{/if}
 
-		{#each messageList as message, messageIdx (message.id)}
+		{#each messageList as message, messageIdx (id ? `${id}-${message.id}` : message.id)}
 			<Message
 				{message}
+				{thread}
 				showUserProfile={messageIdx === 0 ||
 					messageList.at(messageIdx - 1)?.user_id !== message.user_id}
 				onDelete={() => {
