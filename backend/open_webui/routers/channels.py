@@ -531,6 +531,9 @@ async def add_reaction_to_message(
                     "type": "message:reaction:add",
                     "data": {
                         **message.model_dump(),
+                        "user": UserNameResponse(
+                            **Users.get_user_by_id(user.id).model_dump()
+                        ).model_dump(),
                         "name": form_data.name,
                     },
                 },
@@ -597,6 +600,9 @@ async def remove_reaction_by_id_and_user_id_and_name(
                     "type": "message:reaction:remove",
                     "data": {
                         **message.model_dump(),
+                        "user": UserNameResponse(
+                            **Users.get_user_by_id(user.id).model_dump()
+                        ).model_dump(),
                         "name": form_data.name,
                     },
                 },
