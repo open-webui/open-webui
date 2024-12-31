@@ -7,6 +7,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	export let onClose = () => {};
+	export let onSubmit = (name) => {};
 	export let side = 'top';
 	export let align = 'start';
 
@@ -95,8 +96,15 @@
 													.join(', ')}
 												placement="top"
 											>
-												<div
+												<button
 													class="p-1.5 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+													on:click={() => {
+														typeof emojiShortCodes[emoji] === 'string'
+															? onSubmit(emojiShortCodes[emoji])
+															: onSubmit(emojiShortCodes[emoji][0]);
+
+														show = false;
+													}}
 												>
 													<img
 														src="/assets/emojis/{emoji.toLowerCase()}.svg"
@@ -104,7 +112,7 @@
 														class="size-5"
 														loading="lazy"
 													/>
-												</div>
+												</button>
 											</Tooltip>
 										{/each}
 									</div>

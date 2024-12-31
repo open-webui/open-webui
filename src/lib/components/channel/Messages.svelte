@@ -11,12 +11,12 @@
 	dayjs.extend(isYesterday);
 	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
 
-	import { settings } from '$lib/stores';
+	import { settings, user } from '$lib/stores';
 
 	import Message from './Messages/Message.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import { deleteMessage, updateMessage } from '$lib/apis/channels';
+	import { addReaction, deleteMessage, removeReaction, updateMessage } from '$lib/apis/channels';
 
 	const i18n = getContext('i18n');
 
@@ -108,6 +108,31 @@
 						toast.error(error);
 						return null;
 					});
+				}}
+				onReaction={(name) => {
+					if (
+						message.reactions
+							.find((reaction) => reaction.name === name)
+							?.user_ids?.includes($user.id) ??
+						false
+					) {
+						const res = removeReaction(
+							localStorage.token,
+							message.channel_id,
+							message.id,
+							name
+						).catch((error) => {
+							toast.error(error);
+							return null;
+						});
+					} else {
+						const res = addReaction(localStorage.token, message.channel_id, message.id, name).catch(
+							(error) => {
+								toast.error(error);
+								return null;
+							}
+						);
+					}
 				}}
 			/>
 		{/each}

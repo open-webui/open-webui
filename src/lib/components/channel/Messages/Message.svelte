@@ -35,24 +35,13 @@
 
 	export let onDelete: Function = () => {};
 	export let onEdit: Function = () => {};
+	export let onReaction: Function = () => {};
+
 	let showButtons = false;
 
 	let edit = false;
 	let editedContent = null;
 	let showDeleteConfirmDialog = false;
-
-	let reactions = [
-		{
-			name: 'red_circle',
-			user_ids: ['U07KUHZSYER'],
-			count: 1
-		},
-		{
-			name: '+1',
-			user_ids: [$user.id],
-			count: 1
-		}
-	];
 
 	const formatDate = (inputDate) => {
 		const date = dayjs(inputDate);
@@ -92,7 +81,13 @@
 				<div
 					class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100 dark:border-gray-800"
 				>
-					<ReactionPicker onClose={() => (showButtons = false)}>
+					<ReactionPicker
+						onClose={() => (showButtons = false)}
+						onSubmit={(name) => {
+							showButtons = false;
+							onReaction(name);
+						}}
+					>
 						<Tooltip content={$i18n.t('Add Reaction')}>
 							<button
 								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
@@ -271,38 +266,49 @@
 							>{/if}
 					</div>
 
-					{#if reactions.length > 0}
+					{#if message.reactions.length > 0}
 						<div>
 							<div class="flex items-center gap-1 mt-1 mb-2">
-								{#each reactions as reaction}
-									<button
-										class="flex items-center gap-1.5 transition rounded-xl px-2 py-1 cursor-pointer {reaction.user_ids.includes(
-											$user.id
-										)
-											? ' bg-blue-500/10 outline outline-blue-500/50 outline-1'
-											: 'bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1'}"
-									>
-										{#if $shortCodesToEmojis[reaction.name]}
-											<img
-												src="/assets/emojis/{$shortCodesToEmojis[reaction.name].toLowerCase()}.svg"
-												alt={reaction.name}
-												class=" size-4"
-											/>
-										{:else}
-											<div>
-												{reaction.name}
-											</div>
-										{/if}
+								{#each message.reactions as reaction}
+									<Tooltip content={`:${reaction.name}:`}>
+										<button
+											class="flex items-center gap-1.5 transition rounded-xl px-2 py-1 cursor-pointer {reaction.user_ids.includes(
+												$user.id
+											)
+												? ' bg-blue-500/10 outline outline-blue-500/50 outline-1'
+												: 'bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1'}"
+											on:click={() => {
+												onReaction(reaction.name);
+											}}
+										>
+											{#if $shortCodesToEmojis[reaction.name]}
+												<img
+													src="/assets/emojis/{$shortCodesToEmojis[
+														reaction.name
+													].toLowerCase()}.svg"
+													alt={reaction.name}
+													class=" size-4"
+												/>
+											{:else}
+												<div>
+													{reaction.name}
+												</div>
+											{/if}
 
-										{#if reaction.user_ids.length > 0}
-											<div class="text-xs font-medium text-gray-500 dark:text-gray-400">
-												{reaction.user_ids?.length}
-											</div>
-										{/if}
-									</button>
+											{#if reaction.user_ids.length > 0}
+												<div class="text-xs font-medium text-gray-500 dark:text-gray-400">
+													{reaction.user_ids?.length}
+												</div>
+											{/if}
+										</button>
+									</Tooltip>
 								{/each}
 
-								<ReactionPicker>
+								<ReactionPicker
+									onSubmit={(name) => {
+										onReaction(name);
+									}}
+								>
 									<Tooltip content={$i18n.t('Add Reaction')}>
 										<div
 											class="flex items-center gap-1.5 bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1 transition rounded-xl px-1 py-1 cursor-pointer text-gray-500 dark:text-gray-400"

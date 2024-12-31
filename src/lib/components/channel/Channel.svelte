@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { onDestroy, onMount, tick } from 'svelte';
+	import { goto } from '$app/navigation';
 
 	import { chatId, showSidebar, socket, user } from '$lib/stores';
 	import { getChannelById, getChannelMessages, sendMessage } from '$lib/apis/channels';
 
 	import Messages from './Messages.svelte';
 	import MessageInput from './MessageInput.svelte';
-	import { goto } from '$app/navigation';
 	import Navbar from './Navbar.svelte';
 
 	export let id = '';
@@ -84,6 +84,13 @@
 			} else if (type === 'message:delete') {
 				console.log('message:delete', data);
 				messages = messages.filter((message) => message.id !== data.id);
+			} else if (type === 'message:reaction') {
+				console.log('message:reaction', data);
+
+				const idx = messages.findIndex((message) => message.id === data.id);
+				if (idx !== -1) {
+					messages[idx] = data;
+				}
 			} else if (type === 'typing') {
 				if (event.user.id === $user.id) {
 					return;
