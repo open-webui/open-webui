@@ -157,6 +157,9 @@ async def generate_chat_completion(
         )
 
 
+chat_completion = generate_chat_completion
+
+
 async def chat_completed(request: Request, form_data: dict, user: Any):
     if not request.app.state.MODELS:
         await get_all_models(request)
@@ -179,6 +182,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
             "chat_id": data["chat_id"],
             "message_id": data["id"],
             "session_id": data["session_id"],
+            "user_id": user.id,
         }
     )
 
@@ -187,6 +191,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
             "chat_id": data["chat_id"],
             "message_id": data["id"],
             "session_id": data["session_id"],
+            "user_id": user.id,
         }
     )
 

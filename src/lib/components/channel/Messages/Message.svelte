@@ -8,10 +8,10 @@
 	dayjs.extend(isToday);
 	dayjs.extend(isYesterday);
 
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
-	import { settings, user } from '$lib/stores';
+	import { settings, user, shortCodesToEmojis } from '$lib/stores';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -26,12 +26,21 @@
 	import Image from '$lib/components/common/Image.svelte';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import ProfilePreview from './Message/ProfilePreview.svelte';
+	import ChatBubbleOvalEllipsis from '$lib/components/icons/ChatBubbleOvalEllipsis.svelte';
+	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
+	import ReactionPicker from './Message/ReactionPicker.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 
 	export let message;
 	export let showUserProfile = true;
+	export let thread = false;
 
 	export let onDelete: Function = () => {};
 	export let onEdit: Function = () => {};
+	export let onThread: Function = () => {};
+	export let onReaction: Function = () => {};
+
+	let showButtons = false;
 
 	let edit = false;
 	let editedContent = null;
@@ -66,29 +75,69 @@
 			? 'pt-1.5 pb-0.5'
 			: ''} w-full {($settings?.widescreenMode ?? null)
 			? 'max-w-full'
-			: 'max-w-5xl'} mx-auto group hover:bg-gray-500/5 transition relative"
+			: 'max-w-5xl'} mx-auto group hover:bg-gray-300/5 dark:hover:bg-gray-700/5 transition relative"
 	>
-		{#if (message.user_id === $user.id || $user.role === 'admin') && !edit}
-			<div class=" absolute invisible group-hover:visible right-1 -top-2 z-30">
+		{#if !edit}
+			<div
+				class=" absolute {showButtons ? '' : 'invisible group-hover:visible'} right-1 -top-2 z-10"
+			>
 				<div
 					class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100 dark:border-gray-800"
 				>
-					<button
-						class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-						on:click={() => {
-							edit = true;
-							editedContent = message.content;
+					<ReactionPicker
+						onClose={() => (showButtons = false)}
+						onSubmit={(name) => {
+							showButtons = false;
+							onReaction(name);
 						}}
 					>
-						<Pencil />
-					</button>
+						<Tooltip content={$i18n.t('Add Reaction')}>
+							<button
+								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+								on:click={() => {
+									showButtons = true;
+								}}
+							>
+								<FaceSmile />
+							</button>
+						</Tooltip>
+					</ReactionPicker>
 
-					<button
-						class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-						on:click={() => (showDeleteConfirmDialog = true)}
-					>
-						<GarbageBin />
-					</button>
+					{#if !thread}
+						<Tooltip content={$i18n.t('Reply in Thread')}>
+							<button
+								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+								on:click={() => {
+									onThread(message.id);
+								}}
+							>
+								<ChatBubbleOvalEllipsis />
+							</button>
+						</Tooltip>
+					{/if}
+
+					{#if message.user_id === $user.id || $user.role === 'admin'}
+						<Tooltip content={$i18n.t('Edit')}>
+							<button
+								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+								on:click={() => {
+									edit = true;
+									editedContent = message.content;
+								}}
+							>
+								<Pencil />
+							</button>
+						</Tooltip>
+
+						<Tooltip content={$i18n.t('Delete')}>
+							<button
+								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+								on:click={() => (showDeleteConfirmDialog = true)}
+							>
+								<GarbageBin />
+							</button>
+						</Tooltip>
+					{/if}
 				</div>
 			</div>
 		{/if}
@@ -222,6 +271,85 @@
 								>(edited)</span
 							>{/if}
 					</div>
+
+					{#if (message?.reactions ?? []).length > 0}
+						<div>
+							<div class="flex items-center flex-wrap gap-y-1.5 gap-1 mt-1 mb-2">
+								{#each message.reactions as reaction}
+									<Tooltip content={`:${reaction.name}:`}>
+										<button
+											class="flex items-center gap-1.5 transition rounded-xl px-2 py-1 cursor-pointer {reaction.user_ids.includes(
+												$user.id
+											)
+												? ' bg-blue-300/10 outline outline-blue-500/50 outline-1'
+												: 'bg-gray-300/10 dark:bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1'}"
+											on:click={() => {
+												onReaction(reaction.name);
+											}}
+										>
+											{#if $shortCodesToEmojis[reaction.name]}
+												<img
+													src="/assets/emojis/{$shortCodesToEmojis[
+														reaction.name
+													].toLowerCase()}.svg"
+													alt={reaction.name}
+													class=" size-4"
+													loading="lazy"
+												/>
+											{:else}
+												<div>
+													{reaction.name}
+												</div>
+											{/if}
+
+											{#if reaction.user_ids.length > 0}
+												<div class="text-xs font-medium text-gray-500 dark:text-gray-400">
+													{reaction.user_ids?.length}
+												</div>
+											{/if}
+										</button>
+									</Tooltip>
+								{/each}
+
+								<ReactionPicker
+									onSubmit={(name) => {
+										onReaction(name);
+									}}
+								>
+									<Tooltip content={$i18n.t('Add Reaction')}>
+										<div
+											class="flex items-center gap-1.5 bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1 transition rounded-xl px-1 py-1 cursor-pointer text-gray-500 dark:text-gray-400"
+										>
+											<FaceSmile />
+										</div>
+									</Tooltip>
+								</ReactionPicker>
+							</div>
+						</div>
+					{/if}
+
+					{#if !thread && message.reply_count > 0}
+						<div class="flex items-center gap-1.5 -mt-0.5 mb-1.5">
+							<button
+								class="flex items-center text-xs py-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
+								on:click={() => {
+									onThread(message.id);
+								}}
+							>
+								<span class="font-medium mr-1">
+									{$i18n.t('{{COUNT}} Replies', { COUNT: message.reply_count })}</span
+								><span>
+									{' - '}{$i18n.t('Last reply')}
+									{dayjs.unix(message.latest_reply_at / 1000000000).fromNow()}</span
+								>
+
+								<span class="ml-1">
+									<ChevronRight className="size-2.5" strokeWidth="3" />
+								</span>
+								<!-- {$i18n.t('View Replies')} -->
+							</button>
+						</div>
+					{/if}
 				{/if}
 			</div>
 		</div>
