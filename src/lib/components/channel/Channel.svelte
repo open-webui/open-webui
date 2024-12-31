@@ -35,7 +35,9 @@
 	}
 
 	const scrollToBottom = () => {
-		messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+		if (messagesContainerElement) {
+			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+		}
 	};
 
 	const initHandler = async () => {
@@ -55,7 +57,7 @@
 			messages = await getChannelMessages(localStorage.token, id, 0);
 
 			if (messages) {
-				messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+				scrollToBottom();
 
 				if (messages.length < 50) {
 					top = true;
@@ -81,7 +83,7 @@
 
 					await tick();
 					if (scrollEnd) {
-						messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+						scrollToBottom();
 					}
 				}
 			} else if (type === 'message:update') {
