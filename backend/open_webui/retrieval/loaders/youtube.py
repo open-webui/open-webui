@@ -78,6 +78,7 @@ class YoutubeLoader:
             # First try using YouTube Data API v3 if available
             try:
                 from open_webui.config import YOUTUBE_API_KEY
+
                 if YOUTUBE_API_KEY:
                     url = f"https://www.googleapis.com/youtube/v3/videos?id={self.video_id}&key={YOUTUBE_API_KEY}&part=snippet"
                     response = requests.get(url)
@@ -93,7 +94,8 @@ class YoutubeLoader:
             response = requests.get(url)
             if response.status_code == 200:
                 import re
-                title_match = re.search(r'<title>(.+?)</title>', response.text)
+
+                title_match = re.search(r"<title>(.+?)</title>", response.text)
                 if title_match:
                     title = title_match.group(1)
                     return title
@@ -139,10 +141,14 @@ class YoutubeLoader:
             transcript = transcript_list.find_transcript(self.language)
         except NoTranscriptFound:
             # Fallback: try to get any available transcript
-            available_transcripts = list(transcript_list._generated_transcripts.values())
+            available_transcripts = list(
+                transcript_list._generated_transcripts.values()
+            )
             if available_transcripts:
                 transcript = available_transcripts[0]
-                log.info(f"Using first available transcript in language: {transcript.language_code}")
+                log.info(
+                    f"Using first available transcript in language: {transcript.language_code}"
+                )
             else:
                 log.error("No transcripts found for video")
                 return []
@@ -161,27 +167,29 @@ class YoutubeLoader:
         # Combine pieces into a single text while tracking timestamp positions
         full_text = ""
         timestamp_map = []
-        
+
         for piece in transcript_pieces:
             start_char = len(full_text)
             text = piece["text"].strip()
             full_text += text + " "
             end_char = len(full_text)
-            
-            timestamp_map.append({
-                "start": start_char,
-                "end": end_char,
-                "time": piece["start"],
-                "duration": piece["duration"]
-            })
+
+            timestamp_map.append(
+                {
+                    "start": start_char,
+                    "end": end_char,
+                    "time": piece["start"],
+                    "duration": piece["duration"],
+                }
+            )
 
         # Create a single document that will be split by Langchain's text splitter
         doc = Document(
             page_content=full_text.strip(),
             metadata={
                 **self._metadata,
-                "timestamp_map": timestamp_map  # Store timestamp mapping in metadata
-            }
+                "timestamp_map": timestamp_map,  # Store timestamp mapping in metadata
+            },
         )
 
         return [doc]

@@ -152,13 +152,13 @@ def get_rf(
                 raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
     return rf
 
+
 def add_timestamp_to_youtube_url(url: str, timestamp: int) -> str:
     parsed = urlparse(url)
     query_dict = parse_qs(parsed.query)
-    query_dict['t'] = [str(timestamp)]
+    query_dict["t"] = [str(timestamp)]
     new_query = urlencode(query_dict, doseq=True)
     return urlunparse(parsed._replace(query=new_query))
-
 
 
 ##########################################
@@ -662,7 +662,9 @@ async def update_query_settings(
 ####################################
 
 
-def interpolate_timestamp(chunk_start: int, chunk_end: int, timestamp_map: List[dict]) -> Tuple[float, float]:
+def interpolate_timestamp(
+    chunk_start: int, chunk_end: int, timestamp_map: List[dict]
+) -> Tuple[float, float]:
     """
     Find the appropriate timestamp for a chunk based on its character position
     Returns (start_time, end_time) as floats in seconds
@@ -675,7 +677,8 @@ def interpolate_timestamp(chunk_start: int, chunk_end: int, timestamp_map: List[
     else:
         # If not found, use the closest previous timestamp
         start_time = min(
-            [e["time"] for e in timestamp_map if e["start"] <= chunk_start], default=0)
+            [e["time"] for e in timestamp_map if e["start"] <= chunk_start], default=0
+        )
 
     # Find the timestamp entry that contains the end of our chunk
     for entry in reversed(timestamp_map):
@@ -684,10 +687,13 @@ def interpolate_timestamp(chunk_start: int, chunk_end: int, timestamp_map: List[
             break
     else:
         # If not found, use the closest next timestamp
-        end_time = max([e["time"] + e["duration"]
-                       for e in timestamp_map if e["end"] >= chunk_end], default=start_time)
+        end_time = max(
+            [e["time"] + e["duration"] for e in timestamp_map if e["end"] >= chunk_end],
+            default=start_time,
+        )
 
     return start_time, end_time
+
 
 def save_docs_to_vector_db(
     request: Request,
@@ -733,12 +739,12 @@ def save_docs_to_vector_db(
 
     if split:
         # Check if this is a YouTube document by looking at the first doc's metadata
-        is_youtube = (len(docs) == 1 and
-                      docs[0].metadata.get("type") == "youtube")
+        is_youtube = len(docs) == 1 and docs[0].metadata.get("type") == "youtube"
 
         # Store timestamp_map before splitting if it's a YouTube document
-        original_timestamp_map = docs[0].metadata.get(
-            "timestamp_map") if is_youtube else None
+        original_timestamp_map = (
+            docs[0].metadata.get("timestamp_map") if is_youtube else None
+        )
 
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
             text_splitter = RecursiveCharacterTextSplitter(
@@ -770,15 +776,17 @@ def save_docs_to_vector_db(
                 end_index = start_index + len(doc.page_content)
 
                 start_time, end_time = interpolate_timestamp(
-                    start_index,
-                    end_index,
-                    original_timestamp_map
+                    start_index, end_index, original_timestamp_map
                 )
 
-                doc.metadata.update({
-                    "start_time": start_time,
-                    "source_url": add_timestamp_to_youtube_url(doc.metadata['source_url'], int(start_time))
-                })
+                doc.metadata.update(
+                    {
+                        "start_time": start_time,
+                        "source_url": add_timestamp_to_youtube_url(
+                            doc.metadata["source_url"], int(start_time)
+                        ),
+                    }
+                )
 
                 # Remove the timestamp_map from individual chunks
                 doc.metadata.pop("timestamp_map", None)
@@ -915,10 +923,7 @@ def process_file(
                 "status": True,
                 "collection_name": form_data.collection_name,
                 "content": content,
-                "file": {
-                    "id": file.id,
-                    "meta": metadata
-                }
+                "file": {"id": file.id, "meta": metadata},
             }
 
         collection_name = form_data.collection_name
@@ -1148,7 +1153,7 @@ def process_youtube_video(
         content = " ".join([doc.page_content for doc in docs])
         log.debug(f"text_content: {content}")
 
-                # Get video title from metadata or fallback to URL
+        # Get video title from metadata or fallback to URL
         video_title = docs[0].metadata.get("title", form_data.url)
 
         # Create a unique file ID for this video
@@ -1168,11 +1173,9 @@ def process_youtube_video(
                         "size": len(content),
                         "source": form_data.url,
                         "source_url": add_timestamp_to_youtube_url(form_data.url, 0),
-                        "type": "youtube"
+                        "type": "youtube",
                     },
-                    "data": {
-                        "content": content
-                    }
+                    "data": {"content": content},
                 }
             ),
         )
@@ -1185,7 +1188,7 @@ def process_youtube_video(
             "type": "youtube",
             "name": video_title,
             "file_id": file_id,
-            "created_by": user.id if user else None
+            "created_by": user.id if user else None,
         }
 
         # Update all docs with the file metadata
@@ -1194,18 +1197,20 @@ def process_youtube_video(
             # Debug log
             log.info(f"Document metadata before saving: {doc.metadata}")
 
-        save_docs_to_vector_db(request, docs, collection_name, overwrite=False, add=True)
+        save_docs_to_vector_db(
+            request, docs, collection_name, overwrite=False, add=True
+        )
 
         return {
             "status": True,
             "collection_name": collection_name,
             "id": file_id,  # Return the file ID directly
-             "filename": video_title,
+            "filename": video_title,
             "file": {
                 "data": {
                     "content": content,
                 },
-                "meta": file_metadata
+                "meta": file_metadata,
             },
         }
     except Exception as e:
