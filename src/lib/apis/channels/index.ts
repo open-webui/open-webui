@@ -208,7 +208,6 @@ export const getChannelMessages = async (
 	return res;
 };
 
-
 export const getChannelThreadMessages = async (
 	token: string = '',
 	channel_id: string,
@@ -247,7 +246,7 @@ export const getChannelThreadMessages = async (
 	}
 
 	return res;
-}
+};
 
 type MessageForm = {
 	parent_id?: string;
@@ -328,7 +327,12 @@ export const updateMessage = async (
 	return res;
 };
 
-export const addReaction = async (token: string = '', channel_id: string, message_id: string, name: string) => {
+export const addReaction = async (
+	token: string = '',
+	channel_id: string,
+	message_id: string,
+	name: string
+) => {
 	let error = null;
 
 	const res = await fetch(
@@ -361,10 +365,14 @@ export const addReaction = async (token: string = '', channel_id: string, messag
 	}
 
 	return res;
-}
+};
 
-
-export const removeReaction = async (token: string = '', channel_id: string, message_id: string, name: string) => {
+export const removeReaction = async (
+	token: string = '',
+	channel_id: string,
+	message_id: string,
+	name: string
+) => {
 	let error = null;
 
 	const res = await fetch(
@@ -397,7 +405,7 @@ export const removeReaction = async (token: string = '', channel_id: string, mes
 	}
 
 	return res;
-}
+};
 
 export const deleteMessage = async (token: string = '', channel_id: string, message_id: string) => {
 	let error = null;
