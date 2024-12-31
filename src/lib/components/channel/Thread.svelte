@@ -62,24 +62,32 @@
 
 			if (type === 'message') {
 				if ((data?.parent_id ?? null) === threadId) {
-					messages = [data, ...messages];
+					if (messages) {
+						messages = [data, ...messages];
 
-					if (typingUsers.find((user) => user.id === event.user.id)) {
-						typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
+						if (typingUsers.find((user) => user.id === event.user.id)) {
+							typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
+						}
 					}
 				}
 			} else if (type === 'message:update') {
-				const idx = messages.findIndex((message) => message.id === data.id);
+				if (messages) {
+					const idx = messages.findIndex((message) => message.id === data.id);
 
-				if (idx !== -1) {
-					messages[idx] = data;
+					if (idx !== -1) {
+						messages[idx] = data;
+					}
 				}
 			} else if (type === 'message:delete') {
-				messages = messages.filter((message) => message.id !== data.id);
+				if (messages) {
+					messages = messages.filter((message) => message.id !== data.id);
+				}
 			} else if (type.includes('message:reaction')) {
-				const idx = messages.findIndex((message) => message.id === data.id);
-				if (idx !== -1) {
-					messages[idx] = data;
+				if (messages) {
+					const idx = messages.findIndex((message) => message.id === data.id);
+					if (idx !== -1) {
+						messages[idx] = data;
+					}
 				}
 			} else if (type === 'typing' && event.message_id === threadId) {
 				if (event.user.id === $user.id) {
