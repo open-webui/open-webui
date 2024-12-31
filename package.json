@@ -57,6 +57,7 @@
 		"@mediapipe/tasks-vision": "^0.10.17",
 		"@pyscript/core": "^0.4.32",
 		"@sveltejs/adapter-node": "^2.0.0",
+		"@sveltejs/svelte-virtual-list": "^3.0.1",
 		"@tiptap/core": "^2.10.0",
 		"@tiptap/extension-code-block-lowlight": "^2.10.0",
 		"@tiptap/extension-highlight": "^2.10.0",
