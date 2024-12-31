@@ -137,7 +137,7 @@
 
 {#if channel}
 	<div class="flex flex-col w-full h-full bg-gray-50 dark:bg-gray-850">
-		<div class="flex items-center justify-between mb-2 px-3.5 py-3">
+		<div class="flex items-center justify-between px-3.5 py-3">
 			<div class=" font-medium text-lg">Thread</div>
 
 			<div>
@@ -152,29 +152,33 @@
 			</div>
 		</div>
 
-		<Messages
-			id={threadId}
-			{channel}
-			{messages}
-			{top}
-			thread={true}
-			onLoad={async () => {
-				const newMessages = await getChannelThreadMessages(
-					localStorage.token,
-					channel.id,
-					threadId,
-					messages.length
-				);
+		<div class=" max-h-full w-full overflow-y-auto">
+			<Messages
+				id={threadId}
+				{channel}
+				{messages}
+				{top}
+				thread={true}
+				onLoad={async () => {
+					const newMessages = await getChannelThreadMessages(
+						localStorage.token,
+						channel.id,
+						threadId,
+						messages.length
+					);
 
-				messages = [...messages, ...newMessages];
+					messages = [...messages, ...newMessages];
 
-				if (newMessages.length < 50) {
-					top = true;
-					return;
-				}
-			}}
-		/>
+					if (newMessages.length < 50) {
+						top = true;
+						return;
+					}
+				}}
+			/>
 
-		<MessageInput id={threadId} {typingUsers} {onChange} onSubmit={submitHandler} />
+			<div class=" pb-[1rem]">
+				<MessageInput id={threadId} {typingUsers} {onChange} onSubmit={submitHandler} />
+			</div>
+		</div>
 	</div>
 {/if}
