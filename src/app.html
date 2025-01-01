@@ -5,8 +5,14 @@
 		<link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96" />
 		<link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg" />
 		<link rel="shortcut icon" href="/favicon/favicon.ico" />
+
+		<link rel="apple-touch-icon" href="/favicon/apple-touch-icon-iphone-60x60.png">
+		<link rel="apple-touch-icon" sizes="60x60" href="/favicon/apple-touch-icon-ipad-76x76.png">
+		<link rel="apple-touch-icon" sizes="114x114" href="/favicon/apple-touch-icon-iphone-retina-120x120.png">
+		<link rel="apple-touch-icon" sizes="144x144" href="/favicon/apple-touch-icon-ipad-retina-152x152.png">
 		<link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
-		<meta name="apple-mobile-web-app-title" content="Open WebUI" />
+
+		<meta name="apple-mobile-web-app-title" content="Turing" />
 		<link rel="manifest" href="/favicon/site.webmanifest" />
 		<meta
 			name="viewport"
@@ -14,11 +20,11 @@
 		/>
 		<meta name="theme-color" content="#171717" />
 		<meta name="robots" content="noindex,nofollow" />
-		<meta name="description" content="Open WebUI" />
+		<meta name="description" content="Turing" />
 		<link
 			rel="search"
 			type="application/opensearchdescription+xml"
-			title="Open WebUI"
+			title="Turing"
 			href="/opensearch.xml"
 		/>
 
@@ -76,7 +82,7 @@
 			})();
 		</script>
 
-		<title>Open WebUI</title>
+		<title>Turing</title>
 
 		%sveltekit.head%
 	</head>
@@ -106,6 +112,59 @@
 				"
 				src="/static/splash.png"
 			/>
+			<div
+				style="
+					position: absolute;
+					top: 33%;
+					left: 50%;
+
+					width: 24rem;
+					transform: translateX(-50%);
+
+					display: flex;
+					flex-direction: column;
+					align-items: center;
+				"
+			>
+				<img
+					id="logo-dark"
+					style="
+					position: absolute;
+					width: auto;
+					height: 6rem;
+					top: 44%;
+					left: 50%;
+					transform: translateX(-50%);
+				"
+					src="/static/splash-dark.png"
+				/>
+
+				<div style="position: relative; width: 24rem; margin-top: 0.5rem">
+					<div
+						id="progress-background"
+						style="
+							position: absolute;
+							width: 100%;
+							height: 0.75rem;
+
+							border-radius: 9999px;
+							background-color: #fafafa9a;
+						"
+					></div>
+
+					<div
+						id="progress-bar"
+						style="
+							position: absolute;
+							width: 0;
+							height: 0.75rem;
+							border-radius: 9999px;
+							background-color: #fff;
+						"
+						class="bg-white"
+					></div>
+				</div>
+			</div>
 
 			<div
 				style="
@@ -145,7 +204,7 @@
 						id="progress-bar"
 						style="
 							position: absolute;
-							width: 0%;
+							width: 0;
 							height: 0.75rem;
 							border-radius: 9999px;
 							background-color: #fff;
@@ -183,6 +242,10 @@
 		background: #983724;
 	}
 
+	#logo-dark {
+			display: none;
+	}
+
 	#logo-her {
 		display: none;
 	}
@@ -193,6 +256,13 @@
 
 	#progress-bar {
 		display: none;
+	}
+
+	html.dark #logo{
+			display: none;
+	}
+	html.dark #logo-dark {
+		display: block;
 	}
 
 	html.her #logo {
