@@ -1,0 +1,36 @@
+name: open-webui-dev
+
+services:
+  frontend:
+    build:
+      context: .
+      target: build
+    command: ["npm", "run", "dev"]
+    depends_on:
+      - backend
+    ports:
+      - "3000:5173"
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes:
+      - ./src:/app/src
+
+  backend:
+    build:
+      context: .
+      target: base
+    command: ["bash", "dev.sh"]
+    env_file: ".env"
+    environment:
+      - ENV=dev
+      - WEBUI_AUTH=False
+    ports:
+      - "8080:8080"
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes:
+      - ./backend:/app/backend
+      - data:/app/backend/data
+
+volumes:
+  data: {}
