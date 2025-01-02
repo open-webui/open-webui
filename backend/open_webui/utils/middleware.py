@@ -494,6 +494,7 @@ async def chat_completion_files_handler(
     if files := body.get("metadata", {}).get("files", None):
         try:
             queries_response = await generate_queries(
+                request,
                 {
                     "model": body["model"],
                     "messages": body["messages"],
