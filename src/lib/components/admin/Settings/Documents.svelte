@@ -50,6 +50,7 @@
 	let contentExtractionEngine = 'default';
 	let tikaServerUrl = '';
 	let showTikaServerUrl = false;
+	let showPdftotextServerUrl = false;
 
 	let textSplitter = '';
 	let chunkSize = 0;
@@ -569,9 +570,13 @@
 						on:change={(e) => {
 							showTikaServerUrl = e.target.value === 'tika';
 						}}
+						on:change={(e) => {
+							showPdftotextServerUrl = e.target.value === 'pdftotext';
+						}}
 					>
 						<option value="">{$i18n.t('Default')} </option>
 						<option value="tika">{$i18n.t('Tika')}</option>
+						<option value="pdftotext">{$i18n.t('Pdftotext')}</option>
 					</select>
 				</div>
 			</div>
@@ -582,6 +587,18 @@
 						<input
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							placeholder={$i18n.t('Enter Tika Server URL')}
+							bind:value={tikaServerUrl}
+						/>
+					</div>
+				</div>
+			{/if}
+
+			{#if showPdftotextServerUrl}
+				<div class="flex w-full mt-1">
+					<div class="flex-1 mr-2">
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							placeholder={$i18n.t('Enter Pdftotext Server URL')}
 							bind:value={tikaServerUrl}
 						/>
 					</div>

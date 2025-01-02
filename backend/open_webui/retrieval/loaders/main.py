@@ -18,6 +18,10 @@ from langchain_community.document_loaders import (
     UnstructuredXMLLoader,
     YoutubeLoader,
 )
+
+
+from open_webui.retrieval.loaders.pdftotext import PdftotextLoader
+
 from langchain_core.documents import Document
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
@@ -126,6 +130,9 @@ class Loader:
         loader = self._get_loader(filename, file_content_type, file_path)
         docs = loader.load()
 
+        if type(docs) == str:
+            return docs
+
         return [
             Document(
                 page_content=ftfy.fix_text(doc.page_content), metadata=doc.metadata
@@ -147,6 +154,8 @@ class Loader:
                     file_path=file_path,
                     mime_type=file_content_type,
                 )
+        elif self.engine == "pdftotext" and file_ext == "pdf":
+            loader = PdftotextLoader(file_path, url=self.kwargs.get("PDFTOTEXT_SERVER_URL"))
         else:
             if file_ext == "pdf":
                 loader = PyPDFLoader(

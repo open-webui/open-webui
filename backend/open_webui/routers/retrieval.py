@@ -351,6 +351,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
+            "pdftotext_server_url" : request.app.state.config.PDFTOTEXT_SERVER_URL
         },
         "chunk": {
             "text_splitter": request.app.state.config.TEXT_SPLITTER,
@@ -403,6 +404,7 @@ class FileConfig(BaseModel):
 class ContentExtractionConfig(BaseModel):
     engine: str = ""
     tika_server_url: Optional[str] = None
+    pdftotext_server_url: Optional[str] = None
 
 
 class ChunkParamUpdateForm(BaseModel):
@@ -483,6 +485,9 @@ async def update_rag_config(
         request.app.state.config.TIKA_SERVER_URL = (
             form_data.content_extraction.tika_server_url
         )
+        request.app.state.config.pdftotext_server_url = (
+            form_data.content_extraction.pdftotext_server_url
+        )
 
     if form_data.chunk is not None:
         request.app.state.config.TEXT_SPLITTER = form_data.chunk.text_splitter
@@ -559,6 +564,7 @@ async def update_rag_config(
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
+            "pdftotext_server_url": request.app.state.config.TIKA_SERVER_URL
         },
         "chunk": {
             "text_splitter": request.app.state.config.TEXT_SPLITTER,
@@ -815,6 +821,7 @@ def process_file(
         file = Files.get_file_by_id(form_data.file_id)
 
         collection_name = form_data.collection_name
+        engine = request.app.state.config.CONTENT_EXTRACTION_ENGINE
 
         if collection_name is None:
             collection_name = f"file-{file.id}"
@@ -877,27 +884,39 @@ def process_file(
             if file_path:
                 file_path = Storage.get_file(file_path)
                 loader = Loader(
-                    engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
+                    engine=engine,
                     TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
+                    PDFTOTEXT_SERVER_URL=request.app.state.config.PDFTOTEXT_SERVER_URL,
                     PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
                 )
                 docs = loader.load(
                     file.filename, file.meta.get("content_type"), file_path
                 )
 
-                docs = [
-                    Document(
-                        page_content=doc.page_content,
+                if engine == "pdftotext":
+                    docs = Document(
+                        page_content=docs,
                         metadata={
-                            **doc.metadata,
                             "name": file.filename,
                             "created_by": file.user_id,
                             "file_id": file.id,
                             "source": file.filename,
                         },
                     )
-                    for doc in docs
-                ]
+                else:
+                    docs = [
+                        Document(
+                            page_content=doc.page_content,
+                            metadata={
+                                **doc.metadata,
+                                "name": file.filename,
+                                "created_by": file.user_id,
+                                "file_id": file.id,
+                                "source": file.filename,
+                            },
+                        )
+                        for doc in docs
+                    ]
             else:
                 docs = [
                     Document(
@@ -911,7 +930,10 @@ def process_file(
                         },
                     )
                 ]
-            text_content = " ".join([doc.page_content for doc in docs])
+            if engine == "pdftotext":
+                text_content = docs.page_content
+            else:
+                text_content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {text_content}")
         Files.update_file_data_by_id(
