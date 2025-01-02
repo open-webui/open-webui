@@ -542,7 +542,7 @@ async def generate_chat_completion(
         del payload["metadata"]
     if "chat_id" in payload:
         del payload["chat_id"]
-        
+
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
 
@@ -681,14 +681,14 @@ async def generate_chat_completion(
             return response
     except Exception as e:
         log.exception(e)
-        
+
         if r:
             try:
                 error_text = await r.text()
                 log.error(f"OpenAI Error: {error_text}")
             except:
                 pass
-            
+
         detail = None
         if isinstance(response, dict):
             if "error" in response:
