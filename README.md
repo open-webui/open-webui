@@ -11,6 +11,16 @@ docker run \
     --restart always \
     ghcr.io/open-webui/open-webui:main \
     sleep infinity
+
+
+apt update
+apt install npm
+npm ci
+npm run build
+
+# cd backend
+# bash start.sh
+# bash 실행 말고 .vscode 디버깅을 사용
 ```
 
 # Open WebUI 👋
