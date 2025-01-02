@@ -1252,7 +1252,7 @@ TIKA_SERVER_URL = PersistentConfig(
 PDFTOTEXT_SERVER_URL = PersistentConfig(
     "PDFTOTEXT_SERVER_URL",
     "rag.pdftotext_server_url",
-    os.getenv("PDFTOTEXT_SERVER_URL", "http://api-ocr.tj.datascience.legal"),  # Default for sidecar deployment
+    os.getenv("PDFTOTEXT_SERVER_URL", "http://api-ocr"),  # Default for sidecar deployment
 )
 
 RAG_TOP_K = PersistentConfig(
