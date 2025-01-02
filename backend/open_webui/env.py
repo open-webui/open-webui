@@ -313,7 +313,7 @@ RESET_CONFIG_ON_START = (
 
 
 ENABLE_REALTIME_CHAT_SAVE = (
-    os.environ.get("ENABLE_REALTIME_CHAT_SAVE", "True").lower() == "true"
+    os.environ.get("ENABLE_REALTIME_CHAT_SAVE", "False").lower() == "true"
 )
 
 ####################################
