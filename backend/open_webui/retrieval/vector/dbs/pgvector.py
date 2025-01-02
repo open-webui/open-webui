@@ -1,3 +1,4 @@
+import os
 from typing import Optional, List, Dict, Any
 from sqlalchemy import (
     cast,
@@ -21,7 +22,6 @@ from sqlalchemy.ext.mutable import MutableDict
 from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import PGVECTOR_DB_URL
 
-VECTOR_LENGTH = 1536
 Base = declarative_base()
 
 
@@ -29,7 +29,7 @@ class DocumentChunk(Base):
     __tablename__ = "document_chunk"
 
     id = Column(Text, primary_key=True)
-    vector = Column(Vector(dim=VECTOR_LENGTH), nullable=True)
+    vector = Column(Vector(dim=int(os.getenv("VECTOR_LENGTH", 1536))), nullable=True)
     collection_name = Column(Text, nullable=False)
     text = Column(Text, nullable=True)
     vmetadata = Column(MutableDict.as_mutable(JSONB), nullable=True)
@@ -37,6 +37,7 @@ class DocumentChunk(Base):
 
 class PgvectorClient:
     def __init__(self) -> None:
+        self.vector_length = int(os.getenv("VECTOR_LENGTH", 1536))
 
         # if no pgvector uri, use the existing database connection
         if not PGVECTOR_DB_URL:
@@ -85,12 +86,12 @@ class PgvectorClient:
     def adjust_vector_length(self, vector: List[float]) -> List[float]:
         # Adjust vector to have length VECTOR_LENGTH
         current_length = len(vector)
-        if current_length < VECTOR_LENGTH:
+        if current_length < self.vector_length:
             # Pad the vector with zeros
-            vector += [0.0] * (VECTOR_LENGTH - current_length)
-        elif current_length > VECTOR_LENGTH:
+            vector += [0.0] * (self.vector_length - current_length)
+        elif current_length > self.vector_length:
             raise Exception(
-                f"Vector length {current_length} not supported. Max length must be <= {VECTOR_LENGTH}"
+                f"Vector length {current_length} not supported. Max length must be <= {self.vector_length}"
             )
         return vector
 
@@ -164,11 +165,11 @@ class PgvectorClient:
             num_queries = len(vectors)
 
             def vector_expr(vector):
-                return cast(array(vector), Vector(VECTOR_LENGTH))
+                return cast(array(vector), Vector(self.vector_length))
 
             # Create the values for query vectors
             qid_col = column("qid", Integer)
-            q_vector_col = column("q_vector", Vector(VECTOR_LENGTH))
+            q_vector_col = column("q_vector", Vector(self.vector_length))
             query_vectors = (
                 values(qid_col, q_vector_col)
                 .data(
