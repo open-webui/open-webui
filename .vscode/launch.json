@@ -9,6 +9,7 @@
             "name": "app",
             "type": "debugpy",
             "request": "launch",
+            "justMyCode": false,
             "preLaunchTask": "Generate env from dev_setting.sh",
             "envFile": "${workspaceFolder}/dev_setting.env",
             "module": "uvicorn",
