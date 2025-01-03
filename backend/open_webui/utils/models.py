@@ -48,6 +48,7 @@ async def get_all_base_models(request: Request):
                 "created": int(time.time()),
                 "owned_by": "ollama",
                 "ollama": model,
+                "loaded": model.get("loaded", False),
             }
             for model in ollama_models["models"]
         ]
