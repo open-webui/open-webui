@@ -3,7 +3,7 @@ uvicorn[standard]==0.30.6
 pydantic==2.9.2
 python-multipart==0.0.18
 
-Flask==3.0.3
+Flask==3.1.0
 Flask-Cors==5.0.0
 
 python-socketio==5.11.3
@@ -18,7 +18,7 @@ aiofiles
 
 sqlalchemy==2.0.32
 alembic==1.14.0
-peewee==3.17.6
+peewee==3.17.8
 peewee-migrate==1.12.2
 psycopg2-binary==2.9.9
 pgvector==0.3.5
@@ -55,7 +55,7 @@ einops==0.8.0
 
 ftfy==6.2.3
 pypdf==4.3.1
-fpdf2==2.7.9
+fpdf2==2.8.2
 pymdown-extensions==10.11.2
 docx2txt==0.8
 python-pptx==1.0.0
@@ -67,7 +67,7 @@ pandas==2.2.3
 openpyxl==3.1.5
 pyxlsb==1.0.10
 xlrd==2.0.1
-validators==0.33.0
+validators==0.34.0
 psutil
 sentencepiece
 soundfile==0.12.1
@@ -78,7 +78,7 @@ rank-bm25==0.2.2
 
 faster-whisper==1.0.3
 
-PyJWT[crypto]==2.9.0
+PyJWT[crypto]==2.10.1
 authlib==1.3.2
 
 black==24.8.0

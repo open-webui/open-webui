@@ -61,13 +61,13 @@
 				);
 			}
 		});
-		// Group emojis into rows of 6
+		// Group emojis into rows of 8
 		emojiRows = [];
 		let currentRow = [];
 		flattenedEmojis.forEach((item) => {
 			if (item.type === 'emoji') {
 				currentRow.push(item);
-				if (currentRow.length === 7) {
+				if (currentRow.length === 8) {
 					emojiRows.push(currentRow);
 					currentRow = [];
 				}
@@ -126,7 +126,7 @@
 			{#if emojiRows.length === 0}
 				<div class="text-center text-xs text-gray-500 dark:text-gray-400">No results</div>
 			{:else}
-				<div class="w-full flex ml-2">
+				<div class="w-full flex ml-0.5">
 					<VirtualList rowHeight={ROW_HEIGHT} items={emojiRows} height={384} let:item>
 						<div class="w-full">
 							{#if item.length === 1 && item[0].type === 'group'}
@@ -136,7 +136,7 @@
 								</div>
 							{:else}
 								<!-- Render emojis in a row -->
-								<div class="flex items-center gap-2 w-full">
+								<div class="flex items-center gap-1.5 w-full">
 									{#each item as emojiItem}
 										<Tooltip
 											content={emojiItem.shortCodes.map((code) => `:${code}:`).join(', ')}

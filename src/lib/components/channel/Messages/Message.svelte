@@ -178,7 +178,7 @@
 			<div class="flex-auto w-0 pl-1">
 				{#if showUserProfile}
 					<Name>
-						<div class=" self-end text-base font-medium">
+						<div class=" self-end text-base shrink-0 font-medium truncate">
 							{message?.user?.name}
 						</div>
 
@@ -189,7 +189,7 @@
 								<Tooltip
 									content={dayjs(message.created_at / 1000000).format('dddd, DD MMMM YYYY HH:mm')}
 								>
-									{formatDate(message.created_at / 1000000)}
+									<span class="line-clamp-1">{formatDate(message.created_at / 1000000)}</span>
 								</Tooltip>
 							</div>
 						{/if}

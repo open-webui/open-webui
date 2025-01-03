@@ -189,9 +189,11 @@ class MessageTable:
                 .all()
             )
 
-            return [
-                MessageModel.model_validate(message) for message in all_messages
-            ] + [MessageModel.model_validate(message)]
+            # If length of all_messages is less than limit, then add the parent message
+            if len(all_messages) < limit:
+                all_messages.append(message)
+
+            return [MessageModel.model_validate(message) for message in all_messages]
 
     def update_message_by_id(
         self, id: str, form_data: MessageForm

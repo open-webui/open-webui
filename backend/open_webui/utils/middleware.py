@@ -494,6 +494,7 @@ async def chat_completion_files_handler(
     if files := body.get("metadata", {}).get("files", None):
         try:
             queries_response = await generate_queries(
+                request,
                 {
                     "model": body["model"],
                     "messages": body["messages"],
@@ -644,7 +645,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
             request, form_data, model, extra_params
         )
     except Exception as e:
-        return Exception(f"Error: {e}")
+        raise Exception(f"Error: {e}")
 
     tool_ids = form_data.pop("tool_ids", None)
     files = form_data.pop("files", None)

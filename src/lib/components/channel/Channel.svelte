@@ -136,7 +136,7 @@
 	};
 
 	const submitHandler = async ({ content, data }) => {
-		if (!content) {
+		if (!content && (data?.files ?? []).length === 0) {
 			return;
 		}
 

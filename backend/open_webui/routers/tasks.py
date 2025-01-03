@@ -499,8 +499,8 @@ async def generate_moa_response(
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": form_data.get("stream", False),
-        "chat_id": form_data.get("chat_id", None),
         "metadata": {
+            "chat_id": form_data.get("chat_id", None),
             "task": str(TASKS.MOA_RESPONSE_GENERATION),
             "task_body": form_data,
         },

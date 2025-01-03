@@ -81,9 +81,8 @@
 	{#if $user?.role === 'admin'}
 		<button
 			class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
-			on:pointerup={(e) => {
+			on:click={(e) => {
 				e.stopPropagation();
-
 				showEditChannelModal = true;
 			}}
 		>
