@@ -12,6 +12,10 @@
 	export let content: string;
 
 	onMount(() => {
+		if (!navigator.userActivation.hasBeenActive) {
+			return;
+		}
+
 		if ($settings?.notificationSound ?? true) {
 			const audio = new Audio(`/audio/notification.mp3`);
 			audio.play();
