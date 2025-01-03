@@ -8,13 +8,14 @@
 	import { settings, chatId, WEBUI_NAME, models } from '$lib/stores';
 	import { convertMessagesToHistory, createMessagesList } from '$lib/utils';
 
-	import { getChatByShareId } from '$lib/apis/chats';
+	import { getChatByShareId, cloneChatByShareId } from '$lib/apis/chats';
 
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import { getUserById } from '$lib/apis/users';
 	import { error } from '@sveltejs/kit';
 	import { getModels } from '$lib/apis';
+	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
 
@@ -100,6 +101,19 @@
 			}
 		}
 	};
+
+	const cloneSharedChat = async () => {
+		if (!chat) return;
+		
+		const res = await cloneChatByShareId(localStorage.token, chat.id).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res) {
+			goto(`/c/${res.id}`);
+		}
+	};
 </script>
 
 <svelte:head>
@@ -121,8 +135,16 @@
 						{title}
 					</div>
 
-					<div class=" mt-1 text-gray-400">
-						{dayjs(chat.chat.timestamp).format($i18n.t('MMMM DD, YYYY'))}
+					<div class="flex justify-between items-center mt-1">
+						<div class="text-gray-400">
+							{dayjs(chat.chat.timestamp).format($i18n.t('MMMM DD, YYYY'))}
+						</div>
+						<button
+							class="px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition"
+							on:click={cloneSharedChat}
+						>
+							{$i18n.t('Clone in OpenWebUI')}
+						</button>
 					</div>
 				</div>
 
