@@ -29,7 +29,7 @@ class DocumentChunk(Base):
     __tablename__ = "document_chunk"
 
     id = Column(Text, primary_key=True)
-    vector = Column(Vector(dim=int(os.getenv("VECTOR_LENGTH", 1536))), nullable=True)
+    vector = Column(Vector(dim=int(os.getenv("PGVECTOR_INITIALIZE_MAX_VECTOR_SIZE", 1536))), nullable=True)
     collection_name = Column(Text, nullable=False)
     text = Column(Text, nullable=True)
     vmetadata = Column(MutableDict.as_mutable(JSONB), nullable=True)
@@ -37,7 +37,7 @@ class DocumentChunk(Base):
 
 class PgvectorClient:
     def __init__(self) -> None:
-        self.vector_length = int(os.getenv("VECTOR_LENGTH", 1536))
+        self.vector_length = int(os.getenv("PGVECTOR_INITIALIZE_MAX_VECTOR_SIZE", 1536))
 
         # if no pgvector uri, use the existing database connection
         if not PGVECTOR_DB_URL:
