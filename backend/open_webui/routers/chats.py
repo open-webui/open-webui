@@ -464,6 +464,31 @@ async def clone_chat_by_id(id: str, user=Depends(get_verified_user)):
 
 
 ############################
+# CloneChatByShareId
+############################
+
+
+@router.post("/{share_id}/clone_shared", response_model=Optional[ChatResponse])
+async def clone_chat_by_share_id(share_id: str, user=Depends(get_verified_user)):
+    chat = Chats.get_chat_by_share_id(share_id)
+    if chat:
+        updated_chat = {
+            **chat.chat,
+            "originalChatId": chat.id,
+            "branchPointMessageId": chat.chat["history"]["currentId"],
+            "title": f"Clone of {chat.title}",
+        }
+
+        chat = Chats.insert_new_chat(user.id, ChatForm(**{"chat": updated_chat}))
+        return ChatResponse(**chat.model_dump())
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+
+############################
 # ArchiveChat
 ############################
 
