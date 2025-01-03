@@ -56,7 +56,7 @@
 
 <style>
 	.placeholder::before {
-		/* abolute */
+		/* absolute */
 		position: absolute;
 		content: attr(data-placeholder);
 		color: #adb5bd;
