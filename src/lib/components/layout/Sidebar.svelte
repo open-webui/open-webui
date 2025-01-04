@@ -558,19 +558,6 @@
 				on:input={searchDebounceHandler}
 				placeholder={$i18n.t('Search')}
 			/>
-
-			<div class="absolute z-40 right-3.5 top-1">
-				<Tooltip content={$i18n.t('New folder')}>
-					<button
-						class="p-1 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-gray-950 dark:hover:bg-gray-900 text-gray-500 dark:text-gray-500 transition"
-						on:click={() => {
-							createFolder();
-						}}
-					>
-						<Plus className=" size-3" strokeWidth="2.5" />
-					</button>
-				</Tooltip>
-			</div>
 		</div>
 
 		<div
@@ -605,6 +592,10 @@
 				collapsible={!search}
 				className="px-2 mt-0.5"
 				name={$i18n.t('Chats')}
+				onAdd={() => {
+					createFolder();
+				}}
+				onAddLabel={$i18n.t('New Folder')}
 				on:import={(e) => {
 					importChatHandler(e.detail);
 				}}
@@ -631,7 +622,7 @@
 							}
 
 							if (chat.pinned) {
-								const res = await toggleChatPinnedStatusById(localStorage.token, chat, id);
+								const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
 							}
 
 							initChatList();
@@ -661,7 +652,7 @@
 				{#if !search && $pinnedChats.length > 0}
 					<div class="flex flex-col space-y-1 rounded-xl">
 						<Folder
-							className="px-2"
+							className=""
 							bind:open={showPinnedChat}
 							on:change={(e) => {
 								localStorage.setItem('showPinnedChat', e.detail);
