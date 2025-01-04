@@ -10,6 +10,7 @@
 	import {
 		config,
 		user,
+		settings,
 		theme,
 		WEBUI_NAME,
 		mobile,
@@ -107,6 +108,13 @@
 				const { done, content, title } = data;
 
 				if (done) {
+					if ($settings?.notificationEnabled ?? false) {
+						const notification = new Notification(`${title} | Open WebUI`, {
+							body: content,
+							icon: `${WEBUI_BASE_URL}/static/favicon.png`
+						});
+					}
+
 					toast.custom(NotificationToast, {
 						componentProps: {
 							onClick: () => {
@@ -138,6 +146,13 @@
 			const data = event?.data?.data ?? null;
 
 			if (type === 'message') {
+				if ($settings?.notificationEnabled ?? false) {
+					new Notification(`#${event?.channel?.name} | Open WebUI`, {
+						body: data?.content,
+						icon: `${WEBUI_BASE_URL}/static/favicon.png`
+					});
+				}
+
 				toast.custom(NotificationToast, {
 					componentProps: {
 						onClick: () => {
