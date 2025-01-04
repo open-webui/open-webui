@@ -38,6 +38,7 @@
 	import { generateAutoCompletion } from '$lib/apis';
 	import { error, text } from '@sveltejs/kit';
 	import Image from '../common/Image.svelte';
+	import Speech from '$lib/components/icons/Speech.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -1175,7 +1176,7 @@
 															}}
 															aria-label="Call"
 														>
-															<Headphone className="size-5" />
+															<Speech className="size-5"/>
 														</button>
 													</Tooltip>
 												</div>
