@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { settings, playingNotificationSound } from '$lib/stores';
+	import { settings, playingNotificationSound, isLastActiveTab } from '$lib/stores';
 	import DOMPurify from 'dompurify';
 
 	import { marked } from 'marked';
@@ -17,7 +17,7 @@
 		}
 
 		if ($settings?.notificationSound ?? true) {
-			if (!$playingNotificationSound) {
+			if (!$playingNotificationSound && $isLastActiveTab) {
 				playingNotificationSound.set(true);
 
 				const audio = new Audio(`/audio/notification.mp3`);

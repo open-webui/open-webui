@@ -21,7 +21,8 @@
 		chats,
 		currentChatPage,
 		tags,
-		temporaryChatEnabled
+		temporaryChatEnabled,
+		isLastActiveTab
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -43,7 +44,10 @@
 
 	setContext('i18n', i18n);
 
+	const bc = new BroadcastChannel('active-tab-channel');
+
 	let loaded = false;
+
 	const BREAKPOINT = 768;
 
 	const setupSocket = async (enableWebsocket) => {
@@ -108,11 +112,13 @@
 				const { done, content, title } = data;
 
 				if (done) {
-					if ($settings?.notificationEnabled ?? false) {
-						const notification = new Notification(`${title} | Open WebUI`, {
-							body: content,
-							icon: `${WEBUI_BASE_URL}/static/favicon.png`
-						});
+					if ($isLastActiveTab) {
+						if ($settings?.notificationEnabled ?? false) {
+							new Notification(`${title} | Open WebUI`, {
+								body: content,
+								icon: `${WEBUI_BASE_URL}/static/favicon.png`
+							});
+						}
 					}
 
 					toast.custom(NotificationToast, {
@@ -146,11 +152,13 @@
 			const data = event?.data?.data ?? null;
 
 			if (type === 'message') {
-				if ($settings?.notificationEnabled ?? false) {
-					new Notification(`#${event?.channel?.name} | Open WebUI`, {
-						body: data?.content,
-						icon: `${WEBUI_BASE_URL}/static/favicon.png`
-					});
+				if ($isLastActiveTab) {
+					if ($settings?.notificationEnabled ?? false) {
+						new Notification(`#${event?.channel?.name} | Open WebUI`, {
+							body: data?.content,
+							icon: `${WEBUI_BASE_URL}/static/favicon.png`
+						});
+					}
 				}
 
 				toast.custom(NotificationToast, {
@@ -169,6 +177,27 @@
 	};
 
 	onMount(async () => {
+		// Listen for messages on the BroadcastChannel
+		bc.onmessage = (event) => {
+			if (event.data === 'active') {
+				isLastActiveTab.set(false); // Another tab became active
+			}
+		};
+
+		// Set yourself as the last active tab when this tab is focused
+		const handleVisibilityChange = () => {
+			if (document.visibilityState === 'visible') {
+				isLastActiveTab.set(true); // This tab is now the active tab
+				bc.postMessage('active'); // Notify other tabs that this tab is active
+			}
+		};
+
+		// Add event listener for visibility state changes
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+
+		// Call visibility change handler initially to set state on load
+		handleVisibilityChange();
+
 		theme.set(localStorage.theme);
 
 		mobile.set(window.innerWidth < BREAKPOINT);
