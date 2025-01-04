@@ -344,7 +344,7 @@ export const processFile = async (
 	return res;
 };
 
-export const processYoutubeVideo = async (token: string, url: string) => {
+export const processYoutubeVideo = async (token: string, url: string, collection_name: string) => {
 	let error = null;
 
 	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/youtube`, {
@@ -355,7 +355,8 @@ export const processYoutubeVideo = async (token: string, url: string) => {
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			url: url
+			url: url,
+			collection_name: collection_name
 		})
 	})
 		.then(async (res) => {
