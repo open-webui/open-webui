@@ -154,9 +154,9 @@
 			if (type === 'message') {
 				if ($isLastActiveTab) {
 					if ($settings?.notificationEnabled ?? false) {
-						new Notification(`#${event?.channel?.name} | Open WebUI`, {
+						new Notification(`${data?.user?.name} (#${event?.channel?.name}) | Open WebUI`, {
 							body: data?.content,
-							icon: `${WEBUI_BASE_URL}/static/favicon.png`
+							icon: data?.user?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`
 						});
 					}
 				}
