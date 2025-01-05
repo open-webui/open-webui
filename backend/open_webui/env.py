@@ -3,12 +3,13 @@ import json
 import logging
 import os
 import pkgutil
-import sys
 import shutil
+import sys
 from pathlib import Path
 
 import markdown
 from bs4 import BeautifulSoup
+
 from open_webui.constants import ERROR_MESSAGES
 
 ####################################
@@ -36,23 +37,22 @@ DOCKER = os.environ.get("DOCKER", "False").lower() == "true"
 # device type embedding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
 USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
 
-if USE_CUDA.lower() == "true":
-    try:
-        import torch
-
-        assert torch.cuda.is_available(), "CUDA not available"
-        DEVICE_TYPE = "cuda"
-    except Exception as e:
-        cuda_error = (
-            "Error when testing CUDA but USE_CUDA_DOCKER is true. "
-            f"Resetting USE_CUDA_DOCKER to false: {e}"
-        )
-        os.environ["USE_CUDA_DOCKER"] = "false"
-        USE_CUDA = "false"
-        DEVICE_TYPE = "cpu"
-else:
+try:
+    import torch
+except Exception as e:
+    print(f"No Pytorch exception {e}")
     DEVICE_TYPE = "cpu"
-
+    USE_CUDA = "false"
+else:
+# only use cuda in docker if it is allowed
+    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        DEVICE_TYPE = "mps"
+    elif torch.cuda.is_available() and torch.backends.cuda.is_built():
+            if not DOCKER or (DOCKER and USE_CUDA.lower() == "true"):
+                DEVICE_TYPE = "cuda"
+    else:
+        DEVICE_TYPE = "cpu"
+        USE_CUDA = "false"
 
 ####################################
 # LOGGING
@@ -147,7 +147,7 @@ def parse_section(section):
 
 try:
     changelog_path = BASE_DIR / "CHANGELOG.md"
-    with open(str(changelog_path.absolute()), "r", encoding="utf8") as file:
+    with open(str(changelog_path.absolute()), encoding="utf8") as file:
         changelog_content = file.read()
 
 except Exception:
@@ -245,7 +245,7 @@ FRONTEND_BUILD_DIR = Path(os.getenv("FRONTEND_BUILD_DIR", BASE_DIR / "build")).r
 
 if FROM_INIT_PY:
     FRONTEND_BUILD_DIR = Path(
-        os.getenv("FRONTEND_BUILD_DIR", OPEN_WEBUI_DIR / "frontend")
+        os.getenv("FRONTEND_BUILD_DIR", OPEN_WEBUI_DIR / "frontend"),
     ).resolve()
 
 
@@ -328,7 +328,7 @@ REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
 WEBUI_AUTH = os.environ.get("WEBUI_AUTH", "True").lower() == "true"
 WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
-    "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
+    "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None,
 )
 WEBUI_AUTH_TRUSTED_NAME_HEADER = os.environ.get("WEBUI_AUTH_TRUSTED_NAME_HEADER", None)
 
@@ -343,7 +343,7 @@ BYPASS_MODEL_ACCESS_CONTROL = (
 WEBUI_SECRET_KEY = os.environ.get(
     "WEBUI_SECRET_KEY",
     os.environ.get(
-        "WEBUI_JWT_SECRET_KEY", "t0p-s3cr3t"
+        "WEBUI_JWT_SECRET_KEY", "t0p-s3cr3t",
     ),  # DEPRECATED: remove at next major version
 )
 
@@ -379,7 +379,7 @@ else:
         AIOHTTP_CLIENT_TIMEOUT = 300
 
 AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = os.environ.get(
-    "AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST", ""
+    "AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST", "",
 )
 
 if AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST == "":
@@ -387,7 +387,7 @@ if AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST == "":
 else:
     try:
         AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = int(
-            AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST
+            AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST,
         )
     except Exception:
         AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = 5
