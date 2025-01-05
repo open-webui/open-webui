@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **🖼️ Image-Only Messages**: You can now send images without accompanying text or content in channels.
+- **🖼️ Image-Only Messages in Channels**: You can now send images without accompanying text or content in channels.
 - **❌ Proper Exception Handling**: Enhanced error feedback by ensuring exceptions are raised clearly, reducing confusion and promoting smoother debugging.
 - **🔍 RAG Query Generation Restored**: Fixed query generation issues for Retrieval-Augmented Generation, improving retrieval accuracy and ensuring seamless functionality.
 - **📩 MOA Response Functionality Fixed**: Addressed an error with the MOA response generation feature.
