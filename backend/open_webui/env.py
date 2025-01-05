@@ -53,9 +53,11 @@ if USE_CUDA.lower() == "true":
 else:
     DEVICE_TYPE = "cpu"
 
-
-if torch.backends.mps.is_available() and torch.backends.mps.is_built():
-    DEVICE_TYPE = "mps"
+try:
+    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        DEVICE_TYPE = "mps"
+except Exception:
+    pass
 
 ####################################
 # LOGGING
