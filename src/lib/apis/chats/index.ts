@@ -618,10 +618,10 @@ export const cloneChatById = async (token: string, id: string) => {
 	return res;
 };
 
-export const cloneChatByShareId = async (token: string, share_id: string) => {
+export const cloneSharedChatById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${share_id}/clone_shared`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/clone/shared`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
