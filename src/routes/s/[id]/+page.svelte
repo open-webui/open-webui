@@ -166,7 +166,7 @@
 			</div>
 
 			<div
-				class="absolute bottom-0 right-0 left-0 flex justify-center w-full bg-gradient-to-b from-transparent to-gray-900"
+				class="sticky bottom-0 right-0 left-0 flex justify-center w-full bg-gradient-to-b from-transparent to-gray-900"
 			>
 				<div class="pb-5">
 					<button
