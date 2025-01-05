@@ -1151,13 +1151,6 @@
 		if (done) {
 			message.done = true;
 
-			if ($settings.notificationEnabled && !document.hasFocus()) {
-				new Notification(`${message.model}`, {
-					body: message.content,
-					icon: `${WEBUI_BASE_URL}/static/favicon.png`
-				});
-			}
-
 			if ($settings.responseAutoCopy) {
 				copyToClipboard(message.content);
 			}
