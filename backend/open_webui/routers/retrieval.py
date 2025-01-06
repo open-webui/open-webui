@@ -384,7 +384,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
                 "serply_api_key": request.app.state.config.SERPLY_API_KEY,
                 "tavily_api_key": request.app.state.config.TAVILY_API_KEY,
                 "searchapi_api_key": request.app.state.config.SEARCHAPI_API_KEY,
-                "seaarchapi_engine": request.app.state.config.SEARCHAPI_ENGINE,
+                "searchapi_engine": request.app.state.config.SEARCHAPI_ENGINE,
                 "jina_api_key": request.app.state.config.JINA_API_KEY,
                 "bing_search_v7_endpoint": request.app.state.config.BING_SEARCH_V7_ENDPOINT,
                 "bing_search_v7_subscription_key": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
