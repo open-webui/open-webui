@@ -128,7 +128,7 @@
 			await toggleModelById(localStorage.token, model.id);
 		}
 
-		await init();
+		// await init();
 		_models.set(await getModels(localStorage.token));
 	};
 
