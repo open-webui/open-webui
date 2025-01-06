@@ -11,6 +11,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import { WORKSPACE_VISIBILITY_TYPES } from '$lib/types';
 
 	const dispatch = createEventDispatcher();
 
@@ -29,7 +30,7 @@
 		description: ''
 	};
 	export let content = '';
-	export let accessControl = null;
+	export let accessControl = { type: WORKSPACE_VISIBILITY_TYPES.TOOL };
 
 	let _content = '';
 

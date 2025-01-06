@@ -8,9 +8,13 @@
 	export let permissions = {
 		workspace: {
 			models: false,
+			make_models_public: false,
 			knowledge: false,
+			make_knowledge_public: false,
 			prompts: false,
-			tools: false
+			make_prompts_public: false,
+			tools: false,
+			make_tools_public: false,
 		},
 		chat: {
 			delete: true,
@@ -136,6 +140,13 @@
 
 		<div class="  flex w-full justify-between my-2 pr-2">
 			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Make Models Public')}
+			</div>
+			<Switch bind:state={permissions.workspace.make_models_public} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
 				{$i18n.t('Knowledge Access')}
 			</div>
 			<Switch bind:state={permissions.workspace.knowledge} />
@@ -143,9 +154,23 @@
 
 		<div class="  flex w-full justify-between my-2 pr-2">
 			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Make Knowledge Public')}
+			</div>
+			<Switch bind:state={permissions.workspace.make_knowledge_public} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
 				{$i18n.t('Prompts Access')}
 			</div>
 			<Switch bind:state={permissions.workspace.prompts} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Make Prompts Public')}
+			</div>
+			<Switch bind:state={permissions.workspace.make_prompts_public} />
 		</div>
 
 		<div class=" ">
@@ -161,6 +186,13 @@
 				</div>
 				<Switch bind:state={permissions.workspace.tools} />
 			</Tooltip>
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Make Tools Public')}
+			</div>
+			<Switch bind:state={permissions.workspace.make_tools_public} />
 		</div>
 	</div>
 

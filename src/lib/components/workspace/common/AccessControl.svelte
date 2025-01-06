@@ -8,6 +8,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import { user } from '$lib/stores';
 
 	export let onChange: Function = () => {};
 
@@ -16,12 +17,30 @@
 	let selectedGroupId = '';
 	let groups = [];
 
+	// allow_public is used to determine whether the "Public" option on the visibility section is selectable
+	let allow_public:boolean = false;
+
 	onMount(async () => {
 		groups = await getGroups(localStorage.token);
+		allow_public = false;
 
 		if (accessControl === null) {
 			accessControl = null;
 		} else {
+			if ($user !== undefined && $user.role === "admin") {
+				// Admins are always allowed to set public
+				allow_public = true;
+			} else {
+				// If any group for a user has the correct visibility type, allow the "Public" option to be selected
+				groups.forEach((group) => {
+					// accessControl.type is a VISIBILITY_TYPE defined in the respective Editor files.
+					// E.g. ModelEditor.svelte sets accessControl.type = WORKSPACE_VISIBILITY_TYPE.MODELS
+					if (group.permissions["workspace"][accessControl.type]) {
+						allow_public = true;
+					}
+				})
+			}
+			
 			accessControl = {
 				read: {
 					group_ids: accessControl?.read?.group_ids ?? [],
@@ -33,6 +52,10 @@
 				}
 			};
 		}
+
+		console.log(allow_public)
+		console.log($user)
+		console.log($user.role)
 	});
 
 	$: onChange(accessControl);
@@ -96,8 +119,11 @@
 						}
 					}}
 				>
-					<option class=" text-gray-700" value="private" selected>Private</option>
-					<option class=" text-gray-700" value="public" selected>Public</option>
+					<option class=" text-gray-700" value="private" selected>Private</option> 
+					// || ($user !== undefined && $user.role === "admin")
+					{#if allow_public} 
+					<option class=" text-gray-700" value="public">Public</option>
+					{/if}
 				</select>
 
 				<div class=" text-xs text-gray-400 font-medium">

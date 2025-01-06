@@ -1,6 +1,7 @@
-<script lang="ts">
+<script lang="ts" type="module">
 	import { onMount, getContext, tick } from 'svelte';
 	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
+	import { WORKSPACE_VISIBILITY_TYPES } from '$lib/types';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -83,7 +84,7 @@
 	let filterIds = [];
 	let actionIds = [];
 
-	let accessControl = {};
+	let accessControl = { type: WORKSPACE_VISIBILITY_TYPES.MODEL };
 
 	const addUsage = (base_model_id) => {
 		const baseModel = $models.find((m) => m.id === base_model_id);

@@ -4,6 +4,7 @@
 	const i18n = getContext('i18n');
 
 	import { createNewKnowledge, getKnowledgeBases } from '$lib/apis/knowledge';
+	import { WORKSPACE_VISIBILITY_TYPES } from '$lib/types';
 	import { toast } from 'svelte-sonner';
 	import { knowledge } from '$lib/stores';
 	import AccessControl from '../common/AccessControl.svelte';
@@ -12,7 +13,7 @@
 
 	let name = '';
 	let description = '';
-	let accessControl = null;
+	let accessControl = { type: WORKSPACE_VISIBILITY_TYPES.KNOWLEDGE };
 
 	const submitHandler = async () => {
 		loading = true;

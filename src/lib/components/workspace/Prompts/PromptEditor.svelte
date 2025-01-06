@@ -4,6 +4,7 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import { toast } from 'svelte-sonner';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { WORKSPACE_VISIBILITY_TYPES } from '$lib/types';
 	import AccessControl from '../common/AccessControl.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
@@ -20,7 +21,7 @@
 	let command = '';
 	let content = '';
 
-	let accessControl = null;
+	let accessControl = { type: WORKSPACE_VISIBILITY_TYPES.PROMPT };
 
 	let showAccessControlModal = false;
 

@@ -63,9 +63,13 @@ async def get_user_permissisions(user=Depends(get_verified_user)):
 ############################
 class WorkspacePermissions(BaseModel):
     models: bool
+    make_models_public: bool
     knowledge: bool
+    make_knowledge_public: bool
     prompts: bool
+    make_prompts_public: bool
     tools: bool
+    make_tools_public: bool
 
 
 class ChatPermissions(BaseModel):
