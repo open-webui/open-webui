@@ -17,7 +17,7 @@
 <button
 	class={className}
 	on:click={() => {
-		showImagePreview = true;
+		showImagePreview = false;
 	}}
 	type="button"
 >
