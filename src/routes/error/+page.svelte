@@ -1,7 +1,7 @@
 <script>
 	import { goto } from '$app/navigation';
-	import { WEBUI_NAME, config } from '$lib/stores';
-	import { onMount, getContext } from 'svelte';
+	import { config } from '$lib/stores';
+	import { getContext, onMount } from 'svelte';
 
 	const i18n = getContext('i18n');
 
@@ -18,34 +18,26 @@
 
 {#if loaded}
 	<div class="absolute w-full h-full flex z-50">
-		<div class="absolute rounded-xl w-full h-full backdrop-blur flex justify-center">
-			<div class="m-auto pb-44 flex flex-col justify-center">
-				<div class="max-w-md">
-					<div class="text-center text-2xl font-medium z-50">
-						{$i18n.t('{{webUIName}} Backend Required', { webUIName: $WEBUI_NAME })}
+		<div class="absolute rounded-xl w-full h-full backdrop-blur-sm flex justify-center bg-gray-900/50 p-6">
+			<div class="m-auto pb-20 flex flex-col justify-center items-center">
+				<div class="max-w-lg text-center">
+					<div class="text-4xl font-bold z-50 mb-6">
+						🚧 {$i18n.t('Oops! Something’s Missing')}
 					</div>
 
-					<div class=" mt-4 text-center text-sm w-full">
+					<p class="text-md mb-4 leading-relaxed text-gray-300">
 						{$i18n.t(
-							"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend."
+							"It seems that the WebUI doesn't have a connected backend. Don't worry! Double-check your setup, and we'll help you get up and running in no time."
 						)}
+					</p>
 
-						<br class=" " />
-						<br class=" " />
-						<a
-							class=" font-semibold underline"
-							href="https://github.com/open-webui/open-webui#how-to-install-"
-							target="_blank">{$i18n.t('See readme.md for instructions')}</a
-						>
-						{$i18n.t('or')}
-						<a class=" font-semibold underline" href="https://discord.gg/5rJgQTnV4s" target="_blank"
-							>{$i18n.t('join our Discord for help.')}</a
-						>
-					</div>
+					<p class="text-sm mb-8 text-gray-300">
+						{$i18n.t('If you need help, visit our documentation or contact support.')}
+					</p>
 
-					<div class=" mt-6 mx-auto relative group w-fit">
+					<div class="mt-6 flex justify-center gap-4">
 						<button
-							class="relative z-20 flex px-5 py-2 rounded-full bg-gray-100 hover:bg-gray-200 transition font-medium text-sm"
+							class="px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 transition font-medium text-sm text-white shadow-lg"
 							on:click={() => {
 								location.href = '/';
 							}}
