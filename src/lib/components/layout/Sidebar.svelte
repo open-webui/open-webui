@@ -447,30 +447,6 @@
 			: 'invisible'}"
 	>
 		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
-			<button
-				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-				on:click={() => {
-					showSidebar.set(!$showSidebar);
-				}}
-			>
-				<div class=" m-auto self-center">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="2"
-						stroke="currentColor"
-						class="size-5"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
-						/>
-					</svg>
-				</div>
-			</button>
-
 			<a
 				id="sidebar-new-chat-button"
 				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-gray-100 dark:hover:bg-gray-900 transition"
@@ -506,6 +482,22 @@
 					<PencilSquare className=" size-5" strokeWidth="2" />
 				</div>
 			</a>
+
+			<button
+				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				on:click={() => {
+					showSidebar.set(!$showSidebar);
+				}}
+			>
+				<div class=" m-auto self-center">
+					<img
+						crossorigin="anonymous"
+						src="{WEBUI_BASE_URL}/static/close_arrow.png"
+						class=" size-6 -translate-x-2 rounded-full"
+						alt="logo"
+					/>
+				</div>
+			</button>
 		</div>
 
 		<div class="relative {$temporaryChatEnabled ? 'opacity-20' : ''}">
