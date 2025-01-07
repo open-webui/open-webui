@@ -18,14 +18,6 @@
 	export let id: string;
 	export let tokens: Token[];
 	export let onSourceClick: Function = () => {};
-	let isFinishGenResLocal = false;
-	$: {
-		if ($isFinishGenRes) {
-			isFinishGenResLocal = true;
-		} else {
-			isFinishGenResLocal = false;
-		}
-	}
 </script>
 
 {#each tokens as token, tokenIdx (tokenIdx)}
@@ -90,7 +82,7 @@
 		></iframe>
 	{:else if token.type === 'text'}
 		{#if token.raw === 'OpenBottomArtifacts' || token.raw === 'OpenLeftArtifacts' || token.raw === 'OpenAllArtifacts'}
-			{#if isFinishGenResLocal}
+			{#if $isFinishGenRes}
 				<span>Please choose an option from the popup window</span>
 			{:else}
 				<img

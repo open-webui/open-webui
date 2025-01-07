@@ -9,7 +9,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, models, settings, user } from '$lib/stores';
+	import { config, models, settings, user, isFinishGenRes } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -470,6 +470,11 @@
 
 		await tick();
 	});
+	$: if (message.done) {
+		$isFinishGenRes = true;
+	} else {
+		$isFinishGenRes = false;
+	}
 </script>
 
 {#key message.id}

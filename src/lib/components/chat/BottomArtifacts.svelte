@@ -186,7 +186,6 @@
 			chatInputHeight = chatInputElement.clientHeight; // Capture the height of the input
 		}
 		maxHeight = 500 - chatInputHeight; // Recalculate maxHeight based on chat input height
-		console.log({ maxHeight, chatInputHeight, chatInputElement });
 	}
 </script>
 
