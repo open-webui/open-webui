@@ -228,7 +228,7 @@
 			}
 		} else {
 			// Redirect to /error when Backend Not Detected
-			await goto(`/error`);
+
 		}
 
 		await tick();

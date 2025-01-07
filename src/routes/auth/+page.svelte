@@ -12,8 +12,6 @@
 	import { config, socket, user, WEBUI_NAME } from '$lib/stores';
 
 	import { generateInitialsImage } from '$lib/utils';
-
-	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
 
 	const i18n = getContext('i18n');
@@ -27,6 +25,13 @@
 	let password = '';
 
 	let ldapUsername = '';
+
+	let isDarkMode = localStorage.getItem('theme');
+	let videoSrc = '';
+
+	const checkDarkMode = () => {
+		return document.documentElement.classList.contains('dark');
+	}
 
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
@@ -111,6 +116,19 @@
 		if ($user !== undefined) {
 			await goto('/');
 		}
+
+		const observer = new MutationObserver(()=>{
+			isDarkMode = checkDarkMode();
+			updateVideoSrc()
+		})
+
+		observer.observe(document.documentElement, {
+			attributes: true,
+			attributeFilter: ['class']
+		})
+
+		isDarkMode = checkDarkMode();
+		updateVideoSrc();
 		await checkOauthCallback();
 
 		loaded = true;
@@ -119,7 +137,18 @@
 		} else {
 			onboarding = $config?.onboarding ?? false;
 		}
+
+		onDestroy(()=>{
+			observer.disconnect();
+		})
 	});
+	const updateVideoSrc = () => {
+		videoSrc = isDarkMode
+			? `${WEBUI_BASE_URL}/static/2.0.mp4`
+			: `${WEBUI_BASE_URL}/static/1.0.mp4`;
+	};
+
+
 </script>
 
 <svelte:head>
@@ -138,40 +167,31 @@
 
 <div class="w-full h-screen max-h-[100dvh] text-white relative">
 	<div
-		class="w-full h-full absolute top-0 left-0 bg-gradient-to-b from-blue-500 to-blue-100 dark:from-gray-900 dark:to-gray-800"></div>
+		class="w-full h-full absolute top-0 left-0 dark:from-gray-900 dark:to-gray-800"></div>
 
 	{#if loaded}
 		<div class="fixed top-5 left-5 z-50">
 			<div class="flex space-x-2 items-center">
 				<img
 					crossorigin="anonymous"
-					src="{WEBUI_BASE_URL}/static/favicon.png"
+					src="/static/favicon.png"
 					class="w-8 rounded-full"
 					alt="logo"
 				/>
-				<span class="text-xl font-bold text-white">
+				<span class="text-xl font-bold text-gray-700 dark:text-white">
 					{$WEBUI_NAME}
 				</span>
 			</div>
 		</div>
 
-		<div
-			class="absolute top-0 left-0 flex min-h-screen w-full sm:items-center justify-center font-primary z-50 text-white"
-		>
-			<div
-				class="bg-white/90 dark:bg-gray-900/80 shadow-lg rounded-lg px-12 py-10 text-center w-full sm:max-w-md flex flex-col">
-				{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
-					<div class="mt-10">
-						<div
-							class="flex items-center justify-center gap-3 text-lg sm:text-xl font-semibold dark:text-gray-300"
-						>
-							<div>
-								{$i18n.t('Signing in to {{WEBUI_NAME}}', { WEBUI_NAME: $WEBUI_NAME })}
-							</div>
-							<Spinner />
-						</div>
-					</div>
-				{:else}
+		<div class="flex justify-center items-center h-screen dark:bg-[#14171B]">
+			<div class="relative z-999 bg-[#e0e5ec] dark:bg-gray-800 dark:shadow-lg bg-opacity-90 neumorphic rounded-lg flex">
+
+				<div class="w-2/4 overflow-hidden bg-white dark:bg-gray-800">
+					<video autoplay muted class="max-w-[450px] w-full h-full object-cover rounded-l-lg pr-1"
+								 poster="/static/splash.png" src={videoSrc} />
+				</div>
+				<div class="w-2/4 min-h-[600px] flex flex-col justify-center items-center">
 					<h2 class="text-2xl font-bold text-gray-700 dark:text-white mb-4">
 						{#if $config?.onboarding ?? false}
 							{$i18n.t(`Get started with {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
@@ -193,16 +213,18 @@
 					>
 						{#if mode === 'signup'}
 							<div>
-								<label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">{$i18n.t('Name')}</label>
+
+								<label class="block text-sm font-medium text-gray-600">{$i18n.t('Name')}</label>
 								<input
 									bind:value={name}
 									type="text"
-									class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+									class="mt-1 w-full p-3 bg-white rounded-md neumorphic-inner neumorphic focus:outline-none"
 									placeholder={$i18n.t('Enter Your Full Name')}
 									required
 								/>
 							</div>
 						{/if}
+
 
 						{#if mode === 'ldap'}
 							<div>
@@ -224,6 +246,7 @@
 									type="email"
 									class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
 									required
+									placeholder={$i18n.t('user@example.com')}
 								/>
 							</div>
 						{/if}
@@ -236,6 +259,7 @@
 								type="password"
 								class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
 								required
+								placeholder={$i18n.t('Enter you password')}
 							/>
 						</div>
 
@@ -271,8 +295,145 @@
 							</div>
 						{/if}
 					</form>
-				{/if}
+				</div>
+
 			</div>
+
 		</div>
 	{/if}
+	<!--{#if loaded}-->
+	<!--	<div class="fixed top-5 left-5 z-50">-->
+	<!--		<div class="flex space-x-2 items-center">-->
+	<!--			<img-->
+	<!--				crossorigin="anonymous"-->
+	<!--				src="{WEBUI_BASE_URL}/static/favicon.png"-->
+	<!--				class="w-8 rounded-full"-->
+	<!--				alt="logo"-->
+	<!--			/>-->
+	<!--			<span class="text-xl font-bold text-white">-->
+	<!--				{$WEBUI_NAME}-->
+	<!--			</span>-->
+	<!--		</div>-->
+	<!--	</div>-->
+
+	<!--	<div-->
+	<!--		class="absolute top-0 left-0 flex min-h-screen w-full sm:items-center justify-center font-primary z-50 text-white"-->
+	<!--	>-->
+	<!--		<div-->
+	<!--			class="bg-white/90 dark:bg-gray-900/80 shadow-lg rounded-lg px-12 py-10 text-center w-full sm:max-w-md flex flex-col">-->
+	<!--			{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}-->
+	<!--				<div class="mt-10">-->
+	<!--					<div-->
+	<!--						class="flex items-center justify-center gap-3 text-lg sm:text-xl font-semibold dark:text-gray-300"-->
+	<!--					>-->
+	<!--						<div>-->
+	<!--							{$i18n.t('Signing in to {{WEBUI_NAME}}', { WEBUI_NAME: $WEBUI_NAME })}-->
+	<!--						</div>-->
+	<!--						<Spinner />-->
+	<!--					</div>-->
+	<!--				</div>-->
+	<!--			{:else}-->
+	<!--				<h2 class="text-2xl font-bold text-gray-700 mb-4">-->
+	<!--					{#if $config?.onboarding ?? false}-->
+	<!--						{$i18n.t(`Get started with {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}-->
+	<!--					{:else if mode === 'ldap'}-->
+	<!--						{$i18n.t(`Sign in to {{WEBUI_NAME}} with LDAP`, { WEBUI_NAME: $WEBUI_NAME })}-->
+	<!--					{:else if mode === 'signin'}-->
+	<!--						{$i18n.t(`Sign in to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}-->
+	<!--					{:else}-->
+	<!--						{$i18n.t(`Sign up to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}-->
+	<!--					{/if}-->
+	<!--				</h2>-->
+
+	<!--				<form-->
+	<!--					class="flex flex-col space-y-4"-->
+	<!--					on:submit={(e) => {-->
+	<!--				e.preventDefault();-->
+	<!--				submitHandler();-->
+	<!--			}}-->
+	<!--				>-->
+	<!--					{#if mode === 'signup'}-->
+	<!--						<div>-->
+	<!--							<label class="block text-sm font-medium text-gray-600 mb-1">{$i18n.t('Name')}</label>-->
+	<!--							<input-->
+	<!--								bind:value={name}-->
+	<!--								type="text"-->
+	<!--								class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"-->
+	<!--								placeholder={$i18n.t('Enter Your Full Name')}-->
+	<!--								required-->
+	<!--							/>-->
+	<!--						</div>-->
+	<!--					{/if}-->
+
+	<!--					{#if mode === 'ldap'}-->
+	<!--						<div>-->
+	<!--							<label-->
+	<!--								class="block text-sm font-medium text-gray-600 mb-1">{$i18n.t('Username')}</label>-->
+	<!--							<input-->
+	<!--								bind:value={ldapUsername}-->
+	<!--								type="text"-->
+	<!--								class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"-->
+	<!--								required-->
+	<!--							/>-->
+	<!--						</div>-->
+	<!--					{:else}-->
+	<!--						<div>-->
+	<!--							<label-->
+	<!--								class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">{$i18n.t('Email')}</label>-->
+	<!--							<input-->
+	<!--								bind:value={email}-->
+	<!--								type="email"-->
+	<!--								class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"-->
+	<!--								required-->
+	<!--							/>-->
+	<!--						</div>-->
+	<!--					{/if}-->
+
+	<!--					<div>-->
+	<!--						<label-->
+	<!--							class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">{$i18n.t('Password')}</label>-->
+	<!--						<input-->
+	<!--							bind:value={password}-->
+	<!--							type="password"-->
+	<!--							class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"-->
+	<!--							required-->
+	<!--						/>-->
+	<!--					</div>-->
+
+	<!--					<button-->
+	<!--						class="bg-primary-500 hover:bg-primary-700 text-white py-2 px-4 rounded-lg font-medium transition dark:bg-blue-600 dark:hover:bg-blue-700"-->
+	<!--						type="submit"-->
+	<!--					>-->
+	<!--						{mode === 'signin'-->
+	<!--							? $i18n.t('Sign in')-->
+	<!--							: ($config?.onboarding ?? false)-->
+	<!--								? $i18n.t('Create Admin Account')-->
+	<!--								: $i18n.t('Create Account')}-->
+	<!--					</button>-->
+
+	<!--					{#if $config?.features.enable_signup && !($config?.onboarding ?? false)}-->
+	<!--						<div class="text-sm text-gray-600 dark:text-gray-300 text-center mt-4">-->
+	<!--							{mode === 'signin'-->
+	<!--								? $i18n.t("Don't have an account?")-->
+	<!--								: $i18n.t('Already have an account?')}-->
+	<!--							<button-->
+	<!--								class="font-medium text-blue-500 underline hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-600 ml-1"-->
+	<!--								type="button"-->
+	<!--								on:click={() => {-->
+	<!--									if (mode === 'signin') {-->
+	<!--										mode = 'signup';-->
+	<!--									} else {-->
+	<!--										mode = 'signin';-->
+	<!--									}-->
+	<!--								}}-->
+	<!--							>-->
+	<!--								{mode === 'signin' ? $i18n.t('Sign up') : $i18n.t('Sign in')}-->
+	<!--							</button>-->
+	<!--						</div>-->
+	<!--					{/if}-->
+	<!--				</form>-->
+	<!--			{/if}-->
+	<!--		</div>-->
+	<!--	</div>-->
+	<!--{/if}-->
 </div>

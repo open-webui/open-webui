@@ -1133,7 +1133,7 @@
 												<div class=" flex items-center">
 													<Tooltip content={$i18n.t('Call')}>
 														<button
-															class=" bg-primary-100 text-white hover:bg-primary-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-2 self-center"
+															class=" bg-primary-500 text-white hover:bg-primary-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-2 self-center"
 															type="button"
 															on:click={async () => {
 																if (selectedModels.length > 1) {
@@ -1186,7 +1186,7 @@
 														<button
 															id="send-message-button"
 															class="{prompt !== ''
-																? 'bg-primary-100 text-white hover:bg-primary-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+																? 'bg-primary-500 text-white hover:bg-primary-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
 															type="submit"
 															disabled={prompt === ''}
@@ -1211,7 +1211,7 @@
 											<div class=" flex items-center">
 												<Tooltip content={$i18n.t('Stop')}>
 													<button
-														class="bg-primary-100 hover:bg-primary-900 text-white dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+														class="bg-primary-500 hover:bg-primary-900 text-white dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
 														on:click={() => {
 															stopResponse();
 														}}

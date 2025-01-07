@@ -22,6 +22,25 @@
 	font-display: swap;
 }
 
+:root {
+	--e-global-color-uicore_primary: #006EFA;
+	--e-global-color-uicore_secondary: #00B4F7;
+	--e-global-color-uicore_accent: #00FAF4;
+	--e-global-color-uicore_headline: #35383D;
+	--e-global-color-uicore_body: #4B4B55;
+	--e-global-color-uicore_dark: #14171B;
+	--e-global-color-uicore_light: #F6F9FC;
+	--e-global-color-uicore_white: #FFFFFF;
+	--e-global-typography-uicore_primary-font-family: "Inter";
+	--e-global-typography-uicore_primary-font-weight: 600;
+	--e-global-typography-uicore_secondary-font-family: "Inter";
+	--e-global-typography-uicore_secondary-font-weight: 600;
+	--e-global-typography-uicore_text-font-family: "Inter";
+	--e-global-typography-uicore_text-font-weight: normal;
+	--e-global-typography-uicore_accent-font-family: "Inter";
+	--e-global-typography-uicore_accent-font-weight: 500;
+}
+
 html {
 	word-break: break-word;
 }
@@ -303,3 +322,15 @@ input[type='number'] {
 .hljs-strong {
 	font-weight: 700;
 }
+
+.neumorphic {
+	background: #e0e5ec;
+	box-shadow: 9px 9px 16px #bebebe, -9px -9px 16px #ffffff;
+}
+
+.neumorphic-inner {
+	--tw-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+	--tw-shadow-colored: inset 0 2px 4px 0 var(--tw-shadow-color);
+	box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+

@@ -18,6 +18,8 @@
 	"Account": "Cuenta",
 	"Account Activation Pending": "Activación de cuenta pendiente",
 	"Accurate information": "Información precisa",
+	"user@example.com": "usuario@ejemplo.com",
+	"Enter you password": "Ingresa tu contraseña",
 	"Actions": "Acciones",
 	"Activate this command by typing \"/{{COMMAND}}\" to chat input.": "",
 	"Active Users": "Usuarios activos",
