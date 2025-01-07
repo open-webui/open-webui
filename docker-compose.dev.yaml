@@ -6,6 +6,7 @@ services:
       context: .
       target: build
     command: ["sh", "/app/src/frontend-dev.sh"]
+    env_file: ".env"
     depends_on:
       - backend
     ports:
