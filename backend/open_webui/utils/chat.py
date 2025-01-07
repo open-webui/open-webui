@@ -315,6 +315,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
             "chat_id": data["chat_id"],
             "message_id": data["id"],
             "session_id": data["session_id"],
+            "user_id": user.id,
         }
     )
     __event_call__ = get_event_call(
@@ -322,6 +323,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
             "chat_id": data["chat_id"],
             "message_id": data["id"],
             "session_id": data["session_id"],
+            "user_id": user.id,
         }
     )
 

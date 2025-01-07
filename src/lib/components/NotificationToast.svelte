@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { settings } from '$lib/stores';
+	import { settings, playingNotificationSound, isLastActiveTab } from '$lib/stores';
 	import DOMPurify from 'dompurify';
 
 	import { marked } from 'marked';
@@ -12,9 +12,20 @@
 	export let content: string;
 
 	onMount(() => {
+		if (!navigator.userActivation.hasBeenActive) {
+			return;
+		}
+
 		if ($settings?.notificationSound ?? true) {
-			const audio = new Audio(`/audio/notification.mp3`);
-			audio.play();
+			if (!$playingNotificationSound && $isLastActiveTab) {
+				playingNotificationSound.set(true);
+
+				const audio = new Audio(`/audio/notification.mp3`);
+				audio.play().finally(() => {
+					// Ensure the global state is reset after the sound finishes
+					playingNotificationSound.set(false);
+				});
+			}
 		}
 	});
 </script>
