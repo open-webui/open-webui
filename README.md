@@ -80,7 +80,64 @@ Open WebUI can be installed using pip, the Python package installer. Before proc
    ```
 
 This will start the Open WebUI server, which you can access at [http://localhost:8080](http://localhost:8080)
+## How to Run Turin Locally 🚀
 
+### Step 1: Clone the repository from GitHub 🐙
+
+Begin by cloning the `open-webui_sintergica` repository from GitHub into your preferred IDE. Use your terminal or the GitHub interface for this step.
+
+---
+
+### Step 2: Create the `.env` File 📄
+
+After cloning the repository, open your terminal and run the following command:
+
+```bash
+cp .env.example .env
+```
+
+This will create the `.env` file in the root directory of the project.
+
+---
+
+### Step 3: Configure the `.env` File ⚙️
+
+Open the newly created `.env` file and copy-paste the following configuration:
+
+```plaintext
+ENABLE_SIGNUP= N/A
+WEBUI_LOGINFORM= N/A
+WEBUI_NAME= N/A
+WEBUI_AUTH= N/A
+RESET_CONFIG_ON_START= N/A
+OPENAI_API_BASE_URL= N/A
+OPENAI_API_KEY= N/A
+
+# DO NOT TRACK
+SCARF_NO_ANALYTICS= N/A
+DO_NOT_TRACK= N/A
+ANONYMIZED_TELEMETRY= N/A
+```
+
+> **IMPORTANT**: Replace all instances of `N/A` with the appropriate values. These values must be obtained from the respective project owner or administrator.
+
+---
+
+### Step 4: Launch the Application 🐋
+
+To start the application, run the following command in your terminal:
+
+```bash
+docker compose -f "compose-dev.yaml" up
+```
+
+This command will use Docker Compose to spin up the necessary services and set up the application locally.
+
+---
+
+#### Need Help? 🤔
+
+If you encounter any issues or need clarification, don’t hesitate to reach out to the team responsible for administering Turin. Ensure all environment variables in the `.env` file are correctly populated before proceeding! 🚀
 ### Quick Start with Docker 🐳
 
 > [!NOTE]  

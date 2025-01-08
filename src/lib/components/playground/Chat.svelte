@@ -348,7 +348,7 @@
 								</button>
 
 								<button
-									class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
+									class="px-3.5 py-1.5 text-sm font-medium bg-primary-500 hover:bg-primary-700 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
 									on:click={() => {
 										submitHandler();
 									}}
