@@ -34,7 +34,7 @@ from open_webui.config import (
     JWT_EXPIRES_IN,
     AppConfig,
 )
-from open_webui.constants import ERROR_MESSAGES
+from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import WEBUI_SESSION_COOKIE_SAME_SITE, WEBUI_SESSION_COOKIE_SECURE
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.auth import get_password_hash, create_token
@@ -295,10 +295,10 @@ class OAuthManager:
                 if auth_manager_config.WEBHOOK_URL:
                     post_webhook(
                         auth_manager_config.WEBHOOK_URL,
-                        auth_manager_config.WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                        WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
                         {
                             "action": "signup",
-                            "message": auth_manager_config.WEBHOOK_MESSAGES.USER_SIGNUP(
+                            "message": WEBHOOK_MESSAGES.USER_SIGNUP(
                                 user.name
                             ),
                             "user": user.model_dump_json(exclude_none=True),
