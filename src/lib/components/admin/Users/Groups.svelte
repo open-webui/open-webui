@@ -169,7 +169,7 @@
 
 				<div class="mt-3">
 					<button
-						class=" px-4 py-1.5 text-sm rounded-full bg-black hover:bg-gray-800 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition font-medium flex items-center space-x-1"
+						class=" px-4 py-1.5 text-sm rounded-full bg-primary-500 hover:bg-primary-700 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition font-medium flex items-center space-x-1"
 						aria-label={$i18n.t('Create Group')}
 						on:click={() => {
 							showCreateGroupModal = true;
