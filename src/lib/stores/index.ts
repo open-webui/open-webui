@@ -1,8 +1,10 @@
 import { APP_NAME } from '$lib/constants';
 import { type Writable, writable } from 'svelte/store';
-import type { GlobalModelConfig, ModelConfig } from '$lib/apis';
+import type { ModelConfig } from '$lib/apis';
 import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
+
+import emojiShortCodes from '$lib/emoji-shortcodes.json';
 
 // Backend
 export const WEBUI_NAME = writable(APP_NAME);
@@ -15,10 +17,24 @@ export const MODEL_DOWNLOAD_POOL = writable({});
 export const mobile = writable(false);
 
 export const socket: Writable<null | Socket> = writable(null);
-export const activeUserCount: Writable<null | number> = writable(null);
+export const activeUserIds: Writable<null | string[]> = writable(null);
 export const USAGE_POOL: Writable<null | string[]> = writable(null);
 
 export const theme = writable('system');
+
+export const shortCodesToEmojis = writable(
+	Object.entries(emojiShortCodes).reduce((acc, [key, value]) => {
+		if (typeof value === 'string') {
+			acc[value] = key;
+		} else {
+			for (const v of value) {
+				acc[v] = key;
+			}
+		}
+
+		return acc;
+	}, {})
+);
 
 export const chatId = writable('');
 export const chatTitle = writable('');
@@ -52,6 +68,9 @@ export const showCallOverlay = writable(false);
 export const temporaryChatEnabled = writable(false);
 export const scrollPaginationEnabled = writable(false);
 export const currentChatPage = writable(1);
+
+export const isLastActiveTab = writable(true);
+export const playingNotificationSound = writable(false);
 
 export type Model = OpenAIModel | OllamaModel;
 

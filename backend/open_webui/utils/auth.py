@@ -96,11 +96,18 @@ def get_current_user(
                 status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
             )
 
-        allowed_paths = ["/api/models", "/api/chat/completions"]
-        if request.url.path not in allowed_paths:
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
-            )
+        if request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS:
+            allowed_paths = [
+                path.strip()
+                for path in str(
+                    request.app.state.config.API_KEY_ALLOWED_ENDPOINTS
+                ).split(",")
+            ]
+
+            if request.url.path not in allowed_paths:
+                raise HTTPException(
+                    status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
+                )
 
         return get_current_user_by_api_key(token)
 

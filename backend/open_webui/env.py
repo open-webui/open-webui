@@ -53,6 +53,13 @@ if USE_CUDA.lower() == "true":
 else:
     DEVICE_TYPE = "cpu"
 
+try:
+    import torch
+
+    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        DEVICE_TYPE = "mps"
+except Exception:
+    pass
 
 ####################################
 # LOGGING
@@ -311,6 +318,11 @@ RESET_CONFIG_ON_START = (
     os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
 )
 
+
+ENABLE_REALTIME_CHAT_SAVE = (
+    os.environ.get("ENABLE_REALTIME_CHAT_SAVE", "False").lower() == "true"
+)
+
 ####################################
 # REDIS
 ####################################
@@ -392,3 +404,6 @@ else:
 ####################################
 
 OFFLINE_MODE = os.environ.get("OFFLINE_MODE", "false").lower() == "true"
+
+if OFFLINE_MODE:
+    os.environ["HF_HUB_OFFLINE"] = "1"

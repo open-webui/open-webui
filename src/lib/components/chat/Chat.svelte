@@ -427,7 +427,7 @@
 	onDestroy(() => {
 		chatIdUnsubscriber?.();
 		window.removeEventListener('message', onMessageHandler);
-		// $socket?.off('chat-events');
+		$socket?.off('chat-events', chatEventHandler);
 	});
 
 	// File upload functions
@@ -836,16 +836,19 @@
 			return null;
 		});
 
-		if (res !== null) {
+		if (res !== null && res.messages) {
 			// Update chat history with the new messages
 			for (const message of res.messages) {
-				history.messages[message.id] = {
-					...history.messages[message.id],
-					...(history.messages[message.id].content !== message.content
-						? { originalContent: history.messages[message.id].content }
-						: {}),
-					...message
-				};
+				if (message?.id) {
+					// Add null check for message and message.id
+					history.messages[message.id] = {
+						...history.messages[message.id],
+						...(history.messages[message.id].content !== message.content
+							? { originalContent: history.messages[message.id].content }
+							: {}),
+						...message
+					};
+				}
 			}
 		}
 
@@ -890,7 +893,7 @@
 			return null;
 		});
 
-		if (res !== null) {
+		if (res !== null && res.messages) {
 			// Update chat history with the new messages
 			for (const message of res.messages) {
 				history.messages[message.id] = {
@@ -1053,7 +1056,7 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		const { id, done, choices, sources, selected_model_id, error, usage } = data;
+		const { id, done, choices, content, sources, selected_model_id, error, usage } = data;
 
 		if (error) {
 			await handleOpenAIError(error, message);
@@ -1105,6 +1108,38 @@
 			}
 		}
 
+		if (content) {
+			// REALTIME_CHAT_SAVE is disabled
+			message.content = content;
+
+			if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+				navigator.vibrate(5);
+			}
+
+			// Emit chat event for TTS
+			const messageContentParts = getMessageContentParts(
+				message.content,
+				$config?.audio?.tts?.split_on ?? 'punctuation'
+			);
+			messageContentParts.pop();
+
+			// dispatch only last sentence and make sure it hasn't been dispatched before
+			if (
+				messageContentParts.length > 0 &&
+				messageContentParts[messageContentParts.length - 1] !== message.lastSentence
+			) {
+				message.lastSentence = messageContentParts[messageContentParts.length - 1];
+				eventTarget.dispatchEvent(
+					new CustomEvent('chat', {
+						detail: {
+							id: message.id,
+							content: messageContentParts[messageContentParts.length - 1]
+						}
+					})
+				);
+			}
+		}
+
 		if (selected_model_id) {
 			message.selectedModelId = selected_model_id;
 			message.arena = true;
@@ -1114,15 +1149,10 @@
 			message.usage = usage;
 		}
 
+		history.messages[message.id] = message;
+
 		if (done) {
 			message.done = true;
-
-			if ($settings.notificationEnabled && !document.hasFocus()) {
-				new Notification(`${message.model}`, {
-					body: message.content,
-					icon: `${WEBUI_BASE_URL}/static/favicon.png`
-				});
-			}
 
 			if ($settings.responseAutoCopy) {
 				copyToClipboard(message.content);
@@ -1157,8 +1187,6 @@
 			history.messages[message.id] = message;
 			await chatCompletedHandler(chatId, message.model, message.id, createMessagesList(message.id));
 		}
-
-		history.messages[message.id] = message;
 
 		console.log(data);
 		if (autoScroll) {
@@ -1323,7 +1351,8 @@
 				history.currentId = responseMessageId;
 
 				// Append messageId to childrenIds of parent message
-				if (parentId !== null) {
+				if (parentId !== null && history.messages[parentId]) {
+					// Add null check before accessing childrenIds
 					history.messages[parentId].childrenIds = [
 						...history.messages[parentId].childrenIds,
 						responseMessageId
@@ -1501,7 +1530,7 @@
 							: undefined
 				},
 
-				files: files.length > 0 ? files : undefined,
+				files: (files?.length ?? 0) > 0 ? files : undefined,
 				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 				features: {
 					web_search: webSearchEnabled

@@ -52,12 +52,21 @@
 	}
 
 	const init = () => {
-		selectedReason = message?.annotation?.reason ?? '';
-		comment = message?.annotation?.comment ?? '';
+		if (!selectedReason) {
+			selectedReason = message?.annotation?.reason ?? '';
+		}
+
+		if (!comment) {
+			comment = message?.annotation?.comment ?? '';
+		}
+
 		tags = (message?.annotation?.tags ?? []).map((tag) => ({
 			name: tag
 		}));
-		detailedRating = message?.annotation?.details?.rating ?? null;
+
+		if (!detailedRating) {
+			detailedRating = message?.annotation?.details?.rating ?? null;
+		}
 	};
 
 	onMount(() => {

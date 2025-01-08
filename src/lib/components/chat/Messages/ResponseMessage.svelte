@@ -489,11 +489,15 @@
 
 		<div class="flex-auto w-0 pl-1">
 			<Name>
-				{model?.name ?? message.model}
+				<Tooltip content={model?.name ?? message.model} placement="top-start">
+					<span class="line-clamp-1">
+						{model?.name ?? message.model}
+					</span>
+				</Tooltip>
 
 				{#if message.timestamp}
 					<span
-						class=" self-center invisible group-hover:visible text-gray-400 text-xs font-medium uppercase ml-0.5 -mt-0.5"
+						class=" self-center shrink-0 translate-y-0.5 invisible group-hover:visible text-gray-400 text-xs font-medium uppercase ml-0.5 -mt-0.5"
 					>
 						{dayjs(message.timestamp * 1000).format($i18n.t('h:mm a'))}
 					</span>
@@ -543,8 +547,12 @@
 														{$i18n.t(status?.description, {
 															count: status?.urls.length
 														})}
+													{:else if status?.description === 'No search query generated'}
+														{$i18n.t('No search query generated')}
+													{:else if status?.description === 'Generating search query'}
+														{$i18n.t('Generating search query')}
 													{:else}
-														{$i18n.t(status?.description)}
+														{status?.description}
 													{/if}
 												</div>
 											</div>
@@ -573,8 +581,12 @@
 													{$i18n.t(status?.description, {
 														searchQuery: status?.query
 													})}
+												{:else if status?.description === 'No search query generated'}
+													{$i18n.t('No search query generated')}
+												{:else if status?.description === 'Generating search query'}
+													{$i18n.t('Generating search query')}
 												{:else}
-													{$i18n.t(status?.description)}
+													{status?.description}
 												{/if}
 											</div>
 										</div>

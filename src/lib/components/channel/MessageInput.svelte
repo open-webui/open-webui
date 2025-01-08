@@ -6,7 +6,7 @@
 
 	const i18n = getContext('i18n');
 
-	import { config, mobile, settings } from '$lib/stores';
+	import { config, mobile, settings, socket } from '$lib/stores';
 	import { blobToFile, compressImage } from '$lib/utils';
 
 	import Tooltip from '../common/Tooltip.svelte';
@@ -23,6 +23,8 @@
 	export let placeholder = $i18n.t('Send a Message');
 	export let transparentBackground = false;
 
+	export let id = null;
+
 	let draggedOver = false;
 
 	let recording = false;
@@ -32,9 +34,12 @@
 	let filesInputElement;
 	let inputFiles;
 
+	export let typingUsers = [];
+
 	export let onSubmit: Function;
+	export let onChange: Function;
 	export let scrollEnd = true;
-	export let scrollToBottom: Function;
+	export let scrollToBottom: Function = () => {};
 
 	const screenCaptureHandler = async () => {
 		try {
@@ -238,7 +243,7 @@
 	};
 
 	const submitHandler = async () => {
-		if (content === '') {
+		if (content === '' && files.length === 0) {
 			return;
 		}
 
@@ -254,13 +259,17 @@
 
 		await tick();
 
-		const chatInputElement = document.getElementById('chat-input');
+		const chatInputElement = document.getElementById(`chat-input-${id}`);
 		chatInputElement?.focus();
 	};
 
+	$: if (content) {
+		onChange();
+	}
+
 	onMount(async () => {
 		window.setTimeout(() => {
-			const chatInput = document.getElementById('chat-input');
+			const chatInput = document.getElementById(`chat-input-${id}`);
 			chatInput?.focus();
 		}, 0);
 
@@ -290,37 +299,6 @@
 
 <FilesOverlay show={draggedOver} />
 
-<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
-	<div class="flex flex-col px-3 max-w-6xl w-full">
-		<div class="relative">
-			{#if scrollEnd === false}
-				<div class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none">
-					<button
-						class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
-						on:click={() => {
-							scrollEnd = true;
-							scrollToBottom();
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-5 h-5"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M10 3a.75.75 0 01.75.75v10.638l3.96-4.158a.75.75 0 111.08 1.04l-5.25 5.5a.75.75 0 01-1.08 0l-5.25-5.5a.75.75 0 111.08-1.04l3.96 4.158V3.75A.75.75 0 0110 3z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</button>
-				</div>
-			{/if}
-		</div>
-	</div>
-</div>
-
 <input
 	bind:this={filesInputElement}
 	bind:files={inputFiles}
@@ -337,12 +315,58 @@
 		filesInputElement.value = '';
 	}}
 />
-<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-gray-900'} ">
+<div class="bg-transparent">
 	<div
 		class="{($settings?.widescreenMode ?? null)
 			? 'max-w-full'
-			: 'max-w-6xl'} px-2.5 mx-auto inset-x-0"
+			: 'max-w-6xl'} px-2.5 mx-auto inset-x-0 relative"
 	>
+		<div class="absolute top-0 left-0 right-0 mx-auto inset-x-0 bg-transparent flex justify-center">
+			<div class="flex flex-col px-3 w-full">
+				<div class="relative">
+					{#if scrollEnd === false}
+						<div
+							class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none"
+						>
+							<button
+								class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
+								on:click={() => {
+									scrollEnd = true;
+									scrollToBottom();
+								}}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="w-5 h-5"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M10 3a.75.75 0 01.75.75v10.638l3.96-4.158a.75.75 0 111.08 1.04l-5.25 5.5a.75.75 0 01-1.08 0l-5.25-5.5a.75.75 0 111.08-1.04l3.96 4.158V3.75A.75.75 0 0110 3z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							</button>
+						</div>
+					{/if}
+				</div>
+
+				<div class="relative">
+					<div class=" -mt-5">
+						{#if typingUsers.length > 0}
+							<div class=" text-xs px-4 mb-1">
+								<span class=" font-normal text-black dark:text-white">
+									{typingUsers.map((user) => user.name).join(', ')}
+								</span>
+								{$i18n.t('is typing...')}
+							</div>
+						{/if}
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<div class="">
 			{#if recording}
 				<VoiceRecording
@@ -351,7 +375,7 @@
 						recording = false;
 
 						await tick();
-						document.getElementById('chat-input')?.focus();
+						document.getElementById(`chat-input-${id}`)?.focus();
 					}}
 					on:confirm={async (e) => {
 						const { text, filename } = e.detail;
@@ -359,7 +383,7 @@
 						recording = false;
 
 						await tick();
-						document.getElementById('chat-input')?.focus();
+						document.getElementById(`chat-input-${id}`)?.focus();
 					}}
 				/>
 			{:else}
@@ -370,7 +394,7 @@
 					}}
 				>
 					<div
-						class="flex-1 flex flex-col relative w-full rounded-3xl px-1 bg-gray-50 dark:bg-gray-400/5 dark:text-gray-100"
+						class="flex-1 flex flex-col relative w-full rounded-3xl px-1 bg-gray-600/5 dark:bg-gray-400/5 dark:text-gray-100"
 						dir={$settings?.chatDirection ?? 'LTR'}
 					>
 						{#if files.length > 0}
@@ -456,61 +480,21 @@
 								</InputMenu>
 							</div>
 
-							{#if $settings?.richTextInput ?? true}
-								<div
-									class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full py-2.5 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
-								>
-									<RichTextInput
-										bind:value={content}
-										id="chat-input"
-										messageInput={true}
-										shiftEnter={!$mobile ||
-											!(
-												'ontouchstart' in window ||
-												navigator.maxTouchPoints > 0 ||
-												navigator.msMaxTouchPoints > 0
-											)}
-										{placeholder}
-										largeTextAsFile={$settings?.largeTextAsFile ?? false}
-										on:keydown={async (e) => {
-											e = e.detail.event;
-											const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
-											if (
-												!$mobile ||
-												!(
-													'ontouchstart' in window ||
-													navigator.maxTouchPoints > 0 ||
-													navigator.msMaxTouchPoints > 0
-												)
-											) {
-												// Prevent Enter key from creating a new line
-												// Uses keyCode '13' for Enter key for chinese/japanese keyboards
-												if (e.keyCode === 13 && !e.shiftKey) {
-													e.preventDefault();
-												}
-
-												// Submit the content when Enter key is pressed
-												if (content !== '' && e.keyCode === 13 && !e.shiftKey) {
-													submitHandler();
-												}
-											}
-
-											if (e.key === 'Escape') {
-												console.log('Escape');
-											}
-										}}
-										on:paste={async (e) => {
-											e = e.detail.event;
-											console.log(e);
-										}}
-									/>
-								</div>
-							{:else}
-								<textarea
-									id="chat-input"
-									class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-none w-full py-3 px-1 rounded-xl resize-none h-[48px]"
-									{placeholder}
+							<div
+								class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full py-2.5 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
+							>
+								<RichTextInput
 									bind:value={content}
+									id={`chat-input-${id}`}
+									messageInput={true}
+									shiftEnter={!$mobile ||
+										!(
+											'ontouchstart' in window ||
+											navigator.maxTouchPoints > 0 ||
+											navigator.msMaxTouchPoints > 0
+										)}
+									{placeholder}
+									largeTextAsFile={$settings?.largeTextAsFile ?? false}
 									on:keydown={async (e) => {
 										e = e.detail.event;
 										const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
@@ -538,17 +522,12 @@
 											console.log('Escape');
 										}
 									}}
-									rows="1"
-									on:input={async (e) => {
-										e.target.style.height = '';
-										e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
-									}}
-									on:focus={async (e) => {
-										e.target.style.height = '';
-										e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
+									on:paste={async (e) => {
+										e = e.detail.event;
+										console.log(e);
 									}}
 								/>
-							{/if}
+							</div>
 
 							<div class="self-end mb-1.5 flex space-x-1 mr-1">
 								{#if content === ''}
@@ -602,11 +581,11 @@
 										<Tooltip content={$i18n.t('Send message')}>
 											<button
 												id="send-message-button"
-												class="{content !== ''
+												class="{content !== '' || files.length !== 0
 													? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 													: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
 												type="submit"
-												disabled={content === ''}
+												disabled={content === '' && files.length === 0}
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"

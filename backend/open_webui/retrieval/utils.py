@@ -11,10 +11,12 @@ from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriev
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 
+
+from open_webui.config import VECTOR_DB
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.misc import get_last_user_message
 
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, OFFLINE_MODE
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -199,7 +201,12 @@ def query_collection(
             else:
                 pass
 
-    return merge_and_sort_query_results(results, k=k)
+    if VECTOR_DB == "chroma":
+        # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
+        # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
+        return merge_and_sort_query_results(results, k=k, reverse=False)
+    else:
+        return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
 def query_collection_with_hybrid_search(
@@ -235,7 +242,12 @@ def query_collection_with_hybrid_search(
             "Hybrid search failed for all collections. Using Non hybrid search as fallback."
         )
 
-    return merge_and_sort_query_results(results, k=k, reverse=True)
+    if VECTOR_DB == "chroma":
+        # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
+        # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
+        return merge_and_sort_query_results(results, k=k, reverse=False)
+    else:
+        return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
 def get_embedding_function(
@@ -374,6 +386,9 @@ def get_model_path(model: str, update_model: bool = False):
     cache_dir = os.getenv("SENTENCE_TRANSFORMERS_HOME")
 
     local_files_only = not update_model
+
+    if OFFLINE_MODE:
+        local_files_only = True
 
     snapshot_kwargs = {
         "cache_dir": cache_dir,

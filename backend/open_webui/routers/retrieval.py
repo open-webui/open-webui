@@ -347,7 +347,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
     return {
         "status": True,
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
-        "ENABLE_GOOGLE_DRIVE_INTEGRATION": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
+        "enable_google_drive_integration": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
@@ -384,7 +384,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
                 "serply_api_key": request.app.state.config.SERPLY_API_KEY,
                 "tavily_api_key": request.app.state.config.TAVILY_API_KEY,
                 "searchapi_api_key": request.app.state.config.SEARCHAPI_API_KEY,
-                "seaarchapi_engine": request.app.state.config.SEARCHAPI_ENGINE,
+                "searchapi_engine": request.app.state.config.SEARCHAPI_ENGINE,
                 "jina_api_key": request.app.state.config.JINA_API_KEY,
                 "bing_search_v7_endpoint": request.app.state.config.BING_SEARCH_V7_ENDPOINT,
                 "bing_search_v7_subscription_key": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
@@ -1458,6 +1458,7 @@ class BatchProcessFilesResponse(BaseModel):
 
 @router.post("/process/files/batch")
 def process_files_batch(
+    request: Request,
     form_data: BatchProcessFilesForm,
     user=Depends(get_verified_user),
 ) -> BatchProcessFilesResponse:
@@ -1504,7 +1505,10 @@ def process_files_batch(
     if all_docs:
         try:
             save_docs_to_vector_db(
-                docs=all_docs, collection_name=collection_name, add=True
+                request=request,
+                docs=all_docs,
+                collection_name=collection_name,
+                add=True,
             )
 
             # Update all files with collection name

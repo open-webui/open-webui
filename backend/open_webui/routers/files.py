@@ -348,7 +348,7 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
         result = Files.delete_file_by_id(id)
         if result:
             try:
-                Storage.delete_file(file.filename)
+                Storage.delete_file(file.path)
             except Exception as e:
                 log.exception(e)
                 log.error(f"Error deleting files")

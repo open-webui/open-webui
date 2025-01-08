@@ -11,20 +11,23 @@
 	dayjs.extend(isYesterday);
 	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
 
-	import { settings } from '$lib/stores';
+	import { settings, user } from '$lib/stores';
 
 	import Message from './Messages/Message.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import { deleteMessage, updateMessage } from '$lib/apis/channels';
+	import { addReaction, deleteMessage, removeReaction, updateMessage } from '$lib/apis/channels';
 
 	const i18n = getContext('i18n');
 
+	export let id = null;
 	export let channel = null;
 	export let messages = [];
 	export let top = false;
+	export let thread = false;
 
 	export let onLoad: Function = () => {};
+	export let onThread: Function = () => {};
 
 	let messagesLoading = false;
 
@@ -59,14 +62,14 @@
 					<div class=" ">Loading...</div>
 				</div>
 			</Loader>
-		{:else}
+		{:else if !thread}
 			<div
 				class="px-5
 			
 			{($settings?.widescreenMode ?? null) ? 'max-w-full' : 'max-w-5xl'} mx-auto"
 			>
 				{#if channel}
-					<div class="flex flex-col gap-1.5 py-5">
+					<div class="flex flex-col gap-1.5 pb-5 pt-10">
 						<div class="text-2xl font-medium capitalize">{channel.name}</div>
 
 						<div class=" text-gray-500">
@@ -88,12 +91,15 @@
 			</div>
 		{/if}
 
-		{#each messageList as message, messageIdx (message.id)}
+		{#each messageList as message, messageIdx (id ? `${id}-${message.id}` : message.id)}
 			<Message
 				{message}
+				{thread}
 				showUserProfile={messageIdx === 0 ||
 					messageList.at(messageIdx - 1)?.user_id !== message.user_id}
 				onDelete={() => {
+					messages = messages.filter((m) => m.id !== message.id);
+
 					const res = deleteMessage(localStorage.token, message.channel_id, message.id).catch(
 						(error) => {
 							toast.error(error);
@@ -102,12 +108,83 @@
 					);
 				}}
 				onEdit={(content) => {
+					messages = messages.map((m) => {
+						if (m.id === message.id) {
+							m.content = content;
+						}
+						return m;
+					});
+
 					const res = updateMessage(localStorage.token, message.channel_id, message.id, {
 						content: content
 					}).catch((error) => {
 						toast.error(error);
 						return null;
 					});
+				}}
+				onThread={(id) => {
+					onThread(id);
+				}}
+				onReaction={(name) => {
+					if (
+						(message?.reactions ?? [])
+							.find((reaction) => reaction.name === name)
+							?.user_ids?.includes($user.id) ??
+						false
+					) {
+						messages = messages.map((m) => {
+							if (m.id === message.id) {
+								const reaction = m.reactions.find((reaction) => reaction.name === name);
+
+								if (reaction) {
+									reaction.user_ids = reaction.user_ids.filter((id) => id !== $user.id);
+									reaction.count = reaction.user_ids.length;
+
+									if (reaction.count === 0) {
+										m.reactions = m.reactions.filter((r) => r.name !== name);
+									}
+								}
+							}
+							return m;
+						});
+
+						const res = removeReaction(
+							localStorage.token,
+							message.channel_id,
+							message.id,
+							name
+						).catch((error) => {
+							toast.error(error);
+							return null;
+						});
+					} else {
+						messages = messages.map((m) => {
+							if (m.id === message.id) {
+								if (m.reactions) {
+									const reaction = m.reactions.find((reaction) => reaction.name === name);
+
+									if (reaction) {
+										reaction.user_ids.push($user.id);
+										reaction.count = reaction.user_ids.length;
+									} else {
+										m.reactions.push({
+											name: name,
+											user_ids: [$user.id],
+											count: 1
+										});
+									}
+								}
+							}
+							return m;
+						});
+
+						const res = addReaction(localStorage.token, message.channel_id, message.id, name).catch(
+							(error) => {
+								toast.error(error);
+								return null;
+							}
+						);
+					}
 				}}
 			/>
 		{/each}

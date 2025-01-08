@@ -212,6 +212,15 @@ class ChatTable:
 
         return chat.chat.get("history", {}).get("messages", {}) or {}
 
+    def get_message_by_id_and_message_id(
+        self, id: str, message_id: str
+    ) -> Optional[dict]:
+        chat = self.get_chat_by_id(id)
+        if chat is None:
+            return None
+
+        return chat.chat.get("history", {}).get("messages", {}).get(message_id, {})
+
     def upsert_message_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, message: dict
     ) -> Optional[ChatModel]:
@@ -460,6 +469,8 @@ class ChatTable:
     def get_chat_by_share_id(self, id: str) -> Optional[ChatModel]:
         try:
             with get_db() as db:
+                # it is possible that the shared link was deleted. hence,
+                # we check if the chat is still shared by checkng if a chat with the share_id exists
                 chat = db.query(Chat).filter_by(share_id=id).first()
 
                 if chat:
