@@ -11,7 +11,12 @@ from open_webui.socket.main import sio, get_user_ids_from_room
 from open_webui.models.users import Users, UserNameResponse
 
 from open_webui.models.channels import Channels, ChannelModel, ChannelForm
-from open_webui.models.messages import Messages, MessageModel, MessageForm
+from open_webui.models.messages import (
+    Messages,
+    MessageModel,
+    MessageResponse,
+    MessageForm,
+)
 
 
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
@@ -49,7 +54,7 @@ async def get_channels(user=Depends(get_verified_user)):
 @router.post("/create", response_model=Optional[ChannelModel])
 async def create_new_channel(form_data: ChannelForm, user=Depends(get_admin_user)):
     try:
-        channel = Channels.insert_new_channel(form_data, user.id)
+        channel = Channels.insert_new_channel(None, form_data, user.id)
         return ChannelModel(**channel.model_dump())
     except Exception as e:
         log.exception(e)
@@ -134,11 +139,11 @@ async def delete_channel_by_id(id: str, user=Depends(get_admin_user)):
 ############################
 
 
-class MessageUserModel(MessageModel):
+class MessageUserResponse(MessageResponse):
     user: UserNameResponse
 
 
-@router.get("/{id}/messages", response_model=list[MessageUserModel])
+@router.get("/{id}/messages", response_model=list[MessageUserResponse])
 async def get_channel_messages(
     id: str, skip: int = 0, limit: int = 50, user=Depends(get_verified_user)
 ):
@@ -164,10 +169,16 @@ async def get_channel_messages(
             user = Users.get_user_by_id(message.user_id)
             users[message.user_id] = user
 
+        replies = Messages.get_replies_by_message_id(message.id)
+        latest_reply_at = replies[0].created_at if replies else None
+
         messages.append(
-            MessageUserModel(
+            MessageUserResponse(
                 **{
                     **message.model_dump(),
+                    "reply_count": len(replies),
+                    "latest_reply_at": latest_reply_at,
+                    "reactions": Messages.get_reactions_by_message_id(message.id),
                     "user": UserNameResponse(**users[message.user_id].model_dump()),
                 }
             )
@@ -236,10 +247,17 @@ async def post_new_message(
                 "message_id": message.id,
                 "data": {
                     "type": "message",
-                    "data": {
-                        **message.model_dump(),
-                        "user": UserNameResponse(**user.model_dump()).model_dump(),
-                    },
+                    "data": MessageUserResponse(
+                        **{
+                            **message.model_dump(),
+                            "reply_count": 0,
+                            "latest_reply_at": None,
+                            "reactions": Messages.get_reactions_by_message_id(
+                                message.id
+                            ),
+                            "user": UserNameResponse(**user.model_dump()),
+                        }
+                    ).model_dump(),
                 },
                 "user": UserNameResponse(**user.model_dump()).model_dump(),
                 "channel": channel.model_dump(),
@@ -250,6 +268,35 @@ async def post_new_message(
                 event_data,
                 to=f"channel:{channel.id}",
             )
+
+            if message.parent_id:
+                # If this message is a reply, emit to the parent message as well
+                parent_message = Messages.get_message_by_id(message.parent_id)
+
+                if parent_message:
+                    await sio.emit(
+                        "channel-events",
+                        {
+                            "channel_id": channel.id,
+                            "message_id": parent_message.id,
+                            "data": {
+                                "type": "message:reply",
+                                "data": MessageUserResponse(
+                                    **{
+                                        **parent_message.model_dump(),
+                                        "user": UserNameResponse(
+                                            **Users.get_user_by_id(
+                                                parent_message.user_id
+                                            ).model_dump()
+                                        ),
+                                    }
+                                ).model_dump(),
+                            },
+                            "user": UserNameResponse(**user.model_dump()).model_dump(),
+                            "channel": channel.model_dump(),
+                        },
+                        to=f"channel:{channel.id}",
+                    )
 
             active_user_ids = get_user_ids_from_room(f"channel:{channel.id}")
 
@@ -267,6 +314,101 @@ async def post_new_message(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
+
+
+############################
+# GetChannelMessage
+############################
+
+
+@router.get("/{id}/messages/{message_id}", response_model=Optional[MessageUserResponse])
+async def get_channel_message(
+    id: str, message_id: str, user=Depends(get_verified_user)
+):
+    channel = Channels.get_channel_by_id(id)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if user.role != "admin" and not has_access(
+        user.id, type="read", access_control=channel.access_control
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    message = Messages.get_message_by_id(message_id)
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if message.channel_id != id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    return MessageUserResponse(
+        **{
+            **message.model_dump(),
+            "user": UserNameResponse(
+                **Users.get_user_by_id(message.user_id).model_dump()
+            ),
+        }
+    )
+
+
+############################
+# GetChannelThreadMessages
+############################
+
+
+@router.get(
+    "/{id}/messages/{message_id}/thread", response_model=list[MessageUserResponse]
+)
+async def get_channel_thread_messages(
+    id: str,
+    message_id: str,
+    skip: int = 0,
+    limit: int = 50,
+    user=Depends(get_verified_user),
+):
+    channel = Channels.get_channel_by_id(id)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if user.role != "admin" and not has_access(
+        user.id, type="read", access_control=channel.access_control
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    message_list = Messages.get_messages_by_parent_id(id, message_id, skip, limit)
+    users = {}
+
+    messages = []
+    for message in message_list:
+        if message.user_id not in users:
+            user = Users.get_user_by_id(message.user_id)
+            users[message.user_id] = user
+
+        messages.append(
+            MessageUserResponse(
+                **{
+                    **message.model_dump(),
+                    "reply_count": 0,
+                    "latest_reply_at": None,
+                    "reactions": Messages.get_reactions_by_message_id(message.id),
+                    "user": UserNameResponse(**users[message.user_id].model_dump()),
+                }
+            )
+        )
+
+    return messages
 
 
 ############################
@@ -306,6 +448,8 @@ async def update_message_by_id(
 
     try:
         message = Messages.update_message_by_id(message_id, form_data)
+        message = Messages.get_message_by_id(message_id)
+
         if message:
             await sio.emit(
                 "channel-events",
@@ -314,10 +458,14 @@ async def update_message_by_id(
                     "message_id": message.id,
                     "data": {
                         "type": "message:update",
-                        "data": {
-                            **message.model_dump(),
-                            "user": UserNameResponse(**user.model_dump()).model_dump(),
-                        },
+                        "data": MessageUserResponse(
+                            **{
+                                **message.model_dump(),
+                                "user": UserNameResponse(
+                                    **user.model_dump()
+                                ).model_dump(),
+                            }
+                        ).model_dump(),
                     },
                     "user": UserNameResponse(**user.model_dump()).model_dump(),
                     "channel": channel.model_dump(),
@@ -326,6 +474,145 @@ async def update_message_by_id(
             )
 
         return MessageModel(**message.model_dump())
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+############################
+# AddReactionToMessage
+############################
+
+
+class ReactionForm(BaseModel):
+    name: str
+
+
+@router.post("/{id}/messages/{message_id}/reactions/add", response_model=bool)
+async def add_reaction_to_message(
+    id: str, message_id: str, form_data: ReactionForm, user=Depends(get_verified_user)
+):
+    channel = Channels.get_channel_by_id(id)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if user.role != "admin" and not has_access(
+        user.id, type="read", access_control=channel.access_control
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    message = Messages.get_message_by_id(message_id)
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if message.channel_id != id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    try:
+        Messages.add_reaction_to_message(message_id, user.id, form_data.name)
+        message = Messages.get_message_by_id(message_id)
+
+        await sio.emit(
+            "channel-events",
+            {
+                "channel_id": channel.id,
+                "message_id": message.id,
+                "data": {
+                    "type": "message:reaction:add",
+                    "data": {
+                        **message.model_dump(),
+                        "user": UserNameResponse(
+                            **Users.get_user_by_id(message.user_id).model_dump()
+                        ).model_dump(),
+                        "name": form_data.name,
+                    },
+                },
+                "user": UserNameResponse(**user.model_dump()).model_dump(),
+                "channel": channel.model_dump(),
+            },
+            to=f"channel:{channel.id}",
+        )
+
+        return True
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+############################
+# RemoveReactionById
+############################
+
+
+@router.post("/{id}/messages/{message_id}/reactions/remove", response_model=bool)
+async def remove_reaction_by_id_and_user_id_and_name(
+    id: str, message_id: str, form_data: ReactionForm, user=Depends(get_verified_user)
+):
+    channel = Channels.get_channel_by_id(id)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if user.role != "admin" and not has_access(
+        user.id, type="read", access_control=channel.access_control
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    message = Messages.get_message_by_id(message_id)
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if message.channel_id != id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    try:
+        Messages.remove_reaction_by_id_and_user_id_and_name(
+            message_id, user.id, form_data.name
+        )
+
+        message = Messages.get_message_by_id(message_id)
+
+        await sio.emit(
+            "channel-events",
+            {
+                "channel_id": channel.id,
+                "message_id": message.id,
+                "data": {
+                    "type": "message:reaction:remove",
+                    "data": {
+                        **message.model_dump(),
+                        "user": UserNameResponse(
+                            **Users.get_user_by_id(message.user_id).model_dump()
+                        ).model_dump(),
+                        "name": form_data.name,
+                    },
+                },
+                "user": UserNameResponse(**user.model_dump()).model_dump(),
+                "channel": channel.model_dump(),
+            },
+            to=f"channel:{channel.id}",
+        )
+
+        return True
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -385,6 +672,35 @@ async def delete_message_by_id(
             },
             to=f"channel:{channel.id}",
         )
+
+        if message.parent_id:
+            # If this message is a reply, emit to the parent message as well
+            parent_message = Messages.get_message_by_id(message.parent_id)
+
+            if parent_message:
+                await sio.emit(
+                    "channel-events",
+                    {
+                        "channel_id": channel.id,
+                        "message_id": parent_message.id,
+                        "data": {
+                            "type": "message:reply",
+                            "data": MessageUserResponse(
+                                **{
+                                    **parent_message.model_dump(),
+                                    "user": UserNameResponse(
+                                        **Users.get_user_by_id(
+                                            parent_message.user_id
+                                        ).model_dump()
+                                    ),
+                                }
+                            ).model_dump(),
+                        },
+                        "user": UserNameResponse(**user.model_dump()).model_dump(),
+                        "channel": channel.model_dump(),
+                    },
+                    to=f"channel:{channel.id}",
+                )
 
         return True
     except Exception as e:

@@ -29,7 +29,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
                         (
                             (
                                 data.get("eval_count", 0)
-                                / ((data.get("eval_duration", 0) / 1_000_000))
+                                / ((data.get("eval_duration", 0) / 10_000_000))
                             )
                             * 100
                         ),
@@ -43,7 +43,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
                         (
                             (
                                 data.get("prompt_eval_count", 0)
-                                / ((data.get("prompt_eval_duration", 0) / 1_000_000))
+                                / ((data.get("prompt_eval_duration", 0) / 10_000_000))
                             )
                             * 100
                         ),
