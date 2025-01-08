@@ -26,6 +26,7 @@
 
 	import '../tailwind.css';
 	import '../app.css';
+	import '../nbg.css';
 
 	import 'tippy.js/dist/tippy.css';
 

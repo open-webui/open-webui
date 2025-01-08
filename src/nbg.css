@@ -1,0 +1,419 @@
+/* Table CSS START */
+.nbg__table {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 20px 0;
+	font-family: Arial, sans-serif;
+	color: white;
+}
+
+.nbg__table th,
+.nbg__table td {
+	padding: 12px 15px;
+	text-align: left;
+	color: white;
+}
+
+.nbg__table th {
+	color: white;
+}
+
+.nbg__table tbody tr:nth-child(even) {
+	background-color: #163061;
+	color: white;
+}
+
+.nbg__table tbody tr:nth-child(odd) {
+	background-color: #021c4f;
+	color: white;
+}
+
+.nbg__table tbody tr:hover {
+	background-color: #00bc8b;
+}
+
+/* Responsive Table Styles */
+@media screen and (max-width: 768px) {
+	.nbg__table {
+		border: 0;
+		overflow-x: auto;
+		white-space: nowrap;
+
+		margin-left: auto;
+		margin-right: auto;
+		width: 350px;
+	}
+
+	.nbg__table tr {
+		margin-bottom: 10px;
+	}
+
+	.nbg__table td {
+		text-align: left;
+		font-size: 14px;
+		position: relative;
+	}
+
+	.nbg__table td::before {
+		content: attr(data-label);
+		position: absolute;
+		left: 10px;
+		font-weight: bold;
+	}
+
+	.nbg__table td:first-child {
+		padding-top: 20px;
+	}
+}
+
+/* Specific Classes for Header and Cells */
+.nbg__table .nbg__header {
+	background-color: #163061;
+	cursor: default;
+}
+
+.nbg__table .nbg__header-cell {
+	font-size: 16px;
+	font-weight: bold;
+	color: #fff;
+}
+
+.nbg__table .nbg__cell {
+	font-size: 14px;
+	color: white;
+}
+
+/*
+ Name: .nbg__table Description: Basic table class, sets the width, border-collapse, and margin properties for the table. | Name: .nbg__table th, .nbg__table td Description: Styling for table header and data cells, including padding, text alignment, and border properties. | Name: .nbg__table th Description: Specifies the background color and text color for the table headers. | Name: .nbg__table tr:nth-child(even) Description: Applies a background color to even rows in the table for alternating row colors. | Name: .nbg__table tr:hover Description: Adds a hover effect with a background color change when hovering over any row in the table. | Name: .nbg__header Description: Used for the header row of the table, typically applying a background color to the table header. | Name: .nbg__header-cell Description: Applied to individual header cells, styling the font size, weight, and color for header text. | Name: .nbg__cell Description: Applied to the data cells within the table, setting the font size and color. | Name: @media screen and (max-width: 768px) Description: Media query that makes the table responsive by adjusting the table layout for smaller screens (less than 768px). | Name: .nbg__table td::before Description: This pseudo-element is used for adding custom content (e.g., column headers) in front of each table cell when viewed on smaller screens. | Name: .nbg__table td:first-child Description: Applies padding to the first child of each row for extra spacing on mobile viewports. | Name: .nbg__toggle Description: Styling for the toggle button (used in status cells), including dimensions, background color, and rounded corners. | Name: .nbg__toggle-inner Description: Inner part of the toggle button that is responsible for the circular switch effect. | Name: .nbg__toggle.active Description: Applied to the toggle button when it is in the 'active' state (usually indicating 'SUBSCRIBE'). | Name: .nbg__toggle.active .nbg__toggle-inner Description: Moves the toggle button’s inner circle to the other side when in the active state. | Name: .nbg__toggle-text Description: Applied to the text next to the toggle button, used for labeling (e.g., 'SUBSCRIBE' or 'UNSUBSCRIBE'). | Name: .nbg__status-cell Description: Applied to the status column cells, wrapping the toggle button and its associated text. | Name: .nbg__status-cell .nbg__toggle Description: Applies margin to the toggle button within the status cell, ensuring proper spacing between the button and text. | Name: .nbg__status-cell .nbg__toggle-text Description: Styles the text next to the toggle button, ensuring proper alignment and font style.
+ */
+
+/* Table CSS END */
+
+/*
+*/
+
+/* Card CSS START */
+
+/* API Card CSS START */
+
+.nbg__api__card {
+	background-color: #2a406b;
+	border-radius: 12px;
+	padding: 16px;
+	color: #ffffff;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	position: relative;
+	height: 330px;
+	width: 300px;
+	margin: 12px;
+}
+
+.nbg__api__card .nbg__api__card__header {
+	display: flex;
+	justify-content: space-between;
+	font-size: 12px;
+	font-weight: bold;
+	text-transform: uppercase;
+	margin-bottom: 12px;
+}
+
+.nbg__api__card .nbg__category {
+	color: #2a3b57;
+	background-color: #c9e2ff;
+	padding: 4px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: bold;
+	height: 22px;
+	width: 50%;
+	display: inline-block;
+}
+
+.nbg__api__card .nbg__live__data {
+	background-color: #021c4f;
+	color: #4cd1b0;
+	padding: 4px;
+	font-size: 12px;
+	border-radius: 4px;
+	border: 1px solid #000;
+	height: 22px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+.nbg__circle {
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	background-color: green;
+	border-radius: 50%;
+	margin-right: 4px;
+}
+
+.nbg__api__card .nbg__api__card__title {
+	font-size: 24px;
+	font-weight: bold;
+	margin: 0;
+	margin-bottom: 12px;
+	color: #ffffff;
+}
+
+.nbg__api__card .nbg__api__card__text {
+	font-size: 18px;
+	color: #c9e2ff;
+	margin-bottom: 16px;
+}
+
+.nbg__api__card .nbg__api__card__buttons {
+	display: flex;
+	justify-content: space-between;
+}
+
+.nbg__api__card .nbg__cta__arrow {
+	background-color: transparent;
+	color: #4cd1b0;
+	padding: 8px 12px;
+	font-size: 14px;
+	border-radius: 4px;
+	cursor: pointer;
+	display: inline-block;
+	text-align: center;
+	transition: background-color 0.3s ease;
+}
+
+.nbg__api__card .nbg__cta__arrow:hover {
+	background-color: #4cd1b0;
+	color: #fff;
+}
+
+.nbg__api__card .nbg__cta__rounded {
+	background-color: transparent;
+	border: 1px solid #4cd1b0;
+	color: #4cd1b0;
+	padding: 10px 20px;
+	font-size: 14px;
+	border-radius: 50px;
+	cursor: pointer;
+	display: inline-block;
+	transition: background-color 0.3s ease;
+}
+
+.nbg__api__card .nbg__cta__rounded:hover {
+	background-color: #45b18f;
+}
+
+@media screen and (max-width: 768px) {
+	.nbg__api__card {
+		padding: 15px;
+		height: auto;
+	}
+
+	.nbg__api__card .nbg__api__card__title {
+		font-size: 18px;
+	}
+
+	.nbg__api__card .nbg__api__card__text {
+		font-size: 12px;
+	}
+
+	.nbg__api__card .nbg__cta__arrow,
+	.nbg__api__card .nbg__cta__rounded {
+		width: 100%;
+		margin-bottom: 10px;
+	}
+
+	.nbg__api__card .nbg__live__data {
+		top: 5px;
+		right: 5px;
+	}
+}
+
+/*
+Name: .nbg__api__card Description: The main container of the card with background color, border radius, padding, shadow, and flex layout. | Name: .nbg__api__card__header Description: A flex container for the category and live data section at the top of the card. | Name: .nbg__category Description: Styles for the category text (e.g., "Machine learning"). | Name: .nbg__live__data Description: The "LIVE DATA" indicator styled with a blue background, positioned on the top right. | Name: .nbg__circle Description: Green circle before the "Live Data" | Name: .nbg__api__card__title Description: The main title of the card, styled with larger font size and bold weight. | Name: .nbg__api__card__text Description: The description text inside the card. | Name: .nbg__api__card__buttons Description: A flex container holding the call-to-action buttons (on the left and right). | Name: .nbg__cta__arrow Description: The CTA button with the word "Docs" followed by a right arrow. | Name: .nbg__cta__rounded Description: The rounded CTA button styled for the "Learn more" button.
+*/
+
+/* API Card CSS END */
+
+/* Support Card CSS START */
+
+/* Basic Card Styling */
+.nbg__support__card {
+	background-color: transparent;
+	padding: 12px;
+	color: #ffffff;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	height: 245px;
+	width: 245px;
+}
+
+/* Card Title */
+.nbg__support__card .nbg__support__card__title {
+	font-size: 24px;
+	font-weight: 700;
+	margin: 0;
+	color: #ffffff;
+	margin-bottom: 12px;
+}
+
+/* Card Description */
+.nbg__support__card .nbg__support__card__text {
+	font-size: 18px;
+	color: #c9e2ff;
+	margin-bottom: 16px;
+}
+
+/* Card Button */
+.nbg__support__card .nbg__support__cta__arrow {
+	background-color: transparent;
+	color: #4cd1b0;
+	border: 1px solid #4cd1b0;
+	padding: 8px 12px;
+	font-size: 14px;
+	border-radius: 4px;
+	cursor: pointer;
+	display: inline-block;
+	text-align: center;
+	transition: background-color 0.3s ease;
+}
+
+.nbg__support__card .nbg__support__cta__arrow:hover {
+	background-color: #4cd1b0;
+	color: #fff;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+	.nbg__support__card {
+		padding: 15px;
+		height: auto;
+	}
+
+	.nbg__support__card .nbg__support__card__title {
+		font-size: 20px;
+	}
+
+	.nbg__support__card .nbg__support__card__text {
+		font-size: 12px;
+	}
+
+	.nbg__support__card .nbg__support__cta__arrow {
+		width: 100%;
+	}
+}
+
+/*
+Name: .nbg__support__card Description: The main container of the card with background color, border radius, padding, shadow, and flex layout. | Name: .nbg__support__card__title Description: The title of the card, styled with larger font size, bold weight, and margin at the bottom. | Name: .nbg__support__card__text Description: The description text inside the card. | Name: .nbg__support__cta__arrow Description: The CTA button with a right arrow symbol, styled for interaction.
+*/
+
+/* Support Card CSS END */
+
+/* Blog Card CSS START */
+
+.nbg__blog__card {
+	background-color: #2a3b57;
+	border-radius: 8px;
+	padding: 24px;
+	color: #ffffff;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	height: 284px;
+	width: 745px;
+}
+
+.nbg__blog__card .nbg__blog__tags {
+	display: flex;
+	flex-wrap: wrap;
+}
+
+.nbg__blog__card .nbg__blog__tags .nbg__blog__tag {
+	background-color: #1e85ff;
+	border-radius: 8px;
+	color: #ffffff;
+	padding: 4px 8px;
+	font-size: 14px;
+	width: auto;
+	margin-right: 8px;
+	display: inline-block;
+}
+
+.nbg__blog__card .nbg__blog__author {
+	font-size: 14px;
+	color: #c9e2ff;
+	margin-bottom: 8px;
+	margin-top: 16px;
+}
+
+.nbg__blog__card .nbg__blog__title {
+	font-size: 32px;
+	font-weight: bold;
+	color: #ffffff;
+	margin-bottom: 8px;
+}
+
+.nbg__blog__card .nbg__blog__description {
+	font-size: 18px;
+	color: #e0e0e0;
+	margin-bottom: 16px;
+}
+
+.nbg__blog__card .nbg__blog__cta__button {
+	background-color: #4cd1b0;
+	color: #000;
+	border: none;
+	padding: 8px 24px;
+	font-size: 18px;
+	font-weight: bold;
+	border-radius: 24px;
+	cursor: pointer;
+	text-align: center;
+	display: inline-block;
+	transition: background-color 0.3s ease;
+	width: 184px;
+	height: 40px;
+}
+
+.nbg__blog__card .nbg__blog__cta__button:hover {
+	background-color: #45b18f;
+}
+
+@media screen and (max-width: 768px) {
+	.nbg__blog__card {
+		padding: 24px;
+		height: 344px;
+		width: 288px;
+	}
+
+	.nbg__blog__card .nbg__blog__title {
+		font-size: 18px;
+	}
+
+	.nbg__blog__card .nbg__blog__description {
+		font-size: 12px;
+	}
+
+	.nbg__blog__card__footer {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.nbg__blog__card .nbg__blog__card__footer .nbg__blog__cta__button {
+		width: 100%;
+	}
+}
+
+/*
+Name: .nbg__blog__card Description: Main card container with background color, border-radius, padding, shadow, and layout. |Name: .nbg__blog__tags Description: Put the tags in one line horizontally | Name: .nbg__blog__tag Description: Styling for the tags (e.g., "Articles," "Artificial Intelligence"), with background color, padding, and text formatting. | Name: .nbg__blog__tag.secondary Description: Additional styling for the secondary tag, like "Artificial Intelligence," to apply a different background color. | Name: .nbg__blog__author Description: Author's name (e.g., "by Lampros Moussellis") styled with smaller, lighter text. | Name: .nbg__blog__title Description: Title of the blog post with larger font size and bold weight. | Name: .nbg__blog__description Description: Short description of the blog post content, styled with a smaller font size. | Name: nbg__blog__card__footer Description: the footer of the card to be in the center | Name: .nbg__blog__cta__button Description: The "Read more" button, styled with background color, padding, border-radius, and hover effect. | Name: @media screen and (max-width: 768px) Description: Adjusts the layout for smaller screens (e.g., reduces padding, font size, and makes the button full-width).
+*/
+
+/* Blog Card CSS END */
+
+/* Card CSS END */

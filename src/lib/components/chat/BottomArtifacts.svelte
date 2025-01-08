@@ -86,6 +86,8 @@
 					});
 				}
 
+				console.log({ htmlContent });
+
 				if (htmlContent || cssContent || jsContent) {
 					const renderedContent = `
                         <!DOCTYPE html>
