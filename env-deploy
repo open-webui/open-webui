@@ -1,0 +1,18 @@
+# Application Configuration
+OLLAMA_BASE_URL=http://localhost:11434
+CACHE_DIR=/app/backend/data/cache
+
+CHUNK_SIZE=800
+CHUNK_OVERLAP=200
+
+RAG_EMBEDDING_MODEL=jhgan/ko-sroberta-multitask
+
+OFFLINE_MODE=true
+
+# Deployment Configuration
+VERSION="2025_01_07"
+IMAGE_BASE_NAME="koscomtechdev/open-webui"
+CONTAINER_NAME="open-webui_deploy"
+HOST_PORT=8502
+CONTAINER_PORT=8080
+LOCAL_CACHE_DIR="./backend/data/cache"
