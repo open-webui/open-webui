@@ -199,7 +199,7 @@ def query_collection(
             else:
                 pass
 
-    return merge_and_sort_query_results(results, k=k)
+    return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
 def query_collection_with_hybrid_search(
