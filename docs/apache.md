@@ -16,6 +16,9 @@ For the UI configuration, you can set up the Apache VirtualHost as follows:
 
     ProxyPass / http://server.com:3000/ nocanon
     ProxyPassReverse / http://server.com:3000/
+    # Needed after 0.5
+    ProxyPass / ws://server.com:3000/ nocanon
+    ProxyPassReverse / ws://server.com:3000/
 
 </VirtualHost>
 ```
@@ -32,6 +35,9 @@ Enable the site first before you can request SSL:
 
     ProxyPass / http://server.com:3000/ nocanon
     ProxyPassReverse / http://server.com:3000/
+    # Needed after 0.5
+    ProxyPass / ws://server.com:3000/ nocanon
+    ProxyPassReverse / ws://server.com:3000/
 
     SSLEngine on
     SSLCertificateFile /etc/ssl/virtualmin/170514456861234/ssl.cert
