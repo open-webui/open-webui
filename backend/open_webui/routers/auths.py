@@ -51,7 +51,7 @@ from open_webui.utils.access_control import get_permissions
 from typing import Optional, List
 
 from ssl import CERT_REQUIRED, PROTOCOL_TLS
-from ldap3 import Server, Connection, ALL, Tls
+from ldap3 import Server, Connection, NONE, Tls
 from ldap3.utils.conv import escape_filter_chars
 
 router = APIRouter()
@@ -201,7 +201,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
         server = Server(
             host=LDAP_SERVER_HOST,
             port=LDAP_SERVER_PORT,
-            get_info=ALL,
+            get_info=NONE,
             use_ssl=LDAP_USE_TLS,
             tls=tls,
         )
