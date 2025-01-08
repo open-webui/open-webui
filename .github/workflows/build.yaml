@@ -15,7 +15,7 @@ on:
         default: latest
 
 env:
-  IMAGE_NAME: ghcr.io/sintergicaai/michelle
+  IMAGE_NAME: ghcr.io/sintergicaai/${{ inputs.nombre }}
 
 jobs:
   build_image:
