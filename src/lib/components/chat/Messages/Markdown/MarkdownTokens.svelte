@@ -82,7 +82,7 @@
 				id={`${id}-${tokenIdx}`}
 				{token}
 				lang={token?.lang ?? ''}
-				code={revertSanitizedResponseContent(token?.text ?? '')}
+				code={token?.text ?? ''}
 				{save}
 				on:code={(e) => {
 					dispatch('code', e.detail);
@@ -245,17 +245,11 @@
 		{/if}
 	{:else if token.type === 'inlineKatex'}
 		{#if token.text}
-			<KatexRenderer
-				content={revertSanitizedResponseContent(token.text)}
-				displayMode={token?.displayMode ?? false}
-			/>
+			<KatexRenderer content={token.text} displayMode={token?.displayMode ?? false} />
 		{/if}
 	{:else if token.type === 'blockKatex'}
 		{#if token.text}
-			<KatexRenderer
-				content={revertSanitizedResponseContent(token.text)}
-				displayMode={token?.displayMode ?? false}
-			/>
+			<KatexRenderer content={token.text} displayMode={token?.displayMode ?? false} />
 		{/if}
 	{:else if token.type === 'space'}
 		<div class="my-2" />
