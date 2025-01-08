@@ -839,7 +839,8 @@
 		if (res !== null && res.messages) {
 			// Update chat history with the new messages
 			for (const message of res.messages) {
-				if (message && message.id) {  // Add null check for message and message.id
+				if (message?.id) {
+					// Add null check for message and message.id
 					history.messages[message.id] = {
 						...history.messages[message.id],
 						...(history.messages[message.id].content !== message.content
@@ -1350,7 +1351,8 @@
 				history.currentId = responseMessageId;
 
 				// Append messageId to childrenIds of parent message
-				if (parentId !== null && history.messages[parentId]) { // Add null check before accessing childrenIds
+				if (parentId !== null && history.messages[parentId]) {
+					// Add null check before accessing childrenIds
 					history.messages[parentId].childrenIds = [
 						...history.messages[parentId].childrenIds,
 						responseMessageId
