@@ -1,3 +1,23 @@
+/*
+PALLETTE
+White: #ffffff
+Extra Light Gray: #f7f7f7
+Light Gray: #ededed
+Gray: #dfdfdf
+Dark Gray: #9b9b9b
+Extra Dark Gray: #727272
+Neon green base: #77F2A1
+Blue light: #C9E2FF
+Blue base: #1E85FF
+Blue dark: #021C4F
+Light green: #00D69D
+Green base: #00BC8B
+Light red: #FF6A71
+Red base: #E90000
+Light Orange: #FFB800
+Orange base: #FF9600
+*/
+
 /* Table CSS START */
 .nbg__table {
 	width: 100%;
@@ -148,7 +168,7 @@
 	display: inline-block;
 	width: 10px;
 	height: 10px;
-	background-color: green;
+	background-color: #4cd1b0;
 	border-radius: 50%;
 	margin-right: 4px;
 }
@@ -417,3 +437,232 @@ Name: .nbg__blog__card Description: Main card container with background color, b
 /* Blog Card CSS END */
 
 /* Card CSS END */
+
+/* Button CSS START */
+
+/* Basic Button Styling */
+.nbg__button {
+	padding: 8px 24px;
+	font-size: 18px;
+	font-weight: bold;
+	border-radius: 24px;
+	cursor: pointer;
+	transition:
+		background-color 0.3s ease,
+		border 0.3s ease;
+	text-align: center;
+	display: inline-flex;
+	align-items: center;
+}
+
+/* Primary Buttons */
+.nbg__button__primary {
+	background-color: #4cd1b0;
+	color: white;
+	border: none;
+}
+.nbg__button__primary__no__fill {
+	background-color: transparent;
+	color: #4cd1b0;
+	border: none;
+}
+
+.nbg__button__primary:hover {
+	background-color: #45b18f;
+}
+
+.nbg__button__primary .nbg__button__icon {
+	margin-right: 8px;
+}
+
+/* Secondary Buttons (only for dark background) */
+.nbg__button__secondary {
+	background-color: #4a6a91;
+	color: white;
+	border: none;
+}
+.nbg__button__secondary__no__fill {
+	background-color: transparent;
+	color: #4a6a91;
+	border: none;
+}
+
+.nbg__button__secondary:hover {
+	background-color: #2a3b57;
+}
+
+.nbg__button__secondary .nbg__button__icon {
+	margin-right: 8px;
+}
+
+/* Danger Buttons */
+.nbg__button__danger {
+	background-color: #f44336;
+	color: white;
+	border: none;
+}
+
+.nbg__button__danger:hover {
+	background-color: #d32f2f;
+}
+
+/* Button with Icon */
+.nbg__button__icon {
+	background-color: transparent;
+	color: #4cd1b0;
+	border: 1px solid #4cd1b0;
+}
+
+.nbg__button__icon:hover {
+	background-color: #4cd1b0;
+	color: white;
+}
+
+.nbg__button__icon .nbg__button__icon {
+	margin-right: 8px;
+}
+
+/* Text Link Buttons */
+.nbg__button__text__link {
+	background-color: transparent;
+	color: #4cd1b0;
+	border: none;
+	text-decoration: underline;
+}
+
+.nbg__button__text__link:hover {
+	color: #45b18f;
+}
+
+/* Copy Button */
+.nbg__button__copy {
+	background-color: #4a6a91;
+	color: white;
+	border: none;
+}
+
+.nbg__button__copy:hover {
+	background-color: #2a3b57;
+}
+
+.nbg__button__copy .nbg__button__icon {
+	margin-right: 8px;
+}
+
+/* API Sidebar Buttons */
+.nbg__button__sidebar {
+	background-color: #2a3b57;
+	color: white;
+	border: none;
+	width: 100%;
+	padding: 12px;
+	text-align: left;
+}
+
+.nbg__button__sidebar:hover {
+	background-color: #4a6a91;
+}
+
+.nbg__button__sidebar .nbg__button__icon {
+	margin-right: 12px;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+	.nbg__button {
+		padding: 8px 14px;
+		font-size: 12px;
+	}
+
+	.nbg__button__sidebar {
+		width: 100%;
+		padding: 10px;
+	}
+
+	.nbg__button__primary,
+	.nbg__button__secondary,
+	.nbg__button__danger,
+	.nbg__button__copy {
+		width: auto;
+		margin-bottom: 10px;
+	}
+
+	.nbg__button__icon {
+		width: auto;
+		padding: 8px 16px;
+	}
+
+	.nbg__button__text__link {
+		font-size: 14px;
+		padding: 6px 12px;
+	}
+}
+
+/*
+Name: .nbg__button Description: Base class for all buttons, defining common padding, font size, alignment, and transitions. | Name: .nbg__button__primary Description: Primary button style, green background with hover effect. | Name: .nbg__button__primary__no__fill Description: Primary button style, transparent background green letters with hover effect. | Name: .nbg__button__secondary Description: Secondary button style, blue background for dark themes with hover effect. | Name: .nbg__button__secondary__no__fill Description: Secondary button style, transparent background with blue letters with hover effect. | Name: .nbg__button__danger Description: Danger button style, red background used for delete actions with hover effect. | Name: .nbg__button__icon Description: Icon button style with a transparent background and border, commonly used for buttons with an icon. | Name: .nbg__button__text__link Description: Text link style with an underline, commonly used for hyperlinks. | Name: .nbg__button__copy Description: Copy action button with a dark background and an icon. | Name: .nbg__button__sidebar Description: Sidebar button style, typically used for sidebar navigation with full width and left-aligned text.
+*/
+
+/* Button CSS END */
+
+/* Headings CSS START */
+
+/* Typography */
+.nbg__header__xl {
+	font-family: 'Work Sans', sans-serif;
+	font-weight: bold;
+	font-size: 40px;
+}
+
+.nbg__header__lg {
+	font-family: 'Work Sans', sans-serif;
+	font-weight: bold;
+	font-size: 32px;
+}
+
+.nbg__header {
+	font-family: 'Work Sans', sans-serif;
+	font-weight: regular;
+	font-size: 32px;
+}
+
+.nbg__text__xl {
+	font-family: 'Work Sans', sans-serif;
+	font-weight: bold;
+	font-size: 24px;
+}
+
+.nbg__text__lg {
+	font-family: 'Manrope', sans-serif;
+	font-weight: bold;
+	font-size: 18px;
+}
+
+.nbg__text__base {
+	font-family: 'Manrope', sans-serif;
+	font-weight: regular;
+	font-size: 18px;
+}
+
+.nbg__text__sm {
+	font-family: 'Work Sans', sans-serif;
+	font-weight: regular;
+	font-size: 14px;
+}
+
+.nbg__text__xs {
+	font-family: 'Work Sans', sans-serif;
+	font-weight: regular;
+	font-size: 12px;
+}
+
+.nbg__text__xs__code {
+	font-family: 'Fira Code', monospace;
+	font-weight: regular;
+	font-size: 12px;
+}
+
+/*
+Name: .nbg__header__xl Description: Header XL style, bold, 40px font size using Work Sans. | Name: .nbg__header__lg Description: Header LG style, bold, 32px font size using Work Sans. | Name: .nbg__header Description: Default header style, regular weight, 32px font size using Work Sans. | Name: .nbg__text__xl Description: Large text style, bold, 24px font size using Work Sans. | Name: .nbg__text__lg Description: Large text style, bold, 18px font size using Manrope. | Name: .nbg__text__base Description: Base text style, regular weight, 18px font size using Manrope. | Name: .nbg__text__sm Description: Small text style, regular weight, 14px font size using Work Sans. | Name: .nbg__text__xs Description: Extra small text style, regular weight, 12px font size using Work Sans. | Name: .nbg__text__xs__code Description: Extra small code block style, regular weight, 12px font size using Fira Code.
+*/
+
+/* Headings CSS END */
