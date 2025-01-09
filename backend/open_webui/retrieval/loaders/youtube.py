@@ -137,21 +137,42 @@ class YoutubeLoader:
             return []
 
         try:
-            # First try to get transcript in requested language
-            transcript = transcript_list.find_transcript(self.language)
-        except NoTranscriptFound:
-            # Fallback: try to get any available transcript
-            available_transcripts = list(
-                transcript_list._generated_transcripts.values()
-            )
-            if available_transcripts:
-                transcript = available_transcripts[0]
-                log.info(
-                    f"Using first available transcript in language: {transcript.language_code}"
-                )
+            # First try to get manual transcript in requested language
+            for lang in self.language:
+                try:
+                    available_transcripts = (
+                        transcript_list._manually_created_transcripts
+                    )
+                    if lang in available_transcripts:
+                        transcript = available_transcripts[lang]
+                        log.info(f"Found manual transcript in language: {lang}")
+                        break
+                except NoTranscriptFound:
+                    continue
             else:
-                log.error("No transcripts found for video")
-                return []
+                # If no manual transcript found, try auto-generated ones
+                try:
+                    transcript = transcript_list.find_transcript(self.language)
+                    log.info(
+                        f"Using auto-generated transcript in language: {transcript.language_code}"
+                    )
+                except NoTranscriptFound:
+                    # Final fallback: try to get any available transcript
+                    available_transcripts = list(
+                        transcript_list._manually_created_transcripts.values()
+                    ) + list(transcript_list._generated_transcripts.values())
+                    if available_transcripts:
+                        transcript = available_transcripts[0]
+                        log.info(
+                            f"Using first available transcript in language: {transcript.language_code}"
+                        )
+                    else:
+                        log.error("No transcripts found for video")
+                        return []
+
+        except Exception as e:
+            log.exception(f"Error fetching transcript: {str(e)}")
+            return []
 
         transcript_pieces: List[Dict[str, Any]] = transcript.fetch()
 
