@@ -366,7 +366,7 @@
 						<div class="flex w-full gap-2">
 							<div class="w-full">
 								<div class=" self-center text-xs font-medium min-w-fit mb-1">
-									{$i18n.t('Attribute for mail')}
+									{$i18n.t('Attribute for Mail')}
 								</div>
 								<Tooltip
 									content={$i18n.t(
