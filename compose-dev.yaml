@@ -23,7 +23,7 @@ services:
     env_file: ".env"
     environment:
       - ENV=dev
-      - WEBUI_AUTH=False
+      - WEBUI_AUTH=True
     ports:
       - "8080:8080"
     extra_hosts:

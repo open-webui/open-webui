@@ -1,6 +1,4 @@
 import os
-import boto3
-from botocore.exceptions import ClientError
 import shutil
 
 
@@ -22,7 +20,7 @@ import boto3
 from botocore.exceptions import ClientError
 from typing import BinaryIO, Tuple, Optional
 
-from backend.open_webui.config import Config
+from open_webui.config import Config
 
 
 class StorageProvider:
@@ -43,7 +41,6 @@ class StorageProvider:
             endpoint_url=S3_ENDPOINT_URL,
             aws_access_key_id=S3_ACCESS_KEY_ID,
             aws_secret_access_key=S3_SECRET_ACCESS_KEY,
-            config=Config(signature_version="s3v4"),
         )
         self.bucket_name = S3_BUCKET_NAME
 
