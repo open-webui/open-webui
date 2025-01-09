@@ -486,7 +486,7 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
             knowledge_list = model.meta.knowledge or []
             # Filter out the deleted knowledge base
             updated_knowledge = [k for k in knowledge_list if k.get("id") != id]
-            
+
             # If the knowledge list changed, update the model
             if len(updated_knowledge) != len(knowledge_list):
                 log.info(f"Updating model {model.id} to remove knowledge base {id}")
@@ -499,7 +499,7 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
                     meta=model.meta,
                     params=model.params,
                     access_control=model.access_control,
-                    is_active=model.is_active
+                    is_active=model.is_active,
                 )
                 Models.update_model_by_id(model.id, model_form)
 
