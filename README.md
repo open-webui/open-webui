@@ -148,7 +148,7 @@ After installation, you can access Open WebUI at [http://localhost:3000](http://
 
 ### Other Installation Methods
 
-We offer various installation alternatives, including non-Docker native installation methods, Docker Compose, Kustomize, and Helm. Visit our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/) or join our [Discord community](https://discord.gg/5rJgQTnV4s) for comprehensive guidance.
+We offer various installation alternatives, including non-Docker native installation methods, Docker Compose, Kustomize, and [Helm](https://app.trustshepherd.com/docs/3952be81-ac1f-49e9-a86e-0bdfeee983d3). Visit our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/) or join our [Discord community](https://discord.gg/5rJgQTnV4s) for comprehensive guidance.
 
 ### Troubleshooting
 
