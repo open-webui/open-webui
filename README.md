@@ -2,12 +2,8 @@
 ```bash
 docker run \
     -d \
-    --network host \
-    -e ENV=dev \
-    -e HOST=0.0.0.0 \
-    -e PORT=8503 \
-    -e OLLAMA_BASE_URL=http://localhost:11434 \
     --name open-webui_dev \
+    -v ~/.open_webui/cache/:/app/backend/data/cache \
     --restart always \
     ghcr.io/open-webui/open-webui:main \
     sleep infinity
