@@ -219,7 +219,11 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
         search_success = connection_app.search(
             search_base=LDAP_SEARCH_BASE,
             search_filter=f"(&({LDAP_ATTRIBUTE_FOR_USERNAME}={escape_filter_chars(form_data.user.lower())}){LDAP_SEARCH_FILTERS})",
-            attributes=[f"{LDAP_ATTRIBUTE_FOR_USERNAME}", f"{LDAP_ATTRIBUTE_FOR_MAIL}", "cn"],
+            attributes=[
+                f"{LDAP_ATTRIBUTE_FOR_USERNAME}",
+                f"{LDAP_ATTRIBUTE_FOR_MAIL}",
+                "cn",
+            ],
         )
 
         if not search_success:
@@ -752,9 +756,7 @@ async def update_ldap_server(
     request.app.state.config.LDAP_ATTRIBUTE_FOR_USERNAME = (
         form_data.attribute_for_username
     )
-    request.app.state.config.LDAP_ATTRIBUTE_FOR_MAIL = (
-        form_data.attribute_for_mail
-    )
+    request.app.state.config.LDAP_ATTRIBUTE_FOR_MAIL = (form_data.attribute_for_mail)
     request.app.state.config.LDAP_APP_DN = form_data.app_dn
     request.app.state.config.LDAP_APP_PASSWORD = form_data.app_dn_password
     request.app.state.config.LDAP_SEARCH_BASE = form_data.search_base
