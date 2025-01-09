@@ -171,6 +171,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
     LDAP_SERVER_HOST = request.app.state.config.LDAP_SERVER_HOST
     LDAP_SERVER_PORT = request.app.state.config.LDAP_SERVER_PORT
     LDAP_ATTRIBUTE_FOR_USERNAME = request.app.state.config.LDAP_ATTRIBUTE_FOR_USERNAME
+    LDAP_ATTRIBUTE_FOR_MAIL = request.app.state.config.LDAP_ATTRIBUTE_FOR_MAIL
     LDAP_SEARCH_BASE = request.app.state.config.LDAP_SEARCH_BASE
     LDAP_SEARCH_FILTERS = request.app.state.config.LDAP_SEARCH_FILTERS
     LDAP_APP_DN = request.app.state.config.LDAP_APP_DN
@@ -218,7 +219,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
         search_success = connection_app.search(
             search_base=LDAP_SEARCH_BASE,
             search_filter=f"(&({LDAP_ATTRIBUTE_FOR_USERNAME}={escape_filter_chars(form_data.user.lower())}){LDAP_SEARCH_FILTERS})",
-            attributes=[f"{LDAP_ATTRIBUTE_FOR_USERNAME}", "mail", "cn"],
+            attributes=[f"{LDAP_ATTRIBUTE_FOR_USERNAME}", f"{LDAP_ATTRIBUTE_FOR_MAIL}", "cn"],
         )
 
         if not search_success:
@@ -226,7 +227,9 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
         entry = connection_app.entries[0]
         username = str(entry[f"{LDAP_ATTRIBUTE_FOR_USERNAME}"]).lower()
-        mail = str(entry["mail"])
+        mail = str(entry[f"{LDAP_ATTRIBUTE_FOR_MAIL}"])
+        if not mail or mail == "" or mail == "[]":
+            raise HTTPException(400, f"User {form_data.user} does not have mail.")
         cn = str(entry["cn"])
         user_dn = entry.entry_dn
 
@@ -692,6 +695,7 @@ class LdapServerConfig(BaseModel):
     host: str
     port: Optional[int] = None
     attribute_for_username: str = "uid"
+    attribute_for_mail: str = "mail"
     app_dn: str
     app_dn_password: str
     search_base: str
@@ -708,6 +712,7 @@ async def get_ldap_server(request: Request, user=Depends(get_admin_user)):
         "host": request.app.state.config.LDAP_SERVER_HOST,
         "port": request.app.state.config.LDAP_SERVER_PORT,
         "attribute_for_username": request.app.state.config.LDAP_ATTRIBUTE_FOR_USERNAME,
+        "attribute_for_mail": request.app.state.config.LDAP_ATTRIBUTE_FOR_MAIL,
         "app_dn": request.app.state.config.LDAP_APP_DN,
         "app_dn_password": request.app.state.config.LDAP_APP_PASSWORD,
         "search_base": request.app.state.config.LDAP_SEARCH_BASE,
@@ -726,6 +731,7 @@ async def update_ldap_server(
         "label",
         "host",
         "attribute_for_username",
+        "attribute_for_mail",
         "app_dn",
         "app_dn_password",
         "search_base",
@@ -746,6 +752,9 @@ async def update_ldap_server(
     request.app.state.config.LDAP_ATTRIBUTE_FOR_USERNAME = (
         form_data.attribute_for_username
     )
+    request.app.state.config.LDAP_ATTRIBUTE_FOR_MAIL = (
+        form_data.attribute_for_mail
+    )
     request.app.state.config.LDAP_APP_DN = form_data.app_dn
     request.app.state.config.LDAP_APP_PASSWORD = form_data.app_dn_password
     request.app.state.config.LDAP_SEARCH_BASE = form_data.search_base
@@ -759,6 +768,7 @@ async def update_ldap_server(
         "host": request.app.state.config.LDAP_SERVER_HOST,
         "port": request.app.state.config.LDAP_SERVER_PORT,
         "attribute_for_username": request.app.state.config.LDAP_ATTRIBUTE_FOR_USERNAME,
+        "attribute_for_mail": request.app.state.config.LDAP_ATTRIBUTE_FOR_MAIL,
         "app_dn": request.app.state.config.LDAP_APP_DN,
         "app_dn_password": request.app.state.config.LDAP_APP_PASSWORD,
         "search_base": request.app.state.config.LDAP_SEARCH_BASE,

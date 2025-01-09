@@ -392,6 +392,7 @@
 	"Example: ALL": "Sampla: GACH",
 	"Example: ou=users,dc=foo,dc=example": "Sampla: ou=úsáideoirí,dc=foo,dc=sampla",
 	"Example: sAMAccountName or uid or userPrincipalName": "Sampla: sAMAaccountName nó uid nó userPrincipalName",
+	"Example: mail": "Sampla: mail",
 	"Exclude": "Eisigh",
 	"Experimental": "Turgnamhach",
 	"Explore the cosmos": "Déan iniúchadh ar an cosmos",

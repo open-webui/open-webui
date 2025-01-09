@@ -392,6 +392,7 @@
 	"Example: ALL": "Exemplo: ALL",
 	"Example: ou=users,dc=foo,dc=example": "Exemplo: ou=users,dc=foo,dc=example",
 	"Example: sAMAccountName or uid or userPrincipalName": "Exemplo: sAMAccountName ou uid ou userPrincipalName",
+	"Example: mail": "Exemplo: mail",
 	"Exclude": "Excluir",
 	"Experimental": "Experimental",
 	"Explore the cosmos": "Explorar o cosmos",

@@ -392,6 +392,7 @@
 	"Example: ALL": "Приклад: ВСІ",
 	"Example: ou=users,dc=foo,dc=example": "Приклад: ou=users,dc=foo,dc=example",
 	"Example: sAMAccountName or uid or userPrincipalName": "Приклад: sAMAccountName або uid або userPrincipalName",
+	"Example: mail": "Приклад: mail",
 	"Exclude": "Виключити",
 	"Experimental": "Експериментальне",
 	"Explore the cosmos": "Досліджуйте космос",

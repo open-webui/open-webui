@@ -392,6 +392,7 @@
 	"Example: ALL": "",
 	"Example: ou=users,dc=foo,dc=example": "",
 	"Example: sAMAccountName or uid or userPrincipalName": "",
+	"Example: mail": "",
 	"Exclude": "",
 	"Experimental": "Thử nghiệm",
 	"Explore the cosmos": "",

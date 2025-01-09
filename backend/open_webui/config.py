@@ -1937,6 +1937,12 @@ LDAP_ATTRIBUTE_FOR_USERNAME = PersistentConfig(
     os.environ.get("LDAP_ATTRIBUTE_FOR_USERNAME", "uid"),
 )
 
+LDAP_ATTRIBUTE_FOR_MAIL = PersistentConfig(
+    "LDAP_ATTRIBUTE_FOR_MAIL",
+    "ldap.server.attribute_for_mail",
+    os.environ.get("LDAP_ATTRIBUTE_FOR_MAIL", "mail"),
+)
+
 LDAP_APP_DN = PersistentConfig(
     "LDAP_APP_DN", "ldap.server.app_dn", os.environ.get("LDAP_APP_DN", "")
 )

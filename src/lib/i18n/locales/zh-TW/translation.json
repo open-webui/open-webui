@@ -392,6 +392,7 @@
 	"Example: ALL": "範例：ALL",
 	"Example: ou=users,dc=foo,dc=example": "範例：ou=users,dc=foo,dc=example",
 	"Example: sAMAccountName or uid or userPrincipalName": "範例：sAMAccountName 或 uid 或 userPrincipalName",
+	"Example: mail": "範例：mail",
 	"Exclude": "排除",
 	"Experimental": "實驗性功能",
 	"Explore the cosmos": "探索宇宙",

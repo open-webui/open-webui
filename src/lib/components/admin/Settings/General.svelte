@@ -29,6 +29,7 @@
 		host: '',
 		port: '',
 		attribute_for_username: 'uid',
+		attribute_for_mail: 'mail',
 		app_dn: '',
 		app_dn_password: '',
 		search_base: '',
@@ -358,6 +359,26 @@
 										required
 										placeholder={$i18n.t('Example: sAMAccountName or uid or userPrincipalName')}
 										bind:value={LDAP_SERVER.attribute_for_username}
+									/>
+								</Tooltip>
+							</div>
+						</div>
+						<div class="flex w-full gap-2">
+							<div class="w-full">
+								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+									{$i18n.t('Attribute for mail')}
+								</div>
+								<Tooltip
+									content={$i18n.t(
+										'The LDAP attribute that maps to the mail that users use to sign in.'
+									)}
+									placement="top-start"
+								>
+									<input
+										class="w-full bg-transparent outline-none py-0.5"
+										required
+										placeholder={$i18n.t('Example: mail')}
+										bind:value={LDAP_SERVER.attribute_for_mail}
 									/>
 								</Tooltip>
 							</div>
