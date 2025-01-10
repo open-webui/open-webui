@@ -46,6 +46,7 @@ from open_webui.utils.payload import (
 )
 
 
+
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -54,7 +55,7 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 def get_function_module_by_id(request: Request, pipe_id: str):
     # Check if function is already loaded
     if pipe_id not in request.app.state.FUNCTIONS:
-        function_module, _, _ = load_function_module_by_id(pipe_id)
+        function_module = load_function_module_by_id(pipe_id)[0]
         request.app.state.FUNCTIONS[pipe_id] = function_module
     else:
         function_module = request.app.state.FUNCTIONS[pipe_id]
@@ -65,7 +66,7 @@ def get_function_module_by_id(request: Request, pipe_id: str):
     return function_module
 
 
-async def get_function_models(request):
+def get_function_models(request):
     pipes = Functions.get_functions_by_type("pipe", active_only=True)
     pipe_models = []
 
@@ -169,7 +170,7 @@ async def generate_function_chat_completion(
     def get_pipe_id(form_data: dict) -> str:
         pipe_id = form_data["model"]
         if "." in pipe_id:
-            pipe_id, _ = pipe_id.split(".", 1)
+            pipe_id = pipe_id.split(".", 1)[0]
         return pipe_id
 
     def get_function_params(function_module, form_data, user, extra_params=None):
@@ -184,13 +185,18 @@ async def generate_function_chat_completion(
             k: v for k, v in extra_params.items() if k in sig.parameters
         }
 
-        if "__user__" in params and hasattr(function_module, "UserValves"):
-            user_valves = Functions.get_user_valves_by_id_and_user_id(pipe_id, user.id)
-            try:
-                params["__user__"]["valves"] = function_module.UserValves(**user_valves)
-            except Exception as e:
-                log.exception(e)
-                params["__user__"]["valves"] = function_module.UserValves()
+        if not (
+            "__user__" in params
+            and hasattr(function_module, "UserValves")
+        ):
+            return params
+
+        user_valves = Functions.get_user_valves_by_id_and_user_id(pipe_id, user.id)
+        try:
+            params["__user__"]["valves"] = function_module.UserValves(**user_valves)
+        except Exception as e:
+            log.exception(e)
+            params["__user__"]["valves"] = function_module.UserValves()
 
         return params
 
