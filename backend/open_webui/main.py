@@ -8,13 +8,15 @@ import shutil
 import sys
 import time
 import random
+import re
 
 from contextlib import asynccontextmanager
 from urllib.parse import urlencode, parse_qs, urlparse
+from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy import text
 
-from typing import Optional
+from typing import Any, Optional, cast
 from aiocache import cached
 import aiohttp
 import requests
@@ -39,12 +41,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from starlette.background import BackgroundTask
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
+from starlette.types import Message
 
 
+from open_webui.models.audits import AuditLevel
+from open_webui.utils.logger import AuditLogger, start_logger
 from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
@@ -262,8 +268,11 @@ from open_webui.config import (
     reset_config,
 )
 from open_webui.env import (
+    AUDIT_LOG_LEVEL,
     CHANGELOG,
+    ENABLE_AUDIT_LOGS,
     GLOBAL_LOG_LEVEL,
+    MAX_BODY_LOG_SIZE,
     SAFE_MODE,
     SRC_LOG_LEVELS,
     VERSION,
@@ -296,6 +305,8 @@ from open_webui.utils.access_control import has_access
 from open_webui.utils.auth import (
     decode_token,
     get_admin_user,
+    get_current_user,
+    get_http_authorization_cred,
     get_verified_user,
 )
 from open_webui.utils.oauth import oauth_manager
@@ -342,6 +353,8 @@ https://github.com/open-webui/open-webui
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    start_logger(ENABLE_AUDIT_LOGS)
+
     if RESET_CONFIG_ON_START:
         reset_config()
 
@@ -731,6 +744,156 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+URL_RESOURCE_PATTERN = re.compile(r"/v\d+/([^/]+)")
+URL_API_VERSION_PATTERN = re.compile(r"/api/(\w+)/")
+
+
+class AuditLoggerMiddleware(BaseHTTPMiddleware):
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        if request.method == "GET":
+            return await call_next(request)
+
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            return await call_next(request)
+
+        audit_log_level = AuditLevel(AUDIT_LOG_LEVEL)
+
+        try:
+            user = get_current_user(
+                request,
+                get_http_authorization_cred(auth_header),
+            )
+        except Exception:
+            logger.error(
+                f"Audit Logger - logging failed while retrieving user for request URL: {str(request.url)}"
+            )
+            return await call_next(request)
+
+        audit_logger = AuditLogger(logger, user)
+
+        user_agent = request.headers.get("user-agent", "")
+        source_ip = request.client.host if request.client else ""
+        request_uri = str(request.url)
+        api_version, resource = self._get_api_version_and_resource(request_uri)
+
+        raw_request_body = await request.body()
+        truncated_request_body = raw_request_body[:MAX_BODY_LOG_SIZE]
+
+        async def _receive() -> Message:
+            return {
+                "type": "http.request",
+                "body": raw_request_body,
+                "more_body": False,
+            }
+
+        modified_request = Request(request.scope, receive=_receive)
+
+        request_log_data = None
+        if audit_log_level in (AuditLevel.REQUEST, AuditLevel.REQUEST_RESPONSE):
+            request_log_data = self._build_request_log_data(
+                request, truncated_request_body
+            )
+
+        response = await call_next(modified_request)
+
+        response, response_content = await self._read_response_content(response)
+        truncated_response_content = response_content[:MAX_BODY_LOG_SIZE]
+
+        response_log_data = None
+        if audit_log_level == AuditLevel.REQUEST_RESPONSE:
+            response_log_data = self._build_response_log_data(
+                response, truncated_response_content
+            )
+
+        task = BackgroundTask(
+            audit_logger.write,
+            api_version,
+            VERSION,
+            request.method,
+            audit_log_level,
+            resource,
+            source_ip,
+            user_agent,
+            request_uri,
+            request_object=request_log_data,
+            response_object=response_log_data,
+        )
+
+        return Response(
+            content=response_content,
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.media_type,
+            background=task,
+        )
+
+    def _build_request_log_data(self, request: Request, body: bytes) -> dict:
+        """
+        Build a dictionary representing the request data for logging.
+        Sensitive headers are removed later in the AuditLogger.
+        """
+        request_data: dict[str, Any] = {
+            "headers": dict(request.headers),
+            "query_params": dict(request.query_params),
+            "path_params": dict(request.path_params),
+            "body": body.decode("utf-8", errors="replace"),
+        }
+        return request_data
+
+    def _build_response_log_data(self, response: Response, content: bytes) -> dict:
+        response_data = {
+            "headers": dict(response.headers),
+            "status_code": response.status_code,
+            "media_type": response.media_type,
+            "content": content.decode("utf-8", errors="replace"),
+        }
+        return response_data
+
+    def _get_api_version_and_resource(self, url: str) -> tuple[str, str]:
+        resource_match = re.search(URL_RESOURCE_PATTERN, url)
+        resource = resource_match.group(1) if resource_match else ""
+
+        api_version_match = re.search(URL_API_VERSION_PATTERN, url)
+        api_version = api_version_match.group(1) if api_version_match else ""
+
+        return api_version, resource
+
+    async def _read_response_content(
+        self, response: Response
+    ) -> tuple[Response, bytes]:
+        """
+        Read the entire response content from a StreamingResponse into memory
+        and return a new regular Response along with the content bytes.
+        """
+        if not isinstance(response, StreamingResponse):
+            body = response.body
+            new_response = Response(
+                content=body,
+                status_code=response.status_code,
+                headers=dict(response.headers),
+                media_type=response.media_type,
+            )
+            return new_response, body
+
+        content = b"".join(
+            [cast(bytes, chunk) async for chunk in response.body_iterator]
+        )
+
+        new_response = Response(
+            content=content,
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.media_type,
+        )
+        return new_response, content
+
+
+if not AUDIT_LOG_LEVEL == "NONE":
+    app.add_middleware(AuditLoggerMiddleware)
 
 app.mount("/ws", socket_app)
 

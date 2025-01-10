@@ -405,3 +405,12 @@ OFFLINE_MODE = os.environ.get("OFFLINE_MODE", "false").lower() == "true"
 
 if OFFLINE_MODE:
     os.environ["HF_HUB_OFFLINE"] = "1"
+
+####################################
+# AUDIT LOGGING
+####################################
+ENABLE_AUDIT_LOGS = os.getenv("ENABLE_AUDIT_LOGS", "false").lower() == "true"
+AUDIT_LOGS_FILE_PATH = f"{DATA_DIR}/audit.log"
+AUDIT_LOG_FILE_ROTATION_SIZE = os.getenv("AUDIT_LOG_FILE_ROTATION_SIZE", "10MB")
+AUDIT_LOG_LEVEL = os.getenv("AUDIT_LOG_LEVEL", "METADATA").upper()
+MAX_BODY_LOG_SIZE = 2048
