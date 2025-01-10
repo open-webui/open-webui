@@ -110,8 +110,7 @@ def get_users_with_access(
     user_ids_with_access = set(permitted_user_ids)
 
     for group_id in permitted_group_ids:
-        group_user_ids = Groups.get_group_user_ids_by_id(group_id)
-        if group_user_ids:
+        if group_user_ids := Groups.get_group_user_ids_by_id(group_id):
             user_ids_with_access.update(group_user_ids)
 
     return Users.get_users_by_user_ids(list(user_ids_with_access))
