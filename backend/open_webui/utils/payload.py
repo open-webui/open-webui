@@ -5,11 +5,9 @@ from open_webui.utils.misc import (
 
 from typing import Callable, Optional
 
-
 # inplace function: form_data is modified
 def apply_model_system_prompt_to_body(params: dict, form_data: dict, user) -> dict:
-    system = params.get("system", None)
-    if not system:
+    if not (system := params.get("system", None)):
         return form_data
 
     if user:
@@ -33,11 +31,11 @@ def apply_model_params_to_body(
     if not params:
         return form_data
 
-    for key, cast_func in mappings.items():
-        if (value := params.get(key)) is not None:
-            form_data[key] = cast_func(value)
-
-    return form_data
+    return {
+        form_data[key]: cast_func(value)
+        for key, cast_func in mappings.items()
+        if (value := params.get(key)) is not None
+    }
 
 
 # inplace function: form_data is modified
@@ -81,11 +79,11 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         "frequency_penalty": "repeat_penalty",
     }
 
-    for key, value in name_differences.items():
-        if (param := params.get(key, None)) is not None:
-            form_data[value] = param
-
-    return form_data
+    return {
+        form_data[value]: param
+        for key, value in name_differences.items()
+        if (param := params.get(key, None)) is not None
+    }
 
 
 def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
