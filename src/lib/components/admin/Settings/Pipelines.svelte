@@ -157,7 +157,7 @@
 		}
 
 		pipelineFiles = null;
-		const pipelineUploadInputElement = document.getElementById('pipeline-upload-input');
+		const pipelineUploadInputElement = document.getElementById('pipelines-upload-input');
 
 		if (pipelineUploadInputElement) {
 			pipelineUploadInputElement.value = null;
