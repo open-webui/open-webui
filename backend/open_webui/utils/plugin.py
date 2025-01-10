@@ -39,13 +39,12 @@ def extract_frontmatter(content):
                     break
 
             if frontmatter_started and not frontmatter_ended:
-                match = frontmatter_pattern.match(line)
-                if match:
+                if match := frontmatter_pattern.match(line):
                     key, value = match.groups()
                     frontmatter[key.strip()] = value.strip()
 
     except Exception as e:
-        print(f"An error occurred: {e}")
+        log.error(f"An error occurred: {e}")
         return {}
 
     return frontmatter
