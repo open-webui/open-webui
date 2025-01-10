@@ -8,6 +8,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import Badge from '$lib/components/common/Badge.svelte';
 
 	export let onChange: Function = () => {};
 
@@ -91,6 +92,9 @@
 							accessControl = {
 								read: {
 									group_ids: []
+								},
+								write: {
+									group_ids: []
 								}
 							};
 						}
@@ -110,7 +114,6 @@
 			</div>
 		</div>
 	</div>
-
 	{#if accessControl !== null}
 		{@const accessGroups = groups.filter((group) =>
 			accessControl.read.group_ids.includes(group.id)
@@ -138,6 +141,27 @@
 								</div>
 
 								<div class="w-full flex justify-end">
+									<button
+										class=" translate-y-0.5"
+										type="button"
+										on:click={() => {
+											if (accessControl.write.group_ids.includes(group.id)) {
+												accessControl.write.group_ids = accessControl.write.group_ids.filter(
+													(group_id) => group_id !== group.id)
+											} else {
+												accessControl.write.group_ids = [
+												...accessControl.write.group_ids,
+												group.id
+												];
+											}
+										}}
+									>
+									<Badge	
+										type={accessControl.write.group_ids.includes(group.id) ? 'info' : 'success'}
+										content={$i18n.t(accessControl.write.group_ids.includes(group.id) ? "Write" : "Read")}
+									/>
+									</button>
+
 									<button
 										class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 										type="button"
