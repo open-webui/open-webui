@@ -227,8 +227,7 @@ class PersistentConfig(Generic[T]):
         return super().__getattribute__(item)
 
     def update(self):
-        new_value = get_config_value(self.config_path)
-        if new_value is not None:
+        if new_value := get_config_value(self.config_path):
             self.value = new_value
             log.info(f"Updated {self.env_name} to new value {self.value}")
 
@@ -540,41 +539,58 @@ else:
 CUSTOM_NAME = os.environ.get("CUSTOM_NAME", "")
 
 if CUSTOM_NAME:
+    r = requests.get(f"https://api.openwebui.com/api/v1/custom/{CUSTOM_NAME}")
+
     try:
-        r = requests.get(f"https://api.openwebui.com/api/v1/custom/{CUSTOM_NAME}")
-        data = r.json()
-        if r.ok:
-            if "logo" in data:
-                WEBUI_FAVICON_URL = url = (
-                    f"https://api.openwebui.com{data['logo']}"
-                    if data["logo"][0] == "/"
-                    else data["logo"]
-                )
-
-                r = requests.get(url, stream=True)
-                if r.status_code == 200:
-                    with open(f"{STATIC_DIR}/favicon.png", "wb") as f:
-                        r.raw.decode_content = True
-                        shutil.copyfileobj(r.raw, f)
-
-            if "splash" in data:
-                url = (
-                    f"https://api.openwebui.com{data['splash']}"
-                    if data["splash"][0] == "/"
-                    else data["splash"]
-                )
-
-                r = requests.get(url, stream=True)
-                if r.status_code == 200:
-                    with open(f"{STATIC_DIR}/splash.png", "wb") as f:
-                        r.raw.decode_content = True
-                        shutil.copyfileobj(r.raw, f)
-
-            WEBUI_NAME = data["name"]
+        r.raise_for_status()
+        if not r.ok:
+            log.error(r.text)
     except Exception as e:
         log.exception(e)
         pass
+    
+    data = r.json()
 
+    if "logo" in data:
+        WEBUI_FAVICON_URL = url = (
+            f"https://api.openwebui.com{data['logo']}"
+            if data["logo"][0] == "/"
+            else data["logo"]
+        )
+
+        r = requests.get(url, stream=True)
+        try:
+            r.raise_for_status()
+            if not r.ok:
+                log.error(r.text)
+        except Exception as e:
+            log.exception(e)
+            pass
+
+        with open(f"{STATIC_DIR}/favicon.png", "wb") as f:
+            r.raw.decode_content = True
+            shutil.copyfileobj(r.raw, f)
+
+    if "splash" in data:
+        url = (
+            f"https://api.openwebui.com{data['splash']}"
+            if data["splash"][0] == "/"
+            else data["splash"]
+        )
+
+        r = requests.get(url, stream=True)
+        try:
+            r.raise_for_status()
+            if not r.ok:
+                log.error(r.text)
+        except Exception as e:
+            log.exception(e)
+            pass
+        with open(f"{STATIC_DIR}/splash.png", "wb") as f:
+            r.raw.decode_content = True
+            shutil.copyfileobj(r.raw, f)
+
+    WEBUI_NAME = data["name"]
 
 ####################################
 # STORAGE PROVIDER
@@ -1180,13 +1196,10 @@ CHROMA_HTTP_PORT = int(os.environ.get("CHROMA_HTTP_PORT", "8000"))
 CHROMA_CLIENT_AUTH_PROVIDER = os.environ.get("CHROMA_CLIENT_AUTH_PROVIDER", "")
 CHROMA_CLIENT_AUTH_CREDENTIALS = os.environ.get("CHROMA_CLIENT_AUTH_CREDENTIALS", "")
 # Comma-separated list of header=value pairs
-CHROMA_HTTP_HEADERS = os.environ.get("CHROMA_HTTP_HEADERS", "")
-if CHROMA_HTTP_HEADERS:
-    CHROMA_HTTP_HEADERS = dict(
-        [pair.split("=") for pair in CHROMA_HTTP_HEADERS.split(",")]
-    )
-else:
-    CHROMA_HTTP_HEADERS = None
+CHROMA_HTTP_HEADERS =  dict(
+    [pair.split("=") for pair in __headers.split(",")]
+) if (__headers := os.environ.get("CHROMA_HTTP_HEADERS", "")) else None
+
 CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (sentence-transformers/all-MiniLM-L6-v2)
 
