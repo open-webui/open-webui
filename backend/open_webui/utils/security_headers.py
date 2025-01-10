@@ -50,11 +50,11 @@ def set_security_headers() -> Dict[str, str]:
     }
 
     for env_var, setter in header_setters.items():
-        value = os.environ.get(env_var, None)
-        if value:
-            header = setter(value)
-            if header:
-                options.update(header)
+        if not (value := os.environ.get(env_var, None)):
+            continue
+        if not (header := setter(value)):
+            continue
+        options.update(header)
 
     return options
 
@@ -62,8 +62,7 @@ def set_security_headers() -> Dict[str, str]:
 # Set HTTP Strict Transport Security(HSTS) response header
 def set_hsts(value: str):
     pattern = r"^max-age=(\d+)(;includeSubDomains)?(;preload)?$"
-    match = re.match(pattern, value, re.IGNORECASE)
-    if not match:
+    if not re.match(pattern, value, re.IGNORECASE):
         value = "max-age=31536000;includeSubDomains"
     return {"Strict-Transport-Security": value}
 
@@ -71,8 +70,7 @@ def set_hsts(value: str):
 # Set X-Frame-Options response header
 def set_xframe(value: str):
     pattern = r"^(DENY|SAMEORIGIN)$"
-    match = re.match(pattern, value, re.IGNORECASE)
-    if not match:
+    if not re.match(pattern, value, re.IGNORECASE):
         value = "DENY"
     return {"X-Frame-Options": value}
 
@@ -80,8 +78,7 @@ def set_xframe(value: str):
 # Set Permissions-Policy response header
 def set_permissions_policy(value: str):
     pattern = r"^(?:(accelerometer|autoplay|camera|clipboard-read|clipboard-write|fullscreen|geolocation|gyroscope|magnetometer|microphone|midi|payment|picture-in-picture|sync-xhr|usb|xr-spatial-tracking)=\((self)?\),?)*$"
-    match = re.match(pattern, value, re.IGNORECASE)
-    if not match:
+    if not re.match(pattern, value, re.IGNORECASE):
         value = "none"
     return {"Permissions-Policy": value}
 
@@ -89,8 +86,7 @@ def set_permissions_policy(value: str):
 # Set Referrer-Policy response header
 def set_referrer(value: str):
     pattern = r"^(no-referrer|no-referrer-when-downgrade|origin|origin-when-cross-origin|same-origin|strict-origin|strict-origin-when-cross-origin|unsafe-url)$"
-    match = re.match(pattern, value, re.IGNORECASE)
-    if not match:
+    if not re.match(pattern, value, re.IGNORECASE):
         value = "no-referrer"
     return {"Referrer-Policy": value}
 
@@ -98,8 +94,7 @@ def set_referrer(value: str):
 # Set Cache-Control response header
 def set_cache_control(value: str):
     pattern = r"^(public|private|no-cache|no-store|must-revalidate|proxy-revalidate|max-age=\d+|s-maxage=\d+|no-transform|immutable)(,\s*(public|private|no-cache|no-store|must-revalidate|proxy-revalidate|max-age=\d+|s-maxage=\d+|no-transform|immutable))*$"
-    match = re.match(pattern, value, re.IGNORECASE)
-    if not match:
+    if not re.match(pattern, value, re.IGNORECASE):
         value = "no-store, max-age=0"
 
     return {"Cache-Control": value}
@@ -122,8 +117,7 @@ def set_xcontent_type(value: str):
 # Set X-Permitted-Cross-Domain-Policies response header
 def set_xpermitted_cross_domain_policies(value: str):
     pattern = r"^(none|master-only|by-content-type|by-ftp-filename)$"
-    match = re.match(pattern, value, re.IGNORECASE)
-    if not match:
+    if not re.match(pattern, value, re.IGNORECASE):
         value = "none"
     return {"X-Permitted-Cross-Domain-Policies": value}
 
