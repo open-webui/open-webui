@@ -1931,6 +1931,12 @@ LDAP_SERVER_PORT = PersistentConfig(
     int(os.environ.get("LDAP_SERVER_PORT", "389")),
 )
 
+LDAP_ATTRIBUTE_FOR_MAIL = PersistentConfig(
+    "LDAP_ATTRIBUTE_FOR_MAIL",
+    "ldap.server.attribute_for_mail",
+    os.environ.get("LDAP_ATTRIBUTE_FOR_MAIL", "mail"),
+)
+
 LDAP_ATTRIBUTE_FOR_USERNAME = PersistentConfig(
     "LDAP_ATTRIBUTE_FOR_USERNAME",
     "ldap.server.attribute_for_username",
