@@ -46,8 +46,7 @@ async def stop_task(task_id: str):
     """
     Cancel a running task and remove it from the global task list.
     """
-    task = tasks.get(task_id)
-    if not task:
+    if not (task := tasks.get(task_id)):
         raise ValueError(f"Task with ID {task_id} not found.")
 
     task.cancel()  # Request task cancellation
