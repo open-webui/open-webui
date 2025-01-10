@@ -138,17 +138,14 @@ def get_current_user(
 
 
 def get_current_user_by_api_key(api_key: str):
-    user = Users.get_user_by_api_key(api_key)
-
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.INVALID_TOKEN,
-        )
-    else:
+    if user := Users.get_user_by_api_key(api_key):
         Users.update_user_last_active_by_id(user.id)
+        return user
 
-    return user
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+    )
 
 
 def get_verified_user(user=Depends(get_current_user)):
