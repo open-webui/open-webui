@@ -134,11 +134,13 @@ VERSION = PACKAGE_DATA["version"]
 # Function to parse each section
 def parse_section(section):
     items = []
+
+
     for li in section.find_all("li"):
         # Extract raw HTML string
         raw_html = str(li)
 
-        # Extract text without HTML tags
+        # Extract text without HTML tags 
         text = li.get_text(separator=" ", strip=True)
 
         # Split into title and content
