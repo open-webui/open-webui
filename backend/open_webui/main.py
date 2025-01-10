@@ -665,21 +665,19 @@ app.state.MODELS = {}
 
 class RedirectMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        if request.method != "GET":
+            return await call_next(request)
+
         # Check if the request is a GET request
-        if request.method == "GET":
-            path = request.url.path
-            query_params = dict(parse_qs(urlparse(str(request.url)).query))
+        path = request.url.path
+        query_params = dict(parse_qs(urlparse(str(request.url)).query))
 
-            # Check for the specific watch path and the presence of 'v' parameter
-            if path.endswith("/watch") and "v" in query_params:
-                video_id = query_params["v"][0]  # Extract the first 'v' parameter
-                encoded_video_id = urlencode({"youtube": video_id})
-                redirect_url = f"/?{encoded_video_id}"
-                return RedirectResponse(url=redirect_url)
-
-        # Proceed with the normal flow of other requests
-        response = await call_next(request)
-        return response
+        # Check for the specific watch path and the presence of 'v' parameter
+        if path.endswith("/watch") and "v" in query_params:
+            video_id = query_params["v"][0]  # Extract the first 'v' parameter
+            encoded_video_id = urlencode({"youtube": video_id})
+            redirect_url = f"/?{encoded_video_id}"
+            return RedirectResponse(url=redirect_url)
 
 
 # Add the middleware to the app
@@ -690,7 +688,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 @app.middleware("http")
 async def commit_session_after_request(request: Request, call_next):
     response = await call_next(request)
-    # log.debug("Commit session after request")
+    log.debug("Commit session after request")
     Session.commit()
     return response
 
@@ -707,19 +705,21 @@ async def check_url(request: Request, call_next):
 
 @app.middleware("http")
 async def inspect_websocket(request: Request, call_next):
-    if (
+    if not (
         "/ws/socket.io" in request.url.path
         and request.query_params.get("transport") == "websocket"
     ):
-        upgrade = (request.headers.get("Upgrade") or "").lower()
-        connection = (request.headers.get("Connection") or "").lower().split(",")
-        # Check that there's the correct headers for an upgrade, else reject the connection
-        # This is to work around this upstream issue: https://github.com/miguelgrinberg/python-engineio/issues/367
-        if upgrade != "websocket" or "upgrade" not in connection:
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": "Invalid WebSocket upgrade request"},
-            )
+        return await call_next(request)
+
+    upgrade = (request.headers.get("Upgrade") or "").lower()
+    connection = (request.headers.get("Connection") or "").lower().split(",")
+    # Check that there's the correct headers for an upgrade, else reject the connection
+    # This is to work around this upstream issue: https://github.com/miguelgrinberg/python-engineio/issues/367
+    if upgrade != "websocket" or "upgrade" not in connection:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": "Invalid WebSocket upgrade request"},
+        )
     return await call_next(request)
 
 
@@ -781,24 +781,25 @@ app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 async def get_models(request: Request, user=Depends(get_verified_user)):
     def get_filtered_models(models, user):
         filtered_models = []
+
         for model in models:
             if model.get("arena"):
-                if has_access(
+                if not has_access(
                     user.id,
                     type="read",
                     access_control=model.get("info", {})
                     .get("meta", {})
                     .get("access_control", {}),
                 ):
-                    filtered_models.append(model)
-                continue
+                    continue
+                filtered_models.append(model)
 
-            model_info = Models.get_model_by_id(model["id"])
-            if model_info:
-                if user.id == model_info.user_id or has_access(
-                    user.id, type="read", access_control=model_info.access_control
-                ):
-                    filtered_models.append(model)
+            if not (model_info := Models.get_model_by_id(model["id"])):
+                continue
+            if user.id == model_info.user_id or has_access(
+                user.id, type="read", access_control=model_info.access_control
+            ):
+                filtered_models.append(model)
 
         return filtered_models
 
@@ -841,15 +842,15 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
-    if not request.app.state.MODELS:
+    if not (models :=request.app.state.MODELS):
         await get_all_models(request)
 
     tasks = form_data.pop("background_tasks", None)
     try:
         model_id = form_data.get("model", None)
-        if model_id not in request.app.state.MODELS:
+        if model_id not in models:
             raise Exception("Model not found")
-        model = request.app.state.MODELS[model_id]
+        model = models.get(model_id)
 
         # Check if user has access to the model
         if not BYPASS_MODEL_ACCESS_CONTROL and user.role == "user":
@@ -858,7 +859,7 @@ async def chat_completion(
             except Exception as e:
                 raise e
 
-        metadata = {
+        form_data["metadata"] = {
             "user_id": user.id,
             "chat_id": form_data.pop("chat_id", None),
             "message_id": form_data.pop("id", None),
@@ -867,10 +868,9 @@ async def chat_completion(
             "files": form_data.get("files", None),
             "features": form_data.get("features", None),
         }
-        form_data["metadata"] = metadata
 
         form_data, events = await process_chat_payload(
-            request, form_data, metadata, user, model
+            request, form_data, form_data["metadata"], user, model
         )
     except Exception as e:
         raise HTTPException(
@@ -881,7 +881,7 @@ async def chat_completion(
     try:
         response = await chat_completion_handler(request, form_data, user)
         return await process_chat_response(
-            request, response, form_data, user, events, metadata, tasks
+            request, response, form_data, user, events, form_data["metadata"], tasks
         )
     except Exception as e:
         raise HTTPException(
@@ -956,12 +956,11 @@ async def get_app_config(request: Request):
                 detail="Invalid token",
             )
         if data is not None and "id" in data:
-            user = Users.get_user_by_id(data["id"])
-
-    onboarding = False
-    if user is None:
-        user_count = Users.get_num_users()
-        onboarding = user_count == 0
+            if user := Users.get_user_by_id(data["id"]):
+                onboarding = False
+            else:
+                user_count = Users.get_num_users()
+                onboarding = user_count == 0
 
     return {
         **({"onboarding": True} if onboarding else {}),
@@ -1060,20 +1059,22 @@ async def get_app_latest_release_version():
             f"Offline mode is enabled, returning current version as latest version"
         )
         return {"current": VERSION, "latest": VERSION}
-    try:
-        timeout = aiohttp.ClientTimeout(total=1)
-        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-            async with session.get(
-                "https://api.github.com/repos/open-webui/open-webui/releases/latest"
-            ) as response:
-                response.raise_for_status()
-                data = await response.json()
-                latest_version = data["tag_name"]
 
-                return {"current": VERSION, "latest": latest_version[1:]}
-    except Exception as e:
-        log.debug(e)
-        return {"current": VERSION, "latest": VERSION}
+    timeout = aiohttp.ClientTimeout(total=1)
+    async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+        async with session.get(
+            "https://api.github.com/repos/open-webui/open-webui/releases/latest"
+        ) as response:
+            try:
+                response.raise_for_status()
+            except Exception as e:
+                log.debug(e)
+                return {"current": VERSION, "latest": VERSION}
+
+            data = await response.json()
+            latest_version = data["tag_name"]
+
+            return {"current": VERSION, "latest": latest_version[1:]}
 
 
 @app.get("/api/changelog")
