@@ -41,13 +41,11 @@ def get_tools(
     tools_dict = {}
 
     for tool_id in tool_ids:
-        tools = Tools.get_tool_by_id(tool_id)
-        if tools is None:
+        if not (tools := Tools.get_tool_by_id(tool_id)):
             continue
 
-        module = request.app.state.TOOLS.get(tool_id, None)
-        if module is None:
-            module, _ = load_tools_module_by_id(tool_id)
+        if not (module := request.app.state.TOOLS.get(tool_id, None)):
+            module = load_tools_module_by_id(tool_id)[0]
             request.app.state.TOOLS[tool_id] = module
 
         extra_params["__id__"] = tool_id
@@ -72,13 +70,13 @@ def get_tools(
 
             # convert to function that takes only model params and inserts custom params
             original_func = getattr(module, function_name)
-            callable = apply_extra_params_to_tool_function(original_func, extra_params)
+            _callable = apply_extra_params_to_tool_function(original_func, extra_params)
             # TODO: This needs to be a pydantic model
             tool_dict = {
                 "toolkit_id": tool_id,
-                "callable": callable,
+                "callable": _callable,
                 "spec": spec,
-                "pydantic_model": function_to_pydantic_model(callable),
+                "pydantic_model": function_to_pydantic_model(_callable),
                 "file_handler": hasattr(module, "file_handler") and module.file_handler,
                 "citation": hasattr(module, "citation") and module.citation,
             }
@@ -108,14 +106,11 @@ def parse_description(docstring: str | None) -> str:
     if not docstring:
         return ""
 
-    lines = [line.strip() for line in docstring.strip().split("\n")]
-    description_lines: list[str] = []
-
-    for line in lines:
-        if re.match(r":param", line) or re.match(r":return", line):
-            break
-
-        description_lines.append(line)
+    description_lines = [
+        line
+        for line in [line.strip() for line in docstring.strip().split("\n")]
+        if not (re.match(r":param", line) or re.match(r":return", line))
+    ]
 
     return "\n".join(description_lines)
 
@@ -138,8 +133,7 @@ def parse_docstring(docstring):
     param_descriptions = {}
 
     for line in docstring.splitlines():
-        match = param_pattern.match(line.strip())
-        if not match:
+        if not (match := param_pattern.match(line.strip())):
             continue
         param_name, param_description = match.groups()
         if param_name.startswith("__"):
