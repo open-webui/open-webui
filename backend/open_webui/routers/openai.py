@@ -573,6 +573,7 @@ async def generate_chat_completion(
                 detail="Model not found",
             )
 
+    await get_all_models(request)
     model = request.app.state.OPENAI_MODELS.get(model_id)
     if model:
         idx = model["urlIdx"]
