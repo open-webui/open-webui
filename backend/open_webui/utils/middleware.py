@@ -966,12 +966,12 @@ async def process_chat_response(
                     if not data.strip():
                         continue
 
-                    # "data: " is the prefix for each event
-                    if not data.startswith("data: "):
+                    # "data:" is the prefix for each event
+                    if not data.startswith("data:"):
                         continue
 
                     # Remove the prefix
-                    data = data[len("data: ") :]
+                    data = data[len("data:") :].strip()
 
                     try:
                         data = json.loads(data)
