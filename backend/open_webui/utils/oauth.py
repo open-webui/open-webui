@@ -277,7 +277,12 @@ class OAuthManager:
                         picture_url = ""
                 if not picture_url:
                     picture_url = "/user.png"
+
                 username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
+
+                username = user_data.get(username_claim)
+                if not isinstance(username, str):
+                    username = "User"
 
                 role = self.get_user_role(None, user_data)
 
@@ -286,7 +291,7 @@ class OAuthManager:
                     password=get_password_hash(
                         str(uuid.uuid4())
                     ),  # Random password, not used
-                    name=user_data.get(username_claim, "User"),
+                    name=username,
                     profile_image_url=picture_url,
                     role=role,
                     oauth_sub=provider_sub,
