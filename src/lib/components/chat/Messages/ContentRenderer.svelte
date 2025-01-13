@@ -138,19 +138,19 @@
 			document.removeEventListener('keydown', keydownHandler);
 		}
 	});
-
-	$: {
-		if (!$isFinishGenRes) {
-			bottomHistory.set({
-				currentId: '',
-				messages: {}
-			});
-			leftHistory.set({
-				currentId: '',
-				messages: {}
-			});
-		}
-	}
+	// TODO if we want to clear previous history!
+	// $: {
+	// 	if (!$isFinishGenRes) {
+	// 		bottomHistory.set({
+	// 			currentId: '',
+	// 			messages: {}
+	// 		});
+	// 		leftHistory.set({
+	// 			currentId: '',
+	// 			messages: {}
+	// 		});
+	// 	}
+	// }
 </script>
 
 <div bind:this={contentContainerElement}>

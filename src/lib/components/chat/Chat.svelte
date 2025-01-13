@@ -37,7 +37,8 @@
 		showArtifacts,
 		showBottomArtifacts,
 		showLeftArtifacts,
-		tools
+		tools,
+		isFinishGenRes
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -2230,7 +2231,7 @@
 		<PaneGroup
 			direction="horizontal"
 			class="w-full h-full"
-			style={$showLeftArtifacts ? 'padding-left:30%' : ''}
+			style={$showLeftArtifacts && $isFinishGenRes ? 'padding-left:30%' : ''}
 		>
 			{#if $showLeftArtifacts}
 				<div id="LeftArtifact">
@@ -2295,7 +2296,7 @@
 						</div>
 						<div
 							class="flex flex-col justify-start"
-							style={$showBottomArtifacts ? 'height: 65%;' : 'auto'}
+							style={$showBottomArtifacts && $isFinishGenRes ? 'height: 65%;' : 'auto'}
 						>
 							<MessageInput
 								{history}

@@ -471,9 +471,9 @@
 		await tick();
 	});
 	$: if (message.done) {
-		$isFinishGenRes = true;
+		isFinishGenRes.set(true);
 	} else {
-		$isFinishGenRes = false;
+		isFinishGenRes.set(false);
 	}
 </script>
 
