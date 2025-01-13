@@ -204,10 +204,16 @@
 						)
 					}
 				});
-				showLeftArtifacts.set(true);
-				showBottomArtifacts.set(true);
-				showControls.set(true);
-				showArtifacts.set(true);
+				showLeftArtifacts.set(false);
+				showBottomArtifacts.set(false);
+				showControls.set(false);
+				showArtifacts.set(false);
+				setTimeout(() => {
+					showLeftArtifacts.set(true);
+					showBottomArtifacts.set(true);
+					showControls.set(true);
+					showArtifacts.set(true);
+				}, 200);
 			}
 
 			// Case 2: Check if the message includes 'OpenBottomArtifacts'
@@ -224,8 +230,10 @@
 						)
 					}
 				});
-				showBottomArtifacts.set(true);
-				showArtifacts.set(false);
+				showBottomArtifacts.set(false);
+				setTimeout(() => {
+					showBottomArtifacts.set(true);
+				}, 200);
 			}
 
 			// Case 3: Check if the message includes 'OpenLeftArtifacts'
@@ -242,8 +250,10 @@
 						)
 					}
 				});
-				showLeftArtifacts.set(true);
-				showArtifacts.set(false);
+				showLeftArtifacts.set(false);
+				setTimeout(() => {
+					showLeftArtifacts.set(true);
+				}, 200);
 			}
 
 			// Case 4: Handle html, svg, and xml content for artifacts
