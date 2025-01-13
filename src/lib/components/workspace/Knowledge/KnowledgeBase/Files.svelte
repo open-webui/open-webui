@@ -19,7 +19,7 @@
 					? ' bg-gray-50 dark:bg-gray-850'
 					: 'bg-transparent'} hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 				{small}
-				{file}
+				item={file}
 				name={file?.name ?? file?.meta?.name}
 				type="file"
 				size={file?.size ?? file?.meta?.size ?? ''}
