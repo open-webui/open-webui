@@ -17,7 +17,7 @@ from open_webui.routers.retrieval import (
     process_files_batch,
     BatchProcessFilesForm,
 )
-from open_webui.storage.provider import Storage
+from open_webui.routers.files import delete_file_by_id
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user
@@ -390,7 +390,7 @@ def update_file_from_knowledge_by_id(
 
 
 @router.post("/{id}/file/remove", response_model=Optional[KnowledgeFilesResponse])
-def remove_file_from_knowledge_by_id(
+async def remove_file_from_knowledge_by_id(
     id: str,
     form_data: KnowledgeFileIdForm,
     user=Depends(get_verified_user),
@@ -425,12 +425,8 @@ def remove_file_from_knowledge_by_id(
     if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
         VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
 
-    # Delete physical file
-    if file.path:
-        Storage.delete_file(file.path)
-
-    # Delete file from database
-    Files.delete_file_by_id(form_data.file_id)
+    # Delete file (handles both database and physical file)
+    await delete_file_by_id(form_data.file_id, user)
 
     if knowledge:
         data = knowledge.data or {}
