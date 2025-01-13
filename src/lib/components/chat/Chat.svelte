@@ -2233,7 +2233,7 @@
 			class="w-full h-full"
 			style={$showLeftArtifacts && $isFinishGenRes ? 'padding-left:30%' : ''}
 		>
-			{#if $showLeftArtifacts}
+			{#if $showLeftArtifacts && $isFinishGenRes}
 				<div id="LeftArtifact">
 					<LeftArtifact />
 				</div>
@@ -2330,7 +2330,7 @@
 									}
 								}}
 							/>
-							{#if $showBottomArtifacts}
+							{#if $showBottomArtifacts && $isFinishGenRes}
 								<div id="BottomArtifact">
 									<BottomArtifacts />
 								</div>
