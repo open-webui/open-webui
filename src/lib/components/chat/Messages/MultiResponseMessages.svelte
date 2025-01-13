@@ -21,6 +21,7 @@
 	export let chatId;
 	export let history;
 	export let messageId;
+	export let audioParams = {};
 
 	export let isLastMessage;
 	export let readOnly = false;
@@ -215,6 +216,7 @@
 						{#key history.currentId}
 							{#if message}
 								<ResponseMessage
+									{audioParams}
 									{chatId}
 									{history}
 									messageId={_messageId}

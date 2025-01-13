@@ -22,6 +22,7 @@
 
 	export let chatFiles = [];
 	export let params = {};
+	export let audioParams = {};
 
 	export let eventTarget: EventTarget;
 	export let submitPrompt: Function;
@@ -155,6 +156,7 @@
 						>
 							<CallOverlay
 								bind:files
+								{audioParams}
 								{submitPrompt}
 								{stopResponse}
 								{modelId}
@@ -236,6 +238,7 @@
 							<div class="w-full h-full flex justify-center">
 								<CallOverlay
 									bind:files
+									{audioParams}
 									{submitPrompt}
 									{stopResponse}
 									{modelId}

@@ -21,6 +21,7 @@
 	export let files;
 	export let chatId;
 	export let modelId;
+	export let audioParams = {};
 
 	let wakeLock = null;
 
@@ -372,7 +373,8 @@
 								?.at(0) ?? undefined;
 
 						currentUtterance = new SpeechSynthesisUtterance(content);
-						currentUtterance.rate = $settings.audio?.tts?.playbackRate ?? 1;
+						currentUtterance.rate = audioParams?.playbackRate ?? 1;
+						currentUtterance.volume = audioParams?.volume ?? 1;
 
 						if (voice) {
 							currentUtterance.voice = voice;
@@ -399,7 +401,8 @@
 				if (audioElement) {
 					audioElement.src = audio.src;
 					audioElement.muted = true;
-					audioElement.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
+					audioElement.playbackRate = audioParams?.playbackRate ?? 1;
+					audioElement.volume = audioParams?.volume ?? 1;
 
 					audioElement
 						.play()

@@ -17,6 +17,7 @@
 
 	export let history;
 	export let messageId;
+	export let audioParams = {};
 
 	export let user;
 
@@ -65,6 +66,7 @@
 			/>
 		{:else if (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) === 1}
 			<ResponseMessage
+				{audioParams}
 				{chatId}
 				{history}
 				{messageId}
@@ -86,6 +88,7 @@
 		{:else}
 			<MultiResponseMessages
 				bind:history
+				{audioParams}
 				{chatId}
 				{messageId}
 				isLastMessage={messageId === history?.currentId}

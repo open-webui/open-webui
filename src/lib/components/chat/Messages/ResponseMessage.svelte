@@ -123,6 +123,8 @@
 	export let isLastMessage = true;
 	export let readOnly = false;
 
+	export let audioParams = {};
+
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);
 
@@ -239,7 +241,8 @@
 					const blob = await res.blob();
 					const blobUrl = URL.createObjectURL(blob);
 					const audio = new Audio(blobUrl);
-					audio.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
+					audio.playbackRate = audioParams?.playbackRate ?? 1;
+					audio.volume = audioParams?.volume ?? 1;
 
 					audioParts[idx] = audio;
 					loadingSpeech = false;
@@ -263,7 +266,8 @@
 					console.log(voice);
 
 					const speak = new SpeechSynthesisUtterance(message.content);
-					speak.rate = $settings.audio?.tts?.playbackRate ?? 1;
+					speak.rate = audioParams?.playbackRate ?? 1;
+					speak.volume = audioParams?.volume ?? 1;
 
 					console.log(speak);
 

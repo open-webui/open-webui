@@ -97,6 +97,8 @@ export const SUPPORTED_FILE_EXTENSIONS = [
 
 export const PASTED_TEXT_CHARACTER_LIMIT = 1000;
 
+export const AUDIO_PLAYBACKRATE_OPTIONS = [2, 1.75, 1.5, 1.25, 1, 0.75, 0.5];
+
 // Source: https://kit.svelte.dev/docs/modules#$env-static-public
 // This feature, akin to $env/static/private, exclusively incorporates environment variables
 // that are prefixed with config.kit.env.publicPrefix (usually set to PUBLIC_).

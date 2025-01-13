@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { AUDIO_PLAYBACKRATE_OPTIONS } from '$lib/constants';
+	import { createEventDispatcher, getContext, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
 
-	import { user, settings, config } from '$lib/stores';
 	import { getVoices as _getVoices } from '$lib/apis/audio';
+	import { config, settings } from '$lib/stores';
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	const dispatch = createEventDispatcher();
@@ -23,9 +24,10 @@
 	let voices = [];
 	let voice = '';
 
-	// Audio speed control
+	// Audio control
 	let playbackRate = 1;
-	const speedOptions = [2, 1.75, 1.5, 1.25, 1, 0.75, 0.5];
+	let playbackVolume = 1;
+	$: playbackVolumePercentage = Math.round(playbackVolume * 100);
 
 	const getVoices = async () => {
 		if ($config.audio.tts.engine === '') {
@@ -61,6 +63,7 @@
 
 	onMount(async () => {
 		playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
+		playbackVolume = $settings.audio?.tts?.playbackVolume ?? 1;
 		conversationMode = $settings.conversationMode ?? false;
 		speechAutoSend = $settings.speechAutoSend ?? false;
 		responseAutoPlayback = $settings.responseAutoPlayback ?? false;
@@ -89,6 +92,7 @@
 				},
 				tts: {
 					playbackRate: playbackRate,
+					playbackVolume: playbackVolume,
 					voice: voice !== '' ? voice : undefined,
 					defaultVoice: $config?.audio?.tts?.voice ?? '',
 					nonLocalVoices: $config.audio.tts.engine === '' ? nonLocalVoices : undefined
@@ -168,10 +172,31 @@
 						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 						bind:value={playbackRate}
 					>
-						{#each speedOptions as option}
+						{#each AUDIO_PLAYBACKRATE_OPTIONS as option}
 							<option value={option} selected={playbackRate === option}>{option}x</option>
 						{/each}
 					</select>
+				</div>
+			</div>
+
+			<div class="py-0.5 flex w-full justify-between">
+				<div class="self-center text-xs font-medium">{$i18n.t('Playback Volume')}</div>
+
+				<div class="flex items-center justify-between">
+					<div class="flex-1">
+						<input
+							bind:value={playbackVolume}
+							id="steps-range"
+							type="range"
+							min="0"
+							max="1"
+							step="0.01"
+							class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						/>
+					</div>
+					<div class="bg-transparent text-center w-14 text-xs">
+						{playbackVolumePercentage}%
+					</div>
 				</div>
 			</div>
 		</div>

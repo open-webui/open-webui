@@ -129,6 +129,9 @@
 	let files = [];
 	let params = {};
 
+	// Audio (TTS) Params
+	let audioParams = {};
+
 	$: if (chatIdProp) {
 		(async () => {
 			console.log(chatIdProp);
@@ -1913,6 +1916,7 @@
 									bind:history
 									bind:autoScroll
 									bind:prompt
+									{audioParams}
 									{selectedModels}
 									{sendPrompt}
 									{showMessage}
@@ -1933,6 +1937,7 @@
 								{selectedModels}
 								bind:files
 								bind:prompt
+								{audioParams}
 								bind:autoScroll
 								bind:selectedToolIds
 								bind:webSearchEnabled
@@ -2031,6 +2036,7 @@
 					}
 					return a;
 				}, [])}
+				{audioParams}
 				{submitPrompt}
 				{stopResponse}
 				{showMessage}

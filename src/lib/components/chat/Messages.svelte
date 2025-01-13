@@ -24,6 +24,7 @@
 	export let prompt;
 	export let history = {};
 	export let selectedModels;
+	export let audioParams = {};
 
 	let messages = [];
 
@@ -392,6 +393,7 @@
 						<Message
 							{chatId}
 							bind:history
+							{audioParams}
 							messageId={message.id}
 							idx={messageIdx}
 							{user}

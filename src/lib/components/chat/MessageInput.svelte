@@ -38,6 +38,7 @@
 	import { generateAutoCompletion } from '$lib/apis';
 	import { error, text } from '@sveltejs/kit';
 	import Image from '../common/Image.svelte';
+	import AudioControls from './Controls/AudioControls.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -62,6 +63,8 @@
 
 	export let selectedToolIds = [];
 	export let webSearchEnabled = false;
+
+	export let audioParams = {};
 
 	$: onChange({
 		prompt,
@@ -1078,6 +1081,30 @@
 									{/if}
 
 									<div class="self-end mb-1.5 flex space-x-1 mr-1">
+										<AudioControls {audioParams}>
+											<button
+												id="audio-controls-button"
+												class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
+												type="button"
+												aria-label="Audio Controls"
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke-width="1.5"
+													stroke="currentColor"
+													class="size-5"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
+													/>
+												</svg>
+											</button>
+										</AudioControls>
+
 										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
 											<Tooltip content={$i18n.t('Record voice')}>
 												<button
