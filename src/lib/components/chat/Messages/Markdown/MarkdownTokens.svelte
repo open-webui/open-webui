@@ -34,16 +34,27 @@
 	const exportTableToCSVHandler = (token, tokenIdx = 0) => {
 		console.log('Exporting table to CSV');
 
+		// Extract header row text and escape for CSV.
+		const header = token.header.map((headerCell) => `"${headerCell.text.replace(/"/g, '""')}"`);
+
 		// Create an array for rows that will hold the mapped cell text.
 		const rows = token.rows.map((row) =>
-			row.map((cell) => cell.tokens.map((token) => token.text).join(''))
+			row.map((cell) => {
+				// Map tokens into a single text
+				const cellContent = cell.tokens.map((token) => token.text).join('');
+				// Escape double quotes and wrap the content in double quotes
+				return `"${cellContent.replace(/"/g, '""')}"`;
+			})
 		);
 
+		// Combine header and rows
+		const csvData = [header, ...rows];
+
 		// Join the rows using commas (,) as the separator and rows using newline (\n).
-		const csvContent = rows.map((row) => row.join(',')).join('\n');
+		const csvContent = csvData.map((row) => row.join(',')).join('\n');
 
 		// Log rows and CSV content to ensure everything is correct.
-		console.log(rows);
+		console.log(csvData);
 		console.log(csvContent);
 
 		// To handle Unicode characters, you need to prefix the data with a BOM:
@@ -100,7 +111,7 @@
 							{#each token.header as header, headerIdx}
 								<th
 									scope="col"
-									class="!px-3 !py-1.5 cursor-pointer select-none border border-gray-50 dark:border-gray-850"
+									class="!px-3 !py-1.5 cursor-pointer border border-gray-50 dark:border-gray-850"
 									style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}
 								>
 									<div class="flex flex-col gap-1.5 text-left">

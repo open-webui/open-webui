@@ -16,14 +16,16 @@ log.setLevel(SRC_LOG_LEVELS["COMFYUI"])
 default_headers = {"User-Agent": "Mozilla/5.0"}
 
 
-def queue_prompt(prompt, client_id, base_url):
+def queue_prompt(prompt, client_id, base_url, api_key):
     log.info("queue_prompt")
     p = {"prompt": prompt, "client_id": client_id}
     data = json.dumps(p).encode("utf-8")
     log.debug(f"queue_prompt data: {data}")
     try:
         req = urllib.request.Request(
-            f"{base_url}/prompt", data=data, headers=default_headers
+            f"{base_url}/prompt",
+            data=data,
+            headers={**default_headers, "Authorization": f"Bearer {api_key}"},
         )
         response = urllib.request.urlopen(req).read()
         return json.loads(response)
@@ -32,12 +34,13 @@ def queue_prompt(prompt, client_id, base_url):
         raise e
 
 
-def get_image(filename, subfolder, folder_type, base_url):
+def get_image(filename, subfolder, folder_type, base_url, api_key):
     log.info("get_image")
     data = {"filename": filename, "subfolder": subfolder, "type": folder_type}
     url_values = urllib.parse.urlencode(data)
     req = urllib.request.Request(
-        f"{base_url}/view?{url_values}", headers=default_headers
+        f"{base_url}/view?{url_values}",
+        headers={**default_headers, "Authorization": f"Bearer {api_key}"},
     )
     with urllib.request.urlopen(req) as response:
         return response.read()
@@ -50,18 +53,19 @@ def get_image_url(filename, subfolder, folder_type, base_url):
     return f"{base_url}/view?{url_values}"
 
 
-def get_history(prompt_id, base_url):
+def get_history(prompt_id, base_url, api_key):
     log.info("get_history")
 
     req = urllib.request.Request(
-        f"{base_url}/history/{prompt_id}", headers=default_headers
+        f"{base_url}/history/{prompt_id}",
+        headers={**default_headers, "Authorization": f"Bearer {api_key}"},
     )
     with urllib.request.urlopen(req) as response:
         return json.loads(response.read())
 
 
-def get_images(ws, prompt, client_id, base_url):
-    prompt_id = queue_prompt(prompt, client_id, base_url)["prompt_id"]
+def get_images(ws, prompt, client_id, base_url, api_key):
+    prompt_id = queue_prompt(prompt, client_id, base_url, api_key)["prompt_id"]
     output_images = []
     while True:
         out = ws.recv()
@@ -74,7 +78,7 @@ def get_images(ws, prompt, client_id, base_url):
         else:
             continue  # previews are binary data
 
-    history = get_history(prompt_id, base_url)[prompt_id]
+    history = get_history(prompt_id, base_url, api_key)[prompt_id]
     for o in history["outputs"]:
         for node_id in history["outputs"]:
             node_output = history["outputs"][node_id]
@@ -113,7 +117,7 @@ class ComfyUIGenerateImageForm(BaseModel):
 
 
 async def comfyui_generate_image(
-    model: str, payload: ComfyUIGenerateImageForm, client_id, base_url
+    model: str, payload: ComfyUIGenerateImageForm, client_id, base_url, api_key
 ):
     ws_url = base_url.replace("http://", "ws://").replace("https://", "wss://")
     workflow = json.loads(payload.workflow.workflow)
@@ -167,7 +171,8 @@ async def comfyui_generate_image(
 
     try:
         ws = websocket.WebSocket()
-        ws.connect(f"{ws_url}/ws?clientId={client_id}")
+        headers = {"Authorization": f"Bearer {api_key}"}
+        ws.connect(f"{ws_url}/ws?clientId={client_id}", header=headers)
         log.info("WebSocket connection established.")
     except Exception as e:
         log.exception(f"Failed to connect to WebSocket server: {e}")
@@ -176,7 +181,9 @@ async def comfyui_generate_image(
     try:
         log.info("Sending workflow to WebSocket server.")
         log.info(f"Workflow: {workflow}")
-        images = await asyncio.to_thread(get_images, ws, workflow, client_id, base_url)
+        images = await asyncio.to_thread(
+            get_images, ws, workflow, client_id, base_url, api_key
+        )
     except Exception as e:
         log.exception(f"Error while receiving images: {e}")
         images = None

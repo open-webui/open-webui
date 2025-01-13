@@ -168,6 +168,100 @@ class ChatTable:
         except Exception:
             return None
 
+    def update_chat_title_by_id(self, id: str, title: str) -> Optional[ChatModel]:
+        chat = self.get_chat_by_id(id)
+        if chat is None:
+            return None
+
+        chat = chat.chat
+        chat["title"] = title
+
+        return self.update_chat_by_id(id, chat)
+
+    def update_chat_tags_by_id(
+        self, id: str, tags: list[str], user
+    ) -> Optional[ChatModel]:
+        chat = self.get_chat_by_id(id)
+        if chat is None:
+            return None
+
+        self.delete_all_tags_by_id_and_user_id(id, user.id)
+
+        for tag in chat.meta.get("tags", []):
+            if self.count_chats_by_tag_name_and_user_id(tag, user.id) == 0:
+                Tags.delete_tag_by_name_and_user_id(tag, user.id)
+
+        for tag_name in tags:
+            if tag_name.lower() == "none":
+                continue
+
+            self.add_chat_tag_by_id_and_user_id_and_tag_name(id, user.id, tag_name)
+        return self.get_chat_by_id(id)
+
+    def get_chat_title_by_id(self, id: str) -> Optional[str]:
+        chat = self.get_chat_by_id(id)
+        if chat is None:
+            return None
+
+        return chat.chat.get("title", "New Chat")
+
+    def get_messages_by_chat_id(self, id: str) -> Optional[dict]:
+        chat = self.get_chat_by_id(id)
+        if chat is None:
+            return None
+
+        return chat.chat.get("history", {}).get("messages", {}) or {}
+
+    def get_message_by_id_and_message_id(
+        self, id: str, message_id: str
+    ) -> Optional[dict]:
+        chat = self.get_chat_by_id(id)
+        if chat is None:
+            return None
+
+        return chat.chat.get("history", {}).get("messages", {}).get(message_id, {})
+
+    def upsert_message_to_chat_by_id_and_message_id(
+        self, id: str, message_id: str, message: dict
+    ) -> Optional[ChatModel]:
+        chat = self.get_chat_by_id(id)
+        if chat is None:
+            return None
+
+        chat = chat.chat
+        history = chat.get("history", {})
+
+        if message_id in history.get("messages", {}):
+            history["messages"][message_id] = {
+                **history["messages"][message_id],
+                **message,
+            }
+        else:
+            history["messages"][message_id] = message
+
+        history["currentId"] = message_id
+
+        chat["history"] = history
+        return self.update_chat_by_id(id, chat)
+
+    def add_message_status_to_chat_by_id_and_message_id(
+        self, id: str, message_id: str, status: dict
+    ) -> Optional[ChatModel]:
+        chat = self.get_chat_by_id(id)
+        if chat is None:
+            return None
+
+        chat = chat.chat
+        history = chat.get("history", {})
+
+        if message_id in history.get("messages", {}):
+            status_history = history["messages"][message_id].get("statusHistory", [])
+            status_history.append(status)
+            history["messages"][message_id]["statusHistory"] = status_history
+
+        chat["history"] = history
+        return self.update_chat_by_id(id, chat)
+
     def insert_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
         with get_db() as db:
             # Get the existing chat to share
@@ -375,6 +469,8 @@ class ChatTable:
     def get_chat_by_share_id(self, id: str) -> Optional[ChatModel]:
         try:
             with get_db() as db:
+                # it is possible that the shared link was deleted. hence,
+                # we check if the chat is still shared by checkng if a chat with the share_id exists
                 chat = db.query(Chat).filter_by(share_id=id).first()
 
                 if chat:

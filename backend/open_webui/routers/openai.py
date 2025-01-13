@@ -533,6 +533,9 @@ async def generate_chat_completion(
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
 ):
+    if BYPASS_MODEL_ACCESS_CONTROL:
+        bypass_filter = True
+
     idx = 0
     payload = {**form_data}
     if "metadata" in payload:
@@ -545,6 +548,7 @@ async def generate_chat_completion(
     if model_info:
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
+            model_id = model_info.base_model_id
 
         params = model_info.params.model_dump()
         payload = apply_model_params_to_body_openai(params, payload)
@@ -604,14 +608,13 @@ async def generate_chat_completion(
     if is_o1:
         payload = openai_o1_handler(payload)
     elif "api.openai.com" not in url:
-        # Remove "max_tokens" from the payload for backward compatibility
-        if "max_tokens" in payload:
-            payload["max_completion_tokens"] = payload["max_tokens"]
-            del payload["max_tokens"]
+        # Remove "max_completion_tokens" from the payload for backward compatibility
+        if "max_completion_tokens" in payload:
+            payload["max_tokens"] = payload["max_completion_tokens"]
+            del payload["max_completion_tokens"]
 
-    # TODO: check if below is needed
-    # if "max_tokens" in payload and "max_completion_tokens" in payload:
-    #     del payload["max_tokens"]
+    if "max_tokens" in payload and "max_completion_tokens" in payload:
+        del payload["max_tokens"]
 
     # Convert the modified body back to JSON
     payload = json.dumps(payload)

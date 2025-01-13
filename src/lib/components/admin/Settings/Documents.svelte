@@ -56,6 +56,8 @@
 	let chunkOverlap = 0;
 	let pdfExtractImages = true;
 
+	let enableGoogleDriveIntegration = false;
+
 	let OpenAIUrl = '';
 	let OpenAIKey = '';
 
@@ -175,6 +177,7 @@
 		}
 		const res = await updateRAGConfig(localStorage.token, {
 			pdf_extract_images: pdfExtractImages,
+			enable_google_drive_integration: enableGoogleDriveIntegration,
 			file: {
 				max_size: fileMaxSize === '' ? null : fileMaxSize,
 				max_count: fileMaxCount === '' ? null : fileMaxCount
@@ -245,6 +248,8 @@
 
 			fileMaxSize = res?.file.max_size ?? '';
 			fileMaxCount = res?.file.max_count ?? '';
+
+			enableGoogleDriveIntegration = res.enable_google_drive_integration;
 		}
 	});
 </script>
@@ -586,6 +591,19 @@
 
 		<hr class=" dark:border-gray-850" />
 
+		<div class="text-sm font-medium mb-1">{$i18n.t('Google Drive')}</div>
+
+		<div class="">
+			<div class="flex justify-between items-center text-xs">
+				<div class="text-xs font-medium">{$i18n.t('Enable Google Drive')}</div>
+				<div>
+					<Switch bind:state={enableGoogleDriveIntegration} />
+				</div>
+			</div>
+		</div>
+
+		<hr class=" dark:border-gray-850" />
+
 		<div class=" ">
 			<div class=" text-sm font-medium mb-1">{$i18n.t('Query Params')}</div>
 
@@ -669,7 +687,9 @@
 
 			<div class=" flex gap-1.5">
 				<div class="  w-full justify-between">
-					<div class="self-center text-xs font-medium min-w-fit mb-1">{$i18n.t('Chunk Size')}</div>
+					<div class="self-center text-xs font-medium min-w-fit mb-1">
+						{$i18n.t('Chunk Size')}
+					</div>
 					<div class="self-center">
 						<input
 							class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"

@@ -56,6 +56,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
         },
         "comfyui": {
             "COMFYUI_BASE_URL": request.app.state.config.COMFYUI_BASE_URL,
+            "COMFYUI_API_KEY": request.app.state.config.COMFYUI_API_KEY,
             "COMFYUI_WORKFLOW": request.app.state.config.COMFYUI_WORKFLOW,
             "COMFYUI_WORKFLOW_NODES": request.app.state.config.COMFYUI_WORKFLOW_NODES,
         },
@@ -77,6 +78,7 @@ class Automatic1111ConfigForm(BaseModel):
 
 class ComfyUIConfigForm(BaseModel):
     COMFYUI_BASE_URL: str
+    COMFYUI_API_KEY: str
     COMFYUI_WORKFLOW: str
     COMFYUI_WORKFLOW_NODES: list[dict]
 
@@ -148,6 +150,7 @@ async def update_config(
         },
         "comfyui": {
             "COMFYUI_BASE_URL": request.app.state.config.COMFYUI_BASE_URL,
+            "COMFYUI_API_KEY": request.app.state.config.COMFYUI_API_KEY,
             "COMFYUI_WORKFLOW": request.app.state.config.COMFYUI_WORKFLOW,
             "COMFYUI_WORKFLOW_NODES": request.app.state.config.COMFYUI_WORKFLOW_NODES,
         },
@@ -197,7 +200,7 @@ def set_image_model(request: Request, model: str):
     log.info(f"Setting image model to {model}")
     request.app.state.config.IMAGE_GENERATION_MODEL = model
     if request.app.state.config.IMAGE_GENERATION_ENGINE in ["", "automatic1111"]:
-        api_auth = get_automatic1111_api_auth()
+        api_auth = get_automatic1111_api_auth(request)
         r = requests.get(
             url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options",
             headers={"authorization": api_auth},
@@ -233,7 +236,7 @@ def get_image_model(request):
         try:
             r = requests.get(
                 url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options",
-                headers={"authorization": get_automatic1111_api_auth()},
+                headers={"authorization": get_automatic1111_api_auth(request)},
             )
             options = r.json()
             return options["sd_model_checkpoint"]
@@ -298,8 +301,12 @@ def get_models(request: Request, user=Depends(get_verified_user)):
             ]
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == "comfyui":
             # TODO - get models from comfyui
+            headers = {
+                "Authorization": f"Bearer {request.app.state.config.COMFYUI_API_KEY}"
+            }
             r = requests.get(
-                url=f"{request.app.state.config.COMFYUI_BASE_URL}/object_info"
+                url=f"{request.app.state.config.COMFYUI_BASE_URL}/object_info",
+                headers=headers,
             )
             info = r.json()
 
@@ -347,7 +354,7 @@ def get_models(request: Request, user=Depends(get_verified_user)):
         ):
             r = requests.get(
                 url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/sd-models",
-                headers={"authorization": get_automatic1111_api_auth()},
+                headers={"authorization": get_automatic1111_api_auth(request)},
             )
             models = r.json()
             return list(
@@ -521,6 +528,7 @@ async def image_generations(
                 form_data,
                 user.id,
                 request.app.state.config.COMFYUI_BASE_URL,
+                request.app.state.config.COMFYUI_API_KEY,
             )
             log.debug(f"res: {res}")
 
@@ -570,7 +578,7 @@ async def image_generations(
                 requests.post,
                 url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/txt2img",
                 json=data,
-                headers={"authorization": get_automatic1111_api_auth()},
+                headers={"authorization": get_automatic1111_api_auth(request)},
             )
 
             res = r.json()

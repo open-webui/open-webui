@@ -84,7 +84,7 @@ async function* openAIStreamToIterator(
 
 			yield {
 				done: false,
-				value: parsedData.choices?.[0]?.delta?.content ?? '',
+				value: parsedData.choices?.[0]?.delta?.content ?? ''
 			};
 		} catch (e) {
 			console.error('Error extracting delta from SSE event:', e);
@@ -119,8 +119,6 @@ async function* streamLargeDeltasAsRandomChunks(
 			yield textStreamUpdate;
 			continue;
 		}
-
-
 
 		let content = textStreamUpdate.value;
 		if (content.length < 5) {

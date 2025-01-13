@@ -2,21 +2,36 @@ import time
 import logging
 import sys
 
+import asyncio
 from aiocache import cached
 from typing import Any, Optional
 import random
 import json
 import inspect
+from uuid import uuid4
+from concurrent.futures import ThreadPoolExecutor
+
 
 from fastapi import Request
+from fastapi import BackgroundTasks
+
 from starlette.responses import Response, StreamingResponse
 
 
+from open_webui.models.chats import Chats
+from open_webui.models.users import Users
 from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
+    get_active_status_by_user_id,
 )
-from open_webui.routers.tasks import generate_queries
+from open_webui.routers.tasks import (
+    generate_queries,
+    generate_title,
+    generate_chat_tags,
+)
+from open_webui.routers.retrieval import process_web_search, SearchForm
+from open_webui.utils.webhook import post_webhook
 
 
 from open_webui.models.users import UserModel
@@ -33,16 +48,25 @@ from open_webui.utils.task import (
     tools_function_calling_generation_template,
 )
 from open_webui.utils.misc import (
+    get_message_list,
     add_or_update_system_message,
     get_last_user_message,
+    get_last_assistant_message,
     prepend_to_first_user_message_content,
 )
 from open_webui.utils.tools import get_tools
 from open_webui.utils.plugin import load_function_module_by_id
 
 
+from open_webui.tasks import create_task
+
 from open_webui.config import DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
-from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
+from open_webui.env import (
+    SRC_LOG_LEVELS,
+    GLOBAL_LOG_LEVEL,
+    BYPASS_MODEL_ACCESS_CONTROL,
+    ENABLE_REALTIME_CHAT_SAVE,
+)
 from open_webui.constants import TASKS
 
 
@@ -312,6 +336,156 @@ async def chat_completion_tools_handler(
     return body, {"sources": sources}
 
 
+async def chat_web_search_handler(
+    request: Request, form_data: dict, extra_params: dict, user
+):
+    event_emitter = extra_params["__event_emitter__"]
+    await event_emitter(
+        {
+            "type": "status",
+            "data": {
+                "action": "web_search",
+                "description": "Generating search query",
+                "done": False,
+            },
+        }
+    )
+
+    messages = form_data["messages"]
+    user_message = get_last_user_message(messages)
+
+    queries = []
+    try:
+        res = await generate_queries(
+            request,
+            {
+                "model": form_data["model"],
+                "messages": messages,
+                "prompt": user_message,
+                "type": "web_search",
+            },
+            user,
+        )
+
+        response = res["choices"][0]["message"]["content"]
+
+        try:
+            bracket_start = response.find("{")
+            bracket_end = response.rfind("}") + 1
+
+            if bracket_start == -1 or bracket_end == -1:
+                raise Exception("No JSON object found in the response")
+
+            response = response[bracket_start:bracket_end]
+            queries = json.loads(response)
+            queries = queries.get("queries", [])
+        except Exception as e:
+            queries = [response]
+
+    except Exception as e:
+        log.exception(e)
+        queries = [user_message]
+
+    if len(queries) == 0:
+        await event_emitter(
+            {
+                "type": "status",
+                "data": {
+                    "action": "web_search",
+                    "description": "No search query generated",
+                    "done": True,
+                },
+            }
+        )
+        return
+
+    searchQuery = queries[0]
+
+    await event_emitter(
+        {
+            "type": "status",
+            "data": {
+                "action": "web_search",
+                "description": 'Searching "{{searchQuery}}"',
+                "query": searchQuery,
+                "done": False,
+            },
+        }
+    )
+
+    try:
+
+        # Offload process_web_search to a separate thread
+        loop = asyncio.get_running_loop()
+        with ThreadPoolExecutor() as executor:
+            results = await loop.run_in_executor(
+                executor,
+                lambda: process_web_search(
+                    request,
+                    SearchForm(
+                        **{
+                            "query": searchQuery,
+                        }
+                    ),
+                    user,
+                ),
+            )
+
+        if results:
+            await event_emitter(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "web_search",
+                        "description": "Searched {{count}} sites",
+                        "query": searchQuery,
+                        "urls": results["filenames"],
+                        "done": True,
+                    },
+                }
+            )
+
+            files = form_data.get("files", [])
+            files.append(
+                {
+                    "collection_name": results["collection_name"],
+                    "name": searchQuery,
+                    "type": "web_search_results",
+                    "urls": results["filenames"],
+                }
+            )
+            form_data["files"] = files
+        else:
+            await event_emitter(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "web_search",
+                        "description": "No search results found",
+                        "query": searchQuery,
+                        "done": True,
+                        "error": True,
+                    },
+                }
+            )
+    except Exception as e:
+        log.exception(e)
+        await event_emitter(
+            {
+                "type": "status",
+                "data": {
+                    "action": "web_search",
+                    "description": 'Error searching "{{searchQuery}}"',
+                    "query": searchQuery,
+                    "done": True,
+                    "error": True,
+                },
+            }
+        )
+
+    return form_data
+
+
 async def chat_completion_files_handler(
     request: Request, body: dict, user: UserModel
 ) -> tuple[dict, dict[str, list]]:
@@ -320,6 +494,7 @@ async def chat_completion_files_handler(
     if files := body.get("metadata", {}).get("files", None):
         try:
             queries_response = await generate_queries(
+                request,
                 {
                     "model": body["model"],
                     "messages": body["messages"],
@@ -362,19 +537,44 @@ async def chat_completion_files_handler(
     return body, {"sources": sources}
 
 
-async def process_chat_payload(request, form_data, user, model):
-    metadata = {
-        "chat_id": form_data.pop("chat_id", None),
-        "message_id": form_data.pop("id", None),
-        "session_id": form_data.pop("session_id", None),
-        "tool_ids": form_data.get("tool_ids", None),
-        "files": form_data.get("files", None),
-    }
-    form_data["metadata"] = metadata
+def apply_params_to_form_data(form_data, model):
+    params = form_data.pop("params", {})
+    if model.get("ollama"):
+        form_data["options"] = params
+
+        if "format" in params:
+            form_data["format"] = params["format"]
+
+        if "keep_alive" in params:
+            form_data["keep_alive"] = params["keep_alive"]
+    else:
+        if "seed" in params:
+            form_data["seed"] = params["seed"]
+
+        if "stop" in params:
+            form_data["stop"] = params["stop"]
+
+        if "temperature" in params:
+            form_data["temperature"] = params["temperature"]
+
+        if "top_p" in params:
+            form_data["top_p"] = params["top_p"]
+
+        if "frequency_penalty" in params:
+            form_data["frequency_penalty"] = params["frequency_penalty"]
+    return form_data
+
+
+async def process_chat_payload(request, form_data, metadata, user, model):
+    form_data = apply_params_to_form_data(form_data, model)
+    log.debug(f"form_data: {form_data}")
+
+    event_emitter = get_event_emitter(metadata)
+    event_call = get_event_call(metadata)
 
     extra_params = {
-        "__event_emitter__": get_event_emitter(metadata),
-        "__event_call__": get_event_call(metadata),
+        "__event_emitter__": event_emitter,
+        "__event_call__": event_call,
         "__user__": {
             "id": user.id,
             "email": user.email,
@@ -388,18 +588,70 @@ async def process_chat_payload(request, form_data, user, model):
     # Initialize events to store additional event to be sent to the client
     # Initialize contexts and citation
     models = request.app.state.MODELS
+
     events = []
     sources = []
+
+    user_message = get_last_user_message(form_data["messages"])
+    model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", False)
+
+    if model_knowledge:
+        await event_emitter(
+            {
+                "type": "status",
+                "data": {
+                    "action": "knowledge_search",
+                    "query": user_message,
+                    "done": False,
+                },
+            }
+        )
+
+        knowledge_files = []
+        for item in model_knowledge:
+            if item.get("collection_name"):
+                knowledge_files.append(
+                    {
+                        "id": item.get("collection_name"),
+                        "name": item.get("name"),
+                        "legacy": True,
+                    }
+                )
+            elif item.get("collection_names"):
+                knowledge_files.append(
+                    {
+                        "name": item.get("name"),
+                        "type": "collection",
+                        "collection_names": item.get("collection_names"),
+                        "legacy": True,
+                    }
+                )
+            else:
+                knowledge_files.append(item)
+
+        files = form_data.get("files", [])
+        files.extend(knowledge_files)
+        form_data["files"] = files
+
+    features = form_data.pop("features", None)
+    if features:
+        if "web_search" in features and features["web_search"]:
+            form_data = await chat_web_search_handler(
+                request, form_data, extra_params, user
+            )
 
     try:
         form_data, flags = await chat_completion_filter_functions_handler(
             request, form_data, model, extra_params
         )
     except Exception as e:
-        return Exception(f"Error: {e}")
+        raise Exception(f"Error: {e}")
 
     tool_ids = form_data.pop("tool_ids", None)
     files = form_data.pop("files", None)
+    # Remove files duplicates
+    if files:
+        files = list({json.dumps(f, sort_keys=True): f for f in files}.values())
 
     metadata = {
         **metadata,
@@ -478,31 +730,366 @@ async def process_chat_payload(request, form_data, user, model):
     if len(sources) > 0:
         events.append({"sources": sources})
 
+    if model_knowledge:
+        await event_emitter(
+            {
+                "type": "status",
+                "data": {
+                    "action": "knowledge_search",
+                    "query": user_message,
+                    "done": True,
+                    "hidden": True,
+                },
+            }
+        )
+
     return form_data, events
 
 
-async def process_chat_response(response, events):
+async def process_chat_response(
+    request, response, form_data, user, events, metadata, tasks
+):
+    async def background_tasks_handler():
+        message_map = Chats.get_messages_by_chat_id(metadata["chat_id"])
+        message = message_map.get(metadata["message_id"]) if message_map else None
+
+        if message:
+            messages = get_message_list(message_map, message.get("id"))
+
+            if tasks:
+                if TASKS.TITLE_GENERATION in tasks:
+                    if tasks[TASKS.TITLE_GENERATION]:
+                        res = await generate_title(
+                            request,
+                            {
+                                "model": message["model"],
+                                "messages": messages,
+                                "chat_id": metadata["chat_id"],
+                            },
+                            user,
+                        )
+
+                        if res and isinstance(res, dict):
+                            title = (
+                                res.get("choices", [])[0]
+                                .get("message", {})
+                                .get(
+                                    "content",
+                                    message.get("content", "New Chat"),
+                                )
+                            ).strip()
+
+                            if not title:
+                                title = messages[0].get("content", "New Chat")
+
+                            Chats.update_chat_title_by_id(metadata["chat_id"], title)
+
+                            await event_emitter(
+                                {
+                                    "type": "chat:title",
+                                    "data": title,
+                                }
+                            )
+                    elif len(messages) == 2:
+                        title = messages[0].get("content", "New Chat")
+
+                        Chats.update_chat_title_by_id(metadata["chat_id"], title)
+
+                        await event_emitter(
+                            {
+                                "type": "chat:title",
+                                "data": message.get("content", "New Chat"),
+                            }
+                        )
+
+                if TASKS.TAGS_GENERATION in tasks and tasks[TASKS.TAGS_GENERATION]:
+                    res = await generate_chat_tags(
+                        request,
+                        {
+                            "model": message["model"],
+                            "messages": messages,
+                            "chat_id": metadata["chat_id"],
+                        },
+                        user,
+                    )
+
+                    if res and isinstance(res, dict):
+                        tags_string = (
+                            res.get("choices", [])[0]
+                            .get("message", {})
+                            .get("content", "")
+                        )
+
+                        tags_string = tags_string[
+                            tags_string.find("{") : tags_string.rfind("}") + 1
+                        ]
+
+                        try:
+                            tags = json.loads(tags_string).get("tags", [])
+                            Chats.update_chat_tags_by_id(
+                                metadata["chat_id"], tags, user
+                            )
+
+                            await event_emitter(
+                                {
+                                    "type": "chat:tags",
+                                    "data": tags,
+                                }
+                            )
+                        except Exception as e:
+                            print(f"Error: {e}")
+
+    event_emitter = None
+    if (
+        "session_id" in metadata
+        and metadata["session_id"]
+        and "chat_id" in metadata
+        and metadata["chat_id"]
+        and "message_id" in metadata
+        and metadata["message_id"]
+    ):
+        event_emitter = get_event_emitter(metadata)
+
     if not isinstance(response, StreamingResponse):
+        if event_emitter:
+
+            if "selected_model_id" in response:
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    metadata["chat_id"],
+                    metadata["message_id"],
+                    {
+                        "selectedModelId": response["selected_model_id"],
+                    },
+                )
+
+            if response.get("choices", [])[0].get("message", {}).get("content"):
+                content = response["choices"][0]["message"]["content"]
+
+                if content:
+
+                    await event_emitter(
+                        {
+                            "type": "chat:completion",
+                            "data": response,
+                        }
+                    )
+
+                    title = Chats.get_chat_title_by_id(metadata["chat_id"])
+
+                    await event_emitter(
+                        {
+                            "type": "chat:completion",
+                            "data": {
+                                "done": True,
+                                "content": content,
+                                "title": title,
+                            },
+                        }
+                    )
+
+                    # Save message in the database
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
+                        {
+                            "content": content,
+                        },
+                    )
+
+                    # Send a webhook notification if the user is not active
+                    if get_active_status_by_user_id(user.id) is None:
+                        webhook_url = Users.get_user_webhook_url_by_id(user.id)
+                        if webhook_url:
+                            post_webhook(
+                                webhook_url,
+                                f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
+                                {
+                                    "action": "chat",
+                                    "message": content,
+                                    "title": title,
+                                    "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
+                                },
+                            )
+
+                    await background_tasks_handler()
+
+            return response
+        else:
+            return response
+
+    if not any(
+        content_type in response.headers["Content-Type"]
+        for content_type in ["text/event-stream", "application/x-ndjson"]
+    ):
         return response
 
-    content_type = response.headers["Content-Type"]
-    is_openai = "text/event-stream" in content_type
-    is_ollama = "application/x-ndjson" in content_type
+    if event_emitter:
 
-    if not is_openai and not is_ollama:
-        return response
+        task_id = str(uuid4())  # Create a unique task ID.
 
-    async def stream_wrapper(original_generator, events):
-        def wrap_item(item):
-            return f"data: {item}\n\n" if is_openai else f"{item}\n"
+        # Handle as a background task
+        async def post_response_handler(response, events):
+            message = Chats.get_message_by_id_and_message_id(
+                metadata["chat_id"], metadata["message_id"]
+            )
+            content = message.get("content", "") if message else ""
 
-        for event in events:
-            yield wrap_item(json.dumps(event))
+            try:
+                for event in events:
+                    await event_emitter(
+                        {
+                            "type": "chat:completion",
+                            "data": event,
+                        }
+                    )
 
-        async for data in original_generator:
-            yield data
+                    # Save message in the database
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
+                        {
+                            **event,
+                        },
+                    )
 
-    return StreamingResponse(
-        stream_wrapper(response.body_iterator, events),
-        headers=dict(response.headers),
-    )
+                async for line in response.body_iterator:
+                    line = line.decode("utf-8") if isinstance(line, bytes) else line
+                    data = line
+
+                    # Skip empty lines
+                    if not data.strip():
+                        continue
+
+                    # "data: " is the prefix for each event
+                    if not data.startswith("data: "):
+                        continue
+
+                    # Remove the prefix
+                    data = data[len("data: ") :]
+
+                    try:
+                        data = json.loads(data)
+
+                        if "selected_model_id" in data:
+                            Chats.upsert_message_to_chat_by_id_and_message_id(
+                                metadata["chat_id"],
+                                metadata["message_id"],
+                                {
+                                    "selectedModelId": data["selected_model_id"],
+                                },
+                            )
+
+                        else:
+                            value = (
+                                data.get("choices", [])[0]
+                                .get("delta", {})
+                                .get("content")
+                            )
+
+                            if value:
+                                content = f"{content}{value}"
+
+                                if ENABLE_REALTIME_CHAT_SAVE:
+                                    # Save message in the database
+                                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                                        metadata["chat_id"],
+                                        metadata["message_id"],
+                                        {
+                                            "content": content,
+                                        },
+                                    )
+                                else:
+                                    data = {
+                                        "content": content,
+                                    }
+
+                        await event_emitter(
+                            {
+                                "type": "chat:completion",
+                                "data": data,
+                            }
+                        )
+
+                    except Exception as e:
+                        done = "data: [DONE]" in line
+
+                        if done:
+                            pass
+                        else:
+                            continue
+
+                title = Chats.get_chat_title_by_id(metadata["chat_id"])
+                data = {"done": True, "content": content, "title": title}
+
+                if not ENABLE_REALTIME_CHAT_SAVE:
+                    # Save message in the database
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
+                        {
+                            "content": content,
+                        },
+                    )
+
+                # Send a webhook notification if the user is not active
+                if get_active_status_by_user_id(user.id) is None:
+                    webhook_url = Users.get_user_webhook_url_by_id(user.id)
+                    if webhook_url:
+                        post_webhook(
+                            webhook_url,
+                            f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
+                            {
+                                "action": "chat",
+                                "message": content,
+                                "title": title,
+                                "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
+                            },
+                        )
+
+                await event_emitter(
+                    {
+                        "type": "chat:completion",
+                        "data": data,
+                    }
+                )
+
+                await background_tasks_handler()
+            except asyncio.CancelledError:
+                print("Task was cancelled!")
+                await event_emitter({"type": "task-cancelled"})
+
+                if not ENABLE_REALTIME_CHAT_SAVE:
+                    # Save message in the database
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
+                        {
+                            "content": content,
+                        },
+                    )
+
+            if response.background is not None:
+                await response.background()
+
+        # background_tasks.add_task(post_response_handler, response, events)
+        task_id, _ = create_task(post_response_handler(response, events))
+        return {"status": True, "task_id": task_id}
+
+    else:
+
+        # Fallback to the original response
+        async def stream_wrapper(original_generator, events):
+            def wrap_item(item):
+                return f"data: {item}\n\n"
+
+            for event in events:
+                yield wrap_item(json.dumps(event))
+
+            async for data in original_generator:
+                yield data
+
+        return StreamingResponse(
+            stream_wrapper(response.body_iterator, events),
+            headers=dict(response.headers),
+            background=response.background,
+        )

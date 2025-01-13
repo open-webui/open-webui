@@ -21,7 +21,7 @@ from open_webui.env import (
     WEBUI_NAME,
     log,
     DATABASE_URL,
-    OFFLINE_MODE
+    OFFLINE_MODE,
 )
 from pydantic import BaseModel
 from sqlalchemy import JSON, Column, DateTime, Integer, func
@@ -272,6 +272,18 @@ ENABLE_API_KEY = PersistentConfig(
     os.environ.get("ENABLE_API_KEY", "True").lower() == "true",
 )
 
+ENABLE_API_KEY_ENDPOINT_RESTRICTIONS = PersistentConfig(
+    "ENABLE_API_KEY_ENDPOINT_RESTRICTIONS",
+    "auth.api_key.endpoint_restrictions",
+    os.environ.get("ENABLE_API_KEY_ENDPOINT_RESTRICTIONS", "False").lower() == "true",
+)
+
+API_KEY_ALLOWED_ENDPOINTS = PersistentConfig(
+    "API_KEY_ALLOWED_ENDPOINTS",
+    "auth.api_key.allowed_endpoints",
+    os.environ.get("API_KEY_ALLOWED_ENDPOINTS", ""),
+)
+
 
 JWT_EXPIRES_IN = PersistentConfig(
     "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "-1")
@@ -306,6 +318,7 @@ GOOGLE_CLIENT_SECRET = PersistentConfig(
     "oauth.google.client_secret",
     os.environ.get("GOOGLE_CLIENT_SECRET", ""),
 )
+
 
 GOOGLE_OAUTH_SCOPE = PersistentConfig(
     "GOOGLE_OAUTH_SCOPE",
@@ -403,10 +416,22 @@ OAUTH_EMAIL_CLAIM = PersistentConfig(
     os.environ.get("OAUTH_EMAIL_CLAIM", "email"),
 )
 
+OAUTH_GROUPS_CLAIM = PersistentConfig(
+    "OAUTH_GROUPS_CLAIM",
+    "oauth.oidc.group_claim",
+    os.environ.get("OAUTH_GROUP_CLAIM", "groups"),
+)
+
 ENABLE_OAUTH_ROLE_MANAGEMENT = PersistentConfig(
     "ENABLE_OAUTH_ROLE_MANAGEMENT",
     "oauth.enable_role_mapping",
     os.environ.get("ENABLE_OAUTH_ROLE_MANAGEMENT", "False").lower() == "true",
+)
+
+ENABLE_OAUTH_GROUP_MANAGEMENT = PersistentConfig(
+    "ENABLE_OAUTH_GROUP_MANAGEMENT",
+    "oauth.enable_group_mapping",
+    os.environ.get("ENABLE_OAUTH_GROUP_MANAGEMENT", "False").lower() == "true",
 )
 
 OAUTH_ROLES_CLAIM = PersistentConfig(
@@ -696,6 +721,12 @@ OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 # WEBUI
 ####################################
 
+
+WEBUI_URL = PersistentConfig(
+    "WEBUI_URL", "webui.url", os.environ.get("WEBUI_URL", "http://localhost:3000")
+)
+
+
 ENABLE_SIGNUP = PersistentConfig(
     "ENABLE_SIGNUP",
     "ui.enable_signup",
@@ -821,6 +852,12 @@ USER_PERMISSIONS = PersistentConfig(
             "temporary": USER_PERMISSIONS_CHAT_TEMPORARY,
         },
     },
+)
+
+ENABLE_CHANNELS = PersistentConfig(
+    "ENABLE_CHANNELS",
+    "channels.enable",
+    os.environ.get("ENABLE_CHANNELS", "False").lower() == "true",
 )
 
 
@@ -1174,10 +1211,33 @@ if VECTOR_DB == "pgvector" and not PGVECTOR_DB_URL.startswith("postgres"):
     raise ValueError(
         "Pgvector requires setting PGVECTOR_DB_URL or using Postgres with vector extension as the primary database."
     )
+PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
+    os.environ.get("PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH", "1536")
+)
 
 ####################################
 # Information Retrieval (RAG)
 ####################################
+
+
+# If configured, Google Drive will be available as an upload option.
+ENABLE_GOOGLE_DRIVE_INTEGRATION = PersistentConfig(
+    "ENABLE_GOOGLE_DRIVE_INTEGRATION",
+    "google_drive.enable",
+    os.getenv("ENABLE_GOOGLE_DRIVE_INTEGRATION", "False").lower() == "true",
+)
+
+GOOGLE_DRIVE_CLIENT_ID = PersistentConfig(
+    "GOOGLE_DRIVE_CLIENT_ID",
+    "google_drive.client_id",
+    os.environ.get("GOOGLE_DRIVE_CLIENT_ID", ""),
+)
+
+GOOGLE_DRIVE_API_KEY = PersistentConfig(
+    "GOOGLE_DRIVE_API_KEY",
+    "google_drive.api_key",
+    os.environ.get("GOOGLE_DRIVE_API_KEY", ""),
+)
 
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = PersistentConfig(
@@ -1253,7 +1313,8 @@ RAG_EMBEDDING_MODEL = PersistentConfig(
 log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL.value}")
 
 RAG_EMBEDDING_MODEL_AUTO_UPDATE = (
-    not OFFLINE_MODE and os.environ.get("RAG_EMBEDDING_MODEL_AUTO_UPDATE", "True").lower() == "true"
+    not OFFLINE_MODE
+    and os.environ.get("RAG_EMBEDDING_MODEL_AUTO_UPDATE", "True").lower() == "true"
 )
 
 RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
@@ -1278,7 +1339,8 @@ if RAG_RERANKING_MODEL.value != "":
     log.info(f"Reranking model set: {RAG_RERANKING_MODEL.value}")
 
 RAG_RERANKING_MODEL_AUTO_UPDATE = (
-    not OFFLINE_MODE and os.environ.get("RAG_RERANKING_MODEL_AUTO_UPDATE", "True").lower() == "true"
+    not OFFLINE_MODE
+    and os.environ.get("RAG_RERANKING_MODEL_AUTO_UPDATE", "True").lower() == "true"
 )
 
 RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
@@ -1411,6 +1473,7 @@ RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
         # "wikidata.org",
     ],
 )
+
 
 SEARXNG_QUERY_URL = PersistentConfig(
     "SEARXNG_QUERY_URL",
@@ -1587,6 +1650,12 @@ COMFYUI_BASE_URL = PersistentConfig(
     os.getenv("COMFYUI_BASE_URL", ""),
 )
 
+COMFYUI_API_KEY = PersistentConfig(
+    "COMFYUI_API_KEY",
+    "image_generation.comfyui.api_key",
+    os.getenv("COMFYUI_API_KEY", ""),
+)
+
 COMFYUI_DEFAULT_WORKFLOW = """
 {
   "3": {
@@ -1748,7 +1817,8 @@ WHISPER_MODEL = PersistentConfig(
 
 WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models")
 WHISPER_MODEL_AUTO_UPDATE = (
-    not OFFLINE_MODE and os.environ.get("WHISPER_MODEL_AUTO_UPDATE", "").lower() == "true"
+    not OFFLINE_MODE
+    and os.environ.get("WHISPER_MODEL_AUTO_UPDATE", "").lower() == "true"
 )
 
 

@@ -37,7 +37,6 @@
 
 	const confirmHandler = async () => {
 		show = false;
-
 		await onConfirm();
 		dispatch('confirm', inputValue);
 	};
@@ -47,11 +46,15 @@
 	});
 
 	$: if (mounted) {
-		if (show) {
+		if (show && modalElement) {
+			document.body.appendChild(modalElement);
+
 			window.addEventListener('keydown', handleKeyDown);
 			document.body.style.overflow = 'hidden';
-		} else {
+		} else if (modalElement) {
 			window.removeEventListener('keydown', handleKeyDown);
+			document.body.removeChild(modalElement);
+
 			document.body.style.overflow = 'unset';
 		}
 	}
@@ -62,7 +65,7 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		bind:this={modalElement}
-		class=" fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full h-screen max-h-[100dvh] flex justify-center z-[99999] overflow-hidden overscroll-contain"
+		class=" fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full h-screen max-h-[100dvh] flex justify-center z-[99999999] overflow-hidden overscroll-contain"
 		in:fade={{ duration: 10 }}
 		on:mousedown={() => {
 			show = false;

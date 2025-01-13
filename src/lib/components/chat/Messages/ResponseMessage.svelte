@@ -118,6 +118,8 @@
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
 
+	export let addMessages: Function;
+
 	export let isLastMessage = true;
 	export let readOnly = false;
 
@@ -487,11 +489,15 @@
 
 		<div class="flex-auto w-0 pl-1">
 			<Name>
-				{model?.name ?? message.model}
+				<Tooltip content={model?.name ?? message.model} placement="top-start">
+					<span class="line-clamp-1">
+						{model?.name ?? message.model}
+					</span>
+				</Tooltip>
 
 				{#if message.timestamp}
 					<span
-						class=" self-center invisible group-hover:visible text-gray-400 text-xs font-medium uppercase ml-0.5 -mt-0.5"
+						class=" self-center shrink-0 translate-y-0.5 invisible group-hover:visible text-gray-400 text-xs font-medium uppercase ml-0.5 -mt-0.5"
 					>
 						{dayjs(message.timestamp * 1000).format($i18n.t('h:mm a'))}
 					</span>
@@ -517,37 +523,76 @@
 							{@const status = (
 								message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]
 							).at(-1)}
-							<div class="status-description flex items-center gap-2 py-0.5">
-								{#if status?.done === false}
-									<div class="">
-										<Spinner className="size-4" />
-									</div>
-								{/if}
+							{#if !status?.hidden}
+								<div class="status-description flex items-center gap-2 py-0.5">
+									{#if status?.done === false}
+										<div class="">
+											<Spinner className="size-4" />
+										</div>
+									{/if}
 
-								{#if status?.action === 'web_search' && status?.urls}
-									<WebSearchResults {status}>
+									{#if status?.action === 'web_search' && status?.urls}
+										<WebSearchResults {status}>
+											<div class="flex flex-col justify-center -space-y-0.5">
+												<div
+													class="{status?.done === false
+														? 'shimmer'
+														: ''} text-base line-clamp-1 text-wrap"
+												>
+													<!-- $i18n.t("Generating search query") -->
+													<!-- $i18n.t("No search query generated") -->
+
+													<!-- $i18n.t('Searched {{count}} sites') -->
+													{#if status?.description.includes('{{count}}')}
+														{$i18n.t(status?.description, {
+															count: status?.urls.length
+														})}
+													{:else if status?.description === 'No search query generated'}
+														{$i18n.t('No search query generated')}
+													{:else if status?.description === 'Generating search query'}
+														{$i18n.t('Generating search query')}
+													{:else}
+														{status?.description}
+													{/if}
+												</div>
+											</div>
+										</WebSearchResults>
+									{:else if status?.action === 'knowledge_search'}
 										<div class="flex flex-col justify-center -space-y-0.5">
 											<div
 												class="{status?.done === false
 													? 'shimmer'
-													: ''} text-base line-clamp-1 text-wrap"
+													: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
 											>
-												{status?.description}
+												{$i18n.t(`Searching Knowledge for "{{searchQuery}}"`, {
+													searchQuery: status.query
+												})}
 											</div>
 										</div>
-									</WebSearchResults>
-								{:else}
-									<div class="flex flex-col justify-center -space-y-0.5">
-										<div
-											class="{status?.done === false
-												? 'shimmer'
-												: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
-										>
-											{status?.description}
+									{:else}
+										<div class="flex flex-col justify-center -space-y-0.5">
+											<div
+												class="{status?.done === false
+													? 'shimmer'
+													: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
+											>
+												<!-- $i18n.t(`Searching "{{searchQuery}}"`) -->
+												{#if status?.description.includes('{{searchQuery}}')}
+													{$i18n.t(status?.description, {
+														searchQuery: status?.query
+													})}
+												{:else if status?.description === 'No search query generated'}
+													{$i18n.t('No search query generated')}
+												{:else if status?.description === 'Generating search query'}
+													{$i18n.t('Generating search query')}
+												{:else}
+													{status?.description}
+												{/if}
+											</div>
 										</div>
-									</div>
-								{/if}
-							</div>
+									{/if}
+								</div>
+							{/if}
 						{/if}
 
 						{#if edit === true}
@@ -620,6 +665,7 @@
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 									<ContentRenderer
 										id={message.id}
+										{history}
 										content={message.content}
 										sources={message.sources}
 										floatingButtons={message?.done}
@@ -632,6 +678,9 @@
 											if (sourceButton) {
 												sourceButton.click();
 											}
+										}}
+										onAddMessages={({ modelId, parentId, messages }) => {
+											addMessages({ modelId, parentId, messages });
 										}}
 										on:update={(e) => {
 											const { raw, oldContent, newContent } = e.detail;

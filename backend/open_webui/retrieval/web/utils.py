@@ -82,15 +82,15 @@ class SafeWebBaseLoader(WebBaseLoader):
 
 
 def get_web_loader(
-    url: Union[str, Sequence[str]],
+    urls: Union[str, Sequence[str]],
     verify_ssl: bool = True,
     requests_per_second: int = 2,
 ):
     # Check if the URL is valid
-    if not validate_url(url):
+    if not validate_url(urls):
         raise ValueError(ERROR_MESSAGES.INVALID_URL)
     return SafeWebBaseLoader(
-        url,
+        urls,
         verify_ssl=verify_ssl,
         requests_per_second=requests_per_second,
         continue_on_failure=True,

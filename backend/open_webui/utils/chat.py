@@ -89,7 +89,7 @@ async def generate_chat_completion(
         if model_ids and filter_mode == "exclude":
             model_ids = [
                 model["id"]
-                for model in await get_all_models(request)
+                for model in list(request.app.state.MODELS.values())
                 if model.get("owned_by") != "arena" and model["id"] not in model_ids
             ]
 
@@ -99,7 +99,7 @@ async def generate_chat_completion(
         else:
             model_ids = [
                 model["id"]
-                for model in await get_all_models(request)
+                for model in list(request.app.state.MODELS.values())
                 if model.get("owned_by") != "arena"
             ]
             selected_model_id = random.choice(model_ids)
@@ -114,21 +114,27 @@ async def generate_chat_completion(
                     yield chunk
 
             response = await generate_chat_completion(
-                form_data, user, bypass_filter=True
+                request, form_data, user, bypass_filter=True
             )
             return StreamingResponse(
-                stream_wrapper(response.body_iterator), media_type="text/event-stream"
+                stream_wrapper(response.body_iterator),
+                media_type="text/event-stream",
+                background=response.background,
             )
         else:
             return {
-                **(await generate_chat_completion(form_data, user, bypass_filter=True)),
+                **(
+                    await generate_chat_completion(
+                        request, form_data, user, bypass_filter=True
+                    )
+                ),
                 "selected_model_id": selected_model_id,
             }
 
     if model.get("pipe"):
         # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter
         return await generate_function_chat_completion(
-            form_data, user=user, models=models
+            request, form_data, user=user, models=models
         )
     if model["owned_by"] == "ollama":
         # Using /ollama/api/chat endpoint
@@ -141,6 +147,7 @@ async def generate_chat_completion(
             return StreamingResponse(
                 convert_streaming_response_ollama_to_openai(response),
                 headers=dict(response.headers),
+                background=response.background,
             )
         else:
             return convert_response_ollama_to_openai(response)
@@ -150,8 +157,12 @@ async def generate_chat_completion(
         )
 
 
+chat_completion = generate_chat_completion
+
+
 async def chat_completed(request: Request, form_data: dict, user: Any):
-    await get_all_models(request)
+    if not request.app.state.MODELS:
+        await get_all_models(request)
     models = request.app.state.MODELS
 
     data = form_data
@@ -171,6 +182,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
             "chat_id": data["chat_id"],
             "message_id": data["id"],
             "session_id": data["session_id"],
+            "user_id": user.id,
         }
     )
 
@@ -179,6 +191,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
             "chat_id": data["chat_id"],
             "message_id": data["id"],
             "session_id": data["session_id"],
+            "user_id": user.id,
         }
     )
 
@@ -286,7 +299,8 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
     if not action:
         raise Exception(f"Action not found: {action_id}")
 
-    await get_all_models(request)
+    if not request.app.state.MODELS:
+        await get_all_models(request)
     models = request.app.state.MODELS
 
     data = form_data
@@ -301,6 +315,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
             "chat_id": data["chat_id"],
             "message_id": data["id"],
             "session_id": data["session_id"],
+            "user_id": user.id,
         }
     )
     __event_call__ = get_event_call(
@@ -308,6 +323,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
             "chat_id": data["chat_id"],
             "message_id": data["id"],
             "session_id": data["session_id"],
+            "user_id": user.id,
         }
     )
 

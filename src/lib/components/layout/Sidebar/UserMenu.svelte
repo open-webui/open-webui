@@ -5,7 +5,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { goto } from '$app/navigation';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
-	import { showSettings, activeUserCount, USAGE_POOL, mobile, showSidebar } from '$lib/stores';
+	import { showSettings, activeUserIds, USAGE_POOL, mobile, showSidebar } from '$lib/stores';
 	import { fade, slide } from 'svelte/transition';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { userSignOut } from '$lib/apis/auths';
@@ -184,7 +184,7 @@
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
 			</button>
 
-			{#if $activeUserCount}
+			{#if $activeUserIds?.length > 0}
 				<hr class=" border-gray-50 dark:border-gray-850 my-1 p-0" />
 
 				<Tooltip
@@ -207,7 +207,7 @@
 								{$i18n.t('Active Users')}:
 							</span>
 							<span class=" font-semibold">
-								{$activeUserCount}
+								{$activeUserIds?.length}
 							</span>
 						</div>
 					</div>

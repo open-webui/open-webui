@@ -154,8 +154,15 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     )
     ollama_payload["stream"] = openai_payload.get("stream", False)
 
+    if "format" in openai_payload:
+        ollama_payload["format"] = openai_payload["format"]
+
     # If there are advanced parameters in the payload, format them in Ollama's options field
     ollama_options = {}
+
+    if openai_payload.get("options"):
+        ollama_payload["options"] = openai_payload["options"]
+        ollama_options = openai_payload["options"]
 
     # Handle parameters which map directly
     for param in ["temperature", "top_p", "seed"]:

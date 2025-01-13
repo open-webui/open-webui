@@ -7,6 +7,34 @@ from pathlib import Path
 from typing import Callable, Optional
 
 
+def get_message_list(messages, message_id):
+    """
+    Reconstructs a list of messages in order up to the specified message_id.
+
+    :param message_id: ID of the message to reconstruct the chain
+    :param messages: Message history dict containing all messages
+    :return: List of ordered messages starting from the root to the given message
+    """
+
+    # Find the message by its id
+    current_message = messages.get(message_id)
+
+    if not current_message:
+        return f"Message ID {message_id} not found in the history."
+
+    # Reconstruct the chain by following the parentId links
+    message_list = []
+
+    while current_message:
+        message_list.insert(
+            0, current_message
+        )  # Insert the message at the beginning of the list
+        parent_id = current_message["parentId"]
+        current_message = messages.get(parent_id) if parent_id else None
+
+    return message_list
+
+
 def get_messages_content(messages: list[dict]) -> str:
     return "\n".join(
         [
@@ -38,6 +66,13 @@ def get_last_user_message(messages: list[dict]) -> Optional[str]:
     if message is None:
         return None
     return get_content_from_message(message)
+
+
+def get_last_assistant_message_item(messages: list[dict]) -> Optional[dict]:
+    for message in reversed(messages):
+        if message["role"] == "assistant":
+            return message
+    return None
 
 
 def get_last_assistant_message(messages: list[dict]) -> Optional[str]:

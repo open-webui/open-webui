@@ -70,6 +70,13 @@ class UserResponse(BaseModel):
     profile_image_url: str
 
 
+class UserNameResponse(BaseModel):
+    id: str
+    name: str
+    role: str
+    profile_image_url: str
+
+
 class UserRoleUpdateForm(BaseModel):
     id: str
     role: str
@@ -147,13 +154,25 @@ class UsersTable:
         except Exception:
             return None
 
-    def get_users(self, skip: int = 0, limit: int = 50) -> list[UserModel]:
+    def get_users(
+        self, skip: Optional[int] = None, limit: Optional[int] = None
+    ) -> list[UserModel]:
         with get_db() as db:
-            users = (
-                db.query(User)
-                # .offset(skip).limit(limit)
-                .all()
-            )
+
+            query = db.query(User).order_by(User.created_at.desc())
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
+            users = query.all()
+
+            return [UserModel.model_validate(user) for user in users]
+
+    def get_users_by_user_ids(self, user_ids: list[str]) -> list[UserModel]:
+        with get_db() as db:
+            users = db.query(User).filter(User.id.in_(user_ids)).all()
             return [UserModel.model_validate(user) for user in users]
 
     def get_num_users(self) -> Optional[int]:
@@ -165,6 +184,22 @@ class UsersTable:
             with get_db() as db:
                 user = db.query(User).order_by(User.created_at).first()
                 return UserModel.model_validate(user)
+        except Exception:
+            return None
+
+    def get_user_webhook_url_by_id(self, id: str) -> Optional[str]:
+        try:
+            with get_db() as db:
+                user = db.query(User).filter_by(id=id).first()
+
+                if user.settings is None:
+                    return None
+                else:
+                    return (
+                        user.settings.get("ui", {})
+                        .get("notifications", {})
+                        .get("webhook_url", None)
+                    )
         except Exception:
             return None
 
