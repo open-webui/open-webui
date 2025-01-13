@@ -13,7 +13,8 @@
 		showBottomArtifacts,
 		showLeftArtifacts,
 		leftHistory,
-		bottomHistory
+		bottomHistory,
+		isFinishGenRes
 	} from '$lib/stores';
 	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
 	import Message from './Message.svelte';
@@ -137,6 +138,19 @@
 			document.removeEventListener('keydown', keydownHandler);
 		}
 	});
+
+	$: {
+		if (!$isFinishGenRes) {
+			bottomHistory.set({
+				currentId: '',
+				messages: {}
+			});
+			leftHistory.set({
+				currentId: '',
+				messages: {}
+			});
+		}
+	}
 </script>
 
 <div bind:this={contentContainerElement}>
