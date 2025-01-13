@@ -9,7 +9,17 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, models, settings, user, isFinishGenRes } from '$lib/stores';
+	import {
+		config,
+		models,
+		settings,
+		user,
+		isFinishGenRes,
+		showBottomArtifacts,
+		showLeftArtifacts,
+		showArtifacts,
+		showControls
+	} from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -474,6 +484,10 @@
 		isFinishGenRes.set(true);
 	} else {
 		isFinishGenRes.set(false);
+		showBottomArtifacts.set(false);
+		showLeftArtifacts.set(false);
+		showArtifacts.set(false);
+		showControls.set(false);
 	}
 </script>
 
