@@ -266,7 +266,7 @@
 						threadId = null;
 					}}
 				>
-					<div class=" {threadId !== null ? ' h-screen  w-screen' : 'px-6 py-4'} h-full">
+					<div class=" {threadId !== null ? ' h-screen  w-full' : 'px-6 py-4'} h-full">
 						<Thread
 							{threadId}
 							{channel}
