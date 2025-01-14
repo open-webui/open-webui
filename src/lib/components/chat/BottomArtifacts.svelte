@@ -194,7 +194,7 @@
 <div
 	id="bottom-artifact"
 	class="absolute bg-gray-50 dark:bg-gray-850 z-50 w-full max-w-full flex flex-col rounded-md shadow-lg"
-	style="bottom:5px;left:5px;right:15px;max-height:{maxHeight}px;overflow-y:auto;padding: 6px;transition: all 0.3s ease-in-out;"
+	style="bottom:5px;left:5px;right:15px;max-height:380px;overflow-y:auto;padding: 6px;transition: all 0.3s ease-in-out;"
 >
 	<div class="relative flex flex-col" style="">
 		<div class="w-full h-full flex-1 relative">
