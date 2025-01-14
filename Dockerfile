@@ -1,4 +1,3 @@
-# Testing an Action run
 # syntax=docker/dockerfile:1
 # Initialize device type args
 # use build args in the docker build commmand with --build-arg="BUILDARG=true"
