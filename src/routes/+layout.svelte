@@ -153,6 +153,10 @@
 	};
 
 	const channelEventHandler = async (event) => {
+		if (event.data?.type === 'typing') {
+			return;
+		}
+
 		// check url path
 		const channel = $page.url.pathname.includes(`/channels/${event.channel_id}`);
 
@@ -359,7 +363,7 @@
 		<div class="flex flex-row h-screen">
 			<AppControls />
 
-			<div class="w-full flex-1">
+			<div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
 				<slot />
 			</div>
 		</div>
