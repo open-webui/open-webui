@@ -30,7 +30,7 @@
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''}"
 	>
-		<div class=" px-2.5 py-1 backdrop-blur-xl">
+		<nav class="   px-2.5 pt-1 backdrop-blur-xl drag-region">
 			<div class=" flex items-center gap-1">
 				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
 					<button
@@ -81,7 +81,7 @@
 					</div>
 				</div>
 			</div>
-		</div>
+		</nav>
 
 		<div class=" pb-1 px-[16px] flex-1 max-h-full overflow-y-auto">
 			<slot />
