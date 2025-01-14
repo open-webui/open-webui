@@ -1193,6 +1193,7 @@ CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 # Milvus
 
 MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
+MILVUS_DB = os.environ.get("MILVUS_DB", "default")
 
 # Qdrant
 QDRANT_URI = os.environ.get("QDRANT_URI", None)
