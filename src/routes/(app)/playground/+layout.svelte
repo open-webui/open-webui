@@ -16,13 +16,13 @@
 </svelte:head>
 
 <div
-	class=" flex flex-col w-full h-screen max-h-[100dvh] {$showSidebar
+	class=" flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-300 ease-in-out {$showSidebar
 		? 'md:max-w-[calc(100%-260px)]'
-		: ''}"
+		: ''} max-w-full"
 >
 	<nav class="   px-2.5 pt-1 backdrop-blur-xl w-full drag-region">
 		<div class=" flex items-center">
-			<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
+			<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
 				<button
 					id="sidebar-toggle-button"
 					class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
