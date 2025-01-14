@@ -189,10 +189,10 @@ docker run -d -p 3000:8080 -v open-webui:/app/backend/data --name open-webui --a
 
 ### Offline Mode
 
-If you are running Open WebUI in an offline environment, you can set the `HF_HUB_OFFLINE` environment variable to `1` to prevent attempts to download models from the internet.
+If you are running Open WebUI in an offline environment, you can set the `OFFLINE_MODE` environment variable to `True` to prevent attempts to download models from the internet.
 
 ```bash
-export HF_HUB_OFFLINE=1
+export OFFLINE_MODE=True
 ```
 
 ## What's Next? 🌟
