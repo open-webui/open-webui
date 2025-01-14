@@ -5,7 +5,7 @@
 	let selected = 'home';
 </script>
 
-<div class="min-w-[4.5rem] bg-black flex gap-2.5 flex-col pt-10">
+<div class="min-w-[4.5rem] bg-gray-50 dark:bg-gray-950 flex gap-2.5 flex-col pt-10">
 	<div class="flex justify-center relative">
 		{#if selected === 'home'}
 			<div class="absolute top-0 left-0 flex h-full">
@@ -15,7 +15,9 @@
 
 		<Tooltip content="Home" placement="right">
 			<button
-				class=" cursor-pointer bg-gray-850 {selected === 'home' ? 'rounded-2xl' : 'rounded-full'}"
+				class=" cursor-pointer bg-gray-100 dark:bg-gray-850 {selected === 'home'
+					? 'rounded-2xl'
+					: 'rounded-full'}"
 				on:click={() => {
 					selected = 'home';
 				}}
@@ -30,7 +32,7 @@
 		</Tooltip>
 	</div>
 
-	<div class="border-t border-gray-900 mx-3"></div>
+	<div class="border-t border-gray-50 dark:border-gray-900 mx-3"></div>
 
 	<div class="flex justify-center relative group">
 		{#if selected === ''}
