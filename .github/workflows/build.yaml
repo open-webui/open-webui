@@ -20,11 +20,6 @@ env:
 jobs:
   build_image:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        platform:
-          - linux/amd64
-          - linux/arm64
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -48,5 +43,5 @@ jobs:
         with:
           context: .
           tags: ${{ env.IMAGE_NAME }}:${{ inputs.tag }},${{ env.IMAGE_NAME }}:latest
-          platforms: ${{ matrix.platform }}
+          platforms: linux/amd64,linux/arm64
           push: true
