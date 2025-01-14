@@ -157,7 +157,7 @@
 		const bottomArtifact = document.getElementById('BottomArtifact');
 		if (bottomArtifact) {
 			const links = bottomArtifact.querySelectorAll(
-				'a, tr, td, .nbg__blog__card, nbg__support__card, nbg__api__card, button'
+				'a, tr, td, div, .nbg__blog__card, nbg__support__card, nbg__api__card, button'
 			); // Select all links inside BottomArtifact
 			links.forEach((link) => {
 				link.addEventListener('click', (e) => {
