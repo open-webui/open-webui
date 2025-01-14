@@ -360,10 +360,9 @@
 			localStorage.sidebar = value;
 
 			// nav element is not available on the first render
+			const navElement = document.getElementsByTagName('nav')[0];
 
 			if ($mobile) {
-				const navElement = document.getElementsByTagName('nav')[0];
-
 				if (!value) {
 					navElement.style['-webkit-app-region'] = 'drag';
 				} else {
