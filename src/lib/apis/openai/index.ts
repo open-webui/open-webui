@@ -276,9 +276,8 @@ export const verifyOpenAIConnection = async (
 const enrichBody = (body: object) => {
 	const userMessage = body?.messages?.find(
 		(message, index) =>
-			(message.content.includes('OpenBottomArtifacts') ||
-				message.content.includes('OpenLeftArtifacts')) &&
-			index === body?.messages?.length - 1
+			message.content.includes('OpenBottomArtifacts') ||
+			message.content.includes('OpenLeftArtifacts')
 	);
 	if (userMessage) {
 		userMessage.content = userMessage.content +=
