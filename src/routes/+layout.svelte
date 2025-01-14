@@ -103,10 +103,14 @@
 	const chatEventHandler = async (event) => {
 		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
 
-		if (
-			(event.chat_id !== $chatId && !$temporaryChatEnabled) ||
-			document.visibilityState !== 'visible'
-		) {
+		let isFocused = document.visibilityState !== 'visible';
+		if (window.electronAPI) {
+			isFocused = await window.electronAPI.send({
+				type: 'window:isFocused'
+			});
+		}
+
+		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isFocused) {
 			await tick();
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
@@ -149,7 +153,14 @@
 		// check url path
 		const channel = $page.url.pathname.includes(`/channels/${event.channel_id}`);
 
-		if ((!channel || document.visibilityState !== 'visible') && event?.user?.id !== $user?.id) {
+		let isFocused = document.visibilityState !== 'visible';
+		if (window.electronAPI) {
+			isFocused = await window.electronAPI.send({
+				type: 'window:isFocused'
+			});
+		}
+
+		if ((!channel || isFocused) && event?.user?.id !== $user?.id) {
 			await tick();
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
