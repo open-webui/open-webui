@@ -360,12 +360,17 @@
 			localStorage.sidebar = value;
 
 			// nav element is not available on the first render
-			const navElement = document.getElementsByTagName('nav')[0];
 
-			if (!value) {
-				navElement.style['-webkit-app-region'] = 'drag';
+			if ($mobile) {
+				const navElement = document.getElementsByTagName('nav')[0];
+
+				if (!value) {
+					navElement.style['-webkit-app-region'] = 'drag';
+				} else {
+					navElement.style['-webkit-app-region'] = 'no-drag';
+				}
 			} else {
-				navElement.style['-webkit-app-region'] = 'no-drag';
+				navElement.style['-webkit-app-region'] = 'drag';
 			}
 		});
 
