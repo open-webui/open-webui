@@ -22,7 +22,9 @@
 		currentChatPage,
 		tags,
 		temporaryChatEnabled,
-		isLastActiveTab
+		isLastActiveTab,
+		isApp,
+		appVersion
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -41,6 +43,7 @@
 	import { bestMatchingLanguage } from '$lib/utils';
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
+	import AppControls from '$lib/components/app/AppControls.svelte';
 
 	setContext('i18n', i18n);
 
@@ -177,6 +180,17 @@
 	};
 
 	onMount(async () => {
+		if (window?.electronAPI) {
+			const res = await window.electronAPI.send({
+				type: 'version'
+			});
+
+			if (res) {
+				isApp.set(true);
+				appVersion.set(res.version);
+			}
+		}
+
 		// Listen for messages on the BroadcastChannel
 		bc.onmessage = (event) => {
 			if (event.data === 'active') {
@@ -324,7 +338,17 @@
 </svelte:head>
 
 {#if loaded}
-	<slot />
+	{#if $isApp}
+		<div class="flex flex-row h-screen">
+			<AppControls />
+
+			<div class="w-full flex-1">
+				<slot />
+			</div>
+		</div>
+	{:else}
+		<slot />
+	{/if}
 {/if}
 
 <Toaster

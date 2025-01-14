@@ -51,13 +51,13 @@
 
 {#if loaded}
 	<div
-		class=" relative flex flex-col w-full h-screen max-h-[100dvh] {$showSidebar
+		class=" relative flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-300 ease-in-out {$showSidebar
 			? 'md:max-w-[calc(100%-260px)]'
-			: ''}"
+			: ''} max-w-full"
 	>
 		<nav class="   px-2.5 pt-1 backdrop-blur-xl drag-region">
 			<div class=" flex items-center gap-1">
-				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
+				<div class="{$showSidebar ? 'md:hidden' : ''} self-end flex flex-none items-center">
 					<button
 						id="sidebar-toggle-button"
 						class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
