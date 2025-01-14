@@ -77,6 +77,10 @@ math {
 	-webkit-app-region: no-drag;
 }
 
+.no-drag-region {
+	-webkit-app-region: no-drag;
+}
+
 iframe {
 	@apply rounded-lg;
 }
