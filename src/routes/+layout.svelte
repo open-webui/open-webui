@@ -105,9 +105,12 @@
 
 		let isFocused = document.visibilityState !== 'visible';
 		if (window.electronAPI) {
-			isFocused = await window.electronAPI.send({
+			const res = await window.electronAPI.send({
 				type: 'window:isFocused'
 			});
+			if (res) {
+				isFocused = res.isFocused;
+			}
 		}
 
 		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isFocused) {
@@ -155,9 +158,12 @@
 
 		let isFocused = document.visibilityState !== 'visible';
 		if (window.electronAPI) {
-			isFocused = await window.electronAPI.send({
+			const res = await window.electronAPI.send({
 				type: 'window:isFocused'
 			});
+			if (res) {
+				isFocused = res.isFocused;
+			}
 		}
 
 		if ((!channel || isFocused) && event?.user?.id !== $user?.id) {
