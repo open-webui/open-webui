@@ -156,7 +156,9 @@
 		// After content is rendered, add event listeners
 		const bottomArtifact = document.getElementById('BottomArtifact');
 		if (bottomArtifact) {
-			const links = bottomArtifact.querySelectorAll('a'); // Select all links inside BottomArtifact
+			const links = bottomArtifact.querySelectorAll(
+				'a, tr, td, .nbg__blog__card, nbg__support__card, nbg__api__card, button'
+			); // Select all links inside BottomArtifact
 			links.forEach((link) => {
 				link.addEventListener('click', (e) => {
 					if ($bottomHistory.messages[$bottomHistory.currentId].done) {
