@@ -345,12 +345,19 @@
 	onMount(async () => {
 		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
 
-		mobile.subscribe((e) => {
-			if ($showSidebar && e) {
+		mobile.subscribe((value) => {
+			if ($showSidebar && value) {
 				showSidebar.set(false);
 			}
 
-			if (!$showSidebar && !e) {
+			if ($showSidebar && !value) {
+				const navElement = document.getElementsByTagName('nav')[0];
+				if (navElement) {
+					navElement.style['-webkit-app-region'] = 'drag';
+				}
+			}
+
+			if (!$showSidebar && !value) {
 				showSidebar.set(true);
 			}
 		});
@@ -362,14 +369,16 @@
 			// nav element is not available on the first render
 			const navElement = document.getElementsByTagName('nav')[0];
 
-			if ($mobile) {
-				if (!value) {
-					navElement.style['-webkit-app-region'] = 'drag';
+			if (navElement) {
+				if ($mobile) {
+					if (!value) {
+						navElement.style['-webkit-app-region'] = 'drag';
+					} else {
+						navElement.style['-webkit-app-region'] = 'no-drag';
+					}
 				} else {
-					navElement.style['-webkit-app-region'] = 'no-drag';
+					navElement.style['-webkit-app-region'] = 'drag';
 				}
-			} else {
-				navElement.style['-webkit-app-region'] = 'drag';
 			}
 		});
 
