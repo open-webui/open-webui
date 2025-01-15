@@ -18,6 +18,8 @@
 	export let id: string;
 	export let tokens: Token[];
 	export let onSourceClick: Function = () => {};
+	export let history;
+	console.log({ history, id });
 </script>
 
 {#each tokens as token, tokenIdx (tokenIdx)}
@@ -84,12 +86,14 @@
 		{#if token.raw === 'OpenBottomArtifacts' || token.raw === 'OpenLeftArtifacts' || token.raw === 'OpenAllArtifacts'}
 			{#if $isFinishGenRes}
 				<span>Please choose an option from the popup window</span>
-			{:else}
+			{:else if !$isFinishGenRes && id?.includes(history?.currentId)}
 				<img
 					style="width: 300px;border-radius: 10px;"
 					src="https://media.giphy.com/media/wypKXPQggwaCA/giphy.gif?cid=790b7611k3lxamfufuuxl5hadq30352m642vnivn2f7gvq0h&ep=v1_gifs_search&rid=giphy.gif&ct=g"
 					alt="thinking"
 				/>
+			{:else}
+				<span>Please choose an option from the popup window</span>
 			{/if}
 		{:else}
 			{token.raw}

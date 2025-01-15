@@ -157,6 +157,7 @@
 	<Markdown
 		{id}
 		{content}
+		{history}
 		{model}
 		{save}
 		sourceIds={(sources ?? []).reduce((acc, s) => {

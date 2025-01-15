@@ -20,10 +20,6 @@
 
 	let copied = false;
 
-	// TODO
-	// if you write a lot of context in RichInputText or textarea with id chat-input, the max-height is 320px,
-	// i tried to catch this height and set the max-height of the bottom artifact to 500px - chatInputHeight
-	// but is does not change unless i close and open again the BottomArtifact. WIP!!!
 	$: if ($bottomHistory) {
 		messages = createMessagesList($bottomHistory, $bottomHistory.currentId);
 		getContents();
@@ -180,16 +176,6 @@
 				});
 			});
 		}
-	}
-	let maxHeight = 500;
-	let chatInputHeight = 0;
-
-	$: {
-		const chatInputElement = document.getElementById('chat-input');
-		if (chatInputElement && chatInputElement.clientHeight) {
-			chatInputHeight = chatInputElement.clientHeight; // Capture the height of the input
-		}
-		maxHeight = 500 - chatInputHeight; // Recalculate maxHeight based on chat input height
 	}
 </script>
 

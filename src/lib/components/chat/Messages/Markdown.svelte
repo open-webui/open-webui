@@ -15,6 +15,7 @@
 	export let content;
 	export let model = null;
 	export let save = false;
+	export let history;
 
 	export let sourceIds = [];
 	export let onSourceClick = () => {};
@@ -35,11 +36,13 @@
 			);
 		}
 	})();
+	console.log({ content });
 </script>
 
 {#key id}
 	<MarkdownTokens
 		{tokens}
+		{history}
 		{id}
 		{save}
 		{onSourceClick}
