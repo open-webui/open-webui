@@ -194,7 +194,7 @@
 
 							<button
 								id="confirm-edit-message-button"
-								class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+								class=" px-4 py-2 bg-primary-500 dark:bg-white hover:bg-primary-700 text-gray-100 dark:text-gray-800 transition rounded-3xl"
 								on:click={() => {
 									editMessageConfirmHandler();
 								}}
