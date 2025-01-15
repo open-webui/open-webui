@@ -487,6 +487,7 @@ def load_oauth_providers():
             "server_metadata_url": f"https://login.microsoftonline.com/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration",
             "scope": MICROSOFT_OAUTH_SCOPE.value,
             "redirect_uri": MICROSOFT_REDIRECT_URI.value,
+            "picture_url": "https://graph.microsoft.com/v1.0/me/photo/$value",
         }
 
     if (
