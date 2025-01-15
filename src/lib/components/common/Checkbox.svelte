@@ -13,7 +13,7 @@
 <button
 	class=" outline -outline-offset-1 outline-[1.5px] outline-gray-200 dark:outline-gray-600 {state !==
 	'unchecked'
-		? 'bg-black outline-black '
+		? 'bg-primary-500 outline-black '
 		: 'hover:outline-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'} text-white transition-all rounded inline-block w-3.5 h-3.5 relative"
 	on:click={() => {
 		if (_state === 'unchecked') {
