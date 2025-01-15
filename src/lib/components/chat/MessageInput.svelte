@@ -38,6 +38,7 @@
 	import { generateAutoCompletion } from '$lib/apis';
 	import { error, text } from '@sveltejs/kit';
 	import Image from '../common/Image.svelte';
+	import { deleteFileById } from '$lib/apis/files';
 
 	const i18n = getContext('i18n');
 
@@ -615,9 +616,19 @@
 													loading={file.status === 'uploading'}
 													dismissible={true}
 													edit={true}
-													on:dismiss={() => {
-														files.splice(fileIdx, 1);
-														files = files;
+													on:dismiss={async () => {
+														try {
+															if (file.id) {
+																// This will handle both file deletion and Chroma cleanup
+																await deleteFileById(localStorage.token, file.id);
+															}
+															// Remove from UI state
+															files.splice(fileIdx, 1);
+															files = files;
+														} catch (e) {
+															console.error('Error deleting file:', e);
+															toast.error(e);
+														}
 													}}
 													on:click={() => {
 														console.log(file);
