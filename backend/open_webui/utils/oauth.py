@@ -255,7 +255,9 @@ class OAuthManager:
                     raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
                 picture_claim = auth_manager_config.OAUTH_PICTURE_CLAIM
-                picture_url = user_data.get(picture_claim, "")
+                picture_url = user_data.get(
+                    picture_claim, OAUTH_PROVIDERS[provider].get("picture_url", "")
+                )
                 if picture_url:
                     # Download the profile image into a base64 string
                     try:
