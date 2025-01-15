@@ -1156,7 +1156,7 @@ async def generate_openai_chat_completion(
             payload = apply_model_system_prompt_to_body(params, payload, user)
 
         # Check if user has access to the model
-        if user.role == "user":
+        if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
             if not (
                 user.id == model_info.user_id
                 or has_access(

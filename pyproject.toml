@@ -99,7 +99,6 @@ dependencies = [
     "docker~=7.1.0",
     "pytest~=8.3.2",
     "pytest-docker~=3.1.1",
-
     "googleapis-common-protos==1.63.2",
 
     "ldap3==2.9.1"
