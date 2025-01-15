@@ -15,9 +15,7 @@
 
 		<Tooltip content="Home" placement="right">
 			<button
-				class=" cursor-pointer bg-gray-100 dark:bg-gray-850 {selected === 'home'
-					? 'rounded-2xl'
-					: 'rounded-full'}"
+				class=" cursor-pointer {selected === 'home' ? 'rounded-2xl' : 'rounded-full'}"
 				on:click={() => {
 					selected = 'home';
 				}}
@@ -42,13 +40,13 @@
 		{/if}
 		<button
 			class=" cursor-pointer bg-transparent"
-			onclick={() => {
+			on:click={() => {
 				selected = '';
 			}}
 		>
 			<img
-				src="/assets/images/adam.jpg"
-				class="size-11 {selected === '' ? 'rounded-2xl' : 'rounded-full'}"
+				src="/static/favicon.png"
+				class="size-10 {selected === '' ? 'rounded-2xl' : 'rounded-full'}"
 				alt="logo"
 				draggable="false"
 			/>
@@ -56,8 +54,8 @@
 	</div>
 
 	<div class="flex justify-center relative group text-gray-400">
-		<button class=" cursor-pointer p-2" onclick={() => {}}>
-			<Plus className="size-5" strokeWidth="2" />
+		<button class=" cursor-pointer p-2" on:click={() => {}}>
+			<Plus className="size-4" strokeWidth="2" />
 		</button>
 	</div>
 </div>
