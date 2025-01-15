@@ -5,7 +5,7 @@
 
 	import dayjs from 'dayjs';
 
-	import { settings, chatId, WEBUI_NAME, models } from '$lib/stores';
+	import { settings, chatId, WEBUI_NAME, models, user as _user } from '$lib/stores';
 	import { convertMessagesToHistory, createMessagesList } from '$lib/utils';
 
 	import { getChatByShareId, cloneSharedChatById } from '$lib/apis/chats';
@@ -16,6 +16,7 @@
 	import { getUserById } from '$lib/apis/users';
 	import { getModels } from '$lib/apis';
 	import { toast } from 'svelte-sonner';
+	import { getFeedbacksByChatId } from '$lib/apis/evaluations';
 
 	const i18n = getContext('i18n');
 
@@ -24,6 +25,9 @@
 	let autoScroll = true;
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
+	
+	let showFeedback = false;
+	let feedbacks: Feedback[] = [];
 
 	// let chatId = $page.params.id;
 	let showModelSelector = false;
@@ -41,6 +45,10 @@
 		currentId: null
 	};
 
+	const getChatFeedbacks = async () => {
+		feedbacks = await getFeedbacksByChatId(localStorage.token, $chatId);
+	};
+
 	$: messages = createMessagesList(history, history.currentId);
 
 	$: if ($page.params.id) {
@@ -48,6 +56,11 @@
 			if (await loadSharedChat()) {
 				await tick();
 				loaded = true;
+				const urlParams = new URLSearchParams(window.location.search);
+        		showFeedback = urlParams.get('showFeedback') === 'true';
+				if(showFeedback && $_user?.role === 'admin') {
+					await getChatFeedbacks();
+				}
 			} else {
 				await goto('/');
 			}
@@ -153,6 +166,7 @@
 							readOnly={true}
 							{selectedModels}
 							{processing}
+							{feedbacks}
 							bind:history
 							bind:messages
 							bind:autoScroll

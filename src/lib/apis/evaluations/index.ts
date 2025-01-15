@@ -186,6 +186,37 @@ export const getFeedbackById = async (token: string, feedbackId: string) => {
 	return res;
 };
 
+export const getFeedbacksByChatId = async (token: string = '', chatId: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/feedbacks/chat/${chatId}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const updateFeedbackById = async (token: string, feedbackId: string, feedback: object) => {
 	let error = null;
 

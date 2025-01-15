@@ -20,7 +20,7 @@
 	import FeedbackMenu from './FeedbackMenu.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 
-	export let feedbacks = [];
+	export let feedbacks: Feedback[] = [];
 
 	let page = 1;
 	$: paginatedFeedbacks = feedbacks.slice((page - 1) * 10, page * 10);
@@ -35,9 +35,18 @@
 			comment: string;
 			tags: string[];
 		};
+		meta: {
+			chat_id: string;
+			message_id?: string;
+		};
 		user: {
 			name: string;
 			profile_image_url: string;
+		};
+		snapshot: {
+			chat: {
+				title: string;
+			}
 		};
 		updated_at: number;
 	};
@@ -152,6 +161,10 @@
 						{$i18n.t('Models')}
 					</th>
 
+					<th scope="col" class="px-3 pr-1.5 cursor-pointer select-none">
+						{$i18n.t('Chat')}
+					</th>
+
 					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-fit">
 						{$i18n.t('Result')}
 					</th>
@@ -211,6 +224,15 @@
 								</div>
 							</div>
 						</td>
+
+						<td class="px-3 py-1 font-medium text-sm text-gray-900 dark:text-white">
+							<a href="/s/{feedback.meta.chat_id}?showFeedback=true" target="_blank">
+								<div class="underline line-clamp-1 max-w-96">
+									{feedback.snapshot?.chat?.title}
+								</div>
+							</a>
+						</td>
+
 						<td class="px-3 py-1 text-right font-medium text-gray-900 dark:text-white w-max">
 							<div class=" flex justify-end">
 								{#if feedback.data.rating.toString() === '1'}

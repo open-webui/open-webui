@@ -12,6 +12,8 @@
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
 
+	import Feedback from '$lib/components/admin/Evaluations/Feedbacks.svelte';
+
 	import ChatPlaceholder from './ChatPlaceholder.svelte';
 
 	const i18n = getContext('i18n');
@@ -333,6 +335,8 @@
 			}, 100);
 		}
 	};
+
+	export let feedbacks: Feedback[] = [];
 </script>
 
 <div class={className}>
@@ -410,6 +414,7 @@
 							{addMessages}
 							{triggerScroll}
 							{readOnly}
+							feedback={feedbacks.find(f => f.meta.message_id === message.id)}
 						/>
 					{/each}
 				</div>

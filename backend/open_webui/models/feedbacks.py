@@ -30,6 +30,7 @@ class Feedback(Base):
     snapshot = Column(JSON, nullable=True)
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
+    chat_id = Column(Text)
 
 
 class FeedbackModel(BaseModel):
@@ -42,7 +43,7 @@ class FeedbackModel(BaseModel):
     snapshot: Optional[dict] = None
     created_at: int
     updated_at: int
-
+    chat_id: str
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -58,6 +59,7 @@ class FeedbackResponse(BaseModel):
     type: str
     data: Optional[dict] = None
     meta: Optional[dict] = None
+    snapshot: Optional[dict] = None
     created_at: int
     updated_at: int
 
@@ -98,10 +100,12 @@ class FeedbackTable:
     ) -> Optional[FeedbackModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
+            chat_id = form_data.meta.get('chat_id') if form_data.meta else None
             feedback = FeedbackModel(
                 **{
                     "id": id,
                     "user_id": user_id,
+                    "chat_id": chat_id,
                     "version": 0,
                     **form_data.model_dump(),
                     "created_at": int(time.time()),
@@ -220,6 +224,16 @@ class FeedbackTable:
             db.delete(feedback)
             db.commit()
             return True
+        
+    def get_feedbacks_by_chat_id(self, chat_id: str) -> list[FeedbackModel]:
+        with get_db() as db:
+            return [
+                FeedbackModel.model_validate(feedback)
+                for feedback in db.query(Feedback)
+                .filter_by(chat_id=chat_id)
+                .order_by(Feedback.updated_at.desc())
+                .all()
+            ]
 
     def delete_feedback_by_id_and_user_id(self, id: str, user_id: str) -> bool:
         with get_db() as db:
