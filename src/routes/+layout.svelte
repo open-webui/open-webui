@@ -10,12 +10,19 @@
 	import {
 		config,
 		user,
+		settings,
 		theme,
 		WEBUI_NAME,
 		mobile,
 		socket,
-		activeUserCount,
-		USAGE_POOL
+		activeUserIds,
+		USAGE_POOL,
+		chatId,
+		chats,
+		currentChatPage,
+		tags,
+		temporaryChatEnabled,
+		isLastActiveTab
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -32,23 +39,29 @@
 	import { WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
 	import i18n, { initI18n, getLanguages } from '$lib/i18n';
 	import { bestMatchingLanguage } from '$lib/utils';
+	import { getAllTags, getChatList } from '$lib/apis/chats';
+	import NotificationToast from '$lib/components/NotificationToast.svelte';
 
 	setContext('i18n', i18n);
 
+	const bc = new BroadcastChannel('active-tab-channel');
+
 	let loaded = false;
+
 	const BREAKPOINT = 768;
 
-	const setupSocket = () => {
+	const setupSocket = async (enableWebsocket) => {
 		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
 			reconnection: true,
 			reconnectionDelay: 1000,
 			reconnectionDelayMax: 5000,
 			randomizationFactor: 0.5,
 			path: '/ws/socket.io',
+			transports: enableWebsocket ? ['websocket'] : ['polling', 'websocket'],
 			auth: { token: localStorage.token }
 		});
 
-		socket.set(_socket);
+		await socket.set(_socket);
 
 		_socket.on('connect_error', (err) => {
 			console.log('connect_error', err);
@@ -73,9 +86,9 @@
 			}
 		});
 
-		_socket.on('user-count', (data) => {
-			console.log('user-count', data);
-			activeUserCount.set(data.count);
+		_socket.on('user-list', (data) => {
+			console.log('user-list', data);
+			activeUserIds.set(data.user_ids);
 		});
 
 		_socket.on('usage', (data) => {
@@ -84,7 +97,107 @@
 		});
 	};
 
+	const chatEventHandler = async (event) => {
+		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
+
+		if (
+			(event.chat_id !== $chatId && !$temporaryChatEnabled) ||
+			document.visibilityState !== 'visible'
+		) {
+			await tick();
+			const type = event?.data?.type ?? null;
+			const data = event?.data?.data ?? null;
+
+			if (type === 'chat:completion') {
+				const { done, content, title } = data;
+
+				if (done) {
+					if ($isLastActiveTab) {
+						if ($settings?.notificationEnabled ?? false) {
+							new Notification(`${title} | Open WebUI`, {
+								body: content,
+								icon: `${WEBUI_BASE_URL}/static/favicon.png`
+							});
+						}
+					}
+
+					toast.custom(NotificationToast, {
+						componentProps: {
+							onClick: () => {
+								goto(`/c/${event.chat_id}`);
+							},
+							content: content,
+							title: title
+						},
+						duration: 15000,
+						unstyled: true
+					});
+				}
+			} else if (type === 'chat:title') {
+				currentChatPage.set(1);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			} else if (type === 'chat:tags') {
+				tags.set(await getAllTags(localStorage.token));
+			}
+		}
+	};
+
+	const channelEventHandler = async (event) => {
+		// check url path
+		const channel = $page.url.pathname.includes(`/channels/${event.channel_id}`);
+
+		if ((!channel || document.visibilityState !== 'visible') && event?.user?.id !== $user?.id) {
+			await tick();
+			const type = event?.data?.type ?? null;
+			const data = event?.data?.data ?? null;
+
+			if (type === 'message') {
+				if ($isLastActiveTab) {
+					if ($settings?.notificationEnabled ?? false) {
+						new Notification(`${data?.user?.name} (#${event?.channel?.name}) | Open WebUI`, {
+							body: data?.content,
+							icon: data?.user?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`
+						});
+					}
+				}
+
+				toast.custom(NotificationToast, {
+					componentProps: {
+						onClick: () => {
+							goto(`/channels/${event.channel_id}`);
+						},
+						content: data?.content,
+						title: event?.channel?.name
+					},
+					duration: 15000,
+					unstyled: true
+				});
+			}
+		}
+	};
+
 	onMount(async () => {
+		// Listen for messages on the BroadcastChannel
+		bc.onmessage = (event) => {
+			if (event.data === 'active') {
+				isLastActiveTab.set(false); // Another tab became active
+			}
+		};
+
+		// Set yourself as the last active tab when this tab is focused
+		const handleVisibilityChange = () => {
+			if (document.visibilityState === 'visible') {
+				isLastActiveTab.set(true); // This tab is now the active tab
+				bc.postMessage('active'); // Notify other tabs that this tab is active
+			}
+		};
+
+		// Add event listener for visibility state changes
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+
+		// Call visibility change handler initially to set state on load
+		handleVisibilityChange();
+
 		theme.set(localStorage.theme);
 
 		mobile.set(window.innerWidth < BREAKPOINT);
@@ -126,7 +239,7 @@
 			await WEBUI_NAME.set(backendConfig.name);
 
 			if ($config) {
-				setupSocket();
+				await setupSocket($config.features?.enable_websocket ?? true);
 
 				if (localStorage.token) {
 					// Get Session User Info
@@ -137,6 +250,11 @@
 
 					if (sessionUser) {
 						// Save Session User to Store
+						$socket.emit('user-join', { auth: { token: sessionUser.token } });
+
+						$socket?.on('chat-events', chatEventHandler);
+						$socket?.on('channel-events', channelEventHandler);
+
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());
 					} else {
@@ -218,5 +336,5 @@
 				: 'light'
 			: 'light'}
 	richColors
-	position="top-center"
+	position="top-right"
 />

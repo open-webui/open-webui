@@ -26,8 +26,8 @@
 
 html {
 	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'NotoSans', 'NotoSansJP', 'NotoSansKR',
-		'NotoSansSC', 'STSong-Light', 'MSung-Light', 'HeiseiMin-W3', 'HYSMyeongJo-Medium', Roboto,
-		'Helvetica Neue', Arial, sans-serif;
+		'NotoSansSC', 'Twemoji', 'STSong-Light', 'MSung-Light', 'HeiseiMin-W3', 'HYSMyeongJo-Medium',
+		Roboto, 'Helvetica Neue', Arial, sans-serif;
 	font-size: 14px; /* Default font size */
 	line-height: 1.5;
 }
@@ -40,7 +40,7 @@ html {
 
 body {
 	margin: 0;
-	color: #212529;
+	padding: 0;
 	background-color: #fff;
 	width: auto;
 }

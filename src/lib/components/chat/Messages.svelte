@@ -16,6 +16,8 @@
 
 	const i18n = getContext('i18n');
 
+	export let className = 'h-full flex pt-8';
+
 	export let chatId = '';
 	export let user = $_user;
 
@@ -33,6 +35,7 @@
 	export let chatActionHandler: Function;
 	export let showMessage: Function = () => {};
 	export let submitMessage: Function = () => {};
+	export let addMessages: Function = () => {};
 
 	export let readOnly = false;
 
@@ -248,6 +251,7 @@
 					id: responseMessageId,
 					parentId: parentId,
 					childrenIds: [],
+					files: undefined,
 					content: content,
 					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 				};
@@ -331,7 +335,7 @@
 	};
 </script>
 
-<div class="h-full flex pt-8">
+<div class={className}>
 	{#if Object.keys(history?.messages ?? {}).length == 0}
 		<ChatPlaceholder
 			modelIds={selectedModels}
@@ -403,6 +407,7 @@
 							{regenerateResponse}
 							{continueResponse}
 							{mergeResponses}
+							{addMessages}
 							{triggerScroll}
 							{readOnly}
 						/>

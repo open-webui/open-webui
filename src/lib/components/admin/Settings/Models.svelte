@@ -128,7 +128,7 @@
 			await toggleModelById(localStorage.token, model.id);
 		}
 
-		await init();
+		// await init();
 		_models.set(await getModels(localStorage.token));
 	};
 
@@ -137,7 +137,7 @@
 	});
 </script>
 
-<ConfigureModelsModal bind:show={showConfigModal} {init} />
+<ConfigureModelsModal bind:show={showConfigModal} initHandler={init} />
 
 {#if models !== null}
 	{#if selectedModelId === null}

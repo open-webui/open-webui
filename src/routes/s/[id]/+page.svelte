@@ -8,13 +8,14 @@
 	import { settings, chatId, WEBUI_NAME, models } from '$lib/stores';
 	import { convertMessagesToHistory, createMessagesList } from '$lib/utils';
 
-	import { getChatByShareId } from '$lib/apis/chats';
+	import { getChatByShareId, cloneSharedChatById } from '$lib/apis/chats';
 
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
+
 	import { getUserById } from '$lib/apis/users';
-	import { error } from '@sveltejs/kit';
 	import { getModels } from '$lib/apis';
+	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
 
@@ -100,6 +101,19 @@
 			}
 		}
 	};
+
+	const cloneSharedChat = async () => {
+		if (!chat) return;
+
+		const res = await cloneSharedChatById(localStorage.token, chat.id).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res) {
+			goto(`/c/${res.id}`);
+		}
+	};
 </script>
 
 <svelte:head>
@@ -114,25 +128,26 @@
 	<div
 		class="min-h-screen max-h-screen w-full flex flex-col text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900"
 	>
-		<div class="flex flex-col flex-auto justify-center py-8">
-			<div class="px-3 w-full max-w-5xl mx-auto">
-				<div>
-					<div class=" text-3xl font-semibold line-clamp-1">
-						{title}
-					</div>
+		<div class="flex flex-col flex-auto justify-center relative">
+			<div class=" flex flex-col w-full flex-auto overflow-auto h-0" id="messages-container">
+				<div class="pt-5 px-2 w-full max-w-5xl mx-auto">
+					<div class="px-3">
+						<div class=" text-2xl font-semibold line-clamp-1">
+							{title}
+						</div>
 
-					<div class=" mt-1 text-gray-400">
-						{dayjs(chat.chat.timestamp).format($i18n.t('MMMM DD, YYYY'))}
+						<div class="flex text-sm justify-between items-center mt-1">
+							<div class="text-gray-400">
+								{dayjs(chat.chat.timestamp).format($i18n.t('MMMM DD, YYYY'))}
+							</div>
+						</div>
 					</div>
 				</div>
 
-				<hr class="border-gray-50 dark:border-gray-850 mt-6 mb-2" />
-			</div>
-
-			<div class=" flex flex-col w-full flex-auto overflow-auto h-0" id="messages-container">
-				<div class=" h-full w-full flex flex-col py-4">
-					<div class="py-2">
+				<div class=" h-full w-full flex flex-col py-2">
+					<div class="">
 						<Messages
+							className="h-full flex pt-4 pb-8"
 							{user}
 							chatId={$chatId}
 							readOnly={true}
@@ -147,6 +162,19 @@
 							regenerateResponse={() => {}}
 						/>
 					</div>
+				</div>
+			</div>
+
+			<div
+				class="absolute bottom-0 right-0 left-0 flex justify-center w-full bg-gradient-to-b from-transparent to-gray-900"
+			>
+				<div class="pb-5">
+					<button
+						class="px-4 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+						on:click={cloneSharedChat}
+					>
+						{$i18n.t('Clone Chat')}
+					</button>
 				</div>
 			</div>
 		</div>

@@ -105,10 +105,15 @@
 	};
 
 	const updateConfigHandler = async () => {
-		const res = await updateConfig(localStorage.token, config).catch((error) => {
-			toast.error(error);
-			return null;
-		});
+		const res = await updateConfig(localStorage.token, config)
+			.catch((error) => {
+				toast.error(error);
+				return null;
+			})
+			.catch((error) => {
+				toast.error(error);
+				return null;
+			});
 
 		if (res) {
 			config = res;
@@ -462,6 +467,19 @@
 									/>
 								</svg>
 							</button>
+						</div>
+					</div>
+
+					<div class="">
+						<div class=" mb-2 text-sm font-medium">{$i18n.t('ComfyUI API Key')}</div>
+						<div class="flex w-full">
+							<div class="flex-1 mr-2">
+								<SensitiveInput
+									placeholder={$i18n.t('sk-1234')}
+									bind:value={config.comfyui.COMFYUI_API_KEY}
+									required={false}
+								/>
+							</div>
 						</div>
 					</div>
 
