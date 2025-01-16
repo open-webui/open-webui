@@ -385,7 +385,7 @@
 				</div>
 
 				<div class="w-full relative">
-					{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || webSearchEnabled}
+					{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || webSearchEnabled || imageGenerationEnabled}
 						<div
 							class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10"
 						>
@@ -400,7 +400,7 @@
 												<span class="relative inline-flex rounded-full size-2 bg-yellow-500" />
 											</span>
 										</div>
-										<div class=" translate-y-[0.5px] text-ellipsis line-clamp-1 flex">
+										<div class="  text-ellipsis line-clamp-1 flex">
 											{#each selectedToolIds.map((id) => {
 												return $tools ? $tools.find((t) => t.id === id) : { id: id, name: id };
 											}) as tool, toolIdx (toolIdx)}
@@ -421,6 +421,22 @@
 								</div>
 							{/if}
 
+							{#if imageGenerationEnabled}
+								<div class="flex items-center justify-between w-full">
+									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
+										<div class="pl-1">
+											<span class="relative flex size-2">
+												<span
+													class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
+												/>
+												<span class="relative inline-flex rounded-full size-2 bg-green-500" />
+											</span>
+										</div>
+										<div class=" ">{$i18n.t('Image generation')}</div>
+									</div>
+								</div>
+							{/if}
+
 							{#if webSearchEnabled}
 								<div class="flex items-center justify-between w-full">
 									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
@@ -432,7 +448,7 @@
 												<span class="relative inline-flex rounded-full size-2 bg-green-500" />
 											</span>
 										</div>
-										<div class=" translate-y-[0.5px]">{$i18n.t('Search the web')}</div>
+										<div class=" ">{$i18n.t('Search the web')}</div>
 									</div>
 								</div>
 							{/if}
