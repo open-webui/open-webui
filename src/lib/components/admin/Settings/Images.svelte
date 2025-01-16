@@ -234,7 +234,7 @@
 				<div class=" mb-1 text-sm font-medium">{$i18n.t('Image Settings')}</div>
 
 				<div>
-					<div class=" py-0.5 flex w-full justify-between">
+					<div class=" py-1 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">
 							{$i18n.t('Image Generation (Experimental)')}
 						</div>
@@ -271,7 +271,16 @@
 					</div>
 				</div>
 
-				<div class=" py-0.5 flex w-full justify-between">
+				{#if config.enabled}
+					<div class=" py-1 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Image Prompt Generation')}</div>
+						<div class="px-1">
+							<Switch bind:state={config.prompt_generation} />
+						</div>
+					</div>
+				{/if}
+
+				<div class=" py-1 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Image Generation Engine')}</div>
 					<div class="flex items-center relative">
 						<select

@@ -504,37 +504,38 @@ async def chat_image_generation_handler(
     messages = form_data["messages"]
     user_message = get_last_user_message(messages)
 
-    prompt = ""
+    prompt = user_message
     negative_prompt = ""
 
-    try:
-        res = await generate_image_prompt(
-            request,
-            {
-                "model": form_data["model"],
-                "messages": messages,
-            },
-            user,
-        )
-
-        response = res["choices"][0]["message"]["content"]
-
+    if request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION:
         try:
-            bracket_start = response.find("{")
-            bracket_end = response.rfind("}") + 1
+            res = await generate_image_prompt(
+                request,
+                {
+                    "model": form_data["model"],
+                    "messages": messages,
+                },
+                user,
+            )
 
-            if bracket_start == -1 or bracket_end == -1:
-                raise Exception("No JSON object found in the response")
+            response = res["choices"][0]["message"]["content"]
 
-            response = response[bracket_start:bracket_end]
-            response = json.loads(response)
-            prompt = response.get("prompt", [])
+            try:
+                bracket_start = response.find("{")
+                bracket_end = response.rfind("}") + 1
+
+                if bracket_start == -1 or bracket_end == -1:
+                    raise Exception("No JSON object found in the response")
+
+                response = response[bracket_start:bracket_end]
+                response = json.loads(response)
+                prompt = response.get("prompt", [])
+            except Exception as e:
+                prompt = user_message
+
         except Exception as e:
+            log.exception(e)
             prompt = user_message
-
-    except Exception as e:
-        log.exception(e)
-        prompt = user_message
 
     system_message_content = ""
 
