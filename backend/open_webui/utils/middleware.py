@@ -621,17 +621,28 @@ async def chat_completion_files_handler(
         if len(queries) == 0:
             queries = [get_last_user_message(body["messages"])]
 
-        sources = get_sources_from_files(
-            files=files,
-            queries=queries,
-            embedding_function=request.app.state.EMBEDDING_FUNCTION,
-            k=request.app.state.config.TOP_K,
-            reranking_function=request.app.state.rf,
-            r=request.app.state.config.RELEVANCE_THRESHOLD,
-            hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-        )
+        try:
+            # Offload get_sources_from_files to a separate thread
+            loop = asyncio.get_running_loop()
+            with ThreadPoolExecutor() as executor:
+                sources = await loop.run_in_executor(
+                    executor,
+                    lambda: get_sources_from_files(
+                        files=files,
+                        queries=queries,
+                        embedding_function=request.app.state.EMBEDDING_FUNCTION,
+                        k=request.app.state.config.TOP_K,
+                        reranking_function=request.app.state.rf,
+                        r=request.app.state.config.RELEVANCE_THRESHOLD,
+                        hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+                    ),
+                )
+
+        except Exception as e:
+            log.exception(e)
 
         log.debug(f"rag_contexts:sources: {sources}")
+
     return body, {"sources": sources}
 
 
