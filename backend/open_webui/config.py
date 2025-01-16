@@ -1330,6 +1330,18 @@ RAG_EMBEDDING_BATCH_SIZE = PersistentConfig(
     ),
 )
 
+RAG_EMBEDDING_PASSAGE_PREFIX = PersistentConfig(
+    "RAG_EMBEDDING_PASSAGE_PREFIX",
+    "rag.embedding_passage_prefix",
+    os.environ.get("RAG_EMBEDDING_PASSAGE_PREFIX", False),
+)
+
+RAG_EMBEDDING_QUERY_PREFIX = PersistentConfig(
+    "RAG_EMBEDDING_QUERY_PREFIX",
+    "rag.embedding_query_prefix",
+    os.environ.get("RAG_EMBEDDING_QUERY_PREFIX", False),
+)
+
 RAG_RERANKING_MODEL = PersistentConfig(
     "RAG_RERANKING_MODEL",
     "rag.reranking_model",
