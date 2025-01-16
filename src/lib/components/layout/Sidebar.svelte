@@ -597,11 +597,15 @@
 					className="px-2 mt-0.5"
 					name={$i18n.t('Channels')}
 					dragAndDrop={false}
-					onAdd={$user.role === 'admin'
-						? () => {
+					onAdd={async () => {
+						if ($user.role === 'admin') {
+							await tick();
+
+							setTimeout(() => {
 								showCreateChannel = true;
-							}
-						: null}
+							}, 0);
+						}
+					}}
 					onAddLabel={$i18n.t('Create Channel')}
 				>
 					{#each $channels as channel}
