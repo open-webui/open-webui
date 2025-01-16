@@ -415,10 +415,14 @@ def save_b64_image(b64_str):
         return None
 
 
-def save_url_image(url):
+def save_url_image(url, headers=None):
     image_id = str(uuid.uuid4())
     try:
-        r = requests.get(url)
+        if headers:
+            r = requests.get(url, headers=headers)
+        else:
+            r = requests.get(url)
+
         r.raise_for_status()
         if r.headers["content-type"].split("/")[0] == "image":
             mime_type = r.headers["content-type"]
@@ -542,7 +546,13 @@ async def image_generations(
             images = []
 
             for image in res["data"]:
-                image_filename = save_url_image(image["url"])
+                headers = None
+                if request.app.state.config.COMFYUI_API_KEY:
+                    headers = {
+                        "Authorization": f"Bearer {request.app.state.config.COMFYUI_API_KEY}"
+                    }
+
+                image_filename = save_url_image(image["url"], headers)
                 images.append({"url": f"/cache/image/generations/{image_filename}"})
                 file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_filename}.json")
 
