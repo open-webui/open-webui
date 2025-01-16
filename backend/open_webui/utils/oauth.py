@@ -261,8 +261,14 @@ class OAuthManager:
                 if picture_url:
                     # Download the profile image into a base64 string
                     try:
+                        access_token = token.get("access_token")
+                        get_kwargs = {}
+                        if access_token:
+                            get_kwargs["headers"] = {
+                                "Authorization": f"Bearer {access_token}",
+                            }
                         async with aiohttp.ClientSession() as session:
-                            async with session.get(picture_url) as resp:
+                            async with session.get(picture_url, **get_kwargs) as resp:
                                 picture = await resp.read()
                                 base64_encoded_picture = base64.b64encode(
                                     picture
