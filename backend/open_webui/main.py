@@ -225,6 +225,7 @@ from open_webui.config import (
     LDAP_SERVER_LABEL,
     LDAP_SERVER_HOST,
     LDAP_SERVER_PORT,
+    LDAP_ATTRIBUTE_FOR_MAIL,
     LDAP_ATTRIBUTE_FOR_USERNAME,
     LDAP_SEARCH_FILTERS,
     LDAP_SEARCH_BASE,
@@ -437,6 +438,7 @@ app.state.config.ENABLE_LDAP = ENABLE_LDAP
 app.state.config.LDAP_SERVER_LABEL = LDAP_SERVER_LABEL
 app.state.config.LDAP_SERVER_HOST = LDAP_SERVER_HOST
 app.state.config.LDAP_SERVER_PORT = LDAP_SERVER_PORT
+app.state.config.LDAP_ATTRIBUTE_FOR_MAIL = LDAP_ATTRIBUTE_FOR_MAIL
 app.state.config.LDAP_ATTRIBUTE_FOR_USERNAME = LDAP_ATTRIBUTE_FOR_USERNAME
 app.state.config.LDAP_APP_DN = LDAP_APP_DN
 app.state.config.LDAP_APP_PASSWORD = LDAP_APP_PASSWORD
@@ -845,6 +847,10 @@ async def chat_completion(
         await get_all_models(request)
 
     tasks = form_data.pop("background_tasks", None)
+    # Force title generation to be enabled each time
+    if not tasks or 'title_generation' not in tasks:
+        tasks = {'title_generation': True}
+
     try:
         model_id = form_data.get("model", None)
         if model_id not in request.app.state.MODELS:
