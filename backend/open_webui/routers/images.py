@@ -43,6 +43,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
     return {
         "enabled": request.app.state.config.ENABLE_IMAGE_GENERATION,
         "engine": request.app.state.config.IMAGE_GENERATION_ENGINE,
+        "prompt_generation": request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION,
         "openai": {
             "OPENAI_API_BASE_URL": request.app.state.config.IMAGES_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": request.app.state.config.IMAGES_OPENAI_API_KEY,
@@ -86,6 +87,7 @@ class ComfyUIConfigForm(BaseModel):
 class ConfigForm(BaseModel):
     enabled: bool
     engine: str
+    prompt_generation: bool
     openai: OpenAIConfigForm
     automatic1111: Automatic1111ConfigForm
     comfyui: ComfyUIConfigForm
@@ -97,6 +99,10 @@ async def update_config(
 ):
     request.app.state.config.IMAGE_GENERATION_ENGINE = form_data.engine
     request.app.state.config.ENABLE_IMAGE_GENERATION = form_data.enabled
+
+    request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION = (
+        form_data.prompt_generation
+    )
 
     request.app.state.config.IMAGES_OPENAI_API_BASE_URL = (
         form_data.openai.OPENAI_API_BASE_URL
@@ -137,6 +143,7 @@ async def update_config(
     return {
         "enabled": request.app.state.config.ENABLE_IMAGE_GENERATION,
         "engine": request.app.state.config.IMAGE_GENERATION_ENGINE,
+        "prompt_generation": request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION,
         "openai": {
             "OPENAI_API_BASE_URL": request.app.state.config.IMAGES_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": request.app.state.config.IMAGES_OPENAI_API_KEY,

@@ -1650,6 +1650,13 @@ ENABLE_IMAGE_GENERATION = PersistentConfig(
     "image_generation.enable",
     os.environ.get("ENABLE_IMAGE_GENERATION", "").lower() == "true",
 )
+
+ENABLE_IMAGE_PROMPT_GENERATION = PersistentConfig(
+    "ENABLE_IMAGE_PROMPT_GENERATION",
+    "image_generation.prompt.enable",
+    os.environ.get("ENABLE_IMAGE_PROMPT_GENERATION", "true").lower() == "true",
+)
+
 AUTOMATIC1111_BASE_URL = PersistentConfig(
     "AUTOMATIC1111_BASE_URL",
     "image_generation.automatic1111.base_url",
