@@ -845,6 +845,10 @@ async def chat_completion(
         await get_all_models(request)
 
     tasks = form_data.pop("background_tasks", None)
+    # Force title generation to be enabled each time
+    if not tasks or 'title_generation' not in tasks:
+        tasks = {'title_generation': True}
+
     try:
         model_id = form_data.get("model", None)
         if model_id not in request.app.state.MODELS:
