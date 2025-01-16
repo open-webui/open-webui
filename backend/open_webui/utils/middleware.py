@@ -770,14 +770,17 @@ async def process_chat_response(
                         )
 
                         if res and isinstance(res, dict):
-                            title = (
-                                res.get("choices", [])[0]
-                                .get("message", {})
-                                .get(
-                                    "content",
-                                    message.get("content", "New Chat"),
-                                )
-                            ).strip()
+                            if len(res.get("choices", [])) == 1:
+                                title = (
+                                    res.get("choices", [])[0]
+                                    .get("message", {})
+                                    .get(
+                                        "content",
+                                        message.get("content", "New Chat"),
+                                    )
+                                ).strip()
+                            else:
+                                title = None
 
                             if not title:
                                 title = messages[0].get("content", "New Chat")
@@ -814,11 +817,14 @@ async def process_chat_response(
                     )
 
                     if res and isinstance(res, dict):
-                        tags_string = (
-                            res.get("choices", [])[0]
-                            .get("message", {})
-                            .get("content", "")
-                        )
+                        if len(res.get("choices", [])) == 1:
+                            tags_string = (
+                                res.get("choices", [])[0]
+                                .get("message", {})
+                                .get("content", "")
+                            )
+                        else:
+                            tags_string = ""
 
                         tags_string = tags_string[
                             tags_string.find("{") : tags_string.rfind("}") + 1
@@ -837,7 +843,7 @@ async def process_chat_response(
                                 }
                             )
                         except Exception as e:
-                            print(f"Error: {e}")
+                            pass
 
     event_emitter = None
     if (
@@ -960,12 +966,12 @@ async def process_chat_response(
                     if not data.strip():
                         continue
 
-                    # "data: " is the prefix for each event
-                    if not data.startswith("data: "):
+                    # "data:" is the prefix for each event
+                    if not data.startswith("data:"):
                         continue
 
                     # Remove the prefix
-                    data = data[len("data: ") :]
+                    data = data[len("data:") :].strip()
 
                     try:
                         data = json.loads(data)

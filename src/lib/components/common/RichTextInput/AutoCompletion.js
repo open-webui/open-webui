@@ -158,14 +158,16 @@ export const AIAutocompletion = Extension.create({
 															if (
 																view.state.selection.$head.pos === view.state.selection.$head.end()
 															) {
-																view.dispatch(
-																	newState.tr.setNodeMarkup(currentPos, null, {
-																		...newNode.attrs,
-																		class: 'ai-autocompletion',
-																		'data-prompt': prompt,
-																		'data-suggestion': suggestion
-																	})
-																);
+																if (view.state === newState) {
+																	view.dispatch(
+																		newState.tr.setNodeMarkup(currentPos, null, {
+																			...newNode.attrs,
+																			class: 'ai-autocompletion',
+																			'data-prompt': prompt,
+																			'data-suggestion': suggestion
+																		})
+																	);
+																}
 															}
 														}
 													})

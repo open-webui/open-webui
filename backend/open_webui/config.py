@@ -487,6 +487,7 @@ def load_oauth_providers():
             "server_metadata_url": f"https://login.microsoftonline.com/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration",
             "scope": MICROSOFT_OAUTH_SCOPE.value,
             "redirect_uri": MICROSOFT_REDIRECT_URI.value,
+            "picture_url": "https://graph.microsoft.com/v1.0/me/photo/$value",
         }
 
     if (
@@ -1193,6 +1194,7 @@ CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 # Milvus
 
 MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
+MILVUS_DB = os.environ.get("MILVUS_DB", "default")
 
 # Qdrant
 QDRANT_URI = os.environ.get("QDRANT_URI", None)
@@ -1929,6 +1931,12 @@ LDAP_SERVER_PORT = PersistentConfig(
     "LDAP_SERVER_PORT",
     "ldap.server.port",
     int(os.environ.get("LDAP_SERVER_PORT", "389")),
+)
+
+LDAP_ATTRIBUTE_FOR_MAIL = PersistentConfig(
+    "LDAP_ATTRIBUTE_FOR_MAIL",
+    "ldap.server.attribute_for_mail",
+    os.environ.get("LDAP_ATTRIBUTE_FOR_MAIL", "mail"),
 )
 
 LDAP_ATTRIBUTE_FOR_USERNAME = PersistentConfig(
