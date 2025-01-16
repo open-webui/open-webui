@@ -132,7 +132,6 @@ async def generate_title(
 ):
     # Check if gift_request is ready for title generation
     chat_state = ChatState.load(form_data["chat_id"])
-    print(chat_state)
     if not chat_state.gift_request:
         # gift_request not ready. Do not generate title
         logging.debug("gift_request not ready. Do not generate title")
