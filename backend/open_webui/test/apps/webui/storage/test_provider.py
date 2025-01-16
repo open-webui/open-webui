@@ -16,3 +16,37 @@ def test_get_storage_provider():
     assert isinstance(Storage, provider.S3StorageProvider)
     with pytest.raises(RuntimeError):
         provider.get_storage_provider("invalid")
+
+def test_class_instantiation():
+    with pytest.raises(TypeError):
+        provider.StorageProvider()
+    with pytest.raises(TypeError):
+        class Test(provider.StorageProvider):
+            pass
+        Test()
+    provider.LocalStorageProvider()
+    provider.S3StorageProvider()
+
+
+class TestLocalStorageProvider(provider.LocalStorageProvider):
+    def test_upload_file(self):
+        pass
+    def test_get_file(self):
+        pass
+    def test_delete_file(self):
+        pass
+    def test_delete_all_files(self):
+        pass
+
+
+class TestLocalStorageProvider(provider.S3StorageProvider):
+    def test_upload_file(self):
+        pass
+    def test_get_file(self):
+        pass
+    def test_delete_file(self):
+        pass
+    def test_delete_all_files(self):
+        pass
+
+)
