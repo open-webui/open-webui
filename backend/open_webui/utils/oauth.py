@@ -63,7 +63,23 @@ auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 class OAuthManager:
     def __init__(self):
         self.oauth = OAuth()
+        if "github" in OAUTH_PROVIDERS:
+            provider_name = "github"
+            provider_config = OAUTH_PROVIDERS[provider_name]
+            self.oauth.register(
+                name=provider_name,
+                client_id=provider_config["client_id"],
+                client_secret=provider_config["client_secret"],
+                access_token_url=provider_config["access_token_url"],
+                authorize_url=provider_config["authorize_url"],
+                api_base_url=provider_config["api_base_url"],
+                userinfo_endpoint=provider_config["userinfo_endpoint"],
+                client_kwargs={'scope': provider_config["scope"]},
+            )
+
         for provider_name, provider_config in OAUTH_PROVIDERS.items():
+            if provider_name == "github":
+                continue
             self.oauth.register(
                 name=provider_name,
                 client_id=provider_config["client_id"],
@@ -208,6 +224,8 @@ class OAuthManager:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
         sub = user_data.get("sub")
+        if provider == "github":
+            sub = user_data.get("id")
         if not sub:
             log.warning(f"OAuth callback failed, sub is missing: {user_data}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)

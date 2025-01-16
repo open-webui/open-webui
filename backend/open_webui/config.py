@@ -362,6 +362,24 @@ MICROSOFT_REDIRECT_URI = PersistentConfig(
     os.environ.get("MICROSOFT_REDIRECT_URI", ""),
 )
 
+GITHUB_CLIENT_ID = PersistentConfig(
+    "GITHUB_CLIENT_ID",
+    "oauth.github.client_id",
+    os.environ.get("GITHUB_CLIENT_ID", ""),
+)
+
+GITHUB_CLIENT_SECRET = PersistentConfig(
+    "GITHUB_CLIENT_SECRET",
+    "oauth.github.client_secret",
+    os.environ.get("GITHUB_CLIENT_SECRET", ""),
+)
+
+GITHUB_OAUTH_SCOPE = PersistentConfig(
+    "GITHUB_OAUTH_SCOPE",
+    "oauth.github.scope",
+    os.environ.get("GITHUB_OAUTH_SCOPE", "user:email"),
+)
+
 OAUTH_CLIENT_ID = PersistentConfig(
     "OAUTH_CLIENT_ID",
     "oauth.oidc.client_id",
@@ -488,6 +506,20 @@ def load_oauth_providers():
             "scope": MICROSOFT_OAUTH_SCOPE.value,
             "redirect_uri": MICROSOFT_REDIRECT_URI.value,
             "picture_url": "https://graph.microsoft.com/v1.0/me/photo/$value",
+        }
+
+    if (
+        GITHUB_CLIENT_ID.value
+        and GITHUB_CLIENT_SECRET.value
+    ):
+        OAUTH_PROVIDERS["github"] = {
+            "client_id": GITHUB_CLIENT_ID.value,
+            "client_secret": GITHUB_CLIENT_SECRET.value,
+            "access_token_url": "https://github.com/login/oauth/access_token",
+            "authorize_url": "https://github.com/login/oauth/authorize",
+            "api_base_url": "https://api.github.com/",
+            "userinfo_endpoint": "https://api.github.com/user",
+            "scope": GITHUB_OAUTH_SCOPE.value,
         }
 
     if (
