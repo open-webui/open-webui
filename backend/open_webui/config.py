@@ -935,6 +935,10 @@ USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS = (
     os.environ.get("USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS", "False").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_CONTROLS = (
+    os.environ.get("USER_PERMISSIONS_CHAT_CONTROLS", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_CHAT_FILE_UPLOAD = (
     os.environ.get("USER_PERMISSIONS_CHAT_FILE_UPLOAD", "True").lower() == "true"
 )
@@ -951,23 +955,39 @@ USER_PERMISSIONS_CHAT_TEMPORARY = (
     os.environ.get("USER_PERMISSIONS_CHAT_TEMPORARY", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_FEATURES_WEB_SEARCH = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_WEB_SEARCH", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_FEATURES_IMAGE_GENERATION = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_IMAGE_GENERATION", "True").lower()
+    == "true"
+)
+
+DEFAULT_USER_PERMISSIONS = {
+    "workspace": {
+        "models": USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS,
+        "knowledge": USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS,
+        "prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS,
+        "tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS,
+    },
+    "chat": {
+        "controls": USER_PERMISSIONS_CHAT_CONTROLS,
+        "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
+        "delete": USER_PERMISSIONS_CHAT_DELETE,
+        "edit": USER_PERMISSIONS_CHAT_EDIT,
+        "temporary": USER_PERMISSIONS_CHAT_TEMPORARY,
+    },
+    "features": {
+        "web_search": USER_PERMISSIONS_FEATURES_WEB_SEARCH,
+        "image_generation": USER_PERMISSIONS_FEATURES_IMAGE_GENERATION,
+    },
+}
+
 USER_PERMISSIONS = PersistentConfig(
     "USER_PERMISSIONS",
     "user.permissions",
-    {
-        "workspace": {
-            "models": USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS,
-            "knowledge": USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS,
-            "prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS,
-            "tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS,
-        },
-        "chat": {
-            "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
-            "delete": USER_PERMISSIONS_CHAT_DELETE,
-            "edit": USER_PERMISSIONS_CHAT_EDIT,
-            "temporary": USER_PERMISSIONS_CHAT_TEMPORARY,
-        },
-    },
+    DEFAULT_USER_PERMISSIONS,
 )
 
 ENABLE_CHANNELS = PersistentConfig(
