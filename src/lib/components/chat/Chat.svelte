@@ -111,6 +111,7 @@
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 
 	let selectedToolIds = [];
+	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 
 	let chat = null;
@@ -1533,6 +1534,7 @@
 				files: (files?.length ?? 0) > 0 ? files : undefined,
 				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 				features: {
+					image_generation: imageGenerationEnabled,
 					web_search: webSearchEnabled
 				},
 
@@ -1935,6 +1937,7 @@
 								bind:prompt
 								bind:autoScroll
 								bind:selectedToolIds
+								bind:imageGenerationEnabled
 								bind:webSearchEnabled
 								bind:atSelectedModel
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
@@ -1985,6 +1988,7 @@
 								bind:prompt
 								bind:autoScroll
 								bind:selectedToolIds
+								bind:imageGenerationEnabled
 								bind:webSearchEnabled
 								bind:atSelectedModel
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
