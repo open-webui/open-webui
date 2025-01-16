@@ -114,7 +114,7 @@
 				<hr class="border-black/5 dark:border-white/5 my-1" />
 			{/if}
 
-			{#if $config?.features?.enable_web_search}
+			{#if $config?.features?.enable_web_search && ($user.role === 'admin' || $user.permissions.features?.web_search)}
 				<button
 					class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
 					on:click={() => {
