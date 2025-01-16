@@ -138,9 +138,14 @@ class S3StorageProvider(StorageProvider):
         LocalStorageProvider.delete_all_files()
 
 
-if STORAGE_PROVIDER == "local":
-    Storage = LocalStorageProvider()
-elif STORAGE_PROVIDER == "s3":
-    Storage = S3StorageProvider()
-else:
-    raise RuntimeError(f"Unsupported storage provider: {STORAGE_PROVIDER}")
+def get_storage_provider(storage_provider: str):
+    if storage_provider == "local":
+        Storage = LocalStorageProvider()
+    elif storage_provider == "s3":
+        Storage = S3StorageProvider()
+    else:
+        raise RuntimeError(f"Unsupported storage provider: {storage_provider}")
+    return Storage
+
+
+Storage = get_storage_provider(STORAGE_PROVIDER)
