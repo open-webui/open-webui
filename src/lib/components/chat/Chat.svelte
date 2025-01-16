@@ -1150,6 +1150,7 @@
 
 		if (done) {
 			message.done = true;
+			debugger;
 
 			if ($settings.responseAutoCopy) {
 				copyToClipboard(message.content);

@@ -869,9 +869,14 @@ async def chat_completion(
         }
         form_data["metadata"] = metadata
 
-        form_data, events = await process_chat_payload(
+        form_data, events,tool_output = await process_chat_payload(
             request, form_data, metadata, user, model
         )
+        print("form data for us",form_data)
+        print("==================================")
+        print("request",request)
+
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -879,7 +884,16 @@ async def chat_completion(
         )
 
     try:
-        response = await chat_completion_handler(request, form_data, user)
+        # response = await chat_completion_handler(request, form_data, user)
+        response = {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": tool_output
+                            }
+                        }
+                    ]
+                }
         return await process_chat_response(
             request, response, form_data, user, events, metadata, tasks
         )
