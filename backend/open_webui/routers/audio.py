@@ -45,9 +45,6 @@ from open_webui.env import (
 
 router = APIRouter()
 
-# Constants
-MAX_FILE_SIZE_MB = 25
-MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["AUDIO"])
@@ -522,7 +519,11 @@ def transcribe(request: Request, file_path):
             raise Exception(detail if detail else "Open WebUI: Server Connection Error")
 
 
-def compress_audio(file_path):
+def compress_audio(request, file_path):
+        
+    MAX_FILE_SIZE_MB = float(request.app.state.config.STT_MAX_FILE_SIZE_MB)
+    MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
+
     if os.path.getsize(file_path) > MAX_FILE_SIZE:
         file_dir = os.path.dirname(file_path)
         audio = AudioSegment.from_file(file_path)
@@ -570,7 +571,7 @@ def transcription(
 
         try:
             try:
-                file_path = compress_audio(file_path)
+                file_path = compress_audio(request, file_path)
             except Exception as e:
                 log.exception(e)
 
