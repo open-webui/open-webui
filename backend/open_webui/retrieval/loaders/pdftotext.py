@@ -23,6 +23,7 @@ class PdftotextLoader():
             "pdf_upload": pdf
         }
         data = {
+            'max_pages' : 15,
             'header_footer': str(False)
         }
 
