@@ -171,7 +171,6 @@
 			});
 
 			if (res) {
-				console.log(res);
 				const blob = new Blob([res.text], { type: 'text/plain' });
 				file = blobToFile(blob, `${file.name}.txt`);
 
@@ -185,11 +184,6 @@
 			const uploadedFile = await uploadFile(localStorage.token, file);
 
 			if (uploadedFile) {
-				console.log('File upload completed:', {
-					id: uploadedFile.id,
-					name: fileItem.name,
-					collection: uploadedFile?.meta?.collection_name
-				});
 
 				if (uploadedFile.error) {
 					console.warn('File upload warning:', uploadedFile.error);
@@ -214,23 +208,12 @@
 	};
 
 	const inputFilesHandler = async (inputFiles) => {
-		console.log('Input files handler called with:', inputFiles);
 		inputFiles.forEach((file) => {
-			console.log('Processing file:', {
-				name: file.name,
-				type: file.type,
-				size: file.size,
-				extension: file.name.split('.').at(-1)
-			});
 
 			if (
 				($config?.file?.max_size ?? null) !== null &&
 				file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
 			) {
-				console.log('File exceeds max size limit:', {
-					fileSize: file.size,
-					maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
-				});
 				toast.error(
 					$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
 						maxSize: $config?.file?.max_size
@@ -274,7 +257,6 @@
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
-			console.log('Escape');
 			dragged = false;
 		}
 	};
@@ -296,12 +278,10 @@
 
 	const onDrop = async (e) => {
 		e.preventDefault();
-		console.log(e);
 
 		if (e.dataTransfer?.files) {
 			const inputFiles = Array.from(e.dataTransfer?.files);
 			if (inputFiles && inputFiles.length > 0) {
-				console.log(inputFiles);
 				inputFilesHandler(inputFiles);
 			}
 		}
@@ -329,7 +309,6 @@
 	});
 
 	onDestroy(() => {
-		console.log('destroy');
 		window.removeEventListener('keydown', handleKeyDown);
 
 		const dropzoneElement = document.getElementById('chat-container');
@@ -621,7 +600,6 @@
 														files = files;
 													}}
 													on:click={() => {
-														console.log(file);
 													}}
 												/>
 											{/if}
@@ -646,8 +624,6 @@
 															type: fileData.blob.type
 														});
 														await uploadFileHandler(file);
-													} else {
-														console.log('No file was selected from Google Drive');
 													}
 												} catch (error) {
 													console.error('Google Drive Error:', error);
@@ -720,7 +696,6 @@
 														return null;
 													});
 
-													console.log(res);
 													return res;
 												}}
 												on:keydown={async (e) => {
@@ -743,7 +718,6 @@
 													// Check if Ctrl + R is pressed
 													if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
 														e.preventDefault();
-														console.log('regenerate');
 
 														const regenerateButton = [
 															...document.getElementsByClassName('regenerate-response-button')
@@ -836,7 +810,6 @@
 													}
 
 													if (e.key === 'Escape') {
-														console.log('Escape');
 														atSelectedModel = undefined;
 														selectedToolIds = [];
 														webSearchEnabled = false;
@@ -844,7 +817,6 @@
 												}}
 												on:paste={async (e) => {
 													e = e.detail.event;
-													console.log(e);
 
 													const clipboardData = e.clipboardData || window.clipboardData;
 
@@ -929,7 +901,6 @@
 												// Check if Ctrl + R is pressed
 												if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
 													e.preventDefault();
-													console.log('regenerate');
 
 													const regenerateButton = [
 														...document.getElementsByClassName('regenerate-response-button')
@@ -949,7 +920,6 @@
 														...document.getElementsByClassName('edit-user-message-button')
 													]?.at(-1);
 
-													console.log(userMessageElement);
 
 													userMessageElement.scrollIntoView({ block: 'center' });
 													editButton?.click();
@@ -1022,7 +992,6 @@
 												}
 
 												if (e.key === 'Escape') {
-													console.log('Escape');
 													atSelectedModel = undefined;
 													selectedToolIds = [];
 													webSearchEnabled = false;

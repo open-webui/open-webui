@@ -129,14 +129,12 @@
 	};
 
 	function navigateContent(direction: 'prev' | 'next') {
-		console.log(selectedContentIdx);
 
 		selectedContentIdx =
 			direction === 'prev'
 				? Math.max(selectedContentIdx - 1, 0)
 				: Math.min(selectedContentIdx + 1, contents.length - 1);
 
-		console.log(selectedContentIdx);
 	}
 
 	const iframeLoadHandler = () => {
@@ -153,8 +151,6 @@
 							'',
 							url.pathname + url.search + url.hash
 						);
-					} else {
-						console.log('External navigation blocked:', url.href);
 					}
 				}
 			},
