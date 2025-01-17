@@ -421,6 +421,30 @@ MICROSOFT_REDIRECT_URI = PersistentConfig(
     os.environ.get("MICROSOFT_REDIRECT_URI", ""),
 )
 
+GITHUB_CLIENT_ID = PersistentConfig(
+    "GITHUB_CLIENT_ID",
+    "oauth.github.client_id",
+    os.environ.get("GITHUB_CLIENT_ID", ""),
+)
+
+GITHUB_CLIENT_SECRET = PersistentConfig(
+    "GITHUB_CLIENT_SECRET",
+    "oauth.github.client_secret",
+    os.environ.get("GITHUB_CLIENT_SECRET", ""),
+)
+
+GITHUB_CLIENT_SCOPE = PersistentConfig(
+    "GITHUB_CLIENT_SCOPE",
+    "oauth.github.scope",
+    os.environ.get("GITHUB_CLIENT_SCOPE", "user:email"),
+)
+
+GITHUB_CLIENT_REDIRECT_URI = PersistentConfig(
+    "GITHUB_CLIENT_REDIRECT_URI",
+    "oauth.github.redirect_uri",
+    os.environ.get("GITHUB_CLIENT_REDIRECT_URI", ""),
+)
+
 OAUTH_CLIENT_ID = PersistentConfig(
     "OAUTH_CLIENT_ID",
     "oauth.oidc.client_id",
@@ -565,6 +589,27 @@ def load_oauth_providers():
             "register": microsoft_oauth_register,
         }
 
+    if GITHUB_CLIENT_ID.value and GITHUB_CLIENT_SECRET.value:
+        def github_oauth_register(client):
+            client.register(
+                name="github",
+                client_id=GITHUB_CLIENT_ID.value,
+                client_secret=GITHUB_CLIENT_SECRET.value,
+                access_token_url="https://github.com/login/oauth/access_token",
+                authorize_url="https://github.com/login/oauth/authorize",
+                api_base_url="https://api.github.com",
+                userinfo_endpoint="https://api.github.com/user",
+                client_kwargs={
+                    "scope": GITHUB_CLIENT_SCOPE.value
+                },
+                redirect_uri=GITHUB_CLIENT_REDIRECT_URI.value,
+            )
+        OAUTH_PROVIDERS["github"] = {
+            "redirect_uri": GITHUB_CLIENT_REDIRECT_URI.value,
+            "register": github_oauth_register,
+            "sub_claim": "id",
+        }
+
     if (
         OAUTH_CLIENT_ID.value
         and OAUTH_CLIENT_SECRET.value
@@ -583,6 +628,7 @@ def load_oauth_providers():
             )
         OAUTH_PROVIDERS["oidc"] = {
             "name": OAUTH_PROVIDER_NAME.value,
+            "redirect_uri": OPENID_REDIRECT_URI.value,
             "register": oidc_oauth_register,
         }
 
