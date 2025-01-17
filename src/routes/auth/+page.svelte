@@ -49,6 +49,8 @@
 			return null;
 		});
 
+		console.log("Session User", sessionUser);
+
 		await setSessionUser(sessionUser);
 	};
 
@@ -72,6 +74,7 @@
 	};
 
 	const submitHandler = async () => {
+		console.log("Submit Handler", mode);
 		if (mode === 'ldap') {
 			await ldapSignInHandler();
 		} else if (mode === 'signin') {
@@ -94,7 +97,7 @@
 		if (!token) {
 			return;
 		}
-		const sessionUser = await getSessionUser(token).catch((error) => {
+		const sessionUser = await getSessionUser().catch((error) => {
 			toast.error(error);
 			return null;
 		});
@@ -111,6 +114,7 @@
 		if ($user !== undefined) {
 			await goto('/');
 		}
+		
 		await checkOauthCallback();
 
 		loaded = true;
@@ -309,6 +313,31 @@
 							</div>
 						</form>
 
+						<div class="mt-5">
+							<button
+								class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
+								on:click={() => {
+									window.location.href = `${WEBUI_BASE_URL}/login`;
+								}}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="1.5"
+									stroke="currentColor"
+									class="size-6 mr-3"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
+									/>
+								</svg>
+								<span>{$i18n.t('Continue with {{provider}}', { provider: 'ProConnect' })}</span>
+							</button>
+						</div>
+
 						{#if Object.keys($config?.oauth?.providers ?? {}).length > 0}
 							<div class="inline-flex items-center justify-center w-full">
 								<hr class="w-32 h-px my-4 border-0 dark:bg-gray-100/10 bg-gray-700/10" />
@@ -318,7 +347,6 @@
 										>{$i18n.t('or')}</span
 									>
 								{/if}
-
 								<hr class="w-32 h-px my-4 border-0 dark:bg-gray-100/10 bg-gray-700/10" />
 							</div>
 							<div class="flex flex-col space-y-2">

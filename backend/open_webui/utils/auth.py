@@ -13,6 +13,7 @@ from open_webui.env import WEBUI_SECRET_KEY
 from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
+from authlib.oidc.core import UserInfo
 
 logging.getLogger("passlib").setLevel(logging.ERROR)
 
@@ -30,7 +31,8 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def verify_password(plain_password, hashed_password):
     return (
-        pwd_context.verify(plain_password, hashed_password) if hashed_password else None
+        pwd_context.verify(
+            plain_password, hashed_password) if hashed_password else None
     )
 
 
@@ -58,7 +60,7 @@ def decode_token(token: str) -> Optional[dict]:
 
 
 def extract_token_from_auth_header(auth_header: str):
-    return auth_header[len("Bearer ") :]
+    return auth_header[len("Bearer "):]
 
 
 def create_api_key():
@@ -79,18 +81,12 @@ def get_current_user(
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
 ):
     token = None
-
+    
     if auth_token is not None:
         token = auth_token.credentials
 
-    if token is None and "token" in request.cookies:
-        token = request.cookies.get("token")
-
-    if token is None:
-        raise HTTPException(status_code=403, detail="Not authenticated")
-
     # auth by api key
-    if token.startswith("sk-"):
+    if token and token.startswith("sk-"):
         if not request.state.enable_api_key:
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
@@ -112,30 +108,19 @@ def get_current_user(
         return get_current_user_by_api_key(token)
 
     # auth by jwt token
-    try:
-        data = decode_token(token)
-    except Exception as e:
+    user = request.session.get('user')
+    if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-        )
+                status_code=401, detail="Authentication required")
 
-    if data is not None and "id" in data:
-        user = Users.get_user_by_id(data["id"])
-        if user is None:
-            raise HTTPException(
+    if user is None:
+        raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ERROR_MESSAGES.INVALID_TOKEN,
-            )
-        else:
-            Users.update_user_last_active_by_id(user.id)
-        return user
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
-
+    else:
+        Users.update_user_last_active_by_id(user.id)
+        return user
 
 def get_current_user_by_api_key(api_key: str):
     user = Users.get_user_by_api_key(api_key)

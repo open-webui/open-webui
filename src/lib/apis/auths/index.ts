@@ -82,32 +82,22 @@ export const updateAdminConfig = async (token: string, body: object) => {
 	return res;
 };
 
-export const getSessionUser = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/`, {
+export const getSessionUser = async () => {
+	const response = await fetch(`${WEBUI_API_BASE_URL}/auths/userinfo`, {
 		method: 'GET',
 		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
+			'Content-Type': 'application/json'
 		},
 		credentials: 'include'
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
+	});
 
-	if (error) {
-		throw error;
+	if (response.status === 401 || !response.ok) {
+		throw new Error('Unauthorized access or invalid response');
 	}
 
-	return res;
+	const userData = await response.json();
+
+	return userData;
 };
 
 export const ldapUserSignIn = async (user: string, password: string) => {
