@@ -62,16 +62,12 @@
 		<hr class=" border-gray-50 dark:border-gray-850" />
 	{:else if token.type === 'heading'}
 		<svelte:element this={headerComponent(token.depth)}>
-			<MarkdownInlineTokens
-				{history}
-				id={`${id}-${tokenIdx}-h`}
-				tokens={token.tokens}
-				{onSourceClick}
-			/>
+			<MarkdownInlineTokens id={`${id}-${tokenIdx}-h`} tokens={token.tokens} {onSourceClick} />
 		</svelte:element>
 	{:else if token.type === 'code'}
 		{#if token.raw.includes('```')}
 			<CodeBlock
+				{history}
 				id={`${id}-${tokenIdx}`}
 				{token}
 				lang={token?.lang ?? ''}

@@ -7,6 +7,7 @@
 
 	import { getContext, getAllContexts, onMount, tick, createEventDispatcher } from 'svelte';
 	import { copyToClipboard } from '$lib/utils';
+	import { isFinishGenRes, showBottomArtifacts } from '$lib/stores';
 
 	import 'highlight.js/styles/github-dark.min.css';
 
@@ -21,6 +22,7 @@
 
 	export let save = false;
 	export let run = true;
+	export let history;
 
 	export let token;
 	export let lang = '';
@@ -274,7 +276,6 @@ __builtins__.input = input`);
 	}
 
 	$: if (_token) {
-		console.log(11111);
 		console.log({ _token });
 		render();
 	}
@@ -301,7 +302,15 @@ __builtins__.input = input`);
 			});
 		}
 	});
-	console.log({ token });
+	$: {
+		if (
+			$isFinishGenRes &&
+			(history.messages[history.currentId].content.includes('OpenBottomArtifacts') ||
+				history.messages[history.currentId].content.includes('OpenAllArtifacts'))
+		) {
+			showBottomArtifacts.set(true);
+		}
+	}
 </script>
 
 <div>
@@ -393,6 +402,16 @@ __builtins__.input = input`);
 					<div class="text-sm">{stdout || stderr || result}</div>
 				</div>
 			{/if}
+		{:else if $isFinishGenRes}
+			<span>Please choose an option from the popup window</span>
+		{:else if !$isFinishGenRes && id?.includes(history?.currentId)}
+			<img
+				style="width: 300px;border-radius: 10px;"
+				src="https://media.giphy.com/media/wypKXPQggwaCA/giphy.gif?cid=790b7611k3lxamfufuuxl5hadq30352m642vnivn2f7gvq0h&ep=v1_gifs_search&rid=giphy.gif&ct=g"
+				alt="thinking"
+			/>
+		{:else}
+			<span> Please wait for the code to finish executing </span>
 		{/if}
 	</div>
 </div>

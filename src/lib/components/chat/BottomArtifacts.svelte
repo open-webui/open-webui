@@ -153,7 +153,7 @@
 		const bottomArtifact = document.getElementById('BottomArtifact');
 		if (bottomArtifact) {
 			const links = bottomArtifact.querySelectorAll(
-				'a, tr, td, div, .nbg__blog__card, nbg__support__card, nbg__api__card, button'
+				'a, tr, td, .nbg__button, .nbg__button__primary, .nbg__button__secondary, .nbg__button__danger, .nbg__button__icon, .nbg__button__primary__no__fill, .nbg__button__secondary__no__fill, .nbg__button__text__link, .nbg__button__copy, .nbg__button__sidebar, .nbg__cta__arrow, .nbg__cta__rounded, .nbg__support__cta__arrow, .nbg__blog__cta__button, .nbg__feature__card__button, .nbg__advantage__card__tag '
 			); // Select all links inside BottomArtifact
 			links.forEach((link) => {
 				link.addEventListener('click', (e) => {
