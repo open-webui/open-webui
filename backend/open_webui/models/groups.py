@@ -80,10 +80,10 @@ class GroupResponse(BaseModel):
 class GroupForm(BaseModel):
     name: str
     description: str
+    permissions: Optional[dict] = None
 
 
 class GroupUpdateForm(GroupForm):
-    permissions: Optional[dict] = None
     user_ids: Optional[list[str]] = None
     admin_ids: Optional[list[str]] = None
 
@@ -95,7 +95,7 @@ class GroupTable:
         with get_db() as db:
             group = GroupModel(
                 **{
-                    **form_data.model_dump(),
+                    **form_data.model_dump(exclude_none=True),
                     "id": str(uuid.uuid4()),
                     "user_id": user_id,
                     "created_at": int(time.time()),
