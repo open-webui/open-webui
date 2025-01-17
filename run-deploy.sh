@@ -113,6 +113,7 @@ run_container() {
     docker run -d \
         -p "${HOST_PORT}:${CONTAINER_PORT}" \
         --add-host=host.docker.internal:host-gateway \
+        -v "${CONTAINER_NAME}:${DATA_DIR}" \
         --name "$CONTAINER_NAME" \
         --restart always \
         --env-file "$ENV_FILE" \
