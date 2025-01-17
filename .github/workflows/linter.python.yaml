@@ -1,8 +1,7 @@
-name: Python CI
+name: "Python linter 🔎"
 on:
-  push:
-    branches: ['main']
   pull_request:
+
 jobs:
   build:
     name: 'Lint Backend'
@@ -14,14 +13,19 @@ jobs:
         node-version:
           - latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
       - name: Use Python
         uses: actions/setup-python@v5
+
       - name: Use Bun
         uses: oven-sh/setup-bun@v1
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pylint
+
       - name: Lint backend
         run: bun run lint:backend

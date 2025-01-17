@@ -1,6 +1,4 @@
 import os
-import boto3
-from botocore.exceptions import ClientError
 import shutil
 
 
@@ -21,6 +19,8 @@ from open_webui.config import (
 import boto3
 from botocore.exceptions import ClientError
 from typing import BinaryIO, Tuple, Optional
+
+from open_webui.config import Config
 
 
 class StorageProvider:
