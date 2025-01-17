@@ -3,6 +3,11 @@
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR" || exit
 
+# Protect favicon if it exists
+if [ -f "static/favicon/favicon.png" ]; then
+    cp static/favicon/favicon.png static/favicon/favicon.png.backup
+fi
+
 KEY_FILE=.webui_secret_key
 
 PORT="${PORT:-8080}"
@@ -52,6 +57,11 @@ if [ -n "$SPACE_ID" ]; then
   fi
 
   export WEBUI_URL=${SPACE_HOST}
+fi
+
+# Restore favicon if it was backed up
+if [ -f "static/favicon/favicon.png.backup" ]; then
+    mv static/favicon/favicon.png.backup static/favicon/favicon.png
 fi
 
 WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*'
