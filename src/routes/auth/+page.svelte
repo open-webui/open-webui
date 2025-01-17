@@ -139,14 +139,16 @@
 <div class="w-full h-screen max-h-[100dvh] text-white relative">
 	<div class="w-full h-full absolute top-0 left-0 bg-white dark:bg-black"></div>
 
+	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
+
 	{#if loaded}
 		<div class="fixed m-10 z-50">
 			<div class="flex space-x-2">
 				<div class=" self-center">
 					<img
 						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/favicon.png"
-						class=" w-6 rounded-full"
+						src="{WEBUI_BASE_URL}/static/splash.png"
+						class=" w-6 rounded-full dark:invert"
 						alt="logo"
 					/>
 				</div>
@@ -203,7 +205,7 @@
 								{/if}
 							</div>
 
-							{#if $config?.features.enable_login_form}
+							{#if $config?.features.enable_login_form || $config?.features.enable_ldap}
 								<div class="flex flex-col mt-4">
 									{#if mode === 'signup'}
 										<div class="mb-2">
@@ -227,6 +229,7 @@
 												type="text"
 												class="my-0.5 w-full text-sm outline-none bg-transparent"
 												autocomplete="username"
+												name="username"
 												placeholder={$i18n.t('Enter Your Username')}
 												required
 											/>
@@ -239,6 +242,7 @@
 												type="email"
 												class="my-0.5 w-full text-sm outline-none bg-transparent"
 												autocomplete="email"
+												name="email"
 												placeholder={$i18n.t('Enter Your Email')}
 												required
 											/>
@@ -254,13 +258,14 @@
 											class="my-0.5 w-full text-sm outline-none bg-transparent"
 											placeholder={$i18n.t('Enter Your Password')}
 											autocomplete="current-password"
+											name="current-password"
 											required
 										/>
 									</div>
 								</div>
 							{/if}
 							<div class="mt-5">
-								{#if $config?.features.enable_login_form}
+								{#if $config?.features.enable_login_form || $config?.features.enable_ldap}
 									{#if mode === 'ldap'}
 										<button
 											class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
@@ -309,7 +314,7 @@
 						{#if Object.keys($config?.oauth?.providers ?? {}).length > 0}
 							<div class="inline-flex items-center justify-center w-full">
 								<hr class="w-32 h-px my-4 border-0 dark:bg-gray-100/10 bg-gray-700/10" />
-								{#if $config?.features.enable_login_form}
+								{#if $config?.features.enable_login_form || $config?.features.enable_ldap}
 									<span
 										class="px-3 text-sm font-medium text-gray-900 dark:text-white bg-transparent"
 										>{$i18n.t('or')}</span
@@ -401,7 +406,7 @@
 							</div>
 						{/if}
 
-						{#if $config?.features.enable_ldap}
+						{#if $config?.features.enable_ldap && $config?.features.enable_login_form}
 							<div class="mt-2">
 								<button
 									class="flex justify-center items-center text-xs w-full text-center underline"

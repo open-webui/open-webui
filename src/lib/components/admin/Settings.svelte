@@ -2,11 +2,11 @@
 	import { getContext, tick, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
+	import { config } from '$lib/stores';
+	import { getBackendConfig } from '$lib/apis';
 	import Database from './Settings/Database.svelte';
 
 	import General from './Settings/General.svelte';
-	import Users from './Settings/Users.svelte';
-
 	import Pipelines from './Settings/Pipelines.svelte';
 	import Audio from './Settings/Audio.svelte';
 	import Images from './Settings/Images.svelte';
@@ -15,8 +15,7 @@
 	import Connections from './Settings/Connections.svelte';
 	import Documents from './Settings/Documents.svelte';
 	import WebSearch from './Settings/WebSearch.svelte';
-	import { config } from '$lib/stores';
-	import { getBackendConfig } from '$lib/apis';
+
 	import ChartBar from '../icons/ChartBar.svelte';
 	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
 	import Evaluations from './Settings/Evaluations.svelte';
@@ -39,7 +38,7 @@
 	});
 </script>
 
-<div class="flex flex-col lg:flex-row w-full h-full pb-2 -mt-0.5 lg:space-x-4">
+<div class="flex flex-col lg:flex-row w-full h-full pb-2 lg:space-x-4">
 	<div
 		id="admin-settings-tabs-container"
 		class="tabs flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
@@ -327,7 +326,7 @@
 		</button>
 	</div>
 
-	<div class="flex-1 mt-3 lg:mt-0 overflow-y-scroll">
+	<div class="flex-1 mt-3 lg:mt-0 overflow-y-scroll pr-1 scrollbar-hidden">
 		{#if selectedTab === 'general'}
 			<General
 				saveHandler={async () => {

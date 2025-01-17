@@ -1,4 +1,4 @@
-import { OPENAI_API_BASE_URL } from '$lib/constants';
+import { OPENAI_API_BASE_URL, WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 export const getOpenAIConfig = async (token: string = '') => {
 	let error = null;
@@ -32,15 +32,12 @@ export const getOpenAIConfig = async (token: string = '') => {
 	return res;
 };
 
-
 type OpenAIConfig = {
 	ENABLE_OPENAI_API: boolean;
 	OPENAI_API_BASE_URLS: string[];
 	OPENAI_API_KEYS: string[];
 	OPENAI_API_CONFIGS: object;
-}
-
-
+};
 
 export const updateOpenAIConfig = async (token: string = '', config: OpenAIConfig) => {
 	let error = null;
@@ -108,7 +105,6 @@ export const getOpenAIUrls = async (token: string = '') => {
 
 	return res.OPENAI_API_BASE_URLS;
 };
-
 
 export const updateOpenAIUrls = async (token: string = '', urls: string[]) => {
 	let error = null;
@@ -249,22 +245,18 @@ export const verifyOpenAIConnection = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(
-		`${OPENAI_API_BASE_URL}/verify`,
-		{
-			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				Authorization: `Bearer ${token}`,
-				'Content-Type': 'application/json',
-
-			},
-			body: JSON.stringify({
-				url,
-				key
-			})
-		}
-	)
+	const res = await fetch(`${OPENAI_API_BASE_URL}/verify`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			url,
+			key
+		})
+	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
@@ -281,10 +273,10 @@ export const verifyOpenAIConnection = async (
 	return res;
 };
 
-export const generateOpenAIChatCompletion = async (
+export const chatCompletion = async (
 	token: string = '',
 	body: object,
-	url: string = OPENAI_API_BASE_URL
+	url: string = `${WEBUI_BASE_URL}/api`
 ): Promise<[Response | null, AbortController]> => {
 	const controller = new AbortController();
 	let error = null;
@@ -308,6 +300,37 @@ export const generateOpenAIChatCompletion = async (
 	}
 
 	return [res, controller];
+};
+
+export const generateOpenAIChatCompletion = async (
+	token: string = '',
+	body: object,
+	url: string = `${WEBUI_BASE_URL}/api`
+) => {
+	let error = null;
+
+	const res = await fetch(`${url}/chat/completions`, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify(body)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = `${err?.detail ?? 'Network Problem'}`;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
 };
 
 export const synthesizeOpenAISpeech = async (

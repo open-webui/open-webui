@@ -8,7 +8,7 @@
 
 	import { removeLastWordFromString } from '$lib/utils';
 	import { getPrompts } from '$lib/apis/prompts';
-	import { getKnowledgeItems } from '$lib/apis/knowledge';
+	import { getKnowledgeBases } from '$lib/apis/knowledge';
 
 	import Prompts from './Commands/Prompts.svelte';
 	import Knowledge from './Commands/Knowledge.svelte';
@@ -46,7 +46,7 @@
 				prompts.set(await getPrompts(localStorage.token));
 			})(),
 			(async () => {
-				knowledge.set(await getKnowledgeItems(localStorage.token));
+				knowledge.set(await getKnowledgeBases(localStorage.token));
 			})()
 		]);
 		loading = false;
@@ -106,7 +106,7 @@
 	{:else}
 		<div
 			id="commands-container"
-			class="pl-3 pr-14 mb-3 text-left w-full absolute bottom-0 left-0 right-0 z-10"
+			class="px-2 mb-2 text-left w-full absolute bottom-0 left-0 right-0 z-10"
 		>
 			<div class="flex w-full rounded-xl border border-gray-50 dark:border-gray-850">
 				<div

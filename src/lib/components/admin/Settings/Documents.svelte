@@ -19,7 +19,7 @@
 	} from '$lib/apis/retrieval';
 
 	import { knowledge, models } from '$lib/stores';
-	import { getKnowledgeItems } from '$lib/apis/knowledge';
+	import { getKnowledgeBases } from '$lib/apis/knowledge';
 	import { uploadDir, deleteAllFiles, deleteFileById } from '$lib/apis/files';
 
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -56,8 +56,13 @@
 	let chunkOverlap = 0;
 	let pdfExtractImages = true;
 
-	let OpenAIKey = '';
+	let enableGoogleDriveIntegration = false;
+
 	let OpenAIUrl = '';
+	let OpenAIKey = '';
+
+	let OllamaUrl = '';
+	let OllamaKey = '';
 
 	let querySettings = {
 		template: '',
@@ -104,19 +109,15 @@
 		const res = await updateEmbeddingConfig(localStorage.token, {
 			embedding_engine: embeddingEngine,
 			embedding_model: embeddingModel,
-			...(embeddingEngine === 'openai' || embeddingEngine === 'ollama'
-				? {
-						embedding_batch_size: embeddingBatchSize
-					}
-				: {}),
-			...(embeddingEngine === 'openai'
-				? {
-						openai_config: {
-							key: OpenAIKey,
-							url: OpenAIUrl
-						}
-					}
-				: {})
+			embedding_batch_size: embeddingBatchSize,
+			ollama_config: {
+				key: OllamaKey,
+				url: OllamaUrl
+			},
+			openai_config: {
+				key: OpenAIKey,
+				url: OpenAIUrl
+			}
 		}).catch(async (error) => {
 			toast.error(error);
 			await setEmbeddingConfig();
@@ -176,6 +177,7 @@
 		}
 		const res = await updateRAGConfig(localStorage.token, {
 			pdf_extract_images: pdfExtractImages,
+			enable_google_drive_integration: enableGoogleDriveIntegration,
 			file: {
 				max_size: fileMaxSize === '' ? null : fileMaxSize,
 				max_count: fileMaxCount === '' ? null : fileMaxCount
@@ -206,6 +208,9 @@
 
 			OpenAIKey = embeddingConfig.openai_config.key;
 			OpenAIUrl = embeddingConfig.openai_config.url;
+
+			OllamaKey = embeddingConfig.ollama_config.key;
+			OllamaUrl = embeddingConfig.ollama_config.url;
 		}
 	};
 
@@ -243,6 +248,8 @@
 
 			fileMaxSize = res?.file.max_size ?? '';
 			fileMaxCount = res?.file.max_count ?? '';
+
+			enableGoogleDriveIntegration = res.enable_google_drive_integration;
 		}
 	});
 </script>
@@ -310,9 +317,9 @@
 			</div>
 
 			{#if embeddingEngine === 'openai'}
-				<div class="my-0.5 flex gap-2">
+				<div class="my-0.5 flex gap-2 pr-2">
 					<input
-						class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+						class="flex-1 w-full rounded-lg text-sm bg-transparent outline-none"
 						placeholder={$i18n.t('API Base URL')}
 						bind:value={OpenAIUrl}
 						required
@@ -320,7 +327,23 @@
 
 					<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={OpenAIKey} />
 				</div>
+			{:else if embeddingEngine === 'ollama'}
+				<div class="my-0.5 flex gap-2 pr-2">
+					<input
+						class="flex-1 w-full rounded-lg text-sm bg-transparent outline-none"
+						placeholder={$i18n.t('API Base URL')}
+						bind:value={OllamaUrl}
+						required
+					/>
+
+					<SensitiveInput
+						placeholder={$i18n.t('API Key')}
+						bind:value={OllamaKey}
+						required={false}
+					/>
+				</div>
 			{/if}
+
 			{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai'}
 				<div class="flex mt-0.5 space-x-2">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Embedding Batch Size')}</div>
@@ -376,19 +399,12 @@
 			{#if embeddingEngine === 'ollama'}
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
-						<select
+						<input
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							bind:value={embeddingModel}
-							placeholder={$i18n.t('Select a model')}
+							placeholder={$i18n.t('Set embedding model')}
 							required
-						>
-							{#if !embeddingModel}
-								<option value="" disabled selected>{$i18n.t('Select a model')}</option>
-							{/if}
-							{#each $models.filter((m) => m.id && m.ollama && !(m?.preset ?? false)) as model}
-								<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
-							{/each}
-						</select>
+						/>
 					</div>
 				</div>
 			{:else}
@@ -575,6 +591,19 @@
 
 		<hr class=" dark:border-gray-850" />
 
+		<div class="text-sm font-medium mb-1">{$i18n.t('Google Drive')}</div>
+
+		<div class="">
+			<div class="flex justify-between items-center text-xs">
+				<div class="text-xs font-medium">{$i18n.t('Enable Google Drive')}</div>
+				<div>
+					<Switch bind:state={enableGoogleDriveIntegration} />
+				</div>
+			</div>
+		</div>
+
+		<hr class=" dark:border-gray-850" />
+
 		<div class=" ">
 			<div class=" text-sm font-medium mb-1">{$i18n.t('Query Params')}</div>
 
@@ -658,7 +687,9 @@
 
 			<div class=" flex gap-1.5">
 				<div class="  w-full justify-between">
-					<div class="self-center text-xs font-medium min-w-fit mb-1">{$i18n.t('Chunk Size')}</div>
+					<div class="self-center text-xs font-medium min-w-fit mb-1">
+						{$i18n.t('Chunk Size')}
+					</div>
 					<div class="self-center">
 						<input
 							class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"

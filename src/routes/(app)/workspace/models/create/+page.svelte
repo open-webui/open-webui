@@ -5,7 +5,7 @@
 	import { models } from '$lib/stores';
 
 	import { onMount, tick, getContext } from 'svelte';
-	import { addNewModel, getModelById, getModelInfos } from '$lib/apis/models';
+	import { createNewModel, getModelById } from '$lib/apis/models';
 	import { getModels } from '$lib/apis';
 
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
@@ -20,8 +20,13 @@
 			return;
 		}
 
+		if (modelInfo.id === '') {
+			toast.error('Error: Model ID cannot be empty. Please enter a valid ID to proceed.');
+			return;
+		}
+
 		if (modelInfo) {
-			const res = await addNewModel(localStorage.token, {
+			const res = await createNewModel(localStorage.token, {
 				...modelInfo,
 				meta: {
 					...modelInfo.meta,
@@ -31,6 +36,9 @@
 						: null
 				},
 				params: { ...modelInfo.params }
+			}).catch((error) => {
+				toast.error(error);
+				return null;
 			});
 
 			if (res) {

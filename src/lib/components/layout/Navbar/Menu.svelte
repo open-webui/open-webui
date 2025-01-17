@@ -83,12 +83,19 @@
 
 	const downloadJSONExport = async () => {
 		if (chat.id) {
-			chat = await getChatById(localStorage.token, chat.id);
+			let chatObj = null;
+
+			if (chat.id === 'local' || $temporaryChatEnabled) {
+				chatObj = chat;
+			} else {
+				chatObj = await getChatById(localStorage.token, chat.id);
+			}
+
+			let blob = new Blob([JSON.stringify([chatObj])], {
+				type: 'application/json'
+			});
+			saveAs(blob, `chat-export-${Date.now()}.json`);
 		}
-		let blob = new Blob([JSON.stringify([chat])], {
-			type: 'application/json'
-		});
-		saveAs(blob, `chat-export-${Date.now()}.json`);
 	};
 </script>
 
