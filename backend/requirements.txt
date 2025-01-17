@@ -102,6 +102,7 @@ pytest~=8.3.2
 pytest-docker~=3.1.1
 
 googleapis-common-protos==1.63.2
+google-cloud-storage==2.19.0
 
 ## LDAP
 ldap3==2.9.1

@@ -1,7 +1,9 @@
 import os
 import shutil
+import json
 from abc import ABC, abstractmethod
 from typing import BinaryIO, Tuple
+from io import BytesIO
 
 import boto3
 from botocore.exceptions import ClientError
@@ -11,8 +13,8 @@ from open_webui.config import (
     S3_ENDPOINT_URL,
     S3_REGION_NAME,
     S3_SECRET_ACCESS_KEY,
-    GCS_PROJECT_ID, 
     GCS_BUCKET_NAME,
+    GOOGLE_APPLICATION_CREDENTIALS_JSON,
     STORAGE_PROVIDER,
     UPLOAD_DIR,
 )
@@ -143,7 +145,7 @@ class S3StorageProvider(StorageProvider):
 
 class GCSStorageProvider(StorageProvider):
     def __init__(self):
-        self.gcs_client = storage.Client(project=GCS_PROJECT_ID)
+        self.gcs_client = storage.Client.from_service_account_info(info=json.loads(GOOGLE_APPLICATION_CREDENTIALS_JSON))
         self.bucket_name = self.gcs_client.bucket(GCS_BUCKET_NAME)
     
     def upload_file(self, file: BinaryIO, filename: str):
@@ -154,26 +156,28 @@ class GCSStorageProvider(StorageProvider):
             blob = self.bucket_name.blob(filename)
             # Upload the file to the bucket
             blob.upload_from_file(BytesIO(contents))
-            print("file successfully uploaded")
+            return contents, _
         except GoogleCloudError as e:
             raise RuntimeError(f"Error uploading file to GCS: {e}")
 
     def get_file(self, file_path:str) -> str:
         """Handles downloading of the file from GCS storage."""
         try:
-            local_file_path = f"{UPLOAD_DIR}/{file_path}"
+            local_file_path=file_path.removeprefix(UPLOAD_DIR + "/")
             # Get the blob (object in the bucket)
-            blob = self.bucket_name.blob(file_path)
+            blob = self.bucket_name.blob(local_file_path)
             # Download the file to a local destination
-            blob.download_to_filename(local_file_path)
+            blob.download_to_filename(file_path)
+            return file_path
         except NotFound as e:
             raise RuntimeError(f"Error downloading file from GCS: {e}")
     
     def delete_file(self, file_path:str) -> None:
         """Handles deletion of the file from GCS storage."""
         try:
+            local_file_path = file_path.removeprefix(UPLOAD_DIR + "/")
             # Get the blob (object in the bucket)
-            blob = self.bucket_name.blob(file_path)
+            blob = self.bucket_name.blob(local_file_path)
 
             # Delete the file
             blob.delete()
