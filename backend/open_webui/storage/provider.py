@@ -14,6 +14,7 @@ from open_webui.config import (
     STORAGE_PROVIDER,
     UPLOAD_DIR,
 )
+from google.cloud import storage
 from open_webui.constants import ERROR_MESSAGES
 
 
@@ -137,6 +138,11 @@ class S3StorageProvider(StorageProvider):
         # Always delete from local storage
         LocalStorageProvider.delete_all_files()
 
+class GCSStorageProvider(StorageProvider):
+    def __init__(self):
+        self.gcs_client = storage.Client()
+        self.bucket_name = GCS_BUCKET_NAME
+    
 
 def get_storage_provider(storage_provider: str):
     if storage_provider == "local":
