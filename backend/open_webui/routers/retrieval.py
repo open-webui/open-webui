@@ -351,7 +351,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
-            "pdftotext_server_url" : request.app.state.config.PDFTOTEXT_SERVER_URL
+            "pdftotext_server_url": request.app.state.config.PDFTOTEXT_SERVER_URL
         },
         "chunk": {
             "text_splitter": request.app.state.config.TEXT_SPLITTER,
@@ -485,7 +485,7 @@ async def update_rag_config(
         request.app.state.config.TIKA_SERVER_URL = (
             form_data.content_extraction.tika_server_url
         )
-        request.app.state.config.pdftotext_server_url = (
+        request.app.state.config.PDFTOTEXT_SERVER_URL = (
             form_data.content_extraction.pdftotext_server_url
         )
 
@@ -564,7 +564,7 @@ async def update_rag_config(
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
-            "pdftotext_server_url": request.app.state.config.TIKA_SERVER_URL
+            "pdftotext_server_url": request.app.state.config.PDF
         },
         "chunk": {
             "text_splitter": request.app.state.config.TEXT_SPLITTER,
