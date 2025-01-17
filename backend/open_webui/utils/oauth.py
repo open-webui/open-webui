@@ -63,17 +63,8 @@ auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 class OAuthManager:
     def __init__(self):
         self.oauth = OAuth()
-        for provider_name, provider_config in OAUTH_PROVIDERS.items():
-            self.oauth.register(
-                name=provider_name,
-                client_id=provider_config["client_id"],
-                client_secret=provider_config["client_secret"],
-                server_metadata_url=provider_config["server_metadata_url"],
-                client_kwargs={
-                    "scope": provider_config["scope"],
-                },
-                redirect_uri=provider_config["redirect_uri"],
-            )
+        for _, provider_config in OAUTH_PROVIDERS.items():
+            provider_config["register"](self.oauth)
 
     def get_client(self, provider_name):
         return self.oauth.create_client(provider_name)
@@ -207,7 +198,7 @@ class OAuthManager:
             log.warning(f"OAuth callback failed, user data is missing: {token}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
-        sub = user_data.get("sub")
+        sub = user_data.get(OAUTH_PROVIDERS[provider].get("sub_claim", "sub"))
         if not sub:
             log.warning(f"OAuth callback failed, sub is missing: {user_data}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
