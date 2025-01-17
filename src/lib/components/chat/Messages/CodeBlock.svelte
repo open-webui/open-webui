@@ -173,9 +173,9 @@ __builtins__.input = input`);
 					result = '[NO OUTPUT]';
 				}
 
-				console.log(result);
-				console.log(stdout);
-				console.log(stderr);
+				console.log({ result });
+				console.log({ stdout });
+				console.log({ stderr });
 
 				const pltCanvasElement = document.getElementById(`plt-canvas-${id}`);
 
@@ -231,7 +231,7 @@ __builtins__.input = input`);
 			console.log('pyodideWorker.onmessage', event);
 			const { id, ...data } = event.data;
 
-			console.log(id, data);
+			console.log({ id, data });
 
 			data['stdout'] && (stdout = data['stdout']);
 			data['stderr'] && (stderr = data['stderr']);
@@ -274,6 +274,8 @@ __builtins__.input = input`);
 	}
 
 	$: if (_token) {
+		console.log(11111);
+		console.log({ _token });
 		render();
 	}
 
@@ -299,6 +301,7 @@ __builtins__.input = input`);
 			});
 		}
 	});
+	console.log({ token });
 </script>
 
 <div>
@@ -313,7 +316,7 @@ __builtins__.input = input`);
 			{:else}
 				<pre class="mermaid">{code}</pre>
 			{/if}
-			<!-- {:else}
+		{:else if lang !== 'html' && lang !== 'css'}
 			<div class="text-text-300 absolute pl-4 py-1.5 text-xs font-medium dark:text-white">
 				{lang}
 			</div>
@@ -389,7 +392,7 @@ __builtins__.input = input`);
 					<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
 					<div class="text-sm">{stdout || stderr || result}</div>
 				</div>
-			{/if} -->
+			{/if}
 		{/if}
 	</div>
 </div>
