@@ -49,6 +49,7 @@
 
 	let contentExtractionEngine = 'default';
 	let tikaServerUrl = '';
+	let pdftotextServerUrl = '';
 	let showTikaServerUrl = false;
 	let showPdftotextServerUrl = false;
 
@@ -190,7 +191,8 @@
 			},
 			content_extraction: {
 				engine: contentExtractionEngine,
-				tika_server_url: tikaServerUrl
+				tika_server_url: tikaServerUrl,
+				pdftotext_server_url: pdftotextServerUrl
 			}
 		});
 
@@ -245,8 +247,9 @@
 
 			contentExtractionEngine = res.content_extraction.engine;
 			tikaServerUrl = res.content_extraction.tika_server_url;
+			pdftotextServerUrl = res.content_extraction.pdftotext_server_url
 			showTikaServerUrl = contentExtractionEngine === 'tika';
-
+            showPdftotextServerUrl = contentExtractionEngine === 'pdftotext';
 			fileMaxSize = res?.file.max_size ?? '';
 			fileMaxCount = res?.file.max_count ?? '';
 
@@ -569,8 +572,6 @@
 						bind:value={contentExtractionEngine}
 						on:change={(e) => {
 							showTikaServerUrl = e.target.value === 'tika';
-						}}
-						on:change={(e) => {
 							showPdftotextServerUrl = e.target.value === 'pdftotext';
 						}}
 					>
@@ -581,7 +582,7 @@
 				</div>
 			</div>
 
-			{#if showTikaServerUrl}
+			{#if contentExtractionEngine === 'tika'}
 				<div class="flex w-full mt-1">
 					<div class="flex-1 mr-2">
 						<input
@@ -591,15 +592,13 @@
 						/>
 					</div>
 				</div>
-			{/if}
-
-			{#if showPdftotextServerUrl}
+			{:else if contentExtractionEngine === 'pdftotext'}
 				<div class="flex w-full mt-1">
 					<div class="flex-1 mr-2">
 						<input
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							placeholder={$i18n.t('Enter Pdftotext Server URL')}
-							bind:value={tikaServerUrl}
+							bind:value={pdftotextServerUrl}
 						/>
 					</div>
 				</div>
