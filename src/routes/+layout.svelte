@@ -242,10 +242,7 @@
 				await setupSocket($config.features?.enable_websocket ?? true);
 
 				const sessionUser = await getSessionUser().catch(async (error) => {
-					toast.error(error);
-					if ($page.url.pathname !== '/auth') {
-						await goto('/auth');
-					}
+					console.log('error', error);
 				});
 
 				if (sessionUser) {
@@ -259,8 +256,9 @@
 					await config.set(await getBackendConfig());
 				} else {
 					// Redirect Invalid Session User to /auth Page
-					localStorage.removeItem('token');
-					await goto('/auth');
+					if ($page.url.pathname !== '/auth') {
+						await goto('/auth');
+					}
 				}
 			}
 		} else {

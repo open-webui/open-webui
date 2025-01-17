@@ -338,7 +338,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 ############################
 
 
-@router.post("/signin", response_model=SessionUserResponse)
+@router.get("/signin", response_model=SessionUserResponse)
 async def signin(request: Request):
     redirect_uri = f"{BACKEND_URL}/callback"
     state = secrets.token_urlsafe(32)
