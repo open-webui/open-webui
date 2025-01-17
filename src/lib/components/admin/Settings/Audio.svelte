@@ -39,6 +39,7 @@
 	let STT_ENGINE = '';
 	let STT_MODEL = '';
 	let STT_WHISPER_MODEL = '';
+	let STT_MAX_FILE_SIZE_MB = '';
 
 	let STT_WHISPER_MODEL_LOADING = false;
 
@@ -103,7 +104,8 @@
 				OPENAI_API_KEY: STT_OPENAI_API_KEY,
 				ENGINE: STT_ENGINE,
 				MODEL: STT_MODEL,
-				WHISPER_MODEL: STT_WHISPER_MODEL
+				WHISPER_MODEL: STT_WHISPER_MODEL,
+				MAX_FILE_SIZE_MB: STT_MAX_FILE_SIZE_MB
 			}
 		});
 
@@ -143,6 +145,7 @@
 			STT_ENGINE = res.stt.ENGINE;
 			STT_MODEL = res.stt.MODEL;
 			STT_WHISPER_MODEL = res.stt.WHISPER_MODEL;
+			STT_MAX_FILE_SIZE_MB = res.stt.MAX_FILE_SIZE_MB;
 		}
 
 		await getVoices();
@@ -174,6 +177,20 @@
 							<option value="openai">OpenAI</option>
 							<option value="web">{$i18n.t('Web API')}</option>
 						</select>
+					</div>
+				</div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">{$i18n.t('Max Audio File Size (MB)')}</div>
+					<div class="flex items-center relative">
+						<input
+							class="dark:bg-gray-900 cursor-pointer w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+							placeholder="Max Audio File Size in MB"
+							type="number"
+							min="1"
+							max="10000"
+							bind:value={STT_MAX_FILE_SIZE_MB}
+							required
+						/>
 					</div>
 				</div>
 
