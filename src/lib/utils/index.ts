@@ -74,7 +74,6 @@ export const processResponseContent = (content: string) => {
 	return content.trim();
 };
 
-
 export function unescapeHtml(html: string) {
 	const doc = new DOMParser().parseFromString(html, 'text/html');
 	return doc.documentElement.textContent;

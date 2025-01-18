@@ -28,9 +28,13 @@ from open_webui.socket.main import (
 from open_webui.routers.tasks import (
     generate_queries,
     generate_title,
+    generate_image_prompt,
     generate_chat_tags,
 )
 from open_webui.routers.retrieval import process_web_search, SearchForm
+from open_webui.routers.images import image_generations, GenerateImageForm
+
+
 from open_webui.utils.webhook import post_webhook
 
 
@@ -486,6 +490,100 @@ async def chat_web_search_handler(
     return form_data
 
 
+async def chat_image_generation_handler(
+    request: Request, form_data: dict, extra_params: dict, user
+):
+    __event_emitter__ = extra_params["__event_emitter__"]
+    await __event_emitter__(
+        {
+            "type": "status",
+            "data": {"description": "Generating an image", "done": False},
+        }
+    )
+
+    messages = form_data["messages"]
+    user_message = get_last_user_message(messages)
+
+    prompt = user_message
+    negative_prompt = ""
+
+    if request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION:
+        try:
+            res = await generate_image_prompt(
+                request,
+                {
+                    "model": form_data["model"],
+                    "messages": messages,
+                },
+                user,
+            )
+
+            response = res["choices"][0]["message"]["content"]
+
+            try:
+                bracket_start = response.find("{")
+                bracket_end = response.rfind("}") + 1
+
+                if bracket_start == -1 or bracket_end == -1:
+                    raise Exception("No JSON object found in the response")
+
+                response = response[bracket_start:bracket_end]
+                response = json.loads(response)
+                prompt = response.get("prompt", [])
+            except Exception as e:
+                prompt = user_message
+
+        except Exception as e:
+            log.exception(e)
+            prompt = user_message
+
+    system_message_content = ""
+
+    try:
+        images = await image_generations(
+            request=request,
+            form_data=GenerateImageForm(**{"prompt": prompt}),
+            user=user,
+        )
+
+        await __event_emitter__(
+            {
+                "type": "status",
+                "data": {"description": "Generated an image", "done": True},
+            }
+        )
+
+        for image in images:
+            await __event_emitter__(
+                {
+                    "type": "message",
+                    "data": {"content": f"![Generated Image]({image['url']})"},
+                }
+            )
+
+        system_message_content = "<context>User is shown the generated image, tell the user that the image has been generated</context>"
+    except Exception as e:
+        log.exception(e)
+        await __event_emitter__(
+            {
+                "type": "status",
+                "data": {
+                    "description": f"An error occured while generating an image",
+                    "done": True,
+                },
+            }
+        )
+
+        system_message_content = "<context>Unable to generate an image, tell the user that an error occured</context>"
+
+    if system_message_content:
+        form_data["messages"] = add_or_update_system_message(
+            system_message_content, form_data["messages"]
+        )
+
+    return form_data
+
+
 async def chat_completion_files_handler(
     request: Request, body: dict, user: UserModel
 ) -> tuple[dict, dict[str, list]]:
@@ -523,17 +621,28 @@ async def chat_completion_files_handler(
         if len(queries) == 0:
             queries = [get_last_user_message(body["messages"])]
 
-        sources = get_sources_from_files(
-            files=files,
-            queries=queries,
-            embedding_function=request.app.state.EMBEDDING_FUNCTION,
-            k=request.app.state.config.TOP_K,
-            reranking_function=request.app.state.rf,
-            r=request.app.state.config.RELEVANCE_THRESHOLD,
-            hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-        )
+        try:
+            # Offload get_sources_from_files to a separate thread
+            loop = asyncio.get_running_loop()
+            with ThreadPoolExecutor() as executor:
+                sources = await loop.run_in_executor(
+                    executor,
+                    lambda: get_sources_from_files(
+                        files=files,
+                        queries=queries,
+                        embedding_function=request.app.state.EMBEDDING_FUNCTION,
+                        k=request.app.state.config.TOP_K,
+                        reranking_function=request.app.state.rf,
+                        r=request.app.state.config.RELEVANCE_THRESHOLD,
+                        hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+                    ),
+                )
+
+        except Exception as e:
+            log.exception(e)
 
         log.debug(f"rag_contexts:sources: {sources}")
+
     return body, {"sources": sources}
 
 
@@ -637,6 +746,11 @@ async def process_chat_payload(request, form_data, metadata, user, model):
     if features:
         if "web_search" in features and features["web_search"]:
             form_data = await chat_web_search_handler(
+                request, form_data, extra_params, user
+            )
+
+        if "image_generation" in features and features["image_generation"]:
+            form_data = await chat_image_generation_handler(
                 request, form_data, extra_params, user
             )
 
@@ -770,14 +884,17 @@ async def process_chat_response(
                         )
 
                         if res and isinstance(res, dict):
-                            title = (
-                                res.get("choices", [])[0]
-                                .get("message", {})
-                                .get(
-                                    "content",
-                                    message.get("content", "New Chat"),
-                                )
-                            ).strip()
+                            if len(res.get("choices", [])) == 1:
+                                title = (
+                                    res.get("choices", [])[0]
+                                    .get("message", {})
+                                    .get(
+                                        "content",
+                                        message.get("content", "New Chat"),
+                                    )
+                                ).strip()
+                            else:
+                                title = None
 
                             if not title:
                                 title = messages[0].get("content", "New Chat")
@@ -814,11 +931,14 @@ async def process_chat_response(
                     )
 
                     if res and isinstance(res, dict):
-                        tags_string = (
-                            res.get("choices", [])[0]
-                            .get("message", {})
-                            .get("content", "")
-                        )
+                        if len(res.get("choices", [])) == 1:
+                            tags_string = (
+                                res.get("choices", [])[0]
+                                .get("message", {})
+                                .get("content", "")
+                            )
+                        else:
+                            tags_string = ""
 
                         tags_string = tags_string[
                             tags_string.find("{") : tags_string.rfind("}") + 1
@@ -837,7 +957,7 @@ async def process_chat_response(
                                 }
                             )
                         except Exception as e:
-                            print(f"Error: {e}")
+                            pass
 
     event_emitter = None
     if (
@@ -960,12 +1080,12 @@ async def process_chat_response(
                     if not data.strip():
                         continue
 
-                    # "data: " is the prefix for each event
-                    if not data.startswith("data: "):
+                    # "data:" is the prefix for each event
+                    if not data.startswith("data:"):
                         continue
 
                     # Remove the prefix
-                    data = data[len("data: ") :]
+                    data = data[len("data:") :].strip()
 
                     try:
                         data = json.loads(data)

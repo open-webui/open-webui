@@ -68,6 +68,19 @@ math {
 	font-family: 'Archivo', sans-serif;
 }
 
+.drag-region {
+	-webkit-app-region: drag;
+}
+
+.drag-region a,
+.drag-region button {
+	-webkit-app-region: no-drag;
+}
+
+.no-drag-region {
+	-webkit-app-region: no-drag;
+}
+
 iframe {
 	@apply rounded-lg;
 }

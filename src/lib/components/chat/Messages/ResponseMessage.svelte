@@ -917,7 +917,7 @@
 									</button>
 								</Tooltip>
 
-								{#if $config?.features.enable_image_generation && !readOnly}
+								{#if $config?.features.enable_image_generation && ($user.role === 'admin' || $user?.permissions?.features?.image_generation) && !readOnly}
 									<Tooltip content={$i18n.t('Generate Image')} placement="bottom">
 										<button
 											class="{isLastMessage
@@ -1180,20 +1180,22 @@
 													type="button"
 													class="{isLastMessage
 														? 'visible'
-														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
+														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 													on:click={() => {
 														actionMessage(action.id, message);
 													}}
 												>
 													{#if action.icon_url}
-														<img
-															src={action.icon_url}
-															class="w-4 h-4 {action.icon_url.includes('svg')
-																? 'dark:invert-[80%]'
-																: ''}"
-															style="fill: currentColor;"
-															alt={action.name}
-														/>
+														<div class="size-4">
+															<img
+																src={action.icon_url}
+																class="w-4 h-4 {action.icon_url.includes('svg')
+																	? 'dark:invert-[80%]'
+																	: ''}"
+																style="fill: currentColor;"
+																alt={action.name}
+															/>
+														</div>
 													{:else}
 														<Sparkles strokeWidth="2.1" className="size-4" />
 													{/if}
