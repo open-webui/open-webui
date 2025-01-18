@@ -24,7 +24,7 @@
 		temporaryChatEnabled,
 		isLastActiveTab,
 		isApp,
-		appVersion
+		appInfo
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -203,12 +203,12 @@
 	onMount(async () => {
 		if (window?.electronAPI) {
 			const res = await window.electronAPI.send({
-				type: 'version'
+				type: 'info'
 			});
 
 			if (res) {
 				isApp.set(true);
-				appVersion.set(res.version);
+				appInfo.set(res);
 			}
 		}
 
