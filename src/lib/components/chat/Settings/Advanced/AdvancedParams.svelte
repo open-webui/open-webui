@@ -1086,7 +1086,7 @@
 		<div class=" py-0.5 w-full justify-between">
 			<Tooltip
 				content={$i18n.t(
-					'Set the number of GPU devices used for computation. This option controls how many GPU devices (if available) are used to process incoming requests. Increasing this value can significantly improve performance for models that are optimized for GPU acceleration but may also consume more power and GPU resources.'
+					'Set the number of layers, which will be off-loaded to GPU. Increasing this value can significantly improve performance for models that are optimized for GPU acceleration but may also consume more power and GPU resources.'
 				)}
 				placement="top-start"
 				className="inline-tooltip"
