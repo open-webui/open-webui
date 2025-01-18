@@ -135,6 +135,7 @@ class STTConfigForm(BaseModel):
     ENGINE: str
     MODEL: str
     WHISPER_MODEL: str
+    MAX_FILE_SIZE_MB: float
 
 
 class AudioConfigUpdateForm(BaseModel):
@@ -162,6 +163,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "ENGINE": request.app.state.config.STT_ENGINE,
             "MODEL": request.app.state.config.STT_MODEL,
             "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
+            "MAX_FILE_SIZE_MB": request.app.state.config.STT_MAX_FILE_SIZE_MB,
         },
     }
 
@@ -187,6 +189,7 @@ async def update_audio_config(
     request.app.state.config.STT_ENGINE = form_data.stt.ENGINE
     request.app.state.config.STT_MODEL = form_data.stt.MODEL
     request.app.state.config.WHISPER_MODEL = form_data.stt.WHISPER_MODEL
+    request.app.state.config.STT_MAX_FILE_SIZE_MB = form_data.stt.MAX_FILE_SIZE_MB
 
     if request.app.state.config.STT_ENGINE == "":
         request.app.state.faster_whisper_model = set_faster_whisper_model(
@@ -211,6 +214,7 @@ async def update_audio_config(
             "ENGINE": request.app.state.config.STT_ENGINE,
             "MODEL": request.app.state.config.STT_MODEL,
             "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
+            "MAX_FILE_SIZE_MB": request.app.state.config.STT_MAX_FILE_SIZE_MB,
         },
     }
 

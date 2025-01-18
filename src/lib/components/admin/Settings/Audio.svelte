@@ -186,7 +186,7 @@
 							class="dark:bg-gray-900 cursor-pointer w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 							placeholder="Max Audio File Size in MB"
 							type="number"
-							min="1"
+							min="0"
 							max="10000"
 							bind:value={STT_MAX_FILE_SIZE_MB}
 							required

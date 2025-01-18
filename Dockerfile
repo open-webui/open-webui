@@ -24,6 +24,8 @@ ARG GID=0
 FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
 ARG BUILD_HASH
 
+ENV NODE_OPTIONS="--max-old-space-size=5120"
+
 WORKDIR /app
 
 COPY package.json package-lock.json ./
