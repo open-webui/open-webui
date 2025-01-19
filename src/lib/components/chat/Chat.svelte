@@ -138,6 +138,7 @@
 			files = [];
 			selectedToolIds = [];
 			webSearchEnabled = false;
+			imageGenerationEnabled = false;
 
 			loaded = false;
 
@@ -153,6 +154,7 @@
 						files = input.files;
 						selectedToolIds = input.selectedToolIds;
 						webSearchEnabled = input.webSearchEnabled;
+						imageGenerationEnabled = input.imageGenerationEnabled;
 					} catch (e) {}
 				}
 
@@ -391,11 +393,13 @@
 				files = input.files;
 				selectedToolIds = input.selectedToolIds;
 				webSearchEnabled = input.webSearchEnabled;
+				imageGenerationEnabled = input.imageGenerationEnabled;
 			} catch (e) {
 				prompt = '';
 				files = [];
 				selectedToolIds = [];
 				webSearchEnabled = false;
+				imageGenerationEnabled = false;
 			}
 		}
 
@@ -696,6 +700,9 @@
 		}
 		if ($page.url.searchParams.get('web-search') === 'true') {
 			webSearchEnabled = true;
+		}
+		if ($page.url.searchParams.get('image-generation') === 'true') {
+			imageGenerationEnabled = true;
 		}
 
 		if ($page.url.searchParams.get('tools')) {
