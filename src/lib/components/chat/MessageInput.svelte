@@ -870,6 +870,7 @@
 														atSelectedModel = undefined;
 														selectedToolIds = [];
 														webSearchEnabled = false;
+														imageGenerationEnabled = false;
 													}
 												}}
 												on:paste={async (e) => {
@@ -1056,6 +1057,7 @@
 													atSelectedModel = undefined;
 													selectedToolIds = [];
 													webSearchEnabled = false;
+													imageGenerationEnabled = false;
 												}
 											}}
 											rows="1"
