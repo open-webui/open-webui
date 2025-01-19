@@ -551,17 +551,17 @@ OAUTH_ALLOWED_DOMAINS = PersistentConfig(
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
     if GOOGLE_CLIENT_ID.value and GOOGLE_CLIENT_SECRET.value:
+
         def google_oauth_register(client):
             client.register(
                 name="google",
                 client_id=GOOGLE_CLIENT_ID.value,
                 client_secret=GOOGLE_CLIENT_SECRET.value,
                 server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-                client_kwargs={
-                    "scope": GOOGLE_OAUTH_SCOPE.value
-                },
+                client_kwargs={"scope": GOOGLE_OAUTH_SCOPE.value},
                 redirect_uri=GOOGLE_REDIRECT_URI.value,
             )
+
         OAUTH_PROVIDERS["google"] = {
             "redirect_uri": GOOGLE_REDIRECT_URI.value,
             "register": google_oauth_register,
@@ -572,6 +572,7 @@ def load_oauth_providers():
         and MICROSOFT_CLIENT_SECRET.value
         and MICROSOFT_CLIENT_TENANT_ID.value
     ):
+
         def microsoft_oauth_register(client):
             client.register(
                 name="microsoft",
@@ -583,6 +584,7 @@ def load_oauth_providers():
                 },
                 redirect_uri=MICROSOFT_REDIRECT_URI.value,
             )
+
         OAUTH_PROVIDERS["microsoft"] = {
             "redirect_uri": MICROSOFT_REDIRECT_URI.value,
             "picture_url": "https://graph.microsoft.com/v1.0/me/photo/$value",
@@ -590,6 +592,7 @@ def load_oauth_providers():
         }
 
     if GITHUB_CLIENT_ID.value and GITHUB_CLIENT_SECRET.value:
+
         def github_oauth_register(client):
             client.register(
                 name="github",
@@ -599,11 +602,10 @@ def load_oauth_providers():
                 authorize_url="https://github.com/login/oauth/authorize",
                 api_base_url="https://api.github.com",
                 userinfo_endpoint="https://api.github.com/user",
-                client_kwargs={
-                    "scope": GITHUB_CLIENT_SCOPE.value
-                },
+                client_kwargs={"scope": GITHUB_CLIENT_SCOPE.value},
                 redirect_uri=GITHUB_CLIENT_REDIRECT_URI.value,
             )
+
         OAUTH_PROVIDERS["github"] = {
             "redirect_uri": GITHUB_CLIENT_REDIRECT_URI.value,
             "register": github_oauth_register,
@@ -615,6 +617,7 @@ def load_oauth_providers():
         and OAUTH_CLIENT_SECRET.value
         and OPENID_PROVIDER_URL.value
     ):
+
         def oidc_oauth_register(client):
             client.register(
                 name="oidc",
@@ -626,6 +629,7 @@ def load_oauth_providers():
                 },
                 redirect_uri=OPENID_REDIRECT_URI.value,
             )
+
         OAUTH_PROVIDERS["oidc"] = {
             "name": OAUTH_PROVIDER_NAME.value,
             "redirect_uri": OPENID_REDIRECT_URI.value,
