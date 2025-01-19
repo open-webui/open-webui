@@ -86,13 +86,6 @@
 				(url, urlIdx) => OLLAMA_BASE_URLS.indexOf(url) === urlIdx && url !== ''
 			).map((url) => url.replace(/\/$/, ''));
 
-			console.log(OLLAMA_BASE_URLS);
-
-			if (OLLAMA_BASE_URLS.length === 0) {
-				ENABLE_OLLAMA_API = false;
-				toast.info($i18n.t('Ollama API disabled'));
-			}
-
 			const res = await updateOllamaConfig(localStorage.token, {
 				ENABLE_OLLAMA_API: ENABLE_OLLAMA_API,
 				OLLAMA_BASE_URLS: OLLAMA_BASE_URLS,
