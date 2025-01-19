@@ -147,19 +147,22 @@
 										on:click={() => {
 											if (accessControl.write.group_ids.includes(group.id)) {
 												accessControl.write.group_ids = accessControl.write.group_ids.filter(
-													(group_id) => group_id !== group.id)
+													(group_id) => group_id !== group.id
+												);
 											} else {
 												accessControl.write.group_ids = [
-												...accessControl.write.group_ids,
-												group.id
+													...accessControl.write.group_ids,
+													group.id
 												];
 											}
 										}}
 									>
-									<Badge	
-										type={accessControl.write.group_ids.includes(group.id) ? 'info' : 'success'}
-										content={$i18n.t(accessControl.write.group_ids.includes(group.id) ? "Write" : "Read")}
-									/>
+										<Badge
+											type={accessControl.write.group_ids.includes(group.id) ? 'info' : 'success'}
+											content={$i18n.t(
+												accessControl.write.group_ids.includes(group.id) ? 'Write' : 'Read'
+											)}
+										/>
 									</button>
 
 									<button
