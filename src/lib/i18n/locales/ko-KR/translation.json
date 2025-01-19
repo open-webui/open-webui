@@ -623,7 +623,7 @@
 	"No feedbacks found": "피드백 없음",
 	"No file selected": "파일이 선택되지 않음",
 	"No files found.": "파일 없음",
-	"No groups with access, add a group to grant access": "그룹이 없습니다. 그룹을 추가하여 접근 권한을 부여해 주세요",
+	"No groups with access, add a group to grant access": "접근 권한이 있는 그룹이 없습니다. 접근 권한을 부여하려면 그룹을 추가하세요.",
 	"No HTML, CSS, or JavaScript content found.": "HTML, CSS, JavaScript이 발견되지 않음",
 	"No knowledge found": "지식 기반 없음",
 	"No model IDs": "",
