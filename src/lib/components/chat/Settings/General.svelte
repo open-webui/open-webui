@@ -232,18 +232,18 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-850 my-3" />
-
-		<div>
-			<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
-			<textarea
-				bind:value={system}
-				class="w-full rounded-lg p-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
-				rows="4"
-			/>
-		</div>
-
 		{#if $user.role === 'admin' || $user?.permissions.chat?.controls}
+			<hr class=" dark:border-gray-850 my-3" />
+
+			<div>
+				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
+				<textarea
+					bind:value={system}
+					class="w-full rounded-lg p-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+					rows="4"
+				/>
+			</div>
+
 			<div class="mt-2 space-y-3 pr-1.5">
 				<div class="flex justify-between items-center text-sm">
 					<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>
