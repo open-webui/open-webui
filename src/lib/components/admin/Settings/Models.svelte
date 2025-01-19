@@ -26,6 +26,7 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import ConfigureModelsModal from './Models/ConfigureModelsModal.svelte';
+	import Wrench from '$lib/components/icons/Wrench.svelte';
 
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
@@ -151,10 +152,22 @@
 					>
 				</div>
 
-				<div>
+				<div class="flex items-center">
+					<!-- <Tooltip content={$i18n.t('Manage')}>
+						<button
+							class=" p-1 rounded-full flex gap-1 items-center"
+							type="button"
+							on:click={() => {
+								showConfigModal = true;
+							}}
+						>
+							<Wrench />
+						</button>
+					</Tooltip> -->
+
 					<Tooltip content={$i18n.t('Configure')}>
 						<button
-							class=" px-2.5 py-1 rounded-full flex gap-1 items-center"
+							class=" p-1 rounded-full flex gap-1 items-center"
 							type="button"
 							on:click={() => {
 								showConfigModal = true;
