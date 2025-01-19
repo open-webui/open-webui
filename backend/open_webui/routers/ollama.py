@@ -155,7 +155,7 @@ async def send_post_request(
 def get_api_key(idx, url, configs):
     parsed_url = urlparse(url)
     base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-    return configs.get(idx, configs.get(base_url, {})).get(
+    return configs.get(str(idx), configs.get(base_url, {})).get(
         "key", None
     )  # Legacy support
 
@@ -260,15 +260,14 @@ async def get_all_models(request: Request):
     log.info("get_all_models()")
     if request.app.state.config.ENABLE_OLLAMA_API:
         request_tasks = []
-
         for idx, url in enumerate(request.app.state.config.OLLAMA_BASE_URLS):
-            if (idx not in request.app.state.config.OLLAMA_API_CONFIGS) or (
+            if (str(idx) not in request.app.state.config.OLLAMA_API_CONFIGS) or (
                 url not in request.app.state.config.OLLAMA_API_CONFIGS  # Legacy support
             ):
                 request_tasks.append(send_get_request(f"{url}/api/tags"))
             else:
                 api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
-                    idx,
+                    str(idx),
                     request.app.state.config.OLLAMA_API_CONFIGS.get(
                         url, {}
                     ),  # Legacy support
@@ -288,7 +287,7 @@ async def get_all_models(request: Request):
             if response:
                 url = request.app.state.config.OLLAMA_BASE_URLS[idx]
                 api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
-                    idx,
+                    str(idx),
                     request.app.state.config.OLLAMA_API_CONFIGS.get(
                         url, {}
                     ),  # Legacy support
@@ -411,7 +410,7 @@ async def get_ollama_versions(request: Request, url_idx: Optional[int] = None):
                 send_get_request(
                     f"{url}/api/version",
                     request.app.state.config.OLLAMA_API_CONFIGS.get(
-                        idx,
+                        str(idx),
                         request.app.state.config.OLLAMA_API_CONFIGS.get(
                             url, {}
                         ),  # Legacy support
@@ -475,7 +474,7 @@ async def get_ollama_loaded_models(request: Request, user=Depends(get_verified_u
             send_get_request(
                 f"{url}/api/ps",
                 request.app.state.config.OLLAMA_API_CONFIGS.get(
-                    idx,
+                    str(idx),
                     request.app.state.config.OLLAMA_API_CONFIGS.get(
                         url, {}
                     ),  # Legacy support
@@ -921,7 +920,7 @@ async def generate_completion(
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
-        url_idx,
+        str(url_idx),
         request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
     )
 
@@ -1032,7 +1031,7 @@ async def generate_chat_completion(
 
     url = await get_ollama_url(request, payload["model"], url_idx)
     api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
-        url_idx,
+        str(url_idx),
         request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
     )
 
@@ -1134,7 +1133,7 @@ async def generate_openai_completion(
 
     url = await get_ollama_url(request, payload["model"], url_idx)
     api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
-        url_idx,
+        str(url_idx),
         request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
     )
 
@@ -1211,7 +1210,7 @@ async def generate_openai_chat_completion(
 
     url = await get_ollama_url(request, payload["model"], url_idx)
     api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
-        url_idx,
+        str(url_idx),
         request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
     )
 
