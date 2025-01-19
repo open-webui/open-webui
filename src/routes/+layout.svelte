@@ -43,7 +43,7 @@
 	import { bestMatchingLanguage } from '$lib/utils';
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
-	import AppControls from '$lib/components/app/AppControls.svelte';
+	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 
 	setContext('i18n', i18n);
 
@@ -209,6 +209,7 @@
 			if (res) {
 				isApp.set(true);
 				appInfo.set(res);
+				console.log(res);
 			}
 		}
 
@@ -361,7 +362,7 @@
 {#if loaded}
 	{#if $isApp}
 		<div class="flex flex-row h-screen">
-			<AppControls />
+			<AppSidebar />
 
 			<div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
 				<slot />
