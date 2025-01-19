@@ -111,9 +111,13 @@ async def update_prompt_by_command(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-    
+
     # Is the user the original creator, in a group with write access, or an admin
-    if prompt.user_id != user.id and not has_access(user.id, "write", prompt.access_control) and user.role != "admin":
+    if (
+        prompt.user_id != user.id
+        and not has_access(user.id, "write", prompt.access_control)
+        and user.role != "admin"
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
