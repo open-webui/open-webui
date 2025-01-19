@@ -266,7 +266,7 @@ async def get_all_models_responses(request: Request) -> list:
 
     request_tasks = []
     for idx, url in enumerate(request.app.state.config.OPENAI_API_BASE_URLS):
-        if (idx not in request.app.state.config.OPENAI_API_CONFIGS) or (
+        if (str(idx) not in request.app.state.config.OPENAI_API_CONFIGS) or (
             url not in request.app.state.config.OPENAI_API_CONFIGS  # Legacy support
         ):
             request_tasks.append(
@@ -276,7 +276,7 @@ async def get_all_models_responses(request: Request) -> list:
             )
         else:
             api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-                idx,
+                str(idx),
                 request.app.state.config.OPENAI_API_CONFIGS.get(
                     url, {}
                 ),  # Legacy support
@@ -320,7 +320,7 @@ async def get_all_models_responses(request: Request) -> list:
         if response:
             url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
             api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-                idx,
+                str(idx),
                 request.app.state.config.OPENAI_API_CONFIGS.get(
                     url, {}
                 ),  # Legacy support
@@ -599,7 +599,7 @@ async def generate_chat_completion(
 
     # Get the API config for the model
     api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-        idx,
+        str(idx),
         request.app.state.config.OPENAI_API_CONFIGS.get(
             request.app.state.config.OPENAI_API_BASE_URLS[idx], {}
         ),  # Legacy support

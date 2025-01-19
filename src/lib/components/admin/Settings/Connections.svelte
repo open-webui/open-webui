@@ -43,9 +43,8 @@
 
 	const updateOpenAIHandler = async () => {
 		if (ENABLE_OPENAI_API !== null) {
-			OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.filter(
-				(url, urlIdx) => OPENAI_API_BASE_URLS.indexOf(url) === urlIdx && url !== ''
-			).map((url) => url.replace(/\/$/, ''));
+			// Remove trailing slashes
+			OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.map((url) => url.replace(/\/$/, ''));
 
 			// Check if API KEYS length is same than API URLS length
 			if (OPENAI_API_KEYS.length !== OPENAI_API_BASE_URLS.length) {
@@ -81,10 +80,8 @@
 
 	const updateOllamaHandler = async () => {
 		if (ENABLE_OLLAMA_API !== null) {
-			// Remove duplicate URLs
-			OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter(
-				(url, urlIdx) => OLLAMA_BASE_URLS.indexOf(url) === urlIdx && url !== ''
-			).map((url) => url.replace(/\/$/, ''));
+			// Remove trailing slashes
+			OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.map((url) => url.replace(/\/$/, ''));
 
 			const res = await updateOllamaConfig(localStorage.token, {
 				ENABLE_OLLAMA_API: ENABLE_OLLAMA_API,
