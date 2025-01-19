@@ -5,7 +5,7 @@
 	let selected = '';
 </script>
 
-<div class="min-w-[4.5rem] bg-gray-50 dark:bg-gray-950 flex gap-2.5 flex-col pt-9">
+<div class="min-w-[4.5rem] bg-gray-50 dark:bg-gray-950 flex gap-2.5 flex-col pt-8">
 	<div class="flex justify-center relative">
 		{#if selected === 'home'}
 			<div class="absolute top-0 left-0 flex h-full">
@@ -18,11 +18,15 @@
 				class=" cursor-pointer {selected === 'home' ? 'rounded-2xl' : 'rounded-full'}"
 				on:click={() => {
 					selected = 'home';
+
+					if (window.electronAPI) {
+						window.electronAPI.load('home');
+					}
 				}}
 			>
 				<img
 					src="/static/splash.png"
-					class="size-11 dark:invert p-1"
+					class="size-11 dark:invert p-0.5"
 					alt="logo"
 					draggable="false"
 				/>
@@ -30,7 +34,7 @@
 		</Tooltip>
 	</div>
 
-	<div class=" border-[1.5px] border-gray-100 dark:border-gray-900 mx-4"></div>
+	<div class=" -mt-1 border-[1.5px] border-gray-100 dark:border-gray-900 mx-4"></div>
 
 	<div class="flex justify-center relative group">
 		{#if selected === ''}
