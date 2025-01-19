@@ -6,7 +6,8 @@ from typing import Optional
 
 from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import (
-    MILVUS_URI, MILVUS_DB,
+    MILVUS_URI,
+    MILVUS_DB,
 )
 
 
