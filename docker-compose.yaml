@@ -29,7 +29,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./searxng:/etc/searxng:rw
+      - searxng-data:/etc/searxng:rw
     env_file:
       - .env
     restart: always
@@ -46,8 +46,6 @@ services:
         max-size: "1m"
         max-file: "1"
 
-
-
-
 volumes:
   open-webui-data:
+  searxng-data:
