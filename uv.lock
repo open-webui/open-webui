@@ -21,6 +21,9 @@ resolution-markers = [
     "python_full_version < '3.12' and platform_system == 'Darwin'",
     "python_full_version < '3.12' and platform_system == 'Darwin'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_system == 'Darwin'",
+    "python_full_version < '3.12' and platform_system == 'Darwin'",
+    "python_full_version < '3.12' and platform_system == 'Darwin'",
+    "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_system == 'Darwin'",
     "python_full_version < '3.13' and platform_system == 'Darwin'",
     "python_full_version >= '3.13' and platform_system == 'Darwin'",
     "python_full_version >= '3.13' and platform_system == 'Darwin'",
@@ -28,6 +31,10 @@ resolution-markers = [
     "python_full_version >= '3.13' and platform_system == 'Darwin'",
     "python_full_version >= '3.13' and platform_system == 'Darwin'",
     "python_full_version >= '3.13' and platform_system == 'Darwin'",
+    "python_full_version >= '3.13' and platform_system == 'Darwin'",
+    "python_full_version < '3.12' and platform_machine == 'aarch64' and platform_system == 'Linux'",
+    "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'aarch64' and platform_system == 'Linux'",
+    "python_full_version < '3.12' and platform_machine == 'aarch64' and platform_system == 'Linux'",
     "python_full_version < '3.12' and platform_machine == 'aarch64' and platform_system == 'Linux'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'aarch64' and platform_system == 'Linux'",
     "python_full_version < '3.12' and platform_machine == 'aarch64' and platform_system == 'Linux'",
@@ -52,6 +59,10 @@ resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'aarch64' and platform_system == 'Linux'",
     "python_full_version >= '3.13' and platform_machine == 'aarch64' and platform_system == 'Linux'",
     "python_full_version >= '3.13' and platform_machine == 'aarch64' and platform_system == 'Linux'",
+    "python_full_version >= '3.13' and platform_machine == 'aarch64' and platform_system == 'Linux'",
+    "(python_full_version < '3.12' and platform_machine != 'aarch64' and platform_system != 'Darwin') or (python_full_version < '3.12' and platform_system != 'Darwin' and platform_system != 'Linux')",
+    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'aarch64' and platform_system != 'Darwin') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_system != 'Darwin' and platform_system != 'Linux')",
+    "(python_full_version < '3.12' and platform_machine != 'aarch64' and platform_system != 'Darwin') or (python_full_version < '3.12' and platform_system != 'Darwin' and platform_system != 'Linux')",
     "(python_full_version < '3.12' and platform_machine != 'aarch64' and platform_system != 'Darwin') or (python_full_version < '3.12' and platform_system != 'Darwin' and platform_system != 'Linux')",
     "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'aarch64' and platform_system != 'Darwin') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_system != 'Darwin' and platform_system != 'Linux')",
     "(python_full_version < '3.12' and platform_machine != 'aarch64' and platform_system != 'Darwin') or (python_full_version < '3.12' and platform_system != 'Darwin' and platform_system != 'Linux')",
@@ -70,6 +81,7 @@ resolution-markers = [
     "(python_full_version < '3.12' and platform_machine != 'aarch64' and platform_system != 'Darwin') or (python_full_version < '3.12' and platform_system != 'Darwin' and platform_system != 'Linux')",
     "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'aarch64' and platform_system != 'Darwin') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_system != 'Darwin' and platform_system != 'Linux')",
     "(python_full_version < '3.13' and platform_machine != 'aarch64' and platform_system != 'Darwin') or (python_full_version < '3.13' and platform_system != 'Darwin' and platform_system != 'Linux')",
+    "(python_full_version >= '3.13' and platform_machine != 'aarch64' and platform_system != 'Darwin') or (python_full_version >= '3.13' and platform_system != 'Darwin' and platform_system != 'Linux')",
     "(python_full_version >= '3.13' and platform_machine != 'aarch64' and platform_system != 'Darwin') or (python_full_version >= '3.13' and platform_system != 'Darwin' and platform_system != 'Linux')",
     "(python_full_version >= '3.13' and platform_machine != 'aarch64' and platform_system != 'Darwin') or (python_full_version >= '3.13' and platform_system != 'Darwin' and platform_system != 'Linux')",
     "(python_full_version >= '3.13' and platform_machine != 'aarch64' and platform_system != 'Darwin') or (python_full_version >= '3.13' and platform_system != 'Darwin' and platform_system != 'Linux')",
@@ -232,6 +244,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a3/73/199a98fc2dae33535d6b8e8e6ec01f8c1d76c9adb096c6b7d64823038cde/anyio-4.8.0.tar.gz", hash = "sha256:1d9fe889df5212298c0c0723fa20479d1b94883a2df44bd3897aa91083316f7a", size = 181126 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/46/eb/e7f063ad1fec6b3178a3cd82d1a3c4de82cccf283fc42746168188e1cdd5/anyio-4.8.0-py3-none-any.whl", hash = "sha256:b5011f270ab5eb0abf13385f851315585cc37ef330dd88e27ec3d34d651fd47a", size = 96041 },
+]
+
+[[package]]
+name = "appdirs"
+version = "1.4.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d7/d8/05696357e0311f5b5c316d7b95f46c669dd9c15aaeecbb48c7d0aeb88c40/appdirs-1.4.4.tar.gz", hash = "sha256:7d5d0167b2b1ba821647616af46a749d1c653740dd0d2415100fe26e27afdf41", size = 13470 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3b/00/2344469e2084fb287c2e0b57b72910309874c3245463acd6cf5e3db69324/appdirs-1.4.4-py2.py3-none-any.whl", hash = "sha256:a841dacd6b99318a741b166adb07e19ee71a274450e68237b4650ca1055ab128", size = 9566 },
 ]
 
 [[package]]
@@ -1277,6 +1298,20 @@ wheels = [
 ]
 
 [[package]]
+name = "fs"
+version = "2.4.16"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "appdirs" },
+    { name = "setuptools" },
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5d/a9/af5bfd5a92592c16cdae5c04f68187a309be8a146b528eac3c6e30edbad2/fs-2.4.16.tar.gz", hash = "sha256:ae97c7d51213f4b70b6a958292530289090de3a7e15841e108fbe144f069d313", size = 187441 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b9/5c/a3d95dc1ec6cdeb032d789b552ecc76effa3557ea9186e1566df6aac18df/fs-2.4.16-py2.py3-none-any.whl", hash = "sha256:660064febbccda264ae0b6bace80a8d1be9e089e0a5eb2427b7d517f9a91545c", size = 135261 },
+]
+
+[[package]]
 name = "fsspec"
 version = "2024.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1300,6 +1335,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/da/a9/59f4354257e8350a25be1774021991fb3a99a2fb87d0c1f367592548aed3/ftfy-6.2.3.tar.gz", hash = "sha256:79b505988f29d577a58a9069afe75553a02a46e42de6091c0660cdc67812badc", size = 64165 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ed/46/14d230ad057048aea7ccd2f96a80905830866d281ea90a6662a825490659/ftfy-6.2.3-py3-none-any.whl", hash = "sha256:f15761b023f3061a66207d33f0c0149ad40a8319fd16da91796363e2c049fdf8", size = 43011 },
+]
+
+[[package]]
+name = "gcp-storage-emulator"
+version = "2024.8.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "fs" },
+    { name = "google-crc32c" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/17/c2/a0b0e1e54fdd9453603d90939faf652e2488b617c8752edc4ebcd89f1686/gcp_storage_emulator-2024.8.3.tar.gz", hash = "sha256:e5d45e5c23a0344c1c4c44b8f8c36f7e8975ca1fcc5134cab608b96ddccd9225", size = 24928 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/53/bf/b6c717bd7a5b59244388057d36789e72c28bfaa5e51f3a494563a4e3028e/gcp_storage_emulator-2024.8.3-py3-none-any.whl", hash = "sha256:1dc4ea56a0caf50fc6092898b9461d08b494824bfbbcca168e2af5da89c053ce", size = 19385 },
 ]
 
 [[package]]
@@ -2769,6 +2817,7 @@ dependencies = [
     { name = "flask-cors" },
     { name = "fpdf2" },
     { name = "ftfy" },
+    { name = "gcp-storage-emulator" },
     { name = "google-cloud-storage" },
     { name = "google-generativeai" },
     { name = "googleapis-common-protos" },
@@ -2853,6 +2902,7 @@ requires-dist = [
     { name = "flask-cors", specifier = "==5.0.0" },
     { name = "fpdf2", specifier = "==2.8.2" },
     { name = "ftfy", specifier = "==6.2.3" },
+    { name = "gcp-storage-emulator", specifier = ">=2024.8.3" },
     { name = "google-cloud-storage", specifier = "==2.19.0" },
     { name = "google-generativeai", specifier = "==0.7.2" },
     { name = "googleapis-common-protos", specifier = "==1.63.2" },
