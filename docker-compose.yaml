@@ -7,6 +7,12 @@ services:
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GOOGLE_SHEET_CREDENTIALS=${GOOGLE_SHEET_CREDENTIALS}
+      - ENABLE_RAG_WEB_SEARCH=${ENABLE_RAG_WEB_SEARCH}
+      - RAG_WEB_SEARCH_ENGINE=${RAG_WEB_SEARCH_ENGINE}
+      - RAG_WEB_SEARCH_RESULT_COUNT=${RAG_WEB_SEARCH_RESULT_COUNT}
+      - RAG_WEB_SEARCH_CONCURRENT_REQUESTS=${RAG_WEB_SEARCH_CONCURRENT_REQUESTS}
+      - SEARXNG_QUERY_URL=${SEARXNG_QUERY_URL}
+    
     ports:
       - "3000:8080"
     volumes:
@@ -14,6 +20,34 @@ services:
     restart: always
     env_file:
       - .env
+  searxng:
+    container_name: searxng
+    image: searxng/searxng:latest
+    environment:
+      - SEARXNG_UWSGI_WORKERS=${SEARXNG_UWSGI_WORKERS}
+      - SEARXNG_UWSGI_THREADS=${SEARXNG_UWSGI_THREADS}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./searxng:/etc/searxng:rw
+    env_file:
+      - .env
+    restart: always
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+
+
+
 
 volumes:
   open-webui-data:
