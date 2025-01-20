@@ -56,62 +56,45 @@ class InterceptHandler(logging.Handler):
         )
 
 
+@dataclass(frozen=True)
+class AuditLogEntry:
+    id: str
+    user: dict[str, Any]
+    audit_level: str
+    verb: str
+    request_uri: str
+    response_status_code: Optional[int] = None
+    user_agent: Optional[str] = None
+    source_ip: Optional[str] = None
+    request_object: Any = None
+    response_object: Any = None
+class AuditLevel(str, Enum):
+    NONE = "NONE"
+    METADATA = "METADATA"
+    REQUEST = "REQUEST"
+    REQUEST_RESPONSE = "REQUEST_RESPONSE"
 class AuditLogger:
-    def __init__(self, logger: "Logger", user: UserModel):
+    def __init__(self, logger: "Logger"):
         self.logger = logger.bind(auditable=True)
-        self.user = user
 
     def write(
         self,
-        api_version: str,
-        open_webui_version,
-        http_method: str,
-        audit_level: str,
-        resource: str,
-        source_ip: str,
-        user_agent: str,
-        request_uri: str,
+        audit_entry: AuditLogEntry,
         *,
-        user: Optional[UserModel] = None,
         log_level: str = "INFO",
-        request_object: Optional[dict] = None,
-        response_object: Optional[dict] = None,
         extra: Optional[dict] = None,
     ):
 
-        user = user or self.user
-
-        if request_object and "headers" in request_object:
-            request_object["headers"].pop("Authorization", None)
-
-        log_extra = {
-            "user": user.model_dump(),
-            "api_version": api_version,
-            "open_webui_version": open_webui_version,
-            "http_method": http_method,
-            "audit_level": audit_level,
-            "resource": resource,
-            "source_ip": source_ip,
-            "user_agent": user_agent,
-            "request_uri": request_uri,
-            "request_object": request_object,
-            "response_object": response_object,
-            "extra": extra,
-        }
+        entry = asdict(audit_entry)
 
         if extra:
-            log_extra.update(extra)
-
-        event = self._format_event(resource, http_method)
+            entry["extra"] = extra
 
         self.logger.log(
             log_level,
-            event,
-            **log_extra,
+            "",
+            **entry,
         )
-
-    def _format_event(self, resource: str, method: str) -> str:
-        return f"RESOURCE_{resource}_{method}_EVENT"
 
 
 def file_format(record: "Record"):
