@@ -62,11 +62,9 @@ class FeedbackUserResponse(FeedbackResponse):
 
 @router.get("/feedbacks/all", response_model=list[FeedbackUserResponse])
 async def get_all_feedbacks(user=Depends(get_admin_user)):
-    feedbacks = Feedbacks.get_all_feedbacks()
+    feedbacks = Feedbacks.get_all_feedbacks_with_user()
     return [
-        FeedbackUserResponse(
-            **feedback.model_dump(), user=Users.get_user_by_id(feedback.user_id)
-        )
+        FeedbackUserResponse(**feedback.model_dump())
         for feedback in feedbacks
     ]
 
