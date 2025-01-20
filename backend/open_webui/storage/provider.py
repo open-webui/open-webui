@@ -144,12 +144,13 @@ class S3StorageProvider(StorageProvider):
 
 class GCSStorageProvider(StorageProvider):
     def __init__(self):
+        self.bucket_name = GCS_BUCKET_NAME
+    
         if GCS_BUCKET_NAME and GOOGLE_APPLICATION_CREDENTIALS_JSON:
             self.gcs_client = storage.Client.from_service_account_info(info=json.loads(GOOGLE_APPLICATION_CREDENTIALS_JSON))
-        if GCS_BUCKET_NAME and not GOOGLE_APPLICATION_CREDENTIALS_JSON:
+        else:
             # defaults to environment, be it GCE VM or user credentials
             self.gcs_client = storage.Client()
-        self.bucket_name = GCS_BUCKET_NAME
         self.bucket = self.gcs_client.bucket(GCS_BUCKET_NAME)
     
     def upload_file(self, file: BinaryIO, filename: str) -> Tuple[bytes, str]:
