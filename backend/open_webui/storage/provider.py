@@ -13,7 +13,6 @@ from open_webui.config import (
     S3_REGION_NAME,
     S3_SECRET_ACCESS_KEY,
     GCS_BUCKET_NAME,
-    GCS_PROJECT_ID, 
     GOOGLE_APPLICATION_CREDENTIALS_JSON,
     STORAGE_PROVIDER,
     UPLOAD_DIR,
@@ -145,11 +144,11 @@ class S3StorageProvider(StorageProvider):
 
 class GCSStorageProvider(StorageProvider):
     def __init__(self):
-        if GCS_PROJECT_ID:
-            self.gcs_client = storage.Client(project=GCS_PROJECT_ID)
-        if GOOGLE_APPLICATION_CREDENTIALS_JSON:
+        if GCS_BUCKET_NAME and GOOGLE_APPLICATION_CREDENTIALS_JSON:
             self.gcs_client = storage.Client.from_service_account_info(info=json.loads(GOOGLE_APPLICATION_CREDENTIALS_JSON))
-
+        if GCS_BUCKET_NAME and not GOOGLE_APPLICATION_CREDENTIALS_JSON:
+            # defaults to environment, be it GCE VM or user credentials
+            self.gcs_client = storage.Client()
         self.bucket_name = GCS_BUCKET_NAME
         self.bucket = self.gcs_client.bucket(GCS_BUCKET_NAME)
     
