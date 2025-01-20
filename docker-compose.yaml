@@ -26,6 +26,7 @@ services:
     environment:
       - SEARXNG_UWSGI_WORKERS=${SEARXNG_UWSGI_WORKERS}
       - SEARXNG_UWSGI_THREADS=${SEARXNG_UWSGI_THREADS}
+      - SEARXNG_HOSTNAME=${SEARXNG_HOSTNAME}
     ports:
       - "8080:8080"
     volumes:
