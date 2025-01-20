@@ -5,7 +5,7 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.chats import Chats
-
+from open_webui.models.users import User, UserModel
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
@@ -93,6 +93,21 @@ class FeedbackForm(BaseModel):
     snapshot: Optional[SnapshotData] = None
     model_config = ConfigDict(extra="allow")
 
+class FeedbackUserResponse(BaseModel):
+    id: str
+    user_id: str
+    version: int
+    type: str
+    data: Optional[dict] = None
+    meta: Optional[dict] = None
+    snapshot: Optional[dict] = None
+    created_at: int
+    updated_at: int
+    chat_id: str
+    user: Optional[UserModel] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
 
 class FeedbackTable:
     def insert_new_feedback(
@@ -154,6 +169,23 @@ class FeedbackTable:
                 for feedback in db.query(Feedback)
                 .order_by(Feedback.updated_at.desc())
                 .all()
+            ]
+        
+    def get_all_feedbacks_with_user(self) -> list[FeedbackUserResponse]:
+        with get_db() as db:
+            results = (
+                db.query(Feedback, User)
+                .outerjoin(User, Feedback.user_id == User.id)
+                .order_by(Feedback.updated_at.desc())
+                .all()
+            )
+            
+            return [
+                FeedbackUserResponse(
+                    **feedback.__dict__,
+                    user=UserModel.model_validate(user) if user else None
+                )
+                for feedback, user in results
             ]
 
     def get_feedbacks_by_type(self, type: str) -> list[FeedbackModel]:
