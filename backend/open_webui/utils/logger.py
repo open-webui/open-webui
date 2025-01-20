@@ -99,22 +99,17 @@ class AuditLogger:
 
 def file_format(record: "Record"):
 
-    user = record["extra"].get("user", dict())
-    user_audit_info = UserAuditInfo.model_validate(user)
-
     audit_data = {
         "timestamp": int(record["time"].timestamp()),
-        "user": user_audit_info.model_dump(),
-        "api_version": record["extra"].get("api_version"),
-        "http_method": record["extra"].get("http_method"),
-        "audit_level": record["extra"].get("audit_level"),
-        "log_level": record["level"].name,
-        "resource": record["extra"].get("resource"),
-        "source_ip": record["extra"].get("source_ip"),
-        "user_agent": record["extra"].get("user_agent"),
-        "request_uri": record["extra"].get("request_uri"),
-        "request_object": record["extra"].get("request_object"),
-        "response_object": record["extra"].get("response_object"),
+        "user": record["extra"].get("user", dict()),
+        "audit_level": record["extra"].get("audit_level", ""),
+        "verb": record["extra"].get("verb", ""),
+        "request_uri": record["extra"].get("request_uri", ""),
+        "response_status_code": record["extra"].get("response_status_code", 0),
+        "source_ip": record["extra"].get("source_ip", ""),
+        "user_agent": record["extra"].get("user_agent", ""),
+        "request_object": record["extra"].get("request_object", b""),
+        "response_object": record["extra"].get("response_object", b""),
         "extra": record["extra"].get("extra", {}),
     }
 
