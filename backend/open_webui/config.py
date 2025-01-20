@@ -4,7 +4,7 @@ import os
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Generic, Optional, TypeVar
+from typing import Generic, Optional, TypeVar, Tuple
 from urllib.parse import urlparse
 
 import chromadb
@@ -785,8 +785,9 @@ DEFAULT_MODELS = PersistentConfig(
 
 
 class PromptSuggestionModel(BaseModel):
-    title: list[str]
+    title: Tuple[str, str]
     content: str
+
 
 prompt_suggestions_default = [
     {
@@ -819,12 +820,15 @@ prompt_suggestions_default = [
 ]
 
 try:
-    prompt_suggestions = json.loads(os.environ.get("DEFAULT_PROMPT_SUGGESTIONS", prompt_suggestions_default))
+    prompt_suggestions = json.loads(
+        os.environ.get("DEFAULT_PROMPT_SUGGESTIONS", prompt_suggestions_default)
+    )
     prompt_suggestions = [
-        PromptSuggestionModel(**prompt_suggestion) for prompt_suggestion in prompt_suggestions
+        PromptSuggestionModel(**prompt_suggestion)
+        for prompt_suggestion in prompt_suggestions
     ]
 except Exception as e:
-    logging.error(f"Error loading DEFAULT_PROMPT_SUGGESTIONS: {e}")
+    logging.error("Error loading DEFAULT_PROMPT_SUGGESTIONS: %s", e)
     prompt_suggestions = []
 
 DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
