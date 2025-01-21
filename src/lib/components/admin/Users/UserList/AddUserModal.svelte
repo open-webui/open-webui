@@ -49,7 +49,7 @@
 				_user.password,
 				_user.role
 			).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 			});
 
 			if (res) {

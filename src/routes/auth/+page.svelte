@@ -45,7 +45,7 @@
 
 	const signInHandler = async () => {
 		const sessionUser = await userSignIn(email, password).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -55,7 +55,7 @@
 	const signUpHandler = async () => {
 		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
 			(error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			}
 		);
@@ -65,7 +65,7 @@
 
 	const ldapSignInHandler = async () => {
 		const sessionUser = await ldapUserSignIn(ldapUsername, password).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 		await setSessionUser(sessionUser);
@@ -95,7 +95,7 @@
 			return;
 		}
 		const sessionUser = await getSessionUser(token).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 		if (!sessionUser) {

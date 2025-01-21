@@ -280,7 +280,7 @@
 				if (localStorage.token) {
 					// Get Session User Info
 					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
-						toast.error(error);
+						toast.error(`${error}`);
 						return null;
 					});
 

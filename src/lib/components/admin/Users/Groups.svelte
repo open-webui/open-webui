@@ -74,7 +74,7 @@
 
 	const addGroupHandler = async (group) => {
 		const res = await createNewGroup(localStorage.token, group).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -89,7 +89,7 @@
 
 		const res = await updateUserDefaultPermissions(localStorage.token, group.permissions).catch(
 			(error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			}
 		);

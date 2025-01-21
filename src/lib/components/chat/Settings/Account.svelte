@@ -48,7 +48,7 @@
 
 		const updatedUser = await updateUserProfile(localStorage.token, name, profileImageUrl).catch(
 			(error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 			}
 		);
 
