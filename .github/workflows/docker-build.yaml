@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - dev
+      - workflow
     tags:
       - v*
 
