@@ -186,7 +186,7 @@ class TestGCSStorageProvider:
     filename_extra = "test_exyta.txt"
     file_bytesio_empty = io.BytesIO()
 
-    @pytest.fixture
+    @pytest.fixture(scope="class")
     def setup(self):
         host, port = "localhost", 9023
 
@@ -197,17 +197,17 @@ class TestGCSStorageProvider:
         gcs_client = storage.Client()
         bucket = gcs_client.bucket(self.Storage.bucket_name)
         bucket.create()
-        yield gcs_client, bucket
+        self.Storage.gcs_client, self.Storage.bucket = gcs_client, bucket
+        yield 
         bucket.delete(force=True)
         server.stop()
     
     def test_upload_file(self, monkeypatch, tmp_path, setup):
         upload_dir = mock_upload_dir(monkeypatch, tmp_path)
-        # test error if bucket does not exist
+        # catch error if bucket does not exist
         with pytest.raises(Exception):
+            self.Storage.bucket = monkeypatch(self.Storage, "bucket", None)  
             self.Storage.upload_file(io.BytesIO(self.file_content), self.filename)
-        # creates bucket and test upload_file method, downloads the file and confirms contents
-        self.Storage.gcs_client, self.Storage.bucket = setup
         contents, gcs_file_path = self.Storage.upload_file(
             io.BytesIO(self.file_content), self.filename
         )
@@ -224,7 +224,6 @@ class TestGCSStorageProvider:
 
     def test_get_file(self, monkeypatch, tmp_path, setup):
         upload_dir = mock_upload_dir(monkeypatch, tmp_path)
-        self.Storage.gcs_client, self.Storage.bucket = setup
         contents, gcs_file_path = self.Storage.upload_file(
             io.BytesIO(self.file_content), self.filename
         )
@@ -234,7 +233,6 @@ class TestGCSStorageProvider:
 
     def test_delete_file(self, monkeypatch, tmp_path, setup):
         upload_dir = mock_upload_dir(monkeypatch, tmp_path)
-        self.Storage.gcs_client, self.Storage.bucket = setup
         contents, gcs_file_path = self.Storage.upload_file(
             io.BytesIO(self.file_content), self.filename
         )
@@ -248,7 +246,6 @@ class TestGCSStorageProvider:
 
     def test_delete_all_files(self, monkeypatch, tmp_path, setup):
         upload_dir = mock_upload_dir(monkeypatch, tmp_path)
-        self.Storage.gcs_client, self.Storage.bucket = setup
         # create 2 files
         self.Storage.upload_file(io.BytesIO(self.file_content), self.filename)
         object = self.Storage.bucket.get_blob(self.filename)
