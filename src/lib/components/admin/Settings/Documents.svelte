@@ -52,6 +52,7 @@
 	let pdftotextServerUrl = '';
 	let showTikaServerUrl = false;
 	let showPdftotextServerUrl = false;
+	let maxpagePdftotext = 15;
 
 	let textSplitter = '';
 	let chunkSize = 0;
@@ -192,7 +193,10 @@
 			content_extraction: {
 				engine: contentExtractionEngine,
 				tika_server_url: tikaServerUrl,
-				pdftotext_server_url: pdftotextServerUrl
+				pdftotext_server_url: pdftotextServerUrl,
+				maxpage_pdftotext: maxpagePdftotext
+				
+				
 			}
 		});
 
@@ -248,6 +252,8 @@
 			contentExtractionEngine = res.content_extraction.engine;
 			tikaServerUrl = res.content_extraction.tika_server_url;
 			pdftotextServerUrl = res.content_extraction.pdftotext_server_url
+			maxpagePdftotext = res.content_extraction.maxpage_pdftotext
+			
 			showTikaServerUrl = contentExtractionEngine === 'tika';
             showPdftotextServerUrl = contentExtractionEngine === 'pdftotext';
 			fileMaxSize = res?.file.max_size ?? '';
@@ -599,6 +605,16 @@
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							placeholder={$i18n.t('Enter Pdftotext Server URL')}
 							bind:value={pdftotextServerUrl}
+						/>
+					</div>
+				</div>
+				<div class="flex flex-col w-full gap-1">
+					<div class=" text-xs font-medium w-full">{$i18n.t('Max Pages')}</div>
+					<div class="flex-1 mr-2">
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							placeholder={$i18n.t('Enter max page limit')}
+							bind:value={maxpagePdftotext}
 						/>
 					</div>
 				</div>
