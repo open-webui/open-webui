@@ -838,7 +838,7 @@
 			session_id: $socket?.id,
 			id: responseMessageId
 		}).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			messages.at(-1).error = { content: error };
 
 			return null;
@@ -896,7 +896,7 @@
 			session_id: $socket?.id,
 			id: responseMessageId
 		}).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			messages.at(-1).error = { content: error };
 			return null;
 		});
@@ -1404,7 +1404,7 @@
 					if ($settings?.memory ?? false) {
 						if (userContext === null) {
 							const res = await queryMemory(localStorage.token, prompt).catch((error) => {
-								toast.error(error);
+								toast.error(`${error}`);
 								return null;
 							});
 							if (res) {

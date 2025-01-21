@@ -68,7 +68,7 @@
 				OPENAI_API_KEYS: OPENAI_API_KEYS,
 				OPENAI_API_CONFIGS: OPENAI_API_CONFIGS
 			}).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 			});
 
 			if (res) {
@@ -88,7 +88,7 @@
 				OLLAMA_BASE_URLS: OLLAMA_BASE_URLS,
 				OLLAMA_API_CONFIGS: OLLAMA_API_CONFIGS
 			}).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 			});
 
 			if (res) {

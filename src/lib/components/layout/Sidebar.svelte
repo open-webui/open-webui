@@ -79,7 +79,7 @@
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return [];
 		});
 
@@ -144,7 +144,7 @@
 		};
 
 		const res = await createNewFolder(localStorage.token, name).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -433,7 +433,7 @@
 			name: name,
 			access_control: access_control
 		}).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -646,7 +646,7 @@
 							if (chat.folder_id) {
 								const res = await updateChatFolderIdById(localStorage.token, chat.id, null).catch(
 									(error) => {
-										toast.error(error);
+										toast.error(`${error}`);
 										return null;
 									}
 								);
@@ -665,7 +665,7 @@
 
 						const res = await updateFolderParentIdById(localStorage.token, id, null).catch(
 							(error) => {
-								toast.error(error);
+								toast.error(`${error}`);
 								return null;
 							}
 						);
@@ -711,7 +711,7 @@
 												chat.id,
 												null
 											).catch((error) => {
-												toast.error(error);
+												toast.error(`${error}`);
 												return null;
 											});
 										}

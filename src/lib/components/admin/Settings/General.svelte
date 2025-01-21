@@ -42,7 +42,7 @@
 	const updateLdapServerHandler = async () => {
 		if (!ENABLE_LDAP) return;
 		const res = await updateLdapServer(localStorage.token, LDAP_SERVER).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 		if (res) {

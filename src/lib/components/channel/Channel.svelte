@@ -142,7 +142,7 @@
 
 		const res = await sendMessage(localStorage.token, id, { content: content, data: data }).catch(
 			(error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			}
 		);

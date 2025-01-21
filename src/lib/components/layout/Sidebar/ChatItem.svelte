@@ -88,7 +88,7 @@
 
 	const cloneChatHandler = async (id) => {
 		const res = await cloneChatById(localStorage.token, id).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -103,7 +103,7 @@
 
 	const deleteChatHandler = async (id) => {
 		const res = await deleteChatById(localStorage.token, id).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 

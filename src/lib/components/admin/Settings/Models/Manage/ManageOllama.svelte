@@ -70,7 +70,7 @@
 			updateModelId = model.id;
 			const [res, controller] = await pullModel(localStorage.token, model.id, urlIdx).catch(
 				(error) => {
-					toast.error(error);
+					toast.error(`${error}`);
 					return null;
 				}
 			);
@@ -144,7 +144,7 @@
 
 		const [res, controller] = await pullModel(localStorage.token, sanitizedModelTag, urlIdx).catch(
 			(error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			}
 		);
@@ -220,7 +220,7 @@
 						error = error.message;
 					}
 
-					toast.error(error);
+					toast.error(`${error}`);
 					// opts.callback({ success: false, error, modelName: opts.modelName });
 				}
 			}
@@ -264,7 +264,7 @@
 				uploadMessage = 'Uploading...';
 
 				fileResponse = await uploadModel(localStorage.token, file, urlIdx).catch((error) => {
-					toast.error(error);
+					toast.error(`${error}`);
 					return null;
 				});
 			}
@@ -272,7 +272,7 @@
 			uploadProgress = 0;
 			fileResponse = await downloadModel(localStorage.token, modelFileUrl, urlIdx).catch(
 				(error) => {
-					toast.error(error);
+					toast.error(`${error}`);
 					return null;
 				}
 			);
@@ -378,7 +378,7 @@
 						}
 					} catch (error) {
 						console.log(error);
-						toast.error(error);
+						toast.error(`${error}`);
 					}
 				}
 			}
@@ -398,7 +398,7 @@
 
 	const deleteModelHandler = async () => {
 		const res = await deleteModel(localStorage.token, deleteModelTag, urlIdx).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 		});
 
 		if (res) {
@@ -433,7 +433,7 @@
 			createModelContent,
 			urlIdx
 		).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -487,7 +487,7 @@
 					}
 				} catch (error) {
 					console.log(error);
-					toast.error(error);
+					toast.error(`${error}`);
 				}
 			}
 		}

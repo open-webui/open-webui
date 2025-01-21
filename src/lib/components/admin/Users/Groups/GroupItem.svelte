@@ -23,7 +23,7 @@
 
 	const updateHandler = async (_group) => {
 		const res = await updateGroupById(localStorage.token, group.id, _group).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -35,7 +35,7 @@
 
 	const deleteHandler = async () => {
 		const res = await deleteGroupById(localStorage.token, group.id).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
