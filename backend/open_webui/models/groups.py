@@ -188,5 +188,24 @@ class GroupTable:
             except Exception:
                 return False
 
+    def remove_user_from_all_groups(self, user_id: str) -> bool:
+        with get_db() as db:
+            try:
+                groups = self.get_groups_by_member_id(user_id)
+
+                for group in groups:
+                    group.user_ids.remove(user_id)
+                    db.query(Group).filter_by(id=group.id).update(
+                        {
+                            "user_ids": group.user_ids,
+                            "updated_at": int(time.time()),
+                        }
+                    )
+                    db.commit()
+
+                return True
+            except Exception:
+                return False
+
 
 Groups = GroupTable()

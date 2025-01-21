@@ -620,6 +620,7 @@
 			onChange={() => {
 				changeDebounceHandler();
 			}}
+			accessRoles={['read', 'write']}
 		/>
 		<div class="w-full mb-2.5">
 			<div class=" flex w-full">
