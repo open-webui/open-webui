@@ -85,7 +85,6 @@ class GroupForm(BaseModel):
 
 class GroupUpdateForm(GroupForm):
     user_ids: Optional[list[str]] = None
-    admin_ids: Optional[list[str]] = None
 
 
 class GroupTable:

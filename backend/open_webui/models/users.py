@@ -300,5 +300,10 @@ class UsersTable:
         except Exception:
             return None
 
+    def get_valid_user_ids(self, user_ids: list[str]) -> list[str]:
+        with get_db() as db:
+            users = db.query(User).filter(User.id.in_(user_ids)).all()
+            return [user.id for user in users]
+
 
 Users = UsersTable()
