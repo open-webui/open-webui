@@ -105,7 +105,6 @@ dependencies = [
     "ldap3==2.9.1",
     "google-cloud-storage==2.19.0",
     "gcp-storage-emulator>=2024.8.3",
-    "pytest-env>=1.1.5",
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.13.0a1"
@@ -126,11 +125,6 @@ open-webui = "open_webui:app"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-[tool.pytest.ini_options]
-env = [
-    "GCS_BUCKET_NAME=my-bucket"
-]
 
 [tool.rye]
 managed = true
