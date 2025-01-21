@@ -87,13 +87,17 @@ class TestLocalStorageProvider:
 
 @mock_aws
 class TestS3StorageProvider:
-    Storage = provider.S3StorageProvider()
-    Storage.bucket_name = "my-bucket"
-    s3_client = boto3.resource("s3", region_name="us-east-1")
-    file_content = b"test content"
-    filename = "test.txt"
-    filename_extra = "test_exyta.txt"
-    file_bytesio_empty = io.BytesIO()
+
+    def __init__(self):
+        self.Storage = provider.S3StorageProvider()
+        self.Storage.bucket_name = "my-bucket"
+        self.s3_client = boto3.resource("s3", region_name="us-east-1")
+        self.file_content = b"test content"
+        self.filename = "test.txt"
+        self.filename_extra = "test_exyta.txt"
+        self.file_bytesio_empty = io.BytesIO()
+        super().__init__()
+
 
     def test_upload_file(self, monkeypatch, tmp_path):
         upload_dir = mock_upload_dir(monkeypatch, tmp_path)
