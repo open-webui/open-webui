@@ -146,10 +146,12 @@ class GCSStorageProvider(StorageProvider):
     def __init__(self):
         self.bucket_name = GCS_BUCKET_NAME
     
-        if GCS_BUCKET_NAME and GOOGLE_APPLICATION_CREDENTIALS_JSON:
+        if GOOGLE_APPLICATION_CREDENTIALS_JSON:
             self.gcs_client = storage.Client.from_service_account_info(info=json.loads(GOOGLE_APPLICATION_CREDENTIALS_JSON))
         else:
-            # defaults to environment, be it GCE VM or user credentials
+            # if no credentials json is provided, credentials will be picked up from the environment
+            # if running on local environment, credentials would be user credentials
+            # if running on a Compute Engine instance, credentials would be from Google Metadata server
             self.gcs_client = storage.Client()
         self.bucket = self.gcs_client.bucket(GCS_BUCKET_NAME)
     
@@ -206,7 +208,7 @@ def get_storage_provider(storage_provider: str):
         Storage = LocalStorageProvider()
     elif storage_provider == "s3":
         Storage = S3StorageProvider()
-    elif storage_provider == "gcs":
+    elif storage_provider == "gcs" and GCS_BUCKET_NAME:
         Storage = GCSStorageProvider()
     else:
         raise RuntimeError(f"Unsupported storage provider: {storage_provider}")
