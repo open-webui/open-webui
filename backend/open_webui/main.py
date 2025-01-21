@@ -43,12 +43,14 @@ from fastapi.staticfiles import StaticFiles
 
 from starlette.background import BackgroundTask
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
 from starlette.types import Message
 
 
+from open_webui.utils.audits import AuditLoggingMiddleware
 from open_webui.utils.logger import AuditLogger, start_logger
 from open_webui.socket.main import (
     app as socket_app,
@@ -743,6 +745,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(AuditLoggingMiddleware)
 
 app.mount("/ws", socket_app)
 
