@@ -340,11 +340,12 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
 @router.get("/signin", response_model=SessionUserResponse)
 async def signin(request: Request):
-    redirect_uri = f"{BACKEND_URL}/callback"
+    redirect_uri = f"{BACKEND_URL}/api/v1/auths/callback"
     state = secrets.token_urlsafe(32)
     nonce = secrets.token_urlsafe(32)
     request.session['state'] = state
     request.session['nonce'] = nonce
+    print("redirect_uri", redirect_uri)
     return await oauth.fca.authorize_redirect(request, redirect_uri, state=state, nonce=nonce)
 
 ############################
@@ -352,55 +353,165 @@ async def signin(request: Request):
 ############################
 
 @router.get('/callback')
-async def auth(request: Request):
+async def auth_callback(request: Request, response: Response):
+    """
+    This endpoint handles the OAuth2 callback flow by:
+      1. Validating 'state' and 'nonce' against what was stored in the session.
+      2. Exchanging the authorization code for an ID token + access token.
+      3. Parsing and validating the ID token.
+      4. Retrieving user information from the userinfo endpoint.
+      5. Creating or retrieving the user in the local database.
+      6. Creating a session token (JWT) and storing relevant data in the session.
+      7. Setting cookies and redirecting back to the frontend.
+    """
+
     try:
+        # ---------------------------------------------------------------------
+        # 1. Retrieve and validate 'state', 'nonce', and 'code' from session and query params
+        # ---------------------------------------------------------------------
         stored_state = request.session.get('state')
         stored_nonce = request.session.get('nonce')
         client_state = request.query_params.get('state')
         client_code = request.query_params.get('code')
+
+        if not client_state or not stored_state or client_state != stored_state:
+            raise HTTPException(status_code=400, detail="Invalid or missing state parameter")
         
-        if not client_state or client_state != stored_state:
-            raise HTTPException(status_code=400, detail="Invalid state")
-        
+        if not client_code:
+            raise HTTPException(status_code=400, detail="Missing authorization code")
+
+        # Optionally clear state and nonce to prevent replay attacks
+        request.session.pop('state', None)
+        request.session.pop('nonce', None)
+
+        # ---------------------------------------------------------------------
+        # 2. Exchange authorization code for tokens
+        # ---------------------------------------------------------------------
+        token_endpoint = oauth.fca.server_metadata.get('token_endpoint')
+        if not token_endpoint:
+            raise HTTPException(status_code=500, detail="Missing token endpoint in provider metadata")
+
         async with AsyncOAuth2Client(
             client_id=PROCONNECT_CLIENT_ID,
             client_secret=PROCONNECT_CLIENT_SECRET,
-            token_endpoint=oauth.fca.server_metadata['token_endpoint']
+            token_endpoint=token_endpoint
         ) as client:
             token_response = await client.fetch_token(
-                oauth.fca.server_metadata['token_endpoint'],
+                token_endpoint,
                 grant_type='authorization_code',
                 code=client_code,
-                redirect_uri=f"{BACKEND_URL}/api/v2/callback"
+                redirect_uri=f"{BACKEND_URL}/api/v1/auths/callback"
             )
-        
+
+        if not token_response or 'access_token' not in token_response:
+            raise HTTPException(status_code=500, detail="Failed to acquire access token")
+
+        # ---------------------------------------------------------------------
+        # 3. Parse and validate the ID token
+        # ---------------------------------------------------------------------
         id_token = token_response.get('id_token')
         if id_token:
+            # Authlib can parse and validate the ID token (nonce, signatures, etc.)
             id_token_claims = await oauth.fca.parse_id_token(token_response, nonce=stored_nonce)
             if id_token_claims.get('nonce') != stored_nonce:
-                raise HTTPException(status_code=400, detail="Invalid nonce")
-            request.session['id_token'] = id_token
-        
-        userinfo_endpoint = oauth.fca.server_metadata['userinfo_endpoint']
+                raise HTTPException(status_code=400, detail="Invalid nonce in ID token")
+
+        # ---------------------------------------------------------------------
+        # 4. Retrieve user information from userinfo endpoint
+        # ---------------------------------------------------------------------
+        userinfo_endpoint = oauth.fca.server_metadata.get('userinfo_endpoint')
+        if not userinfo_endpoint:
+            raise HTTPException(status_code=500, detail="Missing userinfo endpoint in provider metadata")
+
         async with httpx.AsyncClient() as client:
             userinfo_response = await client.get(
                 userinfo_endpoint,
                 headers={"Authorization": f"Bearer {token_response['access_token']}"}
             )
-            userinfo_response.raise_for_status()
-            if not userinfo_response.text:
-                raise ValueError("Empty response from userinfo endpoint")
-            
-            user = jwt.decode(userinfo_response.text, options={"verify_signature": False})
-        if user:
-            request.session['user'] = user
-        else:
-            raise ValueError("No user info received")
+
+        if userinfo_response.status_code != 200:
+            raise HTTPException(
+                status_code=userinfo_response.status_code,
+                detail=f"Userinfo endpoint returned an error: {userinfo_response.text}"
+            )
+
+        if not userinfo_response.text:
+            raise HTTPException(status_code=500, detail="Empty response from userinfo endpoint")
+
+        user_info = jwt.decode(userinfo_response.text, options={"verify_signature": False})
+        if not user_info or 'sub' not in user_info:
+            raise HTTPException(status_code=500, detail="Invalid user info received")
+
+        # ---------------------------------------------------------------------
+        # 5. Create or retrieve user in local database
+        # ---------------------------------------------------------------------
+        email = user_info.get('email')
+        name = f"{user_info.get('given_name', '')} {user_info.get('usual_name', '')}".strip()
+
+        if not email:
+            raise HTTPException(status_code=400, detail="Missing email in user info")
+
+        # Check if user exists in database
+        db_user = Users.get_user_by_email(email)
+        if not db_user:
+            # If no users exist yet, assign 'admin'; otherwise, use default role
+            role = "admin" if Users.get_num_users() == 0 else request.app.state.config.DEFAULT_USER_ROLE
+            db_user = Auths.insert_new_auth(
+                email=email,
+                password=secrets.token_urlsafe(32),  # Random password since we use OAuth
+                name=name,
+                role=role
+            )
+            if not db_user:
+                raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+
+        # ---------------------------------------------------------------------
+        # 6. Create session token (JWT) and store session data
+        # ---------------------------------------------------------------------
+        expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
+        token = create_token(
+            data={"id": db_user.id},
+            expires_delta=expires_delta,
+        )
+
+        # Log session data for debugging
+        print(f"Session data before setting: {request.session}")
+
+        # Clear any old session data and store user-related fields
+        request.session.clear()
+        request.session['user'] = {
+            'email': email,
+            'name': name,
+            'sub': user_info.get('sub'),
+            'given_name': user_info.get('given_name'),
+            'usual_name': user_info.get('usual_name'),
+        }
+        request.session['id_token'] = id_token
+        request.session['access_token'] = token_response.get('access_token')
+
+        # Log session data after setting
+        print(f"Session data after setting: {request.session}")
+
+        # ---------------------------------------------------------------------
+        # 7. Set the session token as an HTTP-only cookie and redirect
+        # ---------------------------------------------------------------------
+        response.set_cookie(
+            key="token",
+            value=token,
+            httponly=True,
+            samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
+            secure=WEBUI_SESSION_COOKIE_SECURE,
+            max_age=int(expires_delta.total_seconds()) if expires_delta else None
+        )
 
         return RedirectResponse(url=FRONTEND_URL)
+    
     except (OAuthError, httpx.HTTPError, ValueError) as error:
+        # Return a structured error response if something goes wrong
         return {"error": str(error)}
-
+    except Exception as exc:
+        # Catch-all for any other unforeseen errors
+        return {"error": str(exc)}
 
 ############################
 # SignUp

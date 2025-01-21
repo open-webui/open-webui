@@ -362,9 +362,9 @@ PROCONNECT_SESSION_DURATION = os.environ.get("PROCONNECT_SESSION_DURATION", "cha
 # REDIS
 ####################################
 
-REDIS_HOST = os.environ.get("REDIS_HOST", "albert.bdd.001.etalab.gouv.fr")
-REDIS_PORT = os.environ.get("REDIS_PORT", "36379")
-REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "gaYauVqErKgFtAgDZrgJt4ZKohjoJ7FXkgQAEU3gMVSAwHwY2TqeaeTwofroeJnk")
+REDIS_HOST = os.environ.get("REDIS_HOST", "changeme")
+REDIS_PORT = os.environ.get("REDIS_PORT", "changeme")
+REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "changeme")
 
 ####################################
 # WEBUI_SECRET_KEY

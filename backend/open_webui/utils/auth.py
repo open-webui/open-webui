@@ -17,6 +17,7 @@ from authlib.oidc.core import UserInfo
 
 logging.getLogger("passlib").setLevel(logging.ERROR)
 
+log = logging.getLogger(__name__)
 
 SESSION_SECRET = WEBUI_SECRET_KEY
 ALGORITHM = "HS256"
@@ -30,10 +31,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def verify_password(plain_password, hashed_password):
-    return (
-        pwd_context.verify(
-            plain_password, hashed_password) if hashed_password else None
-    )
+    return pwd_context.verify(plain_password, hashed_password) if hashed_password else None
 
 
 def get_password_hash(password):
@@ -60,7 +58,7 @@ def decode_token(token: str) -> Optional[dict]:
 
 
 def extract_token_from_auth_header(auth_header: str):
-    return auth_header[len("Bearer "):]
+    return auth_header[len("Bearer ") :]
 
 
 def create_api_key():
@@ -107,20 +105,26 @@ def get_current_user(
 
         return get_current_user_by_api_key(token)
 
-    # auth by jwt token
+    # Get user from session with detailed logging
+    print(f"Request path: {request.url.path}")
+    print(f"Session cookie: {request.cookies.get('session')}")
+    print(f"All cookies: {request.cookies}")
+    print(f"All session data: {request.session}")
+    
     user = request.session.get('user')
-    if not user:
-        raise HTTPException(
-                status_code=401, detail="Authentication required")
+    if not user or not user.get('email'):
+        print(f"User not found in session for path {request.url.path}")
+        raise HTTPException(status_code=401, detail="Authentication required")
 
-    if user is None:
-        raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=ERROR_MESSAGES.INVALID_TOKEN,
-        )
-    else:
-        Users.update_user_last_active_by_id(user.id)
-        return user
+    # Get user from database
+    db_user = Users.get_user_by_email(user.get('email'))
+    if not db_user:
+        print(f"User {user.get('email')} not found in database")
+        raise HTTPException(status_code=401, detail="User not found")
+
+    Users.update_user_last_active_by_id(db_user.id)
+    return db_user
+
 
 def get_current_user_by_api_key(api_key: str):
     user = Users.get_user_by_api_key(api_key)
@@ -137,6 +141,7 @@ def get_current_user_by_api_key(api_key: str):
 
 
 def get_verified_user(user=Depends(get_current_user)):
+    print("user role: ", user.role)
     if user.role not in {"user", "admin"}:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

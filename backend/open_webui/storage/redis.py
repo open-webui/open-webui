@@ -3,12 +3,14 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.datastructures import MutableHeaders
 from itsdangerous import URLSafeSerializer
 import secrets
+import logging
 
 import copy
 
 from open_webui.env import PROCONNECT_SESSION_DURATION
 from open_webui.storage.redis_client import redis_client
 
+log = logging.getLogger(__name__)
 
 class RedisSessionMiddleware(SessionMiddleware):
     def __init__(self, app, secret_key, session_cookie="session", max_age=PROCONNECT_SESSION_DURATION):
@@ -16,6 +18,7 @@ class RedisSessionMiddleware(SessionMiddleware):
         self.redis = redis_client
         self.serializer = URLSafeSerializer(secret_key)
         super().__init__(app, secret_key, session_cookie, max_age)
+        log.debug(f"Initialized RedisSessionMiddleware with max_age: {max_age}")
 
     def get_session_id(self, scope: dict, receive) -> str:
         """Retrieve session id from cookies."""
@@ -40,25 +43,33 @@ class RedisSessionMiddleware(SessionMiddleware):
 
     def write_session_data(self, session_id: str, session_data: dict):
         """Write session data to Redis."""
-        data = self.serializer.dumps(session_data)
-        self.redis.set(name=session_id, value=data, ex=self.max_age)
+        try:
+            data = self.serializer.dumps(session_data)
+            self.redis.set(name=session_id, value=data, ex=self.max_age)
+            log.debug(f"Session data written for ID {session_id}: {session_data}")
+        except Exception as e:
+            log.error(f"Error writing session data: {str(e)}")
+            raise
 
     def get_valid_session_data(self, session_id: str) -> dict:
         """Retrieve and validate session data from Redis."""
         if not session_id:
-            return {}
-
-        data = self.redis.get(session_id)
-        if not data:
+            log.debug("No session ID provided")
             return {}
 
         try:
+            data = self.redis.get(session_id)
+            if not data:
+                log.debug(f"No data found for session ID {session_id}")
+                return {}
+
             session_data = self.serializer.loads(data)
-        except Exception:
+            log.debug(f"Retrieved session data for ID {session_id}: {session_data}")
+            return session_data
+        except Exception as e:
+            log.error(f"Error retrieving session data: {str(e)}")
             self.redis.delete(session_id)
             return {}
-
-        return session_data
 
     async def __call__(self, scope: dict, receive, send) -> None:
         """Middleware entrypoint."""

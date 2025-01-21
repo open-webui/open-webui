@@ -1,4 +1,5 @@
 import { PUBLIC_PROCONNECT_BASE_URL } from '$env/static/public';
+import { fetchWithCredentials } from '$lib/utils/fetchWrapper';
 
 interface UserInfo {
     given_name?: string;
@@ -15,9 +16,7 @@ export const proconnectService = {
 
     logout: async () => {
         try {
-            const response = await fetch(`${PUBLIC_PROCONNECT_BASE_URL}/api/v2/prepare-logout`, {
-                credentials: 'include'
-            });
+            const response = await fetchWithCredentials(`${PUBLIC_PROCONNECT_BASE_URL}/api/v2/prepare-logout`);
             if (response.ok) {
                 const data = await response.json();
                 if (data.url) {
@@ -34,9 +33,7 @@ export const proconnectService = {
 
     getUserInfo: async (): Promise<UserInfo | null> => {
         try {
-            const response = await fetch(`${PUBLIC_PROCONNECT_BASE_URL}/api/v2/protected`, {
-                credentials: 'include'
-            });
+            const response = await fetchWithCredentials(`${PUBLIC_PROCONNECT_BASE_URL}/api/v2/protected`);
             if (response.ok) {
                 const data = await response.json();
                 return data.user;
@@ -50,9 +47,7 @@ export const proconnectService = {
 
     checkAuthStatus: async (): Promise<boolean> => {
         try {
-            const response = await fetch(`${PUBLIC_PROCONNECT_BASE_URL}/api/v2/protected`, {
-                credentials: 'include'
-            });
+            const response = await fetchWithCredentials(`${PUBLIC_PROCONNECT_BASE_URL}/api/v2/protected`);
             return response.ok;
         } catch (error) {
             return false;

@@ -9,7 +9,8 @@ export const getUserGroups = async (token: string) => {
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
-		}
+		},
+		credentials: 'include'
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -36,7 +37,8 @@ export const getUserDefaultPermissions = async (token: string) => {
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
-		}
+		},
+		credentials: 'include'
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -66,7 +68,8 @@ export const updateUserDefaultPermissions = async (token: string, permissions: o
 		},
 		body: JSON.stringify({
 			...permissions
-		})
+		}),
+		credentials: 'include'
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -97,7 +100,8 @@ export const updateUserRole = async (token: string, id: string, role: string) =>
 		body: JSON.stringify({
 			id: id,
 			role: role
-		})
+		}),
+		credentials: 'include'
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -124,7 +128,8 @@ export const getUsers = async (token: string) => {
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
-		}
+		},
+		credentials: 'include'
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -149,8 +154,9 @@ export const getUserSettings = async (token: string) => {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+			Authorization: `Bearer ${token}`,
+		},
+		credentials: 'include'
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -178,6 +184,7 @@ export const updateUserSettings = async (token: string, settings: object) => {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
+		credentials: 'include',
 		body: JSON.stringify({
 			...settings
 		})
@@ -207,7 +214,8 @@ export const getUserById = async (token: string, userId: string) => {
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
-		}
+		},
+		credentials: 'include'
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -233,7 +241,8 @@ export const getUserInfo = async (token: string) => {
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
-		}
+		},
+		credentials: 'include'
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -261,6 +270,7 @@ export const updateUserInfo = async (token: string, info: object) => {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
+		credentials: 'include',
 		body: JSON.stringify({
 			...info
 		})
@@ -303,7 +313,8 @@ export const deleteUserById = async (token: string, userId: string) => {
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
-		}
+		},
+		credentials: 'include'
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -338,6 +349,7 @@ export const updateUserById = async (token: string, userId: string, user: UserUp
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
+		credentials: 'include',
 		body: JSON.stringify({
 			profile_image_url: user.profile_image_url,
 			email: user.email,
