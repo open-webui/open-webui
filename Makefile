@@ -31,3 +31,15 @@ update:
 	$(DOCKER_COMPOSE) up --build -d
 	$(DOCKER_COMPOSE) start
 
+build:
+	@echo "--> Docker build"
+	docker build -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.0.1 .
+
+create-buildx:
+	@docker buildx create --use
+
+buildx:
+	@docker buildx build  --platform linux/arm64,linux/amd64 -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.0.1 --push .
+
+run:
+	@docker run -d -p 80:80 --env WEB_CONCURRENCY=1 docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.0.1
