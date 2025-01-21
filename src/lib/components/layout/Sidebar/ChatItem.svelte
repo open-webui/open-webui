@@ -234,6 +234,7 @@
 			<input
 				use:focusEdit
 				bind:value={chatTitle}
+				id="chat-title-input-{id}"
 				class=" bg-transparent w-full outline-none mr-10"
 			/>
 		</div>
@@ -362,10 +363,15 @@
 					archiveChatHandler={() => {
 						archiveChatHandler(id);
 					}}
-					renameHandler={() => {
+					renameHandler={async () => {
 						chatTitle = title;
-
 						confirmEdit = true;
+
+						await tick();
+						const input = document.getElementById(`chat-title-input-${id}`);
+						if (input) {
+							input.focus();
+						}
 					}}
 					deleteHandler={() => {
 						showDeleteConfirm = true;
