@@ -27,6 +27,8 @@
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import ConfigureModelsModal from './Models/ConfigureModelsModal.svelte';
 	import Wrench from '$lib/components/icons/Wrench.svelte';
+	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
+	import ManageModelsModal from './Models/ManageModelsModal.svelte';
 
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
@@ -40,6 +42,7 @@
 	let selectedModelId = null;
 
 	let showConfigModal = false;
+	let showManageModal = false;
 
 	$: if (models) {
 		filteredModels = models
@@ -139,6 +142,7 @@
 </script>
 
 <ConfigureModelsModal bind:show={showConfigModal} initHandler={init} />
+<ManageModelsModal bind:show={showManageModal} />
 
 {#if models !== null}
 	{#if selectedModelId === null}
@@ -152,20 +156,20 @@
 					>
 				</div>
 
-				<div class="flex items-center">
-					<!-- <Tooltip content={$i18n.t('Manage')}>
+				<div class="flex items-center gap-1.5">
+					<Tooltip content={$i18n.t('Manage Models')}>
 						<button
 							class=" p-1 rounded-full flex gap-1 items-center"
 							type="button"
 							on:click={() => {
-								showConfigModal = true;
+								showManageModal = true;
 							}}
 						>
-							<Wrench />
+							<ArrowDownTray />
 						</button>
-					</Tooltip> -->
+					</Tooltip>
 
-					<Tooltip content={$i18n.t('Configure')}>
+					<Tooltip content={$i18n.t('Settings')}>
 						<button
 							class=" p-1 rounded-full flex gap-1 items-center"
 							type="button"
