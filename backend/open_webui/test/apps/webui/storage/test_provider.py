@@ -7,7 +7,6 @@ from moto import mock_aws
 from open_webui.storage import provider
 from gcp_storage_emulator.server import create_server
 from google.cloud import storage
-from google.cloud.exceptions import NotFound
 
 
 def mock_upload_dir(monkeypatch, tmp_path):

@@ -208,7 +208,7 @@ def get_storage_provider(storage_provider: str):
         Storage = LocalStorageProvider()
     elif storage_provider == "s3":
         Storage = S3StorageProvider()
-    elif storage_provider == "gcs" and GCS_BUCKET_NAME:
+    elif storage_provider == "gcs":
         Storage = GCSStorageProvider()
     else:
         raise RuntimeError(f"Unsupported storage provider: {storage_provider}")
