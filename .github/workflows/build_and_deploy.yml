@@ -1,0 +1,65 @@
+name: Build and deploy when pushing on workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    name: Build and push from ${{ github.ref_name }}/${{ github.sha }}
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: ghcr.io/${{ github.repository }}/app
+      IMAGE_TAG: ${{ github.sha }}
+    outputs:
+      commit_title: ${{ steps.get_head_commit_title.outputs.title }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - id: get_head_commit_title
+        run: echo "title=$(git log --format=%B -n 1 HEAD | head -n 1)" >> $GITHUB_OUTPUT
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push app
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }},${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-dev:
+    name: Deploy from ${{ github.ref_name }}/${{ github.sha }}
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - name: Trigger dev deployment
+        run: |
+          RESPONSE="$(curl --request POST \
+            --form token=${{ secrets.GITLAB_CI_TOKEN }} \
+            --form ref=main \
+            --form 'variables[pipeline_name]=${{ github.event.repository.name }} - ${{ needs.build-and-push.outputs.commit_title }}' \
+            --form 'variables[docker_image_tag]=latest' \
+            --form 'variables[application_to_deploy]=${{ github.event.repository.name }}' \
+            --form 'variables[deployment_environment]=dev' \
+            'https://gitlab.com/api/v4/projects/58117805/trigger/pipeline')"
+
+          if echo "$RESPONSE" | grep -q '"status":"created"'; then
+            echo $RESPONSE
+          else
+            echo $RESPONSE
+            exit 1
+          fi
