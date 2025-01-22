@@ -17,7 +17,8 @@
 		approximateToHumanReadable,
 		getMessageContentParts,
 		sanitizeResponseContent,
-		createMessagesList
+		createMessagesList,
+		formatDate
 	} from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -496,11 +497,13 @@
 				</Tooltip>
 
 				{#if message.timestamp}
-					<span
-						class=" self-center shrink-0 translate-y-0.5 invisible group-hover:visible text-gray-400 text-xs font-medium uppercase ml-0.5 -mt-0.5"
+					<div
+						class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 					>
-						{dayjs(message.timestamp * 1000).format($i18n.t('h:mm a'))}
-					</span>
+						<Tooltip content={dayjs(message.timestamp * 1000).format('dddd, DD MMMM YYYY HH:mm')}>
+							<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
+						</Tooltip>
+					</div>
 				{/if}
 			</Name>
 

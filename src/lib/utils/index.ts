@@ -1,6 +1,15 @@
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
 
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import isToday from 'dayjs/plugin/isToday';
+import isYesterday from 'dayjs/plugin/isYesterday';
+
+dayjs.extend(relativeTime);
+dayjs.extend(isToday);
+dayjs.extend(isYesterday);
+
 import { WEBUI_BASE_URL } from '$lib/constants';
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
@@ -279,6 +288,19 @@ export const generateInitialsImage = (name) => {
 	ctx.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
 
 	return canvas.toDataURL();
+};
+
+export const formatDate = (inputDate) => {
+	const date = dayjs(inputDate);
+	const now = dayjs();
+
+	if (date.isToday()) {
+		return `Today at ${date.format('HH:mm')}`;
+	} else if (date.isYesterday()) {
+		return `Yesterday at ${date.format('HH:mm')}`;
+	} else {
+		return `${date.format('DD/MM/YYYY')} at ${date.format('HH:mm')}`;
+	}
 };
 
 export const copyToClipboard = async (text) => {
