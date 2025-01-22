@@ -9,12 +9,14 @@
 
 	import ChevronUp from '../icons/ChevronUp.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
+	import Spinner from './Spinner.svelte';
 
 	export let open = false;
 	export let className = '';
 	export let buttonClassName =
 		'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
 	export let title = null;
+	export let isLoading = false;
 
 	export let grow = false;
 
@@ -34,12 +36,23 @@
 				}
 			}}
 		>
-			<div class=" w-full font-medium flex items-center justify-between gap-2">
+			<div
+				class=" w-full font-medium flex items-center justify-between gap-2 {isLoading === true
+					? 'shimmer'
+					: ''}
+			"
+			>
+				{#if isLoading}
+					<div>
+						<Spinner className="size-4" />
+					</div>
+				{/if}
+
 				<div class="">
 					{title}
 				</div>
 
-				<div>
+				<div class="flex self-center translate-y-[1px]">
 					{#if open}
 						<ChevronUp strokeWidth="3.5" className="size-3.5" />
 					{:else}

@@ -18,18 +18,26 @@ function findMatchingClosingTag(src, openTag, closeTag) {
 function detailsTokenizer(src) {
 	const detailsRegex = /^<details>\n/;
 	const summaryRegex = /^<summary>(.*?)<\/summary>\n/;
+	const loadingRegex = /<loading\s*\/>/; // Detect <loading/>
 
 	if (detailsRegex.test(src)) {
 		const endIndex = findMatchingClosingTag(src, '<details>', '</details>');
 		if (endIndex === -1) return;
-
 		const fullMatch = src.slice(0, endIndex);
 		let content = fullMatch.slice(10, -10).trim(); // Remove <details> and </details>
-
 		let summary = '';
+		let isLoading = false;
+
 		const summaryMatch = summaryRegex.exec(content);
 		if (summaryMatch) {
 			summary = summaryMatch[1].trim();
+
+			// Detect and remove <loading/>
+			if (loadingRegex.test(summary)) {
+				isLoading = true;
+				summary = summary.replace(loadingRegex, '').trim(); // Remove <loading/> from summary
+			}
+
 			content = content.slice(summaryMatch[0].length).trim();
 		}
 
@@ -37,7 +45,8 @@ function detailsTokenizer(src) {
 			type: 'details',
 			raw: fullMatch,
 			summary: summary,
-			text: content
+			text: content,
+			isLoading: isLoading // Include loading property to indicate if <loading/> was present
 		};
 	}
 }
