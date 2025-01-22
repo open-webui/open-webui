@@ -227,7 +227,9 @@
 
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
-			content={$i18n.t('Constrains effort on reasoning for reasoning models. (Default: medium)')}
+			content={$i18n.t(
+				'Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort. (Default: medium)'
+			)}
 			placement="top-start"
 			className="inline-tooltip"
 		>
