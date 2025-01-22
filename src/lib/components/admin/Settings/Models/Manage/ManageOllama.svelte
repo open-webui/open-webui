@@ -44,7 +44,8 @@
 	let modelTag = '';
 
 	let createModelLoading = false;
-	let createModelObject = {};
+	let createModelName = '';
+	let createModelObject = '';
 
 	let createModelDigest = '';
 	let createModelPullProgress = null;
@@ -428,7 +429,24 @@
 	const createModelHandler = async () => {
 		createModelLoading = true;
 
-		const res = await createModel(localStorage.token, createModelObject, urlIdx).catch((error) => {
+		let modelObject = {};
+		// parse createModelObject
+		try {
+			modelObject = JSON.parse(createModelObject);
+		} catch (error) {
+			toast.error(`${error}`);
+			createModelLoading = false;
+			return;
+		}
+
+		const res = await createModel(
+			localStorage.token,
+			{
+				model: createModelName,
+				...modelObject
+			},
+			urlIdx
+		).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
@@ -492,7 +510,8 @@
 
 		createModelLoading = false;
 
-		createModelObject = {};
+		createModelName = '';
+		createModelObject = '';
 		createModelDigest = '';
 		createModelPullProgress = null;
 	};
@@ -746,15 +765,15 @@
 								placeholder={$i18n.t('Enter model tag (e.g. {{modelTag}})', {
 									modelTag: 'my-modelfile'
 								})}
-								bind:value={createModelObject.model}
+								bind:value={createModelName}
 								disabled={createModelLoading}
 							/>
 
 							<textarea
-								bind:value={createModelObject.content}
+								bind:value={createModelObject}
 								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-100 dark:bg-gray-850 outline-none resize-none scrollbar-hidden"
 								rows="6"
-								placeholder={`TEMPLATE """{{ .System }}\nUSER: {{ .Prompt }}\nASSISTANT: """\nPARAMETER num_ctx 4096\nPARAMETER stop "</s>"\nPARAMETER stop "USER:"\nPARAMETER stop "ASSISTANT:"`}
+								placeholder={`e.g. {"model": "my-modelfile", "from": "ollama:7b"})`}
 								disabled={createModelLoading}
 							/>
 						</div>

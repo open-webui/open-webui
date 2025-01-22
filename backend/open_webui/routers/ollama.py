@@ -551,10 +551,11 @@ async def push_model(
 
 
 class CreateModelForm(BaseModel):
-    name: str
-    modelfile: Optional[str] = None
+    model: Optional[str] = None
     stream: Optional[bool] = None
     path: Optional[str] = None
+
+    model_config = ConfigDict(extra="allow")
 
 
 @router.post("/api/create")
