@@ -94,7 +94,7 @@ dependencies = [
 
     "extract_msg",
     "pydub",
-    "duckduckgo-search~=6.3.5",
+    "duckduckgo-search~=7.2.1",
 
     "google-api-python-client",
     "google-auth-httplib2",
