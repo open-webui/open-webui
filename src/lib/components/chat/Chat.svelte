@@ -1473,6 +1473,10 @@
 			params?.stream_response ??
 			true;
 
+		const removeDetailsWithReasoning = (content) => {
+			return content.replace(/<details\s+type="reasoning"[^>]*>.*?<\/details>/gis, '').trim();
+		};
+
 		const messages = [
 			params?.system || $settings.system || (responseMessage?.userContext ?? null)
 				? {
@@ -1490,7 +1494,10 @@
 						}`
 					}
 				: undefined,
-			...createMessagesList(responseMessageId)
+			...createMessagesList(responseMessageId).map((message) => ({
+				...message,
+				content: removeDetailsWithReasoning(message.content)
+			}))
 		]
 			.filter((message) => message?.content?.trim())
 			.map((message, idx, arr) => ({
