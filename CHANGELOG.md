@@ -29,7 +29,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **⚙️ General Stability Refac**: Backend refactoring delivers a more stable, robust platform.
 - **🖥️ Desktop App Preparations**: Ongoing work to support the upcoming Open WebUI desktop app. Follow our progress and updates here: https://github.com/open-webui/desktop
 
-
 ## [0.5.4] - 2025-01-05
 
 ### Added
