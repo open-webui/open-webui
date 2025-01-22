@@ -1,5 +1,6 @@
 import os
 import shutil
+import json
 from abc import ABC, abstractmethod
 from typing import BinaryIO, Tuple
 
@@ -11,9 +12,13 @@ from open_webui.config import (
     S3_ENDPOINT_URL,
     S3_REGION_NAME,
     S3_SECRET_ACCESS_KEY,
+    GCS_BUCKET_NAME,
+    GOOGLE_APPLICATION_CREDENTIALS_JSON,
     STORAGE_PROVIDER,
     UPLOAD_DIR,
 )
+from google.cloud import storage
+from google.cloud.exceptions import GoogleCloudError, NotFound
 from open_webui.constants import ERROR_MESSAGES
 
 
@@ -137,15 +142,76 @@ class S3StorageProvider(StorageProvider):
         # Always delete from local storage
         LocalStorageProvider.delete_all_files()
 
+class GCSStorageProvider(StorageProvider):
+    def __init__(self):
+        self.bucket_name = GCS_BUCKET_NAME
+    
+        if GOOGLE_APPLICATION_CREDENTIALS_JSON:
+            self.gcs_client = storage.Client.from_service_account_info(info=json.loads(GOOGLE_APPLICATION_CREDENTIALS_JSON))
+        else:
+            # if no credentials json is provided, credentials will be picked up from the environment
+            # if running on local environment, credentials would be user credentials
+            # if running on a Compute Engine instance, credentials would be from Google Metadata server
+            self.gcs_client = storage.Client()
+        self.bucket = self.gcs_client.bucket(GCS_BUCKET_NAME)
+    
+    def upload_file(self, file: BinaryIO, filename: str) -> Tuple[bytes, str]:
+        """Handles uploading of the file to GCS storage."""
+        contents, file_path = LocalStorageProvider.upload_file(file, filename)
+        try:
+            blob = self.bucket.blob(filename)
+            blob.upload_from_filename(file_path)
+            return contents, "gs://" + self.bucket_name + "/" + filename
+        except GoogleCloudError as e:
+            raise RuntimeError(f"Error uploading file to GCS: {e}")
+
+    def get_file(self, file_path:str) -> str:
+        """Handles downloading of the file from GCS storage."""
+        try:
+            filename = file_path.removeprefix("gs://").split("/")[1]
+            local_file_path = f"{UPLOAD_DIR}/{filename}"            
+            blob = self.bucket.get_blob(filename)
+            blob.download_to_filename(local_file_path)
+
+            return local_file_path
+        except NotFound as e:
+            raise RuntimeError(f"Error downloading file from GCS: {e}")
+    
+    def delete_file(self, file_path:str) -> None:
+        """Handles deletion of the file from GCS storage."""
+        try:
+            filename = file_path.removeprefix("gs://").split("/")[1]
+            blob = self.bucket.get_blob(filename)
+            blob.delete()
+        except NotFound as e:
+            raise RuntimeError(f"Error deleting file from GCS: {e}")
+        
+        # Always delete from local storage
+        LocalStorageProvider.delete_file(file_path)
+
+    def delete_all_files(self) -> None:
+        """Handles deletion of all files from GCS storage."""
+        try:
+            blobs = self.bucket.list_blobs()
+
+            for blob in blobs:
+                blob.delete()
+
+        except NotFound as e:
+            raise RuntimeError(f"Error deleting all files from GCS: {e}")
+        
+        # Always delete from local storage
+        LocalStorageProvider.delete_all_files()
 
 def get_storage_provider(storage_provider: str):
     if storage_provider == "local":
         Storage = LocalStorageProvider()
     elif storage_provider == "s3":
         Storage = S3StorageProvider()
+    elif storage_provider == "gcs":
+        Storage = GCSStorageProvider()
     else:
         raise RuntimeError(f"Unsupported storage provider: {storage_provider}")
     return Storage
-
 
 Storage = get_storage_provider(STORAGE_PROVIDER)

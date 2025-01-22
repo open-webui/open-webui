@@ -102,8 +102,9 @@ dependencies = [
     "moto[s3]>=5.0.26",
 
     "googleapis-common-protos==1.63.2",
-
-    "ldap3==2.9.1"
+    "ldap3==2.9.1",
+    "google-cloud-storage==2.19.0",
+    "gcp-storage-emulator>=2024.8.3",
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.13.0a1"
