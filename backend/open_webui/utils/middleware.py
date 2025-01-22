@@ -1137,6 +1137,15 @@ async def process_chat_response(
                                             )
 
                                             if reasoning_content:
+                                                reasoning_content = "\n".join(
+                                                    (
+                                                        f"> {line}"
+                                                        if not line.startswith(">")
+                                                        else line
+                                                    )
+                                                    for line in reasoning_content.splitlines()
+                                                )
+
                                                 # Format reasoning with <details> tag
                                                 content = f"<details>\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_content}\n</details>\n"
                                             else:
@@ -1144,8 +1153,17 @@ async def process_chat_response(
 
                                             reasoning_start_time = None
                                         else:
+                                            ongoing_content = "\n".join(
+                                                (
+                                                    f"> {line}"
+                                                    if not line.startswith(">")
+                                                    else line
+                                                )
+                                                for line in reasoning_content.splitlines()
+                                            )
+
                                             # Show ongoing thought process
-                                            content = f"<details>\n<summary>Thinking… <loading/></summary>\n{reasoning_content}\n</details>\n"
+                                            content = f"<details>\n<summary>Thinking… <loading/></summary>\n{ongoing_content}\n</details>\n"
 
                                 if ENABLE_REALTIME_CHAT_SAVE:
                                     # Save message in the database
