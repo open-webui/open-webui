@@ -202,14 +202,21 @@
 
 	onMount(async () => {
 		if (window?.electronAPI) {
-			const res = await window.electronAPI.send({
-				type: 'info'
+			const info = await window.electronAPI.send({
+				type: 'app:info'
 			});
 
-			if (res) {
+			if (info) {
 				isApp.set(true);
-				appInfo.set(res);
-				console.log(res);
+				appInfo.set(info);
+
+				const data = await window.electronAPI.send({
+					type: 'app:data'
+				});
+
+				if (data) {
+					appData.set(data);
+				}
 			}
 		}
 
