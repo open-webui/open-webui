@@ -96,14 +96,19 @@ dependencies = [
     "pydub",
     "duckduckgo-search~=6.3.5",
 
+    "google-api-python-client",
+    "google-auth-httplib2",
+    "google-auth-oauthlib",
+
     "docker~=7.1.0",
     "pytest~=8.3.2",
     "pytest-docker~=3.1.1",
     "moto[s3]>=5.0.26",
 
     "googleapis-common-protos==1.63.2",
-    "ldap3==2.9.1",
     "google-cloud-storage==2.19.0",
+
+    "ldap3==2.9.1",
     "gcp-storage-emulator>=2024.8.3",
 ]
 readme = "README.md"
