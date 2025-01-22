@@ -44,7 +44,8 @@
 		extractSentencesForAudio,
 		promptTemplate,
 		splitStream,
-		sleep
+		sleep,
+		removeDetailsWithReasoning
 	} from '$lib/utils';
 
 	import { generateChatCompletion } from '$lib/apis/ollama';
@@ -1485,10 +1486,6 @@
 			$settings?.params?.stream_response ??
 			params?.stream_response ??
 			true;
-
-		const removeDetailsWithReasoning = (content) => {
-			return content.replace(/<details\s+type="reasoning"[^>]*>.*?<\/details>/gis, '').trim();
-		};
 
 		const messages = [
 			params?.system || $settings.system || (responseMessage?.userContext ?? null)
