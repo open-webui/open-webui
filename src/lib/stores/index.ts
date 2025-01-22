@@ -14,6 +14,7 @@ export const user: Writable<SessionUser | undefined> = writable(undefined);
 // Electron App
 export const isApp = writable(false);
 export const appInfo = writable(null);
+export const appData = writable(null);
 
 // Frontend
 export const MODEL_DOWNLOAD_POOL = writable({});
