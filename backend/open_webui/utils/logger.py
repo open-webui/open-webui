@@ -1,21 +1,21 @@
+from dataclasses import asdict, dataclass
+from enum import Enum
 import json
 import logging
 import sys
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from loguru import logger
 
-from open_webui.models.audits import UserAuditInfo
 from open_webui.env import (
     AUDIT_LOG_FILE_ROTATION_SIZE,
     AUDIT_LOGS_FILE_PATH,
     GLOBAL_LOG_LEVEL,
 )
-from open_webui.models.users import UserModel
 
 
 if TYPE_CHECKING:
-    from loguru import Logger, Message, Record
+    from loguru import Logger, Record
 
 
 def stdout_format(record: "Record") -> str:
@@ -68,11 +68,15 @@ class AuditLogEntry:
     source_ip: Optional[str] = None
     request_object: Any = None
     response_object: Any = None
+
+
 class AuditLevel(str, Enum):
     NONE = "NONE"
     METADATA = "METADATA"
     REQUEST = "REQUEST"
     REQUEST_RESPONSE = "REQUEST_RESPONSE"
+
+
 class AuditLogger:
     def __init__(self, logger: "Logger"):
         self.logger = logger.bind(auditable=True)

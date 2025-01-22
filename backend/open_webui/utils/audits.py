@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from pprint import pp as pprint
-from typing import Any, AsyncGenerator, Dict, Mapping, MutableMapping, Optional, cast
+from typing import Any, AsyncGenerator, Dict, MutableMapping, Optional, cast
 import uuid
 
 from asgiref.typing import (
@@ -9,11 +9,8 @@ from asgiref.typing import (
     ASGIReceiveEvent,
     ASGISendCallable,
     ASGISendEvent,
-    HTTPRequestEvent,
-    HTTPScope,
     Scope as ASGIScope,
 )
-from fastapi.datastructures import Headers
 from loguru import logger
 from starlette.requests import Request
 
@@ -21,6 +18,8 @@ from open_webui.env import AUDIT_LOG_LEVEL
 from open_webui.utils.auth import get_current_user, get_http_authorization_cred
 from open_webui.models.users import UserModel
 from open_webui.utils.logger import AuditLogEntry, AuditLogger
+
+
 class AuditContext:
     def __init__(self, max_body_size: int = 4096):
         self.request_body = bytearray()
@@ -39,6 +38,8 @@ class AuditContext:
             self.response_body.extend(
                 chunk[: self.max_body_size - len(self.response_body)]
             )
+
+
 class AuditLoggingMiddleware:
     AUDITED_METHODS = {"PUT", "PATCH", "DELETE", "POST"}
 
