@@ -104,7 +104,6 @@ class TestS3StorageProvider:
         self.file_bytesio_empty = io.BytesIO()
         super().__init__()
 
-
     def test_upload_file(self, monkeypatch, tmp_path):
         upload_dir = mock_upload_dir(monkeypatch, tmp_path)
         # S3 checks
@@ -182,6 +181,7 @@ class TestS3StorageProvider:
         assert not (upload_dir / self.filename).exists()
         assert not (upload_dir / self.filename_extra).exists()
 
+
 class TestGCSStorageProvider:
     Storage = provider.GCSStorageProvider()
     Storage.bucket_name = "my-bucket"
@@ -202,15 +202,15 @@ class TestGCSStorageProvider:
         bucket = gcs_client.bucket(self.Storage.bucket_name)
         bucket.create()
         self.Storage.gcs_client, self.Storage.bucket = gcs_client, bucket
-        yield 
+        yield
         bucket.delete(force=True)
         server.stop()
-    
+
     def test_upload_file(self, monkeypatch, tmp_path, setup):
         upload_dir = mock_upload_dir(monkeypatch, tmp_path)
         # catch error if bucket does not exist
         with pytest.raises(Exception):
-            self.Storage.bucket = monkeypatch(self.Storage, "bucket", None)  
+            self.Storage.bucket = monkeypatch(self.Storage, "bucket", None)
             self.Storage.upload_file(io.BytesIO(self.file_content), self.filename)
         contents, gcs_file_path = self.Storage.upload_file(
             io.BytesIO(self.file_content), self.filename
@@ -261,7 +261,10 @@ class TestGCSStorageProvider:
         object = self.Storage.bucket.get_blob(self.filename_extra)
         assert (upload_dir / self.filename_extra).exists()
         assert (upload_dir / self.filename_extra).read_bytes() == self.file_content
-        assert self.Storage.bucket.get_blob(self.filename_extra).name == self.filename_extra
+        assert (
+            self.Storage.bucket.get_blob(self.filename_extra).name
+            == self.filename_extra
+        )
         assert self.file_content == object.download_as_bytes()
 
         self.Storage.delete_all_files()
