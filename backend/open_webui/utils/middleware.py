@@ -1144,7 +1144,7 @@ async def process_chat_response(
                                             )
 
                                             if reasoning_content:
-                                                reasoning_content = "\n".join(
+                                                reasoning_display_content = "\n".join(
                                                     (
                                                         f"> {line}"
                                                         if not line.startswith(">")
@@ -1154,14 +1154,14 @@ async def process_chat_response(
                                                 )
 
                                                 # Format reasoning with <details> tag
-                                                content = f"{ongoing_content}<details>\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_content}\n</details>\n"
+                                                content = f"{ongoing_content}<details>\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_display_content}\n</details>\n"
                                             else:
                                                 content = ""
 
                                             reasoning_start_time = None
                                         else:
 
-                                            reasoning_content = "\n".join(
+                                            reasoning_display_content = "\n".join(
                                                 (
                                                     f"> {line}"
                                                     if not line.startswith(">")
@@ -1171,7 +1171,7 @@ async def process_chat_response(
                                             )
 
                                             # Show ongoing thought process
-                                            content = f"{ongoing_content}<details>\n<summary>Thinking… <loading/></summary>\n{reasoning_content}\n</details>\n"
+                                            content = f"{ongoing_content}<details>\n<summary>Thinking… <loading/></summary>\n{reasoning_display_content}\n</details>\n"
 
                                 if ENABLE_REALTIME_CHAT_SAVE:
                                     # Save message in the database
