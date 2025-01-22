@@ -671,6 +671,10 @@ def apply_params_to_form_data(form_data, model):
 
         if "frequency_penalty" in params:
             form_data["frequency_penalty"] = params["frequency_penalty"]
+
+        if "reasoning_effort" in params:
+            form_data["reasoning_effort"] = params["reasoning_effort"]
+
     return form_data
 
 
