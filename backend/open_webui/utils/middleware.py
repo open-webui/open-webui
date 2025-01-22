@@ -1072,6 +1072,12 @@ async def process_chat_response(
                         },
                     )
 
+                # We might want to disable this by default
+                detect_reasoning = True
+
+                reasoning_start_time = None
+                reasoning_content = ""
+
                 async for line in response.body_iterator:
                     line = line.decode("utf-8") if isinstance(line, bytes) else line
                     data = line
@@ -1098,7 +1104,6 @@ async def process_chat_response(
                                     "selectedModelId": data["selected_model_id"],
                                 },
                             )
-
                         else:
                             value = (
                                 data.get("choices", [])[0]
@@ -1108,6 +1113,39 @@ async def process_chat_response(
 
                             if value:
                                 content = f"{content}{value}"
+
+                                if detect_reasoning:
+                                    if "<think>\n" in content:
+                                        reasoning_start_time = time.time()
+                                        reasoning_content = ""
+                                        content = content.replace("<think>\n", "")
+
+                                    if reasoning_start_time is not None:
+                                        reasoning_content += value
+
+                                        if "</think>\n" in reasoning_content:
+                                            reasoning_end_time = time.time()
+                                            reasoning_duration = int(
+                                                reasoning_end_time
+                                                - reasoning_start_time
+                                            )
+
+                                            reasoning_content = (
+                                                reasoning_content.strip("<think>\n")
+                                                .strip("</think>\n")
+                                                .strip()
+                                            )
+
+                                            if reasoning_content:
+                                                # Format reasoning with <details> tag
+                                                content = f"<details>\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_content}\n</details>\n"
+                                            else:
+                                                content = ""
+
+                                            reasoning_start_time = None
+                                        else:
+                                            # Show ongoing thought process
+                                            content = f"<details>\n<summary>Thinking… <loading/></summary>\n{reasoning_content}\n</details>\n"
 
                                 if ENABLE_REALTIME_CHAT_SAVE:
                                     # Save message in the database
@@ -1129,10 +1167,8 @@ async def process_chat_response(
                                 "data": data,
                             }
                         )
-
                     except Exception as e:
                         done = "data: [DONE]" in line
-
                         if done:
                             pass
                         else:
