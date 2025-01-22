@@ -70,7 +70,7 @@ async def create_new_tools(
     user=Depends(get_verified_user),
 ):
     if user.role != "admin" and not has_permission(
-        user.id, "workspace.knowledge", request.app.state.config.USER_PERMISSIONS
+        user.id, "workspace.tools", request.app.state.config.USER_PERMISSIONS
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -165,7 +165,12 @@ async def update_tools_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if tools.user_id != user.id and user.role != "admin":
+    # Is the user the original creator, in a group with write access, or an admin
+    if (
+        tools.user_id != user.id
+        and not has_access(user.id, "write", tools.access_control)
+        and user.role != "admin"
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,

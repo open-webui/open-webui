@@ -22,7 +22,9 @@
 		currentChatPage,
 		tags,
 		temporaryChatEnabled,
-		isLastActiveTab
+		isLastActiveTab,
+		isApp,
+		appInfo
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -41,6 +43,7 @@
 	import { bestMatchingLanguage } from '$lib/utils';
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
+	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 
 	setContext('i18n', i18n);
 
@@ -100,10 +103,17 @@
 	const chatEventHandler = async (event) => {
 		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
 
-		if (
-			(event.chat_id !== $chatId && !$temporaryChatEnabled) ||
-			document.visibilityState !== 'visible'
-		) {
+		let isFocused = document.visibilityState !== 'visible';
+		if (window.electronAPI) {
+			const res = await window.electronAPI.send({
+				type: 'window:isFocused'
+			});
+			if (res) {
+				isFocused = res.isFocused;
+			}
+		}
+
+		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isFocused) {
 			await tick();
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
@@ -143,10 +153,24 @@
 	};
 
 	const channelEventHandler = async (event) => {
+		if (event.data?.type === 'typing') {
+			return;
+		}
+
 		// check url path
 		const channel = $page.url.pathname.includes(`/channels/${event.channel_id}`);
 
-		if ((!channel || document.visibilityState !== 'visible') && event?.user?.id !== $user?.id) {
+		let isFocused = document.visibilityState !== 'visible';
+		if (window.electronAPI) {
+			const res = await window.electronAPI.send({
+				type: 'window:isFocused'
+			});
+			if (res) {
+				isFocused = res.isFocused;
+			}
+		}
+
+		if ((!channel || isFocused) && event?.user?.id !== $user?.id) {
 			await tick();
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
@@ -177,6 +201,25 @@
 	};
 
 	onMount(async () => {
+		if (window?.electronAPI) {
+			const info = await window.electronAPI.send({
+				type: 'app:info'
+			});
+
+			if (info) {
+				isApp.set(true);
+				appInfo.set(info);
+
+				const data = await window.electronAPI.send({
+					type: 'app:data'
+				});
+
+				if (data) {
+					appData.set(data);
+				}
+			}
+		}
+
 		// Listen for messages on the BroadcastChannel
 		bc.onmessage = (event) => {
 			if (event.data === 'active') {
@@ -244,7 +287,7 @@
 				if (localStorage.token) {
 					// Get Session User Info
 					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
-						toast.error(error);
+						toast.error(`${error}`);
 						return null;
 					});
 
@@ -324,7 +367,17 @@
 </svelte:head>
 
 {#if loaded}
-	<slot />
+	{#if $isApp}
+		<div class="flex flex-row h-screen">
+			<AppSidebar />
+
+			<div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
+				<slot />
+			</div>
+		</div>
+	{:else}
+		<slot />
+	{/if}
 {/if}
 
 <Toaster

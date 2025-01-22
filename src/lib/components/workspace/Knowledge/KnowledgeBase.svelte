@@ -11,7 +11,7 @@
 	import { page } from '$app/stores';
 	import { mobile, showSidebar, knowledge as _knowledge } from '$lib/stores';
 
-	import { updateFileDataContentById, uploadFile } from '$lib/apis/files';
+	import { updateFileDataContentById, uploadFile, deleteFileById } from '$lib/apis/files';
 	import {
 		addFileToKnowledgeById,
 		getKnowledgeById,
@@ -136,7 +136,7 @@
 		// Check if the file is an audio file and transcribe/convert it to text file
 		if (['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'].includes(file['type'])) {
 			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			});
 
@@ -372,17 +372,21 @@
 	};
 
 	const deleteFileHandler = async (fileId) => {
-		const updatedKnowledge = await removeFileFromKnowledgeById(
-			localStorage.token,
-			id,
-			fileId
-		).catch((e) => {
-			toast.error(e);
-		});
+		try {
+			console.log('Starting file deletion process for:', fileId);
 
-		if (updatedKnowledge) {
-			knowledge = updatedKnowledge;
-			toast.success($i18n.t('File removed successfully.'));
+			// Remove from knowledge base only
+			const updatedKnowledge = await removeFileFromKnowledgeById(localStorage.token, id, fileId);
+
+			console.log('Knowledge base updated:', updatedKnowledge);
+
+			if (updatedKnowledge) {
+				knowledge = updatedKnowledge;
+				toast.success($i18n.t('File removed successfully.'));
+			}
+		} catch (e) {
+			console.error('Error in deleteFileHandler:', e);
+			toast.error(e);
 		}
 	};
 
@@ -616,6 +620,7 @@
 			onChange={() => {
 				changeDebounceHandler();
 			}}
+			accessRoles={['read', 'write']}
 		/>
 		<div class="w-full mb-2.5">
 			<div class=" flex w-full">

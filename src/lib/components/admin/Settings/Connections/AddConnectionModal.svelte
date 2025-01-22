@@ -37,7 +37,7 @@
 
 	const verifyOllamaHandler = async () => {
 		const res = await verifyOllamaConnection(localStorage.token, url, key).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 		});
 
 		if (res) {
@@ -47,7 +47,7 @@
 
 	const verifyOpenAIHandler = async () => {
 		const res = await verifyOpenAIConnection(localStorage.token, url, key).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 		});
 
 		if (res) {
