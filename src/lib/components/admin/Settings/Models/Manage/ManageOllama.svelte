@@ -44,8 +44,8 @@
 	let modelTag = '';
 
 	let createModelLoading = false;
-	let createModelTag = '';
-	let createModelContent = '';
+	let createModelObject = {};
+
 	let createModelDigest = '';
 	let createModelPullProgress = null;
 
@@ -427,12 +427,8 @@
 
 	const createModelHandler = async () => {
 		createModelLoading = true;
-		const res = await createModel(
-			localStorage.token,
-			createModelTag,
-			createModelContent,
-			urlIdx
-		).catch((error) => {
+
+		const res = await createModel(localStorage.token, createModelObject, urlIdx).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
@@ -496,18 +492,21 @@
 
 		createModelLoading = false;
 
-		createModelTag = '';
-		createModelContent = '';
+		createModelObject = {};
 		createModelDigest = '';
 		createModelPullProgress = null;
 	};
 
 	const init = async () => {
 		loading = true;
-		ollamaModels = await getOllamaModels(localStorage.token, urlIdx);
+		ollamaModels = await getOllamaModels(localStorage.token, urlIdx).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
 
-		console.log(ollamaModels);
-		loading = false;
+		if (ollamaModels) {
+			loading = false;
+		}
 	};
 
 	$: if (urlIdx !== null) {
@@ -747,12 +746,12 @@
 								placeholder={$i18n.t('Enter model tag (e.g. {{modelTag}})', {
 									modelTag: 'my-modelfile'
 								})}
-								bind:value={createModelTag}
+								bind:value={createModelObject.model}
 								disabled={createModelLoading}
 							/>
 
 							<textarea
-								bind:value={createModelContent}
+								bind:value={createModelObject.content}
 								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-100 dark:bg-gray-850 outline-none resize-none scrollbar-hidden"
 								rows="6"
 								placeholder={`TEMPLATE """{{ .System }}\nUSER: {{ .Prompt }}\nASSISTANT: """\nPARAMETER num_ctx 4096\nPARAMETER stop "</s>"\nPARAMETER stop "USER:"\nPARAMETER stop "ASSISTANT:"`}
@@ -1013,6 +1012,12 @@
 			</div>
 		</div>
 	</div>
+{:else if ollamaModels === null}
+	<div class="flex justify-center items-center w-full h-full text-xs py-3">
+		{$i18n.t('Failed to fetch models')}
+	</div>
 {:else}
-	<Spinner />
+	<div class="flex justify-center items-center w-full h-full py-3">
+		<Spinner />
+	</div>
 {/if}
