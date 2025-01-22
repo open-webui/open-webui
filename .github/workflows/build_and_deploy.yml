@@ -3,7 +3,7 @@ name: Build and deploy when pushing on workflow
 on:
   push:
     branches:
-      - workflow
+      - main
 
 jobs:
   build-and-push:
