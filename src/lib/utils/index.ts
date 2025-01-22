@@ -666,6 +666,10 @@ export const cleanText = (content: string) => {
 	return removeFormattings(removeEmojis(content.trim()));
 };
 
+export const removeDetailsWithReasoning = (content) => {
+	return content.replace(/<details\s+type="reasoning"[^>]*>.*?<\/details>/gis, '').trim();
+};
+
 // This regular expression matches code blocks marked by triple backticks
 const codeBlockRegex = /```[\s\S]*?```/g;
 
@@ -735,6 +739,7 @@ export const extractSentencesForAudio = (text: string) => {
 };
 
 export const getMessageContentParts = (content: string, split_on: string = 'punctuation') => {
+	content = removeDetailsWithReasoning(content);
 	const messageContentParts: string[] = [];
 
 	switch (split_on) {
