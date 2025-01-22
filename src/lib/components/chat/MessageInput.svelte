@@ -568,15 +568,15 @@
 								dir={$settings?.chatDirection ?? 'LTR'}
 							>
 								{#if files.length > 0}
-									<div class="mx-1 mt-2.5 mb-1 flex flex-wrap gap-2">
+									<div class="mx-1 mt-2.5 mb-1 flex items-center flex-wrap gap-2">
 										{#each files as file, fileIdx}
 											{#if file.type === 'image'}
 												<div class=" relative group">
-													<div class="relative">
+													<div class="relative flex items-center">
 														<Image
 															src={file.url}
 															alt="input"
-															imageClassName=" h-16 w-16 rounded-xl object-cover"
+															imageClassName=" size-14 rounded-xl object-cover"
 														/>
 														{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
 															<Tooltip
@@ -636,18 +636,16 @@
 													dismissible={true}
 													edit={true}
 													on:dismiss={async () => {
-														try {
+														if (file.type !== 'collection' && !file?.collection) {
 															if (file.id) {
 																// This will handle both file deletion and Chroma cleanup
 																await deleteFileById(localStorage.token, file.id);
 															}
-															// Remove from UI state
-															files.splice(fileIdx, 1);
-															files = files;
-														} catch (e) {
-															console.error('Error deleting file:', e);
-															toast.error(e);
 														}
+
+														// Remove from UI state
+														files.splice(fileIdx, 1);
+														files = files;
 													}}
 													on:click={() => {
 														console.log(file);
