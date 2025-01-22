@@ -37,13 +37,13 @@
 			}}
 		>
 			<div
-				class=" w-full font-medium flex items-center justify-between gap-2 {attributes?.done !==
-				'true'
+				class=" w-full font-medium flex items-center justify-between gap-2 {attributes?.done &&
+				attributes?.done !== 'true'
 					? 'shimmer'
 					: ''}
 			"
 			>
-				{#if attributes?.done !== 'true'}
+				{#if attributes?.done && attributes?.done !== 'true'}
 					<div>
 						<Spinner className="size-4" />
 					</div>
