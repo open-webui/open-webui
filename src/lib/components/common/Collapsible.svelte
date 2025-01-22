@@ -16,7 +16,7 @@
 	export let buttonClassName =
 		'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
 	export let title = null;
-	export let isLoading = false;
+	export let attributes = null;
 
 	export let grow = false;
 
@@ -37,12 +37,13 @@
 			}}
 		>
 			<div
-				class=" w-full font-medium flex items-center justify-between gap-2 {isLoading === true
+				class=" w-full font-medium flex items-center justify-between gap-2 {attributes?.done !==
+				'true'
 					? 'shimmer'
 					: ''}
 			"
 			>
-				{#if isLoading}
+				{#if attributes?.done !== 'true'}
 					<div>
 						<Spinner className="size-4" />
 					</div>
