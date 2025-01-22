@@ -1074,6 +1074,9 @@ async def process_chat_response(
 
                 # We might want to disable this by default
                 detect_reasoning = True
+                reasoning_tags = ["think", "reason", "reasoning", "thought"]
+                current_tag = None
+
                 reasoning_start_time = None
 
                 reasoning_content = ""
@@ -1116,13 +1119,20 @@ async def process_chat_response(
                                 content = f"{content}{value}"
 
                                 if detect_reasoning:
-                                    if "<think>\n" in content:
-                                        # Remove the <think> tag
-                                        content = content.replace("<think>\n", "")
-                                        ongoing_content = content
+                                    for tag in reasoning_tags:
+                                        start_tag = f"<{tag}>\n"
+                                        end_tag = f"</{tag}>\n"
 
-                                        reasoning_start_time = time.time()
-                                        reasoning_content = ""
+                                        if start_tag in content:
+                                            # Remove the start tag
+                                            content = content.replace(start_tag, "")
+                                            ongoing_content = content
+
+                                            reasoning_start_time = time.time()
+                                            reasoning_content = ""
+
+                                            current_tag = tag
+                                            break
 
                                     if reasoning_start_time is not None:
                                         # Remove the last value from the content
@@ -1130,16 +1140,18 @@ async def process_chat_response(
 
                                         reasoning_content += value
 
-                                        if "</think>\n" in reasoning_content:
+                                        end_tag = f"</{current_tag}>\n"
+                                        if end_tag in reasoning_content:
                                             reasoning_end_time = time.time()
                                             reasoning_duration = int(
                                                 reasoning_end_time
                                                 - reasoning_start_time
                                             )
-
                                             reasoning_content = (
-                                                reasoning_content.strip("<think>\n")
-                                                .strip("</think>\n")
+                                                reasoning_content.strip(
+                                                    f"<{current_tag}>\n"
+                                                )
+                                                .strip(end_tag)
                                                 .strip()
                                             )
 
