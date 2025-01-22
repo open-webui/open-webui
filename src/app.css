@@ -1,24 +1,81 @@
 @font-face {
-	font-family: 'Inter';
-	src: url('/assets/fonts/Inter-Variable.ttf');
+	font-family: Marianne;
+	src: url("assets/fonts/Marianne-Light.woff2") format("woff2"),
+		url("assets/fonts/Marianne-Light.woff") format("woff");
+	font-weight: 300;
+	font-style: normal;
 	font-display: swap;
 }
-
 @font-face {
-	font-family: 'Archivo';
-	src: url('/assets/fonts/Archivo-Variable.ttf');
+	font-family: Marianne;
+	src: url("assets/fonts/Marianne-Light_Italic.woff2") format("woff2"),
+		url("assets/fonts/Marianne-Light_Italic.woff") format("woff");
+	font-weight: 300;
+	font-style: italic;
 	font-display: swap;
 }
-
 @font-face {
-	font-family: 'Mona Sans';
-	src: url('/assets/fonts/Mona-Sans.woff2');
+	font-family: Marianne;
+	src: url("assets/fonts/Marianne-Regular.woff2") format("woff2"),
+		url("assets/fonts/Marianne-Regular.woff") format("woff");
+	font-weight: 400;
+	font-style: normal;
 	font-display: swap;
 }
-
 @font-face {
-	font-family: 'InstrumentSerif';
-	src: url('/assets/fonts/InstrumentSerif-Regular.ttf');
+	font-family: Marianne;
+	src: url("assets/fonts/Marianne-Regular_Italic.woff2") format("woff2"),
+		url("assets/fonts/Marianne-Regular_Italic.woff") format("woff");
+	font-weight: 400;
+	font-style: italic;
+	font-display: swap;
+}
+@font-face {
+	font-family: Marianne;
+	src: url("assets/fonts/Marianne-Medium.woff2") format("woff2"),
+		url("assets/fonts/Marianne-Medium.woff") format("woff");
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: Marianne;
+	src: url("assets/fonts/Marianne-Medium_Italic.woff2") format("woff2"),
+		url("assets/fonts/Marianne-Medium_Italic.woff") format("woff");
+	font-weight: 500;
+	font-style: italic;
+	font-display: swap;
+}
+@font-face {
+	font-family: Marianne;
+	src: url("assets/fonts/Marianne-Bold.woff2") format("woff2"),
+		url("assets/fonts/Marianne-Bold.woff") format("woff");
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: Marianne;
+	src: url("assets/fonts/Marianne-Bold_Italic.woff2") format("woff2"),
+		url("assets/fonts/Marianne-Bold_Italic.woff") format("woff");
+	font-weight: 700;
+	font-style: italic;
+	font-display: swap;
+}
+@font-face {
+	font-family: Spectral;
+	src: url("assets/fonts/Spectral-Regular.woff2") format("woff2"),
+		url("assets/fonts/Spectral-Regular.woff") format("woff");
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: Spectral;
+	src: url("assets/fonts/Spectral-ExtraBold.woff2") format("woff2"),
+		url("assets/fonts/Spectral-ExtraBold.woff") format("woff");
+	font-weight: 900;
+	font-style: normal;
 	font-display: swap;
 }
 
@@ -33,7 +90,7 @@ code {
 }
 
 .font-secondary {
-	font-family: 'InstrumentSerif', sans-serif;
+	font-family: "InstrumentSerif", sans-serif;
 }
 
 math {
@@ -65,7 +122,7 @@ math {
 }
 
 .font-primary {
-	font-family: 'Archivo', sans-serif;
+	font-family: "Marianne", sans-serif;
 }
 
 iframe {
@@ -151,7 +208,7 @@ input::-webkit-inner-spin-button {
 	margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
 }
 
-input[type='number'] {
+input[type="number"] {
 	-moz-appearance: textfield; /* Firefox */
 }
 
@@ -168,7 +225,7 @@ input[type='number'] {
 	outline: none;
 }
 
-.tippy-box[data-theme~='dark'] {
+.tippy-box[data-theme~="dark"] {
 	@apply rounded-lg bg-gray-950 text-xs border border-gray-900 shadow-xl;
 }
 
@@ -236,7 +293,7 @@ input[type='number'] {
 
 .tiptap > pre {
 	border-radius: 0.5rem;
-	font-family: 'JetBrainsMono', monospace;
+	font-family: "JetBrainsMono", monospace;
 	margin: 1.5rem 0;
 	padding: 0.75rem 1rem;
 
