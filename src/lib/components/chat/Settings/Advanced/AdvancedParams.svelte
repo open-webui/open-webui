@@ -837,7 +837,7 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics. (Default: 24)'
+				'This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the chat context will be retained. Preserving context can help maintain the continuity of a chat, but it may reduce the ability to respond to new topics. (Default: 24)'
 			)}
 			placement="top-start"
 			className="inline-tooltip"

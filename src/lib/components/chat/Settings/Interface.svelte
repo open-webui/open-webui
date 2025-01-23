@@ -321,7 +321,7 @@
 				<div>
 					<div class=" py-0.5 flex w-full justify-between">
 						<div class=" self-center text-xs">
-							{$i18n.t('Display the username instead of You in the Chat')}
+							{$i18n.t('Display the username instead of You in the chat')}
 						</div>
 
 						<button

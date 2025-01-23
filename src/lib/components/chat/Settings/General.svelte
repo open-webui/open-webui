@@ -193,7 +193,7 @@
 						}}
 					>
 						{#each languages as language}
-							<option value={language['code']}>{language['title']}</option>
+							<option value={language['code']}>{$i18n.t(language['title'])}</option>
 						{/each}
 					</select>
 				</div>

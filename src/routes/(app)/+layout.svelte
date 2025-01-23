@@ -256,7 +256,7 @@
 									<span class="font-semibold dark:text-white"
 										>{$i18n.t('Settings')} > {$i18n.t('Chats')} > {$i18n.t('Import Chats')}</span
 									>. {$i18n.t(
-										'This ensures that your valuable conversations are securely saved to your backend database. Thank you!'
+										'This ensures that your valuable chats are securely saved to your backend database. Thank you!'
 									)}
 								</div>
 

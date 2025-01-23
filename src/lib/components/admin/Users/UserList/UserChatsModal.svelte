@@ -175,7 +175,7 @@
 				{:else}
 					<div class="text-left text-sm w-full mb-8">
 						{user.name}
-						{$i18n.t('has no conversations.')}
+						{$i18n.t('has no chats.')}
 					</div>
 				{/if}
 			{:else}

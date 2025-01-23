@@ -1,6 +1,3 @@
-# Qdrant spills this when spinning up docker-compose.qdrant.yaml
-/qdrant_storage
-
 .DS_Store
 node_modules
 /build
@@ -310,3 +307,6 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
+
+# Qdrant
+/qdrant_storage
