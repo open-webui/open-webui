@@ -13,8 +13,6 @@
 		for (const locale of locales) {
 			try {
 				dayjs.locale(locale);
-
-				console.log(`Loaded locale: ${locale}`);
 				break; // Stop after successfully loading the first available locale
 			} catch (error) {
 				console.error(`Could not load locale '${locale}':`, error);
@@ -74,10 +72,14 @@
 				{/if}
 
 				<div class="">
-					{#if attributes?.type === 'reasoning' && attributes?.done === 'true' && attributes?.duration}
-						{$i18n.t('Thought for {{DURATION}}', {
-							DURATION: dayjs.duration(attributes.duration, 'seconds').humanize()
-						})}
+					{#if attributes?.type === 'reasoning'}
+						{#if attributes?.done === 'true' && attributes?.duration}
+							{$i18n.t('Thought for {{DURATION}}', {
+								DURATION: dayjs.duration(attributes.duration, 'seconds').humanize()
+							})}
+						{:else}
+							{$i18n.t('Thinking...')}
+						{/if}
 					{:else}
 						{title}
 					{/if}
