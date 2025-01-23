@@ -934,6 +934,7 @@
 	"This will delete all models including custom models and cannot be undone.": "",
 	"This will reset the knowledge base and sync all files. Do you wish to continue?": "Dette vil nulstille vidensbasen og synkronisere alle filer. Vil du fortsætte?",
 	"Thorough explanation": "Grundig forklaring",
+	"Thought for {{DURATION}}": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Tika-server-URL påkrævet.",
 	"Tiktoken": "",

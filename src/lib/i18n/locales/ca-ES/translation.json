@@ -934,6 +934,7 @@
 	"This will delete all models including custom models and cannot be undone.": "Això eliminarà tots els models incloent els personalitzats i no es pot desfer",
 	"This will reset the knowledge base and sync all files. Do you wish to continue?": "Això restablirà la base de coneixement i sincronitzarà tots els fitxers. Vols continuar?",
 	"Thorough explanation": "Explicació en detall",
+	"Thought for {{DURATION}}": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "La URL del servidor Tika és obligatòria.",
 	"Tiktoken": "Tiktoken",

@@ -934,6 +934,7 @@
 	"This will delete all models including custom models and cannot be undone.": "",
 	"This will reset the knowledge base and sync all files. Do you wish to continue?": "",
 	"Thorough explanation": "Detaljno objašnjenje",
+	"Thought for {{DURATION}}": "",
 	"Tika": "",
 	"Tika Server URL required.": "",
 	"Tiktoken": "",

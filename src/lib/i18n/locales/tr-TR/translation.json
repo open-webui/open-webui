@@ -934,6 +934,7 @@
 	"This will delete all models including custom models and cannot be undone.": "Bu, özel modeller dahil olmak üzere tüm modelleri silecek ve geri alınamaz.",
 	"This will reset the knowledge base and sync all files. Do you wish to continue?": "Bu, bilgi tabanını sıfırlayacak ve tüm dosyaları senkronize edecek. Devam etmek istiyor musunuz?",
 	"Thorough explanation": "Kapsamlı açıklama",
+	"Thought for {{DURATION}}": "",
 	"Tika": "",
 	"Tika Server URL required.": "Tika Sunucu URL'si gereklidir.",
 	"Tiktoken": "Tiktoken",

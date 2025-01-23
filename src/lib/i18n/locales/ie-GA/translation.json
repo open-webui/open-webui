@@ -934,6 +934,7 @@
 	"This will delete all models including custom models and cannot be undone.": "Scriosfaidh sé seo gach samhail lena n-áirítear múnlaí saincheaptha agus ní féidir é a chealú.",
 	"This will reset the knowledge base and sync all files. Do you wish to continue?": "Déanfaidh sé seo an bonn eolais a athshocrú agus gach comhad a shioncronú. Ar mhaith leat leanúint ar aghaidh?",
 	"Thorough explanation": "Míniú críochnúil",
+	"Thought for {{DURATION}}": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Teastaíonn URL Freastalaí Tika.",
 	"Tiktoken": "Tictoken",
