@@ -962,7 +962,7 @@ async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = 
             )
         url_idx = random.choice(models[model].get("urls", []))
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-    return url
+    return url, url_idx
 
 
 @router.post("/api/chat")
@@ -1030,17 +1030,7 @@ async def generate_chat_completion(
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
 
-    await get_all_models(request)
-    model = request.app.state.OLLAMA_MODELS.get(model_id)
-    if model:
-        url_idx = model["urls"].pop()
-    else:
-        raise HTTPException(
-            status_code=404,
-            detail="Model not found",
-        )
-
-    url = await get_ollama_url(request, payload["model"], url_idx)
+    url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
     api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
         str(url_idx),
         request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
@@ -1142,7 +1132,7 @@ async def generate_openai_completion(
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
 
-    url = await get_ollama_url(request, payload["model"], url_idx)
+    url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
     api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
         str(url_idx),
         request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
@@ -1219,7 +1209,7 @@ async def generate_openai_chat_completion(
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
 
-    url = await get_ollama_url(request, payload["model"], url_idx)
+    url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
     api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
         str(url_idx),
         request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
