@@ -35,7 +35,7 @@ from open_webui.config import (
     AppConfig,
 )
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
-from open_webui.env import WEBUI_SESSION_COOKIE_SAME_SITE, WEBUI_SESSION_COOKIE_SECURE
+from open_webui.env import WEBUI_AUTH_COOKIE_SAME_SITE, WEBUI_AUTH_COOKIE_SECURE
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.auth import get_password_hash, create_token
 from open_webui.utils.webhook import post_webhook
@@ -323,8 +323,8 @@ class OAuthManager:
             key="token",
             value=jwt_token,
             httponly=True,  # Ensures the cookie is not accessible via JavaScript
-            samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
-            secure=WEBUI_SESSION_COOKIE_SECURE,
+            samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+            secure=WEBUI_AUTH_COOKIE_SECURE,
         )
 
         if ENABLE_OAUTH_SIGNUP.value:
@@ -333,8 +333,8 @@ class OAuthManager:
                 key="oauth_id_token",
                 value=oauth_id_token,
                 httponly=True,
-                samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
-                secure=WEBUI_SESSION_COOKIE_SECURE,
+                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                secure=WEBUI_AUTH_COOKIE_SECURE,
             )
         # Redirect back to the frontend with the JWT token
         redirect_url = f"{request.base_url}auth#token={jwt_token}"
