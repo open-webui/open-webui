@@ -360,6 +360,9 @@ input[type="number"] {
 .hljs-strong {
 	font-weight: 700;
 }
+body {
+	background-color: var(--background-default-grey);
+}
 :root {
 	--background-default-grey: var(--grey-1000-50);
 	--background-default-grey-hover: var(--grey-1000-50-hover);

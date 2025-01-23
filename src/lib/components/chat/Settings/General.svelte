@@ -17,9 +17,6 @@ export let getModels: Function;
 let themes = [
 	"dark",
 	"light",
-	"rose-pine dark",
-	"rose-pine-dawn light",
-	"oled-dark",
 ];
 let selectedTheme = "system";
 

@@ -1,169 +1,185 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
-	import fileSaver from 'file-saver';
-	const { saveAs } = fileSaver;
+import { toast } from "svelte-sonner";
+import fileSaver from "file-saver";
+const { saveAs } = fileSaver;
 
-	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, config, prompts, tools as _tools, user } from '$lib/stores';
-	import { createNewPrompt, deletePromptByCommand, getPrompts } from '$lib/apis/prompts';
+import { onMount, getContext } from "svelte";
+import {
+	WEBUI_NAME,
+	config,
+	prompts,
+	tools as _tools,
+	user,
+} from "$lib/stores";
+import {
+	createNewPrompt,
+	deletePromptByCommand,
+	getPrompts,
+} from "$lib/apis/prompts";
 
-	import { goto } from '$app/navigation';
-	import {
-		createNewTool,
-		deleteToolById,
-		exportTools,
-		getToolById,
-		getToolList,
-		getTools
-	} from '$lib/apis/tools';
-	import ArrowDownTray from '../icons/ArrowDownTray.svelte';
-	import Tooltip from '../common/Tooltip.svelte';
-	import ConfirmDialog from '../common/ConfirmDialog.svelte';
-	import ToolMenu from './Tools/ToolMenu.svelte';
-	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
-	import ValvesModal from './common/ValvesModal.svelte';
-	import ManifestModal from './common/ManifestModal.svelte';
-	import Heart from '../icons/Heart.svelte';
-	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import GarbageBin from '../icons/GarbageBin.svelte';
-	import Search from '../icons/Search.svelte';
-	import Plus from '../icons/Plus.svelte';
-	import ChevronRight from '../icons/ChevronRight.svelte';
-	import Spinner from '../common/Spinner.svelte';
-	import { capitalizeFirstLetter } from '$lib/utils';
+import { goto } from "$app/navigation";
+import {
+	createNewTool,
+	deleteToolById,
+	exportTools,
+	getToolById,
+	getToolList,
+	getTools,
+} from "$lib/apis/tools";
+import ArrowDownTray from "../icons/ArrowDownTray.svelte";
+import Tooltip from "../common/Tooltip.svelte";
+import ConfirmDialog from "../common/ConfirmDialog.svelte";
+import ToolMenu from "./Tools/ToolMenu.svelte";
+import EllipsisHorizontal from "../icons/EllipsisHorizontal.svelte";
+import ValvesModal from "./common/ValvesModal.svelte";
+import ManifestModal from "./common/ManifestModal.svelte";
+import Heart from "../icons/Heart.svelte";
+import DeleteConfirmDialog from "$lib/components/common/ConfirmDialog.svelte";
+import GarbageBin from "../icons/GarbageBin.svelte";
+import Search from "../icons/Search.svelte";
+import Plus from "../icons/Plus.svelte";
+import ChevronRight from "../icons/ChevronRight.svelte";
+import Spinner from "../common/Spinner.svelte";
+import { capitalizeFirstLetter } from "$lib/utils";
 
-	const i18n = getContext('i18n');
+const i18n = getContext("i18n");
 
-	let shiftKey = false;
-	let loaded = false;
+let shiftKey = false;
+let loaded = false;
 
-	let toolsImportInputElement: HTMLInputElement;
-	let importFiles;
+let toolsImportInputElement: HTMLInputElement;
+let importFiles;
 
-	let showConfirm = false;
-	let query = '';
+let showConfirm = false;
+let query = "";
 
-	let showManifestModal = false;
-	let showValvesModal = false;
-	let selectedTool = null;
+let showManifestModal = false;
+let showValvesModal = false;
+let selectedTool = null;
 
-	let showDeleteConfirm = false;
+let showDeleteConfirm = false;
 
-	let tools = [];
-	let filteredItems = [];
+let tools = [];
+let filteredItems = [];
 
-	$: filteredItems = tools.filter(
-		(t) =>
-			query === '' ||
-			t.name.toLowerCase().includes(query.toLowerCase()) ||
-			t.id.toLowerCase().includes(query.toLowerCase())
+$: filteredItems = tools.filter(
+	(t) =>
+		query === "" ||
+		t.name.toLowerCase().includes(query.toLowerCase()) ||
+		t.id.toLowerCase().includes(query.toLowerCase()),
+);
+
+const shareHandler = async (tool) => {
+	const item = await getToolById(localStorage.token, tool.id).catch((error) => {
+		toast.error(error);
+		return null;
+	});
+
+	toast.success($i18n.t("Redirecting you to OpenWebUI Community"));
+
+	const url = "https://openwebui.com";
+
+	const tab = await window.open(`${url}/tools/create`, "_blank");
+
+	// Define the event handler function
+	const messageHandler = (event) => {
+		if (event.origin !== url) return;
+		if (event.data === "loaded") {
+			tab.postMessage(JSON.stringify(item), "*");
+
+			// Remove the event listener after handling the message
+			window.removeEventListener("message", messageHandler);
+		}
+	};
+
+	window.addEventListener("message", messageHandler, false);
+	console.log(item);
+};
+
+const cloneHandler = async (tool) => {
+	const _tool = await getToolById(localStorage.token, tool.id).catch(
+		(error) => {
+			toast.error(error);
+			return null;
+		},
 	);
 
-	const shareHandler = async (tool) => {
-		const item = await getToolById(localStorage.token, tool.id).catch((error) => {
+	if (_tool) {
+		sessionStorage.tool = JSON.stringify({
+			..._tool,
+			id: `${_tool.id}_clone`,
+			name: `${_tool.name} (Clone)`,
+		});
+		goto("/workspace/tools/create");
+	}
+};
+
+const exportHandler = async (tool) => {
+	const _tool = await getToolById(localStorage.token, tool.id).catch(
+		(error) => {
 			toast.error(error);
 			return null;
+		},
+	);
+
+	if (_tool) {
+		let blob = new Blob([JSON.stringify([_tool])], {
+			type: "application/json",
 		});
+		saveAs(blob, `tool-${_tool.id}-export-${Date.now()}.json`);
+	}
+};
 
-		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
-
-		const url = 'https://openwebui.com';
-
-		const tab = await window.open(`${url}/tools/create`, '_blank');
-
-		// Define the event handler function
-		const messageHandler = (event) => {
-			if (event.origin !== url) return;
-			if (event.data === 'loaded') {
-				tab.postMessage(JSON.stringify(item), '*');
-
-				// Remove the event listener after handling the message
-				window.removeEventListener('message', messageHandler);
-			}
-		};
-
-		window.addEventListener('message', messageHandler, false);
-		console.log(item);
-	};
-
-	const cloneHandler = async (tool) => {
-		const _tool = await getToolById(localStorage.token, tool.id).catch((error) => {
+const deleteHandler = async (tool) => {
+	const res = await deleteToolById(localStorage.token, tool.id).catch(
+		(error) => {
 			toast.error(error);
 			return null;
-		});
+		},
+	);
 
-		if (_tool) {
-			sessionStorage.tool = JSON.stringify({
-				..._tool,
-				id: `${_tool.id}_clone`,
-				name: `${_tool.name} (Clone)`
-			});
-			goto('/workspace/tools/create');
+	if (res) {
+		toast.success($i18n.t("Tool deleted successfully"));
+
+		init();
+	}
+};
+
+const init = async () => {
+	tools = await getToolList(localStorage.token);
+	_tools.set(await getTools(localStorage.token));
+};
+
+onMount(async () => {
+	await init();
+	loaded = true;
+
+	const onKeyDown = (event) => {
+		if (event.key === "Shift") {
+			shiftKey = true;
 		}
 	};
 
-	const exportHandler = async (tool) => {
-		const _tool = await getToolById(localStorage.token, tool.id).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-
-		if (_tool) {
-			let blob = new Blob([JSON.stringify([_tool])], {
-				type: 'application/json'
-			});
-			saveAs(blob, `tool-${_tool.id}-export-${Date.now()}.json`);
-		}
-	};
-
-	const deleteHandler = async (tool) => {
-		const res = await deleteToolById(localStorage.token, tool.id).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-
-		if (res) {
-			toast.success($i18n.t('Tool deleted successfully'));
-
-			init();
-		}
-	};
-
-	const init = async () => {
-		tools = await getToolList(localStorage.token);
-		_tools.set(await getTools(localStorage.token));
-	};
-
-	onMount(async () => {
-		await init();
-		loaded = true;
-
-		const onKeyDown = (event) => {
-			if (event.key === 'Shift') {
-				shiftKey = true;
-			}
-		};
-
-		const onKeyUp = (event) => {
-			if (event.key === 'Shift') {
-				shiftKey = false;
-			}
-		};
-
-		const onBlur = () => {
+	const onKeyUp = (event) => {
+		if (event.key === "Shift") {
 			shiftKey = false;
-		};
+		}
+	};
 
-		window.addEventListener('keydown', onKeyDown);
-		window.addEventListener('keyup', onKeyUp);
-		window.addEventListener('blur', onBlur);
+	const onBlur = () => {
+		shiftKey = false;
+	};
 
-		return () => {
-			window.removeEventListener('keydown', onKeyDown);
-			window.removeEventListener('keyup', onKeyUp);
-			window.removeEventListener('blur', onBlur);
-		};
-	});
+	window.addEventListener("keydown", onKeyDown);
+	window.addEventListener("keyup", onKeyUp);
+	window.addEventListener("blur", onBlur);
+
+	return () => {
+		window.removeEventListener("keydown", onKeyDown);
+		window.removeEventListener("keyup", onKeyUp);
+		window.removeEventListener("blur", onBlur);
+	};
+});
 </script>
 
 <svelte:head>
@@ -438,7 +454,7 @@
 	{#if $config?.features.enable_community_sharing}
 		<div class=" my-16">
 			<div class=" text-xl font-medium mb-1 line-clamp-1">
-				{$i18n.t('Made by OpenWebUI Community')}
+				{$i18n.t('Made by the community')}
 			</div>
 
 			<a
