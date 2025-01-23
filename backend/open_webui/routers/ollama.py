@@ -261,7 +261,7 @@ async def get_all_models(request: Request):
     if request.app.state.config.ENABLE_OLLAMA_API:
         request_tasks = []
         for idx, url in enumerate(request.app.state.config.OLLAMA_BASE_URLS):
-            if (str(idx) not in request.app.state.config.OLLAMA_API_CONFIGS) or (
+            if (str(idx) not in request.app.state.config.OLLAMA_API_CONFIGS) and (
                 url not in request.app.state.config.OLLAMA_API_CONFIGS  # Legacy support
             ):
                 request_tasks.append(send_get_request(f"{url}/api/tags"))
