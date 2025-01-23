@@ -18,6 +18,7 @@ from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user
+from open_webui.config import DISABLE_NON_OAUTH_ROLE_MANAGEMENT
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -117,8 +118,14 @@ async def update_user_permissions(
 
 
 @router.post("/update/role", response_model=Optional[UserModel])
-async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin_user)):
-    if user.id != form_data.id and form_data.id != Users.get_first_user().id:
+async def update_user_role(
+    request: Request, form_data: UserRoleUpdateForm, user=Depends(get_admin_user)
+):
+    if (
+        not DISABLE_NON_OAUTH_ROLE_MANAGEMENT
+        and user.id != form_data.id
+        and form_data.id != Users.get_first_user().id
+    ):
         return Users.update_user_role_by_id(form_data.id, form_data.role)
 
     raise HTTPException(
