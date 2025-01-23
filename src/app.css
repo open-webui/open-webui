@@ -5861,7 +5861,7 @@ input[type="number"] {
 	}
 }
 
-:root[data-fr-theme="dark"] {
+:root[theme="dark"] {
 	--grey-1000-50: #161616;
 	--grey-1000-50-hover: #343434;
 	--grey-1000-50-active: #474747;

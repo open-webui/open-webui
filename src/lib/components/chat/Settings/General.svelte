@@ -85,6 +85,7 @@ const toggleRequestFormat = async () => {
 
 onMount(async () => {
 	selectedTheme = localStorage.theme ?? "system";
+	themeChangeHandler(selectedTheme);
 
 	languages = await getLanguages();
 
@@ -116,58 +117,26 @@ const applyTheme = (_theme: string) => {
 		document.documentElement.style.setProperty("--color-gray-950", "#0d0d0d");
 	}
 
-	themes
-		.filter((e) => e !== themeToApply)
-		.forEach((e) => {
-			e.split(" ").forEach((e) => {
-				document.documentElement.classList.remove(e);
-			});
-		});
-
-	themeToApply.split(" ").forEach((e) => {
-		document.documentElement.classList.add(e);
-	});
+	document.documentElement.setAttribute("theme", themeToApply);
 
 	const metaThemeColor = document.querySelector('meta[name="theme-color"]');
 	if (metaThemeColor) {
-		if (_theme.includes("system")) {
-			const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-				.matches
-				? "dark"
-				: "light";
-			console.log("Setting system meta theme color: " + systemTheme);
-			metaThemeColor.setAttribute(
-				"content",
-				systemTheme === "light" ? "#ffffff" : "#161616",
-			);
-		} else {
-			console.log("Setting meta theme color: " + _theme);
-			metaThemeColor.setAttribute(
-				"content",
-				_theme === "dark"
-					? "#161616"
-					: _theme === "oled-dark"
-						? "#000000"
-						: _theme === "her"
-							? "#983724"
-							: "#ffffff",
-			);
-		}
+		metaThemeColor.setAttribute(
+			"content",
+			_theme === "dark"
+				? "#161616"
+				: _theme === "oled-dark"
+					? "#000000"
+					: _theme === "her"
+						? "#983724"
+						: "#ffffff",
+		);
 	}
-
-	console.log(_theme);
 };
 
 const themeChangeHandler = (_theme: string) => {
 	theme.set(_theme);
 	localStorage.setItem("theme", _theme);
-	if (_theme.includes("oled")) {
-		document.documentElement.style.setProperty("--color-gray-800", "#101010");
-		document.documentElement.style.setProperty("--color-gray-850", "#050505");
-		document.documentElement.style.setProperty("--color-gray-900", "#000000");
-		document.documentElement.style.setProperty("--color-gray-950", "#000000");
-		document.documentElement.classList.add("dark");
-	}
 	applyTheme(_theme);
 };
 </script>
@@ -188,11 +157,7 @@ const themeChangeHandler = (_theme: string) => {
 					>
 						<option value="system">⚙️ {$i18n.t('System')}</option>
 						<option value="dark">🌑 {$i18n.t('Dark')}</option>
-						<option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
 						<option value="light">☀️ {$i18n.t('Light')}</option>
-						<option value="her">🌷 Her</option>
-						<!-- <option value="rose-pine dark">🪻 {$i18n.t('Rosé Pine')}</option>
-						<option value="rose-pine-dawn light">🌷 {$i18n.t('Rosé Pine Dawn')}</option> -->
 					</select>
 				</div>
 			</div>
