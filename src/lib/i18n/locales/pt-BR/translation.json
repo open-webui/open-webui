@@ -934,6 +934,7 @@
 	"This will delete all models including custom models and cannot be undone.": "Isto vai excluir todos os modelos, incluindo personalizados e não pode ser desfeito.",
 	"This will reset the knowledge base and sync all files. Do you wish to continue?": "Esta ação resetará a base de conhecimento e sincronizará todos os arquivos. Deseja continuar?",
 	"Thorough explanation": "Explicação detalhada",
+	"Thought for {{DURATION}}": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "URL do servidor Tika necessária.",
 	"Tiktoken": "",

@@ -934,6 +934,7 @@
 	"This will delete all models including custom models and cannot be undone.": "Tämä poistaa kaikki mallit, mukaan lukien mukautetut mallit, eikä sitä voi peruuttaa.",
 	"This will reset the knowledge base and sync all files. Do you wish to continue?": "Tämä nollaa tietokannan ja synkronoi kaikki tiedostot. Haluatko jatkaa?",
 	"Thorough explanation": "Perusteellinen selitys",
+	"Thought for {{DURATION}}": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Tika Server URL vaaditaan.",
 	"Tiktoken": "Tiktoken",

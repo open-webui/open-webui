@@ -1078,7 +1078,7 @@ async def process_chat_response(
 
                 # We might want to disable this by default
                 detect_reasoning = True
-                reasoning_tags = ["think", "reason", "reasoning", "thought"]
+                reasoning_tags = ["think", "reason", "reasoning", "thought", "Thought"]
                 current_tag = None
 
                 reasoning_start_time = None
@@ -1170,7 +1170,7 @@ async def process_chat_response(
                                                 )
 
                                                 # Format reasoning with <details> tag
-                                                content = f'{ongoing_content}<details type="reasoning" done="true">\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_display_content}\n</details>\n'
+                                                content = f'{ongoing_content}<details type="reasoning" done="true" duration="{reasoning_duration}">\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_display_content}\n</details>\n'
                                             else:
                                                 content = ""
 

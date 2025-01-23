@@ -934,6 +934,7 @@
 	"This will delete all models including custom models and cannot be undone.": "Dette sletter alle modeller, inkludert tilpassede modeller, og kan ikke angres.",
 	"This will reset the knowledge base and sync all files. Do you wish to continue?": "Dette tilbakestiller kunnskapsbasen og synkroniserer alle filer. Vil du fortsette?",
 	"Thorough explanation": "Grundig forklaring",
+	"Thought for {{DURATION}}": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Server-URL for Tika kreves.",
 	"Tiktoken": "Tiktoken",

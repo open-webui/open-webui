@@ -934,6 +934,7 @@
 	"This will delete all models including custom models and cannot be undone.": "Dit zal alle modellen, ook aangepaste modellen, verwijderen en kan niet ontdaan worden",
 	"This will reset the knowledge base and sync all files. Do you wish to continue?": "Dit zal de kennisdatabase resetten en alle bestanden synchroniseren. Wilt u doorgaan?",
 	"Thorough explanation": "Gevorderde uitleg",
+	"Thought for {{DURATION}}": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Tika Server-URL vereist",
 	"Tiktoken": "Tiktoken",

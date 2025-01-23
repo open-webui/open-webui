@@ -934,6 +934,7 @@
 	"This will delete all models including custom models and cannot be undone.": "",
 	"This will reset the knowledge base and sync all files. Do you wish to continue?": "지식 기반과 모든 파일 연동을 초기화합니다. 계속 하시겠습니까?",
 	"Thorough explanation": "완전한 설명",
+	"Thought for {{DURATION}}": "{{DURATION}} 동안 생각함",
 	"Tika": "티카(Tika)",
 	"Tika Server URL required.": "티카 서버 URL이 필요합니다",
 	"Tiktoken": "틱토큰 (Tiktoken)",

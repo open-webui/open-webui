@@ -934,6 +934,7 @@
 	"This will delete all models including custom models and cannot be undone.": "Honek modelo guztiak ezabatuko ditu, modelo pertsonalizatuak barne, eta ezin da desegin.",
 	"This will reset the knowledge base and sync all files. Do you wish to continue?": "Honek ezagutza-basea berrezarri eta fitxategi guztiak sinkronizatuko ditu. Jarraitu nahi duzu?",
 	"Thorough explanation": "Azalpen sakona",
+	"Thought for {{DURATION}}": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Tika zerbitzariaren URLa beharrezkoa da.",
 	"Tiktoken": "Tiktoken",
