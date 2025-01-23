@@ -1,5 +1,29 @@
 <script lang="ts">
 	import { getContext, createEventDispatcher } from 'svelte';
+	const i18n = getContext('i18n');
+
+	import dayjs from '$lib/dayjs';
+	import duration from 'dayjs/plugin/duration';
+	import relativeTime from 'dayjs/plugin/relativeTime';
+
+	dayjs.extend(duration);
+	dayjs.extend(relativeTime);
+
+	async function loadLocale(locales) {
+		for (const locale of locales) {
+			try {
+				dayjs.locale(locale);
+
+				console.log(`Loaded locale: ${locale}`);
+				break; // Stop after successfully loading the first available locale
+			} catch (error) {
+				console.error(`Could not load locale '${locale}':`, error);
+			}
+		}
+	}
+
+	// Assuming $i18n.languages is an array of language codes
+	$: loadLocale($i18n.languages);
 
 	const dispatch = createEventDispatcher();
 	$: dispatch('change', open);
@@ -50,7 +74,13 @@
 				{/if}
 
 				<div class="">
-					{title}
+					{#if attributes?.type === 'reasoning' && attributes?.done === 'true' && attributes?.duration}
+						{$i18n.t('Thought for {{DURATION}}', {
+							DURATION: dayjs.duration(attributes.duration, 'seconds').humanize()
+						})}
+					{:else}
+						{title}
+					{/if}
 				</div>
 
 				<div class="flex self-center translate-y-[1px]">
