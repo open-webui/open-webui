@@ -1105,8 +1105,8 @@ async def process_chat_response(
 
                     try:
                         data = json.loads(data)
-                        if "selected_model_id" in data:
 
+                        if "selected_model_id" in data:
                             Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata["chat_id"],
                                 metadata["message_id"],
