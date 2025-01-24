@@ -135,7 +135,7 @@
 	const submitHref = (e: Event) => {
 		const chatInput = document.getElementById('chat-input');
 		if (chatInput) {
-			let textToSet = `Give me more information about: "${e.target.innerHTML.toString()}". Also, add an arrow back to go back to home page. Give me only code, nothing else. Start your response with: OpenBottomArtifacts`;
+			let textToSet = `Give me more information about: "${e.target.innerHTML.toString()}".`;
 			chatInput.innerHTML = textToSet; // Set the innerHTML directly
 			setTimeout(() => {
 				document.getElementById('send-message-button')?.click();
