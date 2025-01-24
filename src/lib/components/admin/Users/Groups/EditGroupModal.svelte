@@ -37,10 +37,15 @@
 			tools: false
 		},
 		chat: {
+			controls: true,
 			file_upload: true,
 			delete: true,
 			edit: true,
 			temporary: true
+		},
+		features: {
+			web_search: true,
+			image_generation: true
 		}
 	};
 	export let userIds = [];
@@ -65,20 +70,8 @@
 		if (group) {
 			name = group.name;
 			description = group.description;
-			permissions = group?.permissions ?? {
-				workspace: {
-					models: false,
-					knowledge: false,
-					prompts: false,
-					tools: false
-				},
-				chat: {
-					file_upload: true,
-					delete: true,
-					edit: true,
-					temporary: true
-				}
-			};
+			permissions = group?.permissions ?? {};
+
 			userIds = group?.user_ids ?? [];
 		}
 	};

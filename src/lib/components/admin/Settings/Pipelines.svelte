@@ -57,7 +57,7 @@
 				valves,
 				selectedPipelinesUrlIdx
 			).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 			});
 
 			if (res) {
@@ -118,7 +118,7 @@
 			pipelineDownloadUrl,
 			selectedPipelinesUrlIdx
 		).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -157,7 +157,7 @@
 		}
 
 		pipelineFiles = null;
-		const pipelineUploadInputElement = document.getElementById('pipeline-upload-input');
+		const pipelineUploadInputElement = document.getElementById('pipelines-upload-input');
 
 		if (pipelineUploadInputElement) {
 			pipelineUploadInputElement.value = null;
@@ -172,7 +172,7 @@
 			pipelines[selectedPipelineIdx].id,
 			selectedPipelinesUrlIdx
 		).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
