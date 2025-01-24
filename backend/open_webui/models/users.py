@@ -67,7 +67,7 @@ class UserModel(BaseModel):
     oauth_sub: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
-    
+
     rate_limit: Optional[UserRateLimit] = None
 
 ####################
