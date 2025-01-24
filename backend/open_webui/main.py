@@ -306,6 +306,9 @@ from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
 from open_webui.tasks import stop_task, list_tasks  # Import from tasks.py
 
+from open_webui.decorators.rate_limit import rate_limit
+
+
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
     Functions.deactivate_all_functions()
@@ -845,6 +848,7 @@ async def get_base_models(request: Request, user=Depends(get_admin_user)):
 
 
 @app.post("/api/chat/completions")
+@rate_limit
 async def chat_completion(
     request: Request,
     form_data: dict,

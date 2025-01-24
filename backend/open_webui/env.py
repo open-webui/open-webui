@@ -409,3 +409,8 @@ OFFLINE_MODE = os.environ.get("OFFLINE_MODE", "false").lower() == "true"
 
 if OFFLINE_MODE:
     os.environ["HF_HUB_OFFLINE"] = "1"
+
+
+REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "")
+REDIS_PORT = os.environ.get("REDIS_PORT", 6379)

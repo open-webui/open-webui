@@ -9,6 +9,7 @@ from open_webui.models.users import (
     Users,
     UserSettings,
     UserUpdateForm,
+    UserRateLimit
 )
 
 
@@ -208,6 +209,51 @@ async def update_user_info_by_session_user(
         )
 
 
+############################
+# GetUserRateLimitBySessionUser
+############################
+
+
+@router.get("/user/rate-limit", response_model=Optional[dict])
+async def get_user_info_by_session_user(user=Depends(get_verified_user)):
+    user = Users.get_user_by_id(user.id)
+    if user:
+        return user.rate_limit.model_dump()
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+        
+############################
+# UpdateUserRateLimitBySessionUser
+############################
+
+
+@router.post("/user/{user_id}/rate-limit/update", response_model=UserRateLimit)
+async def update_user_info_by_session_user(
+    user_id: str ,form_data: UserRateLimit, session_user=Depends(get_admin_user)
+):
+    user = Users.get_user_by_id(user_id)
+    if user:
+        if user.rate_limit is None:
+            user = Users.update_user_by_id(user.id, {"rate_limit": form_data.model_dump()})
+        else:
+            user = Users.update_user_by_id(user.id, {"rate_limit": {**user.rate_limit.model_dump(), **form_data.model_dump()}})
+        if user:
+            return user.rate_limit
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.USER_NOT_FOUND,
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+        
+        
 ############################
 # GetUserById
 ############################
