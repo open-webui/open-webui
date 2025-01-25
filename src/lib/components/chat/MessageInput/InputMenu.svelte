@@ -44,6 +44,10 @@
 		$config?.features?.enable_web_search &&
 		($user.role === 'admin' || $user?.permissions?.features?.web_search);
 
+	let canUploadFiles = false;
+
+	$: canUploadFiles = $user.role === 'admin' || $user?.permissions?.chat?.file_upload;
+
 	$: if (show) {
 		init();
 	}
@@ -176,7 +180,8 @@
 					<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
 				</DropdownMenu.Item>
 			{/if}
-
+			
+			{#if canUploadFiles}
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 				on:click={() => {
@@ -186,6 +191,7 @@
 				<DocumentArrowUpSolid />
 				<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
 			</DropdownMenu.Item>
+			{/if}
 
 			{#if $config?.features?.enable_google_drive_integration}
 				<DropdownMenu.Item
