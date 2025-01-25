@@ -405,7 +405,7 @@ async def chat_web_search_handler(
         return
 
     searchQueries = queries
-    if not request.app.state.config.ALLOW_MULTIPLE_SEARCH_QUERIES:
+    if not request.app.state.config.ENABLE_MULTIPLE_WEB_SEARCH_QUERIES:
         searchQueries = [queries[0]]
 
     for searchQuery in searchQueries:

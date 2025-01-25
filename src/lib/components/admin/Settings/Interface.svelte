@@ -30,7 +30,7 @@
 		TAGS_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_TAGS_GENERATION: true,
 		ENABLE_SEARCH_QUERY_GENERATION: true,
-		ALLOW_MULTIPLE_SEARCH_QUERIES: true,
+		ENABLE_MULTIPLE_WEB_SEARCH_QUERIES: true,
 		ENABLE_RETRIEVAL_QUERY_GENERATION: true,
 		QUERY_GENERATION_PROMPT_TEMPLATE: ''
 	};
@@ -237,10 +237,10 @@
 
 				<div class="my-3 flex w-full items-center justify-between">
 					<div class="self-center text-xs font-medium">
-						{$i18n.t('Allow Multiple Search Queries')}
+						{$i18n.t('Enable Multi Query Web Search')}
 					</div>
 				
-					<Switch bind:state={taskConfig.ALLOW_MULTIPLE_SEARCH_QUERIES} />
+					<Switch bind:state={taskConfig.ENABLE_MULTIPLE_WEB_SEARCH_QUERIES} />
 				</div>
 
 				<div class="">
