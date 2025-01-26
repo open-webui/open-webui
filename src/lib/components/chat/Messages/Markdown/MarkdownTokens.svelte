@@ -7,7 +7,7 @@
 	const { saveAs } = fileSaver;
 
 	import { marked, type Token } from 'marked';
-	import { revertSanitizedResponseContent, unescapeHtml } from '$lib/utils';
+	import { unescapeHtml } from '$lib/utils';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -82,7 +82,7 @@
 				id={`${id}-${tokenIdx}`}
 				{token}
 				lang={token?.lang ?? ''}
-				code={revertSanitizedResponseContent(token?.text ?? '')}
+				code={token?.text ?? ''}
 				{save}
 				on:code={(e) => {
 					dispatch('code', e.detail);
@@ -195,7 +195,7 @@
 			</ul>
 		{/if}
 	{:else if token.type === 'details'}
-		<Collapsible title={token.summary} className="w-fit space-y-1">
+		<Collapsible title={token.summary} attributes={token?.attributes} className="w-fit space-y-1">
 			<div class=" mb-1.5" slot="content">
 				<svelte:self id={`${id}-${tokenIdx}-d`} tokens={marked.lexer(token.text)} />
 			</div>
@@ -245,17 +245,11 @@
 		{/if}
 	{:else if token.type === 'inlineKatex'}
 		{#if token.text}
-			<KatexRenderer
-				content={revertSanitizedResponseContent(token.text)}
-				displayMode={token?.displayMode ?? false}
-			/>
+			<KatexRenderer content={token.text} displayMode={token?.displayMode ?? false} />
 		{/if}
 	{:else if token.type === 'blockKatex'}
 		{#if token.text}
-			<KatexRenderer
-				content={revertSanitizedResponseContent(token.text)}
-				displayMode={token?.displayMode ?? false}
-			/>
+			<KatexRenderer content={token.text} displayMode={token?.displayMode ?? false} />
 		{/if}
 	{:else if token.type === 'space'}
 		<div class="my-2" />

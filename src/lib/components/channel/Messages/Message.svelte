@@ -30,6 +30,7 @@
 	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
 	import ReactionPicker from './Message/ReactionPicker.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import { formatDate } from '$lib/utils';
 
 	export let message;
 	export let showUserProfile = true;
@@ -45,19 +46,6 @@
 	let edit = false;
 	let editedContent = null;
 	let showDeleteConfirmDialog = false;
-
-	const formatDate = (inputDate) => {
-		const date = dayjs(inputDate);
-		const now = dayjs();
-
-		if (date.isToday()) {
-			return `Today at ${date.format('HH:mm')}`;
-		} else if (date.isYesterday()) {
-			return `Yesterday at ${date.format('HH:mm')}`;
-		} else {
-			return `${date.format('DD/MM/YYYY')} at ${date.format('HH:mm')}`;
-		}
-	};
 </script>
 
 <ConfirmDialog

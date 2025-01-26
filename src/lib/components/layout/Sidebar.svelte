@@ -19,7 +19,8 @@
 		temporaryChatEnabled,
 		channels,
 		socket,
-		config
+		config,
+		isApp
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -78,7 +79,7 @@
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return [];
 		});
 
@@ -143,7 +144,7 @@
 		};
 
 		const res = await createNewFolder(localStorage.token, name).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -344,12 +345,19 @@
 	onMount(async () => {
 		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
 
-		mobile.subscribe((e) => {
-			if ($showSidebar && e) {
+		mobile.subscribe((value) => {
+			if ($showSidebar && value) {
 				showSidebar.set(false);
 			}
 
-			if (!$showSidebar && !e) {
+			if ($showSidebar && !value) {
+				const navElement = document.getElementsByTagName('nav')[0];
+				if (navElement) {
+					navElement.style['-webkit-app-region'] = 'drag';
+				}
+			}
+
+			if (!$showSidebar && !value) {
 				showSidebar.set(true);
 			}
 		});
@@ -357,6 +365,21 @@
 		showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
 		showSidebar.subscribe((value) => {
 			localStorage.sidebar = value;
+
+			// nav element is not available on the first render
+			const navElement = document.getElementsByTagName('nav')[0];
+
+			if (navElement) {
+				if ($mobile) {
+					if (!value) {
+						navElement.style['-webkit-app-region'] = 'drag';
+					} else {
+						navElement.style['-webkit-app-region'] = 'no-drag';
+					}
+				} else {
+					navElement.style['-webkit-app-region'] = 'drag';
+				}
+			}
 		});
 
 		await initChannels();
@@ -410,7 +433,7 @@
 			name: name,
 			access_control: access_control
 		}).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -426,7 +449,9 @@
 
 {#if $showSidebar}
 	<div
-		class=" fixed md:hidden z-40 top-0 right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center overflow-hidden overscroll-contain"
+		class=" {$isApp
+			? ' ml-[4.5rem] md:ml-0'
+			: ''} fixed md:hidden z-40 top-0 right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center overflow-hidden overscroll-contain"
 		on:mousedown={() => {
 			showSidebar.set(!$showSidebar);
 		}}
@@ -438,7 +463,9 @@
 	id="sidebar"
 	class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
 		? 'md:relative w-[260px] max-w-[260px]'
-		: '-translate-x-[260px] w-[0px]'} bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0 overflow-x-hidden
+		: '-translate-x-[260px] w-[0px]'} {$isApp
+		? `ml-[4.5rem] md:ml-0 `
+		: 'transition-width duration-200 ease-in-out'}  flex-shrink-0 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
         "
 	data-state={$showSidebar}
 >
@@ -474,7 +501,7 @@
 
 			<a
 				id="sidebar-new-chat-button"
-				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
 				href="/"
 				draggable="false"
 				on:click={async () => {
@@ -570,11 +597,15 @@
 					className="px-2 mt-0.5"
 					name={$i18n.t('Channels')}
 					dragAndDrop={false}
-					onAdd={$user.role === 'admin'
-						? () => {
+					onAdd={async () => {
+						if ($user.role === 'admin') {
+							await tick();
+
+							setTimeout(() => {
 								showCreateChannel = true;
-							}
-						: null}
+							}, 0);
+						}
+					}}
 					onAddLabel={$i18n.t('Create Channel')}
 				>
 					{#each $channels as channel}
@@ -615,7 +646,7 @@
 							if (chat.folder_id) {
 								const res = await updateChatFolderIdById(localStorage.token, chat.id, null).catch(
 									(error) => {
-										toast.error(error);
+										toast.error(`${error}`);
 										return null;
 									}
 								);
@@ -634,7 +665,7 @@
 
 						const res = await updateFolderParentIdById(localStorage.token, id, null).catch(
 							(error) => {
-								toast.error(error);
+								toast.error(`${error}`);
 								return null;
 							}
 						);
@@ -680,7 +711,7 @@
 												chat.id,
 												null
 											).catch((error) => {
-												toast.error(error);
+												toast.error(`${error}`);
 												return null;
 											});
 										}

@@ -116,7 +116,7 @@
 							// Move the folder
 							const res = await updateFolderParentIdById(localStorage.token, id, folderId).catch(
 								(error) => {
-									toast.error(error);
+									toast.error(`${error}`);
 									return null;
 								}
 							);
@@ -137,7 +137,7 @@
 							// Move the chat
 							const res = await updateChatFolderIdById(localStorage.token, chat.id, folderId).catch(
 								(error) => {
-									toast.error(error);
+									toast.error(`${error}`);
 									return null;
 								}
 							);
@@ -233,7 +233,7 @@
 
 	const deleteHandler = async () => {
 		const res = await deleteFolderById(localStorage.token, folderId).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -260,7 +260,7 @@
 		folders[folderId].name = name;
 
 		const res = await updateFolderNameById(localStorage.token, folderId, name).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 
 			folders[folderId].name = currentName;
 			return null;
@@ -276,7 +276,7 @@
 	const isExpandedUpdateHandler = async () => {
 		const res = await updateFolderIsExpandedById(localStorage.token, folderId, open).catch(
 			(error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			}
 		);
@@ -310,7 +310,7 @@
 
 	const exportHandler = async () => {
 		const chats = await getChatsByFolderId(localStorage.token, folderId).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 		if (!chats) {
