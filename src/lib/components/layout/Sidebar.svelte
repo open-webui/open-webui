@@ -825,7 +825,7 @@
 
 		<div class="px-2">
 			<div class="flex flex-col font-primary">
-				{#if $user !== undefined}
+				{#if $user !== undefined && $user.role === 'admin'}
 					<UserMenu
 						role={$user.role}
 						on:show={(e) => {

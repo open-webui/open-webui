@@ -119,6 +119,15 @@
 		} else {
 			onboarding = $config?.onboarding ?? false;
 		}
+		window.addEventListener("message", (event) => {
+			const { token } = event.data;
+			console.log(event.data);
+			const needsReload = !localStorage.token
+			if (token) {
+			    localStorage.setItem("token", token);
+			}
+			event.source.postMessage({ needsReload }, event.origin);
+    		});
 	});
 </script>
 

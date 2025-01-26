@@ -130,14 +130,14 @@
 					</Tooltip>
 				{/if}
 
-				{#if !$mobile}
+				{#if !$mobile && $user !== undefined && $user?.role === 'admin'}
 					<Tooltip content={$i18n.t('Controls')}>
 						<button
 							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 							on:click={async () => {
 								await showControls.set(!$showControls);
 							}}
-							aria-label="Controls"
+							aria-label="Controls 2"
 						>
 							<div class=" m-auto self-center">
 								<AdjustmentsHorizontal className=" size-5" strokeWidth="0.5" />
@@ -163,7 +163,7 @@
 					</button>
 				</Tooltip>
 
-				{#if $user !== undefined}
+				{#if $user !== undefined && $user?.role === 'admin'}
 					<UserMenu
 						className="max-w-[200px]"
 						role={$user.role}

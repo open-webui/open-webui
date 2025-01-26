@@ -55,7 +55,7 @@
 			</div>
 
 			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
-				{#if $user !== undefined}
+				{#if $user !== undefined && $user?.role === 'admin'}
 					<UserMenu
 						className="max-w-[200px]"
 						role={$user.role}

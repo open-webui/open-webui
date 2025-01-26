@@ -164,7 +164,7 @@
 					</button>
 				</Tooltip>
 
-				{#if $user !== undefined}
+				{#if $user !== undefined && $user?.role === 'admin'}
 					<UserMenu
 						className="max-w-[200px]"
 						role={$user.role}

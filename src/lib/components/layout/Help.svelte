@@ -11,15 +11,15 @@
 </script>
 
 <div class=" hidden lg:flex fixed bottom-0 right-0 px-2 py-2 z-20">
-	<button
+	<!-- <button
 		id="show-shortcuts-button"
 		class="hidden"
 		on:click={() => {
 			showShortcuts = !showShortcuts;
 		}}
-	/>
+	/> -->
 
-	<HelpMenu
+	<!-- <HelpMenu
 		showDocsHandler={() => {
 			showShortcuts = !showShortcuts;
 		}}
@@ -34,7 +34,7 @@
 				?
 			</button>
 		</Tooltip>
-	</HelpMenu>
+	</HelpMenu> -->
 </div>
 
 <ShortcutsModal bind:show={showShortcuts} />
