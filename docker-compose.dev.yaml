@@ -7,6 +7,8 @@ services:
       target: build
     command: ["sh", "/app/src/frontend-dev.sh"]
     env_file: ".env"
+    env:
+      - NODE_OPTIONS=--max-old-space-size=3300
     depends_on:
       - backend
     ports:
