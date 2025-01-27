@@ -279,9 +279,9 @@ class OAuthManager:
 
                 username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
 
-                username = user_data.get(username_claim)
-                if not isinstance(username, str):
-                    username = "User"
+                name = user_data.get(username_claim)
+                if not isinstance(user, str):
+                    name = email
 
                 role = self.get_user_role(None, user_data)
 
@@ -290,7 +290,7 @@ class OAuthManager:
                     password=get_password_hash(
                         str(uuid.uuid4())
                     ),  # Random password, not used
-                    name=username,
+                    name=name,
                     profile_image_url=picture_url,
                     role=role,
                     oauth_sub=provider_sub,
