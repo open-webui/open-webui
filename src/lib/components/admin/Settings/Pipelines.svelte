@@ -57,7 +57,7 @@
 				valves,
 				selectedPipelinesUrlIdx
 			).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 			});
 
 			if (res) {
@@ -118,7 +118,7 @@
 			pipelineDownloadUrl,
 			selectedPipelinesUrlIdx
 		).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -172,7 +172,7 @@
 			pipelines[selectedPipelineIdx].id,
 			selectedPipelinesUrlIdx
 		).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 

@@ -17,7 +17,7 @@ from open_webui.routers.retrieval import (
     process_files_batch,
     BatchProcessFilesForm,
 )
-
+from open_webui.storage.provider import Storage
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user
@@ -213,8 +213,12 @@ async def update_knowledge_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-
-    if knowledge.user_id != user.id and user.role != "admin":
+    # Is the user the original creator, in a group with write access, or an admin
+    if (
+        knowledge.user_id != user.id
+        and not has_access(user.id, "write", knowledge.access_control)
+        and user.role != "admin"
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -419,6 +423,18 @@ def remove_file_from_knowledge_by_id(
     VECTOR_DB_CLIENT.delete(
         collection_name=knowledge.id, filter={"file_id": form_data.file_id}
     )
+
+    # Remove the file's collection from vector database
+    file_collection = f"file-{form_data.file_id}"
+    if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+        VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+
+    # Delete physical file
+    if file.path:
+        Storage.delete_file(file.path)
+
+    # Delete file from database
+    Files.delete_file_by_id(form_data.file_id)
 
     if knowledge:
         data = knowledge.data or {}

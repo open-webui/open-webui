@@ -99,7 +99,7 @@
 
 	const getModels = async () => {
 		models = await getImageGenerationModels(localStorage.token).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 	};
@@ -107,11 +107,11 @@
 	const updateConfigHandler = async () => {
 		const res = await updateConfig(localStorage.token, config)
 			.catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			})
 			.catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			});
 
@@ -159,13 +159,13 @@
 		}
 
 		await updateConfig(localStorage.token, config).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			loading = false;
 			return null;
 		});
 
 		await updateImageGenerationConfig(localStorage.token, imageGenerationConfig).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			loading = false;
 			return null;
 		});
@@ -178,7 +178,7 @@
 	onMount(async () => {
 		if ($user.role === 'admin') {
 			const res = await getConfig(localStorage.token).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			});
 
@@ -211,7 +211,7 @@
 			});
 
 			const imageConfigRes = await getImageGenerationConfig(localStorage.token).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			});
 
@@ -234,7 +234,7 @@
 				<div class=" mb-1 text-sm font-medium">{$i18n.t('Image Settings')}</div>
 
 				<div>
-					<div class=" py-0.5 flex w-full justify-between">
+					<div class=" py-1 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">
 							{$i18n.t('Image Generation (Experimental)')}
 						</div>
@@ -271,7 +271,16 @@
 					</div>
 				</div>
 
-				<div class=" py-0.5 flex w-full justify-between">
+				{#if config.enabled}
+					<div class=" py-1 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Image Prompt Generation')}</div>
+						<div class="px-1">
+							<Switch bind:state={config.prompt_generation} />
+						</div>
+					</div>
+				{/if}
+
+				<div class=" py-1 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Image Generation Engine')}</div>
 					<div class="flex items-center relative">
 						<select
@@ -309,7 +318,7 @@
 								on:click={async () => {
 									await updateConfigHandler();
 									const res = await verifyConfigUrl(localStorage.token).catch((error) => {
-										toast.error(error);
+										toast.error(`${error}`);
 										return null;
 									});
 
@@ -445,7 +454,7 @@
 								on:click={async () => {
 									await updateConfigHandler();
 									const res = await verifyConfigUrl(localStorage.token).catch((error) => {
-										toast.error(error);
+										toast.error(`${error}`);
 										return null;
 									});
 

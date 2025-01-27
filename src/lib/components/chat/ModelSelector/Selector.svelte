@@ -97,7 +97,7 @@
 
 		const [res, controller] = await pullModel(localStorage.token, sanitizedModelTag, '0').catch(
 			(error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			}
 		);
@@ -173,7 +173,7 @@
 						error = error.message;
 					}
 
-					toast.error(error);
+					toast.error(`${error}`);
 					// opts.callback({ success: false, error, modelName: opts.modelName });
 					break;
 				}

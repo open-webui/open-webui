@@ -40,7 +40,7 @@
 			meta: data.meta,
 			content: data.content
 		}).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
