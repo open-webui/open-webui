@@ -1,198 +1,229 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
-	import { goto, invalidate, invalidateAll } from '$app/navigation';
-	import { onMount, getContext, createEventDispatcher, tick, onDestroy } from 'svelte';
-	const i18n = getContext('i18n');
+import { toast } from "svelte-sonner";
+import { goto, invalidate, invalidateAll } from "$app/navigation";
+import {
+	onMount,
+	getContext,
+	createEventDispatcher,
+	tick,
+	onDestroy,
+} from "svelte";
+const i18n = getContext("i18n");
 
-	const dispatch = createEventDispatcher();
+const dispatch = createEventDispatcher();
 
-	import {
-		archiveChatById,
-		cloneChatById,
-		deleteChatById,
-		getAllTags,
-		getChatById,
-		getChatList,
-		getChatListByTagName,
-		getPinnedChatList,
-		updateChatById
-	} from '$lib/apis/chats';
-	import {
-		chatId,
-		chatTitle as _chatTitle,
-		chats,
-		mobile,
-		pinnedChats,
-		showSidebar,
-		currentChatPage,
-		tags
-	} from '$lib/stores';
+import {
+	archiveChatById,
+	cloneChatById,
+	deleteChatById,
+	getAllTags,
+	getChatById,
+	getChatList,
+	getChatListByTagName,
+	getPinnedChatList,
+	updateChatById,
+} from "$lib/apis/chats";
+import {
+	chatId,
+	chatTitle as _chatTitle,
+	chats,
+	mobile,
+	pinnedChats,
+	showSidebar,
+	currentChatPage,
+	tags,
+} from "$lib/stores";
 
-	import ChatMenu from './ChatMenu.svelte';
-	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import ShareChatModal from '$lib/components/chat/ShareChatModal.svelte';
-	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
-	import DragGhost from '$lib/components/common/DragGhost.svelte';
-	import Check from '$lib/components/icons/Check.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
-	import Document from '$lib/components/icons/Document.svelte';
+import ChatMenu from "./ChatMenu.svelte";
+import DeleteConfirmDialog from "$lib/components/common/ConfirmDialog.svelte";
+import ShareChatModal from "$lib/components/chat/ShareChatModal.svelte";
+import GarbageBin from "$lib/components/icons/GarbageBin.svelte";
+import Tooltip from "$lib/components/common/Tooltip.svelte";
+import ArchiveBox from "$lib/components/icons/ArchiveBox.svelte";
+import DragGhost from "$lib/components/common/DragGhost.svelte";
+import Check from "$lib/components/icons/Check.svelte";
+import XMark from "$lib/components/icons/XMark.svelte";
+import Document from "$lib/components/icons/Document.svelte";
 
-	export let className = '';
+export let className = "";
 
-	export let id;
-	export let title;
+export let id;
+export let title;
 
-	export let selected = false;
-	export let shiftKey = false;
+export let selected = false;
+export let shiftKey = false;
 
-	let chat = null;
+let chat = null;
 
-	let mouseOver = false;
-	let draggable = false;
-	$: if (mouseOver) {
-		loadChat();
+let mouseOver = false;
+let draggable = false;
+$: if (mouseOver) {
+	loadChat();
+}
+
+const loadChat = async () => {
+	if (!chat) {
+		draggable = false;
+		chat = await getChatById(localStorage.token, id);
+		draggable = true;
+	}
+};
+
+let showShareChatModal = false;
+let confirmEdit = false;
+
+let chatTitle = title;
+
+const editChatTitle = async (id, title) => {
+	if (title === "") {
+		toast.error($i18n.t("Title cannot be an empty string."));
+	} else {
+		await updateChatById(localStorage.token, id, {
+			title: title,
+		});
+
+		if (id === $chatId) {
+			_chatTitle.set(title);
+		}
+
+		currentChatPage.set(1);
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		await pinnedChats.set(await getPinnedChatList(localStorage.token));
+	}
+};
+
+const cloneChatHandler = async (id) => {
+	const res = await cloneChatById(localStorage.token, id).catch((error) => {
+		toast.error(error);
+		return null;
+	});
+
+	if (res) {
+		goto(`/c/${res.id}`);
+
+		currentChatPage.set(1);
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		await pinnedChats.set(await getPinnedChatList(localStorage.token));
+	}
+};
+
+const deleteChatHandler = async (id) => {
+	const res = await deleteChatById(localStorage.token, id).catch((error) => {
+		toast.error(error);
+		return null;
+	});
+
+	if (res) {
+		tags.set(await getAllTags(localStorage.token));
+		if ($chatId === id) {
+			await goto("/");
+
+			await chatId.set("");
+			await tick();
+		}
+
+		dispatch("change");
+	}
+};
+
+const archiveChatHandler = async (id) => {
+	await archiveChatById(localStorage.token, id);
+	dispatch("change");
+};
+
+const focusEdit = async (node: HTMLInputElement) => {
+	node.focus();
+};
+
+let itemElement;
+
+let dragged = false;
+let x = 0;
+let y = 0;
+
+const dragImage = new Image();
+dragImage.src =
+	"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
+const onDragStart = (event) => {
+	event.stopPropagation();
+
+	event.dataTransfer.setDragImage(dragImage, 0, 0);
+
+	// Set the data to be transferred
+	event.dataTransfer.setData(
+		"text/plain",
+		JSON.stringify({
+			type: "chat",
+			id: id,
+			item: chat,
+		}),
+	);
+
+	dragged = true;
+	itemElement.style.opacity = "0.5"; // Optional: Visual cue to show it's being dragged
+};
+
+const onDrag = (event) => {
+	event.stopPropagation();
+
+	x = event.clientX;
+	y = event.clientY;
+};
+
+const onDragEnd = (event) => {
+	event.stopPropagation();
+
+	itemElement.style.opacity = "1"; // Reset visual cue after drag
+	dragged = false;
+};
+
+onMount(() => {
+	if (itemElement) {
+		// Event listener for when dragging starts
+		itemElement.addEventListener("dragstart", onDragStart);
+		// Event listener for when dragging occurs (optional)
+		itemElement.addEventListener("drag", onDrag);
+		// Event listener for when dragging ends
+		itemElement.addEventListener("dragend", onDragEnd);
+	}
+});
+
+onDestroy(() => {
+	if (itemElement) {
+		itemElement.removeEventListener("dragstart", onDragStart);
+		itemElement.removeEventListener("drag", onDrag);
+		itemElement.removeEventListener("dragend", onDragEnd);
+	}
+});
+
+let showDeleteConfirm = false;
+</script>
+
+<style>
+/* Override DSFR styles */
+:global(a.w-full.flex.justify-between) {
+	text-decoration: none !important;
+}
+:global(a.w-full.flex.justify-between:not(:hover)) {
+	text-decoration: none !important;
+	background: none !important;
+}
+:global(a.w-full.flex.justify-between:hover) {
+	text-decoration: none !important;
+}
+
+:global(.group:hover a.w-full.flex.justify-between) {
+	text-decoration: none !important;
+
+}
+
+:global(.text-left.self-center.overflow-hidden) {
+	text-decoration: none !important;
 	}
 
-	const loadChat = async () => {
-		if (!chat) {
-			draggable = false;
-			chat = await getChatById(localStorage.token, id);
-			draggable = true;
-		}
-	};
 
-	let showShareChatModal = false;
-	let confirmEdit = false;
-
-	let chatTitle = title;
-
-	const editChatTitle = async (id, title) => {
-		if (title === '') {
-			toast.error($i18n.t('Title cannot be an empty string.'));
-		} else {
-			await updateChatById(localStorage.token, id, {
-				title: title
-			});
-
-			if (id === $chatId) {
-				_chatTitle.set(title);
-			}
-
-			currentChatPage.set(1);
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			await pinnedChats.set(await getPinnedChatList(localStorage.token));
-		}
-	};
-
-	const cloneChatHandler = async (id) => {
-		const res = await cloneChatById(localStorage.token, id).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-
-		if (res) {
-			goto(`/c/${res.id}`);
-
-			currentChatPage.set(1);
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			await pinnedChats.set(await getPinnedChatList(localStorage.token));
-		}
-	};
-
-	const deleteChatHandler = async (id) => {
-		const res = await deleteChatById(localStorage.token, id).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-
-		if (res) {
-			tags.set(await getAllTags(localStorage.token));
-			if ($chatId === id) {
-				await goto('/');
-
-				await chatId.set('');
-				await tick();
-			}
-
-			dispatch('change');
-		}
-	};
-
-	const archiveChatHandler = async (id) => {
-		await archiveChatById(localStorage.token, id);
-		dispatch('change');
-	};
-
-	const focusEdit = async (node: HTMLInputElement) => {
-		node.focus();
-	};
-
-	let itemElement;
-
-	let dragged = false;
-	let x = 0;
-	let y = 0;
-
-	const dragImage = new Image();
-	dragImage.src =
-		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
-
-	const onDragStart = (event) => {
-		event.stopPropagation();
-
-		event.dataTransfer.setDragImage(dragImage, 0, 0);
-
-		// Set the data to be transferred
-		event.dataTransfer.setData(
-			'text/plain',
-			JSON.stringify({
-				type: 'chat',
-				id: id,
-				item: chat
-			})
-		);
-
-		dragged = true;
-		itemElement.style.opacity = '0.5'; // Optional: Visual cue to show it's being dragged
-	};
-
-	const onDrag = (event) => {
-		event.stopPropagation();
-
-		x = event.clientX;
-		y = event.clientY;
-	};
-
-	const onDragEnd = (event) => {
-		event.stopPropagation();
-
-		itemElement.style.opacity = '1'; // Reset visual cue after drag
-		dragged = false;
-	};
-
-	onMount(() => {
-		if (itemElement) {
-			// Event listener for when dragging starts
-			itemElement.addEventListener('dragstart', onDragStart);
-			// Event listener for when dragging occurs (optional)
-			itemElement.addEventListener('drag', onDrag);
-			// Event listener for when dragging ends
-			itemElement.addEventListener('dragend', onDragEnd);
-		}
-	});
-
-	onDestroy(() => {
-		if (itemElement) {
-			itemElement.removeEventListener('dragstart', onDragStart);
-			itemElement.removeEventListener('drag', onDrag);
-			itemElement.removeEventListener('dragend', onDragEnd);
-		}
-	});
-
-	let showDeleteConfirm = false;
-</script>
+</style>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={id} />
 

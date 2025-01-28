@@ -1398,10 +1398,6 @@ body {
 	--green-menthe-975-75: #dffdf7;
 	--green-menthe-975-75-hover: #84f9e7;
 	--green-menthe-975-75-active: #70ebd8;
-	--green-menthe-950-100: #bafaee;
-	--green-menthe-950-100-hover: #79e7d5;
-	--green-menthe-950-100-active: #6fd3c3;
-	--green-menthe-sun-373-moon-652: #37635f;
 	--green-menthe-sun-373-moon-652-hover: #53918c;
 	--green-menthe-sun-373-moon-652-active: #62a9a2;
 	--green-menthe-925-125: #8bf8e7;
@@ -3144,12 +3140,6 @@ body {
 	.fr-background-contrast--pink-macaron:hover {
 		background-color: #fdc6bd !important;
 	}
-	.fr-background-contrast--pink-macaron:active {
-		background-color: #fcb0a2 !important;
-	}
-	.fr-background-contrast--pink-tuile {
-		background-color: #fee9e7 !important;
-	}
 	.fr-background-contrast--pink-tuile:hover {
 		background-color: #fdc6c0 !important;
 	}
@@ -3845,9 +3835,6 @@ body {
 	}
 	.fr-text-inverted--purple-glycine {
 		color: #fef3fd !important;
-	}
-	.fr-text-inverted--pink-macaron {
-		color: #fef4f2 !important;
 	}
 	.fr-text-inverted--pink-tuile {
 		color: #fef4f3 !important;
