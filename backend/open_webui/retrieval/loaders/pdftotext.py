@@ -28,7 +28,7 @@ class PdftotextLoader():
             'header_footer': False
         }
 
-        r = requests.post(url=self.url, headers=headers, files=files, data=data, timeout=120)
+        r = requests.post(url=self.url, headers=headers, files=files, data=data, timeout=600)
         logger.info(r)
         response = r.json()
         txt = response.get("text", "")
