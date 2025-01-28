@@ -149,6 +149,7 @@ def openai_chat_chunk_message_template(
         template["choices"][0]["delta"] = {"content": message}
     else:
         template["choices"][0]["finish_reason"] = "stop"
+        template["choices"][0]["delta"] = {}
 
     if usage:
         template["usage"] = usage

@@ -48,6 +48,9 @@
 		init();
 	}
 
+	let fileUploadEnabled = true;
+	$: fileUploadEnabled = $user.role === 'admin' || $user?.permissions?.chat?.file_upload;
+
 	const init = async () => {
 		if ($_tools === null) {
 			await _tools.set(await getTools(localStorage.token));
@@ -166,26 +169,44 @@
 			{/if}
 
 			{#if !$mobile}
-				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl"
-					on:click={() => {
-						screenCaptureHandler();
-					}}
+				<Tooltip
+					content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files') : ''}
+					className="w-full"
 				>
-					<CameraSolid />
-					<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
-				</DropdownMenu.Item>
+					<DropdownMenu.Item
+						class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl {!fileUploadEnabled
+							? 'opacity-50'
+							: ''}"
+						on:click={() => {
+							if (fileUploadEnabled) {
+								screenCaptureHandler();
+							}
+						}}
+					>
+						<CameraSolid />
+						<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
+					</DropdownMenu.Item>
+				</Tooltip>
 			{/if}
 
-			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
-				on:click={() => {
-					uploadFilesHandler();
-				}}
+			<Tooltip
+				content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files') : ''}
+				className="w-full"
 			>
-				<DocumentArrowUpSolid />
-				<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
-			</DropdownMenu.Item>
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl {!fileUploadEnabled
+						? 'opacity-50'
+						: ''}"
+					on:click={() => {
+						if (fileUploadEnabled) {
+							uploadFilesHandler();
+						}
+					}}
+				>
+					<DocumentArrowUpSolid />
+					<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
+				</DropdownMenu.Item>
+			</Tooltip>
 
 			{#if $config?.features?.enable_google_drive_integration}
 				<DropdownMenu.Item
