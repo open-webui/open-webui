@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = open-webui
-        IMAGE_TAG = latest
+        IMAGE_NAME = "open-webui"
+        IMAGE_TAG = "latest"
         AWS_ACCOUNT_ID = credentials('AWS_ACCOUNT_ID')
         ECR_REPO_URL = credentials('ECR_REPO_URL_URL')
     }
