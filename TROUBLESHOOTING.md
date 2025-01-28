@@ -26,6 +26,8 @@ Open WebUI has a default timeout of 5 minutes for Ollama to finish generating th
 
 **Ensure Ollama Version is Up-to-Date**: Always start by checking that you have the latest version of Ollama. Visit [Ollama's official site](https://ollama.com/) for the latest updates.
 
+### You can use Vscode continue extention for using your vscode like curcor and windsurf and make autocompletions of code
+
 **Troubleshooting Steps**:
 
 1. **Verify Ollama URL Format**:
@@ -34,3 +36,5 @@ Open WebUI has a default timeout of 5 minutes for Ollama to finish generating th
    - Confirm that the Ollama Server URL is correctly set to `[OLLAMA URL]` (e.g., `http://localhost:11434`).
 
 By following these enhanced troubleshooting steps, connection issues should be effectively resolved. For further assistance or queries, feel free to reach out to us on our community Discord.
+
+
