@@ -367,7 +367,7 @@
 
 								{#if item.model.owned_by === 'openai'}
 									<Tooltip content={`${'External'}`}>
-										<div class="translate-y-[1px]">
+										<div class="translate-y-[1px] ml-1">
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
 												viewBox="0 0 16 16"
