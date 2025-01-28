@@ -9,7 +9,6 @@
 	import Collapsible from './Collapsible.svelte';
 	import Tooltip from './Tooltip.svelte';
 	import FolderCreate from '../icons/FolderCreate.svelte';
-	import FolderCreate from '../icons/FolderCreate.svelte';
 
 	export let open = true;
 

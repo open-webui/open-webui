@@ -211,16 +211,18 @@ let showDeleteConfirm = false;
 }
 :global(a.w-full.flex.justify-between:hover) {
 	text-decoration: none !important;
+	background: none !important;
+	background-color: var(--color-gray-50, #f9f9f9) !important;
+
 }
 
 :global(.group:hover a.w-full.flex.justify-between) {
 	text-decoration: none !important;
-
 }
 
 :global(.text-left.self-center.overflow-hidden) {
 	text-decoration: none !important;
-	}
+}
 
 
 </style>
