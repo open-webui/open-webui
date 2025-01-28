@@ -376,3 +376,14 @@ def parse_ollama_modelfile(model_text):
         data["params"]["messages"] = messages
 
     return data
+
+def strip_reasoning_tag(message):
+    reasoning_tags = ["think", "reason", "reasoning", "thought", "Thought"]
+    details_block = re.match(f'^<details .*</details>(.*)', message.strip(), re.DOTALL)
+    if details_block:
+        return details_block.group(1)
+    for tag in reasoning_tags:
+        thinking = re.match(f'^<{tag}>.*</{tag}>(.*)', message.strip(), re.DOTALL)
+        if thinking:
+            return thinking.group(1)
+    return message

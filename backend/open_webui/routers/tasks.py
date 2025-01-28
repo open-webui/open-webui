@@ -17,6 +17,7 @@ from open_webui.utils.task import (
     moa_response_generation_template,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.misc import strip_reasoning_tag
 from open_webui.constants import TASKS
 
 from open_webui.routers.pipelines import process_pipeline_inlet_filter
@@ -162,6 +163,9 @@ async def generate_title(
     else:
         template = DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE
 
+    for m in form_data['messages']:
+        m['content'] = strip_reasoning_tag(m['content'])
+
     content = title_generation_template(
         template,
         form_data["messages"],
@@ -190,11 +194,8 @@ async def generate_title(
             "chat_id": form_data.get("chat_id", None),
         },
     }
-    reasoning_tags = ["think", "reason", "reasoning", "thought", "Thought"]
-
     try:
         completion = await generate_chat_completion(request, form_data=payload, user=user)
-
     except Exception as e:
         log.error("Exception occurred", exc_info=True)
         return JSONResponse(
@@ -203,13 +204,7 @@ async def generate_title(
         )
 
     title = completion['choices'][0]['message']['content']
-    for tag in reasoning_tags:
-        thinking = re.match(f'^<{tag}>.*</{tag}>(.*)', title.strip(), re.DOTALL)
-        if thinking:
-            title = thinking.group(1)
-            break
-
-    completion['choices'][0]['message']['content'] = title[:50]
+    completion['choices'][0]['message']['content'] = strip_reasoning_tag(title)[:50]
     return completion
 
 @router.post("/tags/completions")
