@@ -901,15 +901,16 @@ def process_file(
                 )
 
                 if engine == "pdftotext":
-                    docs = Document(
-                        page_content=docs,
+                    docs_text = docs
+                    docs = [Document(
+                        page_content=docs_text,
                         metadata={
                             "name": file.filename,
                             "created_by": file.user_id,
                             "file_id": file.id,
                             "source": file.filename,
                         },
-                    )
+                    )]
                 else:
                     docs = [
                         Document(
@@ -938,7 +939,7 @@ def process_file(
                     )
                 ]
             if engine == "pdftotext":
-                text_content = docs.page_content
+                text_content = docs_text
             else:
                 text_content = " ".join([doc.page_content for doc in docs])
 
