@@ -1,0 +1,96 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = open-webui
+        IMAGE_TAG = latest
+        AWS_ACCOUNT_ID = credentials('AWS_ACCOUNT_ID')
+        ECR_REPO_URL = credentials('ECR_REPO_URL_URL')
+    }
+
+    stages {
+
+        stage('Clean Workspace') {
+            steps {
+                script {
+                    deleteDir()
+                }
+            }
+        }
+
+        stage('Clone forked open-webui repo and build Docker image') {
+            steps {
+
+                sh '''
+                    echo "Cloning repository https://github.com/Sharonk77/open-webui..."
+                    git clone https://github.com/Sharonk77/open-webui
+                    cd open-webui
+                    echo "Building Docker image..."
+                    docker build -t $IMAGE_NAME .
+                '''
+            }
+        }
+
+        stage('Tag Docker Image') {
+            steps {
+                script {
+                    withCredentials([
+                        string(credentialsId: 'ECR_REPO_URL', variable: 'ECR_REPO_URL')
+                    ]) {
+                        sh '''
+                            echo "Current directory:" $(pwd)
+                            echo "Tagging Docker image..."
+                            docker tag $IMAGE_NAME:$IMAGE_TAG $ECR_REPO_URL:$IMAGE_TAG
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Push Docker Image to ECR') {
+            steps {
+                script {
+                    withCredentials([
+                        string(credentialsId: 'ECR_REPO_URL', variable: 'ECR_REPO_URL')
+                    ]) {
+                        withAWS(credentials: 'aws_admin_user', region: 'us-east-1') {
+                            docker.withRegistry("https://${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com", "ecr:us-east-1:aws_admin_user") {
+                                sh """
+                                docker push ${ECR_REPO_URL}:${IMAGE_TAG}
+                                echo "pushed to ECR..."
+
+                                """
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('deploy open-webui') {
+            steps {
+                script {
+
+                    sh '''
+                    echo "applying deployment files"
+                    cd open-webui
+                    echo "Current directory:" $(pwd)
+                    kubectl apply -f open-webui-deployment.yaml open-webui-service.yaml
+                    echo "setting image"
+                    kubectl set image deployment/open-webui open-webui=${ECR_REPO_URL}:${IMAGE_TAG}
+                    '''
+                }
+            }
+        }
+    }
+
+
+    post {
+        success {
+            echo "success"
+        }
+        failure {
+            echo "Failure"
+        }
+    }
+}
