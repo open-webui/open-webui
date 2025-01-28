@@ -93,6 +93,7 @@
 		});
 
 		if (res) {
+			editChatTitle(res.id, `${$i18n.t('Clone of')} ${res.title}`);
 			goto(`/c/${res.id}`);
 
 			currentChatPage.set(1);
