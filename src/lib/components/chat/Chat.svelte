@@ -715,6 +715,11 @@
 		if ($page.url.searchParams.get('web-search') === 'true') {
 			webSearchEnabled = true;
 		}
+
+		if($settings?.alwaysOnWebSearch) {
+			webSearchEnabled = true;
+		}
+
 		if ($page.url.searchParams.get('image-generation') === 'true') {
 			imageGenerationEnabled = true;
 		}
