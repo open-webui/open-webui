@@ -175,19 +175,10 @@ async def generate_title(
         },
     )
 
-    # using 200 token size to support reasoning models, as the first 50 likely to be only reasoning
-    # tokens
     payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": False,
-        **(
-            {"max_tokens": 200}
-            if models[task_model_id]["owned_by"] == "ollama"
-            else {
-                "max_completion_tokens": 200,
-            }
-        ),
         "metadata": {
             "task": str(TASKS.TITLE_GENERATION),
             "task_body": form_data,
