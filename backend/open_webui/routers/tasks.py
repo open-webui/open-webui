@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 from typing import Optional
 import logging
+import re
 
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.task import (
@@ -170,15 +171,17 @@ async def generate_title(
         },
     )
 
+    # using 200 token size to support reasoning models, as the first 50 likely to be only reasoning
+    # tokens
     payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": False,
         **(
-            {"max_tokens": 50}
+            {"max_tokens": 200}
             if models[task_model_id]["owned_by"] == "ollama"
             else {
-                "max_completion_tokens": 50,
+                "max_completion_tokens": 200,
             }
         ),
         "metadata": {
@@ -187,9 +190,11 @@ async def generate_title(
             "chat_id": form_data.get("chat_id", None),
         },
     }
+    reasoning_tags = ["think", "reason", "reasoning", "thought", "Thought"]
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        completion = await generate_chat_completion(request, form_data=payload, user=user)
+
     except Exception as e:
         log.error("Exception occurred", exc_info=True)
         return JSONResponse(
@@ -197,6 +202,15 @@ async def generate_title(
             content={"detail": "An internal error has occurred."},
         )
 
+    title = completion['choices'][0]['message']['content']
+    for tag in reasoning_tags:
+        thinking = re.match(f'^<{tag}>.*</{tag}>(.*)', title.strip(), re.DOTALL)
+        if thinking:
+            title = thinking.group(1)
+            break
+
+    completion['choices'][0]['message']['content'] = title[:50]
+    return completion
 
 @router.post("/tags/completions")
 async def generate_chat_tags(
