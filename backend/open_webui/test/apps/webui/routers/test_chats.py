@@ -200,10 +200,10 @@ class TestChats(AbstractPostgresTest):
             "name": "chat1",
             "originalChatId": chat_id,
             "tags": ["tag1", "tag2"],
-            "title": "Clone of New Chat",
+            "title": "New Chat",
         }
         assert data["share_id"] is None
-        assert data["title"] == "Clone of New Chat"
+        assert data["title"] == "New Chat"
         assert data["user_id"] == "2"
 
     def test_archive_chat_by_id(self):

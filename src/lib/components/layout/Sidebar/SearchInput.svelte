@@ -156,7 +156,9 @@
 		>
 			<div class="px-2 py-2 text-xs group">
 				{#if filteredTags.length > 0}
-					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">Tags</div>
+					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">
+						{$i18n.t('Tags')}
+					</div>
 
 					<div class="max-h-60 overflow-auto">
 						{#each filteredTags as tag, tagIdx}

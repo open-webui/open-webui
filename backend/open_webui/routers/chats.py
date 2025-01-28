@@ -452,7 +452,7 @@ async def clone_chat_by_id(id: str, user=Depends(get_verified_user)):
             **chat.chat,
             "originalChatId": chat.id,
             "branchPointMessageId": chat.chat["history"]["currentId"],
-            "title": f"Clone of {chat.title}",
+            "title": chat.title,
         }
 
         chat = Chats.insert_new_chat(user.id, ChatForm(**{"chat": updated_chat}))
@@ -476,7 +476,7 @@ async def clone_shared_chat_by_id(id: str, user=Depends(get_verified_user)):
             **chat.chat,
             "originalChatId": chat.id,
             "branchPointMessageId": chat.chat["history"]["currentId"],
-            "title": f"Clone of {chat.title}",
+            "title": chat.title,
         }
 
         chat = Chats.insert_new_chat(user.id, ChatForm(**{"chat": updated_chat}))

@@ -93,8 +93,8 @@
 		});
 
 		if (res) {
+			editChatTitle(res.id, `${$i18n.t('Clone of')} ${res.title}`);
 			goto(`/c/${res.id}`);
-
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			await pinnedChats.set(await getPinnedChatList(localStorage.token));

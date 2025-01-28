@@ -29,7 +29,6 @@
 	export let value = '';
 	export let placeholder = 'Select a model';
 	export let searchEnabled = true;
-	export let searchPlaceholder = $i18n.t('Search a model');
 
 	export let showTemporaryChatControl = false;
 
@@ -263,7 +262,7 @@
 						id="model-search-input"
 						bind:value={searchValue}
 						class="w-full text-sm bg-transparent outline-none"
-						placeholder={searchPlaceholder}
+						placeholder={$i18n.t('Search a model')}
 						autocomplete="off"
 						on:keydown={(e) => {
 							if (e.code === 'Enter' && filteredItems.length > 0) {
