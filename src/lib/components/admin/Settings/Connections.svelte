@@ -43,9 +43,8 @@
 
 	const updateOpenAIHandler = async () => {
 		if (ENABLE_OPENAI_API !== null) {
-			OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.filter(
-				(url, urlIdx) => OPENAI_API_BASE_URLS.indexOf(url) === urlIdx && url !== ''
-			).map((url) => url.replace(/\/$/, ''));
+			// Remove trailing slashes
+			OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.map((url) => url.replace(/\/$/, ''));
 
 			// Check if API KEYS length is same than API URLS length
 			if (OPENAI_API_KEYS.length !== OPENAI_API_BASE_URLS.length) {
@@ -69,7 +68,7 @@
 				OPENAI_API_KEYS: OPENAI_API_KEYS,
 				OPENAI_API_CONFIGS: OPENAI_API_CONFIGS
 			}).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 			});
 
 			if (res) {
@@ -81,24 +80,15 @@
 
 	const updateOllamaHandler = async () => {
 		if (ENABLE_OLLAMA_API !== null) {
-			// Remove duplicate URLs
-			OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter(
-				(url, urlIdx) => OLLAMA_BASE_URLS.indexOf(url) === urlIdx && url !== ''
-			).map((url) => url.replace(/\/$/, ''));
-
-			console.log(OLLAMA_BASE_URLS);
-
-			if (OLLAMA_BASE_URLS.length === 0) {
-				ENABLE_OLLAMA_API = false;
-				toast.info($i18n.t('Ollama API disabled'));
-			}
+			// Remove trailing slashes
+			OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.map((url) => url.replace(/\/$/, ''));
 
 			const res = await updateOllamaConfig(localStorage.token, {
 				ENABLE_OLLAMA_API: ENABLE_OLLAMA_API,
 				OLLAMA_BASE_URLS: OLLAMA_BASE_URLS,
 				OLLAMA_API_CONFIGS: OLLAMA_API_CONFIGS
 			}).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 			});
 
 			if (res) {
@@ -111,14 +101,14 @@
 	const addOpenAIConnectionHandler = async (connection) => {
 		OPENAI_API_BASE_URLS = [...OPENAI_API_BASE_URLS, connection.url];
 		OPENAI_API_KEYS = [...OPENAI_API_KEYS, connection.key];
-		OPENAI_API_CONFIGS[connection.url] = connection.config;
+		OPENAI_API_CONFIGS[OPENAI_API_BASE_URLS.length] = connection.config;
 
 		await updateOpenAIHandler();
 	};
 
 	const addOllamaConnectionHandler = async (connection) => {
 		OLLAMA_BASE_URLS = [...OLLAMA_BASE_URLS, connection.url];
-		OLLAMA_API_CONFIGS[connection.url] = connection.config;
+		OLLAMA_API_CONFIGS[OLLAMA_BASE_URLS.length] = connection.config;
 
 		await updateOllamaHandler();
 	};
@@ -148,15 +138,17 @@
 			OLLAMA_API_CONFIGS = ollamaConfig.OLLAMA_API_CONFIGS;
 
 			if (ENABLE_OPENAI_API) {
-				for (const url of OPENAI_API_BASE_URLS) {
-					if (!OPENAI_API_CONFIGS[url]) {
-						OPENAI_API_CONFIGS[url] = {};
+				// get url and idx
+				for (const [idx, url] of OPENAI_API_BASE_URLS.entries()) {
+					if (!OPENAI_API_CONFIGS[idx]) {
+						// Legacy support, url as key
+						OPENAI_API_CONFIGS[idx] = OPENAI_API_CONFIGS[url] || {};
 					}
 				}
 
 				OPENAI_API_BASE_URLS.forEach(async (url, idx) => {
-					OPENAI_API_CONFIGS[url] = OPENAI_API_CONFIGS[url] || {};
-					if (!(OPENAI_API_CONFIGS[url]?.enable ?? true)) {
+					OPENAI_API_CONFIGS[idx] = OPENAI_API_CONFIGS[idx] || {};
+					if (!(OPENAI_API_CONFIGS[idx]?.enable ?? true)) {
 						return;
 					}
 					const res = await getOpenAIModels(localStorage.token, idx);
@@ -167,9 +159,9 @@
 			}
 
 			if (ENABLE_OLLAMA_API) {
-				for (const url of OLLAMA_BASE_URLS) {
-					if (!OLLAMA_API_CONFIGS[url]) {
-						OLLAMA_API_CONFIGS[url] = {};
+				for (const [idx, url] of OLLAMA_BASE_URLS.entries()) {
+					if (!OLLAMA_API_CONFIGS[idx]) {
+						OLLAMA_API_CONFIGS[idx] = OLLAMA_API_CONFIGS[url] || {};
 					}
 				}
 			}
@@ -242,7 +234,7 @@
 										pipeline={pipelineUrls[url] ? true : false}
 										bind:url
 										bind:key={OPENAI_API_KEYS[idx]}
-										bind:config={OPENAI_API_CONFIGS[url]}
+										bind:config={OPENAI_API_CONFIGS[idx]}
 										onSubmit={() => {
 											updateOpenAIHandler();
 										}}
@@ -251,6 +243,8 @@
 												(url, urlIdx) => idx !== urlIdx
 											);
 											OPENAI_API_KEYS = OPENAI_API_KEYS.filter((key, keyIdx) => idx !== keyIdx);
+
+											delete OPENAI_API_CONFIGS[idx];
 										}}
 									/>
 								{/each}
@@ -301,13 +295,14 @@
 								{#each OLLAMA_BASE_URLS as url, idx}
 									<OllamaConnection
 										bind:url
-										bind:config={OLLAMA_API_CONFIGS[url]}
+										bind:config={OLLAMA_API_CONFIGS[idx]}
 										{idx}
 										onSubmit={() => {
 											updateOllamaHandler();
 										}}
 										onDelete={() => {
 											OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url, urlIdx) => idx !== urlIdx);
+											delete OLLAMA_API_CONFIGS[idx];
 										}}
 									/>
 								{/each}

@@ -28,6 +28,7 @@
 		label: '',
 		host: '',
 		port: '',
+		attribute_for_mail: 'mail',
 		attribute_for_username: 'uid',
 		app_dn: '',
 		app_dn_password: '',
@@ -41,7 +42,7 @@
 	const updateLdapServerHandler = async () => {
 		if (!ENABLE_LDAP) return;
 		const res = await updateLdapServer(localStorage.token, LDAP_SERVER).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 		if (res) {
@@ -340,6 +341,26 @@
 									placeholder={$i18n.t('Enter Application DN Password')}
 									bind:value={LDAP_SERVER.app_dn_password}
 								/>
+							</div>
+						</div>
+						<div class="flex w-full gap-2">
+							<div class="w-full">
+								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+									{$i18n.t('Attribute for Mail')}
+								</div>
+								<Tooltip
+									content={$i18n.t(
+										'The LDAP attribute that maps to the mail that users use to sign in.'
+									)}
+									placement="top-start"
+								>
+									<input
+										class="w-full bg-transparent outline-none py-0.5"
+										required
+										placeholder={$i18n.t('Example: mail')}
+										bind:value={LDAP_SERVER.attribute_for_mail}
+									/>
+								</Tooltip>
 							</div>
 						</div>
 						<div class="flex w-full gap-2">

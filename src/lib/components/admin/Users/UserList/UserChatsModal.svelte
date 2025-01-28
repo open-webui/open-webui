@@ -20,7 +20,7 @@
 
 	const deleteChatHandler = async (chatId) => {
 		const res = await deleteChatById(localStorage.token, chatId).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 		});
 
 		chats = await getChatListByUserId(localStorage.token, user.id);

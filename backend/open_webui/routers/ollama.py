@@ -152,10 +152,12 @@ async def send_post_request(
         )
 
 
-def get_api_key(url, configs):
+def get_api_key(idx, url, configs):
     parsed_url = urlparse(url)
     base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-    return configs.get(base_url, {}).get("key", None)
+    return configs.get(str(idx), configs.get(base_url, {})).get(
+        "key", None
+    )  # Legacy support
 
 
 ##########################################
@@ -238,11 +240,13 @@ async def update_config(
     request.app.state.config.OLLAMA_BASE_URLS = form_data.OLLAMA_BASE_URLS
     request.app.state.config.OLLAMA_API_CONFIGS = form_data.OLLAMA_API_CONFIGS
 
-    # Remove any extra configs
-    config_urls = request.app.state.config.OLLAMA_API_CONFIGS.keys()
-    for url in list(request.app.state.config.OLLAMA_BASE_URLS):
-        if url not in config_urls:
-            request.app.state.config.OLLAMA_API_CONFIGS.pop(url, None)
+    # Remove the API configs that are not in the API URLS
+    keys = list(map(str, range(len(request.app.state.config.OLLAMA_BASE_URLS))))
+    request.app.state.config.OLLAMA_API_CONFIGS = {
+        key: value
+        for key, value in request.app.state.config.OLLAMA_API_CONFIGS.items()
+        if key in keys
+    }
 
     return {
         "ENABLE_OLLAMA_API": request.app.state.config.ENABLE_OLLAMA_API,
@@ -256,12 +260,19 @@ async def get_all_models(request: Request):
     log.info("get_all_models()")
     if request.app.state.config.ENABLE_OLLAMA_API:
         request_tasks = []
-
         for idx, url in enumerate(request.app.state.config.OLLAMA_BASE_URLS):
-            if url not in request.app.state.config.OLLAMA_API_CONFIGS:
+            if (str(idx) not in request.app.state.config.OLLAMA_API_CONFIGS) and (
+                url not in request.app.state.config.OLLAMA_API_CONFIGS  # Legacy support
+            ):
                 request_tasks.append(send_get_request(f"{url}/api/tags"))
             else:
-                api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+                api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+                    str(idx),
+                    request.app.state.config.OLLAMA_API_CONFIGS.get(
+                        url, {}
+                    ),  # Legacy support
+                )
+
                 enable = api_config.get("enable", True)
                 key = api_config.get("key", None)
 
@@ -275,7 +286,12 @@ async def get_all_models(request: Request):
         for idx, response in enumerate(responses):
             if response:
                 url = request.app.state.config.OLLAMA_BASE_URLS[idx]
-                api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+                api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+                    str(idx),
+                    request.app.state.config.OLLAMA_API_CONFIGS.get(
+                        url, {}
+                    ),  # Legacy support
+                )
 
                 prefix_id = api_config.get("prefix_id", None)
                 model_ids = api_config.get("model_ids", [])
@@ -349,7 +365,7 @@ async def get_ollama_tags(
         models = await get_all_models(request)
     else:
         url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-        key = get_api_key(url, request.app.state.config.OLLAMA_API_CONFIGS)
+        key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
         r = None
         try:
@@ -393,11 +409,14 @@ async def get_ollama_versions(request: Request, url_idx: Optional[int] = None):
             request_tasks = [
                 send_get_request(
                     f"{url}/api/version",
-                    request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}).get(
-                        "key", None
-                    ),
+                    request.app.state.config.OLLAMA_API_CONFIGS.get(
+                        str(idx),
+                        request.app.state.config.OLLAMA_API_CONFIGS.get(
+                            url, {}
+                        ),  # Legacy support
+                    ).get("key", None),
                 )
-                for url in request.app.state.config.OLLAMA_BASE_URLS
+                for idx, url in enumerate(request.app.state.config.OLLAMA_BASE_URLS)
             ]
             responses = await asyncio.gather(*request_tasks)
             responses = list(filter(lambda x: x is not None, responses))
@@ -454,11 +473,14 @@ async def get_ollama_loaded_models(request: Request, user=Depends(get_verified_u
         request_tasks = [
             send_get_request(
                 f"{url}/api/ps",
-                request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}).get(
-                    "key", None
-                ),
+                request.app.state.config.OLLAMA_API_CONFIGS.get(
+                    str(idx),
+                    request.app.state.config.OLLAMA_API_CONFIGS.get(
+                        url, {}
+                    ),  # Legacy support
+                ).get("key", None),
             )
-            for url in request.app.state.config.OLLAMA_BASE_URLS
+            for idx, url in enumerate(request.app.state.config.OLLAMA_BASE_URLS)
         ]
         responses = await asyncio.gather(*request_tasks)
 
@@ -488,7 +510,7 @@ async def pull_model(
     return await send_post_request(
         url=f"{url}/api/pull",
         payload=json.dumps(payload),
-        key=get_api_key(url, request.app.state.config.OLLAMA_API_CONFIGS),
+        key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
     )
 
 
@@ -524,15 +546,16 @@ async def push_model(
     return await send_post_request(
         url=f"{url}/api/push",
         payload=form_data.model_dump_json(exclude_none=True).encode(),
-        key=get_api_key(url, request.app.state.config.OLLAMA_API_CONFIGS),
+        key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
     )
 
 
 class CreateModelForm(BaseModel):
-    name: str
-    modelfile: Optional[str] = None
+    model: Optional[str] = None
     stream: Optional[bool] = None
     path: Optional[str] = None
+
+    model_config = ConfigDict(extra="allow")
 
 
 @router.post("/api/create")
@@ -549,7 +572,7 @@ async def create_model(
     return await send_post_request(
         url=f"{url}/api/create",
         payload=form_data.model_dump_json(exclude_none=True).encode(),
-        key=get_api_key(url, request.app.state.config.OLLAMA_API_CONFIGS),
+        key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
     )
 
 
@@ -579,7 +602,7 @@ async def copy_model(
             )
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-    key = get_api_key(url, request.app.state.config.OLLAMA_API_CONFIGS)
+    key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
     try:
         r = requests.request(
@@ -634,7 +657,7 @@ async def delete_model(
             )
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-    key = get_api_key(url, request.app.state.config.OLLAMA_API_CONFIGS)
+    key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
     try:
         r = requests.request(
@@ -684,7 +707,7 @@ async def show_model_info(
     url_idx = random.choice(models[form_data.name]["urls"])
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-    key = get_api_key(url, request.app.state.config.OLLAMA_API_CONFIGS)
+    key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
     try:
         r = requests.request(
@@ -753,7 +776,7 @@ async def embed(
             )
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-    key = get_api_key(url, request.app.state.config.OLLAMA_API_CONFIGS)
+    key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
     try:
         r = requests.request(
@@ -822,7 +845,7 @@ async def embeddings(
             )
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-    key = get_api_key(url, request.app.state.config.OLLAMA_API_CONFIGS)
+    key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
     try:
         r = requests.request(
@@ -897,7 +920,10 @@ async def generate_completion(
             )
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-    api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+        str(url_idx),
+        request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
+    )
 
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
@@ -906,7 +932,7 @@ async def generate_completion(
     return await send_post_request(
         url=f"{url}/api/generate",
         payload=form_data.model_dump_json(exclude_none=True).encode(),
-        key=get_api_key(url, request.app.state.config.OLLAMA_API_CONFIGS),
+        key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
     )
 
 
@@ -936,7 +962,7 @@ async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = 
             )
         url_idx = random.choice(models[model].get("urls", []))
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-    return url
+    return url, url_idx
 
 
 @router.post("/api/chat")
@@ -1004,8 +1030,11 @@ async def generate_chat_completion(
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
 
-    url = await get_ollama_url(request, payload["model"], url_idx)
-    api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
+    api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+        str(url_idx),
+        request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
+    )
 
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
@@ -1015,7 +1044,7 @@ async def generate_chat_completion(
         url=f"{url}/api/chat",
         payload=json.dumps(payload),
         stream=form_data.stream,
-        key=get_api_key(url, request.app.state.config.OLLAMA_API_CONFIGS),
+        key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
         content_type="application/x-ndjson",
     )
 
@@ -1103,8 +1132,11 @@ async def generate_openai_completion(
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
 
-    url = await get_ollama_url(request, payload["model"], url_idx)
-    api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
+    api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+        str(url_idx),
+        request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
+    )
 
     prefix_id = api_config.get("prefix_id", None)
 
@@ -1115,7 +1147,7 @@ async def generate_openai_completion(
         url=f"{url}/v1/completions",
         payload=json.dumps(payload),
         stream=payload.get("stream", False),
-        key=get_api_key(url, request.app.state.config.OLLAMA_API_CONFIGS),
+        key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
     )
 
 
@@ -1177,8 +1209,11 @@ async def generate_openai_chat_completion(
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
 
-    url = await get_ollama_url(request, payload["model"], url_idx)
-    api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+    url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
+    api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+        str(url_idx),
+        request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
+    )
 
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
@@ -1188,7 +1223,7 @@ async def generate_openai_chat_completion(
         url=f"{url}/v1/chat/completions",
         payload=json.dumps(payload),
         stream=payload.get("stream", False),
-        key=get_api_key(url, request.app.state.config.OLLAMA_API_CONFIGS),
+        key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
     )
 
 
