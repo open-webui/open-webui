@@ -1933,7 +1933,7 @@ const saveChatHandler = async (_chatId) => {
 	<div
 		class="h-screen max-h-[100dvh] {$showSidebar
 			? 'md:max-w-[calc(100%-260px)]'
-			: ''} w-full max-w-full flex flex-col"
+			: ''} w-full max-w-full flex flex-col fr-background-default--grey"
 		id="chat-container"
 	>
 		{#if $settings?.backgroundImageUrl ?? null}
