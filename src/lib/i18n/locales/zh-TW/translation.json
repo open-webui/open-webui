@@ -934,7 +934,7 @@
 	"This will delete all models including custom models and cannot be undone.": "這將刪除所有模型，包括自訂模型，且無法復原。",
 	"This will reset the knowledge base and sync all files. Do you wish to continue?": "這將重設知識庫並同步所有檔案。您確定要繼續嗎？",
 	"Thorough explanation": "詳細解釋",
-	"Thought for {{DURATION}}": "",
+	"Thought for {{DURATION}}": "{{DURATION}} 思考中",
 	"Tika": "Tika",
 	"Tika Server URL required.": "需要 Tika 伺服器 URL。",
 	"Tiktoken": "Tiktoken",

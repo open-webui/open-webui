@@ -5,10 +5,12 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import isToday from 'dayjs/plugin/isToday';
 import isYesterday from 'dayjs/plugin/isYesterday';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 dayjs.extend(relativeTime);
 dayjs.extend(isToday);
 dayjs.extend(isYesterday);
+dayjs.extend(localizedFormat);
 
 import { WEBUI_BASE_URL } from '$lib/constants';
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
@@ -295,11 +297,11 @@ export const formatDate = (inputDate) => {
 	const now = dayjs();
 
 	if (date.isToday()) {
-		return `Today at ${date.format('HH:mm')}`;
+		return `Today at ${date.format('LT')}`;
 	} else if (date.isYesterday()) {
-		return `Yesterday at ${date.format('HH:mm')}`;
+		return `Yesterday at ${date.format('LT')}`;
 	} else {
-		return `${date.format('DD/MM/YYYY')} at ${date.format('HH:mm')}`;
+		return `${date.format('L')} at ${date.format('LT')}`;
 	}
 };
 

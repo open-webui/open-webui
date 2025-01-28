@@ -25,8 +25,8 @@ from open_webui.env import (
     WEBUI_AUTH,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
-    WEBUI_SESSION_COOKIE_SAME_SITE,
-    WEBUI_SESSION_COOKIE_SECURE,
+    WEBUI_AUTH_COOKIE_SAME_SITE,
+    WEBUI_AUTH_COOKIE_SECURE,
     SRC_LOG_LEVELS,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -95,8 +95,8 @@ async def get_session_user(
         value=token,
         expires=datetime_expires_at,
         httponly=True,  # Ensures the cookie is not accessible via JavaScript
-        samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
-        secure=WEBUI_SESSION_COOKIE_SECURE,
+        samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+        secure=WEBUI_AUTH_COOKIE_SECURE,
     )
 
     user_permissions = get_permissions(
@@ -378,8 +378,8 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             value=token,
             expires=datetime_expires_at,
             httponly=True,  # Ensures the cookie is not accessible via JavaScript
-            samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
-            secure=WEBUI_SESSION_COOKIE_SECURE,
+            samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+            secure=WEBUI_AUTH_COOKIE_SECURE,
         )
 
         user_permissions = get_permissions(
@@ -473,8 +473,8 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 value=token,
                 expires=datetime_expires_at,
                 httponly=True,  # Ensures the cookie is not accessible via JavaScript
-                samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
-                secure=WEBUI_SESSION_COOKIE_SECURE,
+                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                secure=WEBUI_AUTH_COOKIE_SECURE,
             )
 
             if request.app.state.config.WEBHOOK_URL:

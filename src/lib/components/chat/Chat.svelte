@@ -82,10 +82,12 @@
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
+	import Spinner from '../common/Spinner.svelte';
 
 	export let chatIdProp = '';
 
-	let loaded = false;
+	let loading = false;
+
 	const eventTarget = new EventTarget();
 	let controlPane;
 	let controlPaneComponent;
@@ -133,6 +135,7 @@
 
 	$: if (chatIdProp) {
 		(async () => {
+			loading = true;
 			console.log(chatIdProp);
 
 			prompt = '';
@@ -141,11 +144,9 @@
 			webSearchEnabled = false;
 			imageGenerationEnabled = false;
 
-			loaded = false;
-
 			if (chatIdProp && (await loadChat())) {
 				await tick();
-				loaded = true;
+				loading = false;
 
 				if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
 					try {
@@ -1861,7 +1862,7 @@
 		: ' '} w-full max-w-full flex flex-col"
 	id="chat-container"
 >
-	{#if !chatIdProp || (loaded && chatIdProp)}
+	{#if chatIdProp === '' || (!loading && chatIdProp)}
 		{#if $settings?.backgroundImageUrl ?? null}
 			<div
 				class="absolute {$showSidebar
@@ -2065,5 +2066,11 @@
 				{eventTarget}
 			/>
 		</PaneGroup>
+	{:else if loading}
+		<div class=" flex items-center justify-center h-full w-full">
+			<div class="m-auto">
+				<Spinner />
+			</div>
+		</div>
 	{/if}
 </div>
