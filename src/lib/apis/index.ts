@@ -1,9 +1,15 @@
 import { WEBUI_BASE_URL } from '$lib/constants';
-import { fetchWithCredentials } from '$lib/utils/fetchWrapper';
 
 export const getModels = async (token: string = '', base: boolean = false) => {
 	const error = null;
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/models${base ? '/base' : ''}`, { method: 'GET', headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(token && { authorization: `Bearer ${token}` }) } });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/models${base ? '/base' : ''}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	});
 
 	if (error) {
 		throw error;
@@ -24,7 +30,15 @@ type ChatCompletedForm = {
 export const chatCompleted = async (token: string, body: ChatCompletedForm) => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/chat/completed`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(token && { authorization: `Bearer ${token}` }) }, body: JSON.stringify(body) });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/chat/completed`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify(body)
+	});
 
 	if (error) {
 		throw error;
@@ -43,7 +57,15 @@ type ChatActionForm = {
 export const chatAction = async (token: string, action_id: string, body: ChatActionForm) => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/chat/actions/${action_id}`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(token && { authorization: `Bearer ${token}` }) }, body: JSON.stringify(body) });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/chat/actions/${action_id}`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify(body)
+	});
 
 	if (error) {
 		throw error;
@@ -56,7 +78,14 @@ export const chatAction = async (token: string, action_id: string, body: ChatAct
 export const stopTask = async (token: string, id: string) => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/tasks/stop/${id}`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(token && { authorization: `Bearer ${token}` }) } });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/tasks/stop/${id}`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	});
 
 	if (error) {
 		throw error;
@@ -69,7 +98,14 @@ export const stopTask = async (token: string, id: string) => {
 export const getTaskConfig = async (token: string = '') => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/v1/tasks/config`, { method: 'GET', headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(token && { authorization: `Bearer ${token}` }) } });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/config`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	});
 
 	if (error) {
 		throw error;
@@ -82,7 +118,15 @@ export const getTaskConfig = async (token: string = '') => {
 export const updateTaskConfig = async (token: string, config: object) => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/v1/tasks/config/update`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(token && { authorization: `Bearer ${token}` }) }, body: JSON.stringify(config) });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/config/update`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify(config)
+	});
 
 	if (error) {
 		throw error;
@@ -100,11 +144,19 @@ export const generateTitle = async (
 ) => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/v1/tasks/title/completions`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({
-		model: model,
-		messages: messages,
-		...(chat_id && { chat_id: chat_id })
-	}) });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/title/completions`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			messages: messages,
+			...(chat_id && { chat_id: chat_id })
+		})
+	});
 
 	if (error) {
 		throw error;
@@ -122,11 +174,19 @@ export const generateTags = async (
 ) => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/v1/tasks/tags/completions`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({
-		model: model,
-		messages: messages,
-		...(chat_id && { chat_id: chat_id })
-	}) });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/tags/completions`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			messages: messages,
+			...(chat_id && { chat_id: chat_id })
+		})
+	});
 
 	if (error) {
 		throw error;
@@ -177,11 +237,19 @@ export const generateEmoji = async (
 ) => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/v1/tasks/emoji/completions`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({
-		model: model,
-		prompt: prompt,
-		...(chat_id && { chat_id: chat_id })
-	}) });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/emoji/completions`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			prompt: prompt,
+			...(chat_id && { chat_id: chat_id })
+		})
+	});
 
 	if (error) {
 		throw error;
@@ -208,12 +276,20 @@ export const generateQueries = async (
 ) => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/v1/tasks/queries/completions`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({
-		model: model,
-		messages: messages,
-		prompt: prompt,
-		type: type
-	}) });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/queries/completions`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			messages: messages,
+			prompt: prompt,
+			type: type
+		})
+	});
 
 	if (error) {
 		throw error;
@@ -260,13 +336,21 @@ export const generateAutoCompletion = async (
 ) => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/v1/tasks/auto/completions`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({
-		model: model,
-		prompt: prompt,
-		...(messages && { messages: messages }),
-		type: type,
-		stream: false
-	}) });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/auto/completions`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			prompt: prompt,
+			...(messages && { messages: messages }),
+			type: type,
+			stream: false
+		})
+	});
 
 	if (error) {
 		throw error;
@@ -310,12 +394,20 @@ export const generateMoACompletion = async (
 ) => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/v1/tasks/moa/completions`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({
-		model: model,
-		prompt: prompt,
-		responses: responses,
-		stream: true
-	}) });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/moa/completions`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			prompt: prompt,
+			responses: responses,
+			stream: true
+		})
+	});
 
 	if (error) {
 		throw error;
@@ -328,7 +420,14 @@ export const generateMoACompletion = async (
 export const getPipelinesList = async (token: string = '') => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/v1/pipelines/list`, { method: 'GET', headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(token && { authorization: `Bearer ${token}` }) } });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/pipelines/list`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	});
 
 	if (error) {
 		throw error;
@@ -347,7 +446,10 @@ export const uploadPipeline = async (token: string, file: File, urlIdx: string) 
 	formData.append('file', file);
 	formData.append('urlIdx', urlIdx);
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/v1/pipelines/upload`, { method: 'POST', headers: { ...(token && { authorization: `Bearer ${token}` }) } });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/pipelines/upload`, {
+		method: 'POST',
+		headers: { ...(token && { authorization: `Bearer ${token}` }) }
+	});
 
 	if (error) {
 		throw error;
@@ -360,10 +462,18 @@ export const uploadPipeline = async (token: string, file: File, urlIdx: string) 
 export const downloadPipeline = async (token: string, url: string, urlIdx: string) => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/v1/pipelines/add`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(token && { authorization: `Bearer ${token}` }) }, body: JSON.stringify({
-		url: url,
-		urlIdx: urlIdx
-	}) });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/pipelines/add`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			url: url,
+			urlIdx: urlIdx
+		})
+	});
 
 	if (error) {
 		throw error;
@@ -376,10 +486,18 @@ export const downloadPipeline = async (token: string, url: string, urlIdx: strin
 export const deletePipeline = async (token: string, id: string, urlIdx: string) => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/v1/pipelines/delete`, { method: 'DELETE', headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(token && { authorization: `Bearer ${token}` }) }, body: JSON.stringify({
-		id: id,
-		urlIdx: urlIdx
-	}) });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/pipelines/delete`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			id: id,
+			urlIdx: urlIdx
+		})
+	});
 
 	if (error) {
 		throw error;
@@ -397,7 +515,17 @@ export const getPipelines = async (token: string, urlIdx?: string) => {
 		searchParams.append('urlIdx', urlIdx);
 	}
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/v1/pipelines/?${searchParams.toString()}`, { method: 'GET', headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(token && { authorization: `Bearer ${token}` }) } });
+	const res = await fetch(
+		`${WEBUI_BASE_URL}/api/v1/pipelines/?${searchParams.toString()}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
+		}
+	);
 
 	if (error) {
 		throw error;
@@ -416,9 +544,16 @@ export const getPipelineValves = async (token: string, pipeline_id: string, urlI
 		searchParams.append('urlIdx', urlIdx);
 	}
 
-	const res = await fetchWithCredentials(
+	const res = await fetch(
 		`${WEBUI_BASE_URL}/api/v1/pipelines/${pipeline_id}/valves?${searchParams.toString()}`,
-		{ method: 'GET', headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(token && { authorization: `Bearer ${token}` }) } }
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
+		}
 	);
 
 	if (error) {
@@ -437,9 +572,16 @@ export const getPipelineValvesSpec = async (token: string, pipeline_id: string, 
 		searchParams.append('urlIdx', urlIdx);
 	}
 
-	const res = await fetchWithCredentials(
+	const res = await fetch(
 		`${WEBUI_BASE_URL}/api/v1/pipelines/${pipeline_id}/valves/spec?${searchParams.toString()}`,
-		{ method: 'GET', headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(token && { authorization: `Bearer ${token}` }) } }
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
+		}
 	);
 
 	if (error) {
@@ -463,9 +605,17 @@ export const updatePipelineValves = async (
 		searchParams.append('urlIdx', urlIdx);
 	}
 
-	const res = await fetchWithCredentials(
+	const res = await fetch(
 		`${WEBUI_BASE_URL}/api/v1/pipelines/${pipeline_id}/valves/update?${searchParams.toString()}`,
-		{ method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(token && { authorization: `Bearer ${token}` }) }, body: JSON.stringify(valves) }
+		{
+			method: 'POST',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			},
+			body: JSON.stringify(valves)
+		}
 	);
 
 	if (error) {
@@ -479,7 +629,10 @@ export const updatePipelineValves = async (
 export const getBackendConfig = async () => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/config`, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/config`, {
+		method: 'GET',
+		headers: { 'Content-Type': 'application/json' }
+	});
 
 	if (error) {
 		throw error;
@@ -492,7 +645,10 @@ export const getBackendConfig = async () => {
 export const getChangelog = async () => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/changelog`, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/changelog`, {
+		method: 'GET',
+		headers: { 'Content-Type': 'application/json' }
+	});
 
 	if (error) {
 		throw error;
@@ -505,7 +661,10 @@ export const getChangelog = async () => {
 export const getVersionUpdates = async () => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/version/updates`, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/version/updates`, {
+		method: 'GET',
+		headers: { 'Content-Type': 'application/json' }
+	});
 
 	if (error) {
 		throw error;
@@ -518,7 +677,10 @@ export const getVersionUpdates = async () => {
 export const getModelFilterConfig = async (token: string) => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/config/model/filter`, { method: 'GET', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/config/model/filter`, {
+		method: 'GET',
+		headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+	});
 
 	if (error) {
 		throw error;
@@ -535,10 +697,14 @@ export const updateModelFilterConfig = async (
 ) => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/config/model/filter`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({
-		enabled: enabled,
-		models: models
-	}) });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/config/model/filter`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+		body: JSON.stringify({
+			enabled: enabled,
+			models: models
+		})
+	});
 
 	if (error) {
 		throw error;
@@ -551,7 +717,10 @@ export const updateModelFilterConfig = async (
 export const getWebhookUrl = async (token: string) => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/webhook`, { method: 'GET', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/webhook`, {
+		method: 'GET',
+		headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+	});
 
 	if (error) {
 		throw error;
@@ -564,9 +733,13 @@ export const getWebhookUrl = async (token: string) => {
 export const updateWebhookUrl = async (token: string, url: string) => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/webhook`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({
-		url: url
-	}) });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/webhook`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+		body: JSON.stringify({
+			url: url
+		})
+	});
 
 	if (error) {
 		throw error;
@@ -579,7 +752,10 @@ export const updateWebhookUrl = async (token: string, url: string) => {
 export const getCommunitySharingEnabledStatus = async (token: string) => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/community_sharing`, { method: 'GET', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/community_sharing`, {
+		method: 'GET',
+		headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+	});
 
 	if (error) {
 		throw error;
@@ -592,7 +768,10 @@ export const getCommunitySharingEnabledStatus = async (token: string) => {
 export const toggleCommunitySharingEnabledStatus = async (token: string) => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/community_sharing/toggle`, { method: 'GET', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/community_sharing/toggle`, {
+		method: 'GET',
+		headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+	});
 
 	if (error) {
 		throw error;
@@ -605,7 +784,10 @@ export const toggleCommunitySharingEnabledStatus = async (token: string) => {
 export const getModelConfig = async (token: string): Promise<GlobalModelConfig> => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/config/models`, { method: 'GET', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/config/models`, {
+		method: 'GET',
+		headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+	});
 
 	if (error) {
 		throw error;
@@ -636,9 +818,13 @@ export type GlobalModelConfig = ModelConfig[];
 export const updateModelConfig = async (token: string, config: GlobalModelConfig) => {
 	const error = null;
 
-	const res = await fetchWithCredentials(`${WEBUI_BASE_URL}/api/config/models`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({
-		models: config
-	}) });
+	const res = await fetch(`${WEBUI_BASE_URL}/api/config/models`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+		body: JSON.stringify({
+			models: config
+		})
+	});
 
 	if (error) {
 		throw error;

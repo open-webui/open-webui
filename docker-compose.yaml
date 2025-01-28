@@ -1,21 +1,63 @@
 services:
-  open-webui:
-    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
-    container_name: open-webui
+  ollama:
+    volumes:
+      - ollama:/root/.ollama
+    container_name: ollama
+    pull_policy: always
+    tty: true
+    restart: unless-stopped
+    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+
+  frontend:
+    build:
+      context: .
+      target: build
+      args:
+        OLLAMA_BASE_URL: '/ollama'
+      dockerfile: Dockerfile
+    container_name: open-webui-frontend
+    ports:
+      - ${OPEN_WEBUI_PORT-3000}:5173
+    environment:
+      - 'NODE_OPTIONS=--max-old-space-size=8192'
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      target: base
+      args:
+        OLLAMA_BASE_URL: '/ollama'
+      dockerfile: Dockerfile
+    container_name: open-webui-backend
     volumes:
       - open-webui:/app/backend/data
+    depends_on:
+      - ollama
     ports:
-      - ${OPEN_WEBUI_PORT-3000}:8080
+      - ${BACKEND_PORT-8080}:8080
     environment:
+      - 'OLLAMA_BASE_URL=http://ollama:11434'
       - 'WEBUI_SECRET_KEY='
       - 'OPENAI_API_BASE_URL=${OPENAI_API_BASE_URL}'
       - 'OPENAI_API_KEY=${OPENAI_API_KEY}'
       - 'OPENAI_API_BASE_URLS=${OPENAI_API_BASE_URLS}'
       - 'OPENAI_API_KEYS=${OPENAI_API_KEYS}'
-      - 'NODE_OPTIONS=--max-old-space-size=8192'
+      - 'BACKEND_URL=${BACKEND_URL}'
+      - 'FRONTEND_URL=${FRONTEND_URL}'
+      - 'PROCONNECT_CLIENT_ID=${PROCONNECT_CLIENT_ID}'
+      - 'PROCONNECT_CLIENT_SECRET=${PROCONNECT_CLIENT_SECRET}'
+      - 'SERVER_METADATA_URL=${SERVER_METADATA_URL}'
+      - 'PROCONNECT_SESSION_DURATION=${PROCONNECT_SESSION_DURATION}'
+      - 'REDIS_HOST=${REDIS_HOST}'
+      - 'REDIS_PORT=${REDIS_PORT}'
+      - 'REDIS_PASSWORD=${REDIS_PASSWORD}'
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
 
 volumes:
+  ollama: {}
   open-webui: {}

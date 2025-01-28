@@ -6,9 +6,9 @@ from datetime import UTC, datetime, timedelta
 from typing import Optional, Union, List, Dict
 
 from open_webui.models.users import Users
-
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import WEBUI_SECRET_KEY
+from open_webui.storage.redis_client import redis_client
 
 from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -74,86 +74,41 @@ def get_http_authorization_cred(auth_header: str):
         raise ValueError(ERROR_MESSAGES.INVALID_TOKEN)
 
 
-def get_current_user(
-    request: Request,
-    auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
-):
-    token = None
-    
-    if auth_token is not None:
-        token = auth_token.credentials
+async def get_current_user(request: Request):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
-    # auth by api key
-    if token and token.startswith("sk-"):
-        if not request.state.enable_api_key:
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
-            )
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise credentials_exception
 
-        if request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS:
-            allowed_paths = [
-                path.strip()
-                for path in str(
-                    request.app.state.config.API_KEY_ALLOWED_ENDPOINTS
-                ).split(",")
-            ]
+    token = auth_header.split(" ")[1]
 
-            if request.url.path not in allowed_paths:
-                raise HTTPException(
-                    status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
-                )
+    try:
+        payload = jwt.decode(token, SESSION_SECRET, algorithms=[ALGORITHM])
+        user_id = payload.get("id")
+        if user_id is None:
+            raise credentials_exception
+    except jwt.InvalidTokenError:
+        raise credentials_exception
 
-        return get_current_user_by_api_key(token)
-
-    # Get user from session with detailed logging
-    print(f"Request path: {request.url.path}")
-    print(f"Session cookie: {request.cookies.get('session')}")
-    print(f"All cookies: {request.cookies}")
-    print(f"All session data: {request.session}")
-    
-    user = request.session.get('user')
-    if not user or not user.get('email'):
-        print(f"User not found in session for path {request.url.path}")
-        raise HTTPException(status_code=401, detail="Authentication required")
-
-    # Get user from database
-    db_user = Users.get_user_by_email(user.get('email'))
-    if not db_user:
-        print(f"User {user.get('email')} not found in database")
-        raise HTTPException(status_code=401, detail="User not found")
-
-    Users.update_user_last_active_by_id(db_user.id)
-    return db_user
-
-
-def get_current_user_by_api_key(api_key: str):
-    user = Users.get_user_by_api_key(api_key)
-
+    user = Users.get_user_by_id(user_id)
     if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.INVALID_TOKEN,
-        )
-    else:
-        Users.update_user_last_active_by_id(user.id)
+        raise credentials_exception
 
     return user
 
 
-def get_verified_user(user=Depends(get_current_user)):
-    print("user role: ", user.role)
-    if user.role not in {"user", "admin"}:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+async def get_verified_user(user=Depends(get_current_user)):
+    if not user:
+        raise HTTPException(401, "Could not validate credentials")
     return user
 
 
-def get_admin_user(user=Depends(get_current_user)):
-    if user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+async def get_admin_user(user=Depends(get_current_user)):
+    if not user or user.role != "admin":
+        raise HTTPException(401, "Admin privileges required")
     return user

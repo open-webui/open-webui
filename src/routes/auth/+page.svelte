@@ -33,7 +33,7 @@
 			console.log(sessionUser);
 			toast.success($i18n.t(`You're now logged in.`));
 			if (sessionUser.token) {
-				localStorage.token = sessionUser.token;
+				localStorage.setItem('token', sessionUser.token);
 			}
 
 			$socket.emit('user-join', { auth: { token: sessionUser.token } });
@@ -97,15 +97,23 @@
 		if (!token) {
 			return;
 		}
+		
+		localStorage.setItem('token', token);
+		
 		const sessionUser = await getSessionUser().catch((error) => {
+			localStorage.removeItem('token'); // Clear token if getSessionUser fails
 			toast.error(error);
 			return null;
 		});
+		
 		if (!sessionUser) {
 			return;
 		}
-		localStorage.token = token;
-		await setSessionUser(sessionUser);
+		
+		$socket.emit('user-join', { auth: { token: sessionUser.token } });
+		await user.set(sessionUser);
+		await config.set(await getBackendConfig());
+		goto('/');
 	};
 
 	let onboarding = false;

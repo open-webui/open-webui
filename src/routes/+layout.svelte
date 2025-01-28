@@ -239,15 +239,32 @@
 			await WEBUI_NAME.set(backendConfig.name);
 
 			if ($config) {
+				// Check for token in URL hash first
+				const hash = $page.url.hash;
+				if (hash && hash.includes('token=')) {
+					const params = new URLSearchParams(hash.substring(1));
+					const token = params.get('token');
+					if (token) {
+						localStorage.setItem('token', token);
+						// Wait a tick to ensure token is stored
+						await tick();
+					}
+				}
+
+				// Now setup socket with the token (if any)
 				await setupSocket($config.features?.enable_websocket ?? true);
 
+				// Try to get session user with the token
 				const sessionUser = await getSessionUser().catch(async (error) => {
 					console.log('error', error);
+					// Clear token if session user retrieval fails
+					localStorage.removeItem('token');
+					return null;
 				});
 
 				if (sessionUser) {
 					// Save Session User to Store
-					$socket.emit('user-join', { auth: { token: sessionUser.token } });
+					$socket?.emit('user-join', { auth: { token: sessionUser.token } });
 
 					$socket?.on('chat-events', chatEventHandler);
 					$socket?.on('channel-events', channelEventHandler);
