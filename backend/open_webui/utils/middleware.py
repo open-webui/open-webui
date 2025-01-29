@@ -1,3 +1,4 @@
+import re
 import time
 import logging
 import sys
@@ -77,6 +78,8 @@ from open_webui.constants import TASKS
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+REASONING_TAGS = ["think", "reason", "reasoning", "thought", "Thought"]
 
 
 async def chat_completion_filter_functions_handler(request, body, model, extra_params):
@@ -864,6 +867,16 @@ async def process_chat_payload(request, form_data, metadata, user, model):
     return form_data, events
 
 
+def strip_tag_prefix(string: str, tags: list[str]) -> str:
+    for tag in tags:
+        if re.match(rf"<{tag}.*?>", string, re.DOTALL):
+            string: str | None = (
+                match := re.fullmatch(rf"<{tag}.*?>.*?</{tag}>(.*)", string, re.DOTALL)
+            ) and match.group(1)
+            break
+    return string or ""
+
+
 async def process_chat_response(
     request, response, form_data, user, events, metadata, tasks
 ):
@@ -888,21 +901,22 @@ async def process_chat_response(
                         )
 
                         if res and isinstance(res, dict):
-                            if len(res.get("choices", [])) == 1:
-                                title = (
-                                    res.get("choices", [])[0]
-                                    .get("message", {})
-                                    .get(
-                                        "content",
-                                        message.get("content", "New Chat"),
-                                    )
-                                ).strip()
-                            else:
+                            try:
+                                title = strip_tag_prefix(
+                                    res["choices"][0]["message"]["content"],
+                                    REASONING_TAGS,
+                                )
+                            except (KeyError, IndexError):
                                 title = None
-
-                            if not title:
-                                title = messages[0].get("content", "New Chat")
-
+                            title = (
+                                title
+                                or (
+                                    (assistant_message := message.get("content"))
+                                    and strip_tag_prefix(assistant_message, ["details"])
+                                )
+                                or messages[0].get("content")
+                                or "New Chat"
+                            ).strip()
                             Chats.update_chat_title_by_id(metadata["chat_id"], title)
 
                             await event_emitter(
@@ -1078,7 +1092,6 @@ async def process_chat_response(
 
                 # We might want to disable this by default
                 detect_reasoning = True
-                reasoning_tags = ["think", "reason", "reasoning", "thought", "Thought"]
                 current_tag = None
 
                 reasoning_start_time = None
@@ -1123,7 +1136,7 @@ async def process_chat_response(
                                 content = f"{content}{value}"
 
                                 if detect_reasoning:
-                                    for tag in reasoning_tags:
+                                    for tag in REASONING_TAGS:
                                         start_tag = f"<{tag}>\n"
                                         end_tag = f"</{tag}>\n"
 

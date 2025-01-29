@@ -12,6 +12,8 @@ from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
 from sqlalchemy import or_, func, select, and_, text
 from sqlalchemy.sql import exists
 
+MAX_TITLE_LENGTH: int = 50
+
 ####################
 # Chat DB Schema
 ####################
@@ -174,7 +176,7 @@ class ChatTable:
             return None
 
         chat = chat.chat
-        chat["title"] = title
+        chat["title"] = title[:MAX_TITLE_LENGTH]
 
         return self.update_chat_by_id(id, chat)
 

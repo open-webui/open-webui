@@ -52,6 +52,7 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
         "TASK_MODEL": request.app.state.config.TASK_MODEL,
         "TASK_MODEL_EXTERNAL": request.app.state.config.TASK_MODEL_EXTERNAL,
         "TITLE_GENERATION_PROMPT_TEMPLATE": request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE,
+        "TITLE_GENERATION_MODEL_USES_COT": request.app.state.config.TITLE_GENERATION_MODEL_USES_COT,
         "IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE": request.app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_AUTOCOMPLETE_GENERATION": request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION,
         "AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH": request.app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
@@ -68,6 +69,7 @@ class TaskConfigForm(BaseModel):
     TASK_MODEL: Optional[str]
     TASK_MODEL_EXTERNAL: Optional[str]
     TITLE_GENERATION_PROMPT_TEMPLATE: str
+    TITLE_GENERATION_MODEL_USES_COT: bool
     IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: str
     ENABLE_AUTOCOMPLETE_GENERATION: bool
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH: int
@@ -87,6 +89,9 @@ async def update_task_config(
     request.app.state.config.TASK_MODEL_EXTERNAL = form_data.TASK_MODEL_EXTERNAL
     request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = (
         form_data.TITLE_GENERATION_PROMPT_TEMPLATE
+    )
+    request.app.state.config.TITLE_GENERATION_MODEL_USES_COT = (
+        form_data.TITLE_GENERATION_MODEL_USES_COT
     )
 
     request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION = (
@@ -118,6 +123,7 @@ async def update_task_config(
         "TASK_MODEL": request.app.state.config.TASK_MODEL,
         "TASK_MODEL_EXTERNAL": request.app.state.config.TASK_MODEL_EXTERNAL,
         "TITLE_GENERATION_PROMPT_TEMPLATE": request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE,
+        "TITLE_GENERATION_MODEL_USES_COT": request.app.state.config.TITLE_GENERATION_MODEL_USES_COT,
         "IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE": request.app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_AUTOCOMPLETE_GENERATION": request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION,
         "AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH": request.app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
@@ -170,17 +176,18 @@ async def generate_title(
         },
     )
 
+    if request.app.state.config.TITLE_GENERATION_MODEL_USES_COT:
+        max_completion_tokens_option = {}
+    elif models[task_model_id]["owned_by"] == "ollama":
+        max_completion_tokens_option = {"max_tokens": 50}
+    else:
+        max_completion_tokens_option = {"max_completion_tokens": 50}
+
     payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": False,
-        **(
-            {"max_tokens": 50}
-            if models[task_model_id]["owned_by"] == "ollama"
-            else {
-                "max_completion_tokens": 50,
-            }
-        ),
+        **max_completion_tokens_option,
         "metadata": {
             "task": str(TASKS.TITLE_GENERATION),
             "task_body": form_data,

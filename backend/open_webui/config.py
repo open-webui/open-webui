@@ -1094,6 +1094,12 @@ TITLE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     os.environ.get("TITLE_GENERATION_PROMPT_TEMPLATE", ""),
 )
 
+TITLE_GENERATION_MODEL_USES_COT = PersistentConfig(
+    "TITLE_GENERATION_MODEL_USES_COT",
+    "task.title.model_uses_cot",
+    os.environ.get("TITLE_GENERATION_MODEL_USES_COT", "False").lower() == "true",
+)
+
 DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = """Create a concise, 3-5 word title with an emoji as a title for the chat history, in the given language. Suitable Emojis for the summary can be used to enhance understanding but avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
 
 Examples of titles:

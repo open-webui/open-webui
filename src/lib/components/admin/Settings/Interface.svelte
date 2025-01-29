@@ -24,6 +24,7 @@
 		TASK_MODEL: '',
 		TASK_MODEL_EXTERNAL: '',
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
+		TITLE_GENERATION_MODEL_USES_COT: false,
 		IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_AUTOCOMPLETE_GENERATION: true,
 		AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH: -1,
@@ -139,6 +140,13 @@
 							)}
 						/>
 					</Tooltip>
+				</div>
+
+				<div class="my-3 flex w-full items-center justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Title generation model uses chain of thought (e.g. <think>...</think>)')}
+					</div>
+					<Switch bind:state={taskConfig.TITLE_GENERATION_MODEL_USES_COT} />
 				</div>
 
 				<div class="mt-3">
