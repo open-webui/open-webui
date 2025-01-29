@@ -666,6 +666,9 @@ def apply_params_to_form_data(form_data, model):
         if "temperature" in params:
             form_data["temperature"] = params["temperature"]
 
+        if "max_tokens" in params:
+            form_data["max_tokens"] = params["max_tokens"]
+
         if "top_p" in params:
             form_data["top_p"] = params["top_p"]
 
