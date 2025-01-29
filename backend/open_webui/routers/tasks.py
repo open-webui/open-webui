@@ -175,10 +175,10 @@ async def generate_title(
         "messages": [{"role": "user", "content": content}],
         "stream": False,
         **(
-            {"max_tokens": 50}
+            {"max_tokens": 1000}
             if models[task_model_id]["owned_by"] == "ollama"
             else {
-                "max_completion_tokens": 50,
+                "max_completion_tokens": 1000,
             }
         ),
         "metadata": {

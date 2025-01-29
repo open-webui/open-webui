@@ -892,16 +892,24 @@ async def process_chat_response(
 
                         if res and isinstance(res, dict):
                             if len(res.get("choices", [])) == 1:
-                                title = (
+                                title_string = (
                                     res.get("choices", [])[0]
                                     .get("message", {})
-                                    .get(
-                                        "content",
-                                        message.get("content", "New Chat"),
-                                    )
-                                ).strip()
+                                    .get("content", message.get("content", "New Chat"))
+                                )
                             else:
-                                title = None
+                                title_string = ""
+
+                            title_string = title_string[
+                                title_string.find("{") : title_string.rfind("}") + 1
+                            ]
+
+                            try:
+                                title = json.loads(title_string).get(
+                                    "title", "New Chat"
+                                )
+                            except Exception as e:
+                                pass
 
                             if not title:
                                 title = messages[0].get("content", "New Chat")
