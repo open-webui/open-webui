@@ -1,63 +1,61 @@
 services:
-  ollama:
-    volumes:
-      - ollama:/root/.ollama
-    container_name: ollama
-    pull_policy: always
-    tty: true
-    restart: unless-stopped
-    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
-
-  frontend:
+  albert-conversation:
     build:
       context: .
-      target: build
-      args:
-        OLLAMA_BASE_URL: '/ollama'
       dockerfile: Dockerfile
-    container_name: open-webui-frontend
-    ports:
-      - ${OPEN_WEBUI_PORT-3000}:5173
-    environment:
-      - 'NODE_OPTIONS=--max-old-space-size=8192'
-    depends_on:
-      - backend
-    restart: unless-stopped
-
-  backend:
-    build:
-      context: .
-      target: base
       args:
-        OLLAMA_BASE_URL: '/ollama'
-      dockerfile: Dockerfile
-    container_name: open-webui-backend
+        - BUILD_HASH=${BUILD_HASH:-dev-build}
+    container_name: albert-conversation
     volumes:
-      - open-webui:/app/backend/data
-    depends_on:
-      - ollama
+      - albert-conversation:/app/backend/data
+      - ./src:/app/src
+      - ./backend:/app/backend
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
     ports:
-      - ${BACKEND_PORT-8080}:8080
+      - ${OPEN_WEBUI_PORT-3000}:8080
     environment:
-      - 'OLLAMA_BASE_URL=http://ollama:11434'
       - 'WEBUI_SECRET_KEY='
       - 'OPENAI_API_BASE_URL=${OPENAI_API_BASE_URL}'
       - 'OPENAI_API_KEY=${OPENAI_API_KEY}'
       - 'OPENAI_API_BASE_URLS=${OPENAI_API_BASE_URLS}'
       - 'OPENAI_API_KEYS=${OPENAI_API_KEYS}'
-      - 'BACKEND_URL=${BACKEND_URL}'
+      - 'NODE_OPTIONS=--max-old-space-size=8192'
       - 'FRONTEND_URL=${FRONTEND_URL}'
+      - 'BACKEND_URL=${BACKEND_URL}'
+      # ProConnect
       - 'PROCONNECT_CLIENT_ID=${PROCONNECT_CLIENT_ID}'
       - 'PROCONNECT_CLIENT_SECRET=${PROCONNECT_CLIENT_SECRET}'
-      - 'SERVER_METADATA_URL=${SERVER_METADATA_URL}'
       - 'PROCONNECT_SESSION_DURATION=${PROCONNECT_SESSION_DURATION}'
-      - 'REDIS_HOST=${REDIS_HOST}'
-      - 'REDIS_PORT=${REDIS_PORT}'
+      - 'SERVER_METADATA_URL=${SERVER_METADATA_URL}'
+      # Redis
+      - 'REDIS_HOST=redis'
+      - 'REDIS_PORT=6379'
       - 'REDIS_PASSWORD=${REDIS_PASSWORD}'
+    depends_on:
+      - redis
+    networks:
+      - albert-network
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    container_name: albert-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - albert-network
+    restart: unless-stopped
+
 volumes:
-  ollama: {}
-  open-webui: {}
+  albert-conversation: {}
+  redis-data: {}
+
+networks:
+  albert-network:
+    driver: bridge
