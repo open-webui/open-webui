@@ -19,9 +19,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
-                sh """
-                    cd open-webui
-                """
+                sh "ls -la"
             }
         }
 
