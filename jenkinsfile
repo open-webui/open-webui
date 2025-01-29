@@ -4,8 +4,6 @@ pipeline {
     environment {
         IMAGE_NAME = "open-webui"
         IMAGE_TAG = "latest"
-        AWS_ACCOUNT_ID = credentials('AWS_ACCOUNT_ID')
-        ECR_REPO_URL = credentials('ECR_REPO_URL')
     }
 
     stages {
@@ -18,47 +16,38 @@ pipeline {
             }
         }
 
-        stage('Clone forked open-webui repo and build Docker image') {
+        stage('Checkout') {
             steps {
-
-                sh '''
-                    echo "Cloning repository https://github.com/Sharonk77/open-webui..."
-                    git clone https://github.com/Sharonk77/open-webui
+                checkout scm
+                sh """
                     cd open-webui
-                    echo "Building Docker image..."
-                    docker build -t $IMAGE_NAME .
-                '''
+                """
             }
         }
 
-        stage('Tag Docker Image') {
+        stage('Build Docker Image') {
             steps {
                 script {
-                    withCredentials([
-                        string(credentialsId: 'ECR_REPO_URL', variable: 'ECR_REPO_URL')
-                    ]) {
-                        sh '''
-                            echo "Current directory:" $(pwd)
-                            echo "Tagging Docker image..."
-                            docker tag $IMAGE_NAME:$IMAGE_TAG $ECR_REPO_URL:$IMAGE_TAG
-                        '''
+                    withCredentials([string(credentialsId: 'REGISTRY', variable: 'REGISTRY')]) {
+                        def appImage = docker.build("${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}", ".")
                     }
                 }
             }
         }
 
-        stage('Push Docker Image to ECR') {
+        stage('Push to Registry') {
             steps {
                 script {
                     withCredentials([
-                        string(credentialsId: 'ECR_REPO_URL', variable: 'ECR_REPO_URL')
+                        string(credentialsId: 'AWS_ACCOUNT_ID', variable: 'AWS_ACCOUNT_ID'),
+                        string(credentialsId: 'REGISTRY', variable: 'REGISTRY')
                     ]) {
                         withAWS(credentials: 'aws_admin_user', region: 'us-east-1') {
                             docker.withRegistry("https://${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com", "ecr:us-east-1:aws_admin_user") {
+                                def appImage = docker.image("${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}")
+                                appImage.push()
                                 sh """
-                                docker push ${ECR_REPO_URL}:${IMAGE_TAG}
-                                echo "pushed to ECR..."
-
+                                    echo "Pushed to ECR..."
                                 """
                             }
                         }
@@ -67,27 +56,26 @@ pipeline {
             }
         }
 
-        stage('deploy open-webui') {
+        stage('Deploy open-webui') {
             steps {
                 script {
-
-                    sh '''
-                    echo "applying deployment files"
-                    cd open-webui
-                    echo "Current directory:" $(pwd)
-                    kubectl apply -f open-webui-deployment.yaml open-webui-service.yaml
-                    echo "setting image"
-                    kubectl set image deployment/open-webui open-webui=${ECR_REPO_URL}:${IMAGE_TAG}
-                    '''
+                    withCredentials([string(credentialsId: 'REGISTRY', variable: 'REGISTRY')]) {
+                        sh '''
+                            echo "Applying deployment files"
+                            echo "Current directory:" $(pwd)
+                            kubectl apply -f open-webui-deployment.yaml open-webui-service.yaml
+                            echo "Setting image"
+                            kubectl set image deployment/open-webui open-webui=${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+                        '''
+                    }
                 }
             }
         }
     }
 
-
     post {
         success {
-            echo "success"
+            echo "Success"
         }
         failure {
             echo "Failure"
