@@ -167,13 +167,11 @@ async def generate_title(
     # Remove reasoning details from the messages
     for message in messages:
         message["content"] = re.sub(
-            r"<details\s+type=\"reasoning\"[^>]*>.*?<\/details>",
+            r'<details\s+type="reasoning".*?>.*?</details>',
             "",
             message["content"],
-            flags=re.S,
+            flags=re.DOTALL,
         ).strip()
-
-    print(messages)
 
     content = title_generation_template(
         template,
