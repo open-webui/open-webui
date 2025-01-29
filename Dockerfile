@@ -27,11 +27,17 @@ ARG BUILD_HASH
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN rm -f package-lock.json && npm install && npm cache clean --force
+
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
-RUN npm run build
+ENV NODE_ENV=production
+ENV VITE_DISABLE_SOURCEMAPS=true
+
+RUN npm run pyodide:fetch
+
+RUN node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build
 
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base

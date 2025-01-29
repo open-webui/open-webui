@@ -28,6 +28,11 @@ from open_webui.env import (
     WEBUI_SESSION_COOKIE_SAME_SITE,
     WEBUI_SESSION_COOKIE_SECURE,
     SRC_LOG_LEVELS,
+    PROCONNECT_CLIENT_ID,
+    PROCONNECT_CLIENT_SECRET,
+    FRONTEND_URL,
+    BACKEND_URL,
+    SERVER_METADATA_URL,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response
@@ -54,7 +59,34 @@ from ssl import CERT_REQUIRED, PROTOCOL_TLS
 from ldap3 import Server, Connection, ALL, Tls
 from ldap3.utils.conv import escape_filter_chars
 
+from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi.responses import RedirectResponse, JSONResponse
+from starlette.middleware.sessions import SessionMiddleware
+from authlib.integrations.starlette_client import OAuth, OAuthError
+from authlib.oidc.core import UserInfo
+from starlette.config import Config
+from starlette.datastructures import MutableHeaders
+from itsdangerous import URLSafeSerializer
+from authlib.integrations.httpx_client import AsyncOAuth2Client
+import urllib.parse
+import secrets
+import jwt
+import httpx
+from open_webui.storage.redis_client import redis_client
+
 router = APIRouter()
+# OAuth configuration
+oauth = OAuth()
+oauth.register(
+    name="fca",
+    server_metadata_url=SERVER_METADATA_URL,
+    client_id=PROCONNECT_CLIENT_ID,
+    client_secret=PROCONNECT_CLIENT_SECRET,
+    client_kwargs={
+        "scope": "openid profile email given_name usual_name",
+    },
+)
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -306,8 +338,21 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 ############################
 
 
+@router.get("/signin", response_model=SessionUserResponse)
+async def signin_proconnect(request: Request):
+    """Handle ProConnect OAuth signin"""
+    redirect_uri = f"{BACKEND_URL}/api/v1/auths/callback"
+    state = secrets.token_urlsafe(32)
+    nonce = secrets.token_urlsafe(32)
+    request.session["state"] = state
+    request.session["nonce"] = nonce
+    return await oauth.fca.authorize_redirect(
+        request, redirect_uri, state=state, nonce=nonce
+    )
+
 @router.post("/signin", response_model=SessionUserResponse)
 async def signin(request: Request, response: Response, form_data: SigninForm):
+    """Handle regular username/password signin"""
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
@@ -328,6 +373,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             )
         user = Auths.authenticate_user_by_trusted_header(trusted_email)
     elif WEBUI_AUTH == False:
+        # Allow admin login when auth is disabled
         admin_email = "admin@localhost"
         admin_password = "admin"
 
@@ -340,15 +386,15 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             await signup(
                 request,
                 response,
-                SignupForm(email=admin_email, password=admin_password, name="User"),
+                SignupForm(email=admin_email, password=admin_password, name="Admin"),
             )
 
             user = Auths.authenticate_user(admin_email.lower(), admin_password)
     else:
+        # Regular username/password authentication
         user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
 
     if user:
-
         expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
         expires_at = None
         if expires_delta:
@@ -359,21 +405,14 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             expires_delta=expires_delta,
         )
 
-        datetime_expires_at = (
-            datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
-            if expires_at
-            else None
-        )
-
-        # Set the cookie token
-        response.set_cookie(
-            key="token",
-            value=token,
-            expires=datetime_expires_at,
-            httponly=True,  # Ensures the cookie is not accessible via JavaScript
-            samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
-            secure=WEBUI_SESSION_COOKIE_SECURE,
-        )
+        # Store user info in session
+        request.session['user'] = {
+            'email': user.email,
+            'name': user.name,
+            'role': user.role,
+            'id': user.id,
+            'profile_image_url': user.profile_image_url
+        }
 
         user_permissions = get_permissions(
             user.id, request.app.state.config.USER_PERMISSIONS
@@ -389,9 +428,160 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             "role": user.role,
             "profile_image_url": user.profile_image_url,
             "permissions": user_permissions,
+            "auth_type": "regular"
         }
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
+
+############################
+# OAuth2 Callback
+############################
+
+
+@router.get("/callback")
+async def auth_callback(request: Request, response: Response):
+    try:
+        client_code = request.query_params.get("code")
+        if not client_code:
+            raise HTTPException(status_code=400, detail="Missing code parameter")
+
+        stored_state = request.session.get("state")
+        stored_nonce = request.session.get("nonce")
+        if not stored_state or not stored_nonce:
+            raise HTTPException(status_code=400, detail="Missing state or nonce")
+
+        # Optionally clear state and nonce to prevent replay attacks
+        request.session.pop("state", None)
+        request.session.pop("nonce", None)
+
+        token_endpoint = oauth.fca.server_metadata.get("token_endpoint")
+        if not token_endpoint:
+            raise HTTPException(
+                status_code=500, detail="Missing token endpoint in provider metadata"
+            )
+
+        async with AsyncOAuth2Client(
+            client_id=PROCONNECT_CLIENT_ID,
+            client_secret=PROCONNECT_CLIENT_SECRET,
+            token_endpoint=token_endpoint,
+        ) as client:
+            token_response = await client.fetch_token(
+                token_endpoint,
+                grant_type="authorization_code",
+                code=client_code,
+                redirect_uri=f"{BACKEND_URL}/api/v1/auths/callback",
+            )
+
+        if not token_response or "access_token" not in token_response:
+            raise HTTPException(
+                status_code=500, detail="Failed to acquire access token"
+            )
+
+        id_token = token_response.get("id_token")
+        if id_token:
+            # Store the ID token for logout
+            request.session["id_token"] = id_token
+            # Authlib can parse and validate the ID token (nonce, signatures, etc.)
+            id_token_claims = await oauth.fca.parse_id_token(
+                token_response, nonce=stored_nonce
+            )
+            if id_token_claims.get("nonce") != stored_nonce:
+                raise HTTPException(status_code=400, detail="Invalid nonce in ID token")
+
+        userinfo_endpoint = oauth.fca.server_metadata.get("userinfo_endpoint")
+        if not userinfo_endpoint:
+            raise HTTPException(
+                status_code=500, detail="Missing userinfo endpoint in provider metadata"
+            )
+
+        async with httpx.AsyncClient() as client:
+            userinfo_response = await client.get(
+                userinfo_endpoint,
+                headers={"Authorization": f"Bearer {token_response['access_token']}"},
+            )
+
+        if userinfo_response.status_code != 200:
+            raise HTTPException(
+                status_code=userinfo_response.status_code,
+                detail=f"Userinfo endpoint returned an error: {userinfo_response.text}",
+            )
+
+        if not userinfo_response.text:
+            raise HTTPException(
+                status_code=500, detail="Empty response from userinfo endpoint"
+            )
+
+        user_info = jwt.decode(
+            userinfo_response.text, options={"verify_signature": False}
+        )
+        if not user_info or "sub" not in user_info:
+            raise HTTPException(status_code=500, detail="Invalid user info received")
+
+        # Create or retrieve user in local database
+        email = user_info.get("email")
+        name = f"{user_info.get('given_name', '')} {user_info.get('usual_name', '')}".strip()
+
+        if not email:
+            raise HTTPException(status_code=400, detail="Missing email in user info")
+
+        # Check if user exists in database
+        db_user = Users.get_user_by_email(email)
+        if not db_user:
+            # If no users exist yet, assign 'admin'; otherwise, use default role
+            role = (
+                "admin"
+                if Users.get_num_users() == 0
+                else request.app.state.config.DEFAULT_USER_ROLE
+            )
+            db_user = Auths.insert_new_auth(
+                email=email,
+                password=secrets.token_urlsafe(32),  # Random password since we use OAuth
+                name=name,
+                role=role,
+            )
+            if not db_user:
+                raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+
+        # Store user info in session
+        request.session['user'] = {
+            'email': db_user.email,
+            'name': db_user.name,
+            'role': db_user.role,
+            'id': db_user.id,
+            'profile_image_url': db_user.profile_image_url
+        }
+
+        # Create session token
+        expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
+        expires_at = None
+        if expires_delta:
+            expires_at = int(time.time()) + int(expires_delta.total_seconds())
+
+        token = create_token(
+            data={"id": db_user.id},
+            expires_delta=expires_delta,
+        )
+
+        # Store the access token in Redis for future use
+        if redis_client:
+            redis_client.set(
+                f"user_access_token:{db_user.id}",
+                token_response['access_token'],
+                ex=3600  # 1 hour expiration
+            )
+
+        # Redirect to frontend with token and auth type
+        redirect_url = f"{FRONTEND_URL}/#token={token}&auth_type=pro-connect"
+        return RedirectResponse(url=redirect_url)
+
+    except (OAuthError, httpx.HTTPError, ValueError) as error:
+        # Redirect to frontend with error
+        error_redirect = f"{FRONTEND_URL}?error={str(error)}"
+        return RedirectResponse(url=error_redirect)
+    except Exception as err:
+        error_redirect = f"{FRONTEND_URL}?error={str(err)}"
+        return RedirectResponse(url=error_redirect)
 
 
 ############################
@@ -401,19 +591,8 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
 @router.post("/signup", response_model=SessionUserResponse)
 async def signup(request: Request, response: Response, form_data: SignupForm):
-    if WEBUI_AUTH:
-        if (
-            not request.app.state.config.ENABLE_SIGNUP
-            or not request.app.state.config.ENABLE_LOGIN_FORM
-        ):
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
-            )
-    else:
-        if Users.get_num_users() != 0:
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
-            )
+    if not request.app.state.config.ENABLE_SIGNUP:
+        raise HTTPException(400, detail=ERROR_MESSAGES.SIGNUP_DISABLED)
 
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
@@ -429,10 +608,6 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             if Users.get_num_users() == 0
             else request.app.state.config.DEFAULT_USER_ROLE
         )
-
-        if Users.get_num_users() == 0:
-            # Disable signup after the first user is created
-            request.app.state.config.ENABLE_SIGNUP = False
 
         hashed = get_password_hash(form_data.password)
         user = Auths.insert_new_auth(
@@ -454,21 +629,14 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 expires_delta=expires_delta,
             )
 
-            datetime_expires_at = (
-                datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
-                if expires_at
-                else None
-            )
-
-            # Set the cookie token
-            response.set_cookie(
-                key="token",
-                value=token,
-                expires=datetime_expires_at,
-                httponly=True,  # Ensures the cookie is not accessible via JavaScript
-                samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
-                secure=WEBUI_SESSION_COOKIE_SECURE,
-            )
+            # Store user info in session
+            request.session['user'] = {
+                'email': user.email,
+                'name': user.name,
+                'role': user.role,
+                'id': user.id,
+                'profile_image_url': user.profile_image_url
+            }
 
             if request.app.state.config.WEBHOOK_URL:
                 post_webhook(
@@ -481,10 +649,6 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                     },
                 )
 
-            user_permissions = get_permissions(
-                user.id, request.app.state.config.USER_PERMISSIONS
-            )
-
             return {
                 "token": token,
                 "token_type": "Bearer",
@@ -494,7 +658,6 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 "name": user.name,
                 "role": user.role,
                 "profile_image_url": user.profile_image_url,
-                "permissions": user_permissions,
             }
         else:
             raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
@@ -502,33 +665,87 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
         raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
 
 
-@router.get("/signout")
-async def signout(request: Request, response: Response):
-    response.delete_cookie("token")
+@router.get("/prepare-logout")
+async def prepare_logout(request: Request, response: Response, user=Depends(get_current_user)):
+    # Get the token from Authorization header
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid or missing token")
+    
+    token = auth_header.split(" ")[1]
+    
+    # Get the ID token before clearing session
+    id_token = request.session.get("id_token")
+    
+    # If using Redis, clean up user's stored tokens
+    if redis_client:
+        # Clean up user's access token
+        redis_client.delete(f"user_access_token:{user.id}")
+        
+        # Get session ID if it exists
+        session_id = request.cookies.get("session")
+        if session_id:
+            redis_client.delete(session_id)
+    
+    # Handle ProConnect OAuth logout if ID token exists
+    if id_token:
+        logout_state = secrets.token_urlsafe(32)
+        
+        post_logout_redirect_uri = f"{BACKEND_URL}/api/v1/auths/logout"
+        logout_params = {
+            "id_token_hint": id_token,
+            "state": logout_state,
+            "post_logout_redirect_uri": post_logout_redirect_uri,
+        }
+        
+        session_id = request.cookies.get("session")
+        if session_id and redis_client:
+            redis_client.set(name=f"logout_state:{session_id}", value=logout_state, ex=3600)
+        
+        # Clear session after storing necessary data
+        request.session.clear()
+            
+        logout_url = f"https://fca.integ01.dev-agentconnect.fr/api/v2/session/end?{urllib.parse.urlencode(logout_params)}"
+        return RedirectResponse(url=logout_url)
+    
+    # Clear session for non-ProConnect logout
+    request.session.clear()
+    
+    # For token-based authentication, clear cookies and return success
+    response.delete_cookie("token", path="/")
+    response.delete_cookie("session", path="/")
+    return {"status": "success"}
 
-    if ENABLE_OAUTH_SIGNUP.value:
-        oauth_id_token = request.cookies.get("oauth_id_token")
-        if oauth_id_token:
-            try:
-                async with ClientSession() as session:
-                    async with session.get(OPENID_PROVIDER_URL.value) as resp:
-                        if resp.status == 200:
-                            openid_data = await resp.json()
-                            logout_url = openid_data.get("end_session_endpoint")
-                            if logout_url:
-                                response.delete_cookie("oauth_id_token")
-                                return RedirectResponse(
-                                    url=f"{logout_url}?id_token_hint={oauth_id_token}"
-                                )
-                        else:
-                            raise HTTPException(
-                                status_code=resp.status,
-                                detail="Failed to fetch OpenID configuration",
-                            )
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=str(e))
 
-    return {"status": True}
+@router.get("/logout")
+async def logout(request: Request, response: Response, state: str = None):
+    # Get session ID if it exists
+    session_id = request.cookies.get("session")
+    
+    # If we have a state parameter, validate it (for OAuth flow)
+    if state is not None:
+        stored_state = redis_client.get(f"logout_state:{session_id}") if session_id and redis_client else None
+        if not state or state != stored_state:
+            raise HTTPException(status_code=400, detail="Invalid state")
+    
+    # Clean up Redis data
+    if redis_client and session_id:
+        redis_client.delete(session_id)
+        redis_client.delete(f"logout_state:{session_id}")
+    
+    # Clear session
+    request.session.clear()
+    
+    # Clear cookies
+    response.delete_cookie("token", path="/")
+    response.delete_cookie("session", path="/")
+    
+    return RedirectResponse(url=FRONTEND_URL)
+
+
+@router.get("/userinfo")
+async def userinfo(current_user: UserInfo = Depends(get_current_user)):
+    return current_user
 
 
 ############################
@@ -828,3 +1045,10 @@ async def get_api_key(user=Depends(get_current_user)):
         }
     else:
         raise HTTPException(404, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+
+
+@router.get("/signout")
+async def signout(request: Request, response: Response):
+    # Clear session data
+    request.session.clear()
+    return {"status": "success"}

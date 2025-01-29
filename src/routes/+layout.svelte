@@ -239,32 +239,40 @@
 			await WEBUI_NAME.set(backendConfig.name);
 
 			if ($config) {
+				// Check for token in URL hash first
+				const hash = $page.url.hash;
+				if (hash && hash.includes('token=')) {
+					const params = new URLSearchParams(hash.substring(1));
+					const token = params.get('token');
+					if (token) {
+						localStorage.setItem('token', token);
+						// Wait a tick to ensure token is stored
+						await tick();
+					}
+				}
+
+				// Now setup socket with the token (if any)
 				await setupSocket($config.features?.enable_websocket ?? true);
 
-				if (localStorage.token) {
-					// Get Session User Info
-					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
-						toast.error(error);
-						return null;
-					});
+				// Try to get session user with the token
+				const sessionUser = await getSessionUser().catch(async (error) => {
+					console.log('error', error);
+					// Clear token if session user retrieval fails
+					localStorage.removeItem('token');
+					return null;
+				});
 
-					if (sessionUser) {
-						// Save Session User to Store
-						$socket.emit('user-join', { auth: { token: sessionUser.token } });
+				if (sessionUser) {
+					// Save Session User to Store
+					$socket?.emit('user-join', { auth: { token: sessionUser.token } });
 
-						$socket?.on('chat-events', chatEventHandler);
-						$socket?.on('channel-events', channelEventHandler);
+					$socket?.on('chat-events', chatEventHandler);
+					$socket?.on('channel-events', channelEventHandler);
 
-						await user.set(sessionUser);
-						await config.set(await getBackendConfig());
-					} else {
-						// Redirect Invalid Session User to /auth Page
-						localStorage.removeItem('token');
-						await goto('/auth');
-					}
+					await user.set(sessionUser);
+					await config.set(await getBackendConfig());
 				} else {
-					// Don't redirect if we're already on the auth page
-					// Needed because we pass in tokens from OAuth logins via URL fragments
+					// Redirect Invalid Session User to /auth Page
 					if ($page.url.pathname !== '/auth') {
 						await goto('/auth');
 					}

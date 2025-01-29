@@ -59,6 +59,14 @@ try:
 except Exception:
     pass
 
+# FRONTEND_URL
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:8080") 
+FRONTEND_URL = "http://localhost:8080" if os.environ.get("ENV", "dev") == "prod" else FRONTEND_URL
+
+# BACKEND_URL
+BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8080")
+
+
 ####################################
 # LOGGING
 ####################################
@@ -340,6 +348,24 @@ WEBUI_AUTH_TRUSTED_NAME_HEADER = os.environ.get("WEBUI_AUTH_TRUSTED_NAME_HEADER"
 BYPASS_MODEL_ACCESS_CONTROL = (
     os.environ.get("BYPASS_MODEL_ACCESS_CONTROL", "False").lower() == "true"
 )
+
+####################################
+# PROCONNECT_AUTH
+####################################
+
+PROCONNECT_BASE_URL = os.environ.get("PROCONNECT_BASE_URL", "changeme")
+PROCONNECT_CLIENT_ID = os.environ.get("PROCONNECT_CLIENT_ID", "changeme")
+PROCONNECT_CLIENT_SECRET = os.environ.get("PROCONNECT_CLIENT_SECRET", "changeme")
+SERVER_METADATA_URL = os.environ.get("SERVER_METADATA_URL", "changeme")
+PROCONNECT_SESSION_DURATION = os.environ.get("PROCONNECT_SESSION_DURATION", "changeme")
+
+####################################
+# REDIS
+####################################
+
+REDIS_HOST = os.environ.get("REDIS_HOST", "changeme")
+REDIS_PORT = os.environ.get("REDIS_PORT", "changeme")
+REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "changeme")
 
 ####################################
 # WEBUI_SECRET_KEY

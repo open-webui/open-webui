@@ -157,7 +157,6 @@
 				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
 					await userSignOut();
-					localStorage.removeItem('token');
 					location.href = '/auth';
 					show = false;
 				}}
