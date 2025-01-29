@@ -1238,9 +1238,11 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
 
 
 @router.post("/process/web/search")
-def process_web_search(
-    request: Request, form_data: SearchForm, user=Depends(get_verified_user)
+async def process_web_search(
+    request: Request, form_data: SearchForm, extra_params: dict, user=Depends(get_verified_user)
 ):
+    event_emitter = extra_params["__event_emitter__"]
+    
     try:
         logging.info(
             f"trying to web search with {request.app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query}"
@@ -1258,6 +1260,18 @@ def process_web_search(
 
     log.debug(f"web_results: {web_results}")
 
+    await event_emitter(
+        {
+            "type": "status",
+            "data": {
+                "action": "web_search",
+                "description": "Loading {{count}} sites...",
+                "urls": [result.link for result in web_results],
+                "done": False
+            },
+        }
+    )
+
     try:
         collection_name = form_data.collection_name
         if collection_name == "" or collection_name is None:
@@ -1271,7 +1285,8 @@ def process_web_search(
             verify_ssl=request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
         )
-        docs = loader.load()
+        docs = [doc async for doc in loader.alazy_load()]
+        # docs = loader.load()
         save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
 
         return {

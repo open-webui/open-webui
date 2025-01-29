@@ -419,21 +419,16 @@ async def chat_web_search_handler(
 
     try:
 
-        # Offload process_web_search to a separate thread
-        loop = asyncio.get_running_loop()
-        with ThreadPoolExecutor() as executor:
-            results = await loop.run_in_executor(
-                executor,
-                lambda: process_web_search(
-                    request,
-                    SearchForm(
-                        **{
-                            "query": searchQuery,
-                        }
-                    ),
-                    user,
-                ),
-            )
+        results = await process_web_search(
+            request,
+            SearchForm(
+                **{
+                    "query": searchQuery,
+                }
+            ),
+            extra_params=extra_params,
+            user=user
+        )
 
         if results:
             await event_emitter(
@@ -441,7 +436,7 @@ async def chat_web_search_handler(
                     "type": "status",
                     "data": {
                         "action": "web_search",
-                        "description": "Searched {{count}} sites",
+                        "description": "Loaded {{count}} sites",
                         "query": searchQuery,
                         "urls": results["filenames"],
                         "done": True,
