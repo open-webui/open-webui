@@ -395,7 +395,7 @@ async def get_ollama_tags(
             )
 
     if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
-        models["models"] = get_filtered_models(models, user)
+        models["models"] = await get_filtered_models(models, user)
 
     return models
 

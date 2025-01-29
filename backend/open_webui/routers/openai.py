@@ -489,7 +489,7 @@ async def get_models(
                 raise HTTPException(status_code=500, detail=error_detail)
 
     if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
-        models["data"] = get_filtered_models(models, user)
+        models["data"] = await get_filtered_models(models, user)
 
     return models
 
