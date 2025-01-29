@@ -169,7 +169,7 @@
 	"Clipboard write permission denied. Please check your browser settings to grant the necessary access.": "",
 	"Clone": "",
 	"Clone Chat": "",
-	"Clone of": "",
+	"Clone of {{TITLE}}": "",
 	"Close": "",
 	"Code execution": "",
 	"Code formatted successfully": "",

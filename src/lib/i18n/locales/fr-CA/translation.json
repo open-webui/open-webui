@@ -169,7 +169,7 @@
 	"Clipboard write permission denied. Please check your browser settings to grant the necessary access.": "L'autorisation d'écriture du presse-papier a été refusée. Veuillez vérifier les paramètres de votre navigateur pour accorder l'accès nécessaire.",
 	"Clone": "Cloner",
 	"Clone Chat": "Cloner le chat",
-	"Clone of": "Clone de",
+	"Clone of {{TITLE}}": "Clone de {{TITLE}}",
 	"Close": "Fermer",
 	"Code execution": "Exécution de code",
 	"Code formatted successfully": "Le code a été formaté avec succès",
