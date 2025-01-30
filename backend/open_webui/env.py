@@ -54,6 +54,8 @@ else:
     DEVICE_TYPE = "cpu"
 
 try:
+    import torch
+
     if torch.backends.mps.is_available() and torch.backends.mps.is_built():
         DEVICE_TYPE = "mps"
 except Exception:
@@ -271,6 +273,8 @@ DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
 # Replace the postgres:// with postgresql://
 if "postgres://" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")
+
+DATABASE_SCHEMA = os.environ.get("DATABASE_SCHEMA", None)
 
 DATABASE_POOL_SIZE = os.environ.get("DATABASE_POOL_SIZE", 0)
 

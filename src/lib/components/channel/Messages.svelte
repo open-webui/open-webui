@@ -102,7 +102,7 @@
 
 					const res = deleteMessage(localStorage.token, message.channel_id, message.id).catch(
 						(error) => {
-							toast.error(error);
+							toast.error(`${error}`);
 							return null;
 						}
 					);
@@ -118,7 +118,7 @@
 					const res = updateMessage(localStorage.token, message.channel_id, message.id, {
 						content: content
 					}).catch((error) => {
-						toast.error(error);
+						toast.error(`${error}`);
 						return null;
 					});
 				}}
@@ -154,7 +154,7 @@
 							message.id,
 							name
 						).catch((error) => {
-							toast.error(error);
+							toast.error(`${error}`);
 							return null;
 						});
 					} else {
@@ -180,7 +180,7 @@
 
 						const res = addReaction(localStorage.token, message.channel_id, message.id, name).catch(
 							(error) => {
-								toast.error(error);
+								toast.error(`${error}`);
 								return null;
 							}
 						);

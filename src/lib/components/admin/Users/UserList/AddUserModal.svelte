@@ -49,7 +49,7 @@
 				_user.password,
 				_user.role
 			).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 			});
 
 			if (res) {
@@ -114,6 +114,8 @@
 				toast.error($i18n.t('File not found.'));
 			}
 		}
+
+		loading = false;
 	};
 </script>
 
@@ -148,9 +150,13 @@
 						submitHandler();
 					}}
 				>
-					<div class="flex text-center text-sm font-medium rounded-full bg-transparent/10 p-1 mb-2">
+					<div
+						class="flex -mt-2 mb-1.5 gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent dark:text-gray-200"
+					>
 						<button
-							class="w-full rounded-full p-1.5 {tab === '' ? 'bg-gray-50 dark:bg-gray-850' : ''}"
+							class="min-w-fit rounded-full p-1.5 {tab === ''
+								? ''
+								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 							type="button"
 							on:click={() => {
 								tab = '';
@@ -158,23 +164,24 @@
 						>
 
 						<button
-							class="w-full rounded-full p-1 {tab === 'import'
-								? 'bg-gray-50 dark:bg-gray-850'
-								: ''}"
+							class="min-w-fit rounded-full p-1.5 {tab === 'import'
+								? ''
+								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 							type="button"
 							on:click={() => {
 								tab = 'import';
 							}}>{$i18n.t('CSV Import')}</button
 						>
 					</div>
+
 					<div class="px-1">
 						{#if tab === ''}
-							<div class="flex flex-col w-full">
+							<div class="flex flex-col w-full mb-3">
 								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Role')}</div>
 
 								<div class="flex-1">
 									<select
-										class="w-full capitalize rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+										class="w-full capitalize rounded-lg text-sm bg-transparent dark:disabled:text-gray-500 outline-none"
 										bind:value={_user.role}
 										placeholder={$i18n.t('Enter Your Role')}
 										required
@@ -191,7 +198,7 @@
 
 								<div class="flex-1">
 									<input
-										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
 										type="text"
 										bind:value={_user.name}
 										placeholder={$i18n.t('Enter Your Full Name')}
@@ -208,7 +215,7 @@
 
 								<div class="flex-1">
 									<input
-										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
 										type="email"
 										bind:value={_user.email}
 										placeholder={$i18n.t('Enter Your Email')}
@@ -222,7 +229,7 @@
 
 								<div class="flex-1">
 									<input
-										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
 										type="password"
 										bind:value={_user.password}
 										placeholder={$i18n.t('Enter Your Password')}

@@ -1,9 +1,10 @@
 {
 	"name": "open-webui",
-	"version": "0.5.4",
+	"version": "0.5.7",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
+		"dev:5050": "npm run pyodide:fetch && vite dev --port 5050",
 		"build": "npm run pyodide:fetch && vite build",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
@@ -44,7 +45,7 @@
 		"tailwindcss": "^3.3.3",
 		"tslib": "^2.4.1",
 		"typescript": "^5.5.4",
-		"vite": "^5.3.5",
+		"vite": "^5.4.14",
 		"vitest": "^1.6.0"
 	},
 	"type": "module",
@@ -82,7 +83,7 @@
 		"i18next-resources-to-backend": "^1.2.0",
 		"idb": "^7.1.1",
 		"js-sha256": "^0.10.1",
-		"katex": "^0.16.9",
+		"katex": "^0.16.21",
 		"marked": "^9.1.0",
 		"mermaid": "^10.9.3",
 		"paneforge": "^0.0.6",
