@@ -628,7 +628,7 @@
 									</div>
 								{/if}
 
-								<div class=" flex">
+								<div class="bg-gray-50 flex rounded-full">
 									<div class="ml-1 self-end mb-1.5 flex space-x-1">
 										<InputMenu
 											bind:webSearchEnabled

@@ -491,7 +491,7 @@
 			<Name>
 				<Tooltip content={model?.name ?? message.model} placement="top-start">
 					<span class="line-clamp-1">
-						{model?.name ?? message.model}
+						Albert
 					</span>
 				</Tooltip>
 

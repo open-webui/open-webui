@@ -2077,7 +2077,7 @@ const saveChatHandler = async (_chatId) => {
 							</div>
 						</div>
 					{:else}
-						<div class="overflow-auto w-full h-full flex items-center">
+						<div class="overflow-auto w-full h-full flex items-center fr-background-default--grey">
 							<Placeholder
 								{history}
 								{selectedModels}

@@ -136,7 +136,7 @@
 
 				<div class="text-3xl sm:text-4xl line-clamp-1" in:fade={{ duration: 100 }}>
 					
-						Albert Conversation
+						Albert
 					
 				</div>
 			</div>

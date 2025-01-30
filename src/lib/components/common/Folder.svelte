@@ -156,7 +156,7 @@
 								class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
 								on:click={(e) => {}}
 							>
-								<FolderCreate className=" size-5" strokeWidth="2" />
+								<FolderCreate className="size-5 hover:text-gray-700 dark:hover:text-gray-300" strokeWidth="2" />
 							</button>
 						</Tooltip>
 					</button>
