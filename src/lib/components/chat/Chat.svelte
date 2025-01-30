@@ -1932,14 +1932,14 @@ const saveChatHandler = async (_chatId) => {
 {#if !chatIdProp || (loaded && chatIdProp)}
 	<div
 		class="h-screen max-h-[100dvh] {$showSidebar
-			? 'md:max-w-[calc(100%-260px)]'
+			? 'md:max-w-[calc(100%-285px)]'
 			: ''} w-full max-w-full flex flex-col fr-background-default--grey"
 		id="chat-container"
 	>
 		{#if $settings?.backgroundImageUrl ?? null}
 			<div
 				class="absolute {$showSidebar
-					? 'md:max-w-[calc(100%-260px)] md:translate-x-[260px]'
+					? 'md:max-w-[calc(100%-285px)] md:translate-x-[285px]'
 					: ''} top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
 				style="background-image: url({$settings.backgroundImageUrl})  "
 			/>

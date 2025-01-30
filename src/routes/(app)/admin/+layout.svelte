@@ -27,7 +27,7 @@
 {#if loaded}
 	<div
 		class=" flex flex-col w-full min-h-screen max-h-screen {$showSidebar
-			? 'md:max-w-[calc(100%-260px)]'
+			? 'md:max-w-[calc(100%-285px)]'
 			: ''}"
 	>
 		<div class=" px-2.5 py-1 backdrop-blur-xl">
