@@ -18,10 +18,12 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                checkout scm
-                sh """
-                    echo "checkout completed"
-                """
+                script {
+                    checkout scm
+                    sh """
+                        echo "checkout completed"
+                    """
+                }
             }
         }
 
