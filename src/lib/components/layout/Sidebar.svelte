@@ -484,7 +484,7 @@ onDestroy(() => {
 	>
 		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
 			<button
-				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition hover:text-[var(--text-action-high-blue-france)]"
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
 				}}
@@ -603,7 +603,7 @@ onDestroy(() => {
 				<div class="px-2 mt-0.5 flex items-center justify-between">
 					<div class="text-sm font-medium ">{$i18n.t('Folders')}</div>
 					<button
-						class="p-1 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg transition"
+						class="p-1 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg transition hover:text-[var(--text-action-high-blue-france)] "
 						on:click={() => createFolder()}
 					>
 						<FolderCreate className="size-[1.3rem]" strokeWidth="2" />
