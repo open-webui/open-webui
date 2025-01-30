@@ -749,6 +749,8 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         files.extend(knowledge_files)
         form_data["files"] = files
 
+    variables = form_data.pop("variables", None)
+
     features = form_data.pop("features", None)
     if features:
         if "web_search" in features and features["web_search"]:

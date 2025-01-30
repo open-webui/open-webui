@@ -977,6 +977,7 @@ async def generate_chat_completion(
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
+    metadata = form_data.pop("metadata", None)
     try:
         form_data = GenerateChatCompletionForm(**form_data)
     except Exception as e:
@@ -987,8 +988,6 @@ async def generate_chat_completion(
         )
 
     payload = {**form_data.model_dump(exclude_none=True)}
-    if "metadata" in payload:
-        del payload["metadata"]
 
     model_id = payload["model"]
     model_info = Models.get_model_by_id(model_id)
@@ -1006,7 +1005,7 @@ async def generate_chat_completion(
             payload["options"] = apply_model_params_to_body_ollama(
                 params, payload["options"]
             )
-            payload = apply_model_system_prompt_to_body(params, payload, user)
+            payload = apply_model_system_prompt_to_body(params, payload, metadata)
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":

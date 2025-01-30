@@ -45,7 +45,8 @@
 		promptTemplate,
 		splitStream,
 		sleep,
-		removeDetailsWithReasoning
+		removeDetailsWithReasoning,
+		getPromptVariables
 	} from '$lib/utils';
 
 	import { generateChatCompletion } from '$lib/apis/ollama';
@@ -628,7 +629,7 @@
 		} catch (e) {
 			// Remove the failed doc from the files array
 			files = files.filter((f) => f.name !== url);
-			toast.error(e);
+			toast.error(`${e}`);
 		}
 	};
 
@@ -1558,9 +1559,16 @@
 
 				files: (files?.length ?? 0) > 0 ? files : undefined,
 				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
+
 				features: {
 					image_generation: imageGenerationEnabled,
 					web_search: webSearchEnabled
+				},
+				variables: {
+					...getPromptVariables(
+						$user.name,
+						$settings?.userLocation ? await getAndUpdateUserLocation(localStorage.token) : undefined
+					)
 				},
 
 				session_id: $socket?.id,

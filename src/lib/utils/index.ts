@@ -766,6 +766,19 @@ export const blobToFile = (blob, fileName) => {
 	return file;
 };
 
+export const getPromptVariables = (user_name, user_location) => {
+	return {
+		'{{USER_NAME}}': user_name,
+		'{{USER_LOCATION}}': user_location || 'Unknown',
+		'{{CURRENT_DATETIME}}': getCurrentDateTime(),
+		'{{CURRENT_DATE}}': getFormattedDate(),
+		'{{CURRENT_TIME}}': getFormattedTime(),
+		'{{CURRENT_WEEKDAY}}': getWeekday(),
+		'{{CURRENT_TIMEZONE}}': getUserTimezone(),
+		'{{USER_LANGUAGE}}': localStorage.getItem('locale') || 'en-US'
+	};
+};
+
 /**
  * @param {string} template - The template string containing placeholders.
  * @returns {string} The template string with the placeholders replaced by the prompt.
