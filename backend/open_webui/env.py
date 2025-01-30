@@ -59,11 +59,7 @@ try:
 except Exception:
     pass
 
-# FRONTEND_URL
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:8080") 
-FRONTEND_URL = "http://localhost:8080" if os.environ.get("ENV", "dev") == "prod" else FRONTEND_URL
-
-# BACKEND_URL
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8080")
 
 
