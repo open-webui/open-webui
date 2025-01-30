@@ -19,9 +19,15 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
-                sh "ls -la"
+                sh "echo 'checkout completed'"
             }
         }
+
+        stage('Initialize') {
+                sh "echo 'start initializing docker'"
+                def dockerHome = tool 'myDocker'
+                env.PATH = "${dockerHome}/bin:${env.PATH}"
+            }
 
         stage('Build Docker Image') {
             steps {
