@@ -173,8 +173,6 @@ async def generate_title(
             flags=re.S,
         ).strip()
 
-    print(messages)
-
     content = title_generation_template(
         template,
         messages,
