@@ -854,7 +854,7 @@
 	"Sets how far back for the model to look back to prevent repetition. (Default: 64, 0 = disabled, -1 = num_ctx)": "设置模型回溯多远以防止重复。(默认值：64，0 = 禁用，-1 = num_ctx）",
 	"Sets how strongly to penalize repetitions. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. (Default: 1.1)": "设置对重复的惩罚力度。数值越大（如 1.5），对重复的惩罚力度越大，而数值越小（如 0.9），惩罚力度越轻。(默认值：1.1）",
 	"Sets the random number seed to use for generation. Setting this to a specific number will make the model generate the same text for the same prompt. (Default: random)": "设置生成文本时使用的随机数种子。将其设置为一个特定的数字将使模型在同一提示下生成相同的文本。 默认值：随机",
-	"Sets the size of the context window used to generate the next token. (Default: 2048)": "设置用于生成下一个 Toekn 的上下文大小。(默认值：2048）",
+	"Sets the size of the context window used to generate the next token. (Default: 2048)": "设置用于生成下一个 Token 的上下文大小。(默认值：2048）",
 	"Sets the stop sequences to use. When this pattern is encountered, the LLM will stop generating text and return. Multiple stop patterns may be set by specifying multiple separate stop parameters in a modelfile.": "设置要使用的停止序列。遇到这种模式时，大语言模型将停止生成文本并返回。可以通过在模型文件中指定多个单独的停止参数来设置多个停止模式。",
 	"Settings": "设置",
 	"Settings saved successfully!": "设置已保存",
