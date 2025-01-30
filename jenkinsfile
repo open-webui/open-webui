@@ -19,12 +19,16 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
-                sh "echo 'checkout completed'"
+                sh """
+                    echo "checkout completed"
+                """
             }
         }
 
         stage('Initialize') {
-                sh "echo 'start initializing docker'"
+                sh """
+                    echo "cstart initializing docker"
+                """
                 def dockerHome = tool 'myDocker'
                 env.PATH = "${dockerHome}/bin:${env.PATH}"
             }
