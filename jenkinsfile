@@ -22,32 +22,32 @@ pipeline {
             }
         }
 
-        stage('docker test') {
-            agent {
-                docker {
-                    image 'docker:latest'
-                    args '-v /var/run/docker.sock:/var/run/docker.sock'
-                }
-            }
-            steps {
-                script {
-                    sh 'docker ps'
-                }
-            }
-        }
-
-//         stage('Initialize') {
+//         stage('docker test') {
+//             agent {
+//                 docker {
+//                     image 'docker:latest'
+//                     args '-v /var/run/docker.sock:/var/run/docker.sock'
+//                 }
+//             }
 //             steps {
-
 //                 script {
-//                     sh """
-//                         echo "start initializing docker"
-//                     """
-//                     def dockerHome = tool 'myDocker'
-//                     env.PATH = "${dockerHome}/bin:${env.PATH}"
+//                     sh 'docker ps'
 //                 }
 //             }
 //         }
+
+        stage('Initialize') {
+            steps {
+
+                script {
+                    sh """
+                        echo "start initializing docker"
+                    """
+                    def dockerHome = tool 'myDocker'
+                    env.PATH = "${dockerHome}/bin:${env.PATH}"
+                }
+            }
+        }
 
         stage('Build Docker Image') {
             steps {
