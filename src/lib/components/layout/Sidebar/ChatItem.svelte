@@ -248,10 +248,10 @@ let showDeleteConfirm = false;
 		<a
 			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-200 dark:bg-gray-900'
+				? 'bg-[var(--background-contrast-grey)]'
 				: selected
-					? 'bg-gray-100 dark:bg-gray-950'
-					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+					? 'bg-[var(--background-contrast-grey)]'
+					: 'hover:bg-[var(--background-contrast-grey)] group-hover:bg-[var(--background-contrast-grey)]'}  whitespace-nowrap text-ellipsis"
 			href="/c/{id}"
 			on:click={() => {
 				dispatch('select');
@@ -285,10 +285,10 @@ let showDeleteConfirm = false;
 	<div
 		class="
         {id === $chatId || confirmEdit
-			? 'from-gray-200 dark:from-gray-900'
+			? 'fr-background-contrast--grey'
 			: selected
-				? 'from-gray-100 dark:from-gray-950'
-				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
+				? 'fr-background-contrast--grey'
+				: 'invisible group-hover:visible fr-background-contrast--grey'}
             absolute {className === 'pr-2'
 			? 'right-[8px]'
 			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-gradient-to-l from-80%
