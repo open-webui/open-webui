@@ -44,6 +44,17 @@
 	let message = '';
 
 	let messages = [];
+	let chatTextareaHeight = '3rem';
+
+	$: if (showSystem) {
+		setTimeout(() => {
+			const textarea = document.getElementById('system-textarea');
+			if (textarea) {
+				textarea.style.height = 'auto';
+				textarea.style.height = textarea.scrollHeight + 'px';
+			}
+		}, 50);
+	}
 
 	const scrollToBottom = () => {
 		const element = messagesContainerElement;
@@ -148,12 +159,19 @@
 
 	const addHandler = async () => {
 		if (message) {
-			messages.push({
-				role: role,
-				content: message
-			});
+			messages.push({ role, content: message });
 			messages = messages;
 			message = '';
+
+			// Reset textarea height using the ID
+			const textarea = document.getElementById('message-input');
+			if (textarea) {
+				requestAnimationFrame(() => {
+					textarea.style.height = '3rem';
+					textarea.dispatchEvent(new Event('input'));
+				});
+			}
+
 			await tick();
 			scrollToBottom();
 		}
@@ -232,6 +250,15 @@
 					bind:open={showSystem}
 					buttonClassName="w-full rounded-lg text-sm border border-gray-50 dark:border-gray-850 w-full py-1 px-1.5"
 					grow={true}
+					on:expand={() => {
+						setTimeout(() => {
+							const textarea = document.getElementById('system-textarea');
+							if (textarea) {
+								textarea.style.height = 'auto';
+								textarea.style.height = textarea.scrollHeight + 'px';
+							}
+						}, 0);
+					}}
 				>
 					<div class="flex gap-2 justify-between items-center">
 						<div class=" flex-shrink-0 font-medium ml-1.5">
@@ -245,7 +272,18 @@
 						{/if}
 
 						<div class="flex-shrink-0">
-							<button class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg">
+							<button
+								class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
+								on:click={() => {
+									setTimeout(() => {
+										const textarea = document.getElementById('system-textarea');
+										if (textarea) {
+											textarea.style.height = 'auto';
+											textarea.style.height = textarea.scrollHeight + 'px';
+										}
+									}, 50); // increased timeout to ensure content is visible
+								}}
+							>
 								{#if showSystem}
 									<ChevronUp className="size-3.5" />
 								{:else}
@@ -259,10 +297,20 @@
 						<div class="pt-1 px-1.5">
 							<textarea
 								id="system-textarea"
-								class="w-full h-full bg-transparent resize-none outline-none text-sm"
+								class="w-full h-full bg-transparent resize-y outline-none text-sm"
 								bind:value={system}
 								placeholder={$i18n.t("You're a helpful assistant.")}
 								rows="4"
+								on:input={(e) => {
+									e.target.style.height = 'auto';
+									e.target.style.height = e.target.scrollHeight + 'px';
+								}}
+								on:paste={(e) => {
+									setTimeout(() => {
+										e.target.style.height = 'auto';
+										e.target.style.height = e.target.scrollHeight + 'px';
+									}, 0);
+								}}
 							/>
 						</div>
 					</div>
@@ -301,8 +349,9 @@
 						<!-- $i18n.t('a user') -->
 						<!-- $i18n.t('an assistant') -->
 						<textarea
+							id="message-input"
 							bind:value={message}
-							class=" w-full h-full bg-transparent resize-none outline-none text-sm"
+							class="w-full h-full bg-transparent resize-y outline-none text-sm"
 							placeholder={$i18n.t(`Enter {{role}} message here`, {
 								role: role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
 							})}

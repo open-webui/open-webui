@@ -1,14 +1,21 @@
 <script lang="ts">
-	import { onMount, getContext } from 'svelte';
+	import { onMount, afterUpdate, getContext } from 'svelte';
 
 	const i18n = getContext('i18n');
 
 	export let messages = [];
-	let textAreaElement: HTMLTextAreaElement;
-	onMount(() => {
+
+	const adjustTextareaHeight = (textarea: HTMLTextAreaElement) => {
+		if (textarea) {
+			textarea.style.height = 'auto';
+			textarea.style.height = textarea.scrollHeight + 'px';
+		}
+	};
+
+	afterUpdate(() => {
 		messages.forEach((message, idx) => {
-			textAreaElement.style.height = '';
-			textAreaElement.style.height = textAreaElement.scrollHeight + 'px';
+			const textarea = document.getElementById(`${message.role}-${idx}-textarea`);
+			adjustTextareaHeight(textarea as HTMLTextAreaElement);
 		});
 	});
 </script>
@@ -25,33 +32,21 @@
 			</div>
 
 			<div class="flex-1">
-				<!-- $i18n.t('a user') -->
-				<!-- $i18n.t('an assistant') -->
 				<textarea
 					id="{message.role}-{idx}-textarea"
-					bind:this={textAreaElement}
-					class="w-full bg-transparent outline-none rounded-lg p-2 text-sm resize-none overflow-hidden"
-					placeholder={$i18n.t(`Enter {{role}} message here`, {
+					class="w-full bg-transparent outline-none rounded-lg p-2 text-sm resize-y overflow-hidden"
+					placeholder={$i18n.t(`Enter assistant message here`, {
 						role: message.role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
 					})}
 					rows="1"
-					on:input={(e) => {
-						textAreaElement.style.height = '';
-						textAreaElement.style.height = textAreaElement.scrollHeight + 'px';
-					}}
-					on:focus={(e) => {
-						textAreaElement.style.height = '';
-						textAreaElement.style.height = textAreaElement.scrollHeight + 'px';
-
-						// e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
-					}}
+					on:input={(e) => adjustTextareaHeight(e.target)}
 					bind:value={message.content}
 				/>
 			</div>
 
-			<div class=" pt-1">
+			<div class="pt-1">
 				<button
-					class=" group-hover:text-gray-500 dark:text-gray-900 dark:hover:text-gray-300 transition"
+					class="group-hover:text-gray-500 dark:text-gray-900 dark:hover:text-gray-300 transition"
 					on:click={() => {
 						messages = messages.filter((message, messageIdx) => messageIdx !== idx);
 					}}
