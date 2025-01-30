@@ -4,8 +4,10 @@ from typing import IO
 import logging
 import requests
 
-logger = logging.getLogger(__name__)
+from open_webui.env import SRC_LOG_LEVELS
 
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 class PdftotextLoader():
     def __init__(self, pdf_path: str, url: str, max_pages: int):
@@ -16,6 +18,8 @@ class PdftotextLoader():
     def load(self):
         with open(self.pdf_path, "rb") as f:
             pdf = f.read()
+
+        log.info(self.max_pages)
 
         headers = {
             "accept": "application/json",
@@ -28,12 +32,12 @@ class PdftotextLoader():
             'header_footer': False
         }
 
-        r = requests.post(url=self.url, headers=headers, files=files, data=data, timeout=600)
-        logger.info(r)
+        r = requests.post(url=self.url, headers=headers, files=files, data=data, timeout=240)
+        log.info(r)
         response = r.json()
         txt = response.get("text", "")
 
-        logger.info(
+        log.info(
             "REQ_ID: %s Extracted text from pdf using OCR, len(txt) -> %s "
         )
 
