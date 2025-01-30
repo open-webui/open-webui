@@ -493,9 +493,13 @@ onDestroy(() => {
 				</div>
 			</button>
 
-			<a
+
+		</div>
+					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+
+					<a
 				id="sidebar-new-chat-button"
-				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 				href="/"
 				draggable="false"
 				on:click={async () => {
@@ -510,26 +514,15 @@ onDestroy(() => {
 					}, 0);
 				}}
 			>
-				<div class="flex items-center">
-					<div class="self-center mx-1.5">
-						<img
-							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class=" size-5 -translate-x-1.5 rounded-full"
-							alt="logo"
-						/>
-					</div>
-					<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
-						{$i18n.t('New Chat')}
-					</div>
+				<div class="self-center">
+					<PencilSquare className="size-[1.1rem]" strokeWidth="2" />
 				</div>
 
-				<div>
-					<PencilSquare className=" size-5" strokeWidth="2" />
+				<div class="flex self-center">
+					<div class="self-center font-medium text-sm font-primary">{$i18n.t('New Chat')}</div>
 				</div>
 			</a>
 		</div>
-
 		{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
 			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
