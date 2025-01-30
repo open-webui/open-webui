@@ -155,7 +155,7 @@ class Loader:
                     mime_type=file_content_type,
                 )
         elif self.engine == "pdftotext" and file_ext == "pdf":
-            loader = PdftotextLoader(file_path, url=self.kwargs.get("PDFTOTEXT_SERVER_URL"), max_pages = self.kwargs.get("MAXPAGE_PDFTOTEXT"))
+            loader = PdftotextLoader(file_path, url=self.kwargs.get("PDFTOTEXT_SERVER_URL"), max_pages = self.kwargs.get("MAXPAGES_PDFTOTEXT"))
         else:
             if file_ext == "pdf":
                 loader = PyPDFLoader(

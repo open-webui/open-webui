@@ -52,7 +52,7 @@
 	let pdftotextServerUrl = '';
 	let showTikaServerUrl = false;
 	let showPdftotextServerUrl = false;
-	let maxpagePdftotext = 15;
+	let maxpagesPdftotext = 15;
 
 	let textSplitter = '';
 	let chunkSize = 0;
@@ -194,9 +194,7 @@
 				engine: contentExtractionEngine,
 				tika_server_url: tikaServerUrl,
 				pdftotext_server_url: pdftotextServerUrl,
-				maxpage_pdftotext: maxpagePdftotext
-				
-				
+				maxpages_pdftotext: maxpagesPdftotext
 			}
 		});
 
@@ -252,7 +250,7 @@
 			contentExtractionEngine = res.content_extraction.engine;
 			tikaServerUrl = res.content_extraction.tika_server_url;
 			pdftotextServerUrl = res.content_extraction.pdftotext_server_url
-			maxpagePdftotext = res.content_extraction.maxpage_pdftotext
+			maxpagesPdftotext = res.content_extraction.maxpages_pdftotext
 			
 			showTikaServerUrl = contentExtractionEngine === 'tika';
             showPdftotextServerUrl = contentExtractionEngine === 'pdftotext';
@@ -614,7 +612,7 @@
 						<input
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							placeholder={$i18n.t('Enter max page limit')}
-							bind:value={maxpagePdftotext}
+							bind:value={maxpagesPdftotext}
 						/>
 					</div>
 				</div>

@@ -352,7 +352,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
             "pdftotext_server_url": request.app.state.config.PDFTOTEXT_SERVER_URL,
-            "maxpage_pdftotext": request.app.state.config.MAXPAGE_PDFTOTEXT
+            "maxpages_pdftotext": request.app.state.config.MAXPAGES_PDFTOTEXT,
         },
         "chunk": {
             "text_splitter": request.app.state.config.TEXT_SPLITTER,
@@ -406,7 +406,7 @@ class ContentExtractionConfig(BaseModel):
     engine: str = ""
     tika_server_url: Optional[str] = None
     pdftotext_server_url: Optional[str] = None
-    maxpage_pdftotext: Optional[int] = None
+    maxpages_pdftotext: Optional[int] = None
 
 
 class ChunkParamUpdateForm(BaseModel):
@@ -491,8 +491,8 @@ async def update_rag_config(
             form_data.content_extraction.pdftotext_server_url
         )
 
-        request.app.state.config.MAXPAGE_PDFTOTEXT = (
-            form_data.content_extraction.maxpage_pdftotext
+        request.app.state.config.MAXPAGES_PDFTOTEXT = (
+            form_data.content_extraction.maxpages_pdftotext
         )
 
     if form_data.chunk is not None:
@@ -571,7 +571,7 @@ async def update_rag_config(
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
             "pdftotext_server_url": request.app.state.config.PDFTOTEXT_SERVER_URL,
-            "maxpage_pdftotext": request.app.state.config.MAXPAGE_PDFTOTEXT
+            "maxpages_pdftotext": request.app.state.config.MAXPAGES_PDFTOTEXT,
         },
         "chunk": {
             "text_splitter": request.app.state.config.TEXT_SPLITTER,
@@ -895,6 +895,7 @@ def process_file(
                     TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
                     PDFTOTEXT_SERVER_URL=request.app.state.config.PDFTOTEXT_SERVER_URL,
                     PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
+                    MAXPAGES_PDFTOTEXT=request.app.state.config.MAXPAGES_PDFTOTEXT,
                 )
                 docs = loader.load(
                     file.filename, file.meta.get("content_type"), file_path

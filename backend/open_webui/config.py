@@ -1384,10 +1384,10 @@ PDFTOTEXT_SERVER_URL = PersistentConfig(
     os.getenv("PDFTOTEXT_SERVER_URL", "http://api-ocr"),  # Default for sidecar deployment
 )
 
-MAXPAGE_PDFTOTEXT = PersistentConfig(
-    "MAXPAGE_PDFTOTEXT",
-    "rag.maxpage_pdftotext",
-    os.getenv("MAXPAGE_PDFTOTEXT", 15),  # Default for sidecar deployment
+MAXPAGES_PDFTOTEXT = PersistentConfig(
+    "MAXPAGES_PDFTOTEXT",
+    "rag.maxpages_pdftotext",
+    os.getenv("MAXPAGES_PDFTOTEXT", 15),  # Default for sidecar deployment
 )
 
 RAG_TOP_K = PersistentConfig(
