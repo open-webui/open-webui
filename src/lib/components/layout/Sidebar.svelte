@@ -145,18 +145,6 @@ const createFolder = async (name = "Untitled") => {
 		name = `${name} ${i}`;
 	}
 
-	// Add a dummy folder to the list to show the user that the folder is being created
-	const tempId = uuidv4();
-	folders = {
-		...folders,
-		tempId: {
-			id: tempId,
-			name: name,
-			created_at: Date.now(),
-			updated_at: Date.now(),
-		},
-	};
-
 	const res = await createNewFolder(localStorage.token, name).catch((error) => {
 		toast.error(error);
 		return null;
@@ -164,6 +152,17 @@ const createFolder = async (name = "Untitled") => {
 
 	if (res) {
 		await initFolders();
+		// After folder is created, find it and trigger edit mode
+		await tick();
+		const folderButton = document.querySelector(`#folder-${res.id}-button`);
+		if (folderButton) {
+			const event = new MouseEvent("dblclick", {
+				bubbles: true,
+				cancelable: true,
+				view: window,
+			});
+			folderButton.dispatchEvent(event);
+		}
 	}
 };
 
