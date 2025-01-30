@@ -38,20 +38,20 @@ update:
 
 build:
 	@echo "--> Docker build"
-	@docker build -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.0.1 .
+	@docker build -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.5.7 .
 
 create-buildx:
 	@docker buildx create --use
 
 buildx:
-	@docker buildx build  --platform linux/arm64,linux/amd64 -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.0.1 --push .
+	@docker buildx build  --platform linux/arm64,linux/amd64 -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.5.7 --push .
 
 arm-buildx:
-	@docker buildx build  --platform linux/arm64 -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.0.1 --push .
+	@docker buildx build  --platform linux/arm64 -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.5.7 --push .
 
 amd-buildx:
-	@docker buildx build  --platform linux/amd64 -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.0.1 --push .
+	@docker buildx build  --platform linux/amd64 -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.5.7 --push .
 
 
 run:
-	@docker run -p 3000:8080 --env WEB_CONCURRENCY=1 -add-host=host.docker.internal:host-gateway -v "/app/backend/data:/app/backend/data" --name docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.0.1 --restart always
+	@docker run -p 3000:8080 --env WEB_CONCURRENCY=1 -add-host=host.docker.internal:host-gateway -v "/app/backend/data:/app/backend/data" --name docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.5.7 --restart always
