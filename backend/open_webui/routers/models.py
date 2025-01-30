@@ -185,8 +185,8 @@ async def delete_model_by_id(id: str, user=Depends(get_verified_user)):
 
     if (
         user.role != "admin"
-        or model.user_id != user.id
-        or not has_access(user.id, "write", model.access_control)
+        and model.user_id != user.id
+        and not has_access(user.id, "write", model.access_control)
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
