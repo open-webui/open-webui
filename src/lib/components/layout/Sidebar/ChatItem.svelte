@@ -246,7 +246,7 @@ let showDeleteConfirm = false;
 		</div>
 	{:else}
 		<a
-			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
+			class=" w-full flex justify-between rounded-lg px-[8px] py-[6px] {id === $chatId ||
 			confirmEdit
 				? 'bg-[var(--background-contrast-grey)]'
 				: selected
@@ -285,10 +285,10 @@ let showDeleteConfirm = false;
 	<div
 		class="
         {id === $chatId || confirmEdit
-			? 'fr-background-contrast--grey'
+			? 'from-[var(--background-contrast-grey)]'
 			: selected
-				? 'fr-background-contrast--grey'
-				: 'invisible group-hover:visible fr-background-contrast--grey'}
+				? 'from-[var(--background-contrast-grey)]'
+				: 'invisible group-hover:visible from-[var(--background-contrast-grey)]'}
             absolute {className === 'pr-2'
 			? 'right-[8px]'
 			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-gradient-to-l from-80%
@@ -320,7 +320,7 @@ let showDeleteConfirm = false;
 
 				<Tooltip content={$i18n.t('Cancel')}>
 					<button
-						class=" self-center dark:hover:text-white transition"
+						class=" self-center  dark:hover:text-white transition"
 						on:click={() => {
 							confirmEdit = false;
 							chatTitle = '';

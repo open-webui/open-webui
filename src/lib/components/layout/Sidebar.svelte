@@ -473,7 +473,7 @@ onDestroy(() => {
 	id="sidebar"
 	class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
 		? 'md:relative w-[285px] max-w-[285px]'
-		: '-translate-x-[285px] w-[0px]'} bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0 overflow-x-hidden
+		: '-translate-x-[285px] w-[0px]'} bg-[#f6f6f6] text-gray-900 dark:bg-[#1e1e1e] dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0 overflow-x-hidden
         "
 	data-state={$showSidebar}
 >
@@ -606,7 +606,7 @@ onDestroy(() => {
 						class="p-1 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg transition"
 						on:click={() => createFolder()}
 					>
-						<FolderCreate className="size-[1.1rem]" strokeWidth="2" />
+						<FolderCreate className="size-[1.3rem]" strokeWidth="2" />
 					</button>
 				</div>
 				<Folders
@@ -658,13 +658,13 @@ onDestroy(() => {
 					{#if $chats}
 						{#each $chats as chat, idx}
 							{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
-								<div class="w-full pl-2.5 text-xs  dark: font-medium {idx === 0 ? '' : 'pt-5'} pb-1.5">
+								<div class="w-full px-2 text-xs font-medium {idx === 0 ? '' : 'pt-5'} pb-1.5">
 									{$i18n.t(chat.time_range)}
 								</div>
 							{/if}
 
 							<ChatItem
-								className="px-2"
+								className=""
 								id={chat.id}
 								title={chat.title}
 								{shiftKey}
