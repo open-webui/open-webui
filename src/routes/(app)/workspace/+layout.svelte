@@ -15,6 +15,7 @@
 	import { goto } from '$app/navigation';
 
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
+	import DrawerOpen from '$lib/components/icons/DrawerOpen.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -67,7 +68,7 @@
 						aria-label="Toggle Sidebar"
 					>
 						<div class=" m-auto self-center">
-							<MenuLines />
+							<DrawerOpen className="size-5" strokeWidth="2" />
 						</div>
 					</button>
 				</div>
