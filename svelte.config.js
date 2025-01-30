@@ -6,9 +6,6 @@ const config = {
 	// Consult https://kit.svelte.dev/docs/integrations#preprocessors
 	// for more information about preprocessors
 	preprocess: vitePreprocess(),
-	vitePlugin: {
-		inspector: true,
-	},
 	kit: {
 		// adapter-auto only supports some environments, see https://kit.svelte.dev/docs/adapter-auto for a list.
 		// If your environment is not supported or you settled on a specific environment, switch out the adapter.
@@ -19,8 +16,16 @@ const config = {
 			fallback: 'index.html'
 		})
 	},
+	vitePlugin: {
+		inspector: {
+			toggleKeyCombo: 'meta-shift', // Key combination to open the inspector
+			holdMode: false, // Enable or disable hold mode
+			showToggleButton: 'always', // Show toggle button ('always', 'active', 'never')
+			toggleButtonPos: 'bottom-right' // Position of the toggle button
+		}
+	},
 	onwarn: (warning, handler) => {
-		const { code, _ } = warning;
+		const { code } = warning;
 		if (code === 'css-unused-selector') return;
 
 		handler(warning);

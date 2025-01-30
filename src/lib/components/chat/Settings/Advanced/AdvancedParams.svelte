@@ -15,6 +15,7 @@
 		seed: null,
 		stop: null,
 		temperature: null,
+		reasoning_effort: null,
 		frequency_penalty: null,
 		repeat_last_n: null,
 		mirostat: null,
@@ -158,7 +159,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						class="w-full rounded-lg py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 						type="text"
 						placeholder={$i18n.t('Enter stop sequence')}
 						bind:value={params.stop}
@@ -218,6 +219,49 @@
 						min="0"
 						max="1"
 						step="any"
+					/>
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort. (Default: medium)'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Reasoning Effort')}
+				</div>
+				<button
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					type="button"
+					on:click={() => {
+						params.reasoning_effort = (params?.reasoning_effort ?? null) === null ? 'medium' : null;
+					}}
+				>
+					{#if (params?.reasoning_effort ?? null) === null}
+						<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
+					{:else}
+						<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+
+		{#if (params?.reasoning_effort ?? null) !== null}
+			<div class="flex mt-0.5 space-x-2">
+				<div class=" flex-1">
+					<input
+						class="w-full rounded-lg py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						type="text"
+						placeholder={$i18n.t('Enter reasoning effort')}
+						bind:value={params.reasoning_effort}
+						autocomplete="off"
 					/>
 				</div>
 			</div>
@@ -1086,7 +1130,7 @@
 		<div class=" py-0.5 w-full justify-between">
 			<Tooltip
 				content={$i18n.t(
-					'Set the number of GPU devices used for computation. This option controls how many GPU devices (if available) are used to process incoming requests. Increasing this value can significantly improve performance for models that are optimized for GPU acceleration but may also consume more power and GPU resources.'
+					'Set the number of layers, which will be off-loaded to GPU. Increasing this value can significantly improve performance for models that are optimized for GPU acceleration but may also consume more power and GPU resources.'
 				)}
 				placement="top-start"
 				className="inline-tooltip"

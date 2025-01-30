@@ -44,11 +44,11 @@
 
 			if (type === 'tool') {
 				res = await updateToolValvesById(localStorage.token, id, valves).catch((error) => {
-					toast.error(error);
+					toast.error(`${error}`);
 				});
 			} else if (type === 'function') {
 				res = await updateFunctionValvesById(localStorage.token, id, valves).catch((error) => {
-					toast.error(error);
+					toast.error(`${error}`);
 				});
 			}
 

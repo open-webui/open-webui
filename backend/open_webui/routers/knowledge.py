@@ -17,7 +17,7 @@ from open_webui.routers.retrieval import (
     process_files_batch,
     BatchProcessFilesForm,
 )
-
+from open_webui.storage.provider import Storage
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user
@@ -25,6 +25,7 @@ from open_webui.utils.access_control import has_access, has_permission
 
 
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.models.models import Models, ModelForm
 
 
 log = logging.getLogger(__name__)
@@ -212,8 +213,12 @@ async def update_knowledge_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-
-    if knowledge.user_id != user.id and user.role != "admin":
+    # Is the user the original creator, in a group with write access, or an admin
+    if (
+        knowledge.user_id != user.id
+        and not has_access(user.id, "write", knowledge.access_control)
+        and user.role != "admin"
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -419,6 +424,18 @@ def remove_file_from_knowledge_by_id(
         collection_name=knowledge.id, filter={"file_id": form_data.file_id}
     )
 
+    # Remove the file's collection from vector database
+    file_collection = f"file-{form_data.file_id}"
+    if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+        VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+
+    # Delete physical file
+    if file.path:
+        Storage.delete_file(file.path)
+
+    # Delete file from database
+    Files.delete_file_by_id(form_data.file_id)
+
     if knowledge:
         data = knowledge.data or {}
         file_ids = data.get("file_ids", [])
@@ -473,6 +490,36 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    log.info(f"Deleting knowledge base: {id} (name: {knowledge.name})")
+
+    # Get all models
+    models = Models.get_all_models()
+    log.info(f"Found {len(models)} models to check for knowledge base {id}")
+
+    # Update models that reference this knowledge base
+    for model in models:
+        if model.meta and hasattr(model.meta, "knowledge"):
+            knowledge_list = model.meta.knowledge or []
+            # Filter out the deleted knowledge base
+            updated_knowledge = [k for k in knowledge_list if k.get("id") != id]
+
+            # If the knowledge list changed, update the model
+            if len(updated_knowledge) != len(knowledge_list):
+                log.info(f"Updating model {model.id} to remove knowledge base {id}")
+                model.meta.knowledge = updated_knowledge
+                # Create a ModelForm for the update
+                model_form = ModelForm(
+                    id=model.id,
+                    name=model.name,
+                    base_model_id=model.base_model_id,
+                    meta=model.meta,
+                    params=model.params,
+                    access_control=model.access_control,
+                    is_active=model.is_active,
+                )
+                Models.update_model_by_id(model.id, model_form)
+
+    # Clean up vector DB
     try:
         VECTOR_DB_CLIENT.delete_collection(collection_name=id)
     except Exception as e:

@@ -24,7 +24,7 @@
 
 	const submitHandler = async () => {
 		const res = await updateUserById(localStorage.token, selectedUser.id, _user).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 		});
 
 		if (res) {
