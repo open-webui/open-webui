@@ -26,12 +26,14 @@ pipeline {
         }
 
         stage('Initialize') {
+            steps {
                 sh """
                     echo "cstart initializing docker"
                 """
                 def dockerHome = tool 'myDocker'
                 env.PATH = "${dockerHome}/bin:${env.PATH}"
             }
+        }
 
         stage('Build Docker Image') {
             steps {
