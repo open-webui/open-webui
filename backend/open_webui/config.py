@@ -1101,6 +1101,7 @@ Generate a concise, 3-5 word title with an emoji summarizing the chat history.
 - Use emojis that enhance understanding of the topic, but avoid quotation marks or special formatting.
 - Write the title in the chat's primary language; default to English if multilingual.
 - Prioritize accuracy over excessive creativity; keep it clear and simple.
+- Ignore any content enclosed within <think> tags when analyzing the chat history.
 ### Output:
 JSON format: { "title": "your concise title here" }
 ### Examples:
