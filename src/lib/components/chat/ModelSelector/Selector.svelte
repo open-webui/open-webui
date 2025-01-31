@@ -425,6 +425,7 @@
 								{/if}
 							</div>
 						</div>
+
 						{#if value === item.value}
 							<div class="ml-auto pl-2 pr-2 md:pr-0">
 								<Check />
