@@ -425,12 +425,11 @@
 								{/if}
 							</div>
 						</div>
-
-						<div class="ml-auto pl-2 pr-2 md:pr-0 flex items-center gap-2">
-							{#if value === item.value}
+						{#if value === item.value}
+							<div class="ml-auto pl-2 pr-2 md:pr-0 flex items-center gap-2">
 								<Check />
-							{/if}
-						</div>
+							{/div}
+						</if>
 					</button>
 				{:else}
 					<div>
