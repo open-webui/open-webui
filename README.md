@@ -1,223 +1,114 @@
-# Open WebUI 👋
+# GovChat-NL
 
-![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
-![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)
-![GitHub watchers](https://img.shields.io/github/watchers/open-webui/open-webui?style=social)
-![GitHub repo size](https://img.shields.io/github/repo-size/open-webui/open-webui)
-![GitHub language count](https://img.shields.io/github/languages/count/open-webui/open-webui)
-![GitHub top language](https://img.shields.io/github/languages/top/open-webui/open-webui)
-![GitHub last commit](https://img.shields.io/github/last-commit/open-webui/open-webui?color=red)
-![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Follama-webui%2Follama-wbui&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false)
-[![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
-[![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/tjbck)
+Welkom bij de **GovChat-NL repository** ! 
 
-**Open WebUI is an [extensible](https://docs.openwebui.com/features/plugin/), feature-rich, and user-friendly self-hosted AI platform designed to operate entirely offline.** It supports various LLM runners like **Ollama** and **OpenAI-compatible APIs**, with **built-in inference engine** for RAG, making it a **powerful AI deployment solution**.
+Dit project is ontworpen voor Nederlandse **overheidsinstanties**, met als doel ondersteuning te bieden bij de implementatie van **AI-oplossingen**. Het platform faciliteert zowel **chatbots** als gespecialiseerde **AI-toepassingen**. Deze toepassingen zijn eenvoudig toegankelijk via een ingebouwde **App Launcher**. Met **GovChat-NL** kunnen organisaties een balans vinden tussen **centraal beheer** en **decentrale vrijheid**, waarbij gestandaardiseerde functionaliteiten gecombineerd worden met maatwerkopties. Het platform is volledig afgestemd op de eisen van overheidsorganisaties, onder andere op het gebied van **veiligheid**, **privacy** en **schaalbaarheid**. 
 
-For more information, be sure to check out our [Open WebUI Documentation](https://docs.openwebui.com/).
+![Schermafbeelding 2025-01-31 101624](https://github.com/user-attachments/assets/6a5b689e-5804-47d0-8ce2-85a3275ea857)
 
-![Open WebUI Demo](./demo.gif)
+## Voordelen van GovChat-NL 
 
-## Key Features of Open WebUI ⭐
+- **Kant-en-klare applicatie**: Een veilig alternatief voor openbare chatbots (zoals ChatGPT, DeepSeek) of dure oplossingen (zoals Copilot) met ondersteuning voor diverse LLM's (OpenAI, Ollama, Azure AI e.a.). 
+- **AI-toepassingen specifiek ontwikkeld voor de overheid**: Denk aan toepassingen op B1-taalniveau of gericht op subsidies, beschikbaar via de App Launcher 
+- **Veiligheid**: Integratie met bestaande IAM-systemen (OAuth2, SSO, bv Microsoft Entra ID). 
+- **Flexibele implementatie**: Aanpasbaar aan de bestaande IT-omgeving van de organisatie. 
+- **Beheer**: Gebruikersrechten zijn eenvoudig te beheren via een admin paneel. 
 
-- 🚀 **Effortless Setup**: Install seamlessly using Docker or Kubernetes (kubectl, kustomize or helm) for a hassle-free experience with support for both `:ollama` and `:cuda` tagged images.
+## Implementatie 
 
-- 🤝 **Ollama/OpenAI API Integration**: Effortlessly integrate OpenAI-compatible APIs for versatile conversations alongside Ollama models. Customize the OpenAI API URL to link with **LMStudio, GroqCloud, Mistral, OpenRouter, and more**.
+GovChat-NL wordt geleverd in twee vormen: 
 
-- 🛡️ **Granular Permissions and User Groups**: By allowing administrators to create detailed user roles and permissions, we ensure a secure user environment. This granularity not only enhances security but also allows for customized user experiences, fostering a sense of ownership and responsibility amongst users.
+1. **Volledige broncode**: Geschikt voor uitgebreide en onvoorziene aanpassingen en te vinden in deze repository. 
+2. **Docker Images**: Beschikbaar via de packages-sectie van deze GitHub-repository. Deze zijn ideaal voor standaardimplementaties met uitsluitend voorziene aanpassingen. 
 
-- 📱 **Responsive Design**: Enjoy a seamless experience across Desktop PC, Laptop, and Mobile devices.
+Organisaties hebben de keuze om GovChat-NL te implementeren op lokale servers of in een cloudomgeving. Deze flexibiliteit maakt het mogelijk om GovChat-NL volledig af te stemmen op de bestaande infrastructuur. 
 
-- 📱 **Progressive Web App (PWA) for Mobile**: Enjoy a native app-like experience on your mobile device with our PWA, providing offline access on localhost and a seamless user interface.
+### Specifieke Implementatie: Provincie Limburg 
 
-- ✒️🔢 **Full Markdown and LaTeX Support**: Elevate your LLM experience with comprehensive Markdown and LaTeX capabilities for enriched interaction.
+Een praktijkvoorbeeld van GovChat-NL is de implementatie bij de **Provincie Limburg**, waarbij gebruik wordt gemaakt van een Docker Image gehost in Elestio. Taalmodellen worden gehost in Microsoft Azure en Google Vertex AI. Voor meer informatie over deze specifieke uitrol kunt u [deze pagina](/docs/ProvincieLimburg.md) raadplegen. 
 
-- 🎤📹 **Hands-Free Voice/Video Call**: Experience seamless communication with integrated hands-free voice and video call features, allowing for a more dynamic and interactive chat environment.
+![Schermafbeelding 2025-01-31 102730](https://github.com/user-attachments/assets/ac30f57d-fdfa-4cf6-a1da-abb56dad1ad7)
 
-- 🛠️ **Model Builder**: Easily create Ollama models via the Web UI. Create and add custom characters/agents, customize chat elements, and import models effortlessly through [Open WebUI Community](https://openwebui.com/) integration.
+### Andere Deploymentmogelijkheden 
 
-- 🐍 **Native Python Function Calling Tool**: Enhance your LLMs with built-in code editor support in the tools workspace. Bring Your Own Function (BYOF) by simply adding your pure Python functions, enabling seamless integration with LLMs.
+GovChat-NL biedt echter vele verschillende deploymentopties. Raadpleeg hiervoor de upstream documentatie. 
 
-- 📚 **Local RAG Integration**: Dive into the future of chat interactions with groundbreaking Retrieval Augmented Generation (RAG) support. This feature seamlessly integrates document interactions into your chat experience. You can load documents directly into the chat or add files to your document library, effortlessly accessing them using the `#` command before a query.
+## Balans tussen Centraal en Decentraal 
 
-- 🔍 **Web Search for RAG**: Perform web searches using providers like `SearXNG`, `Google PSE`, `Brave Search`, `serpstack`, `serper`, `Serply`, `DuckDuckGo`, `TavilySearch`, `SearchApi` and `Bing` and inject the results directly into your chat experience.
+GovChat-NL streeft naar een optimale balans tussen centraal beheer en decentrale vrijheid: 
 
-- 🌐 **Web Browsing Capability**: Seamlessly integrate websites into your chat experience using the `#` command followed by a URL. This feature allows you to incorporate web content directly into your conversations, enhancing the richness and depth of your interactions.
+- **Centraal**:  
+   - Kernfunctionaliteiten en belangrijke updates worden centraal onderhouden. 
+   - Ontwikkeling van nieuwe AI-toepassingen vindt centraal plaats. 
 
-- 🎨 **Image Generation Integration**: Seamlessly incorporate image generation capabilities using options such as AUTOMATIC1111 API or ComfyUI (local), and OpenAI's DALL-E (external), enriching your chat experience with dynamic visual content.
+- **Decentraal**:  
+   - Overheidsorganisaties kunnen thema's, data en functionaliteiten zelfstandig aanpassen via het admin paneel. 
+   - Implementaties kunnen worden toegespitst op de eigen infrastructuur. 
+   - Grote wijzigingen kunnen worden doorgevoerd in een kopie van de broncode. Optioneel kunnen deze wijzigingen via een pull request worden voorgesteld voor opname in de centraal beheerde code. 
 
-- ⚙️ **Many Models Conversations**: Effortlessly engage with various models simultaneously, harnessing their unique strengths for optimal responses. Enhance your experience by leveraging a diverse set of models in parallel.
+## Onderliggende repositories 
 
-- 🔐 **Role-Based Access Control (RBAC)**: Ensure secure access with restricted permissions; only authorized individuals can access your Ollama, and exclusive model creation/pulling rights are reserved for administrators.
+GovChat-NL is ontwikkeld op basis van open-source technologieën: 
 
-- 🌐🌍 **Multilingual Support**: Experience Open WebUI in your preferred language with our internationalization (i18n) support. Join us in expanding our supported languages! We're actively seeking contributors!
+### [OpenWebUI](https://github.com/open-webui/open-webui):  
 
-- 🧩 **Pipelines, Open WebUI Plugin Support**: Seamlessly integrate custom logic and Python libraries into Open WebUI using [Pipelines Plugin Framework](https://github.com/open-webui/pipelines). Launch your Pipelines instance, set the OpenAI URL to the Pipelines URL, and explore endless possibilities. [Examples](https://github.com/open-webui/pipelines/tree/main/examples) include **Function Calling**, User **Rate Limiting** to control access, **Usage Monitoring** with tools like Langfuse, **Live Translation with LibreTranslate** for multilingual support, **Toxic Message Filtering** and much more.
+OpenWebUI vormt de basis van GovChat-NL en biedt een veelzijdige, schaalbare architectuur. Belangrijke kenmerken: 
+- Uitgebreide chatbot-interface en deployment-opties. 
+- Robuust framework voor authenticatie en admin-beheer. 
+- Ondersteuning voor verschillende taalmodellen (lokaal of in de cloud via standaarden zoals Ollama en OpenAI). 
 
-- 🌟 **Continuous Updates**: We are committed to improving Open WebUI with regular updates, fixes, and new features.
+ 
 
-Want to learn more about Open WebUI's features? Check out our [Open WebUI documentation](https://docs.openwebui.com/features) for a comprehensive overview!
+### [LiteLLM](https://github.com/BerriAI/litellm): 
 
-## 🔗 Also Check Out Open WebUI Community!
+LiteLLM biedt flexibele en schaalbare integratie van Large Language Models (LLM's) Deze module biedt: 
+- Een uniforme interface voor het koppelen van LLM-providers. 
+- Flexibiliteit om te schakelen tussen verschillende AI-modellen en leveranciers, zoals OpenAI, Anthropic en andere. 
 
-Don't forget to explore our sibling project, [Open WebUI Community](https://openwebui.com/), where you can discover, download, and explore customized Modelfiles. Open WebUI Community offers a wide range of exciting possibilities for enhancing your chat interactions with Open WebUI! 🚀
+```mermaid 
 
-## How to Install 🚀
+flowchart TD 
 
-### Installation via Python pip 🐍
+    %% Hoofdcomponent 
 
-Open WebUI can be installed using pip, the Python package installer. Before proceeding, ensure you're using **Python 3.11** to avoid compatibility issues.
+    GovChatNL[GovChat-NL]:::main --> |fork| OpenWebUI:::repo; 
 
-1. **Install Open WebUI**:
-   Open your terminal and run the following command to install Open WebUI:
+ 
 
-   ```bash
-   pip install open-webui
-   ```
+    %% Repositories met standaardstijl 
 
-2. **Running Open WebUI**:
-   After installation, you can start Open WebUI by executing:
+    OpenWebUI --> LokaleLLMs[Lokale LLMs]; 
 
-   ```bash
-   open-webui serve
-   ```
+    OpenWebUI --> OpenAI-standaard; 
 
-This will start the Open WebUI server, which you can access at [http://localhost:8080](http://localhost:8080)
+    OpenWebUI --> Ollama-standaard; 
 
-### Quick Start with Docker 🐳
+    OpenAI-standaard --> LiteLLM:::repo; 
 
-> [!NOTE]  
-> Please note that for certain Docker environments, additional configurations might be needed. If you encounter any connection issues, our detailed guide on [Open WebUI Documentation](https://docs.openwebui.com/) is ready to assist you.
+ 
 
-> [!WARNING]
-> When using Docker to install Open WebUI, make sure to include the `-v open-webui:/app/backend/data` in your Docker command. This step is crucial as it ensures your database is properly mounted and prevents any loss of data.
+    %% Klassen voor stijl 
 
-> [!TIP]  
-> If you wish to utilize Open WebUI with Ollama included or CUDA acceleration, we recommend utilizing our official images tagged with either `:cuda` or `:ollama`. To enable CUDA, you must install the [Nvidia CUDA container toolkit](https://docs.nvidia.com/dgx/nvidia-container-runtime-upgrade/) on your Linux/WSL system.
+    classDef main fill:#ffcc00,stroke:#333,stroke-width:3px,rounded-corners, font-size:16px; 
 
-### Installation with Default Configuration
+    classDef repo fill:#f9f,stroke:#333,stroke-width:2px,rounded-corners; 
 
-- **If Ollama is on your computer**, use this command:
+ 
 
-  ```bash
-  docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
-  ```
+``` 
 
-- **If Ollama is on a Different Server**, use this command:
+## Documentatie 
 
-  To connect to Ollama on another server, change the `OLLAMA_BASE_URL` to the server's URL:
+GovChat-NL wordt geleverd met uitgebreide documentatie voor installatie, configuratie en beheer: 
 
-  ```bash
-  docker run -d -p 3000:8080 -e OLLAMA_BASE_URL=https://example.com -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
-  ```
+- **Implementatiehandleiding**: Stapsgewijze uitleg voor het implementeren van GovChat-NL.  
+- **Admin Paneel Handleiding**: Handleiding voor het beheren van gebruikers, instellingen en thema-aanpassingen 
+- **Thema-aanpassingen**: Gedetailleerde uitleg over hoe organisaties hun chatbot kunnen aanpassen aan specifieke huisstijlrichtlijnen 
+- **Beveiligingsrichtlijnen**: Documentatie over de veiligheidsmaatregelen en aanbevelingen voor het waarborgen van privacy 
+- **Authenticatieopties**: Uitleg over authenticatiemethoden, zoals SSO (Single Sign-On) en OAuth-integratie.
 
-- **To run Open WebUI with Nvidia GPU support**, use this command:
+![Schermafbeelding 2025-01-31 101515](https://github.com/user-attachments/assets/79baef23-a1ee-428e-83f3-95764d0e871a)
 
-  ```bash
-  docker run -d -p 3000:8080 --gpus all --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:cuda
-  ```
+## Bijdragen 
 
-### Installation for OpenAI API Usage Only
-
-- **If you're only using OpenAI API**, use this command:
-
-  ```bash
-  docker run -d -p 3000:8080 -e OPENAI_API_KEY=your_secret_key -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
-  ```
-
-### Installing Open WebUI with Bundled Ollama Support
-
-This installation method uses a single container image that bundles Open WebUI with Ollama, allowing for a streamlined setup via a single command. Choose the appropriate command based on your hardware setup:
-
-- **With GPU Support**:
-  Utilize GPU resources by running the following command:
-
-  ```bash
-  docker run -d -p 3000:8080 --gpus=all -v ollama:/root/.ollama -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama
-  ```
-
-- **For CPU Only**:
-  If you're not using a GPU, use this command instead:
-
-  ```bash
-  docker run -d -p 3000:8080 -v ollama:/root/.ollama -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama
-  ```
-
-Both commands facilitate a built-in, hassle-free installation of both Open WebUI and Ollama, ensuring that you can get everything up and running swiftly.
-
-After installation, you can access Open WebUI at [http://localhost:3000](http://localhost:3000). Enjoy! 😄
-
-### Other Installation Methods
-
-We offer various installation alternatives, including non-Docker native installation methods, Docker Compose, Kustomize, and Helm. Visit our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/) or join our [Discord community](https://discord.gg/5rJgQTnV4s) for comprehensive guidance.
-
-### Troubleshooting
-
-Encountering connection issues? Our [Open WebUI Documentation](https://docs.openwebui.com/troubleshooting/) has got you covered. For further assistance and to join our vibrant community, visit the [Open WebUI Discord](https://discord.gg/5rJgQTnV4s).
-
-#### Open WebUI: Server Connection Error
-
-If you're experiencing connection issues, it’s often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container . Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
-
-**Example Docker Command**:
-
-```bash
-docker run -d --network=host -v open-webui:/app/backend/data -e OLLAMA_BASE_URL=http://127.0.0.1:11434 --name open-webui --restart always ghcr.io/open-webui/open-webui:main
-```
-
-### Keeping Your Docker Installation Up-to-Date
-
-In case you want to update your local Docker installation to the latest version, you can do it with [Watchtower](https://containrrr.dev/watchtower/):
-
-```bash
-docker run --rm --volume /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower --run-once open-webui
-```
-
-In the last part of the command, replace `open-webui` with your container name if it is different.
-
-Check our Migration Guide available in our [Open WebUI Documentation](https://docs.openwebui.com/tutorials/migration/).
-
-### Using the Dev Branch 🌙
-
-> [!WARNING]
-> The `:dev` branch contains the latest unstable features and changes. Use it at your own risk as it may have bugs or incomplete features.
-
-If you want to try out the latest bleeding-edge features and are okay with occasional instability, you can use the `:dev` tag like this:
-
-```bash
-docker run -d -p 3000:8080 -v open-webui:/app/backend/data --name open-webui --add-host=host.docker.internal:host-gateway --restart always ghcr.io/open-webui/open-webui:dev
-```
-
-### Offline Mode
-
-If you are running Open WebUI in an offline environment, you can set the `HF_HUB_OFFLINE` environment variable to `1` to prevent attempts to download models from the internet.
-
-```bash
-export HF_HUB_OFFLINE=1
-```
-
-## What's Next? 🌟
-
-Discover upcoming features on our roadmap in the [Open WebUI Documentation](https://docs.openwebui.com/roadmap/).
-
-## License 📜
-
-This project is licensed under the [BSD-3-Clause License](LICENSE) - see the [LICENSE](LICENSE) file for details. 📄
-
-## Support 💬
-
-If you have any questions, suggestions, or need assistance, please open an issue or join our
-[Open WebUI Discord community](https://discord.gg/5rJgQTnV4s) to connect with us! 🤝
-
-## Star History
-
-<a href="https://star-history.com/#open-webui/open-webui&Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date" />
-  </picture>
-</a>
-
----
-
-Created by [Timothy Jaeryang Baek](https://github.com/tjbck) - Let's make Open WebUI even more amazing together! 💪
+We moedigen bijdragen aan deze repository aan. Raadpleeg CONTRIBUTING.md voor meer informatie over hoe je kunt bijdragen aan de ontwikkeling van GovChat-NL. 
