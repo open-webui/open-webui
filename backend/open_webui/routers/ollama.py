@@ -68,6 +68,8 @@ log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
 #
 ##########################################
 
+ENABLE_FORWARD_USER_INFO_HEADERS=True
+
 
 async def send_get_request(url, key=None,user=None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
@@ -128,10 +130,13 @@ async def send_post_request(
             "Content-Type": "application/json",
             **({"Authorization": f"Bearer {key}"} if key else {}),
         }
-        # log.info(f"user : {user} and enable {ENABLE_FORWARD_USER_INFO_HEADERS} ")
+        log.info(f"headers: {headers}")
+        log.info(f"Testing 1")
+        
+        log.info(f"user : {user} and enable {ENABLE_FORWARD_USER_INFO_HEADERS} ")
         # Conditionally add user info
         if user and ENABLE_FORWARD_USER_INFO_HEADERS:
-
+            log.info(f"Testing inside post request")
             # log.info(f"user : {user} and enable {ENABLE_FORWARD_USER_INFO_HEADERS} ")
             headers.update(
                 {
