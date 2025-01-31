@@ -218,13 +218,6 @@
 			toast.success(`${model} download has been canceled`);
 		}
 	};
-
-	const copyModelLink = (modelId: string) => {
-		const url = new URL(window.location.href);
-		url.searchParams.set('model', modelId);
-		navigator.clipboard.writeText(url.toString());
-		toast.success($i18n.t('Link copied to clipboard'));
-	};
 </script>
 
 <DropdownMenu.Root
@@ -367,7 +360,7 @@
 
 								{#if item.model.owned_by === 'openai'}
 									<Tooltip content={`${'External'}`}>
-										<div class="translate-y-[1px] ml-1">
+										<div class="translate-y-[1px]">
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
 												viewBox="0 0 16 16"
