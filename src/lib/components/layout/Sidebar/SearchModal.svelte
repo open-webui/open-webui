@@ -7,7 +7,18 @@ import XMark from "$lib/components/icons/XMark.svelte";
 import SearchIcon from "$lib/components/icons/Search.svelte";
 import ChatItem from "./ChatItem.svelte";
 import Spinner from "$lib/components/common/Spinner.svelte";
-import type { Chat } from "$lib/types";
+
+interface Chat {
+	id: string;
+	title: string;
+	time_range?: string;
+	created_at?: number;
+	updated_at?: number;
+	folder_id?: string | null;
+	pinned?: boolean;
+	archived?: boolean;
+	tags?: string[];
+} 
 
 const i18n = getContext("i18n");
 
