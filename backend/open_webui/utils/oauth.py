@@ -274,7 +274,7 @@ class OAuthManager:
                         log.error(
                             f"Error downloading profile image '{picture_url}': {e}"
                         )
-                        picture_url = ""
+                        picture_url = "/user.png"
                 if not picture_url:
                     picture_url = "/user.png"
 
