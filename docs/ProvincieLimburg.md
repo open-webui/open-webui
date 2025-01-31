@@ -12,15 +12,16 @@ Om gevoelige informatie, zoals API-sleutels en wachtwoorden, veilig te beheren, 
 ### Locatie:
 Plaats het .env-bestand in de hoofdmappen van de respectieve configuraties, bijvoorbeeld:
 
-- Voor docker-compose.yml: in `/app/`
-- Voor specifieke configuraties van LiteLLM: in `/app/litellm/`
+- Voor docker-compose.yml: in `/app`
+- Voor specifieke configuraties van LiteLLM: in `/app/litellm`
 
 ## Overzicht van de Componenten
-Wat              Leverancier
-Taalmodellen      Microsoft Azure      GPT-4o, Deepseek-R1, text-embeddings-3-large
-Taalmodellen      Google Vertex AI      claude-35-sonnet
-Virtual Machine    Hertzner via Elestio
-Authenthicatie    Microsoft Entra ID
+| **Wat**             | **Leverancier**          | **Details**                                    |
+|----------------------|--------------------------|------------------------------------------------|
+| **Taalmodellen**     | Microsoft Azure          | GPT-4o, DeepSeek-R1, Text-Embeddings-3-large  |
+| **Taalmodellen**     | Google Vertex AI         | Claude-35-Sonnet                              |
+| **Virtual Machine**  | Hertzner via Elestio     | Hosting van infrastructuur                    |
+| **Authenticatie**    | Microsoft Entra ID       | Single sign-on en beveiligde login            |
 
 ## Stap 1: .env-bestand opstellen
 Maak een .env-bestand in `/app/` en voeg de volgende variabelen toe. Vul onderstaande placeholders in met jouw eigen API-sleutels, URL's en gegevens.
@@ -170,8 +171,7 @@ Stappen:
 3. Klik op Beheerdersinstellingen in het menu.
 4. Ga naar het tabblad Verbindingen .
 5. API Base URL Instellen:
-6. 
-Voeg de volgende waarde toe aan het veld API Base URL bij OpenAI API:
+6. Voeg de volgende waarde toe aan het veld API Base URL bij OpenAI API:
 `http://litellm:4000`
 Dit is de interne URL die door de Docker-containers wordt gebruikt om de LiteLLM-service te bereiken.
 
