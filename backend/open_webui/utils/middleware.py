@@ -436,7 +436,7 @@ async def chat_web_search_handler(
                     "type": "status",
                     "data": {
                         "action": "web_search",
-                        "description": "Loaded {{count}} sites",
+                        "description": "Searched {{count}} sites",
                         "query": searchQuery,
                         "urls": results["filenames"],
                         "done": True,

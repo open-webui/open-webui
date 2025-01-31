@@ -561,6 +561,7 @@
 	"Listening...": "Kuuntelee...",
 	"Llama.cpp": "",
 	"LLMs can make mistakes. Verify important information.": "Kielimallit voivat tehdä virheitä. Tarkista tärkeät tiedot.",
+	"Loading {{count}} sites": "",
 	"Local": "Paikallinen",
 	"Local Models": "Paikalliset mallit",
 	"Lost": "Mennyt",

@@ -561,6 +561,7 @@
 	"Listening...": "Hallgatás...",
 	"Llama.cpp": "",
 	"LLMs can make mistakes. Verify important information.": "Az LLM-ek hibázhatnak. Ellenőrizze a fontos információkat.",
+	"Loading {{count}} sites": "",
 	"Local": "",
 	"Local Models": "Helyi modellek",
 	"Lost": "Elveszett",

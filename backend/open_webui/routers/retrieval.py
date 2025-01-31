@@ -1265,7 +1265,7 @@ async def process_web_search(
             "type": "status",
             "data": {
                 "action": "web_search",
-                "description": "Loading {{count}} sites...",
+                "description": "Loading {{count}} sites",
                 "urls": [result.link for result in web_results],
                 "done": False
             },

@@ -561,6 +561,7 @@
 	"Listening...": "正在聆聽...",
 	"Llama.cpp": "Llama.cpp",
 	"LLMs can make mistakes. Verify important information.": "大型語言模型可能會出錯。請驗證重要資訊。",
+	"Loading {{count}} sites": "",
 	"Local": "本機",
 	"Local Models": "本機模型",
 	"Lost": "已遺失",

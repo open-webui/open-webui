@@ -561,6 +561,7 @@
 	"Listening...": "Dinleniyor...",
 	"Llama.cpp": "",
 	"LLMs can make mistakes. Verify important information.": "LLM'ler hata yapabilir. Önemli bilgileri doğrulayın.",
+	"Loading {{count}} sites": "",
 	"Local": "Yerel",
 	"Local Models": "Yerel Modeller",
 	"Lost": "Kayıp",
