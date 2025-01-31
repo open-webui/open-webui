@@ -7,7 +7,7 @@ SET "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%" || exit /b
 
 :: Add conditional Playwright browser installation
-IF /I "%RAG_WEB_LOADER%" == "chromium" (
+IF /I "%RAG_WEB_LOADER%" == "playwright" (
     echo Installing Playwright browsers...
     playwright install chromium
     playwright install-deps chromium

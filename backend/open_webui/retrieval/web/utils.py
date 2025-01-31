@@ -5,6 +5,7 @@ import ssl
 import urllib.parse
 import certifi
 import validators
+from collections import defaultdict
 from typing import AsyncIterator, Dict, List, Optional, Union, Sequence, Iterator
 
 from langchain_community.document_loaders import (
@@ -211,28 +212,27 @@ class SafeWebBaseLoader(WebBaseLoader):
                 # Log the error and continue with the next URL
                 log.error(f"Error loading {path}: {e}")
 
+RAG_WEB_LOADERS = defaultdict(lambda: SafeWebBaseLoader)
+RAG_WEB_LOADERS["playwright"] = SafePlaywrightURLLoader
+RAG_WEB_LOADERS["safe_web"] = SafeWebBaseLoader
 
 def get_web_loader(
     urls: Union[str, Sequence[str]],
     verify_ssl: bool = True,
     requests_per_second: int = 2,
 ):
-    # Check if the URL is valid
+    # Check if the URLs are valid
     safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
 
-    if RAG_WEB_LOADER.value == "chromium":
-        log.info("Using SafePlaywrightURLLoader")
-        return SafePlaywrightURLLoader(
-            safe_urls,
-            verify_ssl=verify_ssl,
-            requests_per_second=requests_per_second,
-            continue_on_failure=True,
-        )
-    else:
-        log.info("Using SafeWebBaseLoader")
-        return SafeWebBaseLoader(
-            safe_urls,
-            verify_ssl=verify_ssl,
-            requests_per_second=requests_per_second,
-            continue_on_failure=True,
-        )
+    # Get the appropriate WebLoader based on the configuration
+    WebLoaderClass = RAG_WEB_LOADERS[RAG_WEB_LOADER.value]
+    web_loader = WebLoaderClass(
+        safe_urls,
+        verify_ssl=verify_ssl,
+        requests_per_second=requests_per_second,
+        continue_on_failure=True,
+    )
+
+    log.debug("Using RAG_WEB_LOADER %s for %s URLs", web_loader.__class__.__name__, len(safe_urls))
+
+    return web_loader
