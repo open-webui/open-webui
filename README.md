@@ -12,7 +12,9 @@ Dit project is ontworpen voor Nederlandse **overheidsinstanties**, met als doel 
 - **AI-toepassingen specifiek ontwikkeld voor de overheid**: Denk aan toepassingen op B1-taalniveau of gericht op subsidies, beschikbaar via de App Launcher 
 - **Veiligheid**: Integratie met bestaande IAM-systemen (OAuth2, SSO, bv Microsoft Entra ID). 
 - **Flexibele implementatie**: Aanpasbaar aan de bestaande IT-omgeving van de organisatie. 
-- **Beheer**: Gebruikersrechten zijn eenvoudig te beheren via een admin paneel. 
+- **Beheer**: Gebruikersrechten zijn eenvoudig te beheren via een admin paneel.
+
+![image](https://github.com/user-attachments/assets/04da966a-05c2-4a95-ad8c-f0de95dcb60c)
 
 ## Implementatie 
 
