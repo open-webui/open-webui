@@ -1,4 +1,4 @@
-# **GovChat-NL **
+# GovChat-NL
 
 Welkom bij de **GovChat-NL repository** ! 
 
