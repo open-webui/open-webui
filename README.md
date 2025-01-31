@@ -1,29 +1,29 @@
-# GovChat-NL 
+# **GovChat-NL **
 
-Welkom bij de GovChat-NL repository ! 
+Welkom bij de **GovChat-NL repository** ! 
 
-Dit project is ontworpen voor Nederlandse overheidsinstanties, met als doel ondersteuning te bieden bij de implementatie van AI-oplossingen. Het platform faciliteert zowel chatbots als gespecialiseerde AI-toepassingen. Deze toepassingen zijn eenvoudig toegankelijk via een ingebouwde App Launcher. Met GovChat-NL kunnen organisaties een balans vinden tussen centraal beheer en decentrale vrijheid, waarbij gestandaardiseerde functionaliteiten gecombineerd worden met maatwerkopties. Het platform is volledig afgestemd op de eisen van overheidsorganisaties, onder andere op het gebied van veiligheid, privacy en schaalbaarheid. 
+Dit project is ontworpen voor Nederlandse **overheidsinstanties**, met als doel ondersteuning te bieden bij de implementatie van **AI-oplossingen**. Het platform faciliteert zowel **chatbots** als gespecialiseerde **AI-toepassingen**. Deze toepassingen zijn eenvoudig toegankelijk via een ingebouwde **App Launcher**. Met **GovChat-NL** kunnen organisaties een balans vinden tussen **centraal beheer** en **decentrale vrijheid**, waarbij gestandaardiseerde functionaliteiten gecombineerd worden met maatwerkopties. Het platform is volledig afgestemd op de eisen van overheidsorganisaties, onder andere op het gebied van **veiligheid**, **privacy** en **schaalbaarheid**. 
 
 ## Voordelen van GovChat-NL 
 
-- Kant-en-klare applicatie: Een veilig alternatief voor openbare chatbots (zoals ChatGPT, DeepSeek) of dure oplossingen (zoals CoPilot) met ondersteuning voor diverse LLM's (OpenAI, Ollama, Azure AI e.a.). 
-- AI-toepassingen specifiek ontwikkeld voor de overheid: Denk aan toepassingen op B1-taalniveau of gericht op subsidies, beschikbaar via de App Launcher 
-- Veiligheid: Integratie met bestaande IAM-systemen (OAuth2, SSO, bv Microsoft Entra ID). 
-- Flexibele implementatie: Aanpasbaar aan de bestaande IT-omgeving van de organisatie. 
-- Beheer: Gebruikersrechten zijn eenvoudig te beheren via een admin paneel. 
+- **Kant-en-klare applicatie**: Een veilig alternatief voor openbare chatbots (zoals ChatGPT, DeepSeek) of dure oplossingen (zoals CoPilot) met ondersteuning voor diverse LLM's (OpenAI, Ollama, Azure AI e.a.). 
+- **AI-toepassingen specifiek ontwikkeld voor de overheid**: Denk aan toepassingen op B1-taalniveau of gericht op subsidies, beschikbaar via de App Launcher 
+- **Veiligheid**: Integratie met bestaande IAM-systemen (OAuth2, SSO, bv Microsoft Entra ID). 
+- **Flexibele implementatie**: Aanpasbaar aan de bestaande IT-omgeving van de organisatie. 
+- **Beheer**: Gebruikersrechten zijn eenvoudig te beheren via een admin paneel. 
 
 ## Implementatie 
 
 GovChat-NL wordt geleverd in twee vormen: 
 
-1. Volledige broncode: Geschikt voor uitgebreide en onvoorziene aanpassingen en te vinden in deze repository. 
-2. Docker Images: Beschikbaar via de packages-sectie van deze GitHub-repository. Deze zijn ideaal voor standaardimplementaties met uitsluitend voorziene aanpassingen. 
+1. **Volledige broncode**: Geschikt voor uitgebreide en onvoorziene aanpassingen en te vinden in deze repository. 
+2. **Docker Images**: Beschikbaar via de packages-sectie van deze GitHub-repository. Deze zijn ideaal voor standaardimplementaties met uitsluitend voorziene aanpassingen. 
 
 Organisaties hebben de keuze om GovChat-NL te implementeren op lokale servers of in een cloudomgeving. Deze flexibiliteit maakt het mogelijk om GovChat-NL volledig af te stemmen op de bestaande infrastructuur. 
 
 ### Specifieke Implementatie: Provincie Limburg 
 
-Een praktijkvoorbeeld van GovChat-NL is de implementatie bij de Provincie Limburg, waarbij gebruik wordt gemaakt van een Docker Image gehost in Elestio. Taalmodellen worden gehost in Microsoft Azure en Google Vertex AI. Voor meer informatie over deze specifieke uitrol kunt u [deze pagina](link invoegen) raadplegen. 
+Een praktijkvoorbeeld van GovChat-NL is de implementatie bij de **Provincie Limburg**, waarbij gebruik wordt gemaakt van een Docker Image gehost in Elestio. Taalmodellen worden gehost in Microsoft Azure en Google Vertex AI. Voor meer informatie over deze specifieke uitrol kunt u [deze pagina](link invoegen) raadplegen. 
 
 ### Andere Deploymentmogelijkheden 
 
@@ -33,11 +33,11 @@ GovChat-NL biedt echter vele verschillende deploymentopties. Raadpleeg hiervoor 
 
 GovChat-NL streeft naar een optimale balans tussen centraal beheer en decentrale vrijheid: 
 
-- Centraal:  
+- **Centraal**:  
    - Kernfunctionaliteiten en belangrijke updates worden centraal onderhouden. 
    - Ontwikkeling van nieuwe AI-toepassingen vindt centraal plaats. 
 
-- Decentraal:  
+- **Decentraal**:  
    - Overheidsorganisaties kunnen thema's, data en functionaliteiten zelfstandig aanpassen via het admin paneel. 
    - Implementaties kunnen worden toegespitst op de eigen infrastructuur. 
    - Grote wijzigingen kunnen worden doorgevoerd in een kopie van de broncode. Optioneel kunnen deze wijzigingen via een pull request worden voorgesteld voor opname in de centraal beheerde code. 
@@ -79,7 +79,7 @@ flowchart TD
 
     OpenWebUI --> Ollama-standaard; 
 
-    OpenAI-standaard --> LiteLLM; 
+    OpenAI-standaard --> LiteLLM:::repo; 
 
  
 
@@ -97,11 +97,11 @@ flowchart TD
 
 GovChat-NL wordt geleverd met uitgebreide documentatie voor installatie, configuratie en beheer: 
 
-- Implementatiehandleiding: Stapsgewijze uitleg voor het implementeren van GovChat-NL.  
-- Admin Paneel Handleiding : Handleiding voor het beheren van gebruikers, instellingen en thema-aanpassingen 
-- Thema-aanpassingen : Gedetailleerde uitleg over hoe organisaties hun chatbot kunnen aanpassen aan specifieke huisstijlrichtlijnen 
-- Beveiligingsrichtlijnen : Documentatie over de veiligheidsmaatregelen en aanbevelingen voor het waarborgen van privacy 
-- Authenticatieopties : Uitleg over authenticatiemethoden, zoals SSO (Single Sign-On) en OAuth-integratie. 
+- **Implementatiehandleiding**: Stapsgewijze uitleg voor het implementeren van GovChat-NL.  
+- **Admin Paneel Handleiding**: Handleiding voor het beheren van gebruikers, instellingen en thema-aanpassingen 
+- **Thema-aanpassingen**: Gedetailleerde uitleg over hoe organisaties hun chatbot kunnen aanpassen aan specifieke huisstijlrichtlijnen 
+- **Beveiligingsrichtlijnen**: Documentatie over de veiligheidsmaatregelen en aanbevelingen voor het waarborgen van privacy 
+- **Authenticatieopties**: Uitleg over authenticatiemethoden, zoals SSO (Single Sign-On) en OAuth-integratie. 
 
 ## Bijdragen 
 
