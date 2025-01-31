@@ -83,7 +83,7 @@ oauth.register(
     client_id=PROCONNECT_CLIENT_ID,
     client_secret=PROCONNECT_CLIENT_SECRET,
     client_kwargs={
-        "scope": "openid profile email given_name usual_name",
+        "scope": "openid profile email given_name usual_name siret",
     },
 )
 
