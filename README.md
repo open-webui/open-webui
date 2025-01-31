@@ -8,7 +8,7 @@ Dit project is ontworpen voor Nederlandse **overheidsinstanties**, met als doel 
 
 ## Voordelen van GovChat-NL 
 
-- **Kant-en-klare applicatie**: Een veilig alternatief voor openbare chatbots (zoals ChatGPT, DeepSeek) of dure oplossingen (zoals CoPilot) met ondersteuning voor diverse LLM's (OpenAI, Ollama, Azure AI e.a.). 
+- **Kant-en-klare applicatie**: Een veilig alternatief voor openbare chatbots (zoals ChatGPT, DeepSeek) of dure oplossingen (zoals Copilot) met ondersteuning voor diverse LLM's (OpenAI, Ollama, Azure AI e.a.). 
 - **AI-toepassingen specifiek ontwikkeld voor de overheid**: Denk aan toepassingen op B1-taalniveau of gericht op subsidies, beschikbaar via de App Launcher 
 - **Veiligheid**: Integratie met bestaande IAM-systemen (OAuth2, SSO, bv Microsoft Entra ID). 
 - **Flexibele implementatie**: Aanpasbaar aan de bestaande IT-omgeving van de organisatie. 
@@ -25,7 +25,7 @@ Organisaties hebben de keuze om GovChat-NL te implementeren op lokale servers of
 
 ### Specifieke Implementatie: Provincie Limburg 
 
-Een praktijkvoorbeeld van GovChat-NL is de implementatie bij de **Provincie Limburg**, waarbij gebruik wordt gemaakt van een Docker Image gehost in Elestio. Taalmodellen worden gehost in Microsoft Azure en Google Vertex AI. Voor meer informatie over deze specifieke uitrol kunt u [deze pagina](link invoegen) raadplegen. 
+Een praktijkvoorbeeld van GovChat-NL is de implementatie bij de **Provincie Limburg**, waarbij gebruik wordt gemaakt van een Docker Image gehost in Elestio. Taalmodellen worden gehost in Microsoft Azure en Google Vertex AI. Voor meer informatie over deze specifieke uitrol kunt u [deze pagina](/docs/ProvincieLimburg.md) raadplegen. 
 
 ![Schermafbeelding 2025-01-31 102730](https://github.com/user-attachments/assets/ac30f57d-fdfa-4cf6-a1da-abb56dad1ad7)
 
