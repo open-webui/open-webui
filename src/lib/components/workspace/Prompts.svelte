@@ -5,7 +5,7 @@
 
 	import { goto } from '$app/navigation';
 	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
+	import { WEBUI_NAME, prompts as _prompts, user } from '$lib/stores';
 
 	import {
 		createNewPrompt,
@@ -19,7 +19,6 @@
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Search from '../icons/Search.svelte';
 	import Plus from '../icons/Plus.svelte';
-	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
@@ -38,24 +37,6 @@
 
 	let filteredItems = [];
 	$: filteredItems = prompts.filter((p) => query === '' || p.command.includes(query));
-
-	const shareHandler = async (prompt) => {
-		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
-
-		const url = 'https://openwebui.com';
-
-		const tab = await window.open(`${url}/prompts/create`, '_blank');
-		window.addEventListener(
-			'message',
-			(event) => {
-				if (event.origin !== url) return;
-				if (event.data === 'loaded') {
-					tab.postMessage(JSON.stringify(prompt), '*');
-				}
-			},
-			false
-		);
-	};
 
 	const cloneHandler = async (prompt) => {
 		sessionStorage.prompt = JSON.stringify(prompt);
@@ -154,19 +135,27 @@
 						</div>
 
 						<div class=" text-xs px-0.5">
-							<Tooltip
-								content={prompt?.user?.email ?? $i18n.t('Deleted User')}
-								className="flex shrink-0"
-								placement="top-start"
-							>
-								<div class="shrink-0 text-gray-500">
-									{$i18n.t('By {{name}}', {
-										name: capitalizeFirstLetter(
-											prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
-										)
-									})}
-								</div>
-							</Tooltip>
+							{#if prompt.access_control == null}
+								<Tooltip content="public" className="flex shrink-0" placement="top-start">
+									<div class="shrink-0 text-gray-500">
+										{$i18n.t('Public')}
+									</div>
+								</Tooltip>
+							{:else if prompt?.user?.role === 'admin' || (prompt?.user?.role === 'user' && prompt.access_control != null)}
+								<Tooltip
+									content={prompt?.user?.email ?? $i18n.t('Deleted User')}
+									className="flex shrink-0"
+									placement="top-start"
+								>
+									<div class="shrink-0 text-gray-500">
+										{$i18n.t('By {{name}}', {
+											name: capitalizeFirstLetter(
+												prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
+											)
+										})}
+									</div>
+								</Tooltip>
+							{/if}
 						</div>
 					</a>
 				</div>
@@ -193,9 +182,6 @@
 					</a>
 
 					<PromptMenu
-						shareHandler={() => {
-							shareHandler(prompt);
-						}}
 						cloneHandler={() => {
 							cloneHandler(prompt);
 						}}
@@ -207,6 +193,7 @@
 							showDeleteConfirm = true;
 						}}
 						onClose={() => {}}
+						canDelete={$user.role === 'admin' || prompt?.user?.id === $user.id}
 					>
 						<button
 							class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
@@ -313,33 +300,6 @@
 					</div>
 				</button>
 			</div>
-		</div>
-	{/if}
-
-	{#if $config?.features.enable_community_sharing}
-		<div class=" my-16">
-			<div class=" text-xl font-medium mb-1 line-clamp-1">
-				{$i18n.t('Made by OpenWebUI Community')}
-			</div>
-
-			<a
-				class=" flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full mb-2 px-3.5 py-1.5 rounded-xl transition"
-				href="https://openwebui.com/#open-webui-community"
-				target="_blank"
-			>
-				<div class=" self-center">
-					<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a prompt')}</div>
-					<div class=" text-sm line-clamp-1">
-						{$i18n.t('Discover, download, and explore custom prompts')}
-					</div>
-				</div>
-
-				<div>
-					<div>
-						<ChevronRight />
-					</div>
-				</div>
-			</a>
 		</div>
 	{/if}
 {:else}
