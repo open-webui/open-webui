@@ -4,6 +4,8 @@ Welkom bij de **GovChat-NL repository** !
 
 Dit project is ontworpen voor Nederlandse **overheidsinstanties**, met als doel ondersteuning te bieden bij de implementatie van **AI-oplossingen**. Het platform faciliteert zowel **chatbots** als gespecialiseerde **AI-toepassingen**. Deze toepassingen zijn eenvoudig toegankelijk via een ingebouwde **App Launcher**. Met **GovChat-NL** kunnen organisaties een balans vinden tussen **centraal beheer** en **decentrale vrijheid**, waarbij gestandaardiseerde functionaliteiten gecombineerd worden met maatwerkopties. Het platform is volledig afgestemd op de eisen van overheidsorganisaties, onder andere op het gebied van **veiligheid**, **privacy** en **schaalbaarheid**. 
 
+![Schermafbeelding 2025-01-31 101624](https://github.com/user-attachments/assets/6a5b689e-5804-47d0-8ce2-85a3275ea857)
+
 ## Voordelen van GovChat-NL 
 
 - **Kant-en-klare applicatie**: Een veilig alternatief voor openbare chatbots (zoals ChatGPT, DeepSeek) of dure oplossingen (zoals CoPilot) met ondersteuning voor diverse LLM's (OpenAI, Ollama, Azure AI e.a.). 
@@ -24,6 +26,8 @@ Organisaties hebben de keuze om GovChat-NL te implementeren op lokale servers of
 ### Specifieke Implementatie: Provincie Limburg 
 
 Een praktijkvoorbeeld van GovChat-NL is de implementatie bij de **Provincie Limburg**, waarbij gebruik wordt gemaakt van een Docker Image gehost in Elestio. Taalmodellen worden gehost in Microsoft Azure en Google Vertex AI. Voor meer informatie over deze specifieke uitrol kunt u [deze pagina](link invoegen) raadplegen. 
+
+![Schermafbeelding 2025-01-31 102730](https://github.com/user-attachments/assets/ac30f57d-fdfa-4cf6-a1da-abb56dad1ad7)
 
 ### Andere Deploymentmogelijkheden 
 
@@ -101,7 +105,9 @@ GovChat-NL wordt geleverd met uitgebreide documentatie voor installatie, configu
 - **Admin Paneel Handleiding**: Handleiding voor het beheren van gebruikers, instellingen en thema-aanpassingen 
 - **Thema-aanpassingen**: Gedetailleerde uitleg over hoe organisaties hun chatbot kunnen aanpassen aan specifieke huisstijlrichtlijnen 
 - **Beveiligingsrichtlijnen**: Documentatie over de veiligheidsmaatregelen en aanbevelingen voor het waarborgen van privacy 
-- **Authenticatieopties**: Uitleg over authenticatiemethoden, zoals SSO (Single Sign-On) en OAuth-integratie. 
+- **Authenticatieopties**: Uitleg over authenticatiemethoden, zoals SSO (Single Sign-On) en OAuth-integratie.
+
+![Schermafbeelding 2025-01-31 101515](https://github.com/user-attachments/assets/79baef23-a1ee-428e-83f3-95764d0e871a)
 
 ## Bijdragen 
 
