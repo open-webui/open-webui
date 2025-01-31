@@ -41,7 +41,7 @@
 			meta: data.meta,
 			content: data.content
 		}).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -58,7 +58,7 @@
 
 		if (id) {
 			func = await getFunctionById(localStorage.token, id).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				goto('/admin/functions');
 				return null;
 			});

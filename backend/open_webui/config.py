@@ -9,22 +9,22 @@ from urllib.parse import urlparse
 
 import chromadb
 import requests
-import yaml
-from open_webui.internal.db import Base, get_db
+from pydantic import BaseModel
+from sqlalchemy import JSON, Column, DateTime, Integer, func
+
 from open_webui.env import (
-    OPEN_WEBUI_DIR,
     DATA_DIR,
+    DATABASE_URL,
     ENV,
     FRONTEND_BUILD_DIR,
+    OFFLINE_MODE,
+    OPEN_WEBUI_DIR,
     WEBUI_AUTH,
     WEBUI_FAVICON_URL,
     WEBUI_NAME,
     log,
-    DATABASE_URL,
-    OFFLINE_MODE,
 )
-from pydantic import BaseModel
-from sqlalchemy import JSON, Column, DateTime, Integer, func
+from open_webui.internal.db import Base, get_db
 
 
 class EndpointFilter(logging.Filter):
@@ -362,6 +362,30 @@ MICROSOFT_REDIRECT_URI = PersistentConfig(
     os.environ.get("MICROSOFT_REDIRECT_URI", ""),
 )
 
+GITHUB_CLIENT_ID = PersistentConfig(
+    "GITHUB_CLIENT_ID",
+    "oauth.github.client_id",
+    os.environ.get("GITHUB_CLIENT_ID", ""),
+)
+
+GITHUB_CLIENT_SECRET = PersistentConfig(
+    "GITHUB_CLIENT_SECRET",
+    "oauth.github.client_secret",
+    os.environ.get("GITHUB_CLIENT_SECRET", ""),
+)
+
+GITHUB_CLIENT_SCOPE = PersistentConfig(
+    "GITHUB_CLIENT_SCOPE",
+    "oauth.github.scope",
+    os.environ.get("GITHUB_CLIENT_SCOPE", "user:email"),
+)
+
+GITHUB_CLIENT_REDIRECT_URI = PersistentConfig(
+    "GITHUB_CLIENT_REDIRECT_URI",
+    "oauth.github.redirect_uri",
+    os.environ.get("GITHUB_CLIENT_REDIRECT_URI", ""),
+)
+
 OAUTH_CLIENT_ID = PersistentConfig(
     "OAUTH_CLIENT_ID",
     "oauth.oidc.client_id",
@@ -468,12 +492,20 @@ OAUTH_ALLOWED_DOMAINS = PersistentConfig(
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
     if GOOGLE_CLIENT_ID.value and GOOGLE_CLIENT_SECRET.value:
+
+        def google_oauth_register(client):
+            client.register(
+                name="google",
+                client_id=GOOGLE_CLIENT_ID.value,
+                client_secret=GOOGLE_CLIENT_SECRET.value,
+                server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+                client_kwargs={"scope": GOOGLE_OAUTH_SCOPE.value},
+                redirect_uri=GOOGLE_REDIRECT_URI.value,
+            )
+
         OAUTH_PROVIDERS["google"] = {
-            "client_id": GOOGLE_CLIENT_ID.value,
-            "client_secret": GOOGLE_CLIENT_SECRET.value,
-            "server_metadata_url": "https://accounts.google.com/.well-known/openid-configuration",
-            "scope": GOOGLE_OAUTH_SCOPE.value,
             "redirect_uri": GOOGLE_REDIRECT_URI.value,
+            "register": google_oauth_register,
         }
 
     if (
@@ -481,12 +513,44 @@ def load_oauth_providers():
         and MICROSOFT_CLIENT_SECRET.value
         and MICROSOFT_CLIENT_TENANT_ID.value
     ):
+
+        def microsoft_oauth_register(client):
+            client.register(
+                name="microsoft",
+                client_id=MICROSOFT_CLIENT_ID.value,
+                client_secret=MICROSOFT_CLIENT_SECRET.value,
+                server_metadata_url=f"https://login.microsoftonline.com/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration",
+                client_kwargs={
+                    "scope": MICROSOFT_OAUTH_SCOPE.value,
+                },
+                redirect_uri=MICROSOFT_REDIRECT_URI.value,
+            )
+
         OAUTH_PROVIDERS["microsoft"] = {
-            "client_id": MICROSOFT_CLIENT_ID.value,
-            "client_secret": MICROSOFT_CLIENT_SECRET.value,
-            "server_metadata_url": f"https://login.microsoftonline.com/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration",
-            "scope": MICROSOFT_OAUTH_SCOPE.value,
             "redirect_uri": MICROSOFT_REDIRECT_URI.value,
+            "picture_url": "https://graph.microsoft.com/v1.0/me/photo/$value",
+            "register": microsoft_oauth_register,
+        }
+
+    if GITHUB_CLIENT_ID.value and GITHUB_CLIENT_SECRET.value:
+
+        def github_oauth_register(client):
+            client.register(
+                name="github",
+                client_id=GITHUB_CLIENT_ID.value,
+                client_secret=GITHUB_CLIENT_SECRET.value,
+                access_token_url="https://github.com/login/oauth/access_token",
+                authorize_url="https://github.com/login/oauth/authorize",
+                api_base_url="https://api.github.com",
+                userinfo_endpoint="https://api.github.com/user",
+                client_kwargs={"scope": GITHUB_CLIENT_SCOPE.value},
+                redirect_uri=GITHUB_CLIENT_REDIRECT_URI.value,
+            )
+
+        OAUTH_PROVIDERS["github"] = {
+            "redirect_uri": GITHUB_CLIENT_REDIRECT_URI.value,
+            "register": github_oauth_register,
+            "sub_claim": "id",
         }
 
     if (
@@ -494,13 +558,23 @@ def load_oauth_providers():
         and OAUTH_CLIENT_SECRET.value
         and OPENID_PROVIDER_URL.value
     ):
+
+        def oidc_oauth_register(client):
+            client.register(
+                name="oidc",
+                client_id=OAUTH_CLIENT_ID.value,
+                client_secret=OAUTH_CLIENT_SECRET.value,
+                server_metadata_url=OPENID_PROVIDER_URL.value,
+                client_kwargs={
+                    "scope": OAUTH_SCOPES.value,
+                },
+                redirect_uri=OPENID_REDIRECT_URI.value,
+            )
+
         OAUTH_PROVIDERS["oidc"] = {
-            "client_id": OAUTH_CLIENT_ID.value,
-            "client_secret": OAUTH_CLIENT_SECRET.value,
-            "server_metadata_url": OPENID_PROVIDER_URL.value,
-            "scope": OAUTH_SCOPES.value,
             "name": OAUTH_PROVIDER_NAME.value,
             "redirect_uri": OPENID_REDIRECT_URI.value,
+            "register": oidc_oauth_register,
         }
 
 
@@ -580,13 +654,18 @@ if CUSTOM_NAME:
 # STORAGE PROVIDER
 ####################################
 
-STORAGE_PROVIDER = os.environ.get("STORAGE_PROVIDER", "")  # defaults to local, s3
+STORAGE_PROVIDER = os.environ.get("STORAGE_PROVIDER", "local")  # defaults to local, s3
 
 S3_ACCESS_KEY_ID = os.environ.get("S3_ACCESS_KEY_ID", None)
 S3_SECRET_ACCESS_KEY = os.environ.get("S3_SECRET_ACCESS_KEY", None)
 S3_REGION_NAME = os.environ.get("S3_REGION_NAME", None)
 S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", None)
 S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", None)
+
+GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME", None)
+GOOGLE_APPLICATION_CREDENTIALS_JSON = os.environ.get(
+    "GOOGLE_APPLICATION_CREDENTIALS_JSON", None
+)
 
 ####################################
 # File Upload DIR
@@ -819,6 +898,10 @@ USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS = (
     os.environ.get("USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS", "False").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_CONTROLS = (
+    os.environ.get("USER_PERMISSIONS_CHAT_CONTROLS", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_CHAT_FILE_UPLOAD = (
     os.environ.get("USER_PERMISSIONS_CHAT_FILE_UPLOAD", "True").lower() == "true"
 )
@@ -835,23 +918,39 @@ USER_PERMISSIONS_CHAT_TEMPORARY = (
     os.environ.get("USER_PERMISSIONS_CHAT_TEMPORARY", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_FEATURES_WEB_SEARCH = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_WEB_SEARCH", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_FEATURES_IMAGE_GENERATION = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_IMAGE_GENERATION", "True").lower()
+    == "true"
+)
+
+DEFAULT_USER_PERMISSIONS = {
+    "workspace": {
+        "models": USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS,
+        "knowledge": USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS,
+        "prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS,
+        "tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS,
+    },
+    "chat": {
+        "controls": USER_PERMISSIONS_CHAT_CONTROLS,
+        "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
+        "delete": USER_PERMISSIONS_CHAT_DELETE,
+        "edit": USER_PERMISSIONS_CHAT_EDIT,
+        "temporary": USER_PERMISSIONS_CHAT_TEMPORARY,
+    },
+    "features": {
+        "web_search": USER_PERMISSIONS_FEATURES_WEB_SEARCH,
+        "image_generation": USER_PERMISSIONS_FEATURES_IMAGE_GENERATION,
+    },
+}
+
 USER_PERMISSIONS = PersistentConfig(
     "USER_PERMISSIONS",
     "user.permissions",
-    {
-        "workspace": {
-            "models": USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS,
-            "knowledge": USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS,
-            "prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS,
-            "tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS,
-        },
-        "chat": {
-            "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
-            "delete": USER_PERMISSIONS_CHAT_DELETE,
-            "edit": USER_PERMISSIONS_CHAT_EDIT,
-            "temporary": USER_PERMISSIONS_CHAT_TEMPORARY,
-        },
-    },
+    DEFAULT_USER_PERMISSIONS,
 )
 
 ENABLE_CHANNELS = PersistentConfig(
@@ -1034,6 +1133,32 @@ JSON format: { "tags": ["tag1", "tag2", "tag3"] }
 {{MESSAGES:END:6}}
 </chat_history>"""
 
+IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE",
+    "task.image.prompt_template",
+    os.environ.get("IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE", ""),
+)
+
+DEFAULT_IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = """### Task:
+Generate a detailed prompt for am image generation task based on the given language and context. Describe the image as if you were explaining it to someone who cannot see it. Include relevant details, colors, shapes, and any other important elements.
+
+### Guidelines:
+- Be descriptive and detailed, focusing on the most important aspects of the image.
+- Avoid making assumptions or adding information not present in the image.
+- Use the chat's primary language; default to English if multilingual.
+- If the image is too complex, focus on the most prominent elements.
+
+### Output:
+Strictly return in JSON format:
+{
+    "prompt": "Your detailed description here."
+}
+
+### Chat History:
+<chat_history>
+{{MESSAGES:END:6}}
+</chat_history>"""
+
 ENABLE_TAGS_GENERATION = PersistentConfig(
     "ENABLE_TAGS_GENERATION",
     "task.tags.enable",
@@ -1193,6 +1318,7 @@ CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 # Milvus
 
 MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
+MILVUS_DB = os.environ.get("MILVUS_DB", "default")
 
 # Qdrant
 QDRANT_URI = os.environ.get("QDRANT_URI", None)
@@ -1602,6 +1728,13 @@ ENABLE_IMAGE_GENERATION = PersistentConfig(
     "image_generation.enable",
     os.environ.get("ENABLE_IMAGE_GENERATION", "").lower() == "true",
 )
+
+ENABLE_IMAGE_PROMPT_GENERATION = PersistentConfig(
+    "ENABLE_IMAGE_PROMPT_GENERATION",
+    "image_generation.prompt.enable",
+    os.environ.get("ENABLE_IMAGE_PROMPT_GENERATION", "true").lower() == "true",
+)
+
 AUTOMATIC1111_BASE_URL = PersistentConfig(
     "AUTOMATIC1111_BASE_URL",
     "image_generation.automatic1111.base_url",
@@ -1929,6 +2062,12 @@ LDAP_SERVER_PORT = PersistentConfig(
     "LDAP_SERVER_PORT",
     "ldap.server.port",
     int(os.environ.get("LDAP_SERVER_PORT", "389")),
+)
+
+LDAP_ATTRIBUTE_FOR_MAIL = PersistentConfig(
+    "LDAP_ATTRIBUTE_FOR_MAIL",
+    "ldap.server.attribute_for_mail",
+    os.environ.get("LDAP_ATTRIBUTE_FOR_MAIL", "mail"),
 )
 
 LDAP_ATTRIBUTE_FOR_USERNAME = PersistentConfig(

@@ -61,7 +61,7 @@
 
 	const shareHandler = async (tool) => {
 		const item = await getToolById(localStorage.token, tool.id).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -88,7 +88,7 @@
 
 	const cloneHandler = async (tool) => {
 		const _tool = await getToolById(localStorage.token, tool.id).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -104,7 +104,7 @@
 
 	const exportHandler = async (tool) => {
 		const _tool = await getToolById(localStorage.token, tool.id).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -118,7 +118,7 @@
 
 	const deleteHandler = async (tool) => {
 		const res = await deleteToolById(localStorage.token, tool.id).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -402,7 +402,7 @@
 					class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
 					on:click={async () => {
 						const _tools = await exportTools(localStorage.token).catch((error) => {
-							toast.error(error);
+							toast.error(`${error}`);
 							return null;
 						});
 
@@ -487,7 +487,7 @@
 
 				for (const tool of _tools) {
 					const res = await createNewTool(localStorage.token, tool).catch((error) => {
-						toast.error(error);
+						toast.error(`${error}`);
 						return null;
 					});
 				}

@@ -47,14 +47,14 @@ dependencies = [
 
     "langchain==0.3.7",
     "langchain-community==0.3.7",
-    "langchain-chroma==0.1.4",
 
     "fake-useragent==1.5.1",
-    "chromadb==0.5.15",
+    "chromadb==0.6.2",
     "pymilvus==2.5.0",
     "qdrant-client~=1.12.0",
     "opensearch-py==2.7.1",
 
+    "transformers",
     "sentence-transformers==3.3.1",
     "colbert-ai==0.2.21",
     "einops==0.8.0",
@@ -94,15 +94,22 @@ dependencies = [
 
     "extract_msg",
     "pydub",
-    "duckduckgo-search~=6.3.5",
+    "duckduckgo-search~=7.2.1",
+
+    "google-api-python-client",
+    "google-auth-httplib2",
+    "google-auth-oauthlib",
 
     "docker~=7.1.0",
     "pytest~=8.3.2",
     "pytest-docker~=3.1.1",
+    "moto[s3]>=5.0.26",
 
     "googleapis-common-protos==1.63.2",
+    "google-cloud-storage==2.19.0",
 
-    "ldap3==2.9.1"
+    "ldap3==2.9.1",
+    "gcp-storage-emulator>=2024.8.3",
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.13.0a1"
