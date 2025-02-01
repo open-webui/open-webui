@@ -289,7 +289,9 @@ def add_file_to_knowledge_by_id(
     # Add content to the vector database
     try:
         process_file(
-            request, ProcessFileForm(file_id=form_data.file_id, collection_name=id)
+            request,
+            ProcessFileForm(file_id=form_data.file_id, collection_name=id),
+            user=user
         )
     except Exception as e:
         log.debug(e)
@@ -372,7 +374,9 @@ def update_file_from_knowledge_by_id(
     # Add content to the vector database
     try:
         process_file(
-            request, ProcessFileForm(file_id=form_data.file_id, collection_name=id)
+            request,
+            ProcessFileForm(file_id=form_data.file_id, collection_name=id),
+            user=user
         )
     except Exception as e:
         raise HTTPException(

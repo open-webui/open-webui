@@ -660,6 +660,7 @@ def save_docs_to_vector_db(
     overwrite: bool = False,
     split: bool = True,
     add: bool = False,
+    user = None,
 ) -> bool:
     def _get_docs_info(docs: list[Document]) -> str:
         docs_info = set()
@@ -775,7 +776,8 @@ def save_docs_to_vector_db(
         )
 
         embeddings = embedding_function(
-            list(map(lambda x: x.replace("\n", " "), texts))
+            list(map(lambda x: x.replace("\n", " "), texts)),
+            user = user
         )
 
         items = [
@@ -933,6 +935,7 @@ def process_file(
                     "hash": hash,
                 },
                 add=(True if form_data.collection_name else False),
+                user=user
             )
 
             if result:
@@ -990,7 +993,7 @@ def process_text(
     text_content = form_data.content
     log.debug(f"text_content: {text_content}")
 
-    result = save_docs_to_vector_db(request, docs, collection_name)
+    result = save_docs_to_vector_db(request, docs, collection_name, user=user)
     if result:
         return {
             "status": True,
@@ -1023,7 +1026,7 @@ def process_youtube_video(
         content = " ".join([doc.page_content for doc in docs])
         log.debug(f"text_content: {content}")
 
-        save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
+        save_docs_to_vector_db(request, docs, collection_name, overwrite=True, user=user)
 
         return {
             "status": True,
@@ -1064,7 +1067,7 @@ def process_web(
         content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {content}")
-        save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
+        save_docs_to_vector_db(request, docs, collection_name, overwrite=True, user=user)
 
         return {
             "status": True,
@@ -1272,7 +1275,7 @@ def process_web_search(
             requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
         )
         docs = loader.load()
-        save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
+        save_docs_to_vector_db(request, docs, collection_name, overwrite=True, user=user)
 
         return {
             "status": True,
@@ -1306,7 +1309,7 @@ def query_doc_handler(
             return query_doc_with_hybrid_search(
                 collection_name=form_data.collection_name,
                 query=form_data.query,
-                embedding_function=request.app.state.EMBEDDING_FUNCTION,
+                embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(query, user=user),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=request.app.state.rf,
                 r=(
@@ -1314,12 +1317,14 @@ def query_doc_handler(
                     if form_data.r
                     else request.app.state.config.RELEVANCE_THRESHOLD
                 ),
+                user=user
             )
         else:
             return query_doc(
                 collection_name=form_data.collection_name,
-                query_embedding=request.app.state.EMBEDDING_FUNCTION(form_data.query),
+                query_embedding=request.app.state.EMBEDDING_FUNCTION(form_data.query, user=user),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
+                user=user
             )
     except Exception as e:
         log.exception(e)
@@ -1348,7 +1353,7 @@ def query_collection_handler(
             return query_collection_with_hybrid_search(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
-                embedding_function=request.app.state.EMBEDDING_FUNCTION,
+                embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(query, user=user),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=request.app.state.rf,
                 r=(
@@ -1361,7 +1366,7 @@ def query_collection_handler(
             return query_collection(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
-                embedding_function=request.app.state.EMBEDDING_FUNCTION,
+                embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(query,user=user),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
             )
 
@@ -1509,6 +1514,7 @@ def process_files_batch(
                 docs=all_docs,
                 collection_name=collection_name,
                 add=True,
+                user=user,
             )
 
             # Update all files with collection name
