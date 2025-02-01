@@ -1094,20 +1094,26 @@ TITLE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     os.environ.get("TITLE_GENERATION_PROMPT_TEMPLATE", ""),
 )
 
-DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = """Create a concise, 3-5 word title with an emoji as a title for the chat history, in the given language. Suitable Emojis for the summary can be used to enhance understanding but avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
-
-Examples of titles:
-📉 Stock Market Trends
-🍪 Perfect Chocolate Chip Recipe
-Evolution of Music Streaming
-Remote Work Productivity Tips
-Artificial Intelligence in Healthcare
-🎮 Video Game Development Insights
-
+DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = """### Task:
+Generate a concise, 3-5 word title with an emoji summarizing the chat history.
+### Guidelines:
+- The title should clearly represent the main theme or subject of the conversation.
+- Use emojis that enhance understanding of the topic, but avoid quotation marks or special formatting.
+- Write the title in the chat's primary language; default to English if multilingual.
+- Prioritize accuracy over excessive creativity; keep it clear and simple.
+### Output:
+JSON format: { "title": "your concise title here" }
+### Examples:
+- { "title": "📉 Stock Market Trends" },
+- { "title": "🍪 Perfect Chocolate Chip Recipe" },
+- { "title": "Evolution of Music Streaming" },
+- { "title": "Remote Work Productivity Tips" },
+- { "title": "Artificial Intelligence in Healthcare" },
+- { "title": "🎮 Video Game Development Insights" }
+### Chat History:
 <chat_history>
 {{MESSAGES:END:2}}
 </chat_history>"""
-
 
 TAGS_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     "TAGS_GENERATION_PROMPT_TEMPLATE",

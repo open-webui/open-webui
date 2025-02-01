@@ -51,7 +51,7 @@
 			models = [];
 		} else {
 			const res = await _getModels(localStorage.token).catch((e) => {
-				toast.error(e);
+				toast.error(`${e}`);
 			});
 
 			if (res) {
@@ -74,7 +74,7 @@
 			}, 100);
 		} else {
 			const res = await _getVoices(localStorage.token).catch((e) => {
-				toast.error(e);
+				toast.error(`${e}`);
 			});
 
 			if (res) {

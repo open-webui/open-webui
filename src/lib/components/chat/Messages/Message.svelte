@@ -78,6 +78,7 @@
 				{rateMessage}
 				{actionMessage}
 				{submitMessage}
+				{deleteMessage}
 				{continueResponse}
 				{regenerateResponse}
 				{addMessages}

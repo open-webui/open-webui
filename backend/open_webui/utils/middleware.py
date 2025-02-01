@@ -666,6 +666,9 @@ def apply_params_to_form_data(form_data, model):
         if "temperature" in params:
             form_data["temperature"] = params["temperature"]
 
+        if "max_tokens" in params:
+            form_data["max_tokens"] = params["max_tokens"]
+
         if "top_p" in params:
             form_data["top_p"] = params["top_p"]
 
@@ -745,6 +748,8 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         files = form_data.get("files", [])
         files.extend(knowledge_files)
         form_data["files"] = files
+
+    variables = form_data.pop("variables", None)
 
     features = form_data.pop("features", None)
     if features:
@@ -889,16 +894,24 @@ async def process_chat_response(
 
                         if res and isinstance(res, dict):
                             if len(res.get("choices", [])) == 1:
-                                title = (
+                                title_string = (
                                     res.get("choices", [])[0]
                                     .get("message", {})
-                                    .get(
-                                        "content",
-                                        message.get("content", "New Chat"),
-                                    )
-                                ).strip()
+                                    .get("content", message.get("content", "New Chat"))
+                                )
                             else:
-                                title = None
+                                title_string = ""
+
+                            title_string = title_string[
+                                title_string.find("{") : title_string.rfind("}") + 1
+                            ]
+
+                            try:
+                                title = json.loads(title_string).get(
+                                    "title", "New Chat"
+                                )
+                            except Exception as e:
+                                title = ""
 
                             if not title:
                                 title = messages[0].get("content", "New Chat")

@@ -9,7 +9,48 @@ def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
     model = ollama_response.get("model", "ollama")
     message_content = ollama_response.get("message", {}).get("content", "")
 
-    response = openai_chat_completion_message_template(model, message_content)
+    data = ollama_response
+    usage = {
+        "response_token/s": (
+            round(
+                (
+                    (
+                        data.get("eval_count", 0)
+                        / ((data.get("eval_duration", 0) / 10_000_000))
+                    )
+                    * 100
+                ),
+                2,
+            )
+            if data.get("eval_duration", 0) > 0
+            else "N/A"
+        ),
+        "prompt_token/s": (
+            round(
+                (
+                    (
+                        data.get("prompt_eval_count", 0)
+                        / ((data.get("prompt_eval_duration", 0) / 10_000_000))
+                    )
+                    * 100
+                ),
+                2,
+            )
+            if data.get("prompt_eval_duration", 0) > 0
+            else "N/A"
+        ),
+        "total_duration": data.get("total_duration", 0),
+        "load_duration": data.get("load_duration", 0),
+        "prompt_eval_count": data.get("prompt_eval_count", 0),
+        "prompt_eval_duration": data.get("prompt_eval_duration", 0),
+        "eval_count": data.get("eval_count", 0),
+        "eval_duration": data.get("eval_duration", 0),
+        "approximate_total": (lambda s: f"{s // 3600}h{(s % 3600) // 60}m{s % 60}s")(
+            (data.get("total_duration", 0) or 0) // 1_000_000_000
+        ),
+    }
+
+    response = openai_chat_completion_message_template(model, message_content, usage)
     return response
 
 
