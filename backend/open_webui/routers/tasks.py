@@ -90,6 +90,10 @@ async def update_task_config(
         form_data.TITLE_GENERATION_PROMPT_TEMPLATE
     )
 
+    request.app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (
+        form_data.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE
+    )
+
     request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION = (
         form_data.ENABLE_AUTOCOMPLETE_GENERATION
     )
