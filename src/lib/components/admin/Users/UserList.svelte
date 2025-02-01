@@ -337,6 +337,7 @@
 									updateRoleHandler(user.id, 'pending');
 								}
 							}}
+							disabled={$config.features.disable_non_oauth_role_management}
 						>
 							<Badge
 								type={user.role === 'admin' ? 'info' : user.role === 'user' ? 'success' : 'muted'}
@@ -446,8 +447,10 @@
 	</table>
 </div>
 
-<div class=" text-gray-500 text-xs mt-1.5 text-right">
-	ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
-</div>
+{#if !$config.features.disable_non_oauth_role_management}
+	<div class=" text-gray-500 text-xs mt-1.5 text-right">
+		ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
+	</div>
+{/if}
 
 <Pagination bind:page count={users.length} />
