@@ -69,6 +69,41 @@ class YoutubeLoader:
         else:
             self.language = language
 
+    def _get_video_title(self) -> Optional[str]:
+        """Get the video title using YouTube API or page scraping."""
+        try:
+            import requests
+            import json
+
+            # First try using YouTube Data API v3 if available
+            try:
+                from open_webui.config import YOUTUBE_API_KEY
+
+                if YOUTUBE_API_KEY:
+                    url = f"https://www.googleapis.com/youtube/v3/videos?id={self.video_id}&key={YOUTUBE_API_KEY}&part=snippet"
+                    response = requests.get(url)
+                    if response.status_code == 200:
+                        data = response.json()
+                        if data.get("items"):
+                            return data["items"][0]["snippet"]["title"]
+            except ImportError:
+                pass
+
+            # Fallback to scraping the title from YouTube page
+            url = f"https://www.youtube.com/watch?v={self.video_id}"
+            response = requests.get(url)
+            if response.status_code == 200:
+                import re
+
+                title_match = re.search(r"<title>(.+?)</title>", response.text)
+                if title_match:
+                    title = title_match.group(1)
+                    return title
+            return None
+        except Exception as e:
+            print(f"Error getting video title: {e}")
+            return None
+
     def load(self) -> List[Document]:
         """Load YouTube transcripts into `Document` objects."""
         try:
@@ -102,16 +137,80 @@ class YoutubeLoader:
             return []
 
         try:
-            transcript = transcript_list.find_transcript(self.language)
-        except NoTranscriptFound:
-            transcript = transcript_list.find_transcript(["en"])
+            # First try to get manual transcript in requested language
+            for lang in self.language:
+                try:
+                    available_transcripts = (
+                        transcript_list._manually_created_transcripts
+                    )
+                    if lang in available_transcripts:
+                        transcript = available_transcripts[lang]
+                        log.info(f"Found manual transcript in language: {lang}")
+                        break
+                except NoTranscriptFound:
+                    continue
+            else:
+                # If no manual transcript found, try auto-generated ones
+                try:
+                    transcript = transcript_list.find_transcript(self.language)
+                    log.info(
+                        f"Using auto-generated transcript in language: {transcript.language_code}"
+                    )
+                except NoTranscriptFound:
+                    # Final fallback: try to get any available transcript
+                    available_transcripts = list(
+                        transcript_list._manually_created_transcripts.values()
+                    ) + list(transcript_list._generated_transcripts.values())
+                    if available_transcripts:
+                        transcript = available_transcripts[0]
+                        log.info(
+                            f"Using first available transcript in language: {transcript.language_code}"
+                        )
+                    else:
+                        log.error("No transcripts found for video")
+                        return []
+
+        except Exception as e:
+            log.exception(f"Error fetching transcript: {str(e)}")
+            return []
 
         transcript_pieces: List[Dict[str, Any]] = transcript.fetch()
 
-        transcript = " ".join(
-            map(
-                lambda transcript_piece: transcript_piece["text"].strip(" "),
-                transcript_pieces,
+        # Get video title and add it to base metadata
+        title = self._get_video_title()
+        if title:
+            self._metadata["title"] = title
+
+        # Add the base video URL to metadata
+        base_url = f"https://www.youtube.com/watch?v={self.video_id}"
+        self._metadata["source_url"] = base_url
+
+        # Combine pieces into a single text while tracking timestamp positions
+        full_text = ""
+        timestamp_map = []
+
+        for piece in transcript_pieces:
+            start_char = len(full_text)
+            text = piece["text"].strip()
+            full_text += text + " "
+            end_char = len(full_text)
+
+            timestamp_map.append(
+                {
+                    "start": start_char,
+                    "end": end_char,
+                    "time": piece["start"],
+                    "duration": piece["duration"],
+                }
             )
+
+        # Create a single document that will be split by Langchain's text splitter
+        doc = Document(
+            page_content=full_text.strip(),
+            metadata={
+                **self._metadata,
+                "timestamp_map": timestamp_map,  # Store timestamp mapping in metadata
+            },
         )
-        return [Document(page_content=transcript, metadata=self._metadata)]
+
+        return [doc]
