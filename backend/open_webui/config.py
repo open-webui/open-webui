@@ -1283,7 +1283,28 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
 )
 
 
-DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = """Available Tools: {{TOOLS}}\nReturn an empty string if no tools match the query. If a function tool matches, construct and return a JSON object in the format {\"name\": \"functionName\", \"parameters\": {\"requiredFunctionParamKey\": \"requiredFunctionParamValue\"}} using the appropriate tool and its parameters. Only return the object and limit the response to the JSON object without additional text."""
+DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = """Available Tools: {{TOOLS}}
+
+Your task is to choose and return the correct tool(s) from the list of available tools based on the query. Follow these guidelines:
+
+- Return only the JSON object, without any additional text or explanation.
+
+- If no tools match the query, return an empty array: 
+   {
+     "tool_calls": []
+   }
+
+- If one or more tools match the query, construct a JSON response containing a "tool_calls" array with objects that include:
+   - "name": The tool's name.
+   - "parameters": A dictionary of required parameters and their corresponding values.
+
+The format for the JSON response is strictly:
+{
+  "tool_calls": [
+    {"name": "toolName1", "parameters": {"key1": "value1"}},
+    {"name": "toolName2", "parameters": {"key2": "value2"}}
+  ]
+}"""
 
 
 DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE = """Your task is to reflect the speaker's likely facial expression through a fitting emoji. Interpret emotions from the message and reflect their facial expression using fitting, diverse emojis (e.g., 😊, 😢, 😡, 😱).
