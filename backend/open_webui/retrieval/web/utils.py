@@ -175,7 +175,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader):
                 yield document
             except Exception as e:
                 if self.continue_on_failure:
-                    log.error(f"Error processing {url}, exception: {e}")
+                    log.exception(e, "Error loading %s", url)
                     continue
                 raise e
 
@@ -190,7 +190,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader):
                 yield document
             except Exception as e:
                 if self.continue_on_failure:
-                    log.error(f"Error processing {url}, exception: {e}")
+                    log.exception(e, "Error loading %s", url)
                     continue
                 raise e
 
@@ -210,7 +210,7 @@ class SafeWebBaseLoader(WebBaseLoader):
                 yield Document(page_content=text, metadata=metadata)
             except Exception as e:
                 # Log the error and continue with the next URL
-                log.error(f"Error loading {path}: {e}")
+                log.exception(e, "Error loading %s", path)
 
 RAG_WEB_LOADERS = defaultdict(lambda: SafeWebBaseLoader)
 RAG_WEB_LOADERS["playwright"] = SafePlaywrightURLLoader
