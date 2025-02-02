@@ -211,7 +211,7 @@
 				files = files.filter((item) => item?.itemId !== tempItemId);
 			}
 		} catch (e) {
-			toast.error(e);
+			toast.error(`${e}`);
 			files = files.filter((item) => item?.itemId !== tempItemId);
 		}
 	};
@@ -597,7 +597,7 @@
 																>
 																	<path
 																		fill-rule="evenodd"
-																		d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
+																		d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
 																		clip-rule="evenodd"
 																	/>
 																</svg>
@@ -606,7 +606,7 @@
 													</div>
 													<div class=" absolute -top-1 -right-1">
 														<button
-															class=" bg-gray-400 text-white border border-white rounded-full group-hover:visible invisible transition"
+															class="bg-gray-400 text-white border border-white rounded-full group-hover:visible invisible transition"
 															type="button"
 															on:click={() => {
 																files.splice(fileIdx, 1);
@@ -656,66 +656,9 @@
 									</div>
 								{/if}
 
-								<div class=" flex">
-									<div class="ml-1 self-end mb-1.5 flex space-x-1">
-										<InputMenu
-											bind:imageGenerationEnabled
-											bind:webSearchEnabled
-											bind:selectedToolIds
-											{screenCaptureHandler}
-											uploadFilesHandler={() => {
-												filesInputElement.click();
-											}}
-											uploadGoogleDriveHandler={async () => {
-												try {
-													const fileData = await createPicker();
-													if (fileData) {
-														const file = new File([fileData.blob], fileData.name, {
-															type: fileData.blob.type
-														});
-														await uploadFileHandler(file);
-													} else {
-														console.log('No file was selected from Google Drive');
-													}
-												} catch (error) {
-													console.error('Google Drive Error:', error);
-													toast.error(
-														$i18n.t('Error accessing Google Drive: {{error}}', {
-															error: error.message
-														})
-													);
-												}
-											}}
-											onClose={async () => {
-												await tick();
-
-												const chatInput = document.getElementById('chat-input');
-												chatInput?.focus();
-											}}
-										>
-											<button
-												class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
-												type="button"
-												aria-label="More"
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="size-5"
-												>
-													<path
-														d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
-													/>
-												</svg>
-											</button>
-										</InputMenu>
-									</div>
-
+								<div class="flex flex-col w-full min-h-[48px]">
 									{#if $settings?.richTextInput ?? true}
-										<div
-											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full py-2.5 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
-										>
+										<div class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full py-2.5 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto">
 											<RichTextInput
 												bind:this={chatInputElement}
 												bind:value={prompt}
@@ -851,13 +794,12 @@
 															)
 														) {
 															// Prevent Enter key from creating a new line
-															// Uses keyCode '13' for Enter key for chinese/japanese keyboards
-															if (e.keyCode === 13 && !e.shiftKey) {
+															if (e.key === 'Enter' && !e.shiftKey) {
 																e.preventDefault();
 															}
 
 															// Submit the prompt when Enter key is pressed
-															if (prompt !== '' && e.keyCode === 13 && !e.shiftKey) {
+															if (prompt !== '' && e.key === 'Enter' && !e.shiftKey) {
 																dispatch('submit', prompt);
 															}
 														}
@@ -1108,128 +1050,210 @@
 										/>
 									{/if}
 
-									<div class="self-end mb-1.5 flex space-x-1 mr-1">
-										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
-											<Tooltip content={$i18n.t('Record voice')}>
-												<button
-													id="voice-input-button"
-													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
-													type="button"
-													on:click={async () => {
-														try {
-															let stream = await navigator.mediaDevices
-																.getUserMedia({ audio: true })
-																.catch(function (err) {
-																	toast.error(
-																		$i18n.t(
-																			`Permission denied when accessing microphone: {{error}}`,
-																			{
-																				error: err
-																			}
-																		)
-																	);
-																	return null;
-																});
-
-															if (stream) {
-																recording = true;
-																const tracks = stream.getTracks();
-																tracks.forEach((track) => track.stop());
-															}
-															stream = null;
-														} catch {
-															toast.error($i18n.t('Permission denied when accessing microphone'));
+									<div class="flex justify-between items-center mt-1">
+										<div class="flex items-center space-x-1 -ml-1">
+											<InputMenu
+												bind:imageGenerationEnabled
+												bind:webSearchEnabled
+												bind:selectedToolIds
+												{screenCaptureHandler}
+												uploadFilesHandler={() => {
+													filesInputElement.click();
+												}}
+												uploadGoogleDriveHandler={async () => {
+													try {
+														const fileData = await createPicker();
+														if (fileData) {
+															const file = new File([fileData.blob], fileData.name, {
+																type: fileData.blob.type
+															});
+															await uploadFileHandler(file);
+														} else {
+															console.log('No file was selected from Google Drive');
 														}
-													}}
-													aria-label="Voice Input"
+													} catch (error) {
+														console.error('Google Drive Error:', error);
+														toast.error(
+															$i18n.t('Error accessing Google Drive: {{error}}', {
+																error: error.message
+															})
+														);
+													}
+												}}
+												onClose={async () => {
+													await tick();
+
+													const chatInput = document.getElementById('chat-input');
+													chatInput?.focus();
+												}}
+											>
+												<button
+													class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
+													type="button"
+													aria-label="More"
 												>
 													<svg
 														xmlns="http://www.w3.org/2000/svg"
 														viewBox="0 0 20 20"
 														fill="currentColor"
-														class="w-5 h-5 translate-y-[0.5px]"
+														class="size-5"
 													>
-														<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
 														<path
-															d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"
+															d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 00 0 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5Z"
 														/>
 													</svg>
 												</button>
-											</Tooltip>
-										{/if}
+											</InputMenu>
+										</div>
 
-										{#if !history.currentId || history.messages[history.currentId]?.done == true}
-											{#if prompt === ''}
-												<div class=" flex items-center">
-													<Tooltip content={$i18n.t('Call')}>
-														<button
-															class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-2 self-center"
-															type="button"
-															on:click={async () => {
-																if (selectedModels.length > 1) {
-																	toast.error($i18n.t('Select only one model to call'));
-
-																	return;
-																}
-
-																if ($config.audio.stt.engine === 'web') {
-																	toast.error(
-																		$i18n.t(
-																			'Call feature is not supported when using Web STT engine'
-																		)
-																	);
-
-																	return;
-																}
-																// check if user has access to getUserMedia
-																try {
-																	let stream = await navigator.mediaDevices.getUserMedia({
-																		audio: true
+										<div class="flex items-center gap-1 -mr-1">
+											{#if !history?.currentId || history.messages[history.currentId]?.done == true}
+												<Tooltip content={$i18n.t('Record voice')}>
+													<button
+														id="voice-input-button"
+														class="text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center"
+														type="button"
+														on:click={async () => {
+															try {
+																let stream = await navigator.mediaDevices
+																	.getUserMedia({ audio: true })
+																	.catch(function (err) {
+																		toast.error(
+																			$i18n.t(
+																				`Permission denied when accessing microphone: {{error}}`,
+																				{
+																					error: err
+																				}
+																			)
+																		);
+																		return null;
 																	});
-																	// If the user grants the permission, proceed to show the call overlay
 
-																	if (stream) {
-																		const tracks = stream.getTracks();
-																		tracks.forEach((track) => track.stop());
+																if (stream) {
+																	recording = true;
+																	const tracks = stream.getTracks();
+																	tracks.forEach((track) => track.stop());
+																}
+
+																stream = null;
+															} catch {
+																toast.error($i18n.t('Permission denied when accessing microphone'));
+															}
+														}}
+														aria-label="Voice Input"
+													>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 20 20"
+															fill="currentColor"
+															class="w-5 h-5 translate-y-[0.5px]"
+														>
+															<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
+															<path
+																d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"
+															/>
+														</svg>
+													</button>
+												</Tooltip>
+											{/if}
+
+											{#if !history.currentId || history.messages[history.currentId]?.done == true}
+												{#if prompt === ''}
+													<div class="flex items-center">
+														<Tooltip content={$i18n.t('Call')}>
+															<button
+																class="bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-2xl p-1.5 self-center"
+																type="button"
+																on:click={async () => {
+																	if (selectedModels.length > 1) {
+																		toast.error($i18n.t('Select only one model to call'));
+
+																		return;
 																	}
 
-																	stream = null;
+																	if ($config.audio.stt.engine === 'web') {
+																		toast.error(
+																			$i18n.t(
+																				'Call feature is not supported when using Web STT engine'
+																			)
+																		);
 
-																	showCallOverlay.set(true);
-																	showControls.set(true);
-																} catch (err) {
-																	// If the user denies the permission or an error occurs, show an error message
-																	toast.error(
-																		$i18n.t('Permission denied when accessing media devices')
-																	);
-																}
-															}}
-															aria-label="Call"
-														>
-															<Headphone className="size-5" />
-														</button>
-													</Tooltip>
-												</div>
+																		return;
+																	}
+																	// check if user has access to getUserMedia
+																	try {
+																		let stream = await navigator.mediaDevices.getUserMedia({
+																			audio: true
+																		});
+																		// If the user grants the permission, proceed to show the call overlay
+
+																		if (stream) {
+																			const tracks = stream.getTracks();
+																			tracks.forEach((track) => track.stop());
+																		}
+
+																		stream = null;
+
+																		showCallOverlay.set(true);
+																		showControls.set(true);
+																	} catch (err) {
+																		// If the user denies the permission or an error occurs, show an error message
+																		toast.error(
+																			$i18n.t('Permission denied when accessing media devices')
+																		);
+																	}
+																}}
+																aria-label="Call"
+															>
+																<Headphone className="size-5" />
+															</button>
+														</Tooltip>
+													</div>
+												{:else}
+													<div class="flex items-center">
+														<Tooltip content={$i18n.t('Send message')}>
+															<button
+																id="send-message-button"
+																class="{prompt !== ''
+																	? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+																	: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+																type="submit"
+																disabled={prompt === ''}
+															>
+																<svg
+																	xmlns="http://www.w3.org/2000/svg"
+																	viewBox="0 0 16 16"
+																	fill="currentColor"
+																	class="size-6"
+																>
+																	<path
+																		fill-rule="evenodd"
+																		d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+																		clip-rule="evenodd"
+																	/>
+																</svg>
+															</button>
+														</Tooltip>
+													</div>
+												{/if}
 											{:else}
-												<div class=" flex items-center">
-													<Tooltip content={$i18n.t('Send message')}>
+												<div class="flex items-center">
+													<Tooltip content={$i18n.t('Stop')}>
 														<button
-															id="send-message-button"
-															class="{prompt !== ''
-																? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
-															type="submit"
-															disabled={prompt === ''}
+															class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+															on:click={() => {
+																stopResponse();
+															}}
 														>
 															<svg
 																xmlns="http://www.w3.org/2000/svg"
-																viewBox="0 0 16 16"
+																viewBox="0 0 24 24"
 																fill="currentColor"
 																class="size-6"
 															>
 																<path
 																	fill-rule="evenodd"
-																	d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+																	d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
 																	clip-rule="evenodd"
 																/>
 															</svg>
@@ -1237,31 +1261,7 @@
 													</Tooltip>
 												</div>
 											{/if}
-										{:else}
-											<div class=" flex items-center">
-												<Tooltip content={$i18n.t('Stop')}>
-													<button
-														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
-														on:click={() => {
-															stopResponse();
-														}}
-													>
-														<svg
-															xmlns="http://www.w3.org/2000/svg"
-															viewBox="0 0 24 24"
-															fill="currentColor"
-															class="size-6"
-														>
-															<path
-																fill-rule="evenodd"
-																d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
-																clip-rule="evenodd"
-															/>
-														</svg>
-													</button>
-												</Tooltip>
-											</div>
-										{/if}
+										</div>
 									</div>
 								</div>
 							</div>
