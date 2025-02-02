@@ -26,12 +26,11 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'REGISTRY', variable: 'REGISTRY')]) {
-                        def appImage = docker.build("${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}", ".")
+                        def appImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}", ".")
                     }
                 }
             }
-        }
+
 
         stage('Push to Registry') {
             steps {
@@ -42,7 +41,7 @@ pipeline {
                     ]) {
                         withAWS(credentials: 'aws_admin_user', region: 'us-east-1') {
                             docker.withRegistry("https://${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com", "ecr:us-east-1:aws_admin_user") {
-                                def appImage = docker.image("${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}")
+                                def appImage = docker.image("${IMAGE_NAME}:${IMAGE_TAG}")
                                 appImage.push()
                                 sh """
                                     echo "Pushed to ECR..."
