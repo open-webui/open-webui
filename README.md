@@ -49,6 +49,9 @@
   - Scheme
   - Liquid
 
+![Difference Viewer Demo](./demo-diffeditor.webp)
+![File Navigation Demo](./demo-filenavigator.gif)
+![React Demo](./demo-react.webp)
 
 # 🧪 TESTING HELP NEEDED! 🧪
 
