@@ -36,8 +36,7 @@ pipeline {
             steps {
                 script {
                     withCredentials([
-                        string(credentialsId: 'AWS_ACCOUNT_ID', variable: 'AWS_ACCOUNT_ID'),
-                        string(credentialsId: 'REGISTRY', variable: 'REGISTRY')
+                        string(credentialsId: 'AWS_ACCOUNT_ID', variable: 'AWS_ACCOUNT_ID')
                     ]) {
                         withAWS(credentials: 'aws_admin_user', region: 'us-east-1') {
                             docker.withRegistry("https://${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com", "ecr:us-east-1:aws_admin_user") {
@@ -56,14 +55,18 @@ pipeline {
         stage('Deploy open-webui') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'REGISTRY', variable: 'REGISTRY')]) {
+                    withCredentials([string(credentialsId: 'AWS_ACCOUNT_ID', variable: 'AWS_ACCOUNT_ID'),
+                    ]) {
                         sh '''
-                            echo "Applying deployment files"
+
                             echo "Current directory:" $(pwd)
+                            echo "Creating secret..."
+                            kubectl create secret docker-registry ecr-secret --docker-server=${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com --docker-username=AWS --docker-password=$(aws ecr get-login-password --region us-east-1) --namespace default
+                            echo "Applying deployment files..."
                             kubectl apply -f open-webui-deployment.yaml
                             kubectl apply -f open-webui-service.yaml
-                            echo "Setting image"
-                            kubectl set image deployment/open-webui open-webui=${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+                            echo "Setting image..."
+                            kubectl set image deployment/open-webui open-webui=${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/${IMAGE_NAME}:${IMAGE_TAG}
                         '''
                     }
                 }
