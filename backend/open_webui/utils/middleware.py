@@ -1137,8 +1137,7 @@ async def process_chat_response(
 
                                 if detect_reasoning:
                                     for tag in reasoning_tags:
-                                        start_tag = f"<{tag}>\n"
-                                        end_tag = f"</{tag}>\n"
+                                        start_tag = f"<{tag}>"
 
                                         if start_tag in content:
                                             # Remove the start tag
