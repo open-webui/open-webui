@@ -1954,6 +1954,12 @@ WHISPER_MODEL_AUTO_UPDATE = (
     and os.environ.get("WHISPER_MODEL_AUTO_UPDATE", "").lower() == "true"
 )
 
+# Add Deepgram configuration
+DEEPGRAM_API_KEY = PersistentConfig(
+    "DEEPGRAM_API_KEY",
+    "audio.stt.deepgram.api_key",
+    os.getenv("DEEPGRAM_API_KEY", ""),
+)
 
 AUDIO_STT_OPENAI_API_BASE_URL = PersistentConfig(
     "AUDIO_STT_OPENAI_API_BASE_URL",
