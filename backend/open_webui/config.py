@@ -1724,6 +1724,12 @@ RAG_WEB_LOADER = PersistentConfig(
     os.environ.get("RAG_WEB_LOADER", "safe_web")
 )
 
+PLAYWRIGHT_WS_URI = PersistentConfig(
+    "PLAYWRIGHT_WS_URI",
+    "rag.web.loader.playwright.ws.uri",
+    os.environ.get("PLAYWRIGHT_WS_URI", None)
+)
+
 ####################################
 # Images
 ####################################

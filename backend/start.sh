@@ -5,9 +5,11 @@ cd "$SCRIPT_DIR" || exit
 
 # Add conditional Playwright browser installation
 if [[ "${RAG_WEB_LOADER,,}" == "playwright" ]]; then
-    echo "Installing Playwright browsers..."
-    playwright install chromium
-    playwright install-deps chromium
+    if [[ -z "${PLAYWRIGHT_WS_URI}" ]]; then
+        echo "Installing Playwright browsers..."
+        playwright install chromium
+        playwright install-deps chromium
+    fi
 
     python -c "import nltk; nltk.download('punkt_tab')"
 fi

@@ -16,7 +16,7 @@ from langchain_core.documents import Document
 
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.config import ENABLE_RAG_LOCAL_WEB_FETCH, RAG_WEB_LOADER
+from open_webui.config import ENABLE_RAG_LOCAL_WEB_FETCH, PLAYWRIGHT_WS_URI, RAG_WEB_LOADER
 from open_webui.env import SRC_LOG_LEVELS
 
 import logging
@@ -83,7 +83,7 @@ def extract_metadata(soup, url):
     return metadata
 
 class SafePlaywrightURLLoader(PlaywrightURLLoader):
-    """Load HTML pages safely with Playwright, supporting SSL verification and rate limiting.
+    """Load HTML pages safely with Playwright, supporting SSL verification, rate limiting, and remote browser connection.
     
     Attributes:
         urls (List[str]): List of URLs to load.
@@ -91,6 +91,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader):
         requests_per_second (Optional[float]): Number of requests per second to limit to.
         continue_on_failure (bool): If True, continue loading other URLs on failure.
         headless (bool): If True, the browser will run in headless mode.
+        playwright_ws_url (Optional[str]): WebSocket endpoint URI for remote browser connection.
     """
 
     def __init__(
@@ -101,19 +102,80 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader):
         continue_on_failure: bool = True,
         headless: bool = True,
         remove_selectors: Optional[List[str]] = None,
-        proxy: Optional[Dict[str, str]] = None
+        proxy: Optional[Dict[str, str]] = None,
+        playwright_ws_url: Optional[str] = None
     ):
-        """Initialize with additional safety parameters."""
+        """Initialize with additional safety parameters and remote browser support."""
+        # We'll set headless to False if using playwright_ws_url since it's handled by the remote browser
         super().__init__(
             urls=urls,
             continue_on_failure=continue_on_failure,
-            headless=headless,
+            headless=headless if playwright_ws_url is None else False,
             remove_selectors=remove_selectors,
             proxy=proxy
         )
         self.verify_ssl = verify_ssl
         self.requests_per_second = requests_per_second
         self.last_request_time = None
+        self.playwright_ws_url = playwright_ws_url
+
+    def lazy_load(self) -> Iterator[Document]:
+        """Safely load URLs synchronously with support for remote browser."""
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as p:
+            # Use remote browser if ws_endpoint is provided, otherwise use local browser
+            if self.playwright_ws_url:
+                browser = p.chromium.connect(self.playwright_ws_url)
+            else:
+                browser = p.chromium.launch(headless=self.headless, proxy=self.proxy)
+
+            for url in self.urls:
+                try:
+                    self._safe_process_url_sync(url)
+                    page = browser.new_page()
+                    response = page.goto(url)
+                    if response is None:
+                        raise ValueError(f"page.goto() returned None for url {url}")
+
+                    text = self.evaluator.evaluate(page, browser, response)
+                    metadata = {"source": url}
+                    yield Document(page_content=text, metadata=metadata)
+                except Exception as e:
+                    if self.continue_on_failure:
+                        log.exception(e, "Error loading %s", url)
+                        continue
+                    raise e
+            browser.close()
+
+    async def alazy_load(self) -> AsyncIterator[Document]:
+        """Safely load URLs asynchronously with support for remote browser."""
+        from playwright.async_api import async_playwright
+
+        async with async_playwright() as p:
+            # Use remote browser if ws_endpoint is provided, otherwise use local browser
+            if self.playwright_ws_url:
+                browser = await p.chromium.connect(self.playwright_ws_url)
+            else:
+                browser = await p.chromium.launch(headless=self.headless, proxy=self.proxy)
+
+            for url in self.urls:
+                try:
+                    await self._safe_process_url(url)
+                    page = await browser.new_page()
+                    response = await page.goto(url)
+                    if response is None:
+                        raise ValueError(f"page.goto() returned None for url {url}")
+
+                    text = await self.evaluator.evaluate_async(page, browser, response)
+                    metadata = {"source": url}
+                    yield Document(page_content=text, metadata=metadata)
+                except Exception as e:
+                    if self.continue_on_failure:
+                        log.exception(e, "Error loading %s", url)
+                        continue
+                    raise e
+            await browser.close()
 
     def _verify_ssl_cert(self, url: str) -> bool:
         """Verify SSL certificate for the given URL."""
@@ -164,36 +226,6 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader):
         self._sync_wait_for_rate_limit()
         return True
 
-    async def alazy_load(self) -> AsyncIterator[Document]:
-        """Safely load URLs asynchronously."""
-        parent_iterator = super().alazy_load()
-        
-        async for document in parent_iterator:
-            url = document.metadata["source"]
-            try:
-                await self._safe_process_url(url)
-                yield document
-            except Exception as e:
-                if self.continue_on_failure:
-                    log.exception(e, "Error loading %s", url)
-                    continue
-                raise e
-
-    def lazy_load(self) -> Iterator[Document]:
-        """Safely load URLs synchronously."""
-        parent_iterator = super().lazy_load()
-        
-        for document in parent_iterator:
-            url = document.metadata["source"]
-            try:
-                self._safe_process_url_sync(url)
-                yield document
-            except Exception as e:
-                if self.continue_on_failure:
-                    log.exception(e, "Error loading %s", url)
-                    continue
-                raise e
-
 class SafeWebBaseLoader(WebBaseLoader):
     """WebBaseLoader with enhanced error handling for URLs."""
 
@@ -224,14 +256,19 @@ def get_web_loader(
     # Check if the URLs are valid
     safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
 
-    # Get the appropriate WebLoader based on the configuration
+    web_loader_args = {
+        "urls": safe_urls,
+        "verify_ssl": verify_ssl,
+        "requests_per_second": requests_per_second,
+        "continue_on_failure": True
+    }
+
+    if PLAYWRIGHT_WS_URI.value:
+        web_loader_args["playwright_ws_url"] = PLAYWRIGHT_WS_URI.value
+
+    # Create the appropriate WebLoader based on the configuration
     WebLoaderClass = RAG_WEB_LOADERS[RAG_WEB_LOADER.value]
-    web_loader = WebLoaderClass(
-        safe_urls,
-        verify_ssl=verify_ssl,
-        requests_per_second=requests_per_second,
-        continue_on_failure=True,
-    )
+    web_loader = WebLoaderClass(**web_loader_args)
 
     log.debug("Using RAG_WEB_LOADER %s for %s URLs", web_loader.__class__.__name__, len(safe_urls))
 
