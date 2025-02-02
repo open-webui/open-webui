@@ -27,7 +27,7 @@ pipeline {
             steps {
                 script {
                     withCredentials([string(credentialsId: 'REGISTRY', variable: 'REGISTRY')]) {
-                        def appImage = docker.build("${REGISTRY}:${IMAGE_TAG}", ".")
+                        def appImage = docker.build("${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}", ".")
                     }
                 }
             }
@@ -42,7 +42,7 @@ pipeline {
                     ]) {
                         withAWS(credentials: 'aws_admin_user', region: 'us-east-1') {
                             docker.withRegistry("https://${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com", "ecr:us-east-1:aws_admin_user") {
-                                def appImage = docker.image("${REGISTRY}:${IMAGE_TAG}")
+                                def appImage = docker.image("${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}")
                                 appImage.push()
                                 sh """
                                     echo "Pushed to ECR..."
@@ -61,7 +61,8 @@ pipeline {
                         sh '''
                             echo "Applying deployment files"
                             echo "Current directory:" $(pwd)
-                            kubectl apply -f open-webui-deployment.yaml open-webui-service.yaml
+                            kubectl apply -f open-webui-deployment.yaml
+                            kubectl apply -f open-webui-service.yaml
                             echo "Setting image"
                             kubectl set image deployment/open-webui open-webui=${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
                         '''
