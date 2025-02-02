@@ -60,8 +60,6 @@ pipeline {
                         sh '''
 
                             echo "Current directory:" $(pwd)
-                            echo "Creating secret..."
-                            kubectl create secret docker-registry ecr-secret --docker-server=${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com --docker-username=AWS --docker-password=$(aws ecr get-login-password --region us-east-1) --namespace default
                             echo "Applying deployment files..."
                             kubectl apply -f open-webui-deployment.yaml
                             kubectl apply -f open-webui-service.yaml
