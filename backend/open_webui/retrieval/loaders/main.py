@@ -7,6 +7,7 @@ from langchain_community.document_loaders import (
     AzureAIDocumentIntelligenceLoader,
     BSHTMLLoader,
     CSVLoader,
+    DoclingLoader,
     Docx2txtLoader,
     OutlookMessageLoader,
     PyPDFLoader,
@@ -170,6 +171,10 @@ class Loader:
                 api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),
                 api_key=self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY"),
             )
+        elif (
+            self.engine == "docling"
+        ):
+            loader = DoclingLoader(file_path=file_path)
         else:
             if file_ext == "pdf":
                 loader = PyPDFLoader(
