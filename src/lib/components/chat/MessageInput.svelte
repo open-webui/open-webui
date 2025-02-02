@@ -211,7 +211,7 @@
 				files = files.filter((item) => item?.itemId !== tempItemId);
 			}
 		} catch (e) {
-			toast.error(`${e}`);
+			toast.error(e);
 			files = files.filter((item) => item?.itemId !== tempItemId);
 		}
 	};
@@ -564,7 +564,7 @@
 							}}
 						>
 							<div
-								class="flex-1 flex flex-col relative w-full rounded-3xl px-1 bg-gray-600/5 dark:bg-gray-400/5 dark:text-gray-100"
+								class="flex flex-col flex-1 relative w-full rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-1 shadow-[0_9px_9px_0_rgba(0,0,0,0.01),0_2px_5px_0_rgba(0,0,0,0.06)] transition-colors duration-150 ease-in-out"
 								dir={$settings?.chatDirection ?? 'LTR'}
 							>
 								{#if files.length > 0}
@@ -918,7 +918,7 @@
 										<textarea
 											id="chat-input"
 											bind:this={chatInputElement}
-											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-none w-full py-3 px-1 rounded-xl resize-none h-[48px]"
+											class="w-full py-3 px-1 bg-transparent outline-none resize-none rounded-xl h-12 text-base leading-6 font-sans text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 scrollbar-hidden"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 											bind:value={prompt}
 											on:keypress={(e) => {
