@@ -1092,6 +1092,7 @@ async def process_chat_response(
                 # We might want to disable this by default
                 detect_reasoning = True
                 reasoning_tags = ["think", "reason", "reasoning", "thought", "Thought"]
+                REASONING_CONTENT_FROM_API_TAG = "reasoning_content_from_api"
                 current_tag = None
 
                 reasoning_start_time = None
@@ -1126,51 +1127,58 @@ async def process_chat_response(
                                 },
                             )
                         else:
-                            value = (
-                                data.get("choices", [])[0]
-                                .get("delta", {})
-                                .get("content")
-                            )
+                            delta = data.get("choices", [{}])[0].get("delta", {})
+                            value = delta.get("content") or ""  # transform None to ""
+                            reasoning_content_from_api = delta.get("reasoning_content") or ""
 
-                            if value:
+                            if value or reasoning_content_from_api:
                                 content = f"{content}{value}"
 
                                 if detect_reasoning:
-                                    for tag in reasoning_tags:
-                                        start_tag = f"<{tag}>\n"
-                                        end_tag = f"</{tag}>\n"
-
-                                        if start_tag in content:
-                                            # Remove the start tag
-                                            content = content.replace(start_tag, "")
+                                    if reasoning_start_time is None:
+                                        if reasoning_content_from_api:
                                             ongoing_content = content
-
+                                            reasoning_content = reasoning_content_from_api
                                             reasoning_start_time = time.time()
-                                            reasoning_content = ""
+                                            current_tag = REASONING_CONTENT_FROM_API_TAG
+                                        else:
+                                            for tag in reasoning_tags:
+                                                start_tag = f"<{tag}>"
 
-                                            current_tag = tag
-                                            break
+                                                if start_tag in content:
+                                                    ongoing_content, reasoning_content = content.split(start_tag)
+                                                    reasoning_content = reasoning_content.lstrip()
 
-                                    if reasoning_start_time is not None:
-                                        # Remove the last value from the content
-                                        content = content[: -len(value)]
+                                                    reasoning_start_time = time.time()
+                                                    current_tag = tag
+                                                    break
+                                    else:
+                                        if current_tag == REASONING_CONTENT_FROM_API_TAG:
+                                            reasoning_content += reasoning_content_from_api
+                                        else:
+                                            reasoning_content += value
 
-                                        reasoning_content += value
-
-                                        end_tag = f"</{current_tag}>\n"
-                                        if end_tag in reasoning_content:
+                                        end_tag = f"</{current_tag}>"
+                                        if (
+                                            current_tag == REASONING_CONTENT_FROM_API_TAG
+                                            and not reasoning_content_from_api
+                                        ) or (
+                                            current_tag != REASONING_CONTENT_FROM_API_TAG
+                                            and end_tag in reasoning_content
+                                        ):
                                             reasoning_end_time = time.time()
                                             reasoning_duration = int(
                                                 reasoning_end_time
                                                 - reasoning_start_time
                                             )
-                                            reasoning_content = (
-                                                reasoning_content.strip(
-                                                    f"<{current_tag}>\n"
-                                                )
-                                                .strip(end_tag)
-                                                .strip()
-                                            )
+
+                                            if current_tag == REASONING_CONTENT_FROM_API_TAG:
+                                                reasoning_content = reasoning_content.rstrip()
+                                                remaining_content = value
+                                            else:
+                                                reasoning_content, remaining_content = reasoning_content.split(end_tag)
+                                                reasoning_content = reasoning_content.strip()
+                                                remaining_content = remaining_content.lstrip()
 
                                             if reasoning_content:
                                                 reasoning_display_content = "\n".join(
@@ -1183,13 +1191,12 @@ async def process_chat_response(
                                                 )
 
                                                 # Format reasoning with <details> tag
-                                                content = f'{ongoing_content}<details type="reasoning" done="true" duration="{reasoning_duration}">\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_display_content}\n</details>\n'
+                                                content = f'{ongoing_content}<details type="reasoning" done="true" duration="{reasoning_duration}">\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_display_content}\n</details>\n{remaining_content}'
                                             else:
-                                                content = ""
+                                                content = f"{remaining_content}"
 
                                             reasoning_start_time = None
                                         else:
-
                                             reasoning_display_content = "\n".join(
                                                 (
                                                     f"> {line}"
