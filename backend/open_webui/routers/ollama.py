@@ -68,8 +68,8 @@ log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
 ##########################################
 
 
-async def send_get_request(url, key=None):
-    timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
+async def send_get_request(url, key=None, timeout=10):
+    timeout = aiohttp.ClientTimeout(total=timeout)
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(
@@ -264,7 +264,7 @@ async def get_all_models(request: Request):
             if (str(idx) not in request.app.state.config.OLLAMA_API_CONFIGS) and (
                 url not in request.app.state.config.OLLAMA_API_CONFIGS  # Legacy support
             ):
-                request_tasks.append(send_get_request(f"{url}/api/tags"))
+                request_tasks.append(send_get_request(f"{url}/api/tags", timeout=10))
             else:
                 api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
                     str(idx),
@@ -277,7 +277,7 @@ async def get_all_models(request: Request):
                 key = api_config.get("key", None)
 
                 if enable:
-                    request_tasks.append(send_get_request(f"{url}/api/tags", key))
+                    request_tasks.append(send_get_request(f"{url}/api/tags", key, timeout=10))
                 else:
                     request_tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
 
@@ -331,6 +331,10 @@ async def get_all_models(request: Request):
                 )
             )
         }
+
+        # Add a warning message if some models are not loaded
+        if any(response is None for response in responses):
+            models["warning"] = "Some models could not be loaded due to timeout or connection issues."
 
     else:
         models = {"models": []}

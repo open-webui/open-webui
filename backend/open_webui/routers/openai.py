@@ -51,8 +51,8 @@ log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 ##########################################
 
 
-async def send_get_request(url, key=None):
-    timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
+async def send_get_request(url, key=None, timeout=10):
+    timeout = aiohttp.ClientTimeout(total=timeout)
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(
@@ -271,7 +271,7 @@ async def get_all_models_responses(request: Request) -> list:
         ):
             request_tasks.append(
                 send_get_request(
-                    f"{url}/models", request.app.state.config.OPENAI_API_KEYS[idx]
+                    f"{url}/models", request.app.state.config.OPENAI_API_KEYS[idx], timeout=10
                 )
             )
         else:
@@ -291,6 +291,7 @@ async def get_all_models_responses(request: Request) -> list:
                         send_get_request(
                             f"{url}/models",
                             request.app.state.config.OPENAI_API_KEYS[idx],
+                            timeout=10
                         )
                     )
                 else:
@@ -405,6 +406,11 @@ async def get_all_models(request: Request) -> dict[str, list]:
     log.debug(f"models: {models}")
 
     request.app.state.OPENAI_MODELS = {model["id"]: model for model in models["data"]}
+
+    # Add a warning message if some models are not loaded
+    if any(response is None for response in responses):
+        models["warning"] = "Some models could not be loaded due to timeout or connection issues."
+
     return models
 
 
