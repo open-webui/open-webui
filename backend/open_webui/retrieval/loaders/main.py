@@ -19,6 +19,7 @@ from langchain_community.document_loaders import (
     YoutubeLoader,
 )
 from langchain_core.documents import Document
+from langchain_docling import DoclingLoader
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -136,17 +137,19 @@ class Loader:
     def _get_loader(self, filename: str, file_content_type: str, file_path: str):
         file_ext = filename.split(".")[-1].lower()
 
-        if self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL"):
+        if self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL") or self.engine == "docling":
             if file_ext in known_source_ext or (
                 file_content_type and file_content_type.find("text/") >= 0
             ):
                 loader = TextLoader(file_path, autodetect_encoding=True)
-            else:
+            elif self.engine == "tika":
                 loader = TikaLoader(
                     url=self.kwargs.get("TIKA_SERVER_URL"),
                     file_path=file_path,
                     mime_type=file_content_type,
                 )
+            else:
+                loader = DoclingLoader(file_path=file_path)
         else:
             if file_ext == "pdf":
                 loader = PyPDFLoader(

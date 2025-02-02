@@ -740,7 +740,7 @@ def save_docs_to_vector_db(
     # for meta-data so convert them to string.
     for metadata in metadatas:
         for key, value in metadata.items():
-            if isinstance(value, datetime):
+            if isinstance(value, (datetime, dict, list)):
                 metadata[key] = str(value)
 
     try:
