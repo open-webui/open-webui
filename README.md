@@ -60,7 +60,10 @@ Thank you all very much for showing interest in this project
 
 -Nick
 
-..........
+
+### NOTE FOR INSTALLATION
+
+Please refer to the original instructions on how to build the app (or docker image) from source in order to get this version working instead of the regular version.
 
 # Open WebUI 👋
 
