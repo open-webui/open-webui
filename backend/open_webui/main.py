@@ -8,13 +8,12 @@ import shutil
 import sys
 import time
 import random
-
+import httpx
 from contextlib import asynccontextmanager
 from urllib.parse import urlencode, parse_qs, urlparse
 from pydantic import BaseModel
 from sqlalchemy import text
-
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from aiocache import cached
 import aiohttp
 import requests
@@ -1089,7 +1088,300 @@ async def get_app_latest_release_version():
 async def get_app_changelog():
     return {key: CHANGELOG[key] for idx, key in enumerate(CHANGELOG) if idx < 5}
 
+############################
+# dify api
+############################
+class ChatCompletionRequest(BaseModel):
+    model: str
+    messages: List[Dict[str, str]]
+    stream: bool = False
+    conversation_id: Optional[str] = None
+    user: Optional[str] = "default_user"
 
+class DifyModelManager:
+    def __init__(self):
+        self.api_keys = []
+        self.name_to_api_key = {}  # 应用名称到API Key的映射
+        self.api_key_to_name = {}  # API Key到应用名称的映射
+        self.load_api_keys()
+
+    def load_api_keys(self):
+        """从环境变量加载API Keys"""
+        api_keys_str = os.getenv('DIFY_API_KEYS', '')
+        print("从环境变量加载API Keys", api_keys_str)
+        if api_keys_str:
+            self.api_keys = [key.strip() for key in api_keys_str.split(',') if key.strip()]
+            log.info(f"Loaded {len(self.api_keys)} API keys")
+            print(self.api_keys)
+
+    async def fetch_app_info(self, api_key):
+        """获取Dify应用信息"""
+        try:
+            async with httpx.AsyncClient() as client:
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                }
+                response = await client.get(
+                    f"{DIFY_API_BASE}/info",
+                    headers=headers,
+                    params={"user": "default_user"}
+                )
+                print('dify response',response.json())
+                
+                if response.status_code == 200:
+                    app_info = response.json()
+                    return app_info.get("name", "Unknown App")
+                else:
+                    log.error(f"Failed to fetch app info for API key: {api_key[:8]}...")
+                    return None
+        except Exception as e:
+            log.error(f"Error fetching app info: {str(e)}")
+            return None
+
+    async def refresh_model_info(self):
+        print("刷新所有应用信息")
+        """刷新所有应用信息"""
+        self.name_to_api_key.clear()
+        self.api_key_to_name.clear()
+        
+        for api_key in self.api_keys:
+            app_name = await self.fetch_app_info(api_key)
+            if app_name:
+                self.name_to_api_key[app_name] = api_key
+                self.api_key_to_name[api_key] = app_name
+                log.info(f"Mapped app '{app_name}' to API key: {api_key[:8]}...")
+
+    def get_api_key(self, model_name):
+        """根据模型名称获取API Key"""
+        return self.name_to_api_key.get(model_name)
+
+    def get_available_models(self):
+        """获取可用模型列表"""
+        print("获取可用模型列表", self.name_to_api_key)
+        return [
+            {
+                "id": name,
+                "object": "model",
+                "created": int(time.time()),
+                "owned_by": "dify"
+            }
+            for name in self.name_to_api_key.keys()
+        ]
+
+# 创建模型管理器实例
+model_manager = DifyModelManager()
+
+# 从环境变量获取API基础URL
+DIFY_API_BASE = os.getenv("DIFY_API_BASE", "")
+
+
+
+def get_api_key(model_name: str) -> Optional[str]:
+    """根据模型名称获取对应的API密钥"""
+    api_key = model_manager.get_api_key(model_name)
+    if not api_key:
+        log.warning(f"No API key found for model: {model_name}")
+    return api_key
+
+def transform_openai_to_dify(openai_request: Dict[str, Any], endpoint: str) -> Optional[Dict[str, Any]]:
+    """将OpenAI格式的请求转换为Dify格式"""
+    
+    if endpoint == "/chat/completions":
+        messages = openai_request.get("messages", [])
+        stream = openai_request.get("stream", False)
+        
+        dify_request = {
+            "inputs": {},
+            "query": messages[-1]["content"] if messages else "",
+            "response_mode": "streaming" if stream else "blocking",
+            "conversation_id": openai_request.get("conversation_id", None),
+            "user": openai_request.get("user", "default_user")
+        }
+
+        # 添加历史消息
+        if len(messages) > 1:
+            history = []
+            for msg in messages[:-1]:  # 除了最后一条消息
+                history.append({
+                    "role": msg["role"],
+                    "content": msg["content"]
+                })
+            dify_request["conversation_history"] = history
+
+        return dify_request
+    
+    return None
+
+def transform_dify_to_openai(dify_response: Dict[str, Any], model: str = "claude-3-5-sonnet-v2", stream: bool = False) -> Dict[str, Any]:
+    """将Dify格式的响应转换为OpenAI格式"""
+    
+    if not stream:
+        return {
+            "id": dify_response.get("message_id", ""),
+            "object": "chat.completion",
+            "created": dify_response.get("created", int(time.time())),
+            "model": model,
+            "choices": [{
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": dify_response.get("answer", "")
+                },
+                "finish_reason": "stop"
+            }]
+        }
+    else:
+        return dify_response
+
+def create_openai_stream_response(content: str, message_id: str, model: str = "claude-3-5-sonnet-v2") -> Dict[str, Any]:
+    """创建OpenAI格式的流式响应"""
+    return {
+        "id": message_id,
+        "object": "chat.completion.chunk",
+        "created": int(time.time()),
+        "model": model,
+        "choices": [{
+            "index": 0,
+            "delta": {
+                "content": content
+            },
+            "finish_reason": None
+        }]
+    }
+
+async def process_stream_response(response: httpx.Response, model: str):
+    """处理流式响应"""
+    message_id = None
+    async for line in response.aiter_lines():
+        if line:
+            try:
+                if line.startswith("data: "):
+                    data = json.loads(line[6:])
+                    if not message_id:
+                        message_id = data.get("message_id", "")
+                    
+                    if "answer" in data:
+                        chunk_data = create_openai_stream_response(
+                            data["answer"],
+                            message_id,
+                            model
+                        )
+                        yield f"data: {json.dumps(chunk_data)}\n\n"
+                    
+                    if data.get("event") == "completed":
+                        # 发送结束标记
+                        final_chunk = create_openai_stream_response("", message_id, model)
+                        final_chunk["choices"][0]["finish_reason"] = "stop"
+                        yield f"data: {json.dumps(final_chunk)}\n\n"
+                        yield "data: [DONE]\n\n"
+            except json.JSONDecodeError as e:
+                log.error(f"Error parsing stream data: {str(e)}")
+                continue
+
+@app.post("/v1/chat/completions")
+async def chat_completions(request: ChatCompletionRequest):
+    try:
+        log.info(f"Received request: {request.dict()}")
+        
+        model = request.model
+        log.info(f"Using model: {model}")
+        
+        # 验证模型是否支持
+        api_key = get_api_key(model)
+        if not api_key:
+            error_msg = f"Model {model} is not supported. Available models: {', '.join(model_manager.name_to_api_key.keys())}"
+            log.error(error_msg)
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "error": {
+                        "message": error_msg,
+                        "type": "invalid_request_error",
+                        "code": "model_not_found"
+                    }
+                }
+            )
+            
+        dify_request = transform_openai_to_dify(request.dict(), "/chat/completions")
+        log.info(f"Transformed request: {json.dumps(dify_request, ensure_ascii=False)}")
+        
+        if not dify_request:
+            log.error("Failed to transform request")
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": {
+                        "message": "Invalid request format",
+                        "type": "invalid_request_error"
+                    }
+                }
+            )
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{DIFY_API_BASE}/chat-messages",
+                headers=headers,
+                json=dify_request,
+                timeout=None
+            )
+            
+            if response.status_code != 200:
+                error_msg = f"Dify API returned error: {response.status_code}"
+                log.error(error_msg)
+                return JSONResponse(
+                    status_code=response.status_code,
+                    content={
+                        "error": {
+                            "message": error_msg,
+                            "type": "api_error"
+                        }
+                    }
+                )
+
+            if request.stream:
+                return StreamingResponse(
+                    process_stream_response(response, model),
+                    media_type="text/event-stream"
+                )
+            else:
+                dify_response = response.json()
+                openai_response = transform_dify_to_openai(dify_response, model)
+                return openai_response
+
+    except Exception as e:
+        log.error(f"Error processing request: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": {
+                    "message": str(e),
+                    "type": "internal_server_error"
+                }
+            }
+        )
+
+@app.get("/v1/models")
+async def list_models():
+    print("获取可用模型列表")
+    await model_manager.refresh_model_info()
+    """返回可用的模型列表"""
+    models = model_manager.get_available_models()
+    return {
+        "object": "list",
+        "data": models
+    }
+
+@app.on_event("startup")
+async def startup_event():
+    """启动时初始化模型信息"""
+    await model_manager.refresh_model_info()
+    
 ############################
 # OAuth Login & Callback
 ############################
