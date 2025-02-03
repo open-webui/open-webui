@@ -45,7 +45,8 @@
 		promptTemplate,
 		splitStream,
 		sleep,
-		removeDetailsWithReasoning
+		removeDetailsWithReasoning,
+		getPromptVariables
 	} from '$lib/utils';
 
 	import { generateChatCompletion } from '$lib/apis/ollama';
@@ -82,10 +83,12 @@
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
+	import Spinner from '../common/Spinner.svelte';
 
 	export let chatIdProp = '';
 
-	let loaded = false;
+	let loading = false;
+
 	const eventTarget = new EventTarget();
 	let controlPane;
 	let controlPaneComponent;
@@ -113,6 +116,7 @@
 
 	let selectedToolIds = [];
 	let imageGenerationEnabled = false;
+	let codeInterpreterEnabled = false;
 	let webSearchEnabled = false;
 
 	let chat = null;
@@ -133,6 +137,7 @@
 
 	$: if (chatIdProp) {
 		(async () => {
+			loading = true;
 			console.log(chatIdProp);
 
 			prompt = '';
@@ -141,11 +146,9 @@
 			webSearchEnabled = false;
 			imageGenerationEnabled = false;
 
-			loaded = false;
-
 			if (chatIdProp && (await loadChat())) {
 				await tick();
-				loaded = true;
+				loading = false;
 
 				if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
 					try {
@@ -627,7 +630,7 @@
 		} catch (e) {
 			// Remove the failed doc from the files array
 			files = files.filter((f) => f.name !== url);
-			toast.error(e);
+			toast.error(`${e}`);
 		}
 	};
 
@@ -1557,9 +1560,17 @@
 
 				files: (files?.length ?? 0) > 0 ? files : undefined,
 				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
+
 				features: {
 					image_generation: imageGenerationEnabled,
+					code_interpreter: codeInterpreterEnabled,
 					web_search: webSearchEnabled
+				},
+				variables: {
+					...getPromptVariables(
+						$user.name,
+						$settings?.userLocation ? await getAndUpdateUserLocation(localStorage.token) : undefined
+					)
 				},
 
 				session_id: $socket?.id,
@@ -1861,7 +1872,7 @@
 		: ' '} w-full max-w-full flex flex-col"
 	id="chat-container"
 >
-	{#if !chatIdProp || (loaded && chatIdProp)}
+	{#if chatIdProp === '' || (!loading && chatIdProp)}
 		{#if $settings?.backgroundImageUrl ?? null}
 			<div
 				class="absolute {$showSidebar
@@ -1962,6 +1973,7 @@
 								bind:autoScroll
 								bind:selectedToolIds
 								bind:imageGenerationEnabled
+								bind:codeInterpreterEnabled
 								bind:webSearchEnabled
 								bind:atSelectedModel
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
@@ -2013,6 +2025,7 @@
 								bind:autoScroll
 								bind:selectedToolIds
 								bind:imageGenerationEnabled
+								bind:codeInterpreterEnabled
 								bind:webSearchEnabled
 								bind:atSelectedModel
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
@@ -2065,5 +2078,11 @@
 				{eventTarget}
 			/>
 		</PaneGroup>
+	{:else if loading}
+		<div class=" flex items-center justify-center h-full w-full">
+			<div class="m-auto">
+				<Spinner />
+			</div>
+		</div>
 	{/if}
 </div>
