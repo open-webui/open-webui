@@ -731,12 +731,27 @@ async def inspect_websocket(request: Request, call_next):
     return await call_next(request)
 
 
+# 定义允许的源
+ALLOWED_ORIGINS = [
+    "http://localhost:8080",
+    "http://localhost:3000",
+    "http://127.0.0.1:8080",
+    "http://localhost:*",
+    "http://127.0.0.1:*",
+    "http://127.0.0.1:3000",
+    "https://haf.api.weibo.com",
+    "*"  # 开发环境允许所有源
+]
+
+# 添加 CORS 支持
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ALLOW_ORIGIN,
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,  # 预检请求的缓存时间
 )
 
 
@@ -1006,10 +1021,10 @@ async def get_app_config(request: Request):
                 else {}
             ),
         },
-        "google_drive": {
-            "client_id": GOOGLE_DRIVE_CLIENT_ID.value,
-            "api_key": GOOGLE_DRIVE_API_KEY.value,
-        },
+        # "google_drive": {
+        #     "client_id": GOOGLE_DRIVE_CLIENT_ID.value,
+        #     "api_key": GOOGLE_DRIVE_API_KEY.value,
+        # },
         **(
             {
                 "default_models": app.state.config.DEFAULT_MODELS,
