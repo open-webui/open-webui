@@ -49,6 +49,7 @@ from open_webui.utils.auth import (
     get_verified_user,
     get_current_user,
     get_password_hash,
+    get_organization_name,
 )
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions
@@ -526,6 +527,8 @@ async def auth_callback(request: Request, response: Response):
             raise HTTPException(status_code=500, detail="Invalid user info received")
 
         # Create or retrieve user in local database
+        siret = user_info.get("siret")
+        organization_name = get_organization_name(siret)
         email = user_info.get("email")
         name = f"{user_info.get('given_name', '')} {user_info.get('usual_name', '')}".strip()
 
@@ -546,6 +549,7 @@ async def auth_callback(request: Request, response: Response):
                 password=secrets.token_urlsafe(32),  # Random password since we use OAuth
                 name=name,
                 role=role,
+                organization_name=organization_name,
             )
             if not db_user:
                 raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)

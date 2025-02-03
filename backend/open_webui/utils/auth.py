@@ -14,7 +14,7 @@ from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
 from authlib.oidc.core import UserInfo
-
+import requests
 logging.getLogger("passlib").setLevel(logging.ERROR)
 
 log = logging.getLogger(__name__)
@@ -64,6 +64,11 @@ def extract_token_from_auth_header(auth_header: str):
 def create_api_key():
     key = str(uuid.uuid4()).replace("-", "")
     return f"sk-{key}"
+
+
+def get_organization_name(siret: str):
+    org = requests.get(f"https://recherche-entreprises.api.gouv.fr/search?q={siret}&page=1&per_page=1")
+    return org.json()["results"][0]["nom_complet"] if org.json()["results"] else ""
 
 
 def get_http_authorization_cred(auth_header: str):

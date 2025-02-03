@@ -102,6 +102,7 @@ class AuthsTable:
         name: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
+        organization_name: str = "",
         oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
@@ -116,7 +117,7 @@ class AuthsTable:
             db.add(result)
 
             user = Users.insert_new_user(
-                id, name, email, profile_image_url, role, oauth_sub
+                id, name, email, profile_image_url, role, organization_name, oauth_sub
             )
 
             db.commit()

@@ -23,6 +23,7 @@ class User(Base):
     name = Column(String)
     email = Column(String)
     role = Column(String)
+    organization_name = Column(String, nullable=True)
     profile_image_url = Column(Text)
 
     last_active_at = Column(BigInteger)
@@ -47,6 +48,7 @@ class UserModel(BaseModel):
     name: str
     email: str
     role: str = "pending"
+    organization_name: str = ""
     profile_image_url: str
 
     last_active_at: int  # timestamp in epoch
@@ -72,6 +74,7 @@ class UserResponse(BaseModel):
     name: str
     email: str
     role: str
+    organization_name: str
     profile_image_url: str
 
 
@@ -79,6 +82,7 @@ class UserNameResponse(BaseModel):
     id: str
     name: str
     role: str
+    organization_name: str
     profile_image_url: str
 
 
@@ -102,6 +106,7 @@ class UsersTable:
         email: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
+        organization_name: str = "",
         oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
@@ -112,6 +117,7 @@ class UsersTable:
                     "email": email,
                     "role": role,
                     "profile_image_url": profile_image_url,
+                    "organization_name": organization_name,
                     "last_active_at": int(time.time()),
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
