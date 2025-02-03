@@ -387,7 +387,7 @@
 				<div class="w-full relative">
 					{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || webSearchEnabled || imageGenerationEnabled}
 						<div
-							class="px-2 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10"
+							class="px-2 pb-0.5 pt-1.5 mx-5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10"
 						>
 							{#if selectedToolIds.length > 0}
 								<div class="flex items-center justify-between w-full">
@@ -433,22 +433,6 @@
 											</span>
 										</div>
 										<div class=" ">{$i18n.t('Image generation')}</div>
-									</div>
-								</div>
-							{/if}
-
-							{#if webSearchEnabled}
-								<div class="flex items-center justify-between w-full">
-									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
-										<div class="pl-1">
-											<span class="relative flex size-2">
-												<span
-													class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
-												/>
-												<span class="relative inline-flex rounded-full size-2 bg-green-500" />
-											</span>
-										</div>
-										<div class=" ">{$i18n.t('Search the web')}</div>
 									</div>
 								</div>
 							{/if}
@@ -564,7 +548,7 @@
 							}}
 						>
 							<div
-								class="flex flex-col flex-1 relative w-full rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-2 my-5 mx-10 shadow-[0_9px_9px_0_rgba(0,0,0,0.01),0_2px_5px_0_rgba(0,0,0,0.06)] transition-colors duration-150 ease-in-out"
+								class="flex flex-col flex-1 relative w-full rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-2 mb-5 mx-5 shadow-[0_9px_9px_0_rgba(0,0,0,0.01),0_2px_5px_0_rgba(0,0,0,0.06)] transition-colors duration-150 ease-in-out"
 								dir={$settings?.chatDirection ?? 'LTR'}
 							>
 								{#if files.length > 0}
