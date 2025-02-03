@@ -118,7 +118,7 @@ const initFolders = async () => {
 	}
 };
 
-const createFolder = async (name = "Untitled") => {
+const createFolder = async (name = "Dossier") => {
 	if (name === "") {
 		toast.error($i18n.t("Folder name cannot be empty."));
 		return;
@@ -599,7 +599,7 @@ onDestroy(() => {
 			{/if}
 
 			{#if !search}
-				<div class="px-2 mt-0.5 flex items-center justify-between">
+				<div class="px-2 mt-4 flex items-center justify-between">
 					<div class="text-sm font-medium ">{$i18n.t('Folders')}</div>
 					<button
 						class="p-1 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg transition hover:text-[var(--text-action-high-blue-france)] "
