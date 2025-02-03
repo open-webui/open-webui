@@ -48,7 +48,7 @@ class UserModel(BaseModel):
     name: str
     email: str
     role: str = "pending"
-    organization_name: str = ""
+    organization_name: Optional[str] = ""
     profile_image_url: str
 
     last_active_at: int  # timestamp in epoch
