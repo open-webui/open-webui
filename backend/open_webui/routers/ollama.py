@@ -68,7 +68,7 @@ log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
 #
 ##########################################
 
-ENABLE_FORWARD_USER_INFO_HEADERS=True
+# ENABLE_FORWARD_USER_INFO_HEADERS=True
 
 
 async def send_get_request(url, key=None,user=None):
@@ -130,6 +130,7 @@ async def send_post_request(
             "Content-Type": "application/json",
             **({"Authorization": f"Bearer {key}"} if key else {}),
         }
+        
         log.info(f"headers: {headers}")
         log.info(f"Testing 1")
         
