@@ -1103,10 +1103,15 @@ async def process_chat_response(
 
                     elif block["type"] == "code_interpreter":
                         attributes = block.get("attributes", {})
-                        lang = attributes.get("lang", "")
-                        attribute_type = attributes.get("type", "")
+                        output = block.get("output", {})
 
-                        content = f"{content}```{lang if lang else attribute_type}\n{block['content']}\n```\n"
+                        lang = attributes.get("lang", "")
+
+                        if output:
+                            content = f'{content}<details type="code_interpreter" done="true">\n<summary>Analyzed</summary>\n```{lang}\n{block["content"]}\n```\n```output\n{output}\n```\n</details>\n'
+                        else:
+                            content = f'{content}<details type="code_interpreter" done="false">\n<summary>Analyzing...</summary>\n```{lang}\n{block["content"]}\n```\n</details>\n'
+
                     else:
                         block_content = str(block["content"]).strip()
                         content = f"{content}{block['type']}: {block_content}\n"
@@ -1205,7 +1210,7 @@ async def process_chat_response(
             DETECT_CODE_INTERPRETER = True
 
             reasoning_tags = ["think", "reason", "reasoning", "thought", "Thought"]
-            code_interpreter_tags = ["oi::code_interpreter"]
+            code_interpreter_tags = ["code_interpreter"]
 
             try:
                 for event in events:
@@ -1339,12 +1344,13 @@ async def process_chat_response(
                     and retries < MAX_RETRIES
                 ):
                     retries += 1
+                    log.debug(f"Retrying code interpreter block: {retries}")
 
                     try:
                         if content_blocks[-1]["attributes"].get("type") == "code":
                             output = await event_caller(
                                 {
-                                    "type": "execute:pyodide",
+                                    "type": "execute:python",
                                     "data": {
                                         "id": str(uuid4()),
                                         "code": content_blocks[-1]["content"],
@@ -1354,19 +1360,20 @@ async def process_chat_response(
                     except Exception as e:
                         output = str(e)
 
-                    content_blocks.append(
-                        {
-                            "type": "code_interpreter",
-                            "attributes": {
-                                "type": "output",
-                            },
-                            "content": output,
-                        }
-                    )
+                    content_blocks[-1]["output"] = output
                     content_blocks.append(
                         {
                             "type": "text",
                             "content": "",
+                        }
+                    )
+
+                    await event_emitter(
+                        {
+                            "type": "chat:completion",
+                            "data": {
+                                "content": serialize_content_blocks(content_blocks),
+                            },
                         }
                     )
 
@@ -1396,15 +1403,6 @@ async def process_chat_response(
                     except Exception as e:
                         log.debug(e)
                         break
-
-                    await event_emitter(
-                        {
-                            "type": "chat:completion",
-                            "data": {
-                                "content": serialize_content_blocks(content_blocks),
-                            },
-                        }
-                    )
 
                 title = Chats.get_chat_title_by_id(metadata["chat_id"])
                 data = {

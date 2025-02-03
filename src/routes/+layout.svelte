@@ -248,8 +248,8 @@
 				tags.set(await getAllTags(localStorage.token));
 			}
 		} else {
-			if (type === 'execute:pyodide') {
-				console.log('execute:pyodide', data);
+			if (type === 'execute:python') {
+				console.log('execute:python', data);
 				executePythonAsWorker(data.id, data.code, cb);
 			}
 		}
