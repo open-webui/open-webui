@@ -407,11 +407,13 @@ __builtins__.input = input`);
 
 			<div
 				id="plt-canvas-{id}"
-				class="bg-[#202123] text-white max-w-full overflow-x-auto scrollbar-hidden"
+				class="bg-gray-50 dark:bg-[#202123] dark:text-white max-w-full overflow-x-auto scrollbar-hidden"
 			/>
 
 			{#if executing || stdout || stderr || result}
-				<div class="bg-[#202123] text-white !rounded-b-lg py-4 px-4 flex flex-col gap-2">
+				<div
+					class="bg-gray-50 dark:bg-[#202123] dark:text-white !rounded-b-lg py-4 px-4 flex flex-col gap-2"
+				>
 					{#if executing}
 						<div class=" ">
 							<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
