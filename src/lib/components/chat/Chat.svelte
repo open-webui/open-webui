@@ -116,6 +116,7 @@
 
 	let selectedToolIds = [];
 	let imageGenerationEnabled = false;
+	let codeInterpreterEnabled = false;
 	let webSearchEnabled = false;
 
 	let chat = null;
@@ -1562,6 +1563,7 @@
 
 				features: {
 					image_generation: imageGenerationEnabled,
+					code_interpreter: codeInterpreterEnabled,
 					web_search: webSearchEnabled
 				},
 				variables: {
@@ -1971,6 +1973,7 @@
 								bind:autoScroll
 								bind:selectedToolIds
 								bind:imageGenerationEnabled
+								bind:codeInterpreterEnabled
 								bind:webSearchEnabled
 								bind:atSelectedModel
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
@@ -2022,6 +2025,7 @@
 								bind:autoScroll
 								bind:selectedToolIds
 								bind:imageGenerationEnabled
+								bind:codeInterpreterEnabled
 								bind:webSearchEnabled
 								bind:atSelectedModel
 								transparentBackground={$settings?.backgroundImageUrl ?? false}

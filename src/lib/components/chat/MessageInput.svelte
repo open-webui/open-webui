@@ -65,6 +65,7 @@
 
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
+	export let codeInterpreterEnabled = false;
 
 	$: onChange({
 		prompt,
@@ -660,6 +661,7 @@
 									<div class="ml-1 self-end mb-1.5 flex space-x-1">
 										<InputMenu
 											bind:imageGenerationEnabled
+											bind:codeInterpreterEnabled
 											bind:webSearchEnabled
 											bind:selectedToolIds
 											{screenCaptureHandler}

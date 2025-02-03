@@ -15,6 +15,7 @@
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 	import CameraSolid from '$lib/components/icons/CameraSolid.svelte';
 	import PhotoSolid from '$lib/components/icons/PhotoSolid.svelte';
+	import CommandLineSolid from '$lib/components/icons/CommandLineSolid.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -26,6 +27,7 @@
 
 	export let webSearchEnabled: boolean;
 	export let imageGenerationEnabled: boolean;
+	export let codeInterpreterEnabled: boolean;
 
 	export let onClose: Function;
 
@@ -147,6 +149,20 @@
 					<Switch state={imageGenerationEnabled} />
 				</button>
 			{/if}
+
+			<button
+				class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
+				on:click={() => {
+					codeInterpreterEnabled = !codeInterpreterEnabled;
+				}}
+			>
+				<div class="flex-1 flex items-center gap-2">
+					<CommandLineSolid />
+					<div class=" line-clamp-1">{$i18n.t('Code Intepreter')}</div>
+				</div>
+
+				<Switch state={codeInterpreterEnabled} />
+			</button>
 
 			{#if showWebSearch}
 				<button

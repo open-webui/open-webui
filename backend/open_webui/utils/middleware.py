@@ -57,6 +57,7 @@ from open_webui.utils.task import (
 from open_webui.utils.misc import (
     get_message_list,
     add_or_update_system_message,
+    add_or_update_user_message,
     get_last_user_message,
     get_last_assistant_message,
     prepend_to_first_user_message_content,
@@ -67,7 +68,10 @@ from open_webui.utils.plugin import load_function_module_by_id
 
 from open_webui.tasks import create_task
 
-from open_webui.config import DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
+from open_webui.config import (
+    DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+    DEFAULT_CODE_INTERPRETER_PROMPT,
+)
 from open_webui.env import (
     SRC_LOG_LEVELS,
     GLOBAL_LOG_LEVEL,
@@ -776,6 +780,11 @@ async def process_chat_payload(request, form_data, metadata, user, model):
                 request, form_data, extra_params, user
             )
 
+        if "code_interpreter" in features and features["code_interpreter"]:
+            form_data["messages"] = add_or_update_user_message(
+                DEFAULT_CODE_INTERPRETER_PROMPT, form_data["messages"]
+            )
+
     try:
         form_data, flags = await chat_completion_filter_functions_handler(
             request, form_data, model, extra_params
@@ -1359,7 +1368,7 @@ async def process_chat_response(
                     and retries < MAX_RETRIES
                 ):
                     retries += 1
-                    log.debug(f"Retrying code interpreter block: {retries}")
+                    log.debug(f"Attempt count: {retries}")
 
                     try:
                         if content_blocks[-1]["attributes"].get("type") == "code":
