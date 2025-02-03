@@ -738,6 +738,7 @@ ALLOWED_ORIGINS = [
     "http://127.0.0.1:8080",
     "http://localhost:*",
     "http://127.0.0.1:*",
+    "http://54.251.139.172:*",
     "http://127.0.0.1:3000",
     "https://haf.api.weibo.com",
     "*"  # 开发环境允许所有源
@@ -748,6 +749,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=False,
+    
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
