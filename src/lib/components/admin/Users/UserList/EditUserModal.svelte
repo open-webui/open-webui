@@ -7,11 +7,11 @@
 	import { updateUserById } from '$lib/apis/users';
 
 	import Modal from '$lib/components/common/Modal.svelte';
-    import localizedFormat from 'dayjs/plugin/localizedFormat';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
-    dayjs.extend(localizedFormat);
+	dayjs.extend(localizedFormat);
 
 	export let show = false;
 	export let selectedUser;

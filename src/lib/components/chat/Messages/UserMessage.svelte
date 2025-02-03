@@ -13,10 +13,10 @@
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import Markdown from './Markdown.svelte';
 	import Image from '$lib/components/common/Image.svelte';
-    import localizedFormat from 'dayjs/plugin/localizedFormat';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	const i18n = getContext('i18n');
-    dayjs.extend(localizedFormat);
+	dayjs.extend(localizedFormat);
 
 	export let user;
 

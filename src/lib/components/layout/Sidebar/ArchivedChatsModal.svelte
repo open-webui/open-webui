@@ -4,9 +4,9 @@
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 	import { getContext, createEventDispatcher } from 'svelte';
-    import localizedFormat from 'dayjs/plugin/localizedFormat';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
-    dayjs.extend(localizedFormat);
+	dayjs.extend(localizedFormat);
 
 	const dispatch = createEventDispatcher();
 

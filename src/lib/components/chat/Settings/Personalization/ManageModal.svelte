@@ -11,10 +11,10 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { error } from '@sveltejs/kit';
 	import EditMemoryModal from './EditMemoryModal.svelte';
-    import localizedFormat from 'dayjs/plugin/localizedFormat';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	const i18n = getContext('i18n');
-    dayjs.extend(localizedFormat);
+	dayjs.extend(localizedFormat);
 
 	export let show = false;
 
