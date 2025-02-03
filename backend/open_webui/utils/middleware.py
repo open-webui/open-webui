@@ -1124,6 +1124,8 @@ async def process_chat_response(
                 return content
 
             def tag_content_handler(content_type, tags, content, content_blocks):
+                end_flag = False
+
                 def extract_attributes(tag_content):
                     """Extract attributes from a tag if they exist."""
                     attributes = {}
@@ -1173,6 +1175,7 @@ async def process_chat_response(
                             end_tag_pattern, "", block_content
                         ).strip()
                         if block_content:
+                            end_flag = True
                             content_blocks[-1]["content"] = block_content
                             content_blocks[-1]["ended_at"] = time.time()
                             content_blocks[-1]["duration"] = int(
@@ -1196,7 +1199,7 @@ async def process_chat_response(
                         else:
                             # Remove the block if content is empty
                             content_blocks.pop()
-                return content, content_blocks
+                return content, content_blocks, end_flag
 
             message = Chats.get_message_by_id_and_message_id(
                 metadata["chat_id"], metadata["message_id"]
@@ -1280,20 +1283,27 @@ async def process_chat_response(
                                     )
 
                                     if DETECT_REASONING:
-                                        content, content_blocks = tag_content_handler(
-                                            "reasoning",
-                                            reasoning_tags,
-                                            content,
-                                            content_blocks,
+                                        content, content_blocks, _ = (
+                                            tag_content_handler(
+                                                "reasoning",
+                                                reasoning_tags,
+                                                content,
+                                                content_blocks,
+                                            )
                                         )
 
                                     if DETECT_CODE_INTERPRETER:
-                                        content, content_blocks = tag_content_handler(
-                                            "code_interpreter",
-                                            code_interpreter_tags,
-                                            content,
-                                            content_blocks,
+                                        content, content_blocks, end = (
+                                            tag_content_handler(
+                                                "code_interpreter",
+                                                code_interpreter_tags,
+                                                content,
+                                                content_blocks,
+                                            )
                                         )
+
+                                        if end:
+                                            break
 
                                     if ENABLE_REALTIME_CHAT_SAVE:
                                         # Save message in the database
@@ -1320,21 +1330,21 @@ async def process_chat_response(
                                 }
                             )
                         except Exception as e:
-
                             done = "data: [DONE]" in line
                             if done:
-                                # Clean up the last text block
-                                if content_blocks[-1]["type"] == "text":
-                                    content_blocks[-1]["content"] = content_blocks[-1][
-                                        "content"
-                                    ].strip()
-
-                                    if not content_blocks[-1]["content"]:
-                                        content_blocks.pop()
                                 pass
                             else:
                                 log.debug("Error: ", e)
                                 continue
+
+                    # Clean up the last text block
+                    if content_blocks[-1]["type"] == "text":
+                        content_blocks[-1]["content"] = content_blocks[-1][
+                            "content"
+                        ].strip()
+
+                        if not content_blocks[-1]["content"]:
+                            content_blocks.pop()
 
                     if response.background:
                         await response.background()
@@ -1459,7 +1469,7 @@ async def process_chat_response(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
-                            "content": content,
+                            "content": serialize_content_blocks(content_blocks),
                         },
                     )
 
