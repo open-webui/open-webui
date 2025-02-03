@@ -1759,6 +1759,11 @@ RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
     int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
 )
 
+ENABLE_SAVE_TO_VECTOR_STORE = PersistentConfig(
+    "ENABLE_SAVE_TO_VECTOR_STORE",
+    "rag.web.search.save_to_store",
+    os.environ.get("ENABLE_SAVE_TO_VECTOR_STORE", "").lower() == "true",
+)
 
 ####################################
 # Images

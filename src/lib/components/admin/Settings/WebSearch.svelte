@@ -111,7 +111,7 @@
 					</div>
 				</div>
 
-				{#if webConfig.search.engine !== ''}
+				{#if webConfig.search.enabled && webConfig.search.engine !== ''}
 					<div class="mt-1.5">
 						{#if webConfig.search.engine === 'searxng'}
 							<div>
@@ -358,6 +358,16 @@
 							placeholder={$i18n.t('Enter domains separated by commas (e.g., example.com,site.org)')}
 							bind:value={webConfig.search.domain_filter_list}
 						/>
+					</div>
+
+					<div class="mt-2">
+						<div class=" py-0.5 flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Save Search Results to Vector Store')}
+							</div>
+
+							<Switch bind:state={webConfig.search.save_to_store} />
+						</div>
 					</div>
 				{/if}
 			</div>

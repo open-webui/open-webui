@@ -402,6 +402,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
                 "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                "save_to_store": request.app.state.config.ENABLE_SAVE_TO_VECTOR_STORE,
             },
         },
     }
@@ -452,6 +453,7 @@ class WebSearchConfig(BaseModel):
     result_count: Optional[int] = None
     concurrent_requests: Optional[int] = None
     domain_filter_list: Optional[List[str]] = []
+    save_to_store: Optional[bool] = False
 
 
 class WebConfig(BaseModel):
@@ -567,6 +569,7 @@ async def update_rag_config(
         request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = (
             form_data.web.search.domain_filter_list
         )
+        request.app.state.config.ENABLE_SAVE_TO_VECTOR_STORE = form_data.web.search.save_to_store
 
     return {
         "status": True,
@@ -614,6 +617,7 @@ async def update_rag_config(
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
                 "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                "save_to_store": request.app.state.config.ENABLE_SAVE_TO_VECTOR_STORE,
             },
         },
     }
@@ -1293,7 +1297,7 @@ def process_web_search(
     collection_name = None
     documents = None
 
-    if form_data.save_to_store:
+    if request.app.state.config.ENABLE_SAVE_TO_VECTOR_STORE:
         try:
             collection_name = form_data.collection_name
             if collection_name == "" or collection_name is None:

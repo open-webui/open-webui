@@ -418,7 +418,6 @@ export const processWebSearch = async (
 	token: string,
 	query: string,
 	collection_name?: string,
-	save_to_store: boolean = false
 ): Promise<SearchDocument | null> => {
 	let error = null;
 
