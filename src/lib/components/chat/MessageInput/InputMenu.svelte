@@ -24,7 +24,6 @@
 
 	export let selectedToolIds: string[] = [];
 
-	export let webSearchEnabled: boolean;
 	export let imageGenerationEnabled: boolean;
 
 	export let onClose: Function;
@@ -37,12 +36,6 @@
 	$: showImageGeneration =
 		$config?.features?.enable_image_generation &&
 		($user.role === 'admin' || $user?.permissions?.features?.image_generation);
-
-	let showWebSearch = false;
-
-	$: showWebSearch =
-		$config?.features?.enable_web_search &&
-		($user.role === 'admin' || $user?.permissions?.features?.web_search);
 
 	$: if (show) {
 		init();
@@ -84,7 +77,7 @@
 			class="w-full max-w-[220px] rounded-xl px-1 py-1  border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow"
 			sideOffset={15}
 			alignOffset={-8}
-			side="top"
+			side="bottom"
 			align="start"
 			transition={flyAndScale}
 		>
@@ -148,23 +141,7 @@
 				</button>
 			{/if}
 
-			{#if showWebSearch}
-				<button
-					class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
-					on:click={() => {
-						webSearchEnabled = !webSearchEnabled;
-					}}
-				>
-					<div class="flex-1 flex items-center gap-2">
-						<GlobeAltSolid />
-						<div class=" line-clamp-1">{$i18n.t('Web Search')}</div>
-					</div>
-
-					<Switch state={webSearchEnabled} />
-				</button>
-			{/if}
-
-			{#if showImageGeneration || showWebSearch}
+			{#if showImageGeneration}
 				<hr class="border-black/5 dark:border-white/5 my-1" />
 			{/if}
 

@@ -642,7 +642,9 @@
 
 								<div class="flex flex-col w-full min-h-[48px]">
 									{#if $settings?.richTextInput ?? true}
-										<div class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full py-2 px-2 rounded-xl resize-none h-fit max-h-80 overflow-auto">
+										<div
+											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full py-2 px-2 rounded-xl resize-none h-fit max-h-80 overflow-auto"
+										>
 											<RichTextInput
 												bind:this={chatInputElement}
 												bind:value={prompt}
@@ -1038,7 +1040,6 @@
 										<div class="flex items-center space-x-1 -ml-1">
 											<InputMenu
 												bind:imageGenerationEnabled
-												bind:webSearchEnabled
 												bind:selectedToolIds
 												{screenCaptureHandler}
 												uploadFilesHandler={() => {
@@ -1071,9 +1072,8 @@
 													chatInput?.focus();
 												}}
 											>
-
 												<button
-													class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 text-sm h-[34px] flex items-center justify-center"
+													class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 text-sm h-[34px] flex items-center justify-center"
 													type="button"
 													aria-label="More"
 												>
@@ -1089,32 +1089,37 @@
 													</svg>
 												</button>
 											</InputMenu>
-											<Tooltip content={$i18n.t('Search the internet')} placement="right">
-												<button
-											on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
-											type="button"
-											class="
-												px-2
-												py-1
-												h-[34px]
-												text-sm
-												border
-												rounded-full
-												font-medium
-												transition-colors
-												duration-300
-												focus:outline-none
-												flex items-center gap-1
-												{webSearchEnabled
-													? 'bg-blue-100 text-blue-500 border-slate-300 hover:bg-white hover:border-gray-200'
-													: 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
-												}
-											"
-										>
-										<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-[18px] w-[18px]"><path fill-rule="evenodd" clip-rule="evenodd" d="M2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM11.9851 4.00291C11.9933 4.00046 11.9982 4.00006 11.9996 4C12.001 4.00006 12.0067 4.00046 12.0149 4.00291C12.0256 4.00615 12.047 4.01416 12.079 4.03356C12.2092 4.11248 12.4258 4.32444 12.675 4.77696C12.9161 5.21453 13.1479 5.8046 13.3486 6.53263C13.6852 7.75315 13.9156 9.29169 13.981 11H10.019C10.0844 9.29169 10.3148 7.75315 10.6514 6.53263C10.8521 5.8046 11.0839 5.21453 11.325 4.77696C11.5742 4.32444 11.7908 4.11248 11.921 4.03356C11.953 4.01416 11.9744 4.00615 11.9851 4.00291ZM8.01766 11C8.08396 9.13314 8.33431 7.41167 8.72334 6.00094C8.87366 5.45584 9.04762 4.94639 9.24523 4.48694C6.48462 5.49946 4.43722 7.9901 4.06189 11H8.01766ZM4.06189 13H8.01766C8.09487 15.1737 8.42177 17.1555 8.93 18.6802C9.02641 18.9694 9.13134 19.2483 9.24522 19.5131C6.48461 18.5005 4.43722 16.0099 4.06189 13ZM10.019 13H13.981C13.9045 14.9972 13.6027 16.7574 13.1726 18.0477C12.9206 18.8038 12.6425 19.3436 12.3823 19.6737C12.2545 19.8359 12.1506 19.9225 12.0814 19.9649C12.0485 19.9852 12.0264 19.9935 12.0153 19.9969C12.0049 20.0001 11.9999 20 11.9999 20C11.9999 20 11.9948 20 11.9847 19.9969C11.9736 19.9935 11.9515 19.9852 11.9186 19.9649C11.8494 19.9225 11.7455 19.8359 11.6177 19.6737C11.3575 19.3436 11.0794 18.8038 10.8274 18.0477C10.3973 16.7574 10.0955 14.9972 10.019 13ZM15.9823 13C15.9051 15.1737 15.5782 17.1555 15.07 18.6802C14.9736 18.9694 14.8687 19.2483 14.7548 19.5131C17.5154 18.5005 19.5628 16.0099 19.9381 13H15.9823ZM19.9381 11C19.5628 7.99009 17.5154 5.49946 14.7548 4.48694C14.9524 4.94639 15.1263 5.45584 15.2767 6.00094C15.6657 7.41167 15.916 9.13314 15.9823 11H19.9381Z" fill="currentColor"></path></svg>
-										{$i18n.t('Search')}
-										</button>
-											</Tooltip>
+											{#if $config?.features?.enable_web_search}
+												<Tooltip content={$i18n.t('Search the internet')} placement="right">
+													<button
+														on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
+														type="button"
+														class="px-2 py-1 h-[34px] text-sm border rounded-full font-medium transition-colors duration-300 focus:outline-none flex items-center gap-1 min-w-[34px] max-w-full overflow-hidden {webSearchEnabled
+															? 'bg-blue-100 text-blue-500 border-slate-300 hover:bg-white hover:border-gray-200'
+															: 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'}"
+													>
+														<svg
+															width="24"
+															height="24"
+															viewBox="0 0 24 24"
+															fill="none"
+															xmlns="http://www.w3.org/2000/svg"
+															class="h-[18px] w-[18px] flex-shrink-0"
+														>
+															<path
+																fill-rule="evenodd"
+																clip-rule="evenodd"
+																d="M2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM11.9851 4.00291C11.9933 4.00046 11.9982 4.00006 11.9996 4C12.001 4.00006 12.0067 4.00046 12.0149 4.00291C12.0256 4.00615 12.047 4.01416 12.079 4.03356C12.2092 4.11248 12.4258 4.32444 12.675 4.77696C12.9161 5.21453 13.1479 5.8046 13.3486 6.53263C13.6852 7.75315 13.9156 9.29169 13.981 11H10.019C10.0844 9.29169 10.3148 7.75315 10.6514 6.53263C10.8521 5.8046 11.0839 5.21453 11.325 4.77696C11.5742 4.32444 11.7908 4.11248 11.921 4.03356C11.953 4.01416 11.9744 4.00615 11.9851 4.00291ZM8.01766 11C8.08396 9.13314 8.33431 7.41167 8.72334 6.00094C8.87366 5.45584 9.04762 4.94639 9.24523 4.48694C6.48462 5.49946 4.43722 7.9901 4.06189 11H8.01766ZM4.06189 13H8.01766C8.09487 15.1737 8.42177 17.1555 8.93 18.6802C9.02641 18.9694 9.13134 19.2483 9.24522 19.5131C6.48461 18.5005 4.43722 16.0099 4.06189 13ZM10.019 13H13.981C13.9045 14.9972 13.6027 16.7574 13.1726 18.0477C12.9206 18.8038 12.6425 19.3436 12.3823 19.6737C12.2545 19.8359 12.1506 19.9225 12.0814 19.9649C12.0485 19.9852 12.0264 19.9935 12.0153 19.9969C12.0049 20.0001 11.9999 20 11.9999 20C11.9999 20 11.9948 20 11.9847 19.9969C11.9736 19.9935 11.9515 19.9852 11.9186 19.9649C11.8494 19.9225 11.7455 19.8359 11.6177 19.6737C11.3575 19.3436 11.0794 18.8038 10.8274 18.0477C10.3973 16.7574 10.0955 14.9972 10.019 13ZM15.9823 13C15.9051 15.1737 15.5782 17.1555 15.07 18.6802C14.9736 18.9694 14.8687 19.2483 14.7548 19.5131C17.5154 18.5005 19.5628 16.0099 19.9381 13H15.9823ZM19.9381 11C19.5628 7.99009 17.5154 5.49946 14.7548 4.48694C14.9524 4.94639 15.1263 5.45584 15.2767 6.00094C15.6657 7.41167 15.916 9.13314 15.9823 11H19.9381Z"
+																fill="currentColor"
+															></path></svg
+														>
+														<span
+															class="hidden sm:block whitespace-nowrap overflow-hidden text-ellipsis"
+															>{$i18n.t('Search')}</span
+														>
+													</button>
+												</Tooltip>
+											{/if}
 										</div>
 
 										<div class="flex items-center gap-1 -mr-1">
@@ -1216,7 +1221,7 @@
 																}}
 																aria-label="Call"
 															>
-																<Headphone className="size-5" />
+																<Headphone className="size-6" />
 															</button>
 														</Tooltip>
 													</div>
@@ -1225,7 +1230,11 @@
 														<Tooltip content={$i18n.t('Send message')}>
 															<button
 																id="send-message-button"
-																class="{prompt !== '' ? (webSearchEnabled ? 'bg-blue-500 text-white hover:bg-blue-400 dark:bg-blue-100 dark:text-blue-900 dark:hover:bg-blue-50' : 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100') : 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 m-1 text-sm h-[34px] flex items-center justify-center"
+																class="{prompt !== ''
+																	? webSearchEnabled
+																		? 'bg-blue-500 text-white hover:bg-blue-400 dark:bg-blue-100 dark:text-blue-900 dark:hover:bg-blue-50'
+																		: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100'
+																	: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 m-1 text-sm h-[34px] flex items-center justify-center"
 																type="submit"
 																disabled={prompt === ''}
 															>
