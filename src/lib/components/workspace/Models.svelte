@@ -1,190 +1,199 @@
 <script lang="ts">
-	import { marked } from 'marked';
+import { marked } from "marked";
 
-	import { toast } from 'svelte-sonner';
-	import Sortable from 'sortablejs';
+import { toast } from "svelte-sonner";
+import Sortable from "sortablejs";
 
-	import fileSaver from 'file-saver';
-	const { saveAs } = fileSaver;
+import fileSaver from "file-saver";
+const { saveAs } = fileSaver;
 
-	import { onMount, getContext, tick } from 'svelte';
-	import { goto } from '$app/navigation';
-	const i18n = getContext('i18n');
+import { onMount, getContext, tick } from "svelte";
+import { goto } from "$app/navigation";
+const i18n = getContext("i18n");
 
-	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
-	import {
-		createNewModel,
-		deleteModelById,
-		getModels as getWorkspaceModels,
-		toggleModelById,
-		updateModelById
-	} from '$lib/apis/models';
+import {
+	WEBUI_NAME,
+	config,
+	mobile,
+	models as _models,
+	settings,
+	user,
+} from "$lib/stores";
+import {
+	createNewModel,
+	deleteModelById,
+	getModels as getWorkspaceModels,
+	toggleModelById,
+	updateModelById,
+} from "$lib/apis/models";
 
 	import { getModels } from '$lib/apis';
 	import { getGroups } from '$lib/apis/groups';
 
-	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
-	import ModelMenu from './Models/ModelMenu.svelte';
-	import ModelDeleteConfirmDialog from '../common/ConfirmDialog.svelte';
-	import Tooltip from '../common/Tooltip.svelte';
-	import GarbageBin from '../icons/GarbageBin.svelte';
-	import Search from '../icons/Search.svelte';
-	import Plus from '../icons/Plus.svelte';
-	import ChevronRight from '../icons/ChevronRight.svelte';
-	import Switch from '../common/Switch.svelte';
-	import Spinner from '../common/Spinner.svelte';
-	import { capitalizeFirstLetter } from '$lib/utils';
+import EllipsisHorizontal from "../icons/EllipsisHorizontal.svelte";
+import ModelMenu from "./Models/ModelMenu.svelte";
+import ModelDeleteConfirmDialog from "../common/ConfirmDialog.svelte";
+import Tooltip from "../common/Tooltip.svelte";
+import GarbageBin from "../icons/GarbageBin.svelte";
+import Search from "../icons/Search.svelte";
+import Plus from "../icons/Plus.svelte";
+import ChevronRight from "../icons/ChevronRight.svelte";
+import Switch from "../common/Switch.svelte";
+import Spinner from "../common/Spinner.svelte";
+import { capitalizeFirstLetter } from "$lib/utils";
 
-	let shiftKey = false;
+let shiftKey = false;
 
-	let importFiles;
-	let modelsImportInputElement: HTMLInputElement;
-	let loaded = false;
+let importFiles;
+let modelsImportInputElement: HTMLInputElement;
+let loaded = false;
 
-	let models = [];
+let models = [];
 
-	let filteredModels = [];
-	let selectedModel = null;
+let filteredModels = [];
+let selectedModel = null;
 
 	let showModelDeleteConfirm = false;
 
 	let group_ids = [];
 
-	$: if (models) {
-		filteredModels = models.filter(
-			(m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase())
+$: if (models) {
+	filteredModels = models.filter(
+		(m) =>
+			searchValue === "" ||
+			m.name.toLowerCase().includes(searchValue.toLowerCase()),
+	);
+}
+
+let searchValue = "";
+
+const deleteModelHandler = async (model) => {
+	const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
+		toast.error(e);
+		return null;
+	});
+
+	if (res) {
+		toast.success($i18n.t(`Deleted {{name}}`, { name: model.id }));
+	}
+
+	await _models.set(await getModels(localStorage.token));
+	models = await getWorkspaceModels(localStorage.token);
+};
+
+const cloneModelHandler = async (model) => {
+	sessionStorage.model = JSON.stringify({
+		...model,
+		id: `${model.id}-clone`,
+		name: `${model.name} (Clone)`,
+	});
+	goto("/workspace/models/create");
+};
+
+const shareModelHandler = async (model) => {
+	toast.success($i18n.t("Redirecting you to OpenWebUI Community"));
+
+	const url = "https://openwebui.com";
+
+	const tab = await window.open(`${url}/models/create`, "_blank");
+
+	// Define the event handler function
+	const messageHandler = (event) => {
+		if (event.origin !== url) return;
+		if (event.data === "loaded") {
+			tab.postMessage(JSON.stringify(model), "*");
+
+			// Remove the event listener after handling the message
+			window.removeEventListener("message", messageHandler);
+		}
+	};
+
+	window.addEventListener("message", messageHandler, false);
+};
+
+const hideModelHandler = async (model) => {
+	let info = model.info;
+
+	if (!info) {
+		info = {
+			id: model.id,
+			name: model.name,
+			meta: {
+				suggestion_prompts: null,
+			},
+			params: {},
+		};
+	}
+
+	info.meta = {
+		...info.meta,
+		hidden: !(info?.meta?.hidden ?? false),
+	};
+
+	console.log(info);
+
+	const res = await updateModelById(localStorage.token, info.id, info);
+
+	if (res) {
+		toast.success(
+			$i18n.t(`Model {{name}} is now {{status}}`, {
+				name: info.id,
+				status: info.meta.hidden ? "hidden" : "visible",
+			}),
 		);
 	}
 
-	let searchValue = '';
+	await _models.set(await getModels(localStorage.token));
+	models = await getWorkspaceModels(localStorage.token);
+};
 
-	const deleteModelHandler = async (model) => {
-		const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
-			toast.error(e);
-			return null;
-		});
+const downloadModels = async (models) => {
+	let blob = new Blob([JSON.stringify(models)], {
+		type: "application/json",
+	});
+	saveAs(blob, `models-export-${Date.now()}.json`);
+};
 
-		if (res) {
-			toast.success($i18n.t(`Deleted {{name}}`, { name: model.id }));
-		}
-
-		await _models.set(await getModels(localStorage.token));
-		models = await getWorkspaceModels(localStorage.token);
-	};
-
-	const cloneModelHandler = async (model) => {
-		sessionStorage.model = JSON.stringify({
-			...model,
-			id: `${model.id}-clone`,
-			name: `${model.name} (Clone)`
-		});
-		goto('/workspace/models/create');
-	};
-
-	const shareModelHandler = async (model) => {
-		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
-
-		const url = 'https://openwebui.com';
-
-		const tab = await window.open(`${url}/models/create`, '_blank');
-
-		// Define the event handler function
-		const messageHandler = (event) => {
-			if (event.origin !== url) return;
-			if (event.data === 'loaded') {
-				tab.postMessage(JSON.stringify(model), '*');
-
-				// Remove the event listener after handling the message
-				window.removeEventListener('message', messageHandler);
-			}
-		};
-
-		window.addEventListener('message', messageHandler, false);
-	};
-
-	const hideModelHandler = async (model) => {
-		let info = model.info;
-
-		if (!info) {
-			info = {
-				id: model.id,
-				name: model.name,
-				meta: {
-					suggestion_prompts: null
-				},
-				params: {}
-			};
-		}
-
-		info.meta = {
-			...info.meta,
-			hidden: !(info?.meta?.hidden ?? false)
-		};
-
-		console.log(info);
-
-		const res = await updateModelById(localStorage.token, info.id, info);
-
-		if (res) {
-			toast.success(
-				$i18n.t(`Model {{name}} is now {{status}}`, {
-					name: info.id,
-					status: info.meta.hidden ? 'hidden' : 'visible'
-				})
-			);
-		}
-
-		await _models.set(await getModels(localStorage.token));
-		models = await getWorkspaceModels(localStorage.token);
-	};
-
-	const downloadModels = async (models) => {
-		let blob = new Blob([JSON.stringify(models)], {
-			type: 'application/json'
-		});
-		saveAs(blob, `models-export-${Date.now()}.json`);
-	};
-
-	const exportModelHandler = async (model) => {
-		let blob = new Blob([JSON.stringify([model])], {
-			type: 'application/json'
-		});
-		saveAs(blob, `${model.id}-${Date.now()}.json`);
-	};
+const exportModelHandler = async (model) => {
+	let blob = new Blob([JSON.stringify([model])], {
+		type: "application/json",
+	});
+	saveAs(blob, `${model.id}-${Date.now()}.json`);
+};
 
 	onMount(async () => {
 		models = await getWorkspaceModels(localStorage.token);
 		let groups = await getGroups(localStorage.token);
 		group_ids = groups.map((group) => group.id);
 
-		loaded = true;
+	loaded = true;
 
-		const onKeyDown = (event) => {
-			if (event.key === 'Shift') {
-				shiftKey = true;
-			}
-		};
+	const onKeyDown = (event) => {
+		if (event.key === "Shift") {
+			shiftKey = true;
+		}
+	};
 
-		const onKeyUp = (event) => {
-			if (event.key === 'Shift') {
-				shiftKey = false;
-			}
-		};
-
-		const onBlur = () => {
+	const onKeyUp = (event) => {
+		if (event.key === "Shift") {
 			shiftKey = false;
-		};
+		}
+	};
 
-		window.addEventListener('keydown', onKeyDown);
-		window.addEventListener('keyup', onKeyUp);
-		window.addEventListener('blur', onBlur);
+	const onBlur = () => {
+		shiftKey = false;
+	};
 
-		return () => {
-			window.removeEventListener('keydown', onKeyDown);
-			window.removeEventListener('keyup', onKeyUp);
-			window.removeEventListener('blur', onBlur);
-		};
-	});
+	window.addEventListener("keydown", onKeyDown);
+	window.addEventListener("keyup", onKeyUp);
+	window.addEventListener("blur", onBlur);
+
+	return () => {
+		window.removeEventListener("keydown", onKeyDown);
+		window.removeEventListener("keyup", onKeyUp);
+		window.removeEventListener("blur", onBlur);
+	};
+});
 </script>
 
 <svelte:head>
@@ -479,7 +488,7 @@
 	{#if $config?.features.enable_community_sharing}
 		<div class=" my-16">
 			<div class=" text-xl font-medium mb-1 line-clamp-1">
-				{$i18n.t('Made by OpenWebUI Community')}
+				{$i18n.t('Made by the community')}
 			</div>
 
 			<a

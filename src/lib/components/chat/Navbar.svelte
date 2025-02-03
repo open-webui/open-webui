@@ -25,7 +25,8 @@ import UserMenu from "$lib/components/layout/Sidebar/UserMenu.svelte";
 import MenuLines from "../icons/MenuLines.svelte";
 import AdjustmentsHorizontal from "../icons/AdjustmentsHorizontal.svelte";
 
-import PencilSquare from "../icons/PencilSquare.svelte";
+	import PencilSquare from '../icons/PencilSquare.svelte';
+	import DrawerOpen from '../icons/DrawerOpen.svelte';
 
 import type { SessionUser } from "$lib/types/auth";
 
@@ -64,14 +65,14 @@ let showDownloadChatModal = false;
 			>
 				<button
 					id="sidebar-toggle-button"
-					class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+					class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition hover:text-[var(--text-action-high-blue-france)]"
 					on:click={() => {
 						showSidebar.set(!$showSidebar);
 					}}
 					aria-label="Toggle Sidebar"
 				>
 					<div class=" m-auto self-center">
-						<MenuLines />
+						<DrawerOpen className="size-5" strokeWidth="2" />
 					</div>
 				</button>
 			</div>
@@ -139,6 +140,7 @@ let showDownloadChatModal = false;
 
 				{#if !$mobile && $user && ($user.role === 'admin' || $user.permissions?.chat?.controls)}
 					<Tooltip content={$i18n.t('Controls')}>
+						<!-- Controls button -->
 						<button
 							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 							on:click={async () => {
@@ -169,7 +171,7 @@ let showDownloadChatModal = false;
 						</div>
 					</button>
 				</Tooltip>
-
+<!-- 
 				{#if $user !== undefined}
 					<UserMenu
 						className="max-w-[200px]"
@@ -194,7 +196,7 @@ let showDownloadChatModal = false;
 							</div>
 						</button>
 					</UserMenu>
-				{/if}
+				{/if} -->
 			</div>
 		</div>
 	</div>

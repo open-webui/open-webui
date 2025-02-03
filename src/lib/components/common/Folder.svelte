@@ -8,7 +8,7 @@
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Collapsible from './Collapsible.svelte';
 	import Tooltip from './Tooltip.svelte';
-	import Plus from '../icons/Plus.svelte';
+	import FolderCreate from '../icons/FolderCreate.svelte';
 
 	export let open = true;
 
@@ -159,7 +159,7 @@
 								class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
 								on:click={(e) => {}}
 							>
-								<Plus className=" size-3" strokeWidth="2.5" />
+								<FolderCreate className="size-5 hover:text-gray-700 dark:hover:text-gray-300" strokeWidth="2" />
 							</button>
 						</Tooltip>
 					</button>

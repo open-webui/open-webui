@@ -1,90 +1,96 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
-	import { goto, invalidate, invalidateAll } from '$app/navigation';
-	import { onMount, getContext, createEventDispatcher, tick, onDestroy } from 'svelte';
-	const i18n = getContext('i18n');
+import { toast } from "svelte-sonner";
+import { goto, invalidate, invalidateAll } from "$app/navigation";
+import {
+	onMount,
+	getContext,
+	createEventDispatcher,
+	tick,
+	onDestroy,
+} from "svelte";
+const i18n = getContext("i18n");
 
-	const dispatch = createEventDispatcher();
+const dispatch = createEventDispatcher();
 
-	import {
-		archiveChatById,
-		cloneChatById,
-		deleteChatById,
-		getAllTags,
-		getChatById,
-		getChatList,
-		getChatListByTagName,
-		getPinnedChatList,
-		updateChatById
-	} from '$lib/apis/chats';
-	import {
-		chatId,
-		chatTitle as _chatTitle,
-		chats,
-		mobile,
-		pinnedChats,
-		showSidebar,
-		currentChatPage,
-		tags
-	} from '$lib/stores';
+import {
+	archiveChatById,
+	cloneChatById,
+	deleteChatById,
+	getAllTags,
+	getChatById,
+	getChatList,
+	getChatListByTagName,
+	getPinnedChatList,
+	updateChatById,
+} from "$lib/apis/chats";
+import {
+	chatId,
+	chatTitle as _chatTitle,
+	chats,
+	mobile,
+	pinnedChats,
+	showSidebar,
+	currentChatPage,
+	tags,
+} from "$lib/stores";
 
-	import ChatMenu from './ChatMenu.svelte';
-	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import ShareChatModal from '$lib/components/chat/ShareChatModal.svelte';
-	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
-	import DragGhost from '$lib/components/common/DragGhost.svelte';
-	import Check from '$lib/components/icons/Check.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
-	import Document from '$lib/components/icons/Document.svelte';
+import ChatMenu from "./ChatMenu.svelte";
+import DeleteConfirmDialog from "$lib/components/common/ConfirmDialog.svelte";
+import ShareChatModal from "$lib/components/chat/ShareChatModal.svelte";
+import GarbageBin from "$lib/components/icons/GarbageBin.svelte";
+import Tooltip from "$lib/components/common/Tooltip.svelte";
+import ArchiveBox from "$lib/components/icons/ArchiveBox.svelte";
+import DragGhost from "$lib/components/common/DragGhost.svelte";
+import Check from "$lib/components/icons/Check.svelte";
+import XMark from "$lib/components/icons/XMark.svelte";
+import Document from "$lib/components/icons/Document.svelte";
 
-	export let className = '';
+export let className = "";
 
-	export let id;
-	export let title;
+export let id;
+export let title;
 
-	export let selected = false;
-	export let shiftKey = false;
+export let selected = false;
+export let shiftKey = false;
 
-	let chat = null;
+let chat = null;
 
-	let mouseOver = false;
-	let draggable = false;
-	$: if (mouseOver) {
-		loadChat();
+let mouseOver = false;
+let draggable = false;
+$: if (mouseOver) {
+	loadChat();
+}
+
+const loadChat = async () => {
+	if (!chat) {
+		draggable = false;
+		chat = await getChatById(localStorage.token, id);
+		draggable = true;
 	}
+};
 
-	const loadChat = async () => {
-		if (!chat) {
-			draggable = false;
-			chat = await getChatById(localStorage.token, id);
-			draggable = true;
+let showShareChatModal = false;
+let confirmEdit = false;
+
+let chatTitle = title;
+
+const editChatTitle = async (id, title) => {
+	if (title === "") {
+		toast.error($i18n.t("Title cannot be an empty string."));
+	} else {
+		await updateChatById(localStorage.token, id, {
+			title: title,
+		});
+
+		if (id === $chatId) {
+			_chatTitle.set(title);
 		}
-	};
 
-	let showShareChatModal = false;
-	let confirmEdit = false;
-
-	let chatTitle = title;
-
-	const editChatTitle = async (id, title) => {
-		if (title === '') {
-			toast.error($i18n.t('Title cannot be an empty string.'));
-		} else {
-			await updateChatById(localStorage.token, id, {
-				title: title
-			});
-
-			if (id === $chatId) {
-				_chatTitle.set(title);
-			}
-
-			currentChatPage.set(1);
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			await pinnedChats.set(await getPinnedChatList(localStorage.token));
-		}
-	};
+		currentChatPage.set(1);
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		await pinnedChats.set(await getPinnedChatList(localStorage.token));
+	}
+};
 
 	const cloneChatHandler = async (id) => {
 		const res = await cloneChatById(localStorage.token, id).catch((error) => {
@@ -92,14 +98,14 @@
 			return null;
 		});
 
-		if (res) {
-			goto(`/c/${res.id}`);
+	if (res) {
+		goto(`/c/${res.id}`);
 
-			currentChatPage.set(1);
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			await pinnedChats.set(await getPinnedChatList(localStorage.token));
-		}
-	};
+		currentChatPage.set(1);
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		await pinnedChats.set(await getPinnedChatList(localStorage.token));
+	}
+};
 
 	const deleteChatHandler = async (id) => {
 		const res = await deleteChatById(localStorage.token, id).catch((error) => {
@@ -107,92 +113,93 @@
 			return null;
 		});
 
-		if (res) {
-			tags.set(await getAllTags(localStorage.token));
-			if ($chatId === id) {
-				await goto('/');
+	if (res) {
+		tags.set(await getAllTags(localStorage.token));
+		if ($chatId === id) {
+			await goto("/");
 
-				await chatId.set('');
-				await tick();
-			}
-
-			dispatch('change');
+			await chatId.set("");
+			await tick();
 		}
-	};
 
-	const archiveChatHandler = async (id) => {
-		await archiveChatById(localStorage.token, id);
-		dispatch('change');
-	};
+		dispatch("change");
+	}
+};
 
-	const focusEdit = async (node: HTMLInputElement) => {
-		node.focus();
-	};
+const archiveChatHandler = async (id) => {
+	await archiveChatById(localStorage.token, id);
+	dispatch("change");
+};
 
-	let itemElement;
+const focusEdit = async (node: HTMLInputElement) => {
+	node.focus();
+};
 
-	let dragged = false;
-	let x = 0;
-	let y = 0;
+let itemElement;
 
-	const dragImage = new Image();
-	dragImage.src =
-		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+let dragged = false;
+let x = 0;
+let y = 0;
 
-	const onDragStart = (event) => {
-		event.stopPropagation();
+const dragImage = new Image();
+dragImage.src =
+	"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
-		event.dataTransfer.setDragImage(dragImage, 0, 0);
+const onDragStart = (event) => {
+	event.stopPropagation();
 
-		// Set the data to be transferred
-		event.dataTransfer.setData(
-			'text/plain',
-			JSON.stringify({
-				type: 'chat',
-				id: id,
-				item: chat
-			})
-		);
+	event.dataTransfer.setDragImage(dragImage, 0, 0);
 
-		dragged = true;
-		itemElement.style.opacity = '0.5'; // Optional: Visual cue to show it's being dragged
-	};
+	// Set the data to be transferred
+	event.dataTransfer.setData(
+		"text/plain",
+		JSON.stringify({
+			type: "chat",
+			id: id,
+			item: chat,
+		}),
+	);
 
-	const onDrag = (event) => {
-		event.stopPropagation();
+	dragged = true;
+	itemElement.style.opacity = "0.5"; // Optional: Visual cue to show it's being dragged
+};
 
-		x = event.clientX;
-		y = event.clientY;
-	};
+const onDrag = (event) => {
+	event.stopPropagation();
 
-	const onDragEnd = (event) => {
-		event.stopPropagation();
+	x = event.clientX;
+	y = event.clientY;
+};
 
-		itemElement.style.opacity = '1'; // Reset visual cue after drag
-		dragged = false;
-	};
+const onDragEnd = (event) => {
+	event.stopPropagation();
 
-	onMount(() => {
-		if (itemElement) {
-			// Event listener for when dragging starts
-			itemElement.addEventListener('dragstart', onDragStart);
-			// Event listener for when dragging occurs (optional)
-			itemElement.addEventListener('drag', onDrag);
-			// Event listener for when dragging ends
-			itemElement.addEventListener('dragend', onDragEnd);
-		}
-	});
+	itemElement.style.opacity = "1"; // Reset visual cue after drag
+	dragged = false;
+};
 
-	onDestroy(() => {
-		if (itemElement) {
-			itemElement.removeEventListener('dragstart', onDragStart);
-			itemElement.removeEventListener('drag', onDrag);
-			itemElement.removeEventListener('dragend', onDragEnd);
-		}
-	});
+onMount(() => {
+	if (itemElement) {
+		// Event listener for when dragging starts
+		itemElement.addEventListener("dragstart", onDragStart);
+		// Event listener for when dragging occurs (optional)
+		itemElement.addEventListener("drag", onDrag);
+		// Event listener for when dragging ends
+		itemElement.addEventListener("dragend", onDragEnd);
+	}
+});
 
-	let showDeleteConfirm = false;
+onDestroy(() => {
+	if (itemElement) {
+		itemElement.removeEventListener("dragstart", onDragStart);
+		itemElement.removeEventListener("drag", onDrag);
+		itemElement.removeEventListener("dragend", onDragEnd);
+	}
+});
+
+let showDeleteConfirm = false;
 </script>
+
 
 <ShareChatModal bind:show={showShareChatModal} chatId={id} />
 
@@ -240,12 +247,12 @@
 		</div>
 	{:else}
 		<a
-			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
+			class=" w-full flex justify-between rounded-lg px-[8px] py-[6px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-200 dark:bg-gray-900'
+				? 'bg-[var(--background-contrast-grey)]'
 				: selected
-					? 'bg-gray-100 dark:bg-gray-950'
-					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+					? 'bg-[var(--background-contrast-grey)]'
+					: 'hover:bg-[var(--background-contrast-grey)] group-hover:bg-[var(--background-contrast-grey)]'}  whitespace-nowrap text-ellipsis"
 			href="/c/{id}"
 			on:click={() => {
 				dispatch('select');
@@ -279,10 +286,10 @@
 	<div
 		class="
         {id === $chatId || confirmEdit
-			? 'from-gray-200 dark:from-gray-900'
+			? 'from-[var(--background-contrast-grey)]'
 			: selected
-				? 'from-gray-100 dark:from-gray-950'
-				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
+				? 'from-[var(--background-contrast-grey)]'
+				: 'invisible group-hover:visible from-[var(--background-contrast-grey)]'}
             absolute {className === 'pr-2'
 			? 'right-[8px]'
 			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-gradient-to-l from-80%
@@ -314,7 +321,7 @@
 
 				<Tooltip content={$i18n.t('Cancel')}>
 					<button
-						class=" self-center dark:hover:text-white transition"
+						class=" self-center  dark:hover:text-white transition"
 						on:click={() => {
 							confirmEdit = false;
 							chatTitle = '';

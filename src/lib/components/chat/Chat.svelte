@@ -1951,16 +1951,16 @@ const saveChatHandler = async (_chatId) => {
 />
 
 <div
-	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
-		? '  md:max-w-[calc(100%-260px)]'
-		: ' '} w-full max-w-full flex flex-col"
+	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out{$showSidebar
+		? ' '
+		: ' '} w-full max-w-full flex flex-col fr-background-default--grey"
 	id="chat-container"
 >
 	{#if !chatIdProp || (loaded && chatIdProp)}
 		{#if $settings?.backgroundImageUrl ?? null}
 			<div
 				class="absolute {$showSidebar
-					? 'md:max-w-[calc(100%-260px)] md:translate-x-[260px]'
+					? 'md:max-w-[calc(100%-285px)] md:translate-x-[285px]'
 					: ''} top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
 				style="background-image: url({$settings.backgroundImageUrl})  "
 			/>
@@ -2099,7 +2099,7 @@ const saveChatHandler = async (_chatId) => {
 							</div>
 						</div>
 					{:else}
-						<div class="overflow-auto w-full h-full flex items-center">
+						<div class="overflow-auto w-full h-full flex items-center fr-background-default--grey">
 							<Placeholder
 								{history}
 								{selectedModels}

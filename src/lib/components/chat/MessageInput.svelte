@@ -656,7 +656,7 @@
 									</div>
 								{/if}
 
-								<div class=" flex">
+								<div class="fr-background-contrast--grey flex rounded-full">
 									<div class="ml-1 self-end mb-1.5 flex space-x-1">
 										<InputMenu
 											bind:imageGenerationEnabled
@@ -694,7 +694,7 @@
 											}}
 										>
 											<button
-												class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
+												class="bg-transparent hover:bg-white/80 hover:text-[var(--text-action-high-blue-france)] dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
 												type="button"
 												aria-label="More"
 											>
@@ -1113,7 +1113,7 @@
 											<Tooltip content={$i18n.t('Record voice')}>
 												<button
 													id="voice-input-button"
-													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
+													class=" text-gray-600 dark:text-gray-300 hover:text-[var(--text-action-high-blue-france)] transition rounded-full p-1.5 mr-0.5 self-center"
 													type="button"
 													on:click={async () => {
 														try {
@@ -1163,7 +1163,7 @@
 												<div class=" flex items-center">
 													<Tooltip content={$i18n.t('Call')}>
 														<button
-															class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-2 self-center"
+															class=" bg-black text-white hover:bg-[var(--background-action-high-blue-france)] dark:bg-white dark:text-black  transition rounded-full p-2 self-center"
 															type="button"
 															on:click={async () => {
 																if (selectedModels.length > 1) {

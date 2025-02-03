@@ -1,46 +1,53 @@
 <script lang="ts">
-	import { onMount, getContext } from 'svelte';
-	import {
-		WEBUI_NAME,
-		showSidebar,
-		functions,
-		user,
-		mobile,
-		models,
-		prompts,
-		knowledge,
-		tools
-	} from '$lib/stores';
-	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
+import { onMount, getContext } from "svelte";
+import {
+	WEBUI_NAME,
+	showSidebar,
+	functions,
+	user,
+	mobile,
+	models,
+	prompts,
+	knowledge,
+	tools,
+} from "$lib/stores";
+import { page } from "$app/stores";
+import { goto } from "$app/navigation";
 
-	import MenuLines from '$lib/components/icons/MenuLines.svelte';
+import MenuLines from "$lib/components/icons/MenuLines.svelte";
+import DrawerOpen from "$lib/components/icons/DrawerOpen.svelte";
 
-	const i18n = getContext('i18n');
+const i18n = getContext("i18n");
 
-	let loaded = false;
+let loaded = false;
 
-	onMount(async () => {
-		if ($user?.role !== 'admin') {
-			if ($page.url.pathname.includes('/models') && !$user?.permissions?.workspace?.models) {
-				goto('/');
-			} else if (
-				$page.url.pathname.includes('/knowledge') &&
-				!$user?.permissions?.workspace?.knowledge
-			) {
-				goto('/');
-			} else if (
-				$page.url.pathname.includes('/prompts') &&
-				!$user?.permissions?.workspace?.prompts
-			) {
-				goto('/');
-			} else if ($page.url.pathname.includes('/tools') && !$user?.permissions?.workspace?.tools) {
-				goto('/');
-			}
+onMount(async () => {
+	if ($user?.role !== "admin") {
+		if (
+			$page.url.pathname.includes("/models") &&
+			!$user?.permissions?.workspace?.models
+		) {
+			goto("/");
+		} else if (
+			$page.url.pathname.includes("/knowledge") &&
+			!$user?.permissions?.workspace?.knowledge
+		) {
+			goto("/");
+		} else if (
+			$page.url.pathname.includes("/prompts") &&
+			!$user?.permissions?.workspace?.prompts
+		) {
+			goto("/");
+		} else if (
+			$page.url.pathname.includes("/tools") &&
+			!$user?.permissions?.workspace?.tools
+		) {
+			goto("/");
 		}
+	}
 
-		loaded = true;
-	});
+	loaded = true;
+});
 </script>
 
 <svelte:head>
@@ -52,7 +59,7 @@
 {#if loaded}
 	<div
 		class=" relative flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
-			? 'md:max-w-[calc(100%-260px)]'
+			? ''
 			: ''} max-w-full"
 	>
 		<nav class="   px-2.5 pt-1 backdrop-blur-xl drag-region">
@@ -67,7 +74,7 @@
 						aria-label="Toggle Sidebar"
 					>
 						<div class=" m-auto self-center">
-							<MenuLines />
+							<DrawerOpen className="size-5" strokeWidth="2" />
 						</div>
 					</button>
 				</div>
