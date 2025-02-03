@@ -19,6 +19,7 @@
 	import ChartBar from '../icons/ChartBar.svelte';
 	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
 	import Evaluations from './Settings/Evaluations.svelte';
+	import Ragas from './Settings/Ragas.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -133,6 +134,21 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Evaluations')}</div>
 		</button>
+
+        <button
+		class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+		'ragas'
+			? ''
+			: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+		on:click={() => {
+			selectedTab = 'ragas';
+		}}
+	>
+		<div class=" self-center mr-2">
+			<DocumentChartBar />
+		</div>
+		<div class=" self-center">{$i18n.t('Ragas')}</div>
+	</button>
 
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
@@ -346,6 +362,15 @@
 			<Models />
 		{:else if selectedTab === 'evaluations'}
 			<Evaluations />
+		{:else if selectedTab === 'ragas'}
+			<Ragas
+				on:save={async () => {
+					toast.success($i18n.t('Settings saved successfully!'));
+
+					await tick();
+					await config.set(await getBackendConfig());
+				}}
+			/>
 		{:else if selectedTab === 'documents'}
 			<Documents
 				on:save={async () => {

@@ -121,6 +121,18 @@
 								{$i18n.t('Tools')}
 							</a>
 						{/if}
+						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
+							<a
+								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
+									'/workspace/ragas'
+								)
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/ragas"
+							>
+								{$i18n.t('Ragas')}
+							</a>
+						{/if}
 					</div>
 				</div>
 

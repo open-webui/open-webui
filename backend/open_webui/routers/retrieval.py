@@ -85,6 +85,18 @@ from open_webui.env import (
     DEVICE_TYPE,
     DOCKER,
 )
+from datetime import datetime
+from open_webui.ragas.utils import save_trace_data
+from open_webui.config import (
+    AppConfig,
+    ENABLE_RAGAS,
+    RAGAS_EVAL_FILE_PATH
+)
+app = FastAPI()
+app.state.config = AppConfig()
+
+app.state.config.ENABLE_RAGAS=ENABLE_RAGAS
+app.state.config.RAGAS_EVAL_FILE_PATH=RAGAS_EVAL_FILE_PATH
 from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
@@ -285,6 +297,17 @@ async def update_embedding_config(
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
 
+        log.info("ENABLE RAGAS "+str(request.app.state.config.ENABLE_RAGAS))
+
+        if (request.app.state.config.ENABLE_RAGAS) :
+            trace_data = {
+                "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
+                "embedding_model": request.app.state.config.RAG_EMBEDDING_MODEL,
+                "embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
+            save_trace_data(request.app.state.config.RAGAS_EVAL_FILE_PATH,trace_data=trace_data, target="config")
+
         return {
             "status": True,
             "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
@@ -330,6 +353,14 @@ async def update_reranking_config(
             log.error(f"Error loading reranking model: {e}")
             request.app.state.config.ENABLE_RAG_HYBRID_SEARCH = False
 
+        if (request.app.state.config.ENABLE_RAGAS) :
+            trace_data = {
+                "reranking_model": request.app.state.config.RAG_RERANKING_MODEL,
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
+            save_trace_data(app.state.config.RAGAS_EVAL_FILE_PATH,trace_data=trace_data, target="config")
+
+        
         return {
             "status": True,
             "reranking_model": request.app.state.config.RAG_RERANKING_MODEL,
@@ -548,6 +579,26 @@ async def update_rag_config(
         request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = (
             form_data.web.search.concurrent_requests
         )
+    
+    if (app.state.config.ENABLE_RAGAS) :
+        trace_data = {
+            "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
+            "file": {
+                "max_size": request.app.state.config.FILE_MAX_SIZE,
+                "max_count": request.app.state.config.FILE_MAX_COUNT,
+            },
+            "content_extraction": {
+                "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
+                "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
+            },
+            "chunk": {
+                "text_splitter": request.app.state.config.TEXT_SPLITTER,
+                "chunk_size": request.app.state.config.CHUNK_SIZE,
+                "chunk_overlap": request.app.state.config.CHUNK_OVERLAP,
+            },
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+        save_trace_data(app.state.config.RAGAS_EVAL_FILE_PATH,trace_data=trace_data, target="config")
 
     return {
         "status": True,
@@ -635,7 +686,16 @@ async def update_query_settings(
     request.app.state.config.ENABLE_RAG_HYBRID_SEARCH = (
         form_data.hybrid if form_data.hybrid else False
     )
-
+    if (app.state.config.ENABLE_RAGAS) :
+        trace_data = {
+            "template":request.app.state.config.RAG_TEMPLATE,
+            "k": request.app.state.config.TOP_K,
+            "r": request.app.state.config.RELEVANCE_THRESHOLD,
+            "hybrid": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+        save_trace_data(app.state.config.RAGAS_EVAL_FILE_PATH,trace_data=trace_data, target="config")
+        
     return {
         "status": True,
         "template": request.app.state.config.RAG_TEMPLATE,

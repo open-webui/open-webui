@@ -1341,6 +1341,28 @@ PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
     os.environ.get("PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH", "1536")
 )
 
+###################################
+# RAGAS
+###################################
+
+RAGAS_EVAL_FILE_PATH=PersistentConfig(
+    "RAGAS_EVAL_FILE_PATH",
+    "ragas.ragas_eval_file_path",
+    os.environ.get("RAGAS_EVAL_FILE_PATH", "")
+)
+
+RAGAS_EVAL_LOGS_PATH=PersistentConfig(
+    "RAGAS_EVAL_LOGS_PATH",
+    "ragas.ragas_eval_logs_path",
+    os.environ.get("RAGAS_EVAL_LOGS_PATH", "")
+)
+
+ENABLE_RAGAS=PersistentConfig(
+    "ENABLE_RAGAS",
+    "ragas.ENABLE_RAGAS",
+    os.environ.get("ENABLE_RAGAS", False)
+)
+
 ####################################
 # Information Retrieval (RAG)
 ####################################

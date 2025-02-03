@@ -90,6 +90,7 @@ log_sources = [
     "OLLAMA",
     "OPENAI",
     "RAG",
+    "RAGAS",
     "WEBHOOK",
     "SOCKET",
 ]

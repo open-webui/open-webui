@@ -55,6 +55,7 @@ from open_webui.routers import (
     ollama,
     openai,
     retrieval,
+    ragas,
     pipelines,
     tasks,
     auths,
@@ -132,6 +133,10 @@ from open_webui.config import (
     WHISPER_MODEL,
     WHISPER_MODEL_AUTO_UPDATE,
     WHISPER_MODEL_DIR,
+    # Ragas
+    RAGAS_EVAL_FILE_PATH,
+    ENABLE_RAGAS,
+    RAGAS_EVAL_LOGS_PATH,
     # Retrieval
     RAG_TEMPLATE,
     DEFAULT_RAG_TEMPLATE,
@@ -457,6 +462,16 @@ app.state.AUTH_TRUSTED_NAME_HEADER = WEBUI_AUTH_TRUSTED_NAME_HEADER
 app.state.TOOLS = {}
 app.state.FUNCTIONS = {}
 
+########################################
+#
+# RAGAS
+#
+########################################
+
+app.state.config.RAGAS_EVAL_FILE_PATH=RAGAS_EVAL_FILE_PATH
+app.state.config.RAGAS_EVAL_LOGS_PATH=RAGAS_EVAL_LOGS_PATH
+app.state.config.ENABLE_RAGAS=ENABLE_RAGAS
+
 
 ########################################
 #
@@ -753,6 +768,7 @@ app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["tasks"])
 app.include_router(images.router, prefix="/api/v1/images", tags=["images"])
 app.include_router(audio.router, prefix="/api/v1/audio", tags=["audio"])
 app.include_router(retrieval.router, prefix="/api/v1/retrieval", tags=["retrieval"])
+app.include_router(ragas.router,prefix="/api/v1/ragas",tags=["ragas"])
 
 app.include_router(configs.router, prefix="/api/v1/configs", tags=["configs"])
 

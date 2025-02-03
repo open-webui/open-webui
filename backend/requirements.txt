@@ -106,3 +106,7 @@ google-cloud-storage==2.19.0
 
 ## LDAP
 ldap3==2.9.1
+# RAG
+langchain_openai
+matplotlib
+seaborn
