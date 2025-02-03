@@ -1,5 +1,6 @@
 # Open WebUI 👋 (FORK FOR E4)
 
+# First time
 git remote add upstream https://github.com/open-webui/open-webui.git
 
 # Fetch changes from upstream
