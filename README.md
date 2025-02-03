@@ -91,9 +91,9 @@ flowchart TD
 
     %% Klassen voor stijl 
 
-    classDef main fill:#ffcc00,stroke:#333,stroke-width:3px,rounded-corners, font-size:16px; 
+    classDef main fill:#ffcc00,stroke:#333,stroke-width:3px,rounded-corners, font-size:16px, color:#000000; 
 
-    classDef repo fill:#f9f,stroke:#333,stroke-width:2px,rounded-corners; 
+    classDef repo fill:#f9f,stroke:#333,stroke-width:2px,rounded-corners,color:#000000; 
 
  
 
