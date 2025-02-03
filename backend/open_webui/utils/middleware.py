@@ -7,6 +7,7 @@ from aiocache import cached
 from typing import Any, Optional
 import random
 import json
+import html
 import inspect
 import re
 
@@ -1082,7 +1083,7 @@ async def process_chat_response(
 
         # Handle as a background task
         async def post_response_handler(response, events):
-            def serialize_content_blocks(content_blocks):
+            def serialize_content_blocks(content_blocks, raw=False):
                 content = ""
 
                 for block in content_blocks:
@@ -1103,12 +1104,16 @@ async def process_chat_response(
 
                     elif block["type"] == "code_interpreter":
                         attributes = block.get("attributes", {})
-                        output = block.get("output", {})
-
+                        output = block.get("output", None)
                         lang = attributes.get("lang", "")
 
                         if output:
-                            content = f'{content}<details type="code_interpreter" done="true">\n<summary>Analyzed</summary>\n```{lang}\n{block["content"]}\n```\n```output\n{output}\n```\n</details>\n'
+                            output = html.escape(json.dumps(output))
+
+                            if raw:
+                                content = f'{content}<details type="code_interpreter" done="true" output="{output}">\n<summary>Analyzed</summary>\n```{lang}\n{block["content"]}\n```\n```output\n{output}\n```\n</details>\n'
+                            else:
+                                content = f'{content}<details type="code_interpreter" done="true" output="{output}">\n<summary>Analyzed</summary>\n```{lang}\n{block["content"]}\n```\n</details>\n'
                         else:
                             content = f'{content}<details type="code_interpreter" done="false">\n<summary>Analyzing...</summary>\n```{lang}\n{block["content"]}\n```\n</details>\n'
 
@@ -1388,7 +1393,7 @@ async def process_chat_response(
                                     {
                                         "role": "assistant",
                                         "content": serialize_content_blocks(
-                                            content_blocks
+                                            content_blocks, raw=True
                                         ),
                                     },
                                 ],

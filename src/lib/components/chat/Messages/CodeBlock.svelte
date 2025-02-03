@@ -25,6 +25,7 @@
 	export let token;
 	export let lang = '';
 	export let code = '';
+	export let attributes = {};
 
 	export let className = 'my-2';
 	export let editorClassName = '';
@@ -278,6 +279,36 @@ __builtins__.input = input`);
 	}
 
 	$: dispatch('code', { lang, code });
+
+	$: if (attributes) {
+		onAttributesUpdate();
+	}
+
+	const onAttributesUpdate = () => {
+		if (attributes?.output) {
+			// Create a helper function to unescape HTML entities
+			const unescapeHtml = (html) => {
+				const textArea = document.createElement('textarea');
+				textArea.innerHTML = html;
+				return textArea.value;
+			};
+
+			try {
+				// Unescape the HTML-encoded string
+				const unescapedOutput = unescapeHtml(attributes.output);
+
+				// Parse the unescaped string into JSON
+				const output = JSON.parse(unescapedOutput);
+
+				// Assign the parsed values to variables
+				stdout = output.stdout;
+				stderr = output.stderr;
+				result = output.result;
+			} catch (error) {
+				console.error('Error:', error);
+			}
+		}
+	};
 
 	onMount(async () => {
 		console.log('codeblock', lang, code);

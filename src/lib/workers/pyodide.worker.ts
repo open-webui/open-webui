@@ -84,6 +84,10 @@ function processResult(result: any): any {
 			// Handle primitive types directly
 			return result;
 		}
+		if (typeof result === 'bigint') {
+			// Convert BigInt to a string for JSON-safe representation
+			return result.toString();
+		}
 		if (Array.isArray(result)) {
 			// If it's an array, recursively process items
 			return result.map((item) => processResult(item));
@@ -106,7 +110,7 @@ function processResult(result: any): any {
 		return JSON.stringify(result);
 	} catch (err) {
 		// In case something unexpected happens, we return a stringified fallback
-		return `[processResult error]: ${err.toString()}`;
+		return `[processResult error]: ${err.message || err.toString()}`;
 	}
 }
 
