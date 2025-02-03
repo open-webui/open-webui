@@ -1078,6 +1078,7 @@ async def process_chat_response(
     # Streaming response
     if event_emitter and event_caller:
         task_id = str(uuid4())  # Create a unique task ID.
+        model_id = form_data.get("model", "")
 
         # Handle as a background task
         async def post_response_handler(response, events):
@@ -1100,8 +1101,15 @@ async def process_chat_response(
                         else:
                             content = f'{content}<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{reasoning_display_content}\n</details>\n'
 
+                    elif block["type"] == "code_interpreter":
+                        attributes = block.get("attributes", {})
+                        lang = attributes.get("lang", "")
+                        attribute_type = attributes.get("type", "")
+
+                        content = f"{content}```{lang if lang else attribute_type}\n{block['content']}\n```\n"
                     else:
-                        content = f"{content}{block['type']}: {block['content']}\n"
+                        block_content = str(block["content"]).strip()
+                        content = f"{content}{block['type']}: {block_content}\n"
 
                 return content
 
@@ -1217,94 +1225,186 @@ async def process_chat_response(
                         },
                     )
 
-                async for line in response.body_iterator:
-                    line = line.decode("utf-8") if isinstance(line, bytes) else line
-                    data = line
+                async def stream_body_handler(response):
+                    nonlocal content
+                    nonlocal content_blocks
 
-                    # Skip empty lines
-                    if not data.strip():
-                        continue
+                    async for line in response.body_iterator:
+                        line = line.decode("utf-8") if isinstance(line, bytes) else line
+                        data = line
 
-                    # "data:" is the prefix for each event
-                    if not data.startswith("data:"):
-                        continue
+                        # Skip empty lines
+                        if not data.strip():
+                            continue
 
-                    # Remove the prefix
-                    data = data[len("data:") :].strip()
+                        # "data:" is the prefix for each event
+                        if not data.startswith("data:"):
+                            continue
 
-                    try:
-                        data = json.loads(data)
+                        # Remove the prefix
+                        data = data[len("data:") :].strip()
 
-                        if "selected_model_id" in data:
-                            Chats.upsert_message_to_chat_by_id_and_message_id(
-                                metadata["chat_id"],
-                                metadata["message_id"],
-                                {
-                                    "selectedModelId": data["selected_model_id"],
-                                },
-                            )
-                        else:
-                            value = (
-                                data.get("choices", [])[0]
-                                .get("delta", {})
-                                .get("content")
-                            )
+                        try:
+                            data = json.loads(data)
 
-                            if value:
-                                content = f"{content}{value}"
-                                content_blocks[-1]["content"] = (
-                                    content_blocks[-1]["content"] + value
+                            if "selected_model_id" in data:
+                                model_id = data["selected_model_id"]
+                                Chats.upsert_message_to_chat_by_id_and_message_id(
+                                    metadata["chat_id"],
+                                    metadata["message_id"],
+                                    {
+                                        "selectedModelId": model_id,
+                                    },
                                 )
+                            else:
+                                choices = data.get("choices", [])
+                                if not choices:
+                                    continue
 
-                                print(f"Content: {content}")
-                                print(f"Content Blocks: {content_blocks}")
+                                value = choices[0].get("delta", {}).get("content")
 
-                                if DETECT_REASONING:
-                                    content, content_blocks = tag_content_handler(
-                                        "reasoning",
-                                        reasoning_tags,
-                                        content,
-                                        content_blocks,
+                                if value:
+                                    content = f"{content}{value}"
+                                    content_blocks[-1]["content"] = (
+                                        content_blocks[-1]["content"] + value
                                     )
 
-                                if DETECT_CODE_INTERPRETER:
-                                    content, content_blocks = tag_content_handler(
-                                        "code_interpreter",
-                                        code_interpreter_tags,
-                                        content,
-                                        content_blocks,
-                                    )
+                                    if DETECT_REASONING:
+                                        content, content_blocks = tag_content_handler(
+                                            "reasoning",
+                                            reasoning_tags,
+                                            content,
+                                            content_blocks,
+                                        )
 
-                                if ENABLE_REALTIME_CHAT_SAVE:
-                                    # Save message in the database
-                                    Chats.upsert_message_to_chat_by_id_and_message_id(
-                                        metadata["chat_id"],
-                                        metadata["message_id"],
-                                        {
+                                    if DETECT_CODE_INTERPRETER:
+                                        content, content_blocks = tag_content_handler(
+                                            "code_interpreter",
+                                            code_interpreter_tags,
+                                            content,
+                                            content_blocks,
+                                        )
+
+                                    if ENABLE_REALTIME_CHAT_SAVE:
+                                        # Save message in the database
+                                        Chats.upsert_message_to_chat_by_id_and_message_id(
+                                            metadata["chat_id"],
+                                            metadata["message_id"],
+                                            {
+                                                "content": serialize_content_blocks(
+                                                    content_blocks
+                                                ),
+                                            },
+                                        )
+                                    else:
+                                        data = {
                                             "content": serialize_content_blocks(
                                                 content_blocks
                                             ),
-                                        },
-                                    )
-                                else:
-                                    data = {
+                                        }
+
+                            await event_emitter(
+                                {
+                                    "type": "chat:completion",
+                                    "data": data,
+                                }
+                            )
+                        except Exception as e:
+
+                            done = "data: [DONE]" in line
+                            if done:
+                                # Clean up the last text block
+                                if content_blocks[-1]["type"] == "text":
+                                    content_blocks[-1]["content"] = content_blocks[-1][
+                                        "content"
+                                    ].strip()
+
+                                    if not content_blocks[-1]["content"]:
+                                        content_blocks.pop()
+                                pass
+                            else:
+                                log.debug("Error: ", e)
+                                continue
+
+                    if response.background:
+                        await response.background()
+
+                await stream_body_handler(response)
+
+                MAX_RETRIES = 5
+                retries = 0
+
+                while (
+                    content_blocks[-1]["type"] == "code_interpreter"
+                    and retries < MAX_RETRIES
+                ):
+                    retries += 1
+
+                    try:
+                        if content_blocks[-1]["attributes"].get("type") == "code":
+                            output = await event_caller(
+                                {
+                                    "type": "execute:pyodide",
+                                    "data": {
+                                        "id": str(uuid4()),
+                                        "code": content_blocks[-1]["content"],
+                                    },
+                                }
+                            )
+                    except Exception as e:
+                        output = str(e)
+
+                    content_blocks.append(
+                        {
+                            "type": "code_interpreter",
+                            "attributes": {
+                                "type": "output",
+                            },
+                            "content": output,
+                        }
+                    )
+                    content_blocks.append(
+                        {
+                            "type": "text",
+                            "content": "",
+                        }
+                    )
+
+                    try:
+                        res = await generate_chat_completion(
+                            request,
+                            {
+                                "model": model_id,
+                                "stream": True,
+                                "messages": [
+                                    *form_data["messages"],
+                                    {
+                                        "role": "assistant",
                                         "content": serialize_content_blocks(
                                             content_blocks
                                         ),
-                                    }
-
-                        await event_emitter(
-                            {
-                                "type": "chat:completion",
-                                "data": data,
-                            }
+                                    },
+                                ],
+                            },
+                            user,
                         )
-                    except Exception as e:
-                        done = "data: [DONE]" in line
-                        if done:
-                            pass
+
+                        if isinstance(res, StreamingResponse):
+                            await stream_body_handler(res)
                         else:
-                            continue
+                            break
+                    except Exception as e:
+                        log.debug(e)
+                        break
+
+                    await event_emitter(
+                        {
+                            "type": "chat:completion",
+                            "data": {
+                                "content": serialize_content_blocks(content_blocks),
+                            },
+                        }
+                    )
 
                 title = Chats.get_chat_title_by_id(metadata["chat_id"])
                 data = {
