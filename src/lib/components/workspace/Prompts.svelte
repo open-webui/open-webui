@@ -126,7 +126,13 @@
 				class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
 			>
 				<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
-					<a href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}>
+					<a
+						href={$user?.role === 'admin' ||
+						(prompt?.user?.id === $user?.id &&
+							!(prompt.user.role === 'user' && prompt.access_control === null))
+							? `/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`
+							: null}
+					>
 						<div class=" flex-1 flex items-center gap-2 self-center">
 							<div class=" font-semibold line-clamp-1 capitalize">{prompt.title}</div>
 							<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
@@ -134,52 +140,52 @@
 							</div>
 						</div>
 
-						<div class=" text-xs px-0.5">
-							{#if prompt.access_control == null}
-								<Tooltip content="public" className="flex shrink-0" placement="top-start">
-									<div class="shrink-0 text-gray-500">
+						<div class="text-xs px-0.5">
+							<Tooltip
+								content={prompt.access_control == null
+									? $i18n.t('Public')
+									: (prompt?.user?.email ?? $i18n.t('Deleted User'))}
+								className="flex shrink-0"
+								placement="top-start"
+							>
+								<div class="shrink-0 text-gray-500">
+									{#if prompt.access_control == null}
 										{$i18n.t('Public')}
-									</div>
-								</Tooltip>
-							{:else if prompt?.user?.role === 'admin' || (prompt?.user?.role === 'user' && prompt.access_control != null)}
-								<Tooltip
-									content={prompt?.user?.email ?? $i18n.t('Deleted User')}
-									className="flex shrink-0"
-									placement="top-start"
-								>
-									<div class="shrink-0 text-gray-500">
+									{:else}
 										{$i18n.t('By {{name}}', {
 											name: capitalizeFirstLetter(
 												prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
 											)
 										})}
-									</div>
-								</Tooltip>
-							{/if}
+									{/if}
+								</div>
+							</Tooltip>
 						</div>
 					</a>
 				</div>
 				<div class="flex flex-row gap-0.5 self-center">
-					<a
-						class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-						type="button"
-						href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="1.5"
-							stroke="currentColor"
-							class="w-4 h-4"
+					{#if $user?.role === 'admin' || (prompt?.user?.id === $user?.id && !(prompt.user.role === 'user' && prompt.access_control === null))}
+						<a
+							class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+							type="button"
+							href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
 						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-							/>
-						</svg>
-					</a>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="1.5"
+								stroke="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
+								/>
+							</svg>
+						</a>
+					{/if}
 
 					<PromptMenu
 						cloneHandler={() => {
@@ -193,7 +199,9 @@
 							showDeleteConfirm = true;
 						}}
 						onClose={() => {}}
-						canDelete={$user.role === 'admin' || prompt?.user?.id === $user.id}
+						canDelete={$user?.role === 'admin' ||
+							(prompt?.user?.id === $user?.id &&
+								!(prompt.user.role === 'user' && prompt.access_control === null))}
 					>
 						<button
 							class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"

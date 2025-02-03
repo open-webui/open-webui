@@ -6,6 +6,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import { user } from '$lib/stores';
 
 	export let onSubmit: Function;
 	export let edit = false;
@@ -29,6 +30,20 @@
 
 	const submitHandler = async () => {
 		loading = true;
+		// this makes user 'private' by default in Prompts edit/create
+		// eliminating the need to interact with access control modal
+		if ($user?.role === 'user') {
+			accessControl = {
+				read: {
+					group_ids: [],
+					user_ids: []
+				},
+				write: {
+					group_ids: [],
+					user_ids: []
+				}
+			};
+		}
 
 		if (validateCommandString(command)) {
 			await onSubmit({

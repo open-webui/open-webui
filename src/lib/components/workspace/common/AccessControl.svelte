@@ -4,11 +4,10 @@
 	const i18n = getContext('i18n');
 
 	import { getGroups } from '$lib/apis/groups';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Plus from '$lib/components/icons/Plus.svelte';
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
+	import { user } from '$lib/stores';
 
 	export let onChange: Function = () => {};
 
@@ -97,31 +96,38 @@
 				<select
 					id="models"
 					class="outline-none bg-transparent text-sm font-medium rounded-lg block w-fit pr-10 max-w-full placeholder-gray-400"
-					value={accessControl !== null ? 'private' : 'public'}
+					value={$user?.role === 'user' || accessControl !== null ? 'private' : 'public'}
 					on:change={(e) => {
-						if (e.target.value === 'public') {
-							accessControl = null;
-						} else {
-							accessControl = {
-								read: {
-									group_ids: []
-								},
-								write: {
-									group_ids: []
-								}
-							};
+						if ($user?.role === 'admin') {
+							if (e.target.value === 'public') {
+								accessControl = null;
+							} else {
+								accessControl = {
+									read: {
+										group_ids: []
+									},
+									write: {
+										group_ids: []
+									}
+								};
+							}
 						}
 					}}
+					disabled={$user?.role === 'user'}
 				>
 					<option class=" text-gray-700" value="private" selected>Private</option>
-					<option class=" text-gray-700" value="public" selected>Public</option>
+					{#if $user?.role === 'admin'}
+						<option class=" text-gray-700" value="public">Public</option>
+					{/if}
 				</select>
 
 				<div class=" text-xs text-gray-400 font-medium">
-					{#if accessControl !== null}
-						{$i18n.t('Only select users and groups with permission can access')}
-					{:else}
-						{$i18n.t('Accessible to all users')}
+					{#if $user?.role === 'admin'}
+						{#if accessControl !== null}
+							{$i18n.t('Only select users and groups with permission can access')}
+						{:else}
+							{$i18n.t('Accessible to all users')}
+						{/if}
 					{/if}
 				</div>
 			</div>
