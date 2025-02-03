@@ -1064,7 +1064,7 @@ async def get_app_version():
 
 
 @app.get("/api/version/updates")
-async def get_app_latest_release_version():
+async def get_app_latest_release_version(user=Depends(get_verified_user)):
     if OFFLINE_MODE:
         log.debug(
             f"Offline mode is enabled, returning current version as latest version"
