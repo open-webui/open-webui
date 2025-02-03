@@ -20,9 +20,18 @@
 	onMount(async () => {
 		groups = await getGroups(localStorage.token);
 
-		if (accessControl === null) {
-			accessControl = null;
-		} else {
+		if (accessControl === null && $user?.role === 'user') {
+			accessControl = {
+				read: {
+					group_ids: [],
+					user_ids: []
+				},
+				write: {
+					group_ids: [],
+					user_ids: []
+				}
+			};
+		} else if (accessControl !== null) {
 			accessControl = {
 				read: {
 					group_ids: accessControl?.read?.group_ids ?? [],
@@ -96,7 +105,7 @@
 				<select
 					id="models"
 					class="outline-none bg-transparent text-sm font-medium rounded-lg block w-fit pr-10 max-w-full placeholder-gray-400"
-					value={$user?.role === 'user' || accessControl !== null ? 'private' : 'public'}
+					value={accessControl !== null ? 'private' : 'public'}
 					on:change={(e) => {
 						if ($user?.role === 'admin') {
 							if (e.target.value === 'public') {
