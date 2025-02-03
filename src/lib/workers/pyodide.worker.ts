@@ -74,44 +74,40 @@ self.onmessage = async (event) => {
 };
 
 function processResult(result: any): any {
-	// Handle null and undefined
-	if (result == null) {
-		return result;
-	}
-
-	// Handle primitive types
-	if (typeof result !== 'object') {
-		return result;
-	}
-
-	// Handle Date objects
-	if (result instanceof Date) {
-		return result.toISOString();
-	}
-
-	// Handle Arrays
-	if (Array.isArray(result)) {
-		return result.map((item) => processResult(item));
-	}
-
-	// Handle Proxy objects (assuming they're from Pyodide)
-	if (typeof result.toJs === 'function') {
-		return processResult(result.toJs());
-	}
-
-	// Handle regular objects
-	if (typeof result === 'object') {
-		const processedObject: { [key: string]: any } = {};
-		for (const key in result) {
-			if (Object.prototype.hasOwnProperty.call(result, key)) {
-				processedObject[key] = processResult(result[key]);
-			}
+	// Catch and always return JSON-safe string representations
+	try {
+		if (result == null) {
+			// Handle null and undefined
+			return null;
 		}
-		return processedObject;
+		if (typeof result === 'string' || typeof result === 'number' || typeof result === 'boolean') {
+			// Handle primitive types directly
+			return result;
+		}
+		if (Array.isArray(result)) {
+			// If it's an array, recursively process items
+			return result.map((item) => processResult(item));
+		}
+		if (typeof result.toJs === 'function') {
+			// If it's a Pyodide proxy object (e.g., Pandas DF, Numpy Array), convert to JS and process recursively
+			return processResult(result.toJs());
+		}
+		if (typeof result === 'object') {
+			// Convert JS objects to a recursively serialized representation
+			const processedObject: { [key: string]: any } = {};
+			for (const key in result) {
+				if (Object.prototype.hasOwnProperty.call(result, key)) {
+					processedObject[key] = processResult(result[key]);
+				}
+			}
+			return processedObject;
+		}
+		// Stringify anything that's left (e.g., Proxy objects that cannot be directly processed)
+		return JSON.stringify(result);
+	} catch (err) {
+		// In case something unexpected happens, we return a stringified fallback
+		return `[processResult error]: ${err.toString()}`;
 	}
-
-	// If we can't process it, return null or a placeholder
-	return null;
 }
 
 export default {};
