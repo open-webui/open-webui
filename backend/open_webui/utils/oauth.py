@@ -82,7 +82,8 @@ class OAuthManager:
             oauth_allowed_roles = auth_manager_config.OAUTH_ALLOWED_ROLES
             oauth_admin_roles = auth_manager_config.OAUTH_ADMIN_ROLES
             oauth_roles = None
-            role = "pending"  # Default/fallback role if no matching roles are found
+            # Default/fallback role if no matching roles are found
+            role = auth_manager_config.DEFAULT_USER_ROLE
 
             # Next block extracts the roles from the user data, accepting nested claims of any depth
             if oauth_claim and oauth_allowed_roles and oauth_admin_roles:
@@ -273,7 +274,7 @@ class OAuthManager:
                         log.error(
                             f"Error downloading profile image '{picture_url}': {e}"
                         )
-                        picture_url = ""
+                        picture_url = "/user.png"
                 if not picture_url:
                     picture_url = "/user.png"
 

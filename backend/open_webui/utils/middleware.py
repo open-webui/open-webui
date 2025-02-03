@@ -270,60 +270,70 @@ async def chat_completion_tools_handler(
 
             result = json.loads(content)
 
-            tool_function_name = result.get("name", None)
-            if tool_function_name not in tools:
-                return body, {}
+            async def tool_call_handler(tool_call):
+                log.debug(f"{tool_call=}")
 
-            tool_function_params = result.get("parameters", {})
+                tool_function_name = tool_call.get("name", None)
+                if tool_function_name not in tools:
+                    return body, {}
 
-            try:
-                required_params = (
-                    tools[tool_function_name]
-                    .get("spec", {})
-                    .get("parameters", {})
-                    .get("required", [])
-                )
-                tool_function = tools[tool_function_name]["callable"]
-                tool_function_params = {
-                    k: v
-                    for k, v in tool_function_params.items()
-                    if k in required_params
-                }
-                tool_output = await tool_function(**tool_function_params)
+                tool_function_params = tool_call.get("parameters", {})
 
-            except Exception as e:
-                tool_output = str(e)
-
-            if isinstance(tool_output, str):
-                if tools[tool_function_name]["citation"]:
-                    sources.append(
-                        {
-                            "source": {
-                                "name": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
-                            },
-                            "document": [tool_output],
-                            "metadata": [
-                                {
-                                    "source": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
-                                }
-                            ],
-                        }
+                try:
+                    required_params = (
+                        tools[tool_function_name]
+                        .get("spec", {})
+                        .get("parameters", {})
+                        .get("required", [])
                     )
-                else:
-                    sources.append(
-                        {
-                            "source": {},
-                            "document": [tool_output],
-                            "metadata": [
-                                {
-                                    "source": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
-                                }
-                            ],
-                        }
-                    )
+                    tool_function = tools[tool_function_name]["callable"]
+                    tool_function_params = {
+                        k: v
+                        for k, v in tool_function_params.items()
+                        if k in required_params
+                    }
+                    tool_output = await tool_function(**tool_function_params)
 
-                if tools[tool_function_name]["file_handler"]:
-                    skip_files = True
+                except Exception as e:
+                    tool_output = str(e)
+
+                if isinstance(tool_output, str):
+                    if tools[tool_function_name]["citation"]:
+                        sources.append(
+                            {
+                                "source": {
+                                    "name": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
+                                },
+                                "document": [tool_output],
+                                "metadata": [
+                                    {
+                                        "source": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
+                                    }
+                                ],
+                            }
+                        )
+                    else:
+                        sources.append(
+                            {
+                                "source": {},
+                                "document": [tool_output],
+                                "metadata": [
+                                    {
+                                        "source": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
+                                    }
+                                ],
+                            }
+                        )
+
+                    if tools[tool_function_name]["file_handler"]:
+                        skip_files = True
+
+            # check if "tool_calls" in result
+            if result.get("tool_calls"):
+                for tool_call in result.get("tool_calls"):
+                    await tool_call_handler(tool_call)
+            else:
+                await tool_call_handler(result)
 
         except Exception as e:
             log.exception(f"Error: {e}")

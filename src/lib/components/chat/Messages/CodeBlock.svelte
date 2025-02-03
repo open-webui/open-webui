@@ -379,15 +379,27 @@ __builtins__.input = input`);
 				class="bg-[#202123] text-white max-w-full overflow-x-auto scrollbar-hidden"
 			/>
 
-			{#if executing}
-				<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-					<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
-					<div class="text-sm">Running...</div>
-				</div>
-			{:else if stdout || stderr || result}
-				<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-					<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
-					<div class="text-sm">{stdout || stderr || result}</div>
+			{#if executing || stdout || stderr || result}
+				<div class="bg-[#202123] text-white !rounded-b-lg py-4 px-4 flex flex-col gap-2">
+					{#if executing}
+						<div class=" ">
+							<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
+							<div class="text-sm">Running...</div>
+						</div>
+					{:else}
+						{#if stdout || stderr}
+							<div class=" ">
+								<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
+								<div class="text-sm">{stdout || stderr}</div>
+							</div>
+						{/if}
+						{#if result}
+							<div class=" ">
+								<div class=" text-gray-500 text-xs mb-1">RESULT</div>
+								<div class="text-sm">{`${result}`}</div>
+							</div>
+						{/if}
+					{/if}
 				</div>
 			{/if}
 		{/if}

@@ -61,9 +61,16 @@ self.onmessage = async (event) => {
 
 	try {
 		self.result = await self.pyodide.runPythonAsync(code);
+
+		try {
+			self.result = self.result.toJSON();
+		} catch (error) {
+			console.error(error);
+		}
 	} catch (error) {
 		self.stderr = error.toString();
 	}
+
 	self.postMessage({ id, result: self.result, stdout: self.stdout, stderr: self.stderr });
 };
 

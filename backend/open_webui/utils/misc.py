@@ -131,6 +131,25 @@ def add_or_update_system_message(content: str, messages: list[dict]):
     return messages
 
 
+def append_or_update_assistant_message(content: str, messages: list[dict]):
+    """
+    Adds a new assistant message at the end of the messages list
+    or updates the existing assistant message at the end.
+
+    :param msg: The message to be added or appended.
+    :param messages: The list of message dictionaries.
+    :return: The updated list of message dictionaries.
+    """
+
+    if messages and messages[-1].get("role") == "assistant":
+        messages[-1]["content"] = f"{messages[-1]['content']}\n{content}"
+    else:
+        # Insert at the end
+        messages.append({"role": "assistant", "content": content})
+
+    return messages
+
+
 def openai_chat_message_template(model: str):
     return {
         "id": f"{model}-{str(uuid.uuid4())}",
