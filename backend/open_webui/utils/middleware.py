@@ -453,6 +453,9 @@ async def chat_web_search_handler(
             )
 
         if results:
+            # Extract URLs from search results
+            urls = [result.link for result in results.results]
+            
             await event_emitter(
                 {
                     "type": "status",
@@ -460,7 +463,7 @@ async def chat_web_search_handler(
                         "action": "web_search",
                         "description": "Searched {{count}} sites",
                         "query": searchQuery,
-                        "urls": results["filenames"],
+                        "urls": urls,
                         "done": True,
                     },
                 }
@@ -469,10 +472,10 @@ async def chat_web_search_handler(
             files = form_data.get("files", [])
             files.append(
                 {
-                    "collection_name": results["collection_name"],
+                    "collection_name": results.collection_name,
                     "name": searchQuery,
                     "type": "web_search_results",
-                    "urls": results["filenames"],
+                    "urls": urls,
                 }
             )
             form_data["files"] = files

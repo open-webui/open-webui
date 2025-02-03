@@ -302,10 +302,17 @@ export const updateRerankingConfig = async (token: string, payload: RerankingMod
 	return res;
 };
 
-export interface SearchDocument {
-	status: boolean;
-	collection_name: string;
-	filenames: string[];
+interface SearchResult {
+    link: string;
+    title: string;
+    snippet: string;
+}
+
+interface SearchDocument {
+    status: boolean;
+    collection_name?: string;
+    results: SearchResult[];
+    documents?: any[];  // Type for Langchain Document
 }
 
 export const processFile = async (
@@ -410,7 +417,8 @@ export const processWeb = async (token: string, collection_name: string, url: st
 export const processWebSearch = async (
 	token: string,
 	query: string,
-	collection_name?: string
+	collection_name?: string,
+	save_to_store: boolean = false
 ): Promise<SearchDocument | null> => {
 	let error = null;
 
@@ -422,7 +430,8 @@ export const processWebSearch = async (
 		},
 		body: JSON.stringify({
 			query,
-			collection_name: collection_name ?? ''
+			collection_name,
+			save_to_store
 		})
 	})
 		.then(async (res) => {

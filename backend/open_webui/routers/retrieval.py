@@ -170,8 +170,17 @@ class ProcessUrlForm(CollectionNameForm):
     url: str
 
 
-class SearchForm(CollectionNameForm):
+class SearchForm(BaseModel):
     query: str
+    collection_name: Optional[str] = None
+    save_to_store: Optional[bool] = False
+
+
+class WebSearchResponse(BaseModel):
+    status: bool
+    collection_name: Optional[str] = None
+    results: List[SearchResult]
+    documents: Optional[List[Document]] = None
 
 
 @router.get("/")
@@ -1281,33 +1290,34 @@ def process_web_search(
 
     log.debug(f"web_results: {web_results}")
 
-    try:
-        collection_name = form_data.collection_name
-        if collection_name == "" or collection_name is None:
-            collection_name = f"web-search-{calculate_sha256_string(form_data.query)}"[
-                :63
-            ]
+    collection_name = None
+    documents = None
 
-        urls = [result.link for result in web_results]
-        loader = get_web_loader(
-            urls,
-            verify_ssl=request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
-            requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
-        )
-        docs = loader.load()
-        save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
+    if form_data.save_to_store:
+        try:
+            collection_name = form_data.collection_name
+            if collection_name == "" or collection_name is None:
+                collection_name = f"web-search-{calculate_sha256_string(form_data.query)}"[:63]
 
-        return {
-            "status": True,
-            "collection_name": collection_name,
-            "filenames": urls,
-        }
-    except Exception as e:
-        log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
-        )
+            urls = [result.link for result in web_results]
+            loader = get_web_loader(
+                urls,
+                verify_ssl=request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+                requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+            )
+            documents = loader.load()
+            save_docs_to_vector_db(request, documents, collection_name, overwrite=True)
+        except Exception as e:
+            log.exception(e)
+            # Don't raise exception here, just log it and continue with search results
+            log.error(f"Failed to save to vector DB: {str(e)}")
+
+    return WebSearchResponse(
+        status=True,
+        collection_name=collection_name,
+        results=web_results,
+        documents=documents
+    )
 
 
 class QueryDocForm(BaseModel):
