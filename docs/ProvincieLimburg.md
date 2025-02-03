@@ -1,30 +1,30 @@
 # Documentatie Pilot-Implementatie Provincie Limburg
-De Provincie Limburg voert een pilot uit waarin AI-taalmodellen worden geïmplementeerd binnen een veilige en schaalbare infrastructuur. Deze documentatie beschrijft de technische configuratie en de vereisten.
+De Provincie Limburg voert een pilot uit waarin AI-taalmodellen worden geïmplementeerd binnen een veilige en schaalbare infrastructuur. Deze documentatie beschrijft deze implementatie.
 
 ## Doelstellingen:
 - Verkennen van de toepassingsmogelijkheden van taalmodellen.
 - Ondersteuning bieden aan projecten binnen verschillende domeinen van de Provincie.
 - Waarborging van dataveiligheid en naleving van regelgeving.
 
-## Belang: Gebruik van een `.env`-bestand
+## Gebruik een `.env`-bestand
 Om gevoelige informatie, zoals API-sleutels en wachtwoorden, veilig te beheren, maken we gebruik van een .env-bestand. Dit bestand bevat de variabelen die door Docker en andere componenten worden opgehaald tijdens de uitvoering van de omgeving.
 
 ### Locatie:
 Plaats het .env-bestand in de hoofdmappen van de respectieve configuraties, bijvoorbeeld:
 
-- Voor docker-compose.yml: in `/app`
-- Voor specifieke configuraties van LiteLLM: in `/app/litellm`
+- Voor docker-compose.yml: in `app`
+- Voor specifieke configuraties van LiteLLM: in `app/litellm`
 
 ## Overzicht van de Componenten
 | **Wat**             | **Leverancier**          | **Details**                                    |
 |----------------------|--------------------------|------------------------------------------------|
-| **Taalmodellen**     | Microsoft Azure          | GPT-4o, DeepSeek-R1, Text-Embeddings-3-large  |
-| **Taalmodellen**     | Google Vertex AI         | Claude-35-Sonnet                              |
-| **Virtual Machine**  | Hertzner via Elestio     | Hosting van infrastructuur                    |
+| **Taalmodellen**     | Microsoft Azure          | GPT-4o, DeepSeek-R1, text-embeddings-3-large  |
+| **Taalmodellen**     | Google Vertex AI         | Claude-3.5-Sonnet                              |
+| **Virtual Machine**  | Hetzner via Elestio     | Hosting van infrastructuur                    |
 | **Authenticatie**    | Microsoft Entra ID       | Single sign-on en beveiligde login            |
 
 ## Stap 1: .env-bestand opstellen
-Maak een .env-bestand in `/app/` en voeg de volgende variabelen toe. Vul onderstaande placeholders in met jouw eigen API-sleutels, URL's en gegevens.
+Maak een .env-bestand in `app/` en voeg de volgende variabelen toe. Vul onderstaande placeholders in met jouw eigen API-sleutels, URL's en gegevens.
 
 ```
 # Algemene instellingen
@@ -62,7 +62,7 @@ ANONYMIZED_TELEMETRY=false
 ```
 
 ## Stap 2: docker-compose.yml configuratie
-De configuratie in `/app/docker-compose.yml` wordt aangepast om gebruik te maken van de waarden in het `.env`-bestand. Hieronder de verbeterde configuratie:
+De configuratie in `app/docker-compose.yml` wordt aangepast om gebruik te maken van de waarden in het `.env`-bestand. Hieronder de verbeterde configuratie:
 
 ```
 version: "3.3"
@@ -129,7 +129,7 @@ services:
 ```
 
 ## Stap 3: LiteLLM Configuratie
-Werk de configuratie in `/app/litellm/litellm_config.yaml` bij zodat alle gevoelige variabelen worden opgehaald uit de omgevingsvariabelen in het `.env`-bestand:
+Werk de configuratie in `app/litellm/litellm_config.yaml` bij zodat alle gevoelige variabelen worden opgehaald uit de omgevingsvariabelen in het `.env`-bestand:
 
 ```
 model_list:
