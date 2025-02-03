@@ -133,6 +133,7 @@
 
 				{#if !$mobile}
 					<Tooltip content={$i18n.t('Controls')}>
+						<!-- Controls button -->
 						<button
 							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 							on:click={async () => {
@@ -163,7 +164,7 @@
 						</div>
 					</button>
 				</Tooltip>
-
+<!-- 
 				{#if $user !== undefined}
 					<UserMenu
 						className="max-w-[200px]"
@@ -188,7 +189,7 @@
 							</div>
 						</button>
 					</UserMenu>
-				{/if}
+				{/if} -->
 			</div>
 		</div>
 	</div>
