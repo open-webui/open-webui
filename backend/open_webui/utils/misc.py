@@ -131,6 +131,25 @@ def add_or_update_system_message(content: str, messages: list[dict]):
     return messages
 
 
+def add_or_update_user_message(content: str, messages: list[dict]):
+    """
+    Adds a new user message at the end of the messages list
+    or updates the existing user message at the end.
+
+    :param msg: The message to be added or appended.
+    :param messages: The list of message dictionaries.
+    :return: The updated list of message dictionaries.
+    """
+
+    if messages and messages[-1].get("role") == "user":
+        messages[-1]["content"] = f"{messages[-1]['content']}\n{content}"
+    else:
+        # Insert at the end
+        messages.append({"role": "user", "content": content})
+
+    return messages
+
+
 def append_or_update_assistant_message(content: str, messages: list[dict]):
     """
     Adds a new assistant message at the end of the messages list

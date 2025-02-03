@@ -1012,10 +1012,6 @@ async def get_app_config(request: Request):
                 else {}
             ),
         },
-        "google_drive": {
-            "client_id": GOOGLE_DRIVE_CLIENT_ID.value,
-            "api_key": GOOGLE_DRIVE_API_KEY.value,
-        },
         **(
             {
                 "default_models": app.state.config.DEFAULT_MODELS,
@@ -1035,6 +1031,10 @@ async def get_app_config(request: Request):
                     "max_count": app.state.config.FILE_MAX_COUNT,
                 },
                 "permissions": {**app.state.config.USER_PERMISSIONS},
+                "google_drive": {
+                    "client_id": GOOGLE_DRIVE_CLIENT_ID.value,
+                    "api_key": GOOGLE_DRIVE_API_KEY.value,
+                },
             }
             if user is not None
             else {}
@@ -1068,7 +1068,7 @@ async def get_app_version():
 
 
 @app.get("/api/version/updates")
-async def get_app_latest_release_version():
+async def get_app_latest_release_version(user=Depends(get_verified_user)):
     if OFFLINE_MODE:
         log.debug(
             f"Offline mode is enabled, returning current version as latest version"
