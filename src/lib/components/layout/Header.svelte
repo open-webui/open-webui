@@ -11,6 +11,7 @@ import { getContext } from "svelte";
 import Tooltip from "../common/Tooltip.svelte";
 import AdjustmentsHorizontal from "../icons/AdjustmentsHorizontal.svelte";
 import UserMenu from "./Sidebar/UserMenu.svelte";
+	import { goto } from "$app/navigation";
 
 interface I18n {
 	t: (key: string) => string;
@@ -25,7 +26,9 @@ const t = (key: string) => i18n?.t?.(key) ?? key;
 		<div class="flex items-center flex-1">
 			<div class="flex items-center gap-3">
 				<img src="/static/favicon.png" alt="Logo" class="h-8 w-8 rounded-full" />
-				<span class="text-2xl font-bold fr-text-title--blue-france ">Albert</span>
+				<button on:click={() => {
+					goto('/');
+				}} class="text-2xl font-bold fr-text-title--blue-france ">Albert</button>
 				<div class="px-2 py-0.5 text-xs rounded-full fr-background-action-low--blue-france fr-text-label--blue-cumulus font-bold flex items-center">
 					ALPHA
 				</div>
