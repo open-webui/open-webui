@@ -827,14 +827,14 @@
 		}
 	};
 
-	const createMessagesList = (responseMessageId) => {
+	const createMessagesList = (history, responseMessageId) => {
 		if (responseMessageId === null) {
 			return [];
 		}
 
 		const message = history.messages[responseMessageId];
 		if (message?.parentId) {
-			return [...createMessagesList(message.parentId), message];
+			return [...createMessagesList(history, message.parentId), message];
 		} else {
 			return [message];
 		}
@@ -896,7 +896,7 @@
 	};
 
 	const chatActionHandler = async (chatId, actionId, modelId, responseMessageId, event = null) => {
-		const messages = createMessagesList(responseMessageId);
+		const messages = createMessagesList(history, responseMessageId);
 
 		const res = await chatAction(localStorage.token, actionId, {
 			model: modelId,
@@ -965,7 +965,7 @@
 			const modelId = selectedModels[0];
 			const model = $models.filter((m) => m.id === modelId).at(0);
 
-			const messages = createMessagesList(history.currentId);
+			const messages = createMessagesList(history, history.currentId);
 			const parentMessage = messages.length !== 0 ? messages.at(-1) : null;
 
 			const userMessageId = uuidv4();
@@ -1210,7 +1210,12 @@
 			);
 
 			history.messages[message.id] = message;
-			await chatCompletedHandler(chatId, message.model, message.id, createMessagesList(message.id));
+			await chatCompletedHandler(
+				chatId,
+				message.model,
+				message.id,
+				createMessagesList(history, message.id)
+			);
 		}
 
 		console.log(data);
@@ -1226,7 +1231,7 @@
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
 		console.log('submitPrompt', userPrompt, $chatId);
 
-		const messages = createMessagesList(history.currentId);
+		const messages = createMessagesList(history, history.currentId);
 		const _selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
@@ -1325,7 +1330,7 @@
 
 		saveSessionSelectedModels();
 
-		await sendPrompt(userPrompt, userMessageId, { newChat: true });
+		sendPrompt(userPrompt, userMessageId, { newChat: true });
 	};
 
 	const sendPrompt = async (
@@ -1333,6 +1338,8 @@
 		parentId: string,
 		{ modelId = null, modelIdx = null, newChat = false } = {}
 	) => {
+		const _chatId = JSON.parse(JSON.stringify($chatId));
+
 		// Create new chat if newChat is true and first user message
 		if (
 			newChat &&
@@ -1341,7 +1348,7 @@
 		) {
 			await initChatHandler();
 		} else {
-			await saveChatHandler($chatId);
+			await saveChatHandler(_chatId);
 		}
 
 		// If modelId is provided, use it, else use selected model
@@ -1390,16 +1397,15 @@
 		await tick();
 
 		// Save chat after all messages have been created
-		await saveChatHandler($chatId);
+		saveChatHandler(_chatId);
 
-		const _chatId = JSON.parse(JSON.stringify($chatId));
 		await Promise.all(
 			selectedModelIds.map(async (modelId, _modelIdx) => {
 				console.log('modelId', modelId);
 				const model = $models.filter((m) => m.id === modelId).at(0);
 
 				if (model) {
-					const messages = createMessagesList(parentId);
+					const messages = createMessagesList(history, parentId);
 					// If there are image files, check if model is vision capable
 					const hasImages = messages.some((message) =>
 						message?.files?.some((file) => file.type === 'image')
@@ -1444,7 +1450,7 @@
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();
-					await sendPromptSocket(model, responseMessageId, _chatId);
+					await sendPromptSocket(history, model, responseMessageId, _chatId);
 
 					if (chatEventEmitter) clearInterval(chatEventEmitter);
 				} else {
@@ -1457,7 +1463,7 @@
 		chats.set(await getChatList(localStorage.token, $currentChatPage));
 	};
 
-	const sendPromptSocket = async (model, responseMessageId, _chatId) => {
+	const sendPromptSocket = async (history, model, responseMessageId, _chatId) => {
 		const responseMessage = history.messages[responseMessageId];
 		const userMessage = history.messages[responseMessage.parentId];
 
@@ -1507,7 +1513,7 @@
 						}`
 					}
 				: undefined,
-			...createMessagesList(responseMessageId).map((message) => ({
+			...createMessagesList(history, responseMessageId).map((message) => ({
 				...message,
 				content: removeDetailsWithReasoning(message.content)
 			}))
@@ -1742,7 +1748,7 @@
 				.at(0);
 
 			if (model) {
-				await sendPromptSocket(model, responseMessage.id, _chatId);
+				await sendPromptSocket(history, model, responseMessage.id, _chatId);
 			}
 		}
 	};
@@ -1803,7 +1809,7 @@
 				system: $settings.system ?? undefined,
 				params: params,
 				history: history,
-				messages: createMessagesList(history.currentId),
+				messages: createMessagesList(history, history.currentId),
 				tags: [],
 				timestamp: Date.now()
 			});
@@ -1825,7 +1831,7 @@
 				chat = await updateChatById(localStorage.token, _chatId, {
 					models: selectedModels,
 					history: history,
-					messages: createMessagesList(history.currentId),
+					messages: createMessagesList(history, history.currentId),
 					params: params,
 					files: chatFiles
 				});
@@ -1933,7 +1939,7 @@
 				{/if}
 
 				<div class="flex flex-col flex-auto z-10 w-full">
-					{#if $settings?.landingPageMode === 'chat' || createMessagesList(history.currentId).length > 0}
+					{#if $settings?.landingPageMode === 'chat' || createMessagesList(history, history.currentId).length > 0}
 						<div
 							class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
 							id="messages-container"
