@@ -62,16 +62,56 @@ self.onmessage = async (event) => {
 	try {
 		self.result = await self.pyodide.runPythonAsync(code);
 
-		try {
-			self.result = self.result.toJSON();
-		} catch (error) {
-			console.error(error);
-		}
+		// Safely process and recursively serialize the result
+		self.result = processResult(self.result);
+
+		console.log('Python result:', self.result);
 	} catch (error) {
 		self.stderr = error.toString();
 	}
 
 	self.postMessage({ id, result: self.result, stdout: self.stdout, stderr: self.stderr });
 };
+
+function processResult(result: any): any {
+	// Handle null and undefined
+	if (result == null) {
+		return result;
+	}
+
+	// Handle primitive types
+	if (typeof result !== 'object') {
+		return result;
+	}
+
+	// Handle Date objects
+	if (result instanceof Date) {
+		return result.toISOString();
+	}
+
+	// Handle Arrays
+	if (Array.isArray(result)) {
+		return result.map((item) => processResult(item));
+	}
+
+	// Handle Proxy objects (assuming they're from Pyodide)
+	if (typeof result.toJs === 'function') {
+		return processResult(result.toJs());
+	}
+
+	// Handle regular objects
+	if (typeof result === 'object') {
+		const processedObject: { [key: string]: any } = {};
+		for (const key in result) {
+			if (Object.prototype.hasOwnProperty.call(result, key)) {
+				processedObject[key] = processResult(result[key]);
+			}
+		}
+		return processedObject;
+	}
+
+	// If we can't process it, return null or a placeholder
+	return null;
+}
 
 export default {};

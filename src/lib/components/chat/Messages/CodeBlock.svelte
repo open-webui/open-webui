@@ -396,7 +396,7 @@ __builtins__.input = input`);
 						{#if result}
 							<div class=" ">
 								<div class=" text-gray-500 text-xs mb-1">RESULT</div>
-								<div class="text-sm">{`${result}`}</div>
+								<div class="text-sm">{`${JSON.stringify(result)}`}</div>
 							</div>
 						{/if}
 					{/if}
