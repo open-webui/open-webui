@@ -643,7 +643,7 @@
 						}}
 					/>
 				{:else if selectedTab === 'about'}
-					<About />
+					<!-- <About /> -->
 				{/if}
 			</div>
 		</div>

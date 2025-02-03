@@ -678,9 +678,9 @@
 	"Open file": "Avaa tiedosto",
 	"Open in full screen": "Avaa koko näytön tilaan",
 	"Open new chat": "Avaa uusi keskustelu",
-	"Open WebUI uses faster-whisper internally.": "Open WebUI käyttää faster-whisperia sisäisesti.",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "Open WebUI käyttää SpeechT5:tä ja CMU Arctic -kaiuttimen upotuksia.",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Open WebUI -versio (v{{OPEN_WEBUI_VERSION}}) on alempi kuin vaadittu versio (v{{REQUIRED_VERSION}})",
+	"Airi uses faster-whisper internally.": "Airi käyttää faster-whisperia sisäisesti.",
+	"Airi uses SpeechT5 and CMU Arctic speaker embeddings.": "Airi käyttää SpeechT5:tä ja CMU Arctic -kaiuttimen upotuksia.",
+	"Airi version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Airi -versio (v{{OPEN_WEBUI_VERSION}}) on alempi kuin vaadittu versio (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "OpenAI API -asetukset",
@@ -1076,7 +1076,7 @@
 	"You're a helpful assistant.": "Olet avulias avustaja.",
 	"You're now logged in.": "Olet nyt kirjautunut sisään.",
 	"Your account status is currently pending activation.": "Tilisi tila on tällä hetkellä odottaa aktivointia.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Koko panoksesi menee suoraan lisäosan kehittäjälle; Open WebUI ei pidätä prosenttiosuutta. Valittu rahoitusalusta voi kuitenkin periä omia maksujaan.",
+	"Your entire contribution will go directly to the plugin developer; Airi does not take any percentage. However, the chosen funding platform might have its own fees.": "Koko panoksesi menee suoraan lisäosan kehittäjälle; Airi ei pidätä prosenttiosuutta. Valittu rahoitusalusta voi kuitenkin periä omia maksujaan.",
 	"Youtube": "YouTube",
 	"Youtube Loader Settings": "YouTube Loader -asetukset"
 }

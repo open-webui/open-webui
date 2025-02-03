@@ -148,7 +148,7 @@ async def send_post_request(
 
         raise HTTPException(
             status_code=r.status if r else 500,
-            detail=detail if detail else "Open WebUI: Server Connection Error",
+            detail=detail if detail else "Airi: Server Connection Error",
         )
 
 
@@ -208,7 +208,7 @@ async def verify_connection(
         except aiohttp.ClientError as e:
             log.exception(f"Client error: {str(e)}")
             raise HTTPException(
-                status_code=500, detail="Open WebUI: Server Connection Error"
+                status_code=500, detail="Airi: Server Connection Error"
             )
         except Exception as e:
             log.exception(f"Unexpected error: {e}")
@@ -391,7 +391,7 @@ async def get_ollama_tags(
 
             raise HTTPException(
                 status_code=r.status_code if r else 500,
-                detail=detail if detail else "Open WebUI: Server Connection Error",
+                detail=detail if detail else "Airi: Server Connection Error",
             )
 
     if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
@@ -458,7 +458,7 @@ async def get_ollama_versions(request: Request, url_idx: Optional[int] = None):
 
                 raise HTTPException(
                     status_code=r.status_code if r else 500,
-                    detail=detail if detail else "Open WebUI: Server Connection Error",
+                    detail=detail if detail else "Airi: Server Connection Error",
                 )
     else:
         return {"version": False}
@@ -632,7 +632,7 @@ async def copy_model(
 
         raise HTTPException(
             status_code=r.status_code if r else 500,
-            detail=detail if detail else "Open WebUI: Server Connection Error",
+            detail=detail if detail else "Airi: Server Connection Error",
         )
 
 
@@ -687,7 +687,7 @@ async def delete_model(
 
         raise HTTPException(
             status_code=r.status_code if r else 500,
-            detail=detail if detail else "Open WebUI: Server Connection Error",
+            detail=detail if detail else "Airi: Server Connection Error",
         )
 
 
@@ -736,7 +736,7 @@ async def show_model_info(
 
         raise HTTPException(
             status_code=r.status_code if r else 500,
-            detail=detail if detail else "Open WebUI: Server Connection Error",
+            detail=detail if detail else "Airi: Server Connection Error",
         )
 
 
@@ -806,7 +806,7 @@ async def embed(
 
         raise HTTPException(
             status_code=r.status_code if r else 500,
-            detail=detail if detail else "Open WebUI: Server Connection Error",
+            detail=detail if detail else "Airi: Server Connection Error",
         )
 
 
@@ -875,7 +875,7 @@ async def embeddings(
 
         raise HTTPException(
             status_code=r.status_code if r else 500,
-            detail=detail if detail else "Open WebUI: Server Connection Error",
+            detail=detail if detail else "Airi: Server Connection Error",
         )
 
 
@@ -1267,7 +1267,7 @@ async def get_openai_models(
             ]
         except Exception as e:
             log.exception(e)
-            error_detail = "Open WebUI: Server Connection Error"
+            error_detail = "Airi: Server Connection Error"
             if r is not None:
                 try:
                     res = r.json()
