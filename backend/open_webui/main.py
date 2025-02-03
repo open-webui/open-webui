@@ -108,6 +108,7 @@ from open_webui.config import (
     COMFYUI_WORKFLOW,
     COMFYUI_WORKFLOW_NODES,
     ENABLE_IMAGE_GENERATION,
+    ENABLE_IMAGE_PROMPT_GENERATION,
     IMAGE_GENERATION_ENGINE,
     IMAGE_GENERATION_MODEL,
     IMAGE_SIZE,
@@ -225,6 +226,7 @@ from open_webui.config import (
     LDAP_SERVER_LABEL,
     LDAP_SERVER_HOST,
     LDAP_SERVER_PORT,
+    LDAP_ATTRIBUTE_FOR_MAIL,
     LDAP_ATTRIBUTE_FOR_USERNAME,
     LDAP_SEARCH_FILTERS,
     LDAP_SEARCH_BASE,
@@ -254,6 +256,7 @@ from open_webui.config import (
     ENABLE_AUTOCOMPLETE_GENERATION,
     TITLE_GENERATION_PROMPT_TEMPLATE,
     TAGS_GENERATION_PROMPT_TEMPLATE,
+    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     QUERY_GENERATION_PROMPT_TEMPLATE,
     AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
@@ -302,6 +305,8 @@ from open_webui.utils.oauth import oauth_manager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
 from open_webui.tasks import stop_task, list_tasks  # Import from tasks.py
+
+from open_webui.storage.redis import RedisSessionMiddleware
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -357,6 +362,7 @@ app = FastAPI(
 )
 
 app.state.config = AppConfig()
+app.add_middleware(RedisSessionMiddleware, secret_key=WEBUI_SECRET_KEY)
 
 
 ########################################
@@ -437,6 +443,7 @@ app.state.config.ENABLE_LDAP = ENABLE_LDAP
 app.state.config.LDAP_SERVER_LABEL = LDAP_SERVER_LABEL
 app.state.config.LDAP_SERVER_HOST = LDAP_SERVER_HOST
 app.state.config.LDAP_SERVER_PORT = LDAP_SERVER_PORT
+app.state.config.LDAP_ATTRIBUTE_FOR_MAIL = LDAP_ATTRIBUTE_FOR_MAIL
 app.state.config.LDAP_ATTRIBUTE_FOR_USERNAME = LDAP_ATTRIBUTE_FOR_USERNAME
 app.state.config.LDAP_APP_DN = LDAP_APP_DN
 app.state.config.LDAP_APP_PASSWORD = LDAP_APP_PASSWORD
@@ -572,6 +579,7 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
 
 app.state.config.IMAGE_GENERATION_ENGINE = IMAGE_GENERATION_ENGINE
 app.state.config.ENABLE_IMAGE_GENERATION = ENABLE_IMAGE_GENERATION
+app.state.config.ENABLE_IMAGE_PROMPT_GENERATION = ENABLE_IMAGE_PROMPT_GENERATION
 
 app.state.config.IMAGES_OPENAI_API_BASE_URL = IMAGES_OPENAI_API_BASE_URL
 app.state.config.IMAGES_OPENAI_API_KEY = IMAGES_OPENAI_API_KEY
@@ -642,6 +650,10 @@ app.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION
 
 app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE
 app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE
+app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (
+    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE
+)
+
 app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
 )

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { quadInOut, quintIn } from 'svelte/easing';
 	import { fade, slide } from 'svelte/transition';
 
 	export let show = false;
@@ -22,7 +21,7 @@
 
 	<div
 		class="absolute z-30 shadow-xl {side === 'right' ? 'right-0' : 'left-0'} top-0 bottom-0"
-		transition:slide={{ duration: duration, easing: quadInOut, axis: side === 'right' ? 'x' : 'y' }}
+		transition:slide={{ duration: duration, axis: side === 'right' ? 'x' : 'y' }}
 	>
 		<div class="{className} h-full" style="width: {show ? width : '0px'}">
 			<slot />

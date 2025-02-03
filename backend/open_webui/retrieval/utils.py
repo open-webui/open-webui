@@ -11,6 +11,8 @@ from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriev
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 
+
+from open_webui.config import VECTOR_DB
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.misc import get_last_user_message
 
@@ -199,7 +201,12 @@ def query_collection(
             else:
                 pass
 
-    return merge_and_sort_query_results(results, k=k)
+    if VECTOR_DB == "chroma":
+        # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
+        # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
+        return merge_and_sort_query_results(results, k=k, reverse=False)
+    else:
+        return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
 def query_collection_with_hybrid_search(
@@ -235,7 +242,12 @@ def query_collection_with_hybrid_search(
             "Hybrid search failed for all collections. Using Non hybrid search as fallback."
         )
 
-    return merge_and_sort_query_results(results, k=k, reverse=True)
+    if VECTOR_DB == "chroma":
+        # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
+        # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
+        return merge_and_sort_query_results(results, k=k, reverse=False)
+    else:
+        return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
 def get_embedding_function(

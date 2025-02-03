@@ -82,32 +82,27 @@ export const updateAdminConfig = async (token: string, body: object) => {
 	return res;
 };
 
-export const getSessionUser = async (token: string) => {
-	let error = null;
+export const getSessionUser = async () => {
+	const token = localStorage.getItem('token');
+	if (!token) {
+		throw new Error('No token found');
+	}
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/`, {
+	const response = await fetch(`${WEBUI_API_BASE_URL}/auths/userinfo`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
-		},
-		credentials: 'include'
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
+		}
+	});
 
-	if (error) {
-		throw error;
+	if (response.status === 401 || !response.ok) {
+		localStorage.removeItem('token'); // Clear invalid token
+		throw new Error('Unauthorized access or invalid response');
 	}
 
-	return res;
+	const userData = await response.json();
+	return userData;
 };
 
 export const ldapUserSignIn = async (user: string, password: string) => {
@@ -118,7 +113,6 @@ export const ldapUserSignIn = async (user: string, password: string) => {
 		headers: {
 			'Content-Type': 'application/json'
 		},
-		credentials: 'include',
 		body: JSON.stringify({
 			user: user,
 			password: password
@@ -126,11 +120,14 @@ export const ldapUserSignIn = async (user: string, password: string) => {
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
-			return res.json();
+			const data = await res.json();
+			if (data.token) {
+				localStorage.setItem('token', data.token);
+			}
+			return data;
 		})
 		.catch((err) => {
 			console.log(err);
-
 			error = err.detail;
 			return null;
 		});
@@ -262,7 +259,6 @@ export const userSignIn = async (email: string, password: string) => {
 		headers: {
 			'Content-Type': 'application/json'
 		},
-		credentials: 'include',
 		body: JSON.stringify({
 			email: email,
 			password: password
@@ -270,11 +266,15 @@ export const userSignIn = async (email: string, password: string) => {
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
-			return res.json();
+			const data = await res.json();
+			if (data.token) {
+				localStorage.setItem('token', data.token);
+				localStorage.setItem('auth_type', data.auth_type || 'regular');
+			}
+			return data;
 		})
 		.catch((err) => {
 			console.log(err);
-
 			error = err.detail;
 			return null;
 		});
@@ -299,7 +299,6 @@ export const userSignUp = async (
 		headers: {
 			'Content-Type': 'application/json'
 		},
-		credentials: 'include',
 		body: JSON.stringify({
 			name: name,
 			email: email,
@@ -309,7 +308,11 @@ export const userSignUp = async (
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
-			return res.json();
+			const data = await res.json();
+			if (data.token) {
+				localStorage.setItem('token', data.token);
+			}
+			return data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -326,26 +329,53 @@ export const userSignUp = async (
 
 export const userSignOut = async () => {
 	let error = null;
+	const authType = localStorage.getItem('auth_type') || 'regular';
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signout`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/prepare-logout`, {
 		method: 'GET',
 		headers: {
-			'Content-Type': 'application/json'
-		},
-		credentials: 'include'
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${localStorage.getItem('token')}`
+		}
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
-			return res;
+			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.log('error signing out: ', err);
 			error = err.detail;
 			return null;
 		});
 
 	if (error) {
 		throw error;
+	}
+
+	// If the response is a redirect (for OAuth logout) and we're using pro-connect
+	if (res?.url && authType === 'pro-connect') {
+		window.location.href = res.url;
+		return;
+	}
+
+	// Clear all auth-related data from localStorage
+	localStorage.removeItem('token');
+	localStorage.removeItem('auth_type');
+	localStorage.removeItem('locale');
+	
+	// Clear session storage
+	sessionStorage.clear();
+	
+	// Clear specific auth-related cookies
+	const cookieOptions = 'path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict';
+	document.cookie = `token=;${cookieOptions}`;
+	document.cookie = `session=;${cookieOptions}`;
+	
+	// Clear all other cookies efficiently
+	const cookies = document.cookie.split('; ');
+	for (const cookie of cookies) {
+		const [name] = cookie.split('=');
+		document.cookie = `${name}=;${cookieOptions}`;
 	}
 };
 

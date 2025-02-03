@@ -14,38 +14,39 @@ import { get, type Unsubscriber, type Writable } from "svelte/store";
 import type { i18n as i18nType } from "i18next";
 import { WEBUI_BASE_URL } from "$lib/constants";
 
-import {
-	chatId,
-	chats,
-	config,
-	type Model,
-	models,
-	tags as allTags,
-	settings,
-	showSidebar,
-	WEBUI_NAME,
-	banners,
-	user,
-	socket,
-	showControls,
-	showCallOverlay,
-	currentChatPage,
-	temporaryChatEnabled,
-	mobile,
-	showOverview,
-	chatTitle,
-	showArtifacts,
-	tools,
-} from "$lib/stores";
-import {
-	convertMessagesToHistory,
-	copyToClipboard,
-	getMessageContentParts,
-	extractSentencesForAudio,
-	promptTemplate,
-	splitStream,
-	sleep,
-} from "$lib/utils";
+	import {
+		chatId,
+		chats,
+		config,
+		type Model,
+		models,
+		tags as allTags,
+		settings,
+		showSidebar,
+		WEBUI_NAME,
+		banners,
+		user,
+		socket,
+		showControls,
+		showCallOverlay,
+		currentChatPage,
+		temporaryChatEnabled,
+		mobile,
+		showOverview,
+		chatTitle,
+		showArtifacts,
+		tools
+	} from '$lib/stores';
+	import {
+		convertMessagesToHistory,
+		copyToClipboard,
+		getMessageContentParts,
+		extractSentencesForAudio,
+		promptTemplate,
+		splitStream,
+		sleep,
+		removeDetailsWithReasoning
+	} from '$lib/utils';
 
 import { generateChatCompletion } from "$lib/apis/ollama";
 import {
@@ -115,8 +116,9 @@ let selectedModelIds = [];
 $: selectedModelIds =
 	atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 
-let selectedToolIds = [];
-let webSearchEnabled = false;
+	let selectedToolIds = [];
+	let imageGenerationEnabled = false;
+	let webSearchEnabled = false;
 
 let chat = null;
 let tags = [];
@@ -138,10 +140,11 @@ $: if (chatIdProp) {
 	(async () => {
 		console.log(chatIdProp);
 
-		prompt = "";
-		files = [];
-		selectedToolIds = [];
-		webSearchEnabled = false;
+			prompt = '';
+			files = [];
+			selectedToolIds = [];
+			webSearchEnabled = false;
+			imageGenerationEnabled = false;
 
 		loaded = false;
 
@@ -155,12 +158,13 @@ $: if (chatIdProp) {
 						localStorage.getItem(`chat-input-${chatIdProp}`),
 					);
 
-					prompt = input.prompt;
-					files = input.files;
-					selectedToolIds = input.selectedToolIds;
-					webSearchEnabled = input.webSearchEnabled;
-				} catch (e) {}
-			}
+						prompt = input.prompt;
+						files = input.files;
+						selectedToolIds = input.selectedToolIds;
+						webSearchEnabled = input.webSearchEnabled;
+						imageGenerationEnabled = input.imageGenerationEnabled;
+					} catch (e) {}
+				}
 
 			window.setTimeout(() => scrollToBottom(), 0);
 			const chatInput = document.getElementById("chat-input");
@@ -334,13 +338,26 @@ const chatEventHandler = async (event, cb) => {
 				eventConfirmationInput = true;
 				showEventConfirmation = true;
 
-				eventConfirmationTitle = data.title;
-				eventConfirmationMessage = data.message;
-				eventConfirmationInputPlaceholder = data.placeholder;
-				eventConfirmationInputValue = data?.value ?? "";
-			} else {
-				console.log("Unknown message type", data);
-			}
+					eventConfirmationTitle = data.title;
+					eventConfirmationMessage = data.message;
+					eventConfirmationInputPlaceholder = data.placeholder;
+					eventConfirmationInputValue = data?.value ?? '';
+				} else if (type === 'notification') {
+					const toastType = data?.type ?? 'info';
+					const toastContent = data?.content ?? '';
+
+					if (toastType === 'success') {
+						toast.success(toastContent);
+					} else if (toastType === 'error') {
+						toast.error(toastContent);
+					} else if (toastType === 'warning') {
+						toast.warning(toastContent);
+					} else {
+						toast.info(toastContent);
+					}
+				} else {
+					console.log('Unknown message type', data);
+				}
 
 			history.messages[event.message_id] = message;
 		}
@@ -403,22 +420,22 @@ onMount(async () => {
 		}
 	}
 
-	if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
-		try {
-			const input = JSON.parse(
-				localStorage.getItem(`chat-input-${chatIdProp}`),
-			);
-			prompt = input.prompt;
-			files = input.files;
-			selectedToolIds = input.selectedToolIds;
-			webSearchEnabled = input.webSearchEnabled;
-		} catch (e) {
-			prompt = "";
-			files = [];
-			selectedToolIds = [];
-			webSearchEnabled = false;
+		if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
+			try {
+				const input = JSON.parse(localStorage.getItem(`chat-input-${chatIdProp}`));
+				prompt = input.prompt;
+				files = input.files;
+				selectedToolIds = input.selectedToolIds;
+				webSearchEnabled = input.webSearchEnabled;
+				imageGenerationEnabled = input.imageGenerationEnabled;
+			} catch (e) {
+				prompt = '';
+				files = [];
+				selectedToolIds = [];
+				webSearchEnabled = false;
+				imageGenerationEnabled = false;
+			}
 		}
-	}
 
 	showControls.subscribe(async (value) => {
 		if (controlPane && !$mobile) {
@@ -726,14 +743,17 @@ const initNewChat = async () => {
 	chatFiles = [];
 	params = {};
 
-	if ($page.url.searchParams.get("youtube")) {
-		uploadYoutubeTranscription(
-			`https://www.youtube.com/watch?v=${$page.url.searchParams.get("youtube")}`,
-		);
-	}
-	if ($page.url.searchParams.get("web-search") === "true") {
-		webSearchEnabled = true;
-	}
+		if ($page.url.searchParams.get('youtube')) {
+			uploadYoutubeTranscription(
+				`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`
+			);
+		}
+		if ($page.url.searchParams.get('web-search') === 'true') {
+			webSearchEnabled = true;
+		}
+		if ($page.url.searchParams.get('image-generation') === 'true') {
+			imageGenerationEnabled = true;
+		}
 
 	if ($page.url.searchParams.get("tools")) {
 		selectedToolIds = $page.url.searchParams
@@ -857,44 +877,42 @@ const createMessagesList = (responseMessageId) => {
 	}
 };
 
-const chatCompletedHandler = async (
-	chatId,
-	modelId,
-	responseMessageId,
-	messages,
-) => {
-	const res = await chatCompleted(localStorage.token, {
-		model: modelId,
-		messages: messages.map((m) => ({
-			id: m.id,
-			role: m.role,
-			content: m.content,
-			info: m.info ? m.info : undefined,
-			timestamp: m.timestamp,
-			...(m.sources ? { sources: m.sources } : {}),
-		})),
-		chat_id: chatId,
-		session_id: $socket?.id,
-		id: responseMessageId,
-	}).catch((error) => {
-		toast.error(error);
-		messages.at(-1).error = { content: error };
+	const chatCompletedHandler = async (chatId, modelId, responseMessageId, messages) => {
+		const res = await chatCompleted(localStorage.token, {
+			model: modelId,
+			messages: messages.map((m) => ({
+				id: m.id,
+				role: m.role,
+				content: m.content,
+				info: m.info ? m.info : undefined,
+				timestamp: m.timestamp,
+				...(m.sources ? { sources: m.sources } : {})
+			})),
+			chat_id: chatId,
+			session_id: $socket?.id,
+			id: responseMessageId
+		}).catch((error) => {
+			toast.error(`${error}`);
+			messages.at(-1).error = { content: error };
 
 		return null;
 	});
 
-	if (res !== null && res.messages) {
-		// Update chat history with the new messages
-		for (const message of res.messages) {
-			history.messages[message.id] = {
-				...history.messages[message.id],
-				...(history.messages[message.id].content !== message.content
-					? { originalContent: history.messages[message.id].content }
-					: {}),
-				...message,
-			};
+		if (res !== null && res.messages) {
+			// Update chat history with the new messages
+			for (const message of res.messages) {
+				if (message?.id) {
+					// Add null check for message and message.id
+					history.messages[message.id] = {
+						...history.messages[message.id],
+						...(history.messages[message.id].content !== message.content
+							? { originalContent: history.messages[message.id].content }
+							: {}),
+						...message
+					};
+				}
+			}
 		}
-	}
 
 	await tick();
 
@@ -923,25 +941,25 @@ const chatActionHandler = async (
 ) => {
 	const messages = createMessagesList(responseMessageId);
 
-	const res = await chatAction(localStorage.token, actionId, {
-		model: modelId,
-		messages: messages.map((m) => ({
-			id: m.id,
-			role: m.role,
-			content: m.content,
-			info: m.info ? m.info : undefined,
-			timestamp: m.timestamp,
-			...(m.sources ? { sources: m.sources } : {}),
-		})),
-		...(event ? { event: event } : {}),
-		chat_id: chatId,
-		session_id: $socket?.id,
-		id: responseMessageId,
-	}).catch((error) => {
-		toast.error(error);
-		messages.at(-1).error = { content: error };
-		return null;
-	});
+		const res = await chatAction(localStorage.token, actionId, {
+			model: modelId,
+			messages: messages.map((m) => ({
+				id: m.id,
+				role: m.role,
+				content: m.content,
+				info: m.info ? m.info : undefined,
+				timestamp: m.timestamp,
+				...(m.sources ? { sources: m.sources } : {})
+			})),
+			...(event ? { event: event } : {}),
+			chat_id: chatId,
+			session_id: $socket?.id,
+			id: responseMessageId
+		}).catch((error) => {
+			toast.error(`${error}`);
+			messages.at(-1).error = { content: error };
+			return null;
+		});
 
 	if (res !== null && res.messages) {
 		// Update chat history with the new messages
@@ -1430,13 +1448,14 @@ const sendPrompt = async (
 			history.messages[responseMessageId] = responseMessage;
 			history.currentId = responseMessageId;
 
-			// Append messageId to childrenIds of parent message
-			if (parentId !== null) {
-				history.messages[parentId].childrenIds = [
-					...history.messages[parentId].childrenIds,
-					responseMessageId,
-				];
-			}
+				// Append messageId to childrenIds of parent message
+				if (parentId !== null && history.messages[parentId]) {
+					// Add null check before accessing childrenIds
+					history.messages[parentId].childrenIds = [
+						...history.messages[parentId].childrenIds,
+						responseMessageId
+					];
+				}
 
 			responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`] =
 				responseMessageId;
@@ -1472,12 +1491,11 @@ const sendPrompt = async (
 					responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`];
 				let responseMessage = history.messages[responseMessageId];
 
-				let userContext = null;
-				if ($settings?.memory ?? false) {
-					if (userContext === null) {
-						const res = await queryMemory(localStorage.token, prompt).catch(
-							(error) => {
-								toast.error(error);
+					let userContext = null;
+					if ($settings?.memory ?? false) {
+						if (userContext === null) {
+							const res = await queryMemory(localStorage.token, prompt).catch((error) => {
+								toast.error(`${error}`);
 								return null;
 							},
 						);
@@ -1550,51 +1568,53 @@ const sendPromptSocket = async (model, responseMessageId, _chatId) => {
 		params?.stream_response ??
 		true;
 
-	const messages = [
-		params?.system || $settings.system || (responseMessage?.userContext ?? null)
-			? {
-					role: "system",
-					content: `${promptTemplate(
-						params?.system ?? $settings?.system ?? "",
-						$user.name,
-						$settings?.userLocation
-							? await getAndUpdateUserLocation(localStorage.token)
-							: undefined,
-					)}${
-						(responseMessage?.userContext ?? null)
-							? `\n\nUser Context:\n${responseMessage?.userContext ?? ""}`
-							: ""
-					}`,
-				}
-			: undefined,
-		...createMessagesList(responseMessageId),
-	]
-		.filter((message) => message?.content?.trim())
-		.map((message, idx, arr) => ({
-			role: message.role,
-			...((message.files?.filter((file) => file.type === "image").length > 0 ??
-				false) &&
-			message.role === "user"
+		const messages = [
+			params?.system || $settings.system || (responseMessage?.userContext ?? null)
 				? {
-						content: [
-							{
-								type: "text",
-								text: message?.merged?.content ?? message.content,
-							},
-							...message.files
-								.filter((file) => file.type === "image")
-								.map((file) => ({
-									type: "image_url",
-									image_url: {
-										url: file.url,
-									},
-								})),
-						],
+						role: 'system',
+						content: `${promptTemplate(
+							params?.system ?? $settings?.system ?? '',
+							$user.name,
+							$settings?.userLocation
+								? await getAndUpdateUserLocation(localStorage.token)
+								: undefined
+						)}${
+							(responseMessage?.userContext ?? null)
+								? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
+								: ''
+						}`
 					}
-				: {
-						content: message?.merged?.content ?? message.content,
-					}),
-		}));
+				: undefined,
+			...createMessagesList(responseMessageId).map((message) => ({
+				...message,
+				content: removeDetailsWithReasoning(message.content)
+			}))
+		]
+			.filter((message) => message?.content?.trim())
+			.map((message, idx, arr) => ({
+				role: message.role,
+				...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
+				message.role === 'user'
+					? {
+							content: [
+								{
+									type: 'text',
+									text: message?.merged?.content ?? message.content
+								},
+								...message.files
+									.filter((file) => file.type === 'image')
+									.map((file) => ({
+										type: 'image_url',
+										image_url: {
+											url: file.url
+										}
+									}))
+							]
+						}
+					: {
+							content: message?.merged?.content ?? message.content
+						})
+			}));
 
 	const res = await generateOpenAIChatCompletion(
 		localStorage.token,
@@ -1621,11 +1641,12 @@ const sendPromptSocket = async (model, responseMessageId, _chatId) => {
 						: undefined,
 			},
 
-			files: files.length > 0 ? files : undefined,
-			tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
-			features: {
-				web_search: webSearchEnabled,
-			},
+				files: (files?.length ?? 0) > 0 ? files : undefined,
+				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
+				features: {
+					image_generation: imageGenerationEnabled,
+					web_search: webSearchEnabled
+				},
 
 			session_id: $socket?.id,
 			chat_id: $chatId,
@@ -1929,13 +1950,13 @@ const saveChatHandler = async (_chatId) => {
 	}}
 />
 
-{#if !chatIdProp || (loaded && chatIdProp)}
-	<div
-		class="h-screen max-h-[100dvh] {$showSidebar
-			? 'md:max-w-[calc(100%-260px)]'
-			: ''} w-full max-w-full flex flex-col"
-		id="chat-container"
-	>
+<div
+	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+		? '  md:max-w-[calc(100%-260px)]'
+		: ' '} w-full max-w-full flex flex-col"
+	id="chat-container"
+>
+	{#if !chatIdProp || (loaded && chatIdProp)}
 		{#if $settings?.backgroundImageUrl ?? null}
 			<div
 				class="absolute {$showSidebar
@@ -2035,6 +2056,7 @@ const saveChatHandler = async (_chatId) => {
 								bind:prompt
 								bind:autoScroll
 								bind:selectedToolIds
+								bind:imageGenerationEnabled
 								bind:webSearchEnabled
 								bind:atSelectedModel
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
@@ -2085,6 +2107,7 @@ const saveChatHandler = async (_chatId) => {
 								bind:prompt
 								bind:autoScroll
 								bind:selectedToolIds
+								bind:imageGenerationEnabled
 								bind:webSearchEnabled
 								bind:atSelectedModel
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
@@ -2137,5 +2160,5 @@ const saveChatHandler = async (_chatId) => {
 				{eventTarget}
 			/>
 		</PaneGroup>
-	</div>
-{/if}
+	{/if}
+</div>

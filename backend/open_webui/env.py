@@ -54,10 +54,16 @@ else:
     DEVICE_TYPE = "cpu"
 
 try:
+    import torch
+
     if torch.backends.mps.is_available() and torch.backends.mps.is_built():
         DEVICE_TYPE = "mps"
 except Exception:
     pass
+
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:8080") 
+BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8080")
+
 
 ####################################
 # LOGGING
@@ -272,6 +278,8 @@ DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
 if "postgres://" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")
 
+DATABASE_SCHEMA = os.environ.get("DATABASE_SCHEMA", None)
+
 DATABASE_POOL_SIZE = os.environ.get("DATABASE_POOL_SIZE", 0)
 
 if DATABASE_POOL_SIZE == "":
@@ -340,6 +348,24 @@ WEBUI_AUTH_TRUSTED_NAME_HEADER = os.environ.get("WEBUI_AUTH_TRUSTED_NAME_HEADER"
 BYPASS_MODEL_ACCESS_CONTROL = (
     os.environ.get("BYPASS_MODEL_ACCESS_CONTROL", "False").lower() == "true"
 )
+
+####################################
+# PROCONNECT_AUTH
+####################################
+
+PROCONNECT_BASE_URL = os.environ.get("PROCONNECT_BASE_URL", "changeme")
+PROCONNECT_CLIENT_ID = os.environ.get("PROCONNECT_CLIENT_ID", "changeme")
+PROCONNECT_CLIENT_SECRET = os.environ.get("PROCONNECT_CLIENT_SECRET", "changeme")
+SERVER_METADATA_URL = os.environ.get("SERVER_METADATA_URL", "changeme")
+PROCONNECT_SESSION_DURATION = os.environ.get("PROCONNECT_SESSION_DURATION", "changeme")
+
+####################################
+# REDIS
+####################################
+
+REDIS_HOST = os.environ.get("REDIS_HOST", "changeme")
+REDIS_PORT = os.environ.get("REDIS_PORT", "changeme")
+REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "changeme")
 
 ####################################
 # WEBUI_SECRET_KEY
