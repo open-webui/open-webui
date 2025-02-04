@@ -22,18 +22,40 @@
 
 	let fuse;
 	let filteredPrompts = [];
+	let oldFilteredPrompts = [];
 
-	// Track the number of updates to filteredPrompts
+	// This variable controls the re-rendering of the suggestions
 	let version = 0;
 
-	// Fuzzy search
+	// Initialize Fuse
 	$: fuse = new Fuse(sortedPrompts, fuseOptions);
-	// Update filteredPrompts + version whenever inputValue changes
+
+	// Update the filteredPrompts if inputValue changes
+	// Only increase version if something wirklich geändert hat
 	$: {
-		filteredPrompts = inputValue.trim()
+		const newFilteredPrompts = inputValue.trim()
 			? fuse.search(inputValue.trim()).map((result) => result.item)
 			: sortedPrompts;
-		version = version + 1;
+
+		// Compare with the oldFilteredPrompts
+		// If there's a difference, update array + version
+		if (!arraysEqual(oldFilteredPrompts, newFilteredPrompts)) {
+			filteredPrompts = newFilteredPrompts;
+			version += 1;
+		}
+		oldFilteredPrompts = newFilteredPrompts;
+	}
+
+	// Helper function to check if arrays are the same
+	// (based on unique IDs oder content)
+	function arraysEqual(a, b) {
+		if (a.length !== b.length) return false;
+		for (let i = 0; i < a.length; i++) {
+			if ((a[i].id ?? a[i].content) !== (b[i].id ?? b[i].content)) {
+				return false;
+			}
+		}
+		return true;
 	}
 </script>
 
@@ -77,7 +99,7 @@
 			</button>
 		{/each}
 	{:else}
-		<!-- No suggestions -->
+		<!-- Keine Vorschläge -->
 	{/if}
 </div>
 
