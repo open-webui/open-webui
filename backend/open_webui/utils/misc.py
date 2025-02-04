@@ -20,7 +20,7 @@ def get_message_list(messages, message_id):
     current_message = messages.get(message_id)
 
     if not current_message:
-        return f"Message ID {message_id} not found in the history."
+        return None
 
     # Reconstruct the chain by following the parentId links
     message_list = []
