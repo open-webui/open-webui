@@ -1239,10 +1239,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
 
 @router.post("/process/web/search")
 async def process_web_search(
-    request: Request, form_data: SearchForm, extra_params: dict, user=Depends(get_verified_user)
+    request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
-    event_emitter = extra_params["__event_emitter__"]
-    
     try:
         logging.info(
             f"trying to web search with {request.app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query}"
@@ -1259,18 +1257,6 @@ async def process_web_search(
         )
 
     log.debug(f"web_results: {web_results}")
-
-    await event_emitter(
-        {
-            "type": "status",
-            "data": {
-                "action": "web_search",
-                "description": "Loading {{count}} sites",
-                "urls": [result.link for result in web_results],
-                "done": False
-            },
-        }
-    )
 
     try:
         collection_name = form_data.collection_name

@@ -443,7 +443,6 @@ async def chat_web_search_handler(
                     "query": searchQuery,
                 }
             ),
-            extra_params=extra_params,
             user=user
         )
 
