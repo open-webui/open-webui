@@ -38,6 +38,16 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
+def get_netid(webauth_response: str):
+    if webauth_response == "no":
+        raise ValueError("Invalid login")
+    return webauth_response.split("\n")[1]
+
+
+def get_netid_email(netid: str):
+    return netid + "@arizona.edu"
+
+
 def create_token(data: dict, expires_delta: Union[timedelta, None] = None) -> str:
     payload = data.copy()
 
