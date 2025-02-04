@@ -21,11 +21,11 @@
 
 	export let screenCaptureHandler: Function;
 	export let uploadFilesHandler: Function;
+	export let inputFilesHandler: Function;
+
 	export let uploadGoogleDriveHandler: Function;
 
 	export let selectedToolIds: string[] = [];
-
-	export let codeInterpreterEnabled: boolean;
 
 	export let onClose: Function;
 
@@ -53,7 +53,25 @@
 			return a;
 		}, {});
 	};
+
+	function handleFileChange(event) {
+		const inputFiles = Array.from(event.target?.files);
+		if (inputFiles && inputFiles.length > 0) {
+			console.log(inputFiles);
+			inputFilesHandler(inputFiles);
+		}
+	}
 </script>
+
+<!-- Hidden file input used to open the camera on mobile -->
+<input
+	id="camera-input"
+	type="file"
+	accept="image/*"
+	capture="environment"
+	on:change={handleFileChange}
+	style="display: none;"
+/>
 
 <Dropdown
 	bind:show
@@ -120,26 +138,32 @@
 				<hr class="border-black/5 dark:border-white/5 my-1" />
 			{/if}
 
-			{#if !$mobile}
-				<Tooltip
-					content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files') : ''}
-					className="w-full"
-				>
-					<DropdownMenu.Item
-						class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl {!fileUploadEnabled
-							? 'opacity-50'
-							: ''}"
-						on:click={() => {
-							if (fileUploadEnabled) {
+			<Tooltip
+				content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files') : ''}
+				className="w-full"
+			>
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl {!fileUploadEnabled
+						? 'opacity-50'
+						: ''}"
+					on:click={() => {
+						if (fileUploadEnabled) {
+							if (!$mobile) {
 								screenCaptureHandler();
+							} else {
+								const cameraInputElement = document.getElementById('camera-input');
+
+								if (cameraInputElement) {
+									cameraInputElement.click();
+								}
 							}
-						}}
-					>
-						<CameraSolid />
-						<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
-					</DropdownMenu.Item>
-				</Tooltip>
-			{/if}
+						}
+					}}
+				>
+					<CameraSolid />
+					<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
+				</DropdownMenu.Item>
+			</Tooltip>
 
 			<Tooltip
 				content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files') : ''}

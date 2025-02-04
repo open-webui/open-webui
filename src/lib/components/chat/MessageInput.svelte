@@ -573,7 +573,7 @@
 								dir={$settings?.chatDirection ?? 'LTR'}
 							>
 								{#if files.length > 0}
-									<div class="mx-1 mt-2.5 mb-1 flex items-center flex-wrap gap-2">
+									<div class="mx-1 mt-2.5 flex items-center flex-wrap gap-2">
 										{#each files as file, fileIdx}
 											{#if file.type === 'image'}
 												<div class=" relative group">
@@ -611,7 +611,7 @@
 													</div>
 													<div class=" absolute -top-1 -right-1">
 														<button
-															class=" bg-gray-400 text-white border border-white rounded-full group-hover:visible invisible transition"
+															class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
 															type="button"
 															on:click={() => {
 																files.splice(fileIdx, 1);
@@ -661,7 +661,7 @@
 									</div>
 								{/if}
 
-								<div class="px-3">
+								<div class="px-2.5">
 									{#if $settings?.richTextInput ?? true}
 										<div
 											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full pt-2.5 pb-1 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
@@ -1062,11 +1062,9 @@
 								<div class=" flex justify-between">
 									<div class="ml-1 self-end mb-1.5 gap-0.5 flex items-center">
 										<InputMenu
-											bind:imageGenerationEnabled
-											bind:codeInterpreterEnabled
-											bind:webSearchEnabled
 											bind:selectedToolIds
 											{screenCaptureHandler}
+											{inputFilesHandler}
 											uploadFilesHandler={() => {
 												filesInputElement.click();
 											}}
