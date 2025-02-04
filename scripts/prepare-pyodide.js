@@ -9,6 +9,8 @@ const packages = [
 	'scikit-learn',
 	'scipy',
 	'regex',
+	'sympy',
+	'tiktoken',
 	'seaborn'
 ];
 
