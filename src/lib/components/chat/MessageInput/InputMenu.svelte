@@ -54,6 +54,11 @@
 		}, {});
 	};
 
+	const detectMobile = () => {
+		const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+		return /android|iphone|ipad|ipod|windows phone/i.test(userAgent);
+	};
+
 	function handleFileChange(event) {
 		const inputFiles = Array.from(event.target?.files);
 		if (inputFiles && inputFiles.length > 0) {
@@ -148,7 +153,7 @@
 						: ''}"
 					on:click={() => {
 						if (fileUploadEnabled) {
-							if (!$mobile) {
+							if (!detectMobile()) {
 								screenCaptureHandler();
 							} else {
 								const cameraInputElement = document.getElementById('camera-input');
