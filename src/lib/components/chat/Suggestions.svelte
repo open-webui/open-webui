@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Fuse from 'fuse.js';
 	import Bolt from '$lib/components/icons/Bolt.svelte';
-	import { getContext, createEventDispatcher, onMount } from 'svelte';
+	import { onMount, getContext, createEventDispatcher } from 'svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -71,7 +71,7 @@
 						>
 							{prompt.content}
 						</div>
-						<div class="text-xs text-gray-500 font-normal line-clamp-1">Prompt</div>
+						<div class="text-xs text-gray-500 font-normal line-clamp-1">{i18n.t('Prompt')}</div>
 					{/if}
 				</div>
 			</button>
