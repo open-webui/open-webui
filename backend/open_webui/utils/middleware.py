@@ -418,7 +418,7 @@ async def chat_web_search_handler(
                 },
             }
         )
-        return
+        return form_data
 
     searchQuery = queries[0]
 
