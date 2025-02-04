@@ -1321,12 +1321,6 @@ async def process_chat_response(
                                         )
 
                                         if end:
-                                            data = {
-                                                "content": serialize_content_blocks(
-                                                    content_blocks
-                                                ),
-                                            }
-
                                             break
 
                                     if ENABLE_REALTIME_CHAT_SAVE:
@@ -1369,6 +1363,15 @@ async def process_chat_response(
 
                         if not content_blocks[-1]["content"]:
                             content_blocks.pop()
+
+                    await event_emitter(
+                        {
+                            "type": "chat:completion",
+                            "data": {
+                                "content": serialize_content_blocks(content_blocks),
+                            },
+                        }
+                    )
 
                     if response.background:
                         await response.background()
