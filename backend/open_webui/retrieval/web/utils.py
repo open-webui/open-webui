@@ -42,6 +42,7 @@ def validate_url(url: Union[str, Sequence[str]]):
     else:
         return False
 
+
 def safe_validate_urls(url: Sequence[str]) -> Sequence[str]:
     valid_urls = []
     for u in url:
@@ -51,6 +52,7 @@ def safe_validate_urls(url: Sequence[str]) -> Sequence[str]:
         except ValueError:
             continue
     return valid_urls
+
 
 def resolve_hostname(hostname):
     # Get address information

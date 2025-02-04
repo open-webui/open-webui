@@ -453,7 +453,7 @@
 												<span class="relative inline-flex rounded-full size-2 bg-teal-500" />
 											</span>
 										</div>
-										<div class=" translate-y-[0.5px]">{$i18n.t('Image generation')}</div>
+										<div class=" translate-y-[0.5px]">{$i18n.t('Generate an image')}</div>
 									</div>
 								</div>
 							{/if}
@@ -469,7 +469,7 @@
 												<span class="relative inline-flex rounded-full size-2 bg-green-500" />
 											</span>
 										</div>
-										<div class=" translate-y-[0.5px]">{$i18n.t('Code interpreter')}</div>
+										<div class=" translate-y-[0.5px]">{$i18n.t('Execute code for analysis')}</div>
 									</div>
 								</div>
 							{/if}
@@ -1167,22 +1167,24 @@
 												</Tooltip>
 											{/if}
 
-											<Tooltip content={$i18n.t('Executes code for analysis')} placement="top">
-												<button
-													on:click|preventDefault={() =>
-														(codeInterpreterEnabled = !codeInterpreterEnabled)}
-													type="button"
-													class="px-1.5 sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
-														? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
-														: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
-												>
-													<CommandLine className="size-5" strokeWidth="1.75" />
-													<span
-														class="hidden sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
-														>{$i18n.t('Code Intepreter')}</span
+											{#if $_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter}
+												<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
+													<button
+														on:click|preventDefault={() =>
+															(codeInterpreterEnabled = !codeInterpreterEnabled)}
+														type="button"
+														class="px-1.5 sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
+															? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
+															: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
 													>
-												</button>
-											</Tooltip>
+														<CommandLine className="size-5" strokeWidth="1.75" />
+														<span
+															class="hidden sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+															>{$i18n.t('Code Interpreter')}</span
+														>
+													</button>
+												</Tooltip>
+											{/if}
 										{/if}
 									</div>
 
