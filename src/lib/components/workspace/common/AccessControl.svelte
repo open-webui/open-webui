@@ -11,7 +11,7 @@
 
 	export let onChange: Function = () => {};
 
-	export let accessRoles = ['read'];
+	export let accessRoles = ['read', 'write'];
 	export let accessControl = null;
 
 	let selectedGroupId = '';
@@ -53,9 +53,27 @@
 
 	const onSelectGroup = () => {
 		if (selectedGroupId !== '') {
+			// By default, add to read access
 			accessControl.read.group_ids = [...accessControl.read.group_ids, selectedGroupId];
+			// Ensure it's not in write access
+			accessControl.write.group_ids = accessControl.write.group_ids.filter(
+				(id) => id !== selectedGroupId
+			);
 
 			selectedGroupId = '';
+		}
+	};
+
+	// Helper function to toggle group access
+	const toggleGroupAccess = (groupId: string) => {
+		if (accessControl.write.group_ids.includes(groupId)) {
+			// If in write, move to read
+			accessControl.write.group_ids = accessControl.write.group_ids.filter((id) => id !== groupId);
+			accessControl.read.group_ids = [...accessControl.read.group_ids, groupId];
+		} else {
+			// If in read, move to write
+			accessControl.read.group_ids = accessControl.read.group_ids.filter((id) => id !== groupId);
+			accessControl.write.group_ids = [...accessControl.write.group_ids, groupId];
 		}
 	};
 </script>
@@ -143,8 +161,10 @@
 		</div>
 	</div>
 	{#if accessControl !== null}
-		{@const accessGroups = groups.filter((group) =>
-			accessControl.read.group_ids.includes(group.id)
+		{@const accessGroups = groups.filter(
+			(group) =>
+				accessControl.read.group_ids.includes(group.id) ||
+				accessControl.write.group_ids.includes(group.id)
 		)}
 		<div>
 			<div class="">
@@ -167,7 +187,7 @@
 									<option class=" text-gray-700" value="" disabled selected
 										>{$i18n.t('Select a group')}</option
 									>
-									{#each groups.filter((group) => !accessControl.read.group_ids.includes(group.id)) as group}
+									{#each groups.filter((group) => !accessControl.read.group_ids.includes(group.id) && !accessControl.write.group_ids.includes(group.id)) as group}
 										<option class=" text-gray-700" value={group.id}>{group.name}</option>
 									{/each}
 								</select>
@@ -209,16 +229,7 @@
 										type="button"
 										on:click={() => {
 											if (accessRoles.includes('write')) {
-												if (accessControl.write.group_ids.includes(group.id)) {
-													accessControl.write.group_ids = accessControl.write.group_ids.filter(
-														(group_id) => group_id !== group.id
-													);
-												} else {
-													accessControl.write.group_ids = [
-														...accessControl.write.group_ids,
-														group.id
-													];
-												}
+												toggleGroupAccess(group.id);
 											}
 										}}
 									>
@@ -234,6 +245,9 @@
 										type="button"
 										on:click={() => {
 											accessControl.read.group_ids = accessControl.read.group_ids.filter(
+												(id) => id !== group.id
+											);
+											accessControl.write.group_ids = accessControl.write.group_ids.filter(
 												(id) => id !== group.id
 											);
 										}}
