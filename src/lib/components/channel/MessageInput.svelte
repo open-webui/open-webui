@@ -453,35 +453,9 @@
 							</div>
 						{/if}
 
-						<div class=" flex">
-							<div class="ml-1 self-end mb-1.5 flex space-x-1">
-								<InputMenu
-									{screenCaptureHandler}
-									uploadFilesHandler={() => {
-										filesInputElement.click();
-									}}
-								>
-									<button
-										class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
-										type="button"
-										aria-label="More"
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="size-5"
-										>
-											<path
-												d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
-											/>
-										</svg>
-									</button>
-								</InputMenu>
-							</div>
-
+						<div class="px-3">
 							<div
-								class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full py-2.5 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
+								class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full pt-2.5 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
 							>
 								<RichTextInput
 									bind:value={content}
@@ -527,6 +501,34 @@
 										console.log(e);
 									}}
 								/>
+							</div>
+						</div>
+
+						<div class=" flex justify-between">
+							<div class="ml-1 self-end mb-1.5 flex space-x-1">
+								<InputMenu
+									{screenCaptureHandler}
+									uploadFilesHandler={() => {
+										filesInputElement.click();
+									}}
+								>
+									<button
+										class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
+										type="button"
+										aria-label="More"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="size-5"
+										>
+											<path
+												d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
+											/>
+										</svg>
+									</button>
+								</InputMenu>
 							</div>
 
 							<div class="self-end mb-1.5 flex space-x-1 mr-1">
