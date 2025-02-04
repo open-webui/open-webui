@@ -455,7 +455,7 @@
 
 						<div class="px-2.5">
 							<div
-								class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full pt-2.5 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
+								class="scrollbar-hidden font-primary text-left bg-transparent dark:text-gray-100 outline-none w-full pt-2.5 pb-1 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
 							>
 								<RichTextInput
 									bind:value={content}
@@ -504,8 +504,8 @@
 							</div>
 						</div>
 
-						<div class=" flex justify-between">
-							<div class="ml-1 self-end mb-1.5 flex space-x-1">
+						<div class=" flex justify-between mb-2">
+							<div class="ml-1 self-end flex space-x-1">
 								<InputMenu
 									{screenCaptureHandler}
 									uploadFilesHandler={() => {
@@ -531,7 +531,7 @@
 								</InputMenu>
 							</div>
 
-							<div class="self-end mb-1.5 flex space-x-1 mr-1">
+							<div class="self-end flex space-x-1 mr-1">
 								{#if content === ''}
 									<Tooltip content={$i18n.t('Record voice')}>
 										<button

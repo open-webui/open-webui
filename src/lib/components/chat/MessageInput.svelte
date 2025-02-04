@@ -868,7 +868,7 @@
 										<textarea
 											id="chat-input"
 											bind:this={chatInputElement}
-											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-none w-full pt-3 px-1 rounded-xl resize-none h-[48px]"
+											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-none w-full pt-3 pb-1 px-1 rounded-xl resize-none"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 											bind:value={prompt}
 											on:keypress={(e) => {
@@ -1059,8 +1059,8 @@
 									{/if}
 								</div>
 
-								<div class=" flex justify-between">
-									<div class="ml-1 self-end mb-1.5 gap-0.5 flex items-center">
+								<div class=" flex justify-between mb-2">
+									<div class="ml-1 self-end gap-0.5 flex items-center">
 										<InputMenu
 											bind:selectedToolIds
 											{screenCaptureHandler}
@@ -1170,7 +1170,7 @@
 										{/if}
 									</div>
 
-									<div class="self-end mb-1.5 flex space-x-1 mr-1">
+									<div class="self-end flex space-x-1 mr-1">
 										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
 											<Tooltip content={$i18n.t('Record voice')}>
 												<button
