@@ -1266,7 +1266,6 @@
 		}
 
 		prompt = '';
-		await tick();
 
 		// Reset chat input textarea
 		const chatInputElement = document.getElementById('chat-input');
@@ -1307,9 +1306,6 @@
 		if (messages.length !== 0) {
 			history.messages[messages.at(-1).id].childrenIds.push(userMessageId);
 		}
-
-		// Wait until history/message have been updated
-		await tick();
 
 		// focus on chat input
 		const chatInput = document.getElementById('chat-input');
