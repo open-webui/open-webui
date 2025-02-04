@@ -68,6 +68,12 @@ Thank you all very much for showing interest in this project
 
 Please refer to the original instructions on how to build the app (or docker image) from source in order to get this version working instead of the regular version.
 
+Otherwise, here's the quickest way IMO:
+
+1. Create a Conda environment with Python 3.11 or 3.10, then activate it
+2. In the main folder, run `npm install --no-package-lock`, then `npm install @floating-ui/utils`, and finally `npm run build`
+3. Change directory to the 'backend' folder and run `pip install -r requirements.txt` and then run `start.sh`
+
 # Open WebUI 👋
 
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
