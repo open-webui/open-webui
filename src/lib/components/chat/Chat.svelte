@@ -1399,6 +1399,8 @@
 		// Save chat after all messages have been created
 		await saveChatHandler(_chatId);
 
+		await tick();
+
 		await Promise.all(
 			selectedModelIds.map(async (modelId, _modelIdx) => {
 				console.log('modelId', modelId);

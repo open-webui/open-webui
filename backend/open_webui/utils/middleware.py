@@ -1090,6 +1090,14 @@ async def process_chat_response(
         task_id = str(uuid4())  # Create a unique task ID.
         model_id = form_data.get("model", "")
 
+        Chats.upsert_message_to_chat_by_id_and_message_id(
+            metadata["chat_id"],
+            metadata["message_id"],
+            {
+                "model": model_id,
+            },
+        )
+
         # Handle as a background task
         async def post_response_handler(response, events):
             def serialize_content_blocks(content_blocks, raw=False):
