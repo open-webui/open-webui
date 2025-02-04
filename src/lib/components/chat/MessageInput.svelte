@@ -39,6 +39,7 @@
 	import { error, text } from '@sveltejs/kit';
 	import Image from '../common/Image.svelte';
 	import { deleteFileById } from '$lib/apis/files';
+	import GlobeAlt from '../icons/GlobeAlt.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -386,7 +387,7 @@
 				</div>
 
 				<div class="w-full relative">
-					{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || webSearchEnabled || imageGenerationEnabled || codeInterpreterEnabled}
+					{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || imageGenerationEnabled || codeInterpreterEnabled}
 						<div
 							class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10"
 						>
@@ -450,22 +451,6 @@
 											</span>
 										</div>
 										<div class=" translate-y-[0.5px]">{$i18n.t('Code interpreter')}</div>
-									</div>
-								</div>
-							{/if}
-
-							{#if webSearchEnabled}
-								<div class="flex items-center justify-between w-full">
-									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
-										<div class="pl-1">
-											<span class="relative flex size-2">
-												<span
-													class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
-												/>
-												<span class="relative inline-flex rounded-full size-2 bg-green-500" />
-											</span>
-										</div>
-										<div class=" translate-y-[0.5px]">{$i18n.t('Search the web')}</div>
 									</div>
 								</div>
 							{/if}
@@ -676,7 +661,7 @@
 								<div class="px-3">
 									{#if $settings?.richTextInput ?? true}
 										<div
-											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full pt-2.5 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
+											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full pt-2.5 pb-1 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
 										>
 											<RichTextInput
 												bind:this={chatInputElement}
@@ -1072,7 +1057,7 @@
 								</div>
 
 								<div class=" flex justify-between">
-									<div class="ml-1 self-end mb-1.5 flex space-x-1">
+									<div class="ml-1 self-end mb-1.5 gap-0.5 flex items-center">
 										<InputMenu
 											bind:imageGenerationEnabled
 											bind:codeInterpreterEnabled
@@ -1110,7 +1095,7 @@
 											}}
 										>
 											<button
-												class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
+												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-none focus:outline-none"
 												type="button"
 												aria-label="More"
 											>
@@ -1126,6 +1111,24 @@
 												</svg>
 											</button>
 										</InputMenu>
+
+										{#if $config?.features?.enable_web_search}
+											<Tooltip content={$i18n.t('Search the internet')} placement="top">
+												<button
+													on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
+													type="button"
+													class="px-1.5 sm:px-2.5 py-1.5 flex items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none gap-1 max-w-full overflow-hidden {webSearchEnabled
+														? 'bg-blue-100 text-blue-500 border-slate-300'
+														: 'bg-transparent text-gray-600 border-gray-200 hover:bg-gray-100'}"
+												>
+													<GlobeAlt className="size-5" strokeWidth="1.75" />
+													<span
+														class="hidden sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+														>{$i18n.t('Web Search')}</span
+													>
+												</button>
+											</Tooltip>
+										{/if}
 									</div>
 
 									<div class="self-end mb-1.5 flex space-x-1 mr-1">
@@ -1183,7 +1186,9 @@
 												<div class=" flex items-center">
 													<Tooltip content={$i18n.t('Call')}>
 														<button
-															class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-2 self-center"
+															class=" {webSearchEnabled
+																? 'bg-blue-500 text-white hover:bg-blue-400 dark:bg-blue-100 dark:text-blue-900 dark:hover:bg-blue-50'
+																: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100'} transition rounded-full p-1.5 self-center"
 															type="button"
 															on:click={async () => {
 																if (selectedModels.length > 1) {
@@ -1236,7 +1241,9 @@
 														<button
 															id="send-message-button"
 															class="{prompt !== ''
-																? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+																? webSearchEnabled
+																	? 'bg-blue-500 text-white hover:bg-blue-400 dark:bg-blue-100 dark:text-blue-900 dark:hover:bg-blue-50'
+																	: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
 															type="submit"
 															disabled={prompt === ''}
@@ -1245,7 +1252,7 @@
 																xmlns="http://www.w3.org/2000/svg"
 																viewBox="0 0 16 16"
 																fill="currentColor"
-																class="size-6"
+																class="size-5"
 															>
 																<path
 																	fill-rule="evenodd"

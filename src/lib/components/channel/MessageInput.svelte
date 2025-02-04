@@ -513,7 +513,7 @@
 									}}
 								>
 									<button
-										class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
+										class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-none focus:outline-none"
 										type="button"
 										aria-label="More"
 									>
@@ -593,7 +593,7 @@
 													xmlns="http://www.w3.org/2000/svg"
 													viewBox="0 0 16 16"
 													fill="currentColor"
-													class="size-6"
+													class="size-5"
 												>
 													<path
 														fill-rule="evenodd"
