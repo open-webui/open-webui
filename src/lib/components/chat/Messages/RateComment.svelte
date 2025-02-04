@@ -110,7 +110,7 @@
 {/if}
 
 <div
-	class=" my-2.5 rounded-xl px-4 py-3 border border-gray-50 dark:border-gray-850"
+	class="relative my-2.5 rounded-xl px-4 py-3 border border-gray-50 dark:border-gray-850 bg-white dark:bg-gray-900"
 	id="message-feedback-{message.id}"
 >
 	<div class="flex justify-between items-center">

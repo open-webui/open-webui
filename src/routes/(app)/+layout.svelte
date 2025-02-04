@@ -232,7 +232,7 @@ const checkForVersionUpdates = async () => {
 };
 </script>
 
-<div class="app relative h-screen max-h-[100dvh] overflow-hidden">
+<div class="app relative h-screen overflow-hidden">
 	<Header />
 	
 	<SettingsModal bind:show={$showSettings} />
@@ -251,7 +251,7 @@ const checkForVersionUpdates = async () => {
 	{/if}
 
 	<main
-		class="text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-full pt-[50px] overflow-auto w-full"
+		class="text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-full pt-[5vh] overflow-auto w-full relative z-0"
 	>
 		{#if !loaded}
 			<div class="flex items-center justify-center h-full">
