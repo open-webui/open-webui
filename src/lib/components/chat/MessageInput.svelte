@@ -1133,7 +1133,7 @@
 											{/if}
 
 											{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
-												<Tooltip content={$i18n.t('Image generation')} placement="top">
+												<Tooltip content={$i18n.t('Generate an image')} placement="top">
 													<button
 														on:click|preventDefault={() =>
 															(imageGenerationEnabled = !imageGenerationEnabled)}
@@ -1151,7 +1151,7 @@
 												</Tooltip>
 											{/if}
 
-											<Tooltip content={$i18n.t('Code Intepreter')} placement="top">
+											<Tooltip content={$i18n.t('Executes code for analysis')} placement="top">
 												<button
 													on:click|preventDefault={() =>
 														(codeInterpreterEnabled = !codeInterpreterEnabled)}
