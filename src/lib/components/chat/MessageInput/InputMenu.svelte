@@ -25,26 +25,12 @@
 
 	export let selectedToolIds: string[] = [];
 
-	export let webSearchEnabled: boolean;
-	export let imageGenerationEnabled: boolean;
 	export let codeInterpreterEnabled: boolean;
 
 	export let onClose: Function;
 
 	let tools = {};
 	let show = false;
-
-	let showImageGeneration = false;
-
-	$: showImageGeneration =
-		$config?.features?.enable_image_generation &&
-		($user.role === 'admin' || $user?.permissions?.features?.image_generation);
-
-	let showWebSearch = false;
-
-	$: showWebSearch =
-		$config?.features?.enable_web_search &&
-		($user.role === 'admin' || $user?.permissions?.features?.web_search);
 
 	$: if (show) {
 		init();
@@ -131,56 +117,6 @@
 					{/each}
 				</div>
 
-				<hr class="border-black/5 dark:border-white/5 my-1" />
-			{/if}
-
-			{#if showImageGeneration}
-				<button
-					class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
-					on:click={() => {
-						imageGenerationEnabled = !imageGenerationEnabled;
-					}}
-				>
-					<div class="flex-1 flex items-center gap-2">
-						<PhotoSolid />
-						<div class=" line-clamp-1">{$i18n.t('Image')}</div>
-					</div>
-
-					<Switch state={imageGenerationEnabled} />
-				</button>
-			{/if}
-
-			<button
-				class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
-				on:click={() => {
-					codeInterpreterEnabled = !codeInterpreterEnabled;
-				}}
-			>
-				<div class="flex-1 flex items-center gap-2">
-					<CommandLineSolid />
-					<div class=" line-clamp-1">{$i18n.t('Code Intepreter')}</div>
-				</div>
-
-				<Switch state={codeInterpreterEnabled} />
-			</button>
-
-			{#if showWebSearch}
-				<button
-					class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
-					on:click={() => {
-						webSearchEnabled = !webSearchEnabled;
-					}}
-				>
-					<div class="flex-1 flex items-center gap-2">
-						<GlobeAltSolid />
-						<div class=" line-clamp-1">{$i18n.t('Web Search')}</div>
-					</div>
-
-					<Switch state={webSearchEnabled} />
-				</button>
-			{/if}
-
-			{#if showImageGeneration || showWebSearch}
 				<hr class="border-black/5 dark:border-white/5 my-1" />
 			{/if}
 

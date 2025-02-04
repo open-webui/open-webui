@@ -22,24 +22,27 @@
 	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import { uploadFile } from '$lib/apis/files';
-	import { getTools } from '$lib/apis/tools';
+	import { generateAutoCompletion } from '$lib/apis';
+	import { deleteFileById } from '$lib/apis/files';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
-	import Tooltip from '../common/Tooltip.svelte';
 	import InputMenu from './MessageInput/InputMenu.svelte';
-	import Headphone from '../icons/Headphone.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
-	import FileItem from '../common/FileItem.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import Commands from './MessageInput/Commands.svelte';
-	import XMark from '../icons/XMark.svelte';
+
 	import RichTextInput from '../common/RichTextInput.svelte';
-	import { generateAutoCompletion } from '$lib/apis';
-	import { error, text } from '@sveltejs/kit';
+	import Tooltip from '../common/Tooltip.svelte';
+	import FileItem from '../common/FileItem.svelte';
 	import Image from '../common/Image.svelte';
-	import { deleteFileById } from '$lib/apis/files';
+
+	import XMark from '../icons/XMark.svelte';
+	import Headphone from '../icons/Headphone.svelte';
 	import GlobeAlt from '../icons/GlobeAlt.svelte';
+	import PhotoSolid from '../icons/PhotoSolid.svelte';
+	import Photo from '../icons/Photo.svelte';
+	import CommandLine from '../icons/CommandLine.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -1112,19 +1115,57 @@
 											</button>
 										</InputMenu>
 
-										{#if $config?.features?.enable_web_search}
-											<Tooltip content={$i18n.t('Search the internet')} placement="top">
+										{#if $_user}
+											{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
+												<Tooltip content={$i18n.t('Search the internet')} placement="top">
+													<button
+														on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
+														type="button"
+														class="px-1.5 sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {webSearchEnabled
+															? 'bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-400'
+															: 'bg-transparent text-gray-600 dark:text-gray-400 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+													>
+														<GlobeAlt className="size-5" strokeWidth="1.75" />
+														<span
+															class="hidden sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+															>{$i18n.t('Web Search')}</span
+														>
+													</button>
+												</Tooltip>
+											{/if}
+
+											{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
+												<Tooltip content={$i18n.t('Image generation')} placement="top">
+													<button
+														on:click|preventDefault={() =>
+															(imageGenerationEnabled = !imageGenerationEnabled)}
+														type="button"
+														class="px-1.5 sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {imageGenerationEnabled
+															? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
+															: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+													>
+														<Photo className="size-5" strokeWidth="1.75" />
+														<span
+															class="hidden sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+															>{$i18n.t('Image')}</span
+														>
+													</button>
+												</Tooltip>
+											{/if}
+
+											<Tooltip content={$i18n.t('Code Intepreter')} placement="top">
 												<button
-													on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
+													on:click|preventDefault={() =>
+														(codeInterpreterEnabled = !codeInterpreterEnabled)}
 													type="button"
-													class="px-1.5 sm:px-2.5 py-1.5 flex items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none gap-1 max-w-full overflow-hidden {webSearchEnabled
-														? 'bg-blue-100 text-blue-500 border-slate-300'
-														: 'bg-transparent text-gray-600 border-gray-200 hover:bg-gray-100'}"
+													class="px-1.5 sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
+														? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
+														: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
 												>
-													<GlobeAlt className="size-5" strokeWidth="1.75" />
+													<CommandLine className="size-5" strokeWidth="1.75" />
 													<span
 														class="hidden sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
-														>{$i18n.t('Web Search')}</span
+														>{$i18n.t('Code Intepreter')}</span
 													>
 												</button>
 											</Tooltip>
@@ -1187,7 +1228,7 @@
 													<Tooltip content={$i18n.t('Call')}>
 														<button
 															class=" {webSearchEnabled
-																? 'bg-blue-500 text-white hover:bg-blue-400 dark:bg-blue-100 dark:text-blue-900 dark:hover:bg-blue-50'
+																? 'bg-blue-500 text-white hover:bg-blue-400 '
 																: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100'} transition rounded-full p-1.5 self-center"
 															type="button"
 															on:click={async () => {
@@ -1242,7 +1283,7 @@
 															id="send-message-button"
 															class="{prompt !== ''
 																? webSearchEnabled
-																	? 'bg-blue-500 text-white hover:bg-blue-400 dark:bg-blue-100 dark:text-blue-900 dark:hover:bg-blue-50'
+																	? 'bg-blue-500 text-white hover:bg-blue-400 '
 																	: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
 															type="submit"
