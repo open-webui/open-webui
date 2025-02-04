@@ -656,7 +656,7 @@
 									</div>
 								{/if}
 
-								<div class="fr-background-contrast--grey flex rounded-full">
+								<div class="fr-background-contrast--grey flex rounded-md">
 									<div class="ml-1 self-end mb-1.5 flex space-x-1">
 										<InputMenu
 											bind:imageGenerationEnabled
