@@ -1388,6 +1388,7 @@ async def process_chat_response(
                     retries += 1
                     log.debug(f"Attempt count: {retries}")
 
+                    output = ""
                     try:
                         if content_blocks[-1]["attributes"].get("type") == "code":
                             output = await event_caller(
