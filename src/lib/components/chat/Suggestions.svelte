@@ -2,6 +2,8 @@
 	import Fuse from 'fuse.js';
 	import Bolt from '$lib/components/icons/Bolt.svelte';
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
+	import { WEBUI_NAME } from '$lib/stores';
+	import { WEBUI_VERSION } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -11,9 +13,6 @@
 	export let inputValue = '';
 
 	let sortedPrompts = [];
-	onMount(() => {
-		sortedPrompts = [...(suggestionPrompts ?? [])].sort(() => Math.random() - 0.5);
-	});
 
 	const fuseOptions = {
 		keys: ['content', 'title'],
@@ -22,29 +21,13 @@
 
 	let fuse;
 	let filteredPrompts = [];
-	let oldFilteredPrompts = [];
-
-	// This variable controls the re-rendering of the suggestions
-	let version = 0;
 
 	// Initialize Fuse
 	$: fuse = new Fuse(sortedPrompts, fuseOptions);
 
 	// Update the filteredPrompts if inputValue changes
 	// Only increase version if something wirklich geändert hat
-	$: {
-		const newFilteredPrompts = inputValue.trim()
-			? fuse.search(inputValue.trim()).map((result) => result.item)
-			: sortedPrompts;
-
-		// Compare with the oldFilteredPrompts
-		// If there's a difference, update array + version
-		if (!arraysEqual(oldFilteredPrompts, newFilteredPrompts)) {
-			filteredPrompts = newFilteredPrompts;
-			version += 1;
-		}
-		oldFilteredPrompts = newFilteredPrompts;
-	}
+	$: getFilteredPrompts(inputValue);
 
 	// Helper function to check if arrays are the same
 	// (based on unique IDs oder content)
@@ -57,21 +40,45 @@
 		}
 		return true;
 	}
+
+	const getFilteredPrompts = (inputValue) => {
+		const newFilteredPrompts = inputValue.trim()
+			? fuse.search(inputValue.trim()).map((result) => result.item)
+			: sortedPrompts;
+
+		// Compare with the oldFilteredPrompts
+		// If there's a difference, update array + version
+		if (!arraysEqual(filteredPrompts, newFilteredPrompts)) {
+			filteredPrompts = newFilteredPrompts;
+		}
+	};
+
+	onMount(() => {
+		sortedPrompts = [...(suggestionPrompts ?? [])].sort(() => Math.random() - 0.5);
+		getFilteredPrompts(inputValue);
+	});
 </script>
 
-<div
-	class="mb-1 flex gap-1 text-sm font-medium items-center text-gray-400 dark:text-gray-600"
-	style="visibility: {filteredPrompts.length > 0 ? 'visible' : 'hidden'}"
->
-	<Bolt />
-	{$i18n.t('Suggested')}
+<div class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-400 dark:text-gray-600">
+	{#if filteredPrompts.length > 0}
+		<Bolt />
+		{$i18n.t('Suggested')}
+	{:else}
+		<!-- Keine Vorschläge -->
+
+		<div
+			class="flex w-full text-center items-center justify-center self-start text-gray-400 dark:text-gray-600"
+		>
+			{$WEBUI_NAME} ‧ v{WEBUI_VERSION}
+		</div>
+	{/if}
 </div>
 
-<div class="h-40 overflow-auto scrollbar-none {className}">
+<div class="h-40 overflow-auto scrollbar-none {className} items-start">
 	{#if filteredPrompts.length > 0}
-		{#each filteredPrompts as prompt, idx ((prompt.id || prompt.content) + version)}
+		{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
 			<button
-				class="waterfall-anim flex flex-col flex-1 shrink-0 w-full justify-between
+				class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
 				       px-3 py-2 rounded-xl bg-transparent hover:bg-black/5
 				       dark:hover:bg-white/5 transition group"
 				style="animation-delay: {idx * 60}ms"
@@ -98,8 +105,6 @@
 				</div>
 			</button>
 		{/each}
-	{:else}
-		<!-- Keine Vorschläge -->
 	{/if}
 </div>
 
@@ -116,7 +121,7 @@
 		}
 	}
 
-	.waterfall-anim {
+	.waterfall {
 		opacity: 0;
 		animation-name: fadeInUp;
 		animation-duration: 200ms;
