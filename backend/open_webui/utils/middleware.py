@@ -895,7 +895,7 @@ async def process_chat_response(
         if message:
             messages = get_message_list(message_map, message.get("id"))
 
-            if tasks:
+            if tasks and messages:
                 if TASKS.TITLE_GENERATION in tasks:
                     if tasks[TASKS.TITLE_GENERATION]:
                         res = await generate_title(
@@ -1083,6 +1083,14 @@ async def process_chat_response(
     if event_emitter and event_caller:
         task_id = str(uuid4())  # Create a unique task ID.
         model_id = form_data.get("model", "")
+
+        Chats.upsert_message_to_chat_by_id_and_message_id(
+            metadata["chat_id"],
+            metadata["message_id"],
+            {
+                "model": model_id,
+            },
+        )
 
         # Handle as a background task
         async def post_response_handler(response, events):
@@ -1382,6 +1390,7 @@ async def process_chat_response(
                     retries += 1
                     log.debug(f"Attempt count: {retries}")
 
+                    output = ""
                     try:
                         if content_blocks[-1]["attributes"].get("type") == "code":
                             output = await event_caller(
