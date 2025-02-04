@@ -901,7 +901,7 @@ async def process_chat_response(
         if message:
             messages = get_message_list(message_map, message.get("id"))
 
-            if tasks:
+            if tasks and messages:
                 if TASKS.TITLE_GENERATION in tasks:
                     if tasks[TASKS.TITLE_GENERATION]:
                         res = await generate_title(
