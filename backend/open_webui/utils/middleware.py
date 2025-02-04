@@ -1120,7 +1120,7 @@ async def process_chat_response(
                             output = html.escape(json.dumps(output))
 
                             if raw:
-                                content = f'{content}<details type="code_interpreter" done="true" output="{output}">\n<summary>Analyzed</summary>\n```{lang}\n{block["content"]}\n```\n```output\n{output}\n```\n</details>\n'
+                                content = f'{content}<code_interpreter type="code" lang="{lang}">\n{block["content"]}\n</code_interpreter>\n```output\n{output}\n```\n'
                             else:
                                 content = f'{content}<details type="code_interpreter" done="true" output="{output}">\n<summary>Analyzed</summary>\n```{lang}\n{block["content"]}\n```\n</details>\n'
                         else:
@@ -1312,6 +1312,12 @@ async def process_chat_response(
                                         )
 
                                         if end:
+                                            data = {
+                                                "content": serialize_content_blocks(
+                                                    content_blocks
+                                                ),
+                                            }
+
                                             break
 
                                     if ENABLE_REALTIME_CHAT_SAVE:

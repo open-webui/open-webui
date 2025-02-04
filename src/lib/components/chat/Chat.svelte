@@ -45,7 +45,7 @@
 		promptTemplate,
 		splitStream,
 		sleep,
-		removeDetailsWithReasoning,
+		removeDetails,
 		getPromptVariables
 	} from '$lib/utils';
 
@@ -1338,8 +1338,17 @@
 		parentId: string,
 		{ modelId = null, modelIdx = null, newChat = false } = {}
 	) => {
-		const _chatId = JSON.parse(JSON.stringify($chatId));
+		// If modelId is provided, use it, else use selected model
+		let selectedModelIds = modelId
+			? [modelId]
+			: atSelectedModel !== undefined
+				? [atSelectedModel.id]
+				: selectedModels;
 
+		// Create response messages for each selected model
+		const responseMessageIds: Record<PropertyKey, string> = {};
+
+		const _chatId = JSON.parse(JSON.stringify($chatId));
 		// Create new chat if newChat is true and first user message
 		if (
 			newChat &&
@@ -1351,15 +1360,6 @@
 			await saveChatHandler(_chatId);
 		}
 
-		// If modelId is provided, use it, else use selected model
-		let selectedModelIds = modelId
-			? [modelId]
-			: atSelectedModel !== undefined
-				? [atSelectedModel.id]
-				: selectedModels;
-
-		// Create response messages for each selected model
-		const responseMessageIds: Record<PropertyKey, string> = {};
 		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
 			const model = $models.filter((m) => m.id === modelId).at(0);
 
@@ -1515,7 +1515,7 @@
 				: undefined,
 			...createMessagesList(history, responseMessageId).map((message) => ({
 				...message,
-				content: removeDetailsWithReasoning(message.content)
+				content: removeDetails(message.content, ['reasoning', 'code_interpreter'])
 			}))
 		]
 			.filter((message) => message?.content?.trim())
