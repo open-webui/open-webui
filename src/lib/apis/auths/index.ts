@@ -1,5 +1,9 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
+export const redirectWebAuth = () => {
+	window.location = `https://webauth.arizona.edu/webauth/login?service=${WEBUI_API_BASE_URL}/auths/signin?redirect_url=${window.location.toString()}`;
+};
+
 export const getAdminDetails = async (token: string) => {
 	let error = null;
 
@@ -243,38 +247,6 @@ export const updateLdapServer = async (token: string = '', body: object) => {
 		})
 		.catch((err) => {
 			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const userSignIn = async (email: string, password: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signin`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json'
-		},
-		credentials: 'include',
-		body: JSON.stringify({
-			email: email,
-			password: password
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-
 			error = err.detail;
 			return null;
 		});

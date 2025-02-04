@@ -49,6 +49,9 @@ ARG GID
 ENV ENV=prod \
     PORT=8080 \
     # pass build args to the build
+    USER_PERMISSIONS_CHAT_DELETE=False \
+    ENABLE_OAUTH_SIGNUP=True \
+    ENABLE_API_KEY=False \
     USE_OLLAMA_DOCKER=${USE_OLLAMA} \
     USE_CUDA_DOCKER=${USE_CUDA} \
     USE_CUDA_DOCKER_VER=${USE_CUDA_VER} \
