@@ -1440,7 +1440,7 @@
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();
-					await sendPromptSocket(model, responseMessageId, _chatId);
+					await sendPromptSocket(history, model, responseMessageId, _chatId);
 
 					if (chatEventEmitter) clearInterval(chatEventEmitter);
 				} else {
@@ -1453,7 +1453,7 @@
 		chats.set(await getChatList(localStorage.token, $currentChatPage));
 	};
 
-	const sendPromptSocket = async (model, responseMessageId, _chatId) => {
+	const sendPromptSocket = async (history, model, responseMessageId, _chatId) => {
 		const responseMessage = history.messages[responseMessageId];
 		const userMessage = history.messages[responseMessage.parentId];
 
@@ -1738,7 +1738,7 @@
 				.at(0);
 
 			if (model) {
-				await sendPromptSocket(model, responseMessage.id, _chatId);
+				await sendPromptSocket(history, model, responseMessage.id, _chatId);
 			}
 		}
 	};
