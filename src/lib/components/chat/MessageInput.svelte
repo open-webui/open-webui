@@ -589,7 +589,7 @@
 								dir={$settings?.chatDirection ?? 'LTR'}
 							>
 								{#if files.length > 0}
-									<div class="mx-2 mt-2.5 flex items-center flex-wrap gap-2">
+									<div class="mx-2 mt-2.5 -mb-1 flex items-center flex-wrap gap-2">
 										{#each files as file, fileIdx}
 											{#if file.type === 'image'}
 												<div class=" relative group">
@@ -680,7 +680,7 @@
 								<div class="px-2.5">
 									{#if $settings?.richTextInput ?? true}
 										<div
-											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full pt-2.5 pb-1 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
+											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full pt-3 pb-1.5 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
 										>
 											<RichTextInput
 												bind:this={chatInputElement}
@@ -884,7 +884,7 @@
 										<textarea
 											id="chat-input"
 											bind:this={chatInputElement}
-											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-none w-full pt-3 pb-1 px-1 rounded-xl resize-none"
+											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-none w-full pt-3 pb-1.5 px-1 rounded-xl resize-none"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 											bind:value={prompt}
 											on:keypress={(e) => {
@@ -1075,7 +1075,7 @@
 									{/if}
 								</div>
 
-								<div class=" flex justify-between mb-2">
+								<div class=" flex justify-between mb-2.5 mx-0.5">
 									<div class="ml-1 self-end gap-0.5 flex items-center">
 										<InputMenu
 											bind:selectedToolIds
