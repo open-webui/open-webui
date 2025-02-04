@@ -53,10 +53,10 @@
 		}
 	};
 
-	onMount(() => {
+	$: if (suggestionPrompts) {
 		sortedPrompts = [...(suggestionPrompts ?? [])].sort(() => Math.random() - 0.5);
 		getFilteredPrompts(inputValue);
-	});
+	}
 </script>
 
 <div class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-400 dark:text-gray-600">
