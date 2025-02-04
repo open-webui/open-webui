@@ -14,19 +14,45 @@
 	let loading = false;
 
 	let title = '';
+	let baseCommand = '';
 	let command = '';
 	let content = '';
 
 	let accessControl = null;
 
+	const generateRandomSuffix = () => {
+		const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
+		let result = '';
+		for (let i = 0; i < 5; i++) {
+			result += characters.charAt(Math.floor(Math.random() * characters.length));
+		}
+		return result;
+	};
+
+	const generateCommandString = () => {
+		if (!edit) {
+			// Add random suffix only for private prompts
+			if (accessControl !== null) {
+				return `${baseCommand}-${generateRandomSuffix()}`;
+			}
+			// For public prompts, just use the base command
+			return baseCommand;
+		}
+		return command;
+	};
+
 	$: if (!edit) {
-		command = title !== '' ? `${title.replace(/\s+/g, '-').toLowerCase()}` : '';
+		baseCommand = title !== '' ? title.replace(/\s+/g, '-').toLowerCase() : '';
+		command = baseCommand;
 	}
 
 	const submitHandler = async () => {
 		loading = true;
+
+		// Generate final command
+		command = generateCommandString();
+
 		// this makes user 'private' by default in Prompts edit/create
-		// eliminating the need to interact with access control modal
 		if ($user?.role === 'user') {
 			accessControl = {
 				read: {
@@ -69,7 +95,8 @@
 			title = prompt.title;
 			await tick();
 
-			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
+			baseCommand = command =
+				prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
 			content = prompt.content;
 
 			accessControl = prompt?.access_control ?? null;
