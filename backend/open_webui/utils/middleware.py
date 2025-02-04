@@ -1107,9 +1107,15 @@ async def process_chat_response(
                         reasoning_duration = block.get("duration", None)
 
                         if reasoning_duration:
-                            content = f'{content}<details type="reasoning" done="true" duration="{reasoning_duration}">\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_display_content}\n</details>\n'
+                            if raw:
+                                content = f'{content}<{block["tag"]}>{block["content"]}</{block["tag"]}>\n'
+                            else:
+                                content = f'{content}<details type="reasoning" done="true" duration="{reasoning_duration}">\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_display_content}\n</details>\n'
                         else:
-                            content = f'{content}<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{reasoning_display_content}\n</details>\n'
+                            if raw:
+                                content = f'{content}<{block["tag"]}>{block["content"]}</{block["tag"]}>\n'
+                            else:
+                                content = f'{content}<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{reasoning_display_content}\n</details>\n'
 
                     elif block["type"] == "code_interpreter":
                         attributes = block.get("attributes", {})
@@ -1120,11 +1126,14 @@ async def process_chat_response(
                             output = html.escape(json.dumps(output))
 
                             if raw:
-                                content = f'{content}<details type="code_interpreter" done="true" output="{output}">\n<summary>Analyzed</summary>\n```{lang}\n{block["content"]}\n```\n```output\n{output}\n```\n</details>\n'
+                                content = f'{content}<code_interpreter type="code" lang="{lang}">\n{block["content"]}\n</code_interpreter>\n```output\n{output}\n```\n'
                             else:
                                 content = f'{content}<details type="code_interpreter" done="true" output="{output}">\n<summary>Analyzed</summary>\n```{lang}\n{block["content"]}\n```\n</details>\n'
                         else:
-                            content = f'{content}<details type="code_interpreter" done="false">\n<summary>Analyzing...</summary>\n```{lang}\n{block["content"]}\n```\n</details>\n'
+                            if raw:
+                                content = f'{content}<code_interpreter type="code" lang="{lang}">\n{block["content"]}\n</code_interpreter>\n'
+                            else:
+                                content = f'{content}<details type="code_interpreter" done="false">\n<summary>Analyzing...</summary>\n```{lang}\n{block["content"]}\n```\n</details>\n'
 
                     else:
                         block_content = str(block["content"]).strip()
@@ -1354,6 +1363,15 @@ async def process_chat_response(
 
                         if not content_blocks[-1]["content"]:
                             content_blocks.pop()
+
+                    await event_emitter(
+                        {
+                            "type": "chat:completion",
+                            "data": {
+                                "content": serialize_content_blocks(content_blocks),
+                            },
+                        }
+                    )
 
                     if response.background:
                         await response.background()
