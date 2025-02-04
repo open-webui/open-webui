@@ -15,7 +15,7 @@
 	const onSubmit = async (_prompt) => {
 		console.log(_prompt);
 		const prompt = await updatePromptByCommand(localStorage.token, _prompt).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -33,7 +33,7 @@
 				localStorage.token,
 				command.replace(/\//g, '')
 			).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			});
 

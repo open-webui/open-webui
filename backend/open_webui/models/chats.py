@@ -393,7 +393,7 @@ class ChatTable:
         limit: int = 50,
     ) -> list[ChatModel]:
         with get_db() as db:
-            query = db.query(Chat).filter_by(user_id=user_id).filter_by(folder_id=None)
+            query = db.query(Chat).filter_by(user_id=user_id)
             if not include_archived:
                 query = query.filter_by(archived=False)
 
