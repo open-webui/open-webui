@@ -100,7 +100,7 @@
 						>
 							{prompt.content}
 						</div>
-						<div class="text-xs text-gray-500 font-normal line-clamp-1">{i18n.t('Prompt')}</div>
+						<div class="text-xs text-gray-500 font-normal line-clamp-1">{$i18n.t('Prompt')}</div>
 					{/if}
 				</div>
 			</button>
