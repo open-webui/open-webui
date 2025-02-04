@@ -455,7 +455,7 @@
 
 						<div class="px-2.5">
 							<div
-								class="scrollbar-hidden font-primary text-left bg-transparent dark:text-gray-100 outline-none w-full pt-3 pb-1.5 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
+								class="scrollbar-hidden font-primary text-left bg-transparent dark:text-gray-100 outline-none w-full pt-3 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
 							>
 								<RichTextInput
 									bind:value={content}
@@ -504,7 +504,7 @@
 							</div>
 						</div>
 
-						<div class=" flex justify-between mb-2.5 mx-0.5">
+						<div class=" flex justify-between mb-2.5 mt-1.5 mx-0.5">
 							<div class="ml-1 self-end flex space-x-1">
 								<InputMenu
 									{screenCaptureHandler}
