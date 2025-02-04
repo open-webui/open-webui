@@ -1327,20 +1327,9 @@
 		{ modelId = null, modelIdx = null, newChat = false } = {}
 	) => {
 		let _chatId = JSON.parse(JSON.stringify($chatId));
+		const _history = JSON.parse(JSON.stringify(history));
 
-		// Create new chat if newChat is true and first user message
-		if (
-			newChat &&
-			history.messages[history.currentId].parentId === null &&
-			history.messages[history.currentId].role === 'user'
-		) {
-			_chatId = await initChatHandler(history);
-		} else {
-			await saveChatHandler(_chatId, history);
-		}
-
-		await tick();
-
+		const responseMessageIds: Record<PropertyKey, string> = {};
 		// If modelId is provided, use it, else use selected model
 		let selectedModelIds = modelId
 			? [modelId]
@@ -1349,7 +1338,6 @@
 				: selectedModels;
 
 		// Create response messages for each selected model
-		const responseMessageIds: Record<PropertyKey, string> = {};
 		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
 			const model = $models.filter((m) => m.id === modelId).at(0);
 
@@ -1383,6 +1371,14 @@
 
 				responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`] = responseMessageId;
 			}
+		}
+		history = history;
+
+		// Create new chat if newChat is true and first user message
+		if (newChat && _history.messages[_history.currentId].parentId === null) {
+			_chatId = await initChatHandler(_history);
+		} else {
+			await saveChatHandler(_chatId, _history);
 		}
 		await tick();
 
