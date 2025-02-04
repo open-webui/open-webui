@@ -398,7 +398,7 @@
 						dir={$settings?.chatDirection ?? 'LTR'}
 					>
 						{#if files.length > 0}
-							<div class="mx-1 mt-2.5 flex flex-wrap gap-2">
+							<div class="mx-2 mt-2.5 flex flex-wrap gap-2">
 								{#each files as file, fileIdx}
 									{#if file.type === 'image'}
 										<div class=" relative group">
