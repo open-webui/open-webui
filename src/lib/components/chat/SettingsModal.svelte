@@ -15,7 +15,6 @@
 	import Chats from './Settings/Chats.svelte';
 	import User from '../icons/User.svelte';
 	import Personalization from './Settings/Personalization.svelte';
-	import SearchInput from '../layout/Sidebar/SearchInput.svelte';
 	import Search from '../icons/Search.svelte';
 
 	const i18n = getContext('i18n');
