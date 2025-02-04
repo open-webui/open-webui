@@ -123,24 +123,24 @@
 	<div class="mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
 		{#each filteredItems as prompt}
 			<div
-				class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+				class="flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
 			>
-				<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
-					<a
-						href={$user?.role === 'admin' ||
-						(prompt?.user?.id === $user?.id &&
-							!(prompt.user.role === 'user' && prompt.access_control === null))
-							? `/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`
-							: null}
-					>
-						<div class=" flex-1 flex items-center gap-2 self-center">
-							<div class=" font-semibold line-clamp-1 capitalize">{prompt.title}</div>
-							<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
+				<a
+					class="flex flex-1 w-full"
+					href={$user?.role === 'admin' ||
+					(prompt?.user?.id === $user?.id &&
+						!(prompt.user.role === 'user' && prompt.access_control === null))
+						? `/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`
+						: null}
+				>
+					<div class="flex flex-col flex-1">
+						<div class="flex items-center gap-2">
+							<div class="font-semibold line-clamp-1 capitalize">{prompt.title}</div>
+							<div class="text-xs overflow-hidden text-ellipsis line-clamp-1">
 								{prompt.command}
 							</div>
 						</div>
-
-						<div class="text-xs px-0.5">
+						<div class="text-xs">
 							<Tooltip
 								content={prompt.access_control == null
 									? $i18n.t('Public')
@@ -161,8 +161,8 @@
 								</div>
 							</Tooltip>
 						</div>
-					</a>
-				</div>
+					</div>
+				</a>
 				<div class="flex flex-row gap-0.5 self-center">
 					{#if $user?.role === 'admin' || (prompt?.user?.id === $user?.id && !(prompt.user.role === 'user' && prompt.access_control === null))}
 						<a
