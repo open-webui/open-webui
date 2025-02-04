@@ -42,6 +42,15 @@ def validate_url(url: Union[str, Sequence[str]]):
     else:
         return False
 
+def safe_validate_urls(url: Sequence[str]) -> Sequence[str]:
+    valid_urls = []
+    for u in url:
+        try:
+            if validate_url(u):
+                valid_urls.append(u)
+        except ValueError:
+            continue
+    return valid_urls
 
 def resolve_hostname(hostname):
     # Get address information
@@ -86,11 +95,11 @@ def get_web_loader(
     verify_ssl: bool = True,
     requests_per_second: int = 2,
 ):
-    # Check if the URL is valid
-    if not validate_url(urls):
-        raise ValueError(ERROR_MESSAGES.INVALID_URL)
+    # Check if the URLs are valid
+    safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
+
     return SafeWebBaseLoader(
-        urls,
+        safe_urls,
         verify_ssl=verify_ssl,
         requests_per_second=requests_per_second,
         continue_on_failure=True,
