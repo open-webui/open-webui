@@ -15,7 +15,11 @@ from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.misc import get_last_user_message
 
 from open_webui.env import SRC_LOG_LEVELS, OFFLINE_MODE
-from open_webui.config import RAG_EMBEDDING_QUERY_PREFIX, RAG_EMBEDDING_PASSAGE_PREFIX
+from open_webui.config import (
+    RAG_EMBEDDING_QUERY_PREFIX, 
+    RAG_EMBEDDING_PASSAGE_PREFIX, 
+    RAG_EMBEDDING_PREFIX_FIELD_NAME
+)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
@@ -265,7 +269,7 @@ def get_embedding_function(
                     embeddings.extend(func(query[i : i + embedding_batch_size], prefix))
                 return embeddings
             else:
-                return func(query)
+                return func(query, prefix)
 
         return lambda query, prefix: generate_multiple(query, prefix, func)
 
@@ -421,7 +425,7 @@ def generate_openai_batch_embeddings(
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {key}",
             },
-            json={"input": texts, "model": model} if not prefix else {"input": texts, "model": model, "prefix": prefix},
+            json={"input": texts, "model": model} if not prefix else {"input": texts, "model": model, RAG_EMBEDDING_PREFIX_FIELD_NAME: prefix},
         )
         r.raise_for_status()
         data = r.json()
@@ -444,7 +448,7 @@ def generate_ollama_batch_embeddings(
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {key}",
             },
-            json={"input": texts, "model": model} if not prefix else {"input": texts, "model": model, "prefix": prefix},
+            json={"input": texts, "model": model} if not prefix else {"input": texts, "model": model, RAG_EMBEDDING_PREFIX_FIELD_NAME: prefix},
         )
         r.raise_for_status()
         data = r.json()
