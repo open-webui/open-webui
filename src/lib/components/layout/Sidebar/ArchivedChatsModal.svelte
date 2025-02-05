@@ -4,6 +4,9 @@
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 	import { getContext, createEventDispatcher } from 'svelte';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
+
+	dayjs.extend(localizedFormat);
 
 	const dispatch = createEventDispatcher();
 
@@ -159,7 +162,7 @@
 
 												<td class=" px-3 py-1 hidden md:flex h-[2.5rem]">
 													<div class="my-auto">
-														{dayjs(chat.created_at * 1000).format($i18n.t('MMMM DD, YYYY HH:mm'))}
+														{dayjs(chat.created_at * 1000).format('LLL')}
 													</div>
 												</td>
 

@@ -15,38 +15,29 @@
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 	import CameraSolid from '$lib/components/icons/CameraSolid.svelte';
 	import PhotoSolid from '$lib/components/icons/PhotoSolid.svelte';
+	import CommandLineSolid from '$lib/components/icons/CommandLineSolid.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let screenCaptureHandler: Function;
 	export let uploadFilesHandler: Function;
+	export let inputFilesHandler: Function;
+
 	export let uploadGoogleDriveHandler: Function;
 
 	export let selectedToolIds: string[] = [];
-
-	export let webSearchEnabled: boolean;
-	export let imageGenerationEnabled: boolean;
 
 	export let onClose: Function;
 
 	let tools = {};
 	let show = false;
 
-	let showImageGeneration = false;
-
-	$: showImageGeneration =
-		$config?.features?.enable_image_generation &&
-		($user.role === 'admin' || $user?.permissions?.features?.image_generation);
-
-	let showWebSearch = false;
-
-	$: showWebSearch =
-		$config?.features?.enable_web_search &&
-		($user.role === 'admin' || $user?.permissions?.features?.web_search);
-
 	$: if (show) {
 		init();
 	}
+
+	let fileUploadEnabled = true;
+	$: fileUploadEnabled = $user.role === 'admin' || $user?.permissions?.chat?.file_upload;
 
 	const init = async () => {
 		if ($_tools === null) {
@@ -62,7 +53,30 @@
 			return a;
 		}, {});
 	};
+
+	const detectMobile = () => {
+		const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+		return /android|iphone|ipad|ipod|windows phone/i.test(userAgent);
+	};
+
+	function handleFileChange(event) {
+		const inputFiles = Array.from(event.target?.files);
+		if (inputFiles && inputFiles.length > 0) {
+			console.log(inputFiles);
+			inputFilesHandler(inputFiles);
+		}
+	}
 </script>
+
+<!-- Hidden file input used to open the camera on mobile -->
+<input
+	id="camera-input"
+	type="file"
+	accept="image/*"
+	capture="environment"
+	on:change={handleFileChange}
+	style="display: none;"
+/>
 
 <Dropdown
 	bind:show
@@ -129,63 +143,51 @@
 				<hr class="border-black/5 dark:border-white/5 my-1" />
 			{/if}
 
-			{#if showImageGeneration}
-				<button
-					class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
-					on:click={() => {
-						imageGenerationEnabled = !imageGenerationEnabled;
-					}}
-				>
-					<div class="flex-1 flex items-center gap-2">
-						<PhotoSolid />
-						<div class=" line-clamp-1">{$i18n.t('Image')}</div>
-					</div>
-
-					<Switch state={imageGenerationEnabled} />
-				</button>
-			{/if}
-
-			{#if showWebSearch}
-				<button
-					class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
-					on:click={() => {
-						webSearchEnabled = !webSearchEnabled;
-					}}
-				>
-					<div class="flex-1 flex items-center gap-2">
-						<GlobeAltSolid />
-						<div class=" line-clamp-1">{$i18n.t('Web Search')}</div>
-					</div>
-
-					<Switch state={webSearchEnabled} />
-				</button>
-			{/if}
-
-			{#if showImageGeneration || showWebSearch}
-				<hr class="border-black/5 dark:border-white/5 my-1" />
-			{/if}
-
-			{#if !$mobile}
+			<Tooltip
+				content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files') : ''}
+				className="w-full"
+			>
 				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl"
+					class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl {!fileUploadEnabled
+						? 'opacity-50'
+						: ''}"
 					on:click={() => {
-						screenCaptureHandler();
+						if (fileUploadEnabled) {
+							if (!detectMobile()) {
+								screenCaptureHandler();
+							} else {
+								const cameraInputElement = document.getElementById('camera-input');
+
+								if (cameraInputElement) {
+									cameraInputElement.click();
+								}
+							}
+						}
 					}}
 				>
 					<CameraSolid />
 					<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
 				</DropdownMenu.Item>
-			{/if}
+			</Tooltip>
 
-			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
-				on:click={() => {
-					uploadFilesHandler();
-				}}
+			<Tooltip
+				content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files') : ''}
+				className="w-full"
 			>
-				<DocumentArrowUpSolid />
-				<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
-			</DropdownMenu.Item>
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl {!fileUploadEnabled
+						? 'opacity-50'
+						: ''}"
+					on:click={() => {
+						if (fileUploadEnabled) {
+							uploadFilesHandler();
+						}
+					}}
+				>
+					<DocumentArrowUpSolid />
+					<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
+				</DropdownMenu.Item>
+			</Tooltip>
 
 			{#if $config?.features?.enable_google_drive_integration}
 				<DropdownMenu.Item

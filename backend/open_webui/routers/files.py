@@ -71,7 +71,7 @@ def upload_file(
         )
 
         try:
-            process_file(request, ProcessFileForm(file_id=id))
+            process_file(request, ProcessFileForm(file_id=id), user=user)
             file_item = Files.get_file_by_id(id=id)
         except Exception as e:
             log.exception(e)
@@ -193,7 +193,9 @@ async def update_file_data_content_by_id(
     if file and (file.user_id == user.id or user.role == "admin"):
         try:
             process_file(
-                request, ProcessFileForm(file_id=id, content=form_data.content)
+                request,
+                ProcessFileForm(file_id=id, content=form_data.content),
+                user=user,
             )
             file = Files.get_file_by_id(id=id)
         except Exception as e:
