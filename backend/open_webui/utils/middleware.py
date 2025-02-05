@@ -1205,7 +1205,7 @@ async def process_chat_response(
                         block_content = str(block["content"]).strip()
                         content = f"{content}{block['type']}: {block_content}\n"
 
-                return content
+                return content.strip()
 
             def tag_content_handler(content_type, tags, content, content_blocks):
                 end_flag = False
@@ -1234,10 +1234,21 @@ async def process_chat_response(
                                 attr_content
                             )  # Extract attributes safely
 
+                            # Capture everything before and after the matched tag
+                            before_tag = content[
+                                : match.start()
+                            ]  # Content before opening tag
+                            after_tag = content[
+                                match.end() :
+                            ]  # Content after opening tag
+
                             # Remove the start tag from the currently handling text block
                             content_blocks[-1]["content"] = content_blocks[-1][
                                 "content"
                             ].replace(match.group(0), "")
+
+                            if before_tag:
+                                content_blocks[-1]["content"] = before_tag
 
                             if not content_blocks[-1]["content"]:
                                 content_blocks.pop()
@@ -1252,6 +1263,10 @@ async def process_chat_response(
                                     "started_at": time.time(),
                                 }
                             )
+
+                            if after_tag:
+                                content_blocks[-1]["content"] = after_tag
+
                             break
                 elif content_blocks[-1]["type"] == content_type:
                     tag = content_blocks[-1]["tag"]
@@ -1289,13 +1304,17 @@ async def process_chat_response(
                                 content_blocks[-1]["ended_at"]
                                 - content_blocks[-1]["started_at"]
                             )
+
                             # Reset the content_blocks by appending a new text block
-                            content_blocks.append(
-                                {
-                                    "type": "text",
-                                    "content": leftover_content,
-                                }
-                            )
+                            if content_type != "code_interpreter":
+                                if leftover_content:
+
+                                    content_blocks.append(
+                                        {
+                                            "type": "text",
+                                            "content": leftover_content,
+                                        }
+                                    )
                         else:
                             # Remove the block if content is empty
                             content_blocks.pop()
