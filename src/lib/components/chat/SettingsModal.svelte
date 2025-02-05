@@ -119,7 +119,7 @@
 				'save',
 				'interfaceoptions',
 				'interfacecustomization',
-				'alwaysonwebsearch',
+				'alwaysonwebsearch'
 			]
 		},
 		{
