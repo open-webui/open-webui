@@ -1252,6 +1252,8 @@ async def process_chat_response(
                     end_tag_pattern = rf"</{tag}>"
 
                     if re.search(end_tag_pattern, content):
+                        end_flag = True
+
                         block_content = content_blocks[-1]["content"]
                         # Strip start and end tags from the content
                         start_tag_pattern = rf"<{tag}(.*?)>"
@@ -1276,7 +1278,6 @@ async def process_chat_response(
                         print(f"leftover_content: {leftover_content}")
 
                         if block_content:
-                            end_flag = True
                             content_blocks[-1]["content"] = block_content
                             content_blocks[-1]["ended_at"] = time.time()
                             content_blocks[-1]["duration"] = int(
@@ -1290,9 +1291,7 @@ async def process_chat_response(
                                     "content": leftover_content,
                                 }
                             )
-
                         else:
-                            end_flag = True
                             # Remove the block if content is empty
                             content_blocks.pop()
 
@@ -1377,7 +1376,6 @@ async def process_chat_response(
 
                         try:
                             data = json.loads(data)
-                            print(data)
 
                             if "selected_model_id" in data:
                                 model_id = data["selected_model_id"]
