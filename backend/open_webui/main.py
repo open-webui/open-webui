@@ -889,9 +889,10 @@ async def chat_completion(
         }
         form_data["metadata"] = metadata
 
-        form_data, events = await process_chat_payload(
+        form_data, metadata, events = await process_chat_payload(
             request, form_data, metadata, user, model
         )
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -900,6 +901,7 @@ async def chat_completion(
 
     try:
         response = await chat_completion_handler(request, form_data, user)
+
         return await process_chat_response(
             request, response, form_data, user, events, metadata, tasks
         )
