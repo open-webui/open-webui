@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🌍 "Always On" Web Search Toggle**: A new option under Settings > Interface allows users to enable Web Search by default—transform Open WebUI into your go-to search engine, ensuring AI-powered results with every query.
 - **🚀 General Performance & Stability**: Significant improvements across the platform for a faster, more reliable experience.
 - **🖼️ UI/UX Enhancements**: Numerous design refinements improving readability, responsiveness, and accessibility.
-- **🌍 Improved Translations**: Chinese, Korean, French, and Serbian translations have been updated with refined terminologies for better clarity.
+- **🌍 Improved Translations**: Chinese, Korean, French, Ukrainian and Serbian translations have been updated with refined terminologies for better clarity.
 
 ### Fixed
 
