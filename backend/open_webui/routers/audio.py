@@ -40,6 +40,7 @@ from open_webui.env import (
     SRC_LOG_LEVELS,
     DEVICE_TYPE,
     ENABLE_FORWARD_USER_INFO_HEADERS,
+    ENABLE_FORWARD_USER_INFO_LITELLM_TAGS
 )
 
 
@@ -252,12 +253,25 @@ async def speech(request: Request, user=Depends(get_verified_user)):
     payload = None
     try:
         payload = json.loads(body.decode("utf-8"))
+
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
     if request.app.state.config.TTS_ENGINE == "openai":
         payload["model"] = request.app.state.config.TTS_MODEL
+        # Add tags for LiteLLM if env option is enabled
+        if ENABLE_FORWARD_USER_INFO_LITELLM_TAGS:
+            # Ensure 'metadata' dictionary exists in the payload
+            if "metadata" not in data:
+                data["metadata"] = {}
+
+            # Ensure 'tags' list exists in the 'metadata' dictionary
+            if "tags" not in data["metadata"]:
+                data["metadata"]["tags"] = []
+
+            # Add user info to the tags
+            data["metadata"]["tags"] = ["openwebui", "audio", f"{str(payload['model']).lower()}", user.email, user.name]
 
         try:
             # print(payload)
@@ -277,7 +291,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                             }
                             if ENABLE_FORWARD_USER_INFO_HEADERS
                             else {}
-                        ),
+                        )
                     },
                 ) as r:
                     r.raise_for_status()
