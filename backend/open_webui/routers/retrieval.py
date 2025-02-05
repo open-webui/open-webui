@@ -55,6 +55,7 @@ from open_webui.retrieval.web.serply import search_serply
 from open_webui.retrieval.web.serpstack import search_serpstack
 from open_webui.retrieval.web.tavily import search_tavily
 from open_webui.retrieval.web.bing import search_bing
+from open_webui.retrieval.web.exa import search_exa
 
 
 from open_webui.retrieval.utils import (
@@ -389,6 +390,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
                 "jina_api_key": request.app.state.config.JINA_API_KEY,
                 "bing_search_v7_endpoint": request.app.state.config.BING_SEARCH_V7_ENDPOINT,
                 "bing_search_v7_subscription_key": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
+                "exa_api_key": request.app.state.config.EXA_API_KEY,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             },
@@ -437,6 +439,7 @@ class WebSearchConfig(BaseModel):
     jina_api_key: Optional[str] = None
     bing_search_v7_endpoint: Optional[str] = None
     bing_search_v7_subscription_key: Optional[str] = None
+    exa_api_key: Optional[str] = None
     result_count: Optional[int] = None
     concurrent_requests: Optional[int] = None
 
@@ -543,6 +546,8 @@ async def update_rag_config(
             form_data.web.search.bing_search_v7_subscription_key
         )
 
+        request.app.state.config.EXA_API_KEY = form_data.web.search.exa_api_key
+
         request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = (
             form_data.web.search.result_count
         )
@@ -592,6 +597,7 @@ async def update_rag_config(
                 "jina_api_key": request.app.state.config.JINA_API_KEY,
                 "bing_search_v7_endpoint": request.app.state.config.BING_SEARCH_V7_ENDPOINT,
                 "bing_search_v7_subscription_key": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
+                "exa_api_key": request.app.state.config.EXA_API_KEY,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             },
@@ -661,6 +667,7 @@ def save_docs_to_vector_db(
     overwrite: bool = False,
     split: bool = True,
     add: bool = False,
+    user=None,
 ) -> bool:
     def _get_docs_info(docs: list[Document]) -> str:
         docs_info = set()
@@ -776,7 +783,7 @@ def save_docs_to_vector_db(
         )
 
         embeddings = embedding_function(
-            list(map(lambda x: x.replace("\n", " "), texts)), RAG_EMBEDDING_PASSAGE_PREFIX
+            list(map(lambda x: x.replace("\n", " "), texts)), prefix=RAG_EMBEDDING_PASSAGE_PREFIX, user=user
         )
 
         items = [
@@ -934,6 +941,7 @@ def process_file(
                     "hash": hash,
                 },
                 add=(True if form_data.collection_name else False),
+                user=user,
             )
 
             if result:
@@ -991,7 +999,7 @@ def process_text(
     text_content = form_data.content
     log.debug(f"text_content: {text_content}")
 
-    result = save_docs_to_vector_db(request, docs, collection_name)
+    result = save_docs_to_vector_db(request, docs, collection_name, user=user)
     if result:
         return {
             "status": True,
@@ -1024,7 +1032,9 @@ def process_youtube_video(
         content = " ".join([doc.page_content for doc in docs])
         log.debug(f"text_content: {content}")
 
-        save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
+        save_docs_to_vector_db(
+            request, docs, collection_name, overwrite=True, user=user
+        )
 
         return {
             "status": True,
@@ -1065,7 +1075,9 @@ def process_web(
         content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {content}")
-        save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
+        save_docs_to_vector_db(
+            request, docs, collection_name, overwrite=True, user=user
+        )
 
         return {
             "status": True,
@@ -1100,6 +1112,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
     - SERPER_API_KEY
     - SERPLY_API_KEY
     - TAVILY_API_KEY
+    - EXA_API_KEY
     - SEARCHAPI_API_KEY + SEARCHAPI_ENGINE (by default `google`)
     Args:
         query (str): The query to search for
@@ -1234,6 +1247,13 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
+    elif engine == "exa":
+        return search_exa(
+            request.app.state.config.EXA_API_KEY,
+            query,
+            request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
     else:
         raise Exception("No search engine API key found in environment variables")
 
@@ -1273,7 +1293,9 @@ def process_web_search(
             requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
         )
         docs = loader.load()
-        save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
+        save_docs_to_vector_db(
+            request, docs, collection_name, overwrite=True, user=user
+        )
 
         return {
             "status": True,
@@ -1307,7 +1329,9 @@ def query_doc_handler(
             return query_doc_with_hybrid_search(
                 collection_name=form_data.collection_name,
                 query=form_data.query,
-                embedding_function=request.app.state.EMBEDDING_FUNCTION,
+                embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(
+                    query, user=user
+                ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=request.app.state.rf,
                 r=(
@@ -1315,12 +1339,17 @@ def query_doc_handler(
                     if form_data.r
                     else request.app.state.config.RELEVANCE_THRESHOLD
                 ),
+                user=user,
             )
         else:
             return query_doc(
                 collection_name=form_data.collection_name,
-                query_embedding=request.app.state.EMBEDDING_FUNCTION(form_data.query, RAG_EMBEDDING_QUERY_PREFIX),
+                query_embedding=request.app.state.EMBEDDING_FUNCTION(
+                    form_data.query, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user
+                ),
+
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
+                user=user,
             )
     except Exception as e:
         log.exception(e)
@@ -1349,7 +1378,9 @@ def query_collection_handler(
             return query_collection_with_hybrid_search(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
-                embedding_function=request.app.state.EMBEDDING_FUNCTION,
+                embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(
+                    query, user=user
+                ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=request.app.state.rf,
                 r=(
@@ -1362,7 +1393,9 @@ def query_collection_handler(
             return query_collection(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
-                embedding_function=request.app.state.EMBEDDING_FUNCTION,
+                embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(
+                    query, user=user
+                ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
             )
 
@@ -1510,6 +1543,7 @@ def process_files_batch(
                 docs=all_docs,
                 collection_name=collection_name,
                 add=True,
+                user=user,
             )
 
             # Update all files with collection name

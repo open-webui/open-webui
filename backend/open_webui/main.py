@@ -177,6 +177,7 @@ from open_webui.config import (
     BING_SEARCH_V7_ENDPOINT,
     BING_SEARCH_V7_SUBSCRIPTION_KEY,
     BRAVE_SEARCH_API_KEY,
+    EXA_API_KEY,
     KAGI_SEARCH_API_KEY,
     MOJEEK_SEARCH_API_KEY,
     GOOGLE_PSE_API_KEY,
@@ -523,6 +524,7 @@ app.state.config.SEARCHAPI_ENGINE = SEARCHAPI_ENGINE
 app.state.config.JINA_API_KEY = JINA_API_KEY
 app.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT
 app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY
+app.state.config.EXA_API_KEY = EXA_API_KEY
 
 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
 app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
@@ -859,6 +861,7 @@ async def chat_completion(
         if model_id not in request.app.state.MODELS:
             raise Exception("Model not found")
         model = request.app.state.MODELS[model_id]
+        model_info = Models.get_model_by_id(model_id)
 
         # Check if user has access to the model
         if not BYPASS_MODEL_ACCESS_CONTROL and user.role == "user":
@@ -875,12 +878,25 @@ async def chat_completion(
             "tool_ids": form_data.get("tool_ids", None),
             "files": form_data.get("files", None),
             "features": form_data.get("features", None),
+            "variables": form_data.get("variables", None),
+            "model": model_info,
+            **(
+                {"function_calling": "native"}
+                if form_data.get("params", {}).get("function_calling") == "native"
+                or (
+                    model_info
+                    and model_info.params.model_dump().get("function_calling")
+                    == "native"
+                )
+                else {}
+            ),
         }
         form_data["metadata"] = metadata
 
-        form_data, events = await process_chat_payload(
+        form_data, metadata, events = await process_chat_payload(
             request, form_data, metadata, user, model
         )
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -889,6 +905,7 @@ async def chat_completion(
 
     try:
         response = await chat_completion_handler(request, form_data, user)
+
         return await process_chat_response(
             request, response, form_data, user, events, metadata, tasks
         )
@@ -1007,10 +1024,6 @@ async def get_app_config(request: Request):
                 else {}
             ),
         },
-        "google_drive": {
-            "client_id": GOOGLE_DRIVE_CLIENT_ID.value,
-            "api_key": GOOGLE_DRIVE_API_KEY.value,
-        },
         **(
             {
                 "default_models": app.state.config.DEFAULT_MODELS,
@@ -1030,6 +1043,10 @@ async def get_app_config(request: Request):
                     "max_count": app.state.config.FILE_MAX_COUNT,
                 },
                 "permissions": {**app.state.config.USER_PERMISSIONS},
+                "google_drive": {
+                    "client_id": GOOGLE_DRIVE_CLIENT_ID.value,
+                    "api_key": GOOGLE_DRIVE_API_KEY.value,
+                },
             }
             if user is not None
             else {}
@@ -1063,7 +1080,7 @@ async def get_app_version():
 
 
 @app.get("/api/version/updates")
-async def get_app_latest_release_version():
+async def get_app_latest_release_version(user=Depends(get_verified_user)):
     if OFFLINE_MODE:
         log.debug(
             f"Offline mode is enabled, returning current version as latest version"
