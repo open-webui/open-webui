@@ -883,7 +883,11 @@ async def chat_completion(
             **(
                 {"function_calling": "native"}
                 if form_data.get("params", {}).get("function_calling") == "native"
-                or model_info.params.model_dump().get("function_calling") == "native"
+                or (
+                    model_info
+                    and model_info.params.model_dump().get("function_calling")
+                    == "native"
+                )
                 else {}
             ),
         }

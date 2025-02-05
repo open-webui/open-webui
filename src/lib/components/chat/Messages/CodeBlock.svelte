@@ -132,7 +132,8 @@
 			code.includes('seaborn') ? 'seaborn' : null,
 			code.includes('sympy') ? 'sympy' : null,
 			code.includes('tiktoken') ? 'tiktoken' : null,
-			code.includes('matplotlib') ? 'matplotlib' : null
+			code.includes('matplotlib') ? 'matplotlib' : null,
+			code.includes('pytz') ? 'pytz' : null
 		].filter(Boolean);
 
 		console.log(packages);

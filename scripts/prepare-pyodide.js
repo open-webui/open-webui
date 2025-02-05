@@ -11,7 +11,8 @@ const packages = [
 	'regex',
 	'sympy',
 	'tiktoken',
-	'seaborn'
+	'seaborn',
+	'pytz'
 ];
 
 import { loadPyodide } from 'pyodide';
