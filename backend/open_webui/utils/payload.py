@@ -154,6 +154,9 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     )
     ollama_payload["stream"] = openai_payload.get("stream", False)
 
+    if "tools" in openai_payload:
+        ollama_payload["tools"] = openai_payload["tools"]
+
     if "format" in openai_payload:
         ollama_payload["format"] = openai_payload["format"]
 
