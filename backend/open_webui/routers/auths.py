@@ -164,7 +164,7 @@ async def update_password(
 ############################
 # LDAP Authentication
 ############################
-@router.post("/ldap", response_model=SigninResponse)
+@router.post("/ldap", response_model=SessionUserResponse)
 async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
     ENABLE_LDAP = request.app.state.config.ENABLE_LDAP
     LDAP_SERVER_LABEL = request.app.state.config.LDAP_SERVER_LABEL
@@ -288,6 +288,10 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     httponly=True,  # Ensures the cookie is not accessible via JavaScript
                 )
 
+                user_permissions = get_permissions(
+                    user.id, request.app.state.config.USER_PERMISSIONS
+                )
+
                 return {
                     "token": token,
                     "token_type": "Bearer",
@@ -296,6 +300,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     "name": user.name,
                     "role": user.role,
                     "profile_image_url": user.profile_image_url,
+                    "permissions": user_permissions,
                 }
             else:
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)

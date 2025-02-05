@@ -16,9 +16,9 @@
 	import Markdown from './Markdown.svelte';
 	import Name from './Name.svelte';
 	import Skeleton from './Skeleton.svelte';
-    import localizedFormat from 'dayjs/plugin/localizedFormat';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	const i18n = getContext('i18n');
-    dayjs.extend(localizedFormat);
+	dayjs.extend(localizedFormat);
 
 	export let chatId;
 	export let history;
@@ -34,6 +34,8 @@
 	export let actionMessage: Function;
 
 	export let submitMessage: Function;
+	export let deleteMessage: Function;
+
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
 	export let mergeResponses: Function;
@@ -228,6 +230,7 @@
 									{editMessage}
 									{saveMessage}
 									{rateMessage}
+									{deleteMessage}
 									{actionMessage}
 									{submitMessage}
 									{continueResponse}
