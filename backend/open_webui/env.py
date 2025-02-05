@@ -210,6 +210,16 @@ ENABLE_FORWARD_USER_INFO_HEADERS = (
 
 
 ####################################
+# ENABLE_FORWARD_USER_INFO_LITELLM_TAGS
+####################################
+
+
+ENABLE_FORWARD_USER_INFO_LITELLM_TAGS = (
+    os.environ.get("ENABLE_FORWARD_USER_INFO_LITELLM_TAGS", "False").lower() == "true"
+)
+
+
+####################################
 # WEBUI_BUILD_HASH
 ####################################
 
@@ -417,3 +427,4 @@ OFFLINE_MODE = os.environ.get("OFFLINE_MODE", "false").lower() == "true"
 
 if OFFLINE_MODE:
     os.environ["HF_HUB_OFFLINE"] = "1"
+
