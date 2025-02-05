@@ -1213,6 +1213,8 @@ async def process_chat_response(
                 def extract_attributes(tag_content):
                     """Extract attributes from a tag if they exist."""
                     attributes = {}
+                    if not tag_content:  # Ensure tag_content is not None
+                        return attributes
                     # Match attributes in the format: key="value" (ignores single quotes for simplicity)
                     matches = re.findall(r'(\w+)\s*=\s*"([^"]+)"', tag_content)
                     for key, value in matches:
@@ -1222,11 +1224,16 @@ async def process_chat_response(
                 if content_blocks[-1]["type"] == "text":
                     for tag in tags:
                         # Match start tag e.g., <tag> or <tag attr="value">
-                        start_tag_pattern = rf"<{tag}(.*?)>"
+                        start_tag_pattern = rf"<{tag}(\s.*?)?>"
                         match = re.search(start_tag_pattern, content)
                         if match:
-                            # Extract attributes in the tag (if present)
-                            attributes = extract_attributes(match.group(1))
+                            attr_content = (
+                                match.group(1) if match.group(1) else ""
+                            )  # Ensure it's not None
+                            attributes = extract_attributes(
+                                attr_content
+                            )  # Extract attributes safely
+
                             # Remove the start tag from the currently handling text block
                             content_blocks[-1]["content"] = content_blocks[-1][
                                 "content"
@@ -1251,6 +1258,7 @@ async def process_chat_response(
                     # Match end tag e.g., </tag>
                     end_tag_pattern = rf"</{tag}>"
 
+                    # Check if the content has the end tag
                     if re.search(end_tag_pattern, content):
                         end_flag = True
 
@@ -1273,9 +1281,6 @@ async def process_chat_response(
                         leftover_content = (
                             split_content[1].strip() if len(split_content) > 1 else ""
                         )
-
-                        print(f"block_content: {block_content}")
-                        print(f"leftover_content: {leftover_content}")
 
                         if block_content:
                             content_blocks[-1]["content"] = block_content
@@ -1332,7 +1337,14 @@ async def process_chat_response(
                 "code_interpreter", False
             )
 
-            reasoning_tags = ["think", "reason", "reasoning", "thought", "Thought"]
+            reasoning_tags = [
+                "think",
+                "thinking",
+                "reason",
+                "reasoning",
+                "thought",
+                "Thought",
+            ]
             code_interpreter_tags = ["code_interpreter"]
 
             try:
