@@ -861,6 +861,7 @@ async def chat_completion(
         if model_id not in request.app.state.MODELS:
             raise Exception("Model not found")
         model = request.app.state.MODELS[model_id]
+        model_info = Models.get_model_by_id(model_id)
 
         # Check if user has access to the model
         if not BYPASS_MODEL_ACCESS_CONTROL and user.role == "user":
@@ -878,6 +879,13 @@ async def chat_completion(
             "files": form_data.get("files", None),
             "features": form_data.get("features", None),
             "variables": form_data.get("variables", None),
+            "model": model_info,
+            **(
+                {"function_calling": "native"}
+                if form_data.get("params", {}).get("function_calling") == "native"
+                or model_info.params.model_dump().get("function_calling") == "native"
+                else {}
+            ),
         }
         form_data["metadata"] = metadata
 

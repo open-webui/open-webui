@@ -702,6 +702,7 @@ def apply_params_to_form_data(form_data, model):
 
 
 async def process_chat_payload(request, form_data, metadata, user, model):
+
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
 
@@ -808,13 +809,15 @@ async def process_chat_payload(request, form_data, metadata, user, model):
     }
     form_data["metadata"] = metadata
 
-    try:
-        form_data, flags = await chat_completion_tools_handler(
-            request, form_data, user, models, extra_params
-        )
-        sources.extend(flags.get("sources", []))
-    except Exception as e:
-        log.exception(e)
+    if not form_data["metadata"].get("function_calling") == "native":
+        # If the function calling is not native, then call the tools function calling handler
+        try:
+            form_data, flags = await chat_completion_tools_handler(
+                request, form_data, user, models, extra_params
+            )
+            sources.extend(flags.get("sources", []))
+        except Exception as e:
+            log.exception(e)
 
     try:
         form_data, flags = await chat_completion_files_handler(request, form_data, user)
