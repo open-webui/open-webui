@@ -96,6 +96,7 @@
 				{rateMessage}
 				{actionMessage}
 				{submitMessage}
+				{deleteMessage}
 				{continueResponse}
 				{regenerateResponse}
 				{mergeResponses}
