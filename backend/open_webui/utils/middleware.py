@@ -12,6 +12,7 @@ import json
 import html
 import inspect
 import re
+import ast
 
 from uuid import uuid4
 from concurrent.futures import ThreadPoolExecutor
@@ -1498,12 +1499,14 @@ async def process_chat_response(
 
                     results = []
                     for tool_call in response_tool_calls:
+                        print("\n\n" + str(tool_call) + "\n\n")
                         tool_call_id = tool_call.get("id", "")
                         tool_name = tool_call.get("function", {}).get("name", "")
 
                         tool_function_params = {}
                         try:
-                            tool_function_params = json.loads(
+                            # json.loads cannot be used because some models do not produce valid JSON
+                            tool_function_params = ast.literal_eval(
                                 tool_call.get("function", {}).get("arguments", "{}")
                             )
                         except Exception as e:
