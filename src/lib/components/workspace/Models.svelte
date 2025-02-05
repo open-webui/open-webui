@@ -67,11 +67,11 @@ $: if (models) {
 
 let searchValue = "";
 
-const deleteModelHandler = async (model) => {
-	const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
-		toast.error(e);
-		return null;
-	});
+	const deleteModelHandler = async (model) => {
+		const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
+			toast.error(`${e}`);
+			return null;
+		});
 
 	if (res) {
 		toast.success($i18n.t(`Deleted {{name}}`, { name: model.id }));

@@ -93,7 +93,13 @@ const editChatTitle = async (id, title) => {
 };
 
 	const cloneChatHandler = async (id) => {
-		const res = await cloneChatById(localStorage.token, id).catch((error) => {
+		const res = await cloneChatById(
+			localStorage.token,
+			id,
+			$i18n.t('Clone of {{TITLE}}', {
+				TITLE: title
+			})
+		).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});

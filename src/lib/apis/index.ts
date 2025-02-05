@@ -658,13 +658,25 @@ export const getChangelog = async () => {
 	return resJson;
 };
 
-export const getVersionUpdates = async () => {
-	const error = null;
+export const getVersionUpdates = async (token: string) => {
+	let error = null;
 
 	const res = await fetch(`${WEBUI_BASE_URL}/api/version/updates`, {
 		method: 'GET',
-		headers: { 'Content-Type': 'application/json' }
-	});
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err;
+			return null;
+		});
 
 	if (error) {
 		throw error;

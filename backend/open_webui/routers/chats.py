@@ -444,15 +444,21 @@ async def pin_chat_by_id(id: str, user=Depends(get_verified_user)):
 ############################
 
 
+class CloneForm(BaseModel):
+    title: Optional[str] = None
+
+
 @router.post("/{id}/clone", response_model=Optional[ChatResponse])
-async def clone_chat_by_id(id: str, user=Depends(get_verified_user)):
+async def clone_chat_by_id(
+    form_data: CloneForm, id: str, user=Depends(get_verified_user)
+):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
         updated_chat = {
             **chat.chat,
             "originalChatId": chat.id,
             "branchPointMessageId": chat.chat["history"]["currentId"],
-            "title": f"Clone of {chat.title}",
+            "title": form_data.title if form_data.title else f"Clone of {chat.title}",
         }
 
         chat = Chats.insert_new_chat(user.id, ChatForm(**{"chat": updated_chat}))

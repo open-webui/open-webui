@@ -16,8 +16,10 @@
 	import { getUserById } from '$lib/apis/users';
 	import { getModels } from '$lib/apis';
 	import { toast } from 'svelte-sonner';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	const i18n = getContext('i18n');
+	dayjs.extend(localizedFormat);
 
 	let loaded = false;
 
@@ -138,7 +140,7 @@
 
 						<div class="flex text-sm justify-between items-center mt-1">
 							<div class="text-gray-400">
-								{dayjs(chat.chat.timestamp).format($i18n.t('MMMM DD, YYYY'))}
+								{dayjs(chat.chat.timestamp).format('LLL')}
 							</div>
 						</div>
 					</div>

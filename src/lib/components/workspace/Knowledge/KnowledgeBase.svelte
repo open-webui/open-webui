@@ -150,10 +150,9 @@ const uploadFileHandler = async (file) => {
 		}
 	}
 
-	try {
-		const uploadedFile = await uploadFile(localStorage.token, file).catch(
-			(e) => {
-				toast.error(e);
+		try {
+			const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
+				toast.error(`${e}`);
 				return null;
 			},
 		);
@@ -165,18 +164,18 @@ const uploadFileHandler = async (file) => {
 					item.id = uploadedFile.id;
 				}
 
-				// Remove temporary item id
-				delete item.itemId;
-				return item;
-			});
-			await addFileHandler(uploadedFile.id);
-		} else {
-			toast.error($i18n.t("Failed to upload file."));
+					// Remove temporary item id
+					delete item.itemId;
+					return item;
+				});
+				await addFileHandler(uploadedFile.id);
+			} else {
+				toast.error($i18n.t('Failed to upload file.'));
+			}
+		} catch (e) {
+			toast.error(`${e}`);
 		}
-	} catch (e) {
-		toast.error(e);
-	}
-};
+	};
 
 const uploadDirectoryHandler = async () => {
 	// Check if File System Access API is supported
@@ -344,12 +343,12 @@ const handleUploadError = (error) => {
 	}
 };
 
-// Helper function to maintain file paths within zip
-const syncDirectoryHandler = async () => {
-	if ((knowledge?.files ?? []).length > 0) {
-		const res = await resetKnowledgeById(localStorage.token, id).catch((e) => {
-			toast.error(e);
-		});
+	// Helper function to maintain file paths within zip
+	const syncDirectoryHandler = async () => {
+		if ((knowledge?.files ?? []).length > 0) {
+			const res = await resetKnowledgeById(localStorage.token, id).catch((e) => {
+				toast.error(`${e}`);
+			});
 
 		if (res) {
 			knowledge = res;
@@ -363,15 +362,13 @@ const syncDirectoryHandler = async () => {
 	}
 };
 
-const addFileHandler = async (fileId) => {
-	const updatedKnowledge = await addFileToKnowledgeById(
-		localStorage.token,
-		id,
-		fileId,
-	).catch((e) => {
-		toast.error(e);
-		return null;
-	});
+	const addFileHandler = async (fileId) => {
+		const updatedKnowledge = await addFileToKnowledgeById(localStorage.token, id, fileId).catch(
+			(e) => {
+				toast.error(`${e}`);
+				return null;
+			}
+		);
 
 	if (updatedKnowledge) {
 		knowledge = updatedKnowledge;
@@ -397,7 +394,7 @@ const addFileHandler = async (fileId) => {
 			}
 		} catch (e) {
 			console.error('Error in deleteFileHandler:', e);
-			toast.error(e);
+			toast.error(`${e}`);
 		}
 	};
 
@@ -405,21 +402,17 @@ const updateFileContentHandler = async () => {
 	const fileId = selectedFile.id;
 	const content = selectedFile.data.content;
 
-	const res = updateFileDataContentById(
-		localStorage.token,
-		fileId,
-		content,
-	).catch((e) => {
-		toast.error(e);
-	});
+		const res = updateFileDataContentById(localStorage.token, fileId, content).catch((e) => {
+			toast.error(`${e}`);
+		});
 
-	const updatedKnowledge = await updateFileFromKnowledgeById(
-		localStorage.token,
-		id,
-		fileId,
-	).catch((e) => {
-		toast.error(e);
-	});
+		const updatedKnowledge = await updateFileFromKnowledgeById(
+			localStorage.token,
+			id,
+			fileId
+		).catch((e) => {
+			toast.error(`${e}`);
+		});
 
 	if (res && updatedKnowledge) {
 		knowledge = updatedKnowledge;
@@ -439,14 +432,14 @@ const changeDebounceHandler = () => {
 			return;
 		}
 
-		const res = await updateKnowledgeById(localStorage.token, id, {
-			...knowledge,
-			name: knowledge.name,
-			description: knowledge.description,
-			access_control: knowledge.access_control,
-		}).catch((e) => {
-			toast.error(e);
-		});
+			const res = await updateKnowledgeById(localStorage.token, id, {
+				...knowledge,
+				name: knowledge.name,
+				description: knowledge.description,
+				access_control: knowledge.access_control
+			}).catch((e) => {
+				toast.error(`${e}`);
+			});
 
 		if (res) {
 			toast.success($i18n.t("Knowledge updated successfully"));
@@ -538,10 +531,10 @@ onMount(async () => {
 
 	id = $page.params.id;
 
-	const res = await getKnowledgeById(localStorage.token, id).catch((e) => {
-		toast.error(e);
-		return null;
-	});
+		const res = await getKnowledgeById(localStorage.token, id).catch((e) => {
+			toast.error(`${e}`);
+			return null;
+		});
 
 	if (res) {
 		knowledge = res;

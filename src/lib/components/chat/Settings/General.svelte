@@ -46,27 +46,28 @@ const toggleNotification = async () => {
 let requestFormat = "";
 let keepAlive: string | null = null;
 
-let params = {
-	// Advanced
-	stream_response: null,
-	seed: null,
-	temperature: null,
-	frequency_penalty: null,
-	repeat_last_n: null,
-	mirostat: null,
-	mirostat_eta: null,
-	mirostat_tau: null,
-	top_k: null,
-	top_p: null,
-	min_p: null,
-	stop: null,
-	tfs_z: null,
-	num_ctx: null,
-	num_batch: null,
-	num_keep: null,
-	max_tokens: null,
-	num_gpu: null,
-};
+	let params = {
+		// Advanced
+		stream_response: null,
+		function_calling: null,
+		seed: null,
+		temperature: null,
+		frequency_penalty: null,
+		repeat_last_n: null,
+		mirostat: null,
+		mirostat_eta: null,
+		mirostat_tau: null,
+		top_k: null,
+		top_p: null,
+		min_p: null,
+		stop: null,
+		tfs_z: null,
+		num_ctx: null,
+		num_batch: null,
+		num_keep: null,
+		max_tokens: null,
+		num_gpu: null
+	};
 
 const toggleRequestFormat = async () => {
 	if (requestFormat === "") {
