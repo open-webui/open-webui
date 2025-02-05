@@ -1156,8 +1156,13 @@ async def process_chat_response(
                             if not raw:
                                 content = f'{content}\n<details type="tool_calls" done="true" content="{html.escape(json.dumps(block_content))}" results="{html.escape(json.dumps(results))}">\n<summary>Tool Executed</summary>\n{result_display_content}\n</details>\n'
                         else:
+                            tool_calls_display_content = ""
+
+                            for tool_call in block_content:
+                                tool_calls_display_content = f"{tool_calls_display_content}\n> Executing {tool_call.get('function', {}).get('name', '')}"
+
                             if not raw:
-                                content = f'{content}\n<details type="tool_calls" done="false" content="{html.escape(json.dumps(block_content))}">\n<summary>Tool Executing...</summary>\n</details>\n'
+                                content = f'{content}\n<details type="tool_calls" done="false" content="{html.escape(json.dumps(block_content))}">\n<summary>Tool Executing...</summary>\n{tool_calls_display_content}\n</details>\n'
 
                     elif block["type"] == "reasoning":
                         reasoning_display_content = "\n".join(
