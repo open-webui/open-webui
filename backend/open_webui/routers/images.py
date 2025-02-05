@@ -18,7 +18,7 @@ from pydantic import BaseModel
 
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import ENV, SRC_LOG_LEVELS, ENABLE_FORWARD_USER_INFO_HEADERS
+from open_webui.env import ENV, SRC_LOG_LEVELS, ENABLE_FORWARD_USER_INFO_HEADERS, ENABLE_FORWARD_USER_INFO_LITELLM_TAGS
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.images.comfyui import (
@@ -484,6 +484,13 @@ async def image_generations(
                     else request.app.state.config.IMAGE_SIZE
                 ),
                 "response_format": "b64_json",
+                 **({
+                       "metadata":{
+                           "tags": ["openwebui","images", f"{str(request.app.state.config.IMAGE_GENERATION_MODEL).lower()}", user.email, user.name]
+                       }
+                       
+                   } if ENABLE_FORWARD_USER_INFO_LITELLM_TAGS and user else {} 
+                   )
             }
 
             # Use asyncio.to_thread for the requests.post call
