@@ -1134,11 +1134,27 @@ async def process_chat_response(
                         results = block.get("results", [])
 
                         if results:
+
+                            result_display_content = ""
+
+                            for result in results:
+                                tool_call_id = result.get("tool_call_id", "")
+                                tool_name = ""
+
+                                for tool_call in block_content:
+                                    if tool_call.get("id", "") == tool_call_id:
+                                        tool_name = tool_call.get("function", {}).get(
+                                            "name", ""
+                                        )
+                                        break
+
+                                result_display_content = f"{result_display_content}\n> {tool_name}: {result.get('content', '')}"
+
                             if not raw:
-                                content = f'{content}\n<details type="tool_calls" done="true" results="{html.escape(json.dumps(results))}">\n<summary>Tool Executed</summary>\n```json\n{block_content}\n```\n```json\n{results}\n```\n</details>\n'
+                                content = f'{content}\n<details type="tool_calls" done="true" content="{html.escape(json.dumps(block_content))}" results="{html.escape(json.dumps(results))}">\n<summary>Tool Executed</summary>\n{result_display_content}\n</details>\n'
                         else:
                             if not raw:
-                                content = f'{content}\n<details type="tool_calls" done="false">\n<summary>Tool Executing...</summary>\n```json\n{block_content}\n```\n</details>\n'
+                                content = f'{content}\n<details type="tool_calls" done="false" content="{html.escape(json.dumps(block_content))}">\n<summary>Tool Executing...</summary>\n</details>\n'
 
                     elif block["type"] == "reasoning":
                         reasoning_display_content = "\n".join(
