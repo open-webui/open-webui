@@ -237,7 +237,13 @@ export const generateTitle = async (
 		throw error;
 	}
 
-	return res?.choices[0]?.message?.content.replace(/["']/g, '') ?? 'New Chat';
+	const rawContent = res?.choices[0]?.message?.content ?? '';
+	const cleanedContent = rawContent
+		.replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
+		.replace(/["']/g, '')
+		.trim();
+	
+	return cleanedContent || 'New Chat';
 };
 
 export const generateTags = async (
