@@ -1172,7 +1172,7 @@ async def process_chat_response(
 
                         reasoning_duration = block.get("duration", None)
 
-                        if reasoning_duration:
+                        if reasoning_duration is not None:
                             if raw:
                                 content = f'{content}\n<{block["tag"]}>{block["content"]}</{block["tag"]}>\n'
                             else:
@@ -1315,6 +1315,14 @@ async def process_chat_response(
                                             "content": leftover_content,
                                         }
                                     )
+                                else:
+                                    content_blocks.append(
+                                        {
+                                            "type": "text",
+                                            "content": "",
+                                        }
+                                    )
+
                         else:
                             # Remove the block if content is empty
                             content_blocks.pop()
@@ -1324,6 +1332,13 @@ async def process_chat_response(
                                     {
                                         "type": "text",
                                         "content": leftover_content,
+                                    }
+                                )
+                            else:
+                                content_blocks.append(
+                                    {
+                                        "type": "text",
+                                        "content": "",
                                     }
                                 )
 
