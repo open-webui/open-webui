@@ -1075,8 +1075,8 @@
 									{/if}
 								</div>
 
-								<div class=" flex justify-between mt-1.5 mb-2.5 mx-0.5">
-									<div class="ml-1 self-end gap-0.5 flex items-center">
+								<div class=" flex justify-between mt-1.5 mb-2.5 mx-0.5 max-w-full">
+									<div class="ml-1 self-end gap-0.5 flex items-center flex-1 max-w-[80%]">
 										<InputMenu
 											bind:selectedToolIds
 											{screenCaptureHandler}
@@ -1129,67 +1129,69 @@
 											</button>
 										</InputMenu>
 
-										{#if $_user}
-											{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
-												<Tooltip content={$i18n.t('Search the internet')} placement="top">
-													<button
-														on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
-														type="button"
-														class="px-1.5 sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {webSearchEnabled ||
-														($settings?.webSearch ?? false) === 'always'
-															? 'bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-400'
-															: 'bg-transparent text-gray-600 dark:text-gray-400 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
-													>
-														<GlobeAlt className="size-5" strokeWidth="1.75" />
-														<span
-															class="hidden sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
-															>{$i18n.t('Web Search')}</span
+										<div class="flex gap-0.5 items-center overflow-x-auto scrollbar-none flex-1">
+											{#if $_user}
+												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
+													<Tooltip content={$i18n.t('Search the internet')} placement="top">
+														<button
+															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
+															type="button"
+															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {webSearchEnabled ||
+															($settings?.webSearch ?? false) === 'always'
+																? 'bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-400'
+																: 'bg-transparent text-gray-600 dark:text-gray-400 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
 														>
-													</button>
-												</Tooltip>
-											{/if}
+															<GlobeAlt className="size-5" strokeWidth="1.75" />
+															<span
+																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																>{$i18n.t('Web Search')}</span
+															>
+														</button>
+													</Tooltip>
+												{/if}
 
-											{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
-												<Tooltip content={$i18n.t('Generate an image')} placement="top">
-													<button
-														on:click|preventDefault={() =>
-															(imageGenerationEnabled = !imageGenerationEnabled)}
-														type="button"
-														class="px-1.5 sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {imageGenerationEnabled
-															? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
-															: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
-													>
-														<Photo className="size-5" strokeWidth="1.75" />
-														<span
-															class="hidden sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
-															>{$i18n.t('Image')}</span
+												{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
+													<Tooltip content={$i18n.t('Generate an image')} placement="top">
+														<button
+															on:click|preventDefault={() =>
+																(imageGenerationEnabled = !imageGenerationEnabled)}
+															type="button"
+															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {imageGenerationEnabled
+																? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
 														>
-													</button>
-												</Tooltip>
-											{/if}
+															<Photo className="size-5" strokeWidth="1.75" />
+															<span
+																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																>{$i18n.t('Image')}</span
+															>
+														</button>
+													</Tooltip>
+												{/if}
 
-											{#if $_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter}
-												<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
-													<button
-														on:click|preventDefault={() =>
-															(codeInterpreterEnabled = !codeInterpreterEnabled)}
-														type="button"
-														class="px-1.5 sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
-															? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
-															: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
-													>
-														<CommandLine className="size-5" strokeWidth="1.75" />
-														<span
-															class="hidden sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
-															>{$i18n.t('Code Interpreter')}</span
+												{#if $_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter}
+													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
+														<button
+															on:click|preventDefault={() =>
+																(codeInterpreterEnabled = !codeInterpreterEnabled)}
+															type="button"
+															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
+																? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
 														>
-													</button>
-												</Tooltip>
+															<CommandLine className="size-5" strokeWidth="1.75" />
+															<span
+																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																>{$i18n.t('Code Interpreter')}</span
+															>
+														</button>
+													</Tooltip>
+												{/if}
 											{/if}
-										{/if}
+										</div>
 									</div>
 
-									<div class="self-end flex space-x-1 mr-1">
+									<div class="self-end flex space-x-1 mr-1 flex-shrink-0">
 										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
 											<Tooltip content={$i18n.t('Record voice')}>
 												<button
