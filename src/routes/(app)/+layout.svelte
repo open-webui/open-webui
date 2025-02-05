@@ -210,10 +210,10 @@ onMount(async () => {
 				const now = new Date();
 
 				if (now - dismissedUpdateToast > 24 * 60 * 60 * 1000) {
-					checkForVersionUpdates();
+					//checkForVersionUpdates();
 				}
 			} else {
-				checkForVersionUpdates();
+				//checkForVersionUpdates();
 			}
 		}
 		await tick();

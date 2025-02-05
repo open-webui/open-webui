@@ -38,7 +38,7 @@
 			return '';
 		});
 
-		checkForVersionUpdates();
+		//checkForVersionUpdates();
 	});
 </script>
 
