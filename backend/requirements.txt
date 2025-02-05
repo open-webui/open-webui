@@ -40,14 +40,15 @@ tiktoken
 
 langchain==0.3.7
 langchain-community==0.3.7
-langchain-chroma==0.1.4
 
 fake-useragent==1.5.1
-chromadb==0.5.15
+chromadb==0.6.2
 pymilvus==2.5.0
 qdrant-client~=1.12.0
 opensearch-py==2.7.1
 
+
+transformers
 sentence-transformers==3.3.1
 colbert-ai==0.2.21
 einops==0.8.0
@@ -88,7 +89,7 @@ pytube==15.0.0
 
 extract_msg
 pydub
-duckduckgo-search~=6.3.5
+duckduckgo-search~=7.2.1
 
 ## Google Drive
 google-api-python-client
@@ -101,6 +102,7 @@ pytest~=8.3.2
 pytest-docker~=3.1.1
 
 googleapis-common-protos==1.63.2
+google-cloud-storage==2.19.0
 
 ## LDAP
 ldap3==2.9.1

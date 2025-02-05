@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
-	export let permissions = {
+	// Default values for permissions
+	const defaultPermissions = {
 		workspace: {
 			models: false,
 			knowledge: false,
@@ -13,12 +14,38 @@
 			tools: false
 		},
 		chat: {
+			controls: true,
 			delete: true,
 			edit: true,
 			temporary: true,
 			file_upload: true
+		},
+		features: {
+			web_search: true,
+			image_generation: true
 		}
 	};
+
+	export let permissions = {};
+
+	// Reactive statement to ensure all fields are present in `permissions`
+	$: {
+		permissions = fillMissingProperties(permissions, defaultPermissions);
+	}
+
+	function fillMissingProperties(obj: any, defaults: any) {
+		return {
+			...defaults,
+			...obj,
+			workspace: { ...defaults.workspace, ...obj.workspace },
+			chat: { ...defaults.chat, ...obj.chat },
+			features: { ...defaults.features, ...obj.features }
+		};
+	}
+
+	onMount(() => {
+		permissions = fillMissingProperties(permissions, defaultPermissions);
+	});
 </script>
 
 <div>
@@ -171,6 +198,14 @@
 
 		<div class="  flex w-full justify-between my-2 pr-2">
 			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Chat Controls')}
+			</div>
+
+			<Switch bind:state={permissions.chat.controls} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
 				{$i18n.t('Allow File Upload')}
 			</div>
 
@@ -199,6 +234,28 @@
 			</div>
 
 			<Switch bind:state={permissions.chat.temporary} />
+		</div>
+	</div>
+
+	<hr class=" border-gray-50 dark:border-gray-850 my-2" />
+
+	<div>
+		<div class=" mb-2 text-sm font-medium">{$i18n.t('Features Permissions')}</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Web Search')}
+			</div>
+
+			<Switch bind:state={permissions.features.web_search} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Image Generation')}
+			</div>
+
+			<Switch bind:state={permissions.features.image_generation} />
 		</div>
 	</div>
 </div>
