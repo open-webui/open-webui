@@ -1317,13 +1317,13 @@
 	};
 
 	const sendPrompt = async (
-		history,
+		_history,
 		prompt: string,
 		parentId: string,
 		{ modelId = null, modelIdx = null, newChat = false } = {}
 	) => {
 		let _chatId = JSON.parse(JSON.stringify($chatId));
-		const _history = JSON.parse(JSON.stringify(history));
+		_history = JSON.parse(JSON.stringify(_history));
 
 		const responseMessageIds: Record<PropertyKey, string> = {};
 		// If modelId is provided, use it, else use selected model
@@ -1373,13 +1373,13 @@
 		// Create new chat if newChat is true and first user message
 		if (newChat && _history.messages[_history.currentId].parentId === null) {
 			_chatId = await initChatHandler(_history);
-		} else {
-			await saveChatHandler(_chatId, _history);
 		}
+
 		await tick();
 
+		_history = JSON.parse(JSON.stringify(history));
 		// Save chat after all messages have been created
-		await saveChatHandler(_chatId, history);
+		await saveChatHandler(_chatId, _history);
 
 		await Promise.all(
 			selectedModelIds.map(async (modelId, _modelIdx) => {
@@ -1387,7 +1387,7 @@
 				const model = $models.filter((m) => m.id === modelId).at(0);
 
 				if (model) {
-					const messages = createMessagesList(history, parentId);
+					const messages = createMessagesList(_history, parentId);
 					// If there are image files, check if model is vision capable
 					const hasImages = messages.some((message) =>
 						message.files?.some((file) => file.type === 'image')
@@ -1403,7 +1403,7 @@
 
 					let responseMessageId =
 						responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`];
-					let responseMessage = history.messages[responseMessageId];
+					let responseMessage = _history.messages[responseMessageId];
 
 					let userContext = null;
 					if ($settings?.memory ?? false) {
@@ -1432,7 +1432,7 @@
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();
-					await sendPromptSocket(history, model, responseMessageId, _chatId);
+					await sendPromptSocket(_history, model, responseMessageId, _chatId);
 
 					if (chatEventEmitter) clearInterval(chatEventEmitter);
 				} else {
@@ -1445,9 +1445,9 @@
 		chats.set(await getChatList(localStorage.token, $currentChatPage));
 	};
 
-	const sendPromptSocket = async (history, model, responseMessageId, _chatId) => {
-		const responseMessage = history.messages[responseMessageId];
-		const userMessage = history.messages[responseMessage.parentId];
+	const sendPromptSocket = async (_history, model, responseMessageId, _chatId) => {
+		const responseMessage = _history.messages[responseMessageId];
+		const userMessage = _history.messages[responseMessage.parentId];
 
 		let files = JSON.parse(JSON.stringify(chatFiles));
 		files.push(
@@ -1495,7 +1495,7 @@
 						}`
 					}
 				: undefined,
-			...createMessagesList(history, responseMessageId).map((message) => ({
+			...createMessagesList(_history, responseMessageId).map((message) => ({
 				...message,
 				content: removeDetails(message.content, ['reasoning', 'code_interpreter'])
 			}))
@@ -1589,12 +1589,15 @@
 			},
 			`${WEBUI_BASE_URL}/api`
 		).catch((error) => {
-			console.log(error);
+			toast.error(`${error}`);
+
 			responseMessage.error = {
 				content: error
 			};
 			responseMessage.done = true;
+
 			history.messages[responseMessageId] = responseMessage;
+			history.currentId = responseMessageId;
 			return null;
 		});
 
