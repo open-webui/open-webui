@@ -24,6 +24,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST,
     ENABLE_FORWARD_USER_INFO_HEADERS,
+    ENABLE_FORWARD_USER_INFO_LITELLM_TAGS,
     BYPASS_MODEL_ACCESS_CONTROL,
 )
 
@@ -166,11 +167,26 @@ async def speech(request: Request, user=Depends(get_verified_user)):
     idx = None
     try:
         idx = request.app.state.config.OPENAI_API_BASE_URLS.index(
-            "https://api.openai.com/v1"
+             "https://api.openai.com/v1"
         )
 
         body = await request.body()
+         # Add tags for LiteLLM if env option is enabled
+        if ENABLE_FORWARD_USER_INFO_LITELLM_TAGS:
+            # Ensure 'metadata' dictionary exists in the payload
+            if "metadata" not in body:
+                body["metadata"] = {}
+
+            # Ensure 'tags' list exists in the 'metadata' dictionary
+            if "tags" not in body["metadata"]:
+                body["metadata"]["tags"] = []
+
+            # Add user info to the tags
+            body["metadata"]["tags"] = ["openwebui","speech", f"{str(body['model']).lower()}", user.email, user.name]
+
         name = hashlib.sha256(body).hexdigest()
+
+        
 
         SPEECH_CACHE_DIR = Path(CACHE_DIR).joinpath("./audio/speech/")
         SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -182,6 +198,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             return FileResponse(file_path)
 
         url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+
 
         r = None
         try:
@@ -208,7 +225,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                         }
                         if ENABLE_FORWARD_USER_INFO_HEADERS
                         else {}
-                    ),
+                    )
                 },
                 stream=True,
             )
@@ -444,7 +461,7 @@ async def get_models(
                             }
                             if ENABLE_FORWARD_USER_INFO_HEADERS
                             else {}
-                        ),
+                        )
                     },
                 ) as r:
                     if r.status != 200:
@@ -551,7 +568,6 @@ async def generate_chat_completion(
         bypass_filter = True
 
     idx = 0
-
     payload = {**form_data}
     metadata = payload.pop("metadata", None)
 
@@ -566,7 +582,7 @@ async def generate_chat_completion(
 
         params = model_info.params.model_dump()
         payload = apply_model_params_to_body_openai(params, payload)
-        payload = apply_model_system_prompt_to_body(params, payload, metadata)
+        payload = apply_model_system_prompt_to_body(params, payload, metadata, user)
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
@@ -634,6 +650,20 @@ async def generate_chat_completion(
     if "max_tokens" in payload and "max_completion_tokens" in payload:
         del payload["max_tokens"]
 
+
+    # Add tags for LiteLLM if env option is enabled
+    if ENABLE_FORWARD_USER_INFO_LITELLM_TAGS:
+        # Ensure 'metadata' dictionary exists in the payload
+        if "metadata" not in payload:
+            payload["metadata"] = {}
+
+        # Ensure 'tags' list exists in the 'metadata' dictionary
+        if "tags" not in payload["metadata"]:
+            payload["metadata"]["tags"] = []
+
+        # Add user info to the tags
+        payload["metadata"]["tags"] = ["openwebui","chat", f"{str(payload['model']).lower()}", user.email, user.name]
+
     # Convert the modified body back to JSON
     payload = json.dumps(payload)
 
@@ -655,7 +685,7 @@ async def generate_chat_completion(
                 "Authorization": f"Bearer {key}",
                 "Content-Type": "application/json",
                 **(
-                    {
+                     {
                         "HTTP-Referer": "https://openwebui.com/",
                         "X-Title": "Open WebUI",
                     }
@@ -671,7 +701,7 @@ async def generate_chat_completion(
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS
                     else {}
-                ),
+                )
             },
         )
 
@@ -724,6 +754,19 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
     body = await request.body()
 
+    # Add tags for LiteLLM if env option is enabled
+    if ENABLE_FORWARD_USER_INFO_LITELLM_TAGS:
+        # Ensure 'metadata' dictionary exists in the payload
+        if "metadata" not in body:
+            body["metadata"] = {}
+
+        # Ensure 'tags' list exists in the 'metadata' dictionary
+        if "tags" not in body["metadata"]:
+            body["metadata"]["tags"] = []
+
+        # Add user info to the tags
+        body["metadata"]["tags"] = ["openwebui", user.email, user.name]
+
     idx = 0
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
@@ -750,7 +793,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS
                     else {}
-                ),
+                )
             },
         )
         r.raise_for_status()
