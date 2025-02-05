@@ -1339,7 +1339,7 @@ RAG_EMBEDDING_PASSAGE_PREFIX = (
 )
 
 RAG_EMBEDDING_PREFIX_FIELD_NAME = (
-    os.environ.get("RAG_EMBEDDING_PREFIX_FIELD_NAME", "input_type")
+    os.environ.get("RAG_EMBEDDING_PREFIX_FIELD_NAME", None)
 )
 
 RAG_RERANKING_MODEL = PersistentConfig(
