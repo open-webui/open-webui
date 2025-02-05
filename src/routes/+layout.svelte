@@ -1,6 +1,7 @@
 <script>
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
+	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 
 	let loadingProgress = spring(0, {
 		stiffness: 0.05
@@ -100,7 +101,108 @@
 		});
 	};
 
-	const chatEventHandler = async (event) => {
+	const executePythonAsWorker = async (id, code, cb) => {
+		let result = null;
+		let stdout = null;
+		let stderr = null;
+
+		let executing = true;
+		let packages = [
+			code.includes('requests') ? 'requests' : null,
+			code.includes('bs4') ? 'beautifulsoup4' : null,
+			code.includes('numpy') ? 'numpy' : null,
+			code.includes('pandas') ? 'pandas' : null,
+			code.includes('matplotlib') ? 'matplotlib' : null,
+			code.includes('sklearn') ? 'scikit-learn' : null,
+			code.includes('scipy') ? 'scipy' : null,
+			code.includes('re') ? 'regex' : null,
+			code.includes('seaborn') ? 'seaborn' : null,
+			code.includes('sympy') ? 'sympy' : null,
+			code.includes('tiktoken') ? 'tiktoken' : null,
+			code.includes('pytz') ? 'pytz' : null
+		].filter(Boolean);
+
+		const pyodideWorker = new PyodideWorker();
+
+		pyodideWorker.postMessage({
+			id: id,
+			code: code,
+			packages: packages
+		});
+
+		setTimeout(() => {
+			if (executing) {
+				executing = false;
+				stderr = 'Execution Time Limit Exceeded';
+				pyodideWorker.terminate();
+
+				if (cb) {
+					cb(
+						JSON.parse(
+							JSON.stringify(
+								{
+									stdout: stdout,
+									stderr: stderr,
+									result: result
+								},
+								(_key, value) => (typeof value === 'bigint' ? value.toString() : value)
+							)
+						)
+					);
+				}
+			}
+		}, 60000);
+
+		pyodideWorker.onmessage = (event) => {
+			console.log('pyodideWorker.onmessage', event);
+			const { id, ...data } = event.data;
+
+			console.log(id, data);
+
+			data['stdout'] && (stdout = data['stdout']);
+			data['stderr'] && (stderr = data['stderr']);
+			data['result'] && (result = data['result']);
+
+			if (cb) {
+				cb(
+					JSON.parse(
+						JSON.stringify(
+							{
+								stdout: stdout,
+								stderr: stderr,
+								result: result
+							},
+							(_key, value) => (typeof value === 'bigint' ? value.toString() : value)
+						)
+					)
+				);
+			}
+
+			executing = false;
+		};
+
+		pyodideWorker.onerror = (event) => {
+			console.log('pyodideWorker.onerror', event);
+
+			if (cb) {
+				cb(
+					JSON.parse(
+						JSON.stringify(
+							{
+								stdout: stdout,
+								stderr: stderr,
+								result: result
+							},
+							(_key, value) => (typeof value === 'bigint' ? value.toString() : value)
+						)
+					)
+				);
+			}
+			executing = false;
+		};
+	};
+
+	const chatEventHandler = async (event, cb) => {
 		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
 
 		let isFocused = document.visibilityState !== 'visible';
@@ -113,11 +215,11 @@
 			}
 		}
 
-		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isFocused) {
-			await tick();
-			const type = event?.data?.type ?? null;
-			const data = event?.data?.data ?? null;
+		await tick();
+		const type = event?.data?.type ?? null;
+		const data = event?.data?.data ?? null;
 
+		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isFocused) {
 			if (type === 'chat:completion') {
 				const { done, content, title } = data;
 
@@ -148,6 +250,11 @@
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			} else if (type === 'chat:tags') {
 				tags.set(await getAllTags(localStorage.token));
+			}
+		} else {
+			if (type === 'execute:python') {
+				console.log('execute:python', data);
+				executePythonAsWorker(data.id, data.code, cb);
 			}
 		}
 	};

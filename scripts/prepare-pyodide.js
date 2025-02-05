@@ -9,7 +9,10 @@ const packages = [
 	'scikit-learn',
 	'scipy',
 	'regex',
-	'seaborn'
+	'sympy',
+	'tiktoken',
+	'seaborn',
+	'pytz'
 ];
 
 import { loadPyodide } from 'pyodide';
