@@ -239,7 +239,7 @@ export const generateTitle = async (
 
 	const rawContent = res?.choices[0]?.message?.content ?? '';
 	const cleanedContent = rawContent
-		.replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
+		.replace(/<think>[\s\S]*?<\/think>/g, '')
 		.replace(/["']/g, '')
 		.trim();
 	
