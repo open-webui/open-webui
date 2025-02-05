@@ -46,7 +46,9 @@ def search_exa(
     }
 
     try:
-        response = requests.post(f"{EXA_API_BASE}/search", headers=headers, json=payload)
+        response = requests.post(
+            f"{EXA_API_BASE}/search", headers=headers, json=payload
+        )
         response.raise_for_status()
         data = response.json()
 

@@ -160,7 +160,9 @@ async def update_memory_by_id(
                 {
                     "id": memory.id,
                     "text": memory.content,
-                    "vector": request.app.state.EMBEDDING_FUNCTION(memory.content, user),
+                    "vector": request.app.state.EMBEDDING_FUNCTION(
+                        memory.content, user
+                    ),
                     "metadata": {
                         "created_at": memory.created_at,
                         "updated_at": memory.updated_at,

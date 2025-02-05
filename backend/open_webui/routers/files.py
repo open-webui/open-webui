@@ -195,7 +195,7 @@ async def update_file_data_content_by_id(
             process_file(
                 request,
                 ProcessFileForm(file_id=id, content=form_data.content),
-                user=user
+                user=user,
             )
             file = Files.get_file_by_id(id=id)
         except Exception as e:
