@@ -7,6 +7,18 @@ from pathlib import Path
 from typing import Callable, Optional
 
 
+import collections.abc
+
+
+def deep_update(d, u):
+    for k, v in u.items():
+        if isinstance(v, collections.abc.Mapping):
+            d[k] = deep_update(d.get(k, {}), v)
+        else:
+            d[k] = v
+    return d
+
+
 def get_message_list(messages, message_id):
     """
     Reconstructs a list of messages in order up to the specified message_id.
@@ -187,6 +199,7 @@ def openai_chat_chunk_message_template(
     template = openai_chat_message_template(model)
     template["object"] = "chat.completion.chunk"
 
+    template["choices"][0]["index"] = 0
     template["choices"][0]["delta"] = {}
 
     if content:
