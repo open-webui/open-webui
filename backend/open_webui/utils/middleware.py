@@ -1340,7 +1340,6 @@ async def process_chat_response(
 
                         try:
                             data = json.loads(data)
-                            print(data)
 
                             if "selected_model_id" in data:
                                 model_id = data["selected_model_id"]
