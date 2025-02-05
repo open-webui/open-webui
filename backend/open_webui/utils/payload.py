@@ -15,9 +15,9 @@ def apply_model_system_prompt_to_body(
         return form_data
 
     if metadata:
-        print("apply_model_system_prompt_to_body: metadata", metadata)
         variables = metadata.get("variables", {})
-        system = prompt_variables_template(system, variables)
+        if variables:
+            system = prompt_variables_template(system, variables)
 
     form_data["messages"] = add_or_update_system_message(
         system, form_data.get("messages", [])
