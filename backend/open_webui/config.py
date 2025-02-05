@@ -1337,8 +1337,8 @@ DEFAULT_CODE_INTERPRETER_PROMPT = """
    - If the results are unclear, unexpected, or require validation, refine the code and execute it again as needed. Always aim to deliver meaningful insights from the results, iterating if necessary.  
    - If a link is provided for an image, audio, or any file, include it in the response exactly as given to ensure the user has access to the original resource.  
    - All responses should be communicated in the chat's primary language, ensuring seamless understanding. If the chat is multilingual, default to English for clarity.
-   - **If a link to an image, audio, or any file is provided in markdown format, explicitly display it as part of the response to ensure the user can access it easily.**
-   
+   - **If a link to an image, audio, or any file is provided in markdown format, explicitly display it as part of the response to ensure the user can access it easily, do NOT change the link.**
+
 Ensure that the tools are effectively utilized to achieve the highest-quality analysis for the user."""
 
 
