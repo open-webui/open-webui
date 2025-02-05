@@ -63,6 +63,7 @@
 	"Allowed Endpoints": "İzin Verilen Uç Noktalar",
 	"Already have an account?": "Zaten bir hesabınız mı var?",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out. (Default: 0.0)": "top_p'ye bir alternatif ve kalite ile çeşitlilik arasında bir denge sağlamayı amaçlar. p parametresi, en olası tokenin olasılığına göre, bir tokenin dikkate alınması için minimum olasılığı temsil eder. Örneğin, p=0.05 ve en olası tokenin 0.9 olasılığı ile 0.045'ten küçük bir değere sahip logitler filtrelenir. (Varsayılan: 0.0)",
+	"Always-On Web Search": "",
 	"Amazing": "Harika",
 	"an assistant": "bir asistan",
 	"Analyzed": "",

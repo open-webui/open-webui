@@ -52,6 +52,8 @@
 	let voiceInterruption = false;
 	let hapticFeedback = false;
 
+	let alwaysOnWebSearch = false;
+
 	const toggleSplitLargeChunks = async () => {
 		splitLargeChunks = !splitLargeChunks;
 		saveSettings({ splitLargeChunks: splitLargeChunks });
@@ -198,6 +200,11 @@
 		});
 	};
 
+	const toggleAlwaysOnWebSearch = async () => {
+		alwaysOnWebSearch = !alwaysOnWebSearch;
+		saveSettings({ alwaysOnWebSearch });
+	};
+
 	onMount(async () => {
 		titleAutoGenerate = $settings?.title?.auto ?? true;
 		autoTags = $settings.autoTags ?? true;
@@ -235,6 +242,8 @@
 		}
 
 		backgroundImageUrl = $settings.backgroundImageUrl ?? null;
+
+		alwaysOnWebSearch = $settings.alwaysOnWebSearch ?? false;
 	});
 </script>
 
@@ -658,6 +667,26 @@
 						type="button"
 					>
 						{#if scrollOnBranchChange === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('Always-On Web Search')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleAlwaysOnWebSearch();
+						}}
+						type="button"
+					>
+						{#if alwaysOnWebSearch === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>

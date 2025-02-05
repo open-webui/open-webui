@@ -63,6 +63,7 @@
 	"Allowed Endpoints": "Points de terminaison autorisés",
 	"Already have an account?": "Avez-vous déjà un compte ?",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out. (Default: 0.0)": "Alternative au top_p, visant à assurer un équilibre entre qualité et variété. Le paramètre p représente la probabilité minimale pour qu'un token soit pris en compte, par rapport à la probabilité du token le plus probable. Par exemple, avec p=0.05 et le token le plus probable ayant une probabilité de 0.9, les logits ayant une valeur inférieure à 0.045 sont filtrés. (Par défaut : 0.0)",
+	"Always-On Web Search": "",
 	"Amazing": "Incroyable",
 	"an assistant": "un assistant",
 	"Analyzed": "",

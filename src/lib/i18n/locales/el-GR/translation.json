@@ -63,6 +63,7 @@
 	"Allowed Endpoints": "",
 	"Already have an account?": "Έχετε ήδη λογαριασμό;",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out. (Default: 0.0)": "Εναλλακτικό στο top_p, και στοχεύει στη διασφάλιση μιας ισορροπίας μεταξύ ποιότητας και ποικιλίας. Η παράμετρος p αντιπροσωπεύει την ελάχιστη πιθανότητα για ένα token να θεωρηθεί, σε σχέση με την πιθανότητα του πιο πιθανού token. Για παράδειγμα, με p=0.05 και το πιο πιθανό token να έχει πιθανότητα 0.9, τα logits με τιμή μικρότερη από 0.045 φιλτράρονται. (Προεπιλογή: 0.0)",
+	"Always-On Web Search": "",
 	"Amazing": "Καταπληκτικό",
 	"an assistant": "ένας βοηθός",
 	"Analyzed": "",
