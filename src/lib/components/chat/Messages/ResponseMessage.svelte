@@ -1295,6 +1295,35 @@
 										</Tooltip>
 									{/if}
 
+									<Tooltip content={$i18n.t('Scroll to Top of Message')} placement="bottom">
+										<button
+											type="button"
+											class="{isLastMessage
+												? 'visible'
+												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+											on:click={() => {
+												document
+													.querySelector(`#message-${message.id}`)
+													?.scrollIntoView({ behavior: 'smooth' });
+											}}
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke-width="2.3"
+												stroke="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="M12 19V5m0 0l-7 7m7-7l7 7"
+												/>
+											</svg>
+										</button>
+									</Tooltip>
+
 									{#if isLastMessage}
 										{#each model?.actions ?? [] as action}
 											<Tooltip content={action.name} placement="bottom">
