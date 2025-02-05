@@ -50,6 +50,7 @@
 	let stdout = null;
 	let stderr = null;
 	let result = null;
+	let files = null;
 
 	let copied = false;
 	let saved = false;
@@ -110,7 +111,7 @@
 	};
 
 	const executePython = async (code) => {
-		if (!code.includes('input') && !code.includes('matplotlib')) {
+		if (!code.includes('input')) {
 			executePythonAsWorker(code);
 		} else {
 			result = null;
@@ -211,7 +212,8 @@ __builtins__.input = input`);
 			code.includes('re') ? 'regex' : null,
 			code.includes('seaborn') ? 'seaborn' : null,
 			code.includes('sympy') ? 'sympy' : null,
-			code.includes('tiktoken') ? 'tiktoken' : null
+			code.includes('tiktoken') ? 'tiktoken' : null,
+			code.includes('matplotlib') ? 'matplotlib' : null
 		].filter(Boolean);
 
 		console.log(packages);
@@ -238,7 +240,31 @@ __builtins__.input = input`);
 
 			console.log(id, data);
 
-			data['stdout'] && (stdout = data['stdout']);
+			if (data['stdout']) {
+				stdout = data['stdout'];
+				const stdoutLines = stdout.split('\n');
+
+				for (const [idx, line] of stdoutLines.entries()) {
+					if (line.startsWith('data:image/png;base64')) {
+						if (files) {
+							files.push({
+								type: 'image/png',
+								data: line
+							});
+						} else {
+							files = [
+								{
+									type: 'image/png',
+									data: line
+								}
+							];
+						}
+
+						stdout = stdout.replace(`${line}\n`, ``);
+					}
+				}
+			}
+
 			data['stderr'] && (stderr = data['stderr']);
 			data['result'] && (result = data['result']);
 
@@ -430,10 +456,21 @@ __builtins__.input = input`);
 								<div class="text-sm">{stdout || stderr}</div>
 							</div>
 						{/if}
-						{#if result}
+						{#if result || files}
 							<div class=" ">
 								<div class=" text-gray-500 text-xs mb-1">RESULT</div>
-								<div class="text-sm">{`${JSON.stringify(result)}`}</div>
+								{#if result}
+									<div class="text-sm">{`${JSON.stringify(result)}`}</div>
+								{/if}
+								{#if files}
+									<div class="flex flex-col gap-2">
+										{#each files as file}
+											{#if file.type.startsWith('image')}
+												<img src={file.data} alt="Output" />
+											{/if}
+										{/each}
+									</div>
+								{/if}
 							</div>
 						{/if}
 					{/if}

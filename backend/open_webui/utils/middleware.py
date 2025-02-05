@@ -1,6 +1,8 @@
 import time
 import logging
 import sys
+import os
+import base64
 
 import asyncio
 from aiocache import cached
@@ -69,6 +71,7 @@ from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.tasks import create_task
 
 from open_webui.config import (
+    CACHE_DIR,
     DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     DEFAULT_CODE_INTERPRETER_PROMPT,
 )
@@ -1241,7 +1244,9 @@ async def process_chat_response(
 
             # We might want to disable this by default
             DETECT_REASONING = True
-            DETECT_CODE_INTERPRETER = True
+            DETECT_CODE_INTERPRETER = metadata.get("features", {}).get(
+                "code_interpreter", False
+            )
 
             reasoning_tags = ["think", "reason", "reasoning", "thought", "Thought"]
             code_interpreter_tags = ["code_interpreter"]
@@ -1386,74 +1391,108 @@ async def process_chat_response(
 
                 await stream_body_handler(response)
 
-                MAX_RETRIES = 5
-                retries = 0
+                if DETECT_CODE_INTERPRETER:
+                    MAX_RETRIES = 5
+                    retries = 0
 
-                while (
-                    content_blocks[-1]["type"] == "code_interpreter"
-                    and retries < MAX_RETRIES
-                ):
-                    retries += 1
-                    log.debug(f"Attempt count: {retries}")
+                    while (
+                        content_blocks[-1]["type"] == "code_interpreter"
+                        and retries < MAX_RETRIES
+                    ):
+                        retries += 1
+                        log.debug(f"Attempt count: {retries}")
 
-                    output = ""
-                    try:
-                        if content_blocks[-1]["attributes"].get("type") == "code":
-                            output = await event_caller(
-                                {
-                                    "type": "execute:python",
-                                    "data": {
-                                        "id": str(uuid4()),
-                                        "code": content_blocks[-1]["content"],
-                                    },
-                                }
-                            )
-                    except Exception as e:
-                        output = str(e)
-
-                    content_blocks[-1]["output"] = output
-                    content_blocks.append(
-                        {
-                            "type": "text",
-                            "content": "",
-                        }
-                    )
-
-                    await event_emitter(
-                        {
-                            "type": "chat:completion",
-                            "data": {
-                                "content": serialize_content_blocks(content_blocks),
-                            },
-                        }
-                    )
-
-                    try:
-                        res = await generate_chat_completion(
-                            request,
-                            {
-                                "model": model_id,
-                                "stream": True,
-                                "messages": [
-                                    *form_data["messages"],
+                        output = ""
+                        try:
+                            if content_blocks[-1]["attributes"].get("type") == "code":
+                                output = await event_caller(
                                     {
-                                        "role": "assistant",
-                                        "content": serialize_content_blocks(
-                                            content_blocks, raw=True
-                                        ),
-                                    },
-                                ],
-                            },
-                            user,
+                                        "type": "execute:python",
+                                        "data": {
+                                            "id": str(uuid4()),
+                                            "code": content_blocks[-1]["content"],
+                                        },
+                                    }
+                                )
+
+                                if isinstance(output, dict):
+                                    stdout = output.get("stdout", "")
+
+                                    if stdout:
+                                        stdoutLines = stdout.split("\n")
+                                        for idx, line in enumerate(stdoutLines):
+                                            if "data:image/png;base64" in line:
+                                                id = str(uuid4())
+
+                                                # ensure the path exists
+                                                os.makedirs(
+                                                    os.path.join(CACHE_DIR, "images"),
+                                                    exist_ok=True,
+                                                )
+
+                                                image_path = os.path.join(
+                                                    CACHE_DIR,
+                                                    f"images/{id}.png",
+                                                )
+
+                                                with open(image_path, "wb") as f:
+                                                    f.write(
+                                                        base64.b64decode(
+                                                            line.split(",")[1]
+                                                        )
+                                                    )
+
+                                                stdoutLines[idx] = (
+                                                    f"![Output Image {idx}](/cache/images/{id}.png)"
+                                                )
+
+                                        output["stdout"] = "\n".join(stdoutLines)
+                        except Exception as e:
+                            output = str(e)
+
+                        content_blocks[-1]["output"] = output
+                        content_blocks.append(
+                            {
+                                "type": "text",
+                                "content": "",
+                            }
                         )
 
-                        if isinstance(res, StreamingResponse):
-                            await stream_body_handler(res)
-                        else:
+                        await event_emitter(
+                            {
+                                "type": "chat:completion",
+                                "data": {
+                                    "content": serialize_content_blocks(content_blocks),
+                                },
+                            }
+                        )
+
+                        try:
+                            res = await generate_chat_completion(
+                                request,
+                                {
+                                    "model": model_id,
+                                    "stream": True,
+                                    "messages": [
+                                        *form_data["messages"],
+                                        {
+                                            "role": "assistant",
+                                            "content": serialize_content_blocks(
+                                                content_blocks, raw=True
+                                            ),
+                                        },
+                                    ],
+                                },
+                                user,
+                            )
+
+                            if isinstance(res, StreamingResponse):
+                                await stream_body_handler(res)
+                            else:
+                                break
+                        except Exception as e:
+                            log.debug(e)
                             break
-                    except Exception as e:
-                        log.debug(e)
-                        break
 
                 title = Chats.get_chat_title_by_id(metadata["chat_id"])
                 data = {
