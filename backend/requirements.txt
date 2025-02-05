@@ -1,4 +1,4 @@
-fastapi==0.111.0
+fastapi==0.115.7
 uvicorn[standard]==0.30.6
 pydantic==2.9.2
 python-multipart==0.0.18
@@ -11,7 +11,7 @@ python-jose==3.3.0
 passlib[bcrypt]==1.7.4
 
 requests==2.32.3
-aiohttp==3.11.8
+aiohttp==3.11.11
 async-timeout
 aiocache
 aiofiles
@@ -57,10 +57,10 @@ einops==0.8.0
 ftfy==6.2.3
 pypdf==4.3.1
 fpdf2==2.8.2
-pymdown-extensions==10.11.2
+pymdown-extensions==10.14.2
 docx2txt==0.8
 python-pptx==1.0.0
-unstructured==0.15.9
+unstructured==0.16.11
 nltk==3.9.1
 Markdown==3.7
 pypandoc==1.13
@@ -71,16 +71,16 @@ xlrd==2.0.1
 validators==0.34.0
 psutil
 sentencepiece
-soundfile==0.12.1
+soundfile==0.13.1
 
-opencv-python-headless==4.10.0.84
+opencv-python-headless==4.11.0.86
 rapidocr-onnxruntime==1.3.24
 rank-bm25==0.2.2
 
 faster-whisper==1.0.3
 
 PyJWT[crypto]==2.10.1
-authlib==1.3.2
+authlib==1.4.1
 
 black==24.8.0
 langfuse==2.44.0
@@ -89,7 +89,7 @@ pytube==15.0.0
 
 extract_msg
 pydub
-duckduckgo-search~=7.2.1
+duckduckgo-search~=7.3.0
 
 ## Google Drive
 google-api-python-client

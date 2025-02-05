@@ -35,6 +35,7 @@
 
 	export let selectedToolIds = [];
 	export let imageGenerationEnabled = false;
+	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
 
 	let models = [];
@@ -196,6 +197,7 @@
 					bind:autoScroll
 					bind:selectedToolIds
 					bind:imageGenerationEnabled
+					bind:codeInterpreterEnabled
 					bind:webSearchEnabled
 					bind:atSelectedModel
 					{transparentBackground}
@@ -218,6 +220,7 @@
 				suggestionPrompts={models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
 					$config?.default_prompt_suggestions ??
 					[]}
+				inputValue={prompt}
 				on:select={(e) => {
 					selectSuggestionPrompt(e.detail);
 				}}

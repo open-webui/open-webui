@@ -32,7 +32,8 @@
 		ENABLE_SEARCH_QUERY_GENERATION: true,
 		ENABLE_MULTIPLE_WEB_SEARCH_QUERIES: true,
 		ENABLE_RETRIEVAL_QUERY_GENERATION: true,
-		QUERY_GENERATION_PROMPT_TEMPLATE: ''
+		QUERY_GENERATION_PROMPT_TEMPLATE: '',
+		TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: ''
 	};
 
 	let promptSuggestions = [];
@@ -258,6 +259,20 @@
 						/>
 					</Tooltip>
 				</div>
+			</div>
+
+			<div class="mt-3">
+				<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Tools Function Calling Prompt')}</div>
+
+				<Tooltip
+					content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+					placement="top-start"
+				>
+					<Textarea
+						bind:value={taskConfig.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE}
+						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+					/>
+				</Tooltip>
 			</div>
 
 			<hr class=" border-gray-50 dark:border-gray-850 my-3" />
