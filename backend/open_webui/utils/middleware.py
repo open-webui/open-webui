@@ -914,9 +914,6 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 async def process_chat_response(
     request, response, form_data, user, events, metadata, tasks
 ):
-
-    print("metadata", metadata)
-
     async def background_tasks_handler():
         message_map = Chats.get_messages_by_chat_id(metadata["chat_id"])
         message = message_map.get(metadata["message_id"]) if message_map else None
@@ -1129,6 +1126,9 @@ async def process_chat_response(
                 for block in content_blocks:
                     if block["type"] == "text":
                         content = f"{content}{block['content'].strip()}\n"
+                    elif block["type"] == "tool":
+                        pass
+
                     elif block["type"] == "reasoning":
                         reasoning_display_content = "\n".join(
                             (f"> {line}" if not line.startswith(">") else line)
@@ -1310,6 +1310,7 @@ async def process_chat_response(
 
                         try:
                             data = json.loads(data)
+                            print(data)
 
                             if "selected_model_id" in data:
                                 model_id = data["selected_model_id"]
