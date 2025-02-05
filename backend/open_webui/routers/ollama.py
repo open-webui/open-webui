@@ -939,6 +939,7 @@ async def generate_completion(
 class ChatMessage(BaseModel):
     role: str
     content: str
+    tool_calls: Optional[list[dict]] = None
     images: Optional[list[str]] = None
 
 
@@ -950,6 +951,7 @@ class GenerateChatCompletionForm(BaseModel):
     template: Optional[str] = None
     stream: Optional[bool] = True
     keep_alive: Optional[Union[int, str]] = None
+    tools: Optional[list[dict]] = None
 
 
 async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = None):
