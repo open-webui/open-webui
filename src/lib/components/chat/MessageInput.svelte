@@ -390,7 +390,7 @@
 				</div>
 
 				<div class="w-full relative">
-					{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || imageGenerationEnabled || codeInterpreterEnabled}
+					{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || webSearchEnabled || ($settings?.webSearch ?? false) === 'always' || imageGenerationEnabled || codeInterpreterEnabled}
 						<div
 							class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10"
 						>
@@ -426,6 +426,22 @@
 								</div>
 							{/if}
 
+							{#if webSearchEnabled || ($settings?.webSearch ?? false) === 'always'}
+								<div class="flex items-center justify-between w-full">
+									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
+										<div class="pl-1">
+											<span class="relative flex size-2">
+												<span
+													class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"
+												/>
+												<span class="relative inline-flex rounded-full size-2 bg-blue-500" />
+											</span>
+										</div>
+										<div class=" translate-y-[0.5px]">{$i18n.t('Search the internet')}</div>
+									</div>
+								</div>
+							{/if}
+
 							{#if imageGenerationEnabled}
 								<div class="flex items-center justify-between w-full">
 									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
@@ -437,7 +453,7 @@
 												<span class="relative inline-flex rounded-full size-2 bg-teal-500" />
 											</span>
 										</div>
-										<div class=" translate-y-[0.5px]">{$i18n.t('Image generation')}</div>
+										<div class=" translate-y-[0.5px]">{$i18n.t('Generate an image')}</div>
 									</div>
 								</div>
 							{/if}
@@ -448,12 +464,12 @@
 										<div class="pl-1">
 											<span class="relative flex size-2">
 												<span
-													class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"
+													class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
 												/>
-												<span class="relative inline-flex rounded-full size-2 bg-blue-500" />
+												<span class="relative inline-flex rounded-full size-2 bg-green-500" />
 											</span>
 										</div>
-										<div class=" translate-y-[0.5px]">{$i18n.t('Code interpreter')}</div>
+										<div class=" translate-y-[0.5px]">{$i18n.t('Execute code for analysis')}</div>
 									</div>
 								</div>
 							{/if}
@@ -573,7 +589,7 @@
 								dir={$settings?.chatDirection ?? 'LTR'}
 							>
 								{#if files.length > 0}
-									<div class="mx-2 mt-2.5 flex items-center flex-wrap gap-2">
+									<div class="mx-2 mt-2.5 -mb-1 flex items-center flex-wrap gap-2">
 										{#each files as file, fileIdx}
 											{#if file.type === 'image'}
 												<div class=" relative group">
@@ -664,7 +680,7 @@
 								<div class="px-2.5">
 									{#if $settings?.richTextInput ?? true}
 										<div
-											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full pt-2.5 pb-1 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
+											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
 										>
 											<RichTextInput
 												bind:this={chatInputElement}
@@ -868,7 +884,7 @@
 										<textarea
 											id="chat-input"
 											bind:this={chatInputElement}
-											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-none w-full pt-3 pb-1 px-1 rounded-xl resize-none"
+											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-none w-full pt-3 px-1 resize-none"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 											bind:value={prompt}
 											on:keypress={(e) => {
@@ -1059,8 +1075,8 @@
 									{/if}
 								</div>
 
-								<div class=" flex justify-between mb-2">
-									<div class="ml-1 self-end gap-0.5 flex items-center">
+								<div class=" flex justify-between mt-1.5 mb-2.5 mx-0.5 max-w-full">
+									<div class="ml-1 self-end gap-0.5 flex items-center flex-1 max-w-[80%]">
 										<InputMenu
 											bind:selectedToolIds
 											{screenCaptureHandler}
@@ -1113,64 +1129,69 @@
 											</button>
 										</InputMenu>
 
-										{#if $_user}
-											{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
-												<Tooltip content={$i18n.t('Search the internet')} placement="top">
-													<button
-														on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
-														type="button"
-														class="px-1.5 sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {webSearchEnabled
-															? 'bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-400'
-															: 'bg-transparent text-gray-600 dark:text-gray-400 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
-													>
-														<GlobeAlt className="size-5" strokeWidth="1.75" />
-														<span
-															class="hidden sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
-															>{$i18n.t('Web Search')}</span
+										<div class="flex gap-0.5 items-center overflow-x-auto scrollbar-none flex-1">
+											{#if $_user}
+												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
+													<Tooltip content={$i18n.t('Search the internet')} placement="top">
+														<button
+															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
+															type="button"
+															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {webSearchEnabled ||
+															($settings?.webSearch ?? false) === 'always'
+																? 'bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-400'
+																: 'bg-transparent text-gray-600 dark:text-gray-400 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
 														>
-													</button>
-												</Tooltip>
-											{/if}
+															<GlobeAlt className="size-5" strokeWidth="1.75" />
+															<span
+																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																>{$i18n.t('Web Search')}</span
+															>
+														</button>
+													</Tooltip>
+												{/if}
 
-											{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
-												<Tooltip content={$i18n.t('Generate an image')} placement="top">
-													<button
-														on:click|preventDefault={() =>
-															(imageGenerationEnabled = !imageGenerationEnabled)}
-														type="button"
-														class="px-1.5 sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {imageGenerationEnabled
-															? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
-															: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
-													>
-														<Photo className="size-5" strokeWidth="1.75" />
-														<span
-															class="hidden sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
-															>{$i18n.t('Image')}</span
+												{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
+													<Tooltip content={$i18n.t('Generate an image')} placement="top">
+														<button
+															on:click|preventDefault={() =>
+																(imageGenerationEnabled = !imageGenerationEnabled)}
+															type="button"
+															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {imageGenerationEnabled
+																? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
 														>
-													</button>
-												</Tooltip>
-											{/if}
+															<Photo className="size-5" strokeWidth="1.75" />
+															<span
+																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																>{$i18n.t('Image')}</span
+															>
+														</button>
+													</Tooltip>
+												{/if}
 
-											<Tooltip content={$i18n.t('Executes code for analysis')} placement="top">
-												<button
-													on:click|preventDefault={() =>
-														(codeInterpreterEnabled = !codeInterpreterEnabled)}
-													type="button"
-													class="px-1.5 sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
-														? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
-														: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
-												>
-													<CommandLine className="size-5" strokeWidth="1.75" />
-													<span
-														class="hidden sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
-														>{$i18n.t('Code Intepreter')}</span
-													>
-												</button>
-											</Tooltip>
-										{/if}
+												{#if $_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter}
+													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
+														<button
+															on:click|preventDefault={() =>
+																(codeInterpreterEnabled = !codeInterpreterEnabled)}
+															type="button"
+															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
+																? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+														>
+															<CommandLine className="size-5" strokeWidth="1.75" />
+															<span
+																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																>{$i18n.t('Code Interpreter')}</span
+															>
+														</button>
+													</Tooltip>
+												{/if}
+											{/if}
+										</div>
 									</div>
 
-									<div class="self-end flex space-x-1 mr-1">
+									<div class="self-end flex space-x-1 mr-1 flex-shrink-0">
 										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
 											<Tooltip content={$i18n.t('Record voice')}>
 												<button
@@ -1225,7 +1246,8 @@
 												<div class=" flex items-center">
 													<Tooltip content={$i18n.t('Call')}>
 														<button
-															class=" {webSearchEnabled
+															class=" {webSearchEnabled ||
+															($settings?.webSearch ?? false) === 'always'
 																? 'bg-blue-500 text-white hover:bg-blue-400 '
 																: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100'} transition rounded-full p-1.5 self-center"
 															type="button"
@@ -1280,7 +1302,7 @@
 														<button
 															id="send-message-button"
 															class="{prompt !== ''
-																? webSearchEnabled
+																? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
 																	? 'bg-blue-500 text-white hover:bg-blue-400 '
 																	: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
@@ -1316,7 +1338,7 @@
 															xmlns="http://www.w3.org/2000/svg"
 															viewBox="0 0 24 24"
 															fill="currentColor"
-															class="size-6"
+															class="size-5"
 														>
 															<path
 																fill-rule="evenodd"

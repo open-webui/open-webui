@@ -156,7 +156,7 @@
 							class="mt-1.5 flex flex-shrink-0 items-center text-xs self-center invisible group-hover:visible text-gray-500 font-medium first-letter:capitalize"
 						>
 							<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
-								{dayjs(message.created_at / 1000000).format('LT')}
+								{dayjs(message.created_at / 1000000).format('HH:mm')}
 							</Tooltip>
 						</div>
 					{/if}

@@ -34,6 +34,8 @@
 	export let actionMessage: Function;
 
 	export let submitMessage: Function;
+	export let deleteMessage: Function;
+
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
 	export let mergeResponses: Function;
@@ -228,6 +230,7 @@
 									{editMessage}
 									{saveMessage}
 									{rateMessage}
+									{deleteMessage}
 									{actionMessage}
 									{submitMessage}
 									{continueResponse}

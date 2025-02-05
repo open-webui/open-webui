@@ -1,4 +1,5 @@
 import json
+from uuid import uuid4
 from open_webui.utils.misc import (
     openai_chat_chunk_message_template,
     openai_chat_completion_message_template,
@@ -60,6 +61,23 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
 
         model = data.get("model", "ollama")
         message_content = data.get("message", {}).get("content", "")
+        tool_calls = data.get("message", {}).get("tool_calls", None)
+        openai_tool_calls = None
+
+        if tool_calls:
+            openai_tool_calls = []
+            for tool_call in tool_calls:
+                openai_tool_call = {
+                    "index": tool_call.get("index", 0),
+                    "id": tool_call.get("id", f"call_{str(uuid4())}"),
+                    "type": "function",
+                    "function": {
+                        "name": tool_call.get("function", {}).get("name", ""),
+                        "arguments": f"{tool_call.get('function', {}).get('arguments', {})}",
+                    },
+                }
+                openai_tool_calls.append(openai_tool_call)
+
         done = data.get("done", False)
 
         usage = None
@@ -105,7 +123,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
             }
 
         data = openai_chat_chunk_message_template(
-            model, message_content if not done else None, usage
+            model, message_content if not done else None, openai_tool_calls, usage
         )
 
         line = f"data: {json.dumps(data)}\n\n"

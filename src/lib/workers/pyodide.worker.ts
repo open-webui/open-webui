@@ -40,6 +40,23 @@ async function loadPyodideAndPackages(packages: string[] = []) {
 		packages: ['micropip']
 	});
 
+	let mountDir = '/mnt';
+	self.pyodide.FS.mkdirTree(mountDir);
+	// self.pyodide.FS.mount(self.pyodide.FS.filesystems.IDBFS, {}, mountDir);
+
+	// // Load persisted files from IndexedDB (Initial Sync)
+	// await new Promise<void>((resolve, reject) => {
+	// 	self.pyodide.FS.syncfs(true, (err) => {
+	// 		if (err) {
+	// 			console.error('Error syncing from IndexedDB:', err);
+	// 			reject(err);
+	// 		} else {
+	// 			console.log('Successfully loaded from IndexedDB.');
+	// 			resolve();
+	// 		}
+	// 	});
+	// });
+
 	const micropip = self.pyodide.pyimport('micropip');
 
 	// await micropip.set_index_urls('https://pypi.org/pypi/{package_name}/json');
@@ -60,12 +77,54 @@ self.onmessage = async (event) => {
 	await loadPyodideAndPackages(self.packages);
 
 	try {
+		// check if matplotlib is imported in the code
+		if (code.includes('matplotlib')) {
+			// Override plt.show() to return base64 image
+			await self.pyodide.runPythonAsync(`import base64
+import os
+from io import BytesIO
+
+# before importing matplotlib
+# to avoid the wasm backend (which needs js.document', not available in worker)
+os.environ["MPLBACKEND"] = "AGG"
+
+import matplotlib.pyplot
+
+_old_show = matplotlib.pyplot.show
+assert _old_show, "matplotlib.pyplot.show"
+
+def show(*, block=None):
+	buf = BytesIO()
+	matplotlib.pyplot.savefig(buf, format="png")
+	buf.seek(0)
+	# encode to a base64 str
+	img_str = base64.b64encode(buf.read()).decode('utf-8')
+	matplotlib.pyplot.clf()
+	buf.close()
+	print(f"data:image/png;base64,{img_str}")
+
+matplotlib.pyplot.show = show`);
+		}
+
 		self.result = await self.pyodide.runPythonAsync(code);
 
 		// Safely process and recursively serialize the result
 		self.result = processResult(self.result);
 
 		console.log('Python result:', self.result);
+
+		// Persist any changes to IndexedDB
+		// await new Promise<void>((resolve, reject) => {
+		// 	self.pyodide.FS.syncfs(false, (err) => {
+		// 		if (err) {
+		// 			console.error('Error syncing to IndexedDB:', err);
+		// 			reject(err);
+		// 		} else {
+		// 			console.log('Successfully synced to IndexedDB.');
+		// 			resolve();
+		// 		}
+		// 	});
+		// });
 	} catch (error) {
 		self.stderr = error.toString();
 	}

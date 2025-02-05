@@ -117,9 +117,8 @@
 
 	let selectedToolIds = [];
 	let imageGenerationEnabled = false;
-	let codeInterpreterEnabled = false;
 	let webSearchEnabled = false;
-
+	let codeInterpreterEnabled = false;
 	let chat = null;
 	let tags = [];
 
@@ -719,6 +718,7 @@
 		if ($page.url.searchParams.get('web-search') === 'true') {
 			webSearchEnabled = true;
 		}
+
 		if ($page.url.searchParams.get('image-generation') === 'true') {
 			imageGenerationEnabled = true;
 		}
@@ -1266,7 +1266,6 @@
 		}
 
 		prompt = '';
-		await tick();
 
 		// Reset chat input textarea
 		const chatInputElement = document.getElementById('chat-input');
@@ -1308,9 +1307,6 @@
 			history.messages[messages.at(-1).id].childrenIds.push(userMessageId);
 		}
 
-		// Wait until history/message have been updated
-		await tick();
-
 		// focus on chat input
 		const chatInput = document.getElementById('chat-input');
 		chatInput?.focus();
@@ -1321,26 +1317,15 @@
 	};
 
 	const sendPrompt = async (
-		history,
+		_history,
 		prompt: string,
 		parentId: string,
 		{ modelId = null, modelIdx = null, newChat = false } = {}
 	) => {
 		let _chatId = JSON.parse(JSON.stringify($chatId));
+		_history = JSON.parse(JSON.stringify(_history));
 
-		// Create new chat if newChat is true and first user message
-		if (
-			newChat &&
-			history.messages[history.currentId].parentId === null &&
-			history.messages[history.currentId].role === 'user'
-		) {
-			_chatId = await initChatHandler(history);
-		} else {
-			await saveChatHandler(_chatId, history);
-		}
-
-		await tick();
-
+		const responseMessageIds: Record<PropertyKey, string> = {};
 		// If modelId is provided, use it, else use selected model
 		let selectedModelIds = modelId
 			? [modelId]
@@ -1349,7 +1334,6 @@
 				: selectedModels;
 
 		// Create response messages for each selected model
-		const responseMessageIds: Record<PropertyKey, string> = {};
 		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
 			const model = $models.filter((m) => m.id === modelId).at(0);
 
@@ -1384,10 +1368,18 @@
 				responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`] = responseMessageId;
 			}
 		}
+		history = history;
+
+		// Create new chat if newChat is true and first user message
+		if (newChat && _history.messages[_history.currentId].parentId === null) {
+			_chatId = await initChatHandler(_history);
+		}
+
 		await tick();
 
+		_history = JSON.parse(JSON.stringify(history));
 		// Save chat after all messages have been created
-		await saveChatHandler(_chatId, history);
+		await saveChatHandler(_chatId, _history);
 
 		await Promise.all(
 			selectedModelIds.map(async (modelId, _modelIdx) => {
@@ -1395,7 +1387,7 @@
 				const model = $models.filter((m) => m.id === modelId).at(0);
 
 				if (model) {
-					const messages = createMessagesList(history, parentId);
+					const messages = createMessagesList(_history, parentId);
 					// If there are image files, check if model is vision capable
 					const hasImages = messages.some((message) =>
 						message.files?.some((file) => file.type === 'image')
@@ -1411,7 +1403,7 @@
 
 					let responseMessageId =
 						responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`];
-					let responseMessage = history.messages[responseMessageId];
+					let responseMessage = _history.messages[responseMessageId];
 
 					let userContext = null;
 					if ($settings?.memory ?? false) {
@@ -1440,7 +1432,7 @@
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();
-					await sendPromptSocket(history, model, responseMessageId, _chatId);
+					await sendPromptSocket(_history, model, responseMessageId, _chatId);
 
 					if (chatEventEmitter) clearInterval(chatEventEmitter);
 				} else {
@@ -1453,9 +1445,9 @@
 		chats.set(await getChatList(localStorage.token, $currentChatPage));
 	};
 
-	const sendPromptSocket = async (history, model, responseMessageId, _chatId) => {
-		const responseMessage = history.messages[responseMessageId];
-		const userMessage = history.messages[responseMessage.parentId];
+	const sendPromptSocket = async (_history, model, responseMessageId, _chatId) => {
+		const responseMessage = _history.messages[responseMessageId];
+		const userMessage = _history.messages[responseMessage.parentId];
 
 		let files = JSON.parse(JSON.stringify(chatFiles));
 		files.push(
@@ -1503,7 +1495,7 @@
 						}`
 					}
 				: undefined,
-			...createMessagesList(history, responseMessageId).map((message) => ({
+			...createMessagesList(_history, responseMessageId).map((message) => ({
 				...message,
 				content: removeDetails(message.content, ['reasoning', 'code_interpreter'])
 			}))
@@ -1558,9 +1550,20 @@
 				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 
 				features: {
-					image_generation: imageGenerationEnabled,
-					code_interpreter: codeInterpreterEnabled,
-					web_search: webSearchEnabled
+					image_generation:
+						$config?.features?.enable_image_generation &&
+						($user.role === 'admin' || $user?.permissions?.features?.image_generation)
+							? imageGenerationEnabled
+							: false,
+					code_interpreter:
+						$user.role === 'admin' || $user?.permissions?.features?.code_interpreter
+							? codeInterpreterEnabled
+							: false,
+					web_search:
+						$config?.features?.enable_web_search &&
+						($user.role === 'admin' || $user?.permissions?.features?.web_search)
+							? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
+							: false
 				},
 				variables: {
 					...getPromptVariables(
@@ -1597,12 +1600,15 @@
 			},
 			`${WEBUI_BASE_URL}/api`
 		).catch((error) => {
-			console.log(error);
+			toast.error(`${error}`);
+
 			responseMessage.error = {
 				content: error
 			};
 			responseMessage.done = true;
+
 			history.messages[responseMessageId] = responseMessage;
+			history.currentId = responseMessageId;
 			return null;
 		});
 
@@ -1934,7 +1940,7 @@
 					</div>
 				{/if}
 
-				<div class="flex flex-col flex-auto z-10 w-full">
+				<div class="flex flex-col flex-auto z-10 w-full @container">
 					{#if $settings?.landingPageMode === 'chat' || createMessagesList(history, history.currentId).length > 0}
 						<div
 							class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
