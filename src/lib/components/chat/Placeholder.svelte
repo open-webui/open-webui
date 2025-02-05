@@ -137,7 +137,7 @@
 				</div>
 
 				<div class=" text-3xl @sm:text-4xl line-clamp-1" in:fade={{ duration: 100 }}>
-					{`${$i18n.t('Hello, {{name}}', { name: $user.name }).split(', ')[0]} ${$i18n.t('Hello, {{name}}', { name: $user.name }).split(', ').slice(-1)}, ik ben Laica`}
+					{`${$i18n.t('Hello, {{name}}', { name: $user.name }).split(', ')[0]} ${$i18n.t('Hello, {{name}}', { name: $user.name }).split(', ').slice(-1)}, dit is GovChat-NL`}
 				</div>
 			</div>
 
