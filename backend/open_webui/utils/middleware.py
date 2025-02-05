@@ -1233,6 +1233,16 @@ async def process_chat_response(
                             ].replace(match.group(0), "")
                             if not content_blocks[-1]["content"]:
                                 content_blocks.pop()
+
+                                if not content_blocks:
+                                    # Append the new block
+                                    content_blocks.append(
+                                        {
+                                            "type": "text",
+                                            "content": "",
+                                        }
+                                    )
+
                             # Append the new block
                             content_blocks.append(
                                 {
@@ -1461,14 +1471,23 @@ async def process_chat_response(
                                 log.debug("Error: ", e)
                                 continue
 
-                    # Clean up the last text block
-                    if content_blocks[-1]["type"] == "text":
-                        content_blocks[-1]["content"] = content_blocks[-1][
-                            "content"
-                        ].strip()
+                    if content_blocks:
+                        # Clean up the last text block
+                        if content_blocks[-1]["type"] == "text":
+                            content_blocks[-1]["content"] = content_blocks[-1][
+                                "content"
+                            ].strip()
 
-                        if not content_blocks[-1]["content"]:
-                            content_blocks.pop()
+                            if not content_blocks[-1]["content"]:
+                                content_blocks.pop()
+
+                                if not content_blocks:
+                                    content_blocks.append(
+                                        {
+                                            "type": "text",
+                                            "content": "",
+                                        }
+                                    )
 
                     if response_tool_calls:
                         tool_calls.append(response_tool_calls)
