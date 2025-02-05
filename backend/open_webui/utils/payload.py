@@ -1,4 +1,4 @@
-from open_webui.utils.task import prompt_variables_template
+from open_webui.utils.task import prompt_template, prompt_variables_template
 from open_webui.utils.misc import (
     add_or_update_system_message,
 )
@@ -8,12 +8,24 @@ from typing import Callable, Optional
 
 # inplace function: form_data is modified
 def apply_model_system_prompt_to_body(
-    params: dict, form_data: dict, metadata: Optional[dict] = None
+    params: dict, form_data: dict, metadata: Optional[dict] = None, user=None
 ) -> dict:
     system = params.get("system", None)
     if not system:
         return form_data
 
+    # Legacy (API Usage)
+    if user:
+        template_params = {
+            "user_name": user.name,
+            "user_location": user.info.get("location") if user.info else None,
+        }
+    else:
+        template_params = {}
+
+    system = prompt_template(system, **template_params)
+
+    # Metadata (WebUI Usage)
     if metadata:
         variables = metadata.get("variables", {})
         if variables:
