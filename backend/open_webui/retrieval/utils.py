@@ -471,31 +471,22 @@ def generate_ollama_batch_embeddings(
     model: str, texts: list[str], url: str, key: str = "", user: UserModel = None
 ) -> Optional[list[list[float]]]:
     try:
-        r = requests.post(
-            f"{url}/api/embed",
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {key}",
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS
-                    else {}
-                ),
-            },
-            json={"input": texts, "model": model},
-        )
-        r.raise_for_status()
-        data = r.json()
-
-        if "embeddings" in data:
-            return data["embeddings"]
-        else:
-            raise "Something went wrong :/"
+        embeddings=[]
+        for text in texts:
+            r = requests.post(
+                f"{url}/api/embeddings",
+                headers={
+                    "Content-Type": "application/json"
+                },
+                json={"prompt": text, "model": model},
+            )
+            r.raise_for_status()
+            data = r.json()
+            if "embedding" in data:
+                embeddings.append(data["embedding"])
+            else:
+                raise "Something went wrong :/"
+        return embeddings
     except Exception as e:
         print(e)
         return None
