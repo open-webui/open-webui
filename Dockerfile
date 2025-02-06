@@ -149,7 +149,13 @@ RUN pip3 install uv && \
     fi; \
     chown -R $UID:$GID /app/backend/data/
 
-
+# Install TPM dependencies
+RUN if [ "$USE_TPM" = "true" ]; then \
+    apt-get update && \
+    # Install TPM C libraries
+    apt-get install -y libtss2-dev pkg-config && \
+    pip3 install -y tpm2-pytss && \
+    fi
 
 # copy embedding weight from build
 # RUN mkdir -p /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2

@@ -5,6 +5,8 @@ from open_webui.utils.misc import (
 
 from typing import Callable, Optional
 
+if os.environ.get("USE_TPM") == "true":
+    import tpm2_pytss as tpm
 
 # inplace function: form_data is modified
 def apply_model_system_prompt_to_body(
@@ -41,6 +43,10 @@ def apply_model_system_prompt_to_body(
 def apply_model_params_to_body(
     params: dict, form_data: dict, mappings: dict[str, Callable]
 ) -> dict:
+    if (os.environ.get("USE_TPM") == "true") and ('seed' not in form_data) :
+        with tpm.ESAPI() as trng:
+            # 4 bytes equals 32 bits which is what llama.cpp expects
+            form_data['seed'] = int.from_bytes(trng.get_random(4))
     if not params:
         return form_data
 
