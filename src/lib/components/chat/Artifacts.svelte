@@ -245,7 +245,7 @@
 	{#if contents.length > 0}
 		<div class="flex justify-between items-center p-2.5 font-primar text-gray-900 dark:text-white">
 			<div class="flex items-center space-x-2">
-				<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
+				<div class="flex items-center gap-0.5 self-center min-w-fit">
 					<button
 						class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition disabled:cursor-not-allowed"
 						on:click={() => navigateContent('prev')}

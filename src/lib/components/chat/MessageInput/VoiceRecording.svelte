@@ -352,10 +352,7 @@
 		</button>
 	</div>
 
-	<div
-		class="flex flex-1 self-center items-center justify-between ml-2 mx-1 overflow-hidden h-6"
-		dir="rtl"
-	>
+	<div class="flex flex-1 self-center items-center justify-between ml-2 mx-1 overflow-hidden h-6">
 		<div
 			class="flex items-center gap-0.5 h-6 w-full max-w-full overflow-hidden overflow-x-hidden flex-wrap"
 		>
