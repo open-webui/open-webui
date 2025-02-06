@@ -133,7 +133,7 @@
 	const submitHref = (e: Event) => {
 		const chatInput = document.getElementById('chat-input');
 		if (chatInput) {
-			let textToSet = `Give me more information about: "${e.target.innerHTML.toString()}". Also, add an arrow back to go back to home page. Give me only code, nothing else. Start your response with: OpenLeftArtifacts`;
+			let textToSet = `Give me more information about: "${e.target.innerHTML.toString()}".`;
 			chatInput.innerHTML = textToSet; // Set the innerHTML directly
 			setTimeout(() => {
 				document.getElementById('send-message-button')?.click();
@@ -188,7 +188,7 @@
 <div
 	id="LeftArtifact"
 	class="absolute bg-gray-50 dark:bg-gray-850 flex flex-col rounded-lg shadow-lg"
-	style="bottom: 4px; left: {leftPx}; max-height: 100svh; max-width: 360px; overflow-y: auto; z-index: 2; padding: 6px;"
+	style="bottom: 4px; left: {leftPx}; max-height: 100svh; max-width: 360px; overflow-y: auto; z-index: 20; padding: 6px;"
 >
 	<div class="relative flex flex-col" style="">
 		<div class="w-full h-full flex-1 relative">

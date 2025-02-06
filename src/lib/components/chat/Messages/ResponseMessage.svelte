@@ -480,14 +480,21 @@
 
 		await tick();
 	});
+
 	$: if (message.done) {
 		isFinishGenRes.set(true);
+		setTimeout(() => {
+			document.getElementById('end-of-messages')?.scrollIntoView({ behavior: 'smooth' });
+		}, 300);
 	} else {
 		isFinishGenRes.set(false);
 		showBottomArtifacts.set(false);
 		showLeftArtifacts.set(false);
 		showArtifacts.set(false);
 		showControls.set(false);
+		setTimeout(() => {
+			document.getElementById('end-of-messages')?.scrollIntoView({ behavior: 'smooth' });
+		}, 300);
 	}
 </script>
 
@@ -687,7 +694,7 @@
 								{/if}
 
 								{#if message.code_executions}
-									<CodeExecutions codeExecutions={message.code_executions} />
+									<CodeExecutions {history} codeExecutions={message.code_executions} />
 								{/if}
 							</div>
 						{/if}
@@ -1143,6 +1150,7 @@
 
 									<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
 										<button
+											id="regenerate-response-btn"
 											type="button"
 											class="{isLastMessage
 												? 'visible'

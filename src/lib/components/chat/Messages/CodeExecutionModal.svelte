@@ -8,6 +8,7 @@
 
 	export let show = false;
 	export let codeExecution = null;
+	export let history;
 </script>
 
 <Modal size="lg" bind:show>
@@ -68,6 +69,7 @@
 			>
 				<div class="flex flex-col w-full">
 					<CodeBlock
+						{history}
 						id="code-exec-{codeExecution?.id}-code"
 						lang={codeExecution?.language ?? ''}
 						code={codeExecution?.code ?? ''}

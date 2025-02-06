@@ -436,6 +436,228 @@ Name: .nbg__blog__card Description: Main card container with background color, b
 
 /* Blog Card CSS END */
 
+/* Step Card CSS START */
+
+.nbg__step__card {
+	background-color: #2a3b57;
+	color: white;
+	padding: 20px;
+	border-radius: 8px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	text-align: center; /* Default to center alignment */
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	height: auto;
+	max-width: 250px;
+	margin: 10px;
+}
+
+.nbg__step__card__left {
+	text-align: left;
+}
+
+.nbg__step__card__number {
+	background-color: transparent;
+	color: #4cd1b0;
+	width: 100px;
+	height: 100px;
+	margin-left: auto;
+	margin-right: auto;
+	border-radius: 50%;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	font-size: 40px;
+	font-weight: bold;
+	margin-bottom: 15px;
+}
+
+.nbg__step__card__description {
+	font-size: 18px;
+	color: #ffffff;
+}
+
+@media screen and (max-width: 768px) {
+	.nbg__step__card {
+		max-width: 70%;
+		margin-left: auto;
+		margin-right: auto;
+		padding: 15px;
+		height: auto;
+	}
+
+	.nbg__step__card__number {
+		width: 50px;
+		height: 50px;
+		font-size: 28px;
+	}
+
+	.nbg__step__card__description {
+		font-size: 12px;
+	}
+}
+
+/*
+Name: .nbg__step__card Description: Basic styling for the step card, with padding, background color, border-radius, text alignment, and flex layout. | Name: .nbg__step__card__left Description: Applies left alignment to the card content. | Name: .nbg__step__card__number Description: Styles for the step number, creating a circle with background color and center-aligned text. | Name: .nbg__step__card__description Description: Styling for the description text inside the card. | Name: @media screen and (max-width: 768px) Description: Adjusts the card’s layout for smaller screen sizes, including the number's size, font size of the description, and card padding.
+*/
+
+/* Step Card CSS END */
+
+/* Feature Card CSS START */
+
+.nbg__feature__card {
+	background-color: #2a3b57;
+	color: white;
+	padding: 20px;
+	border-radius: 12px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	width: 100%;
+	max-width: 350px;
+	margin: 10px;
+}
+
+.nbg__feature__card__title {
+	font-size: 22px;
+	font-weight: bold;
+	margin-bottom: 15px;
+}
+
+.nbg__feature__card__button {
+	background-color: transparent;
+	color: #4cd1b0;
+	border: 2px solid #4cd1b0;
+	padding: 8px 16px;
+	font-size: 14px;
+	border-radius: 4px;
+	cursor: pointer;
+	display: inline-block;
+	text-align: center;
+	transition: background-color 0.3s ease;
+}
+
+.nbg__feature__card__button:hover {
+	background-color: #4cd1b0;
+	color: white;
+}
+
+.nbg__feature__card__description {
+	font-size: 14px;
+	color: #e0e0e0;
+	margin-top: 15px;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+	.nbg__feature__card {
+		padding: 15px;
+		max-width: 60%;
+		margin-left: auto;
+		margin-right: auto;
+	}
+
+	.nbg__feature__card__title {
+		font-size: 20px;
+	}
+
+	.nbg__feature__card__button {
+		width: 100%;
+		padding: 10px;
+		font-size: 16px;
+	}
+
+	.nbg__feature__card__description {
+		font-size: 12px;
+	}
+}
+
+/*
+  Name: .nbg__feature__card Description: This is the container for the feature card, which includes padding, background color, border-radius, shadow, and width properties. | Name: .nbg__feature__card__title Description: Styles for the title of the card, including font size, weight, and margin. | Name: .nbg__feature__card__button Description: Styling for the button within the card (e.g., "Account Information"), with transparent background, border, and hover effect. | Name: .nbg__feature__card__description Description: Description of the feature card, styled with a smaller font size and lighter text color. | Name: @media screen and (max-width: 768px) Description: Adjustments for smaller screen sizes, including font size, padding, and button width for better readability and usability on mobile devices. The CTA is between the title and the description.
+  */
+
+/* Feature Card CSS END */
+
+/* Advantage Card CSS START */
+
+/* Advantage Card Styling */
+.nbg__advantage__card {
+	background-color: #ffffff;
+	color: #2a3b57;
+	border-radius: 8px;
+	padding: 20px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	width: 100%;
+	max-width: 400px;
+	margin: 20px;
+}
+
+.nbg__advantage__card__title {
+	font-size: 22px;
+	font-weight: bold;
+	margin-bottom: 15px;
+}
+
+.nbg__advantage__card__tag {
+	background-color: #4cd1b0;
+	color: white;
+	padding: 8px 15px;
+	border-radius: 20px;
+	font-size: 14px;
+	font-weight: 600;
+	text-transform: uppercase;
+	margin-bottom: 15px;
+	display: inline-block;
+}
+
+.nbg__advantage__card__description {
+	font-size: 14px;
+	color: #4a6a91;
+	margin-bottom: 20px;
+}
+
+.nbg__advantage__card__list {
+	list-style-type: decimal;
+	margin-left: 20px;
+}
+
+.nbg__advantage__card__list-item {
+	font-size: 14px;
+	color: #4a6a91;
+	margin-bottom: 8px;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+	.nbg__advantage__card {
+		padding: 15px;
+		max-width: 100%;
+	}
+
+	.nbg__advantage__card__title {
+		font-size: 20px;
+	}
+
+	.nbg__advantage__card__tag {
+		font-size: 12px;
+		padding: 6px 12px;
+	}
+
+	.nbg__advantage__card__description {
+		font-size: 12px;
+	}
+
+	.nbg__advantage__card__list-item {
+		font-size: 12px;
+	}
+}
+
+/*
+  Name: .nbg__advantage__card Description: The main container for the card, with background color, padding, border-radius, shadow, and margin. | Name: .nbg__advantage__card__title Description: The title of the card styled with a larger font size and bold weight. | Name: .nbg__advantage__card__tag Description: The tag label (e.g., "PSD2 Directive") that is styled with a background color, border radius, and uppercase text. | Name: .nbg__advantage__card__description Description: The descriptive text inside the card, with a smaller font size and different color to distinguish it from the title. | Name: .nbg__advantage__card__list Description: A styled list to display services with a decimal style. | Name: .nbg__advantage__card__list-item Description: Each list item, styled with a font size and spacing. | Name: @media screen and (max-width: 768px) Description: This section adjusts the card layout for smaller screens, such as reducing padding, adjusting font size, and ensuring better legibility and layout for mobile devices.
+  */
+
+/* Advantage Card CSS END */
+
 /* Card CSS END */
 
 /* Button CSS START */

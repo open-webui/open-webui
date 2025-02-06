@@ -6,6 +6,7 @@
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 
 	export let codeExecutions = [];
+	export let history;
 
 	let selectedCodeExecution = null;
 	let showCodeExecutionModal = false;
@@ -23,7 +24,11 @@
 	};
 </script>
 
-<CodeExecutionModal bind:show={showCodeExecutionModal} codeExecution={selectedCodeExecution} />
+<CodeExecutionModal
+	{history}
+	bind:show={showCodeExecutionModal}
+	codeExecution={selectedCodeExecution}
+/>
 
 {#if codeExecutions.length > 0}
 	<div class="mt-1 mb-2 w-full flex gap-1 items-center flex-wrap">

@@ -81,18 +81,6 @@
 			onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
 		></iframe>
 	{:else if token.type === 'text'}
-		{#if token.raw === 'OpenBottomArtifacts' || token.raw === 'OpenLeftArtifacts' || token.raw === 'OpenAllArtifacts'}
-			{#if $isFinishGenRes}
-				<span>Please choose an option from the popup window</span>
-			{:else}
-				<img
-					style="width: 300px;border-radius: 10px;"
-					src="https://media.giphy.com/media/wypKXPQggwaCA/giphy.gif?cid=790b7611k3lxamfufuuxl5hadq30352m642vnivn2f7gvq0h&ep=v1_gifs_search&rid=giphy.gif&ct=g"
-					alt="thinking"
-				/>
-			{/if}
-		{:else}
-			{token.raw}
-		{/if}
+		{token.raw}
 	{/if}
 {/each}

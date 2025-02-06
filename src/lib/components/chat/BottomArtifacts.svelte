@@ -20,10 +20,6 @@
 
 	let copied = false;
 
-	// TODO
-	// if you write a lot of context in RichInputText or textarea with id chat-input, the max-height is 320px,
-	// i tried to catch this height and set the max-height of the bottom artifact to 500px - chatInputHeight
-	// but is does not change unless i close and open again the BottomArtifact. WIP!!!
 	$: if ($bottomHistory) {
 		messages = createMessagesList($bottomHistory, $bottomHistory.currentId);
 		getContents();
@@ -139,7 +135,7 @@
 	const submitHref = (e: Event) => {
 		const chatInput = document.getElementById('chat-input');
 		if (chatInput) {
-			let textToSet = `Give me more information about: "${e.target.innerHTML.toString()}". Also, add an arrow back to go back to home page. Give me only code, nothing else. Start your response with: OpenBottomArtifacts`;
+			let textToSet = `Give me more information about: "${e.target.innerHTML.toString()}".`;
 			chatInput.innerHTML = textToSet; // Set the innerHTML directly
 			setTimeout(() => {
 				document.getElementById('send-message-button')?.click();
@@ -156,7 +152,9 @@
 		// After content is rendered, add event listeners
 		const bottomArtifact = document.getElementById('BottomArtifact');
 		if (bottomArtifact) {
-			const links = bottomArtifact.querySelectorAll('a'); // Select all links inside BottomArtifact
+			const links = bottomArtifact.querySelectorAll(
+				'a, tr, td, .nbg__button, .nbg__button__primary, .nbg__button__secondary, .nbg__button__danger, .nbg__button__icon, .nbg__button__primary__no__fill, .nbg__button__secondary__no__fill, .nbg__button__text__link, .nbg__button__copy, .nbg__button__sidebar, .nbg__cta__arrow, .nbg__cta__rounded, .nbg__support__cta__arrow, .nbg__blog__cta__button, .nbg__feature__card__button, .nbg__advantage__card__tag '
+			); // Select all links inside BottomArtifact
 			links.forEach((link) => {
 				link.addEventListener('click', (e) => {
 					if ($bottomHistory.messages[$bottomHistory.currentId].done) {
@@ -179,22 +177,12 @@
 			});
 		}
 	}
-	let maxHeight = 500;
-	let chatInputHeight = 0;
-
-	$: {
-		const chatInputElement = document.getElementById('chat-input');
-		if (chatInputElement && chatInputElement.clientHeight) {
-			chatInputHeight = chatInputElement.clientHeight; // Capture the height of the input
-		}
-		maxHeight = 500 - chatInputHeight; // Recalculate maxHeight based on chat input height
-	}
 </script>
 
 <div
 	id="bottom-artifact"
 	class="absolute bg-gray-50 dark:bg-gray-850 z-50 w-full max-w-full flex flex-col rounded-md shadow-lg"
-	style="bottom:5px;left:5px;right:15px;max-height:{maxHeight}px;overflow-y:auto;padding: 6px;transition: all 0.3s ease-in-out;"
+	style="bottom:5px;left:5px;right:15px;height:380px;overflow-y:auto;padding: 6px;transition: all 0.3s ease-in-out;"
 >
 	<div class="relative flex flex-col" style="">
 		<div class="w-full h-full flex-1 relative">

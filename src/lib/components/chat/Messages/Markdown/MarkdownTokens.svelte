@@ -23,6 +23,7 @@
 	export let id: string;
 	export let tokens: Token[];
 	export let top = true;
+	export let history;
 
 	export let save = false;
 	export let onSourceClick: Function = () => {};
@@ -43,8 +44,6 @@
 		const csvContent = rows.map((row) => row.join(',')).join('\n');
 
 		// Log rows and CSV content to ensure everything is correct.
-		console.log(rows);
-		console.log(csvContent);
 
 		// To handle Unicode characters, you need to prefix the data with a BOM:
 		const bom = '\uFEFF'; // BOM for UTF-8
@@ -68,6 +67,7 @@
 	{:else if token.type === 'code'}
 		{#if token.raw.includes('```')}
 			<CodeBlock
+				{history}
 				id={`${id}-${tokenIdx}`}
 				{token}
 				lang={token?.lang ?? ''}
@@ -106,6 +106,7 @@
 									<div class="flex flex-col gap-1.5 text-left">
 										<div class="flex-shrink-0 break-normal">
 											<MarkdownInlineTokens
+												{history}
 												id={`${id}-${tokenIdx}-header-${headerIdx}`}
 												tokens={header.tokens}
 												{onSourceClick}
@@ -126,6 +127,7 @@
 									>
 										<div class="flex flex-col break-normal">
 											<MarkdownInlineTokens
+												{history}
 												id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
 												tokens={cell.tokens}
 												{onSourceClick}
@@ -209,6 +211,7 @@
 	{:else if token.type === 'paragraph'}
 		<p>
 			<MarkdownInlineTokens
+				{history}
 				id={`${id}-${tokenIdx}-p`}
 				tokens={token.tokens ?? []}
 				{onSourceClick}
@@ -218,13 +221,19 @@
 		{#if top}
 			<p>
 				{#if token.tokens}
-					<MarkdownInlineTokens id={`${id}-${tokenIdx}-t`} tokens={token.tokens} {onSourceClick} />
+					<MarkdownInlineTokens
+						{history}
+						id={`${id}-${tokenIdx}-t`}
+						tokens={token.tokens}
+						{onSourceClick}
+					/>
 				{:else}
 					{unescapeHtml(token.text)}
 				{/if}
 			</p>
 		{:else if token.tokens}
 			<MarkdownInlineTokens
+				{history}
 				id={`${id}-${tokenIdx}-p`}
 				tokens={token.tokens ?? []}
 				{onSourceClick}
