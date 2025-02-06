@@ -15,6 +15,7 @@
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
+	import Header from '$lib/components/layout/Header.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -147,25 +148,14 @@
 		mode = $config?.features.enable_ldap ? 'ldap' : 'signup';
 	}}
 />
-
+<Header />
 <div class="w-full h-screen max-h-[100dvh] text-white relative">
 	<div class="w-full h-full absolute top-0 left-0 bg-white dark:bg-black"></div>
 
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
 
 	{#if loaded}
-		<div class="fixed m-10 z-50">
-			<div class="flex space-x-2">
-				<div class=" self-center">
-					<img
-						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/splash.png"
-						class=" w-6 rounded-full dark:invert"
-						alt="logo"
-					/>
-				</div>
-			</div>
-		</div>
+
 
 		<div
 			class="fixed bg-transparent min-h-screen w-full flex justify-center font-primary z-50 text-black dark:text-white"
@@ -239,7 +229,7 @@
 											<input
 												bind:value={ldapUsername}
 												type="text"
-												class="my-0.5 w-full text-sm outline-none bg-transparent"
+												class="my-0.5 w-full text-sm outline-none fr-background-contrast--grey rounded-md p-2"
 												autocomplete="username"
 												name="username"
 												placeholder={$i18n.t('Enter Your Username')}
@@ -247,12 +237,12 @@
 											/>
 										</div>
 									{:else}
-										<div class="mb-2">
+										<div class="mb-2 fr-background">
 											<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Email')}</div>
-											<input
+										<input
 												bind:value={email}
 												type="email"
-												class="my-0.5 w-full text-sm outline-none bg-transparent"
+												class="my-0.5 w-full text-sm outline-none fr-background-contrast--grey rounded-md p-2"
 												autocomplete="email"
 												name="email"
 												placeholder={$i18n.t('Enter Your Email')}
@@ -267,7 +257,7 @@
 										<input
 											bind:value={password}
 											type="password"
-											class="my-0.5 w-full text-sm outline-none bg-transparent"
+											class="my-0.5 w-full text-sm outline-none fr-background-contrast--grey rounded-md p-2"
 											placeholder={$i18n.t('Enter Your Password')}
 											autocomplete="current-password"
 											name="current-password"
@@ -287,7 +277,7 @@
 										</button>
 									{:else}
 										<button
-											class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 fr-text-action-high--blue-france  fr-border-default--blue-france border-3 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
+											class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 fr-text-action-high--blue-france  fr-border-default--blue-france border-3 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5 hover:bg-gray-700/10"
 											type="submit"
 										>
 											{mode === 'signin'
@@ -325,7 +315,7 @@
 
 						<div class="mt-5">
 							<button
-								class="flex justify-center items-center fr-background-action-high--blue-france text-white dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
+								class="flex justify-center items-center fr-background-action-high--blue-france text-white dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5 "
 								on:click={() => {
 									window.location.href = `${WEBUI_API_BASE_URL}/auths/signin`;
 								}}

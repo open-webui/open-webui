@@ -63,14 +63,13 @@
 	{#if filteredPrompts.length > 0}
 		<Bolt />
 		{$i18n.t('Suggested')}
-	{:else}
-		<!-- Keine Vorschläge -->
+	<!-- {:else}
 
 		<div
 			class="flex w-full text-center items-center justify-center self-start text-gray-400 dark:text-gray-600"
 		>
 			{$WEBUI_NAME} ‧ v{WEBUI_VERSION}
-		</div>
+		</div> -->
 	{/if}
 </div>
 
