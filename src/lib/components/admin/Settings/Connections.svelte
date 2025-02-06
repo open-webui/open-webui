@@ -101,14 +101,17 @@
 	const addOpenAIConnectionHandler = async (connection) => {
 		OPENAI_API_BASE_URLS = [...OPENAI_API_BASE_URLS, connection.url];
 		OPENAI_API_KEYS = [...OPENAI_API_KEYS, connection.key];
-		OPENAI_API_CONFIGS[OPENAI_API_BASE_URLS.length] = connection.config;
+		OPENAI_API_CONFIGS[OPENAI_API_BASE_URLS.length - 1] = connection.config;
 
 		await updateOpenAIHandler();
 	};
 
 	const addOllamaConnectionHandler = async (connection) => {
 		OLLAMA_BASE_URLS = [...OLLAMA_BASE_URLS, connection.url];
-		OLLAMA_API_CONFIGS[OLLAMA_BASE_URLS.length] = connection.config;
+		OLLAMA_API_CONFIGS[OLLAMA_BASE_URLS.length - 1] = {
+			...connection.config,
+			key: connection.key
+		};
 
 		await updateOllamaHandler();
 	};
