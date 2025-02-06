@@ -32,7 +32,7 @@
 	let showUsername = false;
 	let richTextInput = true;
 	let largeTextAsFile = false;
-	let notificationSound = true;
+	let notificationSound = false;
 
 	let landingPageMode = '';
 	let chatBubble = true;
