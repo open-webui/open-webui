@@ -1122,6 +1122,16 @@ async def process_chat_response(
             },
         )
 
+        def split_content_and_whitespace(content):
+            content_stripped = content.rstrip()
+            original_whitespace = content[len(content_stripped):] if len(content) > len(content_stripped) else ''
+            return content_stripped, original_whitespace
+
+        def is_opening_code_block(content):
+            backtick_segments = content.split('```')
+            # Even number of segments means the last backticks are opening a new block
+            return len(backtick_segments) > 1 and len(backtick_segments) % 2 == 0
+
         # Handle as a background task
         async def post_response_handler(response, events):
             def serialize_content_blocks(content_blocks, raw=False):
@@ -1188,21 +1198,12 @@ async def process_chat_response(
                         output = block.get("output", None)
                         lang = attributes.get("lang", "")
 
-                        # Separate content from ending whitespace but preserve it
-                        original_whitespace = ''
-                        content_stripped = content.rstrip()
-                        if len(content) > len(content_stripped):
-                            original_whitespace = content[len(content_stripped):]
-
-                        # Count the number of backticks to identify if we are in an opening code block
-                        backtick_segments = content_stripped.split('```')
-                        # Odd number of ``` segments -> the last backticks are closing a block
-                        # Even number -> the last backticks are opening a new block
-                        if len(backtick_segments) > 1 and len(backtick_segments) % 2 == 0:
-                            # The trailing backticks are opening a new block, they need to be removed or it will break the code interpreter markdown
+                        content_stripped, original_whitespace = split_content_and_whitespace(content)
+                        if is_opening_code_block(content_stripped):
+                            # Remove trailing backticks that would open a new block
                             content = content_stripped.rstrip('`').rstrip() + original_whitespace
                         else:
-                            # The trailing backticks are closing a block (or there are no backticks), so it won't cause issues
+                            # Keep content as is - either closing backticks or no backticks
                             content = content_stripped + original_whitespace
 
                         if output:
