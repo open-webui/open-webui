@@ -1,67 +1,83 @@
 @font-face {
-	font-family: Marianne;
-	src: url("assets/fonts/Marianne-Light.woff2") format("woff2"),
-		url("assets/fonts/Marianne-Light.woff") format("woff");
-	font-weight: 300;
-	font-style: normal;
-	font-display: swap;
-}
-@font-face {
-	font-family: Marianne;
-	src: url("assets/fonts/Marianne-Light_Italic.woff2") format("woff2"),
-		url("assets/fonts/Marianne-Light_Italic.woff") format("woff");
-	font-weight: 300;
-	font-style: italic;
-	font-display: swap;
-}
-@font-face {
-	font-family: Marianne;
-	src: url("assets/fonts/Marianne-Regular.woff2") format("woff2"),
-		url("assets/fonts/Marianne-Regular.woff") format("woff");
+	font-family: 'Marianne';
+	src: local('Marianne'),
+		 url('/assets/fonts/Marianne-Regular.woff2') format('woff2'),
+		 url('/assets/fonts/Marianne-Regular.woff') format('woff');
 	font-weight: 400;
 	font-style: normal;
 	font-display: swap;
 }
+
 @font-face {
-	font-family: Marianne;
-	src: url("assets/fonts/Marianne-Regular_Italic.woff2") format("woff2"),
-		url("assets/fonts/Marianne-Regular_Italic.woff") format("woff");
+	font-family: 'Marianne';
+	src: local('Marianne Italic'),
+		 url('/assets/fonts/Marianne-Regular_Italic.woff2') format('woff2'),
+		 url('/assets/fonts/Marianne-Regular_Italic.woff') format('woff');
 	font-weight: 400;
 	font-style: italic;
 	font-display: swap;
 }
+
 @font-face {
-	font-family: Marianne;
-	src: url("assets/fonts/Marianne-Medium.woff2") format("woff2"),
-		url("assets/fonts/Marianne-Medium.woff") format("woff");
+	font-family: 'Marianne';
+	src: local('Marianne Light'),
+		 url('/assets/fonts/Marianne-Light.woff2') format('woff2'),
+		 url('/assets/fonts/Marianne-Light.woff') format('woff');
+	font-weight: 300;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Marianne';
+	src: local('Marianne Light Italic'),
+		 url('/assets/fonts/Marianne-Light_Italic.woff2') format('woff2'),
+		 url('/assets/fonts/Marianne-Light_Italic.woff') format('woff');
+	font-weight: 300;
+	font-style: italic;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Marianne';
+	src: local('Marianne Medium'),
+		 url('/assets/fonts/Marianne-Medium.woff2') format('woff2'),
+		 url('/assets/fonts/Marianne-Medium.woff') format('woff');
 	font-weight: 500;
 	font-style: normal;
 	font-display: swap;
 }
+
 @font-face {
-	font-family: Marianne;
-	src: url("assets/fonts/Marianne-Medium_Italic.woff2") format("woff2"),
-		url("assets/fonts/Marianne-Medium_Italic.woff") format("woff");
+	font-family: 'Marianne';
+	src: local('Marianne Medium Italic'),
+		 url('/assets/fonts/Marianne-Medium_Italic.woff2') format('woff2'),
+		 url('/assets/fonts/Marianne-Medium_Italic.woff') format('woff');
 	font-weight: 500;
 	font-style: italic;
 	font-display: swap;
 }
+
 @font-face {
-	font-family: Marianne;
-	src: url("assets/fonts/Marianne-Bold.woff2") format("woff2"),
-		url("assets/fonts/Marianne-Bold.woff") format("woff");
+	font-family: 'Marianne';
+	src: local('Marianne Bold'),
+		 url('/assets/fonts/Marianne-Bold.woff2') format('woff2'),
+		 url('/assets/fonts/Marianne-Bold.woff') format('woff');
 	font-weight: 700;
 	font-style: normal;
 	font-display: swap;
 }
+
 @font-face {
-	font-family: Marianne;
-	src: url("assets/fonts/Marianne-Bold_Italic.woff2") format("woff2"),
-		url("assets/fonts/Marianne-Bold_Italic.woff") format("woff");
+	font-family: 'Marianne';
+	src: local('Marianne Bold Italic'),
+		 url('/assets/fonts/Marianne-Bold_Italic.woff2') format('woff2'),
+		 url('/assets/fonts/Marianne-Bold_Italic.woff') format('woff');
 	font-weight: 700;
 	font-style: italic;
 	font-display: swap;
 }
+
 @font-face {
 	font-family: Spectral;
 	src: url("assets/fonts/Spectral-Regular.woff2") format("woff2"),
@@ -70,6 +86,7 @@
 	font-style: normal;
 	font-display: swap;
 }
+
 @font-face {
 	font-family: Spectral;
 	src: url("assets/fonts/Spectral-ExtraBold.woff2") format("woff2"),
@@ -3144,12 +3161,6 @@ body {
 	.fr-background-contrast--green-emeraude:hover {
 		background-color: #77eda5 !important;
 	}
-	.fr-background-contrast--green-emeraude:active {
-		background-color: #6dd897 !important;
-	}
-	.fr-background-contrast--green-menthe {
-		background-color: #bafaee !important;
-	}
 	.fr-background-contrast--green-menthe:hover {
 		background-color: #79e7d5 !important;
 	}
@@ -4545,9 +4556,6 @@ body {
 	}
 	.fr-background-alt--yellow-moutarde:active {
 		background-color: #fbcd64 !important;
-	}
-	.fr-background-alt--orange-terre-battue {
-		background-color: #fef4f2 !important;
 	}
 	.fr-background-alt--orange-terre-battue:hover {
 		background-color: #fcd8d0 !important;
