@@ -1490,12 +1490,34 @@ async def process_chat_response(
                                                         "arguments"
                                                     ] += delta_arguments
 
+                                reasoning_content = delta.get("reasoning_content")
+                                if reasoning_content:
+                                    if not content_blocks or content_blocks[-1].get("tag") != "reasoning_content":
+                                        content_blocks.append(
+                                            {
+                                                "type": "reasoning",
+                                                "tag": "reasoning_content",
+                                                "attributes": {},
+                                                "content": "",
+                                                "started_at": time.time(),
+                                            }
+                                        )
+                                    content_blocks[-1]["content"] += reasoning_content
+                                
                                 value = delta.get("content")
 
                                 if value:
                                     content = f"{content}{value}"
 
-                                    if not content_blocks:
+                                    # Close the thinking block if we receive content in delta.
+                                    if content_blocks[-1].get("tag") == "reasoning_content":
+                                        content_blocks[-1]["ended_at"] = time.time()
+                                        content_blocks[-1]["duration"] = int(
+                                            content_blocks[-1]["ended_at"]
+                                            - content_blocks[-1]["started_at"]
+                                        )
+
+                                    if not content_blocks or content_blocks[-1].get("tag") == "reasoning_content":
                                         content_blocks.append(
                                             {
                                                 "type": "text",
@@ -1530,6 +1552,7 @@ async def process_chat_response(
                                         if end:
                                             break
 
+                                if reasoning_content or value:
                                     if ENABLE_REALTIME_CHAT_SAVE:
                                         # Save message in the database
                                         Chats.upsert_message_to_chat_by_id_and_message_id(
