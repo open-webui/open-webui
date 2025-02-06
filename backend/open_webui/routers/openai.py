@@ -622,7 +622,7 @@ async def generate_chat_completion(
     key = request.app.state.config.OPENAI_API_KEYS[idx]
 
     # Fix: o1,o3 does not support the "max_tokens" parameter, Modify "max_tokens" to "max_completion_tokens"
-    is_o1_o3 = payload["model"].lower().startswith(("o1-", "o3-"))
+    is_o1_o3 = payload["model"].lower().startswith(("o1", "o3-"))
     if is_o1_o3:
         payload = openai_o1_o3_handler(payload)
     elif "api.openai.com" not in url:
