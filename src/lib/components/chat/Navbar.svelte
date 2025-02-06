@@ -129,65 +129,6 @@
 						</button>
 					</Tooltip>
 				{/if}
-
-				{#if !$mobile && ($user.role === 'admin' || $user?.permissions.chat?.controls)}
-					<Tooltip content={$i18n.t('Controls')}>
-						<button
-							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							on:click={async () => {
-								await showControls.set(!$showControls);
-							}}
-							aria-label="Controls"
-						>
-							<div class=" m-auto self-center">
-								<AdjustmentsHorizontal className=" size-5" strokeWidth="0.5" />
-							</div>
-						</button>
-					</Tooltip>
-				{/if}
-
-				<Tooltip content={$i18n.t('New Chat')}>
-					<button
-						id="new-chat-button"
-						class=" flex {$showSidebar
-							? 'md:hidden'
-							: ''} cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-						on:click={() => {
-							initNewChat();
-						}}
-						aria-label="New Chat"
-					>
-						<div class=" m-auto self-center">
-							<PencilSquare className=" size-5" strokeWidth="2" />
-						</div>
-					</button>
-				</Tooltip>
-
-				{#if $user !== undefined}
-					<UserMenu
-						className="max-w-[200px]"
-						role={$user.role}
-						on:show={(e) => {
-							if (e.detail === 'archived-chat') {
-								showArchivedChats.set(true);
-							}
-						}}
-					>
-						<button
-							class="select-none flex rounded-xl p-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							aria-label="User Menu"
-						>
-							<div class="self-center">
-								<img
-									src={$user.profile_image_url}
-									class="size-6 object-cover rounded-full"
-									alt="User profile"
-									draggable="false"
-								/>
-							</div>
-						</button>
-					</UserMenu>
-				{/if}
 			</div>
 		</div>
 	</div>
