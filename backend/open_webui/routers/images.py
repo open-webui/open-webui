@@ -3,6 +3,7 @@ import base64
 import io
 import json
 import logging
+import mimetypes
 import re
 from pathlib import Path
 from typing import Optional
@@ -411,15 +412,16 @@ def load_url_image_data(url, headers=None):
 
 
 def upload_image(request, data, image_data, content_type, user):
+    image_format = mimetypes.guess_extension(content_type)
     file = UploadFile(
         file=io.BytesIO(image_data),
-        filename="image",  # will be converted to a unique ID on upload_file
+        filename=f"generated{image_format}",  # will be converted to a unique ID on upload_file
         headers={
             "content-type": content_type,
         },
     )
     file_item = upload_file(request, file, user)
-    file_body_path = IMAGE_CACHE_DIR.joinpath(f"{file_item.id}.json")
+    file_body_path = IMAGE_CACHE_DIR.joinpath(f"{file_item.filename}.json")
 
     with open(file_body_path, "w") as f:
         json.dump(data, f)
