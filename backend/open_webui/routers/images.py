@@ -410,6 +410,24 @@ def load_url_image_data(url, headers=None):
         return None
 
 
+def upload_image(request, data, image_data, content_type, user):
+    file = UploadFile(
+        file=io.BytesIO(image_data),
+        filename="image",  # will be converted to a unique ID on upload_file
+        headers={
+            "content-type": content_type,
+        },
+    )
+    file_item = upload_file(request, file, user)
+    file_body_path = IMAGE_CACHE_DIR.joinpath(f"{file_item.id}.json")
+
+    with open(file_body_path, "w") as f:
+        json.dump(data, f)
+
+    url = request.app.url_path_for("get_file_content_by_id", id=file_item.id)
+    return url
+
+
 @router.post("/generations")
 async def image_generations(
     request: Request,
@@ -464,22 +482,8 @@ async def image_generations(
 
             for image in res["data"]:
                 image_data, content_type = load_b64_image_data(image["b64_json"])
-                file = UploadFile(
-                    file=io.BytesIO(image_data),
-                    filename="image",  # will be converted to a unique ID on upload_file
-                    headers={
-                        "content-type": content_type,
-                    },
-                )
-                file_item = upload_file(request, file, user)
-                url = request.app.url_path_for(
-                    "get_file_content_by_id", id=file_item.id
-                )
+                url = upload_image(request, data, image_data, content_type, user)
                 images.append({"url": url})
-                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{file_item.id}.json")
-
-                with open(file_body_path, "w") as f:
-                    json.dump(data, f)
             return images
 
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == "comfyui":
@@ -526,24 +530,14 @@ async def image_generations(
                     }
 
                 image_data, content_type = load_url_image_data(image["url"], headers)
-                file = UploadFile(
-                    file=io.BytesIO(image_data),
-                    filename="image",  # will be converted to a unique ID on upload_file
-                    headers={
-                        "content-type": content_type,
-                    },
-                )
-                file_item = upload_file(request, file, user)
-                url = request.app.url_path_for(
-                    "get_file_content_by_id", id=file_item.id
+                url = upload_image(
+                    request,
+                    form_data.model_dump(exclude_none=True),
+                    image_data,
+                    content_type,
+                    user,
                 )
                 images.append({"url": url})
-                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{file_item.id}.json")
-
-                with open(file_body_path, "w") as f:
-                    json.dump(form_data.model_dump(exclude_none=True), f)
-
-            log.debug(f"images: {images}")
             return images
         elif (
             request.app.state.config.IMAGE_GENERATION_ENGINE == "automatic1111"
@@ -589,23 +583,14 @@ async def image_generations(
 
             for image in res["images"]:
                 image_data, content_type = load_b64_image_data(image)
-                file = UploadFile(
-                    file=io.BytesIO(image_data),
-                    filename="image",  # will be converted to a unique ID on upload_file
-                    headers={
-                        "content-type": content_type,
-                    },
-                )
-                file_item = upload_file(request, file, user)
-                url = request.app.url_path_for(
-                    "get_file_content_by_id", id=file_item.id
+                url = upload_image(
+                    request,
+                    {**data, "info": res["info"]},
+                    image_data,
+                    content_type,
+                    user,
                 )
                 images.append({"url": url})
-                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{file_item.id}.json")
-
-                with open(file_body_path, "w") as f:
-                    json.dump({**data, "info": res["info"]}, f)
-
             return images
     except Exception as e:
         error = e
