@@ -36,6 +36,7 @@
 
 	import '../tailwind.css';
 	import '../app.css';
+	import '../nbg.css';
 
 	import 'tippy.js/dist/tippy.css';
 
@@ -96,7 +97,6 @@
 		});
 
 		_socket.on('usage', (data) => {
-			console.log('usage', data);
 			USAGE_POOL.set(data['models']);
 		});
 	};
@@ -465,7 +465,7 @@
 
 <svelte:head>
 	<title>{$WEBUI_NAME}</title>
-	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
+	<link crossorigin="anonymous" rel="icon" href="/static/favicon.png" />
 
 	<!-- rosepine themes have been disabled as it's not up to date with our latest version. -->
 	<!-- feel free to make a PR to fix if anyone wants to see it return -->

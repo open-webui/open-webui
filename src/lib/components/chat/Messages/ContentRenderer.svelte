@@ -4,15 +4,24 @@
 	const dispatch = createEventDispatcher();
 
 	import Markdown from './Markdown.svelte';
-	import { chatId, mobile, showArtifacts, showControls, showOverview } from '$lib/stores';
+	import { chatId, mobile, showArtifacts, showControls, showOverview, showBottomArtifacts,
+		showLeftArtifacts,
+		leftHistory,
+		bottomHistory } from '$lib/stores';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList } from '$lib/utils';
+	import LightBlub from '$lib/components/icons/LightBlub.svelte';
+	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
+	import Message from './Message.svelte';
 
 	export let id;
 	export let content;
-	export let history;
 	export let model = null;
 	export let sources = null;
+	export let history = {
+		currentId: '',
+		messages: {}
+	};
 
 	export let save = false;
 	export let floatingButtons = true;
@@ -107,12 +116,26 @@
 			document.removeEventListener('keydown', keydownHandler);
 		}
 	});
+	// TODO if we want to clear previous history!
+	// $: {
+	// 	if (!$isFinishGenRes) {
+	// 		bottomHistory.set({
+	// 			currentId: '',
+	// 			messages: {}
+	// 		});
+	// 		leftHistory.set({
+	// 			currentId: '',
+	// 			messages: {}
+	// 		});
+	// 	}
+	// }
 </script>
 
 <div bind:this={contentContainerElement}>
 	<Markdown
 		{id}
 		{content}
+		{history}
 		{model}
 		{save}
 		sourceIds={(sources ?? []).reduce((acc, s) => {
@@ -146,12 +169,98 @@
 		}}
 		on:code={(e) => {
 			const { lang, code } = e.detail;
+			const { currentId, messages } = history;
+			const currentMessage = messages[currentId];
 
-			if (
+			// Case 1: Check if the message includes 'OpenLeftArtifacts' & 'OpenBottomArtifacts'
+			if (currentId && currentMessage.content.includes('OpenAllArtifacts')) {
+				console.log('OpenAllArtifacts');
+				leftHistory.set({
+					currentId,
+					messages: {
+						...$leftHistory?.messages,
+						...Object.fromEntries(
+							Object.entries(history.messages).filter(([id, message]) =>
+								message.content.includes('OpenAllArtifacts')
+							)
+						)
+					}
+				});
+				bottomHistory.set({
+					currentId,
+					messages: {
+						...$bottomHistory?.messages,
+						...Object.fromEntries(
+							Object.entries(history.messages).filter(([id, message]) =>
+								message.content.includes('OpenAllArtifacts')
+							)
+						)
+					}
+				});
+				showLeftArtifacts.set(false);
+				showBottomArtifacts.set(false);
+				showControls.set(false);
+				showArtifacts.set(false);
+				setTimeout(() => {
+					showLeftArtifacts.set(true);
+					showBottomArtifacts.set(true);
+					showControls.set(true);
+					showArtifacts.set(true);
+				}, 200);
+			}
+
+			// Case 2: Check if the message includes 'OpenBottomArtifacts'
+			else if (currentId && currentMessage.content.includes('OpenBottomArtifacts')) {
+				console.log('OpenBottomArtifacts only');
+				bottomHistory.set({
+					currentId,
+					messages: {
+						...$bottomHistory?.messages,
+						...Object.fromEntries(
+							Object.entries(history.messages).filter(([id, message]) =>
+								message.content.includes('OpenBottomArtifacts')
+							)
+						)
+					}
+				});
+				showBottomArtifacts.set(false);
+				setTimeout(() => {
+					showBottomArtifacts.set(true);
+				}, 200);
+			}
+
+			// Case 3: Check if the message includes 'OpenLeftArtifacts'
+			else if (currentId && currentMessage.content.includes('OpenLeftArtifacts')) {
+				console.log('OpenLeftArtifacts only');
+				leftHistory.set({
+					currentId,
+					messages: {
+						...$leftHistory?.messages,
+						...Object.fromEntries(
+							Object.entries(history.messages).filter(([id, message]) =>
+								message.content.includes('OpenLeftArtifacts')
+							)
+						)
+					}
+				});
+				showLeftArtifacts.set(false);
+				setTimeout(() => {
+					showLeftArtifacts.set(true);
+				}, 200);
+			}
+
+			// Case 4: Handle html, svg, and xml content for artifacts
+			else if (
+				currentId &&
 				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
 				!$mobile &&
-				$chatId
+				$chatId &&
+				currentMessage.parentId &&
+				currentMessage.done
 			) {
+				console.log('HTML, SVG, XML content');
+				showBottomArtifacts.set(false);
+				showLeftArtifacts.set(false);
 				showArtifacts.set(true);
 				showControls.set(true);
 			}

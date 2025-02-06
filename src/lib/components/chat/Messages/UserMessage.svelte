@@ -146,7 +146,7 @@
 			{/if}
 
 			{#if edit === true}
-				<div class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 mb-2">
+				<div class=" w-full bg-gray-50 dark:bg-gray-850 rounded-3xl px-5 py-3 mb-2">
 					<div class="max-h-96 overflow-auto">
 						<textarea
 							id="message-edit-{message.id}"

@@ -469,10 +469,15 @@
         "
 	data-state={$showSidebar}
 >
+	<div class="flex justify-center">
+		<img src="/assets/images/logoNBG.svg" style="padding: 8px 16px;" alt="logo NBG" />
+	</div>
+
 	<div
 		class="py-2 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
 			? ''
 			: 'invisible'}"
+		style="height: 87%;"
 	>
 		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
 			<button
@@ -520,7 +525,7 @@
 					<div class="self-center mx-1.5">
 						<img
 							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/favicon.png"
+							src="/static/favicon.png"
 							class=" size-5 -translate-x-1.5 rounded-full"
 							alt="logo"
 						/>

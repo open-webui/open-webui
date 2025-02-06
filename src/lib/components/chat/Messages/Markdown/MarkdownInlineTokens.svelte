@@ -13,13 +13,14 @@
 	import Image from '$lib/components/common/Image.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
 	import Source from './Source.svelte';
+	import { isFinishGenRes, socket } from '$lib/stores';
 
 	export let id: string;
 	export let tokens: Token[];
 	export let onSourceClick: Function = () => {};
 </script>
 
-{#each tokens as token}
+{#each tokens as token, tokenIdx (tokenIdx)}
 	{#if token.type === 'escape'}
 		{unescapeHtml(token.text)}
 	{:else if token.type === 'html'}

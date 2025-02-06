@@ -414,6 +414,7 @@
 					{/each}
 				</div>
 				<div class="pb-12" />
+				<div id="end-of-messages" />
 				{#if bottomPadding}
 					<div class="  pb-6" />
 				{/if}

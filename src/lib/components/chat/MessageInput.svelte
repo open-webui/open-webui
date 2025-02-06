@@ -483,9 +483,7 @@
 											class="size-3.5 max-w-[28px] object-cover rounded-full"
 											src={$models.find((model) => model.id === atSelectedModel.id)?.info?.meta
 												?.profile_image_url ??
-												($i18n.language === 'dg-DG'
-													? `/doge.png`
-													: `${WEBUI_BASE_URL}/static/favicon.png`)}
+												($i18n.language === 'dg-DG' ? `/doge.png` : `/static/favicon.png`)}
 										/>
 										<div class="translate-y-[0.5px]">
 											Talking to <span class=" font-medium">{atSelectedModel.name}</span>
@@ -680,7 +678,8 @@
 								<div class="px-2.5">
 									{#if $settings?.richTextInput ?? true}
 										<div
-											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
+											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full py-2.5 px-1 rounded-xl resize-none h-fit overflow-auto"
+											style="max-height: 180px;"
 										>
 											<RichTextInput
 												bind:this={chatInputElement}
@@ -887,6 +886,7 @@
 											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-none w-full pt-3 px-1 resize-none"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 											bind:value={prompt}
+											bind:clientHeight={chatInputElement}
 											on:keypress={(e) => {
 												if (
 													!$mobile ||

@@ -247,9 +247,10 @@
 	</DropdownMenu.Trigger>
 
 	<DropdownMenu.Content
-		class=" z-40 {$mobile
+		class="{$mobile
 			? `w-full`
 			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg  outline-none"
+		style="z-index: 101;"
 		transition={flyAndScale}
 		side={$mobile ? 'bottom' : 'bottom-start'}
 		sideOffset={3}

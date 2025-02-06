@@ -9,7 +9,17 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, models, settings, user } from '$lib/stores';
+	import {
+		config,
+		models,
+		settings,
+		user,
+		isFinishGenRes,
+		showBottomArtifacts,
+		showLeftArtifacts,
+		showArtifacts,
+		showControls
+	} from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -41,6 +51,7 @@
 	import { createNewFeedback, getFeedbackById, updateFeedbackById } from '$lib/apis/evaluations';
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
+	import Artifacts from '../Artifacts.svelte';
 
 	interface MessageType {
 		id: string;
@@ -477,6 +488,22 @@
 
 		await tick();
 	});
+
+	$: if (message.done) {
+		isFinishGenRes.set(true);
+		setTimeout(() => {
+			document.getElementById('end-of-messages')?.scrollIntoView({ behavior: 'smooth' });
+		}, 300);
+	} else {
+		isFinishGenRes.set(false);
+		showBottomArtifacts.set(false);
+		showLeftArtifacts.set(false);
+		showArtifacts.set(false);
+		showControls.set(false);
+		setTimeout(() => {
+			document.getElementById('end-of-messages')?.scrollIntoView({ behavior: 'smooth' });
+		}, 300);
+	}
 </script>
 
 {#key message.id}
@@ -488,7 +515,7 @@
 		<div class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
 			<ProfileImage
 				src={model?.info?.meta?.profile_image_url ??
-					($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
+					($i18n.language === 'dg-DG' ? `/doge.png` : `/static/favicon.png`)}
 				className={'size-8'}
 			/>
 		</div>
@@ -680,7 +707,6 @@
 										save={!readOnly}
 										{model}
 										onSourceClick={(e) => {
-											console.log(e);
 											const sourceButton = document.getElementById(`source-${e}`);
 
 											if (sourceButton) {
@@ -724,7 +750,7 @@
 								{/if}
 
 								{#if message.code_executions}
-									<CodeExecutions codeExecutions={message.code_executions} />
+									<CodeExecutions {history} codeExecutions={message.code_executions} />
 								{/if}
 							</div>
 						{/if}
@@ -1143,6 +1169,7 @@
 
 									<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
 										<button
+											id="regenerate-response-btn"
 											type="button"
 											class="{isLastMessage
 												? 'visible'

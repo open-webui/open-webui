@@ -189,4 +189,6 @@
 	});
 </script>
 
-<div id="code-textarea-{id}" class="h-full w-full" />
+{#if lang !== 'html' && lang !== 'css'}
+	<div id="code-textarea-{id}" class="h-full w-full" />
+{/if}

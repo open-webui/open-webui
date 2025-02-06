@@ -4,7 +4,15 @@
 	import { Pane, PaneResizer } from 'paneforge';
 
 	import { onDestroy, onMount, tick } from 'svelte';
-	import { mobile, showControls, showCallOverlay, showOverview, showArtifacts } from '$lib/stores';
+	import {
+		mobile,
+		showControls,
+		showCallOverlay,
+		showOverview,
+		showArtifacts,
+		showBottomArtifacts,
+		showLeftArtifacts
+	} from '$lib/stores';
 
 	import Modal from '../common/Modal.svelte';
 	import Controls from './Controls/Controls.svelte';
@@ -124,6 +132,8 @@
 		showControls.set(false);
 		showOverview.set(false);
 		showArtifacts.set(false);
+		showBottomArtifacts.set(false);
+		showLeftArtifacts.set(false);
 
 		if ($showCallOverlay) {
 			showCallOverlay.set(false);
@@ -193,7 +203,7 @@
 	{:else}
 		<!-- if $showControls -->
 
-		{#if $showControls}
+		{#if $showControls || $showLeftArtifacts}
 			<PaneResizer class="relative flex w-2 items-center justify-center bg-background group">
 				<div class="z-10 flex h-7 w-5 items-center justify-center rounded-sm">
 					<EllipsisVertical className="size-4 invisible group-hover:visible" />

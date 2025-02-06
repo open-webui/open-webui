@@ -68,7 +68,12 @@ export const showChangelog = writable(false);
 export const showControls = writable(false);
 export const showOverview = writable(false);
 export const showArtifacts = writable(false);
+export const showBottomArtifacts = writable(false);
+export const bottomHistory = writable<History | undefined>(undefined);
+export const showLeftArtifacts = writable(false);
+export const leftHistory = writable<History | undefined>(undefined);
 export const showCallOverlay = writable(false);
+export const isFinishGenRes = writable(false);
 
 export const temporaryChatEnabled = writable(false);
 export const scrollPaginationEnabled = writable(false);
@@ -225,4 +230,9 @@ type SessionUser = {
 	name: string;
 	role: string;
 	profile_image_url: string;
+};
+
+type History = {
+	currentId?: string;
+	messages?: { [id: string]: any };
 };

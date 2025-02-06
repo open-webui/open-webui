@@ -553,6 +553,10 @@ async def generate_chat_completion(
     idx = 0
 
     payload = {**form_data}
+    metadata_from_payload = None
+
+    if "metadata" in payload:
+        metadata_from_payload = payload["metadata"]
     metadata = payload.pop("metadata", None)
 
     model_id = form_data.get("model")
@@ -617,6 +621,8 @@ async def generate_chat_completion(
             "email": user.email,
             "role": user.role,
         }
+        if metadata_from_payload is not None:
+            payload["metadata"] = metadata_from_payload
 
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
