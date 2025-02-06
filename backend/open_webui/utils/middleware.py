@@ -1122,6 +1122,16 @@ async def process_chat_response(
             },
         )
 
+        def split_content_and_whitespace(content):
+            content_stripped = content.rstrip()
+            original_whitespace = content[len(content_stripped):] if len(content) > len(content_stripped) else ''
+            return content_stripped, original_whitespace
+
+        def is_opening_code_block(content):
+            backtick_segments = content.split('```')
+            # Even number of segments means the last backticks are opening a new block
+            return len(backtick_segments) > 1 and len(backtick_segments) % 2 == 0
+
         # Handle as a background task
         async def post_response_handler(response, events):
             def serialize_content_blocks(content_blocks, raw=False):
@@ -1187,6 +1197,14 @@ async def process_chat_response(
                         attributes = block.get("attributes", {})
                         output = block.get("output", None)
                         lang = attributes.get("lang", "")
+
+                        content_stripped, original_whitespace = split_content_and_whitespace(content)
+                        if is_opening_code_block(content_stripped):
+                            # Remove trailing backticks that would open a new block
+                            content = content_stripped.rstrip('`').rstrip() + original_whitespace
+                        else:
+                            # Keep content as is - either closing backticks or no backticks
+                            content = content_stripped + original_whitespace
 
                         if output:
                             output = html.escape(json.dumps(output))
