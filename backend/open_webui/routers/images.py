@@ -34,7 +34,7 @@ router = APIRouter()
 
 
 @router.get("/config")
-async def get_def(request: Request, user=Depends(get_admin_user)):
+async def get_config(request: Request, user=Depends(get_admin_user)):
     return {
         "enabled": request.app.state.config.ENABLE_IMAGE_GENERATION,
         "engine": request.app.state.config.IMAGE_GENERATION_ENGINE,
@@ -456,7 +456,7 @@ async def image_generations(
                 requests.post,
                 url=f"{request.app.state.config.IMAGES_OPENAI_API_BASE_URL}/images/generations",
                 json=data,
-                headers=headers,
+                headers=headers,    
             )
 
             r.raise_for_status()
