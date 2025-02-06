@@ -60,7 +60,7 @@
 
 	const deleteModelHandler = async (model) => {
 		const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
-			toast.error(e);
+			toast.error(`${e}`);
 			return null;
 		});
 
