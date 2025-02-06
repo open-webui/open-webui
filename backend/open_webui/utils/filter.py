@@ -1,0 +1,100 @@
+import inspect
+from open_webui.utils.plugin import load_function_module_by_id
+from open_webui.models.functions import Functions
+
+def get_sorted_filter_ids(model):
+    def get_priority(function_id):
+        function = Functions.get_function_by_id(function_id)
+        if function is not None and hasattr(function, "valves"):
+            # TODO: Fix FunctionModel to include vavles
+            return (function.valves if function.valves else {}).get("priority", 0)
+        return 0
+
+    filter_ids = [function.id for function in Functions.get_global_filter_functions()]
+    if "info" in model and "meta" in model["info"]:
+        filter_ids.extend(model["info"]["meta"].get("filterIds", []))
+        filter_ids = list(set(filter_ids))
+
+    enabled_filter_ids = [
+        function.id
+        for function in Functions.get_functions_by_type("filter", active_only=True)
+    ]
+    
+    filter_ids = [fid for fid in filter_ids if fid in enabled_filter_ids]
+    filter_ids.sort(key=get_priority)
+    return filter_ids
+
+async def process_filter_functions(
+    handler_type,
+    filter_ids,
+    request,
+    data,
+    extra_params
+):
+    skip_files = None
+
+    for filter_id in filter_ids:
+        filter = Functions.get_function_by_id(filter_id)
+        if not filter:
+            continue
+
+        if filter_id in request.app.state.FUNCTIONS:
+            function_module = request.app.state.FUNCTIONS[filter_id]
+        else:
+            function_module, _, _ = load_function_module_by_id(filter_id)
+            request.app.state.FUNCTIONS[filter_id] = function_module
+
+        # Check if the function has a file_handler variable
+        if handler_type == "inlet" and hasattr(function_module, "file_handler"):
+            skip_files = function_module.file_handler
+
+        # Apply valves to the function
+        if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
+            valves = Functions.get_function_valves_by_id(filter_id)
+            function_module.valves = function_module.Valves(
+                **(valves if valves else {})
+            )
+
+        # Prepare handler function
+        handler = getattr(function_module, handler_type, None)
+        if not handler:
+            continue
+
+        try:
+            # Prepare parameters
+            sig = inspect.signature(handler)
+            params = {"body": data}
+
+            # Add extra parameters that exist in the handler's signature
+            for key in list(extra_params.keys()):
+                if key in sig.parameters:
+                    params[key] = extra_params[key]
+
+            # Handle user parameters
+            if "__user__" in sig.parameters:
+                if hasattr(function_module, "UserValves"):
+                    try:
+                        params["__user__"]["valves"] = function_module.UserValves(
+                            **Functions.get_user_valves_by_id_and_user_id(
+                                filter_id, params["__user__"]["id"]
+                            )
+                        )
+                    except Exception as e:
+                        print(e)
+
+
+            # Execute handler
+            if inspect.iscoroutinefunction(handler):
+                data = await handler(**params)
+            else:
+                data = handler(**params)
+
+        except Exception as e:
+            print(f"Error in {handler_type} handler {filter_id}: {e}")
+            raise e
+
+    # Handle file cleanup for inlet
+    if skip_files and "files" in data.get("metadata", {}):
+        del data["metadata"]["files"]
+
+    return data, {}
