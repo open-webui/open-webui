@@ -1188,6 +1188,23 @@ async def process_chat_response(
                         output = block.get("output", None)
                         lang = attributes.get("lang", "")
 
+                        # Separate content from ending whitespace but preserve it
+                        original_whitespace = ''
+                        content_stripped = content.rstrip()
+                        if len(content) > len(content_stripped):
+                            original_whitespace = content[len(content_stripped):]
+
+                        # Count the number of backticks to identify if we are in an opening code block
+                        backtick_segments = content_stripped.split('```')
+                        # Odd number of ``` segments -> the last backticks are closing a block
+                        # Even number -> the last backticks are opening a new block
+                        if len(backtick_segments) > 1 and len(backtick_segments) % 2 == 0:
+                            # The trailing backticks are opening a new block, they need to be removed or it will break the code interpreter markdown
+                            content = content_stripped.rstrip('`').rstrip() + original_whitespace
+                        else:
+                            # The trailing backticks are closing a block (or there are no backticks), so it won't cause issues
+                            content = content_stripped + original_whitespace
+
                         if output:
                             output = html.escape(json.dumps(output))
 
