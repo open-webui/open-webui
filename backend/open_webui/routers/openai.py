@@ -4,6 +4,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Literal, Optional, overload
+import uuid
 
 import aiohttp
 from aiocache import cached
@@ -554,10 +555,21 @@ async def generate_chat_completion(
 
     payload = {**form_data}
     metadata = payload.pop("metadata", None)
+    
+
+    if metadata is None:
+        metadata = {
+            "trace_user_id": user.email,
+            "session_id": str(uuid.uuid4()), 
+        }
+    else:
+
+        metadata["trace_user_id"] = user.email
+        metadata["session_id"] = str(uuid.uuid4()) 
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
-
+    
     # Check model info and override the payload
     if model_info:
         if model_info.base_model_id:
@@ -567,7 +579,7 @@ async def generate_chat_completion(
         params = model_info.params.model_dump()
         payload = apply_model_params_to_body_openai(params, payload)
         payload = apply_model_system_prompt_to_body(params, payload, metadata, user)
-
+        
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
             if not (
@@ -635,6 +647,7 @@ async def generate_chat_completion(
         del payload["max_tokens"]
 
     # Convert the modified body back to JSON
+    payload["metadata"] = metadata
     payload = json.dumps(payload)
 
     r = None
