@@ -3,9 +3,7 @@ import base64
 import io
 import json
 import logging
-import mimetypes
 import re
-import uuid
 from pathlib import Path
 from typing import Optional
 
@@ -456,7 +454,7 @@ async def image_generations(
                 requests.post,
                 url=f"{request.app.state.config.IMAGES_OPENAI_API_BASE_URL}/images/generations",
                 json=data,
-                headers=headers,    
+                headers=headers,
             )
 
             r.raise_for_status()
