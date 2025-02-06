@@ -33,7 +33,7 @@ async def get_prompt_list(user=Depends(get_verified_user)):
     if user.role == "admin":
         prompts = Prompts.get_prompts()
     else:
-        prompts = Prompts.get_prompts_by_user_id(user.id, "write")
+        prompts = Prompts.get_prompts_by_user_id(user.id, "read")
 
     return prompts
 

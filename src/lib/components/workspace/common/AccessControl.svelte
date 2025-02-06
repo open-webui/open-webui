@@ -11,37 +11,26 @@
 
 	export let onChange: Function = () => {};
 
-	export let accessRoles = ['read', 'write'];
 	export let accessControl = null;
 
 	let selectedGroupId = '';
 	let groups = [];
 
 	onMount(async () => {
-		groups = await getGroups(localStorage.token);
+		try {
+			groups = await getGroups(localStorage.token);
 
-		if (accessControl === null && $user?.role === 'user') {
-			accessControl = {
-				read: {
-					group_ids: [],
-					user_ids: []
-				},
-				write: {
-					group_ids: [],
-					user_ids: []
-				}
-			};
-		} else if (accessControl !== null) {
-			accessControl = {
-				read: {
-					group_ids: accessControl?.read?.group_ids ?? [],
-					user_ids: accessControl?.read?.user_ids ?? []
-				},
-				write: {
-					group_ids: accessControl?.write?.group_ids ?? [],
-					user_ids: accessControl?.write?.user_ids ?? []
-				}
-			};
+			if (!accessControl) {
+				accessControl = {
+					read: { group_ids: [], user_ids: [] },
+					write: {
+						group_ids: [],
+						user_ids: []
+					}
+				};
+			}
+		} catch (error) {
+			console.error('Error loading groups:', error);
 		}
 	});
 
@@ -52,29 +41,22 @@
 	}
 
 	const onSelectGroup = () => {
-		if (selectedGroupId !== '') {
-			// By default, add to read access
-			accessControl.read.group_ids = [...accessControl.read.group_ids, selectedGroupId];
-			// Ensure it's not in write access
-			accessControl.write.group_ids = accessControl.write.group_ids.filter(
-				(id) => id !== selectedGroupId
-			);
+		if (!selectedGroupId) return;
 
-			selectedGroupId = '';
-		}
-	};
+		// Always set as read-only access for now
+		accessControl = {
+			...accessControl,
+			read: {
+				...accessControl.read,
+				group_ids: [...new Set([...accessControl.read.group_ids, selectedGroupId])]
+			},
+			write: {
+				group_ids: [],
+				user_ids: []
+			}
+		};
 
-	// Helper function to toggle group access
-	const toggleGroupAccess = (groupId: string) => {
-		if (accessControl.write.group_ids.includes(groupId)) {
-			// If in write, move to read
-			accessControl.write.group_ids = accessControl.write.group_ids.filter((id) => id !== groupId);
-			accessControl.read.group_ids = [...accessControl.read.group_ids, groupId];
-		} else {
-			// If in read, move to write
-			accessControl.read.group_ids = accessControl.read.group_ids.filter((id) => id !== groupId);
-			accessControl.write.group_ids = [...accessControl.write.group_ids, groupId];
-		}
+		selectedGroupId = '';
 	};
 </script>
 
@@ -224,30 +206,14 @@
 								</div>
 
 								<div class="w-full flex justify-end items-center gap-0.5">
-									<button
-										class=""
-										type="button"
-										on:click={() => {
-											if (accessRoles.includes('write')) {
-												toggleGroupAccess(group.id);
-											}
-										}}
-									>
-										{#if accessControl.write.group_ids.includes(group.id)}
-											<Badge type={'success'} content={$i18n.t('Write')} />
-										{:else}
-											<Badge type={'info'} content={$i18n.t('Read')} />
-										{/if}
-									</button>
+									<!-- Always show read-only badge for now -->
+									<Badge type={'info'} content={$i18n.t('Read')} />
 
 									<button
 										class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 										type="button"
 										on:click={() => {
 											accessControl.read.group_ids = accessControl.read.group_ids.filter(
-												(id) => id !== group.id
-											);
-											accessControl.write.group_ids = accessControl.write.group_ids.filter(
 												(id) => id !== group.id
 											);
 										}}

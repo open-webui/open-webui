@@ -1040,7 +1040,6 @@
 	"Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)": "Fonctionne de pair avec top-k. Une valeur plus élevée (par exemple, 0,95) entraînera un texte plus diversifié, tandis qu'une valeur plus basse (par exemple, 0,5) générera un texte plus concentré et conservateur. (Par défaut : 0,9)",
 	"Workspace": "Espace de travail",
 	"Workspace Permissions": "Autorisations d'espace de travail",
-	"Write": "Écriver",
 	"Write a prompt suggestion (e.g. Who are you?)": "Écrivez une suggestion d’invite (par exemple : Qui êtes-vous ?)",
 	"Write a summary in 50 words that summarizes [topic or keyword].": "Rédigez un résumé de 50 mots qui résume [sujet ou mot-clé].",
 	"Write something...": "Écrivez quelque chose...",
