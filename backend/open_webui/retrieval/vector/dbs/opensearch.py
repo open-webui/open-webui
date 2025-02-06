@@ -114,9 +114,9 @@ class OpenSearchClient:
         return self._result_to_search_result(result)
 
     def query(
-        self, index_name: str, filter: dict, limit: Optional[int] = None
+        self, collection_name: str, filter: dict, limit: Optional[int] = None
     ) -> Optional[GetResult]:
-        if not self.has_collection(index_name):
+        if not self.has_collection(collection_name):
             return None
 
         query_body = {
@@ -137,7 +137,7 @@ class OpenSearchClient:
 
         try:
             result = self.client.search(
-                index=f"{self.index_prefix}_{index_name}",
+                index=f"{self.index_prefix}_{collection_name}",
                 body=query_body,
                 size=size
             )
