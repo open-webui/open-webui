@@ -944,6 +944,7 @@
 	"This will reset the knowledge base and sync all files. Do you wish to continue?": "",
 	"Thorough explanation": "",
 	"Thought for {{DURATION}}": "",
+	"Thought for {{DURATION}} seconds": "",
 	"Tika": "",
 	"Tika Server URL required.": "",
 	"Tiktoken": "",
