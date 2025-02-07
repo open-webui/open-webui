@@ -1175,10 +1175,10 @@ async def process_chat_response(
                                 match.end() :
                             ]  # Content after opening tag
 
-                            # Remove the start tag from the currently handling text block
+                            # Remove the start tag and after from the currently handling text block
                             content_blocks[-1]["content"] = content_blocks[-1][
                                 "content"
-                            ].replace(match.group(0), "")
+                            ].replace(match.group(0) + after_tag, "")
 
                             if before_tag:
                                 content_blocks[-1]["content"] = before_tag
