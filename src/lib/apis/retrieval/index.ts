@@ -32,9 +32,15 @@ type ChunkConfigForm = {
 	chunk_overlap: number;
 };
 
+type DocumentIntelligenceConfigForm = {
+	key: string;
+	endpoint: string;
+};
+
 type ContentExtractConfigForm = {
 	engine: string;
 	tika_server_url: string | null;
+	document_intelligence_config: DocumentIntelligenceConfigForm | null;
 };
 
 type YoutubeConfigForm = {
