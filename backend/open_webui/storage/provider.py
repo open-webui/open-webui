@@ -10,6 +10,7 @@ from open_webui.config import (
     S3_ACCESS_KEY_ID,
     S3_BUCKET_NAME,
     S3_ENDPOINT_URL,
+    S3_KEY_PREFIX,
     S3_REGION_NAME,
     S3_SECRET_ACCESS_KEY,
     GCS_BUCKET_NAME,
@@ -98,7 +99,8 @@ class S3StorageProvider(StorageProvider):
         """Handles uploading of the file to S3 storage."""
         _, file_path = LocalStorageProvider.upload_file(file, filename)
         try:
-            self.s3_client.upload_file(file_path, self.bucket_name, filename)
+            s3_key = os.path.join(S3_KEY_PREFIX, filename)
+            self.s3_client.upload_file(file_path, self.bucket_name, s3_key)
             return (
                 open(file_path, "rb").read(),
                 "s3://" + self.bucket_name + "/" + filename,
