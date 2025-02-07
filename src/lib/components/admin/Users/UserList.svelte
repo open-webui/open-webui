@@ -67,7 +67,7 @@
 
 	let sortKey = 'created_at'; // default sort key
 	let sortOrder = 'asc'; // default sort order
-
+	console.log('user', $user);
 	function setSortKey(key) {
 		if (sortKey === key) {
 			sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
@@ -298,12 +298,12 @@
 				<th
 					scope="col"
 					class="px-3 py-1.5 cursor-pointer select-none"
-					on:click={() => setSortKey('oauth_sub')}
+					on:click={() => setSortKey('organization_name')}
 				>
 					<div class="flex gap-1.5 items-center">
-						{$i18n.t('OAuth ID')}
+						{$i18n.t('Organization')}
 
-						{#if sortKey === 'oauth_sub'}
+						{#if sortKey === 'organization_name'}
 							<span class="font-normal"
 								>{#if sortOrder === 'asc'}
 									<ChevronUp className="size-2" />
@@ -369,7 +369,7 @@
 						{dayjs(user.created_at * 1000).format('LL')}
 					</td>
 
-					<td class=" px-3 py-1"> {user.oauth_sub ?? ''} </td>
+					<td class=" px-3 py-1"> {user.organization_name ?? ''} </td>
 
 					<td class="px-3 py-1 text-right">
 						<div class="flex justify-end w-full">
