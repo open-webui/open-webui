@@ -245,7 +245,7 @@
 									title: prompt.title,
 									content: prompt.content
 								}).catch((error) => {
-									toast.error(error);
+									toast.error(`${error}`);
 									return null;
 								});
 							}

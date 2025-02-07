@@ -1,4 +1,4 @@
-from open_webui.utils.task import prompt_template
+from open_webui.utils.task import prompt_template, prompt_variables_template
 from open_webui.utils.misc import (
     add_or_update_system_message,
 )
@@ -7,11 +7,14 @@ from typing import Callable, Optional
 
 
 # inplace function: form_data is modified
-def apply_model_system_prompt_to_body(params: dict, form_data: dict, user) -> dict:
+def apply_model_system_prompt_to_body(
+    params: dict, form_data: dict, metadata: Optional[dict] = None, user=None
+) -> dict:
     system = params.get("system", None)
     if not system:
         return form_data
 
+    # Legacy (API Usage)
     if user:
         template_params = {
             "user_name": user.name,
@@ -19,7 +22,15 @@ def apply_model_system_prompt_to_body(params: dict, form_data: dict, user) -> di
         }
     else:
         template_params = {}
+
     system = prompt_template(system, **template_params)
+
+    # Metadata (WebUI Usage)
+    if metadata:
+        variables = metadata.get("variables", {})
+        if variables:
+            system = prompt_variables_template(system, variables)
+
     form_data["messages"] = add_or_update_system_message(
         system, form_data.get("messages", [])
     )
@@ -47,6 +58,7 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
         "top_p": float,
         "max_tokens": int,
         "frequency_penalty": float,
+        "reasoning_effort": str,
         "seed": lambda x: x,
         "stop": lambda x: [bytes(s, "utf-8").decode("unicode_escape") for s in x],
     }
@@ -154,6 +166,9 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     )
     ollama_payload["stream"] = openai_payload.get("stream", False)
 
+    if "tools" in openai_payload:
+        ollama_payload["tools"] = openai_payload["tools"]
+
     if "format" in openai_payload:
         ollama_payload["format"] = openai_payload["format"]
 
@@ -186,5 +201,8 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     # Add options to payload if any have been set
     if ollama_options:
         ollama_payload["options"] = ollama_options
+
+    if "metadata" in openai_payload:
+        ollama_payload["metadata"] = openai_payload["metadata"]
 
     return ollama_payload

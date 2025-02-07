@@ -9,22 +9,22 @@ from urllib.parse import urlparse
 
 import chromadb
 import requests
-import yaml
-from open_webui.internal.db import Base, get_db
+from pydantic import BaseModel
+from sqlalchemy import JSON, Column, DateTime, Integer, func
+
 from open_webui.env import (
-    OPEN_WEBUI_DIR,
     DATA_DIR,
+    DATABASE_URL,
     ENV,
     FRONTEND_BUILD_DIR,
+    OFFLINE_MODE,
+    OPEN_WEBUI_DIR,
     WEBUI_AUTH,
     WEBUI_FAVICON_URL,
     WEBUI_NAME,
     log,
-    DATABASE_URL,
-    OFFLINE_MODE,
 )
-from pydantic import BaseModel
-from sqlalchemy import JSON, Column, DateTime, Integer, func
+from open_webui.internal.db import Base, get_db
 
 
 class EndpointFilter(logging.Filter):
@@ -362,6 +362,30 @@ MICROSOFT_REDIRECT_URI = PersistentConfig(
     os.environ.get("MICROSOFT_REDIRECT_URI", ""),
 )
 
+GITHUB_CLIENT_ID = PersistentConfig(
+    "GITHUB_CLIENT_ID",
+    "oauth.github.client_id",
+    os.environ.get("GITHUB_CLIENT_ID", ""),
+)
+
+GITHUB_CLIENT_SECRET = PersistentConfig(
+    "GITHUB_CLIENT_SECRET",
+    "oauth.github.client_secret",
+    os.environ.get("GITHUB_CLIENT_SECRET", ""),
+)
+
+GITHUB_CLIENT_SCOPE = PersistentConfig(
+    "GITHUB_CLIENT_SCOPE",
+    "oauth.github.scope",
+    os.environ.get("GITHUB_CLIENT_SCOPE", "user:email"),
+)
+
+GITHUB_CLIENT_REDIRECT_URI = PersistentConfig(
+    "GITHUB_CLIENT_REDIRECT_URI",
+    "oauth.github.redirect_uri",
+    os.environ.get("GITHUB_CLIENT_REDIRECT_URI", ""),
+)
+
 OAUTH_CLIENT_ID = PersistentConfig(
     "OAUTH_CLIENT_ID",
     "oauth.oidc.client_id",
@@ -468,12 +492,20 @@ OAUTH_ALLOWED_DOMAINS = PersistentConfig(
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
     if GOOGLE_CLIENT_ID.value and GOOGLE_CLIENT_SECRET.value:
+
+        def google_oauth_register(client):
+            client.register(
+                name="google",
+                client_id=GOOGLE_CLIENT_ID.value,
+                client_secret=GOOGLE_CLIENT_SECRET.value,
+                server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+                client_kwargs={"scope": GOOGLE_OAUTH_SCOPE.value},
+                redirect_uri=GOOGLE_REDIRECT_URI.value,
+            )
+
         OAUTH_PROVIDERS["google"] = {
-            "client_id": GOOGLE_CLIENT_ID.value,
-            "client_secret": GOOGLE_CLIENT_SECRET.value,
-            "server_metadata_url": "https://accounts.google.com/.well-known/openid-configuration",
-            "scope": GOOGLE_OAUTH_SCOPE.value,
             "redirect_uri": GOOGLE_REDIRECT_URI.value,
+            "register": google_oauth_register,
         }
 
     if (
@@ -481,12 +513,44 @@ def load_oauth_providers():
         and MICROSOFT_CLIENT_SECRET.value
         and MICROSOFT_CLIENT_TENANT_ID.value
     ):
+
+        def microsoft_oauth_register(client):
+            client.register(
+                name="microsoft",
+                client_id=MICROSOFT_CLIENT_ID.value,
+                client_secret=MICROSOFT_CLIENT_SECRET.value,
+                server_metadata_url=f"https://login.microsoftonline.com/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration",
+                client_kwargs={
+                    "scope": MICROSOFT_OAUTH_SCOPE.value,
+                },
+                redirect_uri=MICROSOFT_REDIRECT_URI.value,
+            )
+
         OAUTH_PROVIDERS["microsoft"] = {
-            "client_id": MICROSOFT_CLIENT_ID.value,
-            "client_secret": MICROSOFT_CLIENT_SECRET.value,
-            "server_metadata_url": f"https://login.microsoftonline.com/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration",
-            "scope": MICROSOFT_OAUTH_SCOPE.value,
             "redirect_uri": MICROSOFT_REDIRECT_URI.value,
+            "picture_url": "https://graph.microsoft.com/v1.0/me/photo/$value",
+            "register": microsoft_oauth_register,
+        }
+
+    if GITHUB_CLIENT_ID.value and GITHUB_CLIENT_SECRET.value:
+
+        def github_oauth_register(client):
+            client.register(
+                name="github",
+                client_id=GITHUB_CLIENT_ID.value,
+                client_secret=GITHUB_CLIENT_SECRET.value,
+                access_token_url="https://github.com/login/oauth/access_token",
+                authorize_url="https://github.com/login/oauth/authorize",
+                api_base_url="https://api.github.com",
+                userinfo_endpoint="https://api.github.com/user",
+                client_kwargs={"scope": GITHUB_CLIENT_SCOPE.value},
+                redirect_uri=GITHUB_CLIENT_REDIRECT_URI.value,
+            )
+
+        OAUTH_PROVIDERS["github"] = {
+            "redirect_uri": GITHUB_CLIENT_REDIRECT_URI.value,
+            "register": github_oauth_register,
+            "sub_claim": "id",
         }
 
     if (
@@ -494,13 +558,23 @@ def load_oauth_providers():
         and OAUTH_CLIENT_SECRET.value
         and OPENID_PROVIDER_URL.value
     ):
+
+        def oidc_oauth_register(client):
+            client.register(
+                name="oidc",
+                client_id=OAUTH_CLIENT_ID.value,
+                client_secret=OAUTH_CLIENT_SECRET.value,
+                server_metadata_url=OPENID_PROVIDER_URL.value,
+                client_kwargs={
+                    "scope": OAUTH_SCOPES.value,
+                },
+                redirect_uri=OPENID_REDIRECT_URI.value,
+            )
+
         OAUTH_PROVIDERS["oidc"] = {
-            "client_id": OAUTH_CLIENT_ID.value,
-            "client_secret": OAUTH_CLIENT_SECRET.value,
-            "server_metadata_url": OPENID_PROVIDER_URL.value,
-            "scope": OAUTH_SCOPES.value,
             "name": OAUTH_PROVIDER_NAME.value,
             "redirect_uri": OPENID_REDIRECT_URI.value,
+            "register": oidc_oauth_register,
         }
 
 
@@ -580,13 +654,18 @@ if CUSTOM_NAME:
 # STORAGE PROVIDER
 ####################################
 
-STORAGE_PROVIDER = os.environ.get("STORAGE_PROVIDER", "")  # defaults to local, s3
+STORAGE_PROVIDER = os.environ.get("STORAGE_PROVIDER", "local")  # defaults to local, s3
 
 S3_ACCESS_KEY_ID = os.environ.get("S3_ACCESS_KEY_ID", None)
 S3_SECRET_ACCESS_KEY = os.environ.get("S3_SECRET_ACCESS_KEY", None)
 S3_REGION_NAME = os.environ.get("S3_REGION_NAME", None)
 S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", None)
 S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", None)
+
+GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME", None)
+GOOGLE_APPLICATION_CREDENTIALS_JSON = os.environ.get(
+    "GOOGLE_APPLICATION_CREDENTIALS_JSON", None
+)
 
 ####################################
 # File Upload DIR
@@ -819,6 +898,10 @@ USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS = (
     os.environ.get("USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS", "False").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_CONTROLS = (
+    os.environ.get("USER_PERMISSIONS_CHAT_CONTROLS", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_CHAT_FILE_UPLOAD = (
     os.environ.get("USER_PERMISSIONS_CHAT_FILE_UPLOAD", "True").lower() == "true"
 )
@@ -835,23 +918,46 @@ USER_PERMISSIONS_CHAT_TEMPORARY = (
     os.environ.get("USER_PERMISSIONS_CHAT_TEMPORARY", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_FEATURES_WEB_SEARCH = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_WEB_SEARCH", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_FEATURES_IMAGE_GENERATION = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_IMAGE_GENERATION", "True").lower()
+    == "true"
+)
+
+USER_PERMISSIONS_FEATURES_CODE_INTERPRETER = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_CODE_INTERPRETER", "True").lower()
+    == "true"
+)
+
+
+DEFAULT_USER_PERMISSIONS = {
+    "workspace": {
+        "models": USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS,
+        "knowledge": USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS,
+        "prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS,
+        "tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS,
+    },
+    "chat": {
+        "controls": USER_PERMISSIONS_CHAT_CONTROLS,
+        "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
+        "delete": USER_PERMISSIONS_CHAT_DELETE,
+        "edit": USER_PERMISSIONS_CHAT_EDIT,
+        "temporary": USER_PERMISSIONS_CHAT_TEMPORARY,
+    },
+    "features": {
+        "web_search": USER_PERMISSIONS_FEATURES_WEB_SEARCH,
+        "image_generation": USER_PERMISSIONS_FEATURES_IMAGE_GENERATION,
+        "code_interpreter": USER_PERMISSIONS_FEATURES_CODE_INTERPRETER,
+    },
+}
+
 USER_PERMISSIONS = PersistentConfig(
     "USER_PERMISSIONS",
     "user.permissions",
-    {
-        "workspace": {
-            "models": USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS,
-            "knowledge": USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS,
-            "prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS,
-            "tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS,
-        },
-        "chat": {
-            "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
-            "delete": USER_PERMISSIONS_CHAT_DELETE,
-            "edit": USER_PERMISSIONS_CHAT_EDIT,
-            "temporary": USER_PERMISSIONS_CHAT_TEMPORARY,
-        },
-    },
+    DEFAULT_USER_PERMISSIONS,
 )
 
 ENABLE_CHANNELS = PersistentConfig(
@@ -995,20 +1101,26 @@ TITLE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     os.environ.get("TITLE_GENERATION_PROMPT_TEMPLATE", ""),
 )
 
-DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = """Create a concise, 3-5 word title with an emoji as a title for the chat history, in the given language. Suitable Emojis for the summary can be used to enhance understanding but avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
-
-Examples of titles:
-📉 Stock Market Trends
-🍪 Perfect Chocolate Chip Recipe
-Evolution of Music Streaming
-Remote Work Productivity Tips
-Artificial Intelligence in Healthcare
-🎮 Video Game Development Insights
-
+DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = """### Task:
+Generate a concise, 3-5 word title with an emoji summarizing the chat history.
+### Guidelines:
+- The title should clearly represent the main theme or subject of the conversation.
+- Use emojis that enhance understanding of the topic, but avoid quotation marks or special formatting.
+- Write the title in the chat's primary language; default to English if multilingual.
+- Prioritize accuracy over excessive creativity; keep it clear and simple.
+### Output:
+JSON format: { "title": "your concise title here" }
+### Examples:
+- { "title": "📉 Stock Market Trends" },
+- { "title": "🍪 Perfect Chocolate Chip Recipe" },
+- { "title": "Evolution of Music Streaming" },
+- { "title": "Remote Work Productivity Tips" },
+- { "title": "Artificial Intelligence in Healthcare" },
+- { "title": "🎮 Video Game Development Insights" }
+### Chat History:
 <chat_history>
 {{MESSAGES:END:2}}
 </chat_history>"""
-
 
 TAGS_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     "TAGS_GENERATION_PROMPT_TEMPLATE",
@@ -1028,6 +1140,32 @@ Generate 1-3 broad tags categorizing the main themes of the chat history, along 
 
 ### Output:
 JSON format: { "tags": ["tag1", "tag2", "tag3"] }
+
+### Chat History:
+<chat_history>
+{{MESSAGES:END:6}}
+</chat_history>"""
+
+IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE",
+    "task.image.prompt_template",
+    os.environ.get("IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE", ""),
+)
+
+DEFAULT_IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = """### Task:
+Generate a detailed prompt for am image generation task based on the given language and context. Describe the image as if you were explaining it to someone who cannot see it. Include relevant details, colors, shapes, and any other important elements.
+
+### Guidelines:
+- Be descriptive and detailed, focusing on the most important aspects of the image.
+- Avoid making assumptions or adding information not present in the image.
+- Use the chat's primary language; default to English if multilingual.
+- If the image is too complex, focus on the most prominent elements.
+
+### Output:
+Strictly return in JSON format:
+{
+    "prompt": "Your detailed description here."
+}
 
 ### Chat History:
 <chat_history>
@@ -1152,7 +1290,28 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
 )
 
 
-DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = """Available Tools: {{TOOLS}}\nReturn an empty string if no tools match the query. If a function tool matches, construct and return a JSON object in the format {\"name\": \"functionName\", \"parameters\": {\"requiredFunctionParamKey\": \"requiredFunctionParamValue\"}} using the appropriate tool and its parameters. Only return the object and limit the response to the JSON object without additional text."""
+DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = """Available Tools: {{TOOLS}}
+
+Your task is to choose and return the correct tool(s) from the list of available tools based on the query. Follow these guidelines:
+
+- Return only the JSON object, without any additional text or explanation.
+
+- If no tools match the query, return an empty array: 
+   {
+     "tool_calls": []
+   }
+
+- If one or more tools match the query, construct a JSON response containing a "tool_calls" array with objects that include:
+   - "name": The tool's name.
+   - "parameters": A dictionary of required parameters and their corresponding values.
+
+The format for the JSON response is strictly:
+{
+  "tool_calls": [
+    {"name": "toolName1", "parameters": {"key1": "value1"}},
+    {"name": "toolName2", "parameters": {"key2": "value2"}}
+  ]
+}"""
 
 
 DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE = """Your task is to reflect the speaker's likely facial expression through a fitting emoji. Interpret emotions from the message and reflect their facial expression using fitting, diverse emojis (e.g., 😊, 😢, 😡, 😱).
@@ -1164,6 +1323,24 @@ DEFAULT_MOA_GENERATION_PROMPT_TEMPLATE = """You have been provided with a set of
 Your task is to synthesize these responses into a single, high-quality response. It is crucial to critically evaluate the information provided in these responses, recognizing that some of it may be biased or incorrect. Your response should not simply replicate the given answers but should offer a refined, accurate, and comprehensive reply to the instruction. Ensure your response is well-structured, coherent, and adheres to the highest standards of accuracy and reliability.
 
 Responses from models: {{responses}}"""
+
+
+DEFAULT_CODE_INTERPRETER_PROMPT = """
+#### Tools Available
+
+1. **Code Interpreter**: `<code_interpreter type="code" lang="python"></code_interpreter>`
+   - You have access to a Python shell that runs directly in the user's browser, enabling fast execution of code for analysis, calculations, or problem-solving.  Use it in this response.
+   - The Python code you write can incorporate a wide array of libraries, handle data manipulation or visualization, perform API calls for web-related tasks, or tackle virtually any computational challenge. Use this flexibility to **think outside the box, craft elegant solutions, and harness Python's full potential**.
+   - To use it, **you must enclose your code within `<code_interpreter type="code" lang="python">` XML tags** and stop right away. If you don't, the code won't execute. Do NOT use triple backticks.
+   - When coding, **always aim to print meaningful outputs** (e.g., results, tables, summaries, or visuals) to better interpret and verify the findings. Avoid relying on implicit outputs; prioritize explicit and clear print statements so the results are effectively communicated to the user.  
+   - After obtaining the printed output, **always provide a concise analysis, interpretation, or next steps to help the user understand the findings or refine the outcome further.**  
+   - If the results are unclear, unexpected, or require validation, refine the code and execute it again as needed. Always aim to deliver meaningful insights from the results, iterating if necessary.  
+   - If a link is provided for an image, audio, or any file, include it in the response exactly as given to ensure the user has access to the original resource.  
+   - All responses should be communicated in the chat's primary language, ensuring seamless understanding. If the chat is multilingual, default to English for clarity.
+   - **If a link to an image, audio, or any file is provided in markdown format, ALWAYS regurgitate explicitly display it as part of the response to ensure the user can access it easily, do NOT change the link.**
+
+Ensure that the tools are effectively utilized to achieve the highest-quality analysis for the user."""
+
 
 ####################################
 # Vector Database
@@ -1193,6 +1370,8 @@ CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 # Milvus
 
 MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
+MILVUS_DB = os.environ.get("MILVUS_DB", "default")
+MILVUS_TOKEN = os.environ.get("MILVUS_TOKEN", None)
 
 # Qdrant
 QDRANT_URI = os.environ.get("QDRANT_URI", None)
@@ -1573,6 +1752,11 @@ BING_SEARCH_V7_SUBSCRIPTION_KEY = PersistentConfig(
     os.environ.get("BING_SEARCH_V7_SUBSCRIPTION_KEY", ""),
 )
 
+EXA_API_KEY = PersistentConfig(
+    "EXA_API_KEY",
+    "rag.web.search.exa_api_key",
+    os.getenv("EXA_API_KEY", ""),
+)
 
 RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(
     "RAG_WEB_SEARCH_RESULT_COUNT",
@@ -1602,6 +1786,13 @@ ENABLE_IMAGE_GENERATION = PersistentConfig(
     "image_generation.enable",
     os.environ.get("ENABLE_IMAGE_GENERATION", "").lower() == "true",
 )
+
+ENABLE_IMAGE_PROMPT_GENERATION = PersistentConfig(
+    "ENABLE_IMAGE_PROMPT_GENERATION",
+    "image_generation.prompt.enable",
+    os.environ.get("ENABLE_IMAGE_PROMPT_GENERATION", "true").lower() == "true",
+)
+
 AUTOMATIC1111_BASE_URL = PersistentConfig(
     "AUTOMATIC1111_BASE_URL",
     "image_generation.automatic1111.base_url",
@@ -1929,6 +2120,12 @@ LDAP_SERVER_PORT = PersistentConfig(
     "LDAP_SERVER_PORT",
     "ldap.server.port",
     int(os.environ.get("LDAP_SERVER_PORT", "389")),
+)
+
+LDAP_ATTRIBUTE_FOR_MAIL = PersistentConfig(
+    "LDAP_ATTRIBUTE_FOR_MAIL",
+    "ldap.server.attribute_for_mail",
+    os.environ.get("LDAP_ATTRIBUTE_FOR_MAIL", "mail"),
 )
 
 LDAP_ATTRIBUTE_FOR_USERNAME = PersistentConfig(

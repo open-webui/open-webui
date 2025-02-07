@@ -43,7 +43,7 @@
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 
-<div class="sticky top-0 z-30 w-full px-1.5 py-1.5 -mb-8 flex items-center">
+<nav class="sticky top-0 z-30 w-full px-1.5 py-1.5 -mb-8 flex items-center drag-region">
 	<div
 		class=" bg-gradient-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1] blur"
 	></div>
@@ -114,7 +114,7 @@
 							</div>
 						</button>
 					</Menu>
-				{:else if $mobile}
+				{:else if $mobile && ($user.role === 'admin' || $user?.permissions.chat?.controls)}
 					<Tooltip content={$i18n.t('Controls')}>
 						<button
 							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
@@ -130,7 +130,7 @@
 					</Tooltip>
 				{/if}
 
-				{#if !$mobile}
+				{#if !$mobile && ($user.role === 'admin' || $user?.permissions.chat?.controls)}
 					<Tooltip content={$i18n.t('Controls')}>
 						<button
 							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
@@ -191,4 +191,4 @@
 			</div>
 		</div>
 	</div>
-</div>
+</nav>

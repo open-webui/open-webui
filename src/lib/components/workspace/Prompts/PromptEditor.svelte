@@ -68,7 +68,11 @@
 	});
 </script>
 
-<AccessControlModal bind:show={showAccessControlModal} bind:accessControl />
+<AccessControlModal
+	bind:show={showAccessControlModal}
+	bind:accessControl
+	accessRoles={['read', 'write']}
+/>
 
 <div class="w-full max-h-full flex justify-center">
 	<form

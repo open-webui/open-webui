@@ -53,10 +53,16 @@
 			tools: false
 		},
 		chat: {
+			controls: true,
 			file_upload: true,
 			delete: true,
 			edit: true,
 			temporary: true
+		},
+		features: {
+			web_search: true,
+			image_generation: true,
+			code_interpreter: true
 		}
 	};
 
@@ -69,7 +75,7 @@
 
 	const addGroupHandler = async (group) => {
 		const res = await createNewGroup(localStorage.token, group).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -84,7 +90,7 @@
 
 		const res = await updateUserDefaultPermissions(localStorage.token, group.permissions).catch(
 			(error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			}
 		);

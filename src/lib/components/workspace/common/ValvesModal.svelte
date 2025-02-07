@@ -44,11 +44,11 @@
 
 			if (type === 'tool') {
 				res = await updateToolValvesById(localStorage.token, id, valves).catch((error) => {
-					toast.error(error);
+					toast.error(`${error}`);
 				});
 			} else if (type === 'function') {
 				res = await updateFunctionValvesById(localStorage.token, id, valves).catch((error) => {
-					toast.error(error);
+					toast.error(`${error}`);
 				});
 			}
 
@@ -136,7 +136,7 @@
 
 					<div class="flex justify-end pt-3 text-sm font-medium">
 						<button
-							class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg flex flex-row space-x-1 items-center {saving
+							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full {saving
 								? ' cursor-not-allowed'
 								: ''}"
 							type="submit"

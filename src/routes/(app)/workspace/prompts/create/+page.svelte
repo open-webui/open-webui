@@ -12,7 +12,7 @@
 	let prompt = null;
 	const onSubmit = async (_prompt) => {
 		const prompt = await createNewPrompt(localStorage.token, _prompt).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 

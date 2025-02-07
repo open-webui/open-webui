@@ -128,7 +128,7 @@
 			content: content,
 			data: data
 		}).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 	};

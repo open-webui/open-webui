@@ -32,6 +32,12 @@ def get_task_model_id(
     return task_model_id
 
 
+def prompt_variables_template(template: str, variables: dict[str, str]) -> str:
+    for variable, value in variables.items():
+        template = template.replace(variable, value)
+    return template
+
+
 def prompt_template(
     template: str, user_name: Optional[str] = None, user_location: Optional[str] = None
 ) -> str:
@@ -200,6 +206,24 @@ def title_generation_template(
 
 
 def tags_generation_template(
+    template: str, messages: list[dict], user: Optional[dict] = None
+) -> str:
+    prompt = get_last_user_message(messages)
+    template = replace_prompt_variable(template, prompt)
+    template = replace_messages_variable(template, messages)
+
+    template = prompt_template(
+        template,
+        **(
+            {"user_name": user.get("name"), "user_location": user.get("location")}
+            if user
+            else {}
+        ),
+    )
+    return template
+
+
+def image_prompt_generation_template(
     template: str, messages: list[dict], user: Optional[dict] = None
 ) -> str:
     prompt = get_last_user_message(messages)
