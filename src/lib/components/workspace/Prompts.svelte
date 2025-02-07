@@ -171,8 +171,8 @@
 					href={$user?.role === 'admin' ||
 					prompt?.user?.id === $user?.id ||
 					prompt.access_control?.write?.group_ids?.some((id) => groups.find((g) => g.id === id))
-						? `/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`
-						: null}
+						? `/workspace/prompts/edit?command=${encodeURIComponent(prompt.command.replace(/^\//, ''))}`
+						: `/workspace/prompts/view?command=${encodeURIComponent(prompt.command.replace(/^\//, ''))}`}
 				>
 					<div class="flex flex-col flex-1">
 						<div class="flex items-center gap-2">
