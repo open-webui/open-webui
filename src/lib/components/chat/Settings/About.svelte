@@ -76,5 +76,23 @@
 		</div>
 
 		<hr class=" dark:border-gray-850" />
+
+		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+			Emoji graphics provided by
+			<a class="underline" href="https://github.com/jdecked/twemoji" target="_blank">Twemoji</a>,
+			licensed under
+			<a class="underline" href="https://creativecommons.org/licenses/by/4.0/" target="_blank"
+				>CC-BY 4.0</a
+			>.
+		</div>
+		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+			Application based on
+			<a class="underline" href="https://github.com/open-webui/open-webui" target="_blank"
+				>Open WebUI</a
+			>, licensed under
+			<a class="underline" href="https://opensource.org/license/BSD-3-clause" target="_blank"
+				>BSD-3-clause</a
+			>.
+		</div>
 	</div>
 </div>
