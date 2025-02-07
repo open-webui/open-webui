@@ -1,14 +1,32 @@
+version: '3.8'
 services:
-  ollama:
+
+  searxng:
+    container_name: searxng
+    image: searxng/searxng:latest
+    ports:
+      - "8080:8080"
     volumes:
-      - ollama:/root/.ollama
-    container_name: ollama
-    pull_policy: always
-    tty: true
+      - ./searxng:/etc/searxng:rw
+    env_file:
+      - .env
     restart: unless-stopped
-    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
 
   open-webui:
+    env_file:
+      - .env
     build:
       context: .
       args:
@@ -18,17 +36,27 @@ services:
     container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
+      # Mount the favicons volume to the location where your application expects the assets.
+      - favicons:/app/static/favicon:ro
     depends_on:
-      - ollama
+      - searxng
     ports:
-      - ${OPEN_WEBUI_PORT-3000}:8080
+      - "${OPEN_WEBUI_PORT-3000}:8080"
     environment:
-      - 'OLLAMA_BASE_URL=http://ollama:11434'
-      - 'WEBUI_SECRET_KEY='
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_SECRET_KEY=
     extra_hosts:
-      - host.docker.internal:host-gateway
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  tika:
+    image: apache/tika:3.1.0.0-full
+    container_name: tika
+    ports:
+      - "9998:9998"
     restart: unless-stopped
 
 volumes:
   ollama: {}
   open-webui: {}
+  favicons: {}
