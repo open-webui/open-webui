@@ -1,4 +1,4 @@
-{
+ {
 	"-1 for no limit, or a positive integer for a specific limit": "-1 表示無限制，或正整數表示特定限制",
 	"'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.": "'s'、'm'、'h'、'd'、'w' 或 '-1' 表示無到期時間。",
 	"(e.g. `sh webui.sh --api --api-auth username_password`)": "（例如 `sh webui.sh --api --api-auth username_password`）",
@@ -287,6 +287,7 @@
 	"Do not install functions from sources you do not fully trust.": "請勿從您無法完全信任的來源安裝函式。",
 	"Do not install tools from sources you do not fully trust.": "請勿從您無法完全信任的來源安裝工具。",
 	"Document": "文件",
+	"Document Intelligence endpoint and key required.": "文件智能終端和密鑰是必需的。",
 	"Documentation": "文件",
 	"Documents": "文件",
 	"does not make any external connections, and your data stays securely on your locally hosted server.": "不會建立任何外部連線，而且您的資料會安全地儲存在您本機伺服器上。",
@@ -349,6 +350,8 @@
 	"Enter Chunk Overlap": "輸入區塊重疊",
 	"Enter Chunk Size": "輸入區塊大小",
 	"Enter description": "輸入描述",
+	"Enter Document Intelligence Endpoint" : "輸入 Document Intelligence 端點",
+	"Enter Document Intelligence Key" : "輸入 Document Intelligence 密鑰",
 	"Enter Exa API Key": "",
 	"Enter Github Raw URL": "輸入 GitHub Raw URL",
 	"Enter Google PSE API Key": "輸入 Google PSE API 金鑰",
