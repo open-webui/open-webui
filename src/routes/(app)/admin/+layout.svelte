@@ -5,6 +5,7 @@
 	import { WEBUI_NAME, showSidebar, user } from '$lib/stores';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { page } from '$app/stores';
+	import DrawerOpen from '$lib/components/icons/DrawerOpen.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -26,9 +27,7 @@
 
 {#if loaded}
 	<div
-		class=" flex flex-col w-full min-h-screen max-h-screen transition-width duration-200 ease-in-out {$showSidebar
-			? 'md:max-w-[calc(100%-285px)]'
-			: ''} max-w-full"
+		class=" flex flex-col w-full min-h-screen max-h-screen transition-width duration-200 ease-in-out  max-w-full"
 	>
 		<nav class="   px-2.5 pt-1 backdrop-blur-xl drag-region">
 			<div class=" flex items-center gap-1">
@@ -42,7 +41,7 @@
 						aria-label="Toggle Sidebar"
 					>
 						<div class=" m-auto self-center">
-							<MenuLines />
+							<DrawerOpen className="size-5" strokeWidth="2"/>
 						</div>
 					</button>
 				</div>
