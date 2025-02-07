@@ -194,6 +194,7 @@ type Config = {
 	default_locale: string;
 	default_models: string;
 	default_prompt_suggestions: PromptSuggestion[];
+	onboarding?: boolean;
 	features: {
 		auth: boolean;
 		auth_trusted_header: boolean;
@@ -206,6 +207,7 @@ type Config = {
 		enable_admin_export: boolean;
 		enable_admin_chat_access: boolean;
 		enable_community_sharing: boolean;
+		enable_ldap?: boolean;
 	};
 	oauth: {
 		providers: {
