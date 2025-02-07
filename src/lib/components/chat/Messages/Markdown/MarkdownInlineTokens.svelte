@@ -34,7 +34,16 @@
 			{token.text}
 		{/if}
 	{:else if token.type === 'link'}
-		{#if token.tokens}
+		{#if token.href.includes('https://www.gmgn.cc/')}
+			<iframe
+				src={token.href}
+				title="GMGN Website"
+				width="100%"
+				height="600px"
+				frameborder="0"
+				style="border-radius: 8px;"
+			></iframe>
+		{:else if token.tokens}
 			<a href={token.href} target="_blank" rel="nofollow" title={token.title}>
 				<svelte:self id={`${id}-a`} tokens={token.tokens} {onSourceClick} />
 			</a>
