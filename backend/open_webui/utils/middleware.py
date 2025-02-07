@@ -1444,6 +1444,28 @@ async def process_chat_response(
                         try:
                             data = json.loads(data)
 
+                            extra_params = {
+                                "__event_emitter__": get_event_emitter(metadata),
+                                "__event_call__": get_event_call(metadata),
+                                "__user__": {
+                                    "id": user.id,
+                                    "email": user.email,
+                                    "name": user.name,
+                                    "role": user.role,
+                                },
+                                "__metadata__": metadata,
+                                "__request__": request,
+                                "__model__": form_data.get("model"),
+                            }
+
+                            data, _ = await process_filter_functions(
+                                request=request,
+                                filter_ids=get_sorted_filter_ids(form_data.get("model")),
+                                filter_type="midlet",
+                                form_data=data,
+                                extra_params=extra_params,
+                            )
+
                             if "selected_model_id" in data:
                                 model_id = data["selected_model_id"]
                                 Chats.upsert_message_to_chat_by_id_and_message_id(
