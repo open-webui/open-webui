@@ -38,7 +38,7 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
-def get_netid(webauth_response: str):
+def get_netid(webauth_response: str) -> str | None:
     if webauth_response == "no":
         raise ValueError("Invalid login")
     return webauth_response.split("\n")[1]

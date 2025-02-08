@@ -321,7 +321,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
 
 @router.get("/signin", response_model=SessionUserResponse)
-async def signin(request: Request, response: Response, ticket: str, redirect_url: str):
+async def signin(request: Request, response: Response, ticket: str):
 
     # Get the ticket from the query parameters
     WEBAUTH_CALLBACK = request.url.remove_query_params("ticket")
@@ -329,55 +329,55 @@ async def signin(request: Request, response: Response, ticket: str, redirect_url
     # Construct the URL for the webauth validation
     WEBAUTH_URL = f"https://webauth.arizona.edu/webauth/validate?service={WEBAUTH_CALLBACK}&ticket={ticket}"
 
-    try:
+    if ticket != None:
         user = Auths.authenticate_user(WEBAUTH_URL)
-    except ValueError as e:
-        raise HTTPException(400, detail=str(e))
-    if user:
-        expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
-        expires_at = None
-        if expires_delta:
-            expires_at = int(time.time()) + int(expires_delta.total_seconds())
+        if user:
+            expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
+            expires_at = None
+            if expires_delta:
+                expires_at = int(time.time()) + int(expires_delta.total_seconds())
 
-        token = create_token(
-            data={"id": user.id},
-            expires_delta=expires_delta,
-        )
+            token = create_token(
+                data={"id": user.id},
+                expires_delta=expires_delta,
+            )
 
-        datetime_expires_at = (
-            datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
-            if expires_at
-            else None
-        )
+            datetime_expires_at = (
+                datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
+                if expires_at
+                else None
+            )
 
-        # Set the cookie token
-        response.set_cookie(
-            key="token",
-            value=token,
-            expires=datetime_expires_at,
-            httponly=True,  # Ensures the cookie is not accessible via JavaScript
-            samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-            secure=WEBUI_AUTH_COOKIE_SECURE,
-        )
+            # Set the cookie token
+            response.set_cookie(
+                key="token",
+                value=token,
+                expires=datetime_expires_at,
+                httponly=True,  # Ensures the cookie is not accessible via JavaScript
+                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                secure=WEBUI_AUTH_COOKIE_SECURE,
+            )
 
-        user_permissions = get_permissions(
-            user.id, request.app.state.config.USER_PERMISSIONS
-        )
+            user_permissions = get_permissions(
+                user.id, request.app.state.config.USER_PERMISSIONS
+            )
 
-        # return {
-        #     "token": token,
-        #     "token_type": "Bearer",
-        #     "expires_at": expires_at,
-        #     "id": user.id,
-        #     "email": user.email,
-        #     "name": user.name,
-        #     "role": user.role,
-        #     "profile_image_url": user.profile_image_url,
-        #     "permissions": user_permissions,
-        # }
-        return RedirectResponse(url=redirect_url)
+            # return {
+            #     "token": token,
+            #     "token_type": "Bearer",
+            #     "expires_at": expires_at,
+            #     "id": user.id,
+            #     "email": user.email,
+            #     "name": user.name,
+            #     "role": user.role,
+            #     "profile_image_url": user.profile_image_url,
+            #     "permissions": user_permissions,
+            # }
+            return RedirectResponse(url=f"http://localhost:5173/auth?token={token}")
+        else:
+            raise HTTPException(400, detail="Invalid credentials")
     else:
-        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+        raise HTTPException(400, detail="Invalid credentials")
 
 
 ############################

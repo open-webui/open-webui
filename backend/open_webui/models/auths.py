@@ -130,17 +130,30 @@ class AuthsTable:
                 return None
 
     def authenticate_user(self, webauth_url: str) -> Optional[UserModel]:
-        webauth_response = requests.get(webauth_url)
-        netid = get_netid(webauth_response.text)
-        email = get_netid_email(netid)
+        try:
+            webauth_response = requests.get(webauth_url, timeout=5)
+            webauth_response.raise_for_status()
+            netid = get_netid(webauth_response.text)
+            email = get_netid_email(netid)
+        except requests.exceptions.Timeout:
+            log.info("Request timeout to webauth after 5 seconds.")
+            return None
+        except ValueError:
+            log.info("Tried to login with invalid credentials.")
+            return None
 
         log.info(f"authenticate_user: {netid}")
-        try:
-            with get_db() as db:
-                auth = db.query(Auth).filter_by(email=email, active=True).first()
-                return Users.get_user_by_id(auth.id)
-        except Exception:
-            return None
+
+        user = Users.get_user_by_email(email)
+        if user == None:
+            id = str(uuid.uuid4())
+            return Users.insert_new_user(
+                id,
+                netid,
+                email,
+                role="admin" if Users.get_num_users() == 0 else "pending",
+            )
+        return user
 
     def authenticate_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
         log.info(f"authenticate_user_by_api_key: {api_key}")
