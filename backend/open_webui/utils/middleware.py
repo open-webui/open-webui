@@ -1380,10 +1380,10 @@ async def process_chat_response(
                             }
 
                             data, _ = await process_filter_functions(
-                                handler_type="midlet",
-                                filter_ids=get_sorted_filter_ids(form_data.get("model")),
                                 request=request,
-                                data=data,
+                                filter_ids=get_sorted_filter_ids(form_data.get("model")),
+                                filter_type="midlet",
+                                form_data=data,
                                 extra_params=extra_params,
                             )
 
