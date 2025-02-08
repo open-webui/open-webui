@@ -284,15 +284,18 @@ class OAuthManager:
                             }
                         async with aiohttp.ClientSession() as session:
                             async with session.get(picture_url, **get_kwargs) as resp:
-                                picture = await resp.read()
-                                base64_encoded_picture = base64.b64encode(
-                                    picture
-                                ).decode("utf-8")
-                                guessed_mime_type = mimetypes.guess_type(picture_url)[0]
-                                if guessed_mime_type is None:
-                                    # assume JPG, browsers are tolerant enough of image formats
-                                    guessed_mime_type = "image/jpeg"
-                                picture_url = f"data:{guessed_mime_type};base64,{base64_encoded_picture}"
+                                if resp.ok:
+                                    picture = await resp.read()
+                                    base64_encoded_picture = base64.b64encode(
+                                        picture
+                                    ).decode("utf-8")
+                                    guessed_mime_type = mimetypes.guess_type(picture_url)[0]
+                                    if guessed_mime_type is None:
+                                        # assume JPG, browsers are tolerant enough of image formats
+                                        guessed_mime_type = "image/jpeg"
+                                    picture_url = f"data:{guessed_mime_type};base64,{base64_encoded_picture}"
+                                else:
+                                    picture_url = "/user.png"
                     except Exception as e:
                         log.error(
                             f"Error downloading profile image '{picture_url}': {e}"
