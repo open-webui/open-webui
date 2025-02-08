@@ -56,11 +56,11 @@ def upload_file(
                     "id": id,
                     "filename": name,
                     "path": file_path,
-                    "data": file_metadata,
                     "meta": {
                         "name": name,
                         "content_type": file.content_type,
                         "size": len(contents),
+                        "data": file_metadata,
                     },
                 }
             ),
