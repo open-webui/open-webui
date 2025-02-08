@@ -85,6 +85,7 @@
 		"idb": "^7.1.1",
 		"js-sha256": "^0.10.1",
 		"katex": "^0.16.21",
+		"kokoro-js": "^1.1.1",
 		"marked": "^9.1.0",
 		"mermaid": "^10.9.3",
 		"paneforge": "^0.0.6",
@@ -105,7 +106,8 @@
 		"svelte-sonner": "^0.3.19",
 		"tippy.js": "^6.3.7",
 		"turndown": "^7.2.0",
-		"uuid": "^9.0.1"
+		"uuid": "^9.0.1",
+		"vite-plugin-static-copy": "^2.2.0"
 	},
 	"engines": {
 		"node": ">=18.13.0 <=22.x.x",
