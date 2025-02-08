@@ -199,6 +199,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
         },
         "__metadata__": metadata,
         "__request__": request,
+        "__model__": model,
     }
 
     try:

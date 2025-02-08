@@ -61,12 +61,14 @@ async def process_filter_functions(
         try:
             # Prepare parameters
             sig = inspect.signature(handler)
-            params = {"body": form_data}
-
-            # Add extra parameters that exist in the handler's signature
-            for key in list(extra_params.keys()):
-                if key in sig.parameters:
-                    params[key] = extra_params[key]
+            params = {"body": form_data} | {
+                k: v
+                for k, v in {
+                    **extra_params,
+                    "__id__": filter_id,
+                }.items()
+                if k in sig.parameters
+            }
 
             # Handle user parameters
             if "__user__" in sig.parameters:
