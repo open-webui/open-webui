@@ -247,7 +247,11 @@
 											);
 											OPENAI_API_KEYS = OPENAI_API_KEYS.filter((key, keyIdx) => idx !== keyIdx);
 
-											delete OPENAI_API_CONFIGS[idx];
+											let newConfig = {};
+											OPENAI_API_BASE_URLS.forEach((url, newIdx) => {
+												newConfig[newIdx] = OPENAI_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
+											});
+											OPENAI_API_CONFIGS = newConfig;
 										}}
 									/>
 								{/each}
@@ -305,7 +309,12 @@
 										}}
 										onDelete={() => {
 											OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url, urlIdx) => idx !== urlIdx);
-											delete OLLAMA_API_CONFIGS[idx];
+
+											let newConfig = {};
+											OLLAMA_BASE_URLS.forEach((url, newIdx) => {
+												newConfig[newIdx] = OLLAMA_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
+											});
+											OLLAMA_API_CONFIGS = newConfig;
 										}}
 									/>
 								{/each}
