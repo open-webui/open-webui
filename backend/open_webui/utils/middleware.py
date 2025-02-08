@@ -1377,6 +1377,7 @@ async def process_chat_response(
                                 },
                                 "__metadata__": metadata,
                                 "__request__": request,
+                                "__model__": form_data.get("model"),
                             }
 
                             data, _ = await process_filter_functions(
