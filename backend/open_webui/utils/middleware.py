@@ -572,13 +572,13 @@ async def chat_image_generation_handler(
             {
                 "type": "status",
                 "data": {
-                    "description": f"An error occured while generating an image",
+                    "description": f"An error occurred while generating an image",
                     "done": True,
                 },
             }
         )
 
-        system_message_content = "<context>Unable to generate an image, tell the user that an error occured</context>"
+        system_message_content = "<context>Unable to generate an image, tell the user that an error occurred</context>"
 
     if system_message_content:
         form_data["messages"] = add_or_update_system_message(
