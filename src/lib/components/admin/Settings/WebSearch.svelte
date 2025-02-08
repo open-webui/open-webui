@@ -35,12 +35,10 @@
 
 	const submitHandler = async () => {
 		// Convert domain filter string to array before sending
-		if (webConfig?.search?.domain_filter_list) {
-			webConfig.search.domain_filter_list = webConfig.search.domain_filter_list
-				.split(',')
-				.map(domain => domain.trim())
-				.filter(domain => domain.length > 0);
-		}
+		webConfig.search.domain_filter_list = webConfig.search.domain_filter_list
+			.split(',')
+			.map((domain) => domain.trim())
+			.filter((domain) => domain.length > 0);
 
 		const res = await updateRAGConfig(localStorage.token, {
 			web: webConfig,
@@ -354,7 +352,9 @@
 
 						<input
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-							placeholder={$i18n.t('Enter domains separated by commas (e.g., example.com,site.org)')}
+							placeholder={$i18n.t(
+								'Enter domains separated by commas (e.g., example.com,site.org)'
+							)}
 							bind:value={webConfig.search.domain_filter_list}
 						/>
 					</div>
