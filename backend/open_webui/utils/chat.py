@@ -203,10 +203,10 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
 
     try:
         result, _ = await process_filter_functions(
-            handler_type="outlet",
-            filter_ids=get_sorted_filter_ids(model),
             request=request,
-            data=data,
+            filter_ids=get_sorted_filter_ids(model),
+            filter_type="outlet",
+            form_data=data,
             extra_params=extra_params,
         )
         return result

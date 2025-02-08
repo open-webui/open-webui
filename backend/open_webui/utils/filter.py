@@ -2,6 +2,7 @@ import inspect
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.models.functions import Functions
 
+
 def get_sorted_filter_ids(model):
     def get_priority(function_id):
         function = Functions.get_function_by_id(function_id)
@@ -19,17 +20,14 @@ def get_sorted_filter_ids(model):
         function.id
         for function in Functions.get_functions_by_type("filter", active_only=True)
     ]
-    
+
     filter_ids = [fid for fid in filter_ids if fid in enabled_filter_ids]
     filter_ids.sort(key=get_priority)
     return filter_ids
 
+
 async def process_filter_functions(
-    handler_type,
-    filter_ids,
-    request,
-    data,
-    extra_params
+    request, filter_ids, filter_type, form_data, extra_params
 ):
     skip_files = None
 
@@ -45,7 +43,7 @@ async def process_filter_functions(
             request.app.state.FUNCTIONS[filter_id] = function_module
 
         # Check if the function has a file_handler variable
-        if handler_type == "inlet" and hasattr(function_module, "file_handler"):
+        if filter_type == "inlet" and hasattr(function_module, "file_handler"):
             skip_files = function_module.file_handler
 
         # Apply valves to the function
@@ -56,14 +54,14 @@ async def process_filter_functions(
             )
 
         # Prepare handler function
-        handler = getattr(function_module, handler_type, None)
+        handler = getattr(function_module, filter_type, None)
         if not handler:
             continue
 
         try:
             # Prepare parameters
             sig = inspect.signature(handler)
-            params = {"body": data}
+            params = {"body": form_data}
 
             # Add extra parameters that exist in the handler's signature
             for key in list(extra_params.keys()):
@@ -82,19 +80,18 @@ async def process_filter_functions(
                     except Exception as e:
                         print(e)
 
-
             # Execute handler
             if inspect.iscoroutinefunction(handler):
-                data = await handler(**params)
+                form_data = await handler(**params)
             else:
-                data = handler(**params)
+                form_data = handler(**params)
 
         except Exception as e:
-            print(f"Error in {handler_type} handler {filter_id}: {e}")
+            print(f"Error in {filter_type} handler {filter_id}: {e}")
             raise e
 
     # Handle file cleanup for inlet
-    if skip_files and "files" in data.get("metadata", {}):
-        del data["metadata"]["files"]
+    if skip_files and "files" in form_data.get("metadata", {}):
+        del form_data["metadata"]["files"]
 
-    return data, {}
+    return form_data, {}

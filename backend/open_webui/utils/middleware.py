@@ -694,10 +694,10 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
     try:
         form_data, flags = await process_filter_functions(
-            handler_type="inlet",
-            filter_ids=get_sorted_filter_ids(model),
             request=request,
-            data=form_data,
+            filter_ids=get_sorted_filter_ids(model),
+            filter_type="inlet",
+            form_data=form_data,
             extra_params=extra_params,
         )
     except Exception as e:
@@ -1039,11 +1039,15 @@ async def process_chat_response(
 
         def split_content_and_whitespace(content):
             content_stripped = content.rstrip()
-            original_whitespace = content[len(content_stripped):] if len(content) > len(content_stripped) else ''
+            original_whitespace = (
+                content[len(content_stripped) :]
+                if len(content) > len(content_stripped)
+                else ""
+            )
             return content_stripped, original_whitespace
 
         def is_opening_code_block(content):
-            backtick_segments = content.split('```')
+            backtick_segments = content.split("```")
             # Even number of segments means the last backticks are opening a new block
             return len(backtick_segments) > 1 and len(backtick_segments) % 2 == 0
 
@@ -1113,10 +1117,15 @@ async def process_chat_response(
                         output = block.get("output", None)
                         lang = attributes.get("lang", "")
 
-                        content_stripped, original_whitespace = split_content_and_whitespace(content)
+                        content_stripped, original_whitespace = (
+                            split_content_and_whitespace(content)
+                        )
                         if is_opening_code_block(content_stripped):
                             # Remove trailing backticks that would open a new block
-                            content = content_stripped.rstrip('`').rstrip() + original_whitespace
+                            content = (
+                                content_stripped.rstrip("`").rstrip()
+                                + original_whitespace
+                            )
                         else:
                             # Keep content as is - either closing backticks or no backticks
                             content = content_stripped + original_whitespace
