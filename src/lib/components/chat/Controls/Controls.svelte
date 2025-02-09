@@ -8,6 +8,7 @@
 	import Valves from '$lib/components/chat/Controls/Valves.svelte';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
+	import ImageGeneration from '$lib/components/chat/Controls/ImageGeneration.svelte';
 
 	import { user } from '$lib/stores';
 	export let models = [];
@@ -15,6 +16,7 @@
 	export let params = {};
 
 	let showValves = false;
+	let showImageGeneration = true;
 </script>
 
 <div class=" dark:text-white">
@@ -83,11 +85,19 @@
 
 			<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 
-			<Collapsible title={$i18n.t('Advanced Params')} open={true} buttonClassName="w-full">
+			<Collapsible title={$i18n.t('Advanced Params')} open={false} buttonClassName="w-full">
 				<div class="text-sm mt-1.5" slot="content">
 					<div>
 						<AdvancedParams admin={$user?.role === 'admin'} bind:params />
 					</div>
+				</div>
+			</Collapsible>
+
+			<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
+
+			<Collapsible bind:open={showImageGeneration} title={$i18n.t('Image Generation')} buttonClassName="w-full">
+				<div class="text-sm" slot="content">
+					<ImageGeneration show={showImageGeneration} bind:params />
 				</div>
 			</Collapsible>
 		</div>

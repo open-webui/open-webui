@@ -94,6 +94,7 @@
 	}
 
 	export let chatId = '';
+	export let params;
 	export let history;
 	export let messageId;
 
@@ -322,7 +323,13 @@
 
 	const generateImage = async (message: MessageType) => {
 		generatingImage = true;
-		const res = await imageGenerations(localStorage.token, message.content).catch((error) => {
+		const res = await imageGenerations(localStorage.token, message.content, {
+			engine: params?.engine,
+			model_wrapper_id: params?.model_wrapper_id,
+			model: params?.model,
+			size: params?.size,
+			steps: params?.steps
+		}).catch((error) => {
 			toast.error(`${error}`);
 		});
 		console.log(res);

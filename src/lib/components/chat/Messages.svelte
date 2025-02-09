@@ -22,6 +22,7 @@
 	export let user = $_user;
 
 	export let prompt;
+	export let params;
 	export let history = {};
 	export let selectedModels;
 
@@ -395,6 +396,7 @@
 							messageId={message.id}
 							idx={messageIdx}
 							{user}
+							{params}
 							{showPreviousMessage}
 							{showNextMessage}
 							{updateChat}

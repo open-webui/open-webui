@@ -67,10 +67,10 @@ export const updateConfig = async (token: string = '', config: object) => {
 	return res;
 };
 
-export const verifyConfigUrl = async (token: string = '') => {
+export const verifyConfigUrl = async (token: string = '', engine: string, baseUrl: string, apiKey: string) => {
 	let error = null;
 
-	const res = await fetch(`${IMAGES_API_BASE_URL}/config/url/verify`, {
+	const res = await fetch(`${IMAGES_API_BASE_URL}/config/${engine}/url/verify`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -164,10 +164,10 @@ export const updateImageGenerationConfig = async (token: string = '', config: ob
 	return res;
 };
 
-export const getImageGenerationModels = async (token: string = '') => {
+export const getImageGenerationModels = async (token: string = '', engine: string) => {
 	let error = null;
 
-	const res = await fetch(`${IMAGES_API_BASE_URL}/models`, {
+	const res = await fetch(`${IMAGES_API_BASE_URL}/engines/${engine}/models`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -196,7 +196,13 @@ export const getImageGenerationModels = async (token: string = '') => {
 	return res;
 };
 
-export const imageGenerations = async (token: string = '', prompt: string) => {
+export const imageGenerations = async (token: string = '', prompt: string, params?: {
+	engine?: string;
+	model_wrapper_id?: string;
+	model?: string;
+	size?: string;
+	steps?: number;
+}) => {
 	let error = null;
 
 	const res = await fetch(`${IMAGES_API_BASE_URL}/generations`, {
@@ -207,7 +213,12 @@ export const imageGenerations = async (token: string = '', prompt: string) => {
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			prompt: prompt
+			prompt,
+			...(params?.model && { model: params.model }),
+			...(params?.size && { size: params.size }),
+			...(params?.steps && { steps: params.steps }),
+			...(params?.engine && { engine: params.engine }),
+			...(params?.model_wrapper_id && { model_wrapper_id: params.model_wrapper_id })
 		})
 	})
 		.then(async (res) => {

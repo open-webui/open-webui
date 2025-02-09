@@ -1958,6 +1958,7 @@
 									bind:history
 									bind:autoScroll
 									bind:prompt
+									{params}
 									{selectedModels}
 									{sendPrompt}
 									{showMessage}

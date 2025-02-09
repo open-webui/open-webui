@@ -7,8 +7,6 @@
 	import { getBackendConfig } from '$lib/apis';
 	import {
 		getImageGenerationModels,
-		getImageGenerationConfig,
-		updateImageGenerationConfig,
 		getConfig,
 		updateConfig,
 		verifyConfigUrl
@@ -16,16 +14,55 @@
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import AccessControl from '../../workspace/common/AccessControl.svelte';
+
+	interface ImageModel {
+		id: string;
+		name: string;
+		model: string;
+		is_default: boolean;
+		enabled: boolean;
+		image_size: string;
+		image_steps: number;
+		access_control: {
+			read: { group_ids: string[] };
+			write: { group_ids: string[] };
+		} | null;
+		workflow?: string;
+		workflow_nodes?: any[];
+		cfg_scale?: number;
+		sampler?: string;
+		scheduler?: string;
+	}
+
+	interface ImageConfig {
+		enabled: boolean;
+		prompt_generation: boolean;
+		default_engine: 'openai' | 'comfyui' | 'automatic1111';
+		openai: {
+			api_base_url: string;
+			api_key: string;
+			model_wrappers: ImageModel[];
+		};
+		comfyui: {
+			base_url: string;
+			api_key: string;
+			model_wrappers: ImageModel[];
+		};
+		automatic1111: {
+			base_url: string;
+			api_auth: string;
+			model_wrappers: ImageModel[];
+		};
+	}
+
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
 
 	let loading = false;
 
-	let config = null;
-	let imageGenerationConfig = null;
-
-	let models = null;
+	let config: ImageConfig | null = null;
 
 	let samplers = [
 		'DPM++ 2M',
@@ -97,199 +134,274 @@
 		}
 	];
 
-	const getModels = async () => {
-		models = await getImageGenerationModels(localStorage.token).catch((error) => {
+	let availableModels: {id: string, name: string}[] = [];
+
+	const getModels = async (engine: string) => {
+		return await getImageGenerationModels(localStorage.token, engine).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 	};
 
 	const updateConfigHandler = async () => {
-		const res = await updateConfig(localStorage.token, config)
-			.catch((error) => {
-				toast.error(`${error}`);
-				return null;
-			})
-			.catch((error) => {
-				toast.error(`${error}`);
-				return null;
-			});
-
-		if (res) {
-			config = res;
-		}
-
-		if (config.enabled) {
-			backendConfig.set(await getBackendConfig());
-			getModels();
+		try {
+			const res = await updateConfig(localStorage.token, config);
+			if (res) {
+				config = res;
+				if (config?.enabled) {
+					await backendConfig.set(await getBackendConfig());
+				}
+			}
+		} catch (error) {
+			toast.error(`${error}`);
 		}
 	};
 
-	const validateJSON = (json) => {
+	const validateJSON = (json: string): boolean => {
 		try {
 			const obj = JSON.parse(json);
-
-			if (obj && typeof obj === 'object') {
-				return true;
-			}
-		} catch (e) {}
-		return false;
+			return obj && typeof obj === 'object';
+		} catch (e) {
+			return false;
+		}
 	};
 
 	const saveHandler = async () => {
+		if (!config) return;
+
 		loading = true;
 
-		if (config?.comfyui?.COMFYUI_WORKFLOW) {
-			if (!validateJSON(config.comfyui.COMFYUI_WORKFLOW)) {
-				toast.error('Invalid JSON format for ComfyUI Workflow.');
-				loading = false;
-				return;
+		const validConfig = {
+			enabled: config.enabled,
+			prompt_generation: config.prompt_generation,
+			default_engine: config.default_engine,
+			openai: {
+				api_base_url: config.openai?.api_base_url || '',
+				api_key: config.openai?.api_key || '',
+				model_wrappers: (config.openai?.model_wrappers || []).map(model_wrapper => ({
+					id: model_wrapper.id,
+					name: model_wrapper.name,
+					model: model_wrapper.model,
+					is_default: model_wrapper.is_default,
+					enabled: model_wrapper.enabled,
+					image_size: model_wrapper.image_size,
+					image_steps: model_wrapper.image_steps,
+					access_control: model_wrapper.access_control,
+				}))
+			},
+			automatic1111: {
+				base_url: config.automatic1111?.base_url || '',
+				api_auth: config.automatic1111?.api_auth || '',
+				model_wrappers: (config.automatic1111?.model_wrappers || []).map(model_wrapper => ({
+					id: model_wrapper.id,
+					name: model_wrapper.name,
+					model: model_wrapper.model,
+					is_default: model_wrapper.is_default,
+					enabled: model_wrapper.enabled,
+					image_size: model_wrapper.image_size,
+					image_steps: model_wrapper.image_steps,
+					access_control: model_wrapper.access_control,
+					cfg_scale: model_wrapper.cfg_scale,
+					sampler: model_wrapper.sampler,
+					scheduler: model_wrapper.scheduler
+				}))
+			},
+			comfyui: {
+				base_url: config.comfyui?.base_url || '',
+				api_key: config.comfyui?.api_key || '',
+				model_wrappers: (config.comfyui?.model_wrappers || []).map(model_wrapper => ({
+					id: model_wrapper.id,
+					name: model_wrapper.name,
+					model: model_wrapper.model,
+					is_default: model_wrapper.is_default,
+					enabled: model_wrapper.enabled,
+					image_size: model_wrapper.image_size,
+					image_steps: model_wrapper.image_steps,
+					access_control: model_wrapper.access_control,
+					workflow: model_wrapper.workflow,
+					workflow_nodes: model_wrapper.workflow_nodes
+				}))
+			}
+		};
+
+		if (validConfig.comfyui.model_wrappers) {
+			for (const model_wrapper of validConfig.comfyui.model_wrappers) {
+				if (model_wrapper.workflow && !validateJSON(model_wrapper.workflow)) {
+					toast.error(`Invalid JSON format for ComfyUI Workflow in model ${model_wrapper.name}`);
+					loading = false;
+					return;
+				}
+
+                const missingNodeIds = model_wrapper.workflow_nodes.find(node =>
+                    !node.node_ids || node.node_ids.length === 0
+                );
+
+                if (missingNodeIds) {
+                    toast.error(`Missing node IDs in workflow configuration for model ${model_wrapper.name}`);
+                    loading = false;
+                    return;
+                }
 			}
 		}
 
-		if (config?.comfyui?.COMFYUI_WORKFLOW) {
-			config.comfyui.COMFYUI_WORKFLOW_NODES = requiredWorkflowNodes.map((node) => {
-				return {
-					type: node.type,
-					key: node.key,
-					node_ids:
-						node.node_ids.trim() === '' ? [] : node.node_ids.split(',').map((id) => id.trim())
-				};
-			});
+		try {
+			await updateConfig(localStorage.token, validConfig);
+			config = validConfig;
+			dispatch('save');
+		} catch (error) {
+			toast.error(`${error}`);
+		} finally {
+			loading = false;
 		}
-
-		await updateConfig(localStorage.token, config).catch((error) => {
-			toast.error(`${error}`);
-			loading = false;
-			return null;
-		});
-
-		await updateImageGenerationConfig(localStorage.token, imageGenerationConfig).catch((error) => {
-			toast.error(`${error}`);
-			loading = false;
-			return null;
-		});
-
-		getModels();
-		dispatch('save');
-		loading = false;
 	};
 
 	onMount(async () => {
 		if ($user.role === 'admin') {
-			const res = await getConfig(localStorage.token).catch((error) => {
+			const res = await getConfig(localStorage.token).catch((error: Error) => {
 				toast.error(`${error}`);
 				return null;
 			});
 
 			if (res) {
 				config = res;
-			}
 
-			if (config.enabled) {
-				getModels();
-			}
-
-			if (config.comfyui.COMFYUI_WORKFLOW) {
-				config.comfyui.COMFYUI_WORKFLOW = JSON.stringify(
-					JSON.parse(config.comfyui.COMFYUI_WORKFLOW),
-					null,
-					2
-				);
-			}
-
-			requiredWorkflowNodes = requiredWorkflowNodes.map((node) => {
-				const n = config.comfyui.COMFYUI_WORKFLOW_NODES.find((n) => n.type === node.type) ?? node;
-
-				console.log(n);
-
-				return {
-					type: n.type,
-					key: n.key,
-					node_ids: typeof n.node_ids === 'string' ? n.node_ids : n.node_ids.join(',')
-				};
-			});
-
-			const imageConfigRes = await getImageGenerationConfig(localStorage.token).catch((error) => {
-				toast.error(`${error}`);
-				return null;
-			});
-
-			if (imageConfigRes) {
-				imageGenerationConfig = imageConfigRes;
+				if (config.comfyui.model_wrappers) {
+					config.comfyui.model_wrappers = config.comfyui.model_wrappers.map(model_wrapper => ({
+						...model_wrapper,
+						workflow: model_wrapper.workflow ? JSON.stringify(JSON.parse(model_wrapper.workflow), null, 2) : undefined
+					}));
+				}
 			}
 		}
 	});
+
+	const generateId = (name: string): string => {
+		const timestamp = Date.now().toString(36);
+		const sanitizedName = name
+			.toLowerCase()
+			.replace(/\s+/g, '-')
+			.replace(/[^a-z0-9-]+/g, '')
+			.replace(/^-+|-+$/g, '');
+		return `${sanitizedName}-${timestamp}`;
+	};
+
+	const addNewModelWrapper = async (engine: 'openai' | 'comfyui' | 'automatic1111') => {
+		if (!config) return;
+
+		try {
+			const urlValid = await verifyConfigUrl(localStorage.token, engine);
+			if (!urlValid) {
+				toast.error(`Invalid ${engine} configuration URL`);
+				return;
+			}
+		} catch (error) {
+			toast.error(`Failed to add model wrapper: ${error}`);
+			return;
+		}
+
+		try {
+			availableModels = await getModels(engine);
+			if (!availableModels) {
+				toast.error('Failed to fetch available models');
+			}
+		} catch (error) {
+			toast.error(`Failed to fetch models: ${error}`);
+		}
+
+		let shouldBeDefault = false;
+		switch (engine) {
+			case 'openai':
+				shouldBeDefault = !config.openai.model_wrappers?.length;
+				break;
+			case 'automatic1111':
+				shouldBeDefault = !config.automatic1111.model_wrappers?.length;
+				break;
+			case 'comfyui':
+				shouldBeDefault = !config.comfyui.model_wrappers?.length;
+				break;
+		}
+
+		const defaultName = {
+			openai: 'New OpenAI model wrapper',
+			automatic1111: 'New Automatic1111 model wrapper',
+			comfyui: 'New ComfyUI model wrapper'
+		}[engine];
+
+		const newModel: ImageModel = {
+			id: generateId(defaultName),
+			name: defaultName,
+			model: '',
+			is_default: shouldBeDefault,
+			enabled: true,
+			image_size: '512x512',
+			image_steps: 50,
+			access_control: null,
+		};
+
+		if (engine === 'automatic1111') {
+			newModel.cfg_scale = 7.0;
+			newModel.sampler = '';
+			newModel.scheduler = '';
+		} else if (engine === 'comfyui') {
+			newModel.workflow = '';
+			newModel.workflow_nodes = [];
+		}
+
+		switch (engine) {
+			case 'openai':
+				if (!config.openai.model_wrappers) config.openai.model_wrappers = [];
+				config.openai.model_wrappers = [...config.openai.model_wrappers, newModel];
+				break;
+			case 'automatic1111':
+				if (!config.automatic1111.model_wrappers) config.automatic1111.model_wrappers = [];
+				config.automatic1111.model_wrappers = [...config.automatic1111.model_wrappers, newModel];
+				break;
+			case 'comfyui':
+				if (!config.comfyui.model_wrappers) config.comfyui.model_wrappers = [];
+				config.comfyui.model_wrappers = [...config.comfyui.model_wrappers, newModel];
+				break;
+		}
+	};
+
 </script>
 
 <form
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
-	on:submit|preventDefault={async () => {
-		saveHandler();
-	}}
+	on:submit|preventDefault={saveHandler}
 >
-	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden pr-2">
-		{#if config && imageGenerationConfig}
-			<div>
-				<div class=" mb-1 text-sm font-medium">{$i18n.t('Image Settings')}</div>
+	<div class="space-y-3 overflow-y-scroll scrollbar-hidden pr-2">
+		{#if config}
+			<div class="space-y-4">
+				<div class="mb-1 text-sm font-medium">{$i18n.t('Image Settings')}</div>
 
-				<div>
-					<div class=" py-1 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Image Generation (Experimental)')}
-						</div>
-
-						<div class="px-1">
-							<Switch
-								bind:state={config.enabled}
-								on:change={(e) => {
-									const enabled = e.detail;
-
-									if (enabled) {
-										if (
-											config.engine === 'automatic1111' &&
-											config.automatic1111.AUTOMATIC1111_BASE_URL === ''
-										) {
-											toast.error($i18n.t('AUTOMATIC1111 Base URL is required.'));
-											config.enabled = false;
-										} else if (
-											config.engine === 'comfyui' &&
-											config.comfyui.COMFYUI_BASE_URL === ''
-										) {
-											toast.error($i18n.t('ComfyUI Base URL is required.'));
-											config.enabled = false;
-										} else if (config.engine === 'openai' && config.openai.OPENAI_API_KEY === '') {
-											toast.error($i18n.t('OpenAI API Key is required.'));
-											config.enabled = false;
-										}
-									}
-
-									updateConfigHandler();
-								}}
-							/>
-						</div>
+				<div class="py-1 flex w-full justify-between">
+					<div class="self-center text-xs font-medium">
+						{$i18n.t('Image Generation (Experimental)')}
+					</div>
+					<div class="px-1">
+						<Switch
+							bind:state={config.enabled}
+							on:change={updateConfigHandler}
+						/>
 					</div>
 				</div>
 
 				{#if config.enabled}
-					<div class=" py-1 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Image Prompt Generation')}</div>
+					<div class="py-1 flex w-full justify-between">
+						<div class="self-center text-xs font-medium">{$i18n.t('Image Prompt Generation')}</div>
 						<div class="px-1">
 							<Switch bind:state={config.prompt_generation} />
 						</div>
 					</div>
 				{/if}
 
-				<div class=" py-1 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Image Generation Engine')}</div>
+				<div class="py-1 flex w-full justify-between">
+					<div class="self-center text-xs font-medium">{$i18n.t('Default Image Generation Engine')}</div>
 					<div class="flex items-center relative">
 						<select
-							class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
-							bind:value={config.engine}
-							placeholder={$i18n.t('Select Engine')}
-							on:change={async () => {
-								updateConfigHandler();
-							}}
+							class="dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+							bind:value={config.default_engine}
+							on:change={updateConfigHandler}
 						>
 							<option value="openai">{$i18n.t('Default (Open AI)')}</option>
 							<option value="comfyui">{$i18n.t('ComfyUI')}</option>
@@ -298,391 +410,538 @@
 					</div>
 				</div>
 			</div>
-			<hr class=" dark:border-gray-850" />
 
-			<div class="flex flex-col gap-2">
-				{#if (config?.engine ?? 'automatic1111') === 'automatic1111'}
-					<div>
-						<div class=" mb-2 text-sm font-medium">{$i18n.t('AUTOMATIC1111 Base URL')}</div>
-						<div class="flex w-full">
-							<div class="flex-1 mr-2">
-								<input
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-									placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
-									bind:value={config.automatic1111.AUTOMATIC1111_BASE_URL}
-								/>
-							</div>
-							<button
-								class="px-2.5 bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
-								type="button"
-								on:click={async () => {
-									await updateConfigHandler();
-									const res = await verifyConfigUrl(localStorage.token).catch((error) => {
-										toast.error(`${error}`);
-										return null;
-									});
+			<hr class="dark:border-gray-850" />
 
-									if (res) {
-										toast.success($i18n.t('Server connection verified'));
-									}
-								}}
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 20 20"
-									fill="currentColor"
-									class="w-4 h-4"
-								>
-									<path
-										fill-rule="evenodd"
-										d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
-										clip-rule="evenodd"
-									/>
-								</svg>
-							</button>
-						</div>
-
-						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-							{$i18n.t('Include `--api` flag when running stable-diffusion-webui')}
-							<a
-								class=" text-gray-300 font-medium"
-								href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/3734"
-								target="_blank"
-							>
-								{$i18n.t('(e.g. `sh webui.sh --api`)')}
-							</a>
-						</div>
-					</div>
-
-					<div>
-						<div class=" mb-2 text-sm font-medium">
-							{$i18n.t('AUTOMATIC1111 Api Auth String')}
-						</div>
+			<div class="space-y-4">
+				<div>
+					<div class="mb-2 text-sm font-medium">{$i18n.t('OpenAI Settings')}</div>
+					<div class="flex gap-2 mb-4">
+						<input
+							class="flex-1 rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							placeholder={$i18n.t('API Base URL')}
+							bind:value={config.openai.api_base_url}
+						/>
 						<SensitiveInput
-							placeholder={$i18n.t('Enter api auth string (e.g. username:password)')}
-							bind:value={config.automatic1111.AUTOMATIC1111_API_AUTH}
+							placeholder={$i18n.t('API Key')}
+							bind:value={config.openai.api_key}
 							required={false}
 						/>
-
-						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-							{$i18n.t('Include `--api-auth` flag when running stable-diffusion-webui')}
-							<a
-								class=" text-gray-300 font-medium"
-								href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/13993"
-								target="_blank"
-							>
-								{$i18n
-									.t('(e.g. `sh webui.sh --api --api-auth username_password`)')
-									.replace('_', ':')}
-							</a>
-						</div>
 					</div>
 
-					<!---Sampler-->
-					<div>
-						<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Sampler')}</div>
-						<div class="flex w-full">
-							<div class="flex-1 mr-2">
-								<Tooltip content={$i18n.t('Enter Sampler (e.g. Euler a)')} placement="top-start">
-									<input
-										list="sampler-list"
-										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-										placeholder={$i18n.t('Enter Sampler (e.g. Euler a)')}
-										bind:value={config.automatic1111.AUTOMATIC1111_SAMPLER}
-									/>
-
-									<datalist id="sampler-list">
-										{#each samplers ?? [] as sampler}
-											<option value={sampler}>{sampler}</option>
-										{/each}
-									</datalist>
-								</Tooltip>
-							</div>
-						</div>
-					</div>
-					<!---Scheduler-->
-					<div>
-						<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Scheduler')}</div>
-						<div class="flex w-full">
-							<div class="flex-1 mr-2">
-								<Tooltip content={$i18n.t('Enter Scheduler (e.g. Karras)')} placement="top-start">
-									<input
-										list="scheduler-list"
-										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-										placeholder={$i18n.t('Enter Scheduler (e.g. Karras)')}
-										bind:value={config.automatic1111.AUTOMATIC1111_SCHEDULER}
-									/>
-
-									<datalist id="scheduler-list">
-										{#each schedulers ?? [] as scheduler}
-											<option value={scheduler}>{scheduler}</option>
-										{/each}
-									</datalist>
-								</Tooltip>
-							</div>
-						</div>
-					</div>
-					<!---CFG scale-->
-					<div>
-						<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set CFG Scale')}</div>
-						<div class="flex w-full">
-							<div class="flex-1 mr-2">
-								<Tooltip content={$i18n.t('Enter CFG Scale (e.g. 7.0)')} placement="top-start">
-									<input
-										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-										placeholder={$i18n.t('Enter CFG Scale (e.g. 7.0)')}
-										bind:value={config.automatic1111.AUTOMATIC1111_CFG_SCALE}
-									/>
-								</Tooltip>
-							</div>
-						</div>
-					</div>
-				{:else if config?.engine === 'comfyui'}
-					<div class="">
-						<div class=" mb-2 text-sm font-medium">{$i18n.t('ComfyUI Base URL')}</div>
-						<div class="flex w-full">
-							<div class="flex-1 mr-2">
-								<input
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-									placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
-									bind:value={config.comfyui.COMFYUI_BASE_URL}
-								/>
-							</div>
+					<div class="space-y-4 mt-4">
+						<div class="flex justify-between items-center">
+							<div class="text-sm font-medium">{$i18n.t('OpenAI Model Wrapper')}</div>
 							<button
-								class="px-2.5 bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
 								type="button"
-								on:click={async () => {
-									await updateConfigHandler();
-									const res = await verifyConfigUrl(localStorage.token).catch((error) => {
-										toast.error(`${error}`);
-										return null;
-									});
-
-									if (res) {
-										toast.success($i18n.t('Server connection verified'));
-									}
-								}}
+								class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition"
+								on:click={() => addNewModelWrapper('openai')}
 							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 20 20"
-									fill="currentColor"
-									class="w-4 h-4"
-								>
-									<path
-										fill-rule="evenodd"
-										d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
-										clip-rule="evenodd"
-									/>
-								</svg>
+								{$i18n.t('Add model wrapper')}
 							</button>
 						</div>
-					</div>
-
-					<div class="">
-						<div class=" mb-2 text-sm font-medium">{$i18n.t('ComfyUI API Key')}</div>
-						<div class="flex w-full">
-							<div class="flex-1 mr-2">
-								<SensitiveInput
-									placeholder={$i18n.t('sk-1234')}
-									bind:value={config.comfyui.COMFYUI_API_KEY}
-									required={false}
-								/>
-							</div>
-						</div>
-					</div>
-
-					<div class="">
-						<div class=" mb-2 text-sm font-medium">{$i18n.t('ComfyUI Workflow')}</div>
-
-						{#if config.comfyui.COMFYUI_WORKFLOW}
-							<textarea
-								class="w-full rounded-lg mb-1 py-2 px-4 text-xs bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none disabled:text-gray-600 resize-none"
-								rows="10"
-								bind:value={config.comfyui.COMFYUI_WORKFLOW}
-								required
-							/>
-						{/if}
-
-						<div class="flex w-full">
-							<div class="flex-1">
-								<input
-									id="upload-comfyui-workflow-input"
-									hidden
-									type="file"
-									accept=".json"
-									on:change={(e) => {
-										const file = e.target.files[0];
-										const reader = new FileReader();
-
-										reader.onload = (e) => {
-											config.comfyui.COMFYUI_WORKFLOW = e.target.result;
-											e.target.value = null;
-										};
-
-										reader.readAsText(file);
-									}}
-								/>
-
-								<button
-									class="w-full text-sm font-medium py-2 bg-transparent hover:bg-gray-100 border border-dashed dark:border-gray-800 dark:hover:bg-gray-850 text-center rounded-xl"
-									type="button"
-									on:click={() => {
-										document.getElementById('upload-comfyui-workflow-input')?.click();
-									}}
-								>
-									{$i18n.t('Click here to upload a workflow.json file.')}
-								</button>
-							</div>
-						</div>
-
-						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-							{$i18n.t('Make sure to export a workflow.json file as API format from ComfyUI.')}
-						</div>
-					</div>
-
-					{#if config.comfyui.COMFYUI_WORKFLOW}
-						<div class="">
-							<div class=" mb-2 text-sm font-medium">{$i18n.t('ComfyUI Workflow Nodes')}</div>
-
-							<div class="text-xs flex flex-col gap-1.5">
-								{#each requiredWorkflowNodes as node}
-									<div class="flex w-full items-center border dark:border-gray-850 rounded-lg">
-										<div class="flex-shrink-0">
-											<div
-												class=" capitalize line-clamp-1 font-medium px-3 py-1 w-20 text-center rounded-l-lg bg-green-500/10 text-green-700 dark:text-green-200"
-											>
-												{node.type}{node.type === 'prompt' ? '*' : ''}
+						{#if config.openai.model_wrappers?.length}
+							{#each config.openai.model_wrappers as model_wrapper, i}
+								<div class="border dark:border-gray-850 rounded-lg p-4">
+									<div class="flex justify-between mb-4">
+										<div class="flex items-center gap-4">
+											<h3 class="text-sm font-medium">{model_wrapper.name || 'New model wrapper'}</h3>
+											<div class="flex items-center gap-2">
+												<Switch
+													bind:state={model_wrapper.enabled}
+												/>
+												<label class="text-xs text-gray-500">{model_wrapper.enabled ? $i18n.t('Enabled') : $i18n.t('Disabled')}</label>
 											</div>
 										</div>
-										<div class="">
-											<Tooltip content="Input Key (e.g. text, unet_name, steps)">
+										<button
+											type="button"
+											class="text-red-500 hover:text-red-600"
+											on:click={() => {
+												if (!config) return;
+												config.openai.model_wrappers = config.openai.model_wrappers.filter((_, index) => index !== i);
+											}}
+										>
+											<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+												<path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+											</svg>
+										</button>
+									</div>
+
+									<div class="space-y-4">
+										<div class="grid grid-cols-2 gap-4">
+											<div>
+												<label class="block text-xs mb-1">{$i18n.t('Model wrapper name')}</label>
 												<input
-													class="py-1 px-3 w-24 text-xs text-center bg-transparent outline-none border-r dark:border-gray-850"
-													placeholder="Key"
-													bind:value={node.key}
-													required
+													class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+													bind:value={model_wrapper.name}
+													placeholder="e.g. SDXL 1.0"
+													on:input={(e) => {
+														model_wrapper.id = generateId(e.currentTarget.value || 'New OpenAI model wrapper');
+													}}
 												/>
-											</Tooltip>
+											</div>
+											<div>
+												<label class="block text-xs mb-1">{$i18n.t('Model')}</label>
+												<div class="relative">
+													<input
+														list="model-list"
+														class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+														bind:value={model_wrapper.model}
+														placeholder="Select a model"
+														required
+													/>
+
+													<datalist id="model-list">
+														{#each availableModels ?? [] as availableModel}
+															<option value={availableModel.id}>{availableModel.name}</option>
+														{/each}
+													</datalist>
+												</div>
+											</div>
 										</div>
 
-										<div class="w-full">
-											<Tooltip
-												content="Comma separated Node Ids (e.g. 1 or 1,2)"
-												placement="top-start"
-											>
+										<div class="grid grid-cols-2 gap-4">
+											<div>
+												<label class="block text-xs mb-1">{$i18n.t('Image Size')}</label>
 												<input
-													class="w-full py-1 px-4 rounded-r-lg text-xs bg-transparent outline-none"
-													placeholder="Node Ids"
-													bind:value={node.node_ids}
+													class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+													bind:value={model_wrapper.image_size}
+													placeholder="e.g. 1024x1024"
 												/>
-											</Tooltip>
+											</div>
+											<div>
+												<label class="block text-xs mb-1">{$i18n.t('Steps')}</label>
+												<input
+													type="number"
+													class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+													bind:value={model_wrapper.image_steps}
+													placeholder="e.g. 50"
+												/>
+											</div>
+										</div>
+
+										<div class="flex items-center space-x-2">
+											<Switch
+												bind:state={model_wrapper.is_default}
+												on:change={() => {
+													if (model_wrapper.is_default) {
+														config.openai.model_wrappers.forEach((m, index) => {
+															if (index !== i) m.is_default = false;
+														});
+													}
+												}}
+											/>
+											<label class="text-sm">{$i18n.t('Default model wrapper')}</label>
+										</div>
+
+										<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+											<AccessControl
+												bind:accessControl={model_wrapper.access_control}
+												accessRoles={['read', 'write']}
+											/>
 										</div>
 									</div>
-								{/each}
-							</div>
-
-							<div class="mt-2 text-xs text-right text-gray-400 dark:text-gray-500">
-								{$i18n.t('*Prompt node ID(s) are required for image generation')}
-							</div>
-						</div>
-					{/if}
-				{:else if config?.engine === 'openai'}
-					<div>
-						<div class=" mb-1.5 text-sm font-medium">{$i18n.t('OpenAI API Config')}</div>
-
-						<div class="flex gap-2 mb-1">
-							<input
-								class="flex-1 w-full text-sm bg-transparent outline-none"
-								placeholder={$i18n.t('API Base URL')}
-								bind:value={config.openai.OPENAI_API_BASE_URL}
-								required
-							/>
-
-							<SensitiveInput
-								placeholder={$i18n.t('API Key')}
-								bind:value={config.openai.OPENAI_API_KEY}
-							/>
-						</div>
-					</div>
-				{/if}
-			</div>
-
-			{#if config?.enabled}
-				<hr class=" dark:border-gray-850" />
-
-				<div>
-					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Default Model')}</div>
-					<div class="flex w-full">
-						<div class="flex-1 mr-2">
-							<div class="flex w-full">
-								<div class="flex-1">
-									<Tooltip content={$i18n.t('Enter Model ID')} placement="top-start">
-										<input
-											list="model-list"
-											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-											bind:value={imageGenerationConfig.MODEL}
-											placeholder="Select a model"
-											required
-										/>
-
-										<datalist id="model-list">
-											{#each models ?? [] as model}
-												<option value={model.id}>{model.name}</option>
-											{/each}
-										</datalist>
-									</Tooltip>
 								</div>
+							{/each}
+						{:else}
+							<div class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+								{$i18n.t('No OpenAI model wrappers configured')}
 							</div>
-						</div>
+						{/if}
 					</div>
 				</div>
 
 				<div>
-					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Image Size')}</div>
-					<div class="flex w-full">
-						<div class="flex-1 mr-2">
-							<Tooltip content={$i18n.t('Enter Image Size (e.g. 512x512)')} placement="top-start">
-								<input
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-									placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
-									bind:value={imageGenerationConfig.IMAGE_SIZE}
-									required
-								/>
-							</Tooltip>
+					<div class="mb-2 text-sm font-medium">{$i18n.t('Automatic1111 Settings')}</div>
+					<div class="flex gap-2 mb-4">
+						<input
+							class="flex-1 rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							placeholder={$i18n.t('Base URL')}
+							bind:value={config.automatic1111.base_url}
+						/>
+						<SensitiveInput
+							placeholder={$i18n.t('API Auth')}
+							bind:value={config.automatic1111.api_auth}
+							required={false}
+						/>
+					</div>
+
+					<div class="space-y-4 mt-4">
+						<div class="flex justify-between items-center">
+							<div class="text-sm font-medium">{$i18n.t('Automatic1111 model wrappers')}</div>
+							<button
+								type="button"
+								class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition"
+								on:click={() => addNewModelWrapper('automatic1111')}
+							>
+								{$i18n.t('Add model wrapper')}
+							</button>
 						</div>
+						{#if config.automatic1111.model_wrappers?.length}
+							{#each config.automatic1111.model_wrappers as model_wrapper, i}
+								<div class="border dark:border-gray-850 rounded-lg p-4">
+									<div class="flex justify-between mb-4">
+										<div class="flex items-center gap-4">
+											<h3 class="text-sm font-medium">{model_wrapper.name || 'New model wrapper'}</h3>
+											<div class="flex items-center gap-2">
+												<Switch
+													bind:state={model_wrapper.enabled}
+												/>
+												<label class="text-xs text-gray-500">{model_wrapper.enabled ? $i18n.t('Enabled') : $i18n.t('Disabled')}</label>
+											</div>
+										</div>
+										<button
+											type="button"
+											class="text-red-500 hover:text-red-600"
+											on:click={() => {
+												if (!config) return;
+												config.automatic1111.model_wrappers = config.automatic1111.model_wrappers.filter((_, index) => index !== i);
+											}}
+										>
+											<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+												<path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+											</svg>
+										</button>
+									</div>
+
+									<div class="space-y-4">
+										<div class="grid grid-cols-2 gap-4">
+											<div>
+												<label class="block text-xs mb-1">{$i18n.t('Model wrapper name')}</label>
+												<input
+													class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+													bind:value={model_wrapper.name}
+													placeholder="e.g. SDXL 1.0"
+													on:input={(e) => {
+														model_wrapper.id = generateId(e.currentTarget.value || 'New Automatic1111 model wrapper');
+													}}
+												/>
+											</div>
+											<div>
+												<label class="block text-xs mb-1">{$i18n.t('Model')}</label>
+												<div class="relative">
+													<input
+														list="model-list"
+														class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+														bind:value={model_wrapper.model}
+														placeholder="Select a model"
+														required
+													/>
+
+													<datalist id="model-list">
+														{#each availableModels ?? [] as availableModel}
+															<option value={availableModel.id}>{availableModel.name}</option>
+														{/each}
+													</datalist>
+												</div>
+											</div>
+										</div>
+
+										<div class="grid grid-cols-2 gap-4">
+											<div>
+												<label class="block text-xs mb-1">{$i18n.t('Image Size')}</label>
+												<input
+													class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+													bind:value={model_wrapper.image_size}
+													placeholder="e.g. 1024x1024"
+												/>
+											</div>
+											<div>
+												<label class="block text-xs mb-1">{$i18n.t('Steps')}</label>
+												<input
+													type="number"
+													class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+													bind:value={model_wrapper.image_steps}
+													placeholder="e.g. 50"
+												/>
+											</div>
+										</div>
+
+										<div class="flex items-center space-x-2">
+											<Switch
+												bind:state={model_wrapper.is_default}
+												on:change={() => {
+													if (model_wrapper.is_default) {
+														config.automatic1111.model_wrappers.forEach((m, index) => {
+															if (index !== i) m.is_default = false;
+														});
+													}
+												}}
+											/>
+											<label class="text-sm">{$i18n.t('Default model wrapper')}</label>
+										</div>
+
+										<div class="space-y-4">
+											<div>
+												<label class="block text-xs mb-1">{$i18n.t('Sampler')}</label>
+												<input
+													list="sampler-list"
+													class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+													bind:value={model_wrapper.sampler}
+													placeholder={$i18n.t('e.g. Euler a')}
+												/>
+												<datalist id="sampler-list">
+													{#each samplers as sampler}
+														<option value={sampler} />
+													{/each}
+												</datalist>
+											</div>
+
+											<div>
+												<label class="block text-xs mb-1">{$i18n.t('Scheduler')}</label>
+												<input
+													list="scheduler-list"
+													class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+													bind:value={model_wrapper.scheduler}
+													placeholder={$i18n.t('e.g. Karras')}
+												/>
+												<datalist id="scheduler-list">
+													{#each schedulers as scheduler}
+														<option value={scheduler} />
+													{/each}
+												</datalist>
+											</div>
+
+											<div>
+												<label class="block text-xs mb-1">{$i18n.t('CFG Scale')}</label>
+												<input
+													type="number"
+													step="0.1"
+													class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+													bind:value={model_wrapper.cfg_scale}
+													placeholder="7.0"
+												/>
+											</div>
+										</div>
+
+										<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+											<AccessControl
+												bind:accessControl={model_wrapper.access_control}
+												accessRoles={['read', 'write']}
+											/>
+										</div>
+									</div>
+								</div>
+							{/each}
+						{:else}
+							<div class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+								{$i18n.t('No Automatic1111 model wrappers configured')}
+							</div>
+						{/if}
 					</div>
 				</div>
 
 				<div>
-					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Steps')}</div>
-					<div class="flex w-full">
-						<div class="flex-1 mr-2">
-							<Tooltip content={$i18n.t('Enter Number of Steps (e.g. 50)')} placement="top-start">
-								<input
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-									placeholder={$i18n.t('Enter Number of Steps (e.g. 50)')}
-									bind:value={imageGenerationConfig.IMAGE_STEPS}
-									required
-								/>
-							</Tooltip>
+					<div class="mb-2 text-sm font-medium">{$i18n.t('ComfyUI Settings')}</div>
+					<div class="flex gap-2 mb-4">
+						<input
+							class="flex-1 rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							placeholder={$i18n.t('Base URL')}
+							bind:value={config.comfyui.base_url}
+						/>
+						<SensitiveInput
+							placeholder={$i18n.t('API Key')}
+							bind:value={config.comfyui.api_key}
+							required={false}
+						/>
+					</div>
+
+					<div class="space-y-4 mt-4">
+						<div class="flex justify-between items-center">
+							<div class="text-sm font-medium">{$i18n.t('ComfyUI model wrappers')}</div>
+							<button
+								type="button"
+								class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition"
+								on:click={() => addNewModelWrapper('comfyui')}
+							>
+								{$i18n.t('Add model wrapper')}
+							</button>
 						</div>
+						{#if config.comfyui.model_wrappers?.length}
+							{#each config.comfyui.model_wrappers as model_wrapper, i}
+								<div class="border dark:border-gray-850 rounded-lg p-4">
+									<div class="flex justify-between mb-4">
+										<div class="flex items-center gap-4">
+											<h3 class="text-sm font-medium">{model_wrapper.name || 'New model wraper'}</h3>
+											<div class="flex items-center gap-2">
+												<Switch
+													bind:state={model_wrapper.enabled}
+												/>
+												<label class="text-xs text-gray-500">{model_wrapper.enabled ? $i18n.t('Enabled') : $i18n.t('Disabled')}</label>
+											</div>
+										</div>
+										<button
+											type="button"
+											class="text-red-500 hover:text-red-600"
+											on:click={() => {
+												if (!config) return;
+												config.comfyui.model_wrappers = config.comfyui.model_wrappers.filter((_, index) => index !== i);
+											}}
+										>
+											<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+												<path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+											</svg>
+										</button>
+									</div>
+
+									<div class="space-y-4">
+										<div class="grid grid-cols-2 gap-4">
+											<div>
+												<label class="block text-xs mb-1">{$i18n.t('Model wrapper name')}</label>
+												<input
+													class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+													bind:value={model_wrapper.name}
+													placeholder="e.g. SDXL 1.0"
+													on:input={(e) => {
+														model_wrapper.id = generateId(e.currentTarget.value || 'New ComfyUI model wrapper');
+													}}
+												/>
+											</div>
+											<div>
+												<label class="block text-xs mb-1">{$i18n.t('Model')}</label>
+												<div class="relative">
+													<input
+														list="model-list"
+														class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+														bind:value={model_wrapper.model}
+														placeholder="Select a model"
+														required
+													/>
+
+													<datalist id="model-list">
+														{#each availableModels ?? [] as availableModel}
+															<option value={availableModel.id}>{availableModel.name}</option>
+														{/each}
+													</datalist>
+												</div>
+											</div>
+										</div>
+
+										<div class="grid grid-cols-2 gap-4">
+											<div>
+												<label class="block text-xs mb-1">{$i18n.t('Image Size')}</label>
+												<input
+													class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+													bind:value={model_wrapper.image_size}
+													placeholder="e.g. 1024x1024"
+												/>
+											</div>
+											<div>
+												<label class="block text-xs mb-1">{$i18n.t('Steps')}</label>
+												<input
+													type="number"
+													class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+													bind:value={model_wrapper.image_steps}
+													placeholder="e.g. 50"
+												/>
+											</div>
+										</div>
+
+										<div class="flex items-center space-x-2">
+											<Switch
+												bind:state={model_wrapper.is_default}
+												on:change={() => {
+													if (model_wrapper.is_default) {
+														config.comfyui.model_wrappers.forEach((m, index) => {
+															if (index !== i) m.is_default = false;
+														});
+													}
+												}}
+											/>
+											<label class="text-sm">{$i18n.t('Default model wrapper')}</label>
+										</div>
+
+										<div class="space-y-4">
+											<div>
+												<label class="block text-xs mb-1">{$i18n.t('Workflow')}</label>
+												<textarea
+													class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-y"
+													rows="10"
+													bind:value={model_wrapper.workflow}
+													placeholder={$i18n.t('Paste ComfyUI workflow JSON here')}
+												/>
+											</div>
+										</div>
+										{#if model_wrapper.workflow}
+											<div class="">
+												<div class="mb-2 text-sm font-medium">{$i18n.t('ComfyUI Workflow Nodes')}</div>
+
+												<div class="text-xs flex flex-col gap-1.5">
+													{#if !model_wrapper.workflow_nodes || model_wrapper.workflow_nodes.length === 0}
+														{@const _ = model_wrapper.workflow_nodes = requiredWorkflowNodes.map(node => ({
+															type: node.type,
+															key: node.key || '',
+															node_ids: ''
+														}))}
+													{/if}
+
+													{#each requiredWorkflowNodes as templateNode, index}
+														<div class="flex w-full items-center border dark:border-gray-850 rounded-lg">
+															<div class="flex-shrink-0">
+																<div class="capitalize line-clamp-1 font-medium px-3 py-1 w-20 text-center rounded-l-lg bg-green-500/10 text-green-700 dark:text-green-200">
+																	{templateNode.type}{templateNode.type === 'prompt' ? '*' : ''}
+																</div>
+															</div>
+															<div class="">
+																<Tooltip content="Input Key (e.g. text, unet_name, steps)">
+																	<input
+																		class="py-1 px-3 w-24 text-xs text-center bg-transparent outline-none border-r dark:border-gray-850"
+																		placeholder="Key"
+																		bind:value={model_wrapper.workflow_nodes[index].key}
+																		required
+																	/>
+																</Tooltip>
+															</div>
+
+															<div class="w-full">
+																<Tooltip
+																	content="Comma separated Node Ids (e.g. 1 or 1,2)"
+																	placement="top-start"
+																>
+																	<input
+																		class="w-full py-1 px-4 rounded-r-lg text-xs bg-transparent outline-none"
+																		placeholder="Node Ids"
+																		bind:value={model_wrapper.workflow_nodes[index].node_ids}
+																	/>
+																</Tooltip>
+															</div>
+														</div>
+													{/each}
+												</div>
+
+												<div class="mt-2 text-xs text-right text-gray-400 dark:text-gray-500">
+													{$i18n.t('*Prompt node ID(s) are required for image generation')}
+												</div>
+											</div>
+										{/if}
+
+										<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+											<AccessControl
+												bind:accessControl={model_wrapper.access_control}
+												accessRoles={['read', 'write']}
+											/>
+										</div>
+									</div>
+								</div>
+							{/each}
+						{:else}
+							<div class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+								{$i18n.t('No ComfyUI model wrappers configured')}
+							</div>
+						{/if}
 					</div>
 				</div>
-			{/if}
+			</div>
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end pt-3">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
-				? ' cursor-not-allowed'
-				: ''}"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center space-x-2"
 			type="submit"
 			disabled={loading}
 		>
-			{$i18n.t('Save')}
-
+			<span>{$i18n.t('Save')}</span>
 			{#if loading}
 				<div class="ml-2 self-center">
 					<svg
