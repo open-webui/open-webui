@@ -42,6 +42,8 @@
 		"svelte": "^4.2.18",
 		"svelte-check": "^3.8.5",
 		"svelte-confetti": "^1.3.2",
+		"svelte-preprocess": "^5.1.3",
+		"svelte-preprocess-react": "^0.17.1",
 		"tailwindcss": "^3.3.3",
 		"tslib": "^2.4.1",
 		"typescript": "^5.5.4",
@@ -56,6 +58,7 @@
 		"@codemirror/theme-one-dark": "^6.1.2",
 		"@huggingface/transformers": "^3.0.0",
 		"@mediapipe/tasks-vision": "^0.10.17",
+		"@privy-io/react-auth": "^1.55.2",
 		"@pyscript/core": "^0.4.32",
 		"@sveltejs/adapter-node": "^2.0.0",
 		"@sveltejs/svelte-virtual-list": "^3.0.1",
@@ -99,12 +102,15 @@
 		"prosemirror-state": "^1.4.3",
 		"prosemirror-view": "^1.34.3",
 		"pyodide": "^0.26.1",
+		"react": "^18.3.1",
+		"react-dom": "^18.3.1",
 		"socket.io-client": "^4.2.0",
 		"sortablejs": "^1.15.2",
 		"svelte-sonner": "^0.3.19",
 		"tippy.js": "^6.3.7",
 		"turndown": "^7.2.0",
-		"uuid": "^9.0.1"
+		"uuid": "^9.0.1",
+		"viem": "^2.7.8"
 	},
 	"engines": {
 		"node": ">=18.13.0 <=22.x.x",

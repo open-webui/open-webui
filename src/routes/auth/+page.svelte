@@ -16,6 +16,20 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
 
+	// privy.io
+	import { PrivyProvider } from "@privy-io/react-auth";
+	import { used } from "svelte-preprocess-react";
+	import { mainnet } from "viem/chains";
+
+	import WalletClientGuard from "$lib/components/auth/WalletClientGuard.svelte";
+	import ConnectGuard from "$lib/components/auth/ConnectGuard.svelte";
+
+	import { PUBLIC_PRIVY_APP_ID } from "$env/static/public";
+
+	// does nothing just prevents unused tsc warning
+	used(PrivyProvider);
+
+  	// priby.io end
 	const i18n = getContext('i18n');
 
 	let loaded = false;
@@ -284,7 +298,20 @@
 													? $i18n.t('Create Admin Account')
 													: $i18n.t('Create Account')}
 										</button>
-
+										<react:PrivyProvider
+											appId={PUBLIC_PRIVY_APP_ID}
+											config={{
+											defaultChain: mainnet,
+											supportedChains: [mainnet],
+											loginMethods: ["email", "wallet"],
+											}}
+										>
+											<ConnectGuard>
+											<WalletClientGuard>
+												<slot />
+											</WalletClientGuard>
+											</ConnectGuard>
+										</react:PrivyProvider>
 										{#if $config?.features.enable_signup && !($config?.onboarding ?? false)}
 											<div class=" mt-4 text-sm text-center">
 												{mode === 'signin'
