@@ -2,12 +2,16 @@ from functools import wraps
 from fastapi import HTTPException, status
 from open_webui.internal.redis import inc_rate_usage, get_rate_usage
 from open_webui.models.users import UserModel
-
+from open_webui.env import (
+    ENABLE_RATE_LIMIT
+)
 
 async def should_limit_user(user: UserModel) -> bool:
     """
     Apply rate limiting per user, per minute
     """
+    if not ENABLE_RATE_LIMIT:
+        return False
     
     current_request_count = await inc_rate_usage(user, 'request')
 

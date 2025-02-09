@@ -414,3 +414,4 @@ if OFFLINE_MODE:
 REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
 REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "")
 REDIS_PORT = os.environ.get("REDIS_PORT", 6379)
+ENABLE_RATE_LIMIT = os.environ.get("ENABLE_RATE_LIMIT", "false").lower() == "true"

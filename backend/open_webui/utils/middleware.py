@@ -70,16 +70,20 @@ from open_webui.env import (
     GLOBAL_LOG_LEVEL,
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_REALTIME_CHAT_SAVE,
+    ENABLE_RATE_LIMIT
 )
 from open_webui.constants import TASKS
 from open_webui.utils.token_limit import calculate_messages_token_usage, calculate_content_token_usage
 from open_webui.internal.redis import inc_rate_usage
 
-
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
+def should_record_token_usage(user):
+    if ENABLE_RATE_LIMIT and user.rate_limit and user.rate_limit.token_limit_per_minute:
+        return True
+    return False
 
 async def chat_completion_filter_functions_handler(request, body, model, extra_params):
     skip_files = None
@@ -867,7 +871,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
 
 async def process_chat_response(
-    request, response, form_data, user, events, metadata, tasks
+    request, response, form_data, user, events, metadata, tasks, model_owned_by
 ):
     async def background_tasks_handler():
         message_map = Chats.get_messages_by_chat_id(metadata["chat_id"])
@@ -1087,7 +1091,9 @@ async def process_chat_response(
 
                 reasoning_content = ""
                 ongoing_content = ""
-
+                prompt_eval_count = 0
+                eval_count = 0
+                
                 async for line in response.body_iterator:
                     line = line.decode("utf-8") if isinstance(line, bytes) else line
                     data = line
@@ -1211,6 +1217,11 @@ async def process_chat_response(
                                 "data": data,
                             }
                         )
+                        
+                        if model_owned_by == "ollama" and data.get("usage"):
+                            prompt_eval_count = data.get("usage")["prompt_eval_count"]
+                            eval_count = data.get("usage")["eval_count"]
+                            
                     except Exception as e:
                         done = "data: [DONE]" in line
                         if done:
@@ -1221,14 +1232,19 @@ async def process_chat_response(
                 title = Chats.get_chat_title_by_id(metadata["chat_id"])
                 data = {"done": True, "content": content, "title": title}
 
-                body = await request.json()
+                if should_record_token_usage(user):
+                    total_token_usage = prompt_eval_count + eval_count
+                    
+                    # Manually calculate the total token usage
+                    if total_token_usage == 0: 
+                        body = await request.json()
     
-                # Access the 'messages' key
-                messages = body.get("messages", [])
-    
-                total_token_usage = calculate_content_token_usage(content) + calculate_messages_token_usage(messages)
+                        # Access the 'messages' key
+                        messages = body.get("messages", [])
 
-                await inc_rate_usage(user, 'token', total_token_usage)
+                        total_token_usage = calculate_content_token_usage(content) + calculate_messages_token_usage(messages)
+
+                    await inc_rate_usage(user, 'token', total_token_usage)
                                 
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database
