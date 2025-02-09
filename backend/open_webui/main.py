@@ -1019,6 +1019,7 @@ async def get_app_config(request: Request):
                     "enable_image_generation": app.state.config.ENABLE_IMAGE_GENERATION,
                     "enable_community_sharing": app.state.config.ENABLE_COMMUNITY_SHARING,
                     "enable_message_rating": app.state.config.ENABLE_MESSAGE_RATING,
+                    "enable_autocomplete_generation": app.state.config.ENABLE_AUTOCOMPLETE_GENERATION,
                     "enable_admin_export": ENABLE_ADMIN_EXPORT,
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
                 }

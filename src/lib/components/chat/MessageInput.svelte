@@ -695,7 +695,7 @@
 													)}
 												placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 												largeTextAsFile={$settings?.largeTextAsFile ?? false}
-												autocomplete={true}
+												autocomplete={$config?.features.enable_autocomplete_generation}
 												generateAutoCompletion={async (text) => {
 													if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {
 														toast.error($i18n.t('Please select a model first.'));
