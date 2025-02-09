@@ -95,7 +95,11 @@
 
 			<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 
-			<Collapsible bind:open={showImageGeneration} title={$i18n.t('Image Generation')} buttonClassName="w-full">
+			<Collapsible
+				bind:open={showImageGeneration}
+				title={$i18n.t('Image Generation')}
+				buttonClassName="w-full"
+			>
 				<div class="text-sm" slot="content">
 					<ImageGeneration show={showImageGeneration} bind:params />
 				</div>

@@ -67,7 +67,12 @@ export const updateConfig = async (token: string = '', config: object) => {
 	return res;
 };
 
-export const verifyConfigUrl = async (token: string = '', engine: string, baseUrl: string, apiKey: string) => {
+export const verifyConfigUrl = async (
+	token: string = '',
+	engine: string,
+	baseUrl: string,
+	apiKey: string
+) => {
 	let error = null;
 
 	const res = await fetch(`${IMAGES_API_BASE_URL}/config/${engine}/url/verify`, {
@@ -196,13 +201,17 @@ export const getImageGenerationModels = async (token: string = '', engine: strin
 	return res;
 };
 
-export const imageGenerations = async (token: string = '', prompt: string, params?: {
-	engine?: string;
-	model_wrapper_id?: string;
-	model?: string;
-	size?: string;
-	steps?: number;
-}) => {
+export const imageGenerations = async (
+	token: string = '',
+	prompt: string,
+	params?: {
+		engine?: string;
+		model_wrapper_id?: string;
+		model?: string;
+		size?: string;
+		steps?: number;
+	}
+) => {
 	let error = null;
 
 	const res = await fetch(`${IMAGES_API_BASE_URL}/generations`, {

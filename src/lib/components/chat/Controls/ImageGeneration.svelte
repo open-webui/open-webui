@@ -6,7 +6,7 @@
 
 	const dispatch = createEventDispatcher();
 
-    const i18n = getContext('i18n');
+	const i18n = getContext('i18n');
 
 	interface ImageModelWrapper {
 		id: string;
@@ -42,13 +42,14 @@
 	let modelWrappersByEngine: Record<string, ImageModelWrapper[]> = {};
 	let availableModels: { id: string; name: string }[] = [];
 
-    $: if (params) {
+	$: if (params) {
 		dispatch('change', params);
 	}
 
-	$: currentModelWrapper = (params.engine && modelWrappersByEngine[params.engine]?.find(
-		m => m.id === params.model_wrapper_id
-	)) as ImageModelWrapper | null;
+	$: currentModelWrapper = (params.engine &&
+		modelWrappersByEngine[params.engine]?.find(
+			(m) => m.id === params.model_wrapper_id
+		)) as ImageModelWrapper | null;
 
 	function updateModelWrapperDefaults(model_wrapper: ImageModelWrapper | null) {
 		if (!model_wrapper) return;
@@ -64,7 +65,7 @@
 		}
 	}
 
-    async function fetchAvailableModels(engine: string) {
+	async function fetchAvailableModels(engine: string) {
 		try {
 			const models = await getImageGenerationModels(localStorage.token, engine);
 			if (models) {
@@ -84,8 +85,9 @@
 			fetchAvailableModels(newEngine);
 
 			if (modelWrappersByEngine[newEngine]?.length > 0) {
-				const defaultWrapper = modelWrappersByEngine[newEngine].find(m => m.is_default)
-					|| modelWrappersByEngine[newEngine][0];
+				const defaultWrapper =
+					modelWrappersByEngine[newEngine].find((m) => m.is_default) ||
+					modelWrappersByEngine[newEngine][0];
 				params.model_wrapper_id = defaultWrapper.id;
 			}
 		}
@@ -97,9 +99,8 @@
 
 		if (newModelWrapperId !== params.model_wrapper_id) {
 			params.model_wrapper_id = newModelWrapperId;
-			const newModelWrapper = modelWrappersByEngine[params.engine]?.find(
-				m => m.id === newModelWrapperId
-			) || null;
+			const newModelWrapper =
+				modelWrappersByEngine[params.engine]?.find((m) => m.id === newModelWrapperId) || null;
 			updateModelWrapperDefaults(newModelWrapper);
 		}
 	}
@@ -114,8 +115,8 @@
 				return;
 			}
 
-			engines = ['openai', 'automatic1111', 'comfyui'].filter(
-				engine => config[engine]?.model_wrappers?.some(m => m.enabled)
+			engines = ['openai', 'automatic1111', 'comfyui'].filter((engine) =>
+				config[engine]?.model_wrappers?.some((m) => m.enabled)
 			);
 
 			if (engines.length === 0) {
@@ -123,23 +124,27 @@
 				return;
 			}
 
-            if (config.openai?.model_wrappers) modelWrappersByEngine.openai = config.openai.model_wrappers;
-			if (config.automatic1111?.model_wrappers) modelWrappersByEngine.automatic1111 = config.automatic1111.model_wrappers;
-			if (config.comfyui?.model_wrappers) modelWrappersByEngine.comfyui = config.comfyui.model_wrappers;
+			if (config.openai?.model_wrappers)
+				modelWrappersByEngine.openai = config.openai.model_wrappers;
+			if (config.automatic1111?.model_wrappers)
+				modelWrappersByEngine.automatic1111 = config.automatic1111.model_wrappers;
+			if (config.comfyui?.model_wrappers)
+				modelWrappersByEngine.comfyui = config.comfyui.model_wrappers;
 
-            if (!params.engine) {
-			    params.engine = config.default_engine || engines[0];
+			if (!params.engine) {
+				params.engine = config.default_engine || engines[0];
 
-                fetchAvailableModels(params.engine);
+				fetchAvailableModels(params.engine);
 
-                if (modelWrappersByEngine[params.engine]?.length > 0) {
-                    const defaultWrapper = modelWrappersByEngine[params.engine].find(m => m.is_default)
-                        || modelWrappersByEngine[params.engine][0];
-                    params.model_wrapper_id = defaultWrapper.id;
+				if (modelWrappersByEngine[params.engine]?.length > 0) {
+					const defaultWrapper =
+						modelWrappersByEngine[params.engine].find((m) => m.is_default) ||
+						modelWrappersByEngine[params.engine][0];
+					params.model_wrapper_id = defaultWrapper.id;
 
-                    updateModelWrapperDefaults(defaultWrapper);
-                }
-            }
+					updateModelWrapperDefaults(defaultWrapper);
+				}
+			}
 
 			configLoaded = true;
 		} catch (error) {
@@ -151,9 +156,9 @@
 	}
 
 	onMount(() => {
-        if (!configLoaded) {
-		    fetchConfig();
-        }
+		if (!configLoaded) {
+			fetchConfig();
+		}
 	});
 </script>
 
@@ -169,7 +174,8 @@
 			>
 				{#each engines as engine}
 					<option value={engine}>
-						{engine.toUpperCase()} {config?.default_engine === engine ? '(Default)' : ''}
+						{engine.toUpperCase()}
+						{config?.default_engine === engine ? '(Default)' : ''}
 					</option>
 				{/each}
 			</select>
@@ -186,7 +192,8 @@
 				>
 					{#each modelWrappersByEngine[params.engine] as model_wrapper}
 						<option value={model_wrapper.id}>
-							{model_wrapper.name} {model_wrapper.is_default ? '(Default)' : ''}
+							{model_wrapper.name}
+							{model_wrapper.is_default ? '(Default)' : ''}
 						</option>
 					{/each}
 				</select>
@@ -210,11 +217,12 @@
 										<option value={availableModel.id}>{availableModel.name}</option>
 									{/each}
 								</datalist>
-                                {#if currentModelWrapper?.model && currentModelWrapper.model !== params.model}
-								<p class="text-xs text-yellow-500 mt-1">
-									{$i18n.t('Default model for this model wrapper is')} {currentModelWrapper.model}
-								</p>
-							{/if}
+								{#if currentModelWrapper?.model && currentModelWrapper.model !== params.model}
+									<p class="text-xs text-yellow-500 mt-1">
+										{$i18n.t('Default model for this model wrapper is')}
+										{currentModelWrapper.model}
+									</p>
+								{/if}
 							</div>
 						</div>
 
@@ -230,7 +238,8 @@
 							</select>
 							{#if currentModelWrapper?.image_size && currentModelWrapper.image_size !== params.size}
 								<p class="text-xs text-yellow-500 mt-1">
-									{$i18n.t('Default size for this model wrapper is')} {currentModelWrapper.image_size}
+									{$i18n.t('Default size for this model wrapper is')}
+									{currentModelWrapper.image_size}
 								</p>
 							{/if}
 						</div>
@@ -246,7 +255,8 @@
 							/>
 							{#if currentModelWrapper?.image_steps && currentModelWrapper.image_steps !== params.steps}
 								<p class="text-xs text-yellow-500 mt-1">
-									{$i18n.t('Default steps for this model wrapper is')} {currentModelWrapper.image_steps}
+									{$i18n.t('Default steps for this model wrapper is')}
+									{currentModelWrapper.image_steps}
 								</p>
 							{/if}
 						</div>

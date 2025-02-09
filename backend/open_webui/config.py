@@ -1805,15 +1805,8 @@ OPENAI_IMAGE_DEFAULT_MODEL_WRAPPERS = [
         "enabled": True,
         "image_size": DEFAULT_IMAGE_SIZE,
         "image_steps": DEFAULT_IMAGE_STEPS,
-        "access_control": {
-            "read": {
-                "group_ids": []
-            },
-            "write": {
-                "group_ids": []
-            }
-        },
-        "visibility": "public"
+        "access_control": {"read": {"group_ids": []}, "write": {"group_ids": []}},
+        "visibility": "public",
     }
 ]
 
@@ -1824,7 +1817,7 @@ OPENAI_IMAGE_CONFIG = PersistentConfig(
         "api_base_url": os.getenv("IMAGES_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
         "api_key": os.getenv("IMAGES_OPENAI_API_KEY", OPENAI_API_KEY),
         "model_wrappers": OPENAI_IMAGE_DEFAULT_MODEL_WRAPPERS,
-    }
+    },
 )
 
 AUTOMATIC1111_DEFAULT_MODEL_WRAPPERS = [
@@ -1851,15 +1844,8 @@ AUTOMATIC1111_DEFAULT_MODEL_WRAPPERS = [
             if os.environ.get("AUTOMATIC1111_SCHEDULER")
             else None
         ),
-        "access_control": {
-            "read": {
-                "group_ids": []
-            },
-            "write": {
-                "group_ids": []
-            }
-        },
-        "visibility": "public"
+        "access_control": {"read": {"group_ids": []}, "write": {"group_ids": []}},
+        "visibility": "public",
     }
 ]
 
@@ -1870,7 +1856,7 @@ AUTOMATIC1111_CONFIG = PersistentConfig(
         "base_url": os.getenv("AUTOMATIC1111_BASE_URL", ""),
         "api_auth": os.getenv("AUTOMATIC1111_API_AUTH", ""),
         "model_wrappers": AUTOMATIC1111_DEFAULT_MODEL_WRAPPERS,
-    }
+    },
 )
 
 COMFYUI_DEFAULT_WORKFLOW = """
@@ -1994,14 +1980,7 @@ COMFYUI_DEFAULT_MODEL_WRAPPERS = [
         "image_steps": DEFAULT_IMAGE_STEPS,
         "workflow": os.getenv("COMFYUI_WORKFLOW", COMFYUI_DEFAULT_WORKFLOW),
         "workflowNodes": [],
-        "access_control": {
-            "read": {
-                "group_ids": []
-            },
-            "write": {
-                "group_ids": []
-            }
-        },
+        "access_control": {"read": {"group_ids": []}, "write": {"group_ids": []}},
         "visibility": "public",
     }
 ]
@@ -2013,7 +1992,7 @@ COMFYUI_CONFIG = PersistentConfig(
         "base_url": os.getenv("COMFYUI_BASE_URL", ""),
         "api_key": os.getenv("COMFYUI_API_KEY", ""),
         "model_wrappers": COMFYUI_DEFAULT_MODEL_WRAPPERS,
-    }
+    },
 )
 
 ####################################

@@ -50,17 +50,21 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
         "comfyui": request.app.state.config.COMFYUI_CONFIG,
     }
 
+
 class AccessControlDict(BaseModel):
     group_ids: list[str] = []
+
 
 class AccessControl(BaseModel):
     read: AccessControlDict = AccessControlDict()
     write: AccessControlDict = AccessControlDict()
 
+
 class WorkflowNode(BaseModel):
     type: str
     key: str
     node_ids: str
+
 
 class OpenAIModelWrapperConfigForm(BaseModel):
     id: str
@@ -72,11 +76,13 @@ class OpenAIModelWrapperConfigForm(BaseModel):
     image_steps: int
     access_control: Optional[AccessControl]
 
+
 class OpenAIConfigForm(BaseModel):
     model_config = {"protected_namespaces": ()}
     api_base_url: str
     api_key: str
     model_wrappers: list[OpenAIModelWrapperConfigForm]
+
 
 class Automatic1111ModelWrapperConfigForm(BaseModel):
     id: str
@@ -91,11 +97,13 @@ class Automatic1111ModelWrapperConfigForm(BaseModel):
     sampler: Optional[str]
     scheduler: Optional[str]
 
+
 class Automatic1111ConfigForm(BaseModel):
     model_config = {"protected_namespaces": ()}
     base_url: str
     api_auth: str
     model_wrappers: list[Automatic1111ModelWrapperConfigForm]
+
 
 class ComfyUIModelWrapperConfigForm(BaseModel):
     id: str
@@ -108,6 +116,7 @@ class ComfyUIModelWrapperConfigForm(BaseModel):
     access_control: Optional[AccessControl]
     workflow: Optional[str]
     workflow_nodes: Optional[list[WorkflowNode]]
+
 
 class ComfyUIConfigForm(BaseModel):
     model_config = {"protected_namespaces": ()}
@@ -130,9 +139,13 @@ async def update_config(
     request: Request, form_data: ConfigForm, user=Depends(get_admin_user)
 ):
     try:
-        request.app.state.config.DEFAULT_IMAGE_GENERATION_ENGINE = form_data.default_engine
+        request.app.state.config.DEFAULT_IMAGE_GENERATION_ENGINE = (
+            form_data.default_engine
+        )
         request.app.state.config.ENABLE_IMAGE_GENERATION = form_data.enabled
-        request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION = form_data.prompt_generation
+        request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION = (
+            form_data.prompt_generation
+        )
 
         openai_config = form_data.openai.model_dump()
         automatic1111_config = form_data.automatic1111.model_dump()
@@ -162,9 +175,9 @@ def get_automatic1111_api_auth(request: Request):
     if request.app.state.config.AUTOMATIC1111_CONFIG["api_auth"] is None:
         return ""
     else:
-        auth1111_byte_string = request.app.state.config.AUTOMATIC1111_CONFIG["api_auth"].encode(
-            "utf-8"
-        )
+        auth1111_byte_string = request.app.state.config.AUTOMATIC1111_CONFIG[
+            "api_auth"
+        ].encode("utf-8")
         auth1111_base64_encoded_bytes = base64.b64encode(auth1111_byte_string)
         auth1111_base64_encoded_string = auth1111_base64_encoded_bytes.decode("utf-8")
         return f"Basic {auth1111_base64_encoded_string}"
@@ -188,8 +201,10 @@ async def verify_url(engine: str, request: Request, user=Depends(get_admin_user)
         elif engine == "comfyui":
             try:
                 headers = {}
-                if request.app.state.config.COMFYUI_CONFIG.get('api_key'):
-                    headers["Authorization"] = f"Bearer {request.app.state.config.COMFYUI_CONFIG['api_key']}"
+                if request.app.state.config.COMFYUI_CONFIG.get("api_key"):
+                    headers["Authorization"] = (
+                        f"Bearer {request.app.state.config.COMFYUI_CONFIG['api_key']}"
+                    )
 
                 r = requests.get(
                     url=f"{request.app.state.config.COMFYUI_CONFIG['base_url']}/object_info",
@@ -205,7 +220,7 @@ async def verify_url(engine: str, request: Request, user=Depends(get_admin_user)
             try:
                 headers = {
                     "Authorization": f"Bearer {request.app.state.config.OPENAI_IMAGE_CONFIG['api_key']}",
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
                 }
 
                 r = requests.get(
@@ -232,9 +247,13 @@ def get_default_model(request, engine=None):
     engine = engine or request.app.state.config.DEFAULT_IMAGE_GENERATION_ENGINE
 
     if engine == "openai":
-        model_wrappers = request.app.state.config.OPENAI_IMAGE_CONFIG.get("model_wrappers")
+        model_wrappers = request.app.state.config.OPENAI_IMAGE_CONFIG.get(
+            "model_wrappers"
+        )
     elif engine == "automatic1111":
-        model_wrappers = request.app.state.config.AUTOMATIC1111_CONFIG.get("model_wrappers")
+        model_wrappers = request.app.state.config.AUTOMATIC1111_CONFIG.get(
+            "model_wrappers"
+        )
     elif engine == "comfyui":
         model_wrappers = request.app.state.config.COMFYUI_CONFIG.get("model_wrappers")
     else:
@@ -249,7 +268,10 @@ def get_default_model(request, engine=None):
 
 def set_image_model(request: Request, model: str):
     log.info(f"Setting image model to {model}")
-    if request.app.state.config.DEFAULT_IMAGE_GENERATION_ENGINE in ["", "automatic1111"]:
+    if request.app.state.config.DEFAULT_IMAGE_GENERATION_ENGINE in [
+        "",
+        "automatic1111",
+    ]:
         api_auth = get_automatic1111_api_auth(request)
         r = requests.get(
             url=f"{request.app.state.config.AUTOMATIC1111_CONFIG['base_url']}/sdapi/v1/options",
@@ -309,7 +331,10 @@ async def get_image_config(request: Request, user=Depends(get_admin_user)):
     else:
         model_wrappers = []
 
-    model_config = next((m for m in model_wrappers if m["model"] == model_id), model_wrappers[0] if model_wrappers else None)
+    model_config = next(
+        (m for m in model_wrappers if m["model"] == model_id),
+        model_wrappers[0] if model_wrappers else None,
+    )
 
     return {
         "MODEL": model_id,
@@ -347,16 +372,12 @@ async def update_image_config(
     elif default_engine == "comfyui":
         model_wrappers = request.app.state.config.COMFYUI_CONFIG["model_wrappers"]
     else:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid engine"
-        )
+        raise HTTPException(status_code=400, detail="Invalid engine")
 
     model = next((m for m in model_wrappers if m["model"] == form_data.MODEL), None)
     if not model:
         raise HTTPException(
-            status_code=400,
-            detail=f"Model {form_data.MODEL} not found"
+            status_code=400, detail=f"Model {form_data.MODEL} not found"
         )
 
     model["image_size"] = form_data.IMAGE_SIZE
@@ -382,13 +403,12 @@ def get_engine_models(engine: str, request: Request, user=Depends(get_verified_u
                 {"id": "dall-e-3", "name": "DALL·E 3"},
             ]
         elif engine == "comfyui":
-            base_url = request.app.state.config.COMFYUI_CONFIG.get('base_url')
-            api_key = request.app.state.config.COMFYUI_CONFIG.get('api_key')
+            base_url = request.app.state.config.COMFYUI_CONFIG.get("base_url")
+            api_key = request.app.state.config.COMFYUI_CONFIG.get("api_key")
 
             if not base_url:
                 raise HTTPException(
-                    status_code=400,
-                    detail="ComfyUI base URL not configured"
+                    status_code=400, detail="ComfyUI base URL not configured"
                 )
 
             headers = {}
@@ -406,18 +426,19 @@ def get_engine_models(engine: str, request: Request, user=Depends(get_verified_u
                 return list(
                     map(
                         lambda model: {"id": model, "name": model},
-                        info["CheckpointLoaderSimple"]["input"]["required"]["ckpt_name"][0],
+                        info["CheckpointLoaderSimple"]["input"]["required"][
+                            "ckpt_name"
+                        ][0],
                     )
                 )
             except Exception as e:
                 log.error(f"ComfyUI request failed: {str(e)}")
                 raise
         elif engine == "automatic1111":
-            base_url = request.app.state.config.AUTOMATIC1111_CONFIG.get('base_url')
+            base_url = request.app.state.config.AUTOMATIC1111_CONFIG.get("base_url")
             if not base_url:
                 raise HTTPException(
-                    status_code=400,
-                    detail="Automatic1111 base URL not configured"
+                    status_code=400, detail="Automatic1111 base URL not configured"
                 )
 
             r = requests.get(
@@ -521,12 +542,18 @@ async def image_generations(
     user=Depends(get_verified_user),
 ):
     try:
-        engine = form_data.engine or request.app.state.config.DEFAULT_IMAGE_GENERATION_ENGINE
+        engine = (
+            form_data.engine or request.app.state.config.DEFAULT_IMAGE_GENERATION_ENGINE
+        )
 
         if engine == "openai":
-            model_wrappers = request.app.state.config.OPENAI_IMAGE_CONFIG["model_wrappers"]
+            model_wrappers = request.app.state.config.OPENAI_IMAGE_CONFIG[
+                "model_wrappers"
+            ]
         elif engine == "automatic1111":
-            model_wrappers = request.app.state.config.AUTOMATIC1111_CONFIG["model_wrappers"]
+            model_wrappers = request.app.state.config.AUTOMATIC1111_CONFIG[
+                "model_wrappers"
+            ]
         elif engine == "comfyui":
             model_wrappers = request.app.state.config.COMFYUI_CONFIG["model_wrappers"]
         else:
@@ -537,18 +564,18 @@ async def image_generations(
         if form_data.model_wrapper_id:
             model_wrapper = next(
                 (m for m in model_wrappers if m["id"] == form_data.model_wrapper_id),
-                None
+                None,
             )
         if not model_wrapper:
             model_wrapper = next(
                 (m for m in model_wrappers if m["is_default"]),
-                model_wrappers[0] if model_wrappers else None
+                model_wrappers[0] if model_wrappers else None,
             )
 
         if not model_wrapper:
             raise HTTPException(
                 status_code=400,
-                detail=f"No valid model wrapper found for engine {engine}"
+                detail=f"No valid model wrapper found for engine {engine}",
             )
 
         model = form_data.model or model_wrapper["model"]
@@ -560,8 +587,7 @@ async def image_generations(
         except (ValueError, KeyError) as e:
             log.error(f"Error parsing model configuration: {str(e)}")
             raise HTTPException(
-                status_code=400,
-                detail=f"Invalid model configuration: {str(e)}"
+                status_code=400, detail=f"Invalid model configuration: {str(e)}"
             )
 
         r = None
@@ -579,12 +605,13 @@ async def image_generations(
                     headers["X-OpenWebUI-User-Email"] = user.email
                     headers["X-OpenWebUI-User-Role"] = user.role
 
-                api_base_url = request.app.state.config.OPENAI_IMAGE_CONFIG.get('api_base_url')
+                api_base_url = request.app.state.config.OPENAI_IMAGE_CONFIG.get(
+                    "api_base_url"
+                )
                 if not api_base_url:
                     log.error("OpenAI API base URL not configured")
                     raise HTTPException(
-                        status_code=400,
-                        detail="OpenAI API base URL not configured"
+                        status_code=400, detail="OpenAI API base URL not configured"
                     )
 
                 data = {
@@ -634,8 +661,7 @@ async def image_generations(
                     if not workflow:
                         log.error("No workflow defined in model configuration")
                         raise HTTPException(
-                            status_code=400,
-                            detail="No workflow defined for this model"
+                            status_code=400, detail="No workflow defined for this model"
                         )
 
                     workflow_nodes = model_wrapper.get("workflow_nodes", [])
@@ -643,7 +669,7 @@ async def image_generations(
                         log.error("No workflow nodes defined in model configuration")
                         raise HTTPException(
                             status_code=400,
-                            detail="No workflow nodes defined for this model"
+                            detail="No workflow nodes defined for this model",
                         )
 
                     processed_nodes = []
@@ -660,22 +686,21 @@ async def image_generations(
                                 type=node.get("type"),
                                 key=node.get("key", "text"),
                                 node_ids=node_ids,
-                                value=node.get("value")
+                                value=node.get("value"),
                             )
                             processed_nodes.append(node_input.model_dump())
                         except Exception as e:
                             log.error(f"Error processing workflow node: {str(e)}")
                             raise HTTPException(
                                 status_code=400,
-                                detail=f"Invalid workflow node configuration: {str(e)}"
+                                detail=f"Invalid workflow node configuration: {str(e)}",
                             )
 
                     workflow_data = ComfyUIGenerateImageForm(
                         workflow=ComfyUIWorkflow(
-                            workflow=workflow,
-                            nodes=processed_nodes
+                            workflow=workflow, nodes=processed_nodes
                         ),
-                        **data
+                        **data,
                     )
 
                     base_url = request.app.state.config.COMFYUI_CONFIG.get("base_url")
@@ -683,22 +708,17 @@ async def image_generations(
 
                     if not base_url:
                         raise HTTPException(
-                            status_code=400,
-                            detail="ComfyUI base URL not configured"
+                            status_code=400, detail="ComfyUI base URL not configured"
                         )
 
                     res = await comfyui_generate_image(
-                        model,
-                        workflow_data,
-                        user.id,
-                        base_url,
-                        api_key
+                        model, workflow_data, user.id, base_url, api_key
                     )
 
                     if not res or "data" not in res:
                         raise HTTPException(
                             status_code=500,
-                            detail="Failed to generate images - no data returned from ComfyUI"
+                            detail="Failed to generate images - no data returned from ComfyUI",
                         )
                     log.debug(f"res: {res}")
 
@@ -713,16 +733,20 @@ async def image_generations(
                             log.error(f"Failed to save image from URL: {image['url']}")
                             continue
 
-                        images.append({"url": f"/cache/image/generations/{image_filename}"})
+                        images.append(
+                            {"url": f"/cache/image/generations/{image_filename}"}
+                        )
 
-                        file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_filename}.json")
+                        file_body_path = IMAGE_CACHE_DIR.joinpath(
+                            f"{image_filename}.json"
+                        )
                         with open(file_body_path, "w") as f:
                             json.dump(workflow_data.model_dump(exclude_none=True), f)
 
                     if not images:
                         raise HTTPException(
                             status_code=500,
-                            detail="Failed to save any generated images"
+                            detail="Failed to save any generated images",
                         )
 
                     log.debug(f"images: {images}")
@@ -733,16 +757,14 @@ async def image_generations(
                 except Exception as e:
                     log.exception("Error in ComfyUI image generation")
                     raise HTTPException(
-                        status_code=500,
-                        detail=f"ComfyUI generation failed: {str(e)}"
+                        status_code=500, detail=f"ComfyUI generation failed: {str(e)}"
                     )
             elif engine in ["automatic1111", ""]:
-                base_url = request.app.state.config.AUTOMATIC1111_CONFIG.get('base_url')
+                base_url = request.app.state.config.AUTOMATIC1111_CONFIG.get("base_url")
                 if not base_url:
                     log.error("Automatic1111 base URL not configured")
                     raise HTTPException(
-                        status_code=400,
-                        detail="Automatic1111 base URL not configured"
+                        status_code=400, detail="Automatic1111 base URL not configured"
                     )
 
                 if form_data.model:
@@ -810,7 +832,4 @@ async def image_generations(
         raise
     except Exception as e:
         log.exception("Unexpected error in image_generations")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Internal server error: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

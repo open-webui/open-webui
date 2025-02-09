@@ -134,7 +134,7 @@
 		}
 	];
 
-	let availableModels: {id: string, name: string}[] = [];
+	let availableModels: { id: string; name: string }[] = [];
 
 	const getModels = async (engine: string) => {
 		return await getImageGenerationModels(localStorage.token, engine).catch((error) => {
@@ -178,7 +178,7 @@
 			openai: {
 				api_base_url: config.openai?.api_base_url || '',
 				api_key: config.openai?.api_key || '',
-				model_wrappers: (config.openai?.model_wrappers || []).map(model_wrapper => ({
+				model_wrappers: (config.openai?.model_wrappers || []).map((model_wrapper) => ({
 					id: model_wrapper.id,
 					name: model_wrapper.name,
 					model: model_wrapper.model,
@@ -186,13 +186,13 @@
 					enabled: model_wrapper.enabled,
 					image_size: model_wrapper.image_size,
 					image_steps: model_wrapper.image_steps,
-					access_control: model_wrapper.access_control,
+					access_control: model_wrapper.access_control
 				}))
 			},
 			automatic1111: {
 				base_url: config.automatic1111?.base_url || '',
 				api_auth: config.automatic1111?.api_auth || '',
-				model_wrappers: (config.automatic1111?.model_wrappers || []).map(model_wrapper => ({
+				model_wrappers: (config.automatic1111?.model_wrappers || []).map((model_wrapper) => ({
 					id: model_wrapper.id,
 					name: model_wrapper.name,
 					model: model_wrapper.model,
@@ -209,7 +209,7 @@
 			comfyui: {
 				base_url: config.comfyui?.base_url || '',
 				api_key: config.comfyui?.api_key || '',
-				model_wrappers: (config.comfyui?.model_wrappers || []).map(model_wrapper => ({
+				model_wrappers: (config.comfyui?.model_wrappers || []).map((model_wrapper) => ({
 					id: model_wrapper.id,
 					name: model_wrapper.name,
 					model: model_wrapper.model,
@@ -232,15 +232,15 @@
 					return;
 				}
 
-                const missingNodeIds = model_wrapper.workflow_nodes.find(node =>
-                    !node.node_ids || node.node_ids.length === 0
-                );
+				const missingNodeIds = model_wrapper.workflow_nodes.find(
+					(node) => !node.node_ids || node.node_ids.length === 0
+				);
 
-                if (missingNodeIds) {
-                    toast.error(`Missing node IDs in workflow configuration for model ${model_wrapper.name}`);
-                    loading = false;
-                    return;
-                }
+				if (missingNodeIds) {
+					toast.error(`Missing node IDs in workflow configuration for model ${model_wrapper.name}`);
+					loading = false;
+					return;
+				}
 			}
 		}
 
@@ -266,9 +266,11 @@
 				config = res;
 
 				if (config.comfyui.model_wrappers) {
-					config.comfyui.model_wrappers = config.comfyui.model_wrappers.map(model_wrapper => ({
+					config.comfyui.model_wrappers = config.comfyui.model_wrappers.map((model_wrapper) => ({
 						...model_wrapper,
-						workflow: model_wrapper.workflow ? JSON.stringify(JSON.parse(model_wrapper.workflow), null, 2) : undefined
+						workflow: model_wrapper.workflow
+							? JSON.stringify(JSON.parse(model_wrapper.workflow), null, 2)
+							: undefined
 					}));
 				}
 			}
@@ -335,7 +337,7 @@
 			enabled: true,
 			image_size: '512x512',
 			image_steps: 50,
-			access_control: null,
+			access_control: null
 		};
 
 		if (engine === 'automatic1111') {
@@ -362,7 +364,6 @@
 				break;
 		}
 	};
-
 </script>
 
 <form
@@ -379,10 +380,7 @@
 						{$i18n.t('Image Generation (Experimental)')}
 					</div>
 					<div class="px-1">
-						<Switch
-							bind:state={config.enabled}
-							on:change={updateConfigHandler}
-						/>
+						<Switch bind:state={config.enabled} on:change={updateConfigHandler} />
 					</div>
 				</div>
 
@@ -396,7 +394,9 @@
 				{/if}
 
 				<div class="py-1 flex w-full justify-between">
-					<div class="self-center text-xs font-medium">{$i18n.t('Default Image Generation Engine')}</div>
+					<div class="self-center text-xs font-medium">
+						{$i18n.t('Default Image Generation Engine')}
+					</div>
 					<div class="flex items-center relative">
 						<select
 							class="dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
@@ -445,12 +445,14 @@
 								<div class="border dark:border-gray-850 rounded-lg p-4">
 									<div class="flex justify-between mb-4">
 										<div class="flex items-center gap-4">
-											<h3 class="text-sm font-medium">{model_wrapper.name || 'New model wrapper'}</h3>
+											<h3 class="text-sm font-medium">
+												{model_wrapper.name || 'New model wrapper'}
+											</h3>
 											<div class="flex items-center gap-2">
-												<Switch
-													bind:state={model_wrapper.enabled}
-												/>
-												<label class="text-xs text-gray-500">{model_wrapper.enabled ? $i18n.t('Enabled') : $i18n.t('Disabled')}</label>
+												<Switch bind:state={model_wrapper.enabled} />
+												<label class="text-xs text-gray-500"
+													>{model_wrapper.enabled ? $i18n.t('Enabled') : $i18n.t('Disabled')}</label
+												>
 											</div>
 										</div>
 										<button
@@ -458,11 +460,22 @@
 											class="text-red-500 hover:text-red-600"
 											on:click={() => {
 												if (!config) return;
-												config.openai.model_wrappers = config.openai.model_wrappers.filter((_, index) => index !== i);
+												config.openai.model_wrappers = config.openai.model_wrappers.filter(
+													(_, index) => index !== i
+												);
 											}}
 										>
-											<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-												<path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												class="h-5 w-5"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+													clip-rule="evenodd"
+												/>
 											</svg>
 										</button>
 									</div>
@@ -476,7 +489,9 @@
 													bind:value={model_wrapper.name}
 													placeholder="e.g. SDXL 1.0"
 													on:input={(e) => {
-														model_wrapper.id = generateId(e.currentTarget.value || 'New OpenAI model wrapper');
+														model_wrapper.id = generateId(
+															e.currentTarget.value || 'New OpenAI model wrapper'
+														);
 													}}
 												/>
 											</div>
@@ -582,12 +597,14 @@
 								<div class="border dark:border-gray-850 rounded-lg p-4">
 									<div class="flex justify-between mb-4">
 										<div class="flex items-center gap-4">
-											<h3 class="text-sm font-medium">{model_wrapper.name || 'New model wrapper'}</h3>
+											<h3 class="text-sm font-medium">
+												{model_wrapper.name || 'New model wrapper'}
+											</h3>
 											<div class="flex items-center gap-2">
-												<Switch
-													bind:state={model_wrapper.enabled}
-												/>
-												<label class="text-xs text-gray-500">{model_wrapper.enabled ? $i18n.t('Enabled') : $i18n.t('Disabled')}</label>
+												<Switch bind:state={model_wrapper.enabled} />
+												<label class="text-xs text-gray-500"
+													>{model_wrapper.enabled ? $i18n.t('Enabled') : $i18n.t('Disabled')}</label
+												>
 											</div>
 										</div>
 										<button
@@ -595,11 +612,21 @@
 											class="text-red-500 hover:text-red-600"
 											on:click={() => {
 												if (!config) return;
-												config.automatic1111.model_wrappers = config.automatic1111.model_wrappers.filter((_, index) => index !== i);
+												config.automatic1111.model_wrappers =
+													config.automatic1111.model_wrappers.filter((_, index) => index !== i);
 											}}
 										>
-											<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-												<path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												class="h-5 w-5"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+													clip-rule="evenodd"
+												/>
 											</svg>
 										</button>
 									</div>
@@ -613,7 +640,9 @@
 													bind:value={model_wrapper.name}
 													placeholder="e.g. SDXL 1.0"
 													on:input={(e) => {
-														model_wrapper.id = generateId(e.currentTarget.value || 'New Automatic1111 model wrapper');
+														model_wrapper.id = generateId(
+															e.currentTarget.value || 'New Automatic1111 model wrapper'
+														);
 													}}
 												/>
 											</div>
@@ -762,12 +791,14 @@
 								<div class="border dark:border-gray-850 rounded-lg p-4">
 									<div class="flex justify-between mb-4">
 										<div class="flex items-center gap-4">
-											<h3 class="text-sm font-medium">{model_wrapper.name || 'New model wraper'}</h3>
+											<h3 class="text-sm font-medium">
+												{model_wrapper.name || 'New model wraper'}
+											</h3>
 											<div class="flex items-center gap-2">
-												<Switch
-													bind:state={model_wrapper.enabled}
-												/>
-												<label class="text-xs text-gray-500">{model_wrapper.enabled ? $i18n.t('Enabled') : $i18n.t('Disabled')}</label>
+												<Switch bind:state={model_wrapper.enabled} />
+												<label class="text-xs text-gray-500"
+													>{model_wrapper.enabled ? $i18n.t('Enabled') : $i18n.t('Disabled')}</label
+												>
 											</div>
 										</div>
 										<button
@@ -775,11 +806,22 @@
 											class="text-red-500 hover:text-red-600"
 											on:click={() => {
 												if (!config) return;
-												config.comfyui.model_wrappers = config.comfyui.model_wrappers.filter((_, index) => index !== i);
+												config.comfyui.model_wrappers = config.comfyui.model_wrappers.filter(
+													(_, index) => index !== i
+												);
 											}}
 										>
-											<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-												<path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												class="h-5 w-5"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+													clip-rule="evenodd"
+												/>
 											</svg>
 										</button>
 									</div>
@@ -793,7 +835,9 @@
 													bind:value={model_wrapper.name}
 													placeholder="e.g. SDXL 1.0"
 													on:input={(e) => {
-														model_wrapper.id = generateId(e.currentTarget.value || 'New ComfyUI model wrapper');
+														model_wrapper.id = generateId(
+															e.currentTarget.value || 'New ComfyUI model wrapper'
+														);
 													}}
 												/>
 											</div>
@@ -864,21 +908,28 @@
 										</div>
 										{#if model_wrapper.workflow}
 											<div class="">
-												<div class="mb-2 text-sm font-medium">{$i18n.t('ComfyUI Workflow Nodes')}</div>
+												<div class="mb-2 text-sm font-medium">
+													{$i18n.t('ComfyUI Workflow Nodes')}
+												</div>
 
 												<div class="text-xs flex flex-col gap-1.5">
 													{#if !model_wrapper.workflow_nodes || model_wrapper.workflow_nodes.length === 0}
-														{@const _ = model_wrapper.workflow_nodes = requiredWorkflowNodes.map(node => ({
-															type: node.type,
-															key: node.key || '',
-															node_ids: ''
-														}))}
+														{@const _ = model_wrapper.workflow_nodes =
+															requiredWorkflowNodes.map((node) => ({
+																type: node.type,
+																key: node.key || '',
+																node_ids: ''
+															}))}
 													{/if}
 
 													{#each requiredWorkflowNodes as templateNode, index}
-														<div class="flex w-full items-center border dark:border-gray-850 rounded-lg">
+														<div
+															class="flex w-full items-center border dark:border-gray-850 rounded-lg"
+														>
 															<div class="flex-shrink-0">
-																<div class="capitalize line-clamp-1 font-medium px-3 py-1 w-20 text-center rounded-l-lg bg-green-500/10 text-green-700 dark:text-green-200">
+																<div
+																	class="capitalize line-clamp-1 font-medium px-3 py-1 w-20 text-center rounded-l-lg bg-green-500/10 text-green-700 dark:text-green-200"
+																>
 																	{templateNode.type}{templateNode.type === 'prompt' ? '*' : ''}
 																</div>
 															</div>

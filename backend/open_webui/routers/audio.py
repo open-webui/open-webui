@@ -560,10 +560,14 @@ def transcribe(request: Request, file_path):
 
             # Extract transcript from Deepgram response
             try:
-                transcript = response_data["results"]["channels"][0]["alternatives"][0].get("transcript", "")
+                transcript = response_data["results"]["channels"][0]["alternatives"][
+                    0
+                ].get("transcript", "")
             except (KeyError, IndexError) as e:
                 log.error(f"Malformed response from Deepgram: {str(e)}")
-                raise Exception("Failed to parse Deepgram response - unexpected response format")
+                raise Exception(
+                    "Failed to parse Deepgram response - unexpected response format"
+                )
             data = {"text": transcript.strip()}
 
             # Save transcript

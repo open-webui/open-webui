@@ -1424,11 +1424,11 @@ async def upload_model(
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
     # --- P1: save file locally ---
-    chunk_size = 1024 * 1024 * 2 # 2 MB chunks
+    chunk_size = 1024 * 1024 * 2  # 2 MB chunks
     with open(file_path, "wb") as out_f:
         while True:
             chunk = file.file.read(chunk_size)
-            #log.info(f"Chunk: {str(chunk)}") # DEBUG
+            # log.info(f"Chunk: {str(chunk)}") # DEBUG
             if not chunk:
                 break
             out_f.write(chunk)
@@ -1436,15 +1436,15 @@ async def upload_model(
     async def file_process_stream():
         nonlocal ollama_url
         total_size = os.path.getsize(file_path)
-        log.info(f"Total Model Size: {str(total_size)}") # DEBUG
+        log.info(f"Total Model Size: {str(total_size)}")  # DEBUG
 
         # --- P2: SSE progress + calculate sha256 hash ---
         file_hash = calculate_sha256(file_path, chunk_size)
-        log.info(f"Model Hash: {str(file_hash)}") # DEBUG
+        log.info(f"Model Hash: {str(file_hash)}")  # DEBUG
         try:
             with open(file_path, "rb") as f:
                 bytes_read = 0
-                while chunk := f.read(chunk_size): 
+                while chunk := f.read(chunk_size):
                     bytes_read += len(chunk)
                     progress = round(bytes_read / total_size * 100, 2)
                     data_msg = {
@@ -1460,25 +1460,23 @@ async def upload_model(
                 response = requests.post(url, data=f)
 
             if response.ok:
-                log.info(f"Uploaded to /api/blobs") # DEBUG
+                log.info(f"Uploaded to /api/blobs")  # DEBUG
                 # Remove local file
                 os.remove(file_path)
 
                 # Create model in ollama
                 model_name, ext = os.path.splitext(file.filename)
-                log.info(f"Created Model: {model_name}") # DEBUG
+                log.info(f"Created Model: {model_name}")  # DEBUG
 
                 create_payload = {
                     "model": model_name,
                     # Reference the file by its original name => the uploaded blob's digest
-                    "files": {
-                        file.filename: f"sha256:{file_hash}"
-                    },
+                    "files": {file.filename: f"sha256:{file_hash}"},
                 }
-                log.info(f"Model Payload: {create_payload}") # DEBUG
+                log.info(f"Model Payload: {create_payload}")  # DEBUG
 
                 # Call ollama /api/create
-                #https://github.com/ollama/ollama/blob/main/docs/api.md#create-a-model
+                # https://github.com/ollama/ollama/blob/main/docs/api.md#create-a-model
                 create_resp = requests.post(
                     url=f"{ollama_url}/api/create",
                     headers={"Content-Type": "application/json"},
@@ -1486,7 +1484,7 @@ async def upload_model(
                 )
 
                 if create_resp.ok:
-                    log.info(f"API SUCCESS!") # DEBUG
+                    log.info(f"API SUCCESS!")  # DEBUG
                     done_msg = {
                         "done": True,
                         "blob": f"sha256:{file_hash}",
