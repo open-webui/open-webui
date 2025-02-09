@@ -35,10 +35,14 @@
 
 	const submitHandler = async () => {
 		// Convert domain filter string to array before sending
-		webConfig.search.domain_filter_list = webConfig.search.domain_filter_list
-			.split(',')
-			.map((domain) => domain.trim())
-			.filter((domain) => domain.length > 0);
+		if (webConfig.search.domain_filter_list) {
+			webConfig.search.domain_filter_list = webConfig.search.domain_filter_list
+				.split(',')
+				.map((domain) => domain.trim())
+				.filter((domain) => domain.length > 0);
+		} else {
+			webConfig.search.domain_filter_list = [];
+		}
 
 		const res = await updateRAGConfig(localStorage.token, {
 			web: webConfig,
