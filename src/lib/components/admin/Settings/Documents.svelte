@@ -589,18 +589,18 @@
 			{/if}
 		</div>
 
-		<hr class=" dark:border-gray-850" />
+		<!-- <hr class=" dark:border-gray-850" /> -->
 
-		<div class="text-sm font-medium mb-1">{$i18n.t('Google Drive')}</div>
+		<!-- <div class="text-sm font-medium mb-1">{$i18n.t('Google Drive')}</div> -->
 
-		<div class="">
+		<!-- <div class="">
 			<div class="flex justify-between items-center text-xs">
 				<div class="text-xs font-medium">{$i18n.t('Enable Google Drive')}</div>
 				<div>
 					<Switch bind:state={enableGoogleDriveIntegration} />
 				</div>
 			</div>
-		</div>
+		</div> -->
 
 		<hr class=" dark:border-gray-850" />
 

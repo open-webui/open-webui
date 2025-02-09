@@ -317,7 +317,7 @@
 	"Edit User": "编辑用户",
 	"Edit User Group": "编辑用户组",
 	"ElevenLabs": "ElevenLabs",
-	"Email": "电子邮箱",
+	"Email": "邮箱",
 	"Embark on adventures": "踏上冒险之旅",
 	"Embedding Batch Size": "嵌入层批处理大小 (Embedding Batch Size)",
 	"Embedding Model": "语义向量模型",
@@ -335,7 +335,7 @@
 	"Enable Web Search": "启用联网搜索",
 	"Enabled": "启用",
 	"Engine": "引擎",
-	"Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.": "确保您的 CSV 文件按以下顺序包含 4 列： 姓名、电子邮箱、密码、角色。",
+	"Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.": "确保您的 CSV 文件按以下顺序包含 4 列： 姓名、邮箱、密码、角色。",
 	"Enter {{role}} message here": "在此处输入 {{role}} 的对话内容",
 	"Enter a detail about yourself for your LLMs to recall": "输入一个关于你自己的详细信息，方便你的大语言模型记住这些内容",
 	"Enter api auth string (e.g. username:password)": "输入 api 鉴权路径 (例如：用户名:密码)",
@@ -385,7 +385,7 @@
 	"Enter URL (e.g. http://127.0.0.1:7860/)": "输入地址 (例如：http://127.0.0.1:7860/)",
 	"Enter URL (e.g. http://localhost:11434)": "输入地址 (例如：http://localhost:11434)",
 	"Enter your current password": "输入当前密码",
-	"Enter Your Email": "输入您的电子邮箱",
+	"Enter Your Email": "输入您的邮箱",
 	"Enter Your Full Name": "输入您的名称",
 	"Enter your message": "输入您的消息",
 	"Enter your new password": "输入新的密码",
@@ -910,7 +910,7 @@
 	"Tavily API Key": "Tavily API 密钥",
 	"Tell us more:": "请告诉我们更多细节",
 	"Temperature": "温度 (Temperature)",
-	"Template": "模板",
+	"Template": "模板",	
 	"Temporary Chat": "临时对话",
 	"Text Splitter": "文本分切器",
 	"Text-to-Speech Engine": "文本转语音引擎",
@@ -1090,5 +1090,6 @@
 	"Your account status is currently pending activation.": "您的账号当前状态为待激活。",
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "您的全部捐款将直接给到插件开发者，Open WebUI 不会收取任何比例。但众筹平台可能会有服务费、抽成。",
 	"Youtube": "YouTube",
-	"Youtube Loader Settings": "YouTube 爬取设置"
+	"Youtube Loader Settings": "YouTube 爬取设置",
+	"This chat won't appear in history and your messages will not be saved.": "此对话不会出现在历史记录中，且不会保存您的消息。"
 }

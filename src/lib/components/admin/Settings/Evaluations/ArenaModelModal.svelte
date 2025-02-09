@@ -33,7 +33,7 @@
 		}
 	};
 
-	let profileImageUrl = '/favicon.png';
+	let profileImageUrl = '/static/model.png';
 	let description = '';
 
 	let selectedModelId = '';
@@ -226,7 +226,7 @@
 							>
 								<img
 									src={profileImageUrl}
-									class="size-16 rounded-full object-cover shrink-0"
+									class="size-16 rounded-full object-cover shrink-0 p-2"
 									alt="Profile"
 								/>
 

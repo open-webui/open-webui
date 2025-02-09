@@ -367,7 +367,7 @@
 					</div>
 				</div>
 
-				<div class=" mt-2 mb-1 text-sm font-medium">
+				<!-- <div class=" mt-2 mb-1 text-sm font-medium">
 					{$i18n.t('Youtube Loader Settings')}
 				</div>
 
@@ -399,7 +399,7 @@
 							/>
 						</div>
 					</div>
-				</div>
+				</div> -->
 			</div>
 		{/if}
 	</div>

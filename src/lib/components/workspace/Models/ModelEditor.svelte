@@ -61,7 +61,7 @@
 		base_model_id: null,
 		name: '',
 		meta: {
-			profile_image_url: '/static/favicon.png',
+			profile_image_url: '/static/model.png',
 			description: '',
 			suggestion_prompts: null,
 			tags: []
@@ -380,13 +380,13 @@
 								<img
 									src={info.meta.profile_image_url}
 									alt="model profile"
-									class="rounded-xl size-72 md:size-60 object-cover shrink-0"
+									class="rounded-xl size-72 md:size-60 object-cover shrink-0 p-2"
 								/>
 							{:else}
 								<img
-									src="/static/favicon.png"
+									src="/static/model.png"
 									alt="model profile"
-									class=" rounded-xl size-72 md:size-60 object-cover shrink-0"
+									class=" rounded-xl size-72 md:size-60 object-cover shrink-0 p-2"
 								/>
 							{/if}
 

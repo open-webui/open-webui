@@ -91,12 +91,12 @@
 <div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
 	{#if $temporaryChatEnabled}
 		<Tooltip
-			content="This chat won't appear in history and your messages will not be saved."
+			content={$i18n.t(`This chat won't appear in history and your messages will not be saved.`)}
 			className="w-full flex justify-center mb-0.5"
 			placement="top"
 		>
 			<div class="flex items-center gap-2 text-gray-500 font-medium text-lg my-2 w-fit">
-				<EyeSlash strokeWidth="2.5" className="size-5" /> Temporary Chat
+				<EyeSlash strokeWidth="2.5" className="size-5" /> {$i18n.t(`Temporary Chat`)}
 			</div>
 		</Tooltip>
 	{/if}
@@ -125,8 +125,8 @@
 										src={model?.info?.meta?.profile_image_url ??
 											($i18n.language === 'dg-DG'
 												? `/doge.png`
-												: `${WEBUI_BASE_URL}/static/favicon.png`)}
-										class=" size-9 @sm:size-10 rounded-full border-[1px] border-gray-200 dark:border-none"
+												: `${WEBUI_BASE_URL}/static/model.png`)}
+										class=" size-9 @sm:size-10 rounded-full p-1 border-[1px] border-gray-200 dark:border-none bg-white dark:bg-gray-900"
 										alt="logo"
 										draggable="false"
 									/>
@@ -213,8 +213,7 @@
 	<div class="mx-auto max-w-2xl font-primary" in:fade={{ duration: 200, delay: 200 }}>
 		<div class="mx-5">
 			<Suggestions
-				suggestionPrompts={models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
-					$config?.default_prompt_suggestions ??
+				suggestionPrompts={$config?.default_prompt_suggestions ??
 					[]}
 				inputValue={prompt}
 				on:select={(e) => {

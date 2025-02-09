@@ -1090,5 +1090,6 @@
 	"Your account status is currently pending activation.": "",
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "",
-	"Youtube Loader Settings": ""
+	"Youtube Loader Settings": "",
+	"This chat won't appear in history and your messages will not be saved.": ""
 }

@@ -128,13 +128,13 @@
 	</title>
 </svelte:head>
 
-<OnBoarding
+<!-- <OnBoarding
 	bind:show={onboarding}
 	getStartedHandler={() => {
 		onboarding = false;
 		mode = $config?.features.enable_ldap ? 'ldap' : 'signup';
 	}}
-/>
+/> -->
 
 <div class="w-full h-screen max-h-[100dvh] text-white relative">
 	<div class="w-full h-full absolute top-0 left-0 bg-white dark:bg-black"></div>
@@ -142,13 +142,13 @@
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
 
 	{#if loaded}
-		<div class="fixed m-10 z-50">
+		<div class="fixed m-4 z-50">
 			<div class="flex space-x-2">
 				<div class=" self-center">
 					<img
 						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/splash.png"
-						class=" w-6 rounded-full dark:invert"
+						src="{WEBUI_BASE_URL}/static/brand-logo.png"
+						class=" w-60 rounded-full dark:invert"
 						alt="logo"
 					/>
 				</div>

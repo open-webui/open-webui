@@ -54,7 +54,7 @@
 								src={model?.info?.meta?.profile_image_url ??
 									($i18n.language === 'dg-DG'
 										? `/doge.png`
-										: `${WEBUI_BASE_URL}/static/favicon.png`)}
+										: `${WEBUI_BASE_URL}/static/model.png`)}
 								class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"
 								alt="logo"
 								draggable="false"
@@ -67,12 +67,12 @@
 
 		{#if $temporaryChatEnabled}
 			<Tooltip
-				content="This chat won't appear in history and your messages will not be saved."
+				content={$i18n.t(`This chat won't appear in history and your messages will not be saved.`)}
 				className="w-fit"
 				placement="top-start"
 			>
 				<div class="flex items-center gap-2 text-gray-500 font-medium text-lg my-2 w-fit">
-					<EyeSlash strokeWidth="2.5" className="size-5" /> Temporary Chat
+					<EyeSlash strokeWidth="2.5" className="size-5" /> {$i18n.t(`Temporary Chat`)}
 				</div>
 			</Tooltip>
 		{/if}
