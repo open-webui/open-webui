@@ -218,7 +218,9 @@ async def update_user_info_by_session_user(
 async def get_user_info_by_session_user(user=Depends(get_verified_user)):
     user = Users.get_user_by_id(user.id)
     if user:
-        return user.rate_limit.model_dump()
+        if user.rate_limit:
+            return user.rate_limit.model_dump()
+        return {}
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
