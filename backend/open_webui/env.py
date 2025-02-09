@@ -92,7 +92,6 @@ log_sources = [
     "RAG",
     "WEBHOOK",
     "SOCKET",
-    "OAUTH",
 ]
 
 SRC_LOG_LEVELS = {}
@@ -418,3 +417,11 @@ OFFLINE_MODE = os.environ.get("OFFLINE_MODE", "false").lower() == "true"
 
 if OFFLINE_MODE:
     os.environ["HF_HUB_OFFLINE"] = "1"
+
+####################################
+# ENABLE_FORWARD_OAUTH_TOKEN
+####################################
+
+ENABLE_FORWARD_OAUTH_TOKEN = (
+    os.environ.get("ENABLE_FORWARD_OAUTH_TOKEN", "False").lower() == "true"
+)

@@ -25,6 +25,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     BYPASS_MODEL_ACCESS_CONTROL,
+    ENABLE_FORWARD_OAUTH_TOKEN
 )
 
 from open_webui.constants import ERROR_MESSAGES
@@ -51,12 +52,17 @@ log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 ##########################################
 
 
-async def send_get_request(url, key=None):
+async def send_get_request(request:Request, url, key=None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+            authorization_header: str = f"Bearer {key}"
+            if ENABLE_FORWARD_OAUTH_TOKEN:
+                auth_token: Optional[str] = request.cookies.get("oauth_id_token")
+                if auth_token:
+                    authorization_header = f"Bearer {auth_token}"
             async with session.get(
-                url, headers={**({"Authorization": f"Bearer {key}"} if key else {})}
+                url, headers={**({"Authorization": authorization_header} if key else {})}
             ) as response:
                 return await response.json()
     except Exception as e:
@@ -185,12 +191,18 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
         r = None
         try:
+            authorization_header: str = f"Bearer {request.app.state.config.OPENAI_API_KEYS[idx]}"
+            if ENABLE_FORWARD_OAUTH_TOKEN:
+                auth_token: Optional[str] = request.cookies.get("oauth_id_token")
+                if auth_token:
+                    authorization_header = f"Bearer {auth_token}"
+
             r = requests.post(
                 url=f"{url}/audio/speech",
                 data=body,
                 headers={
                     "Content-Type": "application/json",
-                    "Authorization": f"Bearer {request.app.state.config.OPENAI_API_KEYS[idx]}",
+                    "Authorization": authorization_header,
                     **(
                         {
                             "HTTP-Referer": "https://openwebui.com/",
@@ -271,6 +283,7 @@ async def get_all_models_responses(request: Request) -> list:
         ):
             request_tasks.append(
                 send_get_request(
+                    request,
                     f"{url}/models", request.app.state.config.OPENAI_API_KEYS[idx]
                 )
             )
@@ -289,6 +302,7 @@ async def get_all_models_responses(request: Request) -> list:
                 if len(model_ids) == 0:
                     request_tasks.append(
                         send_get_request(
+                            request,
                             f"{url}/models",
                             request.app.state.config.OPENAI_API_KEYS[idx],
                         )
@@ -430,10 +444,15 @@ async def get_models(
             )
         ) as session:
             try:
+                authorization_header: str = f"Bearer {key}"
+                if ENABLE_FORWARD_OAUTH_TOKEN:
+                    auth_token: Optional[str] = request.cookies.get("oauth_id_token")
+                    if auth_token:
+                        authorization_header = f"Bearer {auth_token}"
                 async with session.get(
                     f"{url}/models",
                     headers={
-                        "Authorization": f"Bearer {key}",
+                        "Authorization": authorization_header,
                         "Content-Type": "application/json",
                         **(
                             {
@@ -501,6 +520,7 @@ class ConnectionVerificationForm(BaseModel):
 
 @router.post("/verify")
 async def verify_connection(
+    request: Request,
     form_data: ConnectionVerificationForm, user=Depends(get_admin_user)
 ):
     url = form_data.url
@@ -510,10 +530,15 @@ async def verify_connection(
         timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
     ) as session:
         try:
+            authorization_header: str = f"Bearer {key}"
+            if ENABLE_FORWARD_OAUTH_TOKEN:
+                auth_token: Optional[str] = request.cookies.get("oauth_id_token")
+                if auth_token:
+                    authorization_header = f"Bearer {auth_token}"
             async with session.get(
                 f"{url}/models",
                 headers={
-                    "Authorization": f"Bearer {key}",
+                    "Authorization": authorization_header,
                     "Content-Type": "application/json",
                 },
             ) as r:
@@ -646,13 +671,18 @@ async def generate_chat_completion(
         session = aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         )
+        authorization_header: str = f"Bearer {key}"
+        if ENABLE_FORWARD_OAUTH_TOKEN:
+            auth_token: Optional[str] = request.cookies.get("oauth_id_token")
+            if auth_token:
+                authorization_header = f"Bearer {auth_token}"
 
         r = await session.request(
             method="POST",
             url=f"{url}/chat/completions",
             data=payload,
             headers={
-                "Authorization": f"Bearer {key}",
+                "Authorization": authorization_header,
                 "Content-Type": "application/json",
                 **(
                     {
@@ -734,12 +764,17 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
     try:
         session = aiohttp.ClientSession(trust_env=True)
+        authorization_header: str = f"Bearer {key}"
+        if ENABLE_FORWARD_OAUTH_TOKEN:
+            auth_token: Optional[str] = request.cookies.get("oauth_id_token")
+            if auth_token:
+                authorization_header = f"Bearer {auth_token}"
         r = await session.request(
             method=request.method,
             url=f"{url}/{path}",
             data=body,
             headers={
-                "Authorization": f"Bearer {key}",
+                "Authorization": authorization_header,
                 "Content-Type": "application/json",
                 **(
                     {
