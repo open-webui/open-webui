@@ -2,7 +2,7 @@
 	import { DropdownMenu } from 'bits-ui';
 	import { getContext } from 'svelte';
 
-	import { showSettings } from '$lib/stores';
+	import { showSurvey } from '$lib/stores';
 	import { flyAndScale } from '$lib/utils/transitions';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -11,10 +11,14 @@
 	import Keyboard from '$lib/components/icons/Keyboard.svelte';
 	const i18n = getContext('i18n');
 
-	export let showDocsHandler: Function;
+	//export let showDocsHandler: Function;
 	export let showShortcutsHandler: Function;
+	export let showSurveyHandler: Function;
 
 	export let onClose: Function = () => {};
+
+	// Show survey
+	//showSurvey.set(true);
 </script>
 
 <Dropdown
@@ -34,7 +38,7 @@
 			align="end"
 			transition={flyAndScale}
 		>
-			<DropdownMenu.Item
+			<!-- <DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				id="chat-share-button"
 				on:click={() => {
@@ -43,7 +47,7 @@
 			>
 				<QuestionMarkCircle className="size-5" />
 				<div class="flex items-center">{$i18n.t('Documentation')}</div>
-			</DropdownMenu.Item>
+			</DropdownMenu.Item> -->
 
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
@@ -55,6 +59,19 @@
 				<Keyboard className="size-5" />
 				<div class="flex items-center">{$i18n.t('Keyboard shortcuts')}</div>
 			</DropdownMenu.Item>
+
+			{#if $showSurvey}
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					id="chat-share-button"
+					on:click={() => {
+						showSurveyHandler();
+					}}
+				>
+					<Lifebuoy className="size-5" />
+					<div class="flex items-center">{$i18n.t('Survey')}</div>
+				</DropdownMenu.Item>
+			{/if}
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>
