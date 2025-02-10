@@ -1,7 +1,6 @@
 <script lang="ts">
   import { hooks } from "svelte-preprocess-react";
   import { usePrivy, useWallets } from "@privy-io/react-auth";
-  import { read } from "$app/server";
   import { toast } from 'svelte-sonner';
   import { goto } from '$app/navigation';
   import { getBackendConfig } from '$lib/apis';
