@@ -245,7 +245,7 @@ def get_gravatar_url(email):
 
 
 def calculate_sha256(file_path, chunk_size):
-    #Compute SHA-256 hash of a file efficiently in chunks
+    # Compute SHA-256 hash of a file efficiently in chunks
     sha256 = hashlib.sha256()
     with open(file_path, "rb") as f:
         while chunk := f.read(chunk_size):
