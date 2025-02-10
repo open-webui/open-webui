@@ -45,6 +45,7 @@
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
+	import { updateDayjsLocale } from '$lib/dayjs';
 
 	setContext('i18n', i18n);
 
@@ -381,6 +382,14 @@
 				? backendConfig.default_locale
 				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
 			$i18n.changeLanguage(lang);
+			updateDayjsLocale(lang);
+		} else {
+			updateDayjsLocale(localStorage.locale);
+		}
+
+		// Watch for language changes
+		$: if ($i18n) {
+			updateDayjsLocale($i18n.language);
 		}
 
 		if (backendConfig) {

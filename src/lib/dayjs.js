@@ -1,4 +1,8 @@
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
+import isToday from 'dayjs/plugin/isToday';
+import isYesterday from 'dayjs/plugin/isYesterday';
 
 // Import all locales
 import 'dayjs/locale/af';
@@ -100,5 +104,23 @@ import 'dayjs/locale/vi';
 import 'dayjs/locale/yo';
 import 'dayjs/locale/zh';
 import 'dayjs/locale/et';
+
+// Initialize plugins
+dayjs.extend(relativeTime);
+dayjs.extend(localizedFormat);
+dayjs.extend(isToday);
+dayjs.extend(isYesterday);
+
+// Function to update locale
+export const updateDayjsLocale = (/** @type {string} */ locale) => {
+    // Extract the language code before the region (e.g., 'en' from 'en-US')
+    const lang = locale?.split('-')[0];
+    if (lang) {
+        dayjs.locale(lang);
+    }
+};
+
+// Set default locale
+dayjs.locale('en');
 
 export default dayjs;
