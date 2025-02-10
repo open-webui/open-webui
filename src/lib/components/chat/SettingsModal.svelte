@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { getContext, tick } from 'svelte';
+	import { getContext, tick, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { models, settings, user } from '$lib/stores';
+	import { models, settings, user, config } from '$lib/stores';
+	import type { Settings, Config, AudioSettings } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
 	import { getModels as _getModels } from '$lib/apis';
 	import { goto } from '$app/navigation';
@@ -18,9 +19,31 @@
 	import SearchInput from '../layout/Sidebar/SearchInput.svelte';
 	import Search from '../icons/Search.svelte';
 
+	interface AudioSettings {
+		stt?: {
+			engine?: string;
+		};
+		tts?: {
+			playbackRate?: number;
+			voice?: string;
+			defaultVoice?: string;
+			nonLocalVoices?: boolean;
+		};
+	}
+
 	const i18n = getContext('i18n');
 
 	export let show = false;
+
+	// Audio settings variables
+	let playbackRate = 1;
+	let conversationMode = false;
+	let speechAutoSend = false;
+	let responseAutoPlayback = false;
+	let STTEngine = '';
+	let voice = '';
+	let nonLocalVoices = false;
+	let voices = [];
 
 	interface SettingsTab {
 		id: string;
@@ -351,6 +374,56 @@
 	} else {
 		removeScrollListener();
 	}
+
+	const getVoices = async () => {
+		if ($config?.audio?.tts?.engine === '') {
+			const getVoicesLoop = setInterval(async () => {
+				voices = await speechSynthesis.getVoices();
+
+				// do your loop
+				if (voices.length > 0) {
+					clearInterval(getVoicesLoop);
+				}
+			}, 100);
+		}
+	};
+
+	onMount(async () => {
+		playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
+		conversationMode = $settings.conversationMode ?? false;
+		speechAutoSend = $settings.speechAutoSend ?? false;
+		responseAutoPlayback = $settings.responseAutoPlayback ?? false;
+
+		STTEngine = $settings?.audio?.stt?.engine ?? '';
+
+		// Initialize audio settings if they don't exist
+		if (!$settings.audio) {
+			await settings.set({
+				...$settings,
+				audio: {
+					stt: {
+						engine: STTEngine
+					},
+					tts: {
+						playbackRate: playbackRate,
+						voice: '',
+						defaultVoice: $config?.audio?.tts?.voice ?? '',
+						nonLocalVoices: false
+					}
+				}
+			});
+		}
+
+		if ($settings?.audio?.tts?.defaultVoice === ($config?.audio?.tts?.voice ?? '')) {
+			voice = $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice ?? '';
+		} else {
+			voice = $config?.audio?.tts?.voice ?? '';
+		}
+
+		nonLocalVoices = $settings.audio?.tts?.nonLocalVoices ?? false;
+
+		await getVoices();
+	});
 </script>
 
 <Modal size="xl" bind:show>

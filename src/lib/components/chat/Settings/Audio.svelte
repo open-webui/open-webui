@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 
 	import { user, settings, config } from '$lib/stores';
 	import { getVoices as _getVoices } from '$lib/apis/audio';
@@ -8,7 +10,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	const dispatch = createEventDispatcher();
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	export let saveSettings: Function;
 
@@ -20,7 +22,16 @@
 
 	let STTEngine = '';
 
-	let voices = [];
+	type Voice = {
+		name: string;
+		id?: string;
+		localService?: boolean;
+		lang?: string;
+		default?: boolean;
+		voiceURI?: string;
+	};
+
+	let voices: Voice[] = [];
 	let voice = '';
 
 	// Audio speed control
@@ -28,7 +39,7 @@
 	const speedOptions = [2, 1.75, 1.5, 1.25, 1, 0.75, 0.5];
 
 	const getVoices = async () => {
-		if ($config.audio.tts.engine === '') {
+		if ($config?.audio?.tts?.engine === '') {
 			const getVoicesLoop = setInterval(async () => {
 				voices = await speechSynthesis.getVoices();
 
@@ -67,10 +78,10 @@
 
 		STTEngine = $settings?.audio?.stt?.engine ?? '';
 
-		if ($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice) {
-			voice = $settings?.audio?.tts?.voice ?? $config.audio.tts.voice ?? '';
+		if ($settings?.audio?.tts?.defaultVoice === ($config?.audio?.tts?.voice ?? '')) {
+			voice = $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice ?? '';
 		} else {
-			voice = $config.audio.tts.voice ?? '';
+			voice = $config?.audio?.tts?.voice ?? '';
 		}
 
 		nonLocalVoices = $settings.audio?.tts?.nonLocalVoices ?? false;
@@ -91,7 +102,7 @@
 					playbackRate: playbackRate,
 					voice: voice !== '' ? voice : undefined,
 					defaultVoice: $config?.audio?.tts?.voice ?? '',
-					nonLocalVoices: $config.audio.tts.engine === '' ? nonLocalVoices : undefined
+					nonLocalVoices: $config?.audio?.tts?.engine === '' ? nonLocalVoices : undefined
 				}
 			}
 		});
@@ -100,19 +111,19 @@
 >
 	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div>
-			<div class=" mb-1 text-sm font-medium">{$i18n.t('STT Settings')}</div>
+			<div class=" mb-1 text-sm font-medium">{$i18n?.t('STT Settings')}</div>
 
-			{#if $config.audio.stt.engine !== 'web'}
+			{#if $config?.audio?.stt?.engine !== 'web'}
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
+					<div class=" self-center text-xs font-medium">{$i18n?.t('Speech-to-Text Engine')}</div>
 					<div class="flex items-center relative">
 						<select
 							class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 							bind:value={STTEngine}
 							placeholder="Select an engine"
 						>
-							<option value="">{$i18n.t('Default')}</option>
-							<option value="web">{$i18n.t('Web API')}</option>
+							<option value="">{$i18n?.t('Default')}</option>
+							<option value="web">{$i18n?.t('Web API')}</option>
 						</select>
 					</div>
 				</div>
@@ -120,7 +131,7 @@
 
 			<div class=" py-0.5 flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{$i18n.t('Instant Auto-Send After Voice Transcription')}
+					{$i18n?.t('Instant Auto-Send After Voice Transcription')}
 				</div>
 
 				<button
@@ -131,19 +142,19 @@
 					type="button"
 				>
 					{#if speechAutoSend === true}
-						<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						<span class="ml-2 self-center">{$i18n?.t('On')}</span>
 					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						<span class="ml-2 self-center">{$i18n?.t('Off')}</span>
 					{/if}
 				</button>
 			</div>
 		</div>
 
 		<div>
-			<div class=" mb-1 text-sm font-medium">{$i18n.t('TTS Settings')}</div>
+			<div class=" mb-1 text-sm font-medium">{$i18n?.t('TTS Settings')}</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Auto-playback response')}</div>
+				<div class=" self-center text-xs font-medium">{$i18n?.t('Auto-playback response')}</div>
 
 				<button
 					class="p-1 px-3 text-xs flex rounded transition"
@@ -153,15 +164,15 @@
 					type="button"
 				>
 					{#if responseAutoPlayback === true}
-						<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						<span class="ml-2 self-center">{$i18n?.t('On')}</span>
 					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						<span class="ml-2 self-center">{$i18n?.t('Off')}</span>
 					{/if}
 				</button>
 			</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Speech Playback Speed')}</div>
+				<div class=" self-center text-xs font-medium">{$i18n?.t('Speech Playback Speed')}</div>
 
 				<div class="flex items-center relative">
 					<select
@@ -178,16 +189,16 @@
 
 		<hr class=" dark:border-gray-850" />
 
-		{#if $config.audio.tts.engine === ''}
+		{#if $config?.audio?.tts?.engine === ''}
 			<div>
-				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
+				<div class=" mb-2.5 text-sm font-medium">{$i18n?.t('Set Voice')}</div>
 				<div class="flex w-full">
 					<div class="flex-1">
 						<select
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							bind:value={voice}
 						>
-							<option value="" selected={voice !== ''}>{$i18n.t('Default')}</option>
+							<option value="" selected={voice !== ''}>{$i18n?.t('Default')}</option>
 							{#each voices.filter((v) => nonLocalVoices || v.localService === true) as _voice}
 								<option
 									value={_voice.name}
@@ -200,7 +211,7 @@
 				</div>
 				<div class="flex items-center justify-between my-1.5">
 					<div class="text-xs">
-						{$i18n.t('Allow non-local voices')}
+						{$i18n?.t('Allow non-local voices')}
 					</div>
 
 					<div class="mt-1">
@@ -208,9 +219,9 @@
 					</div>
 				</div>
 			</div>
-		{:else if $config.audio.tts.engine !== ''}
+		{:else if $config?.audio?.tts?.engine !== ''}
 			<div>
-				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
+				<div class=" mb-2.5 text-sm font-medium">{$i18n?.t('Set Voice')}</div>
 				<div class="flex w-full">
 					<div class="flex-1">
 						<input
@@ -236,7 +247,7 @@
 			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
-			{$i18n.t('Save')}
+			{$i18n?.t('Save')}
 		</button>
 	</div>
 </form>

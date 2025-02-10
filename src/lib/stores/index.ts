@@ -127,7 +127,7 @@ type OllamaModelDetails = {
 	quantization_level: string;
 };
 
-type Settings = {
+export type Settings = {
 	models?: string[];
 	conversationMode?: boolean;
 	speechAutoSend?: boolean;
@@ -153,26 +153,30 @@ type Settings = {
 	options?: ModelOptions;
 };
 
-type ModelOptions = {
+export type ModelOptions = {
 	stop?: boolean;
 };
 
-type AudioSettings = {
-	STTEngine?: string;
-	TTSEngine?: string;
-	speaker?: string;
-	model?: string;
-	nonLocalVoices?: boolean;
+export type AudioSettings = {
+	stt?: {
+		engine?: string;
+	};
+	tts?: {
+		playbackRate?: number;
+		voice?: string;
+		defaultVoice?: string;
+		nonLocalVoices?: boolean;
+	};
 };
 
-type TitleSettings = {
+export type TitleSettings = {
 	auto?: boolean;
 	model?: string;
 	modelExternal?: string;
 	prompt?: string;
 };
 
-type Prompt = {
+export type Prompt = {
 	command: string;
 	user_id: string;
 	title: string;
@@ -180,14 +184,14 @@ type Prompt = {
 	timestamp: number;
 };
 
-type Document = {
+export type Document = {
 	collection_name: string;
 	filename: string;
 	name: string;
 	title: string;
 };
 
-type Config = {
+export type Config = {
 	status: boolean;
 	name: string;
 	version: string;
@@ -212,14 +216,23 @@ type Config = {
 			[key: string]: string;
 		};
 	};
+	audio?: {
+		tts?: {
+			voice?: string;
+			engine?: string;
+		};
+		stt?: {
+			engine?: string;
+		};
+	};
 };
 
-type PromptSuggestion = {
+export type PromptSuggestion = {
 	content: string;
 	title: [string, string];
 };
 
-type SessionUser = {
+export type SessionUser = {
 	id: string;
 	email: string;
 	name: string;
