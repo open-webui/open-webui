@@ -1,4 +1,8 @@
+import { env } from '@huggingface/transformers';
 import { KokoroTTS } from 'kokoro-js';
+
+// TODO: Below doesn't work as expected, need to investigate further
+env.backends.onnx.wasm.wasmPaths = '/wasm/';
 
 let tts;
 let isInitialized = false; // Flag to track initialization status
