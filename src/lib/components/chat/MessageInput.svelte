@@ -1171,7 +1171,7 @@
 													</Tooltip>
 												{/if}
 
-												{#if $_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter}
+												{#if $config?.features?.enable_code_interpreter && ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter)}
 													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
 														<button
 															on:click|preventDefault={() =>
