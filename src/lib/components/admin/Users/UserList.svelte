@@ -4,7 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount, getContext } from 'svelte';
 
-	import dayjs from 'dayjs';
+	import dayjs from '$lib/dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	dayjs.extend(relativeTime);

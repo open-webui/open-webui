@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
 
-import dayjs from 'dayjs';
+import dayjs from '$lib/dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import isToday from 'dayjs/plugin/isToday';
 import isYesterday from 'dayjs/plugin/isYesterday';
@@ -292,16 +292,14 @@ export const generateInitialsImage = (name) => {
 	return canvas.toDataURL();
 };
 
-export const formatDate = (inputDate) => {
-	const date = dayjs(inputDate);
-	const now = dayjs();
-
+export const formatDate = (timestamp: number): string => {
+	const date = dayjs(timestamp);
 	if (date.isToday()) {
-		return `Today at ${date.format('LT')}`;
+		return date.fromNow();
 	} else if (date.isYesterday()) {
-		return `Yesterday at ${date.format('LT')}`;
+		return 'Yesterday';
 	} else {
-		return `${date.format('L')} at ${date.format('LT')}`;
+		return date.format('LL');
 	}
 };
 
