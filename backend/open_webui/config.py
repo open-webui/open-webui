@@ -1326,6 +1326,48 @@ Your task is to synthesize these responses into a single, high-quality response.
 Responses from models: {{responses}}"""
 
 
+####################################
+# Code Interpreter
+####################################
+
+ENABLE_CODE_INTERPRETER = PersistentConfig(
+    "ENABLE_CODE_INTERPRETER",
+    "code_interpreter.enable",
+    os.environ.get("ENABLE_CODE_INTERPRETER", "True").lower() == "true",
+)
+
+CODE_INTERPRETER_ENGINE = PersistentConfig(
+    "CODE_INTERPRETER_ENGINE",
+    "code_interpreter.engine",
+    os.environ.get("CODE_INTERPRETER_ENGINE", "pyodide"),
+)
+
+CODE_INTERPRETER_JUPYTER_URL = PersistentConfig(
+    "CODE_INTERPRETER_JUPYTER_URL",
+    "code_interpreter.jupyter.url",
+    os.environ.get("CODE_INTERPRETER_JUPYTER_URL", ""),
+)
+
+CODE_INTERPRETER_JUPYTER_AUTH = PersistentConfig(
+    "CODE_INTERPRETER_JUPYTER_AUTH",
+    "code_interpreter.jupyter.auth",
+    os.environ.get("CODE_INTERPRETER_JUPYTER_AUTH", ""),
+)
+
+CODE_INTERPRETER_JUPYTER_AUTH_TOKEN = PersistentConfig(
+    "CODE_INTERPRETER_JUPYTER_AUTH_TOKEN",
+    "code_interpreter.jupyter.auth_token",
+    os.environ.get("CODE_INTERPRETER_JUPYTER_AUTH_TOKEN", ""),
+)
+
+
+CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD = PersistentConfig(
+    "CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD",
+    "code_interpreter.jupyter.auth_password",
+    os.environ.get("CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD", ""),
+)
+
+
 DEFAULT_CODE_INTERPRETER_PROMPT = """
 #### Tools Available
 

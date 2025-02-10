@@ -72,7 +72,7 @@ from open_webui.utils.filter import (
     get_sorted_filter_ids,
     process_filter_functions,
 )
-
+from open_webui.utils.code_interpreter import execute_code_jupyter
 
 from open_webui.tasks import create_task
 
@@ -1651,15 +1651,45 @@ async def process_chat_response(
                         output = ""
                         try:
                             if content_blocks[-1]["attributes"].get("type") == "code":
-                                output = await event_caller(
-                                    {
-                                        "type": "execute:python",
-                                        "data": {
-                                            "id": str(uuid4()),
-                                            "code": content_blocks[-1]["content"],
-                                        },
+                                code = content_blocks[-1]["content"]
+
+                                if (
+                                    request.app.state.config.CODE_INTERPRETER_ENGINE
+                                    == "pyodide"
+                                ):
+                                    output = await event_caller(
+                                        {
+                                            "type": "execute:python",
+                                            "data": {
+                                                "id": str(uuid4()),
+                                                "code": code,
+                                            },
+                                        }
+                                    )
+                                elif (
+                                    request.app.state.config.CODE_INTERPRETER_ENGINE
+                                    == "jupyter"
+                                ):
+                                    output = await execute_code_jupyter(
+                                        request.app.state.config.CODE_INTERPRETER_JUPYTER_URL,
+                                        code,
+                                        (
+                                            request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN
+                                            if request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH
+                                            == "token"
+                                            else None
+                                        ),
+                                        (
+                                            request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD
+                                            if request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH
+                                            == "password"
+                                            else None
+                                        ),
+                                    )
+                                else:
+                                    output = {
+                                        "stdout": "Code interpreter engine not configured."
                                     }
-                                )
 
                                 if isinstance(output, dict):
                                     stdout = output.get("stdout", "")
