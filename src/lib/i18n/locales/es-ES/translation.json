@@ -565,7 +565,7 @@
 	"Leave empty to include all models from \"{{URL}}/api/tags\" endpoint": "Deje vacío para incluir todos los modelos desde el endpoint \"{{URL}}/api/tags\"",
 	"Leave empty to include all models from \"{{URL}}/models\" endpoint": "Deje vacío para incluir todos los modelos desde el endpoint \"{{URL}}/models\"",
 	"Leave empty to include all models or select specific models": "Deje vacío para incluir todos los modelos o seleccione modelos específicos",
-	"Leave empty to use the default prompt, or enter a custom prompt": "Deje vacío para usar el propmt predeterminado, o ingrese un propmt personalizado",
+	"Leave empty to use the default prompt, or enter a custom prompt": "Deje vacío para usar el prompt predeterminado, o ingrese un prompt personalizado",
 	"Light": "Claro",
 	"Listening...": "Escuchando...",
 	"Llama.cpp": "Llama.cpp",
