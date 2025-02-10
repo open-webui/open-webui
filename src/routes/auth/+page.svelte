@@ -25,6 +25,9 @@
 	import ConnectGuard from "$lib/components/auth/ConnectGuard.svelte";
 
 	import { PUBLIC_PRIVY_APP_ID } from "$env/static/public";
+	import { PUBLIC_PRIVY_CLIENT_ID } from "$env/static/public";
+
+	console.log('ffff',PUBLIC_PRIVY_APP_ID, PUBLIC_PRIVY_CLIENT_ID);
 
 	// does nothing just prevents unused tsc warning
 	used(PrivyProvider);
@@ -300,10 +303,12 @@
 										</button>
 										<react:PrivyProvider
 											appId={PUBLIC_PRIVY_APP_ID}
+											clientId={PUBLIC_PRIVY_CLIENT_ID}
 											config={{
 											defaultChain: mainnet,
 											supportedChains: [mainnet],
-											loginMethods: ["email", "wallet"],
+											// loginMethods: ["email", "wallet"],
+											loginMethods: ['email', 'wallet', 'google'],
 											}}
 										>
 											<ConnectGuard>
