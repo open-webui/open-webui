@@ -74,7 +74,7 @@ class UserResponse(BaseModel):
     name: str
     email: str
     role: str
-    organization_name: str
+    organization_name: Optional[str] = ""
     profile_image_url: str
 
 
@@ -82,7 +82,7 @@ class UserNameResponse(BaseModel):
     id: str
     name: str
     role: str
-    organization_name: str
+    organization_name: Optional[str] = ""
     profile_image_url: str
 
 
@@ -106,7 +106,7 @@ class UsersTable:
         email: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
-        organization_name: str = "",
+        organization_name: Optional[str] = "",
         oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
