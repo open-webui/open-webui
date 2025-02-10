@@ -13,7 +13,7 @@ from fastapi import (
 from starlette.responses import RedirectResponse
 
 from open_webui.models.auths import Auths
-from open_webui.models.users import Users
+from beyond_the_loop.models.users import Users
 from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm
 from open_webui.config import (
     DEFAULT_USER_ROLE,
@@ -292,6 +292,7 @@ class OAuthManager:
                         str(uuid.uuid4())
                     ),  # Random password, not used
                     name=name,
+                    company_id="NO_COMPANY",
                     profile_image_url=picture_url,
                     role=role,
                     oauth_sub=provider_sub,

@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 
 from open_webui.socket.main import sio, get_user_ids_from_room
-from open_webui.models.users import Users, UserNameResponse
+from beyond_the_loop.models.users import Users, UserNameResponse
 
 from open_webui.models.channels import Channels, ChannelModel, ChannelForm
 from open_webui.models.messages import (

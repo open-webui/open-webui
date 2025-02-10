@@ -32,7 +32,7 @@ from pydantic import BaseModel, ConfigDict
 from starlette.background import BackgroundTask
 
 
-from open_webui.models.models import Models
+from beyond_the_loop.models.models import Models
 from open_webui.utils.misc import (
     calculate_sha256,
 )

@@ -16,7 +16,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from starlette.background import BackgroundTask
 
-from open_webui.models.models import Models
+from beyond_the_loop.models.models import Models
 from open_webui.config import (
     CACHE_DIR,
 )

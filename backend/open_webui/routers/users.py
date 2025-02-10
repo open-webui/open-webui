@@ -3,7 +3,7 @@ from typing import Optional
 
 from open_webui.models.auths import Auths
 from open_webui.models.chats import Chats
-from open_webui.models.users import (
+from beyond_the_loop.models.users import (
     UserModel,
     UserRoleUpdateForm,
     Users,

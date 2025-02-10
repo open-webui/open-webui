@@ -11,7 +11,7 @@ from langchain_core.utils.function_calling import convert_to_openai_function
 
 
 from open_webui.models.tools import Tools
-from open_webui.models.users import UserModel
+from beyond_the_loop.models.users import UserModel
 from open_webui.utils.plugin import load_tools_module_by_id
 
 log = logging.getLogger(__name__)

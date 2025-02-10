@@ -15,7 +15,7 @@ from langchain_core.documents import Document
 from open_webui.config import VECTOR_DB
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.misc import get_last_user_message
-from open_webui.models.users import UserModel
+from beyond_the_loop.models.users import UserModel
 
 from open_webui.env import (
     SRC_LOG_LEVELS,

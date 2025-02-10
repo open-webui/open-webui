@@ -12,7 +12,7 @@ from fastapi import Request
 from starlette.responses import Response, StreamingResponse
 
 
-from open_webui.models.users import UserModel
+from beyond_the_loop.models.users import UserModel
 
 from open_webui.socket.main import (
     get_event_call,
@@ -34,7 +34,7 @@ from open_webui.routers.pipelines import (
 )
 
 from open_webui.models.functions import Functions
-from open_webui.models.models import Models
+from beyond_the_loop.models.models import Models
 
 
 from open_webui.utils.plugin import load_function_module_by_id

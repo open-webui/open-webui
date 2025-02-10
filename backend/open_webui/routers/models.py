@@ -1,10 +1,10 @@
 from typing import Optional
 
-from open_webui.models.models import (
+from beyond_the_loop.models.models import (
     ModelForm,
     ModelModel,
     ModelResponse,
-    ModelUserResponse,
+    ModelCompanyResponse,
     Models,
 )
 from open_webui.constants import ERROR_MESSAGES
@@ -23,7 +23,7 @@ router = APIRouter()
 ###########################
 
 
-@router.get("/", response_model=list[ModelUserResponse])
+@router.get("/", response_model=list[ModelCompanyResponse])
 async def get_models(id: Optional[str] = None, user=Depends(get_verified_user)):
     if user.role == "admin":
         return Models.get_models()

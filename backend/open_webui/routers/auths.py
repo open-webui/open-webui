@@ -18,7 +18,7 @@ from open_webui.models.auths import (
     UpdateProfileForm,
     UserResponse,
 )
-from open_webui.models.users import Users
+from beyond_the_loop.models.users import Users
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
@@ -258,7 +258,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     )
 
                     user = Auths.insert_new_auth(
-                        email=mail, password=str(uuid.uuid4()), name=cn, role=role
+                        email=mail, password=str(uuid.uuid4()), name=cn, company_id="NO_COMPANY", role=role
                     )
 
                     if not user:
@@ -451,6 +451,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             form_data.email.lower(),
             hashed,
             form_data.name,
+            "NO_COMPANY",
             form_data.profile_image_url,
             role,
         )
@@ -564,6 +565,7 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
             form_data.email.lower(),
             hashed,
             form_data.name,
+            form_data.company_id,
             form_data.profile_image_url,
             form_data.role,
         )

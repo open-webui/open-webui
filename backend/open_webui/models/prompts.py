@@ -2,7 +2,7 @@ import time
 from typing import Optional
 
 from open_webui.internal.db import Base, get_db
-from open_webui.models.users import Users, UserResponse
+from beyond_the_loop.models.users import Users, UserResponse
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON

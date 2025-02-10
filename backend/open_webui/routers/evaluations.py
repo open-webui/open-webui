@@ -2,7 +2,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel
 
-from open_webui.models.users import Users, UserModel
+from beyond_the_loop.models.users import Users, UserModel
 from open_webui.models.feedbacks import (
     FeedbackModel,
     FeedbackResponse,

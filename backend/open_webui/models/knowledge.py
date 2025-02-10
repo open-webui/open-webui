@@ -8,7 +8,7 @@ from open_webui.internal.db import Base, get_db
 from open_webui.env import SRC_LOG_LEVELS
 
 from open_webui.models.files import FileMetadataResponse
-from open_webui.models.users import Users, UserResponse
+from beyond_the_loop.models.users import Users, UserResponse
 
 
 from pydantic import BaseModel, ConfigDict

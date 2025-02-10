@@ -3,7 +3,7 @@ import uuid
 from typing import Optional
 
 from open_webui.internal.db import Base, get_db
-from open_webui.models.users import UserModel, Users
+from beyond_the_loop.models.users import UserModel, Users
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel
 from sqlalchemy import Boolean, Column, String, Text
@@ -91,7 +91,8 @@ class SignupForm(BaseModel):
 
 
 class AddUserForm(SignupForm):
-    role: Optional[str] = "pending"
+    role: Optional[str] = "pending",
+    company_id: str
 
 
 class AuthsTable:
@@ -100,6 +101,7 @@ class AuthsTable:
         email: str,
         password: str,
         name: str,
+        company_id: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
         oauth_sub: Optional[str] = None,
@@ -116,7 +118,7 @@ class AuthsTable:
             db.add(result)
 
             user = Users.insert_new_user(
-                id, name, email, profile_image_url, role, oauth_sub
+                id, name, email, company_id, profile_image_url, role, oauth_sub
             )
 
             db.commit()

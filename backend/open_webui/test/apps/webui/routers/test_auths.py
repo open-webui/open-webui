@@ -32,6 +32,7 @@ class TestAuths(AbstractPostgresTest):
             email="john.doe@openwebui.com",
             password=get_password_hash("old_password"),
             name="John Doe",
+            company_id="1",
             profile_image_url="/user.png",
             role="user",
         )
@@ -53,6 +54,7 @@ class TestAuths(AbstractPostgresTest):
             email="john.doe@openwebui.com",
             password=get_password_hash("old_password"),
             name="John Doe",
+            company_id="1",
             profile_image_url="/user.png",
             role="user",
         )
@@ -80,6 +82,7 @@ class TestAuths(AbstractPostgresTest):
             email="john.doe@openwebui.com",
             password=get_password_hash("password"),
             name="John Doe",
+            company_id="1",
             profile_image_url="/user.png",
             role="user",
         )
@@ -142,6 +145,7 @@ class TestAuths(AbstractPostgresTest):
             email="john.doe@openwebui.com",
             password="password",
             name="John Doe",
+            company_id="1",
             profile_image_url="/user.png",
             role="admin",
         )
@@ -159,6 +163,7 @@ class TestAuths(AbstractPostgresTest):
             email="john.doe@openwebui.com",
             password="password",
             name="John Doe",
+            company_id="1",
             profile_image_url="/user.png",
             role="admin",
         )
@@ -174,6 +179,7 @@ class TestAuths(AbstractPostgresTest):
             email="john.doe@openwebui.com",
             password="password",
             name="John Doe",
+            company_id="1",
             profile_image_url="/user.png",
             role="admin",
         )
@@ -190,6 +196,7 @@ class TestAuths(AbstractPostgresTest):
             email="john.doe@openwebui.com",
             password="password",
             name="John Doe",
+            company_id="1",
             profile_image_url="/user.png",
             role="admin",
         )

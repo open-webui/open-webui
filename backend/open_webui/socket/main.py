@@ -4,7 +4,7 @@ import logging
 import sys
 import time
 
-from open_webui.models.users import Users, UserNameResponse
+from beyond_the_loop.models.users import Users, UserNameResponse
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
 

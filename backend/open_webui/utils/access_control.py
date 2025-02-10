@@ -1,5 +1,5 @@
 from typing import Optional, Union, List, Dict, Any
-from open_webui.models.users import Users, UserModel
+from beyond_the_loop.models.users import Users, UserModel
 from open_webui.models.groups import Groups
 
 

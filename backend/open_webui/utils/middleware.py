@@ -25,7 +25,7 @@ from starlette.responses import Response, StreamingResponse
 
 
 from open_webui.models.chats import Chats
-from open_webui.models.users import Users
+from beyond_the_loop.models.users import Users
 from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
@@ -44,9 +44,9 @@ from open_webui.routers.images import image_generations, GenerateImageForm
 from open_webui.utils.webhook import post_webhook
 
 
-from open_webui.models.users import UserModel
+from beyond_the_loop.models.users import UserModel
 from open_webui.models.functions import Functions
-from open_webui.models.models import Models
+from beyond_the_loop.models.models import Models
 
 from open_webui.retrieval.utils import get_sources_from_files
 

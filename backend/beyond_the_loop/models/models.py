@@ -2,10 +2,13 @@ import logging
 import time
 from typing import Optional
 
+from .companies import Companies
 from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.env import SRC_LOG_LEVELS
 
-from open_webui.models.users import Users, UserResponse
+from beyond_the_loop.models.users import Users
+
+from beyond_the_loop.models.companies import CompanyResponse
 
 
 from pydantic import BaseModel, ConfigDict
@@ -78,6 +81,8 @@ class Model(Base):
         Holds a JSON encoded blob of metadata, see `ModelMeta`.
     """
 
+    company_id = Column(Text, nullable=False)
+
     access_control = Column(JSON, nullable=True)  # Controls data access levels.
     # Defines access control rules for this entry.
     # - `None`: Public access, available to all users with the "user" role.
@@ -116,6 +121,8 @@ class ModelModel(BaseModel):
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
+    company_id: str
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -124,8 +131,8 @@ class ModelModel(BaseModel):
 ####################
 
 
-class ModelUserResponse(ModelModel):
-    user: Optional[UserResponse] = None
+class ModelCompanyResponse(ModelModel):
+    company: Optional[CompanyResponse] = None
 
 
 class ModelResponse(ModelModel):
@@ -144,12 +151,13 @@ class ModelForm(BaseModel):
 
 class ModelsTable:
     def insert_new_model(
-        self, form_data: ModelForm, user_id: str
+        self, form_data: ModelForm, user_id: str, company_id: str
     ) -> Optional[ModelModel]:
         model = ModelModel(
             **{
                 **form_data.model_dump(),
                 "user_id": user_id,
+                "company_id": company_id,
                 "created_at": int(time.time()),
                 "updated_at": int(time.time()),
             }
@@ -173,16 +181,16 @@ class ModelsTable:
         with get_db() as db:
             return [ModelModel.model_validate(model) for model in db.query(Model).all()]
 
-    def get_models(self) -> list[ModelUserResponse]:
+    def get_models(self) -> list[ModelCompanyResponse]:
         with get_db() as db:
             models = []
             for model in db.query(Model).filter(Model.base_model_id != None).all():
-                user = Users.get_user_by_id(model.user_id)
+                company = Companies.get_company_by_id(model.company_id)
                 models.append(
-                    ModelUserResponse.model_validate(
+                    ModelCompanyResponse.model_validate(
                         {
                             **ModelModel.model_validate(model).model_dump(),
-                            "user": user.model_dump() if user else None,
+                            "company": company.model_dump() if company else None,
                         }
                     )
                 )
@@ -195,15 +203,15 @@ class ModelsTable:
                 for model in db.query(Model).filter(Model.base_model_id == None).all()
             ]
 
-    def get_models_by_user_id(
-        self, user_id: str, permission: str = "write"
-    ) -> list[ModelUserResponse]:
+    def get_models_by_company_id(
+        self, company_id: str, permission: str = "write"
+    ) -> list[ModelCompanyResponse]:
         models = self.get_models()
         return [
             model
             for model in models
-            if model.user_id == user_id
-            or has_access(user_id, permission, model.access_control)
+            if model.company_id == company_id
+            or has_access(company_id, permission, model.access_control)
         ]
 
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:

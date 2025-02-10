@@ -84,8 +84,8 @@ from open_webui.routers.retrieval import (
 from open_webui.internal.db import Session
 
 from open_webui.models.functions import Functions
-from open_webui.models.models import Models
-from open_webui.models.users import UserModel, Users
+from beyond_the_loop.models.models import Models
+from beyond_the_loop.models.users import UserModel, Users
 
 from open_webui.config import (
     # Ollama

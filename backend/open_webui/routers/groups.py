@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Optional
 
 
-from open_webui.models.users import Users
+from beyond_the_loop.models.users import Users
 from open_webui.models.groups import (
     Groups,
     GroupForm,

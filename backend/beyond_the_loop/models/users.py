@@ -2,14 +2,18 @@ import time
 from typing import Optional
 
 from open_webui.internal.db import Base, JSONField, get_db
-
-
 from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups
 
+from functools import partial
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, Column, String, Text, ForeignKey
+from sqlalchemy.orm import relationship
+
+# TODO: I think this can be removed after we use companies somewhere else in the code
+from .companies import Company
+
 
 ####################
 # User DB Schema
@@ -35,9 +39,12 @@ class User(Base):
 
     oauth_sub = Column(Text, unique=True)
 
+    company_id = Column(String, ForeignKey("company.id", ondelete="CASCADE"), nullable=False)
+    company = relationship("Company", back_populates="users")
+
 
 class UserSettings(BaseModel):
-    ui: Optional[dict] = {}
+    ui: Optional[dict] = partial(dict)
     model_config = ConfigDict(extra="allow")
     pass
 
@@ -61,6 +68,7 @@ class UserModel(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+    company_id: str
 
 ####################
 # Forms
@@ -100,9 +108,10 @@ class UsersTable:
         id: str,
         name: str,
         email: str,
+        company_id: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
-        oauth_sub: Optional[str] = None,
+        oauth_sub: Optional[str] = None
     ) -> Optional[UserModel]:
         with get_db() as db:
             user = UserModel(
@@ -116,6 +125,7 @@ class UsersTable:
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                     "oauth_sub": oauth_sub,
+                    "company_id": company_id
                 }
             )
             result = User(**user.model_dump())
