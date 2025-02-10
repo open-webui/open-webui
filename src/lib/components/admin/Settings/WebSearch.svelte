@@ -52,6 +52,8 @@
 				proxy_url: youtubeProxyUrl
 			}
 		});
+
+		webConfig.search.domain_filter_list = webConfig.search.domain_filter_list.join(', ');
 	};
 
 	onMount(async () => {
