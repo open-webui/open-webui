@@ -16,6 +16,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
 	import Header from '$lib/components/layout/Header.svelte';
+	import Footer from '$lib/components/chat/Footer.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -473,3 +474,5 @@
 		</div>
 	{/if}
 </div>
+<Footer />
+

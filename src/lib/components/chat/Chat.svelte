@@ -89,6 +89,7 @@ import { getTools } from "$lib/apis/tools";
 	import Placeholder from './Placeholder.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import Footer from './Footer.svelte';
 
 export let chatIdProp = "";
 
@@ -2107,7 +2108,7 @@ const mergeResponses = async (messageId, responses, _chatId) => {
 							</div>
 						</div>
 					{:else}
-						<div class="overflow-auto w-full h-full flex items-center fr-background-default--grey">
+						<div class="overflow-auto w-full h-full flex flex-col items-center fr-background-default--grey">
 							<Placeholder
 								{history}
 								{selectedModels}
@@ -2142,6 +2143,7 @@ const mergeResponses = async (messageId, responses, _chatId) => {
 									}
 								}}
 							/>
+							<Footer />
 						</div>
 					{/if}
 				</div>
