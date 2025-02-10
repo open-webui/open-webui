@@ -83,7 +83,6 @@ class KnowledgeModel(BaseModel):
 class KnowledgeUserModel(KnowledgeModel):
     user: Optional[UserResponse] = None
 
-
 class KnowledgeResponse(KnowledgeModel):
     files: Optional[list[FileMetadataResponse | dict]] = None
 
