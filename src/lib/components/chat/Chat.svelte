@@ -1582,7 +1582,7 @@
 					(messages.length == 2 &&
 						messages.at(0)?.role === 'system' &&
 						messages.at(1)?.role === 'user')) &&
-				selectedModels[0] === model.id
+				(selectedModels[0] === model.id || atSelectedModel !== undefined)
 					? {
 							background_tasks: {
 								title_generation: $settings?.title?.auto ?? true,
