@@ -6,9 +6,24 @@
 
 	import { transcribeAudio } from '$lib/apis/audio';
 
-	const i18n = getContext('i18n');
+	interface AudioSTTConfig {
+		engine: string;
+	}
 
-	const dispatch = createEventDispatcher();
+	interface AudioConfig {
+		stt: AudioSTTConfig;
+	}
+
+	interface Config {
+		audio: AudioConfig;
+	}
+
+	const i18n = getContext<{t: (key: string, params?: Record<string, any>) => string}>('i18n');
+
+	const dispatch = createEventDispatcher<{
+		cancel: void;
+		confirm: { text: string } | any;
+	}>();
 
 	export let recording = false;
 	export let className = ' p-2.5 w-full max-w-full';
@@ -17,7 +32,7 @@
 	let confirmed = false;
 
 	let durationSeconds = 0;
-	let durationCounter = null;
+	let durationCounter: number | null = null;
 
 	let transcription = '';
 
@@ -38,23 +53,62 @@
 		stopRecording();
 	}
 
-	const formatSeconds = (seconds) => {
+	const formatSeconds = (seconds: number) => {
 		const minutes = Math.floor(seconds / 60);
 		const remainingSeconds = seconds % 60;
 		const formattedSeconds = remainingSeconds < 10 ? `0${remainingSeconds}` : remainingSeconds;
 		return `${minutes}:${formattedSeconds}`;
 	};
 
-	let stream;
-	let speechRecognition;
+	let stream: MediaStream | null = null;
 
-	let mediaRecorder;
-	let audioChunks = [];
+	interface SpeechRecognition extends EventTarget {
+		continuous: boolean;
+		start(): void;
+		stop(): void;
+		onresult: (event: SpeechRecognitionEvent) => void;
+		onend: () => void;
+		onerror: (event: { error: string }) => void;
+	}
+
+	let speechRecognition: SpeechRecognition | null = null;
+
+	let mediaRecorder: MediaRecorder | null = null;
+	let audioChunks: Blob[] = [];
 
 	const MIN_DECIBELS = -45;
 	let VISUALIZER_BUFFER_LENGTH = 300;
 
 	let visualizerData = Array(VISUALIZER_BUFFER_LENGTH).fill(0);
+
+	let timeoutId: number | null = null;
+
+	let resizeObserver: ResizeObserver;
+	let containerWidth: number;
+
+	let maxVisibleItems = 300;
+	$: maxVisibleItems = Math.floor(containerWidth / 5); // 2px width + 0.5px gap
+
+	onMount(() => {
+		// listen to width changes
+		resizeObserver = new ResizeObserver(() => {
+			VISUALIZER_BUFFER_LENGTH = Math.floor(window.innerWidth / 4);
+			if (visualizerData.length > VISUALIZER_BUFFER_LENGTH) {
+				visualizerData = visualizerData.slice(visualizerData.length - VISUALIZER_BUFFER_LENGTH);
+			} else {
+				visualizerData = Array(VISUALIZER_BUFFER_LENGTH - visualizerData.length)
+					.fill(0)
+					.concat(visualizerData);
+			}
+		});
+
+		resizeObserver.observe(document.body);
+	});
+
+	onDestroy(() => {
+		// remove resize observer
+		resizeObserver.disconnect();
+	});
 
 	// Function to calculate the RMS level from time domain data
 	const calculateRMS = (data: Uint8Array) => {
@@ -66,7 +120,7 @@
 		return Math.sqrt(sumSquares / data.length);
 	};
 
-	const normalizeRMS = (rms) => {
+	const normalizeRMS = (rms: number) => {
 		rms = rms * 10;
 		const exp = 1.5; // Adjust exponent value; values greater than 1 expand larger numbers more and compress smaller numbers more
 		const scaledRMS = Math.pow(rms, exp);
@@ -75,7 +129,7 @@
 		return Math.min(1.0, Math.max(0.01, scaledRMS));
 	};
 
-	const analyseAudio = (stream) => {
+	const analyseAudio = (stream: MediaStream) => {
 		const audioContext = new AudioContext();
 		const audioStreamSource = audioContext.createMediaStreamSource(stream);
 
@@ -130,28 +184,48 @@
 		detectSound();
 	};
 
-	const transcribeHandler = async (audioBlob) => {
-		// Create a blob from the audio chunks
+	// Add interface for transcription response
+	interface TranscriptionResponse {
+		text: string;
+		filename?: string;
+	}
 
+	// Update the transcribeHandler function with better error handling
+	const transcribeHandler = async (audioBlob: Blob) => {
 		await tick();
 		const file = blobToFile(audioBlob, 'recording.wav');
 
-		const res = await transcribeAudio(localStorage.token, file).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
+		try {
+			const res = await transcribeAudio(localStorage.token, file);
+			if (!res) {
+				throw new Error('No response from transcription service');
+			}
 
-		if (res) {
-			console.log(res);
-			dispatch('confirm', res);
+			console.log('Transcription response:', res);
+			
+			// Check if response has expected format
+			if (typeof res === 'object' && 'text' in res) {
+				dispatch('confirm', res);
+			} else {
+				throw new Error('Invalid transcription response format');
+			}
+		} catch (error) {
+			// More specific error message
+			const errorMessage = error instanceof Error ? error.message : 'Transcription failed';
+			toast.error(errorMessage);
+			
+			// Reset state on error
+			confirmed = false;
+			loading = false;
+			recording = false;
 		}
 	};
 
-	const saveRecording = (blob) => {
+	const saveRecording = (blob: Blob) => {
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement('a');
 		document.body.appendChild(a);
-		a.style = 'display: none';
+		a.setAttribute('style', 'display: none');
 		a.href = url;
 		a.download = 'recording.wav';
 		a.click();
@@ -177,18 +251,27 @@
 		mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
 		mediaRecorder.onstop = async () => {
 			console.log('Recording stopped');
-			if ($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web') {
-				audioChunks = [];
-			} else {
-				if (confirmed) {
-					const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-
-					await transcribeHandler(audioBlob);
-
-					confirmed = false;
-					loading = false;
+			const sttEngine = $config?.audio?.stt?.engine || ($settings?.audio?.stt?.engine ?? '');
+			
+			try {
+				if (sttEngine === 'web') {
+					audioChunks = [];
+				} else {
+					if (confirmed) {
+						const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+						await transcribeHandler(audioBlob);
+					}
+					audioChunks = [];
+					recording = false;
 				}
-				audioChunks = [];
+			} catch (error) {
+				console.error('Error in mediaRecorder.onstop:', error);
+				const errorMessage = error instanceof Error ? error.message : 'Recording failed';
+				toast.error(errorMessage);
+				
+				// Reset state on error
+				confirmed = false;
+				loading = false;
 				recording = false;
 			}
 		};
@@ -204,28 +287,24 @@
 				// Set the timeout for turning off the recognition after inactivity (in milliseconds)
 				const inactivityTimeout = 2000; // 3 seconds
 
-				let timeoutId;
 				// Start recognition
 				speechRecognition.start();
 
 				// Event triggered when speech is recognized
-				speechRecognition.onresult = async (event) => {
-					// Clear the inactivity timeout
+				speechRecognition.onresult = async (event: SpeechRecognitionEvent) => {
 					clearTimeout(timeoutId);
-
-					// Handle recognized speech
 					console.log(event);
-					const transcript = event.results[Object.keys(event.results).length - 1][0].transcript;
-
+					const transcript = event.results[event.results.length - 1][0].transcript;
 					transcription = `${transcription}${transcript}`;
 
 					await tick();
 					document.getElementById('chat-input')?.focus();
 
-					// Restart the inactivity timeout
 					timeoutId = setTimeout(() => {
 						console.log('Speech recognition turned off due to inactivity.');
-						speechRecognition.stop();
+						if (speechRecognition) {
+							speechRecognition.stop();
+						}
 					}, inactivityTimeout);
 				};
 
@@ -241,11 +320,11 @@
 				};
 
 				// Event triggered when an error occurs
-				speechRecognition.onerror = function (event) {
+				speechRecognition.onerror = function (event: { error: string }) {
 					console.log(event);
-					toast.error($i18n.t(`Speech recognition error: {{error}}`, { error: event.error }));
+					const errorMessage = i18n.t(`Speech recognition error: {{error}}`, { error: event.error });
+					toast.error(errorMessage);
 					dispatch('cancel');
-
 					stopRecording();
 				};
 			}
@@ -266,7 +345,7 @@
 
 		if (stream) {
 			const tracks = stream.getTracks();
-			tracks.forEach((track) => track.stop());
+			tracks.forEach((track: MediaStreamTrack) => track.stop());
 		}
 
 		stream = null;
@@ -283,38 +362,11 @@
 
 		if (stream) {
 			const tracks = stream.getTracks();
-			tracks.forEach((track) => track.stop());
+			tracks.forEach((track: MediaStreamTrack) => track.stop());
 		}
 
 		stream = null;
 	};
-
-	let resizeObserver;
-	let containerWidth;
-
-	let maxVisibleItems = 300;
-	$: maxVisibleItems = Math.floor(containerWidth / 5); // 2px width + 0.5px gap
-
-	onMount(() => {
-		// listen to width changes
-		resizeObserver = new ResizeObserver(() => {
-			VISUALIZER_BUFFER_LENGTH = Math.floor(window.innerWidth / 4);
-			if (visualizerData.length > VISUALIZER_BUFFER_LENGTH) {
-				visualizerData = visualizerData.slice(visualizerData.length - VISUALIZER_BUFFER_LENGTH);
-			} else {
-				visualizerData = Array(VISUALIZER_BUFFER_LENGTH - visualizerData.length)
-					.fill(0)
-					.concat(visualizerData);
-			}
-		});
-
-		resizeObserver.observe(document.body);
-	});
-
-	onDestroy(() => {
-		// remove resize observer
-		resizeObserver.disconnect();
-	});
 </script>
 
 <div
