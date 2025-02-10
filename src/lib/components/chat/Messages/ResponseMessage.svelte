@@ -269,8 +269,6 @@
 					await $TTSWorker.init();
 				}
 
-				console.log($TTSWorker);
-
 				for (const [idx, sentence] of messageContentParts.entries()) {
 					const blob = await $TTSWorker
 						.generate({

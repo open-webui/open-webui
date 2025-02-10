@@ -16,7 +16,8 @@
 		showCallOverlay,
 		tools,
 		user as _user,
-		showControls
+		showControls,
+		TTSWorker
 	} from '$lib/stores';
 
 	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
@@ -43,6 +44,7 @@
 	import PhotoSolid from '../icons/PhotoSolid.svelte';
 	import Photo from '../icons/Photo.svelte';
 	import CommandLine from '../icons/CommandLine.svelte';
+	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
 	const i18n = getContext('i18n');
 
@@ -1280,6 +1282,16 @@
 																	}
 
 																	stream = null;
+
+																	if (!$TTSWorker) {
+																		await TTSWorker.set(
+																			new KokoroWorker({
+																				dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
+																			})
+																		);
+
+																		await $TTSWorker.init();
+																	}
 
 																	showCallOverlay.set(true);
 																	showControls.set(true);
