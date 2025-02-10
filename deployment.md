@@ -38,14 +38,7 @@ gcloud container images list
 ## **🚀 Step 4: Deploy the Container on Google Cloud Run**
 Deploy your image to **Google Cloud Run** with:
 ```sh
-gcloud run deploy openwebui-service \
-    --image gcr.io/cogniforce/openwebui-service \
-    --platform managed \
-    --region europe-west4 \
-    --allow-unauthenticated \
-    --memory 1Gi \
-    --cpu 2 \
-    --timeout 300s
+gcloud run deploy openwebui-service --image gcr.io/cogniforce/openwebui-service --platform managed --region europe-west4 --allow-unauthenticated  --memory 1Gi --cpu 2 --timeout 300s
 ```
 
 ---
@@ -77,3 +70,13 @@ docker push gcr.io/cogniforce/openwebui-service
 ```sh
 gcloud run deploy openwebui-service --image gcr.io/cogniforce/openwebui-service --region europe-west4 --allow-unauthenticated
 ```
+4️⃣ **Set the Database Connection (DATABASE_URL)**:
+
+After deploying, set the environment variable for PostgreSQL:
+```sh
+gcloud run services update openwebui-service --region europe-west4 --set-env-vars DATABASE_URL="postgresql://<dbuser>:<dbpass>@34.91.14.23:5432/postgres"
+```
+Replace:
+
+    <dbuser> → Your PostgreSQL username
+    <dbpass> → Your PostgreSQL password
