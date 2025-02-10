@@ -94,22 +94,29 @@ def set_faster_whisper_model(model: str, auto_update: bool = False):
     if model:
         from faster_whisper import WhisperModel
 
-        faster_whisper_kwargs = {
-            "model_size_or_path": model,
-            "device": DEVICE_TYPE if DEVICE_TYPE and DEVICE_TYPE == "cuda" else "cpu",
-            "compute_type": "int8",
-            "download_root": WHISPER_MODEL_DIR,
-            "local_files_only": not auto_update,
-        }
-
         try:
+            # First try with local_files_only=True
+            faster_whisper_kwargs = {
+                "model_size_or_path": model,
+                "device": DEVICE_TYPE if DEVICE_TYPE and DEVICE_TYPE == "cuda" else "cpu",
+                "compute_type": "int8",
+                "download_root": WHISPER_MODEL_DIR,
+                "local_files_only": not auto_update,
+            }
             whisper_model = WhisperModel(**faster_whisper_kwargs)
-        except Exception:
+        except Exception as e:
             log.warning(
-                "WhisperModel initialization failed, attempting download with local_files_only=False"
+                f"WhisperModel initialization failed with local_files_only=True: {str(e)}"
             )
-            faster_whisper_kwargs["local_files_only"] = False
-            whisper_model = WhisperModel(**faster_whisper_kwargs)
+            # If local files not found or auto_update is True, try downloading
+            if auto_update or "Cannot find an appropriate cached snapshot" in str(e):
+                log.info("Attempting to download model from HuggingFace hub...")
+                faster_whisper_kwargs["local_files_only"] = False
+                try:
+                    whisper_model = WhisperModel(**faster_whisper_kwargs)
+                except Exception as download_error:
+                    log.error(f"Failed to download model: {str(download_error)}")
+                    raise download_error
     return whisper_model
 
 
