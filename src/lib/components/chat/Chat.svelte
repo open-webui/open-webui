@@ -1556,7 +1556,8 @@
 							? imageGenerationEnabled
 							: false,
 					code_interpreter:
-						$user.role === 'admin' || $user?.permissions?.features?.code_interpreter
+						$config?.features?.enable_code_interpreter &&
+						($user.role === 'admin' || $user?.permissions?.features?.code_interpreter)
 							? codeInterpreterEnabled
 							: false,
 					web_search:

@@ -97,6 +97,13 @@ from open_webui.config import (
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
+    # Code Interpreter
+    ENABLE_CODE_INTERPRETER,
+    CODE_INTERPRETER_ENGINE,
+    CODE_INTERPRETER_JUPYTER_URL,
+    CODE_INTERPRETER_JUPYTER_AUTH,
+    CODE_INTERPRETER_JUPYTER_AUTH_TOKEN,
+    CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD,
     # Image
     AUTOMATIC1111_API_AUTH,
     AUTOMATIC1111_BASE_URL,
@@ -130,6 +137,7 @@ from open_webui.config import (
     AUDIO_TTS_AZURE_SPEECH_REGION,
     AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
     WHISPER_MODEL,
+    DEEPGRAM_API_KEY,
     WHISPER_MODEL_AUTO_UPDATE,
     WHISPER_MODEL_DIR,
     # Retrieval
@@ -569,6 +577,23 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.config.RAG_EMBEDDING_BATCH_SIZE,
 )
 
+########################################
+#
+# CODE INTERPRETER
+#
+########################################
+
+app.state.config.ENABLE_CODE_INTERPRETER = ENABLE_CODE_INTERPRETER
+app.state.config.CODE_INTERPRETER_ENGINE = CODE_INTERPRETER_ENGINE
+
+app.state.config.CODE_INTERPRETER_JUPYTER_URL = CODE_INTERPRETER_JUPYTER_URL
+app.state.config.CODE_INTERPRETER_JUPYTER_AUTH = CODE_INTERPRETER_JUPYTER_AUTH
+app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN = (
+    CODE_INTERPRETER_JUPYTER_AUTH_TOKEN
+)
+app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD = (
+    CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD
+)
 
 ########################################
 #
@@ -611,6 +636,7 @@ app.state.config.STT_ENGINE = AUDIO_STT_ENGINE
 app.state.config.STT_MODEL = AUDIO_STT_MODEL
 
 app.state.config.WHISPER_MODEL = WHISPER_MODEL
+app.state.config.DEEPGRAM_API_KEY = DEEPGRAM_API_KEY
 
 app.state.config.TTS_OPENAI_API_BASE_URL = AUDIO_TTS_OPENAI_API_BASE_URL
 app.state.config.TTS_OPENAI_API_KEY = AUDIO_TTS_OPENAI_API_KEY
@@ -753,6 +779,7 @@ app.include_router(openai.router, prefix="/openai", tags=["openai"])
 app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])
 app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["tasks"])
 app.include_router(images.router, prefix="/api/v1/images", tags=["images"])
+
 app.include_router(audio.router, prefix="/api/v1/audio", tags=["audio"])
 app.include_router(retrieval.router, prefix="/api/v1/retrieval", tags=["retrieval"])
 
@@ -1013,12 +1040,14 @@ async def get_app_config(request: Request):
                 {
                     "enable_channels": app.state.config.ENABLE_CHANNELS,
                     "enable_web_search": app.state.config.ENABLE_RAG_WEB_SEARCH,
-                    "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
+                    "enable_code_interpreter": app.state.config.ENABLE_CODE_INTERPRETER,
                     "enable_image_generation": app.state.config.ENABLE_IMAGE_GENERATION,
+                    "enable_autocomplete_generation": app.state.config.ENABLE_AUTOCOMPLETE_GENERATION,
                     "enable_community_sharing": app.state.config.ENABLE_COMMUNITY_SHARING,
                     "enable_message_rating": app.state.config.ENABLE_MESSAGE_RATING,
                     "enable_admin_export": ENABLE_ADMIN_EXPORT,
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
+                    "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                 }
                 if user is not None
                 else {}

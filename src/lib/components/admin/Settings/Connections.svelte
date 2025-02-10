@@ -101,14 +101,17 @@
 	const addOpenAIConnectionHandler = async (connection) => {
 		OPENAI_API_BASE_URLS = [...OPENAI_API_BASE_URLS, connection.url];
 		OPENAI_API_KEYS = [...OPENAI_API_KEYS, connection.key];
-		OPENAI_API_CONFIGS[OPENAI_API_BASE_URLS.length] = connection.config;
+		OPENAI_API_CONFIGS[OPENAI_API_BASE_URLS.length - 1] = connection.config;
 
 		await updateOpenAIHandler();
 	};
 
 	const addOllamaConnectionHandler = async (connection) => {
 		OLLAMA_BASE_URLS = [...OLLAMA_BASE_URLS, connection.url];
-		OLLAMA_API_CONFIGS[OLLAMA_BASE_URLS.length] = connection.config;
+		OLLAMA_API_CONFIGS[OLLAMA_BASE_URLS.length - 1] = {
+			...connection.config,
+			key: connection.key
+		};
 
 		await updateOllamaHandler();
 	};
@@ -244,7 +247,11 @@
 											);
 											OPENAI_API_KEYS = OPENAI_API_KEYS.filter((key, keyIdx) => idx !== keyIdx);
 
-											delete OPENAI_API_CONFIGS[idx];
+											let newConfig = {};
+											OPENAI_API_BASE_URLS.forEach((url, newIdx) => {
+												newConfig[newIdx] = OPENAI_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
+											});
+											OPENAI_API_CONFIGS = newConfig;
 										}}
 									/>
 								{/each}
@@ -302,7 +309,12 @@
 										}}
 										onDelete={() => {
 											OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url, urlIdx) => idx !== urlIdx);
-											delete OLLAMA_API_CONFIGS[idx];
+
+											let newConfig = {};
+											OLLAMA_BASE_URLS.forEach((url, newIdx) => {
+												newConfig[newIdx] = OLLAMA_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
+											});
+											OLLAMA_API_CONFIGS = newConfig;
 										}}
 									/>
 								{/each}
