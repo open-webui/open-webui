@@ -315,7 +315,8 @@ class OAuthManager:
                 username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
 
                 name = user_data.get(username_claim)
-                if not isinstance(name, str):
+                if not name:
+                    log.warning("Username claim is missing, using email as name")
                     name = email
 
                 role = self.get_user_role(None, user_data)
