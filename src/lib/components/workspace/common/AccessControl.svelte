@@ -11,7 +11,10 @@
 
 	export let onChange: Function = () => {};
 
-	export let accessControl = null;
+	export let accessControl = {
+		read: { group_ids: [], user_ids: [] },
+		write: { group_ids: [], user_ids: [] }
+	};
 
 	let selectedGroupId = '';
 	let groups = [];
@@ -19,16 +22,6 @@
 	onMount(async () => {
 		try {
 			groups = await getGroups(localStorage.token);
-
-			if (!accessControl) {
-				accessControl = {
-					read: { group_ids: [], user_ids: [] },
-					write: {
-						group_ids: [],
-						user_ids: []
-					}
-				};
-			}
 		} catch (error) {
 			console.error('Error loading groups:', error);
 		}
@@ -145,8 +138,8 @@
 	{#if accessControl !== null}
 		{@const accessGroups = groups.filter(
 			(group) =>
-				accessControl.read.group_ids.includes(group.id) ||
-				accessControl.write.group_ids.includes(group.id)
+				(accessControl?.read?.group_ids || []).includes(group.id) ||
+				(accessControl?.write?.group_ids || []).includes(group.id)
 		)}
 		<div>
 			<div class="">
@@ -169,7 +162,7 @@
 									<option class=" text-gray-700" value="" disabled selected
 										>{$i18n.t('Select a group')}</option
 									>
-									{#each groups.filter((group) => !accessControl.read.group_ids.includes(group.id) && !accessControl.write.group_ids.includes(group.id)) as group}
+									{#each groups.filter((group) => !(accessControl?.read?.group_ids || []).includes(group.id) && !(accessControl?.write?.group_ids || []).includes(group.id)) as group}
 										<option class=" text-gray-700" value={group.id}>{group.name}</option>
 									{/each}
 								</select>
