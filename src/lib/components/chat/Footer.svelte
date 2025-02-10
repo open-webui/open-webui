@@ -1,8 +1,4 @@
-<script lang="ts">
-  import { WEBUI_BASE_URL } from '$lib/constants';
-</script>
-
-<footer class="flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-4 border-t border-gray-200 dark:border-gray-800 w-full gap-4 md:gap-0">
+<footer class="flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-4 border-t border-gray-200 dark:border-gray-800 w-full gap-4 md:gap-0 text-gray-700 dark:text-gray-300">
   <div class="flex flex-col items-center">
     <img 
       src="/assets/images/marianne.svg" 
