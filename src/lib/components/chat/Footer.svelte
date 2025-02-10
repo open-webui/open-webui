@@ -6,8 +6,8 @@
       class="h-6 w-auto"
     />
     <div class="flex flex-col items-center">
-      <span class="text-sm md:text-l font-medium uppercase whitespace-nowrap">DINUM</span>
-      <span class="text-sm md:text-l font-medium uppercase whitespace-nowrap">ETALAB</span>
+      <span class="text-sm md:text-l font-medium uppercase whitespace-nowrap">République</span>
+      <span class="text-sm md:text-l font-medium uppercase whitespace-nowrap">Française</span>
     </div>
   </div>
   
