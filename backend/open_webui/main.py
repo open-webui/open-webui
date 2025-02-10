@@ -217,6 +217,7 @@ from open_webui.config import (
     EVALUATION_ARENA_MODELS,
     # WebUI (OAuth)
     ENABLE_OAUTH_ROLE_MANAGEMENT,
+    DISABLE_NON_OAUTH_ROLE_MANAGEMENT,
     OAUTH_ROLES_CLAIM,
     OAUTH_EMAIL_CLAIM,
     OAUTH_PICTURE_CLAIM,
@@ -437,7 +438,6 @@ app.state.config.ENABLE_OAUTH_ROLE_MANAGEMENT = ENABLE_OAUTH_ROLE_MANAGEMENT
 app.state.config.OAUTH_ROLES_CLAIM = OAUTH_ROLES_CLAIM
 app.state.config.OAUTH_ALLOWED_ROLES = OAUTH_ALLOWED_ROLES
 app.state.config.OAUTH_ADMIN_ROLES = OAUTH_ADMIN_ROLES
-
 app.state.config.ENABLE_LDAP = ENABLE_LDAP
 app.state.config.LDAP_SERVER_LABEL = LDAP_SERVER_LABEL
 app.state.config.LDAP_SERVER_HOST = LDAP_SERVER_HOST
@@ -1022,6 +1022,7 @@ async def get_app_config(request: Request):
                     "enable_autocomplete_generation": app.state.config.ENABLE_AUTOCOMPLETE_GENERATION,
                     "enable_admin_export": ENABLE_ADMIN_EXPORT,
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
+                    "disable_non_oauth_role_management": DISABLE_NON_OAUTH_ROLE_MANAGEMENT,
                 }
                 if user is not None
                 else {}

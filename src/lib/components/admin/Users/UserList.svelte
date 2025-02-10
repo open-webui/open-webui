@@ -154,19 +154,20 @@
 					placeholder={$i18n.t('Search')}
 				/>
 			</div>
-
-			<div>
-				<Tooltip content={$i18n.t('Add User')}>
-					<button
-						class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
-						on:click={() => {
-							showAddUserModal = !showAddUserModal;
-						}}
-					>
-						<Plus className="size-3.5" />
-					</button>
-				</Tooltip>
-			</div>
+			{#if !$config.features.disable_non_oauth_role_management}
+				<div>
+					<Tooltip content={$i18n.t('Add User')}>
+						<button
+							class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
+							on:click={() => {
+								showAddUserModal = !showAddUserModal;
+							}}
+						>
+							<Plus className="size-3.5" />
+						</button>
+					</Tooltip>
+				</div>
+			{/if}
 		</div>
 	</div>
 </div>
@@ -337,6 +338,7 @@
 									updateRoleHandler(user.id, 'pending');
 								}
 							}}
+							disabled={$config.features.disable_non_oauth_role_management}
 						>
 							<Badge
 								type={user.role === 'admin' ? 'info' : user.role === 'user' ? 'success' : 'muted'}
@@ -446,8 +448,10 @@
 	</table>
 </div>
 
-<div class=" text-gray-500 text-xs mt-1.5 text-right">
-	ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
-</div>
+{#if !$config.features.disable_non_oauth_role_management}
+	<div class=" text-gray-500 text-xs mt-1.5 text-right">
+		ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
+	</div>
+{/if}
 
 <Pagination bind:page count={users.length} />

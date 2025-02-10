@@ -452,6 +452,11 @@ ENABLE_OAUTH_ROLE_MANAGEMENT = PersistentConfig(
     os.environ.get("ENABLE_OAUTH_ROLE_MANAGEMENT", "False").lower() == "true",
 )
 
+DISABLE_NON_OAUTH_ROLE_MANAGEMENT = (
+    os.environ.get("DISABLE_NON_OAUTH_ROLE_MANAGEMENT", "False").lower() == "true"
+    and ENABLE_OAUTH_ROLE_MANAGEMENT.value
+)
+
 ENABLE_OAUTH_GROUP_MANAGEMENT = PersistentConfig(
     "ENABLE_OAUTH_GROUP_MANAGEMENT",
     "oauth.enable_group_mapping",
