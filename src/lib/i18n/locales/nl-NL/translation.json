@@ -903,6 +903,7 @@
 	"System": "Systeem",
 	"System Instructions": "Systeem instructies",
 	"System Prompt": "Systeem prompt",
+	"Title Generation": "",
 	"Tags Generation": "",
 	"Tags Generation Prompt": "Prompt voor taggeneratie",
 	"Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting. (default: 1)": "Tail free sampling wordt gebruikt om de impact van minder waarschijnlijke tokens uit de uitvoer te verminderen. Een hogere waarde (bv. 2,0) zal de impact meer verminderen, terwijl een waarde van 1,0 deze instelling uitschakelt. (standaard: 1)",

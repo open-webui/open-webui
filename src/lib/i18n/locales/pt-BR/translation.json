@@ -903,6 +903,7 @@
 	"System": "Sistema",
 	"System Instructions": "Instruções do sistema",
 	"System Prompt": "Prompt do Sistema",
+	"Title Generation": "",
 	"Tags Generation": "",
 	"Tags Generation Prompt": "Prompt para geração de Tags",
 	"Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting. (default: 1)": "A amostragem *tail free* é usada para reduzir o impacto de tokens menos prováveis na saída. Um valor mais alto (por exemplo, 2,0) reduzirá mais o impacto, enquanto um valor de 1,0 desativa essa configuração. (Padrão: 1)",
