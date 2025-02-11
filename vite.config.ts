@@ -1,4 +1,3 @@
-@ -1,34 +1,35 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
