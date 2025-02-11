@@ -7,6 +7,8 @@ from markdown import markdown
 
 import site
 from fpdf import FPDF
+import textwrap
+import re
 
 from open_webui.env import STATIC_DIR, FONTS_DIR
 from open_webui.models.chats import ChatTitleMessagesForm
@@ -39,6 +41,10 @@ class PDFGenerator:
             # Log the error if necessary
             return ""
 
+    def _break_long_content(self, text: str, max_length: int = 80) -> str:
+        pattern = re.compile(r'(\S{' + str(max_length) + r',})')
+        return pattern.sub(lambda match: "<br/>".join(textwrap.wrap(match.group(0), max_length)), text)
+
     def _build_html_message(self, message: Dict[str, Any]) -> str:
         """Build HTML for a single message."""
         role = message.get("role", "user")
@@ -54,6 +60,7 @@ class PDFGenerator:
         # html_content = markdown(content, extensions=["pymdownx.extra"])
 
         content = content.replace("\n", "<br/>")
+        content = self._break_long_content(content)
         html_message = f"""
             <div>
                 <div>
