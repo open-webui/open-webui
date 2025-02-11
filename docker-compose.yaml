@@ -1,34 +1,37 @@
+version: '3.8'
+
 services:
-  ollama:
-    volumes:
-      - ollama:/root/.ollama
-    container_name: ollama
-    pull_policy: always
-    tty: true
+  litellm:
+    container_name: litellm
+    image: ghcr.io/berriai/litellm:main-stable
     restart: unless-stopped
-    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./litellm-config.yaml:/app/config.yaml
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    extra_hosts:
+      - host.docker.internal:host-gateway
 
   open-webui:
     build:
       context: .
       args:
-        OLLAMA_BASE_URL: '/ollama'
+        LITELLM_BASE_URL: '/litellm'
       dockerfile: Dockerfile
     image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
     container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
     depends_on:
-      - ollama
+      - litellm
     ports:
-      - ${OPEN_WEBUI_PORT-3000}:8080
+      - "8080:8080"  # Open Web UI port
     environment:
-      - 'OLLAMA_BASE_URL=http://ollama:11434'
-      - 'WEBUI_SECRET_KEY='
+      - "OPENAI_API_BASE_URL=http://litellm:4000/v1"  # Point Open Web UI to LiteLLM
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
 
 volumes:
-  ollama: {}
   open-webui: {}

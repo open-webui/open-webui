@@ -59,7 +59,6 @@ class Model(Base):
     """
         The model's id as used in the API. If set to an existing model, it will override the model.
     """
-    user_id = Column(Text)
 
     base_model_id = Column(Text, nullable=True)
     """
@@ -108,7 +107,6 @@ class Model(Base):
 
 class ModelModel(BaseModel):
     id: str
-    user_id: str
     base_model_id: Optional[str] = None
 
     name: str
@@ -151,12 +149,11 @@ class ModelForm(BaseModel):
 
 class ModelsTable:
     def insert_new_model(
-        self, form_data: ModelForm, user_id: str, company_id: str
+        self, form_data: ModelForm, company_id: str
     ) -> Optional[ModelModel]:
         model = ModelModel(
             **{
                 **form_data.model_dump(),
-                "user_id": user_id,
                 "company_id": company_id,
                 "created_at": int(time.time()),
                 "updated_at": int(time.time()),

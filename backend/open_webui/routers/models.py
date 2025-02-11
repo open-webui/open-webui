@@ -10,10 +10,10 @@ from beyond_the_loop.models.models import (
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
-
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
 
+from beyond_the_loop.models.companies import Companies
 
 router = APIRouter()
 
@@ -68,7 +68,9 @@ async def create_new_model(
         )
 
     else:
-        model = Models.insert_new_model(form_data, user.id)
+        company = Companies.get_company_by_id(user.company_id)
+
+        model = Models.insert_new_model(form_data, company.id)
         if model:
             return model
         else:

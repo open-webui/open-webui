@@ -26,6 +26,9 @@ ARG BUILD_HASH
 
 WORKDIR /app
 
+# Set the Node.js memory limit to 8GB
+ENV NODE_OPTIONS="--max-old-space-size=8240"
+
 COPY package.json package-lock.json ./
 RUN npm ci
 
