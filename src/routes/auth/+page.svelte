@@ -27,7 +27,7 @@
 	import { PUBLIC_PRIVY_APP_ID } from "$env/static/public";
 	import { PUBLIC_PRIVY_CLIENT_ID } from "$env/static/public";
 
-	console.log('ffff',PUBLIC_PRIVY_APP_ID, PUBLIC_PRIVY_CLIENT_ID);
+	// console.log('ffff',PUBLIC_PRIVY_APP_ID, PUBLIC_PRIVY_CLIENT_ID);
 
 	// does nothing just prevents unused tsc warning
 	used(PrivyProvider);
@@ -139,10 +139,12 @@
 	});
 </script>
 
+
 <svelte:head>
 	<title>
 		{`${$WEBUI_NAME}`}
 	</title>
+	<script type="module" src="https://unpkg.com/@splinetool/viewer@1.9.63/build/spline-viewer.js"></script>
 </svelte:head>
 
 <OnBoarding
@@ -154,28 +156,33 @@
 />
 
 <div class="w-full h-screen max-h-[100dvh] text-white relative">
-	<div class="w-full h-full absolute top-0 left-0 bg-white dark:bg-black"></div>
+	<div class="w-full h-full absolute top-0 left-0 bg-transparent" style="z-index: 10;">
+		<spline-viewer
+			url="/static/scene.splinecode.json"
+			style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;"
+			loading-anim="true"
+		></spline-viewer>
+	</div>
 
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
 
 	{#if loaded}
-		<div class="fixed m-10 z-50">
-			<div class="flex space-x-2">
-				<div class=" self-center">
-					<img
-						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/splash.png"
-						class=" w-6 rounded-full"
-						alt="logo"
-					/>
-				</div>
-			</div>
-		</div>
+		<div class="fixed bg-transparent h-[80vh] w-full flex items-center justify-center font-primary z-50 text-black dark:text-white"
+			style="pointer-events: none;">
 
-		<div
-			class="fixed bg-transparent min-h-screen w-full flex justify-center font-primary z-50 text-black dark:text-white"
-		>
-			<div class="w-full sm:max-w-md px-10 min-h-screen flex flex-col text-center">
+			<div class="w-full sm:max-w-md px-10 flex flex-col text-center bg-white/90 dark:bg-gray-900/90 rounded-2xl p-8 shadow-xl backdrop-blur-sm"
+				style="pointer-events: auto;">
+				<div class="flex space-x-2">
+					<div class=" self-center">
+						<img
+							crossorigin="anonymous"
+							src="{WEBUI_BASE_URL}/static/splash.png"
+							class=" w-6 rounded-full"
+							alt="logo"
+						/>
+					</div>
+				</div>
+
 				{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
 					<div class=" my-auto pb-10 w-full">
 						<div

@@ -886,7 +886,7 @@
 		</div>
 
 		<div class="bottom-0 w-full">
-			<video width="320" height="568" controls>
+			<video width="320" height="568" loop autoplay>
 				<source src="/static/27484_1738840963.mp4" type="video/mp4">
 				Your browser does not support the video tag.
 			</video>

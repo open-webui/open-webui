@@ -360,3 +360,31 @@ input[type='number'] {
 .hljs-strong {
 	font-weight: 700;
 }
+
+spline-viewer {
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
+}
+
+spline-viewer canvas {
+    width: 100% !important;
+    height: 100% !important;
+    outline: none !important;
+}
+
+/* Custom backdrop styles */
+.backdrop-blur-sm {
+	backdrop-filter: blur(4px);
+}
+
+.bg-white\/90 {
+	background-color: rgba(17, 24, 39, 0.8);
+	--tw-text-opacity: 1;
+	color: rgb(255 255 255 / var(--tw-text-opacity));
+	border:1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .dark\:bg-gray-900\/90 {
+	background-color: rgba(17, 24, 39, 0.9);
+}
