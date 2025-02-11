@@ -668,27 +668,26 @@ const uploadYoutubeTranscription = async (url) => {
 //////////////////////////
 
 const initNewChat = async () => {
-	if ($page.url.searchParams.get("models")) {
-		selectedModels = $page.url.searchParams.get("models")?.split(",");
-	} else if ($page.url.searchParams.get("model")) {
-		const urlModels = $page.url.searchParams.get("model")?.split(",");
+	console.log('initNewChat - starting selectedModels:', selectedModels);
+
+	if ($page.url.searchParams.get('models')) {
+		selectedModels = $page.url.searchParams.get('models')?.split(',');
+	} else if ($page.url.searchParams.get('model')) {
+		const urlModels = $page.url.searchParams.get('model')?.split(',');
 
 		if (urlModels.length === 1) {
 			const m = $models.find((m) => m.id === urlModels[0]);
 			if (!m) {
-				const modelSelectorButton = document.getElementById(
-					"model-selector-0-button",
-				);
+				const modelSelectorButton = document.getElementById('model-selector-0-button');
 				if (modelSelectorButton) {
 					modelSelectorButton.click();
 					await tick();
 
-					const modelSelectorInput =
-						document.getElementById("model-search-input");
+					const modelSelectorInput = document.getElementById('model-search-input');
 					if (modelSelectorInput) {
 						modelSelectorInput.focus();
 						modelSelectorInput.value = urlModels[0];
-						modelSelectorInput.dispatchEvent(new Event("input"));
+						modelSelectorInput.dispatchEvent(new Event('input'));
 					}
 				}
 			} else {
@@ -700,30 +699,38 @@ const initNewChat = async () => {
 	} else {
 		if (sessionStorage.selectedModels) {
 			selectedModels = JSON.parse(sessionStorage.selectedModels);
-			sessionStorage.removeItem("selectedModels");
-		} else {
-			if ($settings?.models) {
-				selectedModels = $settings?.models;
-			} else if ($config?.default_models) {
-				console.log($config?.default_models.split(",") ?? "");
-				selectedModels = $config?.default_models.split(",");
+			sessionStorage.removeItem('selectedModels');
+		} else if ($settings?.models && $settings.models.length > 0) {
+			// Check if the model from settings exists in available models
+			const validModel = $settings.models.find(modelId => 
+				$models.some(m => m.id === modelId)
+			);
+			if (validModel) {
+				selectedModels = [$settings.models[0]];
+				console.log('Using model from settings:', selectedModels);
 			}
+		} else if ($config?.default_models) {
+			selectedModels = $config.default_models.split(',');
 		}
 	}
 
-	selectedModels = selectedModels.filter((modelId) =>
-		$models.map((m) => m.id).includes(modelId),
+	// Ensure we have valid models
+	selectedModels = selectedModels.filter(modelId => 
+		$models.some(m => m.id === modelId)
 	);
-	if (
-		selectedModels.length === 0 ||
-		(selectedModels.length === 1 && selectedModels[0] === "")
-	) {
+
+	// If no valid models selected, use first available model
+	if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
 		if ($models.length > 0) {
 			selectedModels = [$models[0].id];
+			console.log('Using first available model:', selectedModels);
 		} else {
-			selectedModels = [""];
+			selectedModels = [''];
+			console.error('No models available!');
 		}
 	}
+
+	console.log('initNewChat - final selectedModels:', selectedModels);
 
 	await showControls.set(false);
 	await showCallOverlay.set(false);

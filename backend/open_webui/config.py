@@ -814,34 +814,27 @@ DEFAULT_MODELS = PersistentConfig(
 DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
     "DEFAULT_PROMPT_SUGGESTIONS",
     "ui.prompt_suggestions",
-    [
+  [
         {
-            "title": ["Help me study", "vocabulary for a college entrance exam"],
-            "content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
+            "title": ["Assistant administratif"],
+            "content": "Pouvez-vous m'aider à rédiger une lettre administrative formelle pour informer les citoyens d'un changement dans les horaires d'ouverture de la mairie?"
         },
         {
-            "title": ["Give me ideas", "for what to do with my kids' art"],
-            "content": "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
+            "title": ["Gestion des demandes"],
+            "content": "Comment puis-je optimiser le processus de traitement des demandes de permis de construire pour réduire les délais d'attente?"
         },
         {
-            "title": ["Tell me a fun fact", "about the Roman Empire"],
-            "content": "Tell me a random fun fact about the Roman Empire",
+            "title": ["Service social"],
+            "content": "Pouvez-vous m'aider à créer un guide pratique pour expliquer aux seniors les démarches d'accès aux services d'aide à domicile?"
         },
         {
-            "title": ["Show me a code snippet", "of a website's sticky header"],
-            "content": "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
+            "title": ["Urbanisme"],
+            "content": "Comment puis-je structurer une présentation pour expliquer aux habitants les modifications du plan local d'urbanisme?"
         },
         {
-            "title": [
-                "Explain options trading",
-                "if I'm familiar with buying and selling stocks",
-            ],
-            "content": "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
-        },
-        {
-            "title": ["Overcome procrastination", "give me tips"],
-            "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
-        },
+            "title": ["Communication publique"],
+            "content": "Aidez-moi à rédiger un communiqué de presse pour annoncer le lancement d'une nouvelle initiative écologique dans notre commune."
+        }
     ],
 )
 

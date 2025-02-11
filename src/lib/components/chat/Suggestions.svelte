@@ -26,11 +26,9 @@
 	$: fuse = new Fuse(sortedPrompts, fuseOptions);
 
 	// Update the filteredPrompts if inputValue changes
-	// Only increase version if something wirklich geändert hat
 	$: getFilteredPrompts(inputValue);
 
 	// Helper function to check if arrays are the same
-	// (based on unique IDs oder content)
 	function arraysEqual(a, b) {
 		if (a.length !== b.length) return false;
 		for (let i = 0; i < a.length; i++) {
@@ -46,16 +44,29 @@
 			? fuse.search(inputValue.trim()).map((result) => result.item)
 			: sortedPrompts;
 
-		// Compare with the oldFilteredPrompts
-		// If there's a difference, update array + version
 		if (!arraysEqual(filteredPrompts, newFilteredPrompts)) {
 			filteredPrompts = newFilteredPrompts;
 		}
 	};
 
-	$: if (suggestionPrompts) {
-		sortedPrompts = [...(suggestionPrompts ?? [])].sort(() => Math.random() - 0.5);
-		getFilteredPrompts(inputValue);
+	// Add validation and transformation of input prompts
+	$: {
+		console.log('Raw suggestion prompts:', suggestionPrompts);
+		
+		// Ensure prompts are in the correct format
+		const formattedPrompts = suggestionPrompts.map(prompt => {
+			if (typeof prompt === 'string') {
+				return { title: prompt, content: prompt };
+			}
+			return prompt;
+		});
+
+		// Filter out any invalid prompts
+		sortedPrompts = formattedPrompts.filter(prompt => 
+			prompt && (prompt.content || prompt.title)
+		);
+
+		console.log('Formatted prompts:', sortedPrompts);
 	}
 </script>
 
@@ -63,13 +74,6 @@
 	{#if filteredPrompts.length > 0}
 		<Bolt />
 		{$i18n.t('Suggested')}
-	<!-- {:else}
-
-		<div
-			class="flex w-full text-center items-center justify-center self-start text-gray-400 dark:text-gray-600"
-		>
-			{$WEBUI_NAME} ‧ v{WEBUI_VERSION}
-		</div> -->
 	{/if}
 </div>
 
@@ -78,20 +82,20 @@
 		{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
 			<button
 				class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
-				       px-3 py-2 rounded-xl bg-transparent hover:bg-black/5
-				       dark:hover:bg-white/5 transition group"
+					   px-3 py-2 rounded-xl bg-transparent hover:bg-black/5
+					   dark:hover:bg-white/5 transition group"
 				style="animation-delay: {idx * 60}ms"
 				on:click={() => dispatch('select', prompt.content)}
 			>
 				<div class="flex flex-col text-left">
-					{#if prompt.title && prompt.title[0] !== ''}
+					{#if prompt.title}
 						<div
 							class="font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
 						>
-							{prompt.title[0]}
+							{prompt.title}
 						</div>
 						<div class="text-xs text-gray-500 font-normal line-clamp-1">
-							{prompt.title[1]}
+							{prompt.content}
 						</div>
 					{:else}
 						<div
