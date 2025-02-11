@@ -1,3 +1,4 @@
+@ -1,34 +1,35 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
@@ -16,7 +17,6 @@ import { defineConfig } from 'vite';
 // };
 
 export default defineConfig({
-	base: process.env.NODE_ENV === 'production' ? 'https://static.airie.fun/' : '/',
 	plugins: [sveltekit()],
 	define: {
 		APP_VERSION: JSON.stringify(process.env.npm_package_version),

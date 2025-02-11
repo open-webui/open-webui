@@ -1,3 +1,4 @@
+@ -1,37 +1,41 @@
 import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import preprocessReact from "svelte-preprocess-react/preprocessReact";
@@ -15,11 +16,7 @@ const config = {
 			pages: 'build',
 			assets: 'build',
 			fallback: 'index.html'
-		}),
-		paths: {
-			base: process.argv.includes('dev') ? '' : '/airie',
-			assets: process.env.NODE_ENV === 'production' ? 'https://static.airie.fun' : ''
-		}
+		})
 	},
 	vitePlugin: {
 		inspector: {
