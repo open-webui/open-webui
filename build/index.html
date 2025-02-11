@@ -90,15 +90,7 @@
 
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">
-			<script type="importmap">
-				{
-					"imports": {
-						"start": "https://static.airie.fun/_app/immutable/entry/start.BT6srn9O.js",
-						"app": "https://static.airie.fun/_app/immutable/entry/app.DkxWIMhY.js"
-					}
-				}
-			</script>
-			<script type="module">
+			<script>
 				{
 					__sveltekit_1a4a313 = {
 						base: "/airie",
@@ -108,8 +100,8 @@
 					const element = document.currentScript.parentElement;
 
 					Promise.all([
-						import("start"),
-						import("app")
+						import("https://static.airie.fun/_app/immutable/entry/start.BT6srn9O.js"),
+						import("https://static.airie.fun/_app/immutable/entry/app.DkxWIMhY.js")
 					]).then(([kit, app]) => {
 						kit.start(app, element);
 					});
