@@ -16,7 +16,7 @@
 </script>
 
 {#if prompts.length > 0}
-	<div class="mb-1 flex gap-1 text-sm font-medium items-center text-gray-400 dark:text-gray-600">
+	<div class="mb-1 flex gap-1 text-sm font-medium items-center text-gray-700 dark:text-gray-400">
 		<Bolt />
 		{$i18n.t('Suggested')}
 	</div>
@@ -38,7 +38,9 @@
 						>
 							{prompt.title[0]}
 						</div>
-						<div class="text-xs text-gray-500 font-normal line-clamp-1">{prompt.title[1]}</div>
+						<div class="text-xs text-gray-700 dark:text-gray-400 font-normal line-clamp-1">
+							{prompt.title[1]}
+						</div>
 					{:else}
 						<div
 							class="  font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
@@ -46,7 +48,9 @@
 							{prompt.content}
 						</div>
 
-						<div class="text-xs text-gray-500 font-normal line-clamp-1">Prompt</div>
+						<div class="text-xs text-gray-700 dark:text-gray-400 font-normal line-clamp-1">
+							Prompt
+						</div>
 					{/if}
 				</div>
 			</button>

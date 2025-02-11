@@ -480,6 +480,8 @@
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
 				}}
+				aria-label={$i18n.t('Toggle sidebar')}
+				title={$i18n.t('Toggle sidebar')}
 			>
 				<div class=" m-auto self-center">
 					<svg
@@ -778,7 +780,7 @@
 							{#each $chats as chat, idx}
 								{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
 									<div
-										class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
+										class="w-full pl-2.5 text-xs text-gray-700 dark:text-gray-400 font-medium {idx ===
 										0
 											? ''
 											: 'pt-5'} pb-1.5"
