@@ -330,13 +330,11 @@ class SPAStaticFiles(StaticFiles):
             return await super().get_response(path, scope)
         except (HTTPException, StarletteHTTPException) as ex:
             if ex.status_code == 404:
-                if path.endswith(".html"):
-                    response = await super().get_response("index.html", scope)
-                    response.status_code = 200
-                    return response
-                else:
-                    # Return 404 for non-HTML files
+                if path.endswith(".js"):
+                    # Return 404 for javascript files
                     raise ex
+                else:
+                    return await super().get_response("index.html", scope)
             else:
                 raise ex
 
