@@ -749,8 +749,8 @@
 					<div class="my-2 flex justify-end pb-20">
 						<button
 							class=" text-sm px-3 py-2 transition rounded-lg {loading
-								? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
-								: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
+								? ' cursor-not-allowed  fr-background-action-high--blue-france text-white  dark:hover:bg-gray-100 hover:bg-blue-600 dark:text-black'
+								: '  text-white fr-background-action-high--blue-france dark:hover:bg-gray-100 hover:bg-blue-600 dark:text-black'} flex w-full justify-center"
 							type="submit"
 							disabled={loading}
 						>

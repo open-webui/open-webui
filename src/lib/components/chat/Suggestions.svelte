@@ -4,7 +4,7 @@
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 	import { WEBUI_NAME } from '$lib/stores';
 	import { WEBUI_VERSION } from '$lib/constants';
-
+	
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
