@@ -14,7 +14,7 @@ env:
 
 jobs:
   build-main-image:
-    runs-on: ubuntu-latest
+    runs-on: ARM64
     permissions:
       contents: read
       packages: write
@@ -111,7 +111,7 @@ jobs:
           retention-days: 1
 
   build-cuda-image:
-    runs-on: ubuntu-latest
+    runs-on: ARM64
     permissions:
       contents: read
       packages: write
@@ -211,7 +211,7 @@ jobs:
           retention-days: 1
 
   build-ollama-image:
-    runs-on: ubuntu-latest
+    runs-on: ARM64
     permissions:
       contents: read
       packages: write
@@ -311,7 +311,7 @@ jobs:
           retention-days: 1
 
   merge-main-images:
-    runs-on: ubuntu-latest
+    runs-on: ARM64
     needs: [build-main-image]
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
@@ -365,7 +365,7 @@ jobs:
           docker buildx imagetools inspect ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
 
   merge-cuda-images:
-    runs-on: ubuntu-latest
+    runs-on: ARM64
     needs: [build-cuda-image]
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
@@ -421,7 +421,7 @@ jobs:
           docker buildx imagetools inspect ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
 
   merge-ollama-images:
-    runs-on: ubuntu-latest
+    runs-on: ARM64
     needs: [build-ollama-image]
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
