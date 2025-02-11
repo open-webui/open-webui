@@ -29,10 +29,7 @@
 
 	// console.log('ffff',PUBLIC_PRIVY_APP_ID, PUBLIC_PRIVY_CLIENT_ID);
 
-	// does nothing just prevents unused tsc warning
-	used(PrivyProvider);
-
-  	// priby.io end
+	// priby.io end
 	const i18n = getContext('i18n');
 
 	let loaded = false;
@@ -161,17 +158,36 @@
 			url="https://static.airie.fun/static/scene.splinecode.json"
 			style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;"
 			loading-anim="true"
+			crossorigin="anonymous"
 		></spline-viewer>
 	</div>
 
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
 
 	{#if loaded}
-		<div class="fixed bg-transparent h-[80vh] w-full flex items-center justify-center font-primary z-50 text-black dark:text-white"
-			style="pointer-events: none;">
-
+		
+		<div class="fixed bg-transparent h-[80vh] w-full flex items-center justify-center font-primary z-50 text-black dark:text-white">
+			<div class="relative w-full flex flex-col items-center">
+				<h1 class="brilliant-title mb-6">BRILLIANT STRATEGY</h1>
+				<react:PrivyProvider
+					appId={PUBLIC_PRIVY_APP_ID}
+					clientId={PUBLIC_PRIVY_CLIENT_ID}
+					config={{
+						defaultChain: mainnet,
+						supportedChains: [mainnet],
+						loginMethods: ['email', 'wallet', 'google'],
+					}}
+				>
+					<ConnectGuard>
+						<WalletClientGuard>
+							<slot />
+						</WalletClientGuard>
+					</ConnectGuard>
+				</react:PrivyProvider>
+			</div>
+			
 			<div class="w-full sm:max-w-md px-10 flex flex-col text-center bg-white/90 dark:bg-gray-900/90 rounded-2xl p-8 shadow-xl backdrop-blur-sm"
-				style="pointer-events: auto;">
+				style="pointer-events: auto;display: none;">
 				<div class="flex space-x-2">
 					<div class=" self-center">
 						<img
@@ -308,7 +324,7 @@
 													? $i18n.t('Create Admin Account')
 													: $i18n.t('Create Account')}
 										</button>
-										<react:PrivyProvider
+										<!-- <react:PrivyProvider
 											appId={PUBLIC_PRIVY_APP_ID}
 											clientId={PUBLIC_PRIVY_CLIENT_ID}
 											config={{
@@ -323,7 +339,7 @@
 												<slot />
 											</WalletClientGuard>
 											</ConnectGuard>
-										</react:PrivyProvider>
+										</react:PrivyProvider> -->
 										{#if $config?.features.enable_signup && !($config?.onboarding ?? false)}
 											<div class=" mt-4 text-sm text-center">
 												{mode === 'signin'
@@ -486,3 +502,24 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	.brilliant-title {
+		color: white;
+		font-size: 3.5rem;
+		font-weight: 300;
+		letter-spacing: 0.5em;
+		text-align: center;
+		text-transform: uppercase;
+		margin-bottom: 1rem;
+		font-family: 'Inter', sans-serif;
+		text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+	}
+
+	@media (max-width: 768px) {
+		.brilliant-title {
+			font-size: 2rem;
+			letter-spacing: 0.3em;
+		}
+	}
+</style>

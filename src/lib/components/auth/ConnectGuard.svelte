@@ -4,7 +4,7 @@
   import { toast } from 'svelte-sonner';
   import { goto } from '$app/navigation';
   import { getBackendConfig } from '$lib/apis';
-  import { userSignUp, getSessionUser } from '$lib/apis/auths';
+  import { userSignUp, getSessionUser, userSignIn } from '$lib/apis/auths';
   import { generateInitialsImage } from '$lib/utils';
   import { config, user, socket } from '$lib/stores';
 
@@ -31,7 +31,10 @@
   // 监听认证状态并自动处理注册和登录
   $: if ($privyWalletsStore || $privyStore) {
     console.log('privy Store:', $privyWalletsStore, $privyStore);
+    
     if ($privyStore.authenticated) {
+      const { logout } = $privyStore
+    logout();
       // 如果已认证但没有连接钱包，自动连接钱包
       // if (!$privyWalletsStore?.wallets?.length) {
       //   console.log('Auto connecting wallet for authenticated user');
@@ -40,10 +43,20 @@
       
       // 自动注册和登录
       const handleAutoSignUp = async () => {
+        let email = '';
+        let name = '';  
         try {
           // 使用 Privy 用户信息进行注册
-          const email = $privyStore.user?.email?.address || '';
-          const name = $privyStore.user?.name || email.split('@')[0] || 'User';
+          if ($privyWalletsStore?.wallets?.length) {
+            console.log('Auto sign up for connected wallet');
+            email = $privyWalletsStore.wallets[0].address + '@airie.fun';
+            name = $privyWalletsStore.wallets[0].address;
+          } else {
+            console.log('Auto sign up for email');
+            email = $privyStore.user?.email?.address || '';
+            name = $privyStore.user?.name || email.split('@')[0] || 'User';
+          }
+          
           
           const sessionUser = await userSignUp(
             name,
@@ -53,7 +66,7 @@
           ).catch(async (error) => {
             console.log('Sign up error, trying to get session:', error);
             // 如果注册失败（可能用户已存在），尝试获取现有会话
-            return await getSessionUser().catch(() => null);
+            return await userSignIn(email, 'privy-auth-' + $privyStore.user?.id).catch(() => null);
           });
           console.log('Auto sign up result:', sessionUser);
           await setSessionUser(sessionUser);
@@ -75,6 +88,7 @@
       <slot />
     {:else}
       <button
+        class="connect-button"
         on:click={() => {
           if (!authenticated) {
             console.log("not authenticated", ready, authenticated, $privyStore, $privyWalletsStore);
@@ -86,8 +100,31 @@
           }
         }}
       >
-        Connect Wallet
+        Log in / Sign up
       </button>
     {/if}
   {/if}
 {/if}
+
+<style>
+  .connect-button {
+    background-color: rgba(255, 255, 255, 0.6);  /* 半透明黑色背景 */
+    color: black;
+    border: none;
+    border-radius: 24px;  /* 圆角效果，创造半圆形外观 */
+    padding: 12px 24px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(4px);  /* 毛玻璃效果 */
+  }
+
+  .connect-button:hover {
+    background-color: rgba(255, 255, 255, 0.8);
+    transform: translateY(-2px);
+  }
+
+  .connect-button:active {
+    transform: translateY(0);
+  }
+</style>
