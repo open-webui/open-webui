@@ -89,7 +89,7 @@
 	</head>
 
 	<body data-sveltekit-preload-data="hover">
-		<div style="display: contents">
+		<div id="sveltekit-app">
 			<script type="module" crossorigin="anonymous">
 				{
 					window.__sveltekit_1a4a313 = {
@@ -97,7 +97,7 @@
 						assets: "https://static.airie.fun"
 					};
 
-					const element = document.currentScript.parentElement;
+					const element = document.getElementById('sveltekit-app');
 
 					Promise.all([
 						import("https://static.airie.fun/_app/immutable/entry/start.BT6srn9O.js"),
