@@ -29,6 +29,9 @@
 
 	// console.log('ffff',PUBLIC_PRIVY_APP_ID, PUBLIC_PRIVY_CLIENT_ID);
 
+	// does nothing just prevents unused tsc warning
+	used(PrivyProvider);
+
 	// priby.io end
 	const i18n = getContext('i18n');
 
@@ -176,6 +179,9 @@
 						defaultChain: mainnet,
 						supportedChains: [mainnet],
 						loginMethods: ['email', 'wallet', 'google'],
+						appearance: {
+							theme: 'dark'
+						}
 					}}
 				>
 					<ConnectGuard>
