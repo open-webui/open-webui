@@ -15,7 +15,11 @@ const config = {
 			pages: 'build',
 			assets: 'build',
 			fallback: 'index.html'
-		})
+		}),
+		paths: {
+			base: process.argv.includes('dev') ? '' : '/airie',
+			assets: process.env.NODE_ENV === 'production' ? 'https://static.airie.fun' : ''
+		}
 	},
 	vitePlugin: {
 		inspector: {
