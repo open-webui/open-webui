@@ -683,6 +683,17 @@ Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 CACHE_DIR = f"{DATA_DIR}/cache"
 Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
 
+
+####################################
+# DIRECT API
+####################################
+
+ENABLE_DIRECT_API = PersistentConfig(
+    "ENABLE_DIRECT_API",
+    "direct.enable",
+    os.environ.get("ENABLE_DIRECT_API", "True").lower() == "true",
+)
+
 ####################################
 # OLLAMA_BASE_URL
 ####################################

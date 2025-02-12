@@ -7,6 +7,7 @@
 	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
 	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
 	import { getModels as _getModels } from '$lib/apis';
+	import { getDirectApiConfig, setDirectApiConfig } from '$lib/apis/configs';
 
 	import { models, user } from '$lib/stores';
 
@@ -36,6 +37,8 @@
 
 	let ENABLE_OPENAI_API: null | boolean = null;
 	let ENABLE_OLLAMA_API: null | boolean = null;
+
+	let directApiConfig = null;
 
 	let pipelineUrls = {};
 	let showAddOpenAIConnectionModal = false;
@@ -127,6 +130,9 @@
 				})(),
 				(async () => {
 					openaiConfig = await getOpenAIConfig(localStorage.token);
+				})(),
+				(async () => {
+					directApiConfig = await getDirectApiConfig(localStorage.token);
 				})()
 			]);
 
@@ -170,6 +176,15 @@
 			}
 		}
 	});
+
+	const submitHandler = async () => {
+		updateOpenAIHandler();
+		updateOllamaHandler();
+
+		setDirectApiConfig(localStorage.token, directApiConfig);
+
+		dispatch('save');
+	};
 </script>
 
 <AddConnectionModal
@@ -183,17 +198,9 @@
 	onSubmit={addOllamaConnectionHandler}
 />
 
-<form
-	class="flex flex-col h-full justify-between text-sm"
-	on:submit|preventDefault={() => {
-		updateOpenAIHandler();
-		updateOllamaHandler();
-
-		dispatch('save');
-	}}
->
+<form class="flex flex-col h-full justify-between text-sm" on:submit|preventDefault={submitHandler}>
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
-		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null}
+		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && directApiConfig !== null}
 			<div class="my-2">
 				<div class="mt-2 space-y-2 pr-1.5">
 					<div class="flex justify-between items-center text-sm">
@@ -333,6 +340,31 @@
 						</div>
 					</div>
 				{/if}
+			</div>
+
+			<hr class=" border-gray-50 dark:border-gray-850" />
+
+			<div class="my-2">
+				<div class="flex justify-between items-center text-sm">
+					<div class="  font-medium">{$i18n.t('Direct API')}</div>
+
+					<div class="flex items-center">
+						<div class="">
+							<Switch
+								bind:state={directApiConfig.ENABLE_DIRECT_API}
+								on:change={async () => {
+									updateOpenAIHandler();
+								}}
+							/>
+						</div>
+					</div>
+				</div>
+
+				<div class="mt-1.5">
+					<div class="text-xs text-gray-500">
+						{$i18n.t('Direct API allows users to use the models directly from their browser.')}
+					</div>
+				</div>
 			</div>
 		{:else}
 			<div class="flex h-full justify-center">
