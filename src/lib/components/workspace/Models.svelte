@@ -21,6 +21,7 @@
 	} from '$lib/apis/models';
 
 	import { getModels } from '$lib/apis';
+	import { getGroups } from '$lib/apis/groups';
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import ModelMenu from './Models/ModelMenu.svelte';
@@ -47,6 +48,8 @@
 
 	let showModelDeleteConfirm = false;
 
+	let group_ids = [];
+
 	$: if (models) {
 		filteredModels = models.filter(
 			(m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase())
@@ -57,7 +60,7 @@
 
 	const deleteModelHandler = async (model) => {
 		const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
-			toast.error(e);
+			toast.error(`${e}`);
 			return null;
 		});
 
@@ -151,6 +154,8 @@
 
 	onMount(async () => {
 		models = await getWorkspaceModels(localStorage.token);
+		let groups = await getGroups(localStorage.token);
+		group_ids = groups.map((group) => group.id);
 
 		loaded = true;
 
@@ -308,7 +313,7 @@
 								</button>
 							</Tooltip>
 						{:else}
-							{#if $user?.role === 'admin' || model.user_id === $user?.id}
+							{#if $user?.role === 'admin' || model.user_id === $user?.id || model.access_control.write.group_ids.some( (wg) => group_ids.includes(wg) )}
 								<a
 									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 									type="button"

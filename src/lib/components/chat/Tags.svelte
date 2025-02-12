@@ -33,7 +33,7 @@
 
 	const addTag = async (tagName) => {
 		const res = await addTagById(localStorage.token, chatId, tagName).catch(async (error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 		if (!res) {

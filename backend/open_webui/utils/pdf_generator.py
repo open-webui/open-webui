@@ -53,6 +53,7 @@ class PDFGenerator:
         # - https://facelessuser.github.io/pymdown-extensions/usage_notes/
         # html_content = markdown(content, extensions=["pymdownx.extra"])
 
+        content = content.replace("\n", "<br/>")
         html_message = f"""
             <div>
                 <div>

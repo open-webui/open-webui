@@ -34,8 +34,8 @@ from open_webui.config import (
     JWT_EXPIRES_IN,
     AppConfig,
 )
-from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import WEBUI_SESSION_COOKIE_SAME_SITE, WEBUI_SESSION_COOKIE_SECURE
+from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
+from open_webui.env import WEBUI_AUTH_COOKIE_SAME_SITE, WEBUI_AUTH_COOKIE_SECURE
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.auth import get_password_hash, create_token
 from open_webui.utils.webhook import post_webhook
@@ -63,17 +63,8 @@ auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 class OAuthManager:
     def __init__(self):
         self.oauth = OAuth()
-        for provider_name, provider_config in OAUTH_PROVIDERS.items():
-            self.oauth.register(
-                name=provider_name,
-                client_id=provider_config["client_id"],
-                client_secret=provider_config["client_secret"],
-                server_metadata_url=provider_config["server_metadata_url"],
-                client_kwargs={
-                    "scope": provider_config["scope"],
-                },
-                redirect_uri=provider_config["redirect_uri"],
-            )
+        for _, provider_config in OAUTH_PROVIDERS.items():
+            provider_config["register"](self.oauth)
 
     def get_client(self, provider_name):
         return self.oauth.create_client(provider_name)
@@ -91,7 +82,8 @@ class OAuthManager:
             oauth_allowed_roles = auth_manager_config.OAUTH_ALLOWED_ROLES
             oauth_admin_roles = auth_manager_config.OAUTH_ADMIN_ROLES
             oauth_roles = None
-            role = "pending"  # Default/fallback role if no matching roles are found
+            # Default/fallback role if no matching roles are found
+            role = auth_manager_config.DEFAULT_USER_ROLE
 
             # Next block extracts the roles from the user data, accepting nested claims of any depth
             if oauth_claim and oauth_allowed_roles and oauth_admin_roles:
@@ -200,14 +192,14 @@ class OAuthManager:
         except Exception as e:
             log.warning(f"OAuth callback error: {e}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
-        user_data: UserInfo = token["userinfo"]
+        user_data: UserInfo = token.get("userinfo")
         if not user_data:
             user_data: UserInfo = await client.userinfo(token=token)
         if not user_data:
             log.warning(f"OAuth callback failed, user data is missing: {token}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
-        sub = user_data.get("sub")
+        sub = user_data.get(OAUTH_PROVIDERS[provider].get("sub_claim", "sub"))
         if not sub:
             log.warning(f"OAuth callback failed, sub is missing: {user_data}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
@@ -255,12 +247,20 @@ class OAuthManager:
                     raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
                 picture_claim = auth_manager_config.OAUTH_PICTURE_CLAIM
-                picture_url = user_data.get(picture_claim, "")
+                picture_url = user_data.get(
+                    picture_claim, OAUTH_PROVIDERS[provider].get("picture_url", "")
+                )
                 if picture_url:
                     # Download the profile image into a base64 string
                     try:
+                        access_token = token.get("access_token")
+                        get_kwargs = {}
+                        if access_token:
+                            get_kwargs["headers"] = {
+                                "Authorization": f"Bearer {access_token}",
+                            }
                         async with aiohttp.ClientSession() as session:
-                            async with session.get(picture_url) as resp:
+                            async with session.get(picture_url, **get_kwargs) as resp:
                                 picture = await resp.read()
                                 base64_encoded_picture = base64.b64encode(
                                     picture
@@ -274,10 +274,15 @@ class OAuthManager:
                         log.error(
                             f"Error downloading profile image '{picture_url}': {e}"
                         )
-                        picture_url = ""
+                        picture_url = "/user.png"
                 if not picture_url:
                     picture_url = "/user.png"
+
                 username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
+
+                name = user_data.get(username_claim)
+                if not isinstance(user, str):
+                    name = email
 
                 role = self.get_user_role(None, user_data)
 
@@ -286,7 +291,7 @@ class OAuthManager:
                     password=get_password_hash(
                         str(uuid.uuid4())
                     ),  # Random password, not used
-                    name=user_data.get(username_claim, "User"),
+                    name=name,
                     profile_image_url=picture_url,
                     role=role,
                     oauth_sub=provider_sub,
@@ -295,12 +300,10 @@ class OAuthManager:
                 if auth_manager_config.WEBHOOK_URL:
                     post_webhook(
                         auth_manager_config.WEBHOOK_URL,
-                        auth_manager_config.WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                        WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
                         {
                             "action": "signup",
-                            "message": auth_manager_config.WEBHOOK_MESSAGES.USER_SIGNUP(
-                                user.name
-                            ),
+                            "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
                             "user": user.model_dump_json(exclude_none=True),
                         },
                     )
@@ -314,7 +317,7 @@ class OAuthManager:
             expires_delta=parse_duration(auth_manager_config.JWT_EXPIRES_IN),
         )
 
-        if auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT:
+        if auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT and user.role != "admin":
             self.update_user_groups(
                 user=user,
                 user_data=user_data,
@@ -326,8 +329,8 @@ class OAuthManager:
             key="token",
             value=jwt_token,
             httponly=True,  # Ensures the cookie is not accessible via JavaScript
-            samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
-            secure=WEBUI_SESSION_COOKIE_SECURE,
+            samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+            secure=WEBUI_AUTH_COOKIE_SECURE,
         )
 
         if ENABLE_OAUTH_SIGNUP.value:
@@ -336,8 +339,8 @@ class OAuthManager:
                 key="oauth_id_token",
                 value=oauth_id_token,
                 httponly=True,
-                samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
-                secure=WEBUI_SESSION_COOKIE_SECURE,
+                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                secure=WEBUI_AUTH_COOKIE_SECURE,
             )
         # Redirect back to the frontend with the JWT token
         redirect_url = f"{request.base_url}auth#token={jwt_token}"

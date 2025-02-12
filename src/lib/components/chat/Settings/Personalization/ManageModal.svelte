@@ -11,8 +11,10 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { error } from '@sveltejs/kit';
 	import EditMemoryModal from './EditMemoryModal.svelte';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	const i18n = getContext('i18n');
+	dayjs.extend(localizedFormat);
 
 	export let show = false;
 
@@ -84,9 +86,7 @@
 											</td>
 											<td class=" px-3 py-1 hidden md:flex h-[2.5rem]">
 												<div class="my-auto whitespace-nowrap">
-													{dayjs(memory.updated_at * 1000).format(
-														$i18n.t('MMMM DD, YYYY hh:mm:ss A')
-													)}
+													{dayjs(memory.updated_at * 1000).format('LLL')}
 												</div>
 											</td>
 											<td class="px-3 py-1">
@@ -124,7 +124,7 @@
 																	localStorage.token,
 																	memory.id
 																).catch((error) => {
-																	toast.error(error);
+																	toast.error(`${error}`);
 																	return null;
 																});
 
@@ -177,7 +177,7 @@
 					class=" px-3.5 py-1.5 font-medium text-red-500 hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-red-300 dark:outline-red-800 rounded-3xl"
 					on:click={async () => {
 						const res = await deleteMemoriesByUserId(localStorage.token).catch((error) => {
-							toast.error(error);
+							toast.error(`${error}`);
 							return null;
 						});
 

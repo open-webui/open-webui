@@ -9,6 +9,7 @@
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import Wrench from '$lib/components/icons/Wrench.svelte';
 	import ManageOllamaModal from './ManageOllamaModal.svelte';
+	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
 
 	export let onDelete = () => {};
 	export let onSubmit = () => {};
@@ -70,7 +71,7 @@
 				}}
 				type="button"
 			>
-				<Wrench />
+				<ArrowDownTray />
 			</button>
 		</Tooltip>
 

@@ -5,7 +5,7 @@
 
 	import { models, settings } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
-	import { copyToClipboard as _copyToClipboard } from '$lib/utils';
+	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
@@ -13,8 +13,10 @@
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import Markdown from './Markdown.svelte';
 	import Image from '$lib/components/common/Image.svelte';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	const i18n = getContext('i18n');
+	dayjs.extend(localizedFormat);
 
 	export let user;
 
@@ -109,11 +111,13 @@
 					{/if}
 
 					{#if message.timestamp}
-						<span
-							class=" invisible group-hover:visible text-gray-400 text-xs font-medium uppercase ml-0.5 -mt-0.5"
+						<div
+							class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 						>
-							{dayjs(message.timestamp * 1000).format($i18n.t('h:mm a'))}
-						</span>
+							<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
+								<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
+							</Tooltip>
+						</div>
 					{/if}
 				</Name>
 			</div>
