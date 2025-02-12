@@ -344,7 +344,7 @@
 
 			<hr class=" border-gray-50 dark:border-gray-850" />
 
-			<div class="my-2">
+			<div class="pr-1.5 my-2">
 				<div class="flex justify-between items-center text-sm">
 					<div class="  font-medium">{$i18n.t('Direct API')}</div>
 
