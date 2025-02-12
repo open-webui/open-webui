@@ -45,14 +45,24 @@
       const handleAutoSignUp = async () => {
         let email = '';
         let name = '';  
+        const user = $privyStore.user;
         try {
           // 使用 Privy 用户信息进行注册
           if ($privyWalletsStore?.wallets?.length) {
             console.log('Auto sign up for connected wallet');
             email = $privyWalletsStore.wallets[0].address + '@airie.fun';
             name = $privyWalletsStore.wallets[0].address;
+          } else if (user?.google?.email) {
+            // google oatuth
+            email = user?.google?.email;
+            name = user?.google?.name || email.split('@')[0] || 'User';
+          }else if (user?.linkedAccounts?.length) {
+            // passkey
+            console.log('passkey login');
+            account = user?.linkedAccounts[0];
+            email = account?.credentialId;
+            name = account?.credentialId || email.split('@')[0] || 'User';
           } else {
-            console.log('Auto sign up for email');
             email = $privyStore.user?.email?.address || '';
             name = $privyStore.user?.name || email.split('@')[0] || 'User';
           }
