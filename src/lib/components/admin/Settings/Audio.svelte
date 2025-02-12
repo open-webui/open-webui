@@ -172,6 +172,7 @@
 					<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
 					<div class="flex items-center relative">
 						<select
+							aria-label = "Select an engine"
 							class="dark:bg-gray-900 cursor-pointer w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 							bind:value={STT_ENGINE}
 							placeholder="Select an engine"
@@ -263,6 +264,7 @@
 
 							<button
 								class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+								aria-label = "STT Model"
 								on:click={() => {
 									sttModelUpdateHandler();
 								}}
@@ -345,6 +347,7 @@
 							class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 							bind:value={TTS_ENGINE}
 							placeholder="Select a mode"
+							aria-label = "Select a mode"
 							on:change={async (e) => {
 								await updateConfigHandler();
 								await getVoices();
@@ -420,6 +423,7 @@
 							<div class="flex-1">
 								<select
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									aria-label = "TTS Voice list"
 									bind:value={TTS_VOICE}
 								>
 									<option value="" selected={TTS_VOICE !== ''}>{$i18n.t('Default')}</option>
@@ -487,6 +491,7 @@
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 										bind:value={TTS_VOICE}
 										placeholder="Select a voice"
+										aria-label = "TTS Voice list"
 									/>
 
 									<datalist id="voice-list">
@@ -528,6 +533,7 @@
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 										bind:value={TTS_VOICE}
 										placeholder="Select a voice"
+										aria-label = "TTS Voice list"
 									/>
 
 									<datalist id="voice-list">
@@ -569,6 +575,7 @@
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 										bind:value={TTS_VOICE}
 										placeholder="Select a voice"
+										aria-label = "TTS Voice list"
 									/>
 
 									<datalist id="voice-list">

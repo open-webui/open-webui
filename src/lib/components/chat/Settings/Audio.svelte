@@ -181,7 +181,8 @@
 					<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
 					<div class="flex items-center relative">
 						<select
-							class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+						aria-label = "Select an engine"	
+						class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 							bind:value={STTEngine}
 							placeholder="Select an engine"
 						>
@@ -272,7 +273,8 @@
 
 				<div class="flex items-center relative">
 					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+					aria-label = "Select Speech Playback Speed"	
+					class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 						bind:value={playbackRate}
 					>
 						{#each speedOptions as option}
@@ -330,6 +332,7 @@
 				<div class="flex w-full">
 					<div class="flex-1">
 						<select
+							aria-label = "Select voice"
 							class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							bind:value={voice}
 						>
@@ -345,12 +348,15 @@
 					</div>
 				</div>
 				<div class="flex items-center justify-between my-1.5">
-					<div class="text-xs">
+					<div class="text-xs" aria-label = "Switch allow non-local voices">
 						{$i18n.t('Allow non-local voices')}
 					</div>
 
 					<div class="mt-1">
-						<Switch bind:state={nonLocalVoices} />
+						<Switch 
+							aria-label = "Switch allow non-local voices"
+							bind:state={nonLocalVoices} 
+						/>
 					</div>
 				</div>
 			</div>
@@ -364,6 +370,7 @@
 							class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							bind:value={voice}
 							placeholder="Select a voice"
+							aria-label = "Voice list"
 						/>
 
 						<datalist id="voice-list">
