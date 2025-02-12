@@ -826,7 +826,7 @@ ENABLE_LOGIN_FORM = PersistentConfig(
 DEFAULT_LOCALE = PersistentConfig(
     "DEFAULT_LOCALE",
     "ui.default_locale",
-    os.environ.get("DEFAULT_LOCALE", ""),
+    os.environ.get("DEFAULT_LOCALE", "zh-CN"),
 )
 
 DEFAULT_MODELS = PersistentConfig(
