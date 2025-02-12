@@ -1732,6 +1732,12 @@ MOJEEK_SEARCH_API_KEY = PersistentConfig(
     os.getenv("MOJEEK_SEARCH_API_KEY", ""),
 )
 
+BOCHA_SEARCH_API_KEY = PersistentConfig(
+    "BOCHA_SEARCH_API_KEY",
+    "rag.web.search.bocha_search_api_key",
+    os.getenv("BOCHA_SEARCH_API_KEY", ""),
+)
+
 SERPSTACK_API_KEY = PersistentConfig(
     "SERPSTACK_API_KEY",
     "rag.web.search.serpstack_api_key",
