@@ -27,7 +27,12 @@
 
 		if (config) {
 			toast.success('Settings saved successfully');
-			models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+				)
+			);
 		}
 	};
 
@@ -36,7 +41,12 @@
 		config.EVALUATION_ARENA_MODELS = [...config.EVALUATION_ARENA_MODELS];
 
 		await submitHandler();
-		models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
+		models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+			)
+		);
 	};
 
 	const editModelHandler = async (model, modelIdx) => {
@@ -44,7 +54,12 @@
 		config.EVALUATION_ARENA_MODELS = [...config.EVALUATION_ARENA_MODELS];
 
 		await submitHandler();
-		models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
+		models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+			)
+		);
 	};
 
 	const deleteModelHandler = async (modelIdx) => {
@@ -53,7 +68,12 @@
 		);
 
 		await submitHandler();
-		models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
+		models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+			)
+		);
 	};
 
 	onMount(async () => {

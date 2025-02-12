@@ -126,7 +126,12 @@
 			toast.success($i18n.t('Function deleted successfully'));
 
 			functions.set(await getFunctions(localStorage.token));
-			models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+				)
+			);
 		}
 	};
 
@@ -147,7 +152,12 @@
 			}
 
 			functions.set(await getFunctions(localStorage.token));
-			models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+				)
+			);
 		}
 	};
 
@@ -360,7 +370,11 @@
 							on:change={async (e) => {
 								toggleFunctionById(localStorage.token, func.id);
 								models.set(
-									await getModels(localStorage.token, $settings?.directConnections ?? null)
+									await getModels(
+										localStorage.token,
+										$config?.features?.enable_direct_connetions &&
+											($settings?.directConnections ?? null)
+									)
 								);
 							}}
 						/>
@@ -498,7 +512,12 @@
 	id={selectedFunction?.id ?? null}
 	on:save={async () => {
 		await tick();
-		models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
+		models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+			)
+		);
 	}}
 />
 
@@ -519,7 +538,12 @@
 
 			toast.success($i18n.t('Functions imported successfully'));
 			functions.set(await getFunctions(localStorage.token));
-			models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+				)
+			);
 		};
 
 		reader.readAsText(importFiles[0]);

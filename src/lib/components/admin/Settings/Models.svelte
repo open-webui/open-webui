@@ -111,7 +111,12 @@
 			}
 		}
 
-		_models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
+		_models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+			)
+		);
 		await init();
 	};
 
@@ -133,7 +138,12 @@
 		}
 
 		// await init();
-		_models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
+		_models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+			)
+		);
 	};
 
 	onMount(async () => {
@@ -331,7 +341,11 @@
 								}
 
 								await _models.set(
-									await getModels(localStorage.token, $settings?.directConnections ?? null)
+									await getModels(
+										localStorage.token,
+										$config?.features?.enable_direct_connetions &&
+											($settings?.directConnections ?? null)
+									)
 								);
 								init();
 							};

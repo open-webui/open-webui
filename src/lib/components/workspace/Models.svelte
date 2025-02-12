@@ -68,7 +68,12 @@
 			toast.success($i18n.t(`Deleted {{name}}`, { name: model.id }));
 		}
 
-		await _models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
+		await _models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+			)
+		);
 		models = await getWorkspaceModels(localStorage.token);
 	};
 
@@ -134,7 +139,12 @@
 			);
 		}
 
-		await _models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
+		await _models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+			)
+		);
 		models = await getWorkspaceModels(localStorage.token);
 	};
 
@@ -372,7 +382,11 @@
 										on:change={async (e) => {
 											toggleModelById(localStorage.token, model.id);
 											_models.set(
-												await getModels(localStorage.token, $settings?.directConnections ?? null)
+												await getModels(
+													localStorage.token,
+													$config?.features?.enable_direct_connetions &&
+														($settings?.directConnections ?? null)
+												)
 											);
 										}}
 									/>
@@ -420,7 +434,11 @@
 							}
 
 							await _models.set(
-								await getModels(localStorage.token, $settings?.directConnections ?? null)
+								await getModels(
+									localStorage.token,
+									$config?.features?.enable_direct_connetions &&
+										($settings?.directConnections ?? null)
+								)
 							);
 							models = await getWorkspaceModels(localStorage.token);
 						};

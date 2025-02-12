@@ -18,7 +18,8 @@
 		models,
 		mobile,
 		temporaryChatEnabled,
-		settings
+		settings,
+		config
 	} from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import { capitalizeFirstLetter, sanitizeResponseContent, splitStream } from '$lib/utils';
@@ -193,7 +194,12 @@
 					})
 				);
 
-				models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
+				models.set(
+					await getModels(
+						localStorage.token,
+						$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+					)
+				);
 			} else {
 				toast.error($i18n.t('Download canceled'));
 			}

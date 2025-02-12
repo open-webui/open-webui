@@ -6,7 +6,7 @@
 	const i18n = getContext('i18n');
 
 	import { page } from '$app/stores';
-	import { models } from '$lib/stores';
+	import { config, models } from '$lib/stores';
 
 	import { getModelById, updateModelById } from '$lib/apis/models';
 
@@ -34,7 +34,12 @@
 		const res = await updateModelById(localStorage.token, modelInfo.id, modelInfo);
 
 		if (res) {
-			await models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
+			await models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+				)
+			);
 			toast.success($i18n.t('Model updated successfully'));
 			await goto('/workspace/models');
 		}

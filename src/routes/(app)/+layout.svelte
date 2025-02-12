@@ -93,7 +93,12 @@
 				settings.set(localStorageSettings);
 			}
 
-			models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+				)
+			);
 			banners.set(await getBanners(localStorage.token));
 			tools.set(await getTools(localStorage.token));
 

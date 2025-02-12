@@ -9,7 +9,7 @@
 	import { getModels as _getModels } from '$lib/apis';
 	import { getDirectConnectionsConfig, setDirectConnectionsConfig } from '$lib/apis/configs';
 
-	import { models, settings, user } from '$lib/stores';
+	import { config, models, settings, user } from '$lib/stores';
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -23,7 +23,10 @@
 	const i18n = getContext('i18n');
 
 	const getModels = async () => {
-		const models = await _getModels(localStorage.token, $settings?.directConnections ?? null);
+		const models = await _getModels(
+			localStorage.token,
+			$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+		);
 		return models;
 	};
 

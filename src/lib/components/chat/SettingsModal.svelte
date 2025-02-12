@@ -322,7 +322,10 @@
 	};
 
 	const getModels = async () => {
-		return await _getModels(localStorage.token, $settings?.directConnections ?? null);
+		return await _getModels(
+			localStorage.token,
+			$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+		);
 	};
 
 	let selectedTab = 'general';
