@@ -245,8 +245,9 @@
 			<hr class="border-gray-100 dark:border-gray-850 my-3" />
 
 			<div>
-				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
+				<div aria-label="System Prompt" class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
 				<textarea
+					id="systemPrompt"
 					bind:value={system}
 					class="w-full rounded-lg p-4 text-sm bg-white dark:text-gray-300 dark:bg-gray-850 outline-hidden resize-none"
 					rows="4"
