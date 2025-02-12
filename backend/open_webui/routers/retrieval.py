@@ -45,6 +45,7 @@ from open_webui.retrieval.web.utils import get_web_loader
 from open_webui.retrieval.web.brave import search_brave
 from open_webui.retrieval.web.kagi import search_kagi
 from open_webui.retrieval.web.mojeek import search_mojeek
+from open_webui.retrieval.web.bocha import search_bocha
 from open_webui.retrieval.web.duckduckgo import search_duckduckgo
 from open_webui.retrieval.web.google_pse import search_google_pse
 from open_webui.retrieval.web.jina_search import search_jina
@@ -379,6 +380,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
                 "brave_search_api_key": request.app.state.config.BRAVE_SEARCH_API_KEY,
                 "kagi_search_api_key": request.app.state.config.KAGI_SEARCH_API_KEY,
                 "mojeek_search_api_key": request.app.state.config.MOJEEK_SEARCH_API_KEY,
+                "bocha_search_api_key": request.app.state.config.BOCHA_SEARCH_API_KEY,
                 "serpstack_api_key": request.app.state.config.SERPSTACK_API_KEY,
                 "serpstack_https": request.app.state.config.SERPSTACK_HTTPS,
                 "serper_api_key": request.app.state.config.SERPER_API_KEY,
@@ -392,6 +394,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
                 "exa_api_key": request.app.state.config.EXA_API_KEY,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+                "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             },
         },
     }
@@ -428,6 +431,7 @@ class WebSearchConfig(BaseModel):
     brave_search_api_key: Optional[str] = None
     kagi_search_api_key: Optional[str] = None
     mojeek_search_api_key: Optional[str] = None
+    bocha_search_api_key: Optional[str] = None
     serpstack_api_key: Optional[str] = None
     serpstack_https: Optional[bool] = None
     serper_api_key: Optional[str] = None
@@ -441,6 +445,7 @@ class WebSearchConfig(BaseModel):
     exa_api_key: Optional[str] = None
     result_count: Optional[int] = None
     concurrent_requests: Optional[int] = None
+    domain_filter_list: Optional[List[str]] = []
 
 
 class WebConfig(BaseModel):
@@ -523,6 +528,9 @@ async def update_rag_config(
         request.app.state.config.MOJEEK_SEARCH_API_KEY = (
             form_data.web.search.mojeek_search_api_key
         )
+        request.app.state.config.BOCHA_SEARCH_API_KEY = (
+            form_data.web.search.bocha_search_api_key
+        )
         request.app.state.config.SERPSTACK_API_KEY = (
             form_data.web.search.serpstack_api_key
         )
@@ -552,6 +560,9 @@ async def update_rag_config(
         )
         request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = (
             form_data.web.search.concurrent_requests
+        )
+        request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = (
+            form_data.web.search.domain_filter_list
         )
 
     return {
@@ -586,6 +597,7 @@ async def update_rag_config(
                 "brave_search_api_key": request.app.state.config.BRAVE_SEARCH_API_KEY,
                 "kagi_search_api_key": request.app.state.config.KAGI_SEARCH_API_KEY,
                 "mojeek_search_api_key": request.app.state.config.MOJEEK_SEARCH_API_KEY,
+                "bocha_search_api_key": request.app.state.config.BOCHA_SEARCH_API_KEY,
                 "serpstack_api_key": request.app.state.config.SERPSTACK_API_KEY,
                 "serpstack_https": request.app.state.config.SERPSTACK_HTTPS,
                 "serper_api_key": request.app.state.config.SERPER_API_KEY,
@@ -599,6 +611,7 @@ async def update_rag_config(
                 "exa_api_key": request.app.state.config.EXA_API_KEY,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+                "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             },
         },
     }
@@ -1107,6 +1120,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
     - BRAVE_SEARCH_API_KEY
     - KAGI_SEARCH_API_KEY
     - MOJEEK_SEARCH_API_KEY
+    - BOCHA_SEARCH_API_KEY
     - SERPSTACK_API_KEY
     - SERPER_API_KEY
     - SERPLY_API_KEY
@@ -1174,6 +1188,16 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             )
         else:
             raise Exception("No MOJEEK_SEARCH_API_KEY found in environment variables")
+    elif engine == "bocha":
+        if request.app.state.config.BOCHA_SEARCH_API_KEY:
+            return search_bocha(
+                request.app.state.config.BOCHA_SEARCH_API_KEY,
+                query,
+                request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception("No BOCHA_SEARCH_API_KEY found in environment variables")
     elif engine == "serpstack":
         if request.app.state.config.SERPSTACK_API_KEY:
             return search_serpstack(
