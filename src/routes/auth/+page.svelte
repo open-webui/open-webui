@@ -158,7 +158,7 @@
 <div class="w-full h-screen max-h-[100dvh] text-white relative">
 	<div class="w-full h-full absolute top-0 left-0 bg-transparent" style="z-index: 10;">
 		<spline-viewer
-			url="https://static.airie.fun/static/scene.splinecode.json?v2"
+			url="https://static.airie.fun/static/scene.splinecodev3.json?v2"
 			style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;"
 			loading-anim="true"
 			crossorigin="anonymous"
