@@ -31,10 +31,17 @@
   // 监听认证状态并自动处理注册和登录
   $: if ($privyWalletsStore || $privyStore) {
     console.log('privy Store:', $privyWalletsStore, $privyStore);
-    
+
+    // if($privyStore.authenticated == false && $privyStore.ready == true){
+    //   console.log('clear privy cache')
+    //   $privyStore.logout();
+    //   $privyStore.unlinkWallet();
+    //   $privyWalletsStore.wallet = {}
+    //   console.log('privy Store:', $privyWalletsStore,$privyStore);
+    // }
+
     if ($privyStore.authenticated) {
-      const { logout } = $privyStore
-    logout();
+
       // 如果已认证但没有连接钱包，自动连接钱包
       // if (!$privyWalletsStore?.wallets?.length) {
       //   console.log('Auto connecting wallet for authenticated user');
@@ -46,9 +53,10 @@
         let email = '';
         let name = '';  
         const user = $privyStore.user;
+        const linkedType = user.linkedAccounts[0]?.type;
         try {
           // 使用 Privy 用户信息进行注册
-          if ($privyWalletsStore?.wallets?.length) {
+          if (linkedType == 'wallet') {
             console.log('Auto sign up for connected wallet');
             email = $privyWalletsStore.wallets[0].address + '@airie.fun';
             name = $privyWalletsStore.wallets[0].address;
@@ -58,7 +66,7 @@
             email = user?.google?.email;
             name = user?.google?.name || email.split('@')[0] || 'User';
             console.log('google retreive email:', email, name)
-          }else if (user?.linkedAccounts?.length) {
+          }else if (linkedType == 'passkey') {
             // passkey
             console.log('passkey login');
             account = user?.linkedAccounts[0];
