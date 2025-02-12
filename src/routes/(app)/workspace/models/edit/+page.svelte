@@ -37,7 +37,7 @@
 			await models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 				)
 			);
 			toast.success($i18n.t('Model updated successfully'));

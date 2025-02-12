@@ -71,7 +71,7 @@
 		await _models.set(
 			await getModels(
 				localStorage.token,
-				$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			)
 		);
 		models = await getWorkspaceModels(localStorage.token);
@@ -142,7 +142,7 @@
 		await _models.set(
 			await getModels(
 				localStorage.token,
-				$config?.features?.enable_direct_connetions && ($settings?.directConnections ?? null)
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			)
 		);
 		models = await getWorkspaceModels(localStorage.token);
@@ -384,7 +384,7 @@
 											_models.set(
 												await getModels(
 													localStorage.token,
-													$config?.features?.enable_direct_connetions &&
+													$config?.features?.enable_direct_connections &&
 														($settings?.directConnections ?? null)
 												)
 											);
@@ -436,7 +436,7 @@
 							await _models.set(
 								await getModels(
 									localStorage.token,
-									$config?.features?.enable_direct_connetions &&
+									$config?.features?.enable_direct_connections &&
 										($settings?.directConnections ?? null)
 								)
 							);

@@ -62,15 +62,28 @@ export const getModels = async (
 								}))
 							};
 
-							requests.push(() => modelList);
+							requests.push(
+								(async () => {
+									return modelList;
+								})()
+							);
 						} else {
 							requests.push(getOpenAIModelsDirect(url, OPENAI_API_KEYS[idx]));
 						}
 					} else {
-						requests.push(() => {});
+						requests.push(
+							(async () => {
+								return {
+									object: 'list',
+									data: [],
+									urlIdx: idx
+								};
+							})()
+						);
 					}
 				}
 			}
+
 			const responses = await Promise.all(requests);
 
 			for (const idx in responses) {
@@ -98,6 +111,14 @@ export const getModels = async (
 				direct: true
 			}))
 		);
+
+		// Remove duplicates
+		const modelsMap = {};
+		for (const model of models) {
+			modelsMap[model.id] = model;
+		}
+
+		models = Object.values(modelsMap);
 	}
 
 	return models;
