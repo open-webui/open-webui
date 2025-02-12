@@ -34,6 +34,7 @@
 	import Spinner from './Spinner.svelte';
 
 	export let open = false;
+  export let id = '';
 	export let className = '';
 	export let buttonClassName =
 		'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
@@ -46,7 +47,7 @@
 	export let hide = false;
 </script>
 
-<div class={className}>
+<div id={id} class={className}>
 	{#if title !== null}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
