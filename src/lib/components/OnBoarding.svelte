@@ -41,20 +41,20 @@
 					<Marquee
 						duration={5000}
 						words={[
-							$i18n.t('Explore the cosmos'),
-							$i18n.t('Unlock mysteries'),
-							$i18n.t('Chart new frontiers'),
-							$i18n.t('Dive into knowledge'),
-							$i18n.t('Discover wonders'),
-							$i18n.t('Ignite curiosity'),
-							$i18n.t('Forge new paths'),
-							$i18n.t('Unravel secrets'),
-							$i18n.t('Pioneer insights'),
-							$i18n.t('Embark on adventures')
+							$i18n.t('Welcome to Findlay Park AI'),
+							$i18n.t('Hello!'),
+							$i18n.t('Welcome to Findlay Park AI'),
+							$i18n.t('Hi!'),
+							$i18n.t('Welcome to Findlay Park AI'),
+							$i18n.t('Hello!'),
+							$i18n.t('Welcome to Findlay Park AI'),
+							$i18n.t('Hi!'),
+							$i18n.t('Welcome to Findlay Park AI'),
+							$i18n.t('Hello!')
 						]}
 					/>
 
-					<div class="mt-0.5">{$i18n.t(`wherever you are`)}</div>
+					<div class="mt-0.5">{$i18n.t(``)}</div>
 				</div>
 
 				<div class="flex justify-center mt-8">
