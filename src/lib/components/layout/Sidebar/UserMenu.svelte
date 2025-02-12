@@ -9,7 +9,6 @@
 	import { fade, slide } from 'svelte/transition';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { userSignOut } from '$lib/apis/auths';
-
 	const i18n = getContext('i18n');
 
 	export let show = false;
@@ -17,6 +16,14 @@
 	export let className = 'max-w-[240px]';
 
 	const dispatch = createEventDispatcher();
+
+	// import { useLogout } from '@privy-io/react-auth';
+
+	// const { logout } = useLogout();
+
+	// Call this function to log out the user
+	// logout();
+
 </script>
 
 <DropdownMenu.Root
@@ -153,10 +160,25 @@
 
 			<hr class=" border-gray-50 dark:border-gray-850 my-1 p-0" />
 
+
 			<button
 				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
 					await userSignOut();
+
+					
+
+					// rebuid for privyio logout
+					//Log the current user out and clears their authentication state. `authenticated` will become false, `user` will become null, and the Privy Auth tokens will be deleted from the browser's local storage.
+					
+					Object.keys(localStorage).forEach(key => {
+						if (key.includes('privy')) {
+							localStorage.removeItem(key);
+						}
+					});
+
+
+
 					localStorage.removeItem('token');
 					location.href = '/auth';
 					show = false;
