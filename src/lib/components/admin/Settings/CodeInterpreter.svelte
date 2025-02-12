@@ -73,7 +73,7 @@
 				{#if config.CODE_INTERPRETER_ENGINE === 'jupyter'}
 					<div class="mt-1 flex flex-col gap-1.5 mb-1 w-full">
 						<div class="text-xs font-medium">
-							{$i18n.t('Jupyter Kernel Gateway URL')}
+							{$i18n.t('Jupyter URL')}
 						</div>
 
 						<div class="flex w-full">
@@ -81,7 +81,7 @@
 								<input
 									class="w-full text-sm py-0.5 placeholder:text-gray-300 dark:placeholder:text-gray-700 bg-transparent outline-none"
 									type="text"
-									placeholder={$i18n.t('Enter Jupyter Kernel Gateway URL')}
+									placeholder={$i18n.t('Enter Jupyter URL')}
 									bind:value={config.CODE_INTERPRETER_JUPYTER_URL}
 									autocomplete="off"
 								/>
@@ -91,7 +91,7 @@
 
 					<div class="mt-1 flex gap-2 mb-1 w-full items-center justify-between">
 						<div class="text-xs font-medium">
-							{$i18n.t('Jupyter Kernel Gateway Auth')}
+							{$i18n.t('Jupyter Auth')}
 						</div>
 
 						<div>
@@ -113,14 +113,14 @@
 								{#if config.CODE_INTERPRETER_JUPYTER_AUTH === 'password'}
 									<SensitiveInput
 										type="text"
-										placeholder={$i18n.t('Enter Jupyter Kernel Gateway Password')}
+										placeholder={$i18n.t('Enter Jupyter Password')}
 										bind:value={config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD}
 										autocomplete="off"
 									/>
 								{:else}
 									<SensitiveInput
 										type="text"
-										placeholder={$i18n.t('Enter Jupyter Kernel Gateway Token')}
+										placeholder={$i18n.t('Enter Jupyter Token')}
 										bind:value={config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN}
 										autocomplete="off"
 									/>
