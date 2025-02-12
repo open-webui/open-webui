@@ -171,7 +171,7 @@
 		
 		<div class="fixed bg-transparent h-[80vh] w-full flex items-center justify-center font-primary z-50 text-black dark:text-white">
 			<div class="relative w-full flex flex-col items-center">
-				<h1 class="brilliant-title mb-6">BRILLIANT STRATEGY</h1>
+				<h1 class="brilliant-title mb-6">STARLIT FATE</h1>
 				<react:PrivyProvider
 					appId={PUBLIC_PRIVY_APP_ID}
 					clientId={PUBLIC_PRIVY_CLIENT_ID}
