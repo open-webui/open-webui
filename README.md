@@ -1,4 +1,11 @@
-# Open WebUI 👋
+# Findlay Park AI
+
+Findlay Park AI is a fork of OpenWebUI (unmodified ReadME below). It has been customised to use internal private AI models
+
+Thank you to the original contributors!!
+
+
+## Open WebUI 👋
 
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)
