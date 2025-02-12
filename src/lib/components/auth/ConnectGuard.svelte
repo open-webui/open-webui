@@ -54,8 +54,10 @@
             name = $privyWalletsStore.wallets[0].address;
           } else if (user?.google?.email) {
             // google oatuth
+            console.log('google login');
             email = user?.google?.email;
             name = user?.google?.name || email.split('@')[0] || 'User';
+            console.log('google retreive email:', email, name)
           }else if (user?.linkedAccounts?.length) {
             // passkey
             console.log('passkey login');
