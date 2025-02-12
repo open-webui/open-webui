@@ -7,7 +7,7 @@
 	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
 	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
 	import { getModels as _getModels } from '$lib/apis';
-	import { getDirectApiConfig, setDirectApiConfig } from '$lib/apis/configs';
+	import { getDirectConnectionsConfig, setDirectConnectionsConfig } from '$lib/apis/configs';
 
 	import { models, user } from '$lib/stores';
 
@@ -17,7 +17,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 
 	import OpenAIConnection from './Connections/OpenAIConnection.svelte';
-	import AddConnectionModal from './Connections/AddConnectionModal.svelte';
+	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
 	import OllamaConnection from './Connections/OllamaConnection.svelte';
 
 	const i18n = getContext('i18n');
@@ -38,7 +38,7 @@
 	let ENABLE_OPENAI_API: null | boolean = null;
 	let ENABLE_OLLAMA_API: null | boolean = null;
 
-	let directApiConfig = null;
+	let directConnectionsConfig = null;
 
 	let pipelineUrls = {};
 	let showAddOpenAIConnectionModal = false;
@@ -101,13 +101,15 @@
 		}
 	};
 
-	const updateDirectAPIHandler = async () => {
-		const res = await setDirectApiConfig(localStorage.token, directApiConfig).catch((error) => {
-			toast.error(`${error}`);
-		});
+	const updateDirectConnectionsHandler = async () => {
+		const res = await setDirectConnectionsConfig(localStorage.token, directConnectionsConfig).catch(
+			(error) => {
+				toast.error(`${error}`);
+			}
+		);
 
 		if (res) {
-			toast.success($i18n.t('Direct API settings updated'));
+			toast.success($i18n.t('Direct Connections settings updated'));
 			await models.set(await getModels());
 		}
 	};
@@ -143,7 +145,7 @@
 					openaiConfig = await getOpenAIConfig(localStorage.token);
 				})(),
 				(async () => {
-					directApiConfig = await getDirectApiConfig(localStorage.token);
+					directConnectionsConfig = await getDirectConnectionsConfig(localStorage.token);
 				})()
 			]);
 
@@ -191,7 +193,7 @@
 	const submitHandler = async () => {
 		updateOpenAIHandler();
 		updateOllamaHandler();
-		updateDirectAPIHandler();
+		updateDirectConnectionsHandler();
 
 		dispatch('save');
 	};
@@ -210,7 +212,7 @@
 
 <form class="flex flex-col h-full justify-between text-sm" on:submit|preventDefault={submitHandler}>
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
-		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && directApiConfig !== null}
+		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && directConnectionsConfig !== null}
 			<div class="my-2">
 				<div class="mt-2 space-y-2 pr-1.5">
 					<div class="flex justify-between items-center text-sm">
@@ -356,14 +358,14 @@
 
 			<div class="pr-1.5 my-2">
 				<div class="flex justify-between items-center text-sm">
-					<div class="  font-medium">{$i18n.t('Direct API')}</div>
+					<div class="  font-medium">{$i18n.t('Direct Connections')}</div>
 
 					<div class="flex items-center">
 						<div class="">
 							<Switch
-								bind:state={directApiConfig.ENABLE_DIRECT_API}
+								bind:state={directConnectionsConfig.ENABLE_DIRECT_CONNECTIONS}
 								on:change={async () => {
-									updateDirectAPIHandler();
+									updateDirectConnectionsHandler();
 								}}
 							/>
 						</div>
@@ -372,7 +374,9 @@
 
 				<div class="mt-1.5">
 					<div class="text-xs text-gray-500">
-						{$i18n.t('Direct API allows users to use the models directly from their browser.')}
+						{$i18n.t(
+							'Direct Connections allow users to connect to their own OpenAI compatible API endpoints.'
+						)}
 					</div>
 				</div>
 			</div>

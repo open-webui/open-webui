@@ -58,10 +58,10 @@ export const exportConfig = async (token: string) => {
 	return res;
 };
 
-export const getDirectApiConfig = async (token: string) => {
+export const getDirectConnectionsConfig = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/direct_api`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/direct_connections`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -85,10 +85,10 @@ export const getDirectApiConfig = async (token: string) => {
 	return res;
 };
 
-export const setDirectApiConfig = async (token: string, config: object) => {
+export const setDirectConnectionsConfig = async (token: string, config: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/direct_api`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/direct_connections`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',

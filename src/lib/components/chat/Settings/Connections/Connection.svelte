@@ -7,8 +7,6 @@
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
 
-	import { connect } from 'socket.io-client';
-
 	export let onDelete = () => {};
 	export let onSubmit = () => {};
 

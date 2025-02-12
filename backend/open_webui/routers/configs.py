@@ -37,28 +37,30 @@ async def export_config(user=Depends(get_admin_user)):
 
 
 ############################
-# Direct API Config
+# Direct Connections Config
 ############################
 
 
 class DirectAPIConfigForm(BaseModel):
-    ENABLE_DIRECT_API: bool
+    ENABLE_DIRECT_CONNECTIONS: bool
 
 
-@router.get("/direct_api", response_model=DirectAPIConfigForm)
-async def get_direct_api_config(request: Request, user=Depends(get_admin_user)):
+@router.get("/direct_connections", response_model=DirectAPIConfigForm)
+async def get_direct_connections_config(request: Request, user=Depends(get_admin_user)):
     return {
-        "ENABLE_DIRECT_API": request.app.state.config.ENABLE_DIRECT_API,
+        "ENABLE_DIRECT_CONNECTIONS": request.app.state.config.ENABLE_DIRECT_CONNECTIONS,
     }
 
 
-@router.post("/direct_api", response_model=DirectAPIConfigForm)
-async def set_direct_api_config(
+@router.post("/direct_connections", response_model=DirectAPIConfigForm)
+async def set_direct_connections_config(
     request: Request, form_data: DirectAPIConfigForm, user=Depends(get_admin_user)
 ):
-    request.app.state.config.ENABLE_DIRECT_API = form_data.ENABLE_DIRECT_API
+    request.app.state.config.ENABLE_DIRECT_CONNECTIONS = (
+        form_data.ENABLE_DIRECT_CONNECTIONS
+    )
     return {
-        "ENABLE_DIRECT_API": request.app.state.config.ENABLE_DIRECT_API,
+        "ENABLE_DIRECT_CONNECTIONS": request.app.state.config.ENABLE_DIRECT_CONNECTIONS,
     }
 
 

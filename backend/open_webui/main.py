@@ -97,8 +97,8 @@ from open_webui.config import (
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
-    # Direct API
-    ENABLE_DIRECT_API,
+    # Direct Connections
+    ENABLE_DIRECT_CONNECTIONS,
     # Code Interpreter
     ENABLE_CODE_INTERPRETER,
     CODE_INTERPRETER_ENGINE,
@@ -407,11 +407,11 @@ app.state.OPENAI_MODELS = {}
 
 ########################################
 #
-# DIRECT API
+# DIRECT CONNECTIONS
 #
 ########################################
 
-app.state.config.ENABLE_DIRECT_API = ENABLE_DIRECT_API
+app.state.config.ENABLE_DIRECT_CONNECTIONS = ENABLE_DIRECT_CONNECTIONS
 
 ########################################
 #
@@ -1056,7 +1056,7 @@ async def get_app_config(request: Request):
             "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
             **(
                 {
-                    "enable_direct_api": app.state.config.ENABLE_DIRECT_API,
+                    "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
                     "enable_channels": app.state.config.ENABLE_CHANNELS,
                     "enable_web_search": app.state.config.ENABLE_RAG_WEB_SEARCH,
                     "enable_code_interpreter": app.state.config.ENABLE_CODE_INTERPRETER,

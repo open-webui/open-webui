@@ -685,13 +685,13 @@ Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
 
 
 ####################################
-# DIRECT API
+# DIRECT CONNECTIONS
 ####################################
 
-ENABLE_DIRECT_API = PersistentConfig(
-    "ENABLE_DIRECT_API",
+ENABLE_DIRECT_CONNECTIONS = PersistentConfig(
+    "ENABLE_DIRECT_CONNECTIONS",
     "direct.enable",
-    os.environ.get("ENABLE_DIRECT_API", "True").lower() == "true",
+    os.environ.get("ENABLE_DIRECT_CONNECTIONS", "True").lower() == "true",
 )
 
 ####################################
