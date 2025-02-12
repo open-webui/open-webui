@@ -281,6 +281,13 @@ async def get_all_models(request: Request):
 
         responses = await asyncio.gather(*request_tasks)
 
+        loaded_models_response = requests.get(
+            f"{request.app.state.config.OLLAMA_BASE_URLS[0]}/api/ps"
+        )
+        loaded_models = [
+            model["model"] for model in loaded_models_response.json().get("models", [])
+        ]
+
         for idx, response in enumerate(responses):
             if response:
                 url = request.app.state.config.OLLAMA_BASE_URLS[idx]
@@ -305,10 +312,11 @@ async def get_all_models(request: Request):
                 if prefix_id:
                     for model in response.get("models", []):
                         model["model"] = f"{prefix_id}.{model['model']}"
+                for model in response.get("models", []):
+                    model["loaded"] = model["model"] in loaded_models
 
         def merge_models_lists(model_lists):
             merged_models = {}
-
             for idx, model_list in enumerate(model_lists):
                 if model_list is not None:
                     for model in model_list:
@@ -318,7 +326,9 @@ async def get_all_models(request: Request):
                             merged_models[id] = model
                         else:
                             merged_models[id]["urls"].append(idx)
-
+                            merged_models[id]["loaded"] = merged_models[id].get(
+                                "loaded", False
+                            ) or model.get("loaded", False)
             return list(merged_models.values())
 
         models = {

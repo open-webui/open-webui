@@ -381,6 +381,7 @@ async def get_all_models(request: Request) -> dict[str, list]:
                             "owned_by": "openai",
                             "openai": model,
                             "urlIdx": idx,
+                            "loaded": True,
                         }
                         for model in models
                         if "api.openai.com"

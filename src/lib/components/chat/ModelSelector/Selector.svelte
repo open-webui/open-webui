@@ -53,6 +53,9 @@
 	export let triggerClassName = 'text-lg';
 
 	let show = false;
+	setInterval(async () => {
+		if (show) models.set(await getModels(localStorage.token));
+	}, 5000);
 
 	let selectedModel = '';
 	$: selectedModel = items.find((item) => item.value === value) ?? '';
@@ -239,6 +242,7 @@
 		searchValue = '';
 		selectedModelIdx = 0;
 		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
+		models.set(await getModels(localStorage.token));
 	}}
 	closeFocus={false}
 >
@@ -305,10 +309,16 @@
 				{#each filteredItems as item, index}
 					<button
 						aria-label="model-item"
-						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
-						selectedModelIdx
-							? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
-							: ''}"
+						class={`flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-lg py-2 pl-3 pr-1.5 text-sm 
+				  text-gray-700 dark:text-gray-200 outline-none transition-all duration-75 
+				  hover:bg-gray-100 dark:hover:bg-gray-700
+				  data-[highlighted]:bg-gray-200 dark:data-[highlighted]:bg-gray-600
+				  ${index === selectedModelIdx && !item.model.loaded ? 'bg-gray-100 dark:bg-gray-700' : ''}
+				  ${
+						item.model.loaded
+							? 'bg-green-50 hover:bg-green-100 dark:bg-green-800 dark:hover:bg-green-700'
+							: ''
+					}`}
 						data-arrow-selected={index === selectedModelIdx}
 						on:click={() => {
 							value = item.value;

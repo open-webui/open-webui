@@ -48,6 +48,8 @@
 	let showUpdateToast = true;
 	let showChangelog = true;
 
+	let showLoadedModelsIndicator = true;
+
 	let showEmojiInCall = false;
 	let voiceInterruption = false;
 	let hapticFeedback = false;
@@ -93,7 +95,10 @@
 		showChangelog = !showChangelog;
 		saveSettings({ showChangelog: showChangelog });
 	};
-
+	const toggleShowLoadedModels = async () => {
+		showLoadedModelsIndicator = !showLoadedModelsIndicator;
+		saveSettings({ showLoadedModelsIndicator: showLoadedModelsIndicator });
+	};
 	const toggleShowUsername = async () => {
 		showUsername = !showUsername;
 		saveSettings({ showUsername: showUsername });
@@ -214,6 +219,8 @@
 		showUsername = $settings.showUsername ?? false;
 		showUpdateToast = $settings.showUpdateToast ?? true;
 		showChangelog = $settings.showChangelog ?? true;
+
+		showLoadedModelsIndicator = $settings.showLoadedModelsIndicator ?? true;
 
 		showEmojiInCall = $settings.showEmojiInCall ?? false;
 		voiceInterruption = $settings.voiceInterruption ?? false;
@@ -454,6 +461,28 @@
 					</div>
 				</div>
 			{/if}
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">
+						{$i18n.t(`Show Loaded Model indicator in model selector`)}
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleShowLoadedModels();
+						}}
+						type="button"
+					>
+						{#if showLoadedModelsIndicator === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
 
 			<div class=" my-1.5 text-sm font-medium">{$i18n.t('Chat')}</div>
 
