@@ -1,12 +1,13 @@
 <script lang="ts">
-	import { getRAGConfig, updateRAGConfig } from '$lib/apis/retrieval';
-	import Switch from '$lib/components/common/Switch.svelte';
-
-	import { models } from '$lib/stores';
-	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import { onMount, getContext } from 'svelte';
 	import { getCodeInterpreterConfig, setCodeInterpreterConfig } from '$lib/apis/configs';
+
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -131,7 +132,27 @@
 				{/if}
 			</div>
 
-			<!-- <hr class=" dark:border-gray-850 my-2" /> -->
+			<hr class=" dark:border-gray-850 my-2" />
+
+			<div>
+				<div class="py-0.5 w-full">
+					<div class=" mb-2.5 text-xs font-medium">
+						{$i18n.t('Code Interpreter Prompt Template')}
+					</div>
+
+					<Tooltip
+						content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+						placement="top-start"
+					>
+						<Textarea
+							bind:value={config.CODE_INTERPRETER_PROMPT_TEMPLATE}
+							placeholder={$i18n.t(
+								'Leave empty to use the default prompt, or enter a custom prompt'
+							)}
+						/>
+					</Tooltip>
+				</div>
+			</div>
 		{/if}
 	</div>
 	<div class="flex justify-end pt-3 text-sm font-medium">

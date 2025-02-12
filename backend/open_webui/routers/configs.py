@@ -42,6 +42,7 @@ async def export_config(user=Depends(get_admin_user)):
 class CodeInterpreterConfigForm(BaseModel):
     ENABLE_CODE_INTERPRETER: bool
     CODE_INTERPRETER_ENGINE: str
+    CODE_INTERPRETER_PROMPT_TEMPLATE: Optional[str]
     CODE_INTERPRETER_JUPYTER_URL: Optional[str]
     CODE_INTERPRETER_JUPYTER_AUTH: Optional[str]
     CODE_INTERPRETER_JUPYTER_AUTH_TOKEN: Optional[str]
@@ -53,6 +54,7 @@ async def get_code_interpreter_config(request: Request, user=Depends(get_admin_u
     return {
         "ENABLE_CODE_INTERPRETER": request.app.state.config.ENABLE_CODE_INTERPRETER,
         "CODE_INTERPRETER_ENGINE": request.app.state.config.CODE_INTERPRETER_ENGINE,
+        "CODE_INTERPRETER_PROMPT_TEMPLATE": request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE,
         "CODE_INTERPRETER_JUPYTER_URL": request.app.state.config.CODE_INTERPRETER_JUPYTER_URL,
         "CODE_INTERPRETER_JUPYTER_AUTH": request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH,
         "CODE_INTERPRETER_JUPYTER_AUTH_TOKEN": request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN,
@@ -66,6 +68,10 @@ async def set_code_interpreter_config(
 ):
     request.app.state.config.ENABLE_CODE_INTERPRETER = form_data.ENABLE_CODE_INTERPRETER
     request.app.state.config.CODE_INTERPRETER_ENGINE = form_data.CODE_INTERPRETER_ENGINE
+    request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE = (
+        form_data.CODE_INTERPRETER_PROMPT_TEMPLATE
+    )
+
     request.app.state.config.CODE_INTERPRETER_JUPYTER_URL = (
         form_data.CODE_INTERPRETER_JUPYTER_URL
     )
@@ -84,6 +90,7 @@ async def set_code_interpreter_config(
     return {
         "ENABLE_CODE_INTERPRETER": request.app.state.config.ENABLE_CODE_INTERPRETER,
         "CODE_INTERPRETER_ENGINE": request.app.state.config.CODE_INTERPRETER_ENGINE,
+        "CODE_INTERPRETER_PROMPT_TEMPLATE": request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE,
         "CODE_INTERPRETER_JUPYTER_URL": request.app.state.config.CODE_INTERPRETER_JUPYTER_URL,
         "CODE_INTERPRETER_JUPYTER_AUTH": request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH,
         "CODE_INTERPRETER_JUPYTER_AUTH_TOKEN": request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN,

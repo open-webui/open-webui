@@ -690,7 +690,12 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
         if "code_interpreter" in features and features["code_interpreter"]:
             form_data["messages"] = add_or_update_user_message(
-                DEFAULT_CODE_INTERPRETER_PROMPT, form_data["messages"]
+                (
+                    request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
+                    if request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE != ""
+                    else DEFAULT_CODE_INTERPRETER_PROMPT
+                ),
+                form_data["messages"],
             )
 
     try:

@@ -1342,6 +1342,12 @@ CODE_INTERPRETER_ENGINE = PersistentConfig(
     os.environ.get("CODE_INTERPRETER_ENGINE", "pyodide"),
 )
 
+CODE_INTERPRETER_PROMPT_TEMPLATE = PersistentConfig(
+    "CODE_INTERPRETER_PROMPT_TEMPLATE",
+    "code_interpreter.prompt_template",
+    os.environ.get("CODE_INTERPRETER_PROMPT_TEMPLATE", ""),
+)
+
 CODE_INTERPRETER_JUPYTER_URL = PersistentConfig(
     "CODE_INTERPRETER_JUPYTER_URL",
     "code_interpreter.jupyter.url",
