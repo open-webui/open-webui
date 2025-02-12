@@ -101,6 +101,17 @@
 		}
 	};
 
+	const updateDirectAPIHandler = async () => {
+		const res = await setDirectApiConfig(localStorage.token, directApiConfig).catch((error) => {
+			toast.error(`${error}`);
+		});
+
+		if (res) {
+			toast.success($i18n.t('Direct API settings updated'));
+			await models.set(await getModels());
+		}
+	};
+
 	const addOpenAIConnectionHandler = async (connection) => {
 		OPENAI_API_BASE_URLS = [...OPENAI_API_BASE_URLS, connection.url];
 		OPENAI_API_KEYS = [...OPENAI_API_KEYS, connection.key];
@@ -180,8 +191,7 @@
 	const submitHandler = async () => {
 		updateOpenAIHandler();
 		updateOllamaHandler();
-
-		setDirectApiConfig(localStorage.token, directApiConfig);
+		updateDirectAPIHandler();
 
 		dispatch('save');
 	};
@@ -353,7 +363,7 @@
 							<Switch
 								bind:state={directApiConfig.ENABLE_DIRECT_API}
 								on:change={async () => {
-									updateOpenAIHandler();
+									updateDirectAPIHandler();
 								}}
 							/>
 						</div>
