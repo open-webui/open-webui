@@ -60,7 +60,7 @@
             console.log('Auto sign up for connected wallet');
             email = $privyWalletsStore.wallets[0].address + '@airie.fun';
             name = $privyWalletsStore.wallets[0].address;
-          } else if (user?.google?.email) {
+          } else if (linkedType == "google_oauth") {
             // google oatuth
             console.log('google login');
             email = user?.google?.email;
