@@ -1835,6 +1835,17 @@ RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
     int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
 )
 
+RAG_WEB_LOADER = PersistentConfig(
+    "RAG_WEB_LOADER",
+    "rag.web.loader",
+    os.environ.get("RAG_WEB_LOADER", "safe_web")
+)
+
+PLAYWRIGHT_WS_URI = PersistentConfig(
+    "PLAYWRIGHT_WS_URI",
+    "rag.web.loader.playwright.ws.uri",
+    os.environ.get("PLAYWRIGHT_WS_URI", None)
+)
 
 ####################################
 # Images
