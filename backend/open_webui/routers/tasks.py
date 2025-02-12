@@ -146,7 +146,7 @@ async def generate_title(
     if not request.app.state.config.ENABLE_TITLE_GENERATION:
         return JSONResponse(
             status_code=status.HTTP_200_OK,
-            content={"detail": "Tags generation is disabled"},
+            content={"detail": "Title generation is disabled"},
         )
         
     models = request.app.state.MODELS
