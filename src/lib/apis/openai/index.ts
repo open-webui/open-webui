@@ -208,6 +208,33 @@ export const updateOpenAIKeys = async (token: string = '', keys: string[]) => {
 	return res.OPENAI_API_KEYS;
 };
 
+export const getOpenAIModelsDirect = async (url: string, key: string) => {
+	let error = null;
+
+	const res = await fetch(`${url}/models`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(key && { authorization: `Bearer ${key}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = `OpenAI: ${err?.error?.message ?? 'Network Problem'}`;
+			return [];
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getOpenAIModels = async (token: string, urlIdx?: number) => {
 	let error = null;
 

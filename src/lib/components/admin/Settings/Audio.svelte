@@ -10,7 +10,7 @@
 		getModels as _getModels,
 		getVoices as _getVoices
 	} from '$lib/apis/audio';
-	import { config } from '$lib/stores';
+	import { config, settings } from '$lib/stores';
 
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
@@ -51,9 +51,11 @@
 		if (TTS_ENGINE === '') {
 			models = [];
 		} else {
-			const res = await _getModels(localStorage.token).catch((e) => {
-				toast.error(`${e}`);
-			});
+			const res = await _getModels(localStorage.token, $settings?.directConnections ?? null).catch(
+				(e) => {
+					toast.error(`${e}`);
+				}
+			);
 
 			if (res) {
 				console.log(res);

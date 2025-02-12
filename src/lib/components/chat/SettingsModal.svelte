@@ -322,7 +322,7 @@
 	};
 
 	const getModels = async () => {
-		return await _getModels(localStorage.token);
+		return await _getModels(localStorage.token, $settings?.directConnections ?? null);
 	};
 
 	let selectedTab = 'general';
@@ -654,8 +654,8 @@
 					/>
 				{:else if selectedTab === 'connections'}
 					<Connections
-						{saveSettings}
-						on:save={() => {
+						saveSettings={async (updated) => {
+							await saveSettings(updated);
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>

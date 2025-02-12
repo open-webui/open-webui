@@ -58,14 +58,6 @@
 		});
 	};
 
-	const submitHandler = async () => {
-		await updateHandler();
-
-		await saveSettings({
-			directConnections: config
-		});
-	};
-
 	onMount(async () => {
 		config = $settings?.directConnections ?? {
 			OPENAI_API_BASE_URLS: [],
@@ -77,7 +69,12 @@
 
 <AddConnectionModal direct bind:show={showConnectionModal} onSubmit={addConnectionHandler} />
 
-<form class="flex flex-col h-full justify-between text-sm" on:submit|preventDefault={submitHandler}>
+<form
+	class="flex flex-col h-full justify-between text-sm"
+	on:submit|preventDefault={() => {
+		updateHandler();
+	}}
+>
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
 		{#if config !== null}
 			<div class="">

@@ -3,7 +3,7 @@
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, models, MODEL_DOWNLOAD_POOL, user, config } from '$lib/stores';
+	import { WEBUI_NAME, models, MODEL_DOWNLOAD_POOL, user, config, settings } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 
 	import {
@@ -235,7 +235,7 @@
 					})
 				);
 
-				models.set(await getModels(localStorage.token));
+				models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
 			} else {
 				toast.error($i18n.t('Download canceled'));
 			}
@@ -394,7 +394,7 @@
 		modelTransferring = false;
 		uploadProgress = null;
 
-		models.set(await getModels(localStorage.token));
+		models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
 	};
 
 	const deleteModelHandler = async () => {
@@ -407,7 +407,7 @@
 		}
 
 		deleteModelTag = '';
-		models.set(await getModels(localStorage.token));
+		models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
 	};
 
 	const cancelModelPullHandler = async (model: string) => {
@@ -506,7 +506,7 @@
 			}
 		}
 
-		models.set(await getModels(localStorage.token));
+		models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
 
 		createModelLoading = false;
 

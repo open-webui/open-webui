@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { models, user } from '$lib/stores';
+	import { models, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 
 	const dispatch = createEventDispatcher();
@@ -27,7 +27,7 @@
 
 		if (config) {
 			toast.success('Settings saved successfully');
-			models.set(await getModels(localStorage.token));
+			models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
 		}
 	};
 
@@ -36,7 +36,7 @@
 		config.EVALUATION_ARENA_MODELS = [...config.EVALUATION_ARENA_MODELS];
 
 		await submitHandler();
-		models.set(await getModels(localStorage.token));
+		models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
 	};
 
 	const editModelHandler = async (model, modelIdx) => {
@@ -44,7 +44,7 @@
 		config.EVALUATION_ARENA_MODELS = [...config.EVALUATION_ARENA_MODELS];
 
 		await submitHandler();
-		models.set(await getModels(localStorage.token));
+		models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
 	};
 
 	const deleteModelHandler = async (modelIdx) => {
@@ -53,7 +53,7 @@
 		);
 
 		await submitHandler();
-		models.set(await getModels(localStorage.token));
+		models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
 	};
 
 	onMount(async () => {

@@ -3,7 +3,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { WEBUI_NAME, config, functions, models } from '$lib/stores';
+	import { WEBUI_NAME, config, functions, models, settings } from '$lib/stores';
 	import { onMount, getContext, tick } from 'svelte';
 
 	import { goto } from '$app/navigation';
@@ -126,7 +126,7 @@
 			toast.success($i18n.t('Function deleted successfully'));
 
 			functions.set(await getFunctions(localStorage.token));
-			models.set(await getModels(localStorage.token));
+			models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
 		}
 	};
 
@@ -147,7 +147,7 @@
 			}
 
 			functions.set(await getFunctions(localStorage.token));
-			models.set(await getModels(localStorage.token));
+			models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
 		}
 	};
 
@@ -359,7 +359,9 @@
 							bind:state={func.is_active}
 							on:change={async (e) => {
 								toggleFunctionById(localStorage.token, func.id);
-								models.set(await getModels(localStorage.token));
+								models.set(
+									await getModels(localStorage.token, $settings?.directConnections ?? null)
+								);
 							}}
 						/>
 					</Tooltip>
@@ -496,7 +498,7 @@
 	id={selectedFunction?.id ?? null}
 	on:save={async () => {
 		await tick();
-		models.set(await getModels(localStorage.token));
+		models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
 	}}
 />
 
@@ -517,7 +519,7 @@
 
 			toast.success($i18n.t('Functions imported successfully'));
 			functions.set(await getFunctions(localStorage.token));
-			models.set(await getModels(localStorage.token));
+			models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
 		};
 
 		reader.readAsText(importFiles[0]);

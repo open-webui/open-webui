@@ -68,7 +68,7 @@
 			toast.success($i18n.t(`Deleted {{name}}`, { name: model.id }));
 		}
 
-		await _models.set(await getModels(localStorage.token));
+		await _models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
 		models = await getWorkspaceModels(localStorage.token);
 	};
 
@@ -134,7 +134,7 @@
 			);
 		}
 
-		await _models.set(await getModels(localStorage.token));
+		await _models.set(await getModels(localStorage.token, $settings?.directConnections ?? null));
 		models = await getWorkspaceModels(localStorage.token);
 	};
 
@@ -371,7 +371,9 @@
 										bind:state={model.is_active}
 										on:change={async (e) => {
 											toggleModelById(localStorage.token, model.id);
-											_models.set(await getModels(localStorage.token));
+											_models.set(
+												await getModels(localStorage.token, $settings?.directConnections ?? null)
+											);
 										}}
 									/>
 								</Tooltip>
@@ -417,7 +419,9 @@
 								}
 							}
 
-							await _models.set(await getModels(localStorage.token));
+							await _models.set(
+								await getModels(localStorage.token, $settings?.directConnections ?? null)
+							);
 							models = await getWorkspaceModels(localStorage.token);
 						};
 
