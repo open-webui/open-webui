@@ -6,7 +6,7 @@
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
-	import { models, user } from '$lib/stores';
+	import { models, settings, user } from '$lib/stores';
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -16,84 +16,132 @@
 
 	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
 
-	const getModels = async () => {
-		const models = await _getModels(localStorage.token);
-		return models;
-	};
+	export let saveSettings: Function;
 
 	let config = null;
 
 	let showConnectionModal = false;
 
-	onMount(async () => {});
+	const addConnectionHandler = async (connection) => {
+		config.OPENAI_API_BASE_URLS.push(connection.url);
+		config.OPENAI_API_KEYS.push(connection.key);
+		config.OPENAI_API_CONFIGS[config.OPENAI_API_BASE_URLS.length - 1] = connection.config;
 
-	const addConnectionHandler = async (connection) => {};
+		await updateHandler();
+	};
 
-	const submitHandler = async () => {};
-	const updateHandler = async () => {};
+	const updateHandler = async () => {
+		// Remove trailing slashes
+		config.OPENAI_API_BASE_URLS = config.OPENAI_API_BASE_URLS.map((url) => url.replace(/\/$/, ''));
+
+		// Check if API KEYS length is same than API URLS length
+		if (config.OPENAI_API_KEYS.length !== config.OPENAI_API_BASE_URLS.length) {
+			// if there are more keys than urls, remove the extra keys
+			if (config.OPENAI_API_KEYS.length > config.OPENAI_API_BASE_URLS.length) {
+				config.OPENAI_API_KEYS = config.OPENAI_API_KEYS.slice(
+					0,
+					config.OPENAI_API_BASE_URLS.length
+				);
+			}
+
+			// if there are more urls than keys, add empty keys
+			if (config.OPENAI_API_KEYS.length < config.OPENAI_API_BASE_URLS.length) {
+				const diff = config.OPENAI_API_BASE_URLS.length - config.OPENAI_API_KEYS.length;
+				for (let i = 0; i < diff; i++) {
+					config.OPENAI_API_KEYS.push('');
+				}
+			}
+		}
+
+		await saveSettings({
+			directConnections: config
+		});
+	};
+
+	const submitHandler = async () => {
+		await updateHandler();
+
+		await saveSettings({
+			directConnections: config
+		});
+	};
+
+	onMount(async () => {
+		config = $settings?.directConnections ?? {
+			OPENAI_API_BASE_URLS: [],
+			OPENAI_API_KEYS: [],
+			OPENAI_API_CONFIGS: {}
+		};
+	});
 </script>
 
 <AddConnectionModal direct bind:show={showConnectionModal} onSubmit={addConnectionHandler} />
 
 <form class="flex flex-col h-full justify-between text-sm" on:submit|preventDefault={submitHandler}>
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
-		<div class="my-2">
-			<div class="pr-1.5">
-				<div class="">
-					<div class="flex justify-between items-center">
-						<div class="font-medium">{$i18n.t('Manage Direct Connections')}</div>
+		{#if config !== null}
+			<div class="">
+				<div class="pr-1.5">
+					<div class="">
+						<div class="flex justify-between items-center mb-0.5">
+							<div class="font-medium">{$i18n.t('Manage Direct Connections')}</div>
 
-						<Tooltip content={$i18n.t(`Add Connection`)}>
-							<button
-								class="px-1"
-								on:click={() => {
-									showConnectionModal = true;
-								}}
-								type="button"
-							>
-								<Plus />
-							</button>
-						</Tooltip>
+							<Tooltip content={$i18n.t(`Add Connection`)}>
+								<button
+									class="px-1"
+									on:click={() => {
+										showConnectionModal = true;
+									}}
+									type="button"
+								>
+									<Plus />
+								</button>
+							</Tooltip>
+						</div>
+
+						<div class="flex flex-col gap-1.5">
+							{#each config?.OPENAI_API_BASE_URLS ?? [] as url, idx}
+								<Connection
+									bind:url
+									bind:key={config.OPENAI_API_KEYS[idx]}
+									bind:config={config.OPENAI_API_CONFIGS[idx]}
+									onSubmit={() => {
+										updateHandler();
+									}}
+									onDelete={() => {
+										config.OPENAI_API_BASE_URLS = config.OPENAI_API_BASE_URLS.filter(
+											(url, urlIdx) => idx !== urlIdx
+										);
+										config.OPENAI_API_KEYS = config.OPENAI_API_KEYS.filter(
+											(key, keyIdx) => idx !== keyIdx
+										);
+
+										let newConfig = {};
+										config.OPENAI_API_BASE_URLS.forEach((url, newIdx) => {
+											newConfig[newIdx] =
+												config.OPENAI_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
+										});
+										config.OPENAI_API_CONFIGS = newConfig;
+									}}
+								/>
+							{/each}
+						</div>
 					</div>
 
-					<div class="flex flex-col gap-1.5 mt-1.5">
-						{#each config?.OPENAI_API_BASE_URLS ?? [] as url, idx}
-							<Connection
-								bind:url
-								bind:key={config.OPENAI_API_KEYS[idx]}
-								bind:config={config.OPENAI_API_CONFIGS[idx]}
-								onSubmit={() => {
-									updateHandler();
-								}}
-								onDelete={() => {
-									config.OPENAI_API_BASE_URLS = config.OPENAI_API_BASE_URLS.filter(
-										(url, urlIdx) => idx !== urlIdx
-									);
-									config.OPENAI_API_KEYS = config.OPENAI_API_KEYS.filter(
-										(key, keyIdx) => idx !== keyIdx
-									);
-
-									let newConfig = {};
-									config.OPENAI_API_BASE_URLS.forEach((url, newIdx) => {
-										newConfig[newIdx] =
-											config.OPENAI_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
-									});
-									config.OPENAI_API_CONFIGS = newConfig;
-								}}
-							/>
-						{/each}
-					</div>
-				</div>
-
-				<hr class=" border-gray-50 dark:border-gray-850" />
-
-				<div class="mt-1.5">
-					<div class="text-xs text-gray-500">
-						{$i18n.t('Connect to your own OpenAI compatible API endpoints.')}
+					<div class="my-1.5">
+						<div class="text-xs text-gray-500">
+							{$i18n.t('Connect to your own OpenAI compatible API endpoints.')}
+						</div>
 					</div>
 				</div>
 			</div>
-		</div>
+		{:else}
+			<div class="flex h-full justify-center">
+				<div class="my-auto">
+					<Spinner className="size-6" />
+				</div>
+			</div>
+		{/if}
 	</div>
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
