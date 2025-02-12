@@ -415,7 +415,7 @@ def upload_image(request, image_metadata, image_data, content_type, user):
     image_format = mimetypes.guess_extension(content_type)
     file = UploadFile(
         file=io.BytesIO(image_data),
-        filename=f"generated{image_format}",  # will be converted to a unique ID on upload_file
+        filename=f"generated-image{image_format}",  # will be converted to a unique ID on upload_file
         headers={
             "content-type": content_type,
         },
