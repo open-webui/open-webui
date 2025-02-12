@@ -813,7 +813,7 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
 
         return filtered_models
 
-    models = await get_all_models(request)
+    models = await get_all_models(request, user)
 
     # Filter out filter pipelines
     models = [
@@ -842,7 +842,7 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
 
 @app.get("/api/models/base")
 async def get_base_models(request: Request, user=Depends(get_admin_user)):
-    models = await get_all_base_models(request)
+    models = await get_all_base_models(request, user)
     return {"data": models}
 
 
@@ -853,7 +853,7 @@ async def chat_completion(
     user=Depends(get_verified_user),
 ):
     if not request.app.state.MODELS:
-        await get_all_models(request)
+        await get_all_models(request, user)
 
     tasks = form_data.pop("background_tasks", None)
     try:

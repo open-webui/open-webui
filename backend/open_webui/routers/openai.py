@@ -190,7 +190,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 data=body,
                 headers={
                     "Content-Type": "application/json",
-                    "Authorization": f"Bearer {request.app.state.config.OPENAI_API_KEYS[idx]}",
+                    "Authorization": f"Bearer {user.api_key}",
                     **(
                         {
                             "HTTP-Referer": "https://openwebui.com/",
@@ -247,7 +247,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.OPENAI_NOT_FOUND)
 
 
-async def get_all_models_responses(request: Request) -> list:
+async def get_all_models_responses(request: Request, user) -> list:
     if not request.app.state.config.ENABLE_OPENAI_API:
         return []
 
@@ -271,7 +271,7 @@ async def get_all_models_responses(request: Request) -> list:
         ):
             request_tasks.append(
                 send_get_request(
-                    f"{url}/models", request.app.state.config.OPENAI_API_KEYS[idx]
+                    f"{url}/models", user.api_key
                 )
             )
         else:
@@ -290,7 +290,7 @@ async def get_all_models_responses(request: Request) -> list:
                     request_tasks.append(
                         send_get_request(
                             f"{url}/models",
-                            request.app.state.config.OPENAI_API_KEYS[idx],
+                            user.api_key,
                         )
                     )
                 else:
@@ -352,13 +352,13 @@ async def get_filtered_models(models, user):
 
 
 @cached(ttl=3)
-async def get_all_models(request: Request) -> dict[str, list]:
+async def get_all_models(request: Request, user) -> dict[str, list]:
     log.info("get_all_models()")
 
     if not request.app.state.config.ENABLE_OPENAI_API:
         return {"data": []}
 
-    responses = await get_all_models_responses(request)
+    responses = await get_all_models_responses(request, user)
 
     def extract_data(response):
         if response and "data" in response:
@@ -418,10 +418,10 @@ async def get_models(
     }
 
     if url_idx is None:
-        models = await get_all_models(request)
+        models = await get_all_models(request,user)
     else:
         url = request.app.state.config.OPENAI_API_BASE_URLS[url_idx]
-        key = request.app.state.config.OPENAI_API_KEYS[url_idx]
+        key = user.api_key
 
         r = None
         async with aiohttp.ClientSession(
@@ -513,7 +513,7 @@ async def verify_connection(
             async with session.get(
                 f"{url}/models",
                 headers={
-                    "Authorization": f"Bearer {key}",
+                    "Authorization": f"Bearer {user.api_key}",
                     "Content-Type": "application/json",
                 },
             ) as r:
@@ -587,7 +587,7 @@ async def generate_chat_completion(
                 detail="Model not found",
             )
 
-    await get_all_models(request)
+    await get_all_models(request,user)
     model = request.app.state.OPENAI_MODELS.get(model_id)
     if model:
         idx = model["urlIdx"]
@@ -620,6 +620,7 @@ async def generate_chat_completion(
 
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
+    key = user.api_key
 
     # Fix: O1 does not support the "max_tokens" parameter, Modify "max_tokens" to "max_completion_tokens"
     is_o1 = payload["model"].lower().startswith("o1-")
@@ -727,7 +728,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     idx = 0
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
-
+    key = user.api_key
     r = None
     session = None
     streaming = False

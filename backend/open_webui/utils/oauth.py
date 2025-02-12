@@ -40,6 +40,10 @@ from open_webui.utils.misc import parse_duration
 from open_webui.utils.auth import get_password_hash, create_token
 from open_webui.utils.webhook import post_webhook
 
+from open_webui.config import WEBUI_URL
+
+from open_webui.utils.get_apikey_by_email import get_api_key_by_email
+
 log = logging.getLogger(__name__)
 
 auth_manager_config = AppConfig()
@@ -316,6 +320,12 @@ class OAuthManager:
             data={"id": user.id},
             expires_delta=parse_duration(auth_manager_config.JWT_EXPIRES_IN),
         )
+        try: 
+            Users.update_user_api_key_by_id(user.id, get_api_key_by_email(user))
+        except Exception as e:
+            log.warning(
+                f"API-Key can't be fetched, please check your account on aibrary.dev/dashboard/api-key: {user_data}"
+            )
 
         if auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT and user.role != "admin":
             self.update_user_groups(
@@ -343,7 +353,7 @@ class OAuthManager:
                 secure=WEBUI_AUTH_COOKIE_SECURE,
             )
         # Redirect back to the frontend with the JWT token
-        redirect_url = f"{request.base_url}auth#token={jwt_token}"
+        redirect_url = f"{WEBUI_URL}auth#token={jwt_token}"
         return RedirectResponse(url=redirect_url, headers=response.headers)
 
 

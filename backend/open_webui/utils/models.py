@@ -29,17 +29,17 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
-async def get_all_base_models(request: Request):
+async def get_all_base_models(request: Request, user):
     function_models = []
     openai_models = []
     ollama_models = []
 
     if request.app.state.config.ENABLE_OPENAI_API:
-        openai_models = await openai.get_all_models(request)
+        openai_models = await openai.get_all_models(request, user)
         openai_models = openai_models["data"]
 
     if request.app.state.config.ENABLE_OLLAMA_API:
-        ollama_models = await ollama.get_all_models(request)
+        ollama_models = await ollama.get_all_models(request, user)
         ollama_models = [
             {
                 "id": model["model"],
@@ -58,8 +58,8 @@ async def get_all_base_models(request: Request):
     return models
 
 
-async def get_all_models(request):
-    models = await get_all_base_models(request)
+async def get_all_models(request, user):
+    models = await get_all_base_models(request, user)
 
     # If there are no models, return an empty list
     if len(models) == 0:
