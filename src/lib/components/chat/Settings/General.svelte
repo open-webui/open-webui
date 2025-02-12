@@ -49,6 +49,7 @@
 		function_calling: null,
 		seed: null,
 		temperature: null,
+		reasoning_effort: null,
 		frequency_penalty: null,
 		repeat_last_n: null,
 		mirostat: null,
@@ -333,9 +334,13 @@
 					system: system !== '' ? system : undefined,
 					params: {
 						stream_response: params.stream_response !== null ? params.stream_response : undefined,
+						function_calling:
+							params.function_calling !== null ? params.function_calling : undefined,
 						seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
 						stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,
 						temperature: params.temperature !== null ? params.temperature : undefined,
+						reasoning_effort:
+							params.reasoning_effort !== null ? params.reasoning_effort : undefined,
 						frequency_penalty:
 							params.frequency_penalty !== null ? params.frequency_penalty : undefined,
 						repeat_last_n: params.repeat_last_n !== null ? params.repeat_last_n : undefined,

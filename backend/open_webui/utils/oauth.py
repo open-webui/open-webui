@@ -1,6 +1,7 @@
 import base64
 import logging
 import mimetypes
+import sys
 import uuid
 
 import aiohttp
@@ -40,7 +41,11 @@ from open_webui.utils.misc import parse_duration
 from open_webui.utils.auth import get_password_hash, create_token
 from open_webui.utils.webhook import post_webhook
 
+from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+
+logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["OAUTH"])
 
 auth_manager_config = AppConfig()
 auth_manager_config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
@@ -72,12 +77,15 @@ class OAuthManager:
     def get_user_role(self, user, user_data):
         if user and Users.get_num_users() == 1:
             # If the user is the only user, assign the role "admin" - actually repairs role for single user on login
+            log.debug("Assigning the only user the admin role")
             return "admin"
         if not user and Users.get_num_users() == 0:
             # If there are no users, assign the role "admin", as the first user will be an admin
+            log.debug("Assigning the first user the admin role")
             return "admin"
 
         if auth_manager_config.ENABLE_OAUTH_ROLE_MANAGEMENT:
+            log.debug("Running OAUTH Role management")
             oauth_claim = auth_manager_config.OAUTH_ROLES_CLAIM
             oauth_allowed_roles = auth_manager_config.OAUTH_ALLOWED_ROLES
             oauth_admin_roles = auth_manager_config.OAUTH_ADMIN_ROLES
@@ -93,17 +101,24 @@ class OAuthManager:
                     claim_data = claim_data.get(nested_claim, {})
                 oauth_roles = claim_data if isinstance(claim_data, list) else None
 
+            log.debug(f"Oauth Roles claim: {oauth_claim}")
+            log.debug(f"User roles from oauth: {oauth_roles}")
+            log.debug(f"Accepted user roles: {oauth_allowed_roles}")
+            log.debug(f"Accepted admin roles: {oauth_admin_roles}")
+
             # If any roles are found, check if they match the allowed or admin roles
             if oauth_roles:
                 # If role management is enabled, and matching roles are provided, use the roles
                 for allowed_role in oauth_allowed_roles:
                     # If the user has any of the allowed roles, assign the role "user"
                     if allowed_role in oauth_roles:
+                        log.debug("Assigned user the user role")
                         role = "user"
                         break
                 for admin_role in oauth_admin_roles:
                     # If the user has any of the admin roles, assign the role "admin"
                     if admin_role in oauth_roles:
+                        log.debug("Assigned user the admin role")
                         role = "admin"
                         break
         else:
@@ -117,16 +132,27 @@ class OAuthManager:
         return role
 
     def update_user_groups(self, user, user_data, default_permissions):
+        log.debug("Running OAUTH Group management")
         oauth_claim = auth_manager_config.OAUTH_GROUPS_CLAIM
 
         user_oauth_groups: list[str] = user_data.get(oauth_claim, list())
         user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
         all_available_groups: list[GroupModel] = Groups.get_groups()
 
+        log.debug(f"Oauth Groups claim: {oauth_claim}")
+        log.debug(f"User oauth groups: {user_oauth_groups}")
+        log.debug(f"User's current groups: {[g.name for g in user_current_groups]}")
+        log.debug(
+            f"All groups available in OpenWebUI: {[g.name for g in all_available_groups]}"
+        )
+
         # Remove groups that user is no longer a part of
         for group_model in user_current_groups:
             if group_model.name not in user_oauth_groups:
                 # Remove group from user
+                log.debug(
+                    f"Removing user from group {group_model.name} as it is no longer in their oauth groups"
+                )
 
                 user_ids = group_model.user_ids
                 user_ids = [i for i in user_ids if i != user.id]
@@ -152,6 +178,9 @@ class OAuthManager:
                 gm.name == group_model.name for gm in user_current_groups
             ):
                 # Add user to group
+                log.debug(
+                    f"Adding user to group {group_model.name} as it was found in their oauth groups"
+                )
 
                 user_ids = group_model.user_ids
                 user_ids.append(user.id)
@@ -193,7 +222,7 @@ class OAuthManager:
             log.warning(f"OAuth callback error: {e}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         user_data: UserInfo = token.get("userinfo")
-        if not user_data:
+        if not user_data or "email" not in user_data:
             user_data: UserInfo = await client.userinfo(token=token)
         if not user_data:
             log.warning(f"OAuth callback failed, user data is missing: {token}")
@@ -261,15 +290,20 @@ class OAuthManager:
                             }
                         async with aiohttp.ClientSession() as session:
                             async with session.get(picture_url, **get_kwargs) as resp:
-                                picture = await resp.read()
-                                base64_encoded_picture = base64.b64encode(
-                                    picture
-                                ).decode("utf-8")
-                                guessed_mime_type = mimetypes.guess_type(picture_url)[0]
-                                if guessed_mime_type is None:
-                                    # assume JPG, browsers are tolerant enough of image formats
-                                    guessed_mime_type = "image/jpeg"
-                                picture_url = f"data:{guessed_mime_type};base64,{base64_encoded_picture}"
+                                if resp.ok:
+                                    picture = await resp.read()
+                                    base64_encoded_picture = base64.b64encode(
+                                        picture
+                                    ).decode("utf-8")
+                                    guessed_mime_type = mimetypes.guess_type(
+                                        picture_url
+                                    )[0]
+                                    if guessed_mime_type is None:
+                                        # assume JPG, browsers are tolerant enough of image formats
+                                        guessed_mime_type = "image/jpeg"
+                                    picture_url = f"data:{guessed_mime_type};base64,{base64_encoded_picture}"
+                                else:
+                                    picture_url = "/user.png"
                     except Exception as e:
                         log.error(
                             f"Error downloading profile image '{picture_url}': {e}"
@@ -281,7 +315,8 @@ class OAuthManager:
                 username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
 
                 name = user_data.get(username_claim)
-                if not isinstance(user, str):
+                if not name:
+                    log.warning("Username claim is missing, using email as name")
                     name = email
 
                 role = self.get_user_role(None, user_data)

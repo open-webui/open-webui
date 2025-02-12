@@ -42,7 +42,12 @@
 			});
 
 			if (res) {
-				await models.set(await getModels(localStorage.token));
+				await models.set(
+					await getModels(
+						localStorage.token,
+						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					)
+				);
 				toast.success($i18n.t('Model created successfully!'));
 				await goto('/workspace/models');
 			}

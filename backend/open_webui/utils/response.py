@@ -73,7 +73,9 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
                     "type": "function",
                     "function": {
                         "name": tool_call.get("function", {}).get("name", ""),
-                        "arguments": f"{tool_call.get('function', {}).get('arguments', {})}",
+                        "arguments": json.dumps(
+                            tool_call.get("function", {}).get("arguments", {})
+                        ),
                     },
                 }
                 openai_tool_calls.append(openai_tool_call)

@@ -14,6 +14,12 @@ def apply_model_system_prompt_to_body(
     if not system:
         return form_data
 
+    # Metadata (WebUI Usage)
+    if metadata:
+        variables = metadata.get("variables", {})
+        if variables:
+            system = prompt_variables_template(system, variables)
+
     # Legacy (API Usage)
     if user:
         template_params = {
@@ -24,12 +30,6 @@ def apply_model_system_prompt_to_body(
         template_params = {}
 
     system = prompt_template(system, **template_params)
-
-    # Metadata (WebUI Usage)
-    if metadata:
-        variables = metadata.get("variables", {})
-        if variables:
-            system = prompt_variables_template(system, variables)
 
     form_data["messages"] = add_or_update_system_message(
         system, form_data.get("messages", [])

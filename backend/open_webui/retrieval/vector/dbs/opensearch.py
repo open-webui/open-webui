@@ -113,6 +113,34 @@ class OpenSearchClient:
 
         return self._result_to_search_result(result)
 
+    def query(
+        self, collection_name: str, filter: dict, limit: Optional[int] = None
+    ) -> Optional[GetResult]:
+        if not self.has_collection(collection_name):
+            return None
+
+        query_body = {
+            "query": {"bool": {"filter": []}},
+            "_source": ["text", "metadata"],
+        }
+
+        for field, value in filter.items():
+            query_body["query"]["bool"]["filter"].append({"term": {field: value}})
+
+        size = limit if limit else 10
+
+        try:
+            result = self.client.search(
+                index=f"{self.index_prefix}_{collection_name}",
+                body=query_body,
+                size=size,
+            )
+
+            return self._result_to_get_result(result)
+
+        except Exception as e:
+            return None
+
     def get_or_create_index(self, index_name: str, dimension: int):
         if not self.has_index(index_name):
             self._create_index(index_name, dimension)

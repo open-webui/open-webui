@@ -3,7 +3,7 @@
 	import { onMount, getContext } from 'svelte';
 
 	import { user, config, settings } from '$lib/stores';
-	import { updateUserProfile, createAPIKey, getAPIKey } from '$lib/apis/auths';
+	import { updateUserProfile, createAPIKey, getAPIKey, getSessionUser } from '$lib/apis/auths';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
 	import { getGravatarUrl } from '$lib/apis/utils';
@@ -53,7 +53,13 @@
 		);
 
 		if (updatedUser) {
-			await user.set(updatedUser);
+			// Get Session User Info
+			const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			await user.set(sessionUser);
 			return true;
 		}
 		return false;

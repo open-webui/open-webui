@@ -5,7 +5,8 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
-	import AddConnectionModal from './AddConnectionModal.svelte';
+	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
+
 	import { connect } from 'socket.io-client';
 
 	export let onDelete = () => {};

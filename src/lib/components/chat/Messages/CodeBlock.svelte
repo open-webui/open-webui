@@ -5,7 +5,14 @@
 
 	import { v4 as uuidv4 } from 'uuid';
 
-	import { getContext, getAllContexts, onMount, tick, createEventDispatcher } from 'svelte';
+	import {
+		getContext,
+		getAllContexts,
+		onMount,
+		tick,
+		createEventDispatcher,
+		onDestroy
+	} from 'svelte';
 	import { copyToClipboard } from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
@@ -30,6 +37,8 @@
 	export let className = 'my-2';
 	export let editorClassName = '';
 	export let stickyButtonsClassName = 'top-8';
+
+	let pyodideWorker = null;
 
 	let _code = '';
 	$: if (code) {
@@ -138,7 +147,7 @@
 
 		console.log(packages);
 
-		const pyodideWorker = new PyodideWorker();
+		pyodideWorker = new PyodideWorker();
 
 		pyodideWorker.postMessage({
 			id: id,
@@ -278,6 +287,12 @@
 				theme: 'default',
 				securityLevel: 'loose'
 			});
+		}
+	});
+
+	onDestroy(() => {
+		if (pyodideWorker) {
+			pyodideWorker.terminate();
 		}
 	});
 </script>
