@@ -15,15 +15,15 @@ Documentation: https://docs.microsoft.com/en-us/bing/search-apis/bing-web-search
 
 
 def search_bing(
-    subscription_key: str,
-    endpoint: str,
-    locale: str,
-    query: str,
-    count: int,
-    filter_list: Optional[list[str]] = None,
+        subscription_key: str,
+        endpoint: str,
+        locale: str,
+        query: str,
+        count: int,
+        filter_list: Optional[list[str]] = None,
 ) -> list[SearchResult]:
     mkt = locale
-    params = {"q": query, "mkt": mkt, "count": count,"promote":"Webpages,News","responseFilter":"Webpages,News"}
+    params = {"q": query, "mkt": mkt, "count": count, "responseFilter": "Webpages,News"}
     headers = {"Ocp-Apim-Subscription-Key": subscription_key}
 
     try:
