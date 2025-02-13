@@ -95,21 +95,14 @@ class SafeWebBaseLoader(WebBaseLoader):
 
 def get_web_loader(
         urls: Union[str, Sequence[str]],
-        verify_ssl: bool = True,
         requests_per_second: int = 2,
 ):
-    # Check if the URLs are valid
-    # safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
     return OptimizedWebLoader(
-        urls=urls
+        urls=urls,
+        timeout=requests_per_second,
+        concurrency=10,
+        max_content=100000
     )
-
-    # return SafeWebBaseLoader(
-    #     safe_urls,
-    #     verify_ssl=verify_ssl,
-    #     requests_per_second=requests_per_second,
-    #     continue_on_failure=True,
-    # )
 
 
 # ================== 异步DNS解析 ==================
@@ -161,13 +154,13 @@ async def async_validate_url(url: str) -> bool:
 class OptimizedWebLoader(WebBaseLoader):
     """优化后的异步网页加载器"""
 
-    def __init__(self, urls: Union[str, List[str]], timeout: float = 10.0, max_content: int = 100000,
+    def __init__(self, urls: Union[str, List[str]], timeout: int = 5, max_content: int = 100000,
                  concurrency: int = 10):
         super().__init__()
         self.urls = [urls] if isinstance(urls, str) else urls
         self.timeout = aiohttp.ClientTimeout(total=timeout)
         self.max_content = max_content
-        self.concurrency = self.requests_per_second
+        self.concurrency = concurrency
 
         self.cleaner = Cleaner(
             scripts=True, javascript=True, comments=True,
@@ -180,6 +173,12 @@ class OptimizedWebLoader(WebBaseLoader):
     async def _fetch_page(self, url: str, session: aiohttp.ClientSession) -> Optional[LangchainDocument]:
         try:
             async with session.get(url) as response:
+                # 检查内容类型
+                content_type = response.headers.get('Content-Type', '')
+                if 'text/html' not in content_type:
+                    log.warning(f"跳过非HTML内容: {url} ({content_type})")
+                    return None
+
                 # 内容长度预检
                 if (content_length := int(response.headers.get('Content-Length', 0))) > self.max_content * 2:
                     log.warning(f"内容过大跳过: {url} ({content_length}字节)")
@@ -235,32 +234,30 @@ class OptimizedWebLoader(WebBaseLoader):
 
         return [doc for doc in results if isinstance(doc, LangchainDocument)]
 
-#
-# if __name__ == "__main__":
-#     async def main():
-#         loader = OptimizedWebLoader(
-#             urls=[
-#                 "https://www.bing.com/search?q=%E4%B8%8A%E6%B5%B7%E9%92%A2%E8%81%942024%E5%B9%B4%E4%B8%9A%E7%BB%A9%E6%8A%A5%E5%91%8A",
-#                 "https://yuanchuang.10jqka.com.cn/20241023/c662721907.shtml",
-#                 "https://money.finance.sina.com.cn/corp/view/vCB_AllBulletinDetail.php?stockid=300226&id=10418230",
-#                 "https://about.mysteel.com/ir.html",
-#                 "https://static.cninfo.com.cn/finalpage/2024-10-24/1221489738.PDF",
-#                 "http://static.cninfo.com.cn/finalpage/2024-10-24/1221489743.PDF",
-#                 "http://money.finance.sina.com.cn/corp/go.php/vCB_Bulletin/stockid/300226/page_type/ndbg.phtml"
-#             ],
-#             concurrency=5,
-#             max_content=50000
-#         )
-#         print("测试流程开始")
-#
-#         docs = await loader.aload()
-#         for doc in docs:
-#             print(f"Loaded: {doc.metadata['source']}")
-#             print(f"Title: {doc.metadata['title']}")
-#             print(f"Content length: {len(doc.page_content)}")
-#             print("-" * 50)
-#
-#         print("测试流程结束")
-#
-#
-#     asyncio.run(main())
+
+if __name__ == "__main__":
+    async def main():
+        loader = get_web_loader(
+            urls=[
+                "https://www.bing.com/search?q=%E4%B8%8A%E6%B5%B7%E9%92%A2%E8%81%942024%E5%B9%B4%E4%B8%9A%E7%BB%A9%E6%8A%A5%E5%91%8A",
+                "https://yuanchuang.10jqka.com.cn/20241023/c662721907.shtml",
+                "https://money.finance.sina.com.cn/corp/view/vCB_AllBulletinDetail.php?stockid=300226&id=10418230",
+                "https://about.mysteel.com/ir.html",
+                "https://static.cninfo.com.cn/finalpage/2024-10-24/1221489738.PDF",
+                "http://static.cninfo.com.cn/finalpage/2024-10-24/1221489743.PDF",
+                "http://money.finance.sina.com.cn/corp/go.php/vCB_Bulletin/stockid/300226/page_type/ndbg.phtml"
+            ]
+        )
+        print("测试流程开始")
+
+        docs = await loader.aload()
+        for doc in docs:
+            print(f"Loaded: {doc.metadata['source']}")
+            print(f"Title: {doc.metadata['title']}")
+            print(f"Content length: {len(doc.page_content)}")
+            print("-" * 50)
+
+        print("测试流程结束")
+
+
+    asyncio.run(main())
