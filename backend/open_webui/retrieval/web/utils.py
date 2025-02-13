@@ -99,14 +99,17 @@ def get_web_loader(
         requests_per_second: int = 2,
 ):
     # Check if the URLs are valid
-    safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
-
-    return SafeWebBaseLoader(
-        safe_urls,
-        verify_ssl=verify_ssl,
-        requests_per_second=requests_per_second,
-        continue_on_failure=True,
+    # safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
+    return OptimizedWebLoader(
+        urls=urls
     )
+
+    # return SafeWebBaseLoader(
+    #     safe_urls,
+    #     verify_ssl=verify_ssl,
+    #     requests_per_second=requests_per_second,
+    #     continue_on_failure=True,
+    # )
 
 
 # ================== 异步DNS解析 ==================
@@ -155,20 +158,16 @@ async def async_validate_url(url: str) -> bool:
 
 
 # ================== 高性能异步加载器 ==================
-class OptimizedWebLoader:
+class OptimizedWebLoader(WebBaseLoader):
     """优化后的异步网页加载器"""
 
-    def __init__(
-            self,
-            urls: Union[str, List[str]],
-            timeout: float = 10.0,
-            max_content: int = 100000,
-            concurrency: int = 10
-    ):
+    def __init__(self, urls: Union[str, List[str]], timeout: float = 10.0, max_content: int = 100000,
+                 concurrency: int = 10):
+        super().__init__()
         self.urls = [urls] if isinstance(urls, str) else urls
         self.timeout = aiohttp.ClientTimeout(total=timeout)
         self.max_content = max_content
-        self.concurrency = concurrency
+        self.concurrency = self.requests_per_second
 
         self.cleaner = Cleaner(
             scripts=True, javascript=True, comments=True,
