@@ -52,7 +52,7 @@ log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 ##########################################
 
 
-async def send_get_request(url, key=None, user: UserModel=None):
+async def send_get_request(url, key=None, user: UserModel = None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
@@ -70,7 +70,7 @@ async def send_get_request(url, key=None, user: UserModel=None):
                         if ENABLE_FORWARD_USER_INFO_HEADERS
                         else {}
                     ),
-                }
+                },
             ) as response:
                 return await response.json()
     except Exception as e:

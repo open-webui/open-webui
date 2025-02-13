@@ -30,7 +30,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
-async def get_all_base_models(request: Request, user: UserModel=None):
+async def get_all_base_models(request: Request, user: UserModel = None):
     function_models = []
     openai_models = []
     ollama_models = []
@@ -59,7 +59,7 @@ async def get_all_base_models(request: Request, user: UserModel=None):
     return models
 
 
-async def get_all_models(request, user: UserModel=None):
+async def get_all_models(request, user: UserModel = None):
     models = await get_all_base_models(request, user=user)
 
     # If there are no models, return an empty list

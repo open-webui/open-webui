@@ -115,7 +115,7 @@ async def send_post_request(
     stream: bool = True,
     key: Optional[str] = None,
     content_type: Optional[str] = None,
-    user: UserModel = None
+    user: UserModel = None,
 ):
 
     r = None
@@ -296,7 +296,7 @@ async def update_config(
 
 
 @cached(ttl=3)
-async def get_all_models(request: Request, user: UserModel=None):
+async def get_all_models(request: Request, user: UserModel = None):
     log.info("get_all_models()")
     if request.app.state.config.ENABLE_OLLAMA_API:
         request_tasks = []
@@ -317,7 +317,9 @@ async def get_all_models(request: Request, user: UserModel=None):
                 key = api_config.get("key", None)
 
                 if enable:
-                    request_tasks.append(send_get_request(f"{url}/api/tags", key, user=user))
+                    request_tasks.append(
+                        send_get_request(f"{url}/api/tags", key, user=user)
+                    )
                 else:
                     request_tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
 
@@ -531,7 +533,7 @@ async def get_ollama_loaded_models(request: Request, user=Depends(get_verified_u
                         url, {}
                     ),  # Legacy support
                 ).get("key", None),
-                user=user
+                user=user,
             )
             for idx, url in enumerate(request.app.state.config.OLLAMA_BASE_URLS)
         ]
