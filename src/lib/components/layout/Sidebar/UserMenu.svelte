@@ -9,6 +9,7 @@
 	import { fade, slide } from 'svelte/transition';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { userSignOut } from '$lib/apis/auths';
+	import { user } from '$lib/stores';
 	const i18n = getContext('i18n');
 
 	export let show = false;
@@ -213,7 +214,7 @@
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
 			</button>
 
-			{#if $activeUserIds?.length > 0}
+			{#if $activeUserIds?.length > 0 && ($user.role === 'admin')}
 				<hr class=" border-gray-50 dark:border-gray-850 my-1 p-0" />
 
 				<Tooltip
@@ -230,7 +231,6 @@
 								<span class="relative inline-flex rounded-full size-2 bg-green-500" />
 							</span>
 						</div>
-
 						<div class=" ">
 							<span class="">
 								{$i18n.t('Active Users')}:
