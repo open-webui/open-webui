@@ -1608,6 +1608,7 @@ async def process_chat_response(
                             {
                                 "model": model_id,
                                 "stream": True,
+                                "tools" : form_data["tools"] ,
                                 "messages": [
                                     *form_data["messages"],
                                     {
