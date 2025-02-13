@@ -243,13 +243,13 @@
 
 				<hr class=" border-gray-50 dark:border-gray-850 my-2" />
 
-				<div class="pt-1 flex w-full justify-between pr-2">
+				<!-- <div class="pt-1 flex w-full justify-between pr-2">
 					<div class=" self-center text-sm font-medium">
 						{$i18n.t('Channels')} ({$i18n.t('Beta')})
 					</div>
 
 					<Switch bind:state={adminConfig.ENABLE_CHANNELS} />
-				</div>
+				</div> -->
 			</div>
 		{/if}
 
