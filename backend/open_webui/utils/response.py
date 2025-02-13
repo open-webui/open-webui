@@ -16,12 +16,13 @@ def convert_ollama_tool_call_to_openai(tool_calls: dict) -> dict:
             "function": {
                 "name": tool_call.get("function", {}).get("name", ""),
                 "arguments": json.dumps(
-                    tool_call.get('function', {}).get('arguments', {})
+                    tool_call.get("function", {}).get("arguments", {})
                 ),
             },
         }
         openai_tool_calls.append(openai_tool_call)
     return openai_tool_calls
+
 
 def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
     model = ollama_response.get("model", "ollama")
@@ -73,7 +74,9 @@ def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
         ),
     }
 
-    response = openai_chat_completion_message_template(model, message_content, openai_tool_calls, usage)
+    response = openai_chat_completion_message_template(
+        model, message_content, openai_tool_calls, usage
+    )
     return response
 
 

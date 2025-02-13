@@ -130,7 +130,7 @@
 							{$i18n.t('Connect to your own OpenAI compatible API endpoints.')}
 							<br />
 							{$i18n.t(
-								'Ensure that CORS is properly configured to allow requests from Open WebUI.'
+								'CORS must be properly configured by the provider to allow requests from Open WebUI.'
 							)}
 						</div>
 					</div>

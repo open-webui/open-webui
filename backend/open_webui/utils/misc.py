@@ -217,10 +217,10 @@ def openai_chat_chunk_message_template(
 
 
 def openai_chat_completion_message_template(
-    model: str, 
+    model: str,
     message: Optional[str] = None,
     tool_calls: Optional[list[dict]] = None,
-    usage: Optional[dict] = None
+    usage: Optional[dict] = None,
 ) -> dict:
     template = openai_chat_message_template(model)
     template["object"] = "chat.completion"
