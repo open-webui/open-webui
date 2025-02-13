@@ -565,8 +565,10 @@ onDestroy(() => {
 				class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
 				href="/"
 				draggable="false"
-				on:click={async () => {
+				on:click={async (e) => {
+					e.preventDefault();
 					selectedChatId = null;
+					chatId.set('');
 					await goto('/');
 					const newChatButton = document.getElementById('new-chat-button');
 					setTimeout(() => {

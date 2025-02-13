@@ -310,5 +310,6 @@ cypress/videos
 cypress/screenshots
 .vscode/settings.json
 .cursorrules
+.cursor
 
 static/pyodide/pyodide-lock.json
