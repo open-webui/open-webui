@@ -273,6 +273,11 @@
 						const API_CONFIG = directConnections.OPENAI_API_CONFIGS[urlIdx];
 
 						try {
+							if (API_CONFIG?.prefix_id) {
+								const prefixId = API_CONFIG.prefix_id;
+								form_data['model'] = form_data['model'].replace(`${prefixId}.`, ``);
+							}
+
 							const [res, controller] = await chatCompletion(
 								OPENAI_API_KEY,
 								form_data,

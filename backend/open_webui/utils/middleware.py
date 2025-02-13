@@ -622,7 +622,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
     # Initialize events to store additional event to be sent to the client
     # Initialize contexts and citation
-    if request.state.direct and request.state.model:
+    if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {
             request.state.model["id"]: request.state.model,
         }
