@@ -184,7 +184,10 @@
 					});
 
 					localStorage.removeItem('token');
-					// location.href = '/auth';
+					location.href = '/auth';
+					//localStorage 
+
+					//locale
 					show = false;
 				}}
 			>
