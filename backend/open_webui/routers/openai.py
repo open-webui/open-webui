@@ -636,6 +636,7 @@ async def generate_chat_completion(
 
     # Convert the modified body back to JSON
     payload = json.dumps(payload)
+    print('dify_request in payload ',payload,url)
 
     r = None
     session = None
@@ -656,7 +657,7 @@ async def generate_chat_completion(
                 "Content-Type": "application/json",
                 **(
                     {
-                        "HTTP-Referer": "https://openwebui.com/",
+                        "HTTP-Referer": "https://airie.fun/",
                         "X-Title": "Airi",
                     }
                     if "openrouter.ai" in url

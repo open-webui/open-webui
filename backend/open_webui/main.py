@@ -734,6 +734,8 @@ async def inspect_websocket(request: Request, call_next):
 # 定义允许的源
 ALLOWED_ORIGINS = [
     "http://localhost:8080",
+    "https://static.airie.fun",
+    "http://static.airie.fun",
     "http://localhost:3000",
     "http://127.0.0.1:8080",
     "http://localhost:*",
@@ -749,7 +751,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=False,
-    
+    # allow_methods=["*"],
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
@@ -866,6 +868,7 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
+    log.debug(f"form data in /api/chat/completions: {form_data}")
     if not request.app.state.MODELS:
         await get_all_models(request)
 
@@ -905,6 +908,7 @@ async def chat_completion(
 
     try:
         response = await chat_completion_handler(request, form_data, user)
+        log.debug(f"form data in /api/chat/completions: {form_data}")
         return await process_chat_response(
             request, response, form_data, user, events, metadata, tasks
         )
@@ -1201,15 +1205,18 @@ def get_api_key(model_name: str) -> Optional[str]:
         log.warning(f"No API key found for model: {model_name}")
     return api_key
 
-def transform_openai_to_dify(openai_request: Dict[str, Any], endpoint: str) -> Optional[Dict[str, Any]]:
+def transform_openai_to_dify(openai_request: Dict[str, Any], endpoint: str, raw_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """将OpenAI格式的请求转换为Dify格式"""
     
     if endpoint == "/chat/completions":
         messages = openai_request.get("messages", [])
         stream = openai_request.get("stream", False)
         
+        log.info("transform_openai_to_dify", raw_data)
         dify_request = {
-            "inputs": {},
+            "inputs": {
+                'language': raw_data['locale']
+            },
             "query": messages[-1]["content"] if messages else "",
             "response_mode": "streaming" if stream else "blocking",
             "conversation_id": openai_request.get("conversation_id", None),
@@ -1297,11 +1304,15 @@ async def process_stream_response(response: httpx.Response, model: str):
                 continue
 
 @app.post("/v1/chat/completions")
-async def chat_completions(request: ChatCompletionRequest):
+async def chat_completions(request: Request):
     try:
-        log.info(f"Received request: {request.dict()}")
+        # 获取原始请求数据
+        raw_data = await request.json()
+        log.info(f"Received raw request data: {raw_data}")
         
-        model = request.model
+        # 验证必需字段
+        request_model = ChatCompletionRequest(**raw_data)
+        model = request_model.model
         log.info(f"Using model: {model}")
         
         # 验证模型是否支持
@@ -1319,8 +1330,8 @@ async def chat_completions(request: ChatCompletionRequest):
                     }
                 }
             )
-            
-        dify_request = transform_openai_to_dify(request.dict(), "/chat/completions")
+        # print('raw_data',type(raw_data), raw_data['locale'])   
+        dify_request = transform_openai_to_dify(request_model.dict(), "/chat/completions", raw_data)
         log.info(f"Transformed request: {json.dumps(dify_request, ensure_ascii=False)}")
         
         if not dify_request:
@@ -1340,6 +1351,7 @@ async def chat_completions(request: ChatCompletionRequest):
             "Content-Type": "application/json"
         }
 
+        print('dify_request',dify_request)
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{DIFY_API_BASE}/chat-messages",
@@ -1361,7 +1373,7 @@ async def chat_completions(request: ChatCompletionRequest):
                     }
                 )
 
-            if request.stream:
+            if request_model.stream:
                 return StreamingResponse(
                     process_stream_response(response, model),
                     media_type="text/event-stream"

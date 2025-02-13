@@ -207,7 +207,7 @@ export const generateTitle = async (
 	chat_id?: string
 ) => {
 	let error = null;
-
+	console.log('generateTitle', model, messages, chat_id);
 	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/title/completions`, {
 		method: 'POST',
 		headers: {

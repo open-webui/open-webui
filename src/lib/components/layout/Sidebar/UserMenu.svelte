@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
-	import { createEventDispatcher, getContext, onMount } from 'svelte';
+	import { createEventDispatcher, getContext } from 'svelte';
 
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { goto } from '$app/navigation';
@@ -10,7 +10,20 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { userSignOut } from '$lib/apis/auths';
 	import { user } from '$lib/stores';
+	import i18next from 'i18next';
 	const i18n = getContext('i18n');
+	import { writable } from 'svelte/store';
+	import languages from '$lib/i18n/locales/languages.json';
+
+	const currentLanguage = writable(i18next.language);
+
+	async function handleLanguageChange(langCode: string) {
+		await i18next.changeLanguage(langCode);
+		currentLanguage.set(langCode);
+		// Force a reload to ensure all components update their translations
+		window.location.reload();
+		show = false;
+	}
 
 	export let show = false;
 	export let role = '';
@@ -161,6 +174,31 @@
 
 			<hr class=" border-gray-50 dark:border-gray-850 my-1 p-0" />
 
+			<DropdownMenu.Sub>
+				<DropdownMenu.SubTrigger
+					class="flex items-center justify-between rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				>
+					<div class="flex items-center">
+						<span class="ml-2">{$i18n.t('Language')}</span>
+					</div>
+					<span class="text-gray-400">→</span>
+				</DropdownMenu.SubTrigger>
+				<DropdownMenu.SubContent class="min-w-[180px] text-sm rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg font-primary">
+					{#each languages as lang}
+						<DropdownMenu.Item
+							class="flex items-center rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
+							on:click={() => handleLanguageChange(lang.code)}
+						>
+							<div class="flex items-center justify-between w-full">
+								<span>{lang.title}</span>
+								{#if $currentLanguage === lang.code}
+									<span class="text-blue-500">✓</span>
+								{/if}
+							</div>
+						</DropdownMenu.Item>
+					{/each}
+				</DropdownMenu.SubContent>
+			</DropdownMenu.Sub>
 
 			<button
 				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"

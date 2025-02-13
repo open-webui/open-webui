@@ -272,6 +272,7 @@
 				} else if (type === 'chat:completion') {
 					chatCompletionEventHandler(data, message, event.chat_id);
 				} else if (type === 'chat:title') {
+					console.log('chat title in Chat.svelte', data);
 					chatTitle.set(data);
 					currentChatPage.set(1);
 					await chats.set(await getChatList(localStorage.token, $currentChatPage));
@@ -1089,6 +1090,7 @@
 		}
 
 		if (choices) {
+			console.log('chat completion ',data,message,chatId)
 			if (choices[0]?.message?.content) {
 				// Non-stream response
 				message.content += choices[0]?.message?.content;
@@ -1457,6 +1459,7 @@
 	const sendPromptSocket = async (model, responseMessageId, _chatId) => {
 		const responseMessage = history.messages[responseMessageId];
 		const userMessage = history.messages[responseMessage.parentId];
+		const locale = localStorage.getItem('locale') || 'en-US';
 
 		let files = JSON.parse(JSON.stringify(chatFiles));
 		files.push(
@@ -1586,7 +1589,9 @@
 								include_usage: true
 							}
 						}
-					: {})
+					: {}),
+
+				locale: locale // Add locale to params
 			},
 			`${WEBUI_BASE_URL}/api`
 		).catch((error) => {
