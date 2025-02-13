@@ -309,6 +309,7 @@
 
 							<Tooltip content={$i18n.t(`Add Connection`)}>
 								<button
+									aria-label = "Add Connection"
 									class="px-1"
 									on:click={() => {
 										showAddOllamaConnectionModal = true;
