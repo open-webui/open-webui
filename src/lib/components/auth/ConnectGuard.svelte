@@ -132,9 +132,9 @@
     color: black;
     border: none;
     border-radius: 24px;  /* 圆角效果，创造半圆形外观 */
-    padding: 12px 24px;
+    padding: 8px 24px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 0.8rem;
     transition: all 0.3s ease;
     backdrop-filter: blur(4px);  /* 毛玻璃效果 */
   }

@@ -169,9 +169,8 @@
 
 	{#if loaded}
 		
-		<div class="fixed bg-transparent h-[80vh] w-full flex items-center justify-center font-primary z-50 text-black dark:text-white">
+		<div class="fixed bg-transparent h-[90vh] w-full flex items-center justify-center font-primary z-50 text-black dark:text-white pt-[2vh]">
 			<div class="relative w-full flex flex-col items-center">
-				<h1 class="brilliant-title mb-6">STARLIT FATE</h1>
 				<react:PrivyProvider
 					appId={PUBLIC_PRIVY_APP_ID}
 					clientId={PUBLIC_PRIVY_CLIENT_ID}
@@ -197,6 +196,10 @@
 						</WalletClientGuard>
 					</ConnectGuard>
 				</react:PrivyProvider>
+				<div class="w-full flex flex-col items-center">
+					<h1 class="brilliant-title mb-6">STARLIT FATE</h1>
+					<h3 class="subtitle mb-6">An ancient metaphysics Al model helps you make the right decisions in Web3.</h3>
+				</div>
 			</div>
 			
 			<div class="w-full sm:max-w-md px-10 flex flex-col text-center bg-white/90 dark:bg-gray-900/90 rounded-2xl p-8 shadow-xl backdrop-blur-sm"
@@ -510,7 +513,7 @@
 							</div>
 						{/if}
 					</div>
-				{/if}
+			{/if}
 			</div>
 		</div>
 	{/if}
@@ -518,21 +521,42 @@
 
 <style>
 	.brilliant-title {
-		color: white;
-		font-size: 3.5rem;
+		background: linear-gradient(180deg, #FFFFFF 0%, #757575 100%);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+		font-size: 5rem;
 		font-weight: 300;
 		letter-spacing: 0.5em;
 		text-align: center;
+		margin-top:2rem;
 		text-transform: uppercase;
 		margin-bottom: 1rem;
 		font-family: 'Inter', sans-serif;
-		text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+		text-shadow: none;
+		width: 100%;
+		display: block;
+		margin-right: -0.5em; /* 抵消最后一个字符的letter-spacing */
+	}
+
+	.subtitle {
+		color: #757575;
+		font-size: 1rem;
+		font-weight: 400;
+		letter-spacing: 0.1em;
+		width: 50%;
+		text-align: center;
 	}
 
 	@media (max-width: 768px) {
 		.brilliant-title {
-			font-size: 2rem;
+			font-size: 20rem;
 			letter-spacing: 0.3em;
+			background: linear-gradient(180deg, #FFFFFF 0%, #757575 100%);
+			-webkit-background-clip: text;
+			-webkit-text-fill-color: transparent;
+			background-clip: text;
+			margin-right: -0.3em; /* 移动端抵消最后一个字符的letter-spacing */
 		}
 	}
 </style>
