@@ -6,7 +6,7 @@ from open_webui.utils.misc import (
 )
 
 
-def conver_ollama_tool_call_to_openai(tool_calls: dict) -> dict:
+def convert_ollama_tool_call_to_openai(tool_calls: dict) -> dict:
     openai_tool_calls = []
     for tool_call in tool_calls:
         openai_tool_call = {
@@ -30,7 +30,7 @@ def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
     openai_tool_calls = None
 
     if tool_calls:
-        openai_tool_calls = conver_ollama_tool_call_to_openai(tool_calls)
+        openai_tool_calls = convert_ollama_tool_call_to_openai(tool_calls)
 
     data = ollama_response
     usage = {
@@ -87,7 +87,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
         openai_tool_calls = None
 
         if tool_calls:
-            openai_tool_calls = conver_ollama_tool_call_to_openai(tool_calls)
+            openai_tool_calls = convert_ollama_tool_call_to_openai(tool_calls)
 
         done = data.get("done", False)
 
