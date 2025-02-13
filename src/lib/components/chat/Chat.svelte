@@ -1226,7 +1226,7 @@
 			selectedModels = _selectedModels;
 		}
 
-		if (userPrompt === '') {
+		if (userPrompt === '' && files.length === 0) {
 			toast.error($i18n.t('Please enter a prompt'));
 			return;
 		}
@@ -1478,7 +1478,7 @@
 			params?.stream_response ??
 			true;
 
-		const messages = [
+		let messages = [
 			params?.system || $settings.system || (responseMessage?.userContext ?? null)
 				? {
 						role: 'system',
@@ -1499,8 +1499,9 @@
 				...message,
 				content: removeDetails(message.content, ['reasoning', 'code_interpreter'])
 			}))
-		]
-			.filter((message) => message?.content?.trim())
+		].filter((message) => message);
+
+		messages = messages
 			.map((message, idx, arr) => ({
 				role: message.role,
 				...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
@@ -1524,7 +1525,8 @@
 					: {
 							content: message?.merged?.content ?? message.content
 						})
-			}));
+			}))
+			.filter((message) => message?.role === 'user' || message?.content?.trim());
 
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
@@ -1556,7 +1558,8 @@
 							? imageGenerationEnabled
 							: false,
 					code_interpreter:
-						$user.role === 'admin' || $user?.permissions?.features?.code_interpreter
+						$config?.features?.enable_code_interpreter &&
+						($user.role === 'admin' || $user?.permissions?.features?.code_interpreter)
 							? codeInterpreterEnabled
 							: false,
 					web_search:
@@ -1581,7 +1584,7 @@
 					(messages.length == 2 &&
 						messages.at(0)?.role === 'system' &&
 						messages.at(1)?.role === 'user')) &&
-				selectedModels[0] === model.id
+				(selectedModels[0] === model.id || atSelectedModel !== undefined)
 					? {
 							background_tasks: {
 								title_generation: $settings?.title?.auto ?? true,
@@ -2006,7 +2009,7 @@
 									}
 								}}
 								on:submit={async (e) => {
-									if (e.detail) {
+									if (e.detail || files.length > 0) {
 										await tick();
 										submitPrompt(
 											($settings?.richTextInput ?? true)
@@ -2049,7 +2052,7 @@
 									}
 								}}
 								on:submit={async (e) => {
-									if (e.detail) {
+									if (e.detail || files.length > 0) {
 										await tick();
 										submitPrompt(
 											($settings?.richTextInput ?? true)

@@ -72,7 +72,7 @@ from open_webui.utils.filter import (
     get_sorted_filter_ids,
     process_filter_functions,
 )
-
+from open_webui.utils.code_interpreter import execute_code_jupyter
 
 from open_webui.tasks import create_task
 
@@ -684,7 +684,12 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
         if "code_interpreter" in features and features["code_interpreter"]:
             form_data["messages"] = add_or_update_user_message(
-                DEFAULT_CODE_INTERPRETER_PROMPT, form_data["messages"]
+                (
+                    request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
+                    if request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE != ""
+                    else DEFAULT_CODE_INTERPRETER_PROMPT
+                ),
+                form_data["messages"],
             )
 
     try:
@@ -1639,21 +1644,60 @@ async def process_chat_response(
                         content_blocks[-1]["type"] == "code_interpreter"
                         and retries < MAX_RETRIES
                     ):
+                        await event_emitter(
+                            {
+                                "type": "chat:completion",
+                                "data": {
+                                    "content": serialize_content_blocks(content_blocks),
+                                },
+                            }
+                        )
+
                         retries += 1
                         log.debug(f"Attempt count: {retries}")
 
                         output = ""
                         try:
                             if content_blocks[-1]["attributes"].get("type") == "code":
-                                output = await event_caller(
-                                    {
-                                        "type": "execute:python",
-                                        "data": {
-                                            "id": str(uuid4()),
-                                            "code": content_blocks[-1]["content"],
-                                        },
+                                code = content_blocks[-1]["content"]
+
+                                if (
+                                    request.app.state.config.CODE_INTERPRETER_ENGINE
+                                    == "pyodide"
+                                ):
+                                    output = await event_caller(
+                                        {
+                                            "type": "execute:python",
+                                            "data": {
+                                                "id": str(uuid4()),
+                                                "code": code,
+                                            },
+                                        }
+                                    )
+                                elif (
+                                    request.app.state.config.CODE_INTERPRETER_ENGINE
+                                    == "jupyter"
+                                ):
+                                    output = await execute_code_jupyter(
+                                        request.app.state.config.CODE_INTERPRETER_JUPYTER_URL,
+                                        code,
+                                        (
+                                            request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN
+                                            if request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH
+                                            == "token"
+                                            else None
+                                        ),
+                                        (
+                                            request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD
+                                            if request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH
+                                            == "password"
+                                            else None
+                                        ),
+                                    )
+                                else:
+                                    output = {
+                                        "stdout": "Code interpreter engine not configured."
                                     }
-                                )
 
                                 if isinstance(output, dict):
                                     stdout = output.get("stdout", "")
@@ -1687,6 +1731,38 @@ async def process_chat_response(
                                                 )
 
                                         output["stdout"] = "\n".join(stdoutLines)
+
+                                    result = output.get("result", "")
+
+                                    if result:
+                                        resultLines = result.split("\n")
+                                        for idx, line in enumerate(resultLines):
+                                            if "data:image/png;base64" in line:
+                                                id = str(uuid4())
+
+                                                # ensure the path exists
+                                                os.makedirs(
+                                                    os.path.join(CACHE_DIR, "images"),
+                                                    exist_ok=True,
+                                                )
+
+                                                image_path = os.path.join(
+                                                    CACHE_DIR,
+                                                    f"images/{id}.png",
+                                                )
+
+                                                with open(image_path, "wb") as f:
+                                                    f.write(
+                                                        base64.b64decode(
+                                                            line.split(",")[1]
+                                                        )
+                                                    )
+
+                                                resultLines[idx] = (
+                                                    f"![Output Image {idx}](/cache/images/{id}.png)"
+                                                )
+
+                                        output["result"] = "\n".join(resultLines)
                         except Exception as e:
                             output = str(e)
 

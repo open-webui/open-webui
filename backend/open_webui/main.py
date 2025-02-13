@@ -97,6 +97,16 @@ from open_webui.config import (
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
+    # Direct Connections
+    ENABLE_DIRECT_CONNECTIONS,
+    # Code Interpreter
+    ENABLE_CODE_INTERPRETER,
+    CODE_INTERPRETER_ENGINE,
+    CODE_INTERPRETER_PROMPT_TEMPLATE,
+    CODE_INTERPRETER_JUPYTER_URL,
+    CODE_INTERPRETER_JUPYTER_AUTH,
+    CODE_INTERPRETER_JUPYTER_AUTH_TOKEN,
+    CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD,
     # Image
     AUTOMATIC1111_API_AUTH,
     AUTOMATIC1111_BASE_URL,
@@ -183,6 +193,7 @@ from open_webui.config import (
     EXA_API_KEY,
     KAGI_SEARCH_API_KEY,
     MOJEEK_SEARCH_API_KEY,
+    BOCHA_SEARCH_API_KEY,
     GOOGLE_PSE_API_KEY,
     GOOGLE_PSE_ENGINE_ID,
     GOOGLE_DRIVE_CLIENT_ID,
@@ -325,7 +336,11 @@ class SPAStaticFiles(StaticFiles):
             return await super().get_response(path, scope)
         except (HTTPException, StarletteHTTPException) as ex:
             if ex.status_code == 404:
-                return await super().get_response("index.html", scope)
+                if path.endswith(".js"):
+                    # Return 404 for javascript files
+                    raise ex
+                else:
+                    return await super().get_response("index.html", scope)
             else:
                 raise ex
 
@@ -391,6 +406,14 @@ app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 app.state.config.OPENAI_API_CONFIGS = OPENAI_API_CONFIGS
 
 app.state.OPENAI_MODELS = {}
+
+########################################
+#
+# DIRECT CONNECTIONS
+#
+########################################
+
+app.state.config.ENABLE_DIRECT_CONNECTIONS = ENABLE_DIRECT_CONNECTIONS
 
 ########################################
 #
@@ -517,6 +540,7 @@ app.state.config.GOOGLE_PSE_ENGINE_ID = GOOGLE_PSE_ENGINE_ID
 app.state.config.BRAVE_SEARCH_API_KEY = BRAVE_SEARCH_API_KEY
 app.state.config.KAGI_SEARCH_API_KEY = KAGI_SEARCH_API_KEY
 app.state.config.MOJEEK_SEARCH_API_KEY = MOJEEK_SEARCH_API_KEY
+app.state.config.BOCHA_SEARCH_API_KEY = BOCHA_SEARCH_API_KEY
 app.state.config.SERPSTACK_API_KEY = SERPSTACK_API_KEY
 app.state.config.SERPSTACK_HTTPS = SERPSTACK_HTTPS
 app.state.config.SERPER_API_KEY = SERPER_API_KEY
@@ -574,6 +598,24 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.config.RAG_EMBEDDING_BATCH_SIZE,
 )
 
+########################################
+#
+# CODE INTERPRETER
+#
+########################################
+
+app.state.config.ENABLE_CODE_INTERPRETER = ENABLE_CODE_INTERPRETER
+app.state.config.CODE_INTERPRETER_ENGINE = CODE_INTERPRETER_ENGINE
+app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE = CODE_INTERPRETER_PROMPT_TEMPLATE
+
+app.state.config.CODE_INTERPRETER_JUPYTER_URL = CODE_INTERPRETER_JUPYTER_URL
+app.state.config.CODE_INTERPRETER_JUPYTER_AUTH = CODE_INTERPRETER_JUPYTER_AUTH
+app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN = (
+    CODE_INTERPRETER_JUPYTER_AUTH_TOKEN
+)
+app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD = (
+    CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD
+)
 
 ########################################
 #
@@ -759,6 +801,7 @@ app.include_router(openai.router, prefix="/openai", tags=["openai"])
 app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])
 app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["tasks"])
 app.include_router(images.router, prefix="/api/v1/images", tags=["images"])
+
 app.include_router(audio.router, prefix="/api/v1/audio", tags=["audio"])
 app.include_router(retrieval.router, prefix="/api/v1/retrieval", tags=["retrieval"])
 
@@ -1017,15 +1060,17 @@ async def get_app_config(request: Request):
             "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
             **(
                 {
+                    "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
                     "enable_channels": app.state.config.ENABLE_CHANNELS,
                     "enable_web_search": app.state.config.ENABLE_RAG_WEB_SEARCH,
-                    "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
+                    "enable_code_interpreter": app.state.config.ENABLE_CODE_INTERPRETER,
                     "enable_image_generation": app.state.config.ENABLE_IMAGE_GENERATION,
+                    "enable_autocomplete_generation": app.state.config.ENABLE_AUTOCOMPLETE_GENERATION,
                     "enable_community_sharing": app.state.config.ENABLE_COMMUNITY_SHARING,
                     "enable_message_rating": app.state.config.ENABLE_MESSAGE_RATING,
-                    "enable_autocomplete_generation": app.state.config.ENABLE_AUTOCOMPLETE_GENERATION,
                     "enable_admin_export": ENABLE_ADMIN_EXPORT,
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
+                    "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                 }
                 if user is not None
                 else {}

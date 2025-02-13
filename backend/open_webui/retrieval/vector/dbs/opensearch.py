@@ -120,18 +120,12 @@ class OpenSearchClient:
             return None
 
         query_body = {
-            "query": {
-                "bool": {
-                    "filter": []
-                }
-            },
+            "query": {"bool": {"filter": []}},
             "_source": ["text", "metadata"],
         }
 
         for field, value in filter.items():
-            query_body["query"]["bool"]["filter"].append({
-                "term": {field: value}
-            })
+            query_body["query"]["bool"]["filter"].append({"term": {field: value}})
 
         size = limit if limit else 10
 
@@ -139,7 +133,7 @@ class OpenSearchClient:
             result = self.client.search(
                 index=f"{self.index_prefix}_{collection_name}",
                 body=query_body,
-                size=size
+                size=size,
             )
 
             return self._result_to_get_result(result)

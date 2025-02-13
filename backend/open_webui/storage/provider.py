@@ -94,7 +94,7 @@ class S3StorageProvider(StorageProvider):
             aws_secret_access_key=S3_SECRET_ACCESS_KEY,
         )
         self.bucket_name = S3_BUCKET_NAME
-        self.key_prefix = S3_KEY_PREFIX if S3_KEY_PREFIX else "" 
+        self.key_prefix = S3_KEY_PREFIX if S3_KEY_PREFIX else ""
 
     def upload_file(self, file: BinaryIO, filename: str) -> Tuple[bytes, str]:
         """Handles uploading of the file to S3 storage."""
@@ -108,7 +108,7 @@ class S3StorageProvider(StorageProvider):
             )
         except ClientError as e:
             raise RuntimeError(f"Error uploading file to S3: {e}")
-    
+
     def get_file(self, file_path: str) -> str:
         """Handles downloading of the file from S3 storage."""
         try:
@@ -137,7 +137,8 @@ class S3StorageProvider(StorageProvider):
             if "Contents" in response:
                 for content in response["Contents"]:
                     # Skip objects that were not uploaded from open-webui in the first place
-                    if not content["Key"].startswith(self.key_prefix): continue
+                    if not content["Key"].startswith(self.key_prefix):
+                        continue
 
                     self.s3_client.delete_object(
                         Bucket=self.bucket_name, Key=content["Key"]
@@ -150,10 +151,11 @@ class S3StorageProvider(StorageProvider):
 
     # The s3 key is the name assigned to an object. It excludes the bucket name, but includes the internal path and the file name.
     def _extract_s3_key(self, full_file_path: str) -> str:
-        return '/'.join(full_file_path.split("//")[1].split("/")[1:])
-    
+        return "/".join(full_file_path.split("//")[1].split("/")[1:])
+
     def _get_local_file_path(self, s3_key: str) -> str:
         return f"{UPLOAD_DIR}/{s3_key.split('/')[-1]}"
+
 
 class GCSStorageProvider(StorageProvider):
     def __init__(self):

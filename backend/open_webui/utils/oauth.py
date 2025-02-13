@@ -142,13 +142,17 @@ class OAuthManager:
         log.debug(f"Oauth Groups claim: {oauth_claim}")
         log.debug(f"User oauth groups: {user_oauth_groups}")
         log.debug(f"User's current groups: {[g.name for g in user_current_groups]}")
-        log.debug(f"All groups available in OpenWebUI: {[g.name for g in all_available_groups]}")
+        log.debug(
+            f"All groups available in OpenWebUI: {[g.name for g in all_available_groups]}"
+        )
 
         # Remove groups that user is no longer a part of
         for group_model in user_current_groups:
             if group_model.name not in user_oauth_groups:
                 # Remove group from user
-                log.debug(f"Removing user from group {group_model.name} as it is no longer in their oauth groups")
+                log.debug(
+                    f"Removing user from group {group_model.name} as it is no longer in their oauth groups"
+                )
 
                 user_ids = group_model.user_ids
                 user_ids = [i for i in user_ids if i != user.id]
@@ -174,7 +178,9 @@ class OAuthManager:
                 gm.name == group_model.name for gm in user_current_groups
             ):
                 # Add user to group
-                log.debug(f"Adding user to group {group_model.name} as it was found in their oauth groups")
+                log.debug(
+                    f"Adding user to group {group_model.name} as it was found in their oauth groups"
+                )
 
                 user_ids = group_model.user_ids
                 user_ids.append(user.id)
@@ -289,7 +295,9 @@ class OAuthManager:
                                     base64_encoded_picture = base64.b64encode(
                                         picture
                                     ).decode("utf-8")
-                                    guessed_mime_type = mimetypes.guess_type(picture_url)[0]
+                                    guessed_mime_type = mimetypes.guess_type(
+                                        picture_url
+                                    )[0]
                                     if guessed_mime_type is None:
                                         # assume JPG, browsers are tolerant enough of image formats
                                         guessed_mime_type = "image/jpeg"
@@ -307,7 +315,8 @@ class OAuthManager:
                 username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
 
                 name = user_data.get(username_claim)
-                if not isinstance(name, str):
+                if not name:
+                    log.warning("Username claim is missing, using email as name")
                     name = email
 
                 role = self.get_user_role(None, user_data)

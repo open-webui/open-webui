@@ -18,6 +18,7 @@
 		'brave',
 		'kagi',
 		'mojeek',
+		'bocha',
 		'serpstack',
 		'serper',
 		'serply',
@@ -52,6 +53,8 @@
 				proxy_url: youtubeProxyUrl
 			}
 		});
+
+		webConfig.search.domain_filter_list = webConfig.search.domain_filter_list.join(', ');
 	};
 
 	onMount(async () => {
@@ -191,6 +194,17 @@
 								<SensitiveInput
 									placeholder={$i18n.t('Enter Mojeek Search API Key')}
 									bind:value={webConfig.search.mojeek_search_api_key}
+								/>
+							</div>
+						{:else if webConfig.search.engine === 'bocha'}
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Bocha Search API Key')}
+								</div>
+
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Bocha Search API Key')}
+									bind:value={webConfig.search.bocha_search_api_key}
 								/>
 							</div>
 						{:else if webConfig.search.engine === 'serpstack'}
