@@ -1212,10 +1212,10 @@ def transform_openai_to_dify(openai_request: Dict[str, Any], endpoint: str, raw_
         messages = openai_request.get("messages", [])
         stream = openai_request.get("stream", False)
         
-        log.info("transform_openai_to_dify", raw_data)
+        log.info("transform_openai_to_dify raw_data: %s", raw_data)
         dify_request = {
             "inputs": {
-                'language': raw_data['locale']
+                'language': raw_data.get("locale", "en-US")
             },
             "query": messages[-1]["content"] if messages else "",
             "response_mode": "streaming" if stream else "blocking",
