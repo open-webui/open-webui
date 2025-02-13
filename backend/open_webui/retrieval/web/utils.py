@@ -5,8 +5,9 @@ import validators
 from typing import Union, Sequence, Iterator, List, Optional
 import aiodns
 import aiohttp
-from async_lru import alru_cache  # 新增异步缓存库
-from readability import Document as ReadabilityDocument  # 重命名解决冲突
+from async_lru import alru_cache
+from readability import Document as ReadabilityDocument
+import html2text
 from lxml_html_clean import Cleaner
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_core.documents import Document as LangchainDocument  # 重命名解决冲突
@@ -199,7 +200,6 @@ class OptimizedWebLoader:
                 # 使用readability提取内容
                 read_doc = ReadabilityDocument(full_html)
 
-                import html2text, re
                 h = html2text.HTML2Text()
                 h.ignore_links = True
                 read_doc_content = read_doc.title() + '\n\n' + h.handle(read_doc.summary())
