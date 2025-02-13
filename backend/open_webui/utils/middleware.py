@@ -1180,12 +1180,14 @@ async def process_chat_response(
                         temp_blocks.append(block)
 
                 if temp_blocks:
-                    messages.append(
-                        {
-                            "role": "assistant",
-                            "content": serialize_content_blocks(temp_blocks),
-                        }
-                    )
+                    content = serialize_content_blocks(temp_blocks)
+                    if content:
+                        messages.append(
+                            {
+                                "role": "assistant",
+                                "content": content,
+                            }
+                        )
 
                 return messages
 
@@ -1580,7 +1582,6 @@ async def process_chat_response(
 
                     results = []
                     for tool_call in response_tool_calls:
-                        print("\n\n" + str(tool_call) + "\n\n")
                         tool_call_id = tool_call.get("id", "")
                         tool_name = tool_call.get("function", {}).get("name", "")
 
