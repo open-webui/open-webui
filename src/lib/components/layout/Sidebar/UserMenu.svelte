@@ -172,15 +172,19 @@
 					//Log the current user out and clears their authentication state. `authenticated` will become false, `user` will become null, and the Privy Auth tokens will be deleted from the browser's local storage.
 					
 					Object.keys(localStorage).forEach(key => {
-						if (key.includes('privy')) {
+						if (key.includes('privy') || key.includes('walletlink')) {
 							localStorage.removeItem(key);
+							console.log(`已删除：${key}`);
 						}
 					});
 
-
+					console.log('当前所有 localStorage 项：');
+					Object.keys(localStorage).forEach((key) => {
+						console.log(`${key}: ${localStorage.getItem(key)}`);
+					});
 
 					localStorage.removeItem('token');
-					location.href = '/auth';
+					// location.href = '/auth';
 					show = false;
 				}}
 			>
