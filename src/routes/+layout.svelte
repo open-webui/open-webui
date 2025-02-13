@@ -279,8 +279,17 @@
 								OPENAI_API_URL
 							);
 
-							if (res && res.ok) {
+							if (res) {
+								// raise if the response is not ok
+								if (!res.ok) {
+									throw await res.json();
+								}
+
 								if (form_data?.stream ?? false) {
+									cb({
+										status: true
+									});
+
 									// res will either be SSE or JSON
 									const reader = res.body.getReader();
 									const decoder = new TextDecoder();
@@ -316,29 +325,12 @@
 							}
 						} catch (error) {
 							console.error('chatCompletion', error);
-
-							if (form_data?.stream ?? false) {
-								$socket.emit(channel, {
-									error: error
-								});
-							} else {
-								cb({
-									error: error
-								});
-							}
+							cb(error);
 						}
 					}
 				} catch (error) {
 					console.error('chatCompletion', error);
-					if (form_data?.stream ?? false) {
-						$socket.emit(channel, {
-							error: error
-						});
-					} else {
-						cb({
-							error: error
-						});
-					}
+					cb(error);
 				} finally {
 					$socket.emit(channel, {
 						done: true
