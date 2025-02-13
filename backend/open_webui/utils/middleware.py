@@ -622,7 +622,13 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
     # Initialize events to store additional event to be sent to the client
     # Initialize contexts and citation
-    models = request.app.state.MODELS
+    if request.state.direct and request.state.model:
+        models = {
+            request.state.model["id"]: request.state.model,
+        }
+    else:
+        models = request.app.state.MODELS
+
     task_model_id = get_task_model_id(
         form_data["model"],
         request.app.state.config.TASK_MODEL,
@@ -1677,6 +1683,9 @@ async def process_chat_response(
                                             "data": {
                                                 "id": str(uuid4()),
                                                 "code": code,
+                                                "session_id": metadata.get(
+                                                    "session_id", None
+                                                ),
                                             },
                                         }
                                     )
