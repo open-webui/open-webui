@@ -22,6 +22,7 @@
 		type="text"
 	/>
 	<button
+		aria-label = "Show Button"
 		class={showButtonClassName}
 		type="button"
 		on:click={(e) => {
