@@ -335,6 +335,7 @@
 	"Embedding model set to \"{{embedding_model}}\"": "임베딩 모델을 \"{{embedding_model}}\"로 설정함",
 	"Enable API Key": "API 키 활성화",
 	"Enable autocomplete generation for chat messages": "",
+	"Enable title generation for chat messages": "",
 	"Enable Code Interpreter": "",
 	"Enable Community Sharing": "커뮤니티 공유 활성화",
 	"Enable Google Drive": "Google Drive 활성화",

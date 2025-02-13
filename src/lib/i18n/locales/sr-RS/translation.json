@@ -335,6 +335,7 @@
 	"Embedding model set to \"{{embedding_model}}\"": "Модел уградње подешен на \"{{embedding_model}}\"",
 	"Enable API Key": "",
 	"Enable autocomplete generation for chat messages": "",
+	"Enable title generation for chat messages": "",
 	"Enable Code Interpreter": "",
 	"Enable Community Sharing": "Омогући дељење заједнице",
 	"Enable Google Drive": "",

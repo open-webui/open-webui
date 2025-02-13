@@ -928,6 +928,7 @@
 	"System": "System",
 	"System Instructions": "Systeminstruksjoner",
 	"System Prompt": "Systemledetekst",
+	"Title Generation": "",
 	"Tags Generation": "",
 	"Tags Generation Prompt": "Ledetekst for genering av etikett",
 	"Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting. (default: 1)": "Tail free sampling brukes til å redusere innvirkningen av mindre sannsynlige tokens fra utdataene. En høyere verdi (f.eks. 2,0) vil redusere effekten mer, mens en verdi på 1,0 deaktiverer denne innstillingen. (standard: 1)",
