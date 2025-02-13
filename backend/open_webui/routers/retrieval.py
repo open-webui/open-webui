@@ -24,14 +24,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import tiktoken
 
-
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from langchain_core.documents import Document
 
 from open_webui.models.files import FileModel, Files
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
-
 
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 
@@ -57,7 +55,6 @@ from open_webui.retrieval.web.tavily import search_tavily
 from open_webui.retrieval.web.bing import search_bing
 from open_webui.retrieval.web.exa import search_exa
 
-
 from open_webui.retrieval.utils import (
     get_embedding_function,
     get_model_path,
@@ -70,7 +67,6 @@ from open_webui.utils.misc import (
     calculate_sha256_string,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
-
 
 from open_webui.config import (
     ENV,
@@ -91,6 +87,7 @@ from open_webui.constants import ERROR_MESSAGES
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
+
 ##########################################
 #
 # Utility functions
@@ -99,9 +96,9 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def get_ef(
-    engine: str,
-    embedding_model: str,
-    auto_update: bool = False,
+        engine: str,
+        embedding_model: str,
+        auto_update: bool = False,
 ):
     ef = None
     if embedding_model and engine == "":
@@ -120,8 +117,8 @@ def get_ef(
 
 
 def get_rf(
-    reranking_model: str,
-    auto_update: bool = False,
+        reranking_model: str,
+        auto_update: bool = False,
 ):
     rf = None
     if reranking_model:
@@ -234,7 +231,7 @@ class EmbeddingModelUpdateForm(BaseModel):
 
 @router.post("/embedding/update")
 async def update_embedding_config(
-    request: Request, form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)
+        request: Request, form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)
 ):
     log.info(
         f"Updating embedding model: {request.app.state.config.RAG_EMBEDDING_MODEL} to {form_data.embedding_model}"
@@ -314,7 +311,7 @@ class RerankingModelUpdateForm(BaseModel):
 
 @router.post("/reranking/update")
 async def update_reranking_config(
-    request: Request, form_data: RerankingModelUpdateForm, user=Depends(get_admin_user)
+        request: Request, form_data: RerankingModelUpdateForm, user=Depends(get_admin_user)
 ):
     log.info(
         f"Updating reranking model: {request.app.state.config.RAG_RERANKING_MODEL} to {form_data.reranking_model}"
@@ -460,7 +457,7 @@ class ConfigUpdateForm(BaseModel):
 
 @router.post("/config/update")
 async def update_rag_config(
-    request: Request, form_data: ConfigUpdateForm, user=Depends(get_admin_user)
+        request: Request, form_data: ConfigUpdateForm, user=Depends(get_admin_user)
 ):
     request.app.state.config.PDF_EXTRACT_IMAGES = (
         form_data.pdf_extract_images
@@ -632,7 +629,7 @@ class QuerySettingsForm(BaseModel):
 
 @router.post("/query/settings/update")
 async def update_query_settings(
-    request: Request, form_data: QuerySettingsForm, user=Depends(get_admin_user)
+        request: Request, form_data: QuerySettingsForm, user=Depends(get_admin_user)
 ):
     request.app.state.config.RAG_TEMPLATE = form_data.template
     request.app.state.config.TOP_K = form_data.k if form_data.k else 4
@@ -659,14 +656,14 @@ async def update_query_settings(
 
 
 def save_docs_to_vector_db(
-    request: Request,
-    docs,
-    collection_name,
-    metadata: Optional[dict] = None,
-    overwrite: bool = False,
-    split: bool = True,
-    add: bool = False,
-    user=None,
+        request: Request,
+        docs,
+        collection_name,
+        metadata: Optional[dict] = None,
+        overwrite: bool = False,
+        split: bool = True,
+        add: bool = False,
+        user=None,
 ) -> bool:
     def _get_docs_info(docs: list[Document]) -> str:
         docs_info = set()
@@ -814,9 +811,9 @@ class ProcessFileForm(BaseModel):
 
 @router.post("/process/file")
 def process_file(
-    request: Request,
-    form_data: ProcessFileForm,
-    user=Depends(get_verified_user),
+        request: Request,
+        form_data: ProcessFileForm,
+        user=Depends(get_verified_user),
 ):
     try:
         file = Files.get_file_by_id(form_data.file_id)
@@ -981,9 +978,9 @@ class ProcessTextForm(BaseModel):
 
 @router.post("/process/text")
 def process_text(
-    request: Request,
-    form_data: ProcessTextForm,
-    user=Depends(get_verified_user),
+        request: Request,
+        form_data: ProcessTextForm,
+        user=Depends(get_verified_user),
 ):
     collection_name = form_data.collection_name
     if collection_name is None:
@@ -1014,7 +1011,7 @@ def process_text(
 
 @router.post("/process/youtube")
 def process_youtube_video(
-    request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
+        request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
 ):
     try:
         collection_name = form_data.collection_name
@@ -1057,8 +1054,8 @@ def process_youtube_video(
 
 
 @router.post("/process/web")
-def process_web(
-    request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
+async def process_web(
+        request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
 ):
     try:
         collection_name = form_data.collection_name
@@ -1070,10 +1067,13 @@ def process_web(
             verify_ssl=request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
         )
-        docs = loader.aload()
+        # 加载文档，确保使用 await
+        docs = await loader.aload()
+
         content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {content}")
+
         save_docs_to_vector_db(
             request, docs, collection_name, overwrite=True, user=user
         )
@@ -1130,8 +1130,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             raise Exception("No SEARXNG_QUERY_URL found in environment variables")
     elif engine == "google_pse":
         if (
-            request.app.state.config.GOOGLE_PSE_API_KEY
-            and request.app.state.config.GOOGLE_PSE_ENGINE_ID
+                request.app.state.config.GOOGLE_PSE_API_KEY
+                and request.app.state.config.GOOGLE_PSE_ENGINE_ID
         ):
             return search_google_pse(
                 request.app.state.config.GOOGLE_PSE_API_KEY,
@@ -1258,8 +1258,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
 
 
 @router.post("/process/web/search")
-def process_web_search(
-    request: Request, form_data: SearchForm, user=Depends(get_verified_user)
+async def process_web_search(
+        request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
     try:
         logging.info(
@@ -1282,8 +1282,8 @@ def process_web_search(
         collection_name = form_data.collection_name
         if collection_name == "" or collection_name is None:
             collection_name = f"web-search-{calculate_sha256_string(form_data.query)}"[
-                :63
-            ]
+                              :63
+                              ]
 
         urls = [result.link for result in web_results]
         loader = get_web_loader(
@@ -1291,7 +1291,7 @@ def process_web_search(
             verify_ssl=request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
         )
-        docs = loader.aload()
+        docs = await loader.aload()
         save_docs_to_vector_db(
             request, docs, collection_name, overwrite=True, user=user
         )
@@ -1319,9 +1319,9 @@ class QueryDocForm(BaseModel):
 
 @router.post("/query/doc")
 def query_doc_handler(
-    request: Request,
-    form_data: QueryDocForm,
-    user=Depends(get_verified_user),
+        request: Request,
+        form_data: QueryDocForm,
+        user=Depends(get_verified_user),
 ):
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
@@ -1367,9 +1367,9 @@ class QueryCollectionsForm(BaseModel):
 
 @router.post("/query/collection")
 def query_collection_handler(
-    request: Request,
-    form_data: QueryCollectionsForm,
-    user=Depends(get_verified_user),
+        request: Request,
+        form_data: QueryCollectionsForm,
+        user=Depends(get_verified_user),
 ):
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
@@ -1466,7 +1466,6 @@ def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
 
 
 if ENV == "dev":
-
     @router.get("/ef/{text}")
     async def get_embeddings(request: Request, text: Optional[str] = "Hello World!"):
         return {"result": request.app.state.EMBEDDING_FUNCTION(text)}
@@ -1490,9 +1489,9 @@ class BatchProcessFilesResponse(BaseModel):
 
 @router.post("/process/files/batch")
 def process_files_batch(
-    request: Request,
-    form_data: BatchProcessFilesForm,
-    user=Depends(get_verified_user),
+        request: Request,
+        form_data: BatchProcessFilesForm,
+        user=Depends(get_verified_user),
 ) -> BatchProcessFilesResponse:
     """
     Process a batch of files and save them to the vector database.
