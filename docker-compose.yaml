@@ -4,6 +4,9 @@ services:
   litellm:
     container_name: litellm
     image: ghcr.io/berriai/litellm:main-stable
+    environment:
+      - "AZURE_OPENAI_API_BASE_URL=${AZURE_OPENAI_API_BASE_URL}"
+      - "AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}"
     restart: unless-stopped
     ports:
       - "4000:4000"
@@ -22,16 +25,18 @@ services:
     image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
     container_name: open-webui
     volumes:
-      - open-webui:/app/backend/data
+      - ./backend/data:/app/backend/data
     depends_on:
       - litellm
     ports:
       - "8080:8080"  # Open Web UI port
     environment:
       - "OPENAI_API_BASE_URL=http://litellm:4000/v1"  # Point Open Web UI to LiteLLM
+      - "DATABASE_URL=sqlite:////app/backend/data/database.sqlite"
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
 
 volumes:
   open-webui: {}
+  litellm: {}

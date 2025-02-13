@@ -1,5 +1,6 @@
 from test.util.abstract_integration_test import AbstractPostgresTest
 from test.util.mock_user import mock_webui_user
+from beyond_the_loop.models.companies import NO_COMPANY
 
 
 class TestAuths(AbstractPostgresTest):
@@ -32,7 +33,7 @@ class TestAuths(AbstractPostgresTest):
             email="john.doe@openwebui.com",
             password=get_password_hash("old_password"),
             name="John Doe",
-            company_id="1",
+            company_id=NO_COMPANY,
             profile_image_url="/user.png",
             role="user",
         )
@@ -54,7 +55,7 @@ class TestAuths(AbstractPostgresTest):
             email="john.doe@openwebui.com",
             password=get_password_hash("old_password"),
             name="John Doe",
-            company_id="1",
+            company_id=NO_COMPANY,
             profile_image_url="/user.png",
             role="user",
         )
@@ -82,7 +83,7 @@ class TestAuths(AbstractPostgresTest):
             email="john.doe@openwebui.com",
             password=get_password_hash("password"),
             name="John Doe",
-            company_id="1",
+            company_id=NO_COMPANY,
             profile_image_url="/user.png",
             role="user",
         )
@@ -145,7 +146,7 @@ class TestAuths(AbstractPostgresTest):
             email="john.doe@openwebui.com",
             password="password",
             name="John Doe",
-            company_id="1",
+            company_id=NO_COMPANY,
             profile_image_url="/user.png",
             role="admin",
         )
@@ -163,7 +164,7 @@ class TestAuths(AbstractPostgresTest):
             email="john.doe@openwebui.com",
             password="password",
             name="John Doe",
-            company_id="1",
+            company_id=NO_COMPANY,
             profile_image_url="/user.png",
             role="admin",
         )
@@ -179,7 +180,7 @@ class TestAuths(AbstractPostgresTest):
             email="john.doe@openwebui.com",
             password="password",
             name="John Doe",
-            company_id="1",
+            company_id=NO_COMPANY,
             profile_image_url="/user.png",
             role="admin",
         )
@@ -196,7 +197,7 @@ class TestAuths(AbstractPostgresTest):
             email="john.doe@openwebui.com",
             password="password",
             name="John Doe",
-            company_id="1",
+            company_id=NO_COMPANY,
             profile_image_url="/user.png",
             role="admin",
         )

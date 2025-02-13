@@ -19,6 +19,7 @@ from open_webui.models.auths import (
     UserResponse,
 )
 from beyond_the_loop.models.users import Users
+from beyond_the_loop.models.companies import NO_COMPANY
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
@@ -258,7 +259,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     )
 
                     user = Auths.insert_new_auth(
-                        email=mail, password=str(uuid.uuid4()), name=cn, company_id="NO_COMPANY", role=role
+                        email=mail, password=str(uuid.uuid4()), name=cn, company_id=NO_COMPANY, role=role
                     )
 
                     if not user:
@@ -451,7 +452,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             form_data.email.lower(),
             hashed,
             form_data.name,
-            "NO_COMPANY",
+            NO_COMPANY,
             form_data.profile_image_url,
             role,
         )
@@ -550,7 +551,7 @@ async def signout(request: Request, response: Response):
 
 
 @router.post("/add", response_model=SigninResponse)
-async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
+async def add_user(form_data: AddUserForm, admin_user: Users = Depends(get_admin_user)):
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
@@ -561,25 +562,26 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
 
     try:
         hashed = get_password_hash(form_data.password)
-        user = Auths.insert_new_auth(
+        new_user = Auths.insert_new_auth(
             form_data.email.lower(),
             hashed,
             form_data.name,
-            form_data.company_id,
+            admin_user.company_id,
             form_data.profile_image_url,
             form_data.role,
         )
 
-        if user:
-            token = create_token(data={"id": user.id})
+        if new_user:
+            token = create_token(data={"id": new_user.id})
             return {
                 "token": token,
                 "token_type": "Bearer",
-                "id": user.id,
-                "email": user.email,
-                "name": user.name,
-                "role": user.role,
-                "profile_image_url": user.profile_image_url,
+                "id": new_user.id,
+                "email": new_user.email,
+                "name": new_user.name,
+                "role": new_user.role,
+                "company_id": new_user.company_id,
+                "profile_image_url": new_user.profile_image_url,
             }
         else:
             raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)

@@ -1,0 +1,29 @@
+litellm_settings:
+  debug: true
+  verbose: true
+  load_env_variables: true
+
+model_list:
+  - model_name: "GPT 4o"
+    litellm_params:
+      model: "azure/gpt-4o"
+      api_base: os.environ/AZURE_OPENAI_API_BASE_URL
+      api_key: os.environ/AZURE_OPENAI_API_KEY
+    model_info:
+      description: "OpenAI's most advanced model, ideal for complex tasks."
+      arena_elo: 1287
+      knowledge_cutoff: "October 2023"
+      context_window: 128000
+
+  - model_name: "GPT 3.5 Turbo"
+    litellm_params:
+      model: "azure/gpt-35-turbo"
+      api_base: os.environ/AZURE_OPENAI_API_BASE_URL
+      api_key: os.environ/AZURE_OPENAI_API_KEY
+    model_info:
+      description: "OpenAI's cheaper model for less complex tasks."
+      arena_elo: 1116
+      knowledge_cutoff: "September 2021"
+      context_window: 16000
+
+general_settings: {}

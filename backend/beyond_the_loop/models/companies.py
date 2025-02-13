@@ -7,6 +7,9 @@ from sqlalchemy import String, Column, Text
 
 from open_webui.internal.db import get_db, Base
 
+# Constants
+NO_COMPANY = "NO_COMPANY"
+
 ####################
 # Company DB Schema
 ####################

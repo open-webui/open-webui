@@ -57,7 +57,6 @@ from open_webui.routers import (
     retrieval,
     pipelines,
     tasks,
-    auths,
     channels,
     chats,
     folders,
@@ -85,7 +84,8 @@ from open_webui.internal.db import Session
 
 from open_webui.models.functions import Functions
 from beyond_the_loop.models.models import Models
-from beyond_the_loop.models.users import UserModel, Users
+from beyond_the_loop.models.users import Users
+from beyond_the_loop.routers import auths
 
 from open_webui.config import (
     # Ollama
