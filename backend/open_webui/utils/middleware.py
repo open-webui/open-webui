@@ -1704,10 +1704,12 @@ async def process_chat_response(
                                         "stdout": "Code interpreter engine not configured."
                                     }
 
+                                log.debug(f"Code interpreter output: {output}")
+
                                 if isinstance(output, dict):
                                     stdout = output.get("stdout", "")
 
-                                    if stdout:
+                                    if isinstance(stdout, str):
                                         stdoutLines = stdout.split("\n")
                                         for idx, line in enumerate(stdoutLines):
                                             if "data:image/png;base64" in line:
@@ -1739,7 +1741,7 @@ async def process_chat_response(
 
                                     result = output.get("result", "")
 
-                                    if result:
+                                    if isinstance(result, str):
                                         resultLines = result.split("\n")
                                         for idx, line in enumerate(resultLines):
                                             if "data:image/png;base64" in line:
@@ -1788,6 +1790,8 @@ async def process_chat_response(
                                 },
                             }
                         )
+
+                        print(content_blocks, serialize_content_blocks(content_blocks))
 
                         try:
                             res = await generate_chat_completion(
