@@ -18,6 +18,8 @@
 
 	const i18n = getContext('i18n');
 
+	const placeholderMessage = $config?.customization?.empty_chat_welcome_message;
+
 	export let transparentBackground = false;
 
 	export let createMessagePair: Function;
@@ -137,11 +139,7 @@
 				</div>
 
 				<div class=" text-3xl @sm:text-4xl line-clamp-1" in:fade={{ duration: 100 }}>
-					{#if models[selectedModelIdx]?.name}
-						{models[selectedModelIdx]?.name}
-					{:else}
-						{$i18n.t('Hello, {{name}}', { name: $user.name })}
-					{/if}
+					{`${$i18n.t('Hello, {{name}}', { name: $user.name }).split(', ')[0]} ${$i18n.t('Hello, {{name}}', { name: $user.name }).split(', ').slice(-1)}, ${placeholderMessage}`}
 				</div>
 			</div>
 
