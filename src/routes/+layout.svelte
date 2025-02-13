@@ -266,8 +266,6 @@
 					if (directConnections) {
 						const urlIdx = model?.urlIdx;
 
-						console.log(model, directConnections);
-
 						const OPENAI_API_URL = directConnections.OPENAI_API_BASE_URLS[urlIdx];
 						const OPENAI_API_KEY = directConnections.OPENAI_API_KEYS[urlIdx];
 						const API_CONFIG = directConnections.OPENAI_API_CONFIGS[urlIdx];
@@ -315,6 +313,7 @@
 											const lines = chunk.split('\n').filter((line) => line.trim() !== '');
 
 											for (const line of lines) {
+												console.log(line);
 												$socket?.emit(channel, line);
 											}
 										}

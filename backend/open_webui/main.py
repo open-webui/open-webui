@@ -947,6 +947,7 @@ async def chat_completion(
                 else {}
             ),
         }
+
         request.state.metadata = metadata
         form_data["metadata"] = metadata
 

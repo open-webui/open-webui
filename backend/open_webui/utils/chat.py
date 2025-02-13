@@ -164,10 +164,14 @@ async def generate_chat_completion(
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
+    if hasattr(request.state, "metadata"):
+        form_data["metadata"] = request.state.metadata
+
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {
             request.state.model["id"]: request.state.model,
         }
+        log.debug(f"direct connection to model: {models}")
     else:
         models = request.app.state.MODELS
 
