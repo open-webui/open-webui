@@ -112,6 +112,8 @@
 			<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC-BY 4.0</a>.
 
 		<div>
+			
+		</div>
 			<pre
 				class="text-xs text-gray-400 dark:text-gray-500">{new Date().getFullYear()} <a
 					href="https://findlaypark.com"
