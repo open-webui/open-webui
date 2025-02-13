@@ -1,18 +1,18 @@
+import asyncio
 import socket
 import urllib.parse
 import validators
-from typing import Union, Sequence, Iterator
-
-from langchain_community.document_loaders import (
-    WebBaseLoader,
-)
-from langchain_core.documents import Document
-
-
+from typing import Union, Sequence, Iterator, List, Optional
+import aiodns
+import aiohttp
+from async_lru import alru_cache  # 新增异步缓存库
+from readability import Document as ReadabilityDocument  # 重命名解决冲突
+from lxml_html_clean import Cleaner
+from langchain_community.document_loaders import WebBaseLoader
+from langchain_core.documents import Document as LangchainDocument  # 重命名解决冲突
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import ENABLE_RAG_LOCAL_WEB_FETCH
 from open_webui.env import SRC_LOG_LEVELS
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ def resolve_hostname(hostname):
 class SafeWebBaseLoader(WebBaseLoader):
     """WebBaseLoader with enhanced error handling for URLs."""
 
-    def lazy_load(self) -> Iterator[Document]:
+    def lazy_load(self) -> Iterator[LangchainDocument]:
         """Lazy load text from the url(s) in web_path with error handling."""
         for path in self.web_paths:
             try:
@@ -86,16 +86,16 @@ class SafeWebBaseLoader(WebBaseLoader):
                 if html := soup.find("html"):
                     metadata["language"] = html.get("lang", "No language found.")
 
-                yield Document(page_content=text, metadata=metadata)
+                yield LangchainDocument(page_content=text, metadata=metadata)
             except Exception as e:
                 # Log the error and continue with the next URL
                 log.error(f"Error loading {path}: {e}")
 
 
 def get_web_loader(
-    urls: Union[str, Sequence[str]],
-    verify_ssl: bool = True,
-    requests_per_second: int = 2,
+        urls: Union[str, Sequence[str]],
+        verify_ssl: bool = True,
+        requests_per_second: int = 2,
 ):
     # Check if the URLs are valid
     safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
@@ -106,3 +106,170 @@ def get_web_loader(
         requests_per_second=requests_per_second,
         continue_on_failure=True,
     )
+
+
+# ================== 异步DNS解析 ==================
+@alru_cache(maxsize=500, ttl=300)  # 使用异步缓存
+async def async_resolve_hostname(hostname: str) -> tuple[List[str], List[str]]:
+    """异步DNS解析器（带缓存）"""
+    try:
+        resolver = aiodns.DNSResolver()
+        ipv4, ipv6 = await asyncio.gather(
+            resolver.query(hostname, 'A'),
+            resolver.query(hostname, 'AAAA')
+        )
+        return (
+            [record.host for record in ipv4],
+            [record.host for record in ipv6]
+        )
+    except Exception as e:
+        log.warning(f"DNS解析失败 {hostname}: {str(e)}")
+        return [], []
+
+
+# ================== URL验证模块 ==================
+async def async_validate_url(url: str) -> bool:
+    """异步URL验证器"""
+    try:
+        # 基础验证
+        if not validators.url(url):
+            return False
+
+        # 本地获取保护
+        if not ENABLE_RAG_LOCAL_WEB_FETCH:
+            parsed = urllib.parse.urlparse(url)
+            ipv4_list, ipv6_list = await async_resolve_hostname(parsed.hostname)
+
+            # 检查IP地址
+            for ip in ipv4_list + ipv6_list:
+                if (validators.ipv4(ip, private=True) or
+                        validators.ipv6(ip, private=True)):
+                    log.warning(f"拒绝私有IP地址: {ip}")
+                    return False
+
+        return True
+    except Exception as e:
+        log.error(f"URL验证异常: {str(e)}")
+        return False
+
+
+# ================== 高性能异步加载器 ==================
+class OptimizedWebLoader:
+    """优化后的异步网页加载器"""
+
+    def __init__(
+            self,
+            urls: Union[str, List[str]],
+            timeout: float = 10.0,
+            max_content: int = 100000,
+            concurrency: int = 10
+    ):
+        self.urls = [urls] if isinstance(urls, str) else urls
+        self.timeout = aiohttp.ClientTimeout(total=timeout)
+        self.max_content = max_content
+        self.concurrency = concurrency
+
+        self.cleaner = Cleaner(
+            scripts=True, javascript=True, comments=True,
+            style=True, links=True, meta=True,
+            safe_attrs_only=True,
+            safe_attrs=frozenset(['src', 'alt', 'href', 'title']),
+            remove_tags=['iframe', 'object', 'embed']
+        )
+
+    async def _fetch_page(self, url: str, session: aiohttp.ClientSession) -> Optional[LangchainDocument]:
+        try:
+            async with session.get(url) as response:
+                # 内容长度预检
+                if (content_length := int(response.headers.get('Content-Length', 0))) > self.max_content * 2:
+                    log.warning(f"内容过大跳过: {url} ({content_length}字节)")
+                    return None
+
+                # 流式处理内容
+                current_length = 0
+                html = []
+                async for chunk in response.content.iter_chunked(4096):
+                    decoded_chunk = chunk.decode(errors='ignore')
+                    current_length += len(decoded_chunk)
+                    html.append(decoded_chunk)
+                    if current_length >= self.max_content:
+                        break
+
+                full_html = "".join(html)[:self.max_content]
+                # 使用readability提取内容
+                read_doc = ReadabilityDocument(full_html)
+                return LangchainDocument(
+                    page_content=f"# {read_doc.title()}\n\n{read_doc.summary()}",
+                    metadata={
+                        "source": url,
+                        "title": read_doc.title(),
+                        "description": read_doc.summary(),
+                        "language": "zh-CN"  # 可添加语言检测逻辑
+                    }
+                )
+        except Exception as e:
+            log.error(f"页面加载失败 {url}: {str(e)}")
+            return None
+
+    async def aload(self) -> List[LangchainDocument]:
+        """异步加载入口"""
+        # 并行验证URL
+        validation_results = await asyncio.gather(
+            *(async_validate_url(url) for url in self.urls)
+        )
+        valid_urls = [url for url, valid in zip(self.urls, validation_results) if valid]
+
+        # 并发获取页面
+        connector = aiohttp.TCPConnector(limit=self.concurrency)
+        async with aiohttp.ClientSession(
+                timeout=self.timeout,
+                connector=connector,
+                trust_env=True
+        ) as session:
+            tasks = [self._fetch_page(url, session) for url in valid_urls]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        return [doc for doc in results if isinstance(doc, LangchainDocument)]
+
+
+if __name__ == "__main__":
+    async def main():
+        loader = OptimizedWebLoader(
+            urls=[
+                "https://www.bing.com/search?q=%E4%B8%8A%E6%B5%B7%E9%92%A2%E8%81%942024%E5%B9%B4%E4%B8%9A%E7%BB%A9%E6%8A%A5%E5%91%8A",
+                "https://yuanchuang.10jqka.com.cn/20241023/c662721907.shtml",
+                "https://money.finance.sina.com.cn/corp/view/vCB_AllBulletinDetail.php?stockid=300226&id=10418230",
+                "https://about.mysteel.com/ir.html",
+                "https://static.cninfo.com.cn/finalpage/2024-10-24/1221489738.PDF",
+                "http://static.cninfo.com.cn/finalpage/2024-10-24/1221489743.PDF",
+                "http://money.finance.sina.com.cn/corp/go.php/vCB_Bulletin/stockid/300226/page_type/ndbg.phtml",
+                "https://stock.finance.sina.com.cn/stock/go.php/vReport_Show/kind/search/rptid/783518900955/index.phtml",
+                "https://stock.finance.sina.com.cn/stock/go.php/vReport_Show/kind/search/rptid/778363239446/index.phtml",
+                "https://vip.stock.finance.sina.com.cn/corp/view/vCB_AllBulletinDetail.php?id=10107700",
+                "https://static.cninfo.com.cn/finalpage/2024-01-26/1219011061.PDF",
+                "https://baijiahao.baidu.com/s?id=1808581218322845217",
+                "https://finance.sina.com.cn/stock/yyyj/2024-08-27/doc-inckzssr4272832.shtml",
+                "https://finance.sina.com.cn/roll/2024-08-26/doc-inckyvnz4671897.shtml",
+                "http://news.hexun.com/2024-08-27/214172563.html",
+                "https://finance.sina.com.cn/jjxw/2024-08-28/doc-incmenpk5106357.shtml",
+                "https://finance.stockstar.com/IG2024082800019117.shtml",
+                "https://data.eastmoney.com/notices/detail/300226/AN202502051642810966.html",
+                "https://fund.10jqka.com.cn/20250212/c665987139.shtml",
+                "https://www.21jingji.com/article/20250212/herald/02e9c96013a42af6a13fc4ad4496a3bf.html"
+            ],
+            concurrency=5,
+            max_content=50000
+        )
+        print("测试流程开始")
+
+        docs = await loader.aload()
+        for doc in docs:
+            print(f"Loaded: {doc.metadata['source']}")
+            print(f"Title: {doc.metadata['title']}")
+            print(f"Content length: {len(doc.page_content)}")
+            print("-" * 50)
+
+        print("测试流程结束")
+
+
+    asyncio.run(main())

@@ -23,7 +23,7 @@ def search_bing(
         filter_list: Optional[list[str]] = None,
 ) -> list[SearchResult]:
     mkt = locale
-    params = {"q": query, "mkt": mkt, "count": count, "responseFilter": ["Webpages", "News"]}
+    params = {"q": query+ "", "mkt": mkt, "count": count, "responseFilter": ["Webpages", "News"]}
     headers = {"Ocp-Apim-Subscription-Key": subscription_key}
 
     try:
@@ -31,8 +31,8 @@ def search_bing(
         response.raise_for_status()
         json_response = response.json()
         results = json_response.get("webPages", {}).get("value", [])
-        if filter_list:
-            results = get_filtered_results(results, filter_list)
+
+        results = get_filtered_results(results, filter_list)
         return [
             SearchResult(
                 link=result["url"],
@@ -45,29 +45,32 @@ def search_bing(
         log.error(f"Error: {ex}")
         raise ex
 
-
-def main():
-    parser = argparse.ArgumentParser(description="Search Bing from the command line.")
-    parser.add_argument(
-        "query",
-        type=str,
-        default="Top 5 international news today",
-        help="The search query.",
-    )
-    parser.add_argument(
-        "--count", type=int, default=5, help="Number of search results to return."
-    )
-    parser.add_argument(
-        "--filter", nargs="*", help="List of filters to apply to the search results."
-    )
-    parser.add_argument(
-        "--locale",
-        type=str,
-        default="en-US",
-        help="The locale to use for the search, maps to market in api",
-    )
-
-    args = parser.parse_args()
-
-    results = search_bing(args.locale, args.query, args.count, args.filter)
-    pprint(results)
+#
+# if __name__ == "__main__":
+#     parser = argparse.ArgumentParser(description="Search Bing from the command line.")
+#     parser.add_argument(
+#         "query",
+#         type=str,
+#         default="Top 5 international news today",
+#         help="The search query.",
+#     )
+#     parser.add_argument(
+#         "--count", type=int, default=5, help="Number of search results to return."
+#     )
+#     parser.add_argument(
+#         "--filter", nargs="*", help="List of filters to apply to the search results."
+#     )
+#     parser.add_argument(
+#         "--locale",
+#         type=str,
+#         default="en-US",
+#         help="The locale to use for the search, maps to market in api",
+#     )
+#
+#     # args = parser.parse_args()
+#
+#     # results = search_bing(args.locale, args.query, args.count, args.filter)
+#
+#     results = search_bing("","https://api.bing.microsoft.com/v7.0/search","zh-CN", "", 5, None)
+#
+#     pprint(results)
