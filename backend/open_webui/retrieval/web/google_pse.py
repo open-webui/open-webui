@@ -17,34 +17,53 @@ def search_google_pse(
     filter_list: Optional[list[str]] = None,
 ) -> list[SearchResult]:
     """Search using Google's Programmable Search Engine API and return the results as a list of SearchResult objects.
+    Handles pagination for counts greater than 10.
 
     Args:
         api_key (str): A Programmable Search Engine API key
         search_engine_id (str): A Programmable Search Engine ID
         query (str): The query to search for
+        count (int): The number of results to return (max 100, as PSE max results per query is 10 and max page is 10)
+        filter_list (Optional[list[str]], optional): A list of keywords to filter out from results. Defaults to None.
+
+    Returns:
+        list[SearchResult]: A list of SearchResult objects.
     """
     url = "https://www.googleapis.com/customsearch/v1"
-
     headers = {"Content-Type": "application/json"}
-    params = {
-        "cx": search_engine_id,
-        "q": query,
-        "key": api_key,
-        "num": count,
-    }
+    all_results = []
+    start_index = 1  # Google PSE start parameter is 1-based
 
-    response = requests.request("GET", url, headers=headers, params=params)
-    response.raise_for_status()
+    while count > 0:
+        num_results_this_page = min(count, 10)  # Google PSE max results per page is 10
+        params = {
+            "cx": search_engine_id,
+            "q": query,
+            "key": api_key,
+            "num": num_results_this_page,
+            "start": start_index,
+        }
+        response = requests.request("GET", url, headers=headers, params=params)
+        response.raise_for_status()
+        json_response = response.json()
+        results = json_response.get("items", [])
+        if results:  # check if results are returned. If not, no more pages to fetch.
+            all_results.extend(results)
+            count -= len(
+                results
+            )  # Decrement count by the number of results fetched in this page.
+            start_index += 10  # Increment start index for the next page
+        else:
+            break  # No more results from Google PSE, break the loop
 
-    json_response = response.json()
-    results = json_response.get("items", [])
     if filter_list:
-        results = get_filtered_results(results, filter_list)
+        all_results = get_filtered_results(all_results, filter_list)
+
     return [
         SearchResult(
             link=result["link"],
             title=result.get("title"),
             snippet=result.get("snippet"),
         )
-        for result in results
+        for result in all_results
     ]
