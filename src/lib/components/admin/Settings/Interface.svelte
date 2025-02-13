@@ -290,7 +290,8 @@
 						</div>
 
 						<button
-							class="p-1 px-3 text-xs flex rounded-sm transition"
+							aria-label = "Add"
+						class="p-1 px-3 text-xs flex rounded-sm transition"
 							type="button"
 							on:click={() => {
 								if (banners.length === 0 || banners.at(-1).content !== '') {
@@ -357,7 +358,8 @@
 								</div>
 
 								<button
-									class="px-2"
+									aria-label="Close Button"
+								class="px-2"
 									type="button"
 									on:click={() => {
 										banners.splice(bannerIdx, 1);
@@ -388,7 +390,8 @@
 							</div>
 
 							<button
-								class="p-1 px-3 text-xs flex rounded-sm transition"
+								aria-label="Add"
+							class="p-1 px-3 text-xs flex rounded-sm transition"
 								type="button"
 								on:click={() => {
 									if (promptSuggestions.length === 0 || promptSuggestions.at(-1).content !== '') {
@@ -439,7 +442,8 @@
 									</div>
 
 									<button
-										class="px-3"
+										aria-label="Close Button"
+									class="px-3"
 										type="button"
 										on:click={() => {
 											promptSuggestions.splice(promptIdx, 1);
