@@ -180,8 +180,15 @@
 						supportedChains: [mainnet],
 						loginMethods: ['email', 'wallet', 'google'],
 						appearance: {
-							theme: 'dark'
-						}
+							theme: 'dark',
+							walletList: [
+								"detected_wallets",
+								"phantom",
+								"solflare",
+								"backpack",
+								"okx_wallet"
+							],
+						},
 					}}
 				>
 					<ConnectGuard>
