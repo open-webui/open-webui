@@ -203,7 +203,7 @@ async def generate_title(
             }
         ),
         "metadata": {
-            **(request.state.metadata if request.state.metadata else {}),
+            **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "task": str(TASKS.TITLE_GENERATION),
             "task_body": form_data,
             "chat_id": form_data.get("chat_id", None),
@@ -272,7 +272,7 @@ async def generate_chat_tags(
         "messages": [{"role": "user", "content": content}],
         "stream": False,
         "metadata": {
-            **(request.state.metadata if request.state.metadata else {}),
+            **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "task": str(TASKS.TAGS_GENERATION),
             "task_body": form_data,
             "chat_id": form_data.get("chat_id", None),
@@ -338,7 +338,7 @@ async def generate_image_prompt(
         "messages": [{"role": "user", "content": content}],
         "stream": False,
         "metadata": {
-            **(request.state.metadata if request.state.metadata else {}),
+            **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "task": str(TASKS.IMAGE_PROMPT_GENERATION),
             "task_body": form_data,
             "chat_id": form_data.get("chat_id", None),
@@ -415,7 +415,7 @@ async def generate_queries(
         "messages": [{"role": "user", "content": content}],
         "stream": False,
         "metadata": {
-            **(request.state.metadata if request.state.metadata else {}),
+            **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "task": str(TASKS.QUERY_GENERATION),
             "task_body": form_data,
             "chat_id": form_data.get("chat_id", None),
@@ -496,7 +496,7 @@ async def generate_autocompletion(
         "messages": [{"role": "user", "content": content}],
         "stream": False,
         "metadata": {
-            **(request.state.metadata if request.state.metadata else {}),
+            **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "task": str(TASKS.AUTOCOMPLETE_GENERATION),
             "task_body": form_data,
             "chat_id": form_data.get("chat_id", None),
@@ -567,7 +567,7 @@ async def generate_emoji(
         ),
         "chat_id": form_data.get("chat_id", None),
         "metadata": {
-            **(request.state.metadata if request.state.metadata else {}),
+            **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "task": str(TASKS.EMOJI_GENERATION),
             "task_body": form_data,
         },
@@ -626,7 +626,7 @@ async def generate_moa_response(
         "messages": [{"role": "user", "content": content}],
         "stream": form_data.get("stream", False),
         "metadata": {
-            **(request.state.metadata if request.state.metadata else {}),
+            **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "chat_id": form_data.get("chat_id", None),
             "task": str(TASKS.MOA_RESPONSE_GENERATION),
             "task_body": form_data,
