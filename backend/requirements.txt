@@ -114,3 +114,4 @@ lxml==5.3.1            # 基础XML处理
 lxml-html-clean==0.1.0 # 独立的HTML清理模块
 readability-lxml==0.8.1 # 必须与lxml 5.x兼容的版本
 async_lru==2.0.4
+html2text==2024.2.26

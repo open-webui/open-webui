@@ -198,12 +198,17 @@ class OptimizedWebLoader:
                 full_html = "".join(html)[:self.max_content]
                 # 使用readability提取内容
                 read_doc = ReadabilityDocument(full_html)
+
+                import html2text, re
+                h = html2text.HTML2Text()
+                h.ignore_links = True
+                read_doc_content = read_doc.title() + '\n\n' + h.handle(read_doc.summary())
                 return LangchainDocument(
-                    page_content=f"# {read_doc.title()}\n\n{read_doc.summary()}",
+                    page_content=f"# {read_doc_content}",
                     metadata={
                         "source": url,
                         "title": read_doc.title(),
-                        "description": read_doc.summary(),
+                        "description": read_doc.title(),
                         "language": "zh-CN"  # 可添加语言检测逻辑
                     }
                 )
@@ -231,45 +236,32 @@ class OptimizedWebLoader:
 
         return [doc for doc in results if isinstance(doc, LangchainDocument)]
 
-
-if __name__ == "__main__":
-    async def main():
-        loader = OptimizedWebLoader(
-            urls=[
-                "https://www.bing.com/search?q=%E4%B8%8A%E6%B5%B7%E9%92%A2%E8%81%942024%E5%B9%B4%E4%B8%9A%E7%BB%A9%E6%8A%A5%E5%91%8A",
-                "https://yuanchuang.10jqka.com.cn/20241023/c662721907.shtml",
-                "https://money.finance.sina.com.cn/corp/view/vCB_AllBulletinDetail.php?stockid=300226&id=10418230",
-                "https://about.mysteel.com/ir.html",
-                "https://static.cninfo.com.cn/finalpage/2024-10-24/1221489738.PDF",
-                "http://static.cninfo.com.cn/finalpage/2024-10-24/1221489743.PDF",
-                "http://money.finance.sina.com.cn/corp/go.php/vCB_Bulletin/stockid/300226/page_type/ndbg.phtml",
-                "https://stock.finance.sina.com.cn/stock/go.php/vReport_Show/kind/search/rptid/783518900955/index.phtml",
-                "https://stock.finance.sina.com.cn/stock/go.php/vReport_Show/kind/search/rptid/778363239446/index.phtml",
-                "https://vip.stock.finance.sina.com.cn/corp/view/vCB_AllBulletinDetail.php?id=10107700",
-                "https://static.cninfo.com.cn/finalpage/2024-01-26/1219011061.PDF",
-                "https://baijiahao.baidu.com/s?id=1808581218322845217",
-                "https://finance.sina.com.cn/stock/yyyj/2024-08-27/doc-inckzssr4272832.shtml",
-                "https://finance.sina.com.cn/roll/2024-08-26/doc-inckyvnz4671897.shtml",
-                "http://news.hexun.com/2024-08-27/214172563.html",
-                "https://finance.sina.com.cn/jjxw/2024-08-28/doc-incmenpk5106357.shtml",
-                "https://finance.stockstar.com/IG2024082800019117.shtml",
-                "https://data.eastmoney.com/notices/detail/300226/AN202502051642810966.html",
-                "https://fund.10jqka.com.cn/20250212/c665987139.shtml",
-                "https://www.21jingji.com/article/20250212/herald/02e9c96013a42af6a13fc4ad4496a3bf.html"
-            ],
-            concurrency=5,
-            max_content=50000
-        )
-        print("测试流程开始")
-
-        docs = await loader.aload()
-        for doc in docs:
-            print(f"Loaded: {doc.metadata['source']}")
-            print(f"Title: {doc.metadata['title']}")
-            print(f"Content length: {len(doc.page_content)}")
-            print("-" * 50)
-
-        print("测试流程结束")
-
-
-    asyncio.run(main())
+#
+# if __name__ == "__main__":
+#     async def main():
+#         loader = OptimizedWebLoader(
+#             urls=[
+#                 "https://www.bing.com/search?q=%E4%B8%8A%E6%B5%B7%E9%92%A2%E8%81%942024%E5%B9%B4%E4%B8%9A%E7%BB%A9%E6%8A%A5%E5%91%8A",
+#                 "https://yuanchuang.10jqka.com.cn/20241023/c662721907.shtml",
+#                 "https://money.finance.sina.com.cn/corp/view/vCB_AllBulletinDetail.php?stockid=300226&id=10418230",
+#                 "https://about.mysteel.com/ir.html",
+#                 "https://static.cninfo.com.cn/finalpage/2024-10-24/1221489738.PDF",
+#                 "http://static.cninfo.com.cn/finalpage/2024-10-24/1221489743.PDF",
+#                 "http://money.finance.sina.com.cn/corp/go.php/vCB_Bulletin/stockid/300226/page_type/ndbg.phtml"
+#             ],
+#             concurrency=5,
+#             max_content=50000
+#         )
+#         print("测试流程开始")
+#
+#         docs = await loader.aload()
+#         for doc in docs:
+#             print(f"Loaded: {doc.metadata['source']}")
+#             print(f"Title: {doc.metadata['title']}")
+#             print(f"Content length: {len(doc.page_content)}")
+#             print("-" * 50)
+#
+#         print("测试流程结束")
+#
+#
+#     asyncio.run(main())
