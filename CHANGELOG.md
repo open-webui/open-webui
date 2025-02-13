@@ -29,10 +29,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **💾 User Settings Persistence Fix**: Ensured user-specific settings are correctly saved and applied across sessions.
 - **🔄 OpenID Username Retrieval Enhancement**: Usernames are now correctly picked up and assigned for OpenID Connect (OIDC) logins.
 
-### Changed
-
-- **🔗 Improved Direct Connections Integration**: Simplified the configuration process for setting up direct API connections, making it easier to integrate custom inference endpoints.
-
 ## [0.5.10] - 2025-02-05
 
 ### Fixed
