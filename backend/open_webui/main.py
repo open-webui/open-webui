@@ -97,6 +97,16 @@ from open_webui.config import (
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
+    # Direct Connections
+    ENABLE_DIRECT_CONNECTIONS,
+    # Code Interpreter
+    ENABLE_CODE_INTERPRETER,
+    CODE_INTERPRETER_ENGINE,
+    CODE_INTERPRETER_PROMPT_TEMPLATE,
+    CODE_INTERPRETER_JUPYTER_URL,
+    CODE_INTERPRETER_JUPYTER_AUTH,
+    CODE_INTERPRETER_JUPYTER_AUTH_TOKEN,
+    CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD,
     # Image
     AUTOMATIC1111_API_AUTH,
     AUTOMATIC1111_BASE_URL,
@@ -130,6 +140,7 @@ from open_webui.config import (
     AUDIO_TTS_AZURE_SPEECH_REGION,
     AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
     WHISPER_MODEL,
+    DEEPGRAM_API_KEY,
     WHISPER_MODEL_AUTO_UPDATE,
     WHISPER_MODEL_DIR,
     # Retrieval
@@ -180,6 +191,7 @@ from open_webui.config import (
     EXA_API_KEY,
     KAGI_SEARCH_API_KEY,
     MOJEEK_SEARCH_API_KEY,
+    BOCHA_SEARCH_API_KEY,
     GOOGLE_PSE_API_KEY,
     GOOGLE_PSE_ENGINE_ID,
     GOOGLE_DRIVE_CLIENT_ID,
@@ -322,7 +334,11 @@ class SPAStaticFiles(StaticFiles):
             return await super().get_response(path, scope)
         except (HTTPException, StarletteHTTPException) as ex:
             if ex.status_code == 404:
-                return await super().get_response("index.html", scope)
+                if path.endswith(".js"):
+                    # Return 404 for javascript files
+                    raise ex
+                else:
+                    return await super().get_response("index.html", scope)
             else:
                 raise ex
 
@@ -388,6 +404,14 @@ app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 app.state.config.OPENAI_API_CONFIGS = OPENAI_API_CONFIGS
 
 app.state.OPENAI_MODELS = {}
+
+########################################
+#
+# DIRECT CONNECTIONS
+#
+########################################
+
+app.state.config.ENABLE_DIRECT_CONNECTIONS = ENABLE_DIRECT_CONNECTIONS
 
 ########################################
 #
@@ -514,6 +538,7 @@ app.state.config.GOOGLE_PSE_ENGINE_ID = GOOGLE_PSE_ENGINE_ID
 app.state.config.BRAVE_SEARCH_API_KEY = BRAVE_SEARCH_API_KEY
 app.state.config.KAGI_SEARCH_API_KEY = KAGI_SEARCH_API_KEY
 app.state.config.MOJEEK_SEARCH_API_KEY = MOJEEK_SEARCH_API_KEY
+app.state.config.BOCHA_SEARCH_API_KEY = BOCHA_SEARCH_API_KEY
 app.state.config.SERPSTACK_API_KEY = SERPSTACK_API_KEY
 app.state.config.SERPSTACK_HTTPS = SERPSTACK_HTTPS
 app.state.config.SERPER_API_KEY = SERPER_API_KEY
@@ -569,6 +594,24 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.config.RAG_EMBEDDING_BATCH_SIZE,
 )
 
+########################################
+#
+# CODE INTERPRETER
+#
+########################################
+
+app.state.config.ENABLE_CODE_INTERPRETER = ENABLE_CODE_INTERPRETER
+app.state.config.CODE_INTERPRETER_ENGINE = CODE_INTERPRETER_ENGINE
+app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE = CODE_INTERPRETER_PROMPT_TEMPLATE
+
+app.state.config.CODE_INTERPRETER_JUPYTER_URL = CODE_INTERPRETER_JUPYTER_URL
+app.state.config.CODE_INTERPRETER_JUPYTER_AUTH = CODE_INTERPRETER_JUPYTER_AUTH
+app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN = (
+    CODE_INTERPRETER_JUPYTER_AUTH_TOKEN
+)
+app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD = (
+    CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD
+)
 
 ########################################
 #
@@ -611,6 +654,7 @@ app.state.config.STT_ENGINE = AUDIO_STT_ENGINE
 app.state.config.STT_MODEL = AUDIO_STT_MODEL
 
 app.state.config.WHISPER_MODEL = WHISPER_MODEL
+app.state.config.DEEPGRAM_API_KEY = DEEPGRAM_API_KEY
 
 app.state.config.TTS_OPENAI_API_BASE_URL = AUDIO_TTS_OPENAI_API_BASE_URL
 app.state.config.TTS_OPENAI_API_KEY = AUDIO_TTS_OPENAI_API_KEY
@@ -753,6 +797,7 @@ app.include_router(openai.router, prefix="/openai", tags=["openai"])
 app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])
 app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["tasks"])
 app.include_router(images.router, prefix="/api/v1/images", tags=["images"])
+
 app.include_router(audio.router, prefix="/api/v1/audio", tags=["audio"])
 app.include_router(retrieval.router, prefix="/api/v1/retrieval", tags=["retrieval"])
 
@@ -855,20 +900,30 @@ async def chat_completion(
     if not request.app.state.MODELS:
         await get_all_models(request)
 
+    model_item = form_data.pop("model_item", {})
     tasks = form_data.pop("background_tasks", None)
-    try:
-        model_id = form_data.get("model", None)
-        if model_id not in request.app.state.MODELS:
-            raise Exception("Model not found")
-        model = request.app.state.MODELS[model_id]
-        model_info = Models.get_model_by_id(model_id)
 
-        # Check if user has access to the model
-        if not BYPASS_MODEL_ACCESS_CONTROL and user.role == "user":
-            try:
-                check_model_access(user, model)
-            except Exception as e:
-                raise e
+    try:
+        if not model_item.get("direct", False):
+            model_id = form_data.get("model", None)
+            if model_id not in request.app.state.MODELS:
+                raise Exception("Model not found")
+
+            model = request.app.state.MODELS[model_id]
+            model_info = Models.get_model_by_id(model_id)
+
+            # Check if user has access to the model
+            if not BYPASS_MODEL_ACCESS_CONTROL and user.role == "user":
+                try:
+                    check_model_access(user, model)
+                except Exception as e:
+                    raise e
+        else:
+            model = model_item
+            model_info = None
+
+            request.state.direct = True
+            request.state.model = model
 
         metadata = {
             "user_id": user.id,
@@ -880,6 +935,7 @@ async def chat_completion(
             "features": form_data.get("features", None),
             "variables": form_data.get("variables", None),
             "model": model_info,
+            "direct": model_item.get("direct", False),
             **(
                 {"function_calling": "native"}
                 if form_data.get("params", {}).get("function_calling") == "native"
@@ -891,6 +947,8 @@ async def chat_completion(
                 else {}
             ),
         }
+
+        request.state.metadata = metadata
         form_data["metadata"] = metadata
 
         form_data, metadata, events = await process_chat_payload(
@@ -898,6 +956,7 @@ async def chat_completion(
         )
 
     except Exception as e:
+        log.debug(f"Error processing chat payload: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -926,6 +985,12 @@ async def chat_completed(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
     try:
+        model_item = form_data.pop("model_item", {})
+
+        if model_item.get("direct", False):
+            request.state.direct = True
+            request.state.model = model_item
+
         return await chat_completed_handler(request, form_data, user)
     except Exception as e:
         raise HTTPException(
@@ -939,6 +1004,12 @@ async def chat_action(
     request: Request, action_id: str, form_data: dict, user=Depends(get_verified_user)
 ):
     try:
+        model_item = form_data.pop("model_item", {})
+
+        if model_item.get("direct", False):
+            request.state.direct = True
+            request.state.model = model_item
+
         return await chat_action_handler(request, action_id, form_data, user)
     except Exception as e:
         raise HTTPException(
@@ -1011,14 +1082,17 @@ async def get_app_config(request: Request):
             "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
             **(
                 {
+                    "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
                     "enable_channels": app.state.config.ENABLE_CHANNELS,
                     "enable_web_search": app.state.config.ENABLE_RAG_WEB_SEARCH,
-                    "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
+                    "enable_code_interpreter": app.state.config.ENABLE_CODE_INTERPRETER,
                     "enable_image_generation": app.state.config.ENABLE_IMAGE_GENERATION,
+                    "enable_autocomplete_generation": app.state.config.ENABLE_AUTOCOMPLETE_GENERATION,
                     "enable_community_sharing": app.state.config.ENABLE_COMMUNITY_SHARING,
                     "enable_message_rating": app.state.config.ENABLE_MESSAGE_RATING,
                     "enable_admin_export": ENABLE_ADMIN_EXPORT,
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
+                    "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                 }
                 if user is not None
                 else {}
