@@ -74,7 +74,6 @@ async def generate_direct_chat_completion(
     session_id = metadata.get("session_id")
     request_id = str(uuid.uuid4())  # Generate a unique request ID
 
-    event_emitter = get_event_emitter(metadata)
     event_caller = get_event_call(metadata)
 
     channel = f"{user_id}:{session_id}:{request_id}"
@@ -191,7 +190,7 @@ async def generate_chat_completion(
         except Exception as e:
             raise e
 
-    if request.state.direct:
+    if getattr(request.state, "direct", False):
         return await generate_direct_chat_completion(
             request, form_data, user=user, models=models
         )

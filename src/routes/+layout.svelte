@@ -294,6 +294,7 @@
 									cb({
 										status: true
 									});
+									console.log({ status: true });
 
 									// res will either be SSE or JSON
 									const reader = res.body.getReader();
