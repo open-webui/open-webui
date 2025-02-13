@@ -8,6 +8,7 @@ from open_webui.env import SRC_LOG_LEVELS
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
+
 def search_google_pse(
     api_key: str,
     search_engine_id: str,
@@ -46,12 +47,14 @@ def search_google_pse(
         response.raise_for_status()
         json_response = response.json()
         results = json_response.get("items", [])
-        if results: # check if results are returned. If not, no more pages to fetch.
+        if results:  # check if results are returned. If not, no more pages to fetch.
             all_results.extend(results)
-            count -= len(results) # Decrement count by the number of results fetched in this page.
-            start_index += 10 # Increment start index for the next page
+            count -= len(
+                results
+            )  # Decrement count by the number of results fetched in this page.
+            start_index += 10  # Increment start index for the next page
         else:
-            break # No more results from Google PSE, break the loop
+            break  # No more results from Google PSE, break the loop
 
     if filter_list:
         all_results = get_filtered_results(all_results, filter_list)

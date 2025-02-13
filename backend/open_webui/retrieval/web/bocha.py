@@ -9,6 +9,7 @@ from open_webui.env import SRC_LOG_LEVELS
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
+
 def _parse_response(response):
     result = {}
     if "data" in response:
@@ -25,7 +26,8 @@ def _parse_response(response):
                         "summary": item.get("summary", ""),
                         "siteName": item.get("siteName", ""),
                         "siteIcon": item.get("siteIcon", ""),
-                        "datePublished": item.get("datePublished", "") or item.get("dateLastCrawled", ""),
+                        "datePublished": item.get("datePublished", "")
+                        or item.get("dateLastCrawled", ""),
                     }
                     for item in webPages["value"]
                 ]
@@ -42,17 +44,11 @@ def search_bocha(
         query (str): The query to search for
     """
     url = "https://api.bochaai.com/v1/web-search?utm_source=ollama"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    
-    payload = json.dumps({
-        "query": query,
-        "summary": True,
-        "freshness": "noLimit",
-        "count": count
-    })
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+
+    payload = json.dumps(
+        {"query": query, "summary": True, "freshness": "noLimit", "count": count}
+    )
 
     response = requests.post(url, headers=headers, data=payload, timeout=5)
     response.raise_for_status()
@@ -63,10 +59,7 @@ def search_bocha(
 
     return [
         SearchResult(
-            link=result["url"], 
-            title=result.get("name"), 
-            snippet=result.get("summary")
+            link=result["url"], title=result.get("name"), snippet=result.get("summary")
         )
-        for result in results.get("webpage", [])[:count]  
+        for result in results.get("webpage", [])[:count]
     ]
-

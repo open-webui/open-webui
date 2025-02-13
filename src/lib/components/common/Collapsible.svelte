@@ -47,7 +47,7 @@
 	export let hide = false;
 </script>
 
-<div id={id} class={className}>
+<div {id} class={className}>
 	{#if title !== null}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
