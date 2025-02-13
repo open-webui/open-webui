@@ -153,7 +153,7 @@ async def get_user_settings_by_session_user(user=Depends(get_verified_user)):
 async def update_user_settings_by_session_user(
     form_data: UserSettings, user=Depends(get_verified_user)
 ):
-    user = Users.update_user_by_id(user.id, {"settings": form_data.model_dump()})
+    user = Users.update_user_settings_by_id(user.id, form_data.model_dump())
     if user:
         return user.settings
     else:
