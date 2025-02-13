@@ -2169,3 +2169,13 @@ LDAP_CA_CERT_FILE = PersistentConfig(
 LDAP_CIPHERS = PersistentConfig(
     "LDAP_CIPHERS", "ldap.server.ciphers", os.environ.get("LDAP_CIPHERS", "ALL")
 )
+
+####################################
+# Personalisatie GovChat-NL
+####################################
+
+EMPTY_CHAT_WELCOME_MESSAGE = PersistentConfig(
+    "EMPTY_CHAT_WELCOME_MESSAGE",
+    "customization.empty_chat_welcome_message",
+    os.getenv("EMPTY_CHAT_WELCOME_MESSAGE", "welkom bij GovChat-NL")
+)

@@ -77,6 +77,9 @@ export const currentChatPage = writable(1);
 export const isLastActiveTab = writable(true);
 export const playingNotificationSound = writable(false);
 
+// Customization for GovChat-NL
+export const customization: Writable<CustomizationGovChatNL | undefined> = writable(undefined);
+
 export type Model = OpenAIModel | OllamaModel;
 
 type BaseModel = {

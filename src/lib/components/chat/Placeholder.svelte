@@ -18,6 +18,8 @@
 
 	const i18n = getContext('i18n');
 
+	const placeholderMessage = $config?.customization?.empty_chat_welcome_message;
+
 	export let transparentBackground = false;
 
 	export let createMessagePair: Function;
@@ -137,7 +139,7 @@
 				</div>
 
 				<div class=" text-3xl @sm:text-4xl line-clamp-1" in:fade={{ duration: 100 }}>
-					{`${$i18n.t('Hello, {{name}}', { name: $user.name }).split(', ')[0]} ${$i18n.t('Hello, {{name}}', { name: $user.name }).split(', ').slice(-1)}, dit is GovChat-NL`}
+					{`${$i18n.t('Hello, {{name}}', { name: $user.name }).split(', ')[0]} ${$i18n.t('Hello, {{name}}', { name: $user.name }).split(', ').slice(-1)}, ${placeholderMessage}`}
 				</div>
 			</div>
 
