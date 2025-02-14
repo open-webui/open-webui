@@ -134,9 +134,7 @@
 						{$i18n.t('Title Generation')}
 					</div>
 
-					<Tooltip content={$i18n.t('Enable title generation for chat messages')}>
-						<Switch bind:state={taskConfig.ENABLE_TITLE_GENERATION} />
-					</Tooltip>
+					<Switch bind:state={taskConfig.ENABLE_TITLE_GENERATION} />
 				</div>
 
 				{#if taskConfig.ENABLE_TITLE_GENERATION}

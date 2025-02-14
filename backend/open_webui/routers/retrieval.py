@@ -550,12 +550,8 @@ async def update_rag_config(
             form_data.web.search.searchapi_engine
         )
 
-        request.app.state.config.SERPAPI_API_KEY = (
-            form_data.web.search.serpapi_api_key
-        )
-        request.app.state.config.SERPAPI_ENGINE = (
-            form_data.web.search.serpapi_engine
-        )
+        request.app.state.config.SERPAPI_API_KEY = form_data.web.search.serpapi_api_key
+        request.app.state.config.SERPAPI_ENGINE = form_data.web.search.serpapi_engine
 
         request.app.state.config.JINA_API_KEY = form_data.web.search.jina_api_key
         request.app.state.config.BING_SEARCH_V7_ENDPOINT = (
