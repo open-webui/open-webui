@@ -18,6 +18,8 @@
 	export let floatingButtons = true;
 
 	export let onSourceClick = () => {};
+	export let onTaskClick = () => {};
+
 	export let onAddMessages = () => {};
 
 	let contentContainerElement;
@@ -141,6 +143,7 @@
 			return acc.filter((item, index) => acc.indexOf(item) === index);
 		}, [])}
 		{onSourceClick}
+		{onTaskClick}
 		on:update={(e) => {
 			dispatch('update', e.detail);
 		}}
