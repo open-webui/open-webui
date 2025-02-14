@@ -31,7 +31,10 @@
 	$: (async () => {
 		if (content) {
 			tokens = marked.lexer(
-				replaceTokens(processResponseContent(content), sourceIds, model?.name, $user?.name)
+				replaceTokens(processResponseContent(content), sourceIds, model?.name, $user?.name),
+				{
+					gfm: true
+				}
 			);
 		}
 	})();
