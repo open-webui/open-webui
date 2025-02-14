@@ -1015,7 +1015,7 @@ async def process_file_async(
     user=Depends(get_verified_user),
 ):
     try:
-        file = Files.get_file_by_id(task_id)+
+        file = Files.get_file_by_id(task_id)
 
         collection_name = form_data.collection_name
         engine = request.app.state.config.CONTENT_EXTRACTION_ENGINE
