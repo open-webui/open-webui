@@ -777,7 +777,7 @@
 	"Read": "Lue",
 	"Read Aloud": "Lue ääneen",
 	"Reasoning Effort": "Päättelyn määrä",
-	"Record voice": "Nauhoita ääni",
+	"Record voice": "Nauhoita ääntä",
 	"Redirecting you to Open WebUI Community": "Ohjataan sinut OpenWebUI-yhteisöön",
 	"Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40)": "Vähentää merkityksetöntä sisältöä tuottavan todennäköisyyttä. Korkeampi arvo (esim. 100) antaa monipuolisempia vastauksia, kun taas alhaisempi arvo (esim. 10) on konservatiivisempi. (Oletus: 40)",
 	"Refer to yourself as \"User\" (e.g., \"User is learning Spanish\")": "Viittaa itseen \"Käyttäjänä\" (esim. \"Käyttäjä opiskelee espanjaa\")",
