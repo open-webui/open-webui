@@ -33,7 +33,7 @@
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Spinner from './Spinner.svelte';
 
-	export let open = false;
+	export let open = true;
 	export let id = '';
 	export let className = '';
 	export let buttonClassName =
