@@ -125,6 +125,9 @@
 
 	let taskId = null;
 
+	let isLoading = false; // 添加loading状态
+	let currentLoadingVideo = '';
+
 	// Chat Input
 	let prompt = '';
 	let chatFiles = [];
@@ -1224,6 +1227,7 @@
 
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
 		console.log('submitPrompt', userPrompt, $chatId);
+		currentLoadingVideo = `/static/loading${Math.floor(Math.random() * 3) + 1}.mp4`;
 
 		const messages = createMessagesList(history.currentId);
 		const _selectedModels = selectedModels.map((modelId) =>
@@ -1442,6 +1446,7 @@
 
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
+					isLoading = true; // 开始loading
 					scrollToBottom();
 					await sendPromptSocket(model, responseMessageId, _chatId);
 
@@ -1457,6 +1462,7 @@
 	};
 
 	const sendPromptSocket = async (model, responseMessageId, _chatId) => {
+		isLoading = true; // 开始loading
 		const responseMessage = history.messages[responseMessageId];
 		const userMessage = history.messages[responseMessage.parentId];
 		const locale = localStorage.getItem('locale') || 'en-US';
@@ -1612,6 +1618,7 @@
 
 		await tick();
 		scrollToBottom();
+		isLoading = false; // 结束loading
 	};
 
 	const handleOpenAIError = async (error, responseMessage) => {
@@ -1859,6 +1866,24 @@
 		eventCallback(false);
 	}}
 />
+
+{#if isLoading}
+	<div class="fixed inset-0 flex items-center justify-center z-50 backdrop-blur bg-black/20">
+		<div class="relative w-[80vw] max-w-[1280px] aspect-[1280/768] rounded-xl overflow-hidden">
+			<div class="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/40 backdrop-blur-sm" />
+			<div class="absolute inset-0 border border-white/10" />
+			<div class="absolute inset-[1px] rounded-xl bg-gradient-to-br from-white/[0.15] to-transparent opacity-50" />
+			<video
+				autoplay
+				loop
+				muted
+				playsinline
+				class="relative w-full h-full object-contain p-4 drop-shadow-2xl"
+				src={currentLoadingVideo}
+			/>
+		</div>
+	</div>
+{/if}
 
 <div
 	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
