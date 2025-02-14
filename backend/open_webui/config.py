@@ -899,7 +899,7 @@ USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS = (
 )
 
 USER_PERMISSIONS_CHAT_CONTROLS = (
-    os.environ.get("USER_PERMISSIONS_CHAT_CONTROLS", "True").lower() == "true"
+    os.environ.get("USER_PERMISSIONS_CHAT_CONTROLS", "False").lower() == "true"
 )
 
 USER_PERMISSIONS_CHAT_FILE_UPLOAD = (
