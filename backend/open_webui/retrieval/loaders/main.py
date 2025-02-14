@@ -115,6 +115,61 @@ class TikaLoader:
             raise Exception(f"Error calling Tika: {r.reason}")
 
 
+class DoclingLoader:
+    def __init__(self, url, file_path=None, mime_type=None):
+        self.url = url.rstrip("/")  # Ensure no trailing slash
+        self.file_path = file_path
+        self.mime_type = mime_type
+
+    def load(self) -> list[Document]:
+        if self.file_path is None:
+            raise ValueError("File path is required for DoclingLoader")
+
+        with open(self.file_path, "rb") as f:
+            files = {"files": (self.file_path, f, self.mime_type or "application/octet-stream")}
+            
+            params = {
+            "from_formats": ["docx", "pptx", "html", "xml_pubmed", "image", "pdf", "asciidoc", "md", "xlsx", "xml_uspto", "json_docling"],
+            "to_formats": ["md"],
+            "image_export_mode": "placeholder",
+            "do_ocr": True,
+            "force_ocr": False,
+            "ocr_engine": "easyocr",
+            "ocr_lang": None,
+            "pdf_backend": "dlparse_v2",
+            "table_mode": "fast",
+            "abort_on_error": False,
+            "return_as_file": False,
+            "do_table_structure": True,
+            "include_images": True,
+            "images_scale": 2.0,
+        }
+
+            endpoint = f"{self.url}/v1alpha/convert/file"
+            response = requests.post(endpoint, files=files, data=params)
+
+        if response.ok:
+            result = response.json()
+            document_data = result.get("document", {})
+            text = document_data.get("md_content", "<No text content found>")
+
+            metadata = {"Content-Type": self.mime_type} if self.mime_type else {}
+            
+            log.debug("Docling extracted text: %s", text)
+
+            return [Document(page_content=text, metadata=metadata)]
+        else:
+            error_msg = f"Error calling Docling API: {response.status_code}"
+            if response.text:
+                try:
+                    error_data = response.json()
+                    if "detail" in error_data:
+                        error_msg += f" - {error_data['detail']}"
+                except:
+                    error_msg += f" - {response.text}"
+            raise Exception(f"Error calling Docling: {error_msg}")
+
+
 class Loader:
     def __init__(self, engine: str = "", **kwargs):
         self.engine = engine
@@ -147,6 +202,12 @@ class Loader:
                     file_path=file_path,
                     mime_type=file_content_type,
                 )
+        elif self.engine == "docling":
+            loader = DoclingLoader(
+                url=self.kwargs.get("DOCLING_SERVER_URL"),
+                file_path=file_path,
+                mime_type=file_content_type,
+            )
         else:
             if file_ext == "pdf":
                 loader = PyPDFLoader(

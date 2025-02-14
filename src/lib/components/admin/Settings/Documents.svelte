@@ -50,6 +50,8 @@
 	let contentExtractionEngine = 'default';
 	let tikaServerUrl = '';
 	let showTikaServerUrl = false;
+	let doclingServerUrl = '';
+	let showDoclingServerUrl = false;
 
 	let textSplitter = '';
 	let chunkSize = 0;
@@ -175,6 +177,12 @@
 			toast.error($i18n.t('Tika Server URL required.'));
 			return;
 		}
+
+		if (contentExtractionEngine === 'docling' && doclingServerUrl === '') {
+			toast.error($i18n.t('Docling Server URL required.'));
+			return;
+		}
+
 		const res = await updateRAGConfig(localStorage.token, {
 			pdf_extract_images: pdfExtractImages,
 			enable_google_drive_integration: enableGoogleDriveIntegration,
@@ -189,7 +197,8 @@
 			},
 			content_extraction: {
 				engine: contentExtractionEngine,
-				tika_server_url: tikaServerUrl
+				tika_server_url: contentExtractionEngine === 'tika' ? tikaServerUrl : undefined,
+				docling_server_url: contentExtractionEngine === 'docling' ? doclingServerUrl : undefined
 			}
 		});
 
@@ -231,7 +240,7 @@
 		await setEmbeddingConfig();
 		await setRerankingConfig();
 
-		querySettings = await getQuerySettings(localStorage.token);
+		querySettings = await getQuerySettings(localStorage.token); 
 
 		const res = await getRAGConfig(localStorage.token);
 
@@ -243,8 +252,11 @@
 			chunkOverlap = res.chunk.chunk_overlap;
 
 			contentExtractionEngine = res.content_extraction.engine;
-			tikaServerUrl = res.content_extraction.tika_server_url;
+			tikaServerUrl = res.content_extraction.tika_server_url ?? '';
+			doclingServerUrl = res.content_extraction.docling_server_url ?? ''; // Load doclingServerUrl
+
 			showTikaServerUrl = contentExtractionEngine === 'tika';
+			showDoclingServerUrl = contentExtractionEngine === 'docling';
 
 			fileMaxSize = res?.file.max_size ?? '';
 			fileMaxCount = res?.file.max_count ?? '';
@@ -568,10 +580,12 @@
 						bind:value={contentExtractionEngine}
 						on:change={(e) => {
 							showTikaServerUrl = e.target.value === 'tika';
+							showDoclingServerUrl = e.target.value === 'docling';
 						}}
 					>
 						<option value="">{$i18n.t('Default')} </option>
 						<option value="tika">{$i18n.t('Tika')}</option>
+						<option value="docling">{$i18n.t('Docling')}</option> <!-- New option added -->
 					</select>
 				</div>
 			</div>
@@ -583,6 +597,17 @@
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							placeholder={$i18n.t('Enter Tika Server URL')}
 							bind:value={tikaServerUrl}
+						/>
+					</div>
+				</div>
+			{/if}
+			{#if showDoclingServerUrl}
+				<div class="flex w-full mt-1">
+					<div class="flex-1 mr-2">
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							placeholder={$i18n.t('Enter Docling Server URL')}
+							bind:value={doclingServerUrl}
 						/>
 					</div>
 				</div>
