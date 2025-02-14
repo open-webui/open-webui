@@ -259,64 +259,70 @@ async def chat_web_search_handler(
     request: Request, form_data: dict, extra_params: dict, user
 ):
     event_emitter = extra_params["__event_emitter__"]
-    await event_emitter(
-        {
-            "type": "status",
-            "data": {
-                "action": "web_search",
-                "description": "Generating search query",
-                "done": False,
-            },
-        }
-    )
 
     messages = form_data["messages"]
     user_message = get_last_user_message(messages)
-
+    
     queries = []
-    try:
-        res = await generate_queries(
-            request,
-            {
-                "model": form_data["model"],
-                "messages": messages,
-                "prompt": user_message,
-                "type": "web_search",
-            },
-            user,
-        )
+    if request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION:
 
-        response = res["choices"][0]["message"]["content"]
-
-        try:
-            bracket_start = response.find("{")
-            bracket_end = response.rfind("}") + 1
-
-            if bracket_start == -1 or bracket_end == -1:
-                raise Exception("No JSON object found in the response")
-
-            response = response[bracket_start:bracket_end]
-            queries = json.loads(response)
-            queries = queries.get("queries", [])
-        except Exception as e:
-            queries = [response]
-
-    except Exception as e:
-        log.exception(e)
-        queries = [user_message]
-
-    if len(queries) == 0:
         await event_emitter(
             {
                 "type": "status",
                 "data": {
                     "action": "web_search",
-                    "description": "No search query generated",
-                    "done": True,
+                    "description": "Generating search query",
+                    "done": False,
                 },
             }
         )
-        return form_data
+    
+        try:
+            res = await generate_queries(
+                request,
+                {
+                    "model": form_data["model"],
+                    "messages": messages,
+                    "prompt": user_message,
+                    "type": "web_search",
+                },
+                user,
+            )
+    
+            response = res["choices"][0]["message"]["content"]
+    
+            try:
+                bracket_start = response.find("{")
+                bracket_end = response.rfind("}") + 1
+    
+                if bracket_start == -1 or bracket_end == -1:
+                    raise Exception("No JSON object found in the response")
+    
+                response = response[bracket_start:bracket_end]
+                queries = json.loads(response)
+                queries = queries.get("queries", [])
+            except Exception as e:
+                queries = [response]
+    
+        except Exception as e:
+            log.exception(e)
+            queries = [user_message]
+    
+        if len(queries) == 0:
+            await event_emitter(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "web_search",
+                        "description": "No search query generated",
+                        "done": True,
+                    },
+                }
+            )
+            return form_data
+    else:
+        log.info(f"Ignore query generation. Querying directly {user_message}")
+        queries.append(user_message)
 
     searchQuery = queries[0]
 
@@ -325,8 +331,7 @@ async def chat_web_search_handler(
             "type": "status",
             "data": {
                 "action": "web_search",
-                "description": 'Searching "{{searchQuery}}"',
-                "query": searchQuery,
+                "description": f"Searching {searchQuery}",
                 "done": False,
             },
         }
@@ -356,7 +361,7 @@ async def chat_web_search_handler(
                     "type": "status",
                     "data": {
                         "action": "web_search",
-                        "description": "Searched {{count}} sites",
+                        "description": "Searched " + str(len(results)) + " sites",
                         "query": searchQuery,
                         "urls": results["filenames"],
                         "done": True,
