@@ -746,14 +746,14 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'Ollama only. Control the repetition of token sequences in the generated text. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 1.1) will be more lenient. At 1, it is disabled. (Default: 1.1)'
+				'Control the repetition of token sequences in the generated text. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 1.1) will be more lenient. At 1, it is disabled. (Default: 1.1)'
 			)}
 			placement="top-start"
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{$i18n.t('Repeat Penalty')}
+					{$i18n.t('Repeat Penalty (Ollama)')}
 				</div>
 
 				<button
