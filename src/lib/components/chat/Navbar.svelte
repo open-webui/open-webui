@@ -70,12 +70,14 @@
 			</div>
 
 			<div
-				class="flex-1 overflow-hidden max-w-full py-0.5
+				class="flex-1 max-w-full py-0.5
 			{$showSidebar ? 'ml-1' : ''}
 			"
 			>
-				{#if showModelSelector}
-					<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
+				{#if showModelSelector && $user.role === 'admin'}
+					<div class="inline-block outline-1 outline-amber-500 outline-dashed outline-offset-2">
+						<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
+					</div>
 				{/if}
 			</div>
 
