@@ -15,28 +15,31 @@ from open_webui.models.files import (
     FileModelResponse,
     Files,
 )
-from open_webui.routers.retrieval import process_file, ProcessFileForm
+from open_webui.routers.retrieval import process_file, ProcessFileForm, process_file_async
 
 from open_webui.config import UPLOAD_DIR
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.constants import ERROR_MESSAGES
 
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Request
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Request, BackgroundTasks
 from fastapi.responses import FileResponse, StreamingResponse
-
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
-
 router = APIRouter()
-
 ############################
 # Upload File
 ############################
+
+
+from threading import Lock
+
+import asyncio
+
 
 
 @router.post("/", response_model=FileModelResponse)
@@ -98,6 +101,109 @@ def upload_file(
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
 
+############################
+# Async Files routes
+############################
+
+
+tasks_cache = {}  # Dictionary to store task results
+
+### Cache temporário para exemplo (substituir por um sistema persistente)
+cache_lock = Lock()
+    
+    
+async def process_tasks(request, background_tasks, form_data, user, task_id):
+    """Executa OCR e processamento do PDF de forma assíncrona."""
+    
+    global tasks_cache
+    with cache_lock:
+        task = tasks_cache.get(task_id, {})
+    
+    task['status'] = "Processing PDF..."
+    text = await process_file_async(request, background_tasks, form_data, task_id, user)
+    task['text'] = text
+    task['status'] = "Processing Completed"
+    
+    
+
+@router.post("/async")
+async def upload_file_async(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    user=Depends(get_verified_user)
+):
+    global tasks_cache
+    log.info(f"file.content_type: {file.content_type}")
+    
+    unsanitized_filename = file.filename
+    filename = os.path.basename(unsanitized_filename)
+
+    # replace filename with uuid
+    task_id = str(uuid.uuid4())
+    with cache_lock:
+        tasks_cache[task_id] = {
+            "status": "queued",
+            "result": None,
+            "error": None
+        }
+    name = filename
+    filename = f"{id}_{filename}"
+    contents, file_path = Storage.upload_file(file.file, filename)
+
+    _ = Files.insert_new_file(
+        user.id,
+        FileForm(
+            **{
+                "id": task_id,
+                "filename": name,
+                "path": file_path,
+                "meta": {
+                    "name": name,
+                    "content_type": file.content_type,
+                    "size": len(contents),
+                },
+            }
+        ),
+    )
+
+    
+    background_tasks.add_task(
+        process_tasks,
+        request,
+        background_tasks,
+        ProcessFileForm(file_id=task_id),
+        user,
+        task_id,
+    )
+    #file_item = Files.get_file_by_id(id=id)
+    
+    return {"task_id": task_id}
+    
+
+############################
+# Get task_status
+############################
+
+# Rota opcional para verificar status da task
+@router.get("/task_status/{task_id}")
+async def get_task_status(task_id: str):
+    global tasks_cache
+    with cache_lock:
+        task = tasks_cache.get(task_id, {})
+    return {
+        "task_id": task_id,
+        "status": task.get("status", "not_found"),
+        "result": task.get("result"),
+        "error": task.get("error"),
+        "task": task,
+    }
+
+@router.get("/get_tasks")
+async def get_task_status():
+    if tasks_cache:
+        return {"task_ids": list(tasks_cache.keys())}  # Retorna apenas os task_ids
+    return {"message": "No tasks found"}
 
 ############################
 # List Files

@@ -8,6 +8,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Iterator, List, Optional, Sequence, Union
+import asyncio
 
 from fastapi import (
     Depends,
@@ -19,7 +20,9 @@ from fastapi import (
     Request,
     status,
     APIRouter,
+    BackgroundTasks,
 )
+
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import tiktoken
@@ -1003,6 +1006,108 @@ def process_file(
                 detail=str(e),
             )
 
+@router.post("/process/file_async")
+async def process_file_async(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    form_data: ProcessFileForm,
+    task_id : str,
+    user=Depends(get_verified_user),
+):
+    try:
+        file = Files.get_file_by_id(task_id)+
+
+        collection_name = form_data.collection_name
+        engine = request.app.state.config.CONTENT_EXTRACTION_ENGINE
+
+        if collection_name is None:
+            collection_name = f"file-{file.id}"
+
+        # Process the file and save the content
+        # Usage: /files/
+        file_path = file.path
+        if file_path:
+            file_path = Storage.get_file(file_path)
+            loader = Loader(
+                engine=engine,
+                TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
+                PDFTOTEXT_SERVER_URL=request.app.state.config.PDFTOTEXT_SERVER_URL,
+                PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
+                MAXPAGES_PDFTOTEXT=request.app.state.config.MAXPAGES_PDFTOTEXT,
+            )
+            if engine == "pdftotext":
+                task_id = loader.load(file.filename, file.meta.get("content_type"), file_path, isasync=True)
+                
+                text_content = loader.loader.get_text(task_id)
+                
+                docs = [Document(
+                    page_content=text_content,
+                    metadata={
+                        "name": file.filename,
+                        "created_by": file.user_id,
+                        "file_id": file.id,
+                        "source": file.filename,
+                    },
+                )]
+                
+                log.info(f"OCR Task {task_id} created successfully.")
+                
+                
+                
+        Files.update_file_data_by_id(
+            file.id,
+            {"content": text_content},
+        )
+
+        hash = calculate_sha256_string(text_content)
+        Files.update_file_hash_by_id(file.id, hash)
+
+        try:
+            result = save_docs_to_vector_db(
+                request,
+                docs=docs,
+                collection_name=collection_name,
+                metadata={
+                    "file_id": file.id,
+                    "name": file.filename,
+                    "hash": hash,
+                },
+                add=(True if form_data.collection_name else False),
+                user=user,
+            )
+
+            if result:
+                Files.update_file_metadata_by_id(
+                    file.id,
+                    {
+                        "collection_name": collection_name,
+                    },
+                )
+
+                return {
+                    "status": True,
+                    "collection_name": collection_name,
+                    "filename": file.filename,
+                    "content": text_content,
+                }
+        except Exception as e:
+            raise e
+
+                
+
+
+    except Exception as e:
+        log.exception(e)
+        if "No pandoc was found" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
 
 class ProcessTextForm(BaseModel):
     name: str
