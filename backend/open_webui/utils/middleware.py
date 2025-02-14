@@ -258,65 +258,69 @@ async def chat_completion_tools_handler(
 async def chat_web_search_handler(
     request: Request, form_data: dict, extra_params: dict, user
 ):
-    event_emitter = extra_params["__event_emitter__"]
-    await event_emitter(
-        {
-            "type": "status",
-            "data": {
-                "action": "web_search",
-                "description": "Generating search query",
-                "done": False,
-            },
-        }
-    )
 
     messages = form_data["messages"]
     user_message = get_last_user_message(messages)
 
     queries = []
-    try:
-        res = await generate_queries(
-            request,
-            {
-                "model": form_data["model"],
-                "messages": messages,
-                "prompt": user_message,
-                "type": "web_search",
-            },
-            user,
-        )
-
-        response = res["choices"][0]["message"]["content"]
-
-        try:
-            bracket_start = response.find("{")
-            bracket_end = response.rfind("}") + 1
-
-            if bracket_start == -1 or bracket_end == -1:
-                raise Exception("No JSON object found in the response")
-
-            response = response[bracket_start:bracket_end]
-            queries = json.loads(response)
-            queries = queries.get("queries", [])
-        except Exception as e:
-            queries = [response]
-
-    except Exception as e:
-        log.exception(e)
-        queries = [user_message]
-
-    if len(queries) == 0:
+    if request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION:
+        event_emitter = extra_params["__event_emitter__"]
         await event_emitter(
             {
                 "type": "status",
                 "data": {
                     "action": "web_search",
-                    "description": "No search query generated",
-                    "done": True,
+                    "description": f"Generating search query from {user_message}",
+                    "done": False,
                 },
             }
         )
-        return form_data
+        try:
+            res = await generate_queries(
+                request,
+                {
+                    "model": form_data["model"],
+                    "messages": messages,
+                    "prompt": user_message,
+                    "type": "web_search",
+                },
+                user,
+            )
+    
+            response = res["choices"][0]["message"]["content"]
+    
+            try:
+                bracket_start = response.find("{")
+                bracket_end = response.rfind("}") + 1
+    
+                if bracket_start == -1 or bracket_end == -1:
+                    raise Exception("No JSON object found in the response")
+    
+                response = response[bracket_start:bracket_end]
+                queries = json.loads(response)
+                queries = queries.get("queries", [])
+            except Exception as e:
+                queries = [response]
+    
+        except Exception as e:
+            log.exception(e)
+            queries = [user_message]
+
+        if len(queries) == 0:
+            await event_emitter(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "web_search",
+                        "description": "No search query generated",
+                        "done": True,
+                    },
+                }
+            )
+            return form_data
+    else:
+        log.info(f"Ignore query generation. Querying directly {user_message}")
+        queries.append(user_message)
 
     searchQuery = queries[0]
 
@@ -325,7 +329,7 @@ async def chat_web_search_handler(
             "type": "status",
             "data": {
                 "action": "web_search",
-                "description": 'Searching "{{searchQuery}}"',
+                "description": 'Searching "' + searchQuery + '"',
                 "query": searchQuery,
                 "done": False,
             },
@@ -356,7 +360,7 @@ async def chat_web_search_handler(
                     "type": "status",
                     "data": {
                         "action": "web_search",
-                        "description": "Searched {{count}} sites",
+                        "description": "Searched " + str(len(results)) + " sites",
                         "query": searchQuery,
                         "urls": results["filenames"],
                         "done": True,
@@ -504,61 +508,70 @@ async def chat_completion_files_handler(
 ) -> tuple[dict, dict[str, list]]:
     sources = []
 
-    if files := body.get("metadata", {}).get("files", None):
-        try:
-            queries_response = await generate_queries(
-                request,
-                {
-                    "model": body["model"],
-                    "messages": body["messages"],
-                    "type": "retrieval",
-                },
-                user,
-            )
-            queries_response = queries_response["choices"][0]["message"]["content"]
-
+    if request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION:
+        if files := body.get("metadata", {}).get("files", None):
             try:
-                bracket_start = queries_response.find("{")
-                bracket_end = queries_response.rfind("}") + 1
-
-                if bracket_start == -1 or bracket_end == -1:
-                    raise Exception("No JSON object found in the response")
-
-                queries_response = queries_response[bracket_start:bracket_end]
-                queries_response = json.loads(queries_response)
-            except Exception as e:
-                queries_response = {"queries": [queries_response]}
-
-            queries = queries_response.get("queries", [])
-        except Exception as e:
-            queries = []
-
-        if len(queries) == 0:
-            queries = [get_last_user_message(body["messages"])]
-
-        try:
-            # Offload get_sources_from_files to a separate thread
-            loop = asyncio.get_running_loop()
-            with ThreadPoolExecutor() as executor:
-                sources = await loop.run_in_executor(
-                    executor,
-                    lambda: get_sources_from_files(
-                        files=files,
-                        queries=queries,
-                        embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(
-                            query, user=user
-                        ),
-                        k=request.app.state.config.TOP_K,
-                        reranking_function=request.app.state.rf,
-                        r=request.app.state.config.RELEVANCE_THRESHOLD,
-                        hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-                    ),
+                msgss = body.get("metadata", {}).get("files", None)
+                log.info(f"Sending to server {body}")
+                queries_response = await generate_queries(
+                    request,
+                    {
+                        "model": body["model"],
+                        "messages": body["messages"],
+                        "type": "retrieval",
+                    },
+                    user,
                 )
-
-        except Exception as e:
-            log.exception(e)
-
-        log.debug(f"rag_contexts:sources: {sources}")
+                queries_response = queries_response["choices"][0]["message"]["content"]
+    
+                try:
+                    bracket_start = queries_response.find("{")
+                    bracket_end = queries_response.rfind("}") + 1
+    
+                    if bracket_start == -1 or bracket_end == -1:
+                        raise Exception("No JSON object found in the response")
+    
+                    queries_response = queries_response[bracket_start:bracket_end]
+                    queries_response = json.loads(queries_response)
+                except Exception as e:
+                    queries_response = {"queries": [queries_response]}
+    
+                queries = queries_response.get("queries", [])
+            except Exception as e:
+                queries = []
+    
+            if len(queries) == 0:
+                queries = [get_last_user_message(body["messages"])]
+    
+            try:
+                # Offload get_sources_from_files to a separate thread
+                loop = asyncio.get_running_loop()
+                log.info(f"Sending to server {queries} \n {files}")
+                with ThreadPoolExecutor() as executor: 
+                    sources = await loop.run_in_executor(
+                        executor,
+                        lambda: get_sources_from_files(
+                            files=files,
+                            queries=queries,
+                            embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(
+                                query, user=user
+                            ),
+                            k=request.app.state.config.TOP_K,
+                            reranking_function=request.app.state.rf,
+                            r=request.app.state.config.RELEVANCE_THRESHOLD,
+                            hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+                        ),
+                    )
+                    log.info(f"Recieved from server {sources}")
+    
+            except Exception as e:
+                log.exception(e)
+    
+            log.debug(f"rag_contexts:sources: {sources}")
+    else:
+        log.info(f"Ignore retrieval generation")
+        sources = body.get("metadata", {}).get("files", [])
+        log.info(f"Return files {sources}")
 
     return body, {"sources": sources}
 

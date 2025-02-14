@@ -1312,7 +1312,7 @@ def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
     try:
-        logging.info(
+        log.info(
             f"trying to web search with {request.app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query}"
         )
         web_results = search_web(
@@ -1325,7 +1325,9 @@ def process_web_search(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
         )
-
+    
+    n_results = len(web_results)
+    log.info(f"Retreived {n_results} from web search")
     log.debug(f"web_results: {web_results}")
 
     try:
