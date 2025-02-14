@@ -867,21 +867,19 @@
 							}
 						}}
 					>
-						<button
-							class="flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-							on:click={() => {
-								showDropdown = !showDropdown;
-							}}
+						<div
+							class="select-none flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 						>
 							<div class="self-center mr-3">
 								<img
 									src={$user.profile_image_url}
 									class="max-w-[28px] object-cover rounded-full"
 									alt="User profile"
+									draggable="false"
 								/>
 							</div>
 							<div class="self-center font-medium">{$user.name}</div>
-						</button>
+						</div>
 					</UserMenu>
 				{/if}
 			</div>

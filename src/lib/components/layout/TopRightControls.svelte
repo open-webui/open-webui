@@ -70,29 +70,25 @@
 		<div class="flex items-center gap-1">
 			<GlobalLanguageSelector />
 			{#if $user !== undefined}
-				<UserMenu
-					className="max-w-[200px]"
-					role={$user.role}
-					on:show={(e) => {
-						if (e.detail === 'archived-chat') {
-							showArchivedChats.set(true);
-						}
-					}}
+				<div
+					class="select-none flex rounded-xl p-2 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 				>
-					<button
-						class="select-none flex rounded-xl p-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-						aria-label="User Menu"
+					<UserMenu
+						role={$user.role}
+						on:show={(e) => {
+							if (e.detail === 'archived-chat') {
+								showArchivedChats.set(true);
+							}
+						}}
 					>
-						<div class="self-center">
-							<img
-								src={$user.profile_image_url}
-								class="size-6 object-cover rounded-full"
-								alt="User profile"
-								draggable="false"
-							/>
-						</div>
-					</button>
-				</UserMenu>
+						<img
+							src={$user.profile_image_url}
+							class="size-6 object-cover rounded-full"
+							alt="User profile"
+							draggable="false"
+						/>
+					</UserMenu>
+				</div>
 			{/if}
 		</div>
 	</div>

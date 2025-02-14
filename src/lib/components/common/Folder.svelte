@@ -138,7 +138,9 @@
 						{/if}
 					</div>
 
-					<div class="translate-y-[0.5px] text-gray-700 dark:text-gray-400">
+					<div
+						class="flex w-full text-gray-900 dark:text-white bg-transparent group-hover:bg-gray-100 dark:group-hover:bg-transparent px-1 rounded transition"
+					>
 						{name}
 					</div>
 				</button>

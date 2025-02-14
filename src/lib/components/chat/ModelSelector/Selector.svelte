@@ -247,18 +247,20 @@
 >
 	<DropdownMenu.Trigger
 		class="relative w-full font-primary"
-		aria-label={placeholder}
 		id="model-selector-{id}-button"
+		aria-label={selectedModel ? selectedModel.label : placeholder}
 	>
 		<div
-			class="flex w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-none"
+			class="flex w-full text-left px-0.5 outline-none bg-white dark:bg-gray-900 truncate {triggerClassName} justify-between font-medium text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md focus:outline-none"
 		>
-			{#if selectedModel}
-				{selectedModel.label}
-			{:else}
-				{placeholder}
-			{/if}
-			<ChevronDown className=" self-center ml-2 size-3" strokeWidth="2.5" />
+			<span class="truncate text-gray-900 dark:text-white">
+				{#if selectedModel}
+					{selectedModel.label}
+				{:else}
+					{placeholder}
+				{/if}
+			</span>
+			<ChevronDown className="self-center ml-2 size-3" strokeWidth="2.5" />
 		</div>
 	</DropdownMenu.Trigger>
 
