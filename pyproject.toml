@@ -47,6 +47,7 @@ dependencies = [
 
     "langchain==0.3.7",
     "langchain-community==0.3.7",
+    "langchain-docling==0.2.0",
 
     "fake-useragent==1.5.1",
     "chromadb==0.6.2",
