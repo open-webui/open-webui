@@ -1038,6 +1038,11 @@ async def list_tasks_endpoint(user=Depends(get_verified_user)):
     return {"tasks": list_tasks()}  # Use the function from tasks.py
 
 
+@app.post("/api/embeddings")
+async def api_embeddings(request: Request, user=Depends(get_verified_user)):
+    return await openai.generate_embeddings(request=request, user=user)
+
+
 ##################################
 #
 # Config Endpoints
