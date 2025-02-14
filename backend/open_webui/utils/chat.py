@@ -166,7 +166,13 @@ async def generate_chat_completion(
         bypass_filter = True
 
     if hasattr(request.state, "metadata"):
-        form_data["metadata"] = request.state.metadata
+        if "metadata" not in form_data:
+            form_data["metadata"] = request.state.metadata
+        else:
+            form_data["metadata"] = {
+                **form_data["metadata"],
+                **request.state.metadata,
+            }
 
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {
