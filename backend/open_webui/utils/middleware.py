@@ -1210,6 +1210,7 @@ async def process_chat_response(
 
                             if after_tag:
                                 content_blocks[-1]["content"] = after_tag
+                                return tag_content_handler(content_type, tags, content, content_blocks)
 
                             break
                 elif content_blocks[-1]["type"] == content_type:
