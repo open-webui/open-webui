@@ -23,6 +23,7 @@
 		'serper',
 		'serply',
 		'searchapi',
+		'serpapi',
 		'duckduckgo',
 		'tavily',
 		'jina',
@@ -263,6 +264,34 @@
 											type="text"
 											placeholder={$i18n.t('Enter SearchApi Engine')}
 											bind:value={webConfig.search.searchapi_engine}
+											autocomplete="off"
+										/>
+									</div>
+								</div>
+							</div>
+						{:else if webConfig.search.engine === 'serpapi'}
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('SerpApi API Key')}
+								</div>
+
+								<SensitiveInput
+									placeholder={$i18n.t('Enter SerpApi API Key')}
+									bind:value={webConfig.search.serpapi_api_key}
+								/>
+							</div>
+							<div class="mt-1.5">
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('SerpApi Engine')}
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1">
+										<input
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+											type="text"
+											placeholder={$i18n.t('Enter SerpApi Engine')}
+											bind:value={webConfig.search.serpapi_engine}
 											autocomplete="off"
 										/>
 									</div>

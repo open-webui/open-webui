@@ -1151,6 +1151,46 @@ async def process_chat_response(
 
                 return content.strip()
 
+            def convert_content_blocks_to_messages(content_blocks):
+                messages = []
+
+                temp_blocks = []
+                for idx, block in enumerate(content_blocks):
+                    if block["type"] == "tool_calls":
+                        messages.append(
+                            {
+                                "role": "assistant",
+                                "content": serialize_content_blocks(temp_blocks),
+                                "tool_calls": block.get("content"),
+                            }
+                        )
+
+                        results = block.get("results", [])
+
+                        for result in results:
+                            messages.append(
+                                {
+                                    "role": "tool",
+                                    "tool_call_id": result["tool_call_id"],
+                                    "content": result["content"],
+                                }
+                            )
+                        temp_blocks = []
+                    else:
+                        temp_blocks.append(block)
+
+                if temp_blocks:
+                    content = serialize_content_blocks(temp_blocks)
+                    if content:
+                        messages.append(
+                            {
+                                "role": "assistant",
+                                "content": content,
+                            }
+                        )
+
+                return messages
+
             def tag_content_handler(content_type, tags, content, content_blocks):
                 end_flag = False
 
@@ -1542,7 +1582,6 @@ async def process_chat_response(
 
                     results = []
                     for tool_call in response_tool_calls:
-                        print("\n\n" + str(tool_call) + "\n\n")
                         tool_call_id = tool_call.get("id", "")
                         tool_name = tool_call.get("function", {}).get("name", "")
 
@@ -1608,23 +1647,10 @@ async def process_chat_response(
                             {
                                 "model": model_id,
                                 "stream": True,
+                                "tools": form_data["tools"],
                                 "messages": [
                                     *form_data["messages"],
-                                    {
-                                        "role": "assistant",
-                                        "content": serialize_content_blocks(
-                                            content_blocks, raw=True
-                                        ),
-                                        "tool_calls": response_tool_calls,
-                                    },
-                                    *[
-                                        {
-                                            "role": "tool",
-                                            "tool_call_id": result["tool_call_id"],
-                                            "content": result["content"],
-                                        }
-                                        for result in results
-                                    ],
+                                    *convert_content_blocks_to_messages(content_blocks),
                                 ],
                             },
                             user,

@@ -1190,6 +1190,12 @@ ENABLE_TAGS_GENERATION = PersistentConfig(
     os.environ.get("ENABLE_TAGS_GENERATION", "True").lower() == "true",
 )
 
+ENABLE_TITLE_GENERATION = PersistentConfig(
+    "ENABLE_TITLE_GENERATION",
+    "task.title.enable",
+    os.environ.get("ENABLE_TITLE_GENERATION", "True").lower() == "true",
+)
+
 
 ENABLE_SEARCH_QUERY_GENERATION = PersistentConfig(
     "ENABLE_SEARCH_QUERY_GENERATION",
@@ -1801,6 +1807,18 @@ SEARCHAPI_ENGINE = PersistentConfig(
     "SEARCHAPI_ENGINE",
     "rag.web.search.searchapi_engine",
     os.getenv("SEARCHAPI_ENGINE", ""),
+)
+
+SERPAPI_API_KEY = PersistentConfig(
+    "SERPAPI_API_KEY",
+    "rag.web.search.serpapi_api_key",
+    os.getenv("SERPAPI_API_KEY", ""),
+)
+
+SERPAPI_ENGINE = PersistentConfig(
+    "SERPAPI_ENGINE",
+    "rag.web.search.serpapi_engine",
+    os.getenv("SERPAPI_ENGINE", ""),
 )
 
 BING_SEARCH_V7_ENDPOINT = PersistentConfig(

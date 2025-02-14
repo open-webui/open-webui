@@ -50,6 +50,7 @@ from open_webui.retrieval.web.duckduckgo import search_duckduckgo
 from open_webui.retrieval.web.google_pse import search_google_pse
 from open_webui.retrieval.web.jina_search import search_jina
 from open_webui.retrieval.web.searchapi import search_searchapi
+from open_webui.retrieval.web.serpapi import search_serpapi
 from open_webui.retrieval.web.searxng import search_searxng
 from open_webui.retrieval.web.serper import search_serper
 from open_webui.retrieval.web.serply import search_serply
@@ -388,6 +389,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
                 "tavily_api_key": request.app.state.config.TAVILY_API_KEY,
                 "searchapi_api_key": request.app.state.config.SEARCHAPI_API_KEY,
                 "searchapi_engine": request.app.state.config.SEARCHAPI_ENGINE,
+                "serpapi_api_key": request.app.state.config.SERPAPI_API_KEY,
+                "serpapi_engine": request.app.state.config.SERPAPI_ENGINE,
                 "jina_api_key": request.app.state.config.JINA_API_KEY,
                 "bing_search_v7_endpoint": request.app.state.config.BING_SEARCH_V7_ENDPOINT,
                 "bing_search_v7_subscription_key": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
@@ -439,6 +442,8 @@ class WebSearchConfig(BaseModel):
     tavily_api_key: Optional[str] = None
     searchapi_api_key: Optional[str] = None
     searchapi_engine: Optional[str] = None
+    serpapi_api_key: Optional[str] = None
+    serpapi_engine: Optional[str] = None
     jina_api_key: Optional[str] = None
     bing_search_v7_endpoint: Optional[str] = None
     bing_search_v7_subscription_key: Optional[str] = None
@@ -545,6 +550,9 @@ async def update_rag_config(
             form_data.web.search.searchapi_engine
         )
 
+        request.app.state.config.SERPAPI_API_KEY = form_data.web.search.serpapi_api_key
+        request.app.state.config.SERPAPI_ENGINE = form_data.web.search.serpapi_engine
+
         request.app.state.config.JINA_API_KEY = form_data.web.search.jina_api_key
         request.app.state.config.BING_SEARCH_V7_ENDPOINT = (
             form_data.web.search.bing_search_v7_endpoint
@@ -604,6 +612,8 @@ async def update_rag_config(
                 "serply_api_key": request.app.state.config.SERPLY_API_KEY,
                 "serachapi_api_key": request.app.state.config.SEARCHAPI_API_KEY,
                 "searchapi_engine": request.app.state.config.SEARCHAPI_ENGINE,
+                "serpapi_api_key": request.app.state.config.SERPAPI_API_KEY,
+                "serpapi_engine": request.app.state.config.SERPAPI_ENGINE,
                 "tavily_api_key": request.app.state.config.TAVILY_API_KEY,
                 "jina_api_key": request.app.state.config.JINA_API_KEY,
                 "bing_search_v7_endpoint": request.app.state.config.BING_SEARCH_V7_ENDPOINT,
@@ -760,7 +770,11 @@ def save_docs_to_vector_db(
     # for meta-data so convert them to string.
     for metadata in metadatas:
         for key, value in metadata.items():
-            if isinstance(value, datetime):
+            if (
+                isinstance(value, datetime)
+                or isinstance(value, list)
+                or isinstance(value, dict)
+            ):
                 metadata[key] = str(value)
 
     try:
@@ -1127,6 +1141,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
     - TAVILY_API_KEY
     - EXA_API_KEY
     - SEARCHAPI_API_KEY + SEARCHAPI_ENGINE (by default `google`)
+    - SERPAPI_API_KEY + SERPAPI_ENGINE (by default `google`)
     Args:
         query (str): The query to search for
     """
@@ -1255,6 +1270,17 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             )
         else:
             raise Exception("No SEARCHAPI_API_KEY found in environment variables")
+    elif engine == "serpapi":
+        if request.app.state.config.SERPAPI_API_KEY:
+            return search_serpapi(
+                request.app.state.config.SERPAPI_API_KEY,
+                request.app.state.config.SERPAPI_ENGINE,
+                query,
+                request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception("No SERPAPI_API_KEY found in environment variables")
     elif engine == "jina":
         return search_jina(
             request.app.state.config.JINA_API_KEY,
