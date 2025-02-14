@@ -51,6 +51,8 @@
 		temperature: null,
 		reasoning_effort: null,
 		frequency_penalty: null,
+		presence_penalty: null,
+		repeat_penalty: null,
 		repeat_last_n: null,
 		mirostat: null,
 		mirostat_eta: null,
@@ -343,6 +345,8 @@
 							params.reasoning_effort !== null ? params.reasoning_effort : undefined,
 						frequency_penalty:
 							params.frequency_penalty !== null ? params.frequency_penalty : undefined,
+						presence_penalty: params.frequency_penalty !== null ? params.frequency_penalty : undefined,
+						repeat_penalty: params.frequency_penalty !== null ? params.frequency_penalty : undefined,
 						repeat_last_n: params.repeat_last_n !== null ? params.repeat_last_n : undefined,
 						mirostat: params.mirostat !== null ? params.mirostat : undefined,
 						mirostat_eta: params.mirostat_eta !== null ? params.mirostat_eta : undefined,
