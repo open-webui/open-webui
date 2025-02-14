@@ -1809,6 +1809,18 @@ SEARCHAPI_ENGINE = PersistentConfig(
     os.getenv("SEARCHAPI_ENGINE", ""),
 )
 
+SERPAPI_API_KEY = PersistentConfig(
+    "SERPAPI_API_KEY",
+    "rag.web.search.serpapi_api_key",
+    os.getenv("SERPAPI_API_KEY", ""),
+)
+
+SERPAPI_ENGINE = PersistentConfig(
+    "SERPAPI_ENGINE",
+    "rag.web.search.serpapi_engine",
+    os.getenv("SERPAPI_ENGINE", ""),
+)
+
 BING_SEARCH_V7_ENDPOINT = PersistentConfig(
     "BING_SEARCH_V7_ENDPOINT",
     "rag.web.search.bing_search_v7_endpoint",
