@@ -197,8 +197,8 @@
 					</ConnectGuard>
 				</react:PrivyProvider>
 				<div class="w-full flex flex-col items-center">
-					<h1 class="brilliant-title mb-6">STARLIT FATE</h1>
-					<h3 class="subtitle mb-6">An ancient metaphysics Al model helps you make the right decisions in Web3.</h3>
+					<h1 class="brilliant-title mb-6">Agent Airie</h1>
+					<h3 class="subtitle mb-6">Aim to find your web3 inner peace in an occult way.</h3>
 				</div>
 			</div>
 			
@@ -536,7 +536,7 @@
 		text-shadow: none;
 		width: 100%;
 		display: block;
-		margin-right: -0.5em; /* 抵消最后一个字符的letter-spacing */
+		margin-right: -0.5em;
 	}
 
 	.subtitle {
@@ -548,15 +548,40 @@
 		text-align: center;
 	}
 
-	@media (max-width: 768px) {
+	/* 大屏手机 竖屏 */
+	@media (max-width: 428px) {
 		.brilliant-title {
-			font-size: 20rem;
+			font-size: 3rem;
 			letter-spacing: 0.3em;
-			background: linear-gradient(180deg, #FFFFFF 0%, #757575 100%);
-			-webkit-background-clip: text;
-			-webkit-text-fill-color: transparent;
-			background-clip: text;
-			margin-right: -0.3em; /* 移动端抵消最后一个字符的letter-spacing */
+			margin-right: -0.3em;
+		}
+		.subtitle {
+			width: 80%;
+			font-size: 0.9rem;
+		}
+	}
+
+	/* 小屏手机 竖屏 */
+	@media (max-width: 320px) {
+		.brilliant-title {
+			font-size: 2.5rem;
+			letter-spacing: 0.2em;
+			margin-right: -0.2em;
+		}
+		.subtitle {
+			width: 90%;
+			font-size: 0.8rem;
+		}
+	}
+
+	/* 横屏 */
+	@media (max-height: 428px) {
+		.brilliant-title {
+			font-size: 2.5rem;
+			margin-top: 1rem;
+		}
+		.subtitle {
+			width: 70%;
 		}
 	}
 </style>

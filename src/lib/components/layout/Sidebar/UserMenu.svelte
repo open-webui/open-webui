@@ -17,7 +17,7 @@
 
 	const currentLanguage = writable(i18next.language);
 
-	async function handleLanguageChange(langCode: string) {
+	async function handleLanguageChange(langCode: string, langTitle: string) {
 		await i18next.changeLanguage(langCode);
 		currentLanguage.set(langCode);
 		// Force a reload to ensure all components update their translations
@@ -187,7 +187,7 @@
 					{#each languages as lang}
 						<DropdownMenu.Item
 							class="flex items-center rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
-							on:click={() => handleLanguageChange(lang.code)}
+							on:click={() => handleLanguageChange(lang.code,lang.title)}
 						>
 							<div class="flex items-center justify-between w-full">
 								<span>{lang.title}</span>
