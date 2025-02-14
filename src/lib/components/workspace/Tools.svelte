@@ -210,10 +210,10 @@ onMount(async () => {
 		</div>
 	</div>
 
-	<div class="mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
+	<div class="my-4 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
 		<a
 			href="/workspace/tools/create"
-			class="flex flex-col justify-center items-center cursor-pointer w-full px-3 py-8 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition border border-gray-100 dark:border-gray-800 min-h-[160px]"
+			class="flex flex-col justify-center items-center cursor-pointer w-full px-3 py-8 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition border border-gray-100 dark:border-gray-800 min-h-[200px]"
 		>
 			<div class="p-4 rounded-full bg-gray-50 dark:bg-gray-800">
 				<Plus className="size-8" />
@@ -225,20 +225,20 @@ onMount(async () => {
 
 		{#each filteredItems as tool}
 			<div
-				class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+				class="flex flex-col cursor-pointer w-full px-3 py-3 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition border border-gray-100 dark:border-gray-800 min-h-[200px]"
 			>
 				<a
-					class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
+					class="flex flex-col flex-1"
 					href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}
 				>
 					<div class="flex items-center text-left">
-						<div class=" flex-1 self-center">
+						<div class="flex-1 self-center text-center">
 							<Tooltip content={tool?.meta?.description ?? ''} placement="top-start">
-								<div class=" font-semibold flex items-center gap-1.5">
+								<div class="font-semibold flex items-center justify-center gap-1.5">
 									<div
-										class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+										class="text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 									>
-										TOOL
+										{$i18n.t('TOOL')}
 									</div>
 
 									{#if tool?.meta?.manifest?.version}
@@ -249,125 +249,134 @@ onMount(async () => {
 										</div>
 									{/if}
 
-									<div class="line-clamp-1">
-										{tool.name}
-
-										<span class=" text-gray-500 text-xs font-medium flex-shrink-0">{tool.id}</span>
-									</div>
 								</div>
 							</Tooltip>
 
+
+						</div>
+						
+					</div>
+						<div class="flex-1 flex flex-col gap-2 justify-center items-center align-middle">
+							<div class="line-clamp-1">
+								{tool.name}
+								<span class="text-gray-500 text-xs font-medium flex-shrink-0">{tool.id}</span>
+							</div>
 							<div class="px-0.5">
-								<div class="flex gap-1.5 mt-0.5 mb-0.5">
-									<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
+								<div class="flex justify-center gap-1.5 mt-0.5 mb-0.5">
+									<div class="text-xs overflow-hidden text-ellipsis line-clamp-1">
 										{tool.meta.description}
 									</div>
 								</div>
-
-								<div class="text-xs text-gray-500 shrink-0">
-									<Tooltip
-										content={tool?.user?.email ?? $i18n.t('Deleted User')}
-										className="flex shrink-0"
-										placement="top-start"
-									>
-										{$i18n.t('By {{name}}', {
-											name: capitalizeFirstLetter(
-												tool?.user?.name ?? tool?.user?.email ?? $i18n.t('Deleted User')
-											)
-										})}
-									</Tooltip>
-								</div>
 							</div>
-						</div>
+
 					</div>
 				</a>
-				<div class="flex flex-row gap-0.5 self-center">
-					{#if shiftKey}
-						<Tooltip content={$i18n.t('Delete')}>
-							<button
-								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-								type="button"
-								on:click={() => {
-									deleteHandler(tool);
-								}}
-							>
-								<GarbageBin />
-							</button>
+
+				<div class="flex justify-between items-end mt-auto">
+					<div class="text-xs text-gray-500">
+						<Tooltip
+							content={tool?.user?.email ?? $i18n.t('Deleted User')}
+							className="flex shrink-0"
+							placement="top-start"
+						>
+							<div class="shrink-0">
+								{$i18n.t('By {{name}}', {
+									name: capitalizeFirstLetter(
+										tool?.user?.name ?? tool?.user?.email ?? $i18n.t('Deleted User')
+									)
+								})}
+							</div>
 						</Tooltip>
-					{:else}
-						{#if tool?.meta?.manifest?.funding_url ?? false}
-							<Tooltip content="Support">
+					</div>
+
+					<div class="flex flex-row gap-0.5">
+						{#if shiftKey}
+							<Tooltip content={$i18n.t('Delete')}>
+								<button
+									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+									type="button"
+									on:click={() => {
+										deleteHandler(tool);
+									}}
+								>
+									<GarbageBin />
+								</button>
+							</Tooltip>
+						{:else}
+							{#if tool?.meta?.manifest?.funding_url ?? false}
+								<Tooltip content="Support">
+									<button
+										class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										type="button"
+										on:click={() => {
+											selectedTool = tool;
+											showManifestModal = true;
+										}}
+									>
+										<Heart />
+									</button>
+								</Tooltip>
+							{/if}
+
+							<Tooltip content={$i18n.t('Valves')}>
 								<button
 									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 									type="button"
 									on:click={() => {
 										selectedTool = tool;
-										showManifestModal = true;
+										showValvesModal = true;
 									}}
 								>
-									<Heart />
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="1.5"
+										stroke="currentColor"
+										class="size-4"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"
+										/>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+										/>
+									</svg>
 								</button>
 							</Tooltip>
-						{/if}
 
-						<Tooltip content={$i18n.t('Valves')}>
-							<button
-								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-								type="button"
-								on:click={() => {
-									selectedTool = tool;
-									showValvesModal = true;
+							<ToolMenu
+								editHandler={() => {
+									goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
 								}}
+								shareHandler={() => {
+									shareHandler(tool);
+								}}
+								cloneHandler={() => {
+									cloneHandler(tool);
+								}}
+								exportHandler={() => {
+									exportHandler(tool);
+								}}
+								deleteHandler={async () => {
+									selectedTool = tool;
+									showDeleteConfirm = true;
+								}}
+								onClose={() => {}}
 							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke-width="1.5"
-									stroke="currentColor"
-									class="size-4"
+								<button
+									class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+									type="button"
 								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"
-									/>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-									/>
-								</svg>
-							</button>
-						</Tooltip>
-
-						<ToolMenu
-							editHandler={() => {
-								goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
-							}}
-							shareHandler={() => {
-								shareHandler(tool);
-							}}
-							cloneHandler={() => {
-								cloneHandler(tool);
-							}}
-							exportHandler={() => {
-								exportHandler(tool);
-							}}
-							deleteHandler={async () => {
-								selectedTool = tool;
-								showDeleteConfirm = true;
-							}}
-							onClose={() => {}}
-						>
-							<button
-								class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-								type="button"
-							>
-								<EllipsisHorizontal className="size-5" />
-							</button>
-						</ToolMenu>
-					{/if}
+									<EllipsisHorizontal className="size-5" />
+								</button>
+							</ToolMenu>
+						{/if}
+					</div>
 				</div>
 			</div>
 		{/each}

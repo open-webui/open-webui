@@ -128,10 +128,10 @@ onMount(async () => {
 		</div>
 	</div>
 
-	<div class="mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
+	<div class="my-4 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
 		<a
 			href="/workspace/prompts/create"
-			class="flex flex-col justify-center items-center cursor-pointer w-full px-3 py-8 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition border border-gray-100 dark:border-gray-800 min-h-[160px]"
+			class="flex flex-col justify-center items-center cursor-pointer w-full px-3 py-8 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition border border-gray-100 dark:border-gray-800 min-h-[200px]"
 		>
 			<div class="p-4 rounded-full bg-gray-50 dark:bg-gray-800">
 				<Plus className="size-8" />
@@ -143,24 +143,26 @@ onMount(async () => {
 
 		{#each filteredItems as prompt}
 			<div
-				class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+				class="flex flex-col cursor-pointer w-full px-3 py-3 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition border border-gray-100 dark:border-gray-800 min-h-[200px]"
 			>
-				<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
-					<a href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}>
-						<div class=" flex-1 flex items-center gap-2 self-center">
-							<div class=" font-semibold line-clamp-1 capitalize">{prompt.title}</div>
-							<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
+				<div class="flex flex-col flex-1">
+					<a href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`} class="flex-1 flex">
+						<div class="flex-1 px-1 mb-1 flex flex-col justify-center text-center">
+							<div class="font-semibold line-clamp-1 h-fit">{prompt.title}</div>
+							<div class="text-xs overflow-hidden text-ellipsis line-clamp-1">
 								{prompt.command}
 							</div>
 						</div>
+					</a>
 
-						<div class=" text-xs px-0.5">
+					<div class="flex justify-between items-end mt-auto">
+						<div class="text-xs text-gray-500">
 							<Tooltip
 								content={prompt?.user?.email ?? $i18n.t('Deleted User')}
 								className="flex shrink-0"
 								placement="top-start"
 							>
-								<div class="shrink-0 text-gray-500">
+								<div class="shrink-0">
 									{$i18n.t('By {{name}}', {
 										name: capitalizeFirstLetter(
 											prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
@@ -169,53 +171,54 @@ onMount(async () => {
 								</div>
 							</Tooltip>
 						</div>
-					</a>
-				</div>
-				<div class="flex flex-row gap-0.5 self-center">
-					<a
-						class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-						type="button"
-						href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="1.5"
-							stroke="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-							/>
-						</svg>
-					</a>
 
-					<PromptMenu
-						shareHandler={() => {
-							shareHandler(prompt);
-						}}
-						cloneHandler={() => {
-							cloneHandler(prompt);
-						}}
-						exportHandler={() => {
-							exportHandler(prompt);
-						}}
-						deleteHandler={async () => {
-							deletePrompt = prompt;
-							showDeleteConfirm = true;
-						}}
-						onClose={() => {}}
-					>
-						<button
-							class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-							type="button"
-						>
-							<EllipsisHorizontal className="size-5" />
-						</button>
-					</PromptMenu>
+						<div class="flex flex-row gap-0.5">
+							<a
+								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+								type="button"
+								href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="1.5"
+									stroke="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
+									/>
+								</svg>
+							</a>
+
+							<PromptMenu
+								shareHandler={() => {
+									shareHandler(prompt);
+								}}
+								cloneHandler={() => {
+									cloneHandler(prompt);
+								}}
+								exportHandler={() => {
+									exportHandler(prompt);
+								}}
+								deleteHandler={async () => {
+									deletePrompt = prompt;
+									showDeleteConfirm = true;
+								}}
+								onClose={() => {}}
+							>
+								<button
+									class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+									type="button"
+								>
+									<EllipsisHorizontal className="size-5" />
+								</button>
+							</PromptMenu>
+						</div>
+					</div>
 				</div>
 			</div>
 		{/each}

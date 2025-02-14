@@ -105,10 +105,10 @@
 		</div>
 	</div>
 
-	<div class="mb-5 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2">
+	<div class="my-4 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2">
 		<a
 			href="/workspace/knowledge/create"
-			class="flex flex-col justify-center items-center cursor-pointer w-full px-3 py-8 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition border border-gray-100 dark:border-gray-800 min-h-[160px]"
+			class="flex flex-col justify-center items-center cursor-pointer w-full px-3 py-8 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition border border-gray-100 dark:border-gray-800 min-h-[200px]"
 		>
 			<div class="p-4 rounded-full bg-gray-50 dark:bg-gray-800">
 				<Plus className="size-8" />
@@ -119,8 +119,8 @@
 		</a>
 
 		{#each filteredItems as item}
-			<button
-				class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-xl"
+			<div
+				class="flex flex-col cursor-pointer w-full px-3 py-3 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition border border-gray-100 dark:border-gray-800 min-h-[200px]"
 				on:click={() => {
 					if (item?.meta?.document) {
 						toast.error(
@@ -133,7 +133,7 @@
 					}
 				}}
 			>
-				<div class=" w-full">
+				<div class="flex flex-col flex-1">
 					<div class="flex items-center justify-between -mt-1">
 						{#if item?.meta?.document}
 							<Badge type="muted" content={$i18n.t('Document')} />
@@ -141,7 +141,7 @@
 							<Badge type="success" content={$i18n.t('Collection')} />
 						{/if}
 
-						<div class=" flex self-center -mr-1 translate-y-1">
+						<div class="flex self-center -mr-1 translate-y-1">
 							<ItemMenu
 								on:delete={() => {
 									selectedItem = item;
@@ -151,14 +151,16 @@
 						</div>
 					</div>
 
-					<div class=" self-center flex-1 px-1 mb-1">
-						<div class=" font-semibold line-clamp-1 h-fit">{item.name}</div>
+					<div class="flex-1 px-1 mb-1 text-center">
+						<div class="font-semibold line-clamp-1 h-fit">{item.name}</div>
 
-						<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
+						<div class="text-xs overflow-hidden text-ellipsis line-clamp-1">
 							{item.description}
 						</div>
+					</div>
 
-						<div class="mt-3 flex justify-between">
+					<div class="mt-auto">
+						<div class="flex justify-between">
 							<div class="text-xs text-gray-500">
 								<Tooltip
 									content={item?.user?.email ?? $i18n.t('Deleted User')}
@@ -172,14 +174,14 @@
 									})}
 								</Tooltip>
 							</div>
-							<div class=" text-xs text-gray-500 line-clamp-1">
+							<div class="text-xs text-gray-500 line-clamp-1">
 								{$i18n.t('Updated')}
 								{dayjs(item.updated_at * 1000).fromNow()}
 							</div>
 						</div>
 					</div>
 				</div>
-			</button>
+			</div>
 		{/each}
 	</div>
 
