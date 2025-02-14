@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, getContext, tick } from 'svelte';
 	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
+	import { locale } from '$lib/stores/locale';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -47,6 +48,22 @@
 
 	let enableDescription = true;
 
+	onMount(() => {
+		const updateLocale = () => {
+			// Use store's set method instead of direct assignment
+			locale.set(localStorage.locale || 'en-GB');
+		};
+		window.addEventListener('storage', updateLocale);
+		return () => window.removeEventListener('storage', updateLocale);
+	});
+
+	// Use $locale in reactive statements
+	$: enableDescription = model
+		? $locale === 'fr-CA'
+			? model?.meta?.description_fr !== null
+			: model?.meta?.description !== null
+		: true;
+
 	$: if (!edit) {
 		if (name) {
 			id = name
@@ -63,6 +80,7 @@
 		meta: {
 			profile_image_url: '/static/favicon.png',
 			description: '',
+			description_fr: '',
 			suggestion_prompts: null,
 			tags: []
 		},
@@ -100,6 +118,21 @@
 		}
 	};
 
+	// Add validation logic
+	function validateDescription() {
+		if (enableDescription) {
+			if (!info.meta.description?.trim() || !info.meta.description_fr?.trim()) {
+				toast.error($i18n.t('Both English and French descriptions are required.'));
+				return false;
+			}
+		} else {
+			// If default selected, nullify both descriptions
+			info.meta.description = null;
+			info.meta.description_fr = null;
+		}
+		return true;
+	}
+
 	const submitHandler = async () => {
 		loading = true;
 
@@ -108,20 +141,24 @@
 
 		if (id === '') {
 			toast.error('Model ID is required.');
+			loading = false;
+			return;
 		}
 
 		if (name === '') {
 			toast.error('Model Name is required.');
+			loading = false;
+			return;
+		}
+
+		// Validate descriptions before proceeding
+		if (!validateDescription()) {
+			loading = false;
+			return;
 		}
 
 		info.access_control = accessControl;
 		info.meta.capabilities = capabilities;
-
-		if (enableDescription) {
-			info.meta.description = info.meta.description.trim() === '' ? null : info.meta.description;
-		} else {
-			info.meta.description = null;
-		}
 
 		if (knowledge.length > 0) {
 			info.meta.knowledge = knowledge;
@@ -186,7 +223,11 @@
 
 			id = model.id;
 
-			enableDescription = model?.meta?.description !== null;
+			// Use locale toggle for description: if locale is 'fr-CA', check description_fr, else description.
+			enableDescription =
+				localStorage.locale === 'fr-CA'
+					? model?.meta?.description_fr !== null
+					: model?.meta?.description !== null;
 
 			if (model.base_model_id) {
 				const base_model = $models
@@ -490,6 +531,10 @@
 								type="button"
 								on:click={() => {
 									enableDescription = !enableDescription;
+									if (!enableDescription) {
+										info.meta.description = null;
+										info.meta.description_fr = null;
+									}
 								}}
 							>
 								{#if !enableDescription}
@@ -501,11 +546,22 @@
 						</div>
 
 						{#if enableDescription}
-							<Textarea
-								className=" text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden "
-								placeholder={$i18n.t('Add a short description about what this model does')}
-								bind:value={info.meta.description}
-							/>
+							<div>
+								<Textarea
+									bind:value={info.meta.description}
+									placeholder={$i18n.t('Enter English description')}
+									className="text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden"
+									required={enableDescription}
+								/>
+							</div>
+							<div class="mt-2">
+								<Textarea
+									bind:value={info.meta.description_fr}
+									placeholder={$i18n.t('Enter French description')}
+									className="text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden"
+									required={enableDescription}
+								/>
+							</div>
 						{/if}
 					</div>
 
@@ -591,6 +647,7 @@
 
 					<hr class=" border-gray-50 dark:border-gray-850 my-1" />
 
+					<!--
 					<div class="my-2">
 						<div class="flex w-full justify-between items-center">
 							<div class="flex w-full justify-between items-center">
@@ -657,7 +714,6 @@
 												placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
 												bind:value={prompt.content}
 											/>
-
 											<button
 												class="px-2"
 												type="button"
@@ -685,6 +741,7 @@
 							</div>
 						{/if}
 					</div>
+					-->
 
 					<hr class=" border-gray-50 dark:border-gray-850 my-1.5" />
 
@@ -780,7 +837,7 @@
 												}
 											}
 										</style><path
-											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1-8-8A8,8,0,0,1,12,20Z"
 											opacity=".25"
 										/><path
 											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
