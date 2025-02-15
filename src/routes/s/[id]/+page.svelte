@@ -5,15 +5,21 @@
 
 	import dayjs from 'dayjs';
 
-	import { modelfiles, settings, chatId, WEBUI_NAME } from '$lib/stores';
-	import { convertMessagesToHistory } from '$lib/utils';
+	import { settings, chatId, WEBUI_NAME, models, config } from '$lib/stores';
+	import { convertMessagesToHistory, createMessagesList } from '$lib/utils';
 
-	import { getChatByShareId } from '$lib/apis/chats';
+	import { getChatByShareId, cloneSharedChatById } from '$lib/apis/chats';
 
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 
+	import { getUserById } from '$lib/apis/users';
+	import { getModels } from '$lib/apis';
+	import { toast } from 'svelte-sonner';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
+
 	const i18n = getContext('i18n');
+	dayjs.extend(localizedFormat);
 
 	let loaded = false;
 
@@ -25,18 +31,8 @@
 	let showModelSelector = false;
 	let selectedModels = [''];
 
-	let selectedModelfiles = {};
-	$: selectedModelfiles = selectedModels.reduce((a, tagName, i, arr) => {
-		const modelfile =
-			$modelfiles.filter((modelfile) => modelfile.tagName === tagName)?.at(0) ?? undefined;
-
-		return {
-			...a,
-			...(modelfile && { [tagName]: modelfile })
-		};
-	}, {});
-
 	let chat = null;
+	let user = null;
 
 	let title = '';
 	let files = [];
@@ -47,29 +43,13 @@
 		currentId: null
 	};
 
-	$: if (history.currentId !== null) {
-		let _messages = [];
-
-		let currentMessage = history.messages[history.currentId];
-		while (currentMessage !== null) {
-			_messages.unshift({ ...currentMessage });
-			currentMessage =
-				currentMessage.parentId !== null ? history.messages[currentMessage.parentId] : null;
-		}
-		messages = _messages;
-	} else {
-		messages = [];
-	}
+	$: messages = createMessagesList(history, history.currentId);
 
 	$: if ($page.params.id) {
 		(async () => {
 			if (await loadSharedChat()) {
 				await tick();
 				loaded = true;
-
-				window.setTimeout(() => scrollToBottom(), 0);
-				const chatInput = document.getElementById('chat-textarea');
-				chatInput?.focus();
 			} else {
 				await goto('/');
 			}
@@ -81,6 +61,12 @@
 	//////////////////////////
 
 	const loadSharedChat = async () => {
+		await models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
 		await chatId.set($page.params.id);
 		chat = await getChatByShareId(localStorage.token, $chatId).catch(async (error) => {
 			await goto('/');
@@ -88,6 +74,11 @@
 		});
 
 		if (chat) {
+			user = await getUserById(localStorage.token, chat.user_id).catch((error) => {
+				console.error(error);
+				return null;
+			});
+
 			const chatContent = chat.chat;
 
 			if (chatContent) {
@@ -103,12 +94,6 @@
 						: convertMessagesToHistory(chatContent.messages);
 				title = chatContent.title;
 
-				let _settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
-				await settings.set({
-					..._settings,
-					system: chatContent.system ?? _settings.system,
-					options: chatContent.options ?? _settings.options
-				});
 				autoScroll = true;
 				await tick();
 
@@ -123,6 +108,19 @@
 			}
 		}
 	};
+
+	const cloneSharedChat = async () => {
+		if (!chat) return;
+
+		const res = await cloneSharedChatById(localStorage.token, chat.id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			goto(`/c/${res.id}`);
+		}
+	};
 </script>
 
 <svelte:head>
@@ -135,41 +133,55 @@
 
 {#if loaded}
 	<div
-		class="min-h-screen max-h-screen w-full flex flex-col text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900"
+		class="h-screen max-h-[100dvh] w-full flex flex-col text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900"
 	>
-		<div class="flex flex-col flex-auto justify-center py-8">
-			<div class="px-3 w-full max-w-5xl mx-auto">
-				<div>
-					<div class=" text-3xl font-semibold line-clamp-1">
-						{title}
-					</div>
+		<div class="flex flex-col flex-auto justify-center relative">
+			<div class=" flex flex-col w-full flex-auto overflow-auto h-0" id="messages-container">
+				<div class="pt-5 px-2 w-full max-w-5xl mx-auto">
+					<div class="px-3">
+						<div class=" text-2xl font-semibold line-clamp-1">
+							{title}
+						</div>
 
-					<div class=" mt-1 text-gray-400">
-						{dayjs(chat.chat.timestamp).format($i18n.t('MMMM DD, YYYY'))}
+						<div class="flex text-sm justify-between items-center mt-1">
+							<div class="text-gray-400">
+								{dayjs(chat.chat.timestamp).format('LLL')}
+							</div>
+						</div>
 					</div>
 				</div>
 
-				<hr class=" dark:border-gray-800 mt-6 mb-2" />
-			</div>
-
-			<div class=" flex flex-col w-full flex-auto overflow-auto h-0" id="messages-container">
-				<div class=" h-full w-full flex flex-col py-4">
-					<div class="py-2">
+				<div class=" h-full w-full flex flex-col py-2">
+					<div class="">
 						<Messages
+							className="h-full flex pt-4 pb-8"
+							{user}
 							chatId={$chatId}
 							readOnly={true}
 							{selectedModels}
-							{selectedModelfiles}
 							{processing}
 							bind:history
 							bind:messages
 							bind:autoScroll
 							bottomPadding={files.length > 0}
 							sendPrompt={() => {}}
-							continueGeneration={() => {}}
+							continueResponse={() => {}}
 							regenerateResponse={() => {}}
 						/>
 					</div>
+				</div>
+			</div>
+
+			<div
+				class="absolute bottom-0 right-0 left-0 flex justify-center w-full bg-gradient-to-b from-transparent to-white dark:to-gray-900"
+			>
+				<div class="pb-5">
+					<button
+						class="px-4 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+						on:click={cloneSharedChat}
+					>
+						{$i18n.t('Clone Chat')}
+					</button>
 				</div>
 			</div>
 		</div>

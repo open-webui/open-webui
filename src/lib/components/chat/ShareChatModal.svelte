@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
+	import { models, config } from '$lib/stores';
 
 	import { toast } from 'svelte-sonner';
 	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
-	import { modelfiles } from '$lib/stores';
 	import { copyToClipboard } from '$lib/utils';
 
 	import Modal from '../common/Modal.svelte';
@@ -30,7 +30,7 @@
 		const _chat = chat.chat;
 		console.log('share', _chat);
 
-		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
+		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
 		const url = 'https://openwebui.com';
 		// const url = 'http://localhost:5173';
 
@@ -43,9 +43,7 @@
 					tab.postMessage(
 						JSON.stringify({
 							chat: _chat,
-							modelfiles: $modelfiles.filter((modelfile) =>
-								_chat.models.includes(modelfile.tagName)
-							)
+							models: $models.filter((m) => _chat.models.includes(m.id))
 						}),
 						'*'
 					);
@@ -57,10 +55,23 @@
 
 	export let show = false;
 
+	const isDifferentChat = (_chat) => {
+		if (!chat) {
+			return true;
+		}
+		if (!_chat) {
+			return false;
+		}
+		return chat.id !== _chat.id || chat.share_id !== _chat.share_id;
+	};
+
 	$: if (show) {
 		(async () => {
 			if (chatId) {
-				chat = await getChatById(localStorage.token, chatId);
+				const _chat = await getChatById(localStorage.token, chatId);
+				if (isDifferentChat(_chat)) {
+					chat = _chat;
+				}
 			} else {
 				chat = null;
 				console.log(chat);
@@ -69,7 +80,7 @@
 	}
 </script>
 
-<Modal bind:show size="sm">
+<Modal bind:show size="md">
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-0.5">
 			<div class=" text-lg font-medium self-center">{$i18n.t('Share Chat')}</div>
@@ -115,28 +126,31 @@
 						{$i18n.t('and create a new shared link.')}
 					{:else}
 						{$i18n.t(
-							"Messages you send after creating your link won't be shared. Users with the URL will beable to view the shared chat."
+							"Messages you send after creating your link won't be shared. Users with the URL will be able to view the shared chat."
 						)}
 					{/if}
 				</div>
 
 				<div class="flex justify-end">
-					<div class="flex flex-col items-end space-x-1 mt-1.5">
+					<div class="flex flex-col items-end space-x-1 mt-3">
 						<div class="flex gap-1">
-							<button
-								class=" self-center px-3.5 py-2 rounded-xl text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white"
-								type="button"
-								on:click={() => {
-									shareChat();
-									show = false;
-								}}
-							>
-								{$i18n.t('Share to OpenWebUI Community')}
-							</button>
+							{#if $config?.features.enable_community_sharing}
+								<button
+									class="self-center flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full"
+									type="button"
+									on:click={() => {
+										shareChat();
+										show = false;
+									}}
+								>
+									{$i18n.t('Share to Open WebUI Community')}
+								</button>
+							{/if}
 
 							<button
-								class=" self-center flex items-center gap-1 px-3.5 py-2 rounded-xl text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white"
+								class="self-center flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 								type="button"
+								id="copy-and-share-chat-button"
 								on:click={async () => {
 									const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 

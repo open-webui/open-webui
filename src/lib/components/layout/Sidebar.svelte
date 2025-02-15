@@ -1,255 +1,582 @@
 <script lang="ts">
+	import { toast } from 'svelte-sonner';
+	import { v4 as uuidv4 } from 'uuid';
+
 	import { goto } from '$app/navigation';
-	import { user, chats, settings, showSettings, chatId, tags, showSidebar } from '$lib/stores';
-	import { onMount, getContext } from 'svelte';
+	import {
+		user,
+		chats,
+		settings,
+		showSettings,
+		chatId,
+		tags,
+		showSidebar,
+		mobile,
+		showArchivedChats,
+		pinnedChats,
+		scrollPaginationEnabled,
+		currentChatPage,
+		temporaryChatEnabled,
+		channels,
+		socket,
+		config,
+		isApp
+	} from '$lib/stores';
+	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
 	const i18n = getContext('i18n');
 
 	import {
 		deleteChatById,
 		getChatList,
+		getAllTags,
+		getChatListBySearchText,
+		createNewChat,
+		getPinnedChatList,
+		toggleChatPinnedStatusById,
+		getChatPinnedStatusById,
 		getChatById,
-		getChatListByTagName,
-		updateChatById,
-		getAllChatTags,
-		archiveChatById
+		updateChatFolderIdById,
+		importChat
 	} from '$lib/apis/chats';
-	import { toast } from 'svelte-sonner';
-	import { fade, slide } from 'svelte/transition';
+	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	import Tooltip from '../common/Tooltip.svelte';
-	import ChatMenu from './Sidebar/ChatMenu.svelte';
-	import ShareChatModal from '../chat/ShareChatModal.svelte';
-	import ArchiveBox from '../icons/ArchiveBox.svelte';
+
 	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
+	import UserMenu from './Sidebar/UserMenu.svelte';
+	import ChatItem from './Sidebar/ChatItem.svelte';
+	import Spinner from '../common/Spinner.svelte';
+	import Loader from '../common/Loader.svelte';
+	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
+	import SearchInput from './Sidebar/SearchInput.svelte';
+	import Folder from '../common/Folder.svelte';
+	import Plus from '../icons/Plus.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
+	import Folders from './Sidebar/Folders.svelte';
+	import { getChannels, createNewChannel } from '$lib/apis/channels';
+	import ChannelModal from './Sidebar/ChannelModal.svelte';
+	import ChannelItem from './Sidebar/ChannelItem.svelte';
+	import PencilSquare from '../icons/PencilSquare.svelte';
+	import Home from '../icons/Home.svelte';
 
-	const BREAKPOINT = 1024;
+	const BREAKPOINT = 768;
 
-	let show = false;
 	let navElement;
-
-	let title: string = 'UI';
 	let search = '';
 
-	let shareChatId = null;
+	let shiftKey = false;
 
 	let selectedChatId = null;
-
-	let chatDeleteId = null;
-	let chatTitleEditId = null;
-	let chatTitle = '';
-
-	let showArchivedChatsModal = false;
-	let showShareChatModal = false;
 	let showDropdown = false;
-	let isEditing = false;
+	let showPinnedChat = true;
 
-	let filteredChatList = [];
+	let showCreateChannel = false;
 
-	$: filteredChatList = $chats.filter((chat) => {
-		if (search === '') {
-			return true;
-		} else {
-			let title = chat.title.toLowerCase();
-			const query = search.toLowerCase();
+	// Pagination variables
+	let chatListLoading = false;
+	let allChatsLoaded = false;
 
-			let contentMatches = false;
-			// Access the messages within chat.chat.messages
-			if (chat.chat && chat.chat.messages && Array.isArray(chat.chat.messages)) {
-				contentMatches = chat.chat.messages.some((message) => {
-					// Check if message.content exists and includes the search query
-					return message.content && message.content.toLowerCase().includes(query);
+	let folders = {};
+
+	const initFolders = async () => {
+		const folderList = await getFolders(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return [];
+		});
+
+		folders = {};
+
+		// First pass: Initialize all folder entries
+		for (const folder of folderList) {
+			// Ensure folder is added to folders with its data
+			folders[folder.id] = { ...(folders[folder.id] || {}), ...folder };
+		}
+
+		// Second pass: Tie child folders to their parents
+		for (const folder of folderList) {
+			if (folder.parent_id) {
+				// Ensure the parent folder is initialized if it doesn't exist
+				if (!folders[folder.parent_id]) {
+					folders[folder.parent_id] = {}; // Create a placeholder if not already present
+				}
+
+				// Initialize childrenIds array if it doesn't exist and add the current folder id
+				folders[folder.parent_id].childrenIds = folders[folder.parent_id].childrenIds
+					? [...folders[folder.parent_id].childrenIds, folder.id]
+					: [folder.id];
+
+				// Sort the children by updated_at field
+				folders[folder.parent_id].childrenIds.sort((a, b) => {
+					return folders[b].updated_at - folders[a].updated_at;
 				});
 			}
-
-			return title.includes(query) || contentMatches;
 		}
-	});
+	};
 
-	onMount(async () => {
-		showSidebar.set(window.innerWidth > BREAKPOINT);
-		await chats.set(await getChatList(localStorage.token));
+	const createFolder = async (name = 'Untitled') => {
+		if (name === '') {
+			toast.error($i18n.t('Folder name cannot be empty.'));
+			return;
+		}
 
-		let touchstart;
-		let touchend;
-
-		function checkDirection() {
-			const screenWidth = window.innerWidth;
-			const swipeDistance = Math.abs(touchend.screenX - touchstart.screenX);
-			if (touchstart.clientX < 40 && swipeDistance >= screenWidth / 8) {
-				if (touchend.screenX < touchstart.screenX) {
-					showSidebar.set(false);
-				}
-				if (touchend.screenX > touchstart.screenX) {
-					showSidebar.set(true);
-				}
+		const rootFolders = Object.values(folders).filter((folder) => folder.parent_id === null);
+		if (rootFolders.find((folder) => folder.name.toLowerCase() === name.toLowerCase())) {
+			// If a folder with the same name already exists, append a number to the name
+			let i = 1;
+			while (
+				rootFolders.find((folder) => folder.name.toLowerCase() === `${name} ${i}`.toLowerCase())
+			) {
+				i++;
 			}
+
+			name = `${name} ${i}`;
 		}
 
-		const onTouchStart = (e) => {
-			touchstart = e.changedTouches[0];
-			console.log(touchstart.clientX);
-		};
-
-		const onTouchEnd = (e) => {
-			touchend = e.changedTouches[0];
-			checkDirection();
-		};
-
-		const onResize = () => {
-			if ($showSidebar && window.innerWidth < BREAKPOINT) {
-				showSidebar.set(false);
+		// Add a dummy folder to the list to show the user that the folder is being created
+		const tempId = uuidv4();
+		folders = {
+			...folders,
+			tempId: {
+				id: tempId,
+				name: name,
+				created_at: Date.now(),
+				updated_at: Date.now()
 			}
 		};
 
-		window.addEventListener('touchstart', onTouchStart);
-		window.addEventListener('touchend', onTouchEnd);
-		window.addEventListener('resize', onResize);
-
-		return () => {
-			window.removeEventListener('touchstart', onTouchStart);
-			window.removeEventListener('touchend', onTouchEnd);
-			window.removeEventListener('resize', onResize);
-		};
-	});
-
-	// Helper function to fetch and add chat content to each chat
-	const enrichChatsWithContent = async (chatList) => {
-		const enrichedChats = await Promise.all(
-			chatList.map(async (chat) => {
-				const chatDetails = await getChatById(localStorage.token, chat.id).catch((error) => null); // Handle error or non-existent chat gracefully
-				if (chatDetails) {
-					chat.chat = chatDetails.chat; // Assuming chatDetails.chat contains the chat content
-				}
-				return chat;
-			})
-		);
-
-		await chats.set(enrichedChats);
-	};
-
-	const loadChat = async (id) => {
-		goto(`/c/${id}`);
-	};
-
-	const editChatTitle = async (id, _title) => {
-		if (_title === '') {
-			toast.error($i18n.t('Title cannot be an empty string.'));
-		} else {
-			title = _title;
-
-			await updateChatById(localStorage.token, id, {
-				title: _title
-			});
-			await chats.set(await getChatList(localStorage.token));
-		}
-	};
-
-	const deleteChat = async (id) => {
-		const res = await deleteChatById(localStorage.token, id).catch((error) => {
-			toast.error(error);
-			chatDeleteId = null;
-
+		const res = await createNewFolder(localStorage.token, name).catch((error) => {
+			toast.error(`${error}`);
 			return null;
 		});
 
 		if (res) {
-			if ($chatId === id) {
-				goto('/');
-			}
-
-			await chats.set(await getChatList(localStorage.token));
+			await initFolders();
 		}
 	};
 
-	const saveSettings = async (updated) => {
-		await settings.set({ ...$settings, ...updated });
-		localStorage.setItem('settings', JSON.stringify($settings));
-		location.href = '/';
+	const initChannels = async () => {
+		await channels.set(await getChannels(localStorage.token));
 	};
 
-	const archiveChatHandler = async (id) => {
-		await archiveChatById(localStorage.token, id);
-		await chats.set(await getChatList(localStorage.token));
+	const initChatList = async () => {
+		// Reset pagination variables
+		tags.set(await getAllTags(localStorage.token));
+		pinnedChats.set(await getPinnedChatList(localStorage.token));
+		initFolders();
+
+		currentChatPage.set(1);
+		allChatsLoaded = false;
+
+		if (search) {
+			await chats.set(await getChatListBySearchText(localStorage.token, search, $currentChatPage));
+		} else {
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		}
+
+		// Enable pagination
+		scrollPaginationEnabled.set(true);
 	};
+
+	const loadMoreChats = async () => {
+		chatListLoading = true;
+
+		currentChatPage.set($currentChatPage + 1);
+
+		let newChatList = [];
+
+		if (search) {
+			newChatList = await getChatListBySearchText(localStorage.token, search, $currentChatPage);
+		} else {
+			newChatList = await getChatList(localStorage.token, $currentChatPage);
+		}
+
+		// once the bottom of the list has been reached (no results) there is no need to continue querying
+		allChatsLoaded = newChatList.length === 0;
+		await chats.set([...($chats ? $chats : []), ...newChatList]);
+
+		chatListLoading = false;
+	};
+
+	let searchDebounceTimeout;
+
+	const searchDebounceHandler = async () => {
+		console.log('search', search);
+		chats.set(null);
+
+		if (searchDebounceTimeout) {
+			clearTimeout(searchDebounceTimeout);
+		}
+
+		if (search === '') {
+			await initChatList();
+			return;
+		} else {
+			searchDebounceTimeout = setTimeout(async () => {
+				allChatsLoaded = false;
+				currentChatPage.set(1);
+				await chats.set(await getChatListBySearchText(localStorage.token, search));
+
+				if ($chats.length === 0) {
+					tags.set(await getAllTags(localStorage.token));
+				}
+			}, 1000);
+		}
+	};
+
+	const importChatHandler = async (items, pinned = false, folderId = null) => {
+		console.log('importChatHandler', items, pinned, folderId);
+		for (const item of items) {
+			console.log(item);
+			if (item.chat) {
+				await importChat(localStorage.token, item.chat, item?.meta ?? {}, pinned, folderId);
+			}
+		}
+
+		initChatList();
+	};
+
+	const inputFilesHandler = async (files) => {
+		console.log(files);
+
+		for (const file of files) {
+			const reader = new FileReader();
+			reader.onload = async (e) => {
+				const content = e.target.result;
+
+				try {
+					const chatItems = JSON.parse(content);
+					importChatHandler(chatItems);
+				} catch {
+					toast.error($i18n.t(`Invalid file format.`));
+				}
+			};
+
+			reader.readAsText(file);
+		}
+	};
+
+	const tagEventHandler = async (type, tagName, chatId) => {
+		console.log(type, tagName, chatId);
+		if (type === 'delete') {
+			initChatList();
+		} else if (type === 'add') {
+			initChatList();
+		}
+	};
+
+	let draggedOver = false;
+
+	const onDragOver = (e) => {
+		e.preventDefault();
+
+		// Check if a file is being draggedOver.
+		if (e.dataTransfer?.types?.includes('Files')) {
+			draggedOver = true;
+		} else {
+			draggedOver = false;
+		}
+	};
+
+	const onDragLeave = () => {
+		draggedOver = false;
+	};
+
+	const onDrop = async (e) => {
+		e.preventDefault();
+		console.log(e); // Log the drop event
+
+		// Perform file drop check and handle it accordingly
+		if (e.dataTransfer?.files) {
+			const inputFiles = Array.from(e.dataTransfer?.files);
+
+			if (inputFiles && inputFiles.length > 0) {
+				console.log(inputFiles); // Log the dropped files
+				inputFilesHandler(inputFiles); // Handle the dropped files
+			}
+		}
+
+		draggedOver = false; // Reset draggedOver status after drop
+	};
+
+	let touchstart;
+	let touchend;
+
+	function checkDirection() {
+		const screenWidth = window.innerWidth;
+		const swipeDistance = Math.abs(touchend.screenX - touchstart.screenX);
+		if (touchstart.clientX < 40 && swipeDistance >= screenWidth / 8) {
+			if (touchend.screenX < touchstart.screenX) {
+				showSidebar.set(false);
+			}
+			if (touchend.screenX > touchstart.screenX) {
+				showSidebar.set(true);
+			}
+		}
+	}
+
+	const onTouchStart = (e) => {
+		touchstart = e.changedTouches[0];
+		console.log(touchstart.clientX);
+	};
+
+	const onTouchEnd = (e) => {
+		touchend = e.changedTouches[0];
+		checkDirection();
+	};
+
+	const onKeyDown = (e) => {
+		if (e.key === 'Shift') {
+			shiftKey = true;
+		}
+	};
+
+	const onKeyUp = (e) => {
+		if (e.key === 'Shift') {
+			shiftKey = false;
+		}
+	};
+
+	const onFocus = () => {};
+
+	const onBlur = () => {
+		shiftKey = false;
+		selectedChatId = null;
+	};
+
+	onMount(async () => {
+		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
+
+		mobile.subscribe((value) => {
+			if ($showSidebar && value) {
+				showSidebar.set(false);
+			}
+
+			if ($showSidebar && !value) {
+				const navElement = document.getElementsByTagName('nav')[0];
+				if (navElement) {
+					navElement.style['-webkit-app-region'] = 'drag';
+				}
+			}
+
+			if (!$showSidebar && !value) {
+				showSidebar.set(true);
+			}
+		});
+
+		showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
+		showSidebar.subscribe((value) => {
+			localStorage.sidebar = value;
+
+			// nav element is not available on the first render
+			const navElement = document.getElementsByTagName('nav')[0];
+
+			if (navElement) {
+				if ($mobile) {
+					if (!value) {
+						navElement.style['-webkit-app-region'] = 'drag';
+					} else {
+						navElement.style['-webkit-app-region'] = 'no-drag';
+					}
+				} else {
+					navElement.style['-webkit-app-region'] = 'drag';
+				}
+			}
+		});
+
+		await initChannels();
+		await initChatList();
+
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('keyup', onKeyUp);
+
+		window.addEventListener('touchstart', onTouchStart);
+		window.addEventListener('touchend', onTouchEnd);
+
+		window.addEventListener('focus', onFocus);
+		window.addEventListener('blur', onBlur);
+
+		const dropZone = document.getElementById('sidebar');
+
+		dropZone?.addEventListener('dragover', onDragOver);
+		dropZone?.addEventListener('drop', onDrop);
+		dropZone?.addEventListener('dragleave', onDragLeave);
+	});
+
+	onDestroy(() => {
+		window.removeEventListener('keydown', onKeyDown);
+		window.removeEventListener('keyup', onKeyUp);
+
+		window.removeEventListener('touchstart', onTouchStart);
+		window.removeEventListener('touchend', onTouchEnd);
+
+		window.removeEventListener('focus', onFocus);
+		window.removeEventListener('blur', onBlur);
+
+		const dropZone = document.getElementById('sidebar');
+
+		dropZone?.removeEventListener('dragover', onDragOver);
+		dropZone?.removeEventListener('drop', onDrop);
+		dropZone?.removeEventListener('dragleave', onDragLeave);
+	});
 </script>
 
-<ShareChatModal bind:show={showShareChatModal} chatId={shareChatId} />
 <ArchivedChatsModal
-	bind:show={showArchivedChatsModal}
+	bind:show={$showArchivedChats}
 	on:change={async () => {
-		await chats.set(await getChatList(localStorage.token));
+		await initChatList();
 	}}
 />
+
+<ChannelModal
+	bind:show={showCreateChannel}
+	onSubmit={async ({ name, access_control }) => {
+		const res = await createNewChannel(localStorage.token, {
+			name: name,
+			access_control: access_control
+		}).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			$socket.emit('join-channels', { auth: { token: $user.token } });
+			await initChannels();
+			showCreateChannel = false;
+		}
+	}}
+/>
+
+<!-- svelte-ignore a11y-no-static-element-interactions -->
+
+{#if $showSidebar}
+	<div
+		class=" {$isApp
+			? ' ml-[4.5rem] md:ml-0'
+			: ''} fixed md:hidden z-40 top-0 right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center overflow-hidden overscroll-contain"
+		on:mousedown={() => {
+			showSidebar.set(!$showSidebar);
+		}}
+	/>
+{/if}
 
 <div
 	bind:this={navElement}
 	id="sidebar"
-	class="h-screen max-h-[100dvh] min-h-screen {$showSidebar
-		? 'lg:relative w-[260px]'
-		: '-translate-x-[260px] w-[0px]'} bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0 rounded-r-2xl
+	class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
+		? 'md:relative w-[260px] max-w-[260px]'
+		: '-translate-x-[260px] w-[0px]'} {$isApp
+		? `ml-[4.5rem] md:ml-0 `
+		: 'transition-width duration-200 ease-in-out'}  flex-shrink-0 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
         "
 	data-state={$showSidebar}
 >
 	<div
-		class="py-2.5 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] {$showSidebar
+		class="py-2 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
 			? ''
 			: 'invisible'}"
 	>
-		<div class="px-2 flex justify-center space-x-2">
+		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
+			<button
+				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				on:click={() => {
+					showSidebar.set(!$showSidebar);
+				}}
+			>
+				<div class=" m-auto self-center">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke-width="2"
+						stroke="currentColor"
+						class="size-5"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
+						/>
+					</svg>
+				</div>
+			</button>
+
 			<a
 				id="sidebar-new-chat-button"
-				class="flex-grow flex justify-between rounded-xl px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
 				href="/"
+				draggable="false"
 				on:click={async () => {
 					selectedChatId = null;
-
 					await goto('/');
 					const newChatButton = document.getElementById('new-chat-button');
 					setTimeout(() => {
 						newChatButton?.click();
+						if ($mobile) {
+							showSidebar.set(false);
+						}
 					}, 0);
 				}}
 			>
-				<div class="flex self-center">
-					<div class="self-center mr-1.5">
+				<div class="flex items-center">
+					<div class="self-center mx-1.5">
 						<img
+							crossorigin="anonymous"
 							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class=" size-6 -translate-x-1.5 rounded-full"
+							class=" size-5 -translate-x-1.5 rounded-full"
 							alt="logo"
 						/>
 					</div>
-
-					<div class=" self-center font-medium text-sm">{$i18n.t('New Chat')}</div>
+					<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
+						{$i18n.t('New Chat')}
+					</div>
 				</div>
 
-				<div class="self-center">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						class="w-4 h-4"
-					>
-						<path
-							d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z"
-						/>
-						<path
-							d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z"
-						/>
-					</svg>
+				<div>
+					<PencilSquare className=" size-5" strokeWidth="2" />
 				</div>
 			</a>
 		</div>
 
-		{#if $user?.role === 'admin'}
-			<div class="px-2 flex justify-center mt-0.5">
+		<!-- {#if $user?.role === 'admin'}
+			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
-					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="/modelfiles"
+					class="flex-grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					href="/home"
 					on:click={() => {
 						selectedChatId = null;
 						chatId.set('');
+
+						if ($mobile) {
+							showSidebar.set(false);
+						}
 					}}
+					draggable="false"
+				>
+					<div class="self-center">
+						<Home strokeWidth="2" className="size-[1.1rem]" />
+					</div>
+
+					<div class="flex self-center translate-y-[0.5px]">
+						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Home')}</div>
+					</div>
+				</a>
+			</div>
+		{/if} -->
+
+		{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
+			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+				<a
+					class="flex-grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					href="/workspace"
+					on:click={() => {
+						selectedChatId = null;
+						chatId.set('');
+
+						if ($mobile) {
+							showSidebar.set(false);
+						}
+					}}
+					draggable="false"
 				>
 					<div class="self-center">
 						<svg
@@ -258,7 +585,7 @@
 							viewBox="0 0 24 24"
 							stroke-width="2"
 							stroke="currentColor"
-							class="w-4 h-4"
+							class="size-[1.1rem]"
 						>
 							<path
 								stroke-linecap="round"
@@ -268,187 +595,223 @@
 						</svg>
 					</div>
 
-					<div class="flex self-center">
-						<div class=" self-center font-medium text-sm">{$i18n.t('Modelfiles')}</div>
-					</div>
-				</a>
-			</div>
-
-			<div class="px-2 flex justify-center">
-				<a
-					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="/prompts"
-					on:click={() => {
-						selectedChatId = null;
-						chatId.set('');
-					}}
-				>
-					<div class="self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
-							/>
-						</svg>
-					</div>
-
-					<div class="flex self-center">
-						<div class=" self-center font-medium text-sm">{$i18n.t('Prompts')}</div>
-					</div>
-				</a>
-			</div>
-
-			<div class="px-2 flex justify-center mb-1">
-				<a
-					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="/documents"
-					on:click={() => {
-						selectedChatId = null;
-						chatId.set('');
-					}}
-				>
-					<div class="self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
-							/>
-						</svg>
-					</div>
-
-					<div class="flex self-center">
-						<div class=" self-center font-medium text-sm">{$i18n.t('Documents')}</div>
+					<div class="flex self-center translate-y-[0.5px]">
+						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Workspace')}</div>
 					</div>
 				</a>
 			</div>
 		{/if}
 
-		<div class="relative flex flex-col flex-1 overflow-y-auto">
-			{#if !($settings.saveChatHistory ?? true)}
-				<div class="absolute z-40 w-full h-full bg-gray-50/90 dark:bg-black/90 flex justify-center">
-					<div class=" text-left px-5 py-2">
-						<div class=" font-medium">{$i18n.t('Chat History is off for this browser.')}</div>
-						<div class="text-xs mt-2">
-							{$i18n.t(
-								"When history is turned off, new chats on this browser won't appear in your history on any of your devices."
-							)}
-							<span class=" font-semibold"
-								>{$i18n.t('This setting does not sync across browsers or devices.')}</span
-							>
-						</div>
-
-						<div class="mt-3">
-							<button
-								class="flex justify-center items-center space-x-1.5 px-3 py-2.5 rounded-lg text-xs bg-gray-100 hover:bg-gray-200 transition text-gray-800 font-medium w-full"
-								type="button"
-								on:click={() => {
-									saveSettings({
-										saveChatHistory: true
-									});
-								}}
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 16 16"
-									fill="currentColor"
-									class="w-3 h-3"
-								>
-									<path
-										fill-rule="evenodd"
-										d="M8 1a.75.75 0 0 1 .75.75v6.5a.75.75 0 0 1-1.5 0v-6.5A.75.75 0 0 1 8 1ZM4.11 3.05a.75.75 0 0 1 0 1.06 5.5 5.5 0 1 0 7.78 0 .75.75 0 0 1 1.06-1.06 7 7 0 1 1-9.9 0 .75.75 0 0 1 1.06 0Z"
-										clip-rule="evenodd"
-									/>
-								</svg>
-
-								<div>{$i18n.t('Enable Chat History')}</div>
-							</button>
-						</div>
-					</div>
-				</div>
+		<div class="relative {$temporaryChatEnabled ? 'opacity-20' : ''}">
+			{#if $temporaryChatEnabled}
+				<div class="absolute z-40 w-full h-full flex justify-center"></div>
 			{/if}
 
-			<div class="px-2 mt-1 mb-2 flex justify-center space-x-2">
-				<div class="flex w-full" id="chat-search">
-					<div class="self-center pl-3 py-2 rounded-l-xl bg-white dark:bg-gray-950">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</div>
+			<SearchInput
+				bind:value={search}
+				on:input={searchDebounceHandler}
+				placeholder={$i18n.t('Search')}
+			/>
+		</div>
 
-					<input
-						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm dark:text-gray-300 dark:bg-gray-950 outline-none"
-						placeholder={$i18n.t('Search')}
-						bind:value={search}
-						on:focus={() => {
-							enrichChatsWithContent($chats);
+		<div
+			class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden {$temporaryChatEnabled
+				? 'opacity-20'
+				: ''}"
+		>
+			{#if $config?.features?.enable_channels && ($user.role === 'admin' || $channels.length > 0) && !search}
+				<Folder
+					className="px-2 mt-0.5"
+					name={$i18n.t('Channels')}
+					dragAndDrop={false}
+					onAdd={async () => {
+						if ($user.role === 'admin') {
+							await tick();
+
+							setTimeout(() => {
+								showCreateChannel = true;
+							}, 0);
+						}
+					}}
+					onAddLabel={$i18n.t('Create Channel')}
+				>
+					{#each $channels as channel}
+						<ChannelItem
+							{channel}
+							onUpdate={async () => {
+								await initChannels();
+							}}
+						/>
+					{/each}
+				</Folder>
+			{/if}
+
+			<Folder
+				collapsible={!search}
+				className="px-2 mt-0.5"
+				name={$i18n.t('Chats')}
+				onAdd={() => {
+					createFolder();
+				}}
+				onAddLabel={$i18n.t('New Folder')}
+				on:import={(e) => {
+					importChatHandler(e.detail);
+				}}
+				on:drop={async (e) => {
+					const { type, id, item } = e.detail;
+
+					if (type === 'chat') {
+						let chat = await getChatById(localStorage.token, id).catch((error) => {
+							return null;
+						});
+						if (!chat && item) {
+							chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+						}
+
+						if (chat) {
+							console.log(chat);
+							if (chat.folder_id) {
+								const res = await updateChatFolderIdById(localStorage.token, chat.id, null).catch(
+									(error) => {
+										toast.error(`${error}`);
+										return null;
+									}
+								);
+							}
+
+							if (chat.pinned) {
+								const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
+							}
+
+							initChatList();
+						}
+					} else if (type === 'folder') {
+						if (folders[id].parent_id === null) {
+							return;
+						}
+
+						const res = await updateFolderParentIdById(localStorage.token, id, null).catch(
+							(error) => {
+								toast.error(`${error}`);
+								return null;
+							}
+						);
+
+						if (res) {
+							await initFolders();
+						}
+					}
+				}}
+			>
+				{#if $temporaryChatEnabled}
+					<div class="absolute z-40 w-full h-full flex justify-center"></div>
+				{/if}
+
+				{#if !search && $pinnedChats.length > 0}
+					<div class="flex flex-col space-y-1 rounded-xl">
+						<Folder
+							className=""
+							bind:open={showPinnedChat}
+							on:change={(e) => {
+								localStorage.setItem('showPinnedChat', e.detail);
+								console.log(e.detail);
+							}}
+							on:import={(e) => {
+								importChatHandler(e.detail, true);
+							}}
+							on:drop={async (e) => {
+								const { type, id, item } = e.detail;
+
+								if (type === 'chat') {
+									let chat = await getChatById(localStorage.token, id).catch((error) => {
+										return null;
+									});
+									if (!chat && item) {
+										chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+									}
+
+									if (chat) {
+										console.log(chat);
+										if (chat.folder_id) {
+											const res = await updateChatFolderIdById(
+												localStorage.token,
+												chat.id,
+												null
+											).catch((error) => {
+												toast.error(`${error}`);
+												return null;
+											});
+										}
+
+										if (!chat.pinned) {
+											const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
+										}
+
+										initChatList();
+									}
+								}
+							}}
+							name={$i18n.t('Pinned')}
+						>
+							<div
+								class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
+							>
+								{#each $pinnedChats as chat, idx}
+									<ChatItem
+										className=""
+										id={chat.id}
+										title={chat.title}
+										{shiftKey}
+										selected={selectedChatId === chat.id}
+										on:select={() => {
+											selectedChatId = chat.id;
+										}}
+										on:unselect={() => {
+											selectedChatId = null;
+										}}
+										on:change={async () => {
+											initChatList();
+										}}
+										on:tag={(e) => {
+											const { type, name } = e.detail;
+											tagEventHandler(type, name, chat.id);
+										}}
+									/>
+								{/each}
+							</div>
+						</Folder>
+					</div>
+				{/if}
+
+				{#if !search && folders}
+					<Folders
+						{folders}
+						on:import={(e) => {
+							const { folderId, items } = e.detail;
+							importChatHandler(items, false, folderId);
+						}}
+						on:update={async (e) => {
+							initChatList();
+						}}
+						on:change={async () => {
+							initChatList();
 						}}
 					/>
-				</div>
-			</div>
+				{/if}
 
-			{#if $tags.length > 0}
-				<div class="px-2.5 mt-0.5 mb-2 flex gap-1 flex-wrap">
-					<button
-						class="px-2.5 text-xs font-medium bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
-						on:click={async () => {
-							await chats.set(await getChatList(localStorage.token));
-						}}
-					>
-						{$i18n.t('all')}
-					</button>
-					{#each $tags as tag}
-						<button
-							class="px-2.5 text-xs font-medium bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
-							on:click={async () => {
-								let chatIds = await getChatListByTagName(localStorage.token, tag.name);
-								if (chatIds.length === 0) {
-									await tags.set(await getAllChatTags(localStorage.token));
-									chatIds = await getChatList(localStorage.token);
-								}
-								await chats.set(chatIds);
-							}}
-						>
-							{tag.name}
-						</button>
-					{/each}
-				</div>
-			{/if}
-
-			<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-none">
-				{#each filteredChatList as chat, idx}
-					{#if idx === 0 || (idx > 0 && chat.time_range !== filteredChatList[idx - 1].time_range)}
-						<div
-							class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
-								? ''
-								: 'pt-5'} pb-0.5"
-						>
-							{$i18n.t(chat.time_range)}
-							<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
+				<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
+					<div class="pt-1.5">
+						{#if $chats}
+							{#each $chats as chat, idx}
+								{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
+									<div
+										class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
+										0
+											? ''
+											: 'pt-5'} pb-1.5"
+									>
+										{$i18n.t(chat.time_range)}
+										<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
 							{$i18n.t('Today')}
 							{$i18n.t('Yesterday')}
 							{$i18n.t('Previous 7 days')}
@@ -466,432 +829,98 @@
 							{$i18n.t('November')}
 							{$i18n.t('December')}
 							-->
-						</div>
-					{/if}
-
-					<div class=" w-full pr-2 relative group">
-						{#if chatTitleEditId === chat.id}
-							<div
-								class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId ||
-								chat.id === chatTitleEditId ||
-								chat.id === chatDeleteId
-									? 'bg-gray-200 dark:bg-gray-900'
-									: chat.id === selectedChatId
-									? 'bg-gray-100 dark:bg-gray-950'
-									: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
-							>
-								<input bind:value={chatTitle} class=" bg-transparent w-full outline-none mr-10" />
-							</div>
-						{:else}
-							<a
-								class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId ||
-								chat.id === chatTitleEditId ||
-								chat.id === chatDeleteId
-									? 'bg-gray-200 dark:bg-gray-900'
-									: chat.id === selectedChatId
-									? 'bg-gray-100 dark:bg-gray-950'
-									: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
-								href="/c/{chat.id}"
-								on:click={() => {
-									selectedChatId = chat.id;
-									if (window.innerWidth < 1024) {
-										showSidebar.set(false);
-									}
-								}}
-								draggable="false"
-							>
-								<div class=" flex self-center flex-1 w-full">
-									<div class=" text-left self-center overflow-hidden w-full h-[20px]">
-										{chat.title}
 									</div>
-								</div>
-							</a>
-						{/if}
-
-						<div
-							class="
-
-							{chat.id === $chatId || chat.id === chatTitleEditId || chat.id === chatDeleteId
-								? 'from-gray-200 dark:from-gray-900'
-								: chat.id === selectedChatId
-								? 'from-gray-100 dark:from-gray-950'
-								: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
-								absolute right-[10px] top-[10px] pr-2 pl-5 bg-gradient-to-l from-80%
-
-								  to-transparent"
-						>
-							{#if chatTitleEditId === chat.id}
-								<div class="flex self-center space-x-1.5 z-10">
-									<button
-										class=" self-center dark:hover:text-white transition"
-										on:click={() => {
-											editChatTitle(chat.id, chatTitle);
-											chatTitleEditId = null;
-											chatTitle = '';
-										}}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-									</button>
-									<button
-										class=" self-center dark:hover:text-white transition"
-										on:click={() => {
-											chatTitleEditId = null;
-											chatTitle = '';
-										}}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-											/>
-										</svg>
-									</button>
-								</div>
-							{:else if chatDeleteId === chat.id}
-								<div class="flex self-center space-x-1.5 z-10">
-									<button
-										class=" self-center dark:hover:text-white transition"
-										on:click={() => {
-											deleteChat(chat.id);
-										}}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-									</button>
-									<button
-										class=" self-center dark:hover:text-white transition"
-										on:click={() => {
-											chatDeleteId = null;
-										}}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-											/>
-										</svg>
-									</button>
-								</div>
-							{:else}
-								<div class="flex self-center space-x-1 z-10">
-									<ChatMenu
-										chatId={chat.id}
-										shareHandler={() => {
-											shareChatId = selectedChatId;
-											showShareChatModal = true;
-										}}
-										renameHandler={() => {
-											chatTitle = chat.title;
-											chatTitleEditId = chat.id;
-										}}
-										deleteHandler={() => {
-											chatDeleteId = chat.id;
-										}}
-										onClose={() => {
-											selectedChatId = null;
-										}}
-									>
-										<button
-											aria-label="Chat Menu"
-											class=" self-center dark:hover:text-white transition"
-											on:click={() => {
-												selectedChatId = chat.id;
-											}}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 16 16"
-												fill="currentColor"
-												class="w-4 h-4"
-											>
-												<path
-													d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
-												/>
-											</svg>
-										</button>
-									</ChatMenu>
-
-									<Tooltip content={$i18n.t('Archive')}>
-										<button
-											aria-label="Archive"
-											class=" self-center dark:hover:text-white transition"
-											on:click={() => {
-												archiveChatHandler(chat.id);
-											}}
-										>
-											<ArchiveBox />
-										</button>
-									</Tooltip>
-
-									{#if chat.id === $chatId}
-										<button
-											id="delete-chat-button"
-											class="hidden"
-											on:click={() => {
-												chatDeleteId = chat.id;
-											}}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 16 16"
-												fill="currentColor"
-												class="w-4 h-4"
-											>
-												<path
-													d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
-												/>
-											</svg>
-										</button>
-									{/if}
-								</div>
-							{/if}
-						</div>
-					</div>
-				{/each}
-			</div>
-		</div>
-
-		<div class="px-2.5">
-			<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
-
-			<div class="flex flex-col">
-				{#if $user !== undefined}
-					<button
-						class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-						on:click={() => {
-							showDropdown = !showDropdown;
-						}}
-					>
-						<div class=" self-center mr-3">
-							<img
-								src={$user.profile_image_url}
-								class=" max-w-[30px] object-cover rounded-full"
-								alt="User profile"
-							/>
-						</div>
-						<div class=" self-center font-semibold">{$user.name}</div>
-					</button>
-
-					{#if showDropdown}
-						<div
-							id="dropdownDots"
-							class="absolute z-40 bottom-[70px] rounded-lg shadow w-[240px] bg-white dark:bg-gray-900"
-							transition:fade|slide={{ duration: 100 }}
-						>
-							<div class="p-1 py-2 w-full">
-								{#if $user.role === 'admin'}
-									<button
-										class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-										on:click={() => {
-											goto('/admin');
-											showDropdown = false;
-										}}
-									>
-										<div class=" self-center mr-3">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="1.5"
-												stroke="currentColor"
-												class="w-5 h-5"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"
-												/>
-											</svg>
-										</div>
-										<div class=" self-center font-medium">{$i18n.t('Admin Panel')}</div>
-									</button>
-
-									<button
-										class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-										on:click={() => {
-											goto('/playground');
-											showDropdown = false;
-										}}
-									>
-										<div class=" self-center mr-3">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="1.5"
-												stroke="currentColor"
-												class="w-5 h-5"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0 0 21 18V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v12a2.25 2.25 0 0 0 2.25 2.25Z"
-												/>
-											</svg>
-										</div>
-										<div class=" self-center font-medium">{$i18n.t('Playground')}</div>
-									</button>
 								{/if}
 
-								<button
-									class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-									on:click={() => {
-										showArchivedChatsModal = true;
-										showDropdown = false;
+								<ChatItem
+									className=""
+									id={chat.id}
+									title={chat.title}
+									{shiftKey}
+									selected={selectedChatId === chat.id}
+									on:select={() => {
+										selectedChatId = chat.id;
 									}}
-								>
-									<div class=" self-center mr-3">
-										<ArchiveBox className="size-5" strokeWidth="1.5" />
-									</div>
-									<div class=" self-center font-medium">{$i18n.t('Archived Chats')}</div>
-								</button>
+									on:unselect={() => {
+										selectedChatId = null;
+									}}
+									on:change={async () => {
+										initChatList();
+									}}
+									on:tag={(e) => {
+										const { type, name } = e.detail;
+										tagEventHandler(type, name, chat.id);
+									}}
+								/>
+							{/each}
 
-								<button
-									class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-									on:click={async () => {
-										await showSettings.set(true);
-										showDropdown = false;
+							{#if $scrollPaginationEnabled && !allChatsLoaded}
+								<Loader
+									on:visible={(e) => {
+										if (!chatListLoading) {
+											loadMoreChats();
+										}
 									}}
 								>
-									<div class=" self-center mr-3">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke-width="1.5"
-											stroke="currentColor"
-											class="w-5 h-5"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z"
-											/>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-											/>
-										</svg>
+									<div
+										class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
+									>
+										<Spinner className=" size-4" />
+										<div class=" ">Loading...</div>
 									</div>
-									<div class=" self-center font-medium">{$i18n.t('Settings')}</div>
-								</button>
+								</Loader>
+							{/if}
+						{:else}
+							<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
+								<Spinner className=" size-4" />
+								<div class=" ">Loading...</div>
 							</div>
+						{/if}
+					</div>
+				</div>
+			</Folder>
+		</div>
 
-							<hr class=" dark:border-gray-800 m-0 p-0" />
-
-							<div class="p-1 py-2 w-full">
-								<button
-									class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-									on:click={() => {
-										localStorage.removeItem('token');
-										location.href = '/auth';
-										showDropdown = false;
-									}}
-								>
-									<div class=" self-center mr-3">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="w-5 h-5"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M3 4.25A2.25 2.25 0 015.25 2h5.5A2.25 2.25 0 0113 4.25v2a.75.75 0 01-1.5 0v-2a.75.75 0 00-.75-.75h-5.5a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 00.75-.75v-2a.75.75 0 011.5 0v2A2.25 2.25 0 0110.75 18h-5.5A2.25 2.25 0 013 15.75V4.25z"
-												clip-rule="evenodd"
-											/>
-											<path
-												fill-rule="evenodd"
-												d="M6 10a.75.75 0 01.75-.75h9.546l-1.048-.943a.75.75 0 111.004-1.114l2.5 2.25a.75.75 0 010 1.114l-2.5 2.25a.75.75 0 11-1.004-1.114l1.048-.943H6.75A.75.75 0 016 10z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-									</div>
-									<div class=" self-center font-medium">{$i18n.t('Sign Out')}</div>
-								</button>
+		<div class="px-2">
+			<div class="flex flex-col font-primary">
+				{#if $user !== undefined}
+					<UserMenu
+						role={$user.role}
+						on:show={(e) => {
+							if (e.detail === 'archived-chat') {
+								showArchivedChats.set(true);
+							}
+						}}
+					>
+						<button
+							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							on:click={() => {
+								showDropdown = !showDropdown;
+							}}
+						>
+							<div class=" self-center mr-3">
+								<img
+									src={$user.profile_image_url}
+									class=" max-w-[30px] object-cover rounded-full"
+									alt="User profile"
+								/>
 							</div>
-						</div>
-					{/if}
+							<div class=" self-center font-medium">{$user.name}</div>
+						</button>
+					</UserMenu>
 				{/if}
 			</div>
 		</div>
 	</div>
-
-	<div
-		id="sidebar-handle"
-		class="fixed left-0 top-[50dvh] -translate-y-1/2 transition-transform translate-x-[255px] md:translate-x-[260px] rotate-0"
-	>
-		<Tooltip
-			placement="right"
-			content={`${$showSidebar ? $i18n.t('Close') : $i18n.t('Open')} ${$i18n.t('sidebar')}`}
-			touch={false}
-		>
-			<button
-				id="sidebar-toggle-button"
-				class=" group"
-				on:click={() => {
-					showSidebar.set(!$showSidebar);
-				}}
-				><span class="" data-state="closed"
-					><div
-						class="flex h-[72px] w-8 items-center justify-center opacity-50 group-hover:opacity-100 transition"
-					>
-						<div class="flex h-6 w-6 flex-col items-center">
-							<div
-								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[0.15rem] {$showSidebar
-									? 'group-hover:rotate-[15deg]'
-									: 'group-hover:rotate-[-15deg]'}"
-							/>
-							<div
-								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[-0.15rem] {$showSidebar
-									? 'group-hover:rotate-[-15deg]'
-									: 'group-hover:rotate-[15deg]'}"
-							/>
-						</div>
-					</div>
-				</span>
-			</button>
-		</Tooltip>
-	</div>
 </div>
 
 <style>
-	.scrollbar-none:active::-webkit-scrollbar-thumb,
-	.scrollbar-none:focus::-webkit-scrollbar-thumb,
-	.scrollbar-none:hover::-webkit-scrollbar-thumb {
+	.scrollbar-hidden:active::-webkit-scrollbar-thumb,
+	.scrollbar-hidden:focus::-webkit-scrollbar-thumb,
+	.scrollbar-hidden:hover::-webkit-scrollbar-thumb {
 		visibility: visible;
 	}
-	.scrollbar-none::-webkit-scrollbar-thumb {
+	.scrollbar-hidden::-webkit-scrollbar-thumb {
 		visibility: hidden;
 	}
 </style>

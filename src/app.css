@@ -1,12 +1,24 @@
 @font-face {
-	font-family: 'Arimo';
-	src: url('/assets/fonts/Arimo-Variable.ttf');
+	font-family: 'Inter';
+	src: url('/assets/fonts/Inter-Variable.ttf');
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Archivo';
+	src: url('/assets/fonts/Archivo-Variable.ttf');
 	font-display: swap;
 }
 
 @font-face {
 	font-family: 'Mona Sans';
 	src: url('/assets/fonts/Mona-Sans.woff2');
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'InstrumentSerif';
+	src: url('/assets/fonts/InstrumentSerif-Regular.ttf');
 	font-display: swap;
 }
 
@@ -20,6 +32,10 @@ code {
 	width: auto;
 }
 
+.font-secondary {
+	font-family: 'InstrumentSerif', sans-serif;
+}
+
 math {
 	margin-top: 1rem;
 }
@@ -28,19 +44,45 @@ math {
 	@apply rounded-lg;
 }
 
-ol > li {
-	counter-increment: list-number;
-	display: block;
-	margin-bottom: 0;
-	margin-top: 0;
-	min-height: 28px;
+.input-prose {
+	@apply prose dark:prose-invert prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
-.prose ol > li::before {
-	content: counters(list-number, '.') '.';
-	padding-right: 0.5rem;
-	color: var(--tw-prose-counters);
-	font-weight: 400;
+.input-prose-sm {
+	@apply prose dark:prose-invert prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line text-sm;
+}
+
+.markdown-prose {
+	@apply prose dark:prose-invert prose-blockquote:border-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-l-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+}
+
+.markdown-prose-xs {
+	@apply text-xs prose dark:prose-invert prose-blockquote:border-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-l-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-0  prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+}
+
+.markdown a {
+	@apply underline;
+}
+
+.font-primary {
+	font-family: 'Archivo', sans-serif;
+}
+
+.drag-region {
+	-webkit-app-region: drag;
+}
+
+.drag-region a,
+.drag-region button {
+	-webkit-app-region: no-drag;
+}
+
+.no-drag-region {
+	-webkit-app-region: no-drag;
+}
+
+iframe {
+	@apply rounded-lg;
 }
 
 li p {
@@ -49,10 +91,16 @@ li p {
 
 ::-webkit-scrollbar-thumb {
 	--tw-border-opacity: 1;
-	background-color: rgba(217, 217, 227, 0.8);
+	background-color: rgba(236, 236, 236, 0.8);
 	border-color: rgba(255, 255, 255, var(--tw-border-opacity));
 	border-radius: 9999px;
 	border-width: 1px;
+}
+
+/* Dark theme scrollbar styles */
+.dark ::-webkit-scrollbar-thumb {
+	background-color: rgba(33, 33, 33, 0.8); /* Darker color for dark theme */
+	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
 }
 
 ::-webkit-scrollbar {
@@ -67,27 +115,248 @@ li p {
 
 select {
 	background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
-	background-position: right 0.5rem center;
+	background-position: right 0rem center;
 	background-repeat: no-repeat;
 	background-size: 1.5em 1.5em;
-	padding-right: 2.5rem;
 	-webkit-print-color-adjust: exact;
 	print-color-adjust: exact;
+	/* padding-right: 2.5rem; */
 	/* for Firefox */
 	-moz-appearance: none;
 	/* for Chrome */
 	-webkit-appearance: none;
 }
 
+@keyframes shimmer {
+	0% {
+		background-position: 200% 0;
+	}
+	100% {
+		background-position: -200% 0;
+	}
+}
+
+.shimmer {
+	background: linear-gradient(90deg, #9a9b9e 25%, #2a2929 50%, #9a9b9e 75%);
+	background-size: 200% 100%;
+	background-clip: text;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	animation: shimmer 4s linear infinite;
+	color: #818286; /* Fallback color */
+}
+
+:global(.dark) .shimmer {
+	background: linear-gradient(90deg, #818286 25%, #eae5e5 50%, #818286 75%);
+	background-size: 200% 100%;
+	background-clip: text;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	animation: shimmer 4s linear infinite;
+	color: #a1a3a7; /* Darker fallback color for dark mode */
+}
+
+@keyframes smoothFadeIn {
+	0% {
+		opacity: 0;
+		transform: translateY(-10px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.status-description {
+	animation: smoothFadeIn 0.2s forwards;
+}
+
 .katex-mathml {
 	display: none;
 }
 
-.scrollbar-none:active::-webkit-scrollbar-thumb,
-.scrollbar-none:focus::-webkit-scrollbar-thumb,
-.scrollbar-none:hover::-webkit-scrollbar-thumb {
+.scrollbar-hidden:active::-webkit-scrollbar-thumb,
+.scrollbar-hidden:focus::-webkit-scrollbar-thumb,
+.scrollbar-hidden:hover::-webkit-scrollbar-thumb {
 	visibility: visible;
 }
-.scrollbar-none::-webkit-scrollbar-thumb {
+.scrollbar-hidden::-webkit-scrollbar-thumb {
 	visibility: hidden;
+}
+
+.scrollbar-hidden::-webkit-scrollbar-corner {
+	display: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+	display: none; /* for Chrome, Safari and Opera */
+}
+
+.scrollbar-none::-webkit-scrollbar-corner {
+	display: none;
+}
+
+.scrollbar-none {
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+	/* display: none; <- Crashes Chrome on hover */
+	-webkit-appearance: none;
+	margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+}
+
+input[type='number'] {
+	-moz-appearance: textfield; /* Firefox */
+}
+
+.cm-editor {
+	height: 100%;
+	width: 100%;
+}
+
+.cm-scroller {
+	@apply scrollbar-hidden;
+}
+
+.cm-editor.cm-focused {
+	outline: none;
+}
+
+.tippy-box[data-theme~='dark'] {
+	@apply rounded-lg bg-gray-950 text-xs border border-gray-900 shadow-xl;
+}
+
+.password {
+	-webkit-text-security: disc;
+}
+
+.codespan {
+	color: #eb5757;
+	border-width: 0px;
+	padding: 3px 8px;
+	font-size: 0.8em;
+	font-weight: 600;
+	@apply rounded-md dark:bg-gray-800 bg-gray-100 mx-0.5;
+}
+
+.svelte-flow {
+	background-color: transparent !important;
+}
+
+.svelte-flow__edge > path {
+	stroke-width: 0.5;
+}
+
+.svelte-flow__edge.animated > path {
+	stroke-width: 2;
+	@apply stroke-gray-600 dark:stroke-gray-500;
+}
+
+.bg-gray-950-90 {
+	background-color: rgba(var(--color-gray-950, #0d0d0d), 0.9);
+}
+
+.ProseMirror {
+	@apply h-full min-h-fit max-h-full whitespace-pre-wrap;
+}
+
+.ProseMirror:focus {
+	outline: none;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+	content: attr(data-placeholder);
+	float: left;
+	color: #adb5bd;
+	pointer-events: none;
+
+	@apply line-clamp-1 absolute;
+}
+
+.ai-autocompletion::after {
+	color: #a0a0a0;
+
+	content: attr(data-suggestion);
+	pointer-events: none;
+}
+
+.tiptap > pre > code {
+	border-radius: 0.4rem;
+	font-size: 0.85rem;
+	padding: 0.25em 0.3em;
+
+	@apply dark:bg-gray-800 bg-gray-100;
+}
+
+.tiptap > pre {
+	border-radius: 0.5rem;
+	font-family: 'JetBrainsMono', monospace;
+	margin: 1.5rem 0;
+	padding: 0.75rem 1rem;
+
+	@apply dark:bg-gray-800 bg-gray-100;
+}
+
+.tiptap p code {
+	color: #eb5757;
+	border-width: 0px;
+	padding: 3px 8px;
+	font-size: 0.8em;
+	font-weight: 600;
+	@apply rounded-md dark:bg-gray-800 bg-gray-100 mx-0.5;
+}
+
+/* Code styling */
+.hljs-comment,
+.hljs-quote {
+	color: #616161;
+}
+
+.hljs-variable,
+.hljs-template-variable,
+.hljs-attribute,
+.hljs-tag,
+.hljs-regexp,
+.hljs-link,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class {
+	color: #f98181;
+}
+
+.hljs-number,
+.hljs-meta,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params {
+	color: #fbbc88;
+}
+
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet {
+	color: #b9f18d;
+}
+
+.hljs-title,
+.hljs-section {
+	color: #faf594;
+}
+
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #70cff8;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: 700;
 }

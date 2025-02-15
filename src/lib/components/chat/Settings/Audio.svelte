@@ -1,8 +1,14 @@
 <script lang="ts">
-	import { getAudioConfig, updateAudioConfig } from '$lib/apis/audio';
-	import { user } from '$lib/stores';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { KokoroTTS } from 'kokoro-js';
+
+	import { user, settings, config } from '$lib/stores';
+	import { getVoices as _getVoices } from '$lib/apis/audio';
+
+	import Switch from '$lib/components/common/Switch.svelte';
+	import { round } from '@huggingface/transformers';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -10,64 +16,61 @@
 	export let saveSettings: Function;
 
 	// Audio
-
-	let OpenAIUrl = '';
-	let OpenAIKey = '';
-
-	let STTEngines = ['', 'openai'];
-	let STTEngine = '';
-
 	let conversationMode = false;
 	let speechAutoSend = false;
 	let responseAutoPlayback = false;
+	let nonLocalVoices = false;
 
-	let TTSEngines = ['', 'openai'];
+	let STTEngine = '';
+
 	let TTSEngine = '';
+	let TTSEngineConfig = {};
+
+	let TTSModel = null;
+	let TTSModelProgress = null;
+	let TTSModelLoading = false;
 
 	let voices = [];
-	let speaker = '';
-	let models = [];
-	let model = '';
+	let voice = '';
 
-	const getOpenAIVoices = () => {
-		voices = [
-			{ name: 'alloy' },
-			{ name: 'echo' },
-			{ name: 'fable' },
-			{ name: 'onyx' },
-			{ name: 'nova' },
-			{ name: 'shimmer' }
-		];
-	};
+	// Audio speed control
+	let playbackRate = 1;
+	const speedOptions = [2, 1.75, 1.5, 1.25, 1, 0.75, 0.5];
 
-	const getOpenAIVoicesModel = () => {
-		models = [{ name: 'tts-1' }, { name: 'tts-1-hd' }];
-	};
-
-	const getWebAPIVoices = () => {
-		const getVoicesLoop = setInterval(async () => {
-			voices = await speechSynthesis.getVoices();
-
-			// do your loop
-			if (voices.length > 0) {
-				clearInterval(getVoicesLoop);
+	const getVoices = async () => {
+		if (TTSEngine === 'browser-kokoro') {
+			if (!TTSModel) {
+				await loadKokoro();
 			}
-		}, 100);
-	};
 
-	const toggleConversationMode = async () => {
-		conversationMode = !conversationMode;
+			voices = Object.entries(TTSModel.voices).map(([key, value]) => {
+				return {
+					id: key,
+					name: value.name,
+					localService: false
+				};
+			});
+		} else {
+			if ($config.audio.tts.engine === '') {
+				const getVoicesLoop = setInterval(async () => {
+					voices = await speechSynthesis.getVoices();
 
-		if (conversationMode) {
-			responseAutoPlayback = true;
-			speechAutoSend = true;
+					// do your loop
+					if (voices.length > 0) {
+						clearInterval(getVoicesLoop);
+					}
+				}, 100);
+			} else {
+				const res = await _getVoices(localStorage.token).catch((e) => {
+					toast.error(`${e}`);
+				});
+
+				if (res) {
+					console.log(res);
+					voices = res.voices;
+				}
+			}
 		}
-
-		saveSettings({
-			conversationMode: conversationMode,
-			responseAutoPlayback: responseAutoPlayback,
-			speechAutoSend: speechAutoSend
-		});
 	};
 
 	const toggleResponseAutoPlayback = async () => {
@@ -80,124 +83,118 @@
 		saveSettings({ speechAutoSend: speechAutoSend });
 	};
 
-	const updateConfigHandler = async () => {
-		if (TTSEngine === 'openai') {
-			const res = await updateAudioConfig(localStorage.token, {
-				url: OpenAIUrl,
-				key: OpenAIKey,
-				model: model,
-				speaker: speaker
-			});
+	onMount(async () => {
+		playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
+		conversationMode = $settings.conversationMode ?? false;
+		speechAutoSend = $settings.speechAutoSend ?? false;
+		responseAutoPlayback = $settings.responseAutoPlayback ?? false;
 
-			if (res) {
-				OpenAIUrl = res.OPENAI_API_BASE_URL;
-				OpenAIKey = res.OPENAI_API_KEY;
-				model = res.OPENAI_API_MODEL;
-				speaker = res.OPENAI_API_VOICE;
-			}
+		STTEngine = $settings?.audio?.stt?.engine ?? '';
+
+		TTSEngine = $settings?.audio?.tts?.engine ?? '';
+		TTSEngineConfig = $settings?.audio?.tts?.engineConfig ?? {};
+
+		if ($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice) {
+			voice = $settings?.audio?.tts?.voice ?? $config.audio.tts.voice ?? '';
+		} else {
+			voice = $config.audio.tts.voice ?? '';
+		}
+
+		nonLocalVoices = $settings.audio?.tts?.nonLocalVoices ?? false;
+
+		await getVoices();
+	});
+
+	$: if (TTSEngine && TTSEngineConfig) {
+		onTTSEngineChange();
+	}
+
+	const onTTSEngineChange = async () => {
+		if (TTSEngine === 'browser-kokoro') {
+			await loadKokoro();
 		}
 	};
 
-	onMount(async () => {
-		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+	const loadKokoro = async () => {
+		if (TTSEngine === 'browser-kokoro') {
+			voices = [];
 
-		conversationMode = settings.conversationMode ?? false;
-		speechAutoSend = settings.speechAutoSend ?? false;
-		responseAutoPlayback = settings.responseAutoPlayback ?? false;
+			if (TTSEngineConfig?.dtype) {
+				TTSModel = null;
+				TTSModelProgress = null;
+				TTSModelLoading = true;
 
-		STTEngine = settings?.audio?.STTEngine ?? '';
-		TTSEngine = settings?.audio?.TTSEngine ?? '';
-		speaker = settings?.audio?.speaker ?? '';
-		model = settings?.audio?.model ?? '';
+				const model_id = 'onnx-community/Kokoro-82M-v1.0-ONNX';
 
-		if (TTSEngine === 'openai') {
-			getOpenAIVoices();
-			getOpenAIVoicesModel();
-		} else {
-			getWebAPIVoices();
-		}
+				TTSModel = await KokoroTTS.from_pretrained(model_id, {
+					dtype: TTSEngineConfig.dtype, // Options: "fp32", "fp16", "q8", "q4", "q4f16"
+					device: !!navigator?.gpu ? 'webgpu' : 'wasm', // Detect WebGPU
+					progress_callback: (e) => {
+						TTSModelProgress = e;
+						console.log(e);
+					}
+				});
 
-		if ($user.role === 'admin') {
-			const res = await getAudioConfig(localStorage.token);
+				await getVoices();
 
-			if (res) {
-				OpenAIUrl = res.OPENAI_API_BASE_URL;
-				OpenAIKey = res.OPENAI_API_KEY;
-				model = res.OPENAI_API_MODEL;
-				speaker = res.OPENAI_API_VOICE;
+				// const rawAudio = await tts.generate(inputText, {
+				// 	// Use `tts.list_voices()` to list all available voices
+				// 	voice: voice
+				// });
+
+				// const blobUrl = URL.createObjectURL(await rawAudio.toBlob());
+				// const audio = new Audio(blobUrl);
+
+				// audio.play();
 			}
 		}
-	});
+	};
 </script>
 
 <form
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={async () => {
-		if ($user.role === 'admin') {
-			await updateConfigHandler();
-		}
 		saveSettings({
 			audio: {
-				STTEngine: STTEngine !== '' ? STTEngine : undefined,
-				TTSEngine: TTSEngine !== '' ? TTSEngine : undefined,
-				speaker: speaker !== '' ? speaker : undefined,
-				model: model !== '' ? model : undefined
+				stt: {
+					engine: STTEngine !== '' ? STTEngine : undefined
+				},
+				tts: {
+					engine: TTSEngine !== '' ? TTSEngine : undefined,
+					engineConfig: TTSEngineConfig,
+					playbackRate: playbackRate,
+					voice: voice !== '' ? voice : undefined,
+					defaultVoice: $config?.audio?.tts?.voice ?? '',
+					nonLocalVoices: $config.audio.tts.engine === '' ? nonLocalVoices : undefined
+				}
 			}
 		});
 		dispatch('save');
 	}}
 >
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[22rem]">
+	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div>
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('STT Settings')}</div>
 
-			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
-				<div class="flex items-center relative">
-					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
-						bind:value={STTEngine}
-						placeholder="Select a mode"
-						on:change={(e) => {
-							if (e.target.value !== '') {
-								navigator.mediaDevices.getUserMedia({ audio: true }).catch(function (err) {
-									toast.error(
-										$i18n.t(`Permission denied when accessing microphone: {{error}}`, {
-											error: err
-										})
-									);
-									STTEngine = '';
-								});
-							}
-						}}
-					>
-						<option value="">{$i18n.t('Default (Web API)')}</option>
-						<option value="whisper-local">{$i18n.t('Whisper (Local)')}</option>
-					</select>
+			{#if $config.audio.stt.engine !== 'web'}
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
+					<div class="flex items-center relative">
+						<select
+							class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+							bind:value={STTEngine}
+							placeholder="Select an engine"
+						>
+							<option value="">{$i18n.t('Default')}</option>
+							<option value="web">{$i18n.t('Web API')}</option>
+						</select>
+					</div>
 				</div>
-			</div>
-
-			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Conversation Mode')}</div>
-
-				<button
-					class="p-1 px-3 text-xs flex rounded transition"
-					on:click={() => {
-						toggleConversationMode();
-					}}
-					type="button"
-				>
-					{#if conversationMode === true}
-						<span class="ml-2 self-center">{$i18n.t('On')}</span>
-					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-					{/if}
-				</button>
-			</div>
+			{/if}
 
 			<div class=" py-0.5 flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{$i18n.t('Auto-send input after 3 sec.')}
+					{$i18n.t('Instant Auto-Send After Voice Transcription')}
 				</div>
 
 				<button
@@ -223,44 +220,33 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Text-to-Speech Engine')}</div>
 				<div class="flex items-center relative">
 					<select
-						class=" dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 						bind:value={TTSEngine}
-						placeholder="Select a mode"
-						on:change={(e) => {
-							if (e.target.value === 'openai') {
-								getOpenAIVoices();
-								speaker = 'alloy';
-								model = 'tts-1';
-							} else {
-								getWebAPIVoices();
-								speaker = '';
-							}
-						}}
+						placeholder="Select an engine"
 					>
-						<option value="">{$i18n.t('Default (Web API)')}</option>
-						<option value="openai">{$i18n.t('Open AI')}</option>
+						<option value="">{$i18n.t('Default')}</option>
+						<option value="browser-kokoro">{$i18n.t('Kokoro.js (Browser)')}</option>
 					</select>
 				</div>
 			</div>
 
-			{#if $user.role === 'admin'}
-				{#if TTSEngine === 'openai'}
-					<div class="mt-1 flex gap-2 mb-1">
-						<input
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							placeholder={$i18n.t('API Base URL')}
-							bind:value={OpenAIUrl}
-							required
-						/>
-
-						<input
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							placeholder={$i18n.t('API Key')}
-							bind:value={OpenAIKey}
-							required
-						/>
+			{#if TTSEngine === 'browser-kokoro'}
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">{$i18n.t('Kokoro.js Dtype')}</div>
+					<div class="flex items-center relative">
+						<select
+							class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+							bind:value={TTSEngineConfig.dtype}
+							placeholder="Select dtype"
+						>
+							<option value="" disabled selected>Select dtype</option>
+							<option value="fp32">fp32</option>
+							<option value="fp16">fp16</option>
+							<option value="q8">q8</option>
+							<option value="q4">q4</option>
+						</select>
 					</div>
-				{/if}
+				</div>
 			{/if}
 
 			<div class=" py-0.5 flex w-full justify-between">
@@ -280,30 +266,95 @@
 					{/if}
 				</button>
 			</div>
+
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('Speech Playback Speed')}</div>
+
+				<div class="flex items-center relative">
+					<select
+						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+						bind:value={playbackRate}
+					>
+						{#each speedOptions as option}
+							<option value={option} selected={playbackRate === option}>{option}x</option>
+						{/each}
+					</select>
+				</div>
+			</div>
 		</div>
 
-		<hr class=" dark:border-gray-700" />
+		<hr class=" dark:border-gray-850" />
 
-		{#if TTSEngine === ''}
+		{#if TTSEngine === 'browser-kokoro'}
+			{#if TTSModel}
+				<div>
+					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
+					<div class="flex w-full">
+						<div class="flex-1">
+							<input
+								list="voice-list"
+								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								bind:value={voice}
+								placeholder="Select a voice"
+							/>
+
+							<datalist id="voice-list">
+								{#each voices as voice}
+									<option value={voice.id}>{voice.name}</option>
+								{/each}
+							</datalist>
+						</div>
+					</div>
+				</div>
+			{:else}
+				<div>
+					<div class=" mb-2.5 text-sm font-medium flex gap-2 items-center">
+						<Spinner className="size-4" />
+
+						<div class=" text-sm font-medium shimmer">
+							{$i18n.t('Loading Kokoro.js...')}
+							{TTSModelProgress && TTSModelProgress.status === 'progress'
+								? `(${Math.round(TTSModelProgress.progress * 10) / 10}%)`
+								: ''}
+						</div>
+					</div>
+
+					<div class="text-xs text-gray-500">
+						{$i18n.t('Please do not close the settings page while loading the model.')}
+					</div>
+				</div>
+			{/if}
+		{:else if $config.audio.tts.engine === ''}
 			<div>
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
 				<div class="flex w-full">
 					<div class="flex-1">
 						<select
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							bind:value={speaker}
-							placeholder="Select a voice"
+							bind:value={voice}
 						>
-							<option value="" selected>{$i18n.t('Default')}</option>
-							{#each voices.filter((v) => v.localService === true) as voice}
-								<option value={voice.name} class="bg-gray-100 dark:bg-gray-700">{voice.name}</option
+							<option value="" selected={voice !== ''}>{$i18n.t('Default')}</option>
+							{#each voices.filter((v) => nonLocalVoices || v.localService === true) as _voice}
+								<option
+									value={_voice.name}
+									class="bg-gray-100 dark:bg-gray-700"
+									selected={voice === _voice.name}>{_voice.name}</option
 								>
 							{/each}
 						</select>
 					</div>
 				</div>
+				<div class="flex items-center justify-between my-1.5">
+					<div class="text-xs">
+						{$i18n.t('Allow non-local voices')}
+					</div>
+
+					<div class="mt-1">
+						<Switch bind:state={nonLocalVoices} />
+					</div>
+				</div>
 			</div>
-		{:else if TTSEngine === 'openai'}
+		{:else if $config.audio.tts.engine !== ''}
 			<div>
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
 				<div class="flex w-full">
@@ -311,32 +362,13 @@
 						<input
 							list="voice-list"
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							bind:value={speaker}
+							bind:value={voice}
 							placeholder="Select a voice"
 						/>
 
 						<datalist id="voice-list">
 							{#each voices as voice}
-								<option value={voice.name} />
-							{/each}
-						</datalist>
-					</div>
-				</div>
-			</div>
-			<div>
-				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Model')}</div>
-				<div class="flex w-full">
-					<div class="flex-1">
-						<input
-							list="model-list"
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							bind:value={model}
-							placeholder="Select a model"
-						/>
-
-						<datalist id="model-list">
-							{#each models as model}
-								<option value={model.name} />
+								<option value={voice.id}>{voice.name}</option>
 							{/each}
 						</datalist>
 					</div>
@@ -345,9 +377,9 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end text-sm font-medium">
 		<button
-			class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}

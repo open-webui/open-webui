@@ -11,8 +11,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-  FULL_IMAGE_NAME: ghcr.io/${{ github.repository }}
 
 jobs:
   build-main-image:
@@ -28,6 +26,15 @@ jobs:
           - linux/arm64
 
     steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
+      - name: Set repository and image name to lowercase
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: '${{ github.repository }}'
+
       - name: Prepare
         run: |
           platform=${{ matrix.platform }}
@@ -63,6 +70,18 @@ jobs:
           flavor: |
             latest=${{ github.ref == 'refs/heads/main' }}
 
+      - name: Extract metadata for Docker cache
+        id: cache-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.FULL_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
+          flavor: |
+            prefix=cache-${{ matrix.platform }}-
+            latest=false
+
       - name: Build Docker image (latest)
         uses: docker/build-push-action@v5
         id: build
@@ -72,8 +91,10 @@ jobs:
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
+          cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
+          build-args: |
+            BUILD_HASH=${{ github.sha }}
 
       - name: Export digest
         run: |
@@ -102,6 +123,15 @@ jobs:
           - linux/arm64
 
     steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
+      - name: Set repository and image name to lowercase
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: '${{ github.repository }}'
+
       - name: Prepare
         run: |
           platform=${{ matrix.platform }}
@@ -123,7 +153,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for Docker images (default latest tag)
+      - name: Extract metadata for Docker images (cuda tag)
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -139,6 +169,18 @@ jobs:
             latest=${{ github.ref == 'refs/heads/main' }}
             suffix=-cuda,onlatest=true
 
+      - name: Extract metadata for Docker cache
+        id: cache-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.FULL_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
+          flavor: |
+            prefix=cache-cuda-${{ matrix.platform }}-
+            latest=false
+
       - name: Build Docker image (cuda)
         uses: docker/build-push-action@v5
         id: build
@@ -148,9 +190,11 @@ jobs:
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: USE_CUDA=true
+          cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
+          cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
+          build-args: |
+            BUILD_HASH=${{ github.sha }}
+            USE_CUDA=true
 
       - name: Export digest
         run: |
@@ -179,6 +223,15 @@ jobs:
           - linux/arm64
 
     steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
+      - name: Set repository and image name to lowercase
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: '${{ github.repository }}'
+
       - name: Prepare
         run: |
           platform=${{ matrix.platform }}
@@ -216,6 +269,18 @@ jobs:
             latest=${{ github.ref == 'refs/heads/main' }}
             suffix=-ollama,onlatest=true
 
+      - name: Extract metadata for Docker cache
+        id: cache-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.FULL_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
+          flavor: |
+            prefix=cache-ollama-${{ matrix.platform }}-
+            latest=false
+
       - name: Build Docker image (ollama)
         uses: docker/build-push-action@v5
         id: build
@@ -225,9 +290,11 @@ jobs:
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: USE_OLLAMA=true
+          cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
+          cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
+          build-args: |
+            BUILD_HASH=${{ github.sha }}
+            USE_OLLAMA=true
 
       - name: Export digest
         run: |
@@ -245,8 +312,17 @@ jobs:
 
   merge-main-images:
     runs-on: ubuntu-latest
-    needs: [ build-main-image ]
+    needs: [build-main-image]
     steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
+      - name: Set repository and image name to lowercase
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: '${{ github.repository }}'
+
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
@@ -288,11 +364,19 @@ jobs:
         run: |
           docker buildx imagetools inspect ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
 
-
   merge-cuda-images:
     runs-on: ubuntu-latest
-    needs: [ build-cuda-image ]
+    needs: [build-cuda-image]
     steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
+      - name: Set repository and image name to lowercase
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: '${{ github.repository }}'
+
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
@@ -338,8 +422,17 @@ jobs:
 
   merge-ollama-images:
     runs-on: ubuntu-latest
-    needs: [ build-ollama-image ]
+    needs: [build-ollama-image]
     steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
+      - name: Set repository and image name to lowercase
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: '${{ github.repository }}'
+
       - name: Download digests
         uses: actions/download-artifact@v4
         with:

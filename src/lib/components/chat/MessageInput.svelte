@@ -1,442 +1,374 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, tick, getContext } from 'svelte';
-	import { modelfiles, settings, showSidebar } from '$lib/stores';
-	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
+	import { v4 as uuidv4 } from 'uuid';
+	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
+
+	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
+	const dispatch = createEventDispatcher();
 
 	import {
-		uploadDocToVectorDB,
-		uploadWebToVectorDB,
-		uploadYoutubeTranscriptionToVectorDB
-	} from '$lib/apis/rag';
-	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS, WEBUI_BASE_URL } from '$lib/constants';
+		type Model,
+		mobile,
+		settings,
+		showSidebar,
+		models,
+		config,
+		showCallOverlay,
+		tools,
+		user as _user,
+		showControls,
+		TTSWorker
+	} from '$lib/stores';
 
+	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
+	import { uploadFile } from '$lib/apis/files';
+	import { generateAutoCompletion } from '$lib/apis';
+	import { deleteFileById } from '$lib/apis/files';
 
-	import Prompts from './MessageInput/PromptCommands.svelte';
-	import Suggestions from './MessageInput/Suggestions.svelte';
-	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
-	import Documents from './MessageInput/Documents.svelte';
-	import Models from './MessageInput/Models.svelte';
+	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
+
+	import InputMenu from './MessageInput/InputMenu.svelte';
+	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
+	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
+	import Commands from './MessageInput/Commands.svelte';
+
+	import RichTextInput from '../common/RichTextInput.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
+	import FileItem from '../common/FileItem.svelte';
+	import Image from '../common/Image.svelte';
+
+	import XMark from '../icons/XMark.svelte';
+	import Headphone from '../icons/Headphone.svelte';
+	import GlobeAlt from '../icons/GlobeAlt.svelte';
+	import PhotoSolid from '../icons/PhotoSolid.svelte';
+	import Photo from '../icons/Photo.svelte';
+	import CommandLine from '../icons/CommandLine.svelte';
+	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
 	const i18n = getContext('i18n');
 
-	export let submitPrompt: Function;
+	export let transparentBackground = false;
+
+	export let onChange: Function = () => {};
+	export let createMessagePair: Function;
 	export let stopResponse: Function;
 
-	export let autoScroll = true;
-	export let selectedModel = '';
+	export let autoScroll = false;
 
-	let chatTextAreaElement: HTMLTextAreaElement;
+	export let atSelectedModel: Model | undefined = undefined;
+	export let selectedModels: [''];
+
+	let selectedModelIds = [];
+	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
+
+	export let history;
+
+	export let prompt = '';
+	export let files = [];
+
+	export let selectedToolIds = [];
+
+	export let imageGenerationEnabled = false;
+	export let webSearchEnabled = false;
+	export let codeInterpreterEnabled = false;
+
+	$: onChange({
+		prompt,
+		files,
+		selectedToolIds,
+		imageGenerationEnabled,
+		webSearchEnabled
+	});
+
+	let loaded = false;
+	let recording = false;
+
+	let chatInputContainerElement;
+	let chatInputElement;
+
 	let filesInputElement;
-
-	let promptsElement;
-	let documentsElement;
-	let modelsElement;
+	let commandsElement;
 
 	let inputFiles;
 	let dragged = false;
 
 	let user = null;
-	let chatInputPlaceholder = '';
+	export let placeholder = '';
 
-	export let files = [];
-
-	export let fileUploadEnabled = true;
-	export let speechRecognitionEnabled = true;
-
-	export let prompt = '';
-	export let messages = [];
-
-	let speechRecognition;
-
-	$: if (prompt) {
-		if (chatTextAreaElement) {
-			chatTextAreaElement.style.height = '';
-			chatTextAreaElement.style.height = Math.min(chatTextAreaElement.scrollHeight, 200) + 'px';
-		}
-	}
-
-	let mediaRecorder;
-	let audioChunks = [];
-	let isRecording = false;
-	const MIN_DECIBELS = -45;
+	let visionCapableModels = [];
+	$: visionCapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
+		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
+	);
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollHeight;
+		element.scrollTo({
+			top: element.scrollHeight,
+			behavior: 'smooth'
+		});
 	};
 
-	const startRecording = async () => {
-		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-		mediaRecorder = new MediaRecorder(stream);
-		mediaRecorder.onstart = () => {
-			isRecording = true;
-			console.log('Recording started');
+	const screenCaptureHandler = async () => {
+		try {
+			// Request screen media
+			const mediaStream = await navigator.mediaDevices.getDisplayMedia({
+				video: { cursor: 'never' },
+				audio: false
+			});
+			// Once the user selects a screen, temporarily create a video element
+			const video = document.createElement('video');
+			video.srcObject = mediaStream;
+			// Ensure the video loads without affecting user experience or tab switching
+			await video.play();
+			// Set up the canvas to match the video dimensions
+			const canvas = document.createElement('canvas');
+			canvas.width = video.videoWidth;
+			canvas.height = video.videoHeight;
+			// Grab a single frame from the video stream using the canvas
+			const context = canvas.getContext('2d');
+			context.drawImage(video, 0, 0, canvas.width, canvas.height);
+			// Stop all video tracks (stop screen sharing) after capturing the image
+			mediaStream.getTracks().forEach((track) => track.stop());
+
+			// bring back focus to this current tab, so that the user can see the screen capture
+			window.focus();
+
+			// Convert the canvas to a Base64 image URL
+			const imageUrl = canvas.toDataURL('image/png');
+			// Add the captured image to the files array to render it
+			files = [...files, { type: 'image', url: imageUrl }];
+			// Clean memory: Clear video srcObject
+			video.srcObject = null;
+		} catch (error) {
+			// Handle any errors (e.g., user cancels screen sharing)
+			console.error('Error capturing screen:', error);
+		}
+	};
+
+	const uploadFileHandler = async (file, fullContext: boolean = false) => {
+		if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true)) {
+			toast.error($i18n.t('You do not have permission to upload files.'));
+			return null;
+		}
+
+		const tempItemId = uuidv4();
+		const fileItem = {
+			type: 'file',
+			file: '',
+			id: null,
+			url: '',
+			name: file.name,
+			collection_name: '',
+			status: 'uploading',
+			size: file.size,
+			error: '',
+			itemId: tempItemId,
+			...(fullContext ? { context: 'full' } : {})
 		};
-		mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
-		mediaRecorder.onstop = async () => {
-			isRecording = false;
-			console.log('Recording stopped');
 
-			// Create a blob from the audio chunks
-			const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+		if (fileItem.size == 0) {
+			toast.error($i18n.t('You cannot upload an empty file.'));
+			return null;
+		}
 
-			const file = blobToFile(audioBlob, 'recording.wav');
-
+		files = [...files, fileItem];
+		// Check if the file is an audio file and transcribe/convert it to text file
+		if (['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'].includes(file['type'])) {
 			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			});
 
 			if (res) {
-				prompt = res.text;
-				await tick();
-				chatTextAreaElement?.focus();
+				console.log(res);
+				const blob = new Blob([res.text], { type: 'text/plain' });
+				file = blobToFile(blob, `${file.name}.txt`);
 
-				if (prompt !== '' && $settings?.speechAutoSend === true) {
-					submitPrompt(prompt, user);
-				}
+				fileItem.name = file.name;
+				fileItem.size = file.size;
 			}
+		}
 
-			// saveRecording(audioBlob);
-			audioChunks = [];
-		};
+		try {
+			// During the file upload, file content is automatically extracted.
+			const uploadedFile = await uploadFile(localStorage.token, file);
 
-		// Start recording
-		mediaRecorder.start();
+			if (uploadedFile) {
+				console.log('File upload completed:', {
+					id: uploadedFile.id,
+					name: fileItem.name,
+					collection: uploadedFile?.meta?.collection_name
+				});
 
-		// Monitor silence
-		monitorSilence(stream);
+				if (uploadedFile.error) {
+					console.warn('File upload warning:', uploadedFile.error);
+					toast.warning(uploadedFile.error);
+				}
+
+				fileItem.status = 'uploaded';
+				fileItem.file = uploadedFile;
+				fileItem.id = uploadedFile.id;
+				fileItem.collection_name =
+					uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
+				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+
+				files = files;
+			} else {
+				files = files.filter((item) => item?.itemId !== tempItemId);
+			}
+		} catch (e) {
+			toast.error(`${e}`);
+			files = files.filter((item) => item?.itemId !== tempItemId);
+		}
 	};
 
-	const monitorSilence = (stream) => {
-		const audioContext = new AudioContext();
-		const audioStreamSource = audioContext.createMediaStreamSource(stream);
-		const analyser = audioContext.createAnalyser();
-		analyser.minDecibels = MIN_DECIBELS;
-		audioStreamSource.connect(analyser);
+	const inputFilesHandler = async (inputFiles) => {
+		console.log('Input files handler called with:', inputFiles);
+		inputFiles.forEach((file) => {
+			console.log('Processing file:', {
+				name: file.name,
+				type: file.type,
+				size: file.size,
+				extension: file.name.split('.').at(-1)
+			});
 
-		const bufferLength = analyser.frequencyBinCount;
-		const domainData = new Uint8Array(bufferLength);
-
-		let lastSoundTime = Date.now();
-
-		const detectSound = () => {
-			analyser.getByteFrequencyData(domainData);
-
-			if (domainData.some((value) => value > 0)) {
-				lastSoundTime = Date.now();
-			}
-
-			if (isRecording && Date.now() - lastSoundTime > 3000) {
-				mediaRecorder.stop();
-				audioContext.close();
+			if (
+				($config?.file?.max_size ?? null) !== null &&
+				file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
+			) {
+				console.log('File exceeds max size limit:', {
+					fileSize: file.size,
+					maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
+				});
+				toast.error(
+					$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
+						maxSize: $config?.file?.max_size
+					})
+				);
 				return;
 			}
 
-			window.requestAnimationFrame(detectSound);
-		};
+			if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
+				if (visionCapableModels.length === 0) {
+					toast.error($i18n.t('Selected model(s) do not support image inputs'));
+					return;
+				}
+				let reader = new FileReader();
+				reader.onload = async (event) => {
+					let imageUrl = event.target.result;
 
-		window.requestAnimationFrame(detectSound);
-	};
+					if ($settings?.imageCompression ?? false) {
+						const width = $settings?.imageCompressionSize?.width ?? null;
+						const height = $settings?.imageCompressionSize?.height ?? null;
 
-	const saveRecording = (blob) => {
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		document.body.appendChild(a);
-		a.style = 'display: none';
-		a.href = url;
-		a.download = 'recording.wav';
-		a.click();
-		window.URL.revokeObjectURL(url);
-	};
+						if (width || height) {
+							imageUrl = await compressImage(imageUrl, width, height);
+						}
+					}
 
-	const speechRecognitionHandler = () => {
-		// Check if SpeechRecognition is supported
-
-		if (isRecording) {
-			if (speechRecognition) {
-				speechRecognition.stop();
-			}
-
-			if (mediaRecorder) {
-				mediaRecorder.stop();
-			}
-		} else {
-			isRecording = true;
-
-			if ($settings?.audio?.STTEngine ?? '' !== '') {
-				startRecording();
+					files = [
+						...files,
+						{
+							type: 'image',
+							url: `${imageUrl}`
+						}
+					];
+				};
+				reader.readAsDataURL(file);
 			} else {
-				if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-					// Create a SpeechRecognition object
-					speechRecognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-
-					// Set continuous to true for continuous recognition
-					speechRecognition.continuous = true;
-
-					// Set the timeout for turning off the recognition after inactivity (in milliseconds)
-					const inactivityTimeout = 3000; // 3 seconds
-
-					let timeoutId;
-					// Start recognition
-					speechRecognition.start();
-
-					// Event triggered when speech is recognized
-					speechRecognition.onresult = async (event) => {
-						// Clear the inactivity timeout
-						clearTimeout(timeoutId);
-
-						// Handle recognized speech
-						console.log(event);
-						const transcript = event.results[Object.keys(event.results).length - 1][0].transcript;
-
-						prompt = `${prompt}${transcript}`;
-
-						await tick();
-						chatTextAreaElement?.focus();
-
-						// Restart the inactivity timeout
-						timeoutId = setTimeout(() => {
-							console.log('Speech recognition turned off due to inactivity.');
-							speechRecognition.stop();
-						}, inactivityTimeout);
-					};
-
-					// Event triggered when recognition is ended
-					speechRecognition.onend = function () {
-						// Restart recognition after it ends
-						console.log('recognition ended');
-						isRecording = false;
-						if (prompt !== '' && $settings?.speechAutoSend === true) {
-							submitPrompt(prompt, user);
-						}
-					};
-
-					// Event triggered when an error occurs
-					speechRecognition.onerror = function (event) {
-						console.log(event);
-						toast.error($i18n.t(`Speech recognition error: {{error}}`, { error: event.error }));
-						isRecording = false;
-					};
-				} else {
-					toast.error($i18n.t('SpeechRecognition API is not supported in this browser.'));
-				}
+				uploadFileHandler(file);
 			}
+		});
+	};
+
+	const handleKeyDown = (event: KeyboardEvent) => {
+		if (event.key === 'Escape') {
+			console.log('Escape');
+			dragged = false;
 		}
 	};
 
-	const uploadDoc = async (file) => {
-		console.log(file);
+	const onDragOver = (e) => {
+		e.preventDefault();
 
-		const doc = {
-			type: 'doc',
-			name: file.name,
-			collection_name: '',
-			upload_status: false,
-			error: ''
-		};
-
-		try {
-			files = [...files, doc];
-
-			if (['audio/mpeg', 'audio/wav'].includes(file['type'])) {
-				const res = await transcribeAudio(localStorage.token, file).catch((error) => {
-					toast.error(error);
-					return null;
-				});
-
-				if (res) {
-					console.log(res);
-					const blob = new Blob([res.text], { type: 'text/plain' });
-					file = blobToFile(blob, `${file.name}.txt`);
-				}
-			}
-
-			const res = await uploadDocToVectorDB(localStorage.token, '', file);
-
-			if (res) {
-				doc.upload_status = true;
-				doc.collection_name = res.collection_name;
-				files = files;
-			}
-		} catch (e) {
-			// Remove the failed doc from the files array
-			files = files.filter((f) => f.name !== file.name);
-			toast.error(e);
-		}
-	};
-
-	const uploadWeb = async (url) => {
-		console.log(url);
-
-		const doc = {
-			type: 'doc',
-			name: url,
-			collection_name: '',
-			upload_status: false,
-			url: url,
-			error: ''
-		};
-
-		try {
-			files = [...files, doc];
-			const res = await uploadWebToVectorDB(localStorage.token, '', url);
-
-			if (res) {
-				doc.upload_status = true;
-				doc.collection_name = res.collection_name;
-				files = files;
-			}
-		} catch (e) {
-			// Remove the failed doc from the files array
-			files = files.filter((f) => f.name !== url);
-			toast.error(e);
-		}
-	};
-
-	const uploadYoutubeTranscription = async (url) => {
-		console.log(url);
-
-		const doc = {
-			type: 'doc',
-			name: url,
-			collection_name: '',
-			upload_status: false,
-			url: url,
-			error: ''
-		};
-
-		try {
-			files = [...files, doc];
-			const res = await uploadYoutubeTranscriptionToVectorDB(localStorage.token, url);
-
-			if (res) {
-				doc.upload_status = true;
-				doc.collection_name = res.collection_name;
-				files = files;
-			}
-		} catch (e) {
-			// Remove the failed doc from the files array
-			files = files.filter((f) => f.name !== url);
-			toast.error(e);
-		}
-	};
-
-	onMount(() => {
-		console.log(document.getElementById('sidebar'));
-		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
-
-		const dropZone = document.querySelector('body');
-
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') {
-				console.log('Escape');
-				dragged = false;
-			}
-		};
-
-		const onDragOver = (e) => {
-			e.preventDefault();
+		// Check if a file is being dragged.
+		if (e.dataTransfer?.types?.includes('Files')) {
 			dragged = true;
-		};
-
-		const onDragLeave = () => {
+		} else {
 			dragged = false;
-		};
+		}
+	};
 
-		const onDrop = async (e) => {
-			e.preventDefault();
-			console.log(e);
+	const onDragLeave = () => {
+		dragged = false;
+	};
 
-			if (e.dataTransfer?.files) {
-				const inputFiles = Array.from(e.dataTransfer?.files);
+	const onDrop = async (e) => {
+		e.preventDefault();
+		console.log(e);
 
-				if (inputFiles && inputFiles.length > 0) {
-					inputFiles.forEach((file) => {
-						console.log(file, file.name.split('.').at(-1));
-						if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
-							let reader = new FileReader();
-							reader.onload = (event) => {
-								files = [
-									...files,
-									{
-										type: 'image',
-										url: `${event.target.result}`
-									}
-								];
-							};
-							reader.readAsDataURL(file);
-						} else if (
-							SUPPORTED_FILE_TYPE.includes(file['type']) ||
-							SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
-						) {
-							uploadDoc(file);
-						} else {
-							toast.error(
-								$i18n.t(
-									`Unknown File Type '{{file_type}}', but accepting and treating as plain text`,
-									{ file_type: file['type'] }
-								)
-							);
-							uploadDoc(file);
-						}
-					});
-				} else {
-					toast.error($i18n.t(`File not found.`));
-				}
+		if (e.dataTransfer?.files) {
+			const inputFiles = Array.from(e.dataTransfer?.files);
+			if (inputFiles && inputFiles.length > 0) {
+				console.log(inputFiles);
+				inputFilesHandler(inputFiles);
 			}
+		}
 
-			dragged = false;
-		};
+		dragged = false;
+	};
+
+	onMount(async () => {
+		loaded = true;
+
+		window.setTimeout(() => {
+			const chatInput = document.getElementById('chat-input');
+			chatInput?.focus();
+		}, 0);
 
 		window.addEventListener('keydown', handleKeyDown);
 
-		dropZone?.addEventListener('dragover', onDragOver);
-		dropZone?.addEventListener('drop', onDrop);
-		dropZone?.addEventListener('dragleave', onDragLeave);
+		await tick();
 
-		return () => {
-			window.removeEventListener('keydown', handleKeyDown);
+		const dropzoneElement = document.getElementById('chat-container');
 
-			dropZone?.removeEventListener('dragover', onDragOver);
-			dropZone?.removeEventListener('drop', onDrop);
-			dropZone?.removeEventListener('dragleave', onDragLeave);
-		};
+		dropzoneElement?.addEventListener('dragover', onDragOver);
+		dropzoneElement?.addEventListener('drop', onDrop);
+		dropzoneElement?.addEventListener('dragleave', onDragLeave);
+	});
+
+	onDestroy(() => {
+		console.log('destroy');
+		window.removeEventListener('keydown', handleKeyDown);
+
+		const dropzoneElement = document.getElementById('chat-container');
+
+		if (dropzoneElement) {
+			dropzoneElement?.removeEventListener('dragover', onDragOver);
+			dropzoneElement?.removeEventListener('drop', onDrop);
+			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
+		}
 	});
 </script>
 
-{#if dragged}
-	<div
-		class="fixed {$showSidebar
-			? 'left-0 lg:left-[260px] lg:w-[calc(100%-260px)]'
-			: 'left-0'}  w-full h-full flex z-50 touch-none pointer-events-none"
-		id="dropzone"
-		role="region"
-		aria-label="Drag and Drop Container"
-	>
-		<div class="absolute w-full h-full backdrop-blur bg-gray-800/40 flex justify-center">
-			<div class="m-auto pt-64 flex flex-col justify-center">
-				<div class="max-w-md">
-					<AddFilesPlaceholder />
-				</div>
-			</div>
-		</div>
-	</div>
-{/if}
+<FilesOverlay show={dragged} />
 
-<div class="fixed bottom-0 {$showSidebar ? 'left-0 lg:left-[260px]' : 'left-0'} right-0">
-	<div class="w-full">
-		<div class="px-2.5 lg:px-16 -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
-			<div class="flex flex-col max-w-5xl w-full">
+{#if loaded}
+	<div class="w-full font-primary">
+		<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
+			<div
+				class="flex flex-col px-3 {($settings?.widescreenMode ?? null)
+					? 'max-w-full'
+					: 'max-w-6xl'} w-full"
+			>
 				<div class="relative">
-					{#if autoScroll === false && messages.length > 0}
-						<div class=" absolute -top-12 left-0 right-0 flex justify-center z-30">
+					{#if autoScroll === false && history?.currentId}
+						<div
+							class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none"
+						>
 							<button
-								class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full"
+								class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
 								on:click={() => {
 									autoScroll = true;
 									scrollToBottom();
@@ -460,83 +392,151 @@
 				</div>
 
 				<div class="w-full relative">
-					{#if prompt.charAt(0) === '/'}
-						<Prompts bind:this={promptsElement} bind:prompt />
-					{:else if prompt.charAt(0) === '#'}
-						<Documents
-							bind:this={documentsElement}
-							bind:prompt
-							on:youtube={(e) => {
-								console.log(e);
-								uploadYoutubeTranscription(e.detail);
-							}}
-							on:url={(e) => {
-								console.log(e);
-								uploadWeb(e.detail);
-							}}
-							on:select={(e) => {
-								console.log(e);
-								files = [
-									...files,
-									{
-										type: e?.detail?.type ?? 'doc',
-										...e.detail,
-										upload_status: true
-									}
-								];
-							}}
-						/>
-					{/if}
-
-					<Models
-						bind:this={modelsElement}
-						bind:prompt
-						bind:user
-						bind:chatInputPlaceholder
-						{messages}
-						on:select={(e) => {
-							selectedModel = e.detail;
-							chatTextAreaElement?.focus();
-						}}
-					/>
-
-					{#if selectedModel !== ''}
+					{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || webSearchEnabled || ($settings?.webSearch ?? false) === 'always' || imageGenerationEnabled || codeInterpreterEnabled}
 						<div
-							class="px-3 py-2.5 text-left w-full flex justify-between items-center absolute bottom-0 left-0 right-0 bg-gradient-to-t from-50% from-white dark:from-gray-900"
+							class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10"
 						>
-							<div class="flex items-center gap-2 text-sm dark:text-gray-500">
-								<img
-									alt="model profile"
-									class="size-5 max-w-[28px] object-cover rounded-full"
-									src={$modelfiles.find((modelfile) => modelfile.tagName === selectedModel.id)
-										?.imageUrl ??
-										($i18n.language === 'dg-DG'
-											? `/doge.png`
-											: `${WEBUI_BASE_URL}/static/favicon.png`)}
-								/>
-								<div>
-									Talking to <span class=" font-medium">{selectedModel.name} </span>
+							{#if selectedToolIds.length > 0}
+								<div class="flex items-center justify-between w-full">
+									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
+										<div class="pl-1">
+											<span class="relative flex size-2">
+												<span
+													class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"
+												/>
+												<span class="relative inline-flex rounded-full size-2 bg-yellow-500" />
+											</span>
+										</div>
+										<div class="  text-ellipsis line-clamp-1 flex">
+											{#each selectedToolIds.map((id) => {
+												return $tools ? $tools.find((t) => t.id === id) : { id: id, name: id };
+											}) as tool, toolIdx (toolIdx)}
+												<Tooltip
+													content={tool?.meta?.description ?? ''}
+													className=" {toolIdx !== 0 ? 'pl-0.5' : ''} flex-shrink-0"
+													placement="top"
+												>
+													{tool.name}
+												</Tooltip>
+
+												{#if toolIdx !== selectedToolIds.length - 1}
+													<span>, </span>
+												{/if}
+											{/each}
+										</div>
+									</div>
 								</div>
-							</div>
-							<div>
-								<button
-									class="flex items-center"
-									on:click={() => {
-										selectedModel = '';
-									}}
-								>
-									<XMark />
-								</button>
-							</div>
+							{/if}
+
+							{#if webSearchEnabled || ($settings?.webSearch ?? false) === 'always'}
+								<div class="flex items-center justify-between w-full">
+									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
+										<div class="pl-1">
+											<span class="relative flex size-2">
+												<span
+													class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"
+												/>
+												<span class="relative inline-flex rounded-full size-2 bg-blue-500" />
+											</span>
+										</div>
+										<div class=" translate-y-[0.5px]">{$i18n.t('Search the internet')}</div>
+									</div>
+								</div>
+							{/if}
+
+							{#if imageGenerationEnabled}
+								<div class="flex items-center justify-between w-full">
+									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
+										<div class="pl-1">
+											<span class="relative flex size-2">
+												<span
+													class="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"
+												/>
+												<span class="relative inline-flex rounded-full size-2 bg-teal-500" />
+											</span>
+										</div>
+										<div class=" translate-y-[0.5px]">{$i18n.t('Generate an image')}</div>
+									</div>
+								</div>
+							{/if}
+
+							{#if codeInterpreterEnabled}
+								<div class="flex items-center justify-between w-full">
+									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
+										<div class="pl-1">
+											<span class="relative flex size-2">
+												<span
+													class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
+												/>
+												<span class="relative inline-flex rounded-full size-2 bg-green-500" />
+											</span>
+										</div>
+										<div class=" translate-y-[0.5px]">{$i18n.t('Execute code for analysis')}</div>
+									</div>
+								</div>
+							{/if}
+
+							{#if atSelectedModel !== undefined}
+								<div class="flex items-center justify-between w-full">
+									<div class="pl-[1px] flex items-center gap-2 text-sm dark:text-gray-500">
+										<img
+											crossorigin="anonymous"
+											alt="model profile"
+											class="size-3.5 max-w-[28px] object-cover rounded-full"
+											src={$models.find((model) => model.id === atSelectedModel.id)?.info?.meta
+												?.profile_image_url ??
+												($i18n.language === 'dg-DG'
+													? `/doge.png`
+													: `${WEBUI_BASE_URL}/static/favicon.png`)}
+										/>
+										<div class="translate-y-[0.5px]">
+											Talking to <span class=" font-medium">{atSelectedModel.name}</span>
+										</div>
+									</div>
+									<div>
+										<button
+											class="flex items-center dark:text-gray-500"
+											on:click={() => {
+												atSelectedModel = undefined;
+											}}
+										>
+											<XMark />
+										</button>
+									</div>
+								</div>
+							{/if}
 						</div>
 					{/if}
+
+					<Commands
+						bind:this={commandsElement}
+						bind:prompt
+						bind:files
+						on:upload={(e) => {
+							dispatch('upload', e.detail);
+						}}
+						on:select={(e) => {
+							const data = e.detail;
+
+							if (data?.type === 'model') {
+								atSelectedModel = data.data;
+							}
+
+							const chatInputElement = document.getElementById('chat-input');
+							chatInputElement?.focus();
+						}}
+					/>
 				</div>
 			</div>
 		</div>
 
-		<div class="bg-white dark:bg-gray-900">
-			<div class="max-w-6xl px-2.5 lg:px-16 mx-auto inset-x-0">
-				<div class=" pb-2">
+		<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-gray-900'} ">
+			<div
+				class="{($settings?.widescreenMode ?? null)
+					? 'max-w-full'
+					: 'max-w-6xl'} px-2.5 mx-auto inset-x-0"
+			>
+				<div class="">
 					<input
 						bind:this={filesInputElement}
 						bind:files={inputFiles}
@@ -546,434 +546,688 @@
 						on:change={async () => {
 							if (inputFiles && inputFiles.length > 0) {
 								const _inputFiles = Array.from(inputFiles);
-								_inputFiles.forEach((file) => {
-									if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
-										let reader = new FileReader();
-										reader.onload = (event) => {
-											files = [
-												...files,
-												{
-													type: 'image',
-													url: `${event.target.result}`
-												}
-											];
-											inputFiles = null;
-											filesInputElement.value = '';
-										};
-										reader.readAsDataURL(file);
-									} else if (
-										SUPPORTED_FILE_TYPE.includes(file['type']) ||
-										SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
-									) {
-										uploadDoc(file);
-										filesInputElement.value = '';
-									} else {
-										toast.error(
-											$i18n.t(
-												`Unknown File Type '{{file_type}}', but accepting and treating as plain text`,
-												{ file_type: file['type'] }
-											)
-										);
-										uploadDoc(file);
-										filesInputElement.value = '';
-									}
-								});
+								inputFilesHandler(_inputFiles);
 							} else {
 								toast.error($i18n.t(`File not found.`));
 							}
+
+							filesInputElement.value = '';
 						}}
 					/>
-					<form
-						class=" flex flex-col relative w-full rounded-3xl px-1.5 border border-gray-100 dark:border-gray-850 bg-white dark:bg-gray-900 dark:text-gray-100"
-						on:submit|preventDefault={() => {
-							submitPrompt(prompt, user);
-						}}
-					>
-						{#if files.length > 0}
-							<div class="mx-2 mt-2 mb-1 flex flex-wrap gap-2">
-								{#each files as file, fileIdx}
-									<div class=" relative group">
-										{#if file.type === 'image'}
-											<img src={file.url} alt="input" class=" h-16 w-16 rounded-xl object-cover" />
-										{:else if file.type === 'doc'}
-											<div
-												class="h-16 w-[15rem] flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none"
-											>
-												<div class="p-2.5 bg-red-400 text-white rounded-lg">
-													{#if file.upload_status}
-														<svg
-															xmlns="http://www.w3.org/2000/svg"
-															viewBox="0 0 24 24"
-															fill="currentColor"
-															class="w-6 h-6"
-														>
-															<path
-																fill-rule="evenodd"
-																d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0 0 16.5 9h-1.875a1.875 1.875 0 0 1-1.875-1.875V5.25A3.75 3.75 0 0 0 9 1.5H5.625ZM7.5 15a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 7.5 15Zm.75 2.25a.75.75 0 0 0 0 1.5H12a.75.75 0 0 0 0-1.5H8.25Z"
-																clip-rule="evenodd"
-															/>
-															<path
-																d="M12.971 1.816A5.23 5.23 0 0 1 14.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 0 1 3.434 1.279 9.768 9.768 0 0 0-6.963-6.963Z"
-															/>
-														</svg>
-													{:else}
-														<svg
-															class=" w-6 h-6 translate-y-[0.5px]"
-															fill="currentColor"
-															viewBox="0 0 24 24"
-															xmlns="http://www.w3.org/2000/svg"
-															><style>
-																.spinner_qM83 {
-																	animation: spinner_8HQG 1.05s infinite;
-																}
-																.spinner_oXPr {
-																	animation-delay: 0.1s;
-																}
-																.spinner_ZTLf {
-																	animation-delay: 0.2s;
-																}
-																@keyframes spinner_8HQG {
-																	0%,
-																	57.14% {
-																		animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
-																		transform: translate(0);
-																	}
-																	28.57% {
-																		animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
-																		transform: translateY(-6px);
-																	}
-																	100% {
-																		transform: translate(0);
-																	}
-																}
-															</style><circle class="spinner_qM83" cx="4" cy="12" r="2.5" /><circle
-																class="spinner_qM83 spinner_oXPr"
-																cx="12"
-																cy="12"
-																r="2.5"
-															/><circle
-																class="spinner_qM83 spinner_ZTLf"
-																cx="20"
-																cy="12"
-																r="2.5"
-															/></svg
-														>
-													{/if}
-												</div>
 
-												<div class="flex flex-col justify-center -space-y-0.5">
-													<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1">
-														{file.name}
-													</div>
+					{#if recording}
+						<VoiceRecording
+							bind:recording
+							on:cancel={async () => {
+								recording = false;
 
-													<div class=" text-gray-500 text-sm">{$i18n.t('Document')}</div>
-												</div>
-											</div>
-										{:else if file.type === 'collection'}
-											<div
-												class="h-16 w-[15rem] flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none"
-											>
-												<div class="p-2.5 bg-red-400 text-white rounded-lg">
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 24 24"
-														fill="currentColor"
-														class="w-6 h-6"
-													>
-														<path
-															d="M7.5 3.375c0-1.036.84-1.875 1.875-1.875h.375a3.75 3.75 0 0 1 3.75 3.75v1.875C13.5 8.161 14.34 9 15.375 9h1.875A3.75 3.75 0 0 1 21 12.75v3.375C21 17.16 20.16 18 19.125 18h-9.75A1.875 1.875 0 0 1 7.5 16.125V3.375Z"
+								await tick();
+								document.getElementById('chat-input')?.focus();
+							}}
+							on:confirm={async (e) => {
+								const { text, filename } = e.detail;
+								prompt = `${prompt}${text} `;
+
+								recording = false;
+
+								await tick();
+								document.getElementById('chat-input')?.focus();
+
+								if ($settings?.speechAutoSend ?? false) {
+									dispatch('submit', prompt);
+								}
+							}}
+						/>
+					{:else}
+						<form
+							class="w-full flex gap-1.5"
+							on:submit|preventDefault={() => {
+								// check if selectedModels support image input
+								dispatch('submit', prompt);
+							}}
+						>
+							<div
+								class="flex-1 flex flex-col relative w-full rounded-3xl px-1 bg-gray-600/5 dark:bg-gray-400/5 dark:text-gray-100"
+								dir={$settings?.chatDirection ?? 'LTR'}
+							>
+								{#if files.length > 0}
+									<div class="mx-2 mt-2.5 -mb-1 flex items-center flex-wrap gap-2">
+										{#each files as file, fileIdx}
+											{#if file.type === 'image'}
+												<div class=" relative group">
+													<div class="relative flex items-center">
+														<Image
+															src={file.url}
+															alt="input"
+															imageClassName=" size-14 rounded-xl object-cover"
 														/>
-														<path
-															d="M15 5.25a5.23 5.23 0 0 0-1.279-3.434 9.768 9.768 0 0 1 6.963 6.963A5.23 5.23 0 0 0 17.25 7.5h-1.875A.375.375 0 0 1 15 7.125V5.25ZM4.875 6H6v10.125A3.375 3.375 0 0 0 9.375 19.5H16.5v1.125c0 1.035-.84 1.875-1.875 1.875h-9.75A1.875 1.875 0 0 1 3 20.625V7.875C3 6.839 3.84 6 4.875 6Z"
-														/>
-													</svg>
-												</div>
-
-												<div class="flex flex-col justify-center -space-y-0.5">
-													<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1">
-														{file?.title ?? `#${file.name}`}
+														{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
+															<Tooltip
+																className=" absolute top-1 left-1"
+																content={$i18n.t('{{ models }}', {
+																	models: [
+																		...(atSelectedModel ? [atSelectedModel] : selectedModels)
+																	]
+																		.filter((id) => !visionCapableModels.includes(id))
+																		.join(', ')
+																})}
+															>
+																<svg
+																	xmlns="http://www.w3.org/2000/svg"
+																	viewBox="0 0 24 24"
+																	fill="currentColor"
+																	class="size-4 fill-yellow-300"
+																>
+																	<path
+																		fill-rule="evenodd"
+																		d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
+																		clip-rule="evenodd"
+																	/>
+																</svg>
+															</Tooltip>
+														{/if}
 													</div>
-
-													<div class=" text-gray-500 text-sm">{$i18n.t('Collection')}</div>
+													<div class=" absolute -top-1 -right-1">
+														<button
+															class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
+															type="button"
+															on:click={() => {
+																files.splice(fileIdx, 1);
+																files = files;
+															}}
+														>
+															<svg
+																xmlns="http://www.w3.org/2000/svg"
+																viewBox="0 0 20 20"
+																fill="currentColor"
+																class="size-4"
+															>
+																<path
+																	d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+																/>
+															</svg>
+														</button>
+													</div>
 												</div>
-											</div>
-										{/if}
+											{:else}
+												<FileItem
+													item={file}
+													name={file.name}
+													type={file.type}
+													size={file?.size}
+													loading={file.status === 'uploading'}
+													dismissible={true}
+													edit={true}
+													on:dismiss={async () => {
+														if (file.type !== 'collection' && !file?.collection) {
+															if (file.id) {
+																// This will handle both file deletion and Chroma cleanup
+																await deleteFileById(localStorage.token, file.id);
+															}
+														}
 
-										<div class=" absolute -top-1 -right-1">
-											<button
-												class=" bg-gray-400 text-white border border-white rounded-full group-hover:visible invisible transition"
-												type="button"
-												on:click={() => {
-													files.splice(fileIdx, 1);
-													files = files;
+														// Remove from UI state
+														files.splice(fileIdx, 1);
+														files = files;
+													}}
+													on:click={() => {
+														console.log(file);
+													}}
+												/>
+											{/if}
+										{/each}
+									</div>
+								{/if}
+
+								<div class="px-2.5">
+									{#if $settings?.richTextInput ?? true}
+										<div
+											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
+										>
+											<RichTextInput
+												bind:this={chatInputElement}
+												bind:value={prompt}
+												id="chat-input"
+												messageInput={true}
+												shiftEnter={!$mobile ||
+													!(
+														'ontouchstart' in window ||
+														navigator.maxTouchPoints > 0 ||
+														navigator.msMaxTouchPoints > 0
+													)}
+												placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
+												largeTextAsFile={$settings?.largeTextAsFile ?? false}
+												autocomplete={$config?.features.enable_autocomplete_generation}
+												generateAutoCompletion={async (text) => {
+													if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {
+														toast.error($i18n.t('Please select a model first.'));
+													}
+
+													const res = await generateAutoCompletion(
+														localStorage.token,
+														selectedModelIds.at(0),
+														text,
+														history?.currentId
+															? createMessagesList(history, history.currentId)
+															: null
+													).catch((error) => {
+														console.log(error);
+
+														return null;
+													});
+
+													console.log(res);
+													return res;
 												}}
+												on:keydown={async (e) => {
+													e = e.detail.event;
+
+													const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
+													const commandsContainerElement =
+														document.getElementById('commands-container');
+
+													if (e.key === 'Escape') {
+														stopResponse();
+													}
+
+													// Command/Ctrl + Shift + Enter to submit a message pair
+													if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
+														e.preventDefault();
+														createMessagePair(prompt);
+													}
+
+													// Check if Ctrl + R is pressed
+													if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
+														e.preventDefault();
+														console.log('regenerate');
+
+														const regenerateButton = [
+															...document.getElementsByClassName('regenerate-response-button')
+														]?.at(-1);
+
+														regenerateButton?.click();
+													}
+
+													if (prompt === '' && e.key == 'ArrowUp') {
+														e.preventDefault();
+
+														const userMessageElement = [
+															...document.getElementsByClassName('user-message')
+														]?.at(-1);
+
+														if (userMessageElement) {
+															userMessageElement.scrollIntoView({ block: 'center' });
+															const editButton = [
+																...document.getElementsByClassName('edit-user-message-button')
+															]?.at(-1);
+
+															editButton?.click();
+														}
+													}
+
+													if (commandsContainerElement) {
+														if (commandsContainerElement && e.key === 'ArrowUp') {
+															e.preventDefault();
+															commandsElement.selectUp();
+
+															const commandOptionButton = [
+																...document.getElementsByClassName('selected-command-option-button')
+															]?.at(-1);
+															commandOptionButton.scrollIntoView({ block: 'center' });
+														}
+
+														if (commandsContainerElement && e.key === 'ArrowDown') {
+															e.preventDefault();
+															commandsElement.selectDown();
+
+															const commandOptionButton = [
+																...document.getElementsByClassName('selected-command-option-button')
+															]?.at(-1);
+															commandOptionButton.scrollIntoView({ block: 'center' });
+														}
+
+														if (commandsContainerElement && e.key === 'Tab') {
+															e.preventDefault();
+
+															const commandOptionButton = [
+																...document.getElementsByClassName('selected-command-option-button')
+															]?.at(-1);
+
+															commandOptionButton?.click();
+														}
+
+														if (commandsContainerElement && e.key === 'Enter') {
+															e.preventDefault();
+
+															const commandOptionButton = [
+																...document.getElementsByClassName('selected-command-option-button')
+															]?.at(-1);
+
+															if (commandOptionButton) {
+																commandOptionButton?.click();
+															} else {
+																document.getElementById('send-message-button')?.click();
+															}
+														}
+													} else {
+														if (
+															!$mobile ||
+															!(
+																'ontouchstart' in window ||
+																navigator.maxTouchPoints > 0 ||
+																navigator.msMaxTouchPoints > 0
+															)
+														) {
+															// Prevent Enter key from creating a new line
+															// Uses keyCode '13' for Enter key for chinese/japanese keyboards
+															if (e.keyCode === 13 && !e.shiftKey) {
+																e.preventDefault();
+															}
+
+															// Submit the prompt when Enter key is pressed
+															if (prompt !== '' && e.keyCode === 13 && !e.shiftKey) {
+																dispatch('submit', prompt);
+															}
+														}
+													}
+
+													if (e.key === 'Escape') {
+														console.log('Escape');
+														atSelectedModel = undefined;
+														selectedToolIds = [];
+														webSearchEnabled = false;
+														imageGenerationEnabled = false;
+													}
+												}}
+												on:paste={async (e) => {
+													e = e.detail.event;
+													console.log(e);
+
+													const clipboardData = e.clipboardData || window.clipboardData;
+
+													if (clipboardData && clipboardData.items) {
+														for (const item of clipboardData.items) {
+															if (item.type.indexOf('image') !== -1) {
+																const blob = item.getAsFile();
+																const reader = new FileReader();
+
+																reader.onload = function (e) {
+																	files = [
+																		...files,
+																		{
+																			type: 'image',
+																			url: `${e.target.result}`
+																		}
+																	];
+																};
+
+																reader.readAsDataURL(blob);
+															} else if (item.type === 'text/plain') {
+																if ($settings?.largeTextAsFile ?? false) {
+																	const text = clipboardData.getData('text/plain');
+
+																	if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
+																		e.preventDefault();
+																		const blob = new Blob([text], { type: 'text/plain' });
+																		const file = new File([blob], `Pasted_Text_${Date.now()}.txt`, {
+																			type: 'text/plain'
+																		});
+
+																		await uploadFileHandler(file, true);
+																	}
+																}
+															}
+														}
+													}
+												}}
+											/>
+										</div>
+									{:else}
+										<textarea
+											id="chat-input"
+											bind:this={chatInputElement}
+											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-none w-full pt-3 px-1 resize-none"
+											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
+											bind:value={prompt}
+											on:keypress={(e) => {
+												if (
+													!$mobile ||
+													!(
+														'ontouchstart' in window ||
+														navigator.maxTouchPoints > 0 ||
+														navigator.msMaxTouchPoints > 0
+													)
+												) {
+													// Prevent Enter key from creating a new line
+													if (e.key === 'Enter' && !e.shiftKey) {
+														e.preventDefault();
+													}
+
+													// Submit the prompt when Enter key is pressed
+													if (prompt !== '' && e.key === 'Enter' && !e.shiftKey) {
+														dispatch('submit', prompt);
+													}
+												}
+											}}
+											on:keydown={async (e) => {
+												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
+												const commandsContainerElement =
+													document.getElementById('commands-container');
+
+												if (e.key === 'Escape') {
+													stopResponse();
+												}
+												// Command/Ctrl + Shift + Enter to submit a message pair
+												if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
+													e.preventDefault();
+													createMessagePair(prompt);
+												}
+
+												// Check if Ctrl + R is pressed
+												if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
+													e.preventDefault();
+													console.log('regenerate');
+
+													const regenerateButton = [
+														...document.getElementsByClassName('regenerate-response-button')
+													]?.at(-1);
+
+													regenerateButton?.click();
+												}
+
+												if (prompt === '' && e.key == 'ArrowUp') {
+													e.preventDefault();
+
+													const userMessageElement = [
+														...document.getElementsByClassName('user-message')
+													]?.at(-1);
+
+													const editButton = [
+														...document.getElementsByClassName('edit-user-message-button')
+													]?.at(-1);
+
+													console.log(userMessageElement);
+
+													userMessageElement.scrollIntoView({ block: 'center' });
+													editButton?.click();
+												}
+
+												if (commandsContainerElement && e.key === 'ArrowUp') {
+													e.preventDefault();
+													commandsElement.selectUp();
+
+													const commandOptionButton = [
+														...document.getElementsByClassName('selected-command-option-button')
+													]?.at(-1);
+													commandOptionButton.scrollIntoView({ block: 'center' });
+												}
+
+												if (commandsContainerElement && e.key === 'ArrowDown') {
+													e.preventDefault();
+													commandsElement.selectDown();
+
+													const commandOptionButton = [
+														...document.getElementsByClassName('selected-command-option-button')
+													]?.at(-1);
+													commandOptionButton.scrollIntoView({ block: 'center' });
+												}
+
+												if (commandsContainerElement && e.key === 'Enter') {
+													e.preventDefault();
+
+													const commandOptionButton = [
+														...document.getElementsByClassName('selected-command-option-button')
+													]?.at(-1);
+
+													if (e.shiftKey) {
+														prompt = `${prompt}\n`;
+													} else if (commandOptionButton) {
+														commandOptionButton?.click();
+													} else {
+														document.getElementById('send-message-button')?.click();
+													}
+												}
+
+												if (commandsContainerElement && e.key === 'Tab') {
+													e.preventDefault();
+
+													const commandOptionButton = [
+														...document.getElementsByClassName('selected-command-option-button')
+													]?.at(-1);
+
+													commandOptionButton?.click();
+												} else if (e.key === 'Tab') {
+													const words = findWordIndices(prompt);
+
+													if (words.length > 0) {
+														const word = words.at(0);
+														const fullPrompt = prompt;
+
+														prompt = prompt.substring(0, word?.endIndex + 1);
+														await tick();
+
+														e.target.scrollTop = e.target.scrollHeight;
+														prompt = fullPrompt;
+														await tick();
+
+														e.preventDefault();
+														e.target.setSelectionRange(word?.startIndex, word.endIndex + 1);
+													}
+
+													e.target.style.height = '';
+													e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
+												}
+
+												if (e.key === 'Escape') {
+													console.log('Escape');
+													atSelectedModel = undefined;
+													selectedToolIds = [];
+													webSearchEnabled = false;
+													imageGenerationEnabled = false;
+												}
+											}}
+											rows="1"
+											on:input={async (e) => {
+												e.target.style.height = '';
+												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
+											}}
+											on:focus={async (e) => {
+												e.target.style.height = '';
+												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
+											}}
+											on:paste={async (e) => {
+												const clipboardData = e.clipboardData || window.clipboardData;
+
+												if (clipboardData && clipboardData.items) {
+													for (const item of clipboardData.items) {
+														if (item.type.indexOf('image') !== -1) {
+															const blob = item.getAsFile();
+															const reader = new FileReader();
+
+															reader.onload = function (e) {
+																files = [
+																	...files,
+																	{
+																		type: 'image',
+																		url: `${e.target.result}`
+																	}
+																];
+															};
+
+															reader.readAsDataURL(blob);
+														} else if (item.type === 'text/plain') {
+															if ($settings?.largeTextAsFile ?? false) {
+																const text = clipboardData.getData('text/plain');
+
+																if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
+																	e.preventDefault();
+																	const blob = new Blob([text], { type: 'text/plain' });
+																	const file = new File([blob], `Pasted_Text_${Date.now()}.txt`, {
+																		type: 'text/plain'
+																	});
+
+																	await uploadFileHandler(file, true);
+																}
+															}
+														}
+													}
+												}
+											}}
+										/>
+									{/if}
+								</div>
+
+								<div class=" flex justify-between mt-1.5 mb-2.5 mx-0.5 max-w-full">
+									<div class="ml-1 self-end gap-0.5 flex items-center flex-1 max-w-[80%]">
+										<InputMenu
+											bind:selectedToolIds
+											{screenCaptureHandler}
+											{inputFilesHandler}
+											uploadFilesHandler={() => {
+												filesInputElement.click();
+											}}
+											uploadGoogleDriveHandler={async () => {
+												try {
+													const fileData = await createPicker();
+													if (fileData) {
+														const file = new File([fileData.blob], fileData.name, {
+															type: fileData.blob.type
+														});
+														await uploadFileHandler(file);
+													} else {
+														console.log('No file was selected from Google Drive');
+													}
+												} catch (error) {
+													console.error('Google Drive Error:', error);
+													toast.error(
+														$i18n.t('Error accessing Google Drive: {{error}}', {
+															error: error.message
+														})
+													);
+												}
+											}}
+											onClose={async () => {
+												await tick();
+
+												const chatInput = document.getElementById('chat-input');
+												chatInput?.focus();
+											}}
+										>
+											<button
+												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-none focus:outline-none"
+												type="button"
+												aria-label="More"
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
 													viewBox="0 0 20 20"
 													fill="currentColor"
-													class="w-4 h-4"
+													class="size-5"
 												>
 													<path
-														d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+														d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
 													/>
 												</svg>
 											</button>
+										</InputMenu>
+
+										<div class="flex gap-0.5 items-center overflow-x-auto scrollbar-none flex-1">
+											{#if $_user}
+												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
+													<Tooltip content={$i18n.t('Search the internet')} placement="top">
+														<button
+															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
+															type="button"
+															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {webSearchEnabled ||
+															($settings?.webSearch ?? false) === 'always'
+																? 'bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-400'
+																: 'bg-transparent text-gray-600 dark:text-gray-400 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+														>
+															<GlobeAlt className="size-5" strokeWidth="1.75" />
+															<span
+																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																>{$i18n.t('Web Search')}</span
+															>
+														</button>
+													</Tooltip>
+												{/if}
+
+												{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
+													<Tooltip content={$i18n.t('Generate an image')} placement="top">
+														<button
+															on:click|preventDefault={() =>
+																(imageGenerationEnabled = !imageGenerationEnabled)}
+															type="button"
+															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {imageGenerationEnabled
+																? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+														>
+															<Photo className="size-5" strokeWidth="1.75" />
+															<span
+																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																>{$i18n.t('Image')}</span
+															>
+														</button>
+													</Tooltip>
+												{/if}
+
+												{#if $config?.features?.enable_code_interpreter && ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter)}
+													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
+														<button
+															on:click|preventDefault={() =>
+																(codeInterpreterEnabled = !codeInterpreterEnabled)}
+															type="button"
+															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
+																? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+														>
+															<CommandLine className="size-5" strokeWidth="1.75" />
+															<span
+																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																>{$i18n.t('Code Interpreter')}</span
+															>
+														</button>
+													</Tooltip>
+												{/if}
+											{/if}
 										</div>
 									</div>
-								{/each}
-							</div>
-						{/if}
 
-						<div class=" flex">
-							{#if fileUploadEnabled}
-								<div class=" self-end mb-2 ml-1">
-									<Tooltip content={$i18n.t('Upload files')}>
-										<button
-											class="bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
-											type="button"
-											on:click={() => {
-												filesInputElement.click();
-											}}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 16 16"
-												fill="currentColor"
-												class="w-[1.2rem] h-[1.2rem]"
-											>
-												<path
-													d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-												/>
-											</svg>
-										</button>
-									</Tooltip>
-								</div>
-							{/if}
+									<div class="self-end flex space-x-1 mr-1 flex-shrink-0">
+										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
+											<Tooltip content={$i18n.t('Record voice')}>
+												<button
+													id="voice-input-button"
+													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
+													type="button"
+													on:click={async () => {
+														try {
+															let stream = await navigator.mediaDevices
+																.getUserMedia({ audio: true })
+																.catch(function (err) {
+																	toast.error(
+																		$i18n.t(
+																			`Permission denied when accessing microphone: {{error}}`,
+																			{
+																				error: err
+																			}
+																		)
+																	);
+																	return null;
+																});
 
-							<textarea
-								id="chat-textarea"
-								bind:this={chatTextAreaElement}
-								class="scrollbar-none dark:bg-gray-900 dark:text-gray-100 outline-none w-full py-3 px-3 {fileUploadEnabled
-									? ''
-									: ' pl-4'} rounded-xl resize-none h-[48px]"
-								placeholder={chatInputPlaceholder !== ''
-									? chatInputPlaceholder
-									: isRecording
-									? $i18n.t('Listening...')
-									: $i18n.t('Send a Message')}
-								bind:value={prompt}
-								on:keypress={(e) => {
-									if (
-										window.innerWidth > 1024 ||
-										!(
-											'ontouchstart' in window ||
-											navigator.maxTouchPoints > 0 ||
-											navigator.msMaxTouchPoints > 0
-										)
-									) {
-										if (e.keyCode == 13 && !e.shiftKey) {
-											e.preventDefault();
-										}
-										if (prompt !== '' && e.keyCode == 13 && !e.shiftKey) {
-											submitPrompt(prompt, user);
-										}
-									}
-								}}
-								on:keydown={async (e) => {
-									const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
-
-									// Check if Ctrl + R is pressed
-									if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
-										e.preventDefault();
-										console.log('regenerate');
-
-										const regenerateButton = [
-											...document.getElementsByClassName('regenerate-response-button')
-										]?.at(-1);
-
-										regenerateButton?.click();
-									}
-
-									if (prompt === '' && e.key == 'ArrowUp') {
-										e.preventDefault();
-
-										const userMessageElement = [
-											...document.getElementsByClassName('user-message')
-										]?.at(-1);
-
-										const editButton = [
-											...document.getElementsByClassName('edit-user-message-button')
-										]?.at(-1);
-
-										console.log(userMessageElement);
-
-										userMessageElement.scrollIntoView({ block: 'center' });
-										editButton?.click();
-									}
-
-									if (['/', '#', '@'].includes(prompt.charAt(0)) && e.key === 'ArrowUp') {
-										e.preventDefault();
-
-										(promptsElement || documentsElement || modelsElement).selectUp();
-
-										const commandOptionButton = [
-											...document.getElementsByClassName('selected-command-option-button')
-										]?.at(-1);
-										commandOptionButton.scrollIntoView({ block: 'center' });
-									}
-
-									if (['/', '#', '@'].includes(prompt.charAt(0)) && e.key === 'ArrowDown') {
-										e.preventDefault();
-
-										(promptsElement || documentsElement || modelsElement).selectDown();
-
-										const commandOptionButton = [
-											...document.getElementsByClassName('selected-command-option-button')
-										]?.at(-1);
-										commandOptionButton.scrollIntoView({ block: 'center' });
-									}
-
-									if (['/', '#', '@'].includes(prompt.charAt(0)) && e.key === 'Enter') {
-										e.preventDefault();
-
-										const commandOptionButton = [
-											...document.getElementsByClassName('selected-command-option-button')
-										]?.at(-1);
-
-										if (commandOptionButton) {
-											commandOptionButton?.click();
-										} else {
-											document.getElementById('send-message-button')?.click();
-										}
-									}
-
-									if (['/', '#', '@'].includes(prompt.charAt(0)) && e.key === 'Tab') {
-										e.preventDefault();
-
-										const commandOptionButton = [
-											...document.getElementsByClassName('selected-command-option-button')
-										]?.at(-1);
-
-										commandOptionButton?.click();
-									} else if (e.key === 'Tab') {
-										const words = findWordIndices(prompt);
-
-										if (words.length > 0) {
-											const word = words.at(0);
-											const fullPrompt = prompt;
-
-											prompt = prompt.substring(0, word?.endIndex + 1);
-											await tick();
-
-											e.target.scrollTop = e.target.scrollHeight;
-											prompt = fullPrompt;
-											await tick();
-
-											e.preventDefault();
-											e.target.setSelectionRange(word?.startIndex, word.endIndex + 1);
-										}
-
-										e.target.style.height = '';
-										e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
-									}
-
-									if (e.key === 'Escape') {
-										console.log('Escape');
-										selectedModel = '';
-									}
-								}}
-								rows="1"
-								on:input={(e) => {
-									e.target.style.height = '';
-									e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
-									user = null;
-								}}
-								on:focus={(e) => {
-									e.target.style.height = '';
-									e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
-								}}
-								on:paste={(e) => {
-									const clipboardData = e.clipboardData || window.clipboardData;
-
-									if (clipboardData && clipboardData.items) {
-										for (const item of clipboardData.items) {
-											if (item.type.indexOf('image') !== -1) {
-												const blob = item.getAsFile();
-												const reader = new FileReader();
-
-												reader.onload = function (e) {
-													files = [
-														...files,
-														{
-															type: 'image',
-															url: `${e.target.result}`
+															if (stream) {
+																recording = true;
+																const tracks = stream.getTracks();
+																tracks.forEach((track) => track.stop());
+															}
+															stream = null;
+														} catch {
+															toast.error($i18n.t('Permission denied when accessing microphone'));
 														}
-													];
-												};
-
-												reader.readAsDataURL(blob);
-											}
-										}
-									}
-								}}
-							/>
-
-							<div class="self-end mb-2 flex space-x-1 mr-1">
-								{#if messages.length == 0 || messages.at(-1).done == true}
-									<Tooltip content={$i18n.t('Record voice')}>
-										{#if speechRecognitionEnabled}
-											<button
-												id="voice-input-button"
-												class=" text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-full p-1.5 mr-0.5 self-center"
-												type="button"
-												on:click={() => {
-													speechRecognitionHandler();
-												}}
-											>
-												{#if isRecording}
-													<svg
-														class=" w-5 h-5 translate-y-[0.5px]"
-														fill="currentColor"
-														viewBox="0 0 24 24"
-														xmlns="http://www.w3.org/2000/svg"
-														><style>
-															.spinner_qM83 {
-																animation: spinner_8HQG 1.05s infinite;
-															}
-															.spinner_oXPr {
-																animation-delay: 0.1s;
-															}
-															.spinner_ZTLf {
-																animation-delay: 0.2s;
-															}
-															@keyframes spinner_8HQG {
-																0%,
-																57.14% {
-																	animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
-																	transform: translate(0);
-																}
-																28.57% {
-																	animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
-																	transform: translateY(-6px);
-																}
-																100% {
-																	transform: translate(0);
-																}
-															}
-														</style><circle class="spinner_qM83" cx="4" cy="12" r="2.5" /><circle
-															class="spinner_qM83 spinner_oXPr"
-															cx="12"
-															cy="12"
-															r="2.5"
-														/><circle
-															class="spinner_qM83 spinner_ZTLf"
-															cx="20"
-															cy="12"
-															r="2.5"
-														/></svg
-													>
-												{:else}
+													}}
+													aria-label="Voice Input"
+												>
 													<svg
 														xmlns="http://www.w3.org/2000/svg"
 														viewBox="0 0 20 20"
@@ -985,73 +1239,136 @@
 															d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"
 														/>
 													</svg>
-												{/if}
-											</button>
+												</button>
+											</Tooltip>
 										{/if}
-									</Tooltip>
 
-									<Tooltip content={$i18n.t('Send message')}>
-										<button
-											id="send-message-button"
-											class="{prompt !== ''
-												? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-												: 'text-white bg-gray-100 dark:text-gray-900 dark:bg-gray-800 disabled'} transition rounded-full p-1.5 self-center"
-											type="submit"
-											disabled={prompt === ''}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 16 16"
-												fill="currentColor"
-												class="w-5 h-5"
-											>
-												<path
-													fill-rule="evenodd"
-													d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-													clip-rule="evenodd"
-												/>
-											</svg>
-										</button>
-									</Tooltip>
-								{:else}
-									<button
-										class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
-										on:click={stopResponse}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 24 24"
-											fill="currentColor"
-											class="w-5 h-5"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-									</button>
-								{/if}
+										{#if !history.currentId || history.messages[history.currentId]?.done == true}
+											{#if prompt === '' && files.length === 0}
+												<div class=" flex items-center">
+													<Tooltip content={$i18n.t('Call')}>
+														<button
+															class=" {webSearchEnabled ||
+															($settings?.webSearch ?? false) === 'always'
+																? 'bg-blue-500 text-white hover:bg-blue-400 '
+																: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100'} transition rounded-full p-1.5 self-center"
+															type="button"
+															on:click={async () => {
+																if (selectedModels.length > 1) {
+																	toast.error($i18n.t('Select only one model to call'));
+
+																	return;
+																}
+
+																if ($config.audio.stt.engine === 'web') {
+																	toast.error(
+																		$i18n.t(
+																			'Call feature is not supported when using Web STT engine'
+																		)
+																	);
+
+																	return;
+																}
+																// check if user has access to getUserMedia
+																try {
+																	let stream = await navigator.mediaDevices.getUserMedia({
+																		audio: true
+																	});
+																	// If the user grants the permission, proceed to show the call overlay
+
+																	if (stream) {
+																		const tracks = stream.getTracks();
+																		tracks.forEach((track) => track.stop());
+																	}
+
+																	stream = null;
+
+																	if (!$TTSWorker) {
+																		await TTSWorker.set(
+																			new KokoroWorker({
+																				dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
+																			})
+																		);
+
+																		await $TTSWorker.init();
+																	}
+
+																	showCallOverlay.set(true);
+																	showControls.set(true);
+																} catch (err) {
+																	// If the user denies the permission or an error occurs, show an error message
+																	toast.error(
+																		$i18n.t('Permission denied when accessing media devices')
+																	);
+																}
+															}}
+															aria-label="Call"
+														>
+															<Headphone className="size-5" />
+														</button>
+													</Tooltip>
+												</div>
+											{:else}
+												<div class=" flex items-center">
+													<Tooltip content={$i18n.t('Send message')}>
+														<button
+															id="send-message-button"
+															class="{!(prompt === '' && files.length === 0)
+																? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
+																	? 'bg-blue-500 text-white hover:bg-blue-400 '
+																	: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+															type="submit"
+															disabled={prompt === '' && files.length === 0}
+														>
+															<svg
+																xmlns="http://www.w3.org/2000/svg"
+																viewBox="0 0 16 16"
+																fill="currentColor"
+																class="size-5"
+															>
+																<path
+																	fill-rule="evenodd"
+																	d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+																	clip-rule="evenodd"
+																/>
+															</svg>
+														</button>
+													</Tooltip>
+												</div>
+											{/if}
+										{:else}
+											<div class=" flex items-center">
+												<Tooltip content={$i18n.t('Stop')}>
+													<button
+														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+														on:click={() => {
+															stopResponse();
+														}}
+													>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 24 24"
+															fill="currentColor"
+															class="size-5"
+														>
+															<path
+																fill-rule="evenodd"
+																d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
+																clip-rule="evenodd"
+															/>
+														</svg>
+													</button>
+												</Tooltip>
+											</div>
+										{/if}
+									</div>
+								</div>
 							</div>
-						</div>
-					</form>
-
-					<div class="mt-1.5 text-xs text-gray-500 text-center">
-						{$i18n.t('LLMs can make mistakes. Verify important information.')}
-					</div>
+						</form>
+					{/if}
 				</div>
 			</div>
 		</div>
 	</div>
-</div>
-
-<style>
-	.scrollbar-none:active::-webkit-scrollbar-thumb,
-	.scrollbar-none:focus::-webkit-scrollbar-thumb,
-	.scrollbar-none:hover::-webkit-scrollbar-thumb {
-		visibility: visible;
-	}
-	.scrollbar-none::-webkit-scrollbar-thumb {
-		visibility: hidden;
-	}
-</style>
+{/if}

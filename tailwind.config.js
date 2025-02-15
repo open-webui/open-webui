@@ -1,3 +1,6 @@
+import typography from '@tailwindcss/typography';
+import containerQuries from '@tailwindcss/container-queries';
+
 /** @type {import('tailwindcss').Config} */
 export default {
 	darkMode: 'class',
@@ -14,8 +17,8 @@ export default {
 					500: '#9b9b9b',
 					600: '#676767',
 					700: '#4e4e4e',
-					800: '#333',
-					850: '#262626',
+					800: 'var(--color-gray-800, #333)',
+					850: 'var(--color-gray-850, #262626)',
 					900: 'var(--color-gray-900, #171717)',
 					950: 'var(--color-gray-950, #0d0d0d)'
 				}
@@ -30,8 +33,11 @@ export default {
 						'code::after': false
 					}
 				}
+			},
+			padding: {
+				'safe-bottom': 'env(safe-area-inset-bottom)'
 			}
 		}
 	},
-	plugins: [require('@tailwindcss/typography')]
+	plugins: [typography, containerQuries]
 };

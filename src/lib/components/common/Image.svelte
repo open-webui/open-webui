@@ -5,19 +5,23 @@
 	export let src = '';
 	export let alt = '';
 
-	let _src = '';
+	export let className = ' w-full outline-none focus:outline-none';
+	export let imageClassName = 'rounded-lg';
 
+	let _src = '';
 	$: _src = src.startsWith('/') ? `${WEBUI_BASE_URL}${src}` : src;
 
 	let showImagePreview = false;
 </script>
 
-<ImagePreview bind:show={showImagePreview} src={_src} {alt} />
 <button
+	class={className}
 	on:click={() => {
-		console.log('image preview');
 		showImagePreview = true;
 	}}
+	type="button"
 >
-	<img src={_src} {alt} class=" max-h-96 rounded-lg" draggable="false" />
+	<img src={_src} {alt} class={imageClassName} draggable="false" data-cy="image" />
 </button>
+
+<ImagePreview bind:show={showImagePreview} src={_src} {alt} />

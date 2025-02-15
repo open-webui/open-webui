@@ -10,9 +10,11 @@ node_modules
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 __pycache__
-.env
+.idea
+venv
 _old
 uploads
 .ipynb_checkpoints
 **/*.db
 _test
+backend/data/*

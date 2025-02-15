@@ -1,4 +1,6 @@
 /// <reference types="cypress" />
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
+/// <reference path="../support/index.d.ts" />
 
 export const adminUser = {
 	name: 'Admin User',
@@ -10,6 +12,9 @@ const login = (email: string, password: string) => {
 	return cy.session(
 		email,
 		() => {
+			// Make sure to test against us english to have stable tests,
+			// regardless on local language preferences
+			localStorage.setItem('locale', 'en-US');
 			// Visit auth page
 			cy.visit('/auth');
 			// Fill out the form
