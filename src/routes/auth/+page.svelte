@@ -234,21 +234,19 @@
 												required
 											/>
 										</div>
-									{:else}
-										{#if mode === 'signin' || ($config?.features.enable_password_signups && mode === 'signup')}
-											<div class="mb-2">
-												<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Email')}</div>
-												<input
-													bind:value={email}
-													type="email"
-													class="my-0.5 w-full text-sm outline-none bg-transparent"
-													autocomplete="email"
-													name="email"
-													placeholder={$i18n.t('Enter Your Email')}
-													required
-												/>
-											</div>
-										{/if}
+									{:else if mode === 'signin' || ($config?.features.enable_password_signups && mode === 'signup')}
+										<div class="mb-2">
+											<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Email')}</div>
+											<input
+												bind:value={email}
+												type="email"
+												class="my-0.5 w-full text-sm outline-none bg-transparent"
+												autocomplete="email"
+												name="email"
+												placeholder={$i18n.t('Enter Your Email')}
+												required
+											/>
+										</div>
 									{/if}
 
 									{#if mode === 'signin' || ($config?.features.enable_password_signups && mode === 'signup')}
@@ -285,7 +283,7 @@
 											>
 												{#if mode === 'signin'}
 													{$i18n.t('Sign in')}
-												{:else if ($config?.onboarding ?? false)}
+												{:else if $config?.onboarding ?? false}
 													{$i18n.t('Create Admin Account')}
 												{:else}
 													{$i18n.t('Create Account')}
