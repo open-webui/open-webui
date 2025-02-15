@@ -1887,18 +1887,18 @@
 	id="chat-container"
 >
 	{#if chatIdProp === '' || (!loading && chatIdProp)}
-		{#if $settings?.backgroundImageUrl ?? null}
-			<div
-				class="absolute {$showSidebar
-					? 'md:max-w-[calc(100%-260px)] md:translate-x-[260px]'
-					: ''} top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
-				style="background-image: url({$settings.backgroundImageUrl})  "
-			/>
+        {#if $settings?.backgroundImageUrl ?? $config?.chat_background_image ?? null}
+            <div
+                class="absolute {$showSidebar
+                    ? 'md:max-w-[calc(100%-260px)] md:translate-x-[260px]'
+                    : ''} top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
+                style="background-image: url({$settings.backgroundImageUrl || $config?.chat_background_image})"
+            />
 
-			<div
-				class="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-white to-white/85 dark:from-gray-900 dark:to-[#171717]/90 z-0"
-			/>
-		{/if}
+            <div
+                class="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-white to-white/85 dark:from-gray-900 dark:to-[#171717]/90 z-0"
+            />
+        {/if}
 
 		<Navbar
 			bind:this={navbarElement}
@@ -1990,7 +1990,7 @@
 								bind:codeInterpreterEnabled
 								bind:webSearchEnabled
 								bind:atSelectedModel
-								transparentBackground={$settings?.backgroundImageUrl ?? false}
+								transparentBackground={$settings?.backgroundImageUrl ?? $config?.chat_background_image ?? false}
 								{stopResponse}
 								{createMessagePair}
 								onChange={(input) => {
@@ -2042,7 +2042,7 @@
 								bind:codeInterpreterEnabled
 								bind:webSearchEnabled
 								bind:atSelectedModel
-								transparentBackground={$settings?.backgroundImageUrl ?? false}
+								transparentBackground={$settings?.backgroundImageUrl ?? $config?.chat_background_image ?? false}
 								{stopResponse}
 								{createMessagePair}
 								on:upload={async (e) => {

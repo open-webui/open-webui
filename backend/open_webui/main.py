@@ -226,6 +226,7 @@ from open_webui.config import (
     DEFAULT_PROMPT_SUGGESTIONS,
     DEFAULT_MODELS,
     DEFAULT_ARENA_MODEL,
+    CHAT_BACKGROUND_IMAGE,
     MODEL_ORDER_LIST,
     EVALUATION_ARENA_MODELS,
     # WebUI (OAuth)
@@ -296,6 +297,7 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
     RESET_CONFIG_ON_START,
     OFFLINE_MODE,
+    DEFAULT_BACKGROUND_IMAGE,
 )
 
 
@@ -441,6 +443,8 @@ app.state.config.ADMIN_EMAIL = ADMIN_EMAIL
 app.state.config.DEFAULT_MODELS = DEFAULT_MODELS
 app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
 app.state.config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
+app.state.config.CHAT_BACKGROUND_IMAGE = CHAT_BACKGROUND_IMAGE
+
 
 app.state.config.USER_PERMISSIONS = USER_PERMISSIONS
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
@@ -1072,6 +1076,8 @@ async def get_app_config(request: Request):
         "name": WEBUI_NAME,
         "version": VERSION,
         "default_locale": str(DEFAULT_LOCALE),
+        "default_background_image": str(DEFAULT_BACKGROUND_IMAGE),
+        "chat_background_image": app.state.config.CHAT_BACKGROUND_IMAGE,
         "oauth": {
             "providers": {
                 name: config.get("name", name)

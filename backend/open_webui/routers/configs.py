@@ -177,6 +177,24 @@ async def set_default_suggestions(
 
 
 ############################
+# SetDefaultBackgroundImage
+############################
+class SetDefaultBackgroundForm(BaseModel):
+    background: str
+
+
+@router.post("/background", response_model=str)
+async def set_default_background_image(
+    request: Request,
+    form_data: SetDefaultBackgroundForm,
+    user=Depends(get_admin_user),
+):
+    data = form_data.model_dump()
+    request.app.state.config.CHAT_BACKGROUND_IMAGE = form_data.background
+    return request.app.state.config.CHAT_BACKGROUND_IMAGE
+
+
+############################
 # SetBanners
 ############################
 
