@@ -66,38 +66,49 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
 
 
 def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
-    opts = [
-        "temperature",
-        "top_p",
-        "seed",
-        "mirostat",
-        "mirostat_eta",
-        "mirostat_tau",
-        "num_ctx",
-        "num_batch",
-        "num_keep",
-        "repeat_last_n",
-        "tfs_z",
-        "top_k",
-        "min_p",
-        "use_mmap",
-        "use_mlock",
-        "num_thread",
-        "num_gpu",
-    ]
-    mappings = {i: lambda x: x for i in opts}
-    form_data = apply_model_params_to_body(params, form_data, mappings)
-
+    # Convert OpenAI parameter names to Ollama parameter names if needed.
+    # We moved this above mappings and apply_model_params_to_body because otherwise the cast func in apply_model_params_to_body wasn't applied consistently.
     name_differences = {
         "max_tokens": "num_predict",
-        "frequency_penalty": "repeat_penalty",
-    }
-
+    }    
+    
     for key, value in name_differences.items():
         if (param := params.get(key, None)) is not None:
-            form_data[value] = param
+            # Copy the parameter to new name then delete it, to prevent Ollama warning of invalid option provided
+            params[value] = param[key]
+            del param[key]
+    
+    # See https://github.com/ollama/ollama/blob/main/docs/api.md#request-8
+    mappings = {
+        "temperature": float,
+        "top_p": float,
+        "seed": lambda x: x,
+        "mirostat": int,
+        "mirostat_eta": float,
+        "mirostat_tau": float,
+        "num_ctx": int,
+        "num_batch": int,
+        "num_keep": int,
+        "repeat_last_n": int,
+        "top_k": int,
+        "min_p": float,
+        "typical_p": float,
+        "repeat_penalty": float,
+        "presence_penalty": float,
+        "frequency_penalty": float,
+        "penalize_newline": bool,
+        "stop":  lambda x: [bytes(s, "utf-8").decode("unicode_escape") for s in x],
+        "numa": bool,
+        "num_gpu": int,
+        "main_gpu": int,
+        "low_vram": bool,
+        "vocab_only": bool,
+        "use_mmap": bool,
+        "use_mlock": bool,
+        "num_thread": int,
+    }
 
-    return form_data
+    return apply_model_params_to_body(params, form_data, mappings)
 
 
 def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
@@ -172,35 +183,20 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     if "format" in openai_payload:
         ollama_payload["format"] = openai_payload["format"]
 
-    # If there are advanced parameters in the payload, format them in Ollama's options field
-    ollama_options = {}
-
     if openai_payload.get("options"):
-        ollama_payload["options"] = openai_payload["options"]
         ollama_options = openai_payload["options"]
-
-    # Handle parameters which map directly
-    for param in ["temperature", "top_p", "seed"]:
-        if param in openai_payload:
-            ollama_options[param] = openai_payload[param]
-
-    # Mapping OpenAI's `max_tokens` -> Ollama's `num_predict`
-    if "max_completion_tokens" in openai_payload:
-        ollama_options["num_predict"] = openai_payload["max_completion_tokens"]
-    elif "max_tokens" in openai_payload:
-        ollama_options["num_predict"] = openai_payload["max_tokens"]
-
-    # Handle frequency / presence_penalty, which needs renaming and checking
-    if "frequency_penalty" in openai_payload:
-        ollama_options["repeat_penalty"] = openai_payload["frequency_penalty"]
-
-    if "presence_penalty" in openai_payload and "penalty" not in ollama_options:
-        # We are assuming presence penalty uses a similar concept in Ollama, which needs custom handling if exists.
-        ollama_options["new_topic_penalty"] = openai_payload["presence_penalty"]
-
-    # Add options to payload if any have been set
-    if ollama_options:
         ollama_payload["options"] = ollama_options
+        
+        # Mapping OpenAI's `max_tokens` -> Ollama's `num_predict`
+        if "max_tokens" in ollama_options:
+            # Remember this alters the original openai_payload["options"] dict, as a debugging note
+            ollama_options["num_predict"] = ollama_options["max_tokens"] 
+            del ollama_options["max_tokens"] # To prevent Ollama warning of invalid option provided
+        
+        # Ollama lacks a "system" prompt option. It has to be provided as a direct parameter, so we copy it down.
+        if "system" in ollama_options:
+            ollama_payload["system"] = ollama_options["system"] 
+            del ollama_options["system"] # To prevent Ollama warning of invalid option provided
 
     if "metadata" in openai_payload:
         ollama_payload["metadata"] = openai_payload["metadata"]
