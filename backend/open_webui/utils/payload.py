@@ -4,6 +4,7 @@ from open_webui.utils.misc import (
 )
 
 from typing import Callable, Optional
+import json
 
 
 # inplace function: form_data is modified
@@ -108,11 +109,38 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
         new_message = {"role": message["role"]}
 
         content = message.get("content", [])
+        tool_calls = message.get("tool_calls", None)
+        tool_call_id = message.get("tool_call_id", None)
 
         # Check if the content is a string (just a simple message)
         if isinstance(content, str):
             # If the content is a string, it's pure text
             new_message["content"] = content
+
+            # If message is a tool call, add the tool call id to the message
+            if tool_call_id:
+                new_message["tool_call_id"] = tool_call_id
+
+        elif tool_calls:
+            # If tool calls are present, add them to the message
+            ollama_tool_calls = []
+            for tool_call in tool_calls:
+                ollama_tool_call = {
+                    "index": tool_call.get("index", 0),
+                    "id": tool_call.get("id", None),
+                    "function": {
+                        "name": tool_call.get("function", {}).get("name", ""),
+                        "arguments": json.loads(
+                            tool_call.get("function", {}).get("arguments", {})
+                        ),
+                    },
+                }
+                ollama_tool_calls.append(ollama_tool_call)
+            new_message["tool_calls"] = ollama_tool_calls
+
+            # Put the content to empty string (Ollama requires an empty string for tool calls)
+            new_message["content"] = ""
+            
         else:
             # Otherwise, assume the content is a list of dicts, e.g., text followed by an image URL
             content_text = ""
