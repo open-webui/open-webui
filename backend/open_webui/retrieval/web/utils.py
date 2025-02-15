@@ -96,11 +96,12 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader):
     Attributes:
         web_paths (List[str]): List of URLs to load.
         verify_ssl (bool): If True, verify SSL certificates.
+        trust_env (bool): If True, use proxy settings from environment variables.
         requests_per_second (Optional[float]): Number of requests per second to limit to.
         continue_on_failure (bool): If True, continue loading other URLs on failure.
         headless (bool): If True, the browser will run in headless mode.
+        proxy (dict): Proxy override settings for the Playwright session.
         playwright_ws_url (Optional[str]): WebSocket endpoint URI for remote browser connection.
-        trust_env (bool): If True, use proxy settings from environment variables.
     """
 
     def __init__(
