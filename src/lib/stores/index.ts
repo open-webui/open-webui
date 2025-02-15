@@ -194,8 +194,8 @@ type Config = {
 	name: string;
 	version: string;
 	default_locale: string;
-    default_background_image: string;
-    chat_background_image: string;
+	default_background_image: string;
+	chat_background_image: string;
 	default_models: string;
 	default_prompt_suggestions: PromptSuggestion[];
 	features: {

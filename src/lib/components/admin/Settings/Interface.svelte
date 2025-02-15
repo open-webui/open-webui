@@ -39,7 +39,7 @@
 
 	let inputFiles = null;
 	let filesInputElement;
-    let backgroundImageUrl = null;
+	let backgroundImageUrl = null;
 
 	let promptSuggestions = [];
 	let banners: Banner[] = [];
@@ -58,7 +58,7 @@
 		taskConfig = await getTaskConfig(localStorage.token);
 
 		promptSuggestions = $config?.default_prompt_suggestions;
-        backgroundImageUrl = $config?.chat_background_image ?? $config?.default_background_image;
+		backgroundImageUrl = $config?.chat_background_image ?? $config?.default_background_image;
 		banners = await getBanners(localStorage.token);
 	});
 
@@ -75,32 +75,32 @@
 			dispatch('save');
 		}}
 	>
-        <input
-            bind:this={filesInputElement}
-            bind:files={inputFiles}
-            type="file"
-            hidden
-            accept="image/*"
-            on:change={() => {
-                let reader = new FileReader();
-                reader.onload = (event) => {
-                    let originalImageUrl = `${event.target.result}`;
+		<input
+			bind:this={filesInputElement}
+			bind:files={inputFiles}
+			type="file"
+			hidden
+			accept="image/*"
+			on:change={() => {
+				let reader = new FileReader();
+				reader.onload = (event) => {
+					let originalImageUrl = `${event.target.result}`;
 
-                    backgroundImageUrl = originalImageUrl;
-                };
+					backgroundImageUrl = originalImageUrl;
+				};
 
-                if (
-                    inputFiles &&
-                    inputFiles.length > 0 &&
-                    ['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(inputFiles[0]['type'])
-                ) {
-                    reader.readAsDataURL(inputFiles[0]);
-                } else {
-                    console.log(`Unsupported File Type '${inputFiles[0]['type']}'.`);
-                    inputFiles = null;
-                }
-            }}
-        />
+				if (
+					inputFiles &&
+					inputFiles.length > 0 &&
+					['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(inputFiles[0]['type'])
+				) {
+					reader.readAsDataURL(inputFiles[0]);
+				} else {
+					console.log(`Unsupported File Type '${inputFiles[0]['type']}'.`);
+					inputFiles = null;
+				}
+			}}
+		/>
 		<div class="  overflow-y-scroll scrollbar-hidden h-full pr-1.5">
 			<div>
 				<div class=" mb-2.5 text-sm font-medium flex items-center">
@@ -265,30 +265,30 @@
 
 				<hr class=" border-gray-50 dark:border-gray-850 my-3" />
 
-                <div>
-                    <div class=" py-0.5 flex w-full justify-between">
-                        <div class=" self-center text-xs font-medium">
-                            {$i18n.t('Chat Background Image')}
-                        </div>
-                        <button
-                            class="p-1 px-3 text-xs flex rounded transition"
-                            on:click={() => {
-                                if (backgroundImageUrl !== $config?.default_background_image) {
-                                    backgroundImageUrl = $config?.default_background_image;
-                                } else {
-                                    filesInputElement.click();
-                                }
-                            }}
-                            type="button"
-                        >
-                            {#if backgroundImageUrl !== $config?.default_background_image}
-                                <span class="ml-2 self-center">{$i18n.t('Reset')}</span>
-                            {:else}
-                                <span class="ml-2 self-center">{$i18n.t('Upload')}</span>
-                            {/if}
-                        </button>
-                    </div>
-                </div>
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Chat Background Image')}
+						</div>
+						<button
+							class="p-1 px-3 text-xs flex rounded transition"
+							on:click={() => {
+								if (backgroundImageUrl !== $config?.default_background_image) {
+									backgroundImageUrl = $config?.default_background_image;
+								} else {
+									filesInputElement.click();
+								}
+							}}
+							type="button"
+						>
+							{#if backgroundImageUrl !== $config?.default_background_image}
+								<span class="ml-2 self-center">{$i18n.t('Reset')}</span>
+							{:else}
+								<span class="ml-2 self-center">{$i18n.t('Upload')}</span>
+							{/if}
+						</button>
+					</div>
+				</div>
 
 				<hr class=" border-gray-50 dark:border-gray-850 my-3" />
 
