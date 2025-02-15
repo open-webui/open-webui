@@ -238,11 +238,6 @@
 				{/each}
 			</ul>
 		{/if}
-	{:else if token.type === 'list_item'}
-		{JSON.stringify(token)}
-		<p>
-			<MarkdownInlineTokens id={`${id}-${tokenIdx}-li`} tokens={token.tokens} {onSourceClick} />
-		</p>
 	{:else if token.type === 'details'}
 		<Collapsible title={token.summary} attributes={token?.attributes} className="w-full space-y-1">
 			<div class=" mb-1.5" slot="content">

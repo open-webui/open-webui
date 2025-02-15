@@ -21,6 +21,7 @@ from fastapi import (
     APIRouter,
 )
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 import tiktoken
 
@@ -1313,7 +1314,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
 
 
 @router.post("/process/web/search")
-def process_web_search(
+async def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
     try:
@@ -1347,15 +1348,21 @@ def process_web_search(
             requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             trust_env=request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
         )
-        docs = loader.load()
-        save_docs_to_vector_db(
-            request, docs, collection_name, overwrite=True, user=user
+        docs = await loader.aload()
+        await run_in_threadpool(
+            save_docs_to_vector_db,
+            request,
+            docs,
+            collection_name,
+            overwrite=True,
+            user=user,
         )
 
         return {
             "status": True,
             "collection_name": collection_name,
             "filenames": urls,
+            "loaded_count": len(docs),
         }
     except Exception as e:
         log.exception(e)
