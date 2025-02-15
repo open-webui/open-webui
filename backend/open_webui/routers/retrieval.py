@@ -1348,8 +1348,6 @@ async def process_web_search(
             requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             trust_env=request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
         )
-        docs = [doc async for doc in loader.alazy_load()]
-        # docs = loader.load()
         docs = await loader.aload()
         await run_in_threadpool(
             save_docs_to_vector_db,
