@@ -37,6 +37,21 @@
 			align="start"
 			transition={(e) => fade(e, { duration: 100 })}
 		>
+ <!-- Новый пункт меню: Обновить план -->
+      <button
+        class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+        on:click={() => showUpdatePlanModal = true} // Открытие модала
+      >
+        <div class=" self-center mr-3">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <!-- Иконка для обновления -->
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+        </div>
+        <div class=" self-center truncate">{$i18n.t('Update Plan')}</div>
+      </button>
+
+      <!-- Оставшиеся кнопки -->
 			<button
 				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
