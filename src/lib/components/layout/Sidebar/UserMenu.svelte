@@ -1,14 +1,11 @@
 <script lang="ts">
-  import { DropdownMenu } from 'bits-ui';
   import { createEventDispatcher, getContext, onMount } from 'svelte';
-
-  import { flyAndScale } from '$lib/utils/transitions';
-  import { goto } from '$app/navigation';
-  import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
+  import { DropdownMenu } from 'bits-ui';
   import { showSettings, activeUserIds, USAGE_POOL, mobile, showSidebar } from '$lib/stores';
   import { fade } from 'svelte/transition';
   import Tooltip from '$lib/components/common/Tooltip.svelte';
   import { userSignOut } from '$lib/apis/auths';
+  import UpdatePlanModal from '$lib/components/UpdatePlanModal.svelte'; // Импортируем модальное окно
 
   const i18n = getContext('i18n');
 
@@ -17,6 +14,9 @@
   export let className = 'max-w-[240px]';
 
   const dispatch = createEventDispatcher();
+  
+  // Состояние для открытия модального окна
+  let showUpdatePlanModal = false;
 </script>
 
 <DropdownMenu.Root
@@ -47,8 +47,10 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
           </svg>
         </div>
-        <div class="self-center truncate">{$i18n.t('Update Plan')}</div>
+        <div class="self-center truncate">{$i18n.t('Upgrade Plan')}</div>
       </button>
+
+      <!-- Другие элементы меню -->
 
       <!-- Кнопка настроек -->
       <button
