@@ -716,6 +716,9 @@
 										floatingButtons={message?.done}
 										save={!readOnly}
 										{model}
+										onTaskClick={async (e) => {
+											console.log(e);
+										}}
 										onSourceClick={async (e) => {
 											console.log(e);
 											let sourceButton = document.getElementById(`source-${e}`);
@@ -725,10 +728,12 @@
 												sourceButton.click();
 											} else if (sourcesCollapsible) {
 												// Open sources collapsible so we can click the source button
-												sourcesCollapsible.querySelector("div:first-child").dispatchEvent(new PointerEvent('pointerup', {}))
+												sourcesCollapsible
+													.querySelector('div:first-child')
+													.dispatchEvent(new PointerEvent('pointerup', {}));
 
 												// Wait for next frame to ensure DOM updates
-												await new Promise(resolve => {
+												await new Promise((resolve) => {
 													requestAnimationFrame(() => {
 														requestAnimationFrame(resolve);
 													});

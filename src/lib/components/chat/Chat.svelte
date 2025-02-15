@@ -838,6 +838,7 @@
 				timestamp: m.timestamp,
 				...(m.sources ? { sources: m.sources } : {})
 			})),
+			model_item: $models.find((m) => m.id === modelId),
 			chat_id: chatId,
 			session_id: $socket?.id,
 			id: responseMessageId
@@ -896,6 +897,7 @@
 				...(m.sources ? { sources: m.sources } : {})
 			})),
 			...(event ? { event: event } : {}),
+			model_item: $models.find((m) => m.id === modelId),
 			chat_id: chatId,
 			session_id: $socket?.id,
 			id: responseMessageId
@@ -1574,6 +1576,7 @@
 						$settings?.userLocation ? await getAndUpdateUserLocation(localStorage.token) : undefined
 					)
 				},
+				model_item: $models.find((m) => m.id === model.id),
 
 				session_id: $socket?.id,
 				chat_id: $chatId,

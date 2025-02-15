@@ -177,10 +177,13 @@ from open_webui.config import (
     RAG_WEB_SEARCH_ENGINE,
     RAG_WEB_SEARCH_RESULT_COUNT,
     RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+    RAG_WEB_SEARCH_TRUST_ENV,
     RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
     JINA_API_KEY,
     SEARCHAPI_API_KEY,
     SEARCHAPI_ENGINE,
+    SERPAPI_API_KEY,
+    SERPAPI_ENGINE,
     SEARXNG_QUERY_URL,
     SERPER_API_KEY,
     SERPLY_API_KEY,
@@ -266,6 +269,7 @@ from open_webui.config import (
     TASK_MODEL,
     TASK_MODEL_EXTERNAL,
     ENABLE_TAGS_GENERATION,
+    ENABLE_TITLE_GENERATION,
     ENABLE_SEARCH_QUERY_GENERATION,
     ENABLE_RETRIEVAL_QUERY_GENERATION,
     ENABLE_AUTOCOMPLETE_GENERATION,
@@ -347,12 +351,12 @@ class SPAStaticFiles(StaticFiles):
 
 print(
     rf"""
-  ___                    __        __   _     _   _ ___
- / _ \ _ __   ___ _ __   \ \      / /__| |__ | | | |_ _|
-| | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || |
-| |_| | |_) |  __/ | | |   \ V  V /  __/ |_) | |_| || |
- \___/| .__/ \___|_| |_|    \_/\_/ \___|_.__/ \___/|___|
-      |_|
+ ██████╗ ██████╗ ███████╗███╗   ██╗    ██╗    ██╗███████╗██████╗ ██╗   ██╗██╗
+██╔═══██╗██╔══██╗██╔════╝████╗  ██║    ██║    ██║██╔════╝██╔══██╗██║   ██║██║
+██║   ██║██████╔╝█████╗  ██╔██╗ ██║    ██║ █╗ ██║█████╗  ██████╔╝██║   ██║██║
+██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║    ██║███╗██║██╔══╝  ██╔══██╗██║   ██║██║
+╚██████╔╝██║     ███████╗██║ ╚████║    ╚███╔███╔╝███████╗██████╔╝╚██████╔╝██║
+ ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝     ╚══╝╚══╝ ╚══════╝╚═════╝  ╚═════╝ ╚═╝
 
 
 v{VERSION} - building the best open-source AI user interface.
@@ -548,6 +552,8 @@ app.state.config.SERPLY_API_KEY = SERPLY_API_KEY
 app.state.config.TAVILY_API_KEY = TAVILY_API_KEY
 app.state.config.SEARCHAPI_API_KEY = SEARCHAPI_API_KEY
 app.state.config.SEARCHAPI_ENGINE = SEARCHAPI_ENGINE
+app.state.config.SERPAPI_API_KEY = SERPAPI_API_KEY
+app.state.config.SERPAPI_ENGINE = SERPAPI_ENGINE
 app.state.config.JINA_API_KEY = JINA_API_KEY
 app.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT
 app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY
@@ -556,6 +562,7 @@ app.state.config.EXA_API_KEY = EXA_API_KEY
 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
 app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
 app.state.config.RAG_WEB_LOADER = RAG_WEB_LOADER
+app.state.config.RAG_WEB_SEARCH_TRUST_ENV = RAG_WEB_SEARCH_TRUST_ENV
 app.state.config.PLAYWRIGHT_WS_URI = PLAYWRIGHT_WS_URI
 
 app.state.EMBEDDING_FUNCTION = None
@@ -693,6 +700,7 @@ app.state.config.ENABLE_SEARCH_QUERY_GENERATION = ENABLE_SEARCH_QUERY_GENERATION
 app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = ENABLE_RETRIEVAL_QUERY_GENERATION
 app.state.config.ENABLE_AUTOCOMPLETE_GENERATION = ENABLE_AUTOCOMPLETE_GENERATION
 app.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION
+app.state.config.ENABLE_TITLE_GENERATION = ENABLE_TITLE_GENERATION
 
 
 app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE
@@ -904,20 +912,30 @@ async def chat_completion(
     if not request.app.state.MODELS:
         await get_all_models(request)
 
+    model_item = form_data.pop("model_item", {})
     tasks = form_data.pop("background_tasks", None)
-    try:
-        model_id = form_data.get("model", None)
-        if model_id not in request.app.state.MODELS:
-            raise Exception("Model not found")
-        model = request.app.state.MODELS[model_id]
-        model_info = Models.get_model_by_id(model_id)
 
-        # Check if user has access to the model
-        if not BYPASS_MODEL_ACCESS_CONTROL and user.role == "user":
-            try:
-                check_model_access(user, model)
-            except Exception as e:
-                raise e
+    try:
+        if not model_item.get("direct", False):
+            model_id = form_data.get("model", None)
+            if model_id not in request.app.state.MODELS:
+                raise Exception("Model not found")
+
+            model = request.app.state.MODELS[model_id]
+            model_info = Models.get_model_by_id(model_id)
+
+            # Check if user has access to the model
+            if not BYPASS_MODEL_ACCESS_CONTROL and user.role == "user":
+                try:
+                    check_model_access(user, model)
+                except Exception as e:
+                    raise e
+        else:
+            model = model_item
+            model_info = None
+
+            request.state.direct = True
+            request.state.model = model
 
         metadata = {
             "user_id": user.id,
@@ -929,6 +947,7 @@ async def chat_completion(
             "features": form_data.get("features", None),
             "variables": form_data.get("variables", None),
             "model": model_info,
+            "direct": model_item.get("direct", False),
             **(
                 {"function_calling": "native"}
                 if form_data.get("params", {}).get("function_calling") == "native"
@@ -940,6 +959,8 @@ async def chat_completion(
                 else {}
             ),
         }
+
+        request.state.metadata = metadata
         form_data["metadata"] = metadata
 
         form_data, metadata, events = await process_chat_payload(
@@ -947,6 +968,7 @@ async def chat_completion(
         )
 
     except Exception as e:
+        log.debug(f"Error processing chat payload: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -975,6 +997,12 @@ async def chat_completed(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
     try:
+        model_item = form_data.pop("model_item", {})
+
+        if model_item.get("direct", False):
+            request.state.direct = True
+            request.state.model = model_item
+
         return await chat_completed_handler(request, form_data, user)
     except Exception as e:
         raise HTTPException(
@@ -988,6 +1016,12 @@ async def chat_action(
     request: Request, action_id: str, form_data: dict, user=Depends(get_verified_user)
 ):
     try:
+        model_item = form_data.pop("model_item", {})
+
+        if model_item.get("direct", False):
+            request.state.direct = True
+            request.state.model = model_item
+
         return await chat_action_handler(request, action_id, form_data, user)
     except Exception as e:
         raise HTTPException(

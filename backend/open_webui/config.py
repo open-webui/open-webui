@@ -1190,6 +1190,12 @@ ENABLE_TAGS_GENERATION = PersistentConfig(
     os.environ.get("ENABLE_TAGS_GENERATION", "True").lower() == "true",
 )
 
+ENABLE_TITLE_GENERATION = PersistentConfig(
+    "ENABLE_TITLE_GENERATION",
+    "task.title.enable",
+    os.environ.get("ENABLE_TITLE_GENERATION", "True").lower() == "true",
+)
+
 
 ENABLE_SEARCH_QUERY_GENERATION = PersistentConfig(
     "ENABLE_SEARCH_QUERY_GENERATION",
@@ -1803,6 +1809,18 @@ SEARCHAPI_ENGINE = PersistentConfig(
     os.getenv("SEARCHAPI_ENGINE", ""),
 )
 
+SERPAPI_API_KEY = PersistentConfig(
+    "SERPAPI_API_KEY",
+    "rag.web.search.serpapi_api_key",
+    os.getenv("SERPAPI_API_KEY", ""),
+)
+
+SERPAPI_ENGINE = PersistentConfig(
+    "SERPAPI_ENGINE",
+    "rag.web.search.serpapi_engine",
+    os.getenv("SERPAPI_ENGINE", ""),
+)
+
 BING_SEARCH_V7_ENDPOINT = PersistentConfig(
     "BING_SEARCH_V7_ENDPOINT",
     "rag.web.search.bing_search_v7_endpoint",
@@ -1839,6 +1857,12 @@ RAG_WEB_LOADER = PersistentConfig(
     "RAG_WEB_LOADER",
     "rag.web.loader",
     os.environ.get("RAG_WEB_LOADER", "safe_web")
+)
+
+RAG_WEB_SEARCH_TRUST_ENV = PersistentConfig(
+    "RAG_WEB_SEARCH_TRUST_ENV",
+    "rag.web.search.trust_env",
+    os.getenv("RAG_WEB_SEARCH_TRUST_ENV", False),
 )
 
 PLAYWRIGHT_WS_URI = PersistentConfig(
