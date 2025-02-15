@@ -2,7 +2,8 @@
 # Initialize device type args
 # use build args in the docker build commmand with --build-arg="BUILDARG=true"
 ARG USE_CUDA=false
-ARG USE_OLLAMA=false
+ARG USE_OLLAMA=true
+ARG USE_OPENCL=true  # Add OpenCL support
 # Tested with cu117 for CUDA 11 and cu121 for CUDA 12 (default)
 ARG USE_CUDA_VER=cu121
 # any sentence transformer model; models to use can be found at https://huggingface.co/models?library=sentence-transformers
@@ -29,6 +30,7 @@ FROM python:3.11-slim-bookworm as base
 # Use args
 ARG USE_CUDA
 ARG USE_OLLAMA
+ARG USE_OPENCL
 ARG USE_CUDA_VER
 ARG USE_EMBEDDING_MODEL
 ARG USE_RERANKING_MODEL
@@ -38,10 +40,14 @@ ENV ENV=prod \
     PORT=8080 \
     # pass build args to the build
     USE_OLLAMA_DOCKER=${USE_OLLAMA} \
+    USE_OPENCL_DOCKER=${USE_OPENCL} \
     USE_CUDA_DOCKER=${USE_CUDA} \
     USE_CUDA_DOCKER_VER=${USE_CUDA_VER} \
     USE_EMBEDDING_MODEL_DOCKER=${USE_EMBEDDING_MODEL} \
-    USE_RERANKING_MODEL_DOCKER=${USE_RERANKING_MODEL}
+    USE_RERANKING_MODEL_DOCKER=${USE_RERANKING_MODEL} \
+    # OpenCL specific settings
+    OLLAMA_BACKEND=opencl \
+    HSA_OVERRIDE_GFX_VERSION=11.0.0
 
 ## Basis URL Config ##
 ENV OLLAMA_BASE_URL="/ollama" \
@@ -100,6 +106,15 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
         # cleanup
         rm -rf /var/lib/apt/lists/*; \
     fi
+
+# Install OpenCL dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ocl-icd-libopencl1 \
+    opencl-headers \
+    clinfo \
+    libhwloc15 && \
+    rm -rf /var/lib/apt/lists/*
 
 # install python dependencies
 COPY ./backend/requirements.txt ./requirements.txt

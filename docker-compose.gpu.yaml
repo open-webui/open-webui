@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   ollama:
     # GPU support
@@ -7,7 +5,7 @@ services:
       resources:
         reservations:
           devices:
-            - driver: ${OLLAMA_GPU_DRIVER-nvidia}
+            - driver: ${OLLAMA_GPU_DRIVER-amdgpu}
               count: ${OLLAMA_GPU_COUNT-1}
               capabilities:
                 - gpu

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   ollama:
     volumes:
@@ -8,8 +6,18 @@ services:
     pull_policy: always
     tty: true
     restart: unless-stopped
-    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
-
+    image: ollama/ollama:${OLLAMA_DOCKER_TAG-rocm}
+    ports:
+      - 11434:11434
+    environment:
+      - OLLAMA_ORIGINS=app://obsidian.md*
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: opencl
+              capabilities: [gpu]
+  
   open-webui:
     build:
       context: .
