@@ -22,6 +22,7 @@ from open_webui.config import (
 )
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+from open_webui.models.users import UserModel
 
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -29,17 +30,17 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
-async def get_all_base_models(request: Request):
+async def get_all_base_models(request: Request, user: UserModel = None):
     function_models = []
     openai_models = []
     ollama_models = []
 
     if request.app.state.config.ENABLE_OPENAI_API:
-        openai_models = await openai.get_all_models(request)
+        openai_models = await openai.get_all_models(request, user=user)
         openai_models = openai_models["data"]
 
     if request.app.state.config.ENABLE_OLLAMA_API:
-        ollama_models = await ollama.get_all_models(request)
+        ollama_models = await ollama.get_all_models(request, user=user)
         ollama_models = [
             {
                 "id": model["model"],
@@ -58,8 +59,8 @@ async def get_all_base_models(request: Request):
     return models
 
 
-async def get_all_models(request):
-    models = await get_all_base_models(request)
+async def get_all_models(request, user: UserModel = None):
+    models = await get_all_base_models(request, user=user)
 
     # If there are no models, return an empty list
     if len(models) == 0:
