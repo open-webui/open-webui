@@ -11,12 +11,8 @@ services:
       - 11434:11434
     environment:
       - OLLAMA_ORIGINS=app://obsidian.md*
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: opencl
-              capabilities: [gpu]
+    devices:
+      - /dev/dri:/dev/dri
   
   open-webui:
     build:
