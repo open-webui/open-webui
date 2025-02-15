@@ -8,13 +8,15 @@ import shutil
 import sys
 import time
 import random
+import re
 
 from contextlib import asynccontextmanager
 from urllib.parse import urlencode, parse_qs, urlparse
+from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy import text
 
-from typing import Optional
+from typing import Any, Optional, cast
 from aiocache import cached
 import aiohttp
 import requests
@@ -39,12 +41,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from starlette.background import BackgroundTask
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware import Middleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
+from starlette.types import Message
 
 
+from open_webui.utils.audits import AuditLoggingMiddleware
+from open_webui.utils.logger import AuditLogger, start_logger
 from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
@@ -282,8 +289,11 @@ from open_webui.config import (
     reset_config,
 )
 from open_webui.env import (
+    AUDIT_LOG_LEVEL,
     CHANGELOG,
+    ENABLE_AUDIT_LOGS,
     GLOBAL_LOG_LEVEL,
+    MAX_BODY_LOG_SIZE,
     SAFE_MODE,
     SRC_LOG_LEVELS,
     VERSION,
@@ -316,6 +326,8 @@ from open_webui.utils.access_control import has_access
 from open_webui.utils.auth import (
     decode_token,
     get_admin_user,
+    get_current_user,
+    get_http_authorization_cred,
     get_verified_user,
 )
 from open_webui.utils.oauth import oauth_manager
@@ -366,6 +378,8 @@ https://github.com/open-webui/open-webui
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    start_logger(ENABLE_AUDIT_LOGS)
+
     if RESET_CONFIG_ON_START:
         reset_config()
 
@@ -794,6 +808,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(AuditLoggingMiddleware)
 
 app.mount("/ws", socket_app)
 
