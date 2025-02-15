@@ -1,4 +1,5 @@
 import { OPENAI_API_BASE_URL, WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+import { getCurrentDateTime } from '$lib/utils';
 
 export const getOpenAIConfig = async (token: string = '') => {
 	let error = null;
@@ -364,6 +365,16 @@ export const generateOpenAIChatCompletion = async (
 	url: string = `${WEBUI_BASE_URL}/api`
 ) => {
 	let error = null;
+
+	const dateTime = getCurrentDateTime();
+	const bodyWithUserData = {
+		...body,
+		user_data: {
+			...(body as any).user_data,
+			date_time: dateTime
+		}
+	};
+	body = bodyWithUserData;
 
 	const res = await fetch(`${url}/chat/completions`, {
 		method: 'POST',
