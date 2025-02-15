@@ -341,7 +341,7 @@ async def chat_web_search_handler(
                     "query": searchQuery,
                 }
             ),
-            user,
+            user=user
         )
 
         if results:
