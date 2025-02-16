@@ -154,7 +154,7 @@
 			</button>
 		</div>
 
-		<hr class=" dark:border-gray-850" />
+		<hr class=" border-gray-100 dark:border-gray-850" />
 
 		<div class="flex flex-col">
 			{#if showArchiveConfirm}

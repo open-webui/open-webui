@@ -140,7 +140,7 @@
 						</svg>
 					</div>
 					<input
-						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
+						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 						bind:value={search}
 						placeholder={$i18n.t('Search')}
 					/>
@@ -195,7 +195,7 @@
 					<div class="w-full"></div>
 				</div>
 
-				<hr class="mt-1.5 border-gray-50 dark:border-gray-850" />
+				<hr class="mt-1.5 border-gray-100 dark:border-gray-850" />
 
 				{#each filteredGroups as group}
 					<div class="my-2">
@@ -205,7 +205,7 @@
 			</div>
 		{/if}
 
-		<hr class="mb-2 border-gray-50 dark:border-gray-850" />
+		<hr class="mb-2 border-gray-100 dark:border-gray-850" />
 
 		<GroupModal
 			bind:show={showDefaultPermissionsModal}

@@ -6,9 +6,32 @@ from open_webui.utils.misc import (
 )
 
 
+def convert_ollama_tool_call_to_openai(tool_calls: dict) -> dict:
+    openai_tool_calls = []
+    for tool_call in tool_calls:
+        openai_tool_call = {
+            "index": tool_call.get("index", 0),
+            "id": tool_call.get("id", f"call_{str(uuid4())}"),
+            "type": "function",
+            "function": {
+                "name": tool_call.get("function", {}).get("name", ""),
+                "arguments": json.dumps(
+                    tool_call.get("function", {}).get("arguments", {})
+                ),
+            },
+        }
+        openai_tool_calls.append(openai_tool_call)
+    return openai_tool_calls
+
+
 def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
     model = ollama_response.get("model", "ollama")
     message_content = ollama_response.get("message", {}).get("content", "")
+    tool_calls = ollama_response.get("message", {}).get("tool_calls", None)
+    openai_tool_calls = None
+
+    if tool_calls:
+        openai_tool_calls = convert_ollama_tool_call_to_openai(tool_calls)
 
     data = ollama_response
     usage = {
@@ -51,7 +74,9 @@ def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
         ),
     }
 
-    response = openai_chat_completion_message_template(model, message_content, usage)
+    response = openai_chat_completion_message_template(
+        model, message_content, openai_tool_calls, usage
+    )
     return response
 
 
@@ -65,18 +90,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
         openai_tool_calls = None
 
         if tool_calls:
-            openai_tool_calls = []
-            for tool_call in tool_calls:
-                openai_tool_call = {
-                    "index": tool_call.get("index", 0),
-                    "id": tool_call.get("id", f"call_{str(uuid4())}"),
-                    "type": "function",
-                    "function": {
-                        "name": tool_call.get("function", {}).get("name", ""),
-                        "arguments": f"{tool_call.get('function', {}).get('arguments', {})}",
-                    },
-                }
-                openai_tool_calls.append(openai_tool_call)
+            openai_tool_calls = convert_ollama_tool_call_to_openai(tool_calls)
 
         done = data.get("done", False)
 

@@ -32,19 +32,15 @@ def search_duckduckgo(
             # Convert the search results into a list
             search_results = [r for r in ddgs_gen]
 
-    # Create an empty list to store the SearchResult objects
-    results = []
-    # Iterate over each search result
-    for result in search_results:
-        # Create a SearchResult object and append it to the results list
-        results.append(
-            SearchResult(
-                link=result["href"],
-                title=result.get("title"),
-                snippet=result.get("body"),
-            )
-        )
     if filter_list:
-        results = get_filtered_results(results, filter_list)
+        search_results = get_filtered_results(search_results, filter_list)
+
     # Return the list of search results
-    return results
+    return [
+        SearchResult(
+            link=result["href"],
+            title=result.get("title"),
+            snippet=result.get("body"),
+        )
+        for result in search_results
+    ]

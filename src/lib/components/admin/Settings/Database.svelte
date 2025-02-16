@@ -119,7 +119,7 @@
 				</div>
 			</button>
 
-			<hr class=" dark:border-gray-850 my-1" />
+			<hr class="border-gray-100 dark:border-gray-850 my-1" />
 
 			{#if $config?.features.enable_admin_export ?? true}
 				<div class="  flex w-full justify-between">
