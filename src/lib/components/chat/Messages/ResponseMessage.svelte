@@ -15,7 +15,7 @@
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
 
-	import { config, models, settings, TTSWorker, user } from '$lib/stores';
+	import { config, models, settings, temporaryChatEnabled, TTSWorker, user } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -1089,7 +1089,7 @@
 								{/if}
 
 								{#if !readOnly}
-									{#if $config?.features.enable_message_rating ?? true}
+									{#if !$temporaryChatEnabled && ($config?.features.enable_message_rating ?? true)}
 										<Tooltip content={$i18n.t('Good Response')} placement="bottom">
 											<button
 												class="{isLastMessage
