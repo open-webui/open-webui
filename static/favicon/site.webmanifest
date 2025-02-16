@@ -1,6 +1,6 @@
 {
-  "name": "Open WebUI",
-  "short_name": "WebUI",
+  "name": "Chat App",
+  "short_name": "Chat App",
   "icons": [
     {
       "src": "/favicon/web-app-manifest-192x192.png",
