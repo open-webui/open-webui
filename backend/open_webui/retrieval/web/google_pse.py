@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 import requests
-from open_webui.retrieval.web.main import SearchResult, get_filtered_results
+from open_webui.retrieval.web.main import SearchResult, get_filtered_results, SearchParameters
 from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
@@ -10,21 +10,18 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_google_pse(
-    api_key: str,
-    search_engine_id: str,
-    query: str,
-    count: int,
-    filter_list: Optional[list[str]] = None,
+    params : SearchParameters,
+    api_key : str,
+    search_engine_id : str,
 ) -> list[SearchResult]:
     """Search using Google's Programmable Search Engine API and return the results as a list of SearchResult objects.
     Handles pagination for counts greater than 10.
 
-    Args:
+    Args expected in params:
         api_key (str): A Programmable Search Engine API key
         search_engine_id (str): A Programmable Search Engine ID
-        query (str): The query to search for
-        count (int): The number of results to return (max 100, as PSE max results per query is 10 and max page is 10)
-        filter_list (Optional[list[str]], optional): A list of keywords to filter out from results. Defaults to None.
+        params.query (str): The query to search for
+        params.count (int): The number of results to return (max 100, as PSE max results per query is 10 and max page is 10)
 
     Returns:
         list[SearchResult]: A list of SearchResult objects.
@@ -34,11 +31,12 @@ def search_google_pse(
     all_results = []
     start_index = 1  # Google PSE start parameter is 1-based
 
+    count = params.count
     while count > 0:
         num_results_this_page = min(count, 10)  # Google PSE max results per page is 10
         params = {
             "cx": search_engine_id,
-            "q": query,
+            "q": params.query,
             "key": api_key,
             "num": num_results_this_page,
             "start": start_index,
@@ -56,9 +54,7 @@ def search_google_pse(
         else:
             break  # No more results from Google PSE, break the loop
 
-    if filter_list:
-        all_results = get_filtered_results(all_results, filter_list)
-
+    all_results = get_filtered_results(all_results, params)
     return [
         SearchResult(
             link=result["link"],

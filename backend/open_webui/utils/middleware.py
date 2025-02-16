@@ -262,50 +262,55 @@ async def chat_web_search_handler(
     request: Request, form_data: dict, extra_params: dict, user
 ):
     event_emitter = extra_params["__event_emitter__"]
-    await event_emitter(
-        {
-            "type": "status",
-            "data": {
-                "action": "web_search",
-                "description": "Generating search query",
-                "done": False,
-            },
-        }
-    )
 
     messages = form_data["messages"]
     user_message = get_last_user_message(messages)
 
     queries = []
-    try:
-        res = await generate_queries(
-            request,
+    
+    if (request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION):
+        await event_emitter(
             {
-                "model": form_data["model"],
-                "messages": messages,
-                "prompt": user_message,
-                "type": "web_search",
-            },
-            user,
+                "type": "status",
+                "data": {
+                    "action": "web_search",
+                    "description": "Generating search query",
+                    "done": False,
+                },
+            }
         )
-
-        response = res["choices"][0]["message"]["content"]
-
         try:
-            bracket_start = response.find("{")
-            bracket_end = response.rfind("}") + 1
-
-            if bracket_start == -1 or bracket_end == -1:
-                raise Exception("No JSON object found in the response")
-
-            response = response[bracket_start:bracket_end]
-            queries = json.loads(response)
-            queries = queries.get("queries", [])
+            res = await generate_queries(
+                request,
+                {
+                    "model": form_data["model"],
+                    "messages": messages,
+                    "prompt": user_message,
+                    "type": "web_search",
+                },
+                user,
+            )
+    
+            response = res["choices"][0]["message"]["content"]
+    
+            try:
+                bracket_start = response.find("{")
+                bracket_end = response.rfind("}") + 1
+    
+                if bracket_start == -1 or bracket_end == -1:
+                    raise Exception("No JSON object found in the response")
+    
+                response = response[bracket_start:bracket_end]
+                queries = json.loads(response)
+                queries = queries.get("queries", [])
+            except Exception as e:
+                queries = [response]
+    
         except Exception as e:
-            queries = [response]
-
-    except Exception as e:
-        log.exception(e)
+            log.exception(e)
+            queries = [user_message]
+    else:
+        log.info("Generating web_search query is disabled")
         queries = [user_message]
 
     if len(queries) == 0:
@@ -328,8 +333,7 @@ async def chat_web_search_handler(
             "type": "status",
             "data": {
                 "action": "web_search",
-                "description": 'Searching "{{searchQuery}}"',
-                "query": searchQuery,
+                "description": f"Searching {request.app.state.config.RAG_WEB_SEARCH_ENGINE} for '{searchQuery}'",
                 "done": False,
             },
         }
@@ -353,7 +357,7 @@ async def chat_web_search_handler(
                     "type": "status",
                     "data": {
                         "action": "web_search",
-                        "description": "Searched {{count}} sites",
+                        "description": "Searched " + str(len(results["filenames"])) + " sites",
                         "query": searchQuery,
                         "urls": results["filenames"],
                         "done": True,
@@ -372,12 +376,17 @@ async def chat_web_search_handler(
             )
             form_data["files"] = files
         else:
+            message = "No search results found"
+            if (request.app.state.config.RAG_WEB_SEARCH_ALLOWED_DOMAIN_LIST
+                or request.app.state.config.RAG_WEB_SEARCH_BLOCKED_DOMAIN_LIST
+            ):
+                message = message + " (Check domain filters it this is not expected)"
             await event_emitter(
                 {
                     "type": "status",
                     "data": {
                         "action": "web_search",
-                        "description": "No search results found",
+                        "description": message,
                         "query": searchQuery,
                         "done": True,
                         "error": True,

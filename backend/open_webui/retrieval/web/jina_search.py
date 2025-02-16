@@ -1,7 +1,7 @@
 import logging
 
 import requests
-from open_webui.retrieval.web.main import SearchResult
+from open_webui.retrieval.web.main import SearchResult, SearchParameters
 from open_webui.env import SRC_LOG_LEVELS
 from yarl import URL
 
@@ -9,12 +9,15 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-def search_jina(api_key: str, query: str, count: int) -> list[SearchResult]:
+def search_jina(
+    params : SearchParameters,
+    api_key : str,
+) -> list[SearchResult]:
     """
     Search using Jina's Search API and return the results as a list of SearchResult objects.
-    Args:
-        query (str): The query to search for
-        count (int): The number of results to return
+    Args expected in params:
+        params.query (str): The query to search for
+        params.count (int): The number of results to return
 
     Returns:
         list[SearchResult]: A list of search results
@@ -28,7 +31,7 @@ def search_jina(api_key: str, query: str, count: int) -> list[SearchResult]:
         "X-Retain-Images": "none",
     }
 
-    payload = {"q": query, "count": count if count <= 10 else 10}
+    payload = {"q": params.query, "count": params.count if params.count <= 10 else 10}
 
     url = str(URL(jina_search_endpoint))
     response = requests.post(url, headers=headers, json=payload)

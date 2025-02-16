@@ -3,7 +3,7 @@ import logging
 from typing import Optional
 
 import requests
-from open_webui.retrieval.web.main import SearchResult, get_filtered_results
+from open_webui.retrieval.web.main import SearchResult, get_filtered_results, SearchParameters
 from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
@@ -11,17 +11,17 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_serper(
-    api_key: str, query: str, count: int, filter_list: Optional[list[str]] = None
+    params : SearchParameters,    
+    api_key : str,
 ) -> list[SearchResult]:
     """Search using serper.dev's API and return the results as a list of SearchResult objects.
 
-    Args:
+    Args expected in params:
         api_key (str): A serper.dev API key
-        query (str): The query to search for
     """
     url = "https://google.serper.dev/search"
 
-    payload = json.dumps({"q": query})
+    payload = json.dumps({"q": params.query})
     headers = {"X-API-KEY": api_key, "Content-Type": "application/json"}
 
     response = requests.request("POST", url, headers=headers, data=payload)
@@ -31,13 +31,12 @@ def search_serper(
     results = sorted(
         json_response.get("organic", []), key=lambda x: x.get("position", 0)
     )
-    if filter_list:
-        results = get_filtered_results(results, filter_list)
+    results = get_filtered_results(results, params)
     return [
         SearchResult(
             link=result["link"],
             title=result.get("title"),
             snippet=result.get("description"),
         )
-        for result in results[:count]
+        for result in results[:params.count]
     ]
