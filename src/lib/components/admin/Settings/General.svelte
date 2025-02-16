@@ -167,14 +167,14 @@
 						</div>
 					</div>
 
-					<div class="">
+					<div class="mb-2">
 						<div class="flex w-full justify-between items-center">
 							<div class="text-xs">
 								<div class="">
 									{$i18n.t('Help')}
 								</div>
 								<div class=" text-xs text-gray-500">
-									Learn how to use Open WebUI and get help from the community.
+									{$i18n.t('Discover how to use Open WebUI and seek support from the community.')}
 								</div>
 							</div>
 
@@ -210,6 +210,29 @@
 									/>
 								</a>
 							</div>
+						</div>
+					</div>
+
+					<div class="mb-2">
+						<div class="flex w-full justify-between items-center">
+							<div class="text-xs">
+								<div class="">
+									{$i18n.t('License')}
+								</div>
+								<a
+									class=" text-xs text-gray-500 underline"
+									href="https://docs.openwebui.com/enterprise"
+									target="_blank"
+								>
+									{$i18n.t(
+										'Upgrade to a licensed plan for enhanced capabilities and dedicated support.'
+									)}
+								</a>
+							</div>
+
+							<!-- <button class=" text-xs font-medium">
+								{$i18n.t('Activate')}
+							</button> -->
 						</div>
 					</div>
 				</div>
