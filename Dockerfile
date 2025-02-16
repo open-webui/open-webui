@@ -26,6 +26,10 @@ ARG BUILD_HASH
 
 WORKDIR /app
 
+# Un-comment 2 next lines on Macos
+# ENV GENERATE_SOURCEMAP=false
+# ENV NODE_OPTIONS=--max-old-space-size=16384
+
 COPY package.json package-lock.json ./
 RUN npm ci
 
