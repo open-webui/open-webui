@@ -391,6 +391,22 @@
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
 
+		const handleCopy = (event: ClipboardEvent) => {
+			if (!get(settings).richTextCopy) {
+				const selection = window.getSelection();
+				if (selection) {
+					// Prevent the browser's default copy behavior which is rich text.
+					event.preventDefault();
+					const text = selection.toString();
+					if (event.clipboardData) {
+						event.clipboardData.setData('text/plain', text);
+					}
+				}
+			}
+			// If settings.richTextCopy is true, the default behavior (rich text) will be used.
+		};
+		document.addEventListener('copy', handleCopy);
+
 		if (!$chatId) {
 			chatIdUnsubscriber = chatId.subscribe(async (value) => {
 				if (!value) {
@@ -449,6 +465,7 @@
 	onDestroy(() => {
 		chatIdUnsubscriber?.();
 		window.removeEventListener('message', onMessageHandler);
+		document.removeEventListener('copy', handleCopy);
 		$socket?.off('chat-events', chatEventHandler);
 	});
 

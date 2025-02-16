@@ -31,6 +31,7 @@
 	let defaultModelId = '';
 	let showUsername = false;
 	let richTextInput = true;
+	let richTextCopy = true;
 	let largeTextAsFile = false;
 	let notificationSound = true;
 
@@ -157,6 +158,11 @@
 	const toggleRichTextInput = async () => {
 		richTextInput = !richTextInput;
 		saveSettings({ richTextInput });
+	};
+
+	const toggleRichTextCopy = async () => {
+		richTextCopy = !richTextCopy;
+		saveSettings({ richTextCopy });
 	};
 
 	const toggleLargeTextAsFile = async () => {
@@ -533,6 +539,28 @@
 						type="button"
 					>
 						{#if richTextInput === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">
+						{$i18n.t('CTRL+C Rich Text')}
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleRichTextCopy();
+						}}
+						type="button"
+					>
+						{#if richTextCopy === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
