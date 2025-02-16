@@ -10,9 +10,15 @@ services:
     ports:
       - 11434:11434
     environment:
+      - OLLAMA_BACKEND=opencl
+      - HASA_OVERRIDE_GFX_VERSION=11.0.0
       - OLLAMA_ORIGINS=app://obsidian.md*
     devices:
       - /dev/dri:/dev/dri
+      - /dev/kfd:/dev/kfd
+    group_add:
+      - video
+      - render
   
   open-webui:
     build:
