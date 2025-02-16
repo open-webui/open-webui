@@ -52,7 +52,9 @@
      </div>
      <div class="self-center truncate">{$i18n.t('Update Plan')}</div>
    </button>
-
+   {#if showUpdatePlanModal}
+   <UpdatePlanModal />
+ {/if}
    <!-- Другие элементы меню -->
 
 			<button
