@@ -94,7 +94,7 @@
 						</div>
 					</div>
 
-					<hr class=" dark:border-gray-800 my-3 w-full" />
+					<hr class="border-gray-100 dark:border-gray-850 my-3 w-full" />
 
 					<div class=" flex flex-col space-y-1.5">
 						<div class="flex flex-col w-full">

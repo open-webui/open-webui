@@ -418,7 +418,7 @@
 					</div>
 				</div>
 
-				<hr class=" dark:border-gray-800 my-3 w-full" />
+				<hr class="border-gray-100 dark:border-gray-850 my-3 w-full" />
 
 				{#if pipelines !== null}
 					{#if pipelines.length > 0}

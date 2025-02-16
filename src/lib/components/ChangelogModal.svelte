@@ -68,7 +68,7 @@
 								v{version} - {changelog[version].date}
 							</div>
 
-							<hr class=" dark:border-gray-800 my-2" />
+							<hr class="border-gray-100 dark:border-gray-850 my-2" />
 
 							{#each Object.keys(changelog[version]).filter((section) => section !== 'date') as section}
 								<div class="">
