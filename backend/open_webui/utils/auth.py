@@ -1,6 +1,9 @@
 import logging
 import uuid
 import jwt
+import base64
+import hmac
+import hashlib
 
 from datetime import UTC, datetime, timedelta
 from typing import Optional, Union, List, Dict
@@ -8,7 +11,7 @@ from typing import Optional, Union, List, Dict
 from open_webui.models.users import Users
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import WEBUI_SECRET_KEY
+from open_webui.env import WEBUI_SECRET_KEY, TRUSTED_SIGNATURE_KEY
 
 from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -23,6 +26,23 @@ ALGORITHM = "HS256"
 ##############
 # Auth Utils
 ##############
+
+
+def verify_signature(payload: str, signature: str) -> bool:
+    """
+    Verifies the HMAC signature of the received payload.
+    """
+    try:
+        expected_signature = base64.b64encode(
+            hmac.new(TRUSTED_SIGNATURE_KEY, payload.encode(), hashlib.sha256).digest()
+        ).decode()
+
+        # Compare securely to prevent timing attacks
+        return hmac.compare_digest(expected_signature, signature)
+
+    except Exception:
+        return False
+
 
 bearer_security = HTTPBearer(auto_error=False)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
