@@ -141,12 +141,10 @@
 			}
 		}
 
-		console.log(_theme);
-	};
+		if (typeof window !== 'undefined' && window.applyTheme) {
+			window.applyTheme();
+		}
 
-	const themeChangeHandler = (_theme: string) => {
-		theme.set(_theme);
-		localStorage.setItem('theme', _theme);
 		if (_theme.includes('oled')) {
 			document.documentElement.style.setProperty('--color-gray-800', '#101010');
 			document.documentElement.style.setProperty('--color-gray-850', '#050505');
@@ -154,6 +152,13 @@
 			document.documentElement.style.setProperty('--color-gray-950', '#000000');
 			document.documentElement.classList.add('dark');
 		}
+
+		console.log(_theme);
+	};
+
+	const themeChangeHandler = (_theme: string) => {
+		theme.set(_theme);
+		localStorage.setItem('theme', _theme);
 		applyTheme(_theme);
 	};
 </script>

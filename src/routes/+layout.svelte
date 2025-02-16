@@ -396,6 +396,10 @@
 	};
 
 	onMount(async () => {
+		if (typeof window !== 'undefined' && window.applyTheme) {
+			window.applyTheme();
+		}
+
 		if (window?.electronAPI) {
 			const info = await window.electronAPI.send({
 				type: 'app:info'
