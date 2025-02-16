@@ -54,10 +54,10 @@
 		>
 			<div class=" flex-1 w-full h-full flex justify-center overflow-auto px-5 py-4">
 				<div class=" max-w-3xl py-2 md:py-10 w-full flex flex-col gap-2">
-					<div class="flex-shrink-0 w-full flex justify-between items-center">
+					<div class="shrink-0 w-full flex justify-between items-center">
 						<div class="w-full">
 							<input
-								class="w-full text-3xl font-semibold bg-transparent outline-none"
+								class="w-full text-3xl font-semibold bg-transparent outline-hidden"
 								type="text"
 								bind:value={name}
 								placeholder={$i18n.t('Title')}
@@ -77,7 +77,7 @@
 			</div>
 
 			<div
-				class="flex flex-row items-center justify-end text-sm font-medium flex-shrink-0 mt-1 p-4 gap-1.5"
+				class="flex flex-row items-center justify-end text-sm font-medium shrink-0 mt-1 p-4 gap-1.5"
 			>
 				<div class="">
 					{#if voiceInput}
@@ -131,7 +131,7 @@
 					{/if}
 				</div>
 
-				<div class=" flex-shrink-0">
+				<div class=" shrink-0">
 					<Tooltip content={$i18n.t('Save')}>
 						<button
 							class=" px-3.5 py-2 bg-black text-white dark:bg-white dark:text-black transition rounded-full"

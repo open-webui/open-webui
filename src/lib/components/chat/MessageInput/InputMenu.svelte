@@ -92,7 +92,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[220px] rounded-xl px-1 py-1  border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow"
+			class="w-full max-w-[220px] rounded-xl px-1 py-1  border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
 			sideOffset={15}
 			alignOffset={-8}
 			side="top"
@@ -114,7 +114,7 @@
 									placement="top-start"
 									className="flex flex-1 gap-2 items-center"
 								>
-									<div class="flex-shrink-0">
+									<div class="shrink-0">
 										<WrenchSolid />
 									</div>
 
@@ -122,7 +122,7 @@
 								</Tooltip>
 							</div>
 
-							<div class=" flex-shrink-0">
+							<div class=" shrink-0">
 								<Switch
 									state={tools[toolId].enabled}
 									on:change={async (e) => {

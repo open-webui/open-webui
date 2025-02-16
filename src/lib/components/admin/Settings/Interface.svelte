@@ -97,7 +97,7 @@
 					<div class="flex-1">
 						<div class=" text-xs mb-1">{$i18n.t('Local Models')}</div>
 						<select
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							bind:value={taskConfig.TASK_MODEL}
 							placeholder={$i18n.t('Select a model')}
 						>
@@ -113,7 +113,7 @@
 					<div class="flex-1">
 						<div class=" text-xs mb-1">{$i18n.t('External Models')}</div>
 						<select
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							bind:value={taskConfig.TASK_MODEL_EXTERNAL}
 							placeholder={$i18n.t('Select a model')}
 						>
@@ -194,7 +194,7 @@
 							placement="top-start"
 						>
 							<input
-								class="w-full outline-none bg-transparent"
+								class="w-full outline-hidden bg-transparent"
 								bind:value={taskConfig.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH}
 								placeholder={$i18n.t('-1 for no limit, or a positive integer for a specific limit')}
 							/>
@@ -288,7 +288,7 @@
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition"
+						class="p-1 px-3 text-xs flex rounded-sm transition"
 						type="button"
 						on:click={() => {
 							if (banners.length === 0 || banners.at(-1).content !== '') {
@@ -323,7 +323,7 @@
 						<div class=" flex justify-between">
 							<div class="flex flex-row flex-1 border rounded-xl dark:border-gray-800">
 								<select
-									class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-none"
+									class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-hidden"
 									bind:value={banner.type}
 									required
 								>
@@ -339,7 +339,7 @@
 								</select>
 
 								<input
-									class="pr-5 py-1.5 text-xs w-full bg-transparent outline-none"
+									class="pr-5 py-1.5 text-xs w-full bg-transparent outline-hidden"
 									placeholder={$i18n.t('Content')}
 									bind:value={banner.content}
 								/>
@@ -383,7 +383,7 @@
 						</div>
 
 						<button
-							class="p-1 px-3 text-xs flex rounded transition"
+							class="p-1 px-3 text-xs flex rounded-sm transition"
 							type="button"
 							on:click={() => {
 								if (promptSuggestions.length === 0 || promptSuggestions.at(-1).content !== '') {
@@ -411,20 +411,20 @@
 								<div class="flex flex-col flex-1 pl-1">
 									<div class="flex border-b border-gray-100 dark:border-gray-800 w-full">
 										<input
-											class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r border-gray-100 dark:border-gray-800"
+											class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-800"
 											placeholder={$i18n.t('Title (e.g. Tell me a fun fact)')}
 											bind:value={prompt.title[0]}
 										/>
 
 										<input
-											class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r border-gray-100 dark:border-gray-800"
+											class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-800"
 											placeholder={$i18n.t('Subtitle (e.g. about the Roman Empire)')}
 											bind:value={prompt.title[1]}
 										/>
 									</div>
 
 									<textarea
-										class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r border-gray-100 dark:border-gray-800 resize-none"
+										class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-800 resize-none"
 										placeholder={$i18n.t('Prompt (e.g. Tell me a fun fact about the Roman Empire)')}
 										rows="3"
 										bind:value={prompt.content}

@@ -221,7 +221,7 @@
 
 <div
 	id={`floating-buttons-${id}`}
-	class="absolute rounded-lg mt-1 text-xs z-[9999]"
+	class="absolute rounded-lg mt-1 text-xs z-9999"
 	style="display: none"
 >
 	{#if responseContent === null}
@@ -230,7 +230,7 @@
 				class="flex flex-row gap-0.5 shrink-0 p-1 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-lg shadow-xl"
 			>
 				<button
-					class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded flex items-center gap-1 min-w-fit"
+					class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm flex items-center gap-1 min-w-fit"
 					on:click={async () => {
 						selectedText = window.getSelection().toString();
 						floatingInput = true;
@@ -249,7 +249,7 @@
 					<div class="shrink-0">Ask</div>
 				</button>
 				<button
-					class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded flex items-center gap-1 min-w-fit"
+					class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm flex items-center gap-1 min-w-fit"
 					on:click={() => {
 						selectedText = window.getSelection().toString();
 						explainHandler();
@@ -267,7 +267,7 @@
 				<input
 					type="text"
 					id="floating-message-input"
-					class="ml-5 bg-transparent outline-none w-full flex-1 text-sm"
+					class="ml-5 bg-transparent outline-hidden w-full flex-1 text-sm"
 					placeholder={$i18n.t('Ask a question')}
 					bind:value={floatingInputValue}
 					on:keydown={(e) => {

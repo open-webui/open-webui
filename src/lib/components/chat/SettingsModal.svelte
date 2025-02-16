@@ -395,7 +395,7 @@
 						<Search className="size-3.5" />
 					</div>
 					<input
-						class="w-full py-1.5 text-sm bg-transparent dark:text-gray-300 outline-none"
+						class="w-full py-1.5 text-sm bg-transparent dark:text-gray-300 outline-hidden"
 						bind:value={search}
 						on:input={searchDebounceHandler}
 						placeholder={$i18n.t('Search')}

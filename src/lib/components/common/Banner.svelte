@@ -48,7 +48,7 @@
 				<div class="flex justify-between self-start">
 					<div
 						class=" text-xs font-bold {classNames[banner.type] ??
-							classNames['info']}  w-fit px-2 rounded uppercase line-clamp-1 mr-0.5"
+							classNames['info']}  w-fit px-2 rounded-sm uppercase line-clamp-1 mr-0.5"
 					>
 						{banner.type}
 					</div>

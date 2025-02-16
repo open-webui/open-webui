@@ -377,7 +377,7 @@
 
 			{#if executing || stdout || stderr || result}
 				<div
-					class="bg-gray-50 dark:bg-[#202123] dark:text-white !rounded-b-lg py-4 px-4 flex flex-col gap-2"
+					class="bg-gray-50 dark:bg-[#202123] dark:text-white rounded-b-lg! py-4 px-4 flex flex-col gap-2"
 				>
 					{#if executing}
 						<div class=" ">

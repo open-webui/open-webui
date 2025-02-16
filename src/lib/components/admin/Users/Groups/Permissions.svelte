@@ -76,7 +76,7 @@
 										<div class=" text-sm flex-1 rounded-lg">
 											{modelId}
 										</div>
-										<div class="flex-shrink-0">
+										<div class="shrink-0">
 											<button
 												type="button"
 												on:click={() => {
@@ -102,7 +102,7 @@
 					<select
 						class="w-full py-1 text-sm rounded-lg bg-transparent {selectedModelId
 							? ''
-							: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-none"
+							: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 						bind:value={selectedModelId}
 					>
 						<option value="">{$i18n.t('Select a model')}</option>
@@ -137,7 +137,7 @@
 
 			<div class="flex-1 mr-2">
 				<select
-					class="w-full bg-transparent outline-none py-0.5 text-sm"
+					class="w-full bg-transparent outline-hidden py-0.5 text-sm"
 					bind:value={permissions.model.default_id}
 					placeholder="Select a model"
 				>
