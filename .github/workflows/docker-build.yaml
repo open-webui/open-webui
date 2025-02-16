@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - release
       - main
       - dev
     tags:
