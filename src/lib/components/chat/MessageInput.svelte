@@ -16,7 +16,8 @@
 		showCallOverlay,
 		tools,
 		user as _user,
-		showControls
+		showControls,
+		TTSWorker
 	} from '$lib/stores';
 
 	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
@@ -43,6 +44,7 @@
 	import PhotoSolid from '../icons/PhotoSolid.svelte';
 	import Photo from '../icons/Photo.svelte';
 	import CommandLine from '../icons/CommandLine.svelte';
+	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
 	const i18n = getContext('i18n');
 
@@ -638,7 +640,7 @@
 																xmlns="http://www.w3.org/2000/svg"
 																viewBox="0 0 20 20"
 																fill="currentColor"
-																class="w-4 h-4"
+																class="size-4"
 															>
 																<path
 																	d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
@@ -695,7 +697,7 @@
 													)}
 												placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 												largeTextAsFile={$settings?.largeTextAsFile ?? false}
-												autocomplete={true}
+												autocomplete={$config?.features.enable_autocomplete_generation}
 												generateAutoCompletion={async (text) => {
 													if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {
 														toast.error($i18n.t('Please select a model first.'));
@@ -1169,7 +1171,7 @@
 													</Tooltip>
 												{/if}
 
-												{#if $_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter}
+												{#if $config?.features?.enable_code_interpreter && ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter)}
 													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
 														<button
 															on:click|preventDefault={() =>
@@ -1242,7 +1244,7 @@
 										{/if}
 
 										{#if !history.currentId || history.messages[history.currentId]?.done == true}
-											{#if prompt === ''}
+											{#if prompt === '' && files.length === 0}
 												<div class=" flex items-center">
 													<Tooltip content={$i18n.t('Call')}>
 														<button
@@ -1281,6 +1283,16 @@
 
 																	stream = null;
 
+																	if (!$TTSWorker) {
+																		await TTSWorker.set(
+																			new KokoroWorker({
+																				dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
+																			})
+																		);
+
+																		await $TTSWorker.init();
+																	}
+
 																	showCallOverlay.set(true);
 																	showControls.set(true);
 																} catch (err) {
@@ -1301,13 +1313,13 @@
 													<Tooltip content={$i18n.t('Send message')}>
 														<button
 															id="send-message-button"
-															class="{prompt !== ''
+															class="{!(prompt === '' && files.length === 0)
 																? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
 																	? 'bg-blue-500 text-white hover:bg-blue-400 '
 																	: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
 															type="submit"
-															disabled={prompt === ''}
+															disabled={prompt === '' && files.length === 0}
 														>
 															<svg
 																xmlns="http://www.w3.org/2000/svg"
