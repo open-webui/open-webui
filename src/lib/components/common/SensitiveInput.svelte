@@ -23,6 +23,7 @@
 	/>
 	<button
 		class={showButtonClassName}
+		type="button"
 		on:click={(e) => {
 			e.preventDefault();
 			show = !show;
