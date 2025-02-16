@@ -17,6 +17,21 @@
 		return attrs;
 	}
 
+	// Helper function to return only the domain from a URL
+	function getDomain(url: string): string {
+		const domain = url.replace('http://', '').replace('https://', '').split(/[/?#]/)[0];
+		return domain;
+	}
+
+	// Helper function to check if text is a URL and return the domain
+	function formattedTitle(title: string): string {
+		if (title.startsWith('http')) {
+			return getDomain(title);
+		}
+
+		return title;
+	}
+
 	$: attributes = extractAttributes(token.text);
 </script>
 
@@ -27,6 +42,6 @@
 	}}
 >
 	<span class="line-clamp-1">
-		{attributes.title}
+		{formattedTitle(attributes.title)}
 	</span>
 </button>
