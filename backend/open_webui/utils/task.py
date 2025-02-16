@@ -22,7 +22,7 @@ def get_task_model_id(
     # Set the task model
     task_model_id = default_model_id
     # Check if the user has a custom task model and use that model
-    if models[task_model_id]["owned_by"] == "ollama":
+    if models[task_model_id].get("owned_by") == "ollama":
         if task_model and task_model in models:
             task_model_id = task_model
     else:
