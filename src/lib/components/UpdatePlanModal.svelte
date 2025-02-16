@@ -1,9 +1,7 @@
 <script lang="ts">
 
 export let showUpdatePlanModal: boolean;
-  function openUpdatePlanModal() {
-    showUpdatePlanModal = true;
-  }
+
 </script>
 
 {#if showUpdatePlanModal}
