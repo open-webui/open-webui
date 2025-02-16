@@ -30,6 +30,8 @@ from langchain_core.documents import Document
 
 from open_webui.models.files import FileModel, Files
 from open_webui.models.knowledge import Knowledges
+from open_webui.models.documents import DocumentModel, DocumentDBs
+
 from open_webui.storage.provider import Storage
 
 
@@ -694,11 +696,19 @@ def save_docs_to_vector_db(
                 log.info(f"Document with hash {metadata['hash']} already exists")
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
+    enable_rag_parent_retriever = split and request.app.state.config.ENABLE_RAG_PARENT_RETRIEVER
+    
     if split:
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=request.app.state.config.CHUNK_SIZE,
                 chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                add_start_index=True,
+            )
+            if enable_rag_parent_retriever:
+                parent_text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=request.app.state.config.PARENT_CHUNK_SIZE,
+                chunk_overlap=request.app.state.config.PARENT_CHUNK_OVERLAP,
                 add_start_index=True,
             )
         elif request.app.state.config.TEXT_SPLITTER == "token":
@@ -713,10 +723,42 @@ def save_docs_to_vector_db(
                 chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
                 add_start_index=True,
             )
+            if enable_rag_parent_retriever:
+                parent_text_splitter = TokenTextSplitter(
+                encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
+                chunk_size=request.app.state.config.PARENT_CHUNK_SIZE,
+                chunk_overlap=request.app.state.config.PARENT_CHUNK_OVERLAP,
+                add_start_index=True,
+            )
         else:
             raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
 
-        docs = text_splitter.split_documents(docs)
+        if enable_rag_parent_retriever:
+            import time
+            
+            parent_docs = parent_text_splitter.split_documents(docs)
+            parent_doc_ids = [str(uuid.uuid4()) for _ in parent_docs]
+            child_docs = []
+            parent_docs_to_save: List[DocumentModel] = []
+            
+            for i, doc in enumerate(parent_docs):
+                sub_docs = text_splitter.split_documents([doc])
+                _id = parent_doc_ids[i]
+                for _doc in sub_docs:
+                    _doc.metadata['parent_id'] = _id
+                child_docs.extend(sub_docs)
+                
+                current_time = int(time.time())
+                parent_doc_to_save = DocumentModel(**{"id": id, "file_name": doc.metadata.name,
+                                        "page_content": doc.page_content, "metadata": metadata,
+                                        "created_at": current_time, "updated_at": current_time})
+                parent_docs_to_save.append(parent_doc_to_save)
+                
+            DocumentDBs.insert_new_docs(parent_docs_to_save)
+            docs = child_docs
+        else:
+            docs = text_splitter.split_documents(docs)
+            print('docsdocsdocs22', docs)
 
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
@@ -792,6 +834,8 @@ def save_docs_to_vector_db(
             collection_name=collection_name,
             items=items,
         )
+        
+        
 
         return True
     except Exception as e:

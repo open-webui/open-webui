@@ -1393,6 +1393,24 @@ ENABLE_RAG_HYBRID_SEARCH = PersistentConfig(
     os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "").lower() == "true",
 )
 
+ENABLE_RAG_PARENT_RETRIEVER = PersistentConfig(
+    "ENABLE_RAG_PARENT_RETRIEVER",
+    "rag.enable_parent_retriever",
+    os.environ.get("ENABLE_RAG_PARENT_RETRIEVER", "").lower() == "true",
+)
+
+PARENT_CHUNK_SIZE = PersistentConfig(
+    "PARENT_CHUNK_SIZE",
+    "rag.parent_chunk_size",
+    int(os.environ.get("PARENT_CHUNK_SIZE", "2048")),
+)
+
+PARENT_CHUNK_OVERLAP = PersistentConfig(
+    "PARENT_CHUNK_OVERLAP",
+    "rag.parent_chunk_OVERLAP",
+    int(os.environ.get("PARENT_CHUNK_OVERLAP", "200")),
+)
+
 RAG_FILE_MAX_COUNT = PersistentConfig(
     "RAG_FILE_MAX_COUNT",
     "rag.file.max_count",
