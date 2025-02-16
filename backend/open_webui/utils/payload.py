@@ -208,7 +208,7 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
         ollama_options = openai_payload["options"]
 
     # Handle parameters which map directly
-    for param in ["temperature", "top_p", "seed"]:
+    for param in ["temperature", "top_p", "seed", "stop"]:
         if param in openai_payload:
             ollama_options[param] = openai_payload[param]
 
