@@ -88,6 +88,7 @@ from open_webui.models.models import Models
 from open_webui.models.users import UserModel, Users
 
 from open_webui.config import (
+    override_static,
     LICENSE_KEY,
     # Ollama
     ENABLE_OLLAMA_API,
@@ -372,45 +373,34 @@ async def lifespan(app: FastAPI):
     if RESET_CONFIG_ON_START:
         reset_config()
 
-    license_key = app.state.config.LICENSE_KEY
-    if license_key:
+    key = app.state.config.LICENSE_KEY
+    if key:
         try:
-            response = requests.post(
+            res = requests.post(
                 "https://api.openwebui.com/api/v1/license",
-                json={"key": license_key, "version": "1"},
+                json={"key": key, "version": "1"},
                 timeout=5,
             )
-            if response.ok:
-                data = response.json()
-                if "payload" in data and "auth" in data:
-                    if verify_signature(data["payload"], data["auth"]):
-                        exec(
-                            data["payload"],
-                            {
-                                "__builtins__": {},
-                                "override_static": override_static,
-                                "USER_COUNT": app.state.USER_COUNT,
-                                "WEBUI_NAME": app.state.WEBUI_NAME,
-                            },
-                        )  # noqa
+
+            if getattr(res, "ok", False):
+                payload = getattr(res, "json", lambda: {})()
+                for k, v in payload.items():
+                    if k == "resources":
+                        for p, c in v.items():
+                            globals().get("override_static", lambda a, b: None)(p, c)
+                    elif k == "user_count":
+                        setattr(app.state, "USER_COUNT", v)
+                    elif k == "webui_name":
+                        setattr(app.state, "WEBUI_NAME", v)
             else:
-                log.error(f"Error fetching license: {response.text}")
-        except Exception as e:
-            log.error(f"Error during license check: {e}")
-            pass
+                log.error(
+                    f"License retrieval issue: {getattr(res, 'text', 'unknown error')}"
+                )
+        except Exception as ex:
+            log.error(f"Uncaught Exception: {ex}")
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     yield
-
-
-def override_static(path: str, content: str):
-    # Ensure path is safe
-    if "/" in path:
-        log.error(f"Invalid path: {path}")
-        return
-
-    with open(f"{STATIC_DIR}/{path}", "wb") as f:
-        shutil.copyfileobj(content, f)
 
 
 app = FastAPI(
