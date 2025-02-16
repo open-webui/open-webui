@@ -281,7 +281,7 @@
 			</DropdownMenu.Item>
 
 			{#if !$temporaryChatEnabled}
-				<hr class="border-gray-50 dark:border-gray-850 my-0.5" />
+				<hr class="border-gray-100 dark:border-gray-850 my-0.5" />
 
 				<div class="flex p-1">
 					<Tags chatId={chat.id} />

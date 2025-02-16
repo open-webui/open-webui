@@ -150,7 +150,7 @@
 		</div>
 	</div>
 
-	<hr class=" border-gray-50 dark:border-gray-850 my-2" /> -->
+	<hr class=" border-gray-100 dark:border-gray-850 my-2" /> -->
 
 	<div>
 		<div class=" mb-2 text-sm font-medium">{$i18n.t('Workspace Permissions')}</div>
@@ -192,7 +192,7 @@
 		</div>
 	</div>
 
-	<hr class=" border-gray-50 dark:border-gray-850 my-2" />
+	<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 	<div>
 		<div class=" mb-2 text-sm font-medium">{$i18n.t('Chat Permissions')}</div>
@@ -238,7 +238,7 @@
 		</div>
 	</div>
 
-	<hr class=" border-gray-50 dark:border-gray-850 my-2" />
+	<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 	<div>
 		<div class=" mb-2 text-sm font-medium">{$i18n.t('Features Permissions')}</div>
