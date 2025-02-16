@@ -1241,7 +1241,7 @@
 			// Response not done
 			return;
 		}
-		if (messages.length != 0 && messages.at(-1).error) {
+		if (messages.length != 0 && messages.at(-1).error && !messages.at(-1).content) {
 			// Error in response
 			toast.error($i18n.t(`Oops! There was an error in the previous response.`));
 			return;
