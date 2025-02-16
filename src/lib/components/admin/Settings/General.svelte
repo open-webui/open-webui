@@ -116,11 +116,11 @@
 		{#if adminConfig !== null}
 			<div class="">
 				<div class="mb-3.5">
-					<div class=" mb-2 text-base font-medium">{$i18n.t('General')}</div>
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
 					<hr class=" border-gray-50 dark:border-gray-850 my-2" />
 
-					<div class="mb-2">
+					<div class="mb-2.5">
 						<div class=" mb-1 text-xs font-medium flex space-x-2 items-center">
 							<div>
 								{$i18n.t('Version')}
@@ -168,7 +168,7 @@
 						</div>
 					</div>
 
-					<div class="mb-2">
+					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
 							<div class="text-xs">
 								<div class="">
@@ -214,7 +214,7 @@
 						</div>
 					</div>
 
-					<div class="mb-2">
+					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
 							<div class="text-xs">
 								<div class="">
@@ -239,11 +239,11 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mb-2 text-base font-medium">{$i18n.t('Authentication')}</div>
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Authentication')}</div>
 
 					<hr class=" border-gray-50 dark:border-gray-850 my-2" />
 
-					<div class="  mb-2 flex w-full justify-between">
+					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Default User Role')}</div>
 						<div class="flex items-center relative">
 							<select
@@ -258,13 +258,13 @@
 						</div>
 					</div>
 
-					<div class=" mb-2 flex w-full justify-between pr-2">
+					<div class=" mb-2.5 flex w-full justify-between pr-2">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Enable New Sign Ups')}</div>
 
 						<Switch bind:state={adminConfig.ENABLE_SIGNUP} />
 					</div>
 
-					<div class="mb-2 flex w-full items-center justify-between pr-2">
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
 							{$i18n.t('Show Admin Details in Account Pending Overlay')}
 						</div>
@@ -272,14 +272,14 @@
 						<Switch bind:state={adminConfig.SHOW_ADMIN_DETAILS} />
 					</div>
 
-					<div class="mb-2 flex w-full justify-between pr-2">
+					<div class="mb-2.5 flex w-full justify-between pr-2">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Enable API Key')}</div>
 
 						<Switch bind:state={adminConfig.ENABLE_API_KEY} />
 					</div>
 
 					{#if adminConfig?.ENABLE_API_KEY}
-						<div class="mb-2 flex w-full justify-between pr-2">
+						<div class="mb-2.5 flex w-full justify-between pr-2">
 							<div class=" self-center text-xs font-medium">
 								{$i18n.t('API Key Endpoint Restrictions')}
 							</div>
@@ -314,7 +314,7 @@
 						{/if}
 					{/if}
 
-					<div class=" mb-2 w-full justify-between">
+					<div class=" mb-2.5 w-full justify-between">
 						<div class="flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">{$i18n.t('JWT Expiration')}</div>
 						</div>
@@ -551,11 +551,11 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mb-2 text-base font-medium">{$i18n.t('Features')}</div>
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Features')}</div>
 
 					<hr class=" border-gray-50 dark:border-gray-850 my-2" />
 
-					<div class="mb-2 flex w-full items-center justify-between pr-2">
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
 							{$i18n.t('Enable Community Sharing')}
 						</div>
@@ -563,13 +563,13 @@
 						<Switch bind:state={adminConfig.ENABLE_COMMUNITY_SHARING} />
 					</div>
 
-					<div class="mb-2 flex w-full items-center justify-between pr-2">
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Enable Message Rating')}</div>
 
 						<Switch bind:state={adminConfig.ENABLE_MESSAGE_RATING} />
 					</div>
 
-					<div class="mb-2 flex w-full items-center justify-between pr-2">
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
 							{$i18n.t('Channels')} ({$i18n.t('Beta')})
 						</div>
@@ -577,7 +577,7 @@
 						<Switch bind:state={adminConfig.ENABLE_CHANNELS} />
 					</div>
 
-					<div class="mb-2 w-full justify-between">
+					<div class="mb-2.5 w-full justify-between">
 						<div class="flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">{$i18n.t('WebUI URL')}</div>
 						</div>
