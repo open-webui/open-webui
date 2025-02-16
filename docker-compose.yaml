@@ -25,6 +25,15 @@ services:
     environment:
       - 'OLLAMA_BASE_URL=http://ollama:11434'
       - 'WEBUI_SECRET_KEY='
+      - 'ENABLE_SIGNUP=true'
+      - 'NODE_OPTIONS=--max-old-space-size=8192'
+      - 'REACT_APP_URL=/custom/'
+    deploy:
+      resources:
+        limits:
+          memory: 10G
+        reservations:
+          memory: 2G
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
