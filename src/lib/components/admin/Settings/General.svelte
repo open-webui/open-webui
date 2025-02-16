@@ -120,7 +120,7 @@
 
 					<hr class=" border-gray-50 dark:border-gray-850 my-2" />
 
-					<div class="">
+					<div class="mb-2">
 						<div class=" mb-1 text-xs font-medium flex space-x-2 items-center">
 							<div>
 								{$i18n.t('Version')}
@@ -164,6 +164,52 @@
 							>
 								{$i18n.t('Check for updates')}
 							</button>
+						</div>
+					</div>
+
+					<div class="">
+						<div class="flex w-full justify-between items-center">
+							<div class="text-xs">
+								<div class="">
+									{$i18n.t('Help')}
+								</div>
+								<div class=" text-xs text-gray-500">
+									Learn how to use Open WebUI and get help from the community.
+								</div>
+							</div>
+
+							<a
+								class=" text-xs font-medium underline"
+								href="https://docs.openwebui.com/"
+								target="_blank"
+							>
+								{$i18n.t('Documentation')}
+							</a>
+						</div>
+
+						<div class="mt-1">
+							<div class="flex space-x-1">
+								<a href="https://discord.gg/5rJgQTnV4s" target="_blank">
+									<img
+										alt="Discord"
+										src="https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white"
+									/>
+								</a>
+
+								<a href="https://twitter.com/OpenWebUI" target="_blank">
+									<img
+										alt="X (formerly Twitter) Follow"
+										src="https://img.shields.io/twitter/follow/OpenWebUI"
+									/>
+								</a>
+
+								<a href="https://github.com/open-webui/open-webui" target="_blank">
+									<img
+										alt="Github Repo"
+										src="https://img.shields.io/github/stars/open-webui/open-webui?style=social&label=Star us on Github"
+									/>
+								</a>
+							</div>
 						</div>
 					</div>
 				</div>
