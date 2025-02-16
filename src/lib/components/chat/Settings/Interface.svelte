@@ -225,6 +225,7 @@
 		voiceInterruption = $settings.voiceInterruption ?? false;
 
 		richTextInput = $settings.richTextInput ?? true;
+		richTextCopy = $settings.richTextCopy ?? true;
 		largeTextAsFile = $settings.largeTextAsFile ?? false;
 
 		landingPageMode = $settings.landingPageMode ?? '';

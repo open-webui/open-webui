@@ -390,21 +390,6 @@
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
-
-		const handleCopy = (event: ClipboardEvent) => {
-			if (!get(settings).richTextCopy) {
-				const selection = window.getSelection();
-				if (selection) {
-					// Prevent the browser's default copy behavior which is rich text.
-					event.preventDefault();
-					const text = selection.toString();
-					if (event.clipboardData) {
-						event.clipboardData.setData('text/plain', text);
-					}
-				}
-			}
-			// If settings.richTextCopy is true, the default behavior (rich text) will be used.
-		};
 		document.addEventListener('copy', handleCopy);
 
 		if (!$chatId) {
@@ -1227,6 +1212,23 @@
 		console.log(data);
 		if (autoScroll) {
 			scrollToBottom();
+		}
+	};
+
+	const handleCopy = (event: ClipboardEvent) => {
+		if (!$settings.richTextCopy) {
+			console.log('Copying text as plain text');
+			const selection = window.getSelection();
+			if (selection) {
+				// Prevent the browser's default rich text copy behavior.
+				event.preventDefault();
+				const text = selection.toString();
+				if (event.clipboardData) {
+					event.clipboardData.setData('text/plain', text);
+				}
+			}
+		} else {
+			console.log('Copying text as rich text');
 		}
 	};
 
