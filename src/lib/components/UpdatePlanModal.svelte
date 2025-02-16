@@ -1,12 +1,10 @@
 <script lang="ts">
-  let showUpdatePlanModal = false;
 
+export let showUpdatePlanModal: boolean;
   function openUpdatePlanModal() {
     showUpdatePlanModal = true;
   }
 </script>
-
-<button on:click={openUpdatePlanModal}>Обновить план</button>
 
 {#if showUpdatePlanModal}
   <div class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
@@ -25,3 +23,6 @@
     </div>
   </div>
 {/if}
+
+
+
