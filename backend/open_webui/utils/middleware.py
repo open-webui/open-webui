@@ -39,7 +39,10 @@ from open_webui.routers.tasks import (
 )
 from open_webui.routers.retrieval import process_web_search, SearchForm
 from open_webui.routers.images import image_generations, GenerateImageForm
-
+from open_webui.routers.pipelines import (
+    process_pipeline_inlet_filter,
+    process_pipeline_outlet_filter,
+)
 
 from open_webui.utils.webhook import post_webhook
 
@@ -676,6 +679,25 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
     variables = form_data.pop("variables", None)
 
+    # Process the form_data through the pipeline
+    try:
+        form_data = await process_pipeline_inlet_filter(
+            request, form_data, user, models
+        )
+    except Exception as e:
+        raise e
+
+    try:
+        form_data, flags = await process_filter_functions(
+            request=request,
+            filter_ids=get_sorted_filter_ids(model),
+            filter_type="inlet",
+            form_data=form_data,
+            extra_params=extra_params,
+        )
+    except Exception as e:
+        raise Exception(f"Error: {e}")
+
     features = form_data.pop("features", None)
     if features:
         if "web_search" in features and features["web_search"]:
@@ -697,17 +719,6 @@ async def process_chat_payload(request, form_data, metadata, user, model):
                 ),
                 form_data["messages"],
             )
-
-    try:
-        form_data, flags = await process_filter_functions(
-            request=request,
-            filter_ids=get_sorted_filter_ids(model),
-            filter_type="inlet",
-            form_data=form_data,
-            extra_params=extra_params,
-        )
-    except Exception as e:
-        raise Exception(f"Error: {e}")
 
     tool_ids = form_data.pop("tool_ids", None)
     files = form_data.pop("files", None)
