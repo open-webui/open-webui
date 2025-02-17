@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: 'gpt-oi-rest'
+  name: 'gpt-oi-rest'
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 3
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: 'gpt-oi-rest'
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        p1.cn/metric_path: /metrics
+        p1.cn/scrape_port: '8080'
+        p1.cn/should_be_scraped: 'true'
+        proxy.istio.io/config: |
+          terminationDrainDuration: 20s
+          holdApplicationUntilProxyStarts: true
+      labels:
+        app: gpt-oi-rest
+        org: gpt
+        resource: container
+    spec:
+      serviceAccount: kyc
+      containers:
+        - env:
+            - name: APP_ENV
+              value: prod
+            - name: http_proxy
+              value: http://10.10.1.81:2345
+            - name: https_proxy
+              value: http://10.10.1.81:2345
+            - name: DATABASE_URL
+              value: pending
+            - name: VECTOR_DB
+              value: pgvector
+            - name: PGVECTOR_DB_URL
+              value: pending
+          image: { { image-url } }
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 2
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            successThreshold: 1
+            httpGet:
+              path: /debug/health
+              port: 8080
+              scheme: HTTP
+            timeoutSeconds: 5
+          name: 'gpt-oi-rest'
+          readinessProbe:
+            failureThreshold: 2
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            httpGet:
+              path: /debug/health
+              port: 8080
+              scheme: HTTP
+            timeoutSeconds: 10
+          resources:
+            limits:
+              cpu: '16'
+              memory: 32Gi
+            requests:
+              cpu: '1m'
+              memory: 1Mi
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: regcred
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      tolerations:
+        - effect: NoExecute
+          key: node.kubernetes.io/not-ready
+          operator: Exists
+          tolerationSeconds: 15
+        - effect: NoExecute
+          key: node.kubernetes.io/unreachable
+          operator: Exists
+          tolerationSeconds: 15

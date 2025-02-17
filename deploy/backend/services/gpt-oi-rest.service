@@ -1,0 +1,14 @@
+[Unit]
+Description=gpt-oi-rest
+After=network-online.target
+
+[Service]
+Type=simple
+User=root
+Restart=on-failure
+LimitNOFILE=102400
+WorkingDirectory=/app/gpt-oi-rest/current
+ExecStart=/data/bin/docker-compose -p gpt-oi-rest up -d --force-recreate --remove-orphans
+
+[Install]
+WantedBy=multi-user.target

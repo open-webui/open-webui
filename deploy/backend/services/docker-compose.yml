@@ -1,0 +1,13 @@
+services:
+  app:
+    image: hub-proxy.p1.cn/{{tag}}
+    ports:
+      - "9090:8080"                  # 固定端口映射
+    volumes:
+      - /data/docker_data:/backend/data     # 固定数据卷
+    networks:
+      - app-net
+
+networks:
+  app-net:
+    driver: bridge

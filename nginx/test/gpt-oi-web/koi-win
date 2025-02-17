@@ -1,0 +1,103 @@
+
+charset_map  koi8-r  windows-1251 {
+
+    80  88 ; # euro
+
+    95  95 ; # bullet
+
+    9A  A0 ; # &nbsp;
+
+    9E  B7 ; # &middot;
+
+    A3  B8 ; # small yo
+    A4  BA ; # small Ukrainian ye
+
+    A6  B3 ; # small Ukrainian i
+    A7  BF ; # small Ukrainian yi
+
+    AD  B4 ; # small Ukrainian soft g
+    AE  A2 ; # small Byelorussian short u
+
+    B0  B0 ; # &deg;
+
+    B3  A8 ; # capital YO
+    B4  AA ; # capital Ukrainian YE
+
+    B6  B2 ; # capital Ukrainian I
+    B7  AF ; # capital Ukrainian YI
+
+    B9  B9 ; # numero sign
+
+    BD  A5 ; # capital Ukrainian soft G
+    BE  A1 ; # capital Byelorussian short U
+
+    BF  A9 ; # (C)
+
+    C0  FE ; # small yu
+    C1  E0 ; # small a
+    C2  E1 ; # small b
+    C3  F6 ; # small ts
+    C4  E4 ; # small d
+    C5  E5 ; # small ye
+    C6  F4 ; # small f
+    C7  E3 ; # small g
+    C8  F5 ; # small kh
+    C9  E8 ; # small i
+    CA  E9 ; # small j
+    CB  EA ; # small k
+    CC  EB ; # small l
+    CD  EC ; # small m
+    CE  ED ; # small n
+    CF  EE ; # small o
+
+    D0  EF ; # small p
+    D1  FF ; # small ya
+    D2  F0 ; # small r
+    D3  F1 ; # small s
+    D4  F2 ; # small t
+    D5  F3 ; # small u
+    D6  E6 ; # small zh
+    D7  E2 ; # small v
+    D8  FC ; # small soft sign
+    D9  FB ; # small y
+    DA  E7 ; # small z
+    DB  F8 ; # small sh
+    DC  FD ; # small e
+    DD  F9 ; # small shch
+    DE  F7 ; # small ch
+    DF  FA ; # small hard sign
+
+    E0  DE ; # capital YU
+    E1  C0 ; # capital A
+    E2  C1 ; # capital B
+    E3  D6 ; # capital TS
+    E4  C4 ; # capital D
+    E5  C5 ; # capital YE
+    E6  D4 ; # capital F
+    E7  C3 ; # capital G
+    E8  D5 ; # capital KH
+    E9  C8 ; # capital I
+    EA  C9 ; # capital J
+    EB  CA ; # capital K
+    EC  CB ; # capital L
+    ED  CC ; # capital M
+    EE  CD ; # capital N
+    EF  CE ; # capital O
+
+    F0  CF ; # capital P
+    F1  DF ; # capital YA
+    F2  D0 ; # capital R
+    F3  D1 ; # capital S
+    F4  D2 ; # capital T
+    F5  D3 ; # capital U
+    F6  C6 ; # capital ZH
+    F7  C2 ; # capital V
+    F8  DC ; # capital soft sign
+    F9  DB ; # capital Y
+    FA  C7 ; # capital Z
+    FB  D8 ; # capital SH
+    FC  DD ; # capital E
+    FD  D9 ; # capital SHCH
+    FE  D7 ; # capital CH
+    FF  DA ; # capital hard sign
+}

@@ -1,33 +1,37 @@
+PACKAGE_DIR := $(CURDIR)/package
 
-ifneq ($(shell which docker-compose 2>/dev/null),)
-    DOCKER_COMPOSE := docker-compose
+### service
+SERVICE_NAME := gpt-oi-web
+
+### frontend static resource name
+FRONTEND := web
+
+ifeq ($(ENV), test)
+BUILD_STAGE := stage
 else
-    DOCKER_COMPOSE := docker compose
+BUILD_STAGE := prod
 endif
 
-install:
-	$(DOCKER_COMPOSE) up -d
+BUILD_CMD := build
 
-remove:
-	@chmod +x confirm_remove.sh
-	@./confirm_remove.sh
+.PHONY: install-deps clean pack
 
-start:
-	$(DOCKER_COMPOSE) start
-startAndBuild: 
-	$(DOCKER_COMPOSE) up -d --build
+### build step
+clean:
+	rm -rf $(PACKAGE_DIR)
+	rm -rf $(CURDIR)/build_tmp
+	@echo "clean success"
 
-stop:
-	$(DOCKER_COMPOSE) stop
+install-deps:
+	npm install
 
-update:
-	# Calls the LLM update script
-	chmod +x update_ollama_models.sh
-	@./update_ollama_models.sh
-	@git pull
-	$(DOCKER_COMPOSE) down
-	# Make sure the ollama-webui container is stopped before rebuilding
-	@docker stop open-webui || true
-	$(DOCKER_COMPOSE) up --build -d
-	$(DOCKER_COMPOSE) start
-
+pack:
+	npm run ${BUILD_CMD}
+	mkdir -p $(CURDIR)/build_tmp/
+	mv $(CURDIR)/build $(CURDIR)/build_tmp/${FRONTEND}
+	# 仓库中的nginx配置仅对容器生效，对虚拟机和物理机部署时，仍需要手动调整nginx配置
+	cp -r $(CURDIR)/nginx/${ENV}/$(SERVICE_NAME) $(CURDIR)/build_tmp/nginx
+	mkdir -p $(PACKAGE_DIR)
+	mv $(CURDIR)/build_tmp $(PACKAGE_DIR)/$(SERVICE_NAME)
+	rm -rf $(CURDIR)/build_tmp
+	@echo "build success"

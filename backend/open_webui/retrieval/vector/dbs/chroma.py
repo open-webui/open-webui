@@ -1,21 +1,22 @@
-import chromadb
-from chromadb import Settings
-from chromadb.utils.batch_utils import create_batches
+# import chromadb
+# from chromadb import Settings
+# from chromadb.utils.batch_utils import create_batches
 
 from typing import Optional
 
 from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
-from open_webui.config import (
-    CHROMA_DATA_PATH,
-    CHROMA_HTTP_HOST,
-    CHROMA_HTTP_PORT,
-    CHROMA_HTTP_HEADERS,
-    CHROMA_HTTP_SSL,
-    CHROMA_TENANT,
-    CHROMA_DATABASE,
-    CHROMA_CLIENT_AUTH_PROVIDER,
-    CHROMA_CLIENT_AUTH_CREDENTIALS,
-)
+
+# from open_webui.config import (
+#     CHROMA_DATA_PATH,
+#     CHROMA_HTTP_HOST,
+#     CHROMA_HTTP_PORT,
+#     CHROMA_HTTP_HEADERS,
+#     CHROMA_HTTP_SSL,
+#     CHROMA_TENANT,
+#     CHROMA_DATABASE,
+#     CHROMA_CLIENT_AUTH_PROVIDER,
+#     CHROMA_CLIENT_AUTH_CREDENTIALS,
+# )
 
 
 class ChromaClient:
@@ -24,30 +25,30 @@ class ChromaClient:
             "allow_reset": True,
             "anonymized_telemetry": False,
         }
-        if CHROMA_CLIENT_AUTH_PROVIDER is not None:
-            settings_dict["chroma_client_auth_provider"] = CHROMA_CLIENT_AUTH_PROVIDER
-        if CHROMA_CLIENT_AUTH_CREDENTIALS is not None:
-            settings_dict["chroma_client_auth_credentials"] = (
-                CHROMA_CLIENT_AUTH_CREDENTIALS
-            )
+        # if CHROMA_CLIENT_AUTH_PROVIDER is not None:
+        #     settings_dict["chroma_client_auth_provider"] = CHROMA_CLIENT_AUTH_PROVIDER
+        # if CHROMA_CLIENT_AUTH_CREDENTIALS is not None:
+        #     settings_dict["chroma_client_auth_credentials"] = (
+        #         CHROMA_CLIENT_AUTH_CREDENTIALS
+        #     )
 
-        if CHROMA_HTTP_HOST != "":
-            self.client = chromadb.HttpClient(
-                host=CHROMA_HTTP_HOST,
-                port=CHROMA_HTTP_PORT,
-                headers=CHROMA_HTTP_HEADERS,
-                ssl=CHROMA_HTTP_SSL,
-                tenant=CHROMA_TENANT,
-                database=CHROMA_DATABASE,
-                settings=Settings(**settings_dict),
-            )
-        else:
-            self.client = chromadb.PersistentClient(
-                path=CHROMA_DATA_PATH,
-                settings=Settings(**settings_dict),
-                tenant=CHROMA_TENANT,
-                database=CHROMA_DATABASE,
-            )
+        # if CHROMA_HTTP_HOST != "":
+        # self.client = chromadb.HttpClient(
+        #     host=CHROMA_HTTP_HOST,
+        #     port=CHROMA_HTTP_PORT,
+        #     headers=CHROMA_HTTP_HEADERS,
+        #     ssl=CHROMA_HTTP_SSL,
+        #     tenant=CHROMA_TENANT,
+        #     database=CHROMA_DATABASE,
+        #     settings=Settings(**settings_dict),
+        # )
+        # else:
+        # self.client = chromadb.PersistentClient(
+        #     path=CHROMA_DATA_PATH,
+        #     settings=Settings(**settings_dict),
+        #     tenant=CHROMA_TENANT,
+        #     database=CHROMA_DATABASE,
+        # )
 
     def has_collection(self, collection_name: str) -> bool:
         # Check if the collection exists based on the collection name.
@@ -131,14 +132,14 @@ class ChromaClient:
         embeddings = [item["vector"] for item in items]
         metadatas = [item["metadata"] for item in items]
 
-        for batch in create_batches(
-            api=self.client,
-            documents=documents,
-            embeddings=embeddings,
-            ids=ids,
-            metadatas=metadatas,
-        ):
-            collection.add(*batch)
+        # for batch in create_batches(
+        #     api=self.client,
+        #     documents=documents,
+        #     embeddings=embeddings,
+        #     ids=ids,
+        #     metadatas=metadatas,
+        # ):
+        #     collection.add(*batch)
 
     def upsert(self, collection_name: str, items: list[VectorItem]):
         # Update the items in the collection, if the items are not present, insert them. If the collection does not exist, it will be created.
