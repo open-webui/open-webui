@@ -23,6 +23,7 @@
 	let taskConfig = {
 		TASK_MODEL: '',
 		TASK_MODEL_EXTERNAL: '',
+		ENABLE_TITLE_GENERATION: true,
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
 		IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_AUTOCOMPLETE_GENERATION: true,
@@ -126,21 +127,33 @@
 					</div>
 				</div>
 
-				<div class="mt-3">
-					<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Title Generation Prompt')}</div>
+				<hr class=" border-gray-50 dark:border-gray-850 my-3" />
 
-					<Tooltip
-						content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
-						placement="top-start"
-					>
-						<Textarea
-							bind:value={taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE}
-							placeholder={$i18n.t(
-								'Leave empty to use the default prompt, or enter a custom prompt'
-							)}
-						/>
-					</Tooltip>
+				<div class="my-3 flex w-full items-center justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Title Generation')}
+					</div>
+
+					<Switch bind:state={taskConfig.ENABLE_TITLE_GENERATION} />
 				</div>
+
+				{#if taskConfig.ENABLE_TITLE_GENERATION}
+					<div class="mt-3">
+						<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Title Generation Prompt')}</div>
+
+						<Tooltip
+							content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+							placement="top-start"
+						>
+							<Textarea
+								bind:value={taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE}
+								placeholder={$i18n.t(
+									'Leave empty to use the default prompt, or enter a custom prompt'
+								)}
+							/>
+						</Tooltip>
+					</div>
+				{/if}
 
 				<div class="mt-3">
 					<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Image Prompt Generation Prompt')}</div>

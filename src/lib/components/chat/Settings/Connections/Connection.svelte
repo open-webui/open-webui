@@ -21,6 +21,7 @@
 
 <AddConnectionModal
 	edit
+	direct
 	bind:show={showConfigModal}
 	connection={{
 		url,

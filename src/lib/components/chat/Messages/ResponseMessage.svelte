@@ -716,6 +716,9 @@
 										floatingButtons={message?.done}
 										save={!readOnly}
 										{model}
+										onTaskClick={async (e) => {
+											console.log(e);
+										}}
 										onSourceClick={async (e) => {
 											console.log(e);
 											let sourceButton = document.getElementById(`source-${e}`);

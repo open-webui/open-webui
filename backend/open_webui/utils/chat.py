@@ -161,11 +161,18 @@ async def generate_chat_completion(
     user: Any,
     bypass_filter: bool = False,
 ):
+    log.debug(f"generate_chat_completion: {form_data}")
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
     if hasattr(request.state, "metadata"):
-        form_data["metadata"] = request.state.metadata
+        if "metadata" not in form_data:
+            form_data["metadata"] = request.state.metadata
+        else:
+            form_data["metadata"] = {
+                **form_data["metadata"],
+                **request.state.metadata,
+            }
 
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {
@@ -187,19 +194,18 @@ async def generate_chat_completion(
 
     model = models[model_id]
 
-    # Check if user has access to the model
-    if not bypass_filter and user.role == "user":
-        try:
-            check_model_access(user, model)
-        except Exception as e:
-            raise e
-
     if getattr(request.state, "direct", False):
         return await generate_direct_chat_completion(
             request, form_data, user=user, models=models
         )
-
     else:
+        # Check if user has access to the model
+        if not bypass_filter and user.role == "user":
+            try:
+                check_model_access(user, model)
+            except Exception as e:
+                raise e
+
         if model["owned_by"] == "arena":
             model_ids = model.get("info", {}).get("meta", {}).get("model_ids")
             filter_mode = model.get("info", {}).get("meta", {}).get("filter_mode")
