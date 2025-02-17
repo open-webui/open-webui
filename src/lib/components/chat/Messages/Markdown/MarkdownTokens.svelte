@@ -118,7 +118,7 @@
 									class="!px-3 !py-1.5 cursor-pointer border border-gray-50 dark:border-gray-850"
 									style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}
 								>
-									<div class="flex flex-col gap-1.5 text-left">
+									<div class="flex flex-col gap-1.5 text-start">
 										<div class="flex-shrink-0 break-normal">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-header-${headerIdx}`}
