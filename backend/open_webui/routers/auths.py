@@ -374,7 +374,9 @@ async def signin(request: Request, response: Response, ticket: str):
             #     "profile_image_url": user.profile_image_url,
             #     "permissions": user_permissions,
             # }
-            return RedirectResponse(url=f"{WEBUI_URL}/auth?token={token}")
+            auth_callback_url = f"{WEBUI_URL}/auth?token={token}"
+            logging.info(f"Redirecting authorized login to {auth_callback_url}")
+            return RedirectResponse(url=auth_callback_url)
         else:
             raise HTTPException(400, detail="Invalid credentials")
     else:
