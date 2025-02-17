@@ -17,6 +17,9 @@ from pydantic import BaseModel
 from starlette.background import BackgroundTask
 
 from beyond_the_loop.models.models import Models
+from beyond_the_loop.models.model_message_credit_costs import ModelMessageCreditCosts
+from beyond_the_loop.models.companies import Companies
+
 from open_webui.config import (
     CACHE_DIR,
 )
@@ -557,6 +560,19 @@ async def generate_chat_completion(
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
+
+    # Subtract credits from the company's balance (if possible)
+    model_message_credit_cost = ModelMessageCreditCosts.get_cost_by_model(model_id)
+
+    # Check if company has sufficient credits
+    if not Companies.has_sufficient_credits(user.company_id, model_message_credit_cost):
+        raise HTTPException(
+            status_code=402,  # 402 Payment Required
+            detail=f"Insufficient credits. This operation requires {model_message_credit_cost} credits.",
+        )
+
+    # Subtract credits from balance
+    Companies.subtract_credit_balance(user.company_id, model_message_credit_cost)
 
     # Check model info and override the payload
     if model_info:

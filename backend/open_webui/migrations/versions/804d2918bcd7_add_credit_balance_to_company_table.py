@@ -1,4 +1,4 @@
-"""Add token_balance to company table
+"""Add credit_balance to company table
 
 Revision ID: 804d2918bcd7
 Revises: 6eb174dec7b4
@@ -27,11 +27,11 @@ def column_exists(table, column):
 
 def upgrade() -> None:
     # Add company_id column if it doesn't exist
-    if not column_exists("company", "token_balance"):
-        op.add_column('company', sa.Column('token_balance', sa.Integer(), nullable=True))
+    if not column_exists("company", "credit_balance"):
+        op.add_column('company', sa.Column('credit_balance', sa.Integer(), nullable=True))
 
 
 def downgrade() -> None:
     with op.batch_alter_table('company', schema=None) as batch_op:
-        if column_exists("company", "token_balance"):
-            batch_op.drop_column('token_balance')
+        if column_exists("company", "credit_balance"):
+            batch_op.drop_column('credit_balance')

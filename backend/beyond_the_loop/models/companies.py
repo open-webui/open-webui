@@ -3,7 +3,7 @@ from pydantic import BaseModel, ConfigDict
 from typing import Optional
 
 from sqlalchemy.orm import relationship
-from sqlalchemy import String, Column, Text, Integer
+from sqlalchemy import Integer, String, Column, Text
 
 from open_webui.internal.db import get_db, Base
 
@@ -22,6 +22,7 @@ class Company(Base):
     profile_image_url = Column(Text, nullable=True)
     default_model = Column(String, default="GPT 4o")
     allowed_models = Column(Text, nullable=True)
+    credit_balance = Column(Integer, default=0)
 
     users = relationship("User", back_populates="company", cascade="all, delete-orphan")
 
@@ -31,7 +32,7 @@ class CompanyModel(BaseModel):
     profile_image_url: Optional[str] = None
     default_model: Optional[str] = "GPT 4o"
     allowed_models: Optional[str] = None
-    token_balance: Optional[int] = 0
+    credit_balance: Optional[int] = 0
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -138,38 +139,49 @@ class CompanyTable:
             # Handle exceptions if any
             return False
 
-    def update_token_balance(self, company_id: str, tokens_used: int) -> bool:
-        """Update company's token balance by subtracting tokens used"""
+    def update_credit_balance(self, company_id: str, credits_used: int) -> bool:
+        """Update company's credit balance by subtracting credits used"""
         with get_db() as db:
             company = db.query(Company).filter(Company.id == company_id).first()
-            if company and company.token_balance is not None:
-                company.token_balance -= tokens_used
+            if company and company.credit_balance is not None:
+                company.credit_balance -= credits_used
                 db.commit()
                 return True
             return False
 
-    def add_token_balance(self, company_id: str, tokens_to_add: int) -> bool:
-        """Add tokens to company's balance"""
+    def add_credit_balance(self, company_id: str, credits_to_add: int) -> bool:
+        """Add credits to company's balance"""
         with get_db() as db:
             company = db.query(Company).filter(Company.id == company_id).first()
             if company:
-                if company.token_balance is None:
-                    company.token_balance = tokens_to_add
+                if company.credit_balance is None:
+                    company.credit_balance = credits_to_add
                 else:
-                    company.token_balance += tokens_to_add
+                    company.credit_balance += credits_to_add
                 db.commit()
                 return True
             return False
 
-    def get_token_balance(self, company_id: str) -> Optional[int]:
-        """Get company's current token balance"""
+    def subtract_credit_balance(self, company_id: str, credits_to_subtract: int) -> bool:
+        """Subtract credits from company's balance"""
         with get_db() as db:
             company = db.query(Company).filter(Company.id == company_id).first()
-            return company.token_balance if company else None
+            if company:
+                if company.credit_balance is not None and company.credit_balance >= credits_to_subtract:
+                    company.credit_balance -= credits_to_subtract
+                    db.commit()
+                    return True
+            return False
 
-    def has_sufficient_tokens(self, company_id: str, required_tokens: int) -> bool:
-        """Check if company has sufficient tokens for an operation"""
-        balance = self.get_token_balance(company_id)
-        return balance is None or balance >= required_tokens  # None means unlimited
+    def get_credit_balance(self, company_id: str) -> Optional[int]:
+        """Get company's current credit balance"""
+        with get_db() as db:
+            company = db.query(Company).filter(Company.id == company_id).first()
+            return company.credit_balance if company else None
+
+    def has_sufficient_credits(self, company_id: str, required_credits: int) -> bool:
+        """Check if company has sufficient credits for an operation"""
+        balance = self.get_credit_balance(company_id)
+        return balance is None or balance >= required_credits  # None means unlimited
 
 Companies = CompanyTable()
