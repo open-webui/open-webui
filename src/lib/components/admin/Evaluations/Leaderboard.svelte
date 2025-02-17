@@ -1,6 +1,8 @@
 <script lang="ts">
 	import * as ort from 'onnxruntime-web';
-	import { AutoModel, AutoTokenizer } from '@huggingface/transformers';
+	import { env, AutoModel, AutoTokenizer } from '@huggingface/transformers';
+
+	env.backends.onnx.wasm.wasmPaths = '/wasm/';
 
 	import { onMount, getContext } from 'svelte';
 	import { models } from '$lib/stores';

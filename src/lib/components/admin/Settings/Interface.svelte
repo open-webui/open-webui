@@ -23,14 +23,17 @@
 	let taskConfig = {
 		TASK_MODEL: '',
 		TASK_MODEL_EXTERNAL: '',
+		ENABLE_TITLE_GENERATION: true,
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
+		IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_AUTOCOMPLETE_GENERATION: true,
 		AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH: -1,
 		TAGS_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_TAGS_GENERATION: true,
 		ENABLE_SEARCH_QUERY_GENERATION: true,
 		ENABLE_RETRIEVAL_QUERY_GENERATION: true,
-		QUERY_GENERATION_PROMPT_TEMPLATE: ''
+		QUERY_GENERATION_PROMPT_TEMPLATE: '',
+		TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: ''
 	};
 
 	let promptSuggestions = [];
@@ -124,15 +127,43 @@
 					</div>
 				</div>
 
+				<hr class=" border-gray-50 dark:border-gray-850 my-3" />
+
+				<div class="my-3 flex w-full items-center justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Title Generation')}
+					</div>
+
+					<Switch bind:state={taskConfig.ENABLE_TITLE_GENERATION} />
+				</div>
+
+				{#if taskConfig.ENABLE_TITLE_GENERATION}
+					<div class="mt-3">
+						<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Title Generation Prompt')}</div>
+
+						<Tooltip
+							content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+							placement="top-start"
+						>
+							<Textarea
+								bind:value={taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE}
+								placeholder={$i18n.t(
+									'Leave empty to use the default prompt, or enter a custom prompt'
+								)}
+							/>
+						</Tooltip>
+					</div>
+				{/if}
+
 				<div class="mt-3">
-					<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Title Generation Prompt')}</div>
+					<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Image Prompt Generation Prompt')}</div>
 
 					<Tooltip
 						content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 						placement="top-start"
 					>
 						<Textarea
-							bind:value={taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE}
+							bind:value={taskConfig.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE}
 							placeholder={$i18n.t(
 								'Leave empty to use the default prompt, or enter a custom prompt'
 							)}
@@ -232,6 +263,20 @@
 						/>
 					</Tooltip>
 				</div>
+			</div>
+
+			<div class="mt-3">
+				<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Tools Function Calling Prompt')}</div>
+
+				<Tooltip
+					content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+					placement="top-start"
+				>
+					<Textarea
+						bind:value={taskConfig.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE}
+						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+					/>
+				</Tooltip>
 			</div>
 
 			<hr class=" border-gray-50 dark:border-gray-850 my-3" />

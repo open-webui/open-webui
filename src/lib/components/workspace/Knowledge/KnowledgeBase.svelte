@@ -11,7 +11,7 @@
 	import { page } from '$app/stores';
 	import { mobile, showSidebar, knowledge as _knowledge } from '$lib/stores';
 
-	import { updateFileDataContentById, uploadFile } from '$lib/apis/files';
+	import { updateFileDataContentById, uploadFile, deleteFileById } from '$lib/apis/files';
 	import {
 		addFileToKnowledgeById,
 		getKnowledgeById,
@@ -136,7 +136,7 @@
 		// Check if the file is an audio file and transcribe/convert it to text file
 		if (['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'].includes(file['type'])) {
 			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			});
 
@@ -149,7 +149,7 @@
 
 		try {
 			const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
-				toast.error(e);
+				toast.error(`${e}`);
 				return null;
 			});
 
@@ -169,7 +169,7 @@
 				toast.error($i18n.t('Failed to upload file.'));
 			}
 		} catch (e) {
-			toast.error(e);
+			toast.error(`${e}`);
 		}
 	};
 
@@ -339,7 +339,7 @@
 	const syncDirectoryHandler = async () => {
 		if ((knowledge?.files ?? []).length > 0) {
 			const res = await resetKnowledgeById(localStorage.token, id).catch((e) => {
-				toast.error(e);
+				toast.error(`${e}`);
 			});
 
 			if (res) {
@@ -357,7 +357,7 @@
 	const addFileHandler = async (fileId) => {
 		const updatedKnowledge = await addFileToKnowledgeById(localStorage.token, id, fileId).catch(
 			(e) => {
-				toast.error(e);
+				toast.error(`${e}`);
 				return null;
 			}
 		);
@@ -372,17 +372,21 @@
 	};
 
 	const deleteFileHandler = async (fileId) => {
-		const updatedKnowledge = await removeFileFromKnowledgeById(
-			localStorage.token,
-			id,
-			fileId
-		).catch((e) => {
-			toast.error(e);
-		});
+		try {
+			console.log('Starting file deletion process for:', fileId);
 
-		if (updatedKnowledge) {
-			knowledge = updatedKnowledge;
-			toast.success($i18n.t('File removed successfully.'));
+			// Remove from knowledge base only
+			const updatedKnowledge = await removeFileFromKnowledgeById(localStorage.token, id, fileId);
+
+			console.log('Knowledge base updated:', updatedKnowledge);
+
+			if (updatedKnowledge) {
+				knowledge = updatedKnowledge;
+				toast.success($i18n.t('File removed successfully.'));
+			}
+		} catch (e) {
+			console.error('Error in deleteFileHandler:', e);
+			toast.error(`${e}`);
 		}
 	};
 
@@ -391,7 +395,7 @@
 		const content = selectedFile.data.content;
 
 		const res = updateFileDataContentById(localStorage.token, fileId, content).catch((e) => {
-			toast.error(e);
+			toast.error(`${e}`);
 		});
 
 		const updatedKnowledge = await updateFileFromKnowledgeById(
@@ -399,7 +403,7 @@
 			id,
 			fileId
 		).catch((e) => {
-			toast.error(e);
+			toast.error(`${e}`);
 		});
 
 		if (res && updatedKnowledge) {
@@ -426,7 +430,7 @@
 				description: knowledge.description,
 				access_control: knowledge.access_control
 			}).catch((e) => {
-				toast.error(e);
+				toast.error(`${e}`);
 			});
 
 			if (res) {
@@ -518,7 +522,7 @@
 		id = $page.params.id;
 
 		const res = await getKnowledgeById(localStorage.token, id).catch((e) => {
-			toast.error(e);
+			toast.error(`${e}`);
 			return null;
 		});
 
@@ -616,6 +620,7 @@
 			onChange={() => {
 				changeDebounceHandler();
 			}}
+			accessRoles={['read', 'write']}
 		/>
 		<div class="w-full mb-2.5">
 			<div class=" flex w-full">

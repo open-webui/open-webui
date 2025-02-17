@@ -2,7 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { toast } from 'svelte-sonner';
-	import { models } from '$lib/stores';
+	import { config, models, settings } from '$lib/stores';
 	import { getContext, onMount, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -57,13 +57,18 @@
 				valves,
 				selectedPipelinesUrlIdx
 			).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 			});
 
 			if (res) {
 				toast.success($i18n.t('Valves updated successfully'));
 				setPipelines();
-				models.set(await getModels(localStorage.token));
+				models.set(
+					await getModels(
+						localStorage.token,
+						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					)
+				);
 				saveHandler();
 			}
 		} else {
@@ -118,14 +123,19 @@
 			pipelineDownloadUrl,
 			selectedPipelinesUrlIdx
 		).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
 		if (res) {
 			toast.success($i18n.t('Pipeline downloaded successfully'));
 			setPipelines();
-			models.set(await getModels(localStorage.token));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
 		}
 
 		downloading = false;
@@ -150,14 +160,19 @@
 			if (res) {
 				toast.success($i18n.t('Pipeline downloaded successfully'));
 				setPipelines();
-				models.set(await getModels(localStorage.token));
+				models.set(
+					await getModels(
+						localStorage.token,
+						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					)
+				);
 			}
 		} else {
 			toast.error($i18n.t('No file selected'));
 		}
 
 		pipelineFiles = null;
-		const pipelineUploadInputElement = document.getElementById('pipeline-upload-input');
+		const pipelineUploadInputElement = document.getElementById('pipelines-upload-input');
 
 		if (pipelineUploadInputElement) {
 			pipelineUploadInputElement.value = null;
@@ -172,14 +187,19 @@
 			pipelines[selectedPipelineIdx].id,
 			selectedPipelinesUrlIdx
 		).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
 		if (res) {
 			toast.success($i18n.t('Pipeline deleted successfully'));
 			setPipelines();
-			models.set(await getModels(localStorage.token));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
 		}
 	};
 

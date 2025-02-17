@@ -26,7 +26,7 @@ class RedisLock:
 
     def release_lock(self):
         lock_value = self.redis.get(self.lock_name)
-        if lock_value and lock_value.decode("utf-8") == self.lock_id:
+        if lock_value and lock_value == self.lock_id:
             self.redis.delete(self.lock_name)
 
 

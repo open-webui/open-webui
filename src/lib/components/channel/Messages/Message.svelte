@@ -3,10 +3,12 @@
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import isToday from 'dayjs/plugin/isToday';
 	import isYesterday from 'dayjs/plugin/isYesterday';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	dayjs.extend(relativeTime);
 	dayjs.extend(isToday);
 	dayjs.extend(isYesterday);
+	dayjs.extend(localizedFormat);
 
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext<Writable<i18nType>>('i18n');
@@ -30,6 +32,7 @@
 	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
 	import ReactionPicker from './Message/ReactionPicker.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import { formatDate } from '$lib/utils';
 
 	export let message;
 	export let showUserProfile = true;
@@ -45,19 +48,6 @@
 	let edit = false;
 	let editedContent = null;
 	let showDeleteConfirmDialog = false;
-
-	const formatDate = (inputDate) => {
-		const date = dayjs(inputDate);
-		const now = dayjs();
-
-		if (date.isToday()) {
-			return `Today at ${date.format('HH:mm')}`;
-		} else if (date.isYesterday()) {
-			return `Yesterday at ${date.format('HH:mm')}`;
-		} else {
-			return `${date.format('DD/MM/YYYY')} at ${date.format('HH:mm')}`;
-		}
-	};
 </script>
 
 <ConfirmDialog
@@ -165,9 +155,7 @@
 						<div
 							class="mt-1.5 flex flex-shrink-0 items-center text-xs self-center invisible group-hover:visible text-gray-500 font-medium first-letter:capitalize"
 						>
-							<Tooltip
-								content={dayjs(message.created_at / 1000000).format('dddd, DD MMMM YYYY HH:mm')}
-							>
+							<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
 								{dayjs(message.created_at / 1000000).format('HH:mm')}
 							</Tooltip>
 						</div>
@@ -186,9 +174,7 @@
 							<div
 								class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 							>
-								<Tooltip
-									content={dayjs(message.created_at / 1000000).format('dddd, DD MMMM YYYY HH:mm')}
-								>
+								<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
 									<span class="line-clamp-1">{formatDate(message.created_at / 1000000)}</span>
 								</Tooltip>
 							</div>

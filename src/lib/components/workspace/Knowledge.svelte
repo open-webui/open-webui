@@ -54,7 +54,7 @@
 
 	const deleteHandler = async (item) => {
 		const res = await deleteKnowledgeById(localStorage.token, item.id).catch((e) => {
-			toast.error(e);
+			toast.error(`${e}`);
 		});
 
 		if (res) {

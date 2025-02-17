@@ -179,7 +179,11 @@ class Tools:
 	};
 </script>
 
-<AccessControlModal bind:show={showAccessControlModal} bind:accessControl />
+<AccessControlModal
+	bind:show={showAccessControlModal}
+	bind:accessControl
+	accessRoles={['read', 'write']}
+/>
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full">

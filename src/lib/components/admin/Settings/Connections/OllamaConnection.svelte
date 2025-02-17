@@ -4,11 +4,12 @@
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
-	import AddConnectionModal from './AddConnectionModal.svelte';
+	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
 
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import Wrench from '$lib/components/icons/Wrench.svelte';
 	import ManageOllamaModal from './ManageOllamaModal.svelte';
+	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
 
 	export let onDelete = () => {};
 	export let onSubmit = () => {};
@@ -70,7 +71,7 @@
 				}}
 				type="button"
 			>
-				<Wrench />
+				<ArrowDownTray />
 			</button>
 		</Tooltip>
 

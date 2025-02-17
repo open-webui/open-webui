@@ -45,16 +45,19 @@ from open_webui.retrieval.web.utils import get_web_loader
 from open_webui.retrieval.web.brave import search_brave
 from open_webui.retrieval.web.kagi import search_kagi
 from open_webui.retrieval.web.mojeek import search_mojeek
+from open_webui.retrieval.web.bocha import search_bocha
 from open_webui.retrieval.web.duckduckgo import search_duckduckgo
 from open_webui.retrieval.web.google_pse import search_google_pse
 from open_webui.retrieval.web.jina_search import search_jina
 from open_webui.retrieval.web.searchapi import search_searchapi
+from open_webui.retrieval.web.serpapi import search_serpapi
 from open_webui.retrieval.web.searxng import search_searxng
 from open_webui.retrieval.web.serper import search_serper
 from open_webui.retrieval.web.serply import search_serply
 from open_webui.retrieval.web.serpstack import search_serpstack
 from open_webui.retrieval.web.tavily import search_tavily
 from open_webui.retrieval.web.bing import search_bing
+from open_webui.retrieval.web.exa import search_exa
 
 
 from open_webui.retrieval.utils import (
@@ -378,18 +381,23 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
                 "brave_search_api_key": request.app.state.config.BRAVE_SEARCH_API_KEY,
                 "kagi_search_api_key": request.app.state.config.KAGI_SEARCH_API_KEY,
                 "mojeek_search_api_key": request.app.state.config.MOJEEK_SEARCH_API_KEY,
+                "bocha_search_api_key": request.app.state.config.BOCHA_SEARCH_API_KEY,
                 "serpstack_api_key": request.app.state.config.SERPSTACK_API_KEY,
                 "serpstack_https": request.app.state.config.SERPSTACK_HTTPS,
                 "serper_api_key": request.app.state.config.SERPER_API_KEY,
                 "serply_api_key": request.app.state.config.SERPLY_API_KEY,
                 "tavily_api_key": request.app.state.config.TAVILY_API_KEY,
                 "searchapi_api_key": request.app.state.config.SEARCHAPI_API_KEY,
-                "seaarchapi_engine": request.app.state.config.SEARCHAPI_ENGINE,
+                "searchapi_engine": request.app.state.config.SEARCHAPI_ENGINE,
+                "serpapi_api_key": request.app.state.config.SERPAPI_API_KEY,
+                "serpapi_engine": request.app.state.config.SERPAPI_ENGINE,
                 "jina_api_key": request.app.state.config.JINA_API_KEY,
                 "bing_search_v7_endpoint": request.app.state.config.BING_SEARCH_V7_ENDPOINT,
                 "bing_search_v7_subscription_key": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
+                "exa_api_key": request.app.state.config.EXA_API_KEY,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+                "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             },
         },
     }
@@ -426,6 +434,7 @@ class WebSearchConfig(BaseModel):
     brave_search_api_key: Optional[str] = None
     kagi_search_api_key: Optional[str] = None
     mojeek_search_api_key: Optional[str] = None
+    bocha_search_api_key: Optional[str] = None
     serpstack_api_key: Optional[str] = None
     serpstack_https: Optional[bool] = None
     serper_api_key: Optional[str] = None
@@ -433,11 +442,15 @@ class WebSearchConfig(BaseModel):
     tavily_api_key: Optional[str] = None
     searchapi_api_key: Optional[str] = None
     searchapi_engine: Optional[str] = None
+    serpapi_api_key: Optional[str] = None
+    serpapi_engine: Optional[str] = None
     jina_api_key: Optional[str] = None
     bing_search_v7_endpoint: Optional[str] = None
     bing_search_v7_subscription_key: Optional[str] = None
+    exa_api_key: Optional[str] = None
     result_count: Optional[int] = None
     concurrent_requests: Optional[int] = None
+    domain_filter_list: Optional[List[str]] = []
 
 
 class WebConfig(BaseModel):
@@ -520,6 +533,9 @@ async def update_rag_config(
         request.app.state.config.MOJEEK_SEARCH_API_KEY = (
             form_data.web.search.mojeek_search_api_key
         )
+        request.app.state.config.BOCHA_SEARCH_API_KEY = (
+            form_data.web.search.bocha_search_api_key
+        )
         request.app.state.config.SERPSTACK_API_KEY = (
             form_data.web.search.serpstack_api_key
         )
@@ -534,6 +550,9 @@ async def update_rag_config(
             form_data.web.search.searchapi_engine
         )
 
+        request.app.state.config.SERPAPI_API_KEY = form_data.web.search.serpapi_api_key
+        request.app.state.config.SERPAPI_ENGINE = form_data.web.search.serpapi_engine
+
         request.app.state.config.JINA_API_KEY = form_data.web.search.jina_api_key
         request.app.state.config.BING_SEARCH_V7_ENDPOINT = (
             form_data.web.search.bing_search_v7_endpoint
@@ -542,11 +561,16 @@ async def update_rag_config(
             form_data.web.search.bing_search_v7_subscription_key
         )
 
+        request.app.state.config.EXA_API_KEY = form_data.web.search.exa_api_key
+
         request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = (
             form_data.web.search.result_count
         )
         request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = (
             form_data.web.search.concurrent_requests
+        )
+        request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = (
+            form_data.web.search.domain_filter_list
         )
 
     return {
@@ -581,18 +605,23 @@ async def update_rag_config(
                 "brave_search_api_key": request.app.state.config.BRAVE_SEARCH_API_KEY,
                 "kagi_search_api_key": request.app.state.config.KAGI_SEARCH_API_KEY,
                 "mojeek_search_api_key": request.app.state.config.MOJEEK_SEARCH_API_KEY,
+                "bocha_search_api_key": request.app.state.config.BOCHA_SEARCH_API_KEY,
                 "serpstack_api_key": request.app.state.config.SERPSTACK_API_KEY,
                 "serpstack_https": request.app.state.config.SERPSTACK_HTTPS,
                 "serper_api_key": request.app.state.config.SERPER_API_KEY,
                 "serply_api_key": request.app.state.config.SERPLY_API_KEY,
                 "serachapi_api_key": request.app.state.config.SEARCHAPI_API_KEY,
                 "searchapi_engine": request.app.state.config.SEARCHAPI_ENGINE,
+                "serpapi_api_key": request.app.state.config.SERPAPI_API_KEY,
+                "serpapi_engine": request.app.state.config.SERPAPI_ENGINE,
                 "tavily_api_key": request.app.state.config.TAVILY_API_KEY,
                 "jina_api_key": request.app.state.config.JINA_API_KEY,
                 "bing_search_v7_endpoint": request.app.state.config.BING_SEARCH_V7_ENDPOINT,
                 "bing_search_v7_subscription_key": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
+                "exa_api_key": request.app.state.config.EXA_API_KEY,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+                "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             },
         },
     }
@@ -660,6 +689,7 @@ def save_docs_to_vector_db(
     overwrite: bool = False,
     split: bool = True,
     add: bool = False,
+    user=None,
 ) -> bool:
     def _get_docs_info(docs: list[Document]) -> str:
         docs_info = set()
@@ -740,7 +770,11 @@ def save_docs_to_vector_db(
     # for meta-data so convert them to string.
     for metadata in metadatas:
         for key, value in metadata.items():
-            if isinstance(value, datetime):
+            if (
+                isinstance(value, datetime)
+                or isinstance(value, list)
+                or isinstance(value, dict)
+            ):
                 metadata[key] = str(value)
 
     try:
@@ -775,7 +809,7 @@ def save_docs_to_vector_db(
         )
 
         embeddings = embedding_function(
-            list(map(lambda x: x.replace("\n", " "), texts))
+            list(map(lambda x: x.replace("\n", " "), texts)), user=user
         )
 
         items = [
@@ -933,6 +967,7 @@ def process_file(
                     "hash": hash,
                 },
                 add=(True if form_data.collection_name else False),
+                user=user,
             )
 
             if result:
@@ -990,7 +1025,7 @@ def process_text(
     text_content = form_data.content
     log.debug(f"text_content: {text_content}")
 
-    result = save_docs_to_vector_db(request, docs, collection_name)
+    result = save_docs_to_vector_db(request, docs, collection_name, user=user)
     if result:
         return {
             "status": True,
@@ -1023,7 +1058,9 @@ def process_youtube_video(
         content = " ".join([doc.page_content for doc in docs])
         log.debug(f"text_content: {content}")
 
-        save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
+        save_docs_to_vector_db(
+            request, docs, collection_name, overwrite=True, user=user
+        )
 
         return {
             "status": True,
@@ -1064,7 +1101,9 @@ def process_web(
         content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {content}")
-        save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
+        save_docs_to_vector_db(
+            request, docs, collection_name, overwrite=True, user=user
+        )
 
         return {
             "status": True,
@@ -1095,11 +1134,14 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
     - BRAVE_SEARCH_API_KEY
     - KAGI_SEARCH_API_KEY
     - MOJEEK_SEARCH_API_KEY
+    - BOCHA_SEARCH_API_KEY
     - SERPSTACK_API_KEY
     - SERPER_API_KEY
     - SERPLY_API_KEY
     - TAVILY_API_KEY
+    - EXA_API_KEY
     - SEARCHAPI_API_KEY + SEARCHAPI_ENGINE (by default `google`)
+    - SERPAPI_API_KEY + SERPAPI_ENGINE (by default `google`)
     Args:
         query (str): The query to search for
     """
@@ -1161,6 +1203,16 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             )
         else:
             raise Exception("No MOJEEK_SEARCH_API_KEY found in environment variables")
+    elif engine == "bocha":
+        if request.app.state.config.BOCHA_SEARCH_API_KEY:
+            return search_bocha(
+                request.app.state.config.BOCHA_SEARCH_API_KEY,
+                query,
+                request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception("No BOCHA_SEARCH_API_KEY found in environment variables")
     elif engine == "serpstack":
         if request.app.state.config.SERPSTACK_API_KEY:
             return search_serpstack(
@@ -1218,6 +1270,17 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             )
         else:
             raise Exception("No SEARCHAPI_API_KEY found in environment variables")
+    elif engine == "serpapi":
+        if request.app.state.config.SERPAPI_API_KEY:
+            return search_serpapi(
+                request.app.state.config.SERPAPI_API_KEY,
+                request.app.state.config.SERPAPI_ENGINE,
+                query,
+                request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception("No SERPAPI_API_KEY found in environment variables")
     elif engine == "jina":
         return search_jina(
             request.app.state.config.JINA_API_KEY,
@@ -1229,6 +1292,13 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             request.app.state.config.BING_SEARCH_V7_ENDPOINT,
             str(DEFAULT_LOCALE),
+            query,
+            request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
+    elif engine == "exa":
+        return search_exa(
+            request.app.state.config.EXA_API_KEY,
             query,
             request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
@@ -1272,7 +1342,9 @@ def process_web_search(
             requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
         )
         docs = loader.load()
-        save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
+        save_docs_to_vector_db(
+            request, docs, collection_name, overwrite=True, user=user
+        )
 
         return {
             "status": True,
@@ -1306,7 +1378,9 @@ def query_doc_handler(
             return query_doc_with_hybrid_search(
                 collection_name=form_data.collection_name,
                 query=form_data.query,
-                embedding_function=request.app.state.EMBEDDING_FUNCTION,
+                embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(
+                    query, user=user
+                ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=request.app.state.rf,
                 r=(
@@ -1314,12 +1388,16 @@ def query_doc_handler(
                     if form_data.r
                     else request.app.state.config.RELEVANCE_THRESHOLD
                 ),
+                user=user,
             )
         else:
             return query_doc(
                 collection_name=form_data.collection_name,
-                query_embedding=request.app.state.EMBEDDING_FUNCTION(form_data.query),
+                query_embedding=request.app.state.EMBEDDING_FUNCTION(
+                    form_data.query, user=user
+                ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
+                user=user,
             )
     except Exception as e:
         log.exception(e)
@@ -1348,7 +1426,9 @@ def query_collection_handler(
             return query_collection_with_hybrid_search(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
-                embedding_function=request.app.state.EMBEDDING_FUNCTION,
+                embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(
+                    query, user=user
+                ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=request.app.state.rf,
                 r=(
@@ -1361,7 +1441,9 @@ def query_collection_handler(
             return query_collection(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
-                embedding_function=request.app.state.EMBEDDING_FUNCTION,
+                embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(
+                    query, user=user
+                ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
             )
 
@@ -1509,6 +1591,7 @@ def process_files_batch(
                 docs=all_docs,
                 collection_name=collection_name,
                 add=True,
+                user=user,
             )
 
             # Update all files with collection name

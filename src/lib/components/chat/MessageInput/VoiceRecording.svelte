@@ -137,7 +137,7 @@
 		const file = blobToFile(audioBlob, 'recording.wav');
 
 		const res = await transcribeAudio(localStorage.token, file).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 

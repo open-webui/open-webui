@@ -7,6 +7,7 @@ from open_webui.internal.wrappers import register_connection
 from open_webui.env import (
     OPEN_WEBUI_DIR,
     DATABASE_URL,
+    DATABASE_SCHEMA,
     SRC_LOG_LEVELS,
     DATABASE_POOL_MAX_OVERFLOW,
     DATABASE_POOL_RECYCLE,
@@ -14,7 +15,7 @@ from open_webui.env import (
     DATABASE_POOL_TIMEOUT,
 )
 from peewee_migrate import Router
-from sqlalchemy import Dialect, create_engine, types
+from sqlalchemy import Dialect, create_engine, MetaData, types
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import QueuePool, NullPool
@@ -99,7 +100,8 @@ else:
 SessionLocal = sessionmaker(
     autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
 )
-Base = declarative_base()
+metadata_obj = MetaData(schema=DATABASE_SCHEMA)
+Base = declarative_base(metadata=metadata_obj)
 Session = scoped_session(SessionLocal)
 
 

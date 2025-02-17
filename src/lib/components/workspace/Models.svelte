@@ -21,6 +21,7 @@
 	} from '$lib/apis/models';
 
 	import { getModels } from '$lib/apis';
+	import { getGroups } from '$lib/apis/groups';
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import ModelMenu from './Models/ModelMenu.svelte';
@@ -47,6 +48,8 @@
 
 	let showModelDeleteConfirm = false;
 
+	let group_ids = [];
+
 	$: if (models) {
 		filteredModels = models.filter(
 			(m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase())
@@ -57,7 +60,7 @@
 
 	const deleteModelHandler = async (model) => {
 		const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
-			toast.error(e);
+			toast.error(`${e}`);
 			return null;
 		});
 
@@ -65,7 +68,12 @@
 			toast.success($i18n.t(`Deleted {{name}}`, { name: model.id }));
 		}
 
-		await _models.set(await getModels(localStorage.token));
+		await _models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
 		models = await getWorkspaceModels(localStorage.token);
 	};
 
@@ -79,7 +87,7 @@
 	};
 
 	const shareModelHandler = async (model) => {
-		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
+		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
 
 		const url = 'https://openwebui.com';
 
@@ -131,7 +139,12 @@
 			);
 		}
 
-		await _models.set(await getModels(localStorage.token));
+		await _models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
 		models = await getWorkspaceModels(localStorage.token);
 	};
 
@@ -151,6 +164,8 @@
 
 	onMount(async () => {
 		models = await getWorkspaceModels(localStorage.token);
+		let groups = await getGroups(localStorage.token);
+		group_ids = groups.map((group) => group.id);
 
 		loaded = true;
 
@@ -308,7 +323,7 @@
 								</button>
 							</Tooltip>
 						{:else}
-							{#if $user?.role === 'admin' || model.user_id === $user?.id}
+							{#if $user?.role === 'admin' || model.user_id === $user?.id || model.access_control.write.group_ids.some( (wg) => group_ids.includes(wg) )}
 								<a
 									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 									type="button"
@@ -366,7 +381,13 @@
 										bind:state={model.is_active}
 										on:change={async (e) => {
 											toggleModelById(localStorage.token, model.id);
-											_models.set(await getModels(localStorage.token));
+											_models.set(
+												await getModels(
+													localStorage.token,
+													$config?.features?.enable_direct_connections &&
+														($settings?.directConnections ?? null)
+												)
+											);
 										}}
 									/>
 								</Tooltip>
@@ -412,7 +433,13 @@
 								}
 							}
 
-							await _models.set(await getModels(localStorage.token));
+							await _models.set(
+								await getModels(
+									localStorage.token,
+									$config?.features?.enable_direct_connections &&
+										($settings?.directConnections ?? null)
+								)
+							);
 							models = await getWorkspaceModels(localStorage.token);
 						};
 
@@ -474,7 +501,7 @@
 	{#if $config?.features.enable_community_sharing}
 		<div class=" my-16">
 			<div class=" text-xl font-medium mb-1 line-clamp-1">
-				{$i18n.t('Made by OpenWebUI Community')}
+				{$i18n.t('Made by Open WebUI Community')}
 			</div>
 
 			<a

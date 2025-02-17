@@ -62,27 +62,45 @@ async def get_user_permissisions(user=Depends(get_verified_user)):
 # User Default Permissions
 ############################
 class WorkspacePermissions(BaseModel):
-    models: bool
-    knowledge: bool
-    prompts: bool
-    tools: bool
+    models: bool = False
+    knowledge: bool = False
+    prompts: bool = False
+    tools: bool = False
 
 
 class ChatPermissions(BaseModel):
-    file_upload: bool
-    delete: bool
-    edit: bool
-    temporary: bool
+    controls: bool = True
+    file_upload: bool = True
+    delete: bool = True
+    edit: bool = True
+    temporary: bool = True
+
+
+class FeaturesPermissions(BaseModel):
+    web_search: bool = True
+    image_generation: bool = True
+    code_interpreter: bool = True
 
 
 class UserPermissions(BaseModel):
     workspace: WorkspacePermissions
     chat: ChatPermissions
+    features: FeaturesPermissions
 
 
-@router.get("/default/permissions")
+@router.get("/default/permissions", response_model=UserPermissions)
 async def get_user_permissions(request: Request, user=Depends(get_admin_user)):
-    return request.app.state.config.USER_PERMISSIONS
+    return {
+        "workspace": WorkspacePermissions(
+            **request.app.state.config.USER_PERMISSIONS.get("workspace", {})
+        ),
+        "chat": ChatPermissions(
+            **request.app.state.config.USER_PERMISSIONS.get("chat", {})
+        ),
+        "features": FeaturesPermissions(
+            **request.app.state.config.USER_PERMISSIONS.get("features", {})
+        ),
+    }
 
 
 @router.post("/default/permissions")
@@ -135,7 +153,7 @@ async def get_user_settings_by_session_user(user=Depends(get_verified_user)):
 async def update_user_settings_by_session_user(
     form_data: UserSettings, user=Depends(get_verified_user)
 ):
-    user = Users.update_user_by_id(user.id, {"settings": form_data.model_dump()})
+    user = Users.update_user_settings_by_id(user.id, form_data.model_dump())
     if user:
         return user.settings
     else:

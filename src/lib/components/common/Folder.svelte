@@ -145,8 +145,11 @@
 
 				{#if onAdd}
 					<button
-						class="absolute z-10 right-2 self-center flex items-center"
+						class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
 						on:pointerup={(e) => {
+							e.stopPropagation();
+						}}
+						on:click={(e) => {
 							e.stopPropagation();
 							onAdd();
 						}}

@@ -39,7 +39,7 @@
 			content: data.content,
 			access_control: data.access_control
 		}).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -57,7 +57,7 @@
 
 		if (id) {
 			tool = await getToolById(localStorage.token, id).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				goto('/workspace/tools');
 				return null;
 			});

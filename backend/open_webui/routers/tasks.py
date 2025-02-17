@@ -4,11 +4,13 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 from typing import Optional
 import logging
+import re
 
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.task import (
     title_generation_template,
     query_generation_template,
+    image_prompt_generation_template,
     autocomplete_generation_template,
     tags_generation_template,
     emoji_generation_template,
@@ -23,6 +25,7 @@ from open_webui.utils.task import get_task_model_id
 from open_webui.config import (
     DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE,
+    DEFAULT_IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE,
@@ -50,10 +53,12 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
         "TASK_MODEL": request.app.state.config.TASK_MODEL,
         "TASK_MODEL_EXTERNAL": request.app.state.config.TASK_MODEL_EXTERNAL,
         "TITLE_GENERATION_PROMPT_TEMPLATE": request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE,
+        "IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE": request.app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_AUTOCOMPLETE_GENERATION": request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION,
         "AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH": request.app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
         "TAGS_GENERATION_PROMPT_TEMPLATE": request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_TAGS_GENERATION": request.app.state.config.ENABLE_TAGS_GENERATION,
+        "ENABLE_TITLE_GENERATION": request.app.state.config.ENABLE_TITLE_GENERATION,
         "ENABLE_SEARCH_QUERY_GENERATION": request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION,
         "ENABLE_RETRIEVAL_QUERY_GENERATION": request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION,
         "QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
@@ -64,7 +69,9 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
 class TaskConfigForm(BaseModel):
     TASK_MODEL: Optional[str]
     TASK_MODEL_EXTERNAL: Optional[str]
+    ENABLE_TITLE_GENERATION: bool
     TITLE_GENERATION_PROMPT_TEMPLATE: str
+    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: str
     ENABLE_AUTOCOMPLETE_GENERATION: bool
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH: int
     TAGS_GENERATION_PROMPT_TEMPLATE: str
@@ -81,8 +88,13 @@ async def update_task_config(
 ):
     request.app.state.config.TASK_MODEL = form_data.TASK_MODEL
     request.app.state.config.TASK_MODEL_EXTERNAL = form_data.TASK_MODEL_EXTERNAL
+    request.app.state.config.ENABLE_TITLE_GENERATION = form_data.ENABLE_TITLE_GENERATION
     request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = (
         form_data.TITLE_GENERATION_PROMPT_TEMPLATE
+    )
+
+    request.app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (
+        form_data.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE
     )
 
     request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION = (
@@ -113,7 +125,9 @@ async def update_task_config(
     return {
         "TASK_MODEL": request.app.state.config.TASK_MODEL,
         "TASK_MODEL_EXTERNAL": request.app.state.config.TASK_MODEL_EXTERNAL,
+        "ENABLE_TITLE_GENERATION": request.app.state.config.ENABLE_TITLE_GENERATION,
         "TITLE_GENERATION_PROMPT_TEMPLATE": request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE,
+        "IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE": request.app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_AUTOCOMPLETE_GENERATION": request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION,
         "AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH": request.app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
         "TAGS_GENERATION_PROMPT_TEMPLATE": request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE,
@@ -129,7 +143,19 @@ async def update_task_config(
 async def generate_title(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
-    models = request.app.state.MODELS
+
+    if not request.app.state.config.ENABLE_TITLE_GENERATION:
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"detail": "Title generation is disabled"},
+        )
+
+    if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
+        models = {
+            request.state.model["id"]: request.state.model,
+        }
+    else:
+        models = request.app.state.MODELS
 
     model_id = form_data["model"]
     if model_id not in models:
@@ -156,9 +182,20 @@ async def generate_title(
     else:
         template = DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE
 
+    messages = form_data["messages"]
+
+    # Remove reasoning details from the messages
+    for message in messages:
+        message["content"] = re.sub(
+            r"<details\s+type=\"reasoning\"[^>]*>.*?<\/details>",
+            "",
+            message["content"],
+            flags=re.S,
+        ).strip()
+
     content = title_generation_template(
         template,
-        form_data["messages"],
+        messages,
         {
             "name": user.name,
             "location": user.info.get("location") if user.info else None,
@@ -170,13 +207,14 @@ async def generate_title(
         "messages": [{"role": "user", "content": content}],
         "stream": False,
         **(
-            {"max_tokens": 50}
+            {"max_tokens": 1000}
             if models[task_model_id]["owned_by"] == "ollama"
             else {
-                "max_completion_tokens": 50,
+                "max_completion_tokens": 1000,
             }
         ),
         "metadata": {
+            **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "task": str(TASKS.TITLE_GENERATION),
             "task_body": form_data,
             "chat_id": form_data.get("chat_id", None),
@@ -204,7 +242,12 @@ async def generate_chat_tags(
             content={"detail": "Tags generation is disabled"},
         )
 
-    models = request.app.state.MODELS
+    if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
+        models = {
+            request.state.model["id"]: request.state.model,
+        }
+    else:
+        models = request.app.state.MODELS
 
     model_id = form_data["model"]
     if model_id not in models:
@@ -240,6 +283,7 @@ async def generate_chat_tags(
         "messages": [{"role": "user", "content": content}],
         "stream": False,
         "metadata": {
+            **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "task": str(TASKS.TAGS_GENERATION),
             "task_body": form_data,
             "chat_id": form_data.get("chat_id", None),
@@ -252,6 +296,72 @@ async def generate_chat_tags(
         log.error(f"Error generating chat completion: {e}")
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "An internal error has occurred."},
+        )
+
+
+@router.post("/image_prompt/completions")
+async def generate_image_prompt(
+    request: Request, form_data: dict, user=Depends(get_verified_user)
+):
+    if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
+        models = {
+            request.state.model["id"]: request.state.model,
+        }
+    else:
+        models = request.app.state.MODELS
+
+    model_id = form_data["model"]
+    if model_id not in models:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model not found",
+        )
+
+    # Check if the user has a custom task model
+    # If the user has a custom task model, use that model
+    task_model_id = get_task_model_id(
+        model_id,
+        request.app.state.config.TASK_MODEL,
+        request.app.state.config.TASK_MODEL_EXTERNAL,
+        models,
+    )
+
+    log.debug(
+        f"generating image prompt using model {task_model_id} for user {user.email} "
+    )
+
+    if request.app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE != "":
+        template = request.app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE
+    else:
+        template = DEFAULT_IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE
+
+    content = image_prompt_generation_template(
+        template,
+        form_data["messages"],
+        user={
+            "name": user.name,
+        },
+    )
+
+    payload = {
+        "model": task_model_id,
+        "messages": [{"role": "user", "content": content}],
+        "stream": False,
+        "metadata": {
+            **(request.state.metadata if hasattr(request.state, "metadata") else {}),
+            "task": str(TASKS.IMAGE_PROMPT_GENERATION),
+            "task_body": form_data,
+            "chat_id": form_data.get("chat_id", None),
+        },
+    }
+
+    try:
+        return await generate_chat_completion(request, form_data=payload, user=user)
+    except Exception as e:
+        log.error("Exception occurred", exc_info=True)
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
             content={"detail": "An internal error has occurred."},
         )
 
@@ -275,7 +385,12 @@ async def generate_queries(
                 detail=f"Query generation is disabled",
             )
 
-    models = request.app.state.MODELS
+    if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
+        models = {
+            request.state.model["id"]: request.state.model,
+        }
+    else:
+        models = request.app.state.MODELS
 
     model_id = form_data["model"]
     if model_id not in models:
@@ -311,6 +426,7 @@ async def generate_queries(
         "messages": [{"role": "user", "content": content}],
         "stream": False,
         "metadata": {
+            **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "task": str(TASKS.QUERY_GENERATION),
             "task_body": form_data,
             "chat_id": form_data.get("chat_id", None),
@@ -350,7 +466,12 @@ async def generate_autocompletion(
                 detail=f"Input prompt exceeds maximum length of {request.app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH}",
             )
 
-    models = request.app.state.MODELS
+    if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
+        models = {
+            request.state.model["id"]: request.state.model,
+        }
+    else:
+        models = request.app.state.MODELS
 
     model_id = form_data["model"]
     if model_id not in models:
@@ -386,6 +507,7 @@ async def generate_autocompletion(
         "messages": [{"role": "user", "content": content}],
         "stream": False,
         "metadata": {
+            **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "task": str(TASKS.AUTOCOMPLETE_GENERATION),
             "task_body": form_data,
             "chat_id": form_data.get("chat_id", None),
@@ -407,7 +529,12 @@ async def generate_emoji(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
 
-    models = request.app.state.MODELS
+    if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
+        models = {
+            request.state.model["id"]: request.state.model,
+        }
+    else:
+        models = request.app.state.MODELS
 
     model_id = form_data["model"]
     if model_id not in models:
@@ -450,7 +577,11 @@ async def generate_emoji(
             }
         ),
         "chat_id": form_data.get("chat_id", None),
-        "metadata": {"task": str(TASKS.EMOJI_GENERATION), "task_body": form_data},
+        "metadata": {
+            **(request.state.metadata if hasattr(request.state, "metadata") else {}),
+            "task": str(TASKS.EMOJI_GENERATION),
+            "task_body": form_data,
+        },
     }
 
     try:
@@ -467,7 +598,13 @@ async def generate_moa_response(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
 
-    models = request.app.state.MODELS
+    if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
+        models = {
+            request.state.model["id"]: request.state.model,
+        }
+    else:
+        models = request.app.state.MODELS
+
     model_id = form_data["model"]
 
     if model_id not in models:
@@ -500,6 +637,7 @@ async def generate_moa_response(
         "messages": [{"role": "user", "content": content}],
         "stream": form_data.get("stream", False),
         "metadata": {
+            **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "chat_id": form_data.get("chat_id", None),
             "task": str(TASKS.MOA_RESPONSE_GENERATION),
             "task_body": form_data,

@@ -1,7 +1,28 @@
 from typing import Optional, Union, List, Dict, Any
 from open_webui.models.users import Users, UserModel
 from open_webui.models.groups import Groups
+
+
+from open_webui.config import DEFAULT_USER_PERMISSIONS
 import json
+
+
+def fill_missing_permissions(
+    permissions: Dict[str, Any], default_permissions: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    Recursively fills in missing properties in the permissions dictionary
+    using the default permissions as a template.
+    """
+    for key, value in default_permissions.items():
+        if key not in permissions:
+            permissions[key] = value
+        elif isinstance(value, dict) and isinstance(
+            permissions[key], dict
+        ):  # Both are nested dictionaries
+            permissions[key] = fill_missing_permissions(permissions[key], value)
+
+    return permissions
 
 
 def get_permissions(
@@ -27,17 +48,23 @@ def get_permissions(
                 if key not in permissions:
                     permissions[key] = value
                 else:
-                    permissions[key] = permissions[key] or value
+                    permissions[key] = (
+                        permissions[key] or value
+                    )  # Use the most permissive value (True > False)
         return permissions
 
     user_groups = Groups.get_groups_by_member_id(user_id)
 
-    # deep copy default permissions to avoid modifying the original dict
+    # Deep copy default permissions to avoid modifying the original dict
     permissions = json.loads(json.dumps(default_permissions))
 
+    # Combine permissions from all user groups
     for group in user_groups:
         group_permissions = group.permissions
         permissions = combine_permissions(permissions, group_permissions)
+
+    # Ensure all fields from default_permissions are present and filled in
+    permissions = fill_missing_permissions(permissions, default_permissions)
 
     return permissions
 
@@ -45,21 +72,21 @@ def get_permissions(
 def has_permission(
     user_id: str,
     permission_key: str,
-    default_permissions: Dict[str, bool] = {},
+    default_permissions: Dict[str, Any] = {},
 ) -> bool:
     """
     Check if a user has a specific permission by checking the group permissions
-    and falls back to default permissions if not found in any group.
+    and fall back to default permissions if not found in any group.
 
     Permission keys can be hierarchical and separated by dots ('.').
     """
 
-    def get_permission(permissions: Dict[str, bool], keys: List[str]) -> bool:
+    def get_permission(permissions: Dict[str, Any], keys: List[str]) -> bool:
         """Traverse permissions dict using a list of keys (from dot-split permission_key)."""
         for key in keys:
             if key not in permissions:
                 return False  # If any part of the hierarchy is missing, deny access
-            permissions = permissions[key]  # Go one level deeper
+            permissions = permissions[key]  # Traverse one level deeper
 
         return bool(permissions)  # Return the boolean at the final level
 
@@ -73,7 +100,10 @@ def has_permission(
         if get_permission(group_permissions, permission_hierarchy):
             return True
 
-    # Check default permissions afterwards if the group permissions don't allow it
+    # Check default permissions afterward if the group permissions don't allow it
+    default_permissions = fill_missing_permissions(
+        default_permissions, DEFAULT_USER_PERMISSIONS
+    )
     return get_permission(default_permissions, permission_hierarchy)
 
 

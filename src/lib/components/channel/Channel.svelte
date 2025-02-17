@@ -142,7 +142,7 @@
 
 		const res = await sendMessage(localStorage.token, id, { content: content, data: data }).catch(
 			(error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			}
 		);
@@ -199,7 +199,7 @@
 </svelte:head>
 
 <div
-	class="h-screen max-h-[100dvh] {$showSidebar
+	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
 		? 'md:max-w-[calc(100%-260px)]'
 		: ''} w-full max-w-full flex flex-col"
 	id="channel-container"
@@ -266,7 +266,7 @@
 						threadId = null;
 					}}
 				>
-					<div class=" {threadId !== null ? ' h-screen  w-screen' : 'px-6 py-4'} h-full">
+					<div class=" {threadId !== null ? ' h-screen  w-full' : 'px-6 py-4'} h-full">
 						<Thread
 							{threadId}
 							{channel}

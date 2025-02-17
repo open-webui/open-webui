@@ -65,6 +65,69 @@ export const AIAutocompletion = Extension.create({
 		let touchStartX = 0;
 		let touchStartY = 0;
 
+		let isComposing = false;
+
+		const handleAICompletion = (view) => {
+			const { state, dispatch } = view;
+			const { selection } = state;
+			const { $head } = selection;
+
+			// Start debounce logic for AI generation only if the cursor is at the end of the paragraph
+			if (selection.empty && $head.pos === $head.end()) {
+				// Set up debounce for AI generation
+				if (this.options.debounceTime !== null) {
+					clearTimeout(debounceTimer);
+
+					// Capture current position
+					const currentPos = $head.before();
+
+					debounceTimer = setTimeout(() => {
+						if (isComposing) return false;
+
+						const newState = view.state;
+						const newSelection = newState.selection;
+						const newNode = newState.doc.nodeAt(currentPos);
+
+						// Check if the node still exists and is still a paragraph
+						if (
+							newNode &&
+							newNode.type.name === 'paragraph' &&
+							newSelection.$head.pos === newSelection.$head.end() &&
+							newSelection.$head.pos === currentPos + newNode.nodeSize - 1
+						) {
+							const prompt = newNode.textContent;
+
+							if (prompt.trim() !== '') {
+								if (loading) return true;
+								loading = true;
+								this.options
+									.generateCompletion(prompt)
+									.then((suggestion) => {
+										if (suggestion && suggestion.trim() !== '') {
+											if (view.state.selection.$head.pos === view.state.selection.$head.end()) {
+												if (view.state === newState) {
+													view.dispatch(
+														newState.tr.setNodeMarkup(currentPos, null, {
+															...newNode.attrs,
+															class: 'ai-autocompletion',
+															'data-prompt': prompt,
+															'data-suggestion': suggestion
+														})
+													);
+												}
+											}
+										}
+									})
+									.finally(() => {
+										loading = false;
+									});
+							}
+						}
+					}, this.options.debounceTime);
+				}
+			}
+		};
+
 		return [
 			new Plugin({
 				key: new PluginKey('aiAutocompletion'),
@@ -125,62 +188,20 @@ export const AIAutocompletion = Extension.create({
 								);
 							}
 
-							// Start debounce logic for AI generation only if the cursor is at the end of the paragraph
-							if (selection.empty && $head.pos === $head.end()) {
-								// Set up debounce for AI generation
-								if (this.options.debounceTime !== null) {
-									clearTimeout(debounceTimer);
-
-									// Capture current position
-									const currentPos = $head.before();
-
-									debounceTimer = setTimeout(() => {
-										const newState = view.state;
-										const newSelection = newState.selection;
-										const newNode = newState.doc.nodeAt(currentPos);
-
-										// Check if the node still exists and is still a paragraph
-										if (
-											newNode &&
-											newNode.type.name === 'paragraph' &&
-											newSelection.$head.pos === newSelection.$head.end() &&
-											newSelection.$head.pos === currentPos + newNode.nodeSize - 1
-										) {
-											const prompt = newNode.textContent;
-
-											if (prompt.trim() !== '') {
-												if (loading) return true;
-												loading = true;
-												this.options
-													.generateCompletion(prompt)
-													.then((suggestion) => {
-														if (suggestion && suggestion.trim() !== '') {
-															if (
-																view.state.selection.$head.pos === view.state.selection.$head.end()
-															) {
-																view.dispatch(
-																	newState.tr.setNodeMarkup(currentPos, null, {
-																		...newNode.attrs,
-																		class: 'ai-autocompletion',
-																		'data-prompt': prompt,
-																		'data-suggestion': suggestion
-																	})
-																);
-															}
-														}
-													})
-													.finally(() => {
-														loading = false;
-													});
-											}
-										}
-									}, this.options.debounceTime);
-								}
-							}
+							handleAICompletion(view);
 						}
 						return false;
 					},
 					handleDOMEvents: {
+						compositionstart: () => {
+							isComposing = true;
+							return false;
+						},
+						compositionend: (view) => {
+							isComposing = false;
+							handleAICompletion(view);
+							return false;
+						},
 						touchstart: (view, event) => {
 							touchStartX = event.touches[0].clientX;
 							touchStartY = event.touches[0].clientY;

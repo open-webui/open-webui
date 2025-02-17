@@ -61,11 +61,11 @@
 
 	const shareHandler = async (tool) => {
 		const item = await getToolById(localStorage.token, tool.id).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
-		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
+		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
 
 		const url = 'https://openwebui.com';
 
@@ -88,7 +88,7 @@
 
 	const cloneHandler = async (tool) => {
 		const _tool = await getToolById(localStorage.token, tool.id).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -104,7 +104,7 @@
 
 	const exportHandler = async (tool) => {
 		const _tool = await getToolById(localStorage.token, tool.id).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -118,7 +118,7 @@
 
 	const deleteHandler = async (tool) => {
 		const res = await deleteToolById(localStorage.token, tool.id).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -402,7 +402,7 @@
 					class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
 					on:click={async () => {
 						const _tools = await exportTools(localStorage.token).catch((error) => {
-							toast.error(error);
+							toast.error(`${error}`);
 							return null;
 						});
 
@@ -438,7 +438,7 @@
 	{#if $config?.features.enable_community_sharing}
 		<div class=" my-16">
 			<div class=" text-xl font-medium mb-1 line-clamp-1">
-				{$i18n.t('Made by OpenWebUI Community')}
+				{$i18n.t('Made by Open WebUI Community')}
 			</div>
 
 			<a
@@ -487,7 +487,7 @@
 
 				for (const tool of _tools) {
 					const res = await createNewTool(localStorage.token, tool).catch((error) => {
-						toast.error(error);
+						toast.error(`${error}`);
 						return null;
 					});
 				}

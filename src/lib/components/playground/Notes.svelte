@@ -42,9 +42,10 @@
 
 		<div class=" flex-1 w-full h-full">
 			<RichTextInput
-				className=" input-prose-sm"
+				className="input-prose-sm"
 				bind:value={content}
 				placeholder={$i18n.t('Write something...')}
+				preserveBreaks={true}
 			/>
 		</div>
 	</div>

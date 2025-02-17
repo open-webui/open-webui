@@ -23,7 +23,7 @@ def search_bing(
     filter_list: Optional[list[str]] = None,
 ) -> list[SearchResult]:
     mkt = locale
-    params = {"q": query, "mkt": mkt, "answerCount": count}
+    params = {"q": query, "mkt": mkt, "count": count}
     headers = {"Ocp-Apim-Subscription-Key": subscription_key}
 
     try:

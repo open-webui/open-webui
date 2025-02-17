@@ -2,7 +2,12 @@ import time
 from typing import Optional
 
 from open_webui.internal.db import Base, JSONField, get_db
+
+
 from open_webui.models.chats import Chats
+from open_webui.models.groups import Groups
+
+
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text
 
@@ -266,11 +271,31 @@ class UsersTable:
         except Exception:
             return None
 
+    def update_user_settings_by_id(self, id: str, updated: dict) -> Optional[UserModel]:
+        try:
+            with get_db() as db:
+                user_settings = db.query(User).filter_by(id=id).first().settings
+
+                if user_settings is None:
+                    user_settings = {}
+
+                user_settings.update(updated)
+
+                db.query(User).filter_by(id=id).update({"settings": user_settings})
+                db.commit()
+
+                user = db.query(User).filter_by(id=id).first()
+                return UserModel.model_validate(user)
+        except Exception:
+            return None
+
     def delete_user_by_id(self, id: str) -> bool:
         try:
+            # Remove User from Groups
+            Groups.remove_user_from_all_groups(id)
+
             # Delete User Chats
             result = Chats.delete_chats_by_user_id(id)
-
             if result:
                 with get_db() as db:
                     # Delete User
@@ -299,6 +324,11 @@ class UsersTable:
                 return user.api_key
         except Exception:
             return None
+
+    def get_valid_user_ids(self, user_ids: list[str]) -> list[str]:
+        with get_db() as db:
+            users = db.query(User).filter(User.id.in_(user_ids)).all()
+            return [user.id for user in users]
 
 
 Users = UsersTable()

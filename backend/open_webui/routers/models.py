@@ -155,6 +155,16 @@ async def update_model_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
+    if (
+        model.user_id != user.id
+        and not has_access(user.id, "write", model.access_control)
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
     model = Models.update_model_by_id(id, form_data)
     return model
 
@@ -173,7 +183,11 @@ async def delete_model_by_id(id: str, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if model.user_id != user.id and user.role != "admin":
+    if (
+        user.role != "admin"
+        and model.user_id != user.id
+        and not has_access(user.id, "write", model.access_control)
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,

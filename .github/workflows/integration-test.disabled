@@ -52,6 +52,8 @@ jobs:
 
       - name: Cypress run
         uses: cypress-io/github-action@v6
+        env:
+          LIBGL_ALWAYS_SOFTWARE: 1
         with:
           browser: chrome
           wait-on: 'http://localhost:3000'

@@ -1,6 +1,17 @@
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
 
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import isToday from 'dayjs/plugin/isToday';
+import isYesterday from 'dayjs/plugin/isYesterday';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
+
+dayjs.extend(relativeTime);
+dayjs.extend(isToday);
+dayjs.extend(isYesterday);
+dayjs.extend(localizedFormat);
+
 import { WEBUI_BASE_URL } from '$lib/constants';
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
@@ -44,15 +55,12 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 
 	// Remove sourceIds from the content and replace them with <source_id>...</source_id>
 	if (Array.isArray(sourceIds)) {
-		sourceIds.forEach((sourceId) => {
-			// Escape special characters in the sourceId
-			const escapedSourceId = escapeRegExp(sourceId);
-
+		sourceIds.forEach((sourceId, idx) => {
 			// Create a token based on the exact `[sourceId]` string
-			const sourceToken = `\\[${escapedSourceId}\\]`; // Escape special characters for RegExp
+			const sourceToken = `\\[${idx}\\]`; // Escape special characters for RegExp
 			const sourceRegex = new RegExp(sourceToken, 'g'); // Match all occurrences of [sourceId]
 
-			content = content.replace(sourceRegex, `<source_id data="${sourceId}" />`);
+			content = content.replace(sourceRegex, `<source_id data="${idx}" title="${sourceId}" />`);
 		});
 	}
 
@@ -72,10 +80,6 @@ export const sanitizeResponseContent = (content: string) => {
 
 export const processResponseContent = (content: string) => {
 	return content.trim();
-};
-
-export const revertSanitizedResponseContent = (content: string) => {
-	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>');
 };
 
 export function unescapeHtml(html: string) {
@@ -283,6 +287,19 @@ export const generateInitialsImage = (name) => {
 	ctx.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
 
 	return canvas.toDataURL();
+};
+
+export const formatDate = (inputDate) => {
+	const date = dayjs(inputDate);
+	const now = dayjs();
+
+	if (date.isToday()) {
+		return `Today at ${date.format('LT')}`;
+	} else if (date.isYesterday()) {
+		return `Yesterday at ${date.format('LT')}`;
+	} else {
+		return `${date.format('L')} at ${date.format('LT')}`;
+	}
 };
 
 export const copyToClipboard = async (text) => {
@@ -648,6 +665,17 @@ export const cleanText = (content: string) => {
 	return removeFormattings(removeEmojis(content.trim()));
 };
 
+export const removeDetails = (content, types) => {
+	for (const type of types) {
+		content = content.replace(
+			new RegExp(`<details\\s+type="${type}"[^>]*>.*?<\\/details>`, 'gis'),
+			''
+		);
+	}
+
+	return content;
+};
+
 // This regular expression matches code blocks marked by triple backticks
 const codeBlockRegex = /```[\s\S]*?```/g;
 
@@ -717,6 +745,7 @@ export const extractSentencesForAudio = (text: string) => {
 };
 
 export const getMessageContentParts = (content: string, split_on: string = 'punctuation') => {
+	content = removeDetails(content, ['reasoning', 'code_interpreter']);
 	const messageContentParts: string[] = [];
 
 	switch (split_on) {
@@ -739,6 +768,19 @@ export const blobToFile = (blob, fileName) => {
 	// Create a new File object from the Blob
 	const file = new File([blob], fileName, { type: blob.type });
 	return file;
+};
+
+export const getPromptVariables = (user_name, user_location) => {
+	return {
+		'{{USER_NAME}}': user_name,
+		'{{USER_LOCATION}}': user_location || 'Unknown',
+		'{{CURRENT_DATETIME}}': getCurrentDateTime(),
+		'{{CURRENT_DATE}}': getFormattedDate(),
+		'{{CURRENT_TIME}}': getFormattedTime(),
+		'{{CURRENT_WEEKDAY}}': getWeekday(),
+		'{{CURRENT_TIMEZONE}}': getUserTimezone(),
+		'{{USER_LANGUAGE}}': localStorage.getItem('locale') || 'en-US'
+	};
 };
 
 /**

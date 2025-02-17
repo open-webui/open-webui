@@ -11,6 +11,11 @@ export const WEBUI_NAME = writable(APP_NAME);
 export const config: Writable<Config | undefined> = writable(undefined);
 export const user: Writable<SessionUser | undefined> = writable(undefined);
 
+// Electron App
+export const isApp = writable(false);
+export const appInfo = writable(null);
+export const appData = writable(null);
+
 // Frontend
 export const MODEL_DOWNLOAD_POOL = writable({});
 
@@ -35,6 +40,8 @@ export const shortCodesToEmojis = writable(
 		return acc;
 	}, {})
 );
+
+export const TTSWorker = writable(null);
 
 export const chatId = writable('');
 export const chatTitle = writable('');
@@ -201,6 +208,7 @@ type Config = {
 		enable_admin_export: boolean;
 		enable_admin_chat_access: boolean;
 		enable_community_sharing: boolean;
+		enable_autocomplete_generation: boolean;
 	};
 	oauth: {
 		providers: {

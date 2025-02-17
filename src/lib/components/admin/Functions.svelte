@@ -3,7 +3,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { WEBUI_NAME, config, functions, models } from '$lib/stores';
+	import { WEBUI_NAME, config, functions, models, settings } from '$lib/stores';
 	import { onMount, getContext, tick } from 'svelte';
 
 	import { goto } from '$app/navigation';
@@ -61,11 +61,11 @@
 
 	const shareHandler = async (func) => {
 		const item = await getFunctionById(localStorage.token, func.id).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
-		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
+		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
 
 		const url = 'https://openwebui.com';
 
@@ -88,7 +88,7 @@
 
 	const cloneHandler = async (func) => {
 		const _function = await getFunctionById(localStorage.token, func.id).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -104,7 +104,7 @@
 
 	const exportHandler = async (func) => {
 		const _function = await getFunctionById(localStorage.token, func.id).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -118,7 +118,7 @@
 
 	const deleteHandler = async (func) => {
 		const res = await deleteFunctionById(localStorage.token, func.id).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -126,13 +126,18 @@
 			toast.success($i18n.t('Function deleted successfully'));
 
 			functions.set(await getFunctions(localStorage.token));
-			models.set(await getModels(localStorage.token));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
 		}
 	};
 
 	const toggleGlobalHandler = async (func) => {
 		const res = await toggleGlobalById(localStorage.token, func.id).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 		});
 
 		if (res) {
@@ -147,7 +152,12 @@
 			}
 
 			functions.set(await getFunctions(localStorage.token));
-			models.set(await getModels(localStorage.token));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
 		}
 	};
 
@@ -359,7 +369,13 @@
 							bind:state={func.is_active}
 							on:change={async (e) => {
 								toggleFunctionById(localStorage.token, func.id);
-								models.set(await getModels(localStorage.token));
+								models.set(
+									await getModels(
+										localStorage.token,
+										$config?.features?.enable_direct_connections &&
+											($settings?.directConnections ?? null)
+									)
+								);
 							}}
 						/>
 					</Tooltip>
@@ -418,7 +434,7 @@
 			class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
 			on:click={async () => {
 				const _functions = await exportFunctions(localStorage.token).catch((error) => {
-					toast.error(error);
+					toast.error(`${error}`);
 					return null;
 				});
 
@@ -453,7 +469,7 @@
 {#if $config?.features.enable_community_sharing}
 	<div class=" my-16">
 		<div class=" text-xl font-medium mb-1 line-clamp-1">
-			{$i18n.t('Made by OpenWebUI Community')}
+			{$i18n.t('Made by Open WebUI Community')}
 		</div>
 
 		<a
@@ -496,7 +512,12 @@
 	id={selectedFunction?.id ?? null}
 	on:save={async () => {
 		await tick();
-		models.set(await getModels(localStorage.token));
+		models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
 	}}
 />
 
@@ -510,14 +531,19 @@
 
 			for (const func of _functions) {
 				const res = await createNewFunction(localStorage.token, func).catch((error) => {
-					toast.error(error);
+					toast.error(`${error}`);
 					return null;
 				});
 			}
 
 			toast.success($i18n.t('Functions imported successfully'));
 			functions.set(await getFunctions(localStorage.token));
-			models.set(await getModels(localStorage.token));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
 		};
 
 		reader.readAsText(importFiles[0]);

@@ -47,7 +47,7 @@
 					reader.onload = async (e) => {
 						const res = await importConfig(localStorage.token, JSON.parse(e.target.result)).catch(
 							(error) => {
-								toast.error(error);
+								toast.error(`${error}`);
 							}
 						);
 
@@ -132,7 +132,7 @@
 							// exportAllUserChats();
 
 							downloadDatabase(localStorage.token).catch((error) => {
-								toast.error(error);
+								toast.error(`${error}`);
 							});
 						}}
 					>

@@ -39,7 +39,7 @@
 			content: data.content,
 			access_control: data.access_control
 		}).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 

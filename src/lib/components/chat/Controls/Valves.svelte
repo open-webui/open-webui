@@ -82,7 +82,7 @@
 			if (tab === 'tools') {
 				const res = await updateToolUserValvesById(localStorage.token, selectedId, valves).catch(
 					(error) => {
-						toast.error(error);
+						toast.error(`${error}`);
 						return null;
 					}
 				);
@@ -97,7 +97,7 @@
 					selectedId,
 					valves
 				).catch((error) => {
-					toast.error(error);
+					toast.error(`${error}`);
 					return null;
 				});
 

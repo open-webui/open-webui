@@ -64,7 +64,7 @@
 	export const formatPythonCodeHandler = async () => {
 		if (codeEditor) {
 			const res = await formatPythonCode(_value).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			});
 

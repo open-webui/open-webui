@@ -2,6 +2,7 @@
 	import { onDestroy, onMount, createEventDispatcher } from 'svelte';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { fade, fly, slide } from 'svelte/transition';
+	import { isApp } from '$lib/stores';
 
 	const dispatch = createEventDispatcher();
 
@@ -57,14 +58,16 @@
 
 <div
 	bind:this={modalElement}
-	class="modal fixed right-0 left-0 bottom-0 bg-black/60 w-full h-screen max-h-[100dvh] flex justify-center z-[999] overflow-hidden overscroll-contain"
+	class="modal fixed right-0 {$isApp
+		? ' ml-[4.5rem] max-w-[calc(100%-4.5rem)]'
+		: ''} left-0 bottom-0 bg-black/60 w-full h-screen max-h-[100dvh] flex justify-center z-[999] overflow-hidden overscroll-contain"
 	in:fly={{ y: 100, duration: 100 }}
 	on:mousedown={() => {
 		show = false;
 	}}
 >
 	<div
-		class=" mt-auto max-w-full w-full bg-gray-50 dark:bg-gray-900 dark:text-gray-100 {className} max-h-[100dvh] overflow-y-auto scrollbar-hidden"
+		class=" mt-auto w-full bg-gray-50 dark:bg-gray-900 dark:text-gray-100 {className} max-h-[100dvh] overflow-y-auto scrollbar-hidden"
 		on:mousedown={(e) => {
 			e.stopPropagation();
 		}}

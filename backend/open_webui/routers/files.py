@@ -3,30 +3,22 @@ import os
 import uuid
 from pathlib import Path
 from typing import Optional
-from pydantic import BaseModel
-import mimetypes
 from urllib.parse import quote
 
-from open_webui.storage.provider import Storage
-
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi.responses import FileResponse, StreamingResponse
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.files import (
     FileForm,
     FileModel,
     FileModelResponse,
     Files,
 )
-from open_webui.routers.retrieval import process_file, ProcessFileForm
-
-from open_webui.config import UPLOAD_DIR
-from open_webui.env import SRC_LOG_LEVELS
-from open_webui.constants import ERROR_MESSAGES
-
-
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Request
-from fastapi.responses import FileResponse, StreamingResponse
-
-
+from open_webui.routers.retrieval import ProcessFileForm, process_file
+from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -41,7 +33,10 @@ router = APIRouter()
 
 @router.post("/", response_model=FileModelResponse)
 def upload_file(
-    request: Request, file: UploadFile = File(...), user=Depends(get_verified_user)
+    request: Request,
+    file: UploadFile = File(...),
+    user=Depends(get_verified_user),
+    file_metadata: dict = {},
 ):
     log.info(f"file.content_type: {file.content_type}")
     try:
@@ -65,13 +60,14 @@ def upload_file(
                         "name": name,
                         "content_type": file.content_type,
                         "size": len(contents),
+                        "data": file_metadata,
                     },
                 }
             ),
         )
 
         try:
-            process_file(request, ProcessFileForm(file_id=id))
+            process_file(request, ProcessFileForm(file_id=id), user=user)
             file_item = Files.get_file_by_id(id=id)
         except Exception as e:
             log.exception(e)
@@ -126,7 +122,7 @@ async def delete_all_files(user=Depends(get_admin_user)):
             Storage.delete_all_files()
         except Exception as e:
             log.exception(e)
-            log.error(f"Error deleting files")
+            log.error("Error deleting files")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),
@@ -193,7 +189,9 @@ async def update_file_data_content_by_id(
     if file and (file.user_id == user.id or user.role == "admin"):
         try:
             process_file(
-                request, ProcessFileForm(file_id=id, content=form_data.content)
+                request,
+                ProcessFileForm(file_id=id, content=form_data.content),
+                user=user,
             )
             file = Files.get_file_by_id(id=id)
         except Exception as e:
@@ -246,7 +244,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
                 )
         except Exception as e:
             log.exception(e)
-            log.error(f"Error getting file content")
+            log.error("Error getting file content")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT("Error getting file content"),
@@ -277,7 +275,7 @@ async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user)):
                 )
         except Exception as e:
             log.exception(e)
-            log.error(f"Error getting file content")
+            log.error("Error getting file content")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT("Error getting file content"),
@@ -345,13 +343,15 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
 async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
     if file and (file.user_id == user.id or user.role == "admin"):
+        # We should add Chroma cleanup here
+
         result = Files.delete_file_by_id(id)
         if result:
             try:
                 Storage.delete_file(file.path)
             except Exception as e:
                 log.exception(e)
-                log.error(f"Error deleting files")
+                log.error("Error deleting files")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),
