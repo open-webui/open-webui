@@ -168,7 +168,7 @@
 					{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
 						<Tooltip className=" w-fit" content={marked.parse(modelDescription)} placement="top">
 							<div
-								class="mt-0.5 px-2 text-sm font-normal text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xl markdown"
+								class="mt-0.5 px-2 text-sm font-normal text-gray-600 dark:text-gray-400 line-clamp-2 max-w-xl markdown"
 							>
 								{@html marked.parse(modelDescription)}
 							</div>
