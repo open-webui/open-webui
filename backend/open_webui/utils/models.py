@@ -2,10 +2,10 @@ import time
 import logging
 import sys
 
-from aiocache import cached
 from fastapi import Request
 
-from open_webui.routers import openai, ollama
+from open_webui.routers import ollama
+from beyond_the_loop.routers import openai
 from open_webui.functions import get_function_models
 
 

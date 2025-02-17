@@ -1,18 +1,13 @@
-import time
 import logging
 import sys
 
-from aiocache import cached
-from typing import Any, Optional
+from typing import Any
 import random
 import json
 import inspect
 
 from fastapi import Request
-from starlette.responses import Response, StreamingResponse
-
-
-from beyond_the_loop.models.users import UserModel
+from starlette.responses import StreamingResponse
 
 from open_webui.socket.main import (
     get_event_call,
@@ -20,7 +15,7 @@ from open_webui.socket.main import (
 )
 from open_webui.functions import generate_function_chat_completion
 
-from open_webui.routers.openai import (
+from beyond_the_loop.routers.openai import (
     generate_chat_completion as generate_openai_chat_completion,
 )
 
@@ -34,8 +29,6 @@ from open_webui.routers.pipelines import (
 )
 
 from open_webui.models.functions import Functions
-from beyond_the_loop.models.models import Models
-
 
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.models import get_all_models, check_model_access
