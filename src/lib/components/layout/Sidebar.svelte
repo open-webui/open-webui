@@ -489,10 +489,12 @@
 					</svg>
 				</div>
 			</button>
+		</div>
 
+		<div class="px-1.5 flex justify-center text-gray-600 dark:text-gray-400">
 			<a
 				id="sidebar-new-chat-button"
-				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
+				class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
 				href="/"
 				draggable="false"
 				on:click={async () => {
@@ -507,22 +509,11 @@
 					}, 0);
 				}}
 			>
-				<div class="flex items-center">
-					<div class="self-center mx-1.5">
-						<img
-							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class=" size-5 -translate-x-1.5 rounded-full"
-							alt="logo"
-						/>
-					</div>
-					<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
-						{$i18n.t('New Chat')}
-					</div>
+				<div class="self-center">
+					<Plus />
 				</div>
-
-				<div>
-					<PencilSquare className=" size-5" strokeWidth="2" />
+				<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
+					{$i18n.t('New Chat')}
 				</div>
 			</a>
 		</div>
