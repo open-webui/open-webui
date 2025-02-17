@@ -1232,13 +1232,13 @@ async def get_manifest_json():
             {
                 "src": "/static/logo.png",
                 "type": "image/png",
-                "sizes": "500x500",
+                "sizes": "500x462",
                 "purpose": "any",
             },
             {
                 "src": "/static/logo.png",
                 "type": "image/png",
-                "sizes": "500x500",
+                "sizes": "500x462",
                 "purpose": "maskable",
             },
         ],
