@@ -269,11 +269,7 @@ async def get_all_models_responses(request: Request, user) -> list:
         if (str(idx) not in request.app.state.config.OPENAI_API_CONFIGS) and (
             url not in request.app.state.config.OPENAI_API_CONFIGS  # Legacy support
         ):
-            request_tasks.append(
-                send_get_request(
-                    f"{url}/models", user.api_key
-                )
-            )
+            request_tasks.append(send_get_request(f"{url}/models", user.api_key))
         else:
             api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
                 str(idx),
@@ -418,7 +414,7 @@ async def get_models(
     }
 
     if url_idx is None:
-        models = await get_all_models(request,user)
+        models = await get_all_models(request, user)
     else:
         url = request.app.state.config.OPENAI_API_BASE_URLS[url_idx]
         key = user.api_key
@@ -587,7 +583,7 @@ async def generate_chat_completion(
                 detail="Model not found",
             )
 
-    await get_all_models(request,user)
+    await get_all_models(request, user)
     model = request.app.state.OPENAI_MODELS.get(model_id)
     if model:
         idx = model["urlIdx"]
