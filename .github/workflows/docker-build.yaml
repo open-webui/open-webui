@@ -78,7 +78,7 @@ jobs:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
-            ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
+            ${{ github.ref_type == 'tag' && 'type=raw,value=release' || '' }}
           flavor: |
             prefix=cache-${{ matrix.platform }}-
             latest=false
@@ -177,7 +177,7 @@ jobs:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
-            ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
+            ${{ github.ref_type == 'tag' && 'type=raw,value=release' || '' }}
           flavor: |
             prefix=cache-cuda-${{ matrix.platform }}-
             latest=false
@@ -277,7 +277,7 @@ jobs:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
-            ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
+            ${{ github.ref_type == 'tag' && 'type=raw,value=release' || '' }}
           flavor: |
             prefix=cache-ollama-${{ matrix.platform }}-
             latest=false
