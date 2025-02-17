@@ -496,9 +496,7 @@ def transcribe(request: Request, file_path, user):
         try:
             r = requests.post(
                 url=f"{request.app.state.config.STT_OPENAI_API_BASE_URL}/audio/transcriptions",
-                headers={
-                    "Authorization": f"Bearer {user.api_key}"
-                },
+                headers={"Authorization": f"Bearer {user.api_key}"},
                 files={"file": (filename, open(file_path, "rb"))},
                 data={"model": request.app.state.config.STT_MODEL},
             )
