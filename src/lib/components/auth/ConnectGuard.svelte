@@ -29,25 +29,12 @@
   };
 
   // 监听认证状态并自动处理注册和登录
-  $: if ($privyWalletsStore || $privyStore) {
+  let isHandlingAuth = false;
+  $: if (($privyWalletsStore || $privyStore) && !isHandlingAuth) {
     console.log('privy Store:', $privyWalletsStore, $privyStore);
 
-    // if($privyStore.authenticated == false && $privyStore.ready == true){
-    //   console.log('clear privy cache')
-    //   $privyStore.logout();
-    //   $privyStore.unlinkWallet();
-    //   $privyWalletsStore.wallet = {}
-    //   console.log('privy Store:', $privyWalletsStore,$privyStore);
-    // }
-
     if ($privyStore.authenticated) {
-
-      // 如果已认证但没有连接钱包，自动连接钱包
-      // if (!$privyWalletsStore?.wallets?.length) {
-      //   console.log('Auto connecting wallet for authenticated user');
-      //   $privyStore.connectWallet();
-      // }
-      
+      isHandlingAuth = true;
       // 自动注册和登录
       const handleAutoSignUp = async () => {
         let email = '';
