@@ -302,7 +302,7 @@
 		{#if lang === 'mermaid'}
 			{#if mermaidHtml}
 				<SvgPanZoom
-					className=" border border-gray-50 dark:border-gray-850 rounded-lg max-h-fit overflow-hidden"
+					className=" border border-gray-100 dark:border-gray-850 rounded-lg max-h-fit overflow-hidden"
 					svg={mermaidHtml}
 					content={_token.text}
 				/>
@@ -377,7 +377,7 @@
 
 			{#if executing || stdout || stderr || result}
 				<div
-					class="bg-gray-50 dark:bg-[#202123] dark:text-white !rounded-b-lg py-4 px-4 flex flex-col gap-2"
+					class="bg-gray-50 dark:bg-[#202123] dark:text-white rounded-b-lg! py-4 px-4 flex flex-col gap-2"
 				>
 					{#if executing}
 						<div class=" ">

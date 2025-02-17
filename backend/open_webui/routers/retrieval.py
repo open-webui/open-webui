@@ -451,6 +451,7 @@ class WebSearchConfig(BaseModel):
     exa_api_key: Optional[str] = None
     result_count: Optional[int] = None
     concurrent_requests: Optional[int] = None
+    trust_env: Optional[bool] = None
     domain_filter_list: Optional[List[str]] = []
 
 
@@ -570,6 +571,9 @@ async def update_rag_config(
         request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = (
             form_data.web.search.concurrent_requests
         )
+        request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV = (
+            form_data.web.search.trust_env
+        )
         request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = (
             form_data.web.search.domain_filter_list
         )
@@ -622,6 +626,7 @@ async def update_rag_config(
                 "exa_api_key": request.app.state.config.EXA_API_KEY,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+                "trust_env": request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
                 "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             },
         },
@@ -1341,6 +1346,7 @@ async def process_web_search(
             urls,
             verify_ssl=request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+            trust_env=request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
         )
         docs = await loader.aload()
         await run_in_threadpool(

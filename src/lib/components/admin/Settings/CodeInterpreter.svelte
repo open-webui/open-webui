@@ -58,7 +58,7 @@
 					<div class=" self-center text-xs font-medium">{$i18n.t('Code Interpreter Engine')}</div>
 					<div class="flex items-center relative">
 						<select
-							class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+							class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 							bind:value={config.CODE_INTERPRETER_ENGINE}
 							placeholder={$i18n.t('Select a engine')}
 							required
@@ -80,7 +80,7 @@
 						<div class="flex w-full">
 							<div class="flex-1">
 								<input
-									class="w-full text-sm py-0.5 placeholder:text-gray-300 dark:placeholder:text-gray-700 bg-transparent outline-none"
+									class="w-full text-sm py-0.5 placeholder:text-gray-300 dark:placeholder:text-gray-700 bg-transparent outline-hidden"
 									type="text"
 									placeholder={$i18n.t('Enter Jupyter URL')}
 									bind:value={config.CODE_INTERPRETER_JUPYTER_URL}
@@ -97,7 +97,7 @@
 
 						<div>
 							<select
-								class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-left"
+								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-left"
 								bind:value={config.CODE_INTERPRETER_JUPYTER_AUTH}
 								placeholder={$i18n.t('Select an auth method')}
 							>
@@ -132,7 +132,7 @@
 				{/if}
 			</div>
 
-			<hr class=" dark:border-gray-850 my-2" />
+			<hr class="border-gray-100 dark:border-gray-850 my-2" />
 
 			<div>
 				<div class="py-0.5 w-full">

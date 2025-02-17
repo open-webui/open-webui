@@ -213,7 +213,7 @@
 											<input
 												bind:value={name}
 												type="text"
-												class="my-0.5 w-full text-sm outline-none bg-transparent"
+												class="my-0.5 w-full text-sm outline-hidden bg-transparent"
 												autocomplete="name"
 												placeholder={$i18n.t('Enter Your Full Name')}
 												required
@@ -227,7 +227,7 @@
 											<input
 												bind:value={ldapUsername}
 												type="text"
-												class="my-0.5 w-full text-sm outline-none bg-transparent"
+												class="my-0.5 w-full text-sm outline-hidden bg-transparent"
 												autocomplete="username"
 												name="username"
 												placeholder={$i18n.t('Enter Your Username')}
@@ -240,7 +240,7 @@
 											<input
 												bind:value={email}
 												type="email"
-												class="my-0.5 w-full text-sm outline-none bg-transparent"
+												class="my-0.5 w-full text-sm outline-hidden bg-transparent"
 												autocomplete="email"
 												name="email"
 												placeholder={$i18n.t('Enter Your Email')}
@@ -248,21 +248,20 @@
 											/>
 										</div>
 									{/if}
+									{#if mode === 'signin' || ($config?.features.enable_password_signups && mode === 'signup')}              
+									<div>
+										<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Password')}</div>
 
-									{#if mode === 'signin' || ($config?.features.enable_password_signups && mode === 'signup')}
-										<div>
-											<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Password')}</div>
-
-											<input
-												bind:value={password}
-												type="password"
-												class="my-0.5 w-full text-sm outline-none bg-transparent"
-												placeholder={$i18n.t('Enter Your Password')}
-												autocomplete="current-password"
-												name="current-password"
-												required
-											/>
-										</div>
+										<input
+											bind:value={password}
+											type="password"
+											class="my-0.5 w-full text-sm outline-hidden bg-transparent"
+											placeholder={$i18n.t('Enter Your Password')}
+											autocomplete="current-password"
+											name="current-password"
+											required
+										/>
+									</div>
 									{/if}
 								</div>
 							{/if}

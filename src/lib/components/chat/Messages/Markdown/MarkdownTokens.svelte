@@ -74,7 +74,7 @@
 <!-- {JSON.stringify(tokens)} -->
 {#each tokens as token, tokenIdx (tokenIdx)}
 	{#if token.type === 'hr'}
-		<hr class=" border-gray-50 dark:border-gray-850" />
+		<hr class=" border-gray-100 dark:border-gray-850" />
 	{:else if token.type === 'heading'}
 		<svelte:element this={headerComponent(token.depth)}>
 			<MarkdownInlineTokens id={`${id}-${tokenIdx}-h`} tokens={token.tokens} {onSourceClick} />
@@ -115,11 +115,11 @@
 							{#each token.header as header, headerIdx}
 								<th
 									scope="col"
-									class="!px-3 !py-1.5 cursor-pointer border border-gray-50 dark:border-gray-850"
+									class="px-3! py-1.5! cursor-pointer border border-gray-100 dark:border-gray-850"
 									style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}
 								>
 									<div class="flex flex-col gap-1.5 text-left">
-										<div class="flex-shrink-0 break-normal">
+										<div class="shrink-0 break-normal">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-header-${headerIdx}`}
 												tokens={header.tokens}
@@ -136,7 +136,7 @@
 							<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
 								{#each row ?? [] as cell, cellIdx}
 									<td
-										class="!px-3 !py-1.5 text-gray-900 dark:text-white w-max border border-gray-50 dark:border-gray-850"
+										class="px-3! py-1.5! text-gray-900 dark:text-white w-max border border-gray-100 dark:border-gray-850"
 										style={token.align[cellIdx] ? '' : `text-align: ${token.align[cellIdx]}`}
 									>
 										<div class="flex flex-col break-normal">
