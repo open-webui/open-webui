@@ -811,7 +811,7 @@ def save_docs_to_vector_db(
         embeddings = embedding_function(
             list(map(lambda x: x.replace("\n", " "), texts)), user=user
         )
-
+        log.info(f"get embedding_function done")
         items = [
             {
                 "id": str(uuid.uuid4()),
@@ -957,33 +957,32 @@ def process_file(
         Files.update_file_hash_by_id(file.id, hash)
 
         try:
-            result = save_docs_to_vector_db(
-                request,
-                docs=docs,
-                collection_name=collection_name,
-                metadata={
-                    "file_id": file.id,
-                    "name": file.filename,
-                    "hash": hash,
+            # result = save_docs_to_vector_db(
+            #     request,
+            #     docs=docs,
+            #     collection_name=collection_name,
+            #     metadata={
+            #         "file_id": file.id,
+            #         "name": file.filename,
+            #         "hash": hash,
+            #     },
+            #     add=(True if form_data.collection_name else False),
+            #     user=user,
+            # )
+            # if result:
+            Files.update_file_metadata_by_id(
+                file.id,
+                {
+                    "collection_name": collection_name,
                 },
-                add=(True if form_data.collection_name else False),
-                user=user,
             )
 
-            if result:
-                Files.update_file_metadata_by_id(
-                    file.id,
-                    {
-                        "collection_name": collection_name,
-                    },
-                )
-
-                return {
-                    "status": True,
-                    "collection_name": collection_name,
-                    "filename": file.filename,
-                    "content": text_content,
-                }
+            return {
+                "status": True,
+                "collection_name": collection_name,
+                "filename": file.filename,
+                "content": text_content,
+            }
         except Exception as e:
             raise e
     except Exception as e:
