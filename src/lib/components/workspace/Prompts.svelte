@@ -59,7 +59,7 @@
 
 	const cloneHandler = async (prompt) => {
 		sessionStorage.prompt = JSON.stringify(prompt);
-		goto('/workspace/prompts/create');
+		goto(WEBUI_BASE_URL + '/workspace/prompts/create');
 	};
 
 	const exportHandler = async (prompt) => {

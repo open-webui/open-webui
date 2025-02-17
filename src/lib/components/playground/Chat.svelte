@@ -195,7 +195,7 @@
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
-			await goto('/');
+			await goto(WEBUI_BASE_URL + '/');
 		}
 
 		if ($settings?.models) {

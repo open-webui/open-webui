@@ -22,7 +22,7 @@
 		if (prompt) {
 			toast.success($i18n.t('Prompt updated successfully'));
 			await prompts.set(await getPrompts(localStorage.token));
-			await goto('/workspace/prompts');
+			await goto(WEBUI_BASE_URL + '/workspace/prompts');
 		}
 	};
 
@@ -45,10 +45,10 @@
 					access_control: _prompt?.access_control ?? null
 				};
 			} else {
-				goto('/workspace/prompts');
+				goto(WEBUI_BASE_URL + '/workspace/prompts');
 			}
 		} else {
-			goto('/workspace/prompts');
+			goto(WEBUI_BASE_URL + '/workspace/prompts');
 		}
 	});
 </script>

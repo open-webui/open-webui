@@ -98,7 +98,7 @@
 				id: `${_tool.id}_clone`,
 				name: `${_tool.name} (Clone)`
 			});
-			goto('/workspace/tools/create');
+			goto(WEBUI_BASE_URL + '/workspace/tools/create');
 		}
 	};
 

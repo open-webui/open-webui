@@ -49,7 +49,7 @@
 			await tick();
 			scrollToBottom();
 		} else {
-			goto('/');
+			goto(WEBUI_BASE_URL + '/');
 		}
 	};
 

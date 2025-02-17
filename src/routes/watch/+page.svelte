@@ -16,7 +16,7 @@
 			goto(`/?youtube=${encodeURIComponent(videoId)}`);
 		} else {
 			// Redirect to root if 'v' parameter doesn't exist
-			goto('/');
+			goto(WEBUI_BASE_URL + '/');
 		}
 	});
 </script>

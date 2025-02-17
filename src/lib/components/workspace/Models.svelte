@@ -83,7 +83,7 @@
 			id: `${model.id}-clone`,
 			name: `${model.name} (Clone)`
 		});
-		goto('/workspace/models/create');
+		goto(WEBUI_BASE_URL + '/workspace/models/create');
 	};
 
 	const shareModelHandler = async (model) => {
@@ -259,7 +259,7 @@
 								: 'opacity-50 dark:opacity-50'} "
 						>
 							<img
-								src={model?.meta?.profile_image_url ?? '/static/favicon.png'}
+								src={model?.meta?.profile_image_url ?? 'static/favicon.png'}
 								alt="modelfile profile"
 								class=" rounded-full w-full h-auto object-cover"
 							/>

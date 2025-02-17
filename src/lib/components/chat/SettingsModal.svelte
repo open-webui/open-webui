@@ -18,6 +18,7 @@
 	import SearchInput from '../layout/Sidebar/SearchInput.svelte';
 	import Search from '../icons/Search.svelte';
 	import Connections from './Settings/Connections.svelte';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
@@ -610,7 +611,7 @@
 										? ''
 										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 									on:click={async () => {
-										await goto('/admin/settings');
+										await goto(WEBUI_BASE_URL + '/admin/settings');
 										show = false;
 									}}
 								>

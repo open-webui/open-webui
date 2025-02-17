@@ -60,7 +60,7 @@
 			onUpdate();
 
 			if ($page.url.pathname === `/channels/${channel.id}`) {
-				goto('/');
+				goto(WEBUI_BASE_URL + '/');
 			}
 		}
 

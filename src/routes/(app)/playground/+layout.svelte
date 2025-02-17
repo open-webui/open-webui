@@ -3,6 +3,7 @@
 	import { WEBUI_NAME, showSidebar, functions } from '$lib/stores';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { page } from '$app/stores';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
@@ -47,7 +48,7 @@
 						)
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-						href="/playground">{$i18n.t('Chat')}</a
+						href={WEBUI_BASE_URL + "/playground"}>{$i18n.t('Chat')}</a
 					>
 
 					<!-- <a
@@ -63,7 +64,7 @@
 						)
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-						href="/playground/completions">{$i18n.t('Completions')}</a
+						href={WEBUI_BASE_URL + "/playground/completions"}>{$i18n.t('Completions')}</a
 					>
 				</div>
 			</div>

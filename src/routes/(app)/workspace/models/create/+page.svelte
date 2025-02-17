@@ -30,7 +30,7 @@
 				...modelInfo,
 				meta: {
 					...modelInfo.meta,
-					profile_image_url: modelInfo.meta.profile_image_url ?? '/static/favicon.png',
+					profile_image_url: modelInfo.meta.profile_image_url ?? 'static/favicon.png',
 					suggestion_prompts: modelInfo.meta.suggestion_prompts
 						? modelInfo.meta.suggestion_prompts.filter((prompt) => prompt.content !== '')
 						: null
@@ -49,7 +49,7 @@
 					)
 				);
 				toast.success($i18n.t('Model created successfully!'));
-				await goto('/workspace/models');
+				await goto(WEBUI_BASE_URL + '/workspace/models');
 			}
 		}
 	};

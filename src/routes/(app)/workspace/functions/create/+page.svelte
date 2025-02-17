@@ -3,6 +3,6 @@
 	import { onMount } from 'svelte';
 
 	onMount(() => {
-		goto('/admin/functions/create');
+		goto(WEBUI_BASE_URL + '/admin/functions/create');
 	});
 </script>

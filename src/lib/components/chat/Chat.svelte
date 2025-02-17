@@ -12,7 +12,7 @@
 
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL, WEBUI_HOSTNAME_PATH } from '$lib/constants';
 
 	import {
 		chatId,
@@ -166,7 +166,7 @@
 				const chatInput = document.getElementById('chat-input');
 				chatInput?.focus();
 			} else {
-				await goto('/');
+				await goto(WEBUI_BASE_URL + '/');
 			}
 		})();
 	}
@@ -399,7 +399,7 @@
 			});
 		} else {
 			if ($temporaryChatEnabled) {
-				await goto('/');
+				await goto(WEBUI_BASE_URL + '/');
 			}
 		}
 
@@ -770,7 +770,7 @@
 	const loadChat = async () => {
 		chatId.set(chatIdProp);
 		chat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
-			await goto('/');
+			await goto(WEBUI_BASE_URL + '/');
 			return null;
 		});
 
@@ -1824,7 +1824,7 @@
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			currentChatPage.set(1);
 
-			window.history.replaceState(history.state, '', `/c/${_chatId}`);
+			window.history.replaceState(history.state, '', `${WEBUI_BASE_URL}/c/${_chatId}`);
 		} else {
 			_chatId = 'local';
 			await chatId.set('local');

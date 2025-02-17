@@ -4,6 +4,7 @@
 
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -305,7 +306,7 @@ class Pipe:
 								<button
 									class="w-full text-left text-sm py-1.5 px-1 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
 									on:click={() => {
-										goto('/admin/functions');
+										goto(WEBUI_BASE_URL + '/admin/functions');
 									}}
 									type="button"
 								>

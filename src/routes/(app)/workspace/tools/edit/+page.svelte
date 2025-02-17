@@ -58,7 +58,7 @@
 		if (id) {
 			tool = await getToolById(localStorage.token, id).catch((error) => {
 				toast.error(`${error}`);
-				goto('/workspace/tools');
+				goto(WEBUI_BASE_URL + '/workspace/tools');
 				return null;
 			});
 

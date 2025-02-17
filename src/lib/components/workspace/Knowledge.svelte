@@ -8,6 +8,7 @@
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import { WEBUI_NAME, knowledge } from '$lib/stores';
 	import {
@@ -112,7 +113,7 @@
 					class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
 					aria-label={$i18n.t('Create Knowledge')}
 					on:click={() => {
-						goto('/workspace/knowledge/create');
+						goto(WEBUI_BASE_URL + '/workspace/knowledge/create');
 					}}
 				>
 					<Plus className="size-3.5" />
@@ -133,7 +134,7 @@
 							)
 						);
 					} else {
-						goto(`/workspace/knowledge/${item.id}`);
+						goto(WEBUI_BASE_URL + `/workspace/knowledge/${item.id}`);
 					}
 				}}
 			>

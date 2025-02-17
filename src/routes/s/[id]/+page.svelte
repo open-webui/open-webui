@@ -17,6 +17,8 @@
 	import { getModels } from '$lib/apis';
 	import { toast } from 'svelte-sonner';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
+	import { WEBUI_BASE_URL, WEBUI_HOSTNAME_PATH } from '$lib/constants';
+
 
 	const i18n = getContext('i18n');
 	dayjs.extend(localizedFormat);
@@ -51,7 +53,7 @@
 				await tick();
 				loaded = true;
 			} else {
-				await goto('/');
+				await goto(WEBUI_BASE_URL + '/');
 			}
 		})();
 	}
@@ -69,7 +71,7 @@
 		);
 		await chatId.set($page.params.id);
 		chat = await getChatByShareId(localStorage.token, $chatId).catch(async (error) => {
-			await goto('/');
+			await goto(WEBUI_BASE_URL + '/');
 			return null;
 		});
 
@@ -118,7 +120,7 @@
 		});
 
 		if (res) {
-			goto(`/c/${res.id}`);
+			goto(`${WEBUI_HOSTNAME_PATH}/c/${res.id}`);
 		}
 	};
 </script>

@@ -64,7 +64,7 @@
 				}
 			}
 		} else {
-			goto('/');
+			goto(WEBUI_BASE_URL + '/');
 		}
 	};
 

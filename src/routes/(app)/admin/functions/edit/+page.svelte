@@ -11,7 +11,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { getModels } from '$lib/apis';
 	import { compareVersion, extractFrontmatter } from '$lib/utils';
-	import { WEBUI_VERSION } from '$lib/constants';
+	import { WEBUI_BASE_URL, WEBUI_VERSION } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
@@ -64,7 +64,7 @@
 		if (id) {
 			func = await getFunctionById(localStorage.token, id).catch((error) => {
 				toast.error(`${error}`);
-				goto('/admin/functions');
+				goto(WEBUI_BASE_URL + '/admin/functions');
 				return null;
 			});
 

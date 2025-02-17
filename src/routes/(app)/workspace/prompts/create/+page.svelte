@@ -20,7 +20,7 @@
 			toast.success($i18n.t('Prompt created successfully'));
 
 			await prompts.set(await getPrompts(localStorage.token));
-			await goto('/workspace/prompts');
+			await goto(WEBUI_BASE_URL + '/workspace/prompts');
 		}
 	};
 
