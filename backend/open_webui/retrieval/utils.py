@@ -439,10 +439,10 @@ def generate_openai_batch_embeddings(
 ) -> Optional[list[list[float]]]:
     try:
         r = requests.post(
-            f"{url}/embeddings",
+            f"{url}/embeddings?api-version=2024-10-21",
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {key}",
+                "api-key": f"{key}",
                 **(
                     {
                         "X-OpenWebUI-User-Name": user.name,
