@@ -88,7 +88,6 @@ from open_webui.models.models import Models
 from open_webui.models.users import UserModel, Users
 
 from open_webui.config import (
-    override_static,
     LICENSE_KEY,
     # Ollama
     ENABLE_OLLAMA_API,
@@ -316,7 +315,7 @@ from open_webui.utils.middleware import process_chat_payload, process_chat_respo
 from open_webui.utils.access_control import has_access
 
 from open_webui.utils.auth import (
-    verify_signature,
+    get_license_data,
     decode_token,
     get_admin_user,
     get_verified_user,
@@ -373,31 +372,8 @@ async def lifespan(app: FastAPI):
     if RESET_CONFIG_ON_START:
         reset_config()
 
-    key = app.state.config.LICENSE_KEY
-    if key:
-        try:
-            res = requests.post(
-                "https://api.openwebui.com/api/v1/license",
-                json={"key": key, "version": "1"},
-                timeout=5,
-            )
-
-            if getattr(res, "ok", False):
-                payload = getattr(res, "json", lambda: {})()
-                for k, v in payload.items():
-                    if k == "resources":
-                        for p, c in v.items():
-                            globals().get("override_static", lambda a, b: None)(p, c)
-                    elif k == "user_count":
-                        setattr(app.state, "USER_COUNT", v)
-                    elif k == "webui_name":
-                        setattr(app.state, "WEBUI_NAME", v)
-            else:
-                log.error(
-                    f"License retrieval issue: {getattr(res, 'text', 'unknown error')}"
-                )
-        except Exception as ex:
-            log.error(f"Uncaught Exception: {ex}")
+    if app.state.config.LICENSE_KEY:
+        get_license_data(app, app.state.config.LICENSE_KEY)
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     yield
@@ -414,9 +390,8 @@ oauth_manager = OAuthManager(app)
 
 app.state.config = AppConfig()
 
-app.state.config.LICENSE_KEY = LICENSE_KEY
-
 app.state.WEBUI_NAME = WEBUI_NAME
+app.state.config.LICENSE_KEY = LICENSE_KEY
 
 ########################################
 #

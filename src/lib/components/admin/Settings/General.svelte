@@ -170,7 +170,7 @@
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
-							<div class="text-xs">
+							<div class="text-xs pr-2">
 								<div class="">
 									{$i18n.t('Help')}
 								</div>
@@ -180,7 +180,7 @@
 							</div>
 
 							<a
-								class=" text-xs font-medium underline"
+								class="flex-shrink-0 text-xs font-medium underline"
 								href="https://docs.openwebui.com/"
 								target="_blank"
 							>
