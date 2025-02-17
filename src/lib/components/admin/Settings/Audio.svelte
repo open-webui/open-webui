@@ -10,7 +10,7 @@
 		getModels as _getModels,
 		getVoices as _getVoices
 	} from '$lib/apis/audio';
-	import { config } from '$lib/stores';
+	import { config, settings } from '$lib/stores';
 
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
@@ -39,6 +39,7 @@
 	let STT_ENGINE = '';
 	let STT_MODEL = '';
 	let STT_WHISPER_MODEL = '';
+	let STT_DEEPGRAM_API_KEY = '';
 
 	let STT_WHISPER_MODEL_LOADING = false;
 
@@ -50,7 +51,10 @@
 		if (TTS_ENGINE === '') {
 			models = [];
 		} else {
-			const res = await _getModels(localStorage.token).catch((e) => {
+			const res = await _getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			).catch((e) => {
 				toast.error(`${e}`);
 			});
 
@@ -103,7 +107,8 @@
 				OPENAI_API_KEY: STT_OPENAI_API_KEY,
 				ENGINE: STT_ENGINE,
 				MODEL: STT_MODEL,
-				WHISPER_MODEL: STT_WHISPER_MODEL
+				WHISPER_MODEL: STT_WHISPER_MODEL,
+				DEEPGRAM_API_KEY: STT_DEEPGRAM_API_KEY
 			}
 		});
 
@@ -143,6 +148,7 @@
 			STT_ENGINE = res.stt.ENGINE;
 			STT_MODEL = res.stt.MODEL;
 			STT_WHISPER_MODEL = res.stt.WHISPER_MODEL;
+			STT_DEEPGRAM_API_KEY = res.stt.DEEPGRAM_API_KEY;
 		}
 
 		await getVoices();
@@ -173,6 +179,7 @@
 							<option value="">{$i18n.t('Whisper (Local)')}</option>
 							<option value="openai">OpenAI</option>
 							<option value="web">{$i18n.t('Web API')}</option>
+							<option value="deepgram">Deepgram</option>
 						</select>
 					</div>
 				</div>
@@ -208,6 +215,37 @@
 									<option value="whisper-1" />
 								</datalist>
 							</div>
+						</div>
+					</div>
+				{:else if STT_ENGINE === 'deepgram'}
+					<div>
+						<div class="mt-1 flex gap-2 mb-1">
+							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={STT_DEEPGRAM_API_KEY} />
+						</div>
+					</div>
+
+					<hr class=" dark:border-gray-850 my-2" />
+
+					<div>
+						<div class=" mb-1.5 text-sm font-medium">{$i18n.t('STT Model')}</div>
+						<div class="flex w-full">
+							<div class="flex-1">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+									bind:value={STT_MODEL}
+									placeholder="Select a model (optional)"
+								/>
+							</div>
+						</div>
+						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('Leave model field empty to use the default model.')}
+							<a
+								class=" hover:underline dark:text-gray-200 text-gray-800"
+								href="https://developers.deepgram.com/docs/models"
+								target="_blank"
+							>
+								{$i18n.t('Click here to see available models.')}
+							</a>
 						</div>
 					</div>
 				{:else if STT_ENGINE === ''}

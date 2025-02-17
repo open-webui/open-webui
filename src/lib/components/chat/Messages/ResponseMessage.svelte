@@ -4,12 +4,18 @@
 
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, tick, getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	const dispatch = createEventDispatcher();
 
-	import { config, models, settings, user } from '$lib/stores';
+	import { createNewFeedback, getFeedbackById, updateFeedbackById } from '$lib/apis/evaluations';
+	import { getChatById } from '$lib/apis/chats';
+	import { generateTags } from '$lib/apis';
+
+	import { config, models, settings, TTSWorker, user } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -34,13 +40,8 @@
 	import Error from './Error.svelte';
 	import Citations from './Citations.svelte';
 	import CodeExecutions from './CodeExecutions.svelte';
-
-	import type { Writable } from 'svelte/store';
-	import type { i18n as i18nType } from 'i18next';
 	import ContentRenderer from './ContentRenderer.svelte';
-	import { createNewFeedback, getFeedbackById, updateFeedbackById } from '$lib/apis/evaluations';
-	import { getChatById } from '$lib/apis/chats';
-	import { generateTags } from '$lib/apis';
+	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
 	interface MessageType {
 		id: string;
@@ -193,62 +194,7 @@
 
 		speaking = true;
 
-		if ($config.audio.tts.engine !== '') {
-			loadingSpeech = true;
-
-			const messageContentParts: string[] = getMessageContentParts(
-				message.content,
-				$config?.audio?.tts?.split_on ?? 'punctuation'
-			);
-
-			if (!messageContentParts.length) {
-				console.log('No content to speak');
-				toast.info($i18n.t('No content to speak'));
-
-				speaking = false;
-				loadingSpeech = false;
-				return;
-			}
-
-			console.debug('Prepared message content for TTS', messageContentParts);
-
-			audioParts = messageContentParts.reduce(
-				(acc, _sentence, idx) => {
-					acc[idx] = null;
-					return acc;
-				},
-				{} as typeof audioParts
-			);
-
-			let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
-
-			for (const [idx, sentence] of messageContentParts.entries()) {
-				const res = await synthesizeOpenAISpeech(
-					localStorage.token,
-					$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
-						? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-						: $config?.audio?.tts?.voice,
-					sentence
-				).catch((error) => {
-					console.error(error);
-					toast.error(`${error}`);
-
-					speaking = false;
-					loadingSpeech = false;
-				});
-
-				if (res) {
-					const blob = await res.blob();
-					const blobUrl = URL.createObjectURL(blob);
-					const audio = new Audio(blobUrl);
-					audio.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
-
-					audioParts[idx] = audio;
-					loadingSpeech = false;
-					lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
-				}
-			}
-		} else {
+		if ($config.audio.tts.engine === '') {
 			let voices = [];
 			const getVoicesLoop = setInterval(() => {
 				voices = speechSynthesis.getVoices();
@@ -283,6 +229,97 @@
 					speechSynthesis.speak(speak);
 				}
 			}, 100);
+		} else {
+			loadingSpeech = true;
+
+			const messageContentParts: string[] = getMessageContentParts(
+				message.content,
+				$config?.audio?.tts?.split_on ?? 'punctuation'
+			);
+
+			if (!messageContentParts.length) {
+				console.log('No content to speak');
+				toast.info($i18n.t('No content to speak'));
+
+				speaking = false;
+				loadingSpeech = false;
+				return;
+			}
+
+			console.debug('Prepared message content for TTS', messageContentParts);
+
+			audioParts = messageContentParts.reduce(
+				(acc, _sentence, idx) => {
+					acc[idx] = null;
+					return acc;
+				},
+				{} as typeof audioParts
+			);
+
+			let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
+
+			if ($settings.audio?.tts?.engine === 'browser-kokoro') {
+				if (!$TTSWorker) {
+					await TTSWorker.set(
+						new KokoroWorker({
+							dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
+						})
+					);
+
+					await $TTSWorker.init();
+				}
+
+				for (const [idx, sentence] of messageContentParts.entries()) {
+					const blob = await $TTSWorker
+						.generate({
+							text: sentence,
+							voice: $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
+						})
+						.catch((error) => {
+							console.error(error);
+							toast.error(`${error}`);
+
+							speaking = false;
+							loadingSpeech = false;
+						});
+
+					if (blob) {
+						const audio = new Audio(blob);
+						audio.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
+
+						audioParts[idx] = audio;
+						loadingSpeech = false;
+						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
+					}
+				}
+			} else {
+				for (const [idx, sentence] of messageContentParts.entries()) {
+					const res = await synthesizeOpenAISpeech(
+						localStorage.token,
+						$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
+							? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
+							: $config?.audio?.tts?.voice,
+						sentence
+					).catch((error) => {
+						console.error(error);
+						toast.error(`${error}`);
+
+						speaking = false;
+						loadingSpeech = false;
+					});
+
+					if (res) {
+						const blob = await res.blob();
+						const blobUrl = URL.createObjectURL(blob);
+						const audio = new Audio(blobUrl);
+						audio.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
+
+						audioParts[idx] = audio;
+						loadingSpeech = false;
+						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
+					}
+				}
+			}
 		}
 	};
 
@@ -679,12 +716,32 @@
 										floatingButtons={message?.done}
 										save={!readOnly}
 										{model}
-										onSourceClick={(e) => {
+										onTaskClick={async (e) => {
 											console.log(e);
-											const sourceButton = document.getElementById(`source-${e}`);
+										}}
+										onSourceClick={async (e) => {
+											console.log(e);
+											let sourceButton = document.getElementById(`source-${e}`);
+											const sourcesCollapsible = document.getElementById(`collapsible-sources`);
 
 											if (sourceButton) {
 												sourceButton.click();
+											} else if (sourcesCollapsible) {
+												// Open sources collapsible so we can click the source button
+												sourcesCollapsible
+													.querySelector('div:first-child')
+													.dispatchEvent(new PointerEvent('pointerup', {}));
+
+												// Wait for next frame to ensure DOM updates
+												await new Promise((resolve) => {
+													requestAnimationFrame(() => {
+														requestAnimationFrame(resolve);
+													});
+												});
+
+												// Try clicking the source button again
+												sourceButton = document.getElementById(`source-${e}`);
+												sourceButton && sourceButton.click();
 											}
 										}}
 										onAddMessages={({ modelId, parentId, messages }) => {

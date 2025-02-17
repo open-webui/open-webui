@@ -3,7 +3,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { WEBUI_NAME, config, functions, models } from '$lib/stores';
+	import { WEBUI_NAME, config, functions, models, settings } from '$lib/stores';
 	import { onMount, getContext, tick } from 'svelte';
 
 	import { goto } from '$app/navigation';
@@ -65,7 +65,7 @@
 			return null;
 		});
 
-		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
+		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
 
 		const url = 'https://openwebui.com';
 
@@ -126,7 +126,12 @@
 			toast.success($i18n.t('Function deleted successfully'));
 
 			functions.set(await getFunctions(localStorage.token));
-			models.set(await getModels(localStorage.token));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
 		}
 	};
 
@@ -147,7 +152,12 @@
 			}
 
 			functions.set(await getFunctions(localStorage.token));
-			models.set(await getModels(localStorage.token));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
 		}
 	};
 
@@ -359,7 +369,13 @@
 							bind:state={func.is_active}
 							on:change={async (e) => {
 								toggleFunctionById(localStorage.token, func.id);
-								models.set(await getModels(localStorage.token));
+								models.set(
+									await getModels(
+										localStorage.token,
+										$config?.features?.enable_direct_connections &&
+											($settings?.directConnections ?? null)
+									)
+								);
 							}}
 						/>
 					</Tooltip>
@@ -453,7 +469,7 @@
 {#if $config?.features.enable_community_sharing}
 	<div class=" my-16">
 		<div class=" text-xl font-medium mb-1 line-clamp-1">
-			{$i18n.t('Made by OpenWebUI Community')}
+			{$i18n.t('Made by Open WebUI Community')}
 		</div>
 
 		<a
@@ -496,7 +512,12 @@
 	id={selectedFunction?.id ?? null}
 	on:save={async () => {
 		await tick();
-		models.set(await getModels(localStorage.token));
+		models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
 	}}
 />
 
@@ -517,7 +538,12 @@
 
 			toast.success($i18n.t('Functions imported successfully'));
 			functions.set(await getFunctions(localStorage.token));
-			models.set(await getModels(localStorage.token));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
 		};
 
 		reader.readAsText(importFiles[0]);

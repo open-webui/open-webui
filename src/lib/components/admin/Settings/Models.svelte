@@ -68,7 +68,7 @@
 
 	const init = async () => {
 		workspaceModels = await getBaseModels(localStorage.token);
-		baseModels = await getModels(localStorage.token, true);
+		baseModels = await getModels(localStorage.token, null, true);
 
 		models = baseModels.map((m) => {
 			const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
@@ -111,7 +111,12 @@
 			}
 		}
 
-		_models.set(await getModels(localStorage.token));
+		_models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
 		await init();
 	};
 
@@ -133,7 +138,12 @@
 		}
 
 		// await init();
-		_models.set(await getModels(localStorage.token));
+		_models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
 	};
 
 	onMount(async () => {
@@ -330,7 +340,13 @@
 									}
 								}
 
-								await _models.set(await getModels(localStorage.token));
+								await _models.set(
+									await getModels(
+										localStorage.token,
+										$config?.features?.enable_direct_connections &&
+											($settings?.directConnections ?? null)
+									)
+								);
 								init();
 							};
 

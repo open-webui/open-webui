@@ -20,7 +20,9 @@
 
 	export let show = false;
 	export let edit = false;
+
 	export let ollama = false;
+	export let direct = false;
 
 	export let connection = null;
 
@@ -46,9 +48,11 @@
 	};
 
 	const verifyOpenAIHandler = async () => {
-		const res = await verifyOpenAIConnection(localStorage.token, url, key).catch((error) => {
-			toast.error(`${error}`);
-		});
+		const res = await verifyOpenAIConnection(localStorage.token, url, key, direct).catch(
+			(error) => {
+				toast.error(`${error}`);
+			}
+		);
 
 		if (res) {
 			toast.success($i18n.t('Server connection verified'));

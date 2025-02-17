@@ -11,6 +11,7 @@ from pydub.silence import split_on_silence
 import aiohttp
 import aiofiles
 import requests
+import mimetypes
 
 from fastapi import (
     Depends,
@@ -138,6 +139,7 @@ class STTConfigForm(BaseModel):
     ENGINE: str
     MODEL: str
     WHISPER_MODEL: str
+    DEEPGRAM_API_KEY: str
 
 
 class AudioConfigUpdateForm(BaseModel):
@@ -165,6 +167,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "ENGINE": request.app.state.config.STT_ENGINE,
             "MODEL": request.app.state.config.STT_MODEL,
             "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
+            "DEEPGRAM_API_KEY": request.app.state.config.DEEPGRAM_API_KEY,
         },
     }
 
@@ -190,6 +193,7 @@ async def update_audio_config(
     request.app.state.config.STT_ENGINE = form_data.stt.ENGINE
     request.app.state.config.STT_MODEL = form_data.stt.MODEL
     request.app.state.config.WHISPER_MODEL = form_data.stt.WHISPER_MODEL
+    request.app.state.config.DEEPGRAM_API_KEY = form_data.stt.DEEPGRAM_API_KEY
 
     if request.app.state.config.STT_ENGINE == "":
         request.app.state.faster_whisper_model = set_faster_whisper_model(
@@ -214,6 +218,7 @@ async def update_audio_config(
             "ENGINE": request.app.state.config.STT_ENGINE,
             "MODEL": request.app.state.config.STT_MODEL,
             "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
+            "DEEPGRAM_API_KEY": request.app.state.config.DEEPGRAM_API_KEY,
         },
     }
 
@@ -519,6 +524,69 @@ def transcribe(request: Request, file_path):
                 except Exception:
                     detail = f"External: {e}"
 
+            raise Exception(detail if detail else "Open WebUI: Server Connection Error")
+
+    elif request.app.state.config.STT_ENGINE == "deepgram":
+        try:
+            # Determine the MIME type of the file
+            mime, _ = mimetypes.guess_type(file_path)
+            if not mime:
+                mime = "audio/wav"  # fallback to wav if undetectable
+
+            # Read the audio file
+            with open(file_path, "rb") as f:
+                file_data = f.read()
+
+            # Build headers and parameters
+            headers = {
+                "Authorization": f"Token {request.app.state.config.DEEPGRAM_API_KEY}",
+                "Content-Type": mime,
+            }
+
+            # Add model if specified
+            params = {}
+            if request.app.state.config.STT_MODEL:
+                params["model"] = request.app.state.config.STT_MODEL
+
+            # Make request to Deepgram API
+            r = requests.post(
+                "https://api.deepgram.com/v1/listen",
+                headers=headers,
+                params=params,
+                data=file_data,
+            )
+            r.raise_for_status()
+            response_data = r.json()
+
+            # Extract transcript from Deepgram response
+            try:
+                transcript = response_data["results"]["channels"][0]["alternatives"][
+                    0
+                ].get("transcript", "")
+            except (KeyError, IndexError) as e:
+                log.error(f"Malformed response from Deepgram: {str(e)}")
+                raise Exception(
+                    "Failed to parse Deepgram response - unexpected response format"
+                )
+            data = {"text": transcript.strip()}
+
+            # Save transcript
+            transcript_file = f"{file_dir}/{id}.json"
+            with open(transcript_file, "w") as f:
+                json.dump(data, f)
+
+            return data
+
+        except Exception as e:
+            log.exception(e)
+            detail = None
+            if r is not None:
+                try:
+                    res = r.json()
+                    if "error" in res:
+                        detail = f"External: {res['error'].get('message', '')}"
+                except Exception:
+                    detail = f"External: {e}"
             raise Exception(detail if detail else "Open WebUI: Server Connection Error")
 
 
