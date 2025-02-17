@@ -169,14 +169,14 @@
 			</div>
 		</div>
 	{:else if token.type === 'blockquote'}
-		<blockquote>
+		<blockquote dir="auto">
 			<svelte:self id={`${id}-${tokenIdx}`} tokens={token.tokens} {onTaskClick} {onSourceClick} />
 		</blockquote>
 	{:else if token.type === 'list'}
 		{#if token.ordered}
 			<ol start={token.start || 1}>
 				{#each token.items as item, itemIdx}
-					<li>
+					<li dir="auto">
 						{#if item?.task}
 							<input
 								class=" translate-y-[1px] -translate-x-1"
@@ -208,7 +208,7 @@
 		{:else}
 			<ul>
 				{#each token.items as item, itemIdx}
-					<li>
+					<li dir="auto">
 						{#if item?.task}
 							<input
 								class=" translate-y-[1px] -translate-x-1"
@@ -268,7 +268,7 @@
 			onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
 		></iframe>
 	{:else if token.type === 'paragraph'}
-		<p>
+		<p dir="auto">
 			<MarkdownInlineTokens
 				id={`${id}-${tokenIdx}-p`}
 				tokens={token.tokens ?? []}
@@ -277,7 +277,7 @@
 		</p>
 	{:else if token.type === 'text'}
 		{#if top}
-			<p>
+			<p dir="auto">
 				{#if token.tokens}
 					<MarkdownInlineTokens id={`${id}-${tokenIdx}-t`} tokens={token.tokens} {onSourceClick} />
 				{:else}
