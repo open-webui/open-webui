@@ -16,6 +16,9 @@ env:
 jobs:
   build:
     runs-on: self-hosted
+    permissions:
+      contents: read
+      issues: write
     steps:
       - name: Set TIMESTAMP variable
         run: echo "TIMESTAMP=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
@@ -67,7 +70,7 @@ jobs:
                   args:
                   - --dockerfile=./Dockerfile
                   - --context=git://${{ secrets.GITHUB_TOKEN }}@github.com/IONOS-Productivity/${{ github.repository }}.git
-                  - --git=branch=main                
+                  - --git=branch=${{ github.ref }}                
                   - --destination=reg.1u1.it:443/moc-dev/drive/open-webui:${{ github.run_id }}
                   - --destination=reg.1u1.it:443/moc-dev/drive/open-webui:latest
                   - --build-arg=BUILD_HASH=${{ github.sha }}
