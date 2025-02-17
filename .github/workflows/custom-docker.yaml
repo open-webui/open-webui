@@ -27,11 +27,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: lowercase github.repository
+        run: |
+          echo "REPO_NAME_LOWERCASE=${GITHUB_REPOSITORY@L}" >> ${GITHUB_ENV}
+
       - name: Build and push the Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ GITHUB_REPOSITORY@L }}:latest
-            ghcr.io/${{ GITHUB_REPOSITORY@L }}:${{ github.sha }}
+            ghcr.io/${{ env.REPO_NAME_LOWERCASE }}:latest
+            ghcr.io/${{ env.REPO_NAME_LOWERCASE }}:${{ github.sha }}
