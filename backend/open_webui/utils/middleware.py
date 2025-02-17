@@ -641,6 +641,7 @@ async def chat_completion_files_handler(
                         reranking_function=request.app.state.rf,
                         r=request.app.state.config.RELEVANCE_THRESHOLD,
                         hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+                        enable_parent_retriever = request.app.state.config.ENABLE_RAG_PARENT_RETRIEVER,
                     ),
                 )
 
