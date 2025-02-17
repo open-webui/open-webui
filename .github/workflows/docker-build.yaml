@@ -4,7 +4,6 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - release
       - main
       - dev
     tags:
@@ -69,7 +68,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
           flavor: |
-            latest=${{ github.ref == 'refs/heads/release' }}
+            latest=${{ github.ref == 'refs/heads/main' }}
 
       - name: Extract metadata for Docker cache
         id: cache-meta
@@ -78,7 +77,7 @@ jobs:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
-            ${{ github.ref_type == 'tag' && 'type=raw,value=release' || '' }}
+            ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
           flavor: |
             prefix=cache-${{ matrix.platform }}-
             latest=false
@@ -165,9 +164,9 @@ jobs:
             type=sha,prefix=git-
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,enable=${{ github.ref == 'refs/heads/release' }},prefix=,suffix=,value=cuda
+            type=raw,enable=${{ github.ref == 'refs/heads/main' }},prefix=,suffix=,value=cuda
           flavor: |
-            latest=${{ github.ref == 'refs/heads/release' }}
+            latest=${{ github.ref == 'refs/heads/main' }}
             suffix=-cuda,onlatest=true
 
       - name: Extract metadata for Docker cache
@@ -177,7 +176,7 @@ jobs:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
-            ${{ github.ref_type == 'tag' && 'type=raw,value=release' || '' }}
+            ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
           flavor: |
             prefix=cache-cuda-${{ matrix.platform }}-
             latest=false
@@ -265,9 +264,9 @@ jobs:
             type=sha,prefix=git-
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,enable=${{ github.ref == 'refs/heads/release' }},prefix=,suffix=,value=ollama
+            type=raw,enable=${{ github.ref == 'refs/heads/main' }},prefix=,suffix=,value=ollama
           flavor: |
-            latest=${{ github.ref == 'refs/heads/release' }}
+            latest=${{ github.ref == 'refs/heads/main' }}
             suffix=-ollama,onlatest=true
 
       - name: Extract metadata for Docker cache
@@ -277,7 +276,7 @@ jobs:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
-            ${{ github.ref_type == 'tag' && 'type=raw,value=release' || '' }}
+            ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
           flavor: |
             prefix=cache-ollama-${{ matrix.platform }}-
             latest=false
@@ -353,7 +352,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
           flavor: |
-            latest=${{ github.ref == 'refs/heads/release' }}
+            latest=${{ github.ref == 'refs/heads/main' }}
 
       - name: Create manifest list and push
         working-directory: /tmp/digests
@@ -406,9 +405,9 @@ jobs:
             type=sha,prefix=git-
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,enable=${{ github.ref == 'refs/heads/release' }},prefix=,suffix=,value=cuda
+            type=raw,enable=${{ github.ref == 'refs/heads/main' }},prefix=,suffix=,value=cuda
           flavor: |
-            latest=${{ github.ref == 'refs/heads/release' }}
+            latest=${{ github.ref == 'refs/heads/main' }}
             suffix=-cuda,onlatest=true
 
       - name: Create manifest list and push
@@ -462,9 +461,9 @@ jobs:
             type=sha,prefix=git-
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,enable=${{ github.ref == 'refs/heads/release' }},prefix=,suffix=,value=ollama
+            type=raw,enable=${{ github.ref == 'refs/heads/main' }},prefix=,suffix=,value=ollama
           flavor: |
-            latest=${{ github.ref == 'refs/heads/release' }}
+            latest=${{ github.ref == 'refs/heads/main' }}
             suffix=-ollama,onlatest=true
 
       - name: Create manifest list and push
