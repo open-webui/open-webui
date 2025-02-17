@@ -2,6 +2,7 @@
 	import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
 	import IonosLogo from '$lib/IONOS/components/icons/IonosLogo.svelte';
 	import Footer from '$lib/IONOS/components/Footer.svelte';
+	import PrivacySlogan from '$lib/IONOS/components/PrivacySlogan.svelte';
 
 	import {
 		user
@@ -12,12 +13,14 @@
 	<div class=" flex max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent">
 		<div class="flex justify-between items-center w-full max-w-full">
 			<div
-				class="items-center flex h-10 overflow-hidden py-0.5"
+				class="items-center flex flex-1 h-10 overflow-hidden py-0.5"
 			>
 				<a href="/">
 					<IonosLogo className={"h-6"} />
 				</a>
 			</div>
+
+			<PrivacySlogan />
 
 			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
 				{#if $user !== undefined}
