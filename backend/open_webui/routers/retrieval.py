@@ -811,7 +811,7 @@ def save_docs_to_vector_db(
         embeddings = embedding_function(
             list(map(lambda x: x.replace("\n", " "), texts)), user=user
         )
-
+        log.info(f"get embedding_function done")
         items = [
             {
                 "id": str(uuid.uuid4()),
