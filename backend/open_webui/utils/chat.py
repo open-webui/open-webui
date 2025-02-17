@@ -186,12 +186,6 @@ async def generate_chat_completion(
     if model_id not in models:
         raise Exception("Model not found")
 
-    # Process the form_data through the pipeline
-    try:
-        form_data = process_pipeline_inlet_filter(request, form_data, user, models)
-    except Exception as e:
-        raise e
-
     model = models[model_id]
 
     if getattr(request.state, "direct", False):
@@ -308,7 +302,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     model = models[model_id]
 
     try:
-        data = process_pipeline_outlet_filter(request, data, user, models)
+        data = await process_pipeline_outlet_filter(request, data, user, models)
     except Exception as e:
         return Exception(f"Error: {e}")
 

@@ -87,7 +87,7 @@
 
 <div class=" flex w-full user-message" dir={$settings.chatDirection} id="message-{message.id}">
 	{#if !($settings?.chatBubble ?? true)}
-		<div class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
+		<div class={`shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
 			<ProfileImage
 				src={message.user
 					? ($models.find((m) => m.id === message.user)?.info?.meta?.profile_image_url ??
@@ -152,7 +152,7 @@
 							<textarea
 								id="message-edit-{message.id}"
 								bind:this={messageEditTextAreaElement}
-								class=" bg-transparent outline-none w-full resize-none"
+								class=" bg-transparent outline-hidden w-full resize-none"
 								bind:value={editedContent}
 								on:input={(e) => {
 									e.target.style.height = '';
@@ -338,7 +338,7 @@
 							{#if !isFirstMessage && !readOnly}
 								<Tooltip content={$i18n.t('Delete')} placement="bottom">
 									<button
-										class="invisible group-hover:visible p-1 rounded dark:hover:text-white hover:text-black transition"
+										class="invisible group-hover:visible p-1 rounded-sm dark:hover:text-white hover:text-black transition"
 										on:click={() => {
 											deleteMessageHandler();
 										}}

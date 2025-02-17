@@ -1,3 +1,5 @@
+@reference "./tailwind.css";
+
 @font-face {
 	font-family: 'Inter';
 	src: url('/assets/fonts/Inter-Variable.ttf');
@@ -217,8 +219,18 @@ input[type='number'] {
 	width: 100%;
 }
 
-.cm-scroller {
-	@apply scrollbar-hidden;
+.cm-scroller:active::-webkit-scrollbar-thumb,
+.cm-scroller:focus::-webkit-scrollbar-thumb,
+.cm-scroller:hover::-webkit-scrollbar-thumb {
+	visibility: visible;
+}
+
+.cm-scroller::-webkit-scrollbar-thumb {
+	visibility: hidden;
+}
+
+.cm-scroller::-webkit-scrollbar-corner {
+	display: none;
 }
 
 .cm-editor.cm-focused {
