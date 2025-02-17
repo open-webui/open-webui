@@ -1,0 +1,2 @@
+import{c as p}from"./index.Ccw7PXcW.js";const y={y:-8,start:.95,duration:200},x=(u,i)=>{const a=getComputedStyle(u),l=a.transform==="none"?"":a.transform,e={...y,...i},s=(t,r,n)=>{const[o,d]=r,[c,f]=n;return(t-o)/(d-o)*(f-c)+c},m=t=>Object.keys(t).reduce((r,n)=>t[n]===void 0?r:r+`${n}:${t[n]};`,"");return{duration:e.duration??200,delay:0,css:t=>{const r=s(t,[0,1],[e.y,0]),n=s(t,[0,1],[e.start,1]);return m({transform:`${l} translate3d(0, ${r}px, 0) scale(${n})`,opacity:t})},easing:p}};export{x as f};
+//# sourceMappingURL=index.BFuekP1B.js.map
