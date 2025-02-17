@@ -649,11 +649,11 @@ async def generate_chat_completion(
 
         r = await session.request(
             method="POST",
-            url=f"{url}/chat/completions",
+            url=f"{url}/chat/completions?api-version=2024-10-21",
             data=payload,
             headers={
-                "Authorization": f"Bearer {key}",
                 "Content-Type": "application/json",
+                "api-key": f"{key}",
                 **(
                     {
                         "HTTP-Referer": "https://openwebui.com/",
