@@ -68,7 +68,7 @@ class VectorSearchRetriever(BaseRetriever):
 def query_doc(
     collection_name: str, query_embedding: list[float], k: int, user: UserModel = None
 ):
-    # log.info(f"query_doc: {collection_name} {k}")
+    log.info(f"temp log query_doc: {collection_name} {k}")
     try:
         result = VECTOR_DB_CLIENT.search(
             collection_name=collection_name,
@@ -187,7 +187,7 @@ def query_collection(
     embedding_function,
     k: int,
 ) -> dict:
-    # log.info("query_collection: " + f"{collection_names} {queries} {k}")
+    log.info("temp log query_collection: " + f"{collection_names} {queries} {k}")
     results = []
     for query in queries:
         query_embedding = embedding_function(query)
@@ -300,12 +300,16 @@ def get_sources_from_files(
     r,
     hybrid_search,
 ):
-    log.debug(f"files: {files} {queries} {embedding_function} {reranking_function}")
+    log.info(f"files: {files} {queries} {embedding_function} {reranking_function}")
 
     return [
-        {"source": file["file"],
-         "document": [file["file"]["data"]["content"]],
-         "metadata": [{"file_id": file["file"]["id"], "name": file["file"]["filename"]}]}
+        {
+            "source": file["file"],
+            "document": [file["file"]["data"]["content"]],
+            "metadata": [
+                {"file_id": file["file"]["id"], "name": file["file"]["filename"]}
+            ],
+        }
         for file in files
     ]
 
