@@ -1,6 +1,5 @@
 .DS_Store
 node_modules
-/build
 /.svelte-kit
 /package
 .env
@@ -22,7 +21,6 @@ static/pyodide/*
 
 # Distribution / packaging
 .Python
-build/
 develop-eggs/
 dist/
 downloads/
@@ -310,3 +308,10 @@ cypress/screenshots
 /.history
 /.github
 /.github
+/.github
+/build_backup
+/build/_app
+/build/assets
+/build/audio
+/build/favicon
+/build/pyodide
