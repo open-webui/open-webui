@@ -12,7 +12,6 @@
 		tags,
 		showSidebar,
 		mobile,
-		showArchivedChats,
 		pinnedChats,
 		scrollPaginationEnabled,
 		currentChatPage,
@@ -42,7 +41,6 @@
 	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
-	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import ChatItem from './Sidebar/ChatItem.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -418,13 +416,6 @@
 		dropZone?.removeEventListener('dragleave', onDragLeave);
 	});
 </script>
-
-<ArchivedChatsModal
-	bind:show={$showArchivedChats}
-	on:change={async () => {
-		await initChatList();
-	}}
-/>
 
 <ChannelModal
 	bind:show={showCreateChannel}
@@ -852,37 +843,6 @@
 					</div>
 				</div>
 			</Folder>
-		</div>
-
-		<div class="px-2">
-			<div class="flex flex-col font-primary">
-				{#if $user !== undefined}
-					<UserMenu
-						role={$user.role}
-						on:show={(e) => {
-							if (e.detail === 'archived-chat') {
-								showArchivedChats.set(true);
-							}
-						}}
-					>
-						<button
-							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-							on:click={() => {
-								showDropdown = !showDropdown;
-							}}
-						>
-							<div class=" self-center mr-3">
-								<img
-									src={$user.profile_image_url}
-									class=" max-w-[30px] object-cover rounded-full"
-									alt="User profile"
-								/>
-							</div>
-							<div class=" self-center font-medium">{$user.name}</div>
-						</button>
-					</UserMenu>
-				{/if}
-			</div>
 		</div>
 	</div>
 </div>
