@@ -248,20 +248,20 @@
 											/>
 										</div>
 									{/if}
-									{#if mode === 'signin' || ($config?.features.enable_password_signups && mode === 'signup')}              
-									<div>
-										<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Password')}</div>
+									{#if mode === 'signin' || ($config?.features.enable_password_signups && mode === 'signup')}
+										<div>
+											<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Password')}</div>
 
-										<input
-											bind:value={password}
-											type="password"
-											class="my-0.5 w-full text-sm outline-hidden bg-transparent"
-											placeholder={$i18n.t('Enter Your Password')}
-											autocomplete="current-password"
-											name="current-password"
-											required
-										/>
-									</div>
+											<input
+												bind:value={password}
+												type="password"
+												class="my-0.5 w-full text-sm outline-hidden bg-transparent"
+												placeholder={$i18n.t('Enter Your Password')}
+												autocomplete="current-password"
+												name="current-password"
+												required
+											/>
+										</div>
 									{/if}
 								</div>
 							{/if}
