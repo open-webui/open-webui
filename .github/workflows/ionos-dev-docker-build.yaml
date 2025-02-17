@@ -69,7 +69,7 @@ jobs:
                   image: gcr.io/kaniko-project/executor:latest
                   args:
                   - --dockerfile=./Dockerfile
-                  - --context=git://${{ secrets.GITHUB_TOKEN }}@github.com/IONOS-Productivity/${{ github.repository }}.git
+                  - --context=git://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
                   - --git=branch=${{ github.ref }}                
                   - --destination=reg.1u1.it:443/moc-dev/drive/open-webui:${{ github.run_id }}
                   - --destination=reg.1u1.it:443/moc-dev/drive/open-webui:latest
