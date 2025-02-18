@@ -26,6 +26,7 @@
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
 
 	import PencilSquare from '../icons/PencilSquare.svelte';
+	import IonosLogo from '$lib/IONOS/components/icons/IonosLogo.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -67,6 +68,14 @@
 						<MenuLines />
 					</div>
 				</button>
+			</div>
+
+			<div
+				class="items-center flex h-10 overflow-hidden py-0.5"
+			>
+				<a href="/">
+					<IonosLogo className={"h-6"} />
+				</a>
 			</div>
 
 			<div
