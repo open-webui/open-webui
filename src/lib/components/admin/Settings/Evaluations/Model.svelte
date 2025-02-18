@@ -34,7 +34,7 @@
 
 				<div class="w-full flex flex-col">
 					<div class="flex items-center gap-1">
-						<div class="flex-shrink-0 line-clamp-1">
+						<div class="shrink-0 line-clamp-1">
 							{model.name}
 						</div>
 					</div>

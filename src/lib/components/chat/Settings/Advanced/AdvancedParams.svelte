@@ -59,7 +59,7 @@
 					{$i18n.t('Stream Chat Response')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition"
+					class="p-1 px-3 text-xs flex rounded-sm transition"
 					on:click={() => {
 						params.stream_response =
 							(params?.stream_response ?? null) === null
@@ -95,7 +95,7 @@
 					{$i18n.t('Function Calling')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition"
+					class="p-1 px-3 text-xs flex rounded-sm transition"
 					on:click={() => {
 						params.function_calling = (params?.function_calling ?? null) === null ? 'native' : null;
 					}}
@@ -125,7 +125,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.seed = (params?.seed ?? null) === null ? 0 : null;
@@ -144,7 +144,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 						type="number"
 						placeholder={$i18n.t('Enter Seed')}
 						bind:value={params.seed}
@@ -170,7 +170,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.stop = (params?.stop ?? null) === null ? '' : null;
@@ -189,7 +189,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						class="w-full rounded-lg py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						class="w-full rounded-lg py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 						type="text"
 						placeholder={$i18n.t('Enter stop sequence')}
 						bind:value={params.stop}
@@ -213,7 +213,7 @@
 					{$i18n.t('Temperature')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.temperature = (params?.temperature ?? null) === null ? 0.8 : null;
@@ -235,7 +235,7 @@
 						id="steps-range"
 						type="range"
 						min="0"
-						max="1"
+						max="2"
 						step="0.05"
 						bind:value={params.temperature}
 						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
@@ -247,7 +247,7 @@
 						type="number"
 						class=" bg-transparent text-center w-14"
 						min="0"
-						max="1"
+						max="2"
 						step="any"
 					/>
 				</div>
@@ -268,7 +268,7 @@
 					{$i18n.t('Reasoning Effort')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.reasoning_effort = (params?.reasoning_effort ?? null) === null ? 'medium' : null;
@@ -287,7 +287,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						class="w-full rounded-lg py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						class="w-full rounded-lg py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 						type="text"
 						placeholder={$i18n.t('Enter reasoning effort')}
 						bind:value={params.reasoning_effort}
@@ -311,7 +311,7 @@
 					{$i18n.t('Mirostat')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.mirostat = (params?.mirostat ?? null) === null ? 0 : null;
@@ -366,7 +366,7 @@
 					{$i18n.t('Mirostat Eta')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.mirostat_eta = (params?.mirostat_eta ?? null) === null ? 0.1 : null;
@@ -422,7 +422,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.mirostat_tau = (params?.mirostat_tau ?? null) === null ? 5.0 : null;
@@ -477,7 +477,7 @@
 					{$i18n.t('Top K')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.top_k = (params?.top_k ?? null) === null ? 40 : null;
@@ -499,7 +499,7 @@
 						id="steps-range"
 						type="range"
 						min="0"
-						max="100"
+						max="1000"
 						step="0.5"
 						bind:value={params.top_k}
 						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
@@ -533,7 +533,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.top_p = (params?.top_p ?? null) === null ? 0.9 : null;
@@ -588,7 +588,7 @@
 					{$i18n.t('Min P')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.min_p = (params?.min_p ?? null) === null ? 0.0 : null;
@@ -633,7 +633,7 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'Sets how strongly to penalize repetitions. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. (Default: 1.1)'
+				'Sets a scaling bias against tokens to penalize repetitions, based on how many times they have appeared. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. At 0, it is disabled. (Default: 1.1)'
 			)}
 			placement="top-start"
 			className="inline-tooltip"
@@ -644,7 +644,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.frequency_penalty = (params?.frequency_penalty ?? null) === null ? 1.1 : null;
@@ -665,7 +665,7 @@
 					<input
 						id="steps-range"
 						type="range"
-						min="0"
+						min="-2"
 						max="2"
 						step="0.05"
 						bind:value={params.frequency_penalty}
@@ -677,7 +677,119 @@
 						bind:value={params.frequency_penalty}
 						type="number"
 						class=" bg-transparent text-center w-14"
-						min="0"
+						min="-2"
+						max="2"
+						step="any"
+					/>
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Sets a flat bias against tokens that have appeared at least once. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. At 0, it is disabled. (Default: 0)'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Presence Penalty')}
+				</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					type="button"
+					on:click={() => {
+						params.presence_penalty = (params?.presence_penalty ?? null) === null ? 0.0 : null;
+					}}
+				>
+					{#if (params?.presence_penalty ?? null) === null}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+
+		{#if (params?.presence_penalty ?? null) !== null}
+			<div class="flex mt-0.5 space-x-2">
+				<div class=" flex-1">
+					<input
+						id="steps-range"
+						type="range"
+						min="-2"
+						max="2"
+						step="0.05"
+						bind:value={params.presence_penalty}
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+					/>
+				</div>
+				<div>
+					<input
+						bind:value={params.presence_penalty}
+						type="number"
+						class=" bg-transparent text-center w-14"
+						min="-2"
+						max="2"
+						step="any"
+					/>
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Control the repetition of token sequences in the generated text. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 1.1) will be more lenient. At 1, it is disabled. (Default: 1.1)'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Repeat Penalty (Ollama)')}
+				</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					type="button"
+					on:click={() => {
+						params.repeat_penalty = (params?.repeat_penalty ?? null) === null ? 1.1 : null;
+					}}
+				>
+					{#if (params?.repeat_penalty ?? null) === null}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+
+		{#if (params?.repeat_penalty ?? null) !== null}
+			<div class="flex mt-0.5 space-x-2">
+				<div class=" flex-1">
+					<input
+						id="steps-range"
+						type="range"
+						min="-2"
+						max="2"
+						step="0.05"
+						bind:value={params.repeat_penalty}
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+					/>
+				</div>
+				<div>
+					<input
+						bind:value={params.repeat_penalty}
+						type="number"
+						class=" bg-transparent text-center w-14"
+						min="-2"
 						max="2"
 						step="any"
 					/>
@@ -700,7 +812,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.repeat_last_n = (params?.repeat_last_n ?? null) === null ? 64 : null;
@@ -756,7 +868,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.tfs_z = (params?.tfs_z ?? null) === null ? 1 : null;
@@ -812,7 +924,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.num_ctx = (params?.num_ctx ?? null) === null ? 2048 : null;
@@ -867,7 +979,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.num_batch = (params?.num_batch ?? null) === null ? 512 : null;
@@ -922,7 +1034,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.num_keep = (params?.num_keep ?? null) === null ? 24 : null;
@@ -977,7 +1089,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.max_tokens = (params?.max_tokens ?? null) === null ? 128 : null;
@@ -1032,7 +1144,7 @@
 						{$i18n.t('use_mmap (Ollama)')}
 					</div>
 					<button
-						class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 						type="button"
 						on:click={() => {
 							params.use_mmap = (params?.use_mmap ?? null) === null ? true : null;
@@ -1073,7 +1185,7 @@
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 						type="button"
 						on:click={() => {
 							params.use_mlock = (params?.use_mlock ?? null) === null ? true : null;
@@ -1115,7 +1227,7 @@
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 						type="button"
 						on:click={() => {
 							params.num_thread = (params?.num_thread ?? null) === null ? 2 : null;
@@ -1171,7 +1283,7 @@
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 						type="button"
 						on:click={() => {
 							params.num_gpu = (params?.num_gpu ?? null) === null ? 0 : null;
@@ -1218,7 +1330,7 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Template')}</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.template = (params?.template ?? null) === null ? '' : null;
@@ -1236,7 +1348,7 @@
 				<div class="flex mt-0.5 space-x-2">
 					<div class=" flex-1">
 						<textarea
-							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg -mb-1"
+							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-hidden rounded-lg -mb-1"
 							placeholder={$i18n.t('Write your model template content here')}
 							rows="4"
 							bind:value={params.template}

@@ -21,6 +21,7 @@ from fastapi import (
     APIRouter,
 )
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 import tiktoken
 
@@ -370,7 +371,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "proxy_url": request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
         },
         "web": {
-            "web_loader_ssl_verification": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            "ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            "RAG_WEB_SEARCH_FULL_CONTEXT": request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT,
             "search": {
                 "enabled": request.app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "drive": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
@@ -450,12 +452,14 @@ class WebSearchConfig(BaseModel):
     exa_api_key: Optional[str] = None
     result_count: Optional[int] = None
     concurrent_requests: Optional[int] = None
+    trust_env: Optional[bool] = None
     domain_filter_list: Optional[List[str]] = []
 
 
 class WebConfig(BaseModel):
     search: WebSearchConfig
-    web_loader_ssl_verification: Optional[bool] = None
+    ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION: Optional[bool] = None
+    RAG_WEB_SEARCH_FULL_CONTEXT: Optional[bool] = None
 
 
 class ConfigUpdateForm(BaseModel):
@@ -510,11 +514,16 @@ async def update_rag_config(
     if form_data.web is not None:
         request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
             # Note: When UI "Bypass SSL verification for Websites"=True then ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION=False
-            form_data.web.web_loader_ssl_verification
+            form_data.web.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
         )
 
         request.app.state.config.ENABLE_RAG_WEB_SEARCH = form_data.web.search.enabled
         request.app.state.config.RAG_WEB_SEARCH_ENGINE = form_data.web.search.engine
+
+        request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT = (
+            form_data.web.RAG_WEB_SEARCH_FULL_CONTEXT
+        )
+
         request.app.state.config.SEARXNG_QUERY_URL = (
             form_data.web.search.searxng_query_url
         )
@@ -569,6 +578,9 @@ async def update_rag_config(
         request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = (
             form_data.web.search.concurrent_requests
         )
+        request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV = (
+            form_data.web.search.trust_env
+        )
         request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = (
             form_data.web.search.domain_filter_list
         )
@@ -595,7 +607,8 @@ async def update_rag_config(
             "translation": request.app.state.YOUTUBE_LOADER_TRANSLATION,
         },
         "web": {
-            "web_loader_ssl_verification": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            "ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            "RAG_WEB_SEARCH_FULL_CONTEXT": request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT,
             "search": {
                 "enabled": request.app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "engine": request.app.state.config.RAG_WEB_SEARCH_ENGINE,
@@ -621,6 +634,7 @@ async def update_rag_config(
                 "exa_api_key": request.app.state.config.EXA_API_KEY,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+                "trust_env": request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
                 "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             },
         },
@@ -1256,6 +1270,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 request.app.state.config.TAVILY_API_KEY,
                 query,
                 request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception("No TAVILY_API_KEY found in environment variables")
@@ -1308,7 +1323,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
 
 
 @router.post("/process/web/search")
-def process_web_search(
+async def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
     try:
@@ -1340,17 +1355,39 @@ def process_web_search(
             urls,
             verify_ssl=request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+            trust_env=request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
         )
-        docs = loader.load()
-        save_docs_to_vector_db(
-            request, docs, collection_name, overwrite=True, user=user
-        )
+        docs = await loader.aload()
 
-        return {
-            "status": True,
-            "collection_name": collection_name,
-            "filenames": urls,
-        }
+        if request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT:
+            return {
+                "status": True,
+                "docs": [
+                    {
+                        "content": doc.page_content,
+                        "metadata": doc.metadata,
+                    }
+                    for doc in docs
+                ],
+                "filenames": urls,
+                "loaded_count": len(docs),
+            }
+        else:
+            await run_in_threadpool(
+                save_docs_to_vector_db,
+                request,
+                docs,
+                collection_name,
+                overwrite=True,
+                user=user,
+            )
+
+            return {
+                "status": True,
+                "collection_name": collection_name,
+                "filenames": urls,
+                "loaded_count": len(docs),
+            }
     except Exception as e:
         log.exception(e)
         raise HTTPException(
