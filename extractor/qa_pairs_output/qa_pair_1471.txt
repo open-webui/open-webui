@@ -1,0 +1,2 @@
+질문: 전공 elective로 들을 수 있는 과목들 중 몇 개는 major requirement에 없는 과목이 prerequisite으로 돼있는데 이런 경우에는 별개로 prerequisite인 과목들을 알아서 먼저 듣고 elective 과목 들어야 하는 건가요?
+답변: 네.

@@ -1,0 +1,2 @@
+질문: pre-enroll 된 과목들은 학교 포털에 가면 알 수 있는 걸까요?
+답변: Student portal -> Academics 밑에 Enroll -> My Class Schedule 들어가시면 나올 거예요; 지금은 안 나오고 수강신청 전에 validation 기간에 뜰 거예요.

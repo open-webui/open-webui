@@ -1,0 +1,2 @@
+질문: 오늘 도서관 열었나요?
+답변: 도서관 열고 닫았는지는 [여기](https://library.hkust.edu.hk/about-us/hours/)서 확인 가능합니다.

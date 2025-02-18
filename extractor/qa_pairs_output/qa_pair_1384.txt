@@ -1,0 +1,2 @@
+질문: 트랜스퍼 데이터베이스에 1000level course in environment 이런식으로 써있는건 envr 1000번대 수업 아무거나로 트랜스퍼 가능하다는 말인가요?
+답변: 아뇨, specific 과목으론 안되고 그냥 envr 1000번대 requirement 항목 fulfill은 된다는 얘기예요.

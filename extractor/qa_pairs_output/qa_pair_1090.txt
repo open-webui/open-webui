@@ -1,0 +1,2 @@
+질문: Course instructor/교수 이메일은 어디서 찾을 수 있나요?
+답변: 교수님 이름 + hkust 라고 구글에 검색하면 faculty profile 나와요; 프로필에 이메일 주소 나와있어요.

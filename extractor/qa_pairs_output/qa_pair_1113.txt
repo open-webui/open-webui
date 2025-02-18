@@ -1,0 +1,2 @@
+질문: chem1008 필요한 requisite이 따로 있나요?
+답변: Exclusion 들으셨을 수도 있으니 확인해보세요.

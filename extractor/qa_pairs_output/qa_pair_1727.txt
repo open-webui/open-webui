@@ -1,0 +1,2 @@
+질문: pre-requisite 과목을 수강하지 않으면 아예 인롤이 안될까요?
+답변: requisite waiver 받으시면 가능합니다; 인롤 전에 validate부터 눌러서 확인해보세요.
