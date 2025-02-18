@@ -83,13 +83,13 @@
 					{/if}
 				</div>
 
-				{#if banner.type === 'html'}
-					{@html DOMPurify.sanitize(banner.content)}
-				{:else}
-					<div class="flex-1 text-xs text-gray-700 dark:text-white">
+				<div class="flex-1 text-xs text-gray-700 dark:text-white">
+					{#if banner.type === 'html'}
+						{@html DOMPurify.sanitize(banner.content)}
+					{:else}
 						{@html marked.parse(DOMPurify.sanitize(banner.content))}
-					</div>
-				{/if}
+					{/if}
+				</div>
 			</div>
 
 			{#if banner.url}
