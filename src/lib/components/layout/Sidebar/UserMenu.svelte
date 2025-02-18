@@ -63,7 +63,7 @@
      <div class="self-center truncate">{$i18n.t('Update Plan')}</div>
    </button>
    {#if showUpdatePlanModal}
-  <UpdatePlanModal bind:showUpdatePlanModal />
+  <UpdatePlanModal bind:showUpdatePlanModal {userId} />
  {/if}
    <!-- Другие элементы меню -->
 
