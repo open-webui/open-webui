@@ -588,20 +588,6 @@ load_oauth_providers()
 
 STATIC_DIR = Path(os.getenv("STATIC_DIR", OPEN_WEBUI_DIR / "static")).resolve()
 
-
-def override_static(path: str, content: str):
-    # Ensure path is safe
-    if "/" in path or ".." in path:
-        log.error(f"Invalid path: {path}")
-        return
-
-    file_path = os.path.join(STATIC_DIR, path)
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-
-    with open(file_path, "wb") as f:
-        f.write(base64.b64decode(content))  # Convert Base64 back to raw binary
-
-
 frontend_favicon = FRONTEND_BUILD_DIR / "static" / "favicon.png"
 
 if frontend_favicon.exists():

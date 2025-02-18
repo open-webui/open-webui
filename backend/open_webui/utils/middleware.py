@@ -1361,7 +1361,14 @@ async def process_chat_response(
             )
 
             tool_calls = []
-            content = message.get("content", "") if message else ""
+
+            last_assistant_message = get_last_assistant_message(form_data["messages"])
+            content = (
+                message.get("content", "")
+                if message
+                else last_assistant_message if last_assistant_message else ""
+            )
+
             content_blocks = [
                 {
                     "type": "text",

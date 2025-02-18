@@ -1,6 +1,14 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
-	import { chats, config, settings, user as _user, mobile, currentChatPage } from '$lib/stores';
+	import {
+		chats,
+		config,
+		settings,
+		user as _user,
+		mobile,
+		currentChatPage,
+		temporaryChatEnabled
+	} from '$lib/stores';
 	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 
@@ -85,15 +93,17 @@
 	};
 
 	const updateChat = async () => {
-		history = history;
-		await tick();
-		await updateChatById(localStorage.token, chatId, {
-			history: history,
-			messages: messages
-		});
+		if (!$temporaryChatEnabled) {
+			history = history;
+			await tick();
+			await updateChatById(localStorage.token, chatId, {
+				history: history,
+				messages: messages
+			});
 
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			currentChatPage.set(1);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		}
 	};
 
 	const showPreviousMessage = async (message) => {
