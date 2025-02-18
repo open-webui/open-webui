@@ -357,7 +357,6 @@ class TestAzureStorageProvider:
         with pytest.raises(ValueError):
             self.Storage.upload_file(self.file_bytesio_empty, self.filename)
 
-
     def test_get_file(self, monkeypatch, tmp_path):
         upload_dir = mock_upload_dir(monkeypatch, tmp_path)
         self.Storage.create_container()
