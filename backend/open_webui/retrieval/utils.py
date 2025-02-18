@@ -304,7 +304,12 @@ def get_sources_from_files(
     relevant_contexts = []
 
     for file in files:
-        if file.get("context") == "full":
+        if file.get("docs"):
+            context = {
+                "documents": [[doc.get("content") for doc in file.get("docs")]],
+                "metadatas": [[doc.get("metadata") for doc in file.get("docs")]],
+            }
+        elif file.get("context") == "full":
             context = {
                 "documents": [[file.get("file").get("data", {}).get("content")]],
                 "metadatas": [[{"file_id": file.get("id"), "name": file.get("name")}]],

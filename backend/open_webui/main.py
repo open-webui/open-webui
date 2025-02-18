@@ -88,6 +88,7 @@ from open_webui.models.models import Models
 from open_webui.models.users import UserModel, Users
 
 from open_webui.config import (
+    LICENSE_KEY,
     # Ollama
     ENABLE_OLLAMA_API,
     OLLAMA_BASE_URLS,
@@ -99,7 +100,12 @@ from open_webui.config import (
     OPENAI_API_CONFIGS,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
-    # Code Interpreter
+    # Code Execution
+    CODE_EXECUTION_ENGINE,
+    CODE_EXECUTION_JUPYTER_URL,
+    CODE_EXECUTION_JUPYTER_AUTH,
+    CODE_EXECUTION_JUPYTER_AUTH_TOKEN,
+    CODE_EXECUTION_JUPYTER_AUTH_PASSWORD,
     ENABLE_CODE_INTERPRETER,
     CODE_INTERPRETER_ENGINE,
     CODE_INTERPRETER_PROMPT_TEMPLATE,
@@ -173,8 +179,10 @@ from open_webui.config import (
     YOUTUBE_LOADER_PROXY_URL,
     # Retrieval (Web Search)
     RAG_WEB_SEARCH_ENGINE,
+    RAG_WEB_SEARCH_FULL_CONTEXT,
     RAG_WEB_SEARCH_RESULT_COUNT,
     RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+    RAG_WEB_SEARCH_TRUST_ENV,
     RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
     JINA_API_KEY,
     SEARCHAPI_API_KEY,
@@ -313,14 +321,16 @@ from open_webui.utils.middleware import process_chat_payload, process_chat_respo
 from open_webui.utils.access_control import has_access
 
 from open_webui.utils.auth import (
+    get_license_data,
     decode_token,
     get_admin_user,
     get_verified_user,
 )
-from open_webui.utils.oauth import oauth_manager
+from open_webui.utils.oauth import OAuthManager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
 from open_webui.tasks import stop_task, list_tasks  # Import from tasks.py
+
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -348,12 +358,12 @@ class SPAStaticFiles(StaticFiles):
 
 print(
     rf"""
-  ___                    __        __   _     _   _ ___
- / _ \ _ __   ___ _ __   \ \      / /__| |__ | | | |_ _|
-| | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || |
-| |_| | |_) |  __/ | | |   \ V  V /  __/ |_) | |_| || |
- \___/| .__/ \___|_| |_|    \_/\_/ \___|_.__/ \___/|___|
-      |_|
+ ██████╗ ██████╗ ███████╗███╗   ██╗    ██╗    ██╗███████╗██████╗ ██╗   ██╗██╗
+██╔═══██╗██╔══██╗██╔════╝████╗  ██║    ██║    ██║██╔════╝██╔══██╗██║   ██║██║
+██║   ██║██████╔╝█████╗  ██╔██╗ ██║    ██║ █╗ ██║█████╗  ██████╔╝██║   ██║██║
+██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║    ██║███╗██║██╔══╝  ██╔══██╗██║   ██║██║
+╚██████╔╝██║     ███████╗██║ ╚████║    ╚███╔███╔╝███████╗██████╔╝╚██████╔╝██║
+ ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝     ╚══╝╚══╝ ╚══════╝╚═════╝  ╚═════╝ ╚═╝
 
 
 v{VERSION} - building the best open-source AI user interface.
@@ -368,6 +378,9 @@ async def lifespan(app: FastAPI):
     if RESET_CONFIG_ON_START:
         reset_config()
 
+    if app.state.config.LICENSE_KEY:
+        get_license_data(app, app.state.config.LICENSE_KEY)
+
     asyncio.create_task(periodic_usage_pool_cleanup())
     yield
 
@@ -379,8 +392,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+oauth_manager = OAuthManager(app)
+
 app.state.config = AppConfig()
 
+app.state.WEBUI_NAME = WEBUI_NAME
+app.state.config.LICENSE_KEY = LICENSE_KEY
 
 ########################################
 #
@@ -482,9 +499,9 @@ app.state.config.LDAP_CIPHERS = LDAP_CIPHERS
 app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
 app.state.AUTH_TRUSTED_NAME_HEADER = WEBUI_AUTH_TRUSTED_NAME_HEADER
 
+app.state.USER_COUNT = None
 app.state.TOOLS = {}
 app.state.FUNCTIONS = {}
-
 
 ########################################
 #
@@ -532,6 +549,7 @@ app.state.config.YOUTUBE_LOADER_PROXY_URL = YOUTUBE_LOADER_PROXY_URL
 
 app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
 app.state.config.RAG_WEB_SEARCH_ENGINE = RAG_WEB_SEARCH_ENGINE
+app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT = RAG_WEB_SEARCH_FULL_CONTEXT
 app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = RAG_WEB_SEARCH_DOMAIN_FILTER_LIST
 
 app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
@@ -558,6 +576,7 @@ app.state.config.EXA_API_KEY = EXA_API_KEY
 
 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
 app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
+app.state.config.RAG_WEB_SEARCH_TRUST_ENV = RAG_WEB_SEARCH_TRUST_ENV
 
 app.state.EMBEDDING_FUNCTION = None
 app.state.ef = None
@@ -601,9 +620,17 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
 
 ########################################
 #
-# CODE INTERPRETER
+# CODE EXECUTION
 #
 ########################################
+
+app.state.config.CODE_EXECUTION_ENGINE = CODE_EXECUTION_ENGINE
+app.state.config.CODE_EXECUTION_JUPYTER_URL = CODE_EXECUTION_JUPYTER_URL
+app.state.config.CODE_EXECUTION_JUPYTER_AUTH = CODE_EXECUTION_JUPYTER_AUTH
+app.state.config.CODE_EXECUTION_JUPYTER_AUTH_TOKEN = CODE_EXECUTION_JUPYTER_AUTH_TOKEN
+app.state.config.CODE_EXECUTION_JUPYTER_AUTH_PASSWORD = (
+    CODE_EXECUTION_JUPYTER_AUTH_PASSWORD
+)
 
 app.state.config.ENABLE_CODE_INTERPRETER = ENABLE_CODE_INTERPRETER
 app.state.config.CODE_INTERPRETER_ENGINE = CODE_INTERPRETER_ENGINE
@@ -1069,7 +1096,7 @@ async def get_app_config(request: Request):
     return {
         **({"onboarding": True} if onboarding else {}),
         "status": True,
-        "name": WEBUI_NAME,
+        "name": app.state.WEBUI_NAME,
         "version": VERSION,
         "default_locale": str(DEFAULT_LOCALE),
         "oauth": {
@@ -1108,6 +1135,9 @@ async def get_app_config(request: Request):
             {
                 "default_models": app.state.config.DEFAULT_MODELS,
                 "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
+                "code": {
+                    "engine": app.state.config.CODE_EXECUTION_ENGINE,
+                },
                 "audio": {
                     "tts": {
                         "engine": app.state.config.TTS_ENGINE,
@@ -1204,7 +1234,7 @@ if len(OAUTH_PROVIDERS) > 0:
 
 @app.get("/oauth/{provider}/login")
 async def oauth_login(provider: str, request: Request):
-    return await oauth_manager.handle_login(provider, request)
+    return await oauth_manager.handle_login(request, provider)
 
 
 # OAuth login logic is as follows:
@@ -1215,14 +1245,14 @@ async def oauth_login(provider: str, request: Request):
 #    - Email addresses are considered unique, so we fail registration if the email address is already taken
 @app.get("/oauth/{provider}/callback")
 async def oauth_callback(provider: str, request: Request, response: Response):
-    return await oauth_manager.handle_callback(provider, request, response)
+    return await oauth_manager.handle_callback(request, provider, response)
 
 
 @app.get("/manifest.json")
 async def get_manifest_json():
     return {
-        "name": WEBUI_NAME,
-        "short_name": WEBUI_NAME,
+        "name": app.state.WEBUI_NAME,
+        "short_name": app.state.WEBUI_NAME,
         "description": "Open WebUI is an open, extensible, user-friendly interface for AI that adapts to your workflow.",
         "start_url": "/",
         "display": "standalone",
@@ -1249,8 +1279,8 @@ async def get_manifest_json():
 async def get_opensearch_xml():
     xml_content = rf"""
     <OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/" xmlns:moz="http://www.mozilla.org/2006/browser/search/">
-    <ShortName>{WEBUI_NAME}</ShortName>
-    <Description>Search {WEBUI_NAME}</Description>
+    <ShortName>{app.state.WEBUI_NAME}</ShortName>
+    <Description>Search {app.state.WEBUI_NAME}</Description>
     <InputEncoding>UTF-8</InputEncoding>
     <Image width="16" height="16" type="image/x-icon">{app.state.config.WEBUI_URL}/static/favicon.png</Image>
     <Url type="text/html" method="get" template="{app.state.config.WEBUI_URL}/?q={"{searchTerms}"}"/>

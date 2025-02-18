@@ -60,7 +60,7 @@
 	const downloadPdf = async () => {
 		const history = chat.chat.history;
 		const messages = createMessagesList(history, history.currentId);
-		const blob = await downloadChatAsPDF(chat.chat.title, messages);
+		const blob = await downloadChatAsPDF(localStorage.token, chat.chat.title, messages);
 
 		// Create a URL for the blob
 		const url = window.URL.createObjectURL(blob);
@@ -281,7 +281,7 @@
 			</DropdownMenu.Item>
 
 			{#if !$temporaryChatEnabled}
-				<hr class="border-gray-50 dark:border-gray-850 my-0.5" />
+				<hr class="border-gray-100 dark:border-gray-850 my-0.5" />
 
 				<div class="flex p-1">
 					<Tags chatId={chat.id} />
