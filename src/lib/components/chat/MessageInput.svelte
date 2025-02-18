@@ -249,7 +249,9 @@
 				return;
 			}
 
-			if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
+			if (
+				['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
+			) {
 				if (visionCapableModels.length === 0) {
 					toast.error($i18n.t('Selected model(s) do not support image inputs'));
 					return;
