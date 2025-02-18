@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import requests
 from open_webui.retrieval.web.main import SearchResult
@@ -8,7 +9,13 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-def search_tavily(api_key: str, query: str, count: int) -> list[SearchResult]:
+def search_tavily(
+    api_key: str,
+    query: str,
+    count: int,
+    filter_list: Optional[list[str]] = None,
+    # **kwargs,
+) -> list[SearchResult]:
     """Search using Tavily's Search API and return the results as a list of SearchResult objects.
 
     Args:
@@ -20,7 +27,6 @@ def search_tavily(api_key: str, query: str, count: int) -> list[SearchResult]:
     """
     url = "https://api.tavily.com/search"
     data = {"query": query, "api_key": api_key}
-
     response = requests.post(url, json=data)
     response.raise_for_status()
 
