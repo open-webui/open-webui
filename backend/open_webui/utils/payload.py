@@ -67,17 +67,16 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
 
 def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
     # Convert OpenAI parameter names to Ollama parameter names if needed.
-    # We moved this above mappings and apply_model_params_to_body because otherwise the cast func in apply_model_params_to_body wasn't applied consistently.
     name_differences = {
         "max_tokens": "num_predict",
-    }    
+    }
     
     for key, value in name_differences.items():
         if (param := params.get(key, None)) is not None:
             # Copy the parameter to new name then delete it, to prevent Ollama warning of invalid option provided
-            params[value] = param[key]
-            del param[key]
-    
+            params[value] = params[key]
+            del params[key]
+
     # See https://github.com/ollama/ollama/blob/main/docs/api.md#request-8
     mappings = {
         "temperature": float,
@@ -89,6 +88,7 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         "num_ctx": int,
         "num_batch": int,
         "num_keep": int,
+        "num_predict": int,
         "repeat_last_n": int,
         "top_k": int,
         "min_p": float,
@@ -189,7 +189,6 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
         
         # Mapping OpenAI's `max_tokens` -> Ollama's `num_predict`
         if "max_tokens" in ollama_options:
-            # Remember this alters the original openai_payload["options"] dict, as a debugging note
             ollama_options["num_predict"] = ollama_options["max_tokens"] 
             del ollama_options["max_tokens"] # To prevent Ollama warning of invalid option provided
         
