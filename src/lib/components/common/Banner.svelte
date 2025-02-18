@@ -25,7 +25,8 @@
 		info: 'bg-blue-500/20 text-blue-700 dark:text-blue-200 ',
 		success: 'bg-green-500/20 text-green-700 dark:text-green-200',
 		warning: 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-200',
-		error: 'bg-red-500/20 text-red-700 dark:text-red-200'
+		error: 'bg-red-500/20 text-red-700 dark:text-red-200',
+		html: 'bg-purple-500/20 text-purple-700 dark:text-purple-200'
 	};
 
 	const dismiss = (id) => {
@@ -82,9 +83,13 @@
 					{/if}
 				</div>
 
-				<div class="flex-1 text-xs text-gray-700 dark:text-white">
-					{@html marked.parse(DOMPurify.sanitize(banner.content))}
-				</div>
+				{#if banner.type === 'html'}
+					{@html DOMPurify.sanitize(banner.content)}
+				{:else}
+					<div class="flex-1 text-xs text-gray-700 dark:text-white">
+						{@html marked.parse(DOMPurify.sanitize(banner.content))}
+					</div>
+				{/if}
 			</div>
 
 			{#if banner.url}
