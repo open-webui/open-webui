@@ -97,7 +97,7 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         "presence_penalty": float,
         "frequency_penalty": float,
         "penalize_newline": bool,
-        "stop":  lambda x: [bytes(s, "utf-8").decode("unicode_escape") for s in x],
+        "stop": lambda x: [bytes(s, "utf-8").decode("unicode_escape") for s in x],
         "numa": bool,
         "num_gpu": int,
         "main_gpu": int,
