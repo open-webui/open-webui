@@ -169,7 +169,7 @@
 								</div>
 							</div>
 
-							{#if config.CODE_EXECUTION_ENGINE === 'jupyter'}
+							{#if config.CODE_INTERPRETER_ENGINE === 'jupyter'}
 								<div class="text-gray-500 text-xs">
 									{$i18n.t(
 										'Warning: Jupyter execution enables arbitrary code execution, posing severe security risks—proceed with extreme caution.'
