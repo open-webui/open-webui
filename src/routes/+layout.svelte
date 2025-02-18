@@ -2,6 +2,10 @@
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
 
+	//fix: s11: Buffer is not defined
+	import { Buffer } from 'buffer';
+	globalThis.Buffer = Buffer;
+
 	let loadingProgress = spring(0, {
 		stiffness: 0.05
 	});
