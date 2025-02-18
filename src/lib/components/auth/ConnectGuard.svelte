@@ -1,6 +1,6 @@
 <script lang="ts">
   import { hooks } from "svelte-preprocess-react";
-  import { usePrivy, useWallets } from "@privy-io/react-auth";
+  import { usePrivy, useWallets, useSolanaWallets } from "@privy-io/react-auth";
   import { toast } from 'svelte-sonner';
   import { goto } from '$app/navigation';
   import { getBackendConfig } from '$lib/apis';
@@ -10,7 +10,8 @@
 
   const privyStore = hooks(() => usePrivy());
   const privyWalletsStore = hooks(() => useWallets());
-  console.log("$privyWalletsStore, $privyStore", $privyWalletsStore, $privyStore);
+  const solanaWalletsStore = hooks(() => useSolanaWallets());
+  console.log("$solanaWalletsStore, $privyWalletsStore, $privyStore",$solanaWalletsStore, $privyWalletsStore, $privyStore);
 
   const setSessionUser = async (sessionUser) => {
     console.log("setSessionUser", sessionUser);
@@ -30,8 +31,8 @@
 
   // 监听认证状态并自动处理注册和登录
   let isHandlingAuth = false;
-  $: if (($privyWalletsStore || $privyStore) && !isHandlingAuth) {
-    console.log('privy Store:', $privyWalletsStore, $privyStore);
+  $: if (($solanaWalletsStore || $privyWalletsStore || $privyStore) && !isHandlingAuth) {
+    console.log('privy Store:', $solanaWalletsStore, $privyWalletsStore, $privyStore);
 
     if ($privyStore.authenticated) {
       isHandlingAuth = true;
@@ -45,8 +46,8 @@
           // 使用 Privy 用户信息进行注册
           if (linkedType == 'wallet') {
             console.log('Auto sign up for connected wallet');
-            email = $privyWalletsStore.wallets[0].address + '@airie.fun';
-            name = $privyWalletsStore.wallets[0].address;
+            email = $solanaWalletsStore.wallets[0].address + '@airie.fun';
+            name = $solanaWalletsStore.wallets[0].address;
           } else if (linkedType == "google_oauth") {
             // google oatuth
             console.log('google login');
