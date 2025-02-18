@@ -41,10 +41,13 @@
 
 {#if !dismissed}
 	{#if mounted}
-		<div
-			class=" top-0 left-0 right-0 p-2 mx-4 px-3 flex justify-center items-center relative rounded-xl border border-gray-100 dark:border-gray-850 text-gray-800 dark:text-gary-100 bg-white dark:bg-gray-900 backdrop-blur-xl z-30"
-			transition:fade={{ delay: 100, duration: 300 }}
-		>
+		{#if banner.type === 'html'}
+			{@html DOMPurify.sanitize(banner.content)}
+		{:else}
+			<div
+				class=" top-0 left-0 right-0 p-2 mx-4 px-3 flex justify-center items-center relative rounded-xl border border-gray-100 dark:border-gray-850 text-gray-800 dark:text-gary-100 bg-white dark:bg-gray-900 backdrop-blur-xl z-30"
+				transition:fade={{ delay: 100, duration: 300 }}
+			>
 			<div class=" flex flex-col md:flex-row md:items-center flex-1 text-sm w-fit gap-1.5">
 				<div class="flex justify-between self-start">
 					<div
@@ -84,11 +87,7 @@
 				</div>
 
 				<div class="flex-1 text-xs text-gray-700 dark:text-white">
-					{#if banner.type === 'html'}
-						{@html DOMPurify.sanitize(banner.content)}
-					{:else}
-						{@html marked.parse(DOMPurify.sanitize(banner.content))}
-					{/if}
+					{@html marked.parse(DOMPurify.sanitize(banner.content))}
 				</div>
 			</div>
 
@@ -128,6 +127,7 @@
 					>
 				{/if}
 			</div>
-		</div>
+			</div>
+		{/if}
 	{/if}
 {/if}
