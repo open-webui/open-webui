@@ -311,8 +311,8 @@ class TestAzureStorageProvider:
         self.file_bytesio_empty = io.BytesIO()
 
         # Apply to instance variables
-        #self.Storage.blob_service_client = mock_blob_service_client
-        #self.Storage.container_client = mock_container_client
+        self.Storage.blob_service_client = mock_blob_service_client
+        self.Storage.container_client = mock_container_client
 
         yield
 
