@@ -20,7 +20,7 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 > [!TIP]
 > **Looking for an [Enterprise Plan](https://docs.openwebui.com/enterprise)?** – **[Speak with Our Sales Team Today!](mailto:sales@openwebui.com)**
 >
-> Get **enhanced capabilities**, including **custom theming and branding**, **Service Level Agreement (SLA) support**, **Long-Term Support (LTS)**, and **more!**  
+> Get **enhanced capabilities**, including **custom theming and branding**, **Service Level Agreement (SLA) support**, **Long-Term Support (LTS) versions**, and **more!**  
 
 ## Key Features of Open WebUI ⭐
 
