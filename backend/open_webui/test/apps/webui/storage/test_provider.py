@@ -292,7 +292,7 @@ class TestAzureStorageProvider:
         self.file_bytesio_empty = io.BytesIO()
         super().__init__()
 
-    @pytest.fixture
+    @pytest.fixture(scope="class")
     def setup(self, monkeypatch):
         """Mock BlobServiceClient and BlobContainerClient for local testing"""
         # Create mock Blob Service Client
