@@ -5,6 +5,7 @@ import base64
 import hmac
 import hashlib
 import requests
+import os
 
 
 from datetime import UTC, datetime, timedelta
@@ -13,8 +14,7 @@ from typing import Optional, Union, List, Dict
 from open_webui.models.users import Users
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.config import override_static
-from open_webui.env import WEBUI_SECRET_KEY, TRUSTED_SIGNATURE_KEY
+from open_webui.env import WEBUI_SECRET_KEY, TRUSTED_SIGNATURE_KEY, STATIC_DIR
 
 from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -45,6 +45,19 @@ def verify_signature(payload: str, signature: str) -> bool:
 
     except Exception:
         return False
+
+
+def override_static(path: str, content: str):
+    # Ensure path is safe
+    if "/" in path or ".." in path:
+        print(f"Invalid path: {path}")
+        return
+
+    file_path = os.path.join(STATIC_DIR, path)
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+    with open(file_path, "wb") as f:
+        f.write(base64.b64decode(content))  # Convert Base64 back to raw binary
 
 
 def get_license_data(app, key):
