@@ -341,6 +341,7 @@
 										<option value="warning" class="text-gray-900">{$i18n.t('Warning')}</option>
 										<option value="error" class="text-gray-900">{$i18n.t('Error')}</option>
 										<option value="success" class="text-gray-900">{$i18n.t('Success')}</option>
+										<option value="html" class="text-gray-900">{$i18n.t('HTML')}</option>
 									</select>
 
 									<input
