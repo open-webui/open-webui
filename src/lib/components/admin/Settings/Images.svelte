@@ -261,6 +261,9 @@
 										} else if (config.engine === 'openai' && config.openai.OPENAI_API_KEY === '') {
 											toast.error($i18n.t('OpenAI API Key is required.'));
 											config.enabled = false;
+										} else if (config.engine === 'gemini' && config.gemini.GEMINI_API_KEY === '') {
+											toast.error($i18n.t('Gemini API Key is required.'));
+											config.enabled = false;
 										}
 									}
 
@@ -294,6 +297,7 @@
 							<option value="openai">{$i18n.t('Default (Open AI)')}</option>
 							<option value="comfyui">{$i18n.t('ComfyUI')}</option>
 							<option value="automatic1111">{$i18n.t('Automatic1111')}</option>
+							<option value="gemini">{$i18n.t('Gemini')}</option>
 						</select>
 					</div>
 				</div>
@@ -602,6 +606,24 @@
 							<SensitiveInput
 								placeholder={$i18n.t('API Key')}
 								bind:value={config.openai.OPENAI_API_KEY}
+							/>
+						</div>
+					</div>
+				{:else if config?.engine === 'gemini'}
+					<div>
+						<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Gemini API Config')}</div>
+
+						<div class="flex gap-2 mb-1">
+							<input
+								class="flex-1 w-full text-sm bg-transparent outline-none"
+								placeholder={$i18n.t('API Base URL')}
+								bind:value={config.gemini.GEMINI_API_BASE_URL}
+								required
+							/>
+
+							<SensitiveInput
+								placeholder={$i18n.t('API Key')}
+								bind:value={config.gemini.GEMINI_API_KEY}
 							/>
 						</div>
 					</div>
