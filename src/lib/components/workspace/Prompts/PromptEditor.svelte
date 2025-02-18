@@ -20,7 +20,8 @@
 	let command = '';
 	let content = '';
 
-	let accessControl = null;
+	let accessControl = { read: { group_ids: [] }, write: { group_ids: [] } };
+
 
 	let showAccessControlModal = false;
 
