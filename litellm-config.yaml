@@ -9,6 +9,7 @@ model_list:
       model: "azure/gpt-4o"
       api_base: os.environ/AZURE_OPENAI_API_BASE_URL
       api_key: os.environ/AZURE_OPENAI_API_KEY
+      max_tokens: 800
     model_info:
       description: "OpenAI's most advanced model, ideal for complex tasks."
       arena_elo: 1287
@@ -20,6 +21,7 @@ model_list:
       model: "azure/gpt-35-turbo"
       api_base: os.environ/AZURE_OPENAI_API_BASE_URL
       api_key: os.environ/AZURE_OPENAI_API_KEY
+      max_tokens: 800
     model_info:
       description: "OpenAI's cheaper model for less complex tasks."
       arena_elo: 1116

@@ -3,7 +3,7 @@ version: '3.8'
 services:
   litellm:
     container_name: litellm
-    image: ghcr.io/berriai/litellm:main-stable
+    image: ghcr.io/berriai/litellm:main-v1.61.7
     environment:
       - "AZURE_OPENAI_API_BASE_URL=${AZURE_OPENAI_API_BASE_URL}"
       - "AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}"
