@@ -371,7 +371,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "proxy_url": request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
         },
         "web": {
-            "web_loader_ssl_verification": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            "ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            "RAG_WEB_SEARCH_FULL_CONTEXT": request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT,
             "search": {
                 "enabled": request.app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "drive": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
@@ -457,7 +458,8 @@ class WebSearchConfig(BaseModel):
 
 class WebConfig(BaseModel):
     search: WebSearchConfig
-    web_loader_ssl_verification: Optional[bool] = None
+    ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION: Optional[bool] = None
+    RAG_WEB_SEARCH_FULL_CONTEXT: Optional[bool] = None
 
 
 class ConfigUpdateForm(BaseModel):
@@ -512,11 +514,16 @@ async def update_rag_config(
     if form_data.web is not None:
         request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
             # Note: When UI "Bypass SSL verification for Websites"=True then ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION=False
-            form_data.web.web_loader_ssl_verification
+            form_data.web.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
         )
 
         request.app.state.config.ENABLE_RAG_WEB_SEARCH = form_data.web.search.enabled
         request.app.state.config.RAG_WEB_SEARCH_ENGINE = form_data.web.search.engine
+
+        request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT = (
+            form_data.web.RAG_WEB_SEARCH_FULL_CONTEXT
+        )
+
         request.app.state.config.SEARXNG_QUERY_URL = (
             form_data.web.search.searxng_query_url
         )
@@ -600,7 +607,8 @@ async def update_rag_config(
             "translation": request.app.state.YOUTUBE_LOADER_TRANSLATION,
         },
         "web": {
-            "web_loader_ssl_verification": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            "ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            "RAG_WEB_SEARCH_FULL_CONTEXT": request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT,
             "search": {
                 "enabled": request.app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "engine": request.app.state.config.RAG_WEB_SEARCH_ENGINE,
@@ -1349,21 +1357,36 @@ async def process_web_search(
             trust_env=request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
         )
         docs = await loader.aload()
-        await run_in_threadpool(
-            save_docs_to_vector_db,
-            request,
-            docs,
-            collection_name,
-            overwrite=True,
-            user=user,
-        )
 
-        return {
-            "status": True,
-            "collection_name": collection_name,
-            "filenames": urls,
-            "loaded_count": len(docs),
-        }
+        if request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT:
+            return {
+                "status": True,
+                "docs": [
+                    {
+                        "content": doc.page_content,
+                        "metadata": doc.metadata,
+                    }
+                    for doc in docs
+                ],
+                "filenames": urls,
+                "loaded_count": len(docs),
+            }
+        else:
+            await run_in_threadpool(
+                save_docs_to_vector_db,
+                request,
+                docs,
+                collection_name,
+                overwrite=True,
+                user=user,
+            )
+
+            return {
+                "status": True,
+                "collection_name": collection_name,
+                "filenames": urls,
+                "loaded_count": len(docs),
+            }
     except Exception as e:
         log.exception(e)
         raise HTTPException(

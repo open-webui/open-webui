@@ -115,10 +115,10 @@ export const setDirectConnectionsConfig = async (token: string, config: object) 
 	return res;
 };
 
-export const getCodeInterpreterConfig = async (token: string) => {
+export const getCodeExecutionConfig = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/code_interpreter`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/code_execution`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -142,10 +142,10 @@ export const getCodeInterpreterConfig = async (token: string) => {
 	return res;
 };
 
-export const setCodeInterpreterConfig = async (token: string, config: object) => {
+export const setCodeExecutionConfig = async (token: string, config: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/code_interpreter`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/code_execution`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',

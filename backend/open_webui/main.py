@@ -88,7 +88,6 @@ from open_webui.models.models import Models
 from open_webui.models.users import UserModel, Users
 
 from open_webui.config import (
-    override_static,
     LICENSE_KEY,
     # Ollama
     ENABLE_OLLAMA_API,
@@ -101,7 +100,12 @@ from open_webui.config import (
     OPENAI_API_CONFIGS,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
-    # Code Interpreter
+    # Code Execution
+    CODE_EXECUTION_ENGINE,
+    CODE_EXECUTION_JUPYTER_URL,
+    CODE_EXECUTION_JUPYTER_AUTH,
+    CODE_EXECUTION_JUPYTER_AUTH_TOKEN,
+    CODE_EXECUTION_JUPYTER_AUTH_PASSWORD,
     ENABLE_CODE_INTERPRETER,
     CODE_INTERPRETER_ENGINE,
     CODE_INTERPRETER_PROMPT_TEMPLATE,
@@ -175,6 +179,7 @@ from open_webui.config import (
     YOUTUBE_LOADER_PROXY_URL,
     # Retrieval (Web Search)
     RAG_WEB_SEARCH_ENGINE,
+    RAG_WEB_SEARCH_FULL_CONTEXT,
     RAG_WEB_SEARCH_RESULT_COUNT,
     RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
     RAG_WEB_SEARCH_TRUST_ENV,
@@ -317,7 +322,7 @@ from open_webui.utils.middleware import process_chat_payload, process_chat_respo
 from open_webui.utils.access_control import has_access
 
 from open_webui.utils.auth import (
-    verify_signature,
+    get_license_data,
     decode_token,
     get_admin_user,
     get_verified_user,
@@ -374,31 +379,8 @@ async def lifespan(app: FastAPI):
     if RESET_CONFIG_ON_START:
         reset_config()
 
-    key = app.state.config.LICENSE_KEY
-    if key:
-        try:
-            res = requests.post(
-                "https://api.openwebui.com/api/v1/license",
-                json={"key": key, "version": "1"},
-                timeout=5,
-            )
-
-            if getattr(res, "ok", False):
-                payload = getattr(res, "json", lambda: {})()
-                for k, v in payload.items():
-                    if k == "resources":
-                        for p, c in v.items():
-                            globals().get("override_static", lambda a, b: None)(p, c)
-                    elif k == "user_count":
-                        setattr(app.state, "USER_COUNT", v)
-                    elif k == "webui_name":
-                        setattr(app.state, "WEBUI_NAME", v)
-            else:
-                log.error(
-                    f"License retrieval issue: {getattr(res, 'text', 'unknown error')}"
-                )
-        except Exception as ex:
-            log.error(f"Uncaught Exception: {ex}")
+    if app.state.config.LICENSE_KEY:
+        get_license_data(app, app.state.config.LICENSE_KEY)
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     yield
@@ -415,9 +397,8 @@ oauth_manager = OAuthManager(app)
 
 app.state.config = AppConfig()
 
-app.state.config.LICENSE_KEY = LICENSE_KEY
-
 app.state.WEBUI_NAME = WEBUI_NAME
+app.state.config.LICENSE_KEY = LICENSE_KEY
 
 ########################################
 #
@@ -569,6 +550,7 @@ app.state.config.YOUTUBE_LOADER_PROXY_URL = YOUTUBE_LOADER_PROXY_URL
 
 app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
 app.state.config.RAG_WEB_SEARCH_ENGINE = RAG_WEB_SEARCH_ENGINE
+app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT = RAG_WEB_SEARCH_FULL_CONTEXT
 app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = RAG_WEB_SEARCH_DOMAIN_FILTER_LIST
 
 app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
@@ -639,9 +621,17 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
 
 ########################################
 #
-# CODE INTERPRETER
+# CODE EXECUTION
 #
 ########################################
+
+app.state.config.CODE_EXECUTION_ENGINE = CODE_EXECUTION_ENGINE
+app.state.config.CODE_EXECUTION_JUPYTER_URL = CODE_EXECUTION_JUPYTER_URL
+app.state.config.CODE_EXECUTION_JUPYTER_AUTH = CODE_EXECUTION_JUPYTER_AUTH
+app.state.config.CODE_EXECUTION_JUPYTER_AUTH_TOKEN = CODE_EXECUTION_JUPYTER_AUTH_TOKEN
+app.state.config.CODE_EXECUTION_JUPYTER_AUTH_PASSWORD = (
+    CODE_EXECUTION_JUPYTER_AUTH_PASSWORD
+)
 
 app.state.config.ENABLE_CODE_INTERPRETER = ENABLE_CODE_INTERPRETER
 app.state.config.CODE_INTERPRETER_ENGINE = CODE_INTERPRETER_ENGINE
@@ -1147,6 +1137,9 @@ async def get_app_config(request: Request):
             {
                 "default_models": app.state.config.DEFAULT_MODELS,
                 "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
+                "code": {
+                    "engine": app.state.config.CODE_EXECUTION_ENGINE,
+                },
                 "audio": {
                     "tts": {
                         "engine": app.state.config.TTS_ENGINE,

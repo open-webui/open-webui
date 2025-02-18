@@ -170,7 +170,7 @@
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
-							<div class="text-xs">
+							<div class="text-xs pr-2">
 								<div class="">
 									{$i18n.t('Help')}
 								</div>
@@ -180,7 +180,7 @@
 							</div>
 
 							<a
-								class=" text-xs font-medium underline"
+								class="flex-shrink-0 text-xs font-medium underline"
 								href="https://docs.openwebui.com/"
 								target="_blank"
 							>
@@ -231,11 +231,11 @@
 								</a>
 							</div>
 
-							<button
+							<!-- <button
 								class="flex-shrink-0 text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
 							>
 								{$i18n.t('Activate')}
-							</button>
+							</button> -->
 						</div>
 					</div>
 				</div>

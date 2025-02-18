@@ -63,7 +63,7 @@
 
 	export const formatPythonCodeHandler = async () => {
 		if (codeEditor) {
-			const res = await formatPythonCode(_value).catch((error) => {
+			const res = await formatPythonCode(localStorage.token, _value).catch((error) => {
 				toast.error(`${error}`);
 				return null;
 			});

@@ -60,7 +60,7 @@
 	const downloadPdf = async () => {
 		const history = chat.chat.history;
 		const messages = createMessagesList(history, history.currentId);
-		const blob = await downloadChatAsPDF(chat.chat.title, messages);
+		const blob = await downloadChatAsPDF(localStorage.token, chat.chat.title, messages);
 
 		// Create a URL for the blob
 		const url = window.URL.createObjectURL(blob);
