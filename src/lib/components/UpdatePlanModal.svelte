@@ -29,6 +29,8 @@
         Description: 'Оплата заказа в Тестовом магазине ROBOKASSA',
         Culture: 'ru',
         Encoding: 'utf-8',
+        IsTest: 1,
+        Shp: {userId},
         Settings: JSON.stringify({ PaymentMethods: ['BankCard', 'SBP'], Mode: 'modal' }),
         SignatureValue: '00c6675e103f387ae5a3c0ba80695b98' // Подпись (замените на вашу)
       });
