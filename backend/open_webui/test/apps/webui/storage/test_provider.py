@@ -290,8 +290,12 @@ class TestAzureStorageProvider:
         mock_blob_client = MagicMock()
 
         # Set up return values for the mock
-        mock_blob_service_client.get_container_client.return_value = mock_container_client
-        mock_container_client.get_blob_client.return_value = mock_blob_client
+        mock_blob_service_client.get_container_client.return_value = (
+            mock_container_client
+        )
+        mock_container_client.get_blob_client.return_value = (
+            mock_blob_client
+        )
 
         # Monkeypatch the Azure classes to return our mocks
         monkeypatch.setattr(
@@ -321,7 +325,9 @@ class TestAzureStorageProvider:
         upload_dir = mock_upload_dir(monkeypatch, tmp_path)
 
         # Simulate an error when container does not exist
-        self.Storage.container_client.get_blob_client.side_effect = Exception("Container does not exist")
+        self.Storage.container_client.get_blob_client.side_effect = Exception(
+            "Container does not exist"
+        )
         with pytest.raises(Exception):
             self.Storage.upload_file(io.BytesIO(self.file_content), self.filename)
 
