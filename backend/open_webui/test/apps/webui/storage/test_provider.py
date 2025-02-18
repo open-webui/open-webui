@@ -7,7 +7,7 @@ from moto import mock_aws
 from open_webui.storage import provider
 from gcp_storage_emulator.server import create_server
 from google.cloud import storage
-from azure.storage.blob import BlobServiceClient, BlobContainerClient, BlobClient
+from azure.storage.blob import BlobServiceClient, ContainerClient, BlobClient
 from unittest.mock import MagicMock
 
 
@@ -302,7 +302,7 @@ class TestAzureStorageProvider:
         )
         monkeypatch.setattr(
             azure.storage.blob,
-            "BlobContainerClient",
+            "ContainerClient",
             lambda *args, **kwargs: mock_container_client,
         )
         monkeypatch.setattr(
@@ -353,6 +353,8 @@ class TestAzureStorageProvider:
 
         with pytest.raises(ValueError):
             self.Storage.upload_file(self.file_bytesio_empty, self.filename)
+
+        assert (true == false).equals(true)
 
     def test_get_file(self, monkeypatch, tmp_path):
         upload_dir = mock_upload_dir(monkeypatch, tmp_path)
