@@ -45,25 +45,35 @@
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
-					<div class=" py-0.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Code Execution Engine')}</div>
-						<div class="flex items-center relative">
-							<select
-								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
-								bind:value={config.CODE_EXECUTION_ENGINE}
-								placeholder={$i18n.t('Select a engine')}
-								required
-							>
-								<option disabled selected value="">{$i18n.t('Select a engine')}</option>
-								{#each engines as engine}
-									<option value={engine}>{engine}</option>
-								{/each}
-							</select>
+					<div class="mb-2.5">
+						<div class="flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">{$i18n.t('Code Execution Engine')}</div>
+							<div class="flex items-center relative">
+								<select
+									class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+									bind:value={config.CODE_EXECUTION_ENGINE}
+									placeholder={$i18n.t('Select a engine')}
+									required
+								>
+									<option disabled selected value="">{$i18n.t('Select a engine')}</option>
+									{#each engines as engine}
+										<option value={engine}>{engine}</option>
+									{/each}
+								</select>
+							</div>
 						</div>
+
+						{#if config.CODE_EXECUTION_ENGINE === 'jupyter'}
+							<div class="text-gray-500 text-xs">
+								{$i18n.t(
+									'Warning: Jupyter execution enables arbitrary code execution, posing severe security risks—proceed with extreme caution.'
+								)}
+							</div>
+						{/if}
 					</div>
 
 					{#if config.CODE_EXECUTION_ENGINE === 'jupyter'}
-						<div class="mt-1 flex flex-col gap-1.5 mb-1 w-full">
+						<div class="mb-2.5 flex flex-col gap-1.5 w-full">
 							<div class="text-xs font-medium">
 								{$i18n.t('Jupyter URL')}
 							</div>
@@ -81,7 +91,7 @@
 							</div>
 						</div>
 
-						<div class="mt-1 flex gap-2 mb-1 w-full items-center justify-between">
+						<div class=" flex gap-2 w-full items-center justify-between">
 							<div class="text-xs font-medium">
 								{$i18n.t('Jupyter Auth')}
 							</div>
