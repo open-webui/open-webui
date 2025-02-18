@@ -1227,7 +1227,7 @@
 
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
 		console.log('submitPrompt', userPrompt, $chatId);
-		currentLoadingVideo = `/static/loading${Math.floor(Math.random() * 3) + 1}.mp4`;
+		currentLoadingVideo = `/static/loading${Math.floor(Math.random() * 6) + 1}.mp4`;
 
 		const messages = createMessagesList(history.currentId);
 		const _selectedModels = selectedModels.map((modelId) =>
