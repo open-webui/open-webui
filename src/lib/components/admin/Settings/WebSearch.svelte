@@ -6,6 +6,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -113,6 +114,19 @@
 								<option value={engine}>{engine}</option>
 							{/each}
 						</select>
+					</div>
+				</div>
+
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">{$i18n.t('Full Context Mode')}</div>
+					<div class="flex items-center relative">
+						<Tooltip
+							content={webConfig.RAG_WEB_SEARCH_FULL_CONTEXT
+								? 'Inject the entire web results as context for comprehensive processing, this is recommended for complex queries.'
+								: 'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'}
+						>
+							<Switch bind:state={webConfig.RAG_WEB_SEARCH_FULL_CONTEXT} />
+						</Tooltip>
 					</div>
 				</div>
 
@@ -424,12 +438,13 @@
 						<button
 							class="p-1 px-3 text-xs flex rounded-sm transition"
 							on:click={() => {
-								webConfig.web_loader_ssl_verification = !webConfig.web_loader_ssl_verification;
+								webConfig.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION =
+									!webConfig.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION;
 								submitHandler();
 							}}
 							type="button"
 						>
-							{#if webConfig.web_loader_ssl_verification === false}
+							{#if webConfig.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION === false}
 								<span class="ml-2 self-center">{$i18n.t('On')}</span>
 							{:else}
 								<span class="ml-2 self-center">{$i18n.t('Off')}</span>

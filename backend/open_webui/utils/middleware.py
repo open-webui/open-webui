@@ -362,14 +362,25 @@ async def chat_web_search_handler(
             )
 
             files = form_data.get("files", [])
-            files.append(
-                {
-                    "collection_name": results["collection_name"],
-                    "name": searchQuery,
-                    "type": "web_search_results",
-                    "urls": results["filenames"],
-                }
-            )
+
+            if request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT:
+                files.append(
+                    {
+                        "docs": results.get("docs", []),
+                        "name": searchQuery,
+                        "type": "web_search_docs",
+                        "urls": results["filenames"],
+                    }
+                )
+            else:
+                files.append(
+                    {
+                        "collection_name": results["collection_name"],
+                        "name": searchQuery,
+                        "type": "web_search_results",
+                        "urls": results["filenames"],
+                    }
+                )
             form_data["files"] = files
         else:
             await event_emitter(
