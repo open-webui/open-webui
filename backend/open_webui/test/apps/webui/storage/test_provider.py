@@ -3,7 +3,7 @@ import os
 import boto3
 import pytest
 from botocore.exceptions import ClientError
-from moto import mock_aws, mock_azure
+from moto import mock_aws
 from open_webui.storage import provider
 from gcp_storage_emulator.server import create_server
 from google.cloud import storage
