@@ -305,8 +305,6 @@ def get_sources_from_files(
 
     for file in files:
         if file.get("docs"):
-
-            print("file.get('docs')", file.get("docs"))
             context = {
                 "documents": [[doc.get("content") for doc in file.get("docs")]],
                 "metadatas": [[doc.get("metadata") for doc in file.get("docs")]],
