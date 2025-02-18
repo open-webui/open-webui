@@ -23,7 +23,7 @@
 
       // Вызываем Robokassa.Render
       Robokassa.Render({
-        MerchantLogin: 'robo-demo',
+        MerchantLogin: 'aidachat',
         OutSum: '11', // Сумма оплаты
         InvId: '', // Номер заказа (может быть пустым)
         Description: 'Оплата заказа в Тестовом магазине ROBOKASSA',
