@@ -165,7 +165,7 @@
 									<select
 										class="w-full py-1 text-sm rounded-lg bg-transparent {selectedModelId
 											? ''
-											: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-none"
+											: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 										bind:value={selectedModelId}
 									>
 										<option value="">{$i18n.t('Select a model')}</option>
@@ -186,7 +186,7 @@
 												<div class=" text-sm flex-1 py-1 rounded-lg">
 													{$models.find((model) => model.id === modelId)?.name}
 												</div>
-												<div class="flex-shrink-0">
+												<div class="shrink-0">
 													<button
 														type="button"
 														on:click={() => {

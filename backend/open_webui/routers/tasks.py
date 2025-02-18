@@ -208,7 +208,7 @@ async def generate_title(
         "stream": False,
         **(
             {"max_tokens": 1000}
-            if models[task_model_id]["owned_by"] == "ollama"
+            if models[task_model_id].get("owned_by") == "ollama"
             else {
                 "max_completion_tokens": 1000,
             }
@@ -571,7 +571,7 @@ async def generate_emoji(
         "stream": False,
         **(
             {"max_tokens": 4}
-            if models[task_model_id]["owned_by"] == "ollama"
+            if models[task_model_id].get("owned_by") == "ollama"
             else {
                 "max_completion_tokens": 4,
             }
