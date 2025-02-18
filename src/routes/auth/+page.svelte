@@ -27,7 +27,7 @@
 	import { PUBLIC_PRIVY_APP_ID } from "$env/static/public";
 	import { PUBLIC_PRIVY_CLIENT_ID } from "$env/static/public";
 	import {toSolanaWalletConnectors} from '@privy-io/react-auth/solana';
-const solanaConnectors = toSolanaWalletConnectors();
+	const solanaConnectors = toSolanaWalletConnectors();
 
 	// console.log('ffff',PUBLIC_PRIVY_APP_ID, PUBLIC_PRIVY_CLIENT_ID);
 
@@ -179,7 +179,7 @@ const solanaConnectors = toSolanaWalletConnectors();
 					config={{
 						defaultChain: mainnet,
 						supportedChains: [mainnet],
-						loginMethods: ['wallet'],
+						loginMethods: ['email', 'wallet', 'google'],
 						appearance: {
 							theme: 'dark',
 							walletChainType: 'solana-only',
@@ -191,6 +191,7 @@ const solanaConnectors = toSolanaWalletConnectors();
 								"okx_wallet"
 							],
 						},
+						solanaClusters: [{name: 'mainnet-beta', rpcUrl: 'https://api.mainnet-beta.solana.com'}],
 						externalWallets: {
 							solana: {connectors: solanaConnectors}
 						}
