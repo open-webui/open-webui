@@ -120,6 +120,28 @@ class ChromaClient:
             )
         return None
 
+    def get_raw_data(self, collection_name: str):
+        # Get all the items in the collection.
+        collection = self.client.get_collection(name=collection_name)
+        if collection:
+            result = collection.get(include=["embeddings", "documents", "metadatas"])
+            return result
+        return None
+
+    def insert_raw_data(self, collection_name: str, documents):
+        collection = self.client.get_or_create_collection(
+            name=collection_name, metadata={"hnsw:space": "cosine"}
+        )
+
+        for batch in create_batches(
+            api=self.client,
+            documents=documents.get("documents", []),
+            embeddings=documents.get("embeddings", []),
+            ids=documents["ids"],
+            metadatas=documents.get("metadatas", []),
+        ):
+            collection.add(*batch)
+
     def insert(self, collection_name: str, items: list[VectorItem]):
         # Insert the items into the collection, if the collection does not exist, it will be created.
         collection = self.client.get_or_create_collection(
