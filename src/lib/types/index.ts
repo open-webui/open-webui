@@ -1,8 +1,6 @@
-export type BannerType = 'info' | 'success' | 'warning' | 'error' | 'html';
-
 export type Banner = {
 	id: string;
-	type: BannerType;
+	type: string;
 	title?: string;
 	content: string;
 	url?: string;
