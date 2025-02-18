@@ -1,0 +1,36 @@
+{
+    "qa_pairs": [
+        {
+            "question": "비자가 만기됐으면 다시 신청해야하나요?",
+            "answer": "네, 전 됐습니다."
+        },
+        {
+            "question": "Comp 1991은 어떻게 진행되는지 아시는 분 계신가요?",
+            "answer": "https://cse.hkust.edu.hk/ug/comp1991/"
+        },
+        {
+            "question": "Comp 2011 하시는 교수님들 중 추천하시는 분 있을까요?",
+            "answer": "Dimitris 교수님 잘 가르치십니다."
+        },
+        {
+            "question": "요새 복학생들 기숙사 받기 빡센가요?",
+            "answer": "답변 없음"
+        },
+        {
+            "question": "numpy & Pandas 수업이 생기나요?",
+            "answer": "comp 2211이 다루기는 할 거에요."
+        },
+        {
+            "question": "기숙사 비용 semester 마다 내는거 맞을까요?",
+            "answer": "넵."
+        },
+        {
+            "question": "학비 낸 거 영수증 어떻게 확인하나요?",
+            "answer": "SIS 오른쪽에 보면 official receipt 있어요."
+        },
+        {
+            "question": "학생증 없이 학교 건물 들어갈 수 있나요?",
+            "answer": "학생증 있어야 출입 가능해요, 재학생이시면 그 무인보관함으로 들어와요."
+        }
+    ]
+}
