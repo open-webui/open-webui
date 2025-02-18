@@ -316,7 +316,6 @@ class SafeWebBaseLoader(WebBaseLoader):
         results = await self.fetch_all(urls)
         return self._unpack_fetch_results(results, urls, parser=parser)
 
-
     def lazy_load(self) -> Iterator[Document]:
         """Lazy load text from the url(s) in web_path with error handling."""
         for path in self.web_paths:
