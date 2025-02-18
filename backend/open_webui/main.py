@@ -100,7 +100,12 @@ from open_webui.config import (
     OPENAI_API_CONFIGS,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
-    # Code Interpreter
+    # Code Execution
+    CODE_EXECUTION_ENGINE,
+    CODE_EXECUTION_JUPYTER_URL,
+    CODE_EXECUTION_JUPYTER_AUTH,
+    CODE_EXECUTION_JUPYTER_AUTH_TOKEN,
+    CODE_EXECUTION_JUPYTER_AUTH_PASSWORD,
     ENABLE_CODE_INTERPRETER,
     CODE_INTERPRETER_ENGINE,
     CODE_INTERPRETER_PROMPT_TEMPLATE,
@@ -613,9 +618,17 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
 
 ########################################
 #
-# CODE INTERPRETER
+# CODE EXECUTION
 #
 ########################################
+
+app.state.config.CODE_EXECUTION_ENGINE = CODE_EXECUTION_ENGINE
+app.state.config.CODE_EXECUTION_JUPYTER_URL = CODE_EXECUTION_JUPYTER_URL
+app.state.config.CODE_EXECUTION_JUPYTER_AUTH = CODE_EXECUTION_JUPYTER_AUTH
+app.state.config.CODE_EXECUTION_JUPYTER_AUTH_TOKEN = CODE_EXECUTION_JUPYTER_AUTH_TOKEN
+app.state.config.CODE_EXECUTION_JUPYTER_AUTH_PASSWORD = (
+    CODE_EXECUTION_JUPYTER_AUTH_PASSWORD
+)
 
 app.state.config.ENABLE_CODE_INTERPRETER = ENABLE_CODE_INTERPRETER
 app.state.config.CODE_INTERPRETER_ENGINE = CODE_INTERPRETER_ENGINE
@@ -1120,6 +1133,9 @@ async def get_app_config(request: Request):
             {
                 "default_models": app.state.config.DEFAULT_MODELS,
                 "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
+                "code": {
+                    "engine": app.state.config.CODE_EXECUTION_ENGINE,
+                },
                 "audio": {
                     "tts": {
                         "engine": app.state.config.TTS_ENGINE,

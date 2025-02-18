@@ -1377,6 +1377,39 @@ Responses from models: {{responses}}"""
 # Code Interpreter
 ####################################
 
+
+CODE_EXECUTION_ENGINE = PersistentConfig(
+    "CODE_EXECUTION_ENGINE",
+    "code_execution.engine",
+    os.environ.get("CODE_EXECUTION_ENGINE", "pyodide"),
+)
+
+CODE_EXECUTION_JUPYTER_URL = PersistentConfig(
+    "CODE_EXECUTION_JUPYTER_URL",
+    "code_execution.jupyter.url",
+    os.environ.get("CODE_EXECUTION_JUPYTER_URL", ""),
+)
+
+CODE_EXECUTION_JUPYTER_AUTH = PersistentConfig(
+    "CODE_EXECUTION_JUPYTER_AUTH",
+    "code_execution.jupyter.auth",
+    os.environ.get("CODE_EXECUTION_JUPYTER_AUTH", ""),
+)
+
+CODE_EXECUTION_JUPYTER_AUTH_TOKEN = PersistentConfig(
+    "CODE_EXECUTION_JUPYTER_AUTH_TOKEN",
+    "code_execution.jupyter.auth_token",
+    os.environ.get("CODE_EXECUTION_JUPYTER_AUTH_TOKEN", ""),
+)
+
+
+CODE_EXECUTION_JUPYTER_AUTH_PASSWORD = PersistentConfig(
+    "CODE_EXECUTION_JUPYTER_AUTH_PASSWORD",
+    "code_execution.jupyter.auth_password",
+    os.environ.get("CODE_EXECUTION_JUPYTER_AUTH_PASSWORD", ""),
+)
+
+
 ENABLE_CODE_INTERPRETER = PersistentConfig(
     "ENABLE_CODE_INTERPRETER",
     "code_interpreter.enable",
@@ -1398,26 +1431,37 @@ CODE_INTERPRETER_PROMPT_TEMPLATE = PersistentConfig(
 CODE_INTERPRETER_JUPYTER_URL = PersistentConfig(
     "CODE_INTERPRETER_JUPYTER_URL",
     "code_interpreter.jupyter.url",
-    os.environ.get("CODE_INTERPRETER_JUPYTER_URL", ""),
+    os.environ.get(
+        "CODE_INTERPRETER_JUPYTER_URL", os.environ.get("CODE_EXECUTION_JUPYTER_URL", "")
+    ),
 )
 
 CODE_INTERPRETER_JUPYTER_AUTH = PersistentConfig(
     "CODE_INTERPRETER_JUPYTER_AUTH",
     "code_interpreter.jupyter.auth",
-    os.environ.get("CODE_INTERPRETER_JUPYTER_AUTH", ""),
+    os.environ.get(
+        "CODE_INTERPRETER_JUPYTER_AUTH",
+        os.environ.get("CODE_EXECUTION_JUPYTER_AUTH", ""),
+    ),
 )
 
 CODE_INTERPRETER_JUPYTER_AUTH_TOKEN = PersistentConfig(
     "CODE_INTERPRETER_JUPYTER_AUTH_TOKEN",
     "code_interpreter.jupyter.auth_token",
-    os.environ.get("CODE_INTERPRETER_JUPYTER_AUTH_TOKEN", ""),
+    os.environ.get(
+        "CODE_INTERPRETER_JUPYTER_AUTH_TOKEN",
+        os.environ.get("CODE_EXECUTION_JUPYTER_AUTH_TOKEN", ""),
+    ),
 )
 
 
 CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD = PersistentConfig(
     "CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD",
     "code_interpreter.jupyter.auth_password",
-    os.environ.get("CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD", ""),
+    os.environ.get(
+        "CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD",
+        os.environ.get("CODE_EXECUTION_JUPYTER_AUTH_PASSWORD", ""),
+    ),
 )
 
 
