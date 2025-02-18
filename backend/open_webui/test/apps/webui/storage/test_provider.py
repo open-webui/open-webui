@@ -328,7 +328,9 @@ class TestAzureStorageProvider:
         # Reset side effect and create container
         self.Storage.container_client.get_blob_client.side_effect = None
         self.Storage.create_container()
-        contents, azure_file_path = self.Storage.upload_file(io.BytesIO(self.file_content), self.filename)
+        contents, azure_file_path = self.Storage.upload_file(
+            io.BytesIO(self.file_content), self.filename
+        )
 
         # Assertions
         self.Storage.container_client.get_blob_client.assert_called_with(self.filename)
@@ -336,7 +338,10 @@ class TestAzureStorageProvider:
             self.file_content, overwrite=True
         )
         assert contents == self.file_content
-        assert azure_file_path == f"https://myaccount.blob.core.windows.net/{self.Storage.container_name}/{self.filename}"
+        assert (
+            azure_file_path
+            == f"https://myaccount.blob.core.windows.net/{self.Storage.container_name}/{self.filename}"
+        )
         assert (upload_dir / self.filename).exists()
         assert (upload_dir / self.filename).read_bytes() == self.file_content
 
@@ -350,7 +355,9 @@ class TestAzureStorageProvider:
         # Mock upload behavior
         self.Storage.upload_file(io.BytesIO(self.file_content), self.filename)
         # Mock blob download behavior
-        self.Storage.container_client.get_blob_client().download_blob().readall.return_value = self.file_content
+        self.Storage.container_client.get_blob_client().download_blob().readall.return_value = (
+            self.file_content
+        )
 
         file_url = f"https://myaccount.blob.core.windows.net/{self.Storage.container_name}/{self.filename}"
         file_path = self.Storage.get_file(file_url)
@@ -401,6 +408,8 @@ class TestAzureStorageProvider:
 
         file_url = f"https://myaccount.blob.core.windows.net/{self.Storage.container_name}/{self.filename}"
         # Mock behavior to raise an error for missing blobs
-        self.Storage.container_client.get_blob_client().download_blob.side_effect = Exception("Blob not found")
+        self.Storage.container_client.get_blob_client().download_blob.side_effect = (
+            Exception("Blob not found")
+        )
         with pytest.raises(Exception, match="Blob not found"):
             self.Storage.get_file(file_url)
