@@ -5,7 +5,7 @@
 	export let src = '';
 	export let alt = '';
 
-	export let className = ' w-full outline-none focus:outline-none';
+	export let className = ' w-full outline-hidden focus:outline-hidden';
 	export let imageClassName = 'rounded-lg';
 
 	let _src = '';
