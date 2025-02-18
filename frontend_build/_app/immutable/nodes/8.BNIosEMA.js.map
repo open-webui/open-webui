@@ -1,0 +1,1 @@
+{"version":3,"file":"8.BNIosEMA.js","sources":["../../../../../../src/routes/(app)/admin/+page.svelte"],"sourcesContent":["<script lang=\"ts\">\n\timport { goto } from '$app/navigation';\n\timport { onMount } from 'svelte';\n\n\tonMount(() => {\n\t\tgoto('/admin/users');\n\t});\n</script>\n"],"names":["onMount","goto"],"mappings":"gLAIC,OAAAA,EAAA,IAAA,CACCC,EAAK,cAAc"}
