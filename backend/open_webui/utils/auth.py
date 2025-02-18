@@ -1,6 +1,12 @@
 import logging
 import uuid
 import jwt
+import base64
+import hmac
+import hashlib
+import requests
+import os
+
 
 from datetime import UTC, datetime, timedelta
 from typing import Optional, Union, List, Dict
@@ -8,7 +14,7 @@ from typing import Optional, Union, List, Dict
 from open_webui.models.users import Users
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import WEBUI_SECRET_KEY
+from open_webui.env import WEBUI_SECRET_KEY, TRUSTED_SIGNATURE_KEY, STATIC_DIR
 
 from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -23,6 +29,66 @@ ALGORITHM = "HS256"
 ##############
 # Auth Utils
 ##############
+
+
+def verify_signature(payload: str, signature: str) -> bool:
+    """
+    Verifies the HMAC signature of the received payload.
+    """
+    try:
+        expected_signature = base64.b64encode(
+            hmac.new(TRUSTED_SIGNATURE_KEY, payload.encode(), hashlib.sha256).digest()
+        ).decode()
+
+        # Compare securely to prevent timing attacks
+        return hmac.compare_digest(expected_signature, signature)
+
+    except Exception:
+        return False
+
+
+def override_static(path: str, content: str):
+    # Ensure path is safe
+    if "/" in path or ".." in path:
+        print(f"Invalid path: {path}")
+        return
+
+    file_path = os.path.join(STATIC_DIR, path)
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+    with open(file_path, "wb") as f:
+        f.write(base64.b64decode(content))  # Convert Base64 back to raw binary
+
+
+def get_license_data(app, key):
+    if key:
+        try:
+            res = requests.post(
+                "https://api.openwebui.com/api/v1/license",
+                json={"key": key, "version": "1"},
+                timeout=5,
+            )
+
+            if getattr(res, "ok", False):
+                payload = getattr(res, "json", lambda: {})()
+                for k, v in payload.items():
+                    if k == "resources":
+                        for p, c in v.items():
+                            globals().get("override_static", lambda a, b: None)(p, c)
+                    elif k == "user_count":
+                        setattr(app.state, "USER_COUNT", v)
+                    elif k == "webui_name":
+                        setattr(app.state, "WEBUI_NAME", v)
+
+                return True
+            else:
+                print(
+                    f"License: retrieval issue: {getattr(res, 'text', 'unknown error')}"
+                )
+        except Exception as ex:
+            print(f"License: Uncaught Exception: {ex}")
+    return False
+
 
 bearer_security = HTTPBearer(auto_error=False)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

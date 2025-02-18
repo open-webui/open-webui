@@ -251,9 +251,19 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             user = Users.get_user_by_email(mail)
             if not user:
                 try:
+                    user_count = Users.get_num_users()
+                    if (
+                        request.app.state.USER_COUNT
+                        and user_count >= request.app.state.USER_COUNT
+                    ):
+                        raise HTTPException(
+                            status.HTTP_403_FORBIDDEN,
+                            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                        )
+
                     role = (
                         "admin"
-                        if Users.get_num_users() == 0
+                        if user_count == 0
                         else request.app.state.config.DEFAULT_USER_ROLE
                     )
 
@@ -413,6 +423,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
 @router.post("/signup", response_model=SessionUserResponse)
 async def signup(request: Request, response: Response, form_data: SignupForm):
+
     if WEBUI_AUTH:
         if (
             not request.app.state.config.ENABLE_SIGNUP
@@ -427,6 +438,12 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
             )
 
+    user_count = Users.get_num_users()
+    if request.app.state.USER_COUNT and user_count >= request.app.state.USER_COUNT:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
+        )
+
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
@@ -437,12 +454,10 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
     try:
         role = (
-            "admin"
-            if Users.get_num_users() == 0
-            else request.app.state.config.DEFAULT_USER_ROLE
+            "admin" if user_count == 0 else request.app.state.config.DEFAULT_USER_ROLE
         )
 
-        if Users.get_num_users() == 0:
+        if user_count == 0:
             # Disable signup after the first user is created
             request.app.state.config.ENABLE_SIGNUP = False
 
@@ -484,6 +499,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
             if request.app.state.config.WEBHOOK_URL:
                 post_webhook(
+                    request.app.state.WEBUI_NAME,
                     request.app.state.config.WEBHOOK_URL,
                     WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
                     {

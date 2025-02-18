@@ -98,7 +98,7 @@
 		</div>
 
 		<input
-			class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm bg-transparent dark:text-gray-300 outline-none"
+			class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm bg-transparent dark:text-gray-300 outline-hidden"
 			placeholder={placeholder ? placeholder : $i18n.t('Search')}
 			bind:value
 			on:input={() => {
@@ -177,9 +177,7 @@
 									dispatch('input');
 								}}
 							>
-								<div
-									class="dark:text-gray-300 text-gray-700 font-medium line-clamp-1 flex-shrink-0"
-								>
+								<div class="dark:text-gray-300 text-gray-700 font-medium line-clamp-1 shrink-0">
 									{tag.name}
 								</div>
 

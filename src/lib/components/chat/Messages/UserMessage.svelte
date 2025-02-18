@@ -13,6 +13,8 @@
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import Markdown from './Markdown.svelte';
 	import Image from '$lib/components/common/Image.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	const i18n = getContext('i18n');
@@ -33,6 +35,8 @@
 
 	export let isFirstMessage: boolean;
 	export let readOnly: boolean;
+
+	let showDeleteConfirm = false;
 
 	let edit = false;
 	let editedContent = '';
@@ -85,9 +89,17 @@
 	});
 </script>
 
+<DeleteConfirmDialog
+	bind:show={showDeleteConfirm}
+	title={$i18n.t('Delete message?')}
+	on:confirm={() => {
+		deleteMessageHandler();
+	}}
+/>
+
 <div class=" flex w-full user-message" dir={$settings.chatDirection} id="message-{message.id}">
 	{#if !($settings?.chatBubble ?? true)}
-		<div class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
+		<div class={`shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
 			<ProfileImage
 				src={message.user
 					? ($models.find((m) => m.id === message.user)?.info?.meta?.profile_image_url ??
@@ -152,7 +164,7 @@
 							<textarea
 								id="message-edit-{message.id}"
 								bind:this={messageEditTextAreaElement}
-								class=" bg-transparent outline-none w-full resize-none"
+								class=" bg-transparent outline-hidden w-full resize-none"
 								bind:value={editedContent}
 								on:input={(e) => {
 									e.target.style.height = '';
@@ -338,9 +350,9 @@
 							{#if !isFirstMessage && !readOnly}
 								<Tooltip content={$i18n.t('Delete')} placement="bottom">
 									<button
-										class="invisible group-hover:visible p-1 rounded dark:hover:text-white hover:text-black transition"
+										class="invisible group-hover:visible p-1 rounded-sm dark:hover:text-white hover:text-black transition"
 										on:click={() => {
-											deleteMessageHandler();
+											showDeleteConfirm = true;
 										}}
 									>
 										<svg
