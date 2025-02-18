@@ -29,7 +29,6 @@ from azure.storage.blob import BlobServiceClient
 from azure.core.exceptions import ResourceNotFoundError
 
 
-
 class StorageProvider(ABC):
     @abstractmethod
     def get_file(self, file_path: str) -> str:

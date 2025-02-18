@@ -280,7 +280,6 @@ class TestGCSStorageProvider:
         assert self.Storage.bucket.get_blob(self.filename_extra) == None
 
 
-
 class TestAzureStorageProvider:
     @pytest.fixture(autouse=True)
     def setup_storage(self, monkeypatch):
@@ -309,7 +308,6 @@ class TestAzureStorageProvider:
         monkeypatch.setattr(
             azure.storage.blob, "BlobClient", lambda *args, **kwargs: mock_blob_client
         )
-
 
         self.Storage = provider.AzureStorageProvider()
         self.Storage.endpoint = "https://myaccount.blob.core.windows.net"
