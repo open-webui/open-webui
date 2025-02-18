@@ -3,10 +3,11 @@ import os
 import boto3
 import pytest
 from botocore.exceptions import ClientError
-from moto import mock_aws
+from moto import mock_aws, mock_azure
 from open_webui.storage import provider
 from gcp_storage_emulator.server import create_server
 from google.cloud import storage
+from azure.storage.blob import BlobServiceClient
 
 
 def mock_upload_dir(monkeypatch, tmp_path):
@@ -276,3 +277,100 @@ class TestGCSStorageProvider:
         assert not (upload_dir / self.filename_extra).exists()
         assert self.Storage.bucket.get_blob(self.filename) == None
         assert self.Storage.bucket.get_blob(self.filename_extra) == None
+
+
+class TestAzureStorageProvider:
+    def __init__(self):
+        self.Storage = provider.AzureStorageProvider()
+        self.Storage.container_name = "my-container"
+        self.file_content = b"test content"
+        self.filename = "test.txt"
+        self.filename_extra = "test_exyta.txt"
+        self.file_bytesio_empty = io.BytesIO()
+        super().__init__()
+
+    @pytest.fixture(scope="class")
+    def setup(self, monkeypatch):
+        connection_string = "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtl6rE4rWlgEoMF1rA==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;"
+        self.Storage.blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+        self.Storage.container_client = self.Storage.blob_service_client.get_container_client(self.Storage.container_name)
+        monkeypatch.setattr(self.Storage, "blob_service_client", self.Storage.blob_service_client)
+        monkeypatch.setattr(self.Storage, "container_client", self.Storage.container_client)
+        yield
+        self.Storage.container_client.delete_container()
+
+    def test_upload_file(self, monkeypatch, tmp_path, setup):
+        upload_dir = mock_upload_dir(monkeypatch, tmp_path)
+        # Azure checks
+        with pytest.raises(Exception):
+            self.Storage.upload_file(io.BytesIO(self.file_content), self.filename)
+        self.Storage.create_container()
+        contents, azure_file_path = self.Storage.upload_file(
+            io.BytesIO(self.file_content), self.filename
+        )
+        blob = self.Storage.blob_service_client.get_blob_client(
+            container=self.Storage.container_name, blob=self.filename
+        )
+        assert self.file_content == blob.download_blob().readall()
+        # local checks
+        assert (upload_dir / self.filename).exists()
+        assert (upload_dir / self.filename).read_bytes() == self.file_content
+        assert contents == self.file_content
+        assert azure_file_path == "azure://" + self.Storage.container_name + "/" + self.filename
+        with pytest.raises(ValueError):
+            self.Storage.upload_file(self.file_bytesio_empty, self.filename)
+
+    def test_get_file(self, monkeypatch, tmp_path, setup):
+        upload_dir = mock_upload_dir(monkeypatch, tmp_path)
+        self.Storage.create_container()
+        contents, azure_file_path = self.Storage.upload_file(
+            io.BytesIO(self.file_content), self.filename
+        )
+        file_path = self.Storage.get_file(azure_file_path)
+        assert file_path == str(upload_dir / self.filename)
+        assert (upload_dir / self.filename).exists()
+
+    def test_delete_file(self, monkeypatch, tmp_path, setup):
+        upload_dir = mock_upload_dir(monkeypatch, tmp_path)
+        self.Storage.create_container()
+        contents, azure_file_path = self.Storage.upload_file(
+            io.BytesIO(self.file_content), self.filename
+        )
+        assert (upload_dir / self.filename).exists()
+        self.Storage.delete_file(azure_file_path)
+        assert not (upload_dir / self.filename).exists()
+        blob = self.Storage.blob_service_client.get_blob_client(
+            container=self.Storage.container_name, blob=self.filename
+        )
+        with pytest.raises(Exception):
+            blob.download_blob().readall()
+
+    def test_delete_all_files(self, monkeypatch, tmp_path, setup):
+        upload_dir = mock_upload_dir(monkeypatch, tmp_path)
+        self.Storage.create_container()
+        self.Storage.upload_file(io.BytesIO(self.file_content), self.filename)
+        blob = self.Storage.blob_service_client.get_blob_client(
+            container=self.Storage.container_name, blob=self.filename
+        )
+        assert self.file_content == blob.download_blob().readall()
+        assert (upload_dir / self.filename).exists()
+        self.Storage.upload_file(io.BytesIO(self.file_content), self.filename_extra)
+        blob = self.Storage.blob_service_client.get_blob_client(
+            container=self.Storage.container_name, blob=self.filename_extra
+        )
+        assert self.file_content == blob.download_blob().readall()
+        assert (upload_dir / self.filename_extra).exists()
+
+        self.Storage.delete_all_files()
+        assert not (upload_dir / self.filename).exists()
+        assert not (upload_dir / self.filename_extra).exists()
+        blob = self.Storage.blob_service_client.get_blob_client(
+            container=self.Storage.container_name, blob=self.filename
+        )
+        with pytest.raises(Exception):
+            blob.download_blob().readall()
+        blob = self.Storage.blob_service_client.get_blob_client(
+            container=self.Storage.container_name, blob=self.filename_extra
+        )
+        with pytest.raises(Exception):
+            blob.download_blob().readall()

@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - dev
+      - azure-storage
   pull_request:
     branches:
       - main
