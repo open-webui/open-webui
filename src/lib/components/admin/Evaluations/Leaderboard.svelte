@@ -300,7 +300,9 @@
 	</div>
 </div>
 
-<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm pt-0.5">
+<div
+	class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm pt-0.5"
+>
 	{#if loadingLeaderboard}
 		<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
 			<div class="m-auto">

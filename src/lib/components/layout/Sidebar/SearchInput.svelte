@@ -177,9 +177,7 @@
 									dispatch('input');
 								}}
 							>
-								<div
-									class="dark:text-gray-300 text-gray-700 font-medium line-clamp-1 shrink-0"
-								>
+								<div class="dark:text-gray-300 text-gray-700 font-medium line-clamp-1 shrink-0">
 									{tag.name}
 								</div>
 
