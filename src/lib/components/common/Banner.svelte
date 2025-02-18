@@ -32,7 +32,7 @@
 		success: 'bg-green-500/20 text-green-700 dark:text-green-200',
 		warning: 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-200',
 		error: 'bg-red-500/20 text-red-700 dark:text-red-200',
-		html: 'bg-purple-500/20 text-purple-700 dark:text-purple-200'
+		html: 'bg-violet-500/20 text-violet-700 dark:text-violet-200'
 	};
 
 	const dismiss = (id) => {

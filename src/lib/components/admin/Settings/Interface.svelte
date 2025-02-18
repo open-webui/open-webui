@@ -341,12 +341,12 @@
 										<option value="warning" class="text-gray-900">{$i18n.t('Warning')}</option>
 										<option value="error" class="text-gray-900">{$i18n.t('Error')}</option>
 										<option value="success" class="text-gray-900">{$i18n.t('Success')}</option>
-										<option value="html" class="text-gray-900">{$i18n.t('HTML')}</option>
+										<option value="html" class="text-gray-900">{$i18n.t('Custom')}</option>
 									</select>
 
 									<input
 										class="pr-5 py-1.5 text-xs w-full bg-transparent outline-hidden"
-										placeholder={$i18n.t('Content')}
+										placeholder={banner.type === 'html' ? $i18n.t('Enter custom HTML, JavaScript, or CSS here') : $i18n.t('Content')}
 										bind:value={banner.content}
 									/>
 
