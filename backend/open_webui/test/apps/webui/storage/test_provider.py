@@ -284,14 +284,6 @@ class TestGCSStorageProvider:
 class TestAzureStorageProvider:
     @pytest.fixture(autouse=True)
     def setup_storage(self, monkeypatch):
-        self.Storage = provider.AzureStorageProvider()
-        self.Storage.endpoint = "https://myaccount.blob.core.windows.net"
-        self.Storage.container_name = "my-container"
-        self.file_content = b"test content"
-        self.filename = "test.txt"
-        self.filename_extra = "test_extra.txt"
-        self.file_bytesio_empty = io.BytesIO()
-
         # Create mock Blob Service Client and related clients
         mock_blob_service_client = MagicMock()
         mock_container_client = MagicMock()
@@ -311,6 +303,15 @@ class TestAzureStorageProvider:
         monkeypatch.setattr(
             azure.storage.blob, "BlobClient", lambda *args, **kwargs: mock_blob_client
         )
+
+
+        self.Storage = provider.AzureStorageProvider()
+        self.Storage.endpoint = "https://myaccount.blob.core.windows.net"
+        self.Storage.container_name = "my-container"
+        self.file_content = b"test content"
+        self.filename = "test.txt"
+        self.filename_extra = "test_extra.txt"
+        self.file_bytesio_empty = io.BytesIO()
 
         # Apply mocks to the Storage instance
         self.Storage.blob_service_client = mock_blob_service_client
