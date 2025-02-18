@@ -4,7 +4,7 @@
   import { user, settings } from '$lib/stores';
   import i18n from '$lib/i18n';
   
-  const REACT_APP_URL = import.meta.env.REACT_APP_URL || 'http://localhost:3000/custom';
+  const REACT_APP_URL = import.meta.env.REACT_APP_URL || '/custom/';
   let iframeElement: HTMLIFrameElement;
 
   // RTL languages
