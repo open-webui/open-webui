@@ -360,7 +360,9 @@ async def chat_web_search_handler(
                     },
                 }
             )
+
             files = form_data.get("files", [])
+
             if request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT:
                 files.append(
                     {
