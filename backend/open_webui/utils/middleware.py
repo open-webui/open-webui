@@ -332,7 +332,7 @@ async def chat_web_search_handler(
                 "type": "status",
                 "data": {
                     "action": "web_search",
-                    "description": f'Searching "{searchQuery}"',
+                    "description": 'Searching "{{searchQuery}}"',
                     "query": searchQuery,
                     "done": False,
                 },
@@ -356,7 +356,7 @@ async def chat_web_search_handler(
                         "type": "status",
                         "data": {
                             "action": "web_search",
-                            "description": f'Searched {len(results["filenames"])} sites for "{searchQuery}"',
+                            "description": "Searched {{count}} sites",
                             "query": searchQuery,
                             "urls": results["filenames"],
                             "done": True,
@@ -380,7 +380,7 @@ async def chat_web_search_handler(
                         "type": "status",
                         "data": {
                             "action": "web_search",
-                            "description": f'No search results found for "{searchQuery}"',
+                            "description": "No search results found",
                             "query": searchQuery,
                             "done": True,
                             "error": True,
@@ -394,7 +394,7 @@ async def chat_web_search_handler(
                     "type": "status",
                     "data": {
                         "action": "web_search",
-                        "description": f'Error searching "{searchQuery}"',
+                        "description": 'Error searching "{{searchQuery}}"',
                         "query": searchQuery,
                         "done": True,
                         "error": True,

@@ -843,7 +843,7 @@
 	"Search Tools": "검색 도구",
 	"SearchApi API Key": "SearchApi API 키",
 	"SearchApi Engine": "SearchApi 엔진",
-	"Searched {{count}} sites": "",
+	"Searched {{count}} sites": "{{count}} 개 사이트에서 검색",
 	"Searching \"{{searchQuery}}\"": "\"{{searchQuery}}\" 검색 중",
 	"Searching Knowledge for \"{{searchQuery}}\"": "\"{{searchQuery}}\"위한 지식 기반 검색 중",
 	"Searxng Query URL": "Searxng 쿼리 URL",
