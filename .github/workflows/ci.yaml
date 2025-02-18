@@ -1,0 +1,15 @@
+name: ci
+
+on:
+  push:
+
+jobs:
+  build:
+    uses: 3DHubs/workflows/.github/workflows/ecr-build.yaml@main
+
+  release-dispatch:
+    needs: [build]
+    uses: 3DHubs/workflows/.github/workflows/release-dispatch.yaml@main
+    secrets: inherit
+    with:
+      service: open-webui

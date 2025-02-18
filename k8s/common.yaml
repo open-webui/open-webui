@@ -1,0 +1,22 @@
+#@data/values
+---
+service: open-webui
+
+deployments:
+  - name: open-webui
+
+env:
+  - name: AWS_REGION
+    value: eu-west-1
+  - name: S3_BUCKET
+    value: f.3dhubs.com
+  - name: BASE_URL
+    value: https://f.hubs.com/
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 512Mi
