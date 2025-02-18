@@ -26,6 +26,7 @@ from open_webui.utils.access_control import has_access, has_permission
 
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.models import Models, ModelForm
+from open_webui.models.documents import DocumentDBs
 
 
 log = logging.getLogger(__name__)
@@ -360,6 +361,8 @@ def update_file_from_knowledge_by_id(
         collection_name=knowledge.id, filter={"file_id": form_data.file_id}
     )
 
+    DocumentDBs.delete_by_collection_name_and_file_id(knowledge.id, form_data.file_id)
+
     # Add content to the vector database
     try:
         process_file(
@@ -424,10 +427,13 @@ def remove_file_from_knowledge_by_id(
         collection_name=knowledge.id, filter={"file_id": form_data.file_id}
     )
 
+    DocumentDBs.delete_by_collection_name_and_file_id(knowledge.id, form_data.file_id)
+
     # Remove the file's collection from vector database
     file_collection = f"file-{form_data.file_id}"
     if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
         VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+        DocumentDBs.delete_by_collection_name(file_collection)
 
     # Delete physical file
     if file.path:
@@ -522,6 +528,8 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
     # Clean up vector DB
     try:
         VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+        DocumentDBs.delete_by_collection_name(id)
+
     except Exception as e:
         log.debug(e)
         pass
@@ -551,6 +559,7 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
     try:
         VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+        DocumentDBs.delete_by_collection_name(id)
     except Exception as e:
         log.debug(e)
         pass

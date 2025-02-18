@@ -18,6 +18,8 @@ from open_webui.utils.misc import get_last_user_message
 
 from open_webui.env import SRC_LOG_LEVELS, OFFLINE_MODE
 
+from open_webui.models.documents import DocumentDBs
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
@@ -289,6 +291,7 @@ def get_sources_from_files(
     reranking_function,
     r,
     hybrid_search,
+    enable_parent_retriever,
 ):
     log.debug(f"files: {files} {queries} {embedding_function} {reranking_function}")
 
@@ -366,10 +369,18 @@ def get_sources_from_files(
         try:
             if "documents" in context:
                 if "metadatas" in context:
+                    metadatas = context["metadatas"][0]
+                    document = context["documents"][0]
+                    parent_ids = [item.get("parent_id") for item in metadatas]
+                    if enable_parent_retriever and len(parent_ids):
+                        parent_docs = DocumentDBs.get_document_by_ids(parent_ids)
+                        parent_contexts = [doc.page_content for doc in parent_docs]
+                        document = parent_contexts
+
                     source = {
                         "source": context["file"],
-                        "document": context["documents"][0],
-                        "metadata": context["metadatas"][0],
+                        "document": document,
+                        "metadata": metadatas,
                     }
                     if "distances" in context and context["distances"]:
                         source["distances"] = context["distances"][0]
