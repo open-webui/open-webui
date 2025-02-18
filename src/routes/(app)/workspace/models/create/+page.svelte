@@ -2,7 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { models } from '$lib/stores';
+	import { config, models, settings } from '$lib/stores';
 
 	import { onMount, tick, getContext } from 'svelte';
 	import { createNewModel, getModelById } from '$lib/apis/models';
@@ -42,7 +42,12 @@
 			});
 
 			if (res) {
-				await models.set(await getModels(localStorage.token));
+				await models.set(
+					await getModels(
+						localStorage.token,
+						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					)
+				);
 				toast.success($i18n.t('Model created successfully!'));
 				await goto('/workspace/models');
 			}

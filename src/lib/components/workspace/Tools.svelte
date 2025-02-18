@@ -65,7 +65,7 @@
 			return null;
 		});
 
-		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
+		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
 
 		const url = 'https://openwebui.com';
 
@@ -156,12 +156,12 @@
 
 		window.addEventListener('keydown', onKeyDown);
 		window.addEventListener('keyup', onKeyUp);
-		window.addEventListener('blur', onBlur);
+		window.addEventListener('blur-sm', onBlur);
 
 		return () => {
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
-			window.removeEventListener('blur', onBlur);
+			window.removeEventListener('blur-sm', onBlur);
 		};
 	});
 </script>
@@ -190,7 +190,7 @@
 					<Search className="size-3.5" />
 				</div>
 				<input
-					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
+					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
 					placeholder={$i18n.t('Search Tools')}
 				/>
@@ -221,14 +221,14 @@
 							<Tooltip content={tool?.meta?.description ?? ''} placement="top-start">
 								<div class=" font-semibold flex items-center gap-1.5">
 									<div
-										class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+										class=" text-xs font-bold px-1 rounded-sm uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 									>
 										TOOL
 									</div>
 
 									{#if tool?.meta?.manifest?.version}
 										<div
-											class="text-xs font-bold px-1 rounded line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+											class="text-xs font-bold px-1 rounded-sm line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 										>
 											v{tool?.meta?.manifest?.version ?? ''}
 										</div>
@@ -237,7 +237,7 @@
 									<div class="line-clamp-1">
 										{tool.name}
 
-										<span class=" text-gray-500 text-xs font-medium flex-shrink-0">{tool.id}</span>
+										<span class=" text-gray-500 text-xs font-medium shrink-0">{tool.id}</span>
 									</div>
 								</div>
 							</Tooltip>
@@ -438,7 +438,7 @@
 	{#if $config?.features.enable_community_sharing}
 		<div class=" my-16">
 			<div class=" text-xl font-medium mb-1 line-clamp-1">
-				{$i18n.t('Made by OpenWebUI Community')}
+				{$i18n.t('Made by Open WebUI Community')}
 			</div>
 
 			<a

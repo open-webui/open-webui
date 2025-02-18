@@ -34,6 +34,7 @@
 	import Spinner from './Spinner.svelte';
 
 	export let open = false;
+	export let id = '';
 	export let className = '';
 	export let buttonClassName =
 		'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
@@ -46,7 +47,7 @@
 	export let hide = false;
 </script>
 
-<div class={className}>
+<div {id} class={className}>
 	{#if title !== null}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -74,9 +75,15 @@
 				<div class="">
 					{#if attributes?.type === 'reasoning'}
 						{#if attributes?.done === 'true' && attributes?.duration}
-							{$i18n.t('Thought for {{DURATION}}', {
-								DURATION: dayjs.duration(attributes.duration, 'seconds').humanize()
-							})}
+							{#if attributes.duration < 60}
+								{$i18n.t('Thought for {{DURATION}} seconds', {
+									DURATION: attributes.duration
+								})}
+							{:else}
+								{$i18n.t('Thought for {{DURATION}}', {
+									DURATION: dayjs.duration(attributes.duration, 'seconds').humanize()
+								})}
+							{/if}
 						{:else}
 							{$i18n.t('Thinking...')}
 						{/if}
