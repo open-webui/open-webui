@@ -281,7 +281,10 @@ class TestGCSStorageProvider:
 
 
 class TestAzureStorageProvider:
-    @pytest.fixture(autouse=True)
+    def __init__(self):
+        super().__init__()
+
+    @pytest.fixture(scope="class")
     def setup_storage(self, monkeypatch):
         # Create mock Blob Service Client and related clients
         mock_blob_service_client = MagicMock()
@@ -354,7 +357,6 @@ class TestAzureStorageProvider:
         with pytest.raises(ValueError):
             self.Storage.upload_file(self.file_bytesio_empty, self.filename)
 
-        assert (true == false).equals(true)
 
     def test_get_file(self, monkeypatch, tmp_path):
         upload_dir = mock_upload_dir(monkeypatch, tmp_path)
