@@ -284,12 +284,13 @@
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 				<div class="  {banners.length > 0 ? ' mb-3' : ''}">
-					<div class="mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-sm font-semibold">
-							{$i18n.t('Banners')}
-						</div>
+					<div class="mb-2.5">
+						<div class="flex w-full justify-between">
+							<div class=" self-center text-sm font-semibold">
+								{$i18n.t('Banners')}
+							</div>
 
-						<button
+							<button
 							class="p-1 px-3 text-xs flex rounded-sm transition"
 							type="button"
 							on:click={() => {
@@ -318,7 +319,12 @@
 									d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
 								/>
 							</svg>
-						</button>
+							</button>
+						</div>
+						<div class="mt-2 px-2 py-1.5 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 rounded-md">
+							<span class="font-medium">{$i18n.t('Security Notice')}: </span>
+							{$i18n.t('The Custom banner type allows execution of arbitrary HTML, JavaScript, and CSS code. Only add content from trusted sources as it could pose security risks to your application.')}
+						</div>
 					</div>
 
 					<div class=" flex flex-col space-y-1">
