@@ -305,6 +305,7 @@ class TestAzureStorageProvider:
         mock_container_client.get_blob_client.return_value = mock_blob_client
 
         # Mock `from_connection_string` and `BlobServiceClient` constructor
+        monkeypatch.setattr(provider, "BlobServiceClient", lambda *_: mock_blob_service_client)
         monkeypatch.setattr("azure.storage.blob.BlobServiceClient", lambda *_: mock_blob_service_client)
 
         # Apply to instance variables
