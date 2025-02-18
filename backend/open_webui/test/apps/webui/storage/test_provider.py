@@ -298,9 +298,9 @@ class TestAzureStorageProvider:
         mock_container_client.get_blob_client.return_value = mock_blob_client
 
         # Mock `from_connection_string` and `BlobServiceClient` constructor
-        monkeypatch.setattr("azure.storage.blob.BlobServiceClient", lambda *_: mock_blob_service_client)
-
-        
+        monkeypatch.setattr(azure.storage.blob.BlobServiceClient, lambda *_: mock_blob_service_client)
+        monkeypatch.setattr(azure.storage.blob.BlobContainerClient, lambda *_: mock_container_client)
+        monkeypatch.setattr(azure.storage.blob.BlobClient, lambda *_: mock_blob_client)
 
         self.Storage = provider.AzureStorageProvider()
         self.Storage.endpoint = "https://myaccount.blob.core.windows.net"
