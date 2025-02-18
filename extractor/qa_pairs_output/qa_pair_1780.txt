@@ -1,0 +1,2 @@
+질문: 혹시 sis에서 waitlist 번호 확인하는 방법 있나요?
+답변: Sis에서는 enroll -> my class schedule로 가서 show waitlisted classes 필터 체크하고 확인하실 수 있고요; Usthing은 한번 새로고침 해보세요.

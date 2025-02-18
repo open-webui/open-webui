@@ -1,0 +1,2 @@
+질문: add drop period 때 시간표 짠다고 swap을 같은 시간대로 여러 번 해도 괜찮을까요?
+답변: 아니요, 그냥 department 승인만 나면 돼요.

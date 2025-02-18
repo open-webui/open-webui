@@ -1,0 +1,2 @@
+질문: hsbc atm으로 한국 계좌에서 돈 뽑을 때 hsbc conversion rate로 하는게 더 이득인가요?
+답변: 외화통장이면 hsbc conversion rate로 하면 돈 안 뽑히고, 수수료랑 환율을 고려할 필요가 있습니다.

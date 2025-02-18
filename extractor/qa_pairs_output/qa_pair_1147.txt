@@ -1,0 +1,2 @@
+질문: HSBC bill payment에서 학비 낼 때 bill account number는 뭐 넣으면 되는거였죠?
+답변: 이름과 학번일 거예요.

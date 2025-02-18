@@ -1,0 +1,2 @@
+질문: Merchant에 HKUST로 하고 Bill Type 01 -tuition 이거로 하고 Bill account number에 student number만 넣으면 되나요?
+답변: Student number 넣으시면 됩니다.

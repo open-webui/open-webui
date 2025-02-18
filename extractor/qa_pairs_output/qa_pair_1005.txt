@@ -1,0 +1,2 @@
+질문: 전공과목이 왜 “Enrollment requisites are not met”라고 뜨는지 정말 의문인데 이런 거 관련해서는 academic registry한테 이메일 하면 되나요?
+답변: pre requisite 안 들었거나 이나 exclusion 수업 들으셔서 안 되는 걸 수 도 있어요; corequisite도 한 번 확인해보세요.

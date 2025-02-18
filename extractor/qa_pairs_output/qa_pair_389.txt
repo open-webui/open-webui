@@ -1,0 +1,2 @@
+질문: 기숙사 와이파이 비번 어디서 알 수 있나요?
+답변: https://itsc.hkust.edu.hk/services/general-it-services/wifi/wi-fi-services/configuration-eduroam

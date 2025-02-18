@@ -1,0 +1,2 @@
+질문: lifs1901은 prerequisite이 없는데 왜 requisites are not met라고 뜰까요?
+답변: 아마 어드바이저 분한테 메일 써보셔야 할것 같네요.
