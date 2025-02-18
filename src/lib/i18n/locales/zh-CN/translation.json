@@ -282,7 +282,7 @@
 	"Description": "描述",
 	"Didn't fully follow instructions": "没有完全遵照指示",
 	"Direct Connections": "直接连接",
-	"Direct Connections allow users to connect to their own OpenAI compatible API endpoints.": "直接连接Direct Connections 功能 允许用户连接至其自有的、兼容 OpenAI 的 API 端点。",
+	"Direct Connections allow users to connect to their own OpenAI compatible API endpoints.": "直接连接功能允许用户连接至其自有的、兼容 OpenAI 的 API 端点。",
 	"Direct Connections settings updated": "直接连接设置已更新",
 	"Disabled": "禁用",
 	"Discover a function": "发现更多函数",
