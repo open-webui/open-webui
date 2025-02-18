@@ -5,6 +5,12 @@
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
 
+	// Configure DOMPurify to allow scripts for HTML banners
+	const htmlConfig = {
+		ADD_TAGS: ['script'],
+		ADD_ATTR: ['async', 'defer', 'src', 'type']
+	};
+
 	const dispatch = createEventDispatcher();
 
 	export let banner: Banner = {
@@ -42,7 +48,7 @@
 {#if !dismissed}
 	{#if mounted}
 		{#if banner.type === 'html'}
-			{@html DOMPurify.sanitize(banner.content)}
+			{@html DOMPurify.sanitize(banner.content, htmlConfig)}
 		{:else}
 			<div
 				class=" top-0 left-0 right-0 p-2 mx-4 px-3 flex justify-center items-center relative rounded-xl border border-gray-100 dark:border-gray-850 text-gray-800 dark:text-gary-100 bg-white dark:bg-gray-900 backdrop-blur-xl z-30"
