@@ -293,19 +293,23 @@ class TestAzureStorageProvider:
         mock_blob_service_client.get_container_client.return_value = (
             mock_container_client
         )
-        mock_container_client.get_blob_client.return_value = (
-            mock_blob_client
-        )
+        mock_container_client.get_blob_client.return_value = mock_blob_client
 
         # Monkeypatch the Azure classes to return our mocks
         monkeypatch.setattr(
-            azure.storage.blob, "BlobServiceClient", lambda *args, **kwargs: mock_blob_service_client
+            azure.storage.blob,
+            "BlobServiceClient",
+            lambda *args, **kwargs: mock_blob_service_client
         )
         monkeypatch.setattr(
-            azure.storage.blob, "BlobContainerClient", lambda *args, **kwargs: mock_container_client
+            azure.storage.blob,
+            "BlobContainerClient",
+            lambda *args, **kwargs: mock_container_client
         )
         monkeypatch.setattr(
-            azure.storage.blob, "BlobClient", lambda *args, **kwargs: mock_blob_client
+            azure.storage.blob,
+            "BlobClient",
+            lambda *args, **kwargs: mock_blob_client
         )
 
 
