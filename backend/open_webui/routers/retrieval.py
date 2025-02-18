@@ -695,6 +695,14 @@ def save_docs_to_vector_db(
             if existing_doc_ids:
                 log.info(f"Document with hash {metadata['hash']} already exists")
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
+    if add:
+        file_collection_name = f'file-{metadata["file_id"]}'
+        file_data = VECTOR_DB_CLIENT.get_raw_data(file_collection_name)
+        VECTOR_DB_CLIENT.insert_raw_data(collection_name, file_data)
+        log.info(
+            f"Migrate vectors from {file_collection_name} to {collection_name} successfully"
+        )
+        return True
 
     enable_rag_parent_retriever = (
         split and request.app.state.config.ENABLE_RAG_PARENT_RETRIEVER
@@ -894,10 +902,7 @@ def process_file(
             ]
 
             text_content = form_data.content
-        elif (
-            form_data.collection_name
-            and not request.app.state.config.ENABLE_RAG_PARENT_RETRIEVER
-        ):
+        elif form_data.collection_name:
             # Check if the file has already been processed and save the content
             # If parent retriever is enabled, we should not get the docs from vector store since it's splitted with small chunk
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
@@ -906,7 +911,11 @@ def process_file(
                 collection_name=f"file-{file.id}", filter={"file_id": file.id}
             )
 
-            if result is not None and len(result.ids[0]) > 0:
+            if (
+                result is not None
+                and len(result.ids[0]) > 0
+                and not request.app.state.config.ENABLE_RAG_PARENT_RETRIEVER
+            ):
                 docs = [
                     Document(
                         page_content=result.documents[0][idx],
