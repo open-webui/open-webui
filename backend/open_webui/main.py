@@ -74,6 +74,7 @@ from open_webui.models.functions import Functions
 from beyond_the_loop.models.models import Models
 from beyond_the_loop.models.users import Users
 from beyond_the_loop.routers import auths
+from beyond_the_loop.routers import analytics
 
 from open_webui.config import (
     # Ollama
@@ -759,6 +760,8 @@ app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
+
+app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
 
 
 ##################################

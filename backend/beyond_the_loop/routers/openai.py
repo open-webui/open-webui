@@ -19,6 +19,7 @@ from starlette.background import BackgroundTask
 from beyond_the_loop.models.models import Models
 from beyond_the_loop.models.model_message_credit_costs import ModelMessageCreditCosts
 from beyond_the_loop.models.companies import Companies
+from beyond_the_loop.models.completions import Completions
 
 from open_webui.config import (
     CACHE_DIR,
@@ -573,6 +574,9 @@ async def generate_chat_completion(
 
     # Subtract credits from balance
     Companies.subtract_credit_balance(user.company_id, model_message_credit_cost)
+
+    # Add completion to completion table
+    Completions.insert_new_completion(user.id, metadata["chat_id"], model_id, model_message_credit_cost)
 
     # Check model info and override the payload
     if model_info:
