@@ -23,7 +23,7 @@
 	} from '$lib/apis/knowledge';
 
 	import { transcribeAudio } from '$lib/apis/audio';
-	import { blobToFile } from '$lib/utils';
+	import { blobToFile, sleep } from '$lib/utils';
 	import { processFile } from '$lib/apis/retrieval';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -238,7 +238,6 @@
 				if (entry.kind === 'file') {
 					const file = await entry.getFile();
 					const fileWithPath = new File([file], entryPath, { type: file.type });
-
 					await uploadFileHandler(fileWithPath);
 					uploadedFiles++;
 					updateProgress();
@@ -300,7 +299,6 @@
 						if (!file.name.startsWith('.')) {
 							const relativePath = file.webkitRelativePath || file.name;
 							const fileWithPath = new File([file], relativePath, { type: file.type });
-
 							await uploadFileHandler(fileWithPath);
 							uploadedFiles++;
 							updateProgress();
@@ -597,6 +595,7 @@
 	on:change={async () => {
 		if (inputFiles && inputFiles.length > 0) {
 			for (const file of inputFiles) {
+				sleep(1000);
 				await uploadFileHandler(file);
 			}
 
