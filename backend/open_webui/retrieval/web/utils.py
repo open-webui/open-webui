@@ -25,7 +25,7 @@ from langchain_community.document_loaders import (
 )
 from langchain_core.documents import Document
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.config import ENABLE_RAG_LOCAL_WEB_FETCH, PLAYWRIGHT_WS_URI, RAG_WEB_LOADER
+from open_webui.config import ENABLE_RAG_LOCAL_WEB_FETCH, PLAYWRIGHT_WS_URI, RAG_WEB_LOADER_ENGINE
 from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
@@ -352,9 +352,9 @@ class SafeWebBaseLoader(WebBaseLoader):
         """Load data into Document objects."""
         return [document async for document in self.alazy_load()]
 
-RAG_WEB_LOADERS = defaultdict(lambda: SafeWebBaseLoader)
-RAG_WEB_LOADERS["playwright"] = SafePlaywrightURLLoader
-RAG_WEB_LOADERS["safe_web"] = SafeWebBaseLoader
+RAG_WEB_LOADER_ENGINES = defaultdict(lambda: SafeWebBaseLoader)
+RAG_WEB_LOADER_ENGINES["playwright"] = SafePlaywrightURLLoader
+RAG_WEB_LOADER_ENGINES["safe_web"] = SafeWebBaseLoader
 
 def get_web_loader(
     urls: Union[str, Sequence[str]],
@@ -377,9 +377,9 @@ def get_web_loader(
         web_loader_args["playwright_ws_url"] = PLAYWRIGHT_WS_URI.value
 
     # Create the appropriate WebLoader based on the configuration
-    WebLoaderClass = RAG_WEB_LOADERS[RAG_WEB_LOADER.value]
+    WebLoaderClass = RAG_WEB_LOADER_ENGINES[RAG_WEB_LOADER_ENGINE.value]
     web_loader = WebLoaderClass(**web_loader_args)
 
-    log.debug("Using RAG_WEB_LOADER %s for %s URLs", web_loader.__class__.__name__, len(safe_urls))
+    log.debug("Using RAG_WEB_LOADER_ENGINE %s for %s URLs", web_loader.__class__.__name__, len(safe_urls))
 
     return web_loader
