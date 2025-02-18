@@ -25,7 +25,7 @@
 					{:else}
 						<Pagination.Page
 							{page}
-							class="inline-flex size-8 items-center justify-center rounded-[9px] bg-transparent hover:bg-gray-50 dark:hover:bg-gray-850 text-sm font-medium hover:bg-dark-10 active:scale-98 disabled:cursor-not-allowed disabled:opacity-50 hover:disabled:bg-transparent data-[selected]:bg-gray-50 data-[selected]:text-gray-700 data-[selected]:hover:bg-gray-100 dark:data-[selected]:bg-gray-850 dark:data-[selected]:text-gray-50 dark:data-[selected]:hover:bg-gray-800 transition"
+							class="inline-flex size-8 items-center justify-center rounded-[9px] bg-transparent hover:bg-gray-50 dark:hover:bg-gray-850 text-sm font-medium hover:bg-dark-10 active:scale-98 disabled:cursor-not-allowed disabled:opacity-50 hover:disabled:bg-transparent data-selected:bg-gray-50 data-selected:text-gray-700 data-selected:hover:bg-gray-100 dark:data-selected:bg-gray-850 dark:data-selected:text-gray-50 dark:data-selected:hover:bg-gray-800 transition"
 						>
 							{page.value}
 						</Pagination.Page>

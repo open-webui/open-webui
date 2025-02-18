@@ -296,7 +296,7 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Embedding Model Engine')}</div>
 				<div class="flex items-center relative">
 					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+						class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 						bind:value={embeddingEngine}
 						placeholder="Select an embedding model engine"
 						on:change={(e) => {
@@ -319,7 +319,7 @@
 			{#if embeddingEngine === 'openai'}
 				<div class="my-0.5 flex gap-2 pr-2">
 					<input
-						class="flex-1 w-full rounded-lg text-sm bg-transparent outline-none"
+						class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
 						placeholder={$i18n.t('API Base URL')}
 						bind:value={OpenAIUrl}
 						required
@@ -330,7 +330,7 @@
 			{:else if embeddingEngine === 'ollama'}
 				<div class="my-0.5 flex gap-2 pr-2">
 					<input
-						class="flex-1 w-full rounded-lg text-sm bg-transparent outline-none"
+						class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
 						placeholder={$i18n.t('API Base URL')}
 						bind:value={OllamaUrl}
 						required
@@ -375,7 +375,7 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Hybrid Search')}</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition"
+					class="p-1 px-3 text-xs flex rounded-sm transition"
 					on:click={() => {
 						toggleHybridSearch();
 					}}
@@ -390,7 +390,7 @@
 			</div>
 		</div>
 
-		<hr class="dark:border-gray-850" />
+		<hr class="border-gray-100 dark:border-gray-850" />
 
 		<div class="space-y-2" />
 		<div>
@@ -400,7 +400,7 @@
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
 						<input
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							bind:value={embeddingModel}
 							placeholder={$i18n.t('Set embedding model')}
 							required
@@ -411,7 +411,7 @@
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
 						<input
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							placeholder={$i18n.t('Set embedding model (e.g. {{model}})', {
 								model: embeddingModel.slice(-40)
 							})}
@@ -490,7 +490,7 @@
 					<div class="flex w-full">
 						<div class="flex-1 mr-2">
 							<input
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 								placeholder={$i18n.t('Set reranking model (e.g. {{model}})', {
 									model: 'BAAI/bge-reranker-v2-m3'
 								})}
@@ -555,7 +555,7 @@
 			{/if}
 		</div>
 
-		<hr class=" dark:border-gray-850" />
+		<hr class=" border-gray-100 dark:border-gray-850" />
 
 		<div class="">
 			<div class="text-sm font-medium mb-1">{$i18n.t('Content Extraction')}</div>
@@ -564,7 +564,7 @@
 				<div class="self-center text-xs font-medium">{$i18n.t('Engine')}</div>
 				<div class="flex items-center relative">
 					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 text-xs bg-transparent outline-none text-right"
+						class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 						bind:value={contentExtractionEngine}
 						on:change={(e) => {
 							showTikaServerUrl = e.target.value === 'tika';
@@ -580,7 +580,7 @@
 				<div class="flex w-full mt-1">
 					<div class="flex-1 mr-2">
 						<input
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							placeholder={$i18n.t('Enter Tika Server URL')}
 							bind:value={tikaServerUrl}
 						/>
@@ -589,7 +589,7 @@
 			{/if}
 		</div>
 
-		<hr class=" dark:border-gray-850" />
+		<hr class=" border-gray-100 dark:border-gray-850" />
 
 		<div class="text-sm font-medium mb-1">{$i18n.t('Google Drive')}</div>
 
@@ -602,7 +602,7 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-850" />
+		<hr class=" border-gray-100 dark:border-gray-850" />
 
 		<div class=" ">
 			<div class=" text-sm font-medium mb-1">{$i18n.t('Query Params')}</div>
@@ -613,7 +613,7 @@
 
 					<div class="w-full">
 						<input
-							class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							type="number"
 							placeholder={$i18n.t('Enter Top K')}
 							bind:value={querySettings.k}
@@ -631,7 +631,7 @@
 
 						<div class="w-full">
 							<input
-								class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 								type="number"
 								step="0.01"
 								placeholder={$i18n.t('Enter Score')}
@@ -667,7 +667,7 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-850" />
+		<hr class=" border-gray-100 dark:border-gray-850" />
 
 		<div class=" ">
 			<div class="mb-1 text-sm font-medium">{$i18n.t('Chunk Params')}</div>
@@ -676,7 +676,7 @@
 				<div class="self-center text-xs font-medium">{$i18n.t('Text Splitter')}</div>
 				<div class="flex items-center relative">
 					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 text-xs bg-transparent outline-none text-right"
+						class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 						bind:value={textSplitter}
 					>
 						<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
@@ -692,7 +692,7 @@
 					</div>
 					<div class="self-center">
 						<input
-							class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							type="number"
 							placeholder={$i18n.t('Enter Chunk Size')}
 							bind:value={chunkSize}
@@ -709,7 +709,7 @@
 
 					<div class="self-center">
 						<input
-							class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							type="number"
 							placeholder={$i18n.t('Enter Chunk Overlap')}
 							bind:value={chunkOverlap}
@@ -731,7 +731,7 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-850" />
+		<hr class=" border-gray-100 dark:border-gray-850" />
 
 		<div class="">
 			<div class="text-sm font-medium mb-1">{$i18n.t('Files')}</div>
@@ -750,7 +750,7 @@
 							placement="top-start"
 						>
 							<input
-								class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 								type="number"
 								placeholder={$i18n.t('Leave empty for unlimited')}
 								bind:value={fileMaxSize}
@@ -773,7 +773,7 @@
 							placement="top-start"
 						>
 							<input
-								class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 								type="number"
 								placeholder={$i18n.t('Leave empty for unlimited')}
 								bind:value={fileMaxCount}
@@ -786,7 +786,7 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-850" />
+		<hr class=" border-gray-100 dark:border-gray-850" />
 
 		<div>
 			<button

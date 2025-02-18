@@ -90,7 +90,7 @@
 							>
 								<div class="text-sm dark:text-gray-400 flex items-center gap-2 w-fit">
 									<a
-										class="hover:text-gray-500 hover:dark:text-gray-100 underline flex-grow"
+										class="hover:text-gray-500 dark:hover:text-gray-100 underline grow"
 										href={document?.metadata?.file_id
 											? `${WEBUI_API_BASE_URL}/files/${document?.metadata?.file_id}/content${document?.metadata?.page !== undefined ? `#page=${document.metadata.page + 1}` : ''}`
 											: document.source?.url?.includes('http')
@@ -122,7 +122,9 @@
 										<div class="text-sm my-1 dark:text-gray-400 flex items-center gap-2 w-fit">
 											{#if showPercentage}
 												{@const percentage = calculatePercentage(document.distance)}
-												<span class={`px-1 rounded font-medium ${getRelevanceColor(percentage)}`}>
+												<span
+													class={`px-1 rounded-sm font-medium ${getRelevanceColor(percentage)}`}
+												>
 													{percentage.toFixed(2)}%
 												</span>
 												<span class="text-gray-500 dark:text-gray-500">
@@ -166,7 +168,7 @@
 					</div>
 
 					{#if documentIdx !== mergedDocuments.length - 1}
-						<hr class=" dark:border-gray-850 my-3" />
+						<hr class="border-gray-100 dark:border-gray-850 my-3" />
 					{/if}
 				{/each}
 			</div>

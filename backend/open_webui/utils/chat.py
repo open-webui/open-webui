@@ -186,12 +186,6 @@ async def generate_chat_completion(
     if model_id not in models:
         raise Exception("Model not found")
 
-    # Process the form_data through the pipeline
-    try:
-        form_data = process_pipeline_inlet_filter(request, form_data, user, models)
-    except Exception as e:
-        raise e
-
     model = models[model_id]
 
     if getattr(request.state, "direct", False):
@@ -206,7 +200,7 @@ async def generate_chat_completion(
             except Exception as e:
                 raise e
 
-        if model["owned_by"] == "arena":
+        if model.get("owned_by") == "arena":
             model_ids = model.get("info", {}).get("meta", {}).get("model_ids")
             filter_mode = model.get("info", {}).get("meta", {}).get("filter_mode")
             if model_ids and filter_mode == "exclude":
@@ -259,7 +253,7 @@ async def generate_chat_completion(
             return await generate_function_chat_completion(
                 request, form_data, user=user, models=models
             )
-        if model["owned_by"] == "ollama":
+        if model.get("owned_by") == "ollama":
             # Using /ollama/api/chat endpoint
             form_data = convert_payload_openai_to_ollama(form_data)
             response = await generate_ollama_chat_completion(
@@ -308,7 +302,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     model = models[model_id]
 
     try:
-        data = process_pipeline_outlet_filter(request, data, user, models)
+        data = await process_pipeline_outlet_filter(request, data, user, models)
     except Exception as e:
         return Exception(f"Error: {e}")
 

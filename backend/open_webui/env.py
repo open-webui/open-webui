@@ -111,6 +111,7 @@ WEBUI_NAME = os.environ.get("WEBUI_NAME", "Prediction Guard Chat")
 
 WEBUI_FAVICON_URL = os.environ.get("WEBUI_FAVICON_URL", "https://publicpgdocimages.s3.us-east-1.amazonaws.com/pglogo.svg")
 
+TRUSTED_SIGNATURE_KEY = os.environ.get("TRUSTED_SIGNATURE_KEY", "")
 
 ####################################
 # ENV (dev,test,prod)
