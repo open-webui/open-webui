@@ -22,6 +22,7 @@ def test_imports():
     provider.LocalStorageProvider
     provider.S3StorageProvider
     provider.GCSStorageProvider
+    provider.AzureStorageProvider
     provider.Storage
 
 
@@ -32,6 +33,8 @@ def test_get_storage_provider():
     assert isinstance(Storage, provider.S3StorageProvider)
     Storage = provider.get_storage_provider("gcs")
     assert isinstance(Storage, provider.GCSStorageProvider)
+    Storage = provider.get_storage_provider("azure")
+    assert isinstance(Storage, provider.AzureStorageProvider)
     with pytest.raises(RuntimeError):
         provider.get_storage_provider("invalid")
 
@@ -48,6 +51,7 @@ def test_class_instantiation():
     provider.LocalStorageProvider()
     provider.S3StorageProvider()
     provider.GCSStorageProvider()
+    provider.AzureStorageProvider()
 
 
 class TestLocalStorageProvider:
