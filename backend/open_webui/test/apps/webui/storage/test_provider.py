@@ -283,13 +283,6 @@ class TestGCSStorageProvider:
 
 class TestAzureStorageProvider:
     def __init__(self):
-        self.Storage = provider.AzureStorageProvider()
-        self.Storage.endpoint = "https://myaccount.blob.core.windows.net"
-        self.Storage.container_name = "my-container"
-        self.file_content = b"test content"
-        self.filename = "test.txt"
-        self.filename_extra = "test_extra.txt"
-        self.file_bytesio_empty = io.BytesIO()
         super().__init__()
 
     @pytest.fixture(scope="class")
@@ -305,12 +298,21 @@ class TestAzureStorageProvider:
         mock_container_client.get_blob_client.return_value = mock_blob_client
 
         # Mock `from_connection_string` and `BlobServiceClient` constructor
-        monkeypatch.setattr(provider, "BlobServiceClient", lambda *_: mock_blob_service_client)
         monkeypatch.setattr("azure.storage.blob.BlobServiceClient", lambda *_: mock_blob_service_client)
 
+        
+
+        self.Storage = provider.AzureStorageProvider()
+        self.Storage.endpoint = "https://myaccount.blob.core.windows.net"
+        self.Storage.container_name = "my-container"
+        self.file_content = b"test content"
+        self.filename = "test.txt"
+        self.filename_extra = "test_extra.txt"
+        self.file_bytesio_empty = io.BytesIO()
+
         # Apply to instance variables
-        self.Storage.blob_service_client = mock_blob_service_client
-        self.Storage.container_client = mock_container_client
+        #self.Storage.blob_service_client = mock_blob_service_client
+        #self.Storage.container_client = mock_container_client
 
         yield
 
