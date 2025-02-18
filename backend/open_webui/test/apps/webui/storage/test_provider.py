@@ -299,17 +299,15 @@ class TestAzureStorageProvider:
         monkeypatch.setattr(
             azure.storage.blob,
             "BlobServiceClient",
-            lambda *args, **kwargs: mock_blob_service_client
+            lambda *args, **kwargs: mock_blob_service_client,
         )
         monkeypatch.setattr(
             azure.storage.blob,
             "BlobContainerClient",
-            lambda *args, **kwargs: mock_container_client
+            lambda *args, **kwargs: mock_container_client,
         )
         monkeypatch.setattr(
-            azure.storage.blob,
-            "BlobClient",
-            lambda *args, **kwargs: mock_blob_client
+            azure.storage.blob, "BlobClient", lambda *args, **kwargs: mock_blob_client
         )
 
 

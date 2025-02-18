@@ -228,7 +228,6 @@ class GCSStorageProvider(StorageProvider):
         LocalStorageProvider.delete_all_files()
 
 
-
 class AzureStorageProvider(StorageProvider):
     def __init__(self):
         self.endpoint = AZURE_STORAGE_ENDPOINT
@@ -246,7 +245,9 @@ class AzureStorageProvider(StorageProvider):
             self.blob_service_client = BlobServiceClient(
                 account_url=self.endpoint, credential=DefaultAzureCredential()
             )
-        self.container_client = self.blob_service_client.get_container_client(self.container_name)
+        self.container_client = self.blob_service_client.get_container_client(
+            self.container_name
+        )
 
     def upload_file(self, file: BinaryIO, filename: str) -> Tuple[bytes, str]:
         """Handles uploading of the file to Azure Blob Storage."""
@@ -293,7 +294,7 @@ class AzureStorageProvider(StorageProvider):
 
         # Always delete from local storage
         LocalStorageProvider.delete_all_files()
-    
+
 
 def get_storage_provider(storage_provider: str):
     if storage_provider == "local":
