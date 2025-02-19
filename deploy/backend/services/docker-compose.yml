@@ -1,6 +1,6 @@
 services:
   app:
-    image: hub-proxy.p1.cn/{{tag}}
+    image: {{tag}}
     ports:
       - "9090:8080"                  # 固定端口映射
     volumes:
