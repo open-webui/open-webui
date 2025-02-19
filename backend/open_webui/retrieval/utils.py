@@ -404,8 +404,6 @@ def get_sources_from_files(
             if full_context:
                 try:
                     context = get_all_items_from_collections(collection_names)
-
-                    print("context", context)
                 except Exception as e:
                     log.exception(e)
 
