@@ -55,7 +55,7 @@
 
       // Рассчитываем SignatureValue (SHA-256)
       const signatureValue = await calculateSignatureValue(merchantLogin, outSum, password1, invId);
-
+      console.log("SIG", signatureValue)
       // Вызываем платежный iframe
       window.Robokassa.Render({
         MerchantLogin: merchantLogin,
