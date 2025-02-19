@@ -493,7 +493,13 @@
 						{#if stdout || stderr}
 							<div class=" ">
 								<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
-								<div class="text-sm">{stdout || stderr}</div>
+								<div
+									class="text-sm {stdout?.split('\n')?.length > 100
+										? `max-h-96`
+										: ''}  overflow-y-auto"
+								>
+									{stdout || stderr}
+								</div>
 							</div>
 						{/if}
 						{#if result || files}
