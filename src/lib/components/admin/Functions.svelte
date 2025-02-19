@@ -399,23 +399,7 @@
 								<EllipsisHorizontal className="size-5" />
 							</button>
 						</FunctionMenu>
-
-				<div class=" self-center mx-1">
-					<Tooltip content={func.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
-						<Switch
-							bind:state={func.is_active}
-							on:change={async (e) => {
-								toggleFunctionById(localStorage.token, func.id);
-								models.set(
-									await getModels(
-										localStorage.token,
-										$config?.features?.enable_direct_connections &&
-											($settings?.directConnections ?? null)
-									)
-								);
-							}}
-						/>
-					</Tooltip>
+					{/if}
 				</div>
 			</div>
 		</div>
@@ -526,31 +510,71 @@
 	</div>
 {/if}
 
-<DeleteConfirmDialog
-	bind:show={showDeleteConfirm}
-	title={$i18n.t('Delete function?')}
-	on:confirm={() => {
-		deleteHandler(selectedFunction);
-	}}
->
-	<div class=" text-sm text-gray-500">
-		{$i18n.t('This will delete')} <span class="  font-semibold">{selectedFunction.name}</span>.
-	</div>
-</DeleteConfirmDialog>
+{#if showValvesModal}
+	<ValvesModal
+		bind:show={showValvesModal}
+		{selectedFunction}
+		on:close={() => {
+			selectedFunction = null;
+		}}
+	/>
+{/if}
 
-<ManifestModal bind:show={showManifestModal} manifest={selectedFunction?.meta?.manifest ?? {}} />
-<ValvesModal
-	bind:show={showValvesModal}
-	type="function"
-	id={selectedFunction?.id ?? null}
-	on:save={async () => {
-		await tick();
-		models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			)
-		);
+{#if showManifestModal}
+	<ManifestModal
+		bind:show={showManifestModal}
+		{selectedFunction}
+		on:close={() => {
+			selectedFunction = null;
+		}}
+	/>
+{/if}
+
+{#if showDeleteConfirm}
+	<DeleteConfirmDialog
+		bind:show={showDeleteConfirm}
+		title={$i18n.t('Delete Function')}
+		message={$i18n.t('Are you sure you want to delete this function?')}
+		on:confirm={async () => {
+			if (selectedFunction) {
+				await deleteHandler(selectedFunction);
+				selectedFunction = null;
+			}
+		}}
+		on:close={() => {
+			selectedFunction = null;
+		}}
+	/>
+{/if}
+
+<input
+	type="file"
+	accept=".json"
+	bind:this={functionsImportInputElement}
+	bind:files={importFiles}
+	class="hidden"
+	on:change={async () => {
+		if (importFiles?.length > 0) {
+			const file = importFiles[0];
+			const reader = new FileReader();
+			reader.onload = async (e) => {
+				const functions = JSON.parse(e.target.result);
+				for (const func of functions) {
+					await createNewFunction(localStorage.token, func).catch((error) => {
+						toast.error(`${error}`);
+					});
+				}
+				functions.set(await getFunctions(localStorage.token));
+				models.set(
+					await getModels(
+						localStorage.token,
+						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					)
+				);
+				toast.success($i18n.t('Functions imported successfully'));
+			};
+			reader.readAsText(file);
+		}
 	}}
 />
 
