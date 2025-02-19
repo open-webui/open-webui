@@ -90,8 +90,11 @@ class SignupForm(BaseModel):
     profile_image_url: Optional[str] = "/user.png"
 
 
-class AddUserForm(SignupForm):
-    role: Optional[str] = "pending",
+class AddUserForm(BaseModel):
+    name: str
+    email: str
+    profile_image_url: Optional[str] = "/user.png"
+    role: Optional[str] = "pending"
 
 
 class AuthsTable:

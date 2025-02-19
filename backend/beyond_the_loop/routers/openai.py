@@ -19,7 +19,9 @@ from starlette.background import BackgroundTask
 from beyond_the_loop.models.models import Models
 from beyond_the_loop.models.model_message_credit_costs import ModelMessageCreditCosts
 from beyond_the_loop.models.companies import Companies
+from beyond_the_loop.models.companies import EIGHTY_PERCENT_CREDIT_LIMIT
 from beyond_the_loop.models.completions import Completions
+from beyond_the_loop.services.email_service import EmailService
 
 from open_webui.config import (
     CACHE_DIR,
@@ -565,12 +567,23 @@ async def generate_chat_completion(
     # Subtract credits from the company's balance (if possible)
     model_message_credit_cost = ModelMessageCreditCosts.get_cost_by_model(model_id)
 
+    # Get current credit balance once
+    current_balance = Companies.get_credit_balance(user.company_id)
+    
     # Check if company has sufficient credits
-    if not Companies.has_sufficient_credits(user.company_id, model_message_credit_cost):
+    if current_balance < model_message_credit_cost:
+        email_service = EmailService()
+        email_service.send_budget_mail_100(to_email=user.email, recipient_name=user.name)
+
         raise HTTPException(
             status_code=402,  # 402 Payment Required
             detail=f"Insufficient credits. This operation requires {model_message_credit_cost} credits.",
         )
+
+    # Check 80% threshold
+    if current_balance - model_message_credit_cost < EIGHTY_PERCENT_CREDIT_LIMIT:  # If balance is less than 125% of required (which means we're below 80%)
+        email_service = EmailService()
+        email_service.send_budget_mail_80(to_email=user.email, recipient_name=user.name)
 
     # Subtract credits from balance
     Companies.subtract_credit_balance(user.company_id, model_message_credit_cost)

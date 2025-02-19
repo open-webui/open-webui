@@ -3,6 +3,8 @@ import uuid
 import time
 import datetime
 import logging
+import secrets
+import string
 from aiohttp import ClientSession
 
 from open_webui.models.auths import (
@@ -19,6 +21,7 @@ from open_webui.models.auths import (
     UserResponse,
 )
 from beyond_the_loop.models.users import Users
+from beyond_the_loop.services.email_service import EmailService
 from beyond_the_loop.models.companies import NO_COMPANY
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
@@ -550,6 +553,19 @@ async def signout(request: Request, response: Response):
 ############################
 
 
+def generate_secure_password(length=12):
+    """Generate a secure random password."""
+    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+    while True:
+        password = ''.join(secrets.choice(alphabet) for _ in range(length))
+        # Check if password has at least one of each: uppercase, lowercase, digit, special char
+        if (any(c.isupper() for c in password)
+            and any(c.islower() for c in password)
+            and any(c.isdigit() for c in password)
+            and any(c in "!@#$%^&*" for c in password)):
+            return password
+
+
 @router.post("/add", response_model=SigninResponse)
 async def add_user(form_data: AddUserForm, admin_user: Users = Depends(get_admin_user)):
     if not validate_email_format(form_data.email.lower()):
@@ -561,7 +577,10 @@ async def add_user(form_data: AddUserForm, admin_user: Users = Depends(get_admin
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
     try:
-        hashed = get_password_hash(form_data.password)
+        # Generate a secure random password
+        password = generate_secure_password()
+        hashed = get_password_hash(password)
+        
         new_user = Auths.insert_new_auth(
             form_data.email.lower(),
             hashed,
@@ -572,6 +591,14 @@ async def add_user(form_data: AddUserForm, admin_user: Users = Depends(get_admin
         )
 
         if new_user:
+            # Send welcome email with the generated password
+            email_service = EmailService()
+            email_service.send_welcome_mail(
+                to_email=form_data.email.lower(),
+                username=form_data.name,
+                password=password
+            )
+
             token = create_token(data={"id": new_user.id})
             return {
                 "token": token,

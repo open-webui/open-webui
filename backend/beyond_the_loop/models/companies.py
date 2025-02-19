@@ -9,6 +9,7 @@ from open_webui.internal.db import get_db, Base
 
 # Constants
 NO_COMPANY = "NO_COMPANY"
+EIGHTY_PERCENT_CREDIT_LIMIT = 4000
 
 ####################
 # Company DB Schema
@@ -178,10 +179,5 @@ class CompanyTable:
         with get_db() as db:
             company = db.query(Company).filter(Company.id == company_id).first()
             return company.credit_balance if company else None
-
-    def has_sufficient_credits(self, company_id: str, required_credits: int) -> bool:
-        """Check if company has sufficient credits for an operation"""
-        balance = self.get_credit_balance(company_id)
-        return balance is None or balance >= required_credits  # None means unlimited
 
 Companies = CompanyTable()

@@ -20,7 +20,6 @@
 	let _user = {
 		name: '',
 		email: '',
-		password: '',
 		role: 'user'
 	};
 
@@ -28,7 +27,6 @@
 		_user = {
 			name: '',
 			email: '',
-			password: '',
 			role: 'user'
 		};
 	}
@@ -42,15 +40,11 @@
 		if (tab === '') {
 			loading = true;
 
-			const res = await addUser(
-				localStorage.token,
-				_user.name,
-				_user.email,
-				_user.password,
-				_user.role
-			).catch((error) => {
-				toast.error(`${error}`);
-			});
+			const res = await addUser(localStorage.token, _user.name, _user.email, _user.role).catch(
+				(error) => {
+					toast.error(`${error}`);
+				}
+			);
 
 			if (res) {
 				stopLoading();
@@ -75,15 +69,14 @@
 
 						if (idx > 0) {
 							if (
-								columns.length === 4 &&
-								['admin', 'user', 'pending'].includes(columns[3].toLowerCase())
+								columns.length === 3 &&
+								['admin', 'user', 'pending'].includes(columns[2].toLowerCase())
 							) {
 								const res = await addUser(
 									localStorage.token,
-									columns[0],
-									columns[1],
-									columns[2],
-									columns[3].toLowerCase()
+									columns[0], // name
+									columns[1], // email
+									columns[2].toLowerCase() // role
 								).catch((error) => {
 									toast.error(`Row ${idx + 1}: ${error}`);
 									return null;
@@ -201,7 +194,7 @@
 										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
 										type="text"
 										bind:value={_user.name}
-										placeholder={$i18n.t('Enter Your Full Name')}
+										placeholder={$i18n.t('Enter Full Name')}
 										autocomplete="off"
 										required
 									/>
@@ -218,22 +211,8 @@
 										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
 										type="email"
 										bind:value={_user.email}
-										placeholder={$i18n.t('Enter Your Email')}
+										placeholder={$i18n.t('Enter Email')}
 										required
-									/>
-								</div>
-							</div>
-
-							<div class="flex flex-col w-full mt-1">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Password')}</div>
-
-								<div class="flex-1">
-									<input
-										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
-										type="password"
-										bind:value={_user.password}
-										placeholder={$i18n.t('Enter Your Password')}
-										autocomplete="off"
 									/>
 								</div>
 							</div>
@@ -265,7 +244,7 @@
 
 								<div class=" text-xs text-gray-500">
 									ⓘ {$i18n.t(
-										'Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.'
+										'Ensure your CSV file includes 4 columns in this order: Name, Email, Role.'
 									)}
 									<a
 										class="underline dark:text-gray-200"

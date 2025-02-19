@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Achtung: Abrechnungslimit erreicht!{% endblock %}
+
+{% block header %}Achtung: Abrechnungslimit erreicht!{% endblock %}
+
+{% block content %}
+<p>Hi,</p>
+<p>das festgelegte Abrechnungslimit für deinen Workspace wurde erreicht. Um Einschränkungen zu vermeiden, ist jetzt dringend deine Aktion erforderlich.</p>
+<p>Ohne sofortige Erhöhung des Limits kann dein Team nicht mehr auf BChat zugreifen. Erhöhe das Limit einfach in deinen Unternehmenseinstellungen!</p>
+<a href="https://bchat.example.com/billing" class="button">Jetzt Limit erhöhen</a>
+<p>Falls der Button nicht funktioniert, kopiere bitte diese URL und füge sie in deinen Browser ein:</p>
+<p><a href="https://bchat.example.com/billing">https://bchat.example.com/billing</a></p>
+<p>Zögere nicht, uns bei Fragen zu kontaktieren.</p>
+<p>Dein Beyond the Loop Team</p>
+{% endblock %}

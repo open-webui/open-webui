@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Account Aktivierung{% endblock %}
+
+{% block additional_styles %}
+.password {
+    font-size: 24px;
+    color: #333333;
+    text-align: center;
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    border: 1px solid #dee2e6;
+}
+{% endblock %}
+
+{% block header %}Willkommen bei Bchat!{% endblock %}
+
+{% block content %}
+<p>Hallo {{ name }},</p>
+<p>Du wurdest zu bChat eingeladen! Um loszulegen, logge dich mit deiner Email-Adresse und folgendem Passwort ein:</p>
+<div class="password">{{ password }}</div>
+<p>Viel Spaß beim Entdecken von bChat!</p>
+{% endblock %}
+
+{% block footer %}
+<p>Diese E-Mail wurde automatisch generiert. Bitte antworte nicht direkt darauf. Bei Fragen wenden dich an unseren <a href="mailto:support@beyondtheloop.ai">Support</a>.</p>
+{% endblock %}

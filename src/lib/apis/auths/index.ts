@@ -353,7 +353,6 @@ export const addUser = async (
 	token: string,
 	name: string,
 	email: string,
-	password: string,
 	role: string = 'pending'
 ) => {
 	let error = null;
@@ -367,7 +366,6 @@ export const addUser = async (
 		body: JSON.stringify({
 			name: name,
 			email: email,
-			password: password,
 			role: role
 		})
 	})
