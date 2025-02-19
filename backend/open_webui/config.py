@@ -2,6 +2,8 @@ import json
 import logging
 import os
 import shutil
+import base64
+
 from datetime import datetime
 from pathlib import Path
 from typing import Generic, Optional, TypeVar
@@ -593,12 +595,18 @@ if frontend_splash.exists():
         shutil.copyfile(frontend_splash, STATIC_DIR / "splash.png")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
-else:
-    logging.warning(f"Frontend splash not found at {frontend_splash}")
+
+frontend_loader = FRONTEND_BUILD_DIR / "static" / "loader.js"
+
+if frontend_loader.exists():
+    try:
+        shutil.copyfile(frontend_loader, STATIC_DIR / "loader.js")
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
 
 
 ####################################
-# CUSTOM_NAME
+# CUSTOM_NAME (Legacy)
 ####################################
 
 CUSTOM_NAME = os.environ.get("CUSTOM_NAME", "")
@@ -629,6 +637,16 @@ if CUSTOM_NAME:
 
 
 ####################################
+# LICENSE_KEY
+####################################
+
+LICENSE_KEY = PersistentConfig(
+    "LICENSE_KEY",
+    "license.key",
+    os.environ.get("LICENSE_KEY", ""),
+)
+
+####################################
 # STORAGE PROVIDER
 ####################################
 
@@ -638,6 +656,7 @@ S3_ACCESS_KEY_ID = os.environ.get("S3_ACCESS_KEY_ID", None)
 S3_SECRET_ACCESS_KEY = os.environ.get("S3_SECRET_ACCESS_KEY", None)
 S3_REGION_NAME = os.environ.get("S3_REGION_NAME", None)
 S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", None)
+S3_KEY_PREFIX = os.environ.get("S3_KEY_PREFIX", None)
 S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", None)
 
 GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME", None)
@@ -659,6 +678,17 @@ Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 
 CACHE_DIR = f"{DATA_DIR}/cache"
 Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
+
+
+####################################
+# DIRECT CONNECTIONS
+####################################
+
+ENABLE_DIRECT_CONNECTIONS = PersistentConfig(
+    "ENABLE_DIRECT_CONNECTIONS",
+    "direct.enable",
+    os.environ.get("ENABLE_DIRECT_CONNECTIONS", "True").lower() == "true",
+)
 
 ####################################
 # OLLAMA_BASE_URL
@@ -1149,6 +1179,12 @@ ENABLE_TAGS_GENERATION = PersistentConfig(
     os.environ.get("ENABLE_TAGS_GENERATION", "True").lower() == "true",
 )
 
+ENABLE_TITLE_GENERATION = PersistentConfig(
+    "ENABLE_TITLE_GENERATION",
+    "task.title.enable",
+    os.environ.get("ENABLE_TITLE_GENERATION", "True").lower() == "true",
+)
+
 
 ENABLE_SEARCH_QUERY_GENERATION = PersistentConfig(
     "ENABLE_SEARCH_QUERY_GENERATION",
@@ -1296,6 +1332,98 @@ Your task is to synthesize these responses into a single, high-quality response.
 Responses from models: {{responses}}"""
 
 
+####################################
+# Code Interpreter
+####################################
+
+
+CODE_EXECUTION_ENGINE = PersistentConfig(
+    "CODE_EXECUTION_ENGINE",
+    "code_execution.engine",
+    os.environ.get("CODE_EXECUTION_ENGINE", "pyodide"),
+)
+
+CODE_EXECUTION_JUPYTER_URL = PersistentConfig(
+    "CODE_EXECUTION_JUPYTER_URL",
+    "code_execution.jupyter.url",
+    os.environ.get("CODE_EXECUTION_JUPYTER_URL", ""),
+)
+
+CODE_EXECUTION_JUPYTER_AUTH = PersistentConfig(
+    "CODE_EXECUTION_JUPYTER_AUTH",
+    "code_execution.jupyter.auth",
+    os.environ.get("CODE_EXECUTION_JUPYTER_AUTH", ""),
+)
+
+CODE_EXECUTION_JUPYTER_AUTH_TOKEN = PersistentConfig(
+    "CODE_EXECUTION_JUPYTER_AUTH_TOKEN",
+    "code_execution.jupyter.auth_token",
+    os.environ.get("CODE_EXECUTION_JUPYTER_AUTH_TOKEN", ""),
+)
+
+
+CODE_EXECUTION_JUPYTER_AUTH_PASSWORD = PersistentConfig(
+    "CODE_EXECUTION_JUPYTER_AUTH_PASSWORD",
+    "code_execution.jupyter.auth_password",
+    os.environ.get("CODE_EXECUTION_JUPYTER_AUTH_PASSWORD", ""),
+)
+
+
+ENABLE_CODE_INTERPRETER = PersistentConfig(
+    "ENABLE_CODE_INTERPRETER",
+    "code_interpreter.enable",
+    os.environ.get("ENABLE_CODE_INTERPRETER", "True").lower() == "true",
+)
+
+CODE_INTERPRETER_ENGINE = PersistentConfig(
+    "CODE_INTERPRETER_ENGINE",
+    "code_interpreter.engine",
+    os.environ.get("CODE_INTERPRETER_ENGINE", "pyodide"),
+)
+
+CODE_INTERPRETER_PROMPT_TEMPLATE = PersistentConfig(
+    "CODE_INTERPRETER_PROMPT_TEMPLATE",
+    "code_interpreter.prompt_template",
+    os.environ.get("CODE_INTERPRETER_PROMPT_TEMPLATE", ""),
+)
+
+CODE_INTERPRETER_JUPYTER_URL = PersistentConfig(
+    "CODE_INTERPRETER_JUPYTER_URL",
+    "code_interpreter.jupyter.url",
+    os.environ.get(
+        "CODE_INTERPRETER_JUPYTER_URL", os.environ.get("CODE_EXECUTION_JUPYTER_URL", "")
+    ),
+)
+
+CODE_INTERPRETER_JUPYTER_AUTH = PersistentConfig(
+    "CODE_INTERPRETER_JUPYTER_AUTH",
+    "code_interpreter.jupyter.auth",
+    os.environ.get(
+        "CODE_INTERPRETER_JUPYTER_AUTH",
+        os.environ.get("CODE_EXECUTION_JUPYTER_AUTH", ""),
+    ),
+)
+
+CODE_INTERPRETER_JUPYTER_AUTH_TOKEN = PersistentConfig(
+    "CODE_INTERPRETER_JUPYTER_AUTH_TOKEN",
+    "code_interpreter.jupyter.auth_token",
+    os.environ.get(
+        "CODE_INTERPRETER_JUPYTER_AUTH_TOKEN",
+        os.environ.get("CODE_EXECUTION_JUPYTER_AUTH_TOKEN", ""),
+    ),
+)
+
+
+CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD = PersistentConfig(
+    "CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD",
+    "code_interpreter.jupyter.auth_password",
+    os.environ.get(
+        "CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD",
+        os.environ.get("CODE_EXECUTION_JUPYTER_AUTH_PASSWORD", ""),
+    ),
+)
+
+
 DEFAULT_CODE_INTERPRETER_PROMPT = """
 #### Tools Available
 
@@ -1306,9 +1434,8 @@ DEFAULT_CODE_INTERPRETER_PROMPT = """
    - When coding, **always aim to print meaningful outputs** (e.g., results, tables, summaries, or visuals) to better interpret and verify the findings. Avoid relying on implicit outputs; prioritize explicit and clear print statements so the results are effectively communicated to the user.  
    - After obtaining the printed output, **always provide a concise analysis, interpretation, or next steps to help the user understand the findings or refine the outcome further.**  
    - If the results are unclear, unexpected, or require validation, refine the code and execute it again as needed. Always aim to deliver meaningful insights from the results, iterating if necessary.  
-   - If a link is provided for an image, audio, or any file, include it in the response exactly as given to ensure the user has access to the original resource.  
+   - **If a link to an image, audio, or any file is provided in markdown format in the output, ALWAYS regurgitate word for word, explicitly display it as part of the response to ensure the user can access it easily, do NOT change the link.**
    - All responses should be communicated in the chat's primary language, ensuring seamless understanding. If the chat is multilingual, default to English for clarity.
-   - **If a link to an image, audio, or any file is provided in markdown format, ALWAYS regurgitate explicitly display it as part of the response to ensure the user can access it easily, do NOT change the link.**
 
 Ensure that the tools are effectively utilized to achieve the highest-quality analysis for the user."""
 
@@ -1612,11 +1739,17 @@ RAG_WEB_SEARCH_ENGINE = PersistentConfig(
     os.getenv("RAG_WEB_SEARCH_ENGINE", ""),
 )
 
+RAG_WEB_SEARCH_FULL_CONTEXT = PersistentConfig(
+    "RAG_WEB_SEARCH_FULL_CONTEXT",
+    "rag.web.search.full_context",
+    os.getenv("RAG_WEB_SEARCH_FULL_CONTEXT", "False").lower() == "true",
+)
+
 # You can provide a list of your own websites to filter after performing a web search.
 # This ensures the highest level of safety and reliability of the information sources.
 RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
     "RAG_WEB_SEARCH_DOMAIN_FILTER_LIST",
-    "rag.rag.web.search.domain.filter_list",
+    "rag.web.search.domain.filter_list",
     [
         # "wikipedia.com",
         # "wikimedia.org",
@@ -1659,6 +1792,12 @@ MOJEEK_SEARCH_API_KEY = PersistentConfig(
     "MOJEEK_SEARCH_API_KEY",
     "rag.web.search.mojeek_search_api_key",
     os.getenv("MOJEEK_SEARCH_API_KEY", ""),
+)
+
+BOCHA_SEARCH_API_KEY = PersistentConfig(
+    "BOCHA_SEARCH_API_KEY",
+    "rag.web.search.bocha_search_api_key",
+    os.getenv("BOCHA_SEARCH_API_KEY", ""),
 )
 
 SERPSTACK_API_KEY = PersistentConfig(
@@ -1709,6 +1848,18 @@ SEARCHAPI_ENGINE = PersistentConfig(
     os.getenv("SEARCHAPI_ENGINE", ""),
 )
 
+SERPAPI_API_KEY = PersistentConfig(
+    "SERPAPI_API_KEY",
+    "rag.web.search.serpapi_api_key",
+    os.getenv("SERPAPI_API_KEY", ""),
+)
+
+SERPAPI_ENGINE = PersistentConfig(
+    "SERPAPI_ENGINE",
+    "rag.web.search.serpapi_engine",
+    os.getenv("SERPAPI_ENGINE", ""),
+)
+
 BING_SEARCH_V7_ENDPOINT = PersistentConfig(
     "BING_SEARCH_V7_ENDPOINT",
     "rag.web.search.bing_search_v7_endpoint",
@@ -1741,6 +1892,11 @@ RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
     int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
 )
 
+RAG_WEB_SEARCH_TRUST_ENV = PersistentConfig(
+    "RAG_WEB_SEARCH_TRUST_ENV",
+    "rag.web.search.trust_env",
+    os.getenv("RAG_WEB_SEARCH_TRUST_ENV", False),
+)
 
 ####################################
 # Images
@@ -1983,6 +2139,12 @@ WHISPER_MODEL_AUTO_UPDATE = (
     and os.environ.get("WHISPER_MODEL_AUTO_UPDATE", "").lower() == "true"
 )
 
+# Add Deepgram configuration
+DEEPGRAM_API_KEY = PersistentConfig(
+    "DEEPGRAM_API_KEY",
+    "audio.stt.deepgram.api_key",
+    os.getenv("DEEPGRAM_API_KEY", ""),
+)
 
 AUDIO_STT_OPENAI_API_BASE_URL = PersistentConfig(
     "AUDIO_STT_OPENAI_API_BASE_URL",

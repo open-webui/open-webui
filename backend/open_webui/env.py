@@ -96,6 +96,7 @@ log_sources = [
     "RAG",
     "WEBHOOK",
     "SOCKET",
+    "OAUTH",
 ]
 
 SRC_LOG_LEVELS = {}
@@ -114,6 +115,7 @@ WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
 
 WEBUI_FAVICON_URL = "https://www.systeme-de-design.gouv.fr/uploads/apple_touch_icon_8ffa1fa80c.png" 
 
+TRUSTED_SIGNATURE_KEY = os.environ.get("TRUSTED_SIGNATURE_KEY", "")
 
 ####################################
 # ENV (dev,test,prod)

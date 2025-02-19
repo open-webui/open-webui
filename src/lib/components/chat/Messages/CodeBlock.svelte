@@ -5,7 +5,14 @@
 
 	import { v4 as uuidv4 } from 'uuid';
 
-	import { getContext, getAllContexts, onMount, tick, createEventDispatcher } from 'svelte';
+	import {
+		getContext,
+		getAllContexts,
+		onMount,
+		tick,
+		createEventDispatcher,
+		onDestroy
+	} from 'svelte';
 	import { copyToClipboard } from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
@@ -13,6 +20,9 @@
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import SvgPanZoom from '$lib/components/common/SVGPanZoom.svelte';
+	import { config } from '$lib/stores';
+	import { executeCode } from '$lib/apis/utils';
+	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -30,6 +40,8 @@
 	export let className = 'my-2';
 	export let editorClassName = '';
 	export let stickyButtonsClassName = 'top-8';
+
+	let pyodideWorker = null;
 
 	let _code = '';
 	$: if (code) {
@@ -111,7 +123,20 @@
 	};
 
 	const executePython = async (code) => {
-		executePythonAsWorker(code);
+		if ($config?.code?.engine === 'jupyter') {
+			const output = await executeCode(localStorage.token, code).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			if (output) {
+				stdout = output.stdout;
+				stderr = output.stderr;
+				result = output.result;
+			}
+		} else {
+			executePythonAsWorker(code);
+		}
 	};
 
 	const executePythonAsWorker = async (code) => {
@@ -138,7 +163,7 @@
 
 		console.log(packages);
 
-		const pyodideWorker = new PyodideWorker();
+		pyodideWorker = new PyodideWorker();
 
 		pyodideWorker.postMessage({
 			id: id,
@@ -280,6 +305,12 @@
 			});
 		}
 	});
+
+	onDestroy(() => {
+		if (pyodideWorker) {
+			pyodideWorker.terminate();
+		}
+	});
 </script>
 
 <div>
@@ -287,7 +318,7 @@
 		{#if lang === 'mermaid'}
 			{#if mermaidHtml}
 				<SvgPanZoom
-					className=" border border-gray-50 dark:border-gray-850 rounded-lg max-h-fit overflow-hidden"
+					className=" border border-gray-100 dark:border-gray-850 rounded-lg max-h-fit overflow-hidden"
 					svg={mermaidHtml}
 					content={_token.text}
 				/>
@@ -362,7 +393,7 @@
 
 			{#if executing || stdout || stderr || result}
 				<div
-					class="bg-gray-50 dark:bg-[#202123] dark:text-white !rounded-b-lg py-4 px-4 flex flex-col gap-2"
+					class="bg-gray-50 dark:bg-[#202123] dark:text-white rounded-b-lg! py-4 px-4 flex flex-col gap-2"
 				>
 					{#if executing}
 						<div class=" ">

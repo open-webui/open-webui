@@ -28,10 +28,10 @@
 	{/if}
 
 	<div class=" w-full flex flex-col gap-2 {loading ? 'opacity-20' : ''}">
-		<div class="flex-shrink-0 w-full flex justify-between items-center">
+		<div class="shrink-0 w-full flex justify-between items-center">
 			<div class="w-full">
 				<input
-					class="w-full text-2xl font-medium bg-transparent outline-none"
+					class="w-full text-2xl font-medium bg-transparent outline-hidden"
 					type="text"
 					bind:value={name}
 					placeholder={$i18n.t('Title')}
@@ -42,9 +42,10 @@
 
 		<div class=" flex-1 w-full h-full">
 			<RichTextInput
-				className=" input-prose-sm"
+				className="input-prose-sm"
 				bind:value={content}
 				placeholder={$i18n.t('Write something...')}
+				preserveBreaks={true}
 			/>
 		</div>
 	</div>

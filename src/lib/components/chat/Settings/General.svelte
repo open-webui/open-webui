@@ -49,7 +49,10 @@
 		function_calling: null,
 		seed: null,
 		temperature: null,
+		reasoning_effort: null,
 		frequency_penalty: null,
+		presence_penalty: null,
+		repeat_penalty: null,
 		repeat_last_n: null,
 		mirostat: null,
 		mirostat_eta: null,
@@ -112,17 +115,40 @@
 
 		const metaThemeColor = document.querySelector('meta[name="theme-color"]');
 		if (metaThemeColor) {
-			metaThemeColor.setAttribute(
-				'content',
-				_theme === 'dark'
-					? '#161616'
-					: _theme === 'oled-dark'
-						? '#000000'
-						: _theme === 'her'
-							? '#983724'
-							: '#ffffff'
-			);
+			if (_theme.includes('system')) {
+				const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+					? 'dark'
+					: 'light';
+				console.log('Setting system meta theme color: ' + systemTheme);
+				metaThemeColor.setAttribute('content', systemTheme === 'light' ? '#ffffff' : '#171717');
+			} else {
+				console.log('Setting meta theme color: ' + _theme);
+				metaThemeColor.setAttribute(
+					'content',
+					_theme === 'dark'
+						? '#171717'
+						: _theme === 'oled-dark'
+							? '#000000'
+							: _theme === 'her'
+								? '#983724'
+								: '#ffffff'
+				);
+			}
 		}
+
+		if (typeof window !== 'undefined' && window.applyTheme) {
+			window.applyTheme();
+		}
+
+		if (_theme.includes('oled')) {
+			document.documentElement.style.setProperty('--color-gray-800', '#101010');
+			document.documentElement.style.setProperty('--color-gray-850', '#050505');
+			document.documentElement.style.setProperty('--color-gray-900', '#000000');
+			document.documentElement.style.setProperty('--color-gray-950', '#000000');
+			document.documentElement.classList.add('dark');
+		}
+
+		console.log(_theme);
 	};
 
 	const themeChangeHandler = (_theme: string) => {
@@ -141,7 +167,7 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Theme')}</div>
 				<div class="flex items-center relative">
 					<select
-						class=" dark:bg-gray-900 w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
+						class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
 						bind:value={selectedTheme}
 						placeholder="Select a theme"
 						on:change={() => themeChangeHandler(selectedTheme)}
@@ -157,7 +183,7 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
 				<div class="flex items-center relative">
 					<select
-						class=" dark:bg-gray-900 w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
+						class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
 						bind:value={lang}
 						placeholder="Select a language"
 						on:change={(e) => {
@@ -188,7 +214,7 @@
 					<div class=" self-center text-xs font-medium">{$i18n.t('Notifications')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition"
+						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleNotification();
 						}}
@@ -204,14 +230,14 @@
 			</div>
 		</div>
 
-		{#if $user.role === 'admin'}
-			<hr class=" dark:border-gray-850 my-3" />
+		{#if $user.role === 'admin' || $user?.permissions.chat?.controls}
+			<hr class="border-gray-100 dark:border-gray-850 my-3" />
 
 			<div>
 				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
 				<textarea
 					bind:value={system}
-					class="w-full rounded-lg p-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+					class="w-full rounded-lg p-4 text-sm bg-white dark:text-gray-300 dark:bg-gray-850 outline-hidden resize-none"
 					rows="4"
 				/>
 			</div>
@@ -230,14 +256,14 @@
 
 				{#if showAdvanced}
 					<AdvancedParams admin={$user?.role === 'admin'} bind:params />
-					<hr class=" dark:border-gray-850" />
+					<hr class=" border-gray-100 dark:border-gray-850" />
 
 					<div class=" py-1 w-full justify-between">
 						<div class="flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">{$i18n.t('Keep Alive')}</div>
 
 							<button
-								class="p-1 px-3 text-xs flex rounded transition"
+								class="p-1 px-3 text-xs flex rounded-sm transition"
 								type="button"
 								on:click={() => {
 									keepAlive = keepAlive === null ? '5m' : null;
@@ -254,7 +280,7 @@
 						{#if keepAlive !== null}
 							<div class="flex mt-1 space-x-2">
 								<input
-									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 									type="text"
 									placeholder={$i18n.t("e.g. '30s','10m'. Valid time units are 's', 'm', 'h'.")}
 									bind:value={keepAlive}
@@ -268,7 +294,7 @@
 							<div class=" self-center text-sm font-medium">{$i18n.t('Request Mode')}</div>
 
 							<button
-								class="p-1 px-3 text-xs flex rounded transition"
+								class="p-1 px-3 text-xs flex rounded-sm transition"
 								on:click={() => {
 									toggleRequestFormat();
 								}}
@@ -304,10 +330,18 @@
 					system: system !== '' ? system : undefined,
 					params: {
 						stream_response: params.stream_response !== null ? params.stream_response : undefined,
+						function_calling:
+							params.function_calling !== null ? params.function_calling : undefined,
 						seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
 						stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,
 						temperature: params.temperature !== null ? params.temperature : undefined,
+						reasoning_effort:
+							params.reasoning_effort !== null ? params.reasoning_effort : undefined,
 						frequency_penalty:
+							params.frequency_penalty !== null ? params.frequency_penalty : undefined,
+						presence_penalty:
+							params.frequency_penalty !== null ? params.frequency_penalty : undefined,
+						repeat_penalty:
 							params.frequency_penalty !== null ? params.frequency_penalty : undefined,
 						repeat_last_n: params.repeat_last_n !== null ? params.repeat_last_n : undefined,
 						mirostat: params.mirostat !== null ? params.mirostat : undefined,

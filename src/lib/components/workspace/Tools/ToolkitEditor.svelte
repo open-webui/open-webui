@@ -224,7 +224,7 @@ class Tools:
 								placement="top-start"
 							>
 								<input
-									class="w-full text-2xl font-semibold bg-transparent outline-none"
+									class="w-full text-2xl font-semibold bg-transparent outline-hidden"
 									type="text"
 									placeholder={$i18n?.t?.('Tool Name') ?? 'Tool Name'}
 									bind:value={name}
@@ -233,7 +233,7 @@ class Tools:
 							</Tooltip>
 						</div>
 
-						<div class="self-center flex-shrink-0">
+						<div class="self-center shrink-0">
 							<button
 								class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
 								type="button"
@@ -252,7 +252,7 @@ class Tools:
 
 					<div class=" flex gap-2 px-1 items-center">
 						{#if edit}
-							<div class="text-sm text-gray-500 flex-shrink-0">
+							<div class="text-sm text-gray-500 shrink-0">
 								{id}
 							</div>
 						{:else}
@@ -262,7 +262,7 @@ class Tools:
 								placement="top-start"
 							>
 								<input
-									class="w-full text-sm disabled:text-gray-500 bg-transparent outline-none"
+									class="w-full text-sm disabled:text-gray-500 bg-transparent outline-hidden"
 									type="text"
 									placeholder={$i18n?.t?.('Tool ID') ?? 'Tool ID'}
 									bind:value={id}
@@ -279,7 +279,7 @@ class Tools:
 							placement="top-start"
 						>
 							<input
-								class="w-full text-sm bg-transparent outline-none"
+								class="w-full text-sm bg-transparent outline-hidden"
 								type="text"
 								placeholder={$i18n?.t?.('Tool Description') ?? 'Tool Description'}
 								bind:value={meta.description}

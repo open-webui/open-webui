@@ -6,9 +6,10 @@
 	import Tooltip from '../common/Tooltip.svelte';
 
 	import { updateUserSettings } from '$lib/apis/users';
+	import type { Model } from '$lib/types/models';
 	const i18n = getContext('i18n');
 
-	export let selectedModels = [''];
+	export let selectedModels: string[] = [''];
 	export let disabled = false;
 
 	export let showSetDefault = true;

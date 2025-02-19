@@ -57,6 +57,7 @@
 	import ChannelModal from './Sidebar/ChannelModal.svelte';
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
+	import Home from '../icons/Home.svelte';
 	import DrawerClose from '../icons/DrawerClose.svelte';
 	import FolderCreate from '../icons/FolderCreate.svelte';
 
@@ -393,7 +394,7 @@
 		window.addEventListener('touchend', onTouchEnd);
 
 		window.addEventListener('focus', onFocus);
-		window.addEventListener('blur', onBlur);
+		window.addEventListener('blur-sm', onBlur);
 
 		const dropZone = document.getElementById('sidebar');
 
@@ -410,7 +411,7 @@
 		window.removeEventListener('touchend', onTouchEnd);
 
 		window.removeEventListener('focus', onFocus);
-		window.removeEventListener('blur', onBlur);
+		window.removeEventListener('blur-sm', onBlur);
 
 		const dropZone = document.getElementById('sidebar');
 
@@ -485,10 +486,11 @@
 				</div>
 			</button>
 		</div>
+
 		{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
 			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
-					class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] transition fr-background-action-high--blue-france hover:bg-[var(--background-action-high-blue-france-hover)]"
+					class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] fr-background-action-high--blue-france hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/workspace"
 					on:click={() => {
 						selectedChatId = null;

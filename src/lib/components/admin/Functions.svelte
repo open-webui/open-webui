@@ -3,7 +3,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { WEBUI_NAME, config, functions, models, user } from '$lib/stores';
+	import { WEBUI_NAME, config, functions, models, user, settings } from '$lib/stores';
 	import { onMount, getContext, tick } from 'svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
 
@@ -67,7 +67,7 @@
 			return null;
 		});
 
-		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
+		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
 
 		const url = 'https://openwebui.com';
 
@@ -128,7 +128,12 @@
 			toast.success($i18n.t('Function deleted successfully'));
 
 			functions.set(await getFunctions(localStorage.token));
-			models.set(await getModels(localStorage.token));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
 		}
 	};
 
@@ -149,7 +154,12 @@
 			}
 
 			functions.set(await getFunctions(localStorage.token));
-			models.set(await getModels(localStorage.token));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
 		}
 	};
 
@@ -172,12 +182,12 @@
 
 		window.addEventListener('keydown', onKeyDown);
 		window.addEventListener('keyup', onKeyUp);
-		window.addEventListener('blur', onBlur);
+		window.addEventListener('blur-sm', onBlur);
 
 		return () => {
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
-			window.removeEventListener('blur', onBlur);
+			window.removeEventListener('blur-sm', onBlur);
 		};
 	});
 </script>
@@ -201,7 +211,7 @@
 				<Search className="size-6" />
 			</div>
 			<input
-				class="w-full text-sm py-2.5 rounded-r-xl outline-none bg-transparent"
+				class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 				bind:value={query}
 				placeholder={$i18n.t('Search Functions')}
 			/>
@@ -390,18 +400,22 @@
 							</button>
 						</FunctionMenu>
 
-						<div>
-							<Tooltip content={func.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
-								<Switch
-									bind:state={func.is_active}
-									on:change={async (e) => {
-										toggleFunctionById(localStorage.token, func.id);
-										functions.set(await getFunctions(localStorage.token));
-									}}
-								/>
-							</Tooltip>
-						</div>
-					{/if}
+				<div class=" self-center mx-1">
+					<Tooltip content={func.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
+						<Switch
+							bind:state={func.is_active}
+							on:change={async (e) => {
+								toggleFunctionById(localStorage.token, func.id);
+								models.set(
+									await getModels(
+										localStorage.token,
+										$config?.features?.enable_direct_connections &&
+											($settings?.directConnections ?? null)
+									)
+								);
+							}}
+						/>
+					</Tooltip>
 				</div>
 			</div>
 		</div>
@@ -531,7 +545,12 @@
 	id={selectedFunction?.id ?? null}
 	on:save={async () => {
 		await tick();
-		models.set(await getModels(localStorage.token));
+		models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
 	}}
 />
 
@@ -552,7 +571,12 @@
 
 			toast.success($i18n.t('Functions imported successfully'));
 			functions.set(await getFunctions(localStorage.token));
-			models.set(await getModels(localStorage.token));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
 		};
 
 		reader.readAsText(importFiles[0]);
