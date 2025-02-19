@@ -66,6 +66,15 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
 
 
 def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
+    name_differences = {
+        "max_tokens": "num_predict",
+        "frequency_penalty": "repeat_penalty",
+    }
+
+    for key, value in name_differences.items():
+        if (param := params.get(key, None)) is not None:
+            form_data[value] = param
+
     opts = [
         "temperature",
         "top_p",
@@ -98,15 +107,6 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
     ]
     mappings = {i: lambda x: x for i in opts}
     form_data = apply_model_params_to_body(params, form_data, mappings)
-
-    name_differences = {
-        "max_tokens": "num_predict",
-        "frequency_penalty": "repeat_penalty",
-    }
-
-    for key, value in name_differences.items():
-        if (param := params.get(key, None)) is not None:
-            form_data[value] = param
 
     return form_data
 
