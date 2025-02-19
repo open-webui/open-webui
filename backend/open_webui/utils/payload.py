@@ -66,13 +66,16 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
 
 
 def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
+    # Convert OpenAI parameter names to Ollama parameter names if needed.
     name_differences = {
         "max_tokens": "num_predict",
     }
-
+    
     for key, value in name_differences.items():
         if (param := params.get(key, None)) is not None:
-            form_data[value] = param
+            # Copy the parameter to new name then delete it, to prevent Ollama warning of invalid option provided
+            params[value] = params[key]
+            del params[key]
 
     opts = [
         "temperature",
