@@ -371,24 +371,55 @@ def get_sources_from_files(
                 if "metadatas" in context:
                     metadatas = context["metadatas"][0]
                     document = context["documents"][0]
+                    distances = (
+                        context["distances"][0]
+                        if "distances" in context and context["distances"]
+                        else None
+                    )
+
                     parent_ids = [item.get("parent_id") for item in metadatas]
-                    if enable_parent_retriever and len(parent_ids):
-                        parent_docs = DocumentDBs.get_document_by_ids(parent_ids)
-                        parent_contexts = [doc.page_content for doc in parent_docs]
-                        document = parent_contexts
+                    if enable_parent_retriever:
+                        new_metadatas = []
+                        new_document = []
+                        new_distances = [] if distances else None
+
+                        processed_parent_ids = []
+
+                        for idx, parent_id in enumerate(parent_ids):
+                            if parent_id and parent_id in processed_parent_ids:
+                                continue
+                            processed_parent_ids.append(parent_id)
+                            new_metadatas.append(metadatas[idx])
+
+                            if distances:
+                                new_distances.append(distances[idx])
+
+                            parent_doc = (
+                                DocumentDBs.get_document_by_id(parent_id)
+                                if parent_id
+                                else None
+                            )
+
+                            new_document.append(
+                                parent_doc.page_content if parent_doc else document[idx]
+                            )
+
+                        document = new_document
+                        metadatas = new_metadatas
+                        distances = new_distances
 
                     source = {
                         "source": context["file"],
                         "document": document,
                         "metadata": metadatas,
+                        "distances": distances,
                     }
-                    if "distances" in context and context["distances"]:
-                        source["distances"] = context["distances"][0]
 
                     sources.append(source)
         except Exception as e:
             log.exception(e)
 
+    print("sourcessources221", sources)
     return sources
 
 
