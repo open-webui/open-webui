@@ -142,12 +142,9 @@
 			}
 		}
 	};
-</script>
 
-<form
-	class="flex flex-col h-full justify-between space-y-3 text-sm"
-	on:submit|preventDefault={async () => {
-		saveSettings({
+	const saveAudioSettings = async () => {
+		const settings: Partial<Settings> = {
 			audio: {
 				stt: {
 					engine: STTEngine !== '' ? STTEngine : undefined
@@ -161,9 +158,15 @@
 					nonLocalVoices: $config?.audio?.tts?.engine === '' ? nonLocalVoices : undefined
 				}
 			}
-		});
+		};
+		await saveSettings(settings);
 		dispatch('save');
-	}}
+	};
+</script>
+
+<form
+	class="flex flex-col h-full justify-between space-y-3 text-sm"
+	on:submit|preventDefault={saveAudioSettings}
 >
 	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div>

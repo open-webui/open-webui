@@ -105,3 +105,8 @@ google-cloud-storage==2.19.0
 
 ## LDAP
 ldap3==2.9.1
+
+# OCR + Vision PDfs
+mistralai==1.5.0
+PyMuPDF==1.25.3
+pytesseract==0.3.13
