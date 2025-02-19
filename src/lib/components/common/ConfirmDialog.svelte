@@ -2,7 +2,7 @@
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	
+
 	const i18n = getContext<Writable<i18nType>>('i18n');
 	const dispatch = createEventDispatcher();
 
@@ -14,7 +14,7 @@
 
 	export let cancelLabel = 'Cancel';
 	export let confirmLabel = 'Confirm';
-	
+
 	// W need this to update labels when i18n is ready else we get an error because we try to use it before
 	$: if ($i18n?.t) {
 		if (cancelLabel === 'Cancel') {
@@ -105,13 +105,16 @@
 						{#if message !== ''}
 							{message}
 						{:else}
-							{$i18n?.t?.('This action cannot be undone. Do you wish to continue?') ?? 'This action cannot be undone. Do you wish to continue?'}
+							{$i18n?.t?.('This action cannot be undone. Do you wish to continue?') ??
+								'This action cannot be undone. Do you wish to continue?'}
 						{/if}
 
 						{#if input}
 							<textarea
 								bind:value={inputValue}
-								placeholder={inputPlaceholder ? inputPlaceholder : ($i18n?.t?.('Enter your message') ?? 'Enter your message')}
+								placeholder={inputPlaceholder
+									? inputPlaceholder
+									: ($i18n?.t?.('Enter your message') ?? 'Enter your message')}
 								class="w-full mt-2 rounded-lg px-4 py-2 text-sm dark:text-gray-300 dark:bg-gray-900 outline-none resize-none"
 								rows="3"
 								required

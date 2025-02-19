@@ -1,12 +1,12 @@
 <script lang="ts">
-import { getContext, createEventDispatcher } from "svelte";
-import SearchIcon from "$lib/components/icons/Search.svelte";
-import SearchModal from "./SearchModal.svelte";
+	import { getContext, createEventDispatcher } from 'svelte';
+	import SearchIcon from '$lib/components/icons/Search.svelte';
+	import SearchModal from './SearchModal.svelte';
 
-const i18n = getContext("i18n");
-const dispatch = createEventDispatcher();
+	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
-let showSearchModal = false;
+	let showSearchModal = false;
 </script>
 
 <SearchModal bind:show={showSearchModal} />

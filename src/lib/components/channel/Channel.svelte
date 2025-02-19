@@ -1,148 +1,144 @@
 <script lang="ts">
-import { toast } from "svelte-sonner";
-import { Pane, PaneGroup, PaneResizer } from "paneforge";
+	import { toast } from 'svelte-sonner';
+	import { Pane, PaneGroup, PaneResizer } from 'paneforge';
 
-import { onDestroy, onMount, tick } from "svelte";
-import { goto } from "$app/navigation";
+	import { onDestroy, onMount, tick } from 'svelte';
+	import { goto } from '$app/navigation';
 
-import { chatId, showSidebar, socket, user } from "$lib/stores";
-import {
-	getChannelById,
-	getChannelMessages,
-	sendMessage,
-} from "$lib/apis/channels";
+	import { chatId, showSidebar, socket, user } from '$lib/stores';
+	import { getChannelById, getChannelMessages, sendMessage } from '$lib/apis/channels';
 
-import Messages from "./Messages.svelte";
-import MessageInput from "./MessageInput.svelte";
-import Navbar from "./Navbar.svelte";
-import Drawer from "../common/Drawer.svelte";
-import EllipsisVertical from "../icons/EllipsisVertical.svelte";
-import Thread from "./Thread.svelte";
+	import Messages from './Messages.svelte';
+	import MessageInput from './MessageInput.svelte';
+	import Navbar from './Navbar.svelte';
+	import Drawer from '../common/Drawer.svelte';
+	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
+	import Thread from './Thread.svelte';
 
-export let id = "";
+	export let id = '';
 
-let scrollEnd = true;
-let messagesContainerElement = null;
+	let scrollEnd = true;
+	let messagesContainerElement = null;
 
-let top = false;
+	let top = false;
 
-let channel = null;
-let messages = null;
+	let channel = null;
+	let messages = null;
 
-let threadId = null;
+	let threadId = null;
 
-let typingUsers = [];
-let typingUsersTimeout = {};
+	let typingUsers = [];
+	let typingUsersTimeout = {};
 
-$: if (id) {
-	initHandler();
-}
-
-const scrollToBottom = () => {
-	if (messagesContainerElement) {
-		messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+	$: if (id) {
+		initHandler();
 	}
-};
 
-const initHandler = async () => {
-	top = false;
-	messages = null;
-	channel = null;
-	threadId = null;
-
-	typingUsers = [];
-	typingUsersTimeout = {};
-
-	channel = await getChannelById(localStorage.token, id).catch((error) => {
-		return null;
-	});
-
-	if (channel) {
-		messages = await getChannelMessages(localStorage.token, id, 0);
-
-		if (messages) {
-			scrollToBottom();
-
-			if (messages.length < 50) {
-				top = true;
-			}
+	const scrollToBottom = () => {
+		if (messagesContainerElement) {
+			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
 		}
-	} else {
-		goto("/");
-	}
-};
+	};
 
-const channelEventHandler = async (event) => {
-	if (event.channel_id === id) {
-		const type = event?.data?.type ?? null;
-		const data = event?.data?.data ?? null;
+	const initHandler = async () => {
+		top = false;
+		messages = null;
+		channel = null;
+		threadId = null;
 
-		if (type === "message") {
-			if ((data?.parent_id ?? null) === null) {
-				messages = [data, ...messages];
+		typingUsers = [];
+		typingUsersTimeout = {};
 
-				if (typingUsers.find((user) => user.id === event.user.id)) {
+		channel = await getChannelById(localStorage.token, id).catch((error) => {
+			return null;
+		});
+
+		if (channel) {
+			messages = await getChannelMessages(localStorage.token, id, 0);
+
+			if (messages) {
+				scrollToBottom();
+
+				if (messages.length < 50) {
+					top = true;
+				}
+			}
+		} else {
+			goto('/');
+		}
+	};
+
+	const channelEventHandler = async (event) => {
+		if (event.channel_id === id) {
+			const type = event?.data?.type ?? null;
+			const data = event?.data?.data ?? null;
+
+			if (type === 'message') {
+				if ((data?.parent_id ?? null) === null) {
+					messages = [data, ...messages];
+
+					if (typingUsers.find((user) => user.id === event.user.id)) {
+						typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
+					}
+
+					await tick();
+					if (scrollEnd) {
+						scrollToBottom();
+					}
+				}
+			} else if (type === 'message:update') {
+				const idx = messages.findIndex((message) => message.id === data.id);
+
+				if (idx !== -1) {
+					messages[idx] = data;
+				}
+			} else if (type === 'message:delete') {
+				messages = messages.filter((message) => message.id !== data.id);
+			} else if (type === 'message:reply') {
+				const idx = messages.findIndex((message) => message.id === data.id);
+
+				if (idx !== -1) {
+					messages[idx] = data;
+				}
+			} else if (type.includes('message:reaction')) {
+				const idx = messages.findIndex((message) => message.id === data.id);
+				if (idx !== -1) {
+					messages[idx] = data;
+				}
+			} else if (type === 'typing' && event.message_id === null) {
+				if (event.user.id === $user.id) {
+					return;
+				}
+
+				typingUsers = data.typing
+					? [
+							...typingUsers,
+							...(typingUsers.find((user) => user.id === event.user.id)
+								? []
+								: [
+										{
+											id: event.user.id,
+											name: event.user.name
+										}
+									])
+						]
+					: typingUsers.filter((user) => user.id !== event.user.id);
+
+				if (typingUsersTimeout[event.user.id]) {
+					clearTimeout(typingUsersTimeout[event.user.id]);
+				}
+
+				typingUsersTimeout[event.user.id] = setTimeout(() => {
 					typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
-				}
-
-				await tick();
-				if (scrollEnd) {
-					scrollToBottom();
-				}
+				}, 5000);
 			}
-		} else if (type === "message:update") {
-			const idx = messages.findIndex((message) => message.id === data.id);
-
-			if (idx !== -1) {
-				messages[idx] = data;
-			}
-		} else if (type === "message:delete") {
-			messages = messages.filter((message) => message.id !== data.id);
-		} else if (type === "message:reply") {
-			const idx = messages.findIndex((message) => message.id === data.id);
-
-			if (idx !== -1) {
-				messages[idx] = data;
-			}
-		} else if (type.includes("message:reaction")) {
-			const idx = messages.findIndex((message) => message.id === data.id);
-			if (idx !== -1) {
-				messages[idx] = data;
-			}
-		} else if (type === "typing" && event.message_id === null) {
-			if (event.user.id === $user.id) {
-				return;
-			}
-
-			typingUsers = data.typing
-				? [
-						...typingUsers,
-						...(typingUsers.find((user) => user.id === event.user.id)
-							? []
-							: [
-									{
-										id: event.user.id,
-										name: event.user.name,
-									},
-								]),
-					]
-				: typingUsers.filter((user) => user.id !== event.user.id);
-
-			if (typingUsersTimeout[event.user.id]) {
-				clearTimeout(typingUsersTimeout[event.user.id]);
-			}
-
-			typingUsersTimeout[event.user.id] = setTimeout(() => {
-				typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
-			}, 5000);
 		}
-	}
-};
+	};
 
-const submitHandler = async ({ content, data }) => {
-	if (!content && (data?.files ?? []).length === 0) {
-		return;
-	}
+	const submitHandler = async ({ content, data }) => {
+		if (!content && (data?.files ?? []).length === 0) {
+			return;
+		}
 
 		const res = await sendMessage(localStorage.token, id, { content: content, data: data }).catch(
 			(error) => {
@@ -151,51 +147,51 @@ const submitHandler = async ({ content, data }) => {
 			}
 		);
 
-	if (res) {
-		messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
-	}
-};
-
-const onChange = async () => {
-	$socket?.emit("channel-events", {
-		channel_id: id,
-		message_id: null,
-		data: {
-			type: "typing",
-			data: {
-				typing: true,
-			},
-		},
-	});
-};
-
-let mediaQuery;
-let largeScreen = false;
-
-onMount(() => {
-	if ($chatId) {
-		chatId.set("");
-	}
-
-	$socket?.on("channel-events", channelEventHandler);
-
-	mediaQuery = window.matchMedia("(min-width: 1024px)");
-
-	const handleMediaQuery = async (e) => {
-		if (e.matches) {
-			largeScreen = true;
-		} else {
-			largeScreen = false;
+		if (res) {
+			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
 		}
 	};
 
-	mediaQuery.addEventListener("change", handleMediaQuery);
-	handleMediaQuery(mediaQuery);
-});
+	const onChange = async () => {
+		$socket?.emit('channel-events', {
+			channel_id: id,
+			message_id: null,
+			data: {
+				type: 'typing',
+				data: {
+					typing: true
+				}
+			}
+		});
+	};
 
-onDestroy(() => {
-	$socket?.off("channel-events", channelEventHandler);
-});
+	let mediaQuery;
+	let largeScreen = false;
+
+	onMount(() => {
+		if ($chatId) {
+			chatId.set('');
+		}
+
+		$socket?.on('channel-events', channelEventHandler);
+
+		mediaQuery = window.matchMedia('(min-width: 1024px)');
+
+		const handleMediaQuery = async (e) => {
+			if (e.matches) {
+				largeScreen = true;
+			} else {
+				largeScreen = false;
+			}
+		};
+
+		mediaQuery.addEventListener('change', handleMediaQuery);
+		handleMediaQuery(mediaQuery);
+	});
+
+	onDestroy(() => {
+		$socket?.off('channel-events', channelEventHandler);
+	});
 </script>
 
 <svelte:head>

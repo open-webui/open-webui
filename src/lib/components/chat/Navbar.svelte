@@ -1,52 +1,52 @@
 <script lang="ts">
-import { getContext } from "svelte";
-import { toast } from "svelte-sonner";
+	import { getContext } from 'svelte';
+	import { toast } from 'svelte-sonner';
 
-import {
-	WEBUI_NAME,
-	chatId,
-	mobile,
-	settings,
-	showArchivedChats,
-	showControls,
-	showSidebar,
-	temporaryChatEnabled,
-	user,
-} from "$lib/stores";
+	import {
+		WEBUI_NAME,
+		chatId,
+		mobile,
+		settings,
+		showArchivedChats,
+		showControls,
+		showSidebar,
+		temporaryChatEnabled,
+		user
+	} from '$lib/stores';
 
-import { slide } from "svelte/transition";
-import { page } from "$app/stores";
+	import { slide } from 'svelte/transition';
+	import { page } from '$app/stores';
 
-import ShareChatModal from "../chat/ShareChatModal.svelte";
-import ModelSelector from "../chat/ModelSelector.svelte";
-import Tooltip from "../common/Tooltip.svelte";
-import Menu from "$lib/components/layout/Navbar/Menu.svelte";
-import UserMenu from "$lib/components/layout/Sidebar/UserMenu.svelte";
-import MenuLines from "../icons/MenuLines.svelte";
-import AdjustmentsHorizontal from "../icons/AdjustmentsHorizontal.svelte";
+	import ShareChatModal from '../chat/ShareChatModal.svelte';
+	import ModelSelector from '../chat/ModelSelector.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
+	import Menu from '$lib/components/layout/Navbar/Menu.svelte';
+	import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
+	import MenuLines from '../icons/MenuLines.svelte';
+	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
 
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import DrawerOpen from '../icons/DrawerOpen.svelte';
 
-import type { SessionUser } from "$lib/types/auth";
+	import type { SessionUser } from '$lib/types/auth';
 
-const i18n = getContext<{
-	t: (key: string) => string;
-	subscribe: (callback: (value: any) => void) => () => void;
-}>("i18n");
+	const i18n = getContext<{
+		t: (key: string) => string;
+		subscribe: (callback: (value: any) => void) => () => void;
+	}>('i18n');
 
-export let initNewChat: () => void;
-export const title = $WEBUI_NAME;
-export const shareEnabled = false;
+	export let initNewChat: () => void;
+	export const title = $WEBUI_NAME;
+	export const shareEnabled = false;
 
-export let chat: {
-	id?: string;
-} | null = null;
-export let selectedModels: { id: string; name: string }[];
-export const showModelSelector = true;
+	export let chat: {
+		id?: string;
+	} | null = null;
+	export let selectedModels: { id: string; name: string }[];
+	export const showModelSelector = true;
 
-let showShareChatModal = false;
-let showDownloadChatModal = false;
+	let showShareChatModal = false;
+	let showDownloadChatModal = false;
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
@@ -171,7 +171,7 @@ let showDownloadChatModal = false;
 						</div>
 					</button>
 				</Tooltip>
-<!-- 
+				<!-- 
 				{#if $user !== undefined}
 					<UserMenu
 						className="max-w-[200px]"

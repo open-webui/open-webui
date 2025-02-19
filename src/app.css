@@ -1,8 +1,9 @@
 @font-face {
 	font-family: 'Marianne';
-	src: local('Marianne'),
-		 url('/assets/fonts/Marianne-Regular.woff2') format('woff2'),
-		 url('/assets/fonts/Marianne-Regular.woff') format('woff');
+	src:
+		local('Marianne'),
+		url('/assets/fonts/Marianne-Regular.woff2') format('woff2'),
+		url('/assets/fonts/Marianne-Regular.woff') format('woff');
 	font-weight: 400;
 	font-style: normal;
 	font-display: swap;
@@ -10,9 +11,10 @@
 
 @font-face {
 	font-family: 'Marianne';
-	src: local('Marianne Italic'),
-		 url('/assets/fonts/Marianne-Regular_Italic.woff2') format('woff2'),
-		 url('/assets/fonts/Marianne-Regular_Italic.woff') format('woff');
+	src:
+		local('Marianne Italic'),
+		url('/assets/fonts/Marianne-Regular_Italic.woff2') format('woff2'),
+		url('/assets/fonts/Marianne-Regular_Italic.woff') format('woff');
 	font-weight: 400;
 	font-style: italic;
 	font-display: swap;
@@ -20,9 +22,10 @@
 
 @font-face {
 	font-family: 'Marianne';
-	src: local('Marianne Light'),
-		 url('/assets/fonts/Marianne-Light.woff2') format('woff2'),
-		 url('/assets/fonts/Marianne-Light.woff') format('woff');
+	src:
+		local('Marianne Light'),
+		url('/assets/fonts/Marianne-Light.woff2') format('woff2'),
+		url('/assets/fonts/Marianne-Light.woff') format('woff');
 	font-weight: 300;
 	font-style: normal;
 	font-display: swap;
@@ -30,9 +33,10 @@
 
 @font-face {
 	font-family: 'Marianne';
-	src: local('Marianne Light Italic'),
-		 url('/assets/fonts/Marianne-Light_Italic.woff2') format('woff2'),
-		 url('/assets/fonts/Marianne-Light_Italic.woff') format('woff');
+	src:
+		local('Marianne Light Italic'),
+		url('/assets/fonts/Marianne-Light_Italic.woff2') format('woff2'),
+		url('/assets/fonts/Marianne-Light_Italic.woff') format('woff');
 	font-weight: 300;
 	font-style: italic;
 	font-display: swap;
@@ -40,9 +44,10 @@
 
 @font-face {
 	font-family: 'Marianne';
-	src: local('Marianne Medium'),
-		 url('/assets/fonts/Marianne-Medium.woff2') format('woff2'),
-		 url('/assets/fonts/Marianne-Medium.woff') format('woff');
+	src:
+		local('Marianne Medium'),
+		url('/assets/fonts/Marianne-Medium.woff2') format('woff2'),
+		url('/assets/fonts/Marianne-Medium.woff') format('woff');
 	font-weight: 500;
 	font-style: normal;
 	font-display: swap;
@@ -50,9 +55,10 @@
 
 @font-face {
 	font-family: 'Marianne';
-	src: local('Marianne Medium Italic'),
-		 url('/assets/fonts/Marianne-Medium_Italic.woff2') format('woff2'),
-		 url('/assets/fonts/Marianne-Medium_Italic.woff') format('woff');
+	src:
+		local('Marianne Medium Italic'),
+		url('/assets/fonts/Marianne-Medium_Italic.woff2') format('woff2'),
+		url('/assets/fonts/Marianne-Medium_Italic.woff') format('woff');
 	font-weight: 500;
 	font-style: italic;
 	font-display: swap;
@@ -60,9 +66,10 @@
 
 @font-face {
 	font-family: 'Marianne';
-	src: local('Marianne Bold'),
-		 url('/assets/fonts/Marianne-Bold.woff2') format('woff2'),
-		 url('/assets/fonts/Marianne-Bold.woff') format('woff');
+	src:
+		local('Marianne Bold'),
+		url('/assets/fonts/Marianne-Bold.woff2') format('woff2'),
+		url('/assets/fonts/Marianne-Bold.woff') format('woff');
 	font-weight: 700;
 	font-style: normal;
 	font-display: swap;
@@ -70,9 +77,10 @@
 
 @font-face {
 	font-family: 'Marianne';
-	src: local('Marianne Bold Italic'),
-		 url('/assets/fonts/Marianne-Bold_Italic.woff2') format('woff2'),
-		 url('/assets/fonts/Marianne-Bold_Italic.woff') format('woff');
+	src:
+		local('Marianne Bold Italic'),
+		url('/assets/fonts/Marianne-Bold_Italic.woff2') format('woff2'),
+		url('/assets/fonts/Marianne-Bold_Italic.woff') format('woff');
 	font-weight: 700;
 	font-style: italic;
 	font-display: swap;
@@ -80,7 +88,8 @@
 
 @font-face {
 	font-family: Spectral;
-	src: url('/assets/fonts/Spectral-Regular.woff2') format('woff2'),
+	src:
+		url('/assets/fonts/Spectral-Regular.woff2') format('woff2'),
 		url('/assets/fonts/Spectral-Regular.woff') format('woff');
 	font-weight: 400;
 	font-style: normal;
@@ -89,7 +98,8 @@
 
 @font-face {
 	font-family: Spectral;
-	src: url('/assets/fonts/Spectral-ExtraBold.woff2') format('woff2'),
+	src:
+		url('/assets/fonts/Spectral-ExtraBold.woff2') format('woff2'),
 		url('/assets/fonts/Spectral-ExtraBold.woff') format('woff');
 	font-weight: 900;
 	font-style: normal;
@@ -98,7 +108,7 @@
 
 html {
 	word-break: break-word;
-	font-family: "Marianne", sans-serif;
+	font-family: 'Marianne', sans-serif;
 }
 
 code {
@@ -108,7 +118,7 @@ code {
 }
 
 .font-secondary {
-	font-family: "InstrumentSerif", sans-serif;
+	font-family: 'InstrumentSerif', sans-serif;
 }
 
 math {
@@ -140,7 +150,7 @@ math {
 }
 
 .font-primary {
-	font-family: "Marianne", sans-serif;
+	font-family: 'Marianne', sans-serif;
 }
 
 .drag-region {
@@ -283,7 +293,7 @@ input::-webkit-inner-spin-button {
 	margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
 }
 
-input[type="number"] {
+input[type='number'] {
 	-moz-appearance: textfield; /* Firefox */
 }
 
@@ -300,7 +310,7 @@ input[type="number"] {
 	outline: none;
 }
 
-.tippy-box[data-theme~="dark"] {
+.tippy-box[data-theme~='dark'] {
 	@apply rounded-lg bg-gray-950 text-xs border border-gray-900 shadow-xl;
 }
 
@@ -368,7 +378,7 @@ input[type="number"] {
 
 .tiptap > pre {
 	border-radius: 0.5rem;
-	font-family: "JetBrainsMono", monospace;
+	font-family: 'JetBrainsMono', monospace;
 	margin: 1.5rem 0;
 	padding: 0.75rem 1rem;
 
@@ -452,12 +462,8 @@ body {
 	--background-alt-red-marianne-hover: var(--red-marianne-975-75-hover);
 	--background-alt-red-marianne-active: var(--red-marianne-975-75-active);
 	--background-alt-green-tilleul-verveine: var(--green-tilleul-verveine-975-75);
-	--background-alt-green-tilleul-verveine-hover: var(
-		--green-tilleul-verveine-975-75-hover
-	);
-	--background-alt-green-tilleul-verveine-active: var(
-		--green-tilleul-verveine-975-75-active
-	);
+	--background-alt-green-tilleul-verveine-hover: var(--green-tilleul-verveine-975-75-hover);
+	--background-alt-green-tilleul-verveine-active: var(--green-tilleul-verveine-975-75-active);
 	--background-alt-green-bourgeon: var(--green-bourgeon-975-75);
 	--background-alt-green-bourgeon-hover: var(--green-bourgeon-975-75-hover);
 	--background-alt-green-bourgeon-active: var(--green-bourgeon-975-75-active);
@@ -487,24 +493,16 @@ body {
 	--background-alt-pink-tuile-active: var(--pink-tuile-975-75-active);
 	--background-alt-yellow-tournesol: var(--yellow-tournesol-975-75);
 	--background-alt-yellow-tournesol-hover: var(--yellow-tournesol-975-75-hover);
-	--background-alt-yellow-tournesol-active: var(
-		--yellow-tournesol-975-75-active
-	);
+	--background-alt-yellow-tournesol-active: var(--yellow-tournesol-975-75-active);
 	--background-alt-yellow-moutarde: var(--yellow-moutarde-975-75);
 	--background-alt-yellow-moutarde-hover: var(--yellow-moutarde-975-75-hover);
 	--background-alt-yellow-moutarde-active: var(--yellow-moutarde-975-75-active);
 	--background-alt-orange-terre-battue: var(--orange-terre-battue-975-75);
-	--background-alt-orange-terre-battue-hover: var(
-		--orange-terre-battue-975-75-hover
-	);
-	--background-alt-orange-terre-battue-active: var(
-		--orange-terre-battue-975-75-active
-	);
+	--background-alt-orange-terre-battue-hover: var(--orange-terre-battue-975-75-hover);
+	--background-alt-orange-terre-battue-active: var(--orange-terre-battue-975-75-active);
 	--background-alt-brown-cafe-creme: var(--brown-cafe-creme-975-75);
 	--background-alt-brown-cafe-creme-hover: var(--brown-cafe-creme-975-75-hover);
-	--background-alt-brown-cafe-creme-active: var(
-		--brown-cafe-creme-975-75-active
-	);
+	--background-alt-brown-cafe-creme-active: var(--brown-cafe-creme-975-75-active);
 	--background-alt-brown-caramel: var(--brown-caramel-975-75);
 	--background-alt-brown-caramel-hover: var(--brown-caramel-975-75-hover);
 	--background-alt-brown-caramel-active: var(--brown-caramel-975-75-active);
@@ -513,9 +511,7 @@ body {
 	--background-alt-brown-opera-active: var(--brown-opera-975-75-active);
 	--background-alt-beige-gris-galet: var(--beige-gris-galet-975-75);
 	--background-alt-beige-gris-galet-hover: var(--beige-gris-galet-975-75-hover);
-	--background-alt-beige-gris-galet-active: var(
-		--beige-gris-galet-975-75-active
-	);
+	--background-alt-beige-gris-galet-active: var(--beige-gris-galet-975-75-active);
 	--background-contrast-grey: var(--grey-950-100);
 	--background-contrast-grey-hover: var(--grey-950-100-hover);
 	--background-contrast-grey-active: var(--grey-950-100-active);
@@ -525,39 +521,21 @@ body {
 	--background-contrast-red-marianne: var(--red-marianne-950-100);
 	--background-contrast-red-marianne-hover: var(--red-marianne-950-100-hover);
 	--background-contrast-red-marianne-active: var(--red-marianne-950-100-active);
-	--background-contrast-green-tilleul-verveine: var(
-		--green-tilleul-verveine-950-100
-	);
-	--background-contrast-green-tilleul-verveine-hover: var(
-		--green-tilleul-verveine-950-100-hover
-	);
-	--background-contrast-green-tilleul-verveine-active: var(
-		--green-tilleul-verveine-950-100-active
-	);
+	--background-contrast-green-tilleul-verveine: var(--green-tilleul-verveine-950-100);
+	--background-contrast-green-tilleul-verveine-hover: var(--green-tilleul-verveine-950-100-hover);
+	--background-contrast-green-tilleul-verveine-active: var(--green-tilleul-verveine-950-100-active);
 	--background-contrast-green-bourgeon: var(--green-bourgeon-950-100);
-	--background-contrast-green-bourgeon-hover: var(
-		--green-bourgeon-950-100-hover
-	);
-	--background-contrast-green-bourgeon-active: var(
-		--green-bourgeon-950-100-active
-	);
+	--background-contrast-green-bourgeon-hover: var(--green-bourgeon-950-100-hover);
+	--background-contrast-green-bourgeon-active: var(--green-bourgeon-950-100-active);
 	--background-contrast-green-emeraude: var(--green-emeraude-950-100);
-	--background-contrast-green-emeraude-hover: var(
-		--green-emeraude-950-100-hover
-	);
-	--background-contrast-green-emeraude-active: var(
-		--green-emeraude-950-100-active
-	);
+	--background-contrast-green-emeraude-hover: var(--green-emeraude-950-100-hover);
+	--background-contrast-green-emeraude-active: var(--green-emeraude-950-100-active);
 	--background-contrast-green-menthe: var(--green-menthe-950-100);
 	--background-contrast-green-menthe-hover: var(--green-menthe-950-100-hover);
 	--background-contrast-green-menthe-active: var(--green-menthe-950-100-active);
 	--background-contrast-green-archipel: var(--green-archipel-950-100);
-	--background-contrast-green-archipel-hover: var(
-		--green-archipel-950-100-hover
-	);
-	--background-contrast-green-archipel-active: var(
-		--green-archipel-950-100-active
-	);
+	--background-contrast-green-archipel-hover: var(--green-archipel-950-100-hover);
+	--background-contrast-green-archipel-active: var(--green-archipel-950-100-active);
 	--background-contrast-blue-ecume: var(--blue-ecume-950-100);
 	--background-contrast-blue-ecume-hover: var(--blue-ecume-950-100-hover);
 	--background-contrast-blue-ecume-active: var(--blue-ecume-950-100-active);
@@ -565,12 +543,8 @@ body {
 	--background-contrast-blue-cumulus-hover: var(--blue-cumulus-950-100-hover);
 	--background-contrast-blue-cumulus-active: var(--blue-cumulus-950-100-active);
 	--background-contrast-purple-glycine: var(--purple-glycine-950-100);
-	--background-contrast-purple-glycine-hover: var(
-		--purple-glycine-950-100-hover
-	);
-	--background-contrast-purple-glycine-active: var(
-		--purple-glycine-950-100-active
-	);
+	--background-contrast-purple-glycine-hover: var(--purple-glycine-950-100-hover);
+	--background-contrast-purple-glycine-active: var(--purple-glycine-950-100-active);
 	--background-contrast-pink-macaron: var(--pink-macaron-950-100);
 	--background-contrast-pink-macaron-hover: var(--pink-macaron-950-100-hover);
 	--background-contrast-pink-macaron-active: var(--pink-macaron-950-100-active);
@@ -578,48 +552,26 @@ body {
 	--background-contrast-pink-tuile-hover: var(--pink-tuile-950-100-hover);
 	--background-contrast-pink-tuile-active: var(--pink-tuile-950-100-active);
 	--background-contrast-yellow-tournesol: var(--yellow-tournesol-950-100);
-	--background-contrast-yellow-tournesol-hover: var(
-		--yellow-tournesol-950-100-hover
-	);
-	--background-contrast-yellow-tournesol-active: var(
-		--yellow-tournesol-950-100-active
-	);
+	--background-contrast-yellow-tournesol-hover: var(--yellow-tournesol-950-100-hover);
+	--background-contrast-yellow-tournesol-active: var(--yellow-tournesol-950-100-active);
 	--background-contrast-yellow-moutarde: var(--yellow-moutarde-950-100);
-	--background-contrast-yellow-moutarde-hover: var(
-		--yellow-moutarde-950-100-hover
-	);
-	--background-contrast-yellow-moutarde-active: var(
-		--yellow-moutarde-950-100-active
-	);
+	--background-contrast-yellow-moutarde-hover: var(--yellow-moutarde-950-100-hover);
+	--background-contrast-yellow-moutarde-active: var(--yellow-moutarde-950-100-active);
 	--background-contrast-orange-terre-battue: var(--orange-terre-battue-950-100);
-	--background-contrast-orange-terre-battue-hover: var(
-		--orange-terre-battue-950-100-hover
-	);
-	--background-contrast-orange-terre-battue-active: var(
-		--orange-terre-battue-950-100-active
-	);
+	--background-contrast-orange-terre-battue-hover: var(--orange-terre-battue-950-100-hover);
+	--background-contrast-orange-terre-battue-active: var(--orange-terre-battue-950-100-active);
 	--background-contrast-brown-cafe-creme: var(--brown-cafe-creme-950-100);
-	--background-contrast-brown-cafe-creme-hover: var(
-		--brown-cafe-creme-950-100-hover
-	);
-	--background-contrast-brown-cafe-creme-active: var(
-		--brown-cafe-creme-950-100-active
-	);
+	--background-contrast-brown-cafe-creme-hover: var(--brown-cafe-creme-950-100-hover);
+	--background-contrast-brown-cafe-creme-active: var(--brown-cafe-creme-950-100-active);
 	--background-contrast-brown-caramel: var(--brown-caramel-950-100);
 	--background-contrast-brown-caramel-hover: var(--brown-caramel-950-100-hover);
-	--background-contrast-brown-caramel-active: var(
-		--brown-caramel-950-100-active
-	);
+	--background-contrast-brown-caramel-active: var(--brown-caramel-950-100-active);
 	--background-contrast-brown-opera: var(--brown-opera-950-100);
 	--background-contrast-brown-opera-hover: var(--brown-opera-950-100-hover);
 	--background-contrast-brown-opera-active: var(--brown-opera-950-100-active);
 	--background-contrast-beige-gris-galet: var(--beige-gris-galet-950-100);
-	--background-contrast-beige-gris-galet-hover: var(
-		--beige-gris-galet-950-100-hover
-	);
-	--background-contrast-beige-gris-galet-active: var(
-		--beige-gris-galet-950-100-active
-	);
+	--background-contrast-beige-gris-galet-hover: var(--beige-gris-galet-950-100-hover);
+	--background-contrast-beige-gris-galet-active: var(--beige-gris-galet-950-100-active);
 	--background-contrast-info: var(--info-950-100);
 	--background-contrast-info-hover: var(--info-950-100-hover);
 	--background-contrast-info-active: var(--info-950-100-active);
@@ -635,9 +587,7 @@ body {
 	--background-flat-grey: var(--grey-200-850);
 	--background-flat-blue-france: var(--blue-france-sun-113-625);
 	--background-flat-red-marianne: var(--red-marianne-425-625);
-	--background-flat-green-tilleul-verveine: var(
-		--green-tilleul-verveine-sun-418-moon-817
-	);
+	--background-flat-green-tilleul-verveine: var(--green-tilleul-verveine-sun-418-moon-817);
 	--background-flat-green-bourgeon: var(--green-bourgeon-sun-425-moon-759);
 	--background-flat-green-emeraude: var(--green-emeraude-sun-425-moon-753);
 	--background-flat-green-menthe: var(--green-menthe-sun-373-moon-652);
@@ -649,9 +599,7 @@ body {
 	--background-flat-pink-tuile: var(--pink-tuile-sun-425-moon-750);
 	--background-flat-yellow-tournesol: var(--yellow-tournesol-sun-407-moon-922);
 	--background-flat-yellow-moutarde: var(--yellow-moutarde-sun-348-moon-860);
-	--background-flat-orange-terre-battue: var(
-		--orange-terre-battue-sun-370-moon-672
-	);
+	--background-flat-orange-terre-battue: var(--orange-terre-battue-sun-370-moon-672);
 	--background-flat-brown-cafe-creme: var(--brown-cafe-creme-sun-383-moon-885);
 	--background-flat-brown-caramel: var(--brown-caramel-sun-425-moon-901);
 	--background-flat-brown-opera: var(--brown-opera-sun-395-moon-820);
@@ -664,156 +612,70 @@ body {
 	--background-action-high-grey-hover: var(--grey-200-850-hover);
 	--background-action-high-grey-active: var(--grey-200-850-active);
 	--background-action-high-blue-france: var(--blue-france-sun-113-625);
-	--background-action-high-blue-france-hover: var(
-		--blue-france-sun-113-625-hover
-	);
-	--background-action-high-blue-france-active: var(
-		--blue-france-sun-113-625-active
-	);
+	--background-action-high-blue-france-hover: var(--blue-france-sun-113-625-hover);
+	--background-action-high-blue-france-active: var(--blue-france-sun-113-625-active);
 	--background-action-high-red-marianne: var(--red-marianne-425-625);
 	--background-action-high-red-marianne-hover: var(--red-marianne-425-625-hover);
-	--background-action-high-red-marianne-active: var(
-		--red-marianne-425-625-active
-	);
-	--background-action-high-green-tilleul-verveine: var(
-		--green-tilleul-verveine-sun-418-moon-817
-	);
+	--background-action-high-red-marianne-active: var(--red-marianne-425-625-active);
+	--background-action-high-green-tilleul-verveine: var(--green-tilleul-verveine-sun-418-moon-817);
 	--background-action-high-green-tilleul-verveine-hover: var(
 		--green-tilleul-verveine-sun-418-moon-817-hover
 	);
 	--background-action-high-green-tilleul-verveine-active: var(
 		--green-tilleul-verveine-sun-418-moon-817-active
 	);
-	--background-action-high-green-bourgeon: var(
-		--green-bourgeon-sun-425-moon-759
-	);
-	--background-action-high-green-bourgeon-hover: var(
-		--green-bourgeon-sun-425-moon-759-hover
-	);
-	--background-action-high-green-bourgeon-active: var(
-		--green-bourgeon-sun-425-moon-759-active
-	);
-	--background-action-high-green-emeraude: var(
-		--green-emeraude-sun-425-moon-753
-	);
-	--background-action-high-green-emeraude-hover: var(
-		--green-emeraude-sun-425-moon-753-hover
-	);
-	--background-action-high-green-emeraude-active: var(
-		--green-emeraude-sun-425-moon-753-active
-	);
+	--background-action-high-green-bourgeon: var(--green-bourgeon-sun-425-moon-759);
+	--background-action-high-green-bourgeon-hover: var(--green-bourgeon-sun-425-moon-759-hover);
+	--background-action-high-green-bourgeon-active: var(--green-bourgeon-sun-425-moon-759-active);
+	--background-action-high-green-emeraude: var(--green-emeraude-sun-425-moon-753);
+	--background-action-high-green-emeraude-hover: var(--green-emeraude-sun-425-moon-753-hover);
+	--background-action-high-green-emeraude-active: var(--green-emeraude-sun-425-moon-753-active);
 	--background-action-high-green-menthe: var(--green-menthe-sun-373-moon-652);
-	--background-action-high-green-menthe-hover: var(
-		--green-menthe-sun-373-moon-652-hover
-	);
-	--background-action-high-green-menthe-active: var(
-		--green-menthe-sun-373-moon-652-active
-	);
-	--background-action-high-green-archipel: var(
-		--green-archipel-sun-391-moon-716
-	);
-	--background-action-high-green-archipel-hover: var(
-		--green-archipel-sun-391-moon-716-hover
-	);
-	--background-action-high-green-archipel-active: var(
-		--green-archipel-sun-391-moon-716-active
-	);
+	--background-action-high-green-menthe-hover: var(--green-menthe-sun-373-moon-652-hover);
+	--background-action-high-green-menthe-active: var(--green-menthe-sun-373-moon-652-active);
+	--background-action-high-green-archipel: var(--green-archipel-sun-391-moon-716);
+	--background-action-high-green-archipel-hover: var(--green-archipel-sun-391-moon-716-hover);
+	--background-action-high-green-archipel-active: var(--green-archipel-sun-391-moon-716-active);
 	--background-action-high-blue-ecume: var(--blue-ecume-sun-247-moon-675);
-	--background-action-high-blue-ecume-hover: var(
-		--blue-ecume-sun-247-moon-675-hover
-	);
-	--background-action-high-blue-ecume-active: var(
-		--blue-ecume-sun-247-moon-675-active
-	);
+	--background-action-high-blue-ecume-hover: var(--blue-ecume-sun-247-moon-675-hover);
+	--background-action-high-blue-ecume-active: var(--blue-ecume-sun-247-moon-675-active);
 	--background-action-high-blue-cumulus: var(--blue-cumulus-sun-368-moon-732);
-	--background-action-high-blue-cumulus-hover: var(
-		--blue-cumulus-sun-368-moon-732-hover
-	);
-	--background-action-high-blue-cumulus-active: var(
-		--blue-cumulus-sun-368-moon-732-active
-	);
-	--background-action-high-purple-glycine: var(
-		--purple-glycine-sun-319-moon-630
-	);
-	--background-action-high-purple-glycine-hover: var(
-		--purple-glycine-sun-319-moon-630-hover
-	);
-	--background-action-high-purple-glycine-active: var(
-		--purple-glycine-sun-319-moon-630-active
-	);
+	--background-action-high-blue-cumulus-hover: var(--blue-cumulus-sun-368-moon-732-hover);
+	--background-action-high-blue-cumulus-active: var(--blue-cumulus-sun-368-moon-732-active);
+	--background-action-high-purple-glycine: var(--purple-glycine-sun-319-moon-630);
+	--background-action-high-purple-glycine-hover: var(--purple-glycine-sun-319-moon-630-hover);
+	--background-action-high-purple-glycine-active: var(--purple-glycine-sun-319-moon-630-active);
 	--background-action-high-pink-macaron: var(--pink-macaron-sun-406-moon-833);
-	--background-action-high-pink-macaron-hover: var(
-		--pink-macaron-sun-406-moon-833-hover
-	);
-	--background-action-high-pink-macaron-active: var(
-		--pink-macaron-sun-406-moon-833-active
-	);
+	--background-action-high-pink-macaron-hover: var(--pink-macaron-sun-406-moon-833-hover);
+	--background-action-high-pink-macaron-active: var(--pink-macaron-sun-406-moon-833-active);
 	--background-action-high-pink-tuile: var(--pink-tuile-sun-425-moon-750);
-	--background-action-high-pink-tuile-hover: var(
-		--pink-tuile-sun-425-moon-750-hover
-	);
-	--background-action-high-pink-tuile-active: var(
-		--pink-tuile-sun-425-moon-750-active
-	);
-	--background-action-high-yellow-tournesol: var(
-		--yellow-tournesol-sun-407-moon-922
-	);
-	--background-action-high-yellow-tournesol-hover: var(
-		--yellow-tournesol-sun-407-moon-922-hover
-	);
-	--background-action-high-yellow-tournesol-active: var(
-		--yellow-tournesol-sun-407-moon-922-active
-	);
-	--background-action-high-yellow-moutarde: var(
-		--yellow-moutarde-sun-348-moon-860
-	);
-	--background-action-high-yellow-moutarde-hover: var(
-		--yellow-moutarde-sun-348-moon-860-hover
-	);
-	--background-action-high-yellow-moutarde-active: var(
-		--yellow-moutarde-sun-348-moon-860-active
-	);
-	--background-action-high-orange-terre-battue: var(
-		--orange-terre-battue-sun-370-moon-672
-	);
+	--background-action-high-pink-tuile-hover: var(--pink-tuile-sun-425-moon-750-hover);
+	--background-action-high-pink-tuile-active: var(--pink-tuile-sun-425-moon-750-active);
+	--background-action-high-yellow-tournesol: var(--yellow-tournesol-sun-407-moon-922);
+	--background-action-high-yellow-tournesol-hover: var(--yellow-tournesol-sun-407-moon-922-hover);
+	--background-action-high-yellow-tournesol-active: var(--yellow-tournesol-sun-407-moon-922-active);
+	--background-action-high-yellow-moutarde: var(--yellow-moutarde-sun-348-moon-860);
+	--background-action-high-yellow-moutarde-hover: var(--yellow-moutarde-sun-348-moon-860-hover);
+	--background-action-high-yellow-moutarde-active: var(--yellow-moutarde-sun-348-moon-860-active);
+	--background-action-high-orange-terre-battue: var(--orange-terre-battue-sun-370-moon-672);
 	--background-action-high-orange-terre-battue-hover: var(
 		--orange-terre-battue-sun-370-moon-672-hover
 	);
 	--background-action-high-orange-terre-battue-active: var(
 		--orange-terre-battue-sun-370-moon-672-active
 	);
-	--background-action-high-brown-cafe-creme: var(
-		--brown-cafe-creme-sun-383-moon-885
-	);
-	--background-action-high-brown-cafe-creme-hover: var(
-		--brown-cafe-creme-sun-383-moon-885-hover
-	);
-	--background-action-high-brown-cafe-creme-active: var(
-		--brown-cafe-creme-sun-383-moon-885-active
-	);
+	--background-action-high-brown-cafe-creme: var(--brown-cafe-creme-sun-383-moon-885);
+	--background-action-high-brown-cafe-creme-hover: var(--brown-cafe-creme-sun-383-moon-885-hover);
+	--background-action-high-brown-cafe-creme-active: var(--brown-cafe-creme-sun-383-moon-885-active);
 	--background-action-high-brown-caramel: var(--brown-caramel-sun-425-moon-901);
-	--background-action-high-brown-caramel-hover: var(
-		--brown-caramel-sun-425-moon-901-hover
-	);
-	--background-action-high-brown-caramel-active: var(
-		--brown-caramel-sun-425-moon-901-active
-	);
+	--background-action-high-brown-caramel-hover: var(--brown-caramel-sun-425-moon-901-hover);
+	--background-action-high-brown-caramel-active: var(--brown-caramel-sun-425-moon-901-active);
 	--background-action-high-brown-opera: var(--brown-opera-sun-395-moon-820);
-	--background-action-high-brown-opera-hover: var(
-		--brown-opera-sun-395-moon-820-hover
-	);
-	--background-action-high-brown-opera-active: var(
-		--brown-opera-sun-395-moon-820-active
-	);
-	--background-action-high-beige-gris-galet: var(
-		--beige-gris-galet-sun-407-moon-821
-	);
-	--background-action-high-beige-gris-galet-hover: var(
-		--beige-gris-galet-sun-407-moon-821-hover
-	);
-	--background-action-high-beige-gris-galet-active: var(
-		--beige-gris-galet-sun-407-moon-821-active
-	);
+	--background-action-high-brown-opera-hover: var(--brown-opera-sun-395-moon-820-hover);
+	--background-action-high-brown-opera-active: var(--brown-opera-sun-395-moon-820-active);
+	--background-action-high-beige-gris-galet: var(--beige-gris-galet-sun-407-moon-821);
+	--background-action-high-beige-gris-galet-hover: var(--beige-gris-galet-sun-407-moon-821-hover);
+	--background-action-high-beige-gris-galet-active: var(--beige-gris-galet-sun-407-moon-821-active);
 	--background-action-high-info: var(--info-425-625);
 	--background-action-high-info-hover: var(--info-425-625-hover);
 	--background-action-high-info-active: var(--info-425-625-active);
@@ -831,114 +693,60 @@ body {
 	--background-action-low-blue-france-active: var(--blue-france-925-125-active);
 	--background-action-low-red-marianne: var(--red-marianne-925-125);
 	--background-action-low-red-marianne-hover: var(--red-marianne-925-125-hover);
-	--background-action-low-red-marianne-active: var(
-		--red-marianne-925-125-active
-	);
-	--background-action-low-green-tilleul-verveine: var(
-		--green-tilleul-verveine-925-125
-	);
-	--background-action-low-green-tilleul-verveine-hover: var(
-		--green-tilleul-verveine-925-125-hover
-	);
+	--background-action-low-red-marianne-active: var(--red-marianne-925-125-active);
+	--background-action-low-green-tilleul-verveine: var(--green-tilleul-verveine-925-125);
+	--background-action-low-green-tilleul-verveine-hover: var(--green-tilleul-verveine-925-125-hover);
 	--background-action-low-green-tilleul-verveine-active: var(
 		--green-tilleul-verveine-925-125-active
 	);
 	--background-action-low-green-bourgeon: var(--green-bourgeon-925-125);
-	--background-action-low-green-bourgeon-hover: var(
-		--green-bourgeon-925-125-hover
-	);
-	--background-action-low-green-bourgeon-active: var(
-		--green-bourgeon-925-125-active
-	);
+	--background-action-low-green-bourgeon-hover: var(--green-bourgeon-925-125-hover);
+	--background-action-low-green-bourgeon-active: var(--green-bourgeon-925-125-active);
 	--background-action-low-green-emeraude: var(--green-emeraude-925-125);
-	--background-action-low-green-emeraude-hover: var(
-		--green-emeraude-925-125-hover
-	);
-	--background-action-low-green-emeraude-active: var(
-		--green-emeraude-925-125-active
-	);
+	--background-action-low-green-emeraude-hover: var(--green-emeraude-925-125-hover);
+	--background-action-low-green-emeraude-active: var(--green-emeraude-925-125-active);
 	--background-action-low-green-menthe: var(--green-menthe-925-125);
 	--background-action-low-green-menthe-hover: var(--green-menthe-925-125-hover);
-	--background-action-low-green-menthe-active: var(
-		--green-menthe-925-125-active
-	);
+	--background-action-low-green-menthe-active: var(--green-menthe-925-125-active);
 	--background-action-low-green-archipel: var(--green-archipel-925-125);
-	--background-action-low-green-archipel-hover: var(
-		--green-archipel-925-125-hover
-	);
-	--background-action-low-green-archipel-active: var(
-		--green-archipel-925-125-active
-	);
+	--background-action-low-green-archipel-hover: var(--green-archipel-925-125-hover);
+	--background-action-low-green-archipel-active: var(--green-archipel-925-125-active);
 	--background-action-low-blue-ecume: var(--blue-ecume-925-125);
 	--background-action-low-blue-ecume-hover: var(--blue-ecume-925-125-hover);
 	--background-action-low-blue-ecume-active: var(--blue-ecume-925-125-active);
 	--background-action-low-blue-cumulus: var(--blue-cumulus-925-125);
 	--background-action-low-blue-cumulus-hover: var(--blue-cumulus-925-125-hover);
-	--background-action-low-blue-cumulus-active: var(
-		--blue-cumulus-925-125-active
-	);
+	--background-action-low-blue-cumulus-active: var(--blue-cumulus-925-125-active);
 	--background-action-low-purple-glycine: var(--purple-glycine-925-125);
-	--background-action-low-purple-glycine-hover: var(
-		--purple-glycine-925-125-hover
-	);
-	--background-action-low-purple-glycine-active: var(
-		--purple-glycine-925-125-active
-	);
+	--background-action-low-purple-glycine-hover: var(--purple-glycine-925-125-hover);
+	--background-action-low-purple-glycine-active: var(--purple-glycine-925-125-active);
 	--background-action-low-pink-macaron: var(--pink-macaron-925-125);
 	--background-action-low-pink-macaron-hover: var(--pink-macaron-925-125-hover);
-	--background-action-low-pink-macaron-active: var(
-		--pink-macaron-925-125-active
-	);
+	--background-action-low-pink-macaron-active: var(--pink-macaron-925-125-active);
 	--background-action-low-pink-tuile: var(--pink-tuile-925-125);
 	--background-action-low-pink-tuile-hover: var(--pink-tuile-925-125-hover);
 	--background-action-low-pink-tuile-active: var(--pink-tuile-925-125-active);
 	--background-action-low-yellow-tournesol: var(--yellow-tournesol-925-125);
-	--background-action-low-yellow-tournesol-hover: var(
-		--yellow-tournesol-925-125-hover
-	);
-	--background-action-low-yellow-tournesol-active: var(
-		--yellow-tournesol-925-125-active
-	);
+	--background-action-low-yellow-tournesol-hover: var(--yellow-tournesol-925-125-hover);
+	--background-action-low-yellow-tournesol-active: var(--yellow-tournesol-925-125-active);
 	--background-action-low-yellow-moutarde: var(--yellow-moutarde-925-125);
-	--background-action-low-yellow-moutarde-hover: var(
-		--yellow-moutarde-925-125-hover
-	);
-	--background-action-low-yellow-moutarde-active: var(
-		--yellow-moutarde-925-125-active
-	);
-	--background-action-low-orange-terre-battue: var(
-		--orange-terre-battue-925-125
-	);
-	--background-action-low-orange-terre-battue-hover: var(
-		--orange-terre-battue-925-125-hover
-	);
-	--background-action-low-orange-terre-battue-active: var(
-		--orange-terre-battue-925-125-active
-	);
+	--background-action-low-yellow-moutarde-hover: var(--yellow-moutarde-925-125-hover);
+	--background-action-low-yellow-moutarde-active: var(--yellow-moutarde-925-125-active);
+	--background-action-low-orange-terre-battue: var(--orange-terre-battue-925-125);
+	--background-action-low-orange-terre-battue-hover: var(--orange-terre-battue-925-125-hover);
+	--background-action-low-orange-terre-battue-active: var(--orange-terre-battue-925-125-active);
 	--background-action-low-brown-cafe-creme: var(--brown-cafe-creme-925-125);
-	--background-action-low-brown-cafe-creme-hover: var(
-		--brown-cafe-creme-925-125-hover
-	);
-	--background-action-low-brown-cafe-creme-active: var(
-		--brown-cafe-creme-925-125-active
-	);
+	--background-action-low-brown-cafe-creme-hover: var(--brown-cafe-creme-925-125-hover);
+	--background-action-low-brown-cafe-creme-active: var(--brown-cafe-creme-925-125-active);
 	--background-action-low-brown-caramel: var(--brown-caramel-925-125);
-	--background-action-low-brown-caramel-hover: var(
-		--brown-caramel-925-125-hover
-	);
-	--background-action-low-brown-caramel-active: var(
-		--brown-caramel-925-125-active
-	);
+	--background-action-low-brown-caramel-hover: var(--brown-caramel-925-125-hover);
+	--background-action-low-brown-caramel-active: var(--brown-caramel-925-125-active);
 	--background-action-low-brown-opera: var(--brown-opera-925-125);
 	--background-action-low-brown-opera-hover: var(--brown-opera-925-125-hover);
 	--background-action-low-brown-opera-active: var(--brown-opera-925-125-active);
 	--background-action-low-beige-gris-galet: var(--beige-gris-galet-925-125);
-	--background-action-low-beige-gris-galet-hover: var(
-		--beige-gris-galet-925-125-hover
-	);
-	--background-action-low-beige-gris-galet-active: var(
-		--beige-gris-galet-925-125-active
-	);
+	--background-action-low-beige-gris-galet-hover: var(--beige-gris-galet-925-125-hover);
+	--background-action-low-beige-gris-galet-active: var(--beige-gris-galet-925-125-active);
 	--background-active-blue-france: var(--blue-france-sun-113-625);
 	--background-active-blue-france-hover: var(--blue-france-sun-113-625-hover);
 	--background-active-blue-france-active: var(--blue-france-sun-113-625-active);
@@ -981,9 +789,7 @@ body {
 	--text-action-high-grey: var(--grey-50-1000);
 	--text-action-high-blue-france: var(--blue-france-sun-113-625);
 	--text-action-high-red-marianne: var(--red-marianne-425-625);
-	--text-action-high-green-tilleul-verveine: var(
-		--green-tilleul-verveine-sun-418-moon-817
-	);
+	--text-action-high-green-tilleul-verveine: var(--green-tilleul-verveine-sun-418-moon-817);
 	--text-action-high-green-bourgeon: var(--green-bourgeon-sun-425-moon-759);
 	--text-action-high-green-emeraude: var(--green-emeraude-sun-425-moon-753);
 	--text-action-high-green-menthe: var(--green-menthe-sun-373-moon-652);
@@ -995,9 +801,7 @@ body {
 	--text-action-high-pink-tuile: var(--pink-tuile-sun-425-moon-750);
 	--text-action-high-yellow-tournesol: var(--yellow-tournesol-sun-407-moon-922);
 	--text-action-high-yellow-moutarde: var(--yellow-moutarde-sun-348-moon-860);
-	--text-action-high-orange-terre-battue: var(
-		--orange-terre-battue-sun-370-moon-672
-	);
+	--text-action-high-orange-terre-battue: var(--orange-terre-battue-sun-370-moon-672);
 	--text-action-high-brown-cafe-creme: var(--brown-cafe-creme-sun-383-moon-885);
 	--text-action-high-brown-caramel: var(--brown-caramel-sun-425-moon-901);
 	--text-action-high-brown-opera: var(--brown-opera-sun-395-moon-820);
@@ -1008,9 +812,7 @@ body {
 	--text-label-grey: var(--grey-50-1000);
 	--text-label-blue-france: var(--blue-france-sun-113-625);
 	--text-label-red-marianne: var(--red-marianne-425-625);
-	--text-label-green-tilleul-verveine: var(
-		--green-tilleul-verveine-sun-418-moon-817
-	);
+	--text-label-green-tilleul-verveine: var(--green-tilleul-verveine-sun-418-moon-817);
 	--text-label-green-bourgeon: var(--green-bourgeon-sun-425-moon-759);
 	--text-label-green-emeraude: var(--green-emeraude-sun-425-moon-753);
 	--text-label-green-menthe: var(--green-menthe-sun-373-moon-652);
@@ -1060,9 +862,7 @@ body {
 	--border-default-grey: var(--grey-900-175);
 	--border-default-blue-france: var(--blue-france-main-525);
 	--border-default-red-marianne: var(--red-marianne-main-472);
-	--border-default-green-tilleul-verveine: var(
-		--green-tilleul-verveine-main-707
-	);
+	--border-default-green-tilleul-verveine: var(--green-tilleul-verveine-main-707);
 	--border-default-green-bourgeon: var(--green-bourgeon-main-640);
 	--border-default-green-emeraude: var(--green-emeraude-main-632);
 	--border-default-green-menthe: var(--green-menthe-main-548);
@@ -1091,9 +891,7 @@ body {
 	--border-action-high-error: var(--error-425-625);
 	--border-action-low-blue-france: var(--blue-france-850-200);
 	--border-action-low-red-marianne: var(--red-marianne-850-200);
-	--border-action-low-green-tilleul-verveine: var(
-		--green-tilleul-verveine-850-200
-	);
+	--border-action-low-green-tilleul-verveine: var(--green-tilleul-verveine-850-200);
 	--border-action-low-green-bourgeon: var(--green-bourgeon-850-200);
 	--border-action-low-green-emeraude: var(--green-emeraude-850-200);
 	--border-action-low-green-menthe: var(--green-menthe-850-200);
@@ -1119,9 +917,7 @@ body {
 	--border-plain-success: var(--success-425-625);
 	--border-plain-warning: var(--warning-425-625);
 	--border-plain-error: var(--error-425-625);
-	--border-plain-green-tilleul-verveine: var(
-		--green-tilleul-verveine-sun-418-moon-817
-	);
+	--border-plain-green-tilleul-verveine: var(--green-tilleul-verveine-sun-418-moon-817);
 	--border-plain-green-bourgeon: var(--green-bourgeon-sun-425-moon-759);
 	--border-plain-green-emeraude: var(--green-emeraude-sun-425-moon-753);
 	--border-plain-green-menthe: var(--green-menthe-sun-373-moon-652);
@@ -1133,9 +929,7 @@ body {
 	--border-plain-pink-tuile: var(--pink-tuile-sun-425-moon-750);
 	--border-plain-yellow-tournesol: var(--yellow-tournesol-sun-407-moon-922);
 	--border-plain-yellow-moutarde: var(--yellow-moutarde-sun-348-moon-860);
-	--border-plain-orange-terre-battue: var(
-		--orange-terre-battue-sun-370-moon-672
-	);
+	--border-plain-orange-terre-battue: var(--orange-terre-battue-sun-370-moon-672);
 	--border-plain-brown-cafe-creme: var(--brown-cafe-creme-sun-383-moon-885);
 	--border-plain-brown-caramel: var(--brown-caramel-sun-425-moon-901);
 	--border-plain-brown-opera: var(--brown-opera-sun-395-moon-820);
@@ -1147,9 +941,7 @@ body {
 	--artwork-major-red-marianne: var(--red-marianne-425-625);
 	--artwork-major-red-marianne-hover: var(--red-marianne-425-625-hover);
 	--artwork-major-red-marianne-active: var(--red-marianne-425-625-active);
-	--artwork-major-green-tilleul-verveine: var(
-		--green-tilleul-verveine-sun-418-moon-817
-	);
+	--artwork-major-green-tilleul-verveine: var(--green-tilleul-verveine-sun-418-moon-817);
 	--artwork-major-green-tilleul-verveine-hover: var(
 		--green-tilleul-verveine-sun-418-moon-817-hover
 	);
@@ -1157,101 +949,53 @@ body {
 		--green-tilleul-verveine-sun-418-moon-817-active
 	);
 	--artwork-major-green-bourgeon: var(--green-bourgeon-sun-425-moon-759);
-	--artwork-major-green-bourgeon-hover: var(
-		--green-bourgeon-sun-425-moon-759-hover
-	);
-	--artwork-major-green-bourgeon-active: var(
-		--green-bourgeon-sun-425-moon-759-active
-	);
+	--artwork-major-green-bourgeon-hover: var(--green-bourgeon-sun-425-moon-759-hover);
+	--artwork-major-green-bourgeon-active: var(--green-bourgeon-sun-425-moon-759-active);
 	--artwork-major-green-emeraude: var(--green-emeraude-sun-425-moon-753);
-	--artwork-major-green-emeraude-hover: var(
-		--green-emeraude-sun-425-moon-753-hover
-	);
-	--artwork-major-green-emeraude-active: var(
-		--green-emeraude-sun-425-moon-753-active
-	);
+	--artwork-major-green-emeraude-hover: var(--green-emeraude-sun-425-moon-753-hover);
+	--artwork-major-green-emeraude-active: var(--green-emeraude-sun-425-moon-753-active);
 	--artwork-major-green-menthe: var(--green-menthe-sun-373-moon-652);
 	--artwork-major-green-menthe-hover: var(--green-menthe-sun-373-moon-652-hover);
-	--artwork-major-green-menthe-active: var(
-		--green-menthe-sun-373-moon-652-active
-	);
+	--artwork-major-green-menthe-active: var(--green-menthe-sun-373-moon-652-active);
 	--artwork-major-green-archipel: var(--green-archipel-sun-391-moon-716);
-	--artwork-major-green-archipel-hover: var(
-		--green-archipel-sun-391-moon-716-hover
-	);
-	--artwork-major-green-archipel-active: var(
-		--green-archipel-sun-391-moon-716-active
-	);
+	--artwork-major-green-archipel-hover: var(--green-archipel-sun-391-moon-716-hover);
+	--artwork-major-green-archipel-active: var(--green-archipel-sun-391-moon-716-active);
 	--artwork-major-blue-ecume: var(--blue-ecume-sun-247-moon-675);
 	--artwork-major-blue-ecume-hover: var(--blue-ecume-sun-247-moon-675-hover);
 	--artwork-major-blue-ecume-active: var(--blue-ecume-sun-247-moon-675-active);
 	--artwork-major-blue-cumulus: var(--blue-cumulus-sun-368-moon-732);
 	--artwork-major-blue-cumulus-hover: var(--blue-cumulus-sun-368-moon-732-hover);
-	--artwork-major-blue-cumulus-active: var(
-		--blue-cumulus-sun-368-moon-732-active
-	);
+	--artwork-major-blue-cumulus-active: var(--blue-cumulus-sun-368-moon-732-active);
 	--artwork-major-purple-glycine: var(--purple-glycine-sun-319-moon-630);
-	--artwork-major-purple-glycine-hover: var(
-		--purple-glycine-sun-319-moon-630-hover
-	);
-	--artwork-major-purple-glycine-active: var(
-		--purple-glycine-sun-319-moon-630-active
-	);
+	--artwork-major-purple-glycine-hover: var(--purple-glycine-sun-319-moon-630-hover);
+	--artwork-major-purple-glycine-active: var(--purple-glycine-sun-319-moon-630-active);
 	--artwork-major-pink-macaron: var(--pink-macaron-sun-406-moon-833);
 	--artwork-major-pink-macaron-hover: var(--pink-macaron-sun-406-moon-833-hover);
-	--artwork-major-pink-macaron-active: var(
-		--pink-macaron-sun-406-moon-833-active
-	);
+	--artwork-major-pink-macaron-active: var(--pink-macaron-sun-406-moon-833-active);
 	--artwork-major-pink-tuile: var(--pink-tuile-sun-425-moon-750);
 	--artwork-major-pink-tuile-hover: var(--pink-tuile-sun-425-moon-750-hover);
 	--artwork-major-pink-tuile-active: var(--pink-tuile-sun-425-moon-750-active);
 	--artwork-major-yellow-tournesol: var(--yellow-tournesol-sun-407-moon-922);
-	--artwork-major-yellow-tournesol-hover: var(
-		--yellow-tournesol-sun-407-moon-922-hover
-	);
-	--artwork-major-yellow-tournesol-active: var(
-		--yellow-tournesol-sun-407-moon-922-active
-	);
+	--artwork-major-yellow-tournesol-hover: var(--yellow-tournesol-sun-407-moon-922-hover);
+	--artwork-major-yellow-tournesol-active: var(--yellow-tournesol-sun-407-moon-922-active);
 	--artwork-major-yellow-moutarde: var(--yellow-moutarde-sun-348-moon-860);
-	--artwork-major-yellow-moutarde-hover: var(
-		--yellow-moutarde-sun-348-moon-860-hover
-	);
-	--artwork-major-yellow-moutarde-active: var(
-		--yellow-moutarde-sun-348-moon-860-active
-	);
-	--artwork-major-orange-terre-battue: var(
-		--orange-terre-battue-sun-370-moon-672
-	);
-	--artwork-major-orange-terre-battue-hover: var(
-		--orange-terre-battue-sun-370-moon-672-hover
-	);
-	--artwork-major-orange-terre-battue-active: var(
-		--orange-terre-battue-sun-370-moon-672-active
-	);
+	--artwork-major-yellow-moutarde-hover: var(--yellow-moutarde-sun-348-moon-860-hover);
+	--artwork-major-yellow-moutarde-active: var(--yellow-moutarde-sun-348-moon-860-active);
+	--artwork-major-orange-terre-battue: var(--orange-terre-battue-sun-370-moon-672);
+	--artwork-major-orange-terre-battue-hover: var(--orange-terre-battue-sun-370-moon-672-hover);
+	--artwork-major-orange-terre-battue-active: var(--orange-terre-battue-sun-370-moon-672-active);
 	--artwork-major-brown-cafe-creme: var(--brown-cafe-creme-sun-383-moon-885);
-	--artwork-major-brown-cafe-creme-hover: var(
-		--brown-cafe-creme-sun-383-moon-885-hover
-	);
-	--artwork-major-brown-cafe-creme-active: var(
-		--brown-cafe-creme-sun-383-moon-885-active
-	);
+	--artwork-major-brown-cafe-creme-hover: var(--brown-cafe-creme-sun-383-moon-885-hover);
+	--artwork-major-brown-cafe-creme-active: var(--brown-cafe-creme-sun-383-moon-885-active);
 	--artwork-major-brown-caramel: var(--brown-caramel-sun-425-moon-901);
-	--artwork-major-brown-caramel-hover: var(
-		--brown-caramel-sun-425-moon-901-hover
-	);
-	--artwork-major-brown-caramel-active: var(
-		--brown-caramel-sun-425-moon-901-active
-	);
+	--artwork-major-brown-caramel-hover: var(--brown-caramel-sun-425-moon-901-hover);
+	--artwork-major-brown-caramel-active: var(--brown-caramel-sun-425-moon-901-active);
 	--artwork-major-brown-opera: var(--brown-opera-sun-395-moon-820);
 	--artwork-major-brown-opera-hover: var(--brown-opera-sun-395-moon-820-hover);
 	--artwork-major-brown-opera-active: var(--brown-opera-sun-395-moon-820-active);
 	--artwork-major-beige-gris-galet: var(--beige-gris-galet-sun-407-moon-821);
-	--artwork-major-beige-gris-galet-hover: var(
-		--beige-gris-galet-sun-407-moon-821-hover
-	);
-	--artwork-major-beige-gris-galet-active: var(
-		--beige-gris-galet-sun-407-moon-821-active
-	);
+	--artwork-major-beige-gris-galet-hover: var(--beige-gris-galet-sun-407-moon-821-hover);
+	--artwork-major-beige-gris-galet-active: var(--beige-gris-galet-sun-407-moon-821-active);
 	--artwork-minor-blue-france: var(--blue-france-main-525);
 	--artwork-minor-red-marianne: var(--red-marianne-main-472);
 	--artwork-minor-green-tilleul-verveine: var(--green-tilleul-verveine-main-707);
@@ -1274,9 +1018,7 @@ body {
 	--artwork-decorative-grey: var(--grey-950-100);
 	--artwork-decorative-blue-france: var(--blue-france-950-100);
 	--artwork-decorative-red-marianne: var(--red-marianne-950-100);
-	--artwork-decorative-green-tilleul-verveine: var(
-		--green-tilleul-verveine-950-100
-	);
+	--artwork-decorative-green-tilleul-verveine: var(--green-tilleul-verveine-950-100);
 	--artwork-decorative-green-bourgeon: var(--green-bourgeon-950-100);
 	--artwork-decorative-green-emeraude: var(--green-emeraude-950-100);
 	--artwork-decorative-green-menthe: var(--green-menthe-950-100);
@@ -1296,9 +1038,7 @@ body {
 	--artwork-background-grey: var(--grey-975-75);
 	--artwork-background-blue-france: var(--blue-france-975-75);
 	--artwork-background-red-marianne: var(--red-marianne-975-75);
-	--artwork-background-green-tilleul-verveine: var(
-		--green-tilleul-verveine-975-75
-	);
+	--artwork-background-green-tilleul-verveine: var(--green-tilleul-verveine-975-75);
 	--artwork-background-green-bourgeon: var(--green-bourgeon-975-75);
 	--artwork-background-green-emeraude: var(--green-emeraude-975-75);
 	--artwork-background-green-menthe: var(--green-menthe-975-75);
@@ -1666,7 +1406,8 @@ body {
 
 /*!
  * DSFR v1.13.0 | SPDX-License-Identifier: MIT | License-Filename: LICENSE.md | restricted use (see terms and conditions)
- */ .fr-background-default--grey {
+ */
+.fr-background-default--grey {
 	--idle: transparent;
 	--hover: var(--background-default-grey-hover) !important;
 	--active: var(--background-default-grey-active) !important;
@@ -2909,13 +2650,13 @@ body {
 	fill: var(--artwork-motif-beige-gris-galet) !important;
 }
 .fr-border-width-0-5v {
-	border-width: .125rem !important;
+	border-width: 0.125rem !important;
 }
 .fr-border-width-1v {
-	border-width: .25rem !important;
+	border-width: 0.25rem !important;
 }
 .fr-border-width-2v {
-	border-width: .5rem !important;
+	border-width: 0.5rem !important;
 }
 @media screen and (min-width: 0\0) and (min-resolution: 72dpi) {
 	.fr-background-default--grey {
@@ -5917,7 +5658,7 @@ body {
 	}
 }
 
-:root[theme="dark"] {
+:root[theme='dark'] {
 	--grey-1000-50: #161616;
 	--grey-1000-50-hover: #343434;
 	--grey-1000-50-active: #474747;

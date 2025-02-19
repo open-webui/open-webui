@@ -113,7 +113,6 @@
 		</div>
 
 		<div class="flex space-x-1">
-
 			<a href="https://github.com/etalab-ia/albert-conversation" target="_blank">
 				<img
 					alt="Github Repo"
@@ -157,6 +156,5 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 </pre>
 		</div>
-
 	</div>
 </div>

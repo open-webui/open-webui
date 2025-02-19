@@ -166,7 +166,9 @@ export const createPicker = () => {
 								downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
 							}
 							// Create a Blob from the file download
-							const response = await fetch(downloadUrl, { headers: { Authorization: `Bearer ${token}`, Accept: '*/*' } });
+							const response = await fetch(downloadUrl, {
+								headers: { Authorization: `Bearer ${token}`, Accept: '*/*' }
+							});
 
 							if (!response.ok) {
 								const errorText = await response.text();

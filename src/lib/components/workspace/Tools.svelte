@@ -1,185 +1,169 @@
 <script lang="ts">
-import { toast } from "svelte-sonner";
-import fileSaver from "file-saver";
-const { saveAs } = fileSaver;
+	import { toast } from 'svelte-sonner';
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
 
-import { onMount, getContext } from "svelte";
-import {
-	WEBUI_NAME,
-	config,
-	prompts,
-	tools as _tools,
-	user,
-} from "$lib/stores";
-import {
-	createNewPrompt,
-	deletePromptByCommand,
-	getPrompts,
-} from "$lib/apis/prompts";
+	import { onMount, getContext } from 'svelte';
+	import { WEBUI_NAME, config, prompts, tools as _tools, user } from '$lib/stores';
+	import { createNewPrompt, deletePromptByCommand, getPrompts } from '$lib/apis/prompts';
 
-import { goto } from "$app/navigation";
-import {
-	createNewTool,
-	deleteToolById,
-	exportTools,
-	getToolById,
-	getToolList,
-	getTools,
-} from "$lib/apis/tools";
-import ArrowDownTray from "../icons/ArrowDownTray.svelte";
-import Tooltip from "../common/Tooltip.svelte";
-import ConfirmDialog from "../common/ConfirmDialog.svelte";
-import ToolMenu from "./Tools/ToolMenu.svelte";
-import EllipsisHorizontal from "../icons/EllipsisHorizontal.svelte";
-import ValvesModal from "./common/ValvesModal.svelte";
-import ManifestModal from "./common/ManifestModal.svelte";
-import Heart from "../icons/Heart.svelte";
-import DeleteConfirmDialog from "$lib/components/common/ConfirmDialog.svelte";
-import GarbageBin from "../icons/GarbageBin.svelte";
-import Search from "../icons/Search.svelte";
-import Plus from "../icons/Plus.svelte";
-import ChevronRight from "../icons/ChevronRight.svelte";
-import Spinner from "../common/Spinner.svelte";
-import { capitalizeFirstLetter } from "$lib/utils";
+	import { goto } from '$app/navigation';
+	import {
+		createNewTool,
+		deleteToolById,
+		exportTools,
+		getToolById,
+		getToolList,
+		getTools
+	} from '$lib/apis/tools';
+	import ArrowDownTray from '../icons/ArrowDownTray.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
+	import ConfirmDialog from '../common/ConfirmDialog.svelte';
+	import ToolMenu from './Tools/ToolMenu.svelte';
+	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
+	import ValvesModal from './common/ValvesModal.svelte';
+	import ManifestModal from './common/ManifestModal.svelte';
+	import Heart from '../icons/Heart.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import GarbageBin from '../icons/GarbageBin.svelte';
+	import Search from '../icons/Search.svelte';
+	import Plus from '../icons/Plus.svelte';
+	import ChevronRight from '../icons/ChevronRight.svelte';
+	import Spinner from '../common/Spinner.svelte';
+	import { capitalizeFirstLetter } from '$lib/utils';
 
-const i18n = getContext("i18n");
+	const i18n = getContext('i18n');
 
-let shiftKey = false;
-let loaded = false;
+	let shiftKey = false;
+	let loaded = false;
 
-let toolsImportInputElement: HTMLInputElement;
-let importFiles;
+	let toolsImportInputElement: HTMLInputElement;
+	let importFiles;
 
-let showConfirm = false;
-let query = "";
+	let showConfirm = false;
+	let query = '';
 
-let showManifestModal = false;
-let showValvesModal = false;
-let selectedTool = null;
+	let showManifestModal = false;
+	let showValvesModal = false;
+	let selectedTool = null;
 
-let showDeleteConfirm = false;
+	let showDeleteConfirm = false;
 
-let tools = [];
-let filteredItems = [];
+	let tools = [];
+	let filteredItems = [];
 
-$: filteredItems = tools.filter(
-	(t) =>
-		query === "" ||
-		t.name.toLowerCase().includes(query.toLowerCase()) ||
-		t.id.toLowerCase().includes(query.toLowerCase()),
-);
+	$: filteredItems = tools.filter(
+		(t) =>
+			query === '' ||
+			t.name.toLowerCase().includes(query.toLowerCase()) ||
+			t.id.toLowerCase().includes(query.toLowerCase())
+	);
 
-const shareHandler = async (tool) => {
-	const item = await getToolById(localStorage.token, tool.id).catch((error) => {
-		toast.error(`${error}`);
-		return null;
-	});
+	const shareHandler = async (tool) => {
+		const item = await getToolById(localStorage.token, tool.id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
 
-	toast.success($i18n.t("Redirecting you to OpenWebUI Community"));
+		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
 
-	const url = "https://openwebui.com";
+		const url = 'https://openwebui.com';
 
-	const tab = await window.open(`${url}/tools/create`, "_blank");
+		const tab = await window.open(`${url}/tools/create`, '_blank');
 
-	// Define the event handler function
-	const messageHandler = (event) => {
-		if (event.origin !== url) return;
-		if (event.data === "loaded") {
-			tab.postMessage(JSON.stringify(item), "*");
+		// Define the event handler function
+		const messageHandler = (event) => {
+			if (event.origin !== url) return;
+			if (event.data === 'loaded') {
+				tab.postMessage(JSON.stringify(item), '*');
 
-			// Remove the event listener after handling the message
-			window.removeEventListener("message", messageHandler);
+				// Remove the event listener after handling the message
+				window.removeEventListener('message', messageHandler);
+			}
+		};
+
+		window.addEventListener('message', messageHandler, false);
+		console.log(item);
+	};
+
+	const cloneHandler = async (tool) => {
+		const _tool = await getToolById(localStorage.token, tool.id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (_tool) {
+			sessionStorage.tool = JSON.stringify({
+				..._tool,
+				id: `${_tool.id}_clone`,
+				name: `${_tool.name} (Clone)`
+			});
+			goto('/workspace/tools/create');
 		}
 	};
 
-	window.addEventListener("message", messageHandler, false);
-	console.log(item);
-};
-
-const cloneHandler = async (tool) => {
-	const _tool = await getToolById(localStorage.token, tool.id).catch(
-		(error) => {
+	const exportHandler = async (tool) => {
+		const _tool = await getToolById(localStorage.token, tool.id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
-		},
-	);
-
-	if (_tool) {
-		sessionStorage.tool = JSON.stringify({
-			..._tool,
-			id: `${_tool.id}_clone`,
-			name: `${_tool.name} (Clone)`,
 		});
-		goto("/workspace/tools/create");
-	}
-};
 
-const exportHandler = async (tool) => {
-	const _tool = await getToolById(localStorage.token, tool.id).catch(
-		(error) => {
-			toast.error(`${error}`);
-			return null;
-		},
-	);
-
-	if (_tool) {
-		let blob = new Blob([JSON.stringify([_tool])], {
-			type: "application/json",
-		});
-		saveAs(blob, `tool-${_tool.id}-export-${Date.now()}.json`);
-	}
-};
-
-const deleteHandler = async (tool) => {
-	const res = await deleteToolById(localStorage.token, tool.id).catch(
-		(error) => {
-			toast.error(`${error}`);
-			return null;
-		},
-	);
-
-	if (res) {
-		toast.success($i18n.t("Tool deleted successfully"));
-
-		init();
-	}
-};
-
-const init = async () => {
-	tools = await getToolList(localStorage.token);
-	_tools.set(await getTools(localStorage.token));
-};
-
-onMount(async () => {
-	await init();
-	loaded = true;
-
-	const onKeyDown = (event) => {
-		if (event.key === "Shift") {
-			shiftKey = true;
+		if (_tool) {
+			let blob = new Blob([JSON.stringify([_tool])], {
+				type: 'application/json'
+			});
+			saveAs(blob, `tool-${_tool.id}-export-${Date.now()}.json`);
 		}
 	};
 
-	const onKeyUp = (event) => {
-		if (event.key === "Shift") {
+	const deleteHandler = async (tool) => {
+		const res = await deleteToolById(localStorage.token, tool.id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Tool deleted successfully'));
+
+			init();
+		}
+	};
+
+	const init = async () => {
+		tools = await getToolList(localStorage.token);
+		_tools.set(await getTools(localStorage.token));
+	};
+
+	onMount(async () => {
+		await init();
+		loaded = true;
+
+		const onKeyDown = (event) => {
+			if (event.key === 'Shift') {
+				shiftKey = true;
+			}
+		};
+
+		const onKeyUp = (event) => {
+			if (event.key === 'Shift') {
+				shiftKey = false;
+			}
+		};
+
+		const onBlur = () => {
 			shiftKey = false;
-		}
-	};
+		};
 
-	const onBlur = () => {
-		shiftKey = false;
-	};
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('keyup', onKeyUp);
+		window.addEventListener('blur', onBlur);
 
-	window.addEventListener("keydown", onKeyDown);
-	window.addEventListener("keyup", onKeyUp);
-	window.addEventListener("blur", onBlur);
-
-	return () => {
-		window.removeEventListener("keydown", onKeyDown);
-		window.removeEventListener("keyup", onKeyUp);
-		window.removeEventListener("blur", onBlur);
-	};
-});
+		return () => {
+			window.removeEventListener('keydown', onKeyDown);
+			window.removeEventListener('keyup', onKeyUp);
+			window.removeEventListener('blur', onBlur);
+		};
+	});
 </script>
 
 <svelte:head>
@@ -248,27 +232,22 @@ onMount(async () => {
 											v{tool?.meta?.manifest?.version ?? ''}
 										</div>
 									{/if}
-
 								</div>
 							</Tooltip>
-
-
 						</div>
-						
 					</div>
-						<div class="flex-1 flex flex-col gap-2 justify-center items-center align-middle">
-							<div class="line-clamp-1">
-								{tool.name}
-								<span class="text-gray-500 text-xs font-medium flex-shrink-0">{tool.id}</span>
-							</div>
-							<div class="px-0.5">
-								<div class="flex justify-center gap-1.5 mt-0.5 mb-0.5">
-									<div class="text-xs overflow-hidden text-ellipsis line-clamp-1">
-										{tool.meta.description}
-									</div>
+					<div class="flex-1 flex flex-col gap-2 justify-center items-center align-middle">
+						<div class="line-clamp-1">
+							{tool.name}
+							<span class="text-gray-500 text-xs font-medium flex-shrink-0">{tool.id}</span>
+						</div>
+						<div class="px-0.5">
+							<div class="flex justify-center gap-1.5 mt-0.5 mb-0.5">
+								<div class="text-xs overflow-hidden text-ellipsis line-clamp-1">
+									{tool.meta.description}
 								</div>
 							</div>
-
+						</div>
 					</div>
 				</a>
 

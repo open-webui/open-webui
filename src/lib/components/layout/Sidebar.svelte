@@ -1,6 +1,6 @@
 <script lang="ts">
-import { toast } from "svelte-sonner";
-import { v4 as uuidv4 } from "uuid";
+	import { toast } from 'svelte-sonner';
+	import { v4 as uuidv4 } from 'uuid';
 
 	import { goto } from '$app/navigation';
 	import {
@@ -24,64 +24,60 @@ import { v4 as uuidv4 } from "uuid";
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
-const i18n = getContext("i18n");
+	const i18n = getContext('i18n');
 
-import {
-	deleteChatById,
-	getChatList,
-	getAllTags,
-	getChatListBySearchText,
-	createNewChat,
-	getPinnedChatList,
-	toggleChatPinnedStatusById,
-	getChatPinnedStatusById,
-	getChatById,
-	updateChatFolderIdById,
-	importChat,
-} from "$lib/apis/chats";
-import {
-	createNewFolder,
-	getFolders,
-	updateFolderParentIdById,
-} from "$lib/apis/folders";
-import { WEBUI_BASE_URL } from "$lib/constants";
+	import {
+		deleteChatById,
+		getChatList,
+		getAllTags,
+		getChatListBySearchText,
+		createNewChat,
+		getPinnedChatList,
+		toggleChatPinnedStatusById,
+		getChatPinnedStatusById,
+		getChatById,
+		updateChatFolderIdById,
+		importChat
+	} from '$lib/apis/chats';
+	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
-import ArchivedChatsModal from "./Sidebar/ArchivedChatsModal.svelte";
-import UserMenu from "./Sidebar/UserMenu.svelte";
-import ChatItem from "./Sidebar/ChatItem.svelte";
-import Spinner from "../common/Spinner.svelte";
-import Loader from "../common/Loader.svelte";
-import AddFilesPlaceholder from "../AddFilesPlaceholder.svelte";
-import SearchInput from "./Sidebar/SearchInput.svelte";
-import Folder from "../common/Folder.svelte";
-import Plus from "../icons/Plus.svelte";
-import Tooltip from "../common/Tooltip.svelte";
-import Folders from "./Sidebar/Folders.svelte";
-import { getChannels, createNewChannel } from "$lib/apis/channels";
-import ChannelModal from "./Sidebar/ChannelModal.svelte";
-import ChannelItem from "./Sidebar/ChannelItem.svelte";
-import PencilSquare from "../icons/PencilSquare.svelte";
-import DrawerClose from "../icons/DrawerClose.svelte";
-import FolderCreate from "../icons/FolderCreate.svelte";
+	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
+	import UserMenu from './Sidebar/UserMenu.svelte';
+	import ChatItem from './Sidebar/ChatItem.svelte';
+	import Spinner from '../common/Spinner.svelte';
+	import Loader from '../common/Loader.svelte';
+	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
+	import SearchInput from './Sidebar/SearchInput.svelte';
+	import Folder from '../common/Folder.svelte';
+	import Plus from '../icons/Plus.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
+	import Folders from './Sidebar/Folders.svelte';
+	import { getChannels, createNewChannel } from '$lib/apis/channels';
+	import ChannelModal from './Sidebar/ChannelModal.svelte';
+	import ChannelItem from './Sidebar/ChannelItem.svelte';
+	import PencilSquare from '../icons/PencilSquare.svelte';
+	import DrawerClose from '../icons/DrawerClose.svelte';
+	import FolderCreate from '../icons/FolderCreate.svelte';
 
-const BREAKPOINT = 768;
+	const BREAKPOINT = 768;
 
-let navElement;
-let search = "";
+	let navElement;
+	let search = '';
 
-let shiftKey = false;
+	let shiftKey = false;
 
-let selectedChatId = null;
-let showDropdown = false;
-let showPinnedChat = true;
+	let selectedChatId = null;
+	let showDropdown = false;
+	let showPinnedChat = true;
 
-let showCreateChannel = false;
+	let showCreateChannel = false;
 
-// Pagination variables
-let chatListLoading = false;
-let allChatsLoaded = false;
+	// Pagination variables
+	let chatListLoading = false;
+	let allChatsLoaded = false;
 
-let folders = {};
+	let folders = {};
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
@@ -89,295 +85,266 @@ let folders = {};
 			return [];
 		});
 
-	folders = {};
+		folders = {};
 
-	// First pass: Initialize all folder entries
-	for (const folder of folderList) {
-		// Ensure folder is added to folders with its data
-		folders[folder.id] = { ...(folders[folder.id] || {}), ...folder };
-	}
+		// First pass: Initialize all folder entries
+		for (const folder of folderList) {
+			// Ensure folder is added to folders with its data
+			folders[folder.id] = { ...(folders[folder.id] || {}), ...folder };
+		}
 
-	// Second pass: Tie child folders to their parents
-	for (const folder of folderList) {
-		if (folder.parent_id) {
-			// Ensure the parent folder is initialized if it doesn't exist
-			if (!folders[folder.parent_id]) {
-				folders[folder.parent_id] = {}; // Create a placeholder if not already present
+		// Second pass: Tie child folders to their parents
+		for (const folder of folderList) {
+			if (folder.parent_id) {
+				// Ensure the parent folder is initialized if it doesn't exist
+				if (!folders[folder.parent_id]) {
+					folders[folder.parent_id] = {}; // Create a placeholder if not already present
+				}
+
+				// Initialize childrenIds array if it doesn't exist and add the current folder id
+				folders[folder.parent_id].childrenIds = folders[folder.parent_id].childrenIds
+					? [...folders[folder.parent_id].childrenIds, folder.id]
+					: [folder.id];
+
+				// Sort the children by updated_at field
+				folders[folder.parent_id].childrenIds.sort((a, b) => {
+					return folders[b].updated_at - folders[a].updated_at;
+				});
+			}
+		}
+	};
+
+	const createFolder = async (name = 'Dossier') => {
+		if (name === '') {
+			toast.error($i18n.t('Folder name cannot be empty.'));
+			return;
+		}
+
+		const rootFolders = Object.values(folders).filter((folder) => folder.parent_id === null);
+		if (rootFolders.find((folder) => folder.name.toLowerCase() === name.toLowerCase())) {
+			// If a folder with the same name already exists, append a number to the name
+			let i = 1;
+			while (
+				rootFolders.find((folder) => folder.name.toLowerCase() === `${name} ${i}`.toLowerCase())
+			) {
+				i++;
 			}
 
-			// Initialize childrenIds array if it doesn't exist and add the current folder id
-			folders[folder.parent_id].childrenIds = folders[folder.parent_id]
-				.childrenIds
-				? [...folders[folder.parent_id].childrenIds, folder.id]
-				: [folder.id];
-
-			// Sort the children by updated_at field
-			folders[folder.parent_id].childrenIds.sort((a, b) => {
-				return folders[b].updated_at - folders[a].updated_at;
-			});
+			name = `${name} ${i}`;
 		}
-	}
-};
-
-const createFolder = async (name = "Dossier") => {
-	if (name === "") {
-		toast.error($i18n.t("Folder name cannot be empty."));
-		return;
-	}
-
-	const rootFolders = Object.values(folders).filter(
-		(folder) => folder.parent_id === null,
-	);
-	if (
-		rootFolders.find(
-			(folder) => folder.name.toLowerCase() === name.toLowerCase(),
-		)
-	) {
-		// If a folder with the same name already exists, append a number to the name
-		let i = 1;
-		while (
-			rootFolders.find(
-				(folder) => folder.name.toLowerCase() === `${name} ${i}`.toLowerCase(),
-			)
-		) {
-			i++;
-		}
-
-		name = `${name} ${i}`;
-	}
 
 		const res = await createNewFolder(localStorage.token, name).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
-	if (res) {
-		await initFolders();
-		// After folder is created, find it and trigger edit mode
-		await tick();
-		const folderButton = document.querySelector(`#folder-${res.id}-button`);
-		if (folderButton) {
-			const event = new MouseEvent("dblclick", {
-				bubbles: true,
-				cancelable: true,
-				view: window,
-			});
-			folderButton.dispatchEvent(event);
-		}
-	}
-};
-
-const initChannels = async () => {
-	await channels.set(await getChannels(localStorage.token));
-};
-
-const initChatList = async () => {
-	// Reset pagination variables
-	tags.set(await getAllTags(localStorage.token));
-	pinnedChats.set(await getPinnedChatList(localStorage.token));
-	initFolders();
-
-	currentChatPage.set(1);
-	allChatsLoaded = false;
-
-	if (search) {
-		await chats.set(
-			await getChatListBySearchText(
-				localStorage.token,
-				search,
-				$currentChatPage,
-			),
-		);
-	} else {
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-	}
-
-	// Enable pagination
-	scrollPaginationEnabled.set(true);
-};
-
-const loadMoreChats = async () => {
-	chatListLoading = true;
-
-	currentChatPage.set($currentChatPage + 1);
-
-	let newChatList = [];
-
-	if (search) {
-		newChatList = await getChatListBySearchText(
-			localStorage.token,
-			search,
-			$currentChatPage,
-		);
-	} else {
-		newChatList = await getChatList(localStorage.token, $currentChatPage);
-	}
-
-	// once the bottom of the list has been reached (no results) there is no need to continue querying
-	allChatsLoaded = newChatList.length === 0;
-	await chats.set([...($chats ? $chats : []), ...newChatList]);
-
-	chatListLoading = false;
-};
-
-let searchDebounceTimeout;
-
-const searchDebounceHandler = async () => {
-	console.log("search", search);
-	chats.set(null);
-
-	if (searchDebounceTimeout) {
-		clearTimeout(searchDebounceTimeout);
-	}
-
-	if (search === "") {
-		await initChatList();
-		return;
-	} else {
-		searchDebounceTimeout = setTimeout(async () => {
-			allChatsLoaded = false;
-			currentChatPage.set(1);
-			await chats.set(
-				await getChatListBySearchText(localStorage.token, search),
-			);
-
-			if ($chats.length === 0) {
-				tags.set(await getAllTags(localStorage.token));
+		if (res) {
+			await initFolders();
+			// After folder is created, find it and trigger edit mode
+			await tick();
+			const folderButton = document.querySelector(`#folder-${res.id}-button`);
+			if (folderButton) {
+				const event = new MouseEvent('dblclick', {
+					bubbles: true,
+					cancelable: true,
+					view: window
+				});
+				folderButton.dispatchEvent(event);
 			}
-		}, 1000);
-	}
-};
-
-const importChatHandler = async (items, pinned = false, folderId = null) => {
-	console.log("importChatHandler", items, pinned, folderId);
-	for (const item of items) {
-		console.log(item);
-		if (item.chat) {
-			await importChat(
-				localStorage.token,
-				item.chat,
-				item?.meta ?? {},
-				pinned,
-				folderId,
-			);
 		}
-	}
+	};
 
-	initChatList();
-};
+	const initChannels = async () => {
+		await channels.set(await getChannels(localStorage.token));
+	};
 
-const inputFilesHandler = async (files) => {
-	console.log(files);
+	const initChatList = async () => {
+		// Reset pagination variables
+		tags.set(await getAllTags(localStorage.token));
+		pinnedChats.set(await getPinnedChatList(localStorage.token));
+		initFolders();
 
-	for (const file of files) {
-		const reader = new FileReader();
-		reader.onload = async (e) => {
-			const content = e.target.result;
+		currentChatPage.set(1);
+		allChatsLoaded = false;
 
-			try {
-				const chatItems = JSON.parse(content);
-				importChatHandler(chatItems);
-			} catch {
-				toast.error($i18n.t(`Invalid file format.`));
+		if (search) {
+			await chats.set(await getChatListBySearchText(localStorage.token, search, $currentChatPage));
+		} else {
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		}
+
+		// Enable pagination
+		scrollPaginationEnabled.set(true);
+	};
+
+	const loadMoreChats = async () => {
+		chatListLoading = true;
+
+		currentChatPage.set($currentChatPage + 1);
+
+		let newChatList = [];
+
+		if (search) {
+			newChatList = await getChatListBySearchText(localStorage.token, search, $currentChatPage);
+		} else {
+			newChatList = await getChatList(localStorage.token, $currentChatPage);
+		}
+
+		// once the bottom of the list has been reached (no results) there is no need to continue querying
+		allChatsLoaded = newChatList.length === 0;
+		await chats.set([...($chats ? $chats : []), ...newChatList]);
+
+		chatListLoading = false;
+	};
+
+	let searchDebounceTimeout;
+
+	const searchDebounceHandler = async () => {
+		console.log('search', search);
+		chats.set(null);
+
+		if (searchDebounceTimeout) {
+			clearTimeout(searchDebounceTimeout);
+		}
+
+		if (search === '') {
+			await initChatList();
+			return;
+		} else {
+			searchDebounceTimeout = setTimeout(async () => {
+				allChatsLoaded = false;
+				currentChatPage.set(1);
+				await chats.set(await getChatListBySearchText(localStorage.token, search));
+
+				if ($chats.length === 0) {
+					tags.set(await getAllTags(localStorage.token));
+				}
+			}, 1000);
+		}
+	};
+
+	const importChatHandler = async (items, pinned = false, folderId = null) => {
+		console.log('importChatHandler', items, pinned, folderId);
+		for (const item of items) {
+			console.log(item);
+			if (item.chat) {
+				await importChat(localStorage.token, item.chat, item?.meta ?? {}, pinned, folderId);
 			}
-		};
+		}
 
-		reader.readAsText(file);
-	}
-};
-
-const tagEventHandler = async (type, tagName, chatId) => {
-	console.log(type, tagName, chatId);
-	if (type === "delete") {
 		initChatList();
-	} else if (type === "add") {
-		initChatList();
-	}
-};
+	};
 
-let draggedOver = false;
+	const inputFilesHandler = async (files) => {
+		console.log(files);
 
-const onDragOver = (e) => {
-	e.preventDefault();
+		for (const file of files) {
+			const reader = new FileReader();
+			reader.onload = async (e) => {
+				const content = e.target.result;
 
-	// Check if a file is being draggedOver.
-	if (e.dataTransfer?.types?.includes("Files")) {
-		draggedOver = true;
-	} else {
+				try {
+					const chatItems = JSON.parse(content);
+					importChatHandler(chatItems);
+				} catch {
+					toast.error($i18n.t(`Invalid file format.`));
+				}
+			};
+
+			reader.readAsText(file);
+		}
+	};
+
+	const tagEventHandler = async (type, tagName, chatId) => {
+		console.log(type, tagName, chatId);
+		if (type === 'delete') {
+			initChatList();
+		} else if (type === 'add') {
+			initChatList();
+		}
+	};
+
+	let draggedOver = false;
+
+	const onDragOver = (e) => {
+		e.preventDefault();
+
+		// Check if a file is being draggedOver.
+		if (e.dataTransfer?.types?.includes('Files')) {
+			draggedOver = true;
+		} else {
+			draggedOver = false;
+		}
+	};
+
+	const onDragLeave = () => {
 		draggedOver = false;
-	}
-};
+	};
 
-const onDragLeave = () => {
-	draggedOver = false;
-};
+	const onDrop = async (e) => {
+		e.preventDefault();
+		console.log(e); // Log the drop event
 
-const onDrop = async (e) => {
-	e.preventDefault();
-	console.log(e); // Log the drop event
+		// Perform file drop check and handle it accordingly
+		if (e.dataTransfer?.files) {
+			const inputFiles = Array.from(e.dataTransfer?.files);
 
-	// Perform file drop check and handle it accordingly
-	if (e.dataTransfer?.files) {
-		const inputFiles = Array.from(e.dataTransfer?.files);
+			if (inputFiles && inputFiles.length > 0) {
+				console.log(inputFiles); // Log the dropped files
+				inputFilesHandler(inputFiles); // Handle the dropped files
+			}
+		}
 
-		if (inputFiles && inputFiles.length > 0) {
-			console.log(inputFiles); // Log the dropped files
-			inputFilesHandler(inputFiles); // Handle the dropped files
+		draggedOver = false; // Reset draggedOver status after drop
+	};
+
+	let touchstart;
+	let touchend;
+
+	function checkDirection() {
+		const screenWidth = window.innerWidth;
+		const swipeDistance = Math.abs(touchend.screenX - touchstart.screenX);
+		if (touchstart.clientX < 40 && swipeDistance >= screenWidth / 8) {
+			if (touchend.screenX < touchstart.screenX) {
+				showSidebar.set(false);
+			}
+			if (touchend.screenX > touchstart.screenX) {
+				showSidebar.set(true);
+			}
 		}
 	}
 
-	draggedOver = false; // Reset draggedOver status after drop
-};
+	const onTouchStart = (e) => {
+		touchstart = e.changedTouches[0];
+		console.log(touchstart.clientX);
+	};
 
-let touchstart;
-let touchend;
+	const onTouchEnd = (e) => {
+		touchend = e.changedTouches[0];
+		checkDirection();
+	};
 
-function checkDirection() {
-	const screenWidth = window.innerWidth;
-	const swipeDistance = Math.abs(touchend.screenX - touchstart.screenX);
-	if (touchstart.clientX < 40 && swipeDistance >= screenWidth / 8) {
-		if (touchend.screenX < touchstart.screenX) {
-			showSidebar.set(false);
+	const onKeyDown = (e) => {
+		if (e.key === 'Shift') {
+			shiftKey = true;
 		}
-		if (touchend.screenX > touchstart.screenX) {
-			showSidebar.set(true);
+	};
+
+	const onKeyUp = (e) => {
+		if (e.key === 'Shift') {
+			shiftKey = false;
 		}
-	}
-}
+	};
 
-const onTouchStart = (e) => {
-	touchstart = e.changedTouches[0];
-	console.log(touchstart.clientX);
-};
+	const onFocus = () => {};
 
-const onTouchEnd = (e) => {
-	touchend = e.changedTouches[0];
-	checkDirection();
-};
-
-const onKeyDown = (e) => {
-	if (e.key === "Shift") {
-		shiftKey = true;
-	}
-};
-
-const onKeyUp = (e) => {
-	if (e.key === "Shift") {
+	const onBlur = () => {
 		shiftKey = false;
-	}
-};
+		selectedChatId = null;
+	};
 
-const onFocus = () => {};
-
-const onBlur = () => {
-	shiftKey = false;
-	selectedChatId = null;
-};
-
-onMount(async () => {
-	showPinnedChat = localStorage?.showPinnedChat
-		? localStorage.showPinnedChat === "true"
-		: true;
+	onMount(async () => {
+		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
 
 		mobile.subscribe((value) => {
 			if ($showSidebar && value) {
@@ -416,41 +383,41 @@ onMount(async () => {
 			}
 		});
 
-	await initChannels();
-	await initChatList();
+		await initChannels();
+		await initChatList();
 
-	window.addEventListener("keydown", onKeyDown);
-	window.addEventListener("keyup", onKeyUp);
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('keyup', onKeyUp);
 
-	window.addEventListener("touchstart", onTouchStart);
-	window.addEventListener("touchend", onTouchEnd);
+		window.addEventListener('touchstart', onTouchStart);
+		window.addEventListener('touchend', onTouchEnd);
 
-	window.addEventListener("focus", onFocus);
-	window.addEventListener("blur", onBlur);
+		window.addEventListener('focus', onFocus);
+		window.addEventListener('blur', onBlur);
 
-	const dropZone = document.getElementById("sidebar");
+		const dropZone = document.getElementById('sidebar');
 
-	dropZone?.addEventListener("dragover", onDragOver);
-	dropZone?.addEventListener("drop", onDrop);
-	dropZone?.addEventListener("dragleave", onDragLeave);
-});
+		dropZone?.addEventListener('dragover', onDragOver);
+		dropZone?.addEventListener('drop', onDrop);
+		dropZone?.addEventListener('dragleave', onDragLeave);
+	});
 
-onDestroy(() => {
-	window.removeEventListener("keydown", onKeyDown);
-	window.removeEventListener("keyup", onKeyUp);
+	onDestroy(() => {
+		window.removeEventListener('keydown', onKeyDown);
+		window.removeEventListener('keyup', onKeyUp);
 
-	window.removeEventListener("touchstart", onTouchStart);
-	window.removeEventListener("touchend", onTouchEnd);
+		window.removeEventListener('touchstart', onTouchStart);
+		window.removeEventListener('touchend', onTouchEnd);
 
-	window.removeEventListener("focus", onFocus);
-	window.removeEventListener("blur", onBlur);
+		window.removeEventListener('focus', onFocus);
+		window.removeEventListener('blur', onBlur);
 
-	const dropZone = document.getElementById("sidebar");
+		const dropZone = document.getElementById('sidebar');
 
-	dropZone?.removeEventListener("dragover", onDragOver);
-	dropZone?.removeEventListener("drop", onDrop);
-	dropZone?.removeEventListener("dragleave", onDragLeave);
-});
+		dropZone?.removeEventListener('dragover', onDragOver);
+		dropZone?.removeEventListener('drop', onDrop);
+		dropZone?.removeEventListener('dragleave', onDragLeave);
+	});
 </script>
 
 <ArchivedChatsModal
@@ -517,10 +484,8 @@ onDestroy(() => {
 					<DrawerClose className="size-5" strokeWidth="2" />
 				</div>
 			</button>
-
-
 		</div>
-				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
+		{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
 			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
 					class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] transition fr-background-action-high--blue-france hover:bg-[var(--background-action-high-blue-france-hover)]"
@@ -553,14 +518,15 @@ onDestroy(() => {
 					</div>
 
 					<div class="flex self-center">
-						<div class=" self-center font-medium text-sm font-primary text-white">{$i18n.t('Workspace')}</div>
+						<div class=" self-center font-medium text-sm font-primary text-white">
+							{$i18n.t('Workspace')}
+						</div>
 					</div>
 				</a>
 			</div>
 		{/if}
-					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-
-					<a
+		<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+			<a
 				id="sidebar-new-chat-button"
 				class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
 				href="/"
@@ -589,7 +555,6 @@ onDestroy(() => {
 			</a>
 		</div>
 
-
 		<div class="relative {$temporaryChatEnabled ? 'opacity-20' : ''}">
 			{#if $temporaryChatEnabled}
 				<div class="absolute z-40 w-full h-full flex justify-center"></div>
@@ -602,7 +567,11 @@ onDestroy(() => {
 			/>
 		</div>
 
-		<div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden {$temporaryChatEnabled ? 'opacity-20' : ''}">
+		<div
+			class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden {$temporaryChatEnabled
+				? 'opacity-20'
+				: ''}"
+		>
 			{#if $config?.features?.enable_channels && ($user.role === 'admin' || $channels.length > 0) && !search}
 				<Folder
 					className="px-2 mt-0.5"
@@ -632,9 +601,9 @@ onDestroy(() => {
 
 			{#if !search}
 				<div class="px-2 mt-4 flex items-center justify-between">
-					<div class="text-sm font-medium ">{$i18n.t('Folders')}</div>
+					<div class="text-sm font-medium">{$i18n.t('Folders')}</div>
 					<button
-						class="p-1 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg transition hover:text-[var(--text-action-high-blue-france)] "
+						class="p-1 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg transition hover:text-[var(--text-action-high-blue-france)]"
 						on:click={() => createFolder()}
 					>
 						<FolderCreate className="size-[1.3rem]" strokeWidth="2" />
@@ -657,7 +626,7 @@ onDestroy(() => {
 
 			{#if !search && $pinnedChats.length > 0}
 				<div class="flex flex-col space-y-1 px-2 mt-2">
-					<div class="text-sm font-medium  mb-1">{$i18n.t('Pinned')}</div>
+					<div class="text-sm font-medium mb-1">{$i18n.t('Pinned')}</div>
 					<div class="flex flex-col space-y-1">
 						{#each $pinnedChats as chat}
 							<ChatItem
@@ -724,7 +693,9 @@ onDestroy(() => {
 									}
 								}}
 							>
-								<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
+								<div
+									class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
+								>
 									<Spinner className="size-4" />
 									<div>Loading...</div>
 								</div>

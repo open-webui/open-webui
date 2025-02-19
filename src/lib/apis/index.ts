@@ -515,17 +515,14 @@ export const getPipelines = async (token: string, urlIdx?: string) => {
 		searchParams.append('urlIdx', urlIdx);
 	}
 
-	const res = await fetch(
-		`${WEBUI_BASE_URL}/api/v1/pipelines/?${searchParams.toString()}`,
-		{
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				...(token && { authorization: `Bearer ${token}` })
-			}
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/pipelines/?${searchParams.toString()}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
 		}
-	);
+	});
 
 	if (error) {
 		throw error;

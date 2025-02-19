@@ -219,7 +219,10 @@ class Tools:
 						</div>
 
 						<div class="flex-1">
-							<Tooltip content={$i18n?.t?.('e.g. My Tools') ?? 'e.g. My Tools'} placement="top-start">
+							<Tooltip
+								content={$i18n?.t?.('e.g. My Tools') ?? 'e.g. My Tools'}
+								placement="top-start"
+							>
 								<input
 									class="w-full text-2xl font-semibold bg-transparent outline-none"
 									type="text"
@@ -253,7 +256,11 @@ class Tools:
 								{id}
 							</div>
 						{:else}
-							<Tooltip className="w-full" content={$i18n?.t?.('e.g. my_tools') ?? 'e.g. my_tools'} placement="top-start">
+							<Tooltip
+								className="w-full"
+								content={$i18n?.t?.('e.g. my_tools') ?? 'e.g. my_tools'}
+								placement="top-start"
+							>
 								<input
 									class="w-full text-sm disabled:text-gray-500 bg-transparent outline-none"
 									type="text"
@@ -267,7 +274,8 @@ class Tools:
 
 						<Tooltip
 							className="w-full self-center items-center flex"
-							content={$i18n?.t?.('e.g. Tools for performing various operations') ?? 'e.g. Tools for performing various operations'}
+							content={$i18n?.t?.('e.g. Tools for performing various operations') ??
+								'e.g. Tools for performing various operations'}
 							placement="top-start"
 						>
 							<input
@@ -301,10 +309,14 @@ class Tools:
 				<div class="pb-3 flex justify-between">
 					<div class="flex-1 pr-3">
 						<div class="text-xs text-gray-500 line-clamp-2">
-							<span class=" font-semibold dark:text-gray-200">{$i18n?.t?.('Warning:') ?? 'Warning:'}</span>
-							{$i18n?.t?.('Tools are a function calling system with arbitrary code execution') ?? 'Tools are a function calling system with arbitrary code execution'} <br />—
+							<span class=" font-semibold dark:text-gray-200"
+								>{$i18n?.t?.('Warning:') ?? 'Warning:'}</span
+							>
+							{$i18n?.t?.('Tools are a function calling system with arbitrary code execution') ??
+								'Tools are a function calling system with arbitrary code execution'} <br />—
 							<span class=" font-medium dark:text-gray-400"
-								>{$i18n?.t?.(`don't install random tools from sources you don't trust.`) ?? `don't install random tools from sources you don't trust.`}</span
+								>{$i18n?.t?.(`don't install random tools from sources you don't trust.`) ??
+									`don't install random tools from sources you don't trust.`}</span
 							>
 						</div>
 					</div>
@@ -329,20 +341,29 @@ class Tools:
 >
 	<div class="text-sm text-gray-500">
 		<div class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-lg px-4 py-3">
-			<div>{$i18n?.t?.('Please carefully review the following warnings:') ?? 'Please carefully review the following warnings:'}</div>
+			<div>
+				{$i18n?.t?.('Please carefully review the following warnings:') ??
+					'Please carefully review the following warnings:'}
+			</div>
 
 			<ul class=" mt-1 list-disc pl-4 text-xs">
 				<li>
-					{$i18n?.t?.('Tools have a function calling system that allows arbitrary code execution.') ?? 'Tools have a function calling system that allows arbitrary code execution.'}
+					{$i18n?.t?.(
+						'Tools have a function calling system that allows arbitrary code execution.'
+					) ?? 'Tools have a function calling system that allows arbitrary code execution.'}
 				</li>
-				<li>{$i18n?.t?.('Do not install tools from sources you do not fully trust.') ?? 'Do not install tools from sources you do not fully trust.'}</li>
+				<li>
+					{$i18n?.t?.('Do not install tools from sources you do not fully trust.') ??
+						'Do not install tools from sources you do not fully trust.'}
+				</li>
 			</ul>
 		</div>
 
 		<div class="my-3">
 			{$i18n?.t?.(
 				'I acknowledge that I have read and I understand the implications of my action. I am aware of the risks associated with executing arbitrary code and I have verified the trustworthiness of the source.'
-			) ?? 'I acknowledge that I have read and I understand the implications of my action. I am aware of the risks associated with executing arbitrary code and I have verified the trustworthiness of the source.'}
+			) ??
+				'I acknowledge that I have read and I understand the implications of my action. I am aware of the risks associated with executing arbitrary code and I have verified the trustworthiness of the source.'}
 		</div>
 	</div>
 </ConfirmDialog>

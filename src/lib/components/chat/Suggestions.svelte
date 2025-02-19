@@ -4,7 +4,7 @@
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 	import { WEBUI_NAME } from '$lib/stores';
 	import { WEBUI_VERSION } from '$lib/constants';
-	
+
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
@@ -52,9 +52,9 @@
 	// Add validation and transformation of input prompts
 	$: {
 		console.log('Raw suggestion prompts:', suggestionPrompts);
-		
+
 		// Ensure prompts are in the correct format
-		const formattedPrompts = suggestionPrompts.map(prompt => {
+		const formattedPrompts = suggestionPrompts.map((prompt) => {
 			if (typeof prompt === 'string') {
 				return { title: prompt, content: prompt };
 			}
@@ -62,9 +62,7 @@
 		});
 
 		// Filter out any invalid prompts
-		sortedPrompts = formattedPrompts.filter(prompt => 
-			prompt && (prompt.content || prompt.title)
-		);
+		sortedPrompts = formattedPrompts.filter((prompt) => prompt && (prompt.content || prompt.title));
 
 		console.log('Formatted prompts:', sortedPrompts);
 	}

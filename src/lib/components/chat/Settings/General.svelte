@@ -1,50 +1,47 @@
 <script lang="ts">
-import { toast } from "svelte-sonner";
-import { createEventDispatcher, onMount, getContext } from "svelte";
-import { getLanguages } from "$lib/i18n";
-const dispatch = createEventDispatcher();
+	import { toast } from 'svelte-sonner';
+	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { getLanguages } from '$lib/i18n';
+	const dispatch = createEventDispatcher();
 
-import { models, settings, theme, user } from "$lib/stores";
+	import { models, settings, theme, user } from '$lib/stores';
 
-const i18n = getContext("i18n");
+	const i18n = getContext('i18n');
 
-import AdvancedParams from "./Advanced/AdvancedParams.svelte";
+	import AdvancedParams from './Advanced/AdvancedParams.svelte';
 
-export let saveSettings: Function;
-export let getModels: Function;
+	export let saveSettings: Function;
+	export let getModels: Function;
 
-// General
-let themes = [
-	"dark",
-	"light",
-];
-let selectedTheme = "system";
+	// General
+	let themes = ['dark', 'light'];
+	let selectedTheme = 'system';
 
-let languages: Awaited<ReturnType<typeof getLanguages>> = [];
-let lang = $i18n.language;
-let notificationEnabled = false;
-let system = "";
+	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
+	let lang = $i18n.language;
+	let notificationEnabled = false;
+	let system = '';
 
-let showAdvanced = false;
+	let showAdvanced = false;
 
-const toggleNotification = async () => {
-	const permission = await Notification.requestPermission();
+	const toggleNotification = async () => {
+		const permission = await Notification.requestPermission();
 
-	if (permission === "granted") {
-		notificationEnabled = !notificationEnabled;
-		saveSettings({ notificationEnabled: notificationEnabled });
-	} else {
-		toast.error(
-			$i18n.t(
-				"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.",
-			),
-		);
-	}
-};
+		if (permission === 'granted') {
+			notificationEnabled = !notificationEnabled;
+			saveSettings({ notificationEnabled: notificationEnabled });
+		} else {
+			toast.error(
+				$i18n.t(
+					'Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.'
+				)
+			);
+		}
+	};
 
-// Advanced
-let requestFormat = "";
-let keepAlive: string | null = null;
+	// Advanced
+	let requestFormat = '';
+	let keepAlive: string | null = null;
 
 	let params = {
 		// Advanced
@@ -69,74 +66,70 @@ let keepAlive: string | null = null;
 		num_gpu: null
 	};
 
-const toggleRequestFormat = async () => {
-	if (requestFormat === "") {
-		requestFormat = "json";
-	} else {
-		requestFormat = "";
-	}
+	const toggleRequestFormat = async () => {
+		if (requestFormat === '') {
+			requestFormat = 'json';
+		} else {
+			requestFormat = '';
+		}
 
-	saveSettings({
-		requestFormat: requestFormat !== "" ? requestFormat : undefined,
+		saveSettings({
+			requestFormat: requestFormat !== '' ? requestFormat : undefined
+		});
+	};
+
+	onMount(async () => {
+		selectedTheme = localStorage.theme ?? 'system';
+		themeChangeHandler(selectedTheme);
+
+		languages = await getLanguages();
+
+		notificationEnabled = $settings.notificationEnabled ?? false;
+		system = $settings.system ?? '';
+
+		requestFormat = $settings.requestFormat ?? '';
+		keepAlive = $settings.keepAlive ?? null;
+
+		params = { ...params, ...$settings.params };
+		params.stop = $settings?.params?.stop ? ($settings?.params?.stop ?? []).join(',') : null;
 	});
-};
 
-onMount(async () => {
-	selectedTheme = localStorage.theme ?? "system";
-	themeChangeHandler(selectedTheme);
+	const applyTheme = (_theme: string) => {
+		let themeToApply = _theme === 'oled-dark' ? 'dark' : _theme;
 
-	languages = await getLanguages();
+		if (_theme === 'system') {
+			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+		}
 
-	notificationEnabled = $settings.notificationEnabled ?? false;
-	system = $settings.system ?? "";
+		if (themeToApply === 'dark' && !_theme.includes('oled')) {
+			document.documentElement.style.setProperty('--color-gray-800', '#333');
+			document.documentElement.style.setProperty('--color-gray-850', '#262626');
+			document.documentElement.style.setProperty('--color-gray-900', '#161616');
+			document.documentElement.style.setProperty('--color-gray-950', '#0d0d0d');
+		}
 
-	requestFormat = $settings.requestFormat ?? "";
-	keepAlive = $settings.keepAlive ?? null;
+		document.documentElement.setAttribute('theme', themeToApply);
 
-	params = { ...params, ...$settings.params };
-	params.stop = $settings?.params?.stop
-		? ($settings?.params?.stop ?? []).join(",")
-		: null;
-});
+		const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+		if (metaThemeColor) {
+			metaThemeColor.setAttribute(
+				'content',
+				_theme === 'dark'
+					? '#161616'
+					: _theme === 'oled-dark'
+						? '#000000'
+						: _theme === 'her'
+							? '#983724'
+							: '#ffffff'
+			);
+		}
+	};
 
-const applyTheme = (_theme: string) => {
-	let themeToApply = _theme === "oled-dark" ? "dark" : _theme;
-
-	if (_theme === "system") {
-		themeToApply = window.matchMedia("(prefers-color-scheme: dark)").matches
-			? "dark"
-			: "light";
-	}
-
-	if (themeToApply === "dark" && !_theme.includes("oled")) {
-		document.documentElement.style.setProperty("--color-gray-800", "#333");
-		document.documentElement.style.setProperty("--color-gray-850", "#262626");
-		document.documentElement.style.setProperty("--color-gray-900", "#161616");
-		document.documentElement.style.setProperty("--color-gray-950", "#0d0d0d");
-	}
-
-	document.documentElement.setAttribute("theme", themeToApply);
-
-	const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-	if (metaThemeColor) {
-		metaThemeColor.setAttribute(
-			"content",
-			_theme === "dark"
-				? "#161616"
-				: _theme === "oled-dark"
-					? "#000000"
-					: _theme === "her"
-						? "#983724"
-						: "#ffffff",
-		);
-	}
-};
-
-const themeChangeHandler = (_theme: string) => {
-	theme.set(_theme);
-	localStorage.setItem("theme", _theme);
-	applyTheme(_theme);
-};
+	const themeChangeHandler = (_theme: string) => {
+		theme.set(_theme);
+		localStorage.setItem('theme', _theme);
+		applyTheme(_theme);
+	};
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">

@@ -113,11 +113,11 @@ dayjs.extend(isYesterday);
 
 // Function to update locale
 export const updateDayjsLocale = (/** @type {string} */ locale) => {
-    // Extract the language code before the region (e.g., 'en' from 'en-US')
-    const lang = locale?.split('-')[0];
-    if (lang) {
-        dayjs.locale(lang);
-    }
+	// Extract the language code before the region (e.g., 'en' from 'en-US')
+	const lang = locale?.split('-')[0];
+	if (lang) {
+		dayjs.locale(lang);
+	}
 };
 
 // Set default locale

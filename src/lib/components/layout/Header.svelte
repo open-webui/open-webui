@@ -1,40 +1,46 @@
 <script lang="ts">
-import {
-	showControls,
-	showSidebar,
-	temporaryChatEnabled,
-	user,
-	mobile,
-	showArchivedChats,
-	chatId,
-	chats
-} from "$lib/stores";
-import { getContext } from "svelte";
-import Tooltip from "../common/Tooltip.svelte";
-import AdjustmentsHorizontal from "../icons/AdjustmentsHorizontal.svelte";
-import UserMenu from "./Sidebar/UserMenu.svelte";
-import { goto } from "$app/navigation";
+	import {
+		showControls,
+		showSidebar,
+		temporaryChatEnabled,
+		user,
+		mobile,
+		showArchivedChats,
+		chatId,
+		chats
+	} from '$lib/stores';
+	import { getContext } from 'svelte';
+	import Tooltip from '../common/Tooltip.svelte';
+	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
+	import UserMenu from './Sidebar/UserMenu.svelte';
+	import { goto } from '$app/navigation';
 
-interface I18n {
-	t: (key: string) => string;
-}
+	interface I18n {
+		t: (key: string) => string;
+	}
 
-const i18n = getContext<I18n>("i18n");
-const t = (key: string) => i18n?.t?.(key) ?? key;
+	const i18n = getContext<I18n>('i18n');
+	const t = (key: string) => i18n?.t?.(key) ?? key;
 
-const handleHomeClick = async () => {
-	chatId.set('');
-	await goto('/');
-};
+	const handleHomeClick = async () => {
+		chatId.set('');
+		await goto('/');
+	};
 </script>
 
-<div class="fixed top-0 left-0 right-0 h-[5vh] bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 z-50">
+<div
+	class="fixed top-0 left-0 right-0 h-[5vh] bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 z-50"
+>
 	<div class=" h-full mx-auto flex items-center px-4 w-full">
 		<div class="flex items-center flex-1">
 			<div class="flex items-center gap-3">
 				<img src="/static/favicon.png" alt="Logo" class="h-8 w-8 rounded-full" />
-				<button on:click={handleHomeClick} class="text-2xl font-bold fr-text-title--blue-france ">Albert</button>
-				<div class="px-2 py-0.5 text-xs rounded-full fr-background-action-low--blue-france fr-text-label--blue-cumulus font-bold flex items-center">
+				<button on:click={handleHomeClick} class="text-2xl font-bold fr-text-title--blue-france"
+					>Albert</button
+				>
+				<div
+					class="px-2 py-0.5 text-xs rounded-full fr-background-action-low--blue-france fr-text-label--blue-cumulus font-bold flex items-center"
+				>
 					ALPHA
 				</div>
 			</div>
@@ -84,4 +90,4 @@ const handleHomeClick = async () => {
 			{/if}
 		</div>
 	</div>
-</div> 
+</div>

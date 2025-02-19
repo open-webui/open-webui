@@ -362,15 +362,15 @@ export const userSignOut = async () => {
 	localStorage.removeItem('token');
 	localStorage.removeItem('auth_type');
 	localStorage.removeItem('locale');
-	
+
 	// Clear session storage
 	sessionStorage.clear();
-	
+
 	// Clear specific auth-related cookies
 	const cookieOptions = 'path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict';
 	document.cookie = `token=;${cookieOptions}`;
 	document.cookie = `session=;${cookieOptions}`;
-	
+
 	// Clear all other cookies efficiently
 	const cookies = document.cookie.split('; ');
 	for (const cookie of cookies) {

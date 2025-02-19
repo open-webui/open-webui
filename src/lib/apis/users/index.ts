@@ -154,7 +154,7 @@ export const getUserSettings = async (token: string) => {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`,
+			Authorization: `Bearer ${token}`
 		},
 		credentials: 'include'
 	})

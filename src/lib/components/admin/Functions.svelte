@@ -1,189 +1,185 @@
 <script lang="ts">
-import { toast } from "svelte-sonner";
-import fileSaver from "file-saver";
-const { saveAs } = fileSaver;
+	import { toast } from 'svelte-sonner';
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
 
-import { WEBUI_NAME, config, functions, models, user } from "$lib/stores";
-import { onMount, getContext, tick } from "svelte";
-import { capitalizeFirstLetter } from "$lib/utils";
+	import { WEBUI_NAME, config, functions, models, user } from '$lib/stores';
+	import { onMount, getContext, tick } from 'svelte';
+	import { capitalizeFirstLetter } from '$lib/utils';
 
-import { goto } from "$app/navigation";
-import {
-	createNewFunction,
-	deleteFunctionById,
-	exportFunctions,
-	getFunctionById,
-	getFunctions,
-	toggleFunctionById,
-	toggleGlobalById,
-} from "$lib/apis/functions";
+	import { goto } from '$app/navigation';
+	import {
+		createNewFunction,
+		deleteFunctionById,
+		exportFunctions,
+		getFunctionById,
+		getFunctions,
+		toggleFunctionById,
+		toggleGlobalById
+	} from '$lib/apis/functions';
 
-import ArrowDownTray from "../icons/ArrowDownTray.svelte";
-import Tooltip from "../common/Tooltip.svelte";
-import ConfirmDialog from "../common/ConfirmDialog.svelte";
-import { getModels } from "$lib/apis";
-import FunctionMenu from "./Functions/FunctionMenu.svelte";
-import EllipsisHorizontal from "../icons/EllipsisHorizontal.svelte";
-import Switch from "../common/Switch.svelte";
-import ValvesModal from "../workspace/common/ValvesModal.svelte";
-import ManifestModal from "../workspace/common/ManifestModal.svelte";
-import Heart from "../icons/Heart.svelte";
-import DeleteConfirmDialog from "$lib/components/common/ConfirmDialog.svelte";
-import GarbageBin from "../icons/GarbageBin.svelte";
-import Search from "../icons/Search.svelte";
-import Plus from "../icons/Plus.svelte";
-import ChevronRight from "../icons/ChevronRight.svelte";
-import Spinner from "../common/Spinner.svelte";
+	import ArrowDownTray from '../icons/ArrowDownTray.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
+	import ConfirmDialog from '../common/ConfirmDialog.svelte';
+	import { getModels } from '$lib/apis';
+	import FunctionMenu from './Functions/FunctionMenu.svelte';
+	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
+	import Switch from '../common/Switch.svelte';
+	import ValvesModal from '../workspace/common/ValvesModal.svelte';
+	import ManifestModal from '../workspace/common/ManifestModal.svelte';
+	import Heart from '../icons/Heart.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import GarbageBin from '../icons/GarbageBin.svelte';
+	import Search from '../icons/Search.svelte';
+	import Plus from '../icons/Plus.svelte';
+	import ChevronRight from '../icons/ChevronRight.svelte';
+	import Spinner from '../common/Spinner.svelte';
 
-const i18n = getContext("i18n");
+	const i18n = getContext('i18n');
 
-let shiftKey = false;
+	let shiftKey = false;
 
-let functionsImportInputElement: HTMLInputElement;
-let importFiles;
+	let functionsImportInputElement: HTMLInputElement;
+	let importFiles;
 
-let showConfirm = false;
-let query = "";
+	let showConfirm = false;
+	let query = '';
 
-let showManifestModal = false;
-let showValvesModal = false;
-let selectedFunction = null;
+	let showManifestModal = false;
+	let showValvesModal = false;
+	let selectedFunction = null;
 
-let showDeleteConfirm = false;
+	let showDeleteConfirm = false;
 
-let filteredItems = [];
-$: filteredItems = $functions
-	.filter(
-		(f) =>
-			query === "" ||
-			f.name.toLowerCase().includes(query.toLowerCase()) ||
-			f.id.toLowerCase().includes(query.toLowerCase()),
-	)
-	.sort((a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
+	let filteredItems = [];
+	$: filteredItems = $functions
+		.filter(
+			(f) =>
+				query === '' ||
+				f.name.toLowerCase().includes(query.toLowerCase()) ||
+				f.id.toLowerCase().includes(query.toLowerCase())
+		)
+		.sort((a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
 
 	const shareHandler = async (func) => {
 		const item = await getFunctionById(localStorage.token, func.id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
-		},
-	);
+		});
 
-	toast.success($i18n.t("Redirecting you to OpenWebUI Community"));
+		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
 
-	const url = "https://openwebui.com";
+		const url = 'https://openwebui.com';
 
-	const tab = await window.open(`${url}/functions/create`, "_blank");
+		const tab = await window.open(`${url}/functions/create`, '_blank');
 
-	// Define the event handler function
-	const messageHandler = (event) => {
-		if (event.origin !== url) return;
-		if (event.data === "loaded") {
-			tab.postMessage(JSON.stringify(item), "*");
+		// Define the event handler function
+		const messageHandler = (event) => {
+			if (event.origin !== url) return;
+			if (event.data === 'loaded') {
+				tab.postMessage(JSON.stringify(item), '*');
 
-			// Remove the event listener after handling the message
-			window.removeEventListener("message", messageHandler);
-		}
+				// Remove the event listener after handling the message
+				window.removeEventListener('message', messageHandler);
+			}
+		};
+
+		window.addEventListener('message', messageHandler, false);
+		console.log(item);
 	};
-
-	window.addEventListener("message", messageHandler, false);
-	console.log(item);
-};
 
 	const cloneHandler = async (func) => {
 		const _function = await getFunctionById(localStorage.token, func.id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
-		},
-	);
-
-	if (_function) {
-		sessionStorage.function = JSON.stringify({
-			..._function,
-			id: `${_function.id}_clone`,
-			name: `${_function.name} (Clone)`,
 		});
-		goto("/admin/functions/create");
-	}
-};
+
+		if (_function) {
+			sessionStorage.function = JSON.stringify({
+				..._function,
+				id: `${_function.id}_clone`,
+				name: `${_function.name} (Clone)`
+			});
+			goto('/admin/functions/create');
+		}
+	};
 
 	const exportHandler = async (func) => {
 		const _function = await getFunctionById(localStorage.token, func.id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
-		},
-	);
-
-	if (_function) {
-		let blob = new Blob([JSON.stringify([_function])], {
-			type: "application/json",
 		});
-		saveAs(blob, `function-${_function.id}-export-${Date.now()}.json`);
-	}
-};
+
+		if (_function) {
+			let blob = new Blob([JSON.stringify([_function])], {
+				type: 'application/json'
+			});
+			saveAs(blob, `function-${_function.id}-export-${Date.now()}.json`);
+		}
+	};
 
 	const deleteHandler = async (func) => {
 		const res = await deleteFunctionById(localStorage.token, func.id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
-		},
-	);
+		});
 
-	if (res) {
-		toast.success($i18n.t("Function deleted successfully"));
+		if (res) {
+			toast.success($i18n.t('Function deleted successfully'));
 
-		functions.set(await getFunctions(localStorage.token));
-		models.set(await getModels(localStorage.token));
-	}
-};
+			functions.set(await getFunctions(localStorage.token));
+			models.set(await getModels(localStorage.token));
+		}
+	};
 
 	const toggleGlobalHandler = async (func) => {
 		const res = await toggleGlobalById(localStorage.token, func.id).catch((error) => {
 			toast.error(`${error}`);
 		});
 
-	if (res) {
-		if (func.is_global) {
-			func.type === "filter"
-				? toast.success($i18n.t("Filter is now globally enabled"))
-				: toast.success($i18n.t("Function is now globally enabled"));
-		} else {
-			func.type === "filter"
-				? toast.success($i18n.t("Filter is now globally disabled"))
-				: toast.success($i18n.t("Function is now globally disabled"));
-		}
+		if (res) {
+			if (func.is_global) {
+				func.type === 'filter'
+					? toast.success($i18n.t('Filter is now globally enabled'))
+					: toast.success($i18n.t('Function is now globally enabled'));
+			} else {
+				func.type === 'filter'
+					? toast.success($i18n.t('Filter is now globally disabled'))
+					: toast.success($i18n.t('Function is now globally disabled'));
+			}
 
-		functions.set(await getFunctions(localStorage.token));
-		models.set(await getModels(localStorage.token));
-	}
-};
-
-onMount(() => {
-	const onKeyDown = (event) => {
-		if (event.key === "Shift") {
-			shiftKey = true;
+			functions.set(await getFunctions(localStorage.token));
+			models.set(await getModels(localStorage.token));
 		}
 	};
 
-	const onKeyUp = (event) => {
-		if (event.key === "Shift") {
+	onMount(() => {
+		const onKeyDown = (event) => {
+			if (event.key === 'Shift') {
+				shiftKey = true;
+			}
+		};
+
+		const onKeyUp = (event) => {
+			if (event.key === 'Shift') {
+				shiftKey = false;
+			}
+		};
+
+		const onBlur = () => {
 			shiftKey = false;
-		}
-	};
+		};
 
-	const onBlur = () => {
-		shiftKey = false;
-	};
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('keyup', onKeyUp);
+		window.addEventListener('blur', onBlur);
 
-	window.addEventListener("keydown", onKeyDown);
-	window.addEventListener("keyup", onKeyUp);
-	window.addEventListener("blur", onBlur);
-
-	return () => {
-		window.removeEventListener("keydown", onKeyDown);
-		window.removeEventListener("keyup", onKeyUp);
-		window.removeEventListener("blur", onBlur);
-	};
-});
+		return () => {
+			window.removeEventListener('keydown', onKeyDown);
+			window.removeEventListener('keyup', onKeyUp);
+			window.removeEventListener('blur', onBlur);
+		};
+	});
 </script>
 
 <svelte:head>
@@ -234,9 +230,7 @@ onMount(() => {
 				<div class="flex justify-center">
 					<div class="w-[60px] shrink-0">
 						<div
-							class="rounded-full object-cover {func.is_active
-								? ''
-								: 'opacity-50 dark:opacity-50'}"
+							class="rounded-full object-cover {func.is_active ? '' : 'opacity-50 dark:opacity-50'}"
 						>
 							<img
 								src={func?.meta?.profile_image_url ?? '/static/favicon.png'}
@@ -253,8 +247,8 @@ onMount(() => {
 				>
 					<div class="flex-1 text-center {func.is_active ? '' : 'text-gray-500'}">
 						<div class="font-semibold text-lg line-clamp-1">
-							<div class="line-clamp-1 ">
-									{func.name}
+							<div class="line-clamp-1">
+								{func.name}
 							</div>
 							<div class="flex items-center justify-center gap-1.5">
 								<div

@@ -1,15 +1,15 @@
 <script lang="ts">
-import Fuse from "fuse.js";
-import { toast } from "svelte-sonner";
-import { v4 as uuidv4 } from "uuid";
-import { PaneGroup, Pane, PaneResizer } from "paneforge";
+	import Fuse from 'fuse.js';
+	import { toast } from 'svelte-sonner';
+	import { v4 as uuidv4 } from 'uuid';
+	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
 
-import { onMount, getContext, onDestroy, tick } from "svelte";
-const i18n = getContext("i18n");
+	import { onMount, getContext, onDestroy, tick } from 'svelte';
+	const i18n = getContext('i18n');
 
-import { goto } from "$app/navigation";
-import { page } from "$app/stores";
-import { mobile, showSidebar, knowledge as _knowledge } from "$lib/stores";
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { mobile, showSidebar, knowledge as _knowledge } from '$lib/stores';
 
 	import { updateFileDataContentById, uploadFile, deleteFileById } from '$lib/apis/files';
 	import {
@@ -22,147 +22,143 @@ import { mobile, showSidebar, knowledge as _knowledge } from "$lib/stores";
 		updateKnowledgeById
 	} from '$lib/apis/knowledge';
 
-import { transcribeAudio } from "$lib/apis/audio";
-import { blobToFile } from "$lib/utils";
-import { processFile } from "$lib/apis/retrieval";
+	import { transcribeAudio } from '$lib/apis/audio';
+	import { blobToFile } from '$lib/utils';
+	import { processFile } from '$lib/apis/retrieval';
 
-import Spinner from "$lib/components/common/Spinner.svelte";
-import Files from "./KnowledgeBase/Files.svelte";
-import AddFilesPlaceholder from "$lib/components/AddFilesPlaceholder.svelte";
+	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Files from './KnowledgeBase/Files.svelte';
+	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
 
-import AddContentMenu from "./KnowledgeBase/AddContentMenu.svelte";
-import AddTextContentModal from "./KnowledgeBase/AddTextContentModal.svelte";
+	import AddContentMenu from './KnowledgeBase/AddContentMenu.svelte';
+	import AddTextContentModal from './KnowledgeBase/AddTextContentModal.svelte';
 
-import SyncConfirmDialog from "../../common/ConfirmDialog.svelte";
-import RichTextInput from "$lib/components/common/RichTextInput.svelte";
-import EllipsisVertical from "$lib/components/icons/EllipsisVertical.svelte";
-import Drawer from "$lib/components/common/Drawer.svelte";
-import ChevronLeft from "$lib/components/icons/ChevronLeft.svelte";
-import LockClosed from "$lib/components/icons/LockClosed.svelte";
-import AccessControlModal from "../common/AccessControlModal.svelte";
+	import SyncConfirmDialog from '../../common/ConfirmDialog.svelte';
+	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
+	import EllipsisVertical from '$lib/components/icons/EllipsisVertical.svelte';
+	import Drawer from '$lib/components/common/Drawer.svelte';
+	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import AccessControlModal from '../common/AccessControlModal.svelte';
 
-let largeScreen = true;
+	let largeScreen = true;
 
-let pane;
-let showSidepanel = true;
-let minSize = 0;
+	let pane;
+	let showSidepanel = true;
+	let minSize = 0;
 
-type Knowledge = {
-	id: string;
-	name: string;
-	description: string;
-	data: {
-		file_ids: string[];
+	type Knowledge = {
+		id: string;
+		name: string;
+		description: string;
+		data: {
+			file_ids: string[];
+		};
+		files: any[];
 	};
-	files: any[];
-};
 
-let id = null;
-let knowledge: Knowledge | null = null;
-let query = "";
+	let id = null;
+	let knowledge: Knowledge | null = null;
+	let query = '';
 
-let showAddTextContentModal = false;
-let showSyncConfirmModal = false;
-let showAccessControlModal = false;
+	let showAddTextContentModal = false;
+	let showSyncConfirmModal = false;
+	let showAccessControlModal = false;
 
-let inputFiles = null;
+	let inputFiles = null;
 
-let filteredItems = [];
-$: if (knowledge && knowledge.files) {
-	fuse = new Fuse(knowledge.files, {
-		keys: ["meta.name", "meta.description"],
-	});
-}
+	let filteredItems = [];
+	$: if (knowledge && knowledge.files) {
+		fuse = new Fuse(knowledge.files, {
+			keys: ['meta.name', 'meta.description']
+		});
+	}
 
-$: if (fuse) {
-	filteredItems = query
-		? fuse.search(query).map((e) => {
-				return e.item;
-			})
-		: (knowledge?.files ?? []);
-}
+	$: if (fuse) {
+		filteredItems = query
+			? fuse.search(query).map((e) => {
+					return e.item;
+				})
+			: (knowledge?.files ?? []);
+	}
 
-let selectedFile = null;
-let selectedFileId = null;
+	let selectedFile = null;
+	let selectedFileId = null;
 
-$: if (selectedFileId) {
-	const file = (knowledge?.files ?? []).find(
-		(file) => file.id === selectedFileId,
-	);
-	if (file) {
-		file.data = file.data ?? { content: "" };
-		selectedFile = file;
+	$: if (selectedFileId) {
+		const file = (knowledge?.files ?? []).find((file) => file.id === selectedFileId);
+		if (file) {
+			file.data = file.data ?? { content: '' };
+			selectedFile = file;
+		} else {
+			selectedFile = null;
+		}
 	} else {
 		selectedFile = null;
 	}
-} else {
-	selectedFile = null;
-}
 
-let fuse = null;
-let debounceTimeout = null;
-let mediaQuery;
-let dragged = false;
+	let fuse = null;
+	let debounceTimeout = null;
+	let mediaQuery;
+	let dragged = false;
 
-const createFileFromText = (name, content) => {
-	const blob = new Blob([content], { type: "text/plain" });
-	const file = blobToFile(blob, `${name}.txt`);
+	const createFileFromText = (name, content) => {
+		const blob = new Blob([content], { type: 'text/plain' });
+		const file = blobToFile(blob, `${name}.txt`);
 
-	console.log(file);
-	return file;
-};
-
-const uploadFileHandler = async (file) => {
-	console.log(file);
-
-	const tempItemId = uuidv4();
-	const fileItem = {
-		type: "file",
-		file: "",
-		id: null,
-		url: "",
-		name: file.name,
-		size: file.size,
-		status: "uploading",
-		error: "",
-		itemId: tempItemId,
+		console.log(file);
+		return file;
 	};
 
-	if (fileItem.size == 0) {
-		toast.error($i18n.t("You cannot upload an empty file."));
-		return null;
-	}
+	const uploadFileHandler = async (file) => {
+		console.log(file);
 
-	knowledge.files = [...(knowledge.files ?? []), fileItem];
+		const tempItemId = uuidv4();
+		const fileItem = {
+			type: 'file',
+			file: '',
+			id: null,
+			url: '',
+			name: file.name,
+			size: file.size,
+			status: 'uploading',
+			error: '',
+			itemId: tempItemId
+		};
+
+		if (fileItem.size == 0) {
+			toast.error($i18n.t('You cannot upload an empty file.'));
+			return null;
+		}
+
+		knowledge.files = [...(knowledge.files ?? []), fileItem];
 
 		// Check if the file is an audio file and transcribe/convert it to text file
 		if (['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'].includes(file['type'])) {
 			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
 				toast.error(`${error}`);
 				return null;
-			},
-		);
+			});
 
-		if (res) {
-			console.log(res);
-			const blob = new Blob([res.text], { type: "text/plain" });
-			file = blobToFile(blob, `${file.name}.txt`);
+			if (res) {
+				console.log(res);
+				const blob = new Blob([res.text], { type: 'text/plain' });
+				file = blobToFile(blob, `${file.name}.txt`);
+			}
 		}
-	}
 
 		try {
 			const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
 				toast.error(`${e}`);
 				return null;
-			},
-		);
+			});
 
-		if (uploadedFile) {
-			console.log(uploadedFile);
-			knowledge.files = knowledge.files.map((item) => {
-				if (item.itemId === tempItemId) {
-					item.id = uploadedFile.id;
-				}
+			if (uploadedFile) {
+				console.log(uploadedFile);
+				knowledge.files = knowledge.files.map((item) => {
+					if (item.itemId === tempItemId) {
+						item.id = uploadedFile.id;
+					}
 
 					// Remove temporary item id
 					delete item.itemId;
@@ -177,171 +173,169 @@ const uploadFileHandler = async (file) => {
 		}
 	};
 
-const uploadDirectoryHandler = async () => {
-	// Check if File System Access API is supported
-	const isFileSystemAccessSupported = "showDirectoryPicker" in window;
+	const uploadDirectoryHandler = async () => {
+		// Check if File System Access API is supported
+		const isFileSystemAccessSupported = 'showDirectoryPicker' in window;
 
-	try {
-		if (isFileSystemAccessSupported) {
-			// Modern browsers (Chrome, Edge) implementation
-			await handleModernBrowserUpload();
-		} else {
-			// Firefox fallback
-			await handleFirefoxUpload();
+		try {
+			if (isFileSystemAccessSupported) {
+				// Modern browsers (Chrome, Edge) implementation
+				await handleModernBrowserUpload();
+			} else {
+				// Firefox fallback
+				await handleFirefoxUpload();
+			}
+		} catch (error) {
+			handleUploadError(error);
 		}
-	} catch (error) {
-		handleUploadError(error);
-	}
-};
-
-// Helper function to check if a path contains hidden folders
-const hasHiddenFolder = (path) => {
-	return path.split("/").some((part) => part.startsWith("."));
-};
-
-// Modern browsers implementation using File System Access API
-const handleModernBrowserUpload = async () => {
-	const dirHandle = await window.showDirectoryPicker();
-	let totalFiles = 0;
-	let uploadedFiles = 0;
-
-	// Function to update the UI with the progress
-	const updateProgress = () => {
-		const percentage = (uploadedFiles / totalFiles) * 100;
-		toast.info(
-			`Upload Progress: ${uploadedFiles}/${totalFiles} (${percentage.toFixed(2)}%)`,
-		);
 	};
 
-	// Recursive function to count all files excluding hidden ones
-	async function countFiles(dirHandle) {
-		for await (const entry of dirHandle.values()) {
-			// Skip hidden files and directories
-			if (entry.name.startsWith(".")) continue;
+	// Helper function to check if a path contains hidden folders
+	const hasHiddenFolder = (path) => {
+		return path.split('/').some((part) => part.startsWith('.'));
+	};
 
-			if (entry.kind === "file") {
-				totalFiles++;
-			} else if (entry.kind === "directory") {
-				// Only process non-hidden directories
-				if (!entry.name.startsWith(".")) {
-					await countFiles(entry);
-				}
-			}
-		}
-	}
+	// Modern browsers implementation using File System Access API
+	const handleModernBrowserUpload = async () => {
+		const dirHandle = await window.showDirectoryPicker();
+		let totalFiles = 0;
+		let uploadedFiles = 0;
 
-	// Recursive function to process directories excluding hidden files and folders
-	async function processDirectory(dirHandle, path = "") {
-		for await (const entry of dirHandle.values()) {
-			// Skip hidden files and directories
-			if (entry.name.startsWith(".")) continue;
+		// Function to update the UI with the progress
+		const updateProgress = () => {
+			const percentage = (uploadedFiles / totalFiles) * 100;
+			toast.info(`Upload Progress: ${uploadedFiles}/${totalFiles} (${percentage.toFixed(2)}%)`);
+		};
 
-			const entryPath = path ? `${path}/${entry.name}` : entry.name;
+		// Recursive function to count all files excluding hidden ones
+		async function countFiles(dirHandle) {
+			for await (const entry of dirHandle.values()) {
+				// Skip hidden files and directories
+				if (entry.name.startsWith('.')) continue;
 
-			// Skip if the path contains any hidden folders
-			if (hasHiddenFolder(entryPath)) continue;
-
-			if (entry.kind === "file") {
-				const file = await entry.getFile();
-				const fileWithPath = new File([file], entryPath, { type: file.type });
-
-				await uploadFileHandler(fileWithPath);
-				uploadedFiles++;
-				updateProgress();
-			} else if (entry.kind === "directory") {
-				// Only process non-hidden directories
-				if (!entry.name.startsWith(".")) {
-					await processDirectory(entry, entryPath);
-				}
-			}
-		}
-	}
-
-	await countFiles(dirHandle);
-	updateProgress();
-
-	if (totalFiles > 0) {
-		await processDirectory(dirHandle);
-	} else {
-		console.log("No files to upload.");
-	}
-};
-
-// Firefox fallback implementation using traditional file input
-const handleFirefoxUpload = async () => {
-	return new Promise((resolve, reject) => {
-		// Create hidden file input
-		const input = document.createElement("input");
-		input.type = "file";
-		input.webkitdirectory = true;
-		input.directory = true;
-		input.multiple = true;
-		input.style.display = "none";
-
-		// Add input to DOM temporarily
-		document.body.appendChild(input);
-
-		input.onchange = async () => {
-			try {
-				const files = Array.from(input.files)
-					// Filter out files from hidden folders
-					.filter((file) => !hasHiddenFolder(file.webkitRelativePath));
-
-				let totalFiles = files.length;
-				let uploadedFiles = 0;
-
-				// Function to update the UI with the progress
-				const updateProgress = () => {
-					const percentage = (uploadedFiles / totalFiles) * 100;
-					toast.info(
-						`Upload Progress: ${uploadedFiles}/${totalFiles} (${percentage.toFixed(2)}%)`,
-					);
-				};
-
-				updateProgress();
-
-				// Process all files
-				for (const file of files) {
-					// Skip hidden files (additional check)
-					if (!file.name.startsWith(".")) {
-						const relativePath = file.webkitRelativePath || file.name;
-						const fileWithPath = new File([file], relativePath, {
-							type: file.type,
-						});
-
-						await uploadFileHandler(fileWithPath);
-						uploadedFiles++;
-						updateProgress();
+				if (entry.kind === 'file') {
+					totalFiles++;
+				} else if (entry.kind === 'directory') {
+					// Only process non-hidden directories
+					if (!entry.name.startsWith('.')) {
+						await countFiles(entry);
 					}
 				}
-
-				// Clean up
-				document.body.removeChild(input);
-				resolve();
-			} catch (error) {
-				reject(error);
 			}
-		};
+		}
 
-		input.onerror = (error) => {
-			document.body.removeChild(input);
-			reject(error);
-		};
+		// Recursive function to process directories excluding hidden files and folders
+		async function processDirectory(dirHandle, path = '') {
+			for await (const entry of dirHandle.values()) {
+				// Skip hidden files and directories
+				if (entry.name.startsWith('.')) continue;
 
-		// Trigger file picker
-		input.click();
-	});
-};
+				const entryPath = path ? `${path}/${entry.name}` : entry.name;
 
-// Error handler
-const handleUploadError = (error) => {
-	if (error.name === "AbortError") {
-		toast.info("Directory selection was cancelled");
-	} else {
-		toast.error("Error accessing directory");
-		console.error("Directory access error:", error);
-	}
-};
+				// Skip if the path contains any hidden folders
+				if (hasHiddenFolder(entryPath)) continue;
+
+				if (entry.kind === 'file') {
+					const file = await entry.getFile();
+					const fileWithPath = new File([file], entryPath, { type: file.type });
+
+					await uploadFileHandler(fileWithPath);
+					uploadedFiles++;
+					updateProgress();
+				} else if (entry.kind === 'directory') {
+					// Only process non-hidden directories
+					if (!entry.name.startsWith('.')) {
+						await processDirectory(entry, entryPath);
+					}
+				}
+			}
+		}
+
+		await countFiles(dirHandle);
+		updateProgress();
+
+		if (totalFiles > 0) {
+			await processDirectory(dirHandle);
+		} else {
+			console.log('No files to upload.');
+		}
+	};
+
+	// Firefox fallback implementation using traditional file input
+	const handleFirefoxUpload = async () => {
+		return new Promise((resolve, reject) => {
+			// Create hidden file input
+			const input = document.createElement('input');
+			input.type = 'file';
+			input.webkitdirectory = true;
+			input.directory = true;
+			input.multiple = true;
+			input.style.display = 'none';
+
+			// Add input to DOM temporarily
+			document.body.appendChild(input);
+
+			input.onchange = async () => {
+				try {
+					const files = Array.from(input.files)
+						// Filter out files from hidden folders
+						.filter((file) => !hasHiddenFolder(file.webkitRelativePath));
+
+					let totalFiles = files.length;
+					let uploadedFiles = 0;
+
+					// Function to update the UI with the progress
+					const updateProgress = () => {
+						const percentage = (uploadedFiles / totalFiles) * 100;
+						toast.info(
+							`Upload Progress: ${uploadedFiles}/${totalFiles} (${percentage.toFixed(2)}%)`
+						);
+					};
+
+					updateProgress();
+
+					// Process all files
+					for (const file of files) {
+						// Skip hidden files (additional check)
+						if (!file.name.startsWith('.')) {
+							const relativePath = file.webkitRelativePath || file.name;
+							const fileWithPath = new File([file], relativePath, {
+								type: file.type
+							});
+
+							await uploadFileHandler(fileWithPath);
+							uploadedFiles++;
+							updateProgress();
+						}
+					}
+
+					// Clean up
+					document.body.removeChild(input);
+					resolve();
+				} catch (error) {
+					reject(error);
+				}
+			};
+
+			input.onerror = (error) => {
+				document.body.removeChild(input);
+				reject(error);
+			};
+
+			// Trigger file picker
+			input.click();
+		});
+	};
+
+	// Error handler
+	const handleUploadError = (error) => {
+		if (error.name === 'AbortError') {
+			toast.info('Directory selection was cancelled');
+		} else {
+			toast.error('Error accessing directory');
+			console.error('Directory access error:', error);
+		}
+	};
 
 	// Helper function to maintain file paths within zip
 	const syncDirectoryHandler = async () => {
@@ -350,17 +344,17 @@ const handleUploadError = (error) => {
 				toast.error(`${e}`);
 			});
 
-		if (res) {
-			knowledge = res;
-			toast.success($i18n.t("Knowledge reset successfully."));
+			if (res) {
+				knowledge = res;
+				toast.success($i18n.t('Knowledge reset successfully.'));
 
-			// Upload directory
+				// Upload directory
+				uploadDirectoryHandler();
+			}
+		} else {
 			uploadDirectoryHandler();
 		}
-	} else {
-		uploadDirectoryHandler();
-	}
-};
+	};
 
 	const addFileHandler = async (fileId) => {
 		const updatedKnowledge = await addFileToKnowledgeById(localStorage.token, id, fileId).catch(
@@ -370,14 +364,14 @@ const handleUploadError = (error) => {
 			}
 		);
 
-	if (updatedKnowledge) {
-		knowledge = updatedKnowledge;
-		toast.success($i18n.t("File added successfully."));
-	} else {
-		toast.error($i18n.t("Failed to add file."));
-		knowledge.files = knowledge.files.filter((file) => file.id !== fileId);
-	}
-};
+		if (updatedKnowledge) {
+			knowledge = updatedKnowledge;
+			toast.success($i18n.t('File added successfully.'));
+		} else {
+			toast.error($i18n.t('Failed to add file.'));
+			knowledge.files = knowledge.files.filter((file) => file.id !== fileId);
+		}
+	};
 
 	const deleteFileHandler = async (fileId) => {
 		try {
@@ -398,9 +392,9 @@ const handleUploadError = (error) => {
 		}
 	};
 
-const updateFileContentHandler = async () => {
-	const fileId = selectedFile.id;
-	const content = selectedFile.data.content;
+	const updateFileContentHandler = async () => {
+		const fileId = selectedFile.id;
+		const content = selectedFile.data.content;
 
 		const res = updateFileDataContentById(localStorage.token, fileId, content).catch((e) => {
 			toast.error(`${e}`);
@@ -414,23 +408,23 @@ const updateFileContentHandler = async () => {
 			toast.error(`${e}`);
 		});
 
-	if (res && updatedKnowledge) {
-		knowledge = updatedKnowledge;
-		toast.success($i18n.t("File content updated successfully."));
-	}
-};
-
-const changeDebounceHandler = () => {
-	console.log("debounce");
-	if (debounceTimeout) {
-		clearTimeout(debounceTimeout);
-	}
-
-	debounceTimeout = setTimeout(async () => {
-		if (knowledge.name.trim() === "" || knowledge.description.trim() === "") {
-			toast.error($i18n.t("Please fill in all fields."));
-			return;
+		if (res && updatedKnowledge) {
+			knowledge = updatedKnowledge;
+			toast.success($i18n.t('File content updated successfully.'));
 		}
+	};
+
+	const changeDebounceHandler = () => {
+		console.log('debounce');
+		if (debounceTimeout) {
+			clearTimeout(debounceTimeout);
+		}
+
+		debounceTimeout = setTimeout(async () => {
+			if (knowledge.name.trim() === '' || knowledge.description.trim() === '') {
+				toast.error($i18n.t('Please fill in all fields.'));
+				return;
+			}
 
 			const res = await updateKnowledgeById(localStorage.token, id, {
 				...knowledge,
@@ -441,120 +435,118 @@ const changeDebounceHandler = () => {
 				toast.error(`${e}`);
 			});
 
-		if (res) {
-			toast.success($i18n.t("Knowledge updated successfully"));
-			_knowledge.set(await getKnowledgeBases(localStorage.token));
+			if (res) {
+				toast.success($i18n.t('Knowledge updated successfully'));
+				_knowledge.set(await getKnowledgeBases(localStorage.token));
+			}
+		}, 1000);
+	};
+
+	const handleMediaQuery = async (e) => {
+		if (e.matches) {
+			largeScreen = true;
+		} else {
+			largeScreen = false;
 		}
-	}, 1000);
-};
+	};
 
-const handleMediaQuery = async (e) => {
-	if (e.matches) {
-		largeScreen = true;
-	} else {
-		largeScreen = false;
-	}
-};
+	const onDragOver = (e) => {
+		e.preventDefault();
 
-const onDragOver = (e) => {
-	e.preventDefault();
+		// Check if a file is being draggedOver.
+		if (e.dataTransfer?.types?.includes('Files')) {
+			dragged = true;
+		} else {
+			dragged = false;
+		}
+	};
 
-	// Check if a file is being draggedOver.
-	if (e.dataTransfer?.types?.includes("Files")) {
-		dragged = true;
-	} else {
+	const onDragLeave = () => {
 		dragged = false;
-	}
-};
+	};
 
-const onDragLeave = () => {
-	dragged = false;
-};
+	const onDrop = async (e) => {
+		e.preventDefault();
+		dragged = false;
 
-const onDrop = async (e) => {
-	e.preventDefault();
-	dragged = false;
+		if (e.dataTransfer?.types?.includes('Files')) {
+			if (e.dataTransfer?.files) {
+				const inputFiles = e.dataTransfer?.files;
 
-	if (e.dataTransfer?.types?.includes("Files")) {
-		if (e.dataTransfer?.files) {
-			const inputFiles = e.dataTransfer?.files;
-
-			if (inputFiles && inputFiles.length > 0) {
-				for (const file of inputFiles) {
-					await uploadFileHandler(file);
-				}
-			} else {
-				toast.error($i18n.t(`File not found.`));
-			}
-		}
-	}
-};
-
-onMount(async () => {
-	// listen to resize 1024px
-	mediaQuery = window.matchMedia("(min-width: 1024px)");
-
-	mediaQuery.addEventListener("change", handleMediaQuery);
-	handleMediaQuery(mediaQuery);
-
-	// Select the container element you want to observe
-	const container = document.getElementById("collection-container");
-
-	// initialize the minSize based on the container width
-	minSize = !largeScreen
-		? 100
-		: Math.floor((300 / container.clientWidth) * 100);
-
-	// Create a new ResizeObserver instance
-	const resizeObserver = new ResizeObserver((entries) => {
-		for (let entry of entries) {
-			const width = entry.contentRect.width;
-			// calculate the percentage of 300
-			const percentage = (300 / width) * 100;
-			// set the minSize to the percentage, must be an integer
-			minSize = !largeScreen ? 100 : Math.floor(percentage);
-
-			if (showSidepanel) {
-				if (pane && pane.isExpanded() && pane.getSize() < minSize) {
-					pane.resize(minSize);
+				if (inputFiles && inputFiles.length > 0) {
+					for (const file of inputFiles) {
+						await uploadFileHandler(file);
+					}
+				} else {
+					toast.error($i18n.t(`File not found.`));
 				}
 			}
 		}
-	});
+	};
 
-	// Start observing the container's size changes
-	resizeObserver.observe(container);
+	onMount(async () => {
+		// listen to resize 1024px
+		mediaQuery = window.matchMedia('(min-width: 1024px)');
 
-	if (pane) {
-		pane.expand();
-	}
+		mediaQuery.addEventListener('change', handleMediaQuery);
+		handleMediaQuery(mediaQuery);
 
-	id = $page.params.id;
+		// Select the container element you want to observe
+		const container = document.getElementById('collection-container');
+
+		// initialize the minSize based on the container width
+		minSize = !largeScreen ? 100 : Math.floor((300 / container.clientWidth) * 100);
+
+		// Create a new ResizeObserver instance
+		const resizeObserver = new ResizeObserver((entries) => {
+			for (let entry of entries) {
+				const width = entry.contentRect.width;
+				// calculate the percentage of 300
+				const percentage = (300 / width) * 100;
+				// set the minSize to the percentage, must be an integer
+				minSize = !largeScreen ? 100 : Math.floor(percentage);
+
+				if (showSidepanel) {
+					if (pane && pane.isExpanded() && pane.getSize() < minSize) {
+						pane.resize(minSize);
+					}
+				}
+			}
+		});
+
+		// Start observing the container's size changes
+		resizeObserver.observe(container);
+
+		if (pane) {
+			pane.expand();
+		}
+
+		id = $page.params.id;
 
 		const res = await getKnowledgeById(localStorage.token, id).catch((e) => {
 			toast.error(`${e}`);
 			return null;
 		});
 
-	if (res) {
-		knowledge = res;
-	} else {
-		goto("/workspace/knowledge");
-	}
+		if (res) {
+			knowledge = res;
+		} else {
+			goto('/workspace/knowledge');
+		}
 
-	const dropZone = document.querySelector("body");
-	dropZone?.addEventListener("dragover", onDragOver);
-	dropZone?.addEventListener("drop", onDrop);
-	dropZone?.addEventListener("dragleave", onDragLeave);
-});
+		const dropZone = document.querySelector('body');
+		dropZone?.addEventListener('dragover', onDragOver);
+		dropZone?.addEventListener('drop', onDrop);
+		dropZone?.addEventListener('dragleave', onDragLeave);
+	});
 
-onDestroy(() => {
-	mediaQuery?.removeEventListener("change", handleMediaQuery);
-	const dropZone = document.querySelector("body");
-	dropZone?.removeEventListener("dragover", onDragOver);
-	dropZone?.removeEventListener("drop", onDrop);
-	dropZone?.removeEventListener("dragleave", onDragLeave);
-});
+	onDestroy(() => {
+		mediaQuery?.removeEventListener('change', handleMediaQuery);
+		const dropZone = document.querySelector('body');
+		dropZone?.removeEventListener('dragover', onDragOver);
+		dropZone?.removeEventListener('drop', onDrop);
+		dropZone?.removeEventListener('dragleave', onDragLeave);
+	});
 </script>
 
 {#if dragged}

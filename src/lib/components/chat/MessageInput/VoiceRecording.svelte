@@ -18,7 +18,7 @@
 		audio: AudioConfig;
 	}
 
-	const i18n = getContext<{t: (key: string, params?: Record<string, any>) => string}>('i18n');
+	const i18n = getContext<{ t: (key: string, params?: Record<string, any>) => string }>('i18n');
 
 	const dispatch = createEventDispatcher<{
 		cancel: void;
@@ -202,7 +202,7 @@
 			}
 
 			console.log('Transcription response:', res);
-			
+
 			// Check if response has expected format
 			if (typeof res === 'object' && 'text' in res) {
 				dispatch('confirm', res);
@@ -213,7 +213,7 @@
 			// More specific error message
 			const errorMessage = error instanceof Error ? error.message : 'Transcription failed';
 			toast.error(errorMessage);
-			
+
 			// Reset state on error
 			confirmed = false;
 			loading = false;
@@ -252,7 +252,7 @@
 		mediaRecorder.onstop = async () => {
 			console.log('Recording stopped');
 			const sttEngine = $config?.audio?.stt?.engine || ($settings?.audio?.stt?.engine ?? '');
-			
+
 			try {
 				if (sttEngine === 'web') {
 					audioChunks = [];
@@ -268,7 +268,7 @@
 				console.error('Error in mediaRecorder.onstop:', error);
 				const errorMessage = error instanceof Error ? error.message : 'Recording failed';
 				toast.error(errorMessage);
-				
+
 				// Reset state on error
 				confirmed = false;
 				loading = false;
@@ -322,7 +322,9 @@
 				// Event triggered when an error occurs
 				speechRecognition.onerror = function (event: { error: string }) {
 					console.log(event);
-					const errorMessage = i18n.t(`Speech recognition error: {{error}}`, { error: event.error });
+					const errorMessage = i18n.t(`Speech recognition error: {{error}}`, {
+						error: event.error
+					});
 					toast.error(errorMessage);
 					dispatch('cancel');
 					stopRecording();

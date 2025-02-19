@@ -1,118 +1,112 @@
 <script>
-import {
-	getContext,
-	createEventDispatcher,
-	onMount,
-	onDestroy,
-	tick,
-} from "svelte";
+	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 
-const i18n = getContext("i18n");
-const dispatch = createEventDispatcher();
+	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
-import DOMPurify from "dompurify";
-import fileSaver from "file-saver";
-const { saveAs } = fileSaver;
+	import DOMPurify from 'dompurify';
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
 
-import ChevronDown from "../../icons/ChevronDown.svelte";
-import ChevronRight from "../../icons/ChevronRight.svelte";
-import Collapsible from "../../common/Collapsible.svelte";
-import DragGhost from "$lib/components/common/DragGhost.svelte";
+	import ChevronDown from '../../icons/ChevronDown.svelte';
+	import ChevronRight from '../../icons/ChevronRight.svelte';
+	import Collapsible from '../../common/Collapsible.svelte';
+	import DragGhost from '$lib/components/common/DragGhost.svelte';
 
-import FolderOpen from "$lib/components/icons/FolderOpen.svelte";
-import EllipsisHorizontal from "$lib/components/icons/EllipsisHorizontal.svelte";
-import {
-	deleteFolderById,
-	updateFolderIsExpandedById,
-	updateFolderNameById,
-	updateFolderParentIdById,
-} from "$lib/apis/folders";
-import { toast } from "svelte-sonner";
-import {
-	getChatById,
-	getChatsByFolderId,
-	importChat,
-	updateChatFolderIdById,
-} from "$lib/apis/chats";
-import ChatItem from "./ChatItem.svelte";
-import FolderMenu from "./Folders/FolderMenu.svelte";
-import DeleteConfirmDialog from "$lib/components/common/ConfirmDialog.svelte";
+	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
+	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import {
+		deleteFolderById,
+		updateFolderIsExpandedById,
+		updateFolderNameById,
+		updateFolderParentIdById
+	} from '$lib/apis/folders';
+	import { toast } from 'svelte-sonner';
+	import {
+		getChatById,
+		getChatsByFolderId,
+		importChat,
+		updateChatFolderIdById
+	} from '$lib/apis/chats';
+	import ChatItem from './ChatItem.svelte';
+	import FolderMenu from './Folders/FolderMenu.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
-export let open = false;
+	export let open = false;
 
-export let folders;
-export let folderId;
+	export let folders;
+	export let folderId;
 
-export let className = "";
+	export let className = '';
 
-export let parentDragged = false;
+	export let parentDragged = false;
 
-let folderElement;
+	let folderElement;
 
-let edit = false;
+	let edit = false;
 
-let draggedOver = false;
-let dragged = false;
+	let draggedOver = false;
+	let dragged = false;
 
-let name = "";
+	let name = '';
 
-const onDragOver = (e) => {
-	e.preventDefault();
-	e.stopPropagation();
-	if (dragged || parentDragged) {
-		return;
-	}
-	draggedOver = true;
-};
+	const onDragOver = (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		if (dragged || parentDragged) {
+			return;
+		}
+		draggedOver = true;
+	};
 
-const onDrop = async (e) => {
-	e.preventDefault();
-	e.stopPropagation();
-	if (dragged || parentDragged) {
-		return;
-	}
+	const onDrop = async (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		if (dragged || parentDragged) {
+			return;
+		}
 
-	if (folderElement.contains(e.target)) {
-		console.log("Dropped on the Button");
+		if (folderElement.contains(e.target)) {
+			console.log('Dropped on the Button');
 
-		if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-			// Iterate over all items in the DataTransferItemList use functional programming
-			for (const item of Array.from(e.dataTransfer.items)) {
-				// If dropped items aren't files, reject them
-				if (item.kind === "file") {
-					const file = item.getAsFile();
-					if (file && file.type === "application/json") {
-						console.log("Dropped file is a JSON file!");
+			if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+				// Iterate over all items in the DataTransferItemList use functional programming
+				for (const item of Array.from(e.dataTransfer.items)) {
+					// If dropped items aren't files, reject them
+					if (item.kind === 'file') {
+						const file = item.getAsFile();
+						if (file && file.type === 'application/json') {
+							console.log('Dropped file is a JSON file!');
 
-						// Read the JSON file with FileReader
-						const reader = new FileReader();
-						reader.onload = async function (event) {
-							try {
-								const fileContent = JSON.parse(event.target.result);
-								open = true;
-								dispatch("import", {
-									folderId: folderId,
-									items: fileContent,
-								});
-							} catch (error) {
-								console.error("Error parsing JSON file:", error);
-							}
-						};
+							// Read the JSON file with FileReader
+							const reader = new FileReader();
+							reader.onload = async function (event) {
+								try {
+									const fileContent = JSON.parse(event.target.result);
+									open = true;
+									dispatch('import', {
+										folderId: folderId,
+										items: fileContent
+									});
+								} catch (error) {
+									console.error('Error parsing JSON file:', error);
+								}
+							};
 
-						// Start reading the file
-						reader.readAsText(file);
+							// Start reading the file
+							reader.readAsText(file);
+						} else {
+							console.error('Only JSON file types are supported.');
+						}
+
+						console.log(file);
 					} else {
-						console.error("Only JSON file types are supported.");
-					}
+						// Handle the drag-and-drop data for folders or chats (same as before)
+						const dataTransfer = e.dataTransfer.getData('text/plain');
+						const data = JSON.parse(dataTransfer);
+						console.log(data);
 
-					console.log(file);
-				} else {
-					// Handle the drag-and-drop data for folders or chats (same as before)
-					const dataTransfer = e.dataTransfer.getData("text/plain");
-					const data = JSON.parse(dataTransfer);
-					console.log(data);
-
-					const { type, id, item } = data;
+						const { type, id, item } = data;
 
 						if (type === 'folder') {
 							open = true;
@@ -127,24 +121,18 @@ const onDrop = async (e) => {
 								}
 							);
 
-						if (res) {
-							dispatch("update");
-						}
-					} else if (type === "chat") {
-						open = true;
+							if (res) {
+								dispatch('update');
+							}
+						} else if (type === 'chat') {
+							open = true;
 
-						let chat = await getChatById(localStorage.token, id).catch(
-							(error) => {
+							let chat = await getChatById(localStorage.token, id).catch((error) => {
 								return null;
-							},
-						);
-						if (!chat && item) {
-							chat = await importChat(
-								localStorage.token,
-								item.chat,
-								item?.meta ?? {},
-							);
-						}
+							});
+							if (!chat && item) {
+								chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+							}
 
 							// Move the chat
 							const res = await updateChatFolderIdById(localStorage.token, chat.id, folderId).catch(
@@ -154,137 +142,136 @@ const onDrop = async (e) => {
 								}
 							);
 
-						if (res) {
-							dispatch("update");
+							if (res) {
+								dispatch('update');
+							}
 						}
 					}
 				}
 			}
+
+			draggedOver = false;
+		}
+	};
+
+	const onDragLeave = (e) => {
+		e.preventDefault();
+		if (dragged || parentDragged) {
+			return;
 		}
 
 		draggedOver = false;
-	}
-};
+	};
 
-const onDragLeave = (e) => {
-	e.preventDefault();
-	if (dragged || parentDragged) {
-		return;
-	}
+	const dragImage = new Image();
+	dragImage.src =
+		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
-	draggedOver = false;
-};
+	let x;
+	let y;
 
-const dragImage = new Image();
-dragImage.src =
-	"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+	const onDragStart = (event) => {
+		event.stopPropagation();
+		event.dataTransfer.setDragImage(dragImage, 0, 0);
 
-let x;
-let y;
+		// Set the data to be transferred
+		event.dataTransfer.setData(
+			'text/plain',
+			JSON.stringify({
+				type: 'folder',
+				id: folderId
+			})
+		);
 
-const onDragStart = (event) => {
-	event.stopPropagation();
-	event.dataTransfer.setDragImage(dragImage, 0, 0);
+		dragged = true;
+		folderElement.style.opacity = '0.5'; // Optional: Visual cue to show it's being dragged
+	};
 
-	// Set the data to be transferred
-	event.dataTransfer.setData(
-		"text/plain",
-		JSON.stringify({
-			type: "folder",
-			id: folderId,
-		}),
-	);
+	const onDrag = (event) => {
+		event.stopPropagation();
 
-	dragged = true;
-	folderElement.style.opacity = "0.5"; // Optional: Visual cue to show it's being dragged
-};
+		x = event.clientX;
+		y = event.clientY;
+	};
 
-const onDrag = (event) => {
-	event.stopPropagation();
+	const onDragEnd = (event) => {
+		event.stopPropagation();
 
-	x = event.clientX;
-	y = event.clientY;
-};
+		folderElement.style.opacity = '1'; // Reset visual cue after drag
+		dragged = false;
+	};
 
-const onDragEnd = (event) => {
-	event.stopPropagation();
+	onMount(() => {
+		open = folders[folderId].is_expanded;
+		if (folderElement) {
+			folderElement.addEventListener('dragover', onDragOver);
+			folderElement.addEventListener('drop', onDrop);
+			folderElement.addEventListener('dragleave', onDragLeave);
 
-	folderElement.style.opacity = "1"; // Reset visual cue after drag
-	dragged = false;
-};
+			// Event listener for when dragging starts
+			folderElement.addEventListener('dragstart', onDragStart);
+			// Event listener for when dragging occurs (optional)
+			folderElement.addEventListener('drag', onDrag);
+			// Event listener for when dragging ends
+			folderElement.addEventListener('dragend', onDragEnd);
+		}
+	});
 
-onMount(() => {
-	open = folders[folderId].is_expanded;
-	if (folderElement) {
-		folderElement.addEventListener("dragover", onDragOver);
-		folderElement.addEventListener("drop", onDrop);
-		folderElement.addEventListener("dragleave", onDragLeave);
+	onDestroy(() => {
+		if (folderElement) {
+			folderElement.addEventListener('dragover', onDragOver);
+			folderElement.removeEventListener('drop', onDrop);
+			folderElement.removeEventListener('dragleave', onDragLeave);
 
-		// Event listener for when dragging starts
-		folderElement.addEventListener("dragstart", onDragStart);
-		// Event listener for when dragging occurs (optional)
-		folderElement.addEventListener("drag", onDrag);
-		// Event listener for when dragging ends
-		folderElement.addEventListener("dragend", onDragEnd);
-	}
-});
+			folderElement.removeEventListener('dragstart', onDragStart);
+			folderElement.removeEventListener('drag', onDrag);
+			folderElement.removeEventListener('dragend', onDragEnd);
+		}
+	});
 
-onDestroy(() => {
-	if (folderElement) {
-		folderElement.addEventListener("dragover", onDragOver);
-		folderElement.removeEventListener("drop", onDrop);
-		folderElement.removeEventListener("dragleave", onDragLeave);
-
-		folderElement.removeEventListener("dragstart", onDragStart);
-		folderElement.removeEventListener("drag", onDrag);
-		folderElement.removeEventListener("dragend", onDragEnd);
-	}
-});
-
-let showDeleteConfirm = false;
+	let showDeleteConfirm = false;
 
 	const deleteHandler = async () => {
 		const res = await deleteFolderById(localStorage.token, folderId).catch((error) => {
 			toast.error(`${error}`);
 			return null;
-		},
-	);
+		});
 
-	if (res) {
-		toast.success($i18n.t("Folder deleted successfully"));
-		dispatch("update");
-	}
-};
+		if (res) {
+			toast.success($i18n.t('Folder deleted successfully'));
+			dispatch('update');
+		}
+	};
 
-const nameUpdateHandler = async () => {
-	if (name === "") {
-		toast.error($i18n.t("Folder name cannot be empty"));
-		return;
-	}
+	const nameUpdateHandler = async () => {
+		if (name === '') {
+			toast.error($i18n.t('Folder name cannot be empty'));
+			return;
+		}
 
-	if (name === folders[folderId].name) {
-		edit = false;
-		return;
-	}
+		if (name === folders[folderId].name) {
+			edit = false;
+			return;
+		}
 
-	const currentName = folders[folderId].name;
+		const currentName = folders[folderId].name;
 
-	name = name.trim();
-	folders[folderId].name = name;
+		name = name.trim();
+		folders[folderId].name = name;
 
 		const res = await updateFolderNameById(localStorage.token, folderId, name).catch((error) => {
 			toast.error(`${error}`);
 
-		folders[folderId].name = currentName;
-		return null;
-	});
+			folders[folderId].name = currentName;
+			return null;
+		});
 
-	if (res) {
-		folders[folderId].name = name;
-		toast.success($i18n.t("Folder name updated successfully"));
-		dispatch("update");
-	}
-};
+		if (res) {
+			folders[folderId].name = name;
+			toast.success($i18n.t('Folder name updated successfully'));
+			dispatch('update');
+		}
+	};
 
 	const isExpandedUpdateHandler = async () => {
 		const res = await updateFolderIsExpandedById(localStorage.token, folderId, open).catch(
@@ -295,48 +282,47 @@ const nameUpdateHandler = async () => {
 		);
 	};
 
-let isExpandedUpdateTimeout;
+	let isExpandedUpdateTimeout;
 
-const isExpandedUpdateDebounceHandler = (open) => {
-	clearTimeout(isExpandedUpdateTimeout);
-	isExpandedUpdateTimeout = setTimeout(() => {
-		isExpandedUpdateHandler();
-	}, 500);
-};
+	const isExpandedUpdateDebounceHandler = (open) => {
+		clearTimeout(isExpandedUpdateTimeout);
+		isExpandedUpdateTimeout = setTimeout(() => {
+			isExpandedUpdateHandler();
+		}, 500);
+	};
 
-$: isExpandedUpdateDebounceHandler(open);
+	$: isExpandedUpdateDebounceHandler(open);
 
-const editHandler = async () => {
-	console.log("Edit");
-	await tick();
-	name = folders[folderId].name;
-	edit = true;
+	const editHandler = async () => {
+		console.log('Edit');
+		await tick();
+		name = folders[folderId].name;
+		edit = true;
 
-	await tick();
+		await tick();
 
-	// focus on the input
-	setTimeout(() => {
-		const input = document.getElementById(`folder-${folderId}-input`);
-		input.focus();
-	}, 100);
-};
+		// focus on the input
+		setTimeout(() => {
+			const input = document.getElementById(`folder-${folderId}-input`);
+			input.focus();
+		}, 100);
+	};
 
 	const exportHandler = async () => {
 		const chats = await getChatsByFolderId(localStorage.token, folderId).catch((error) => {
 			toast.error(`${error}`);
 			return null;
-		},
-	);
-	if (!chats) {
-		return;
-	}
+		});
+		if (!chats) {
+			return;
+		}
 
-	const blob = new Blob([JSON.stringify(chats)], {
-		type: "application/json",
-	});
+		const blob = new Blob([JSON.stringify(chats)], {
+			type: 'application/json'
+		});
 
-	saveAs(blob, `folder-${folders[folderId].name}-export-${Date.now()}.json`);
-};
+		saveAs(blob, `folder-${folders[folderId].name}-export-${Date.now()}.json`);
+	};
 </script>
 
 <DeleteConfirmDialog
@@ -402,7 +388,11 @@ const editHandler = async () => {
 					{/if}
 				</div>
 
-				<div class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1 {open ? 'fr-text-default--grey' : ''}">
+				<div
+					class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1 {open
+						? 'fr-text-default--grey'
+						: ''}"
+				>
 					{#if edit}
 						<input
 							id="folder-{folderId}-input"

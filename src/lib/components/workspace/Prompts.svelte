@@ -1,91 +1,89 @@
 <script lang="ts">
-import { toast } from "svelte-sonner";
-import fileSaver from "file-saver";
-const { saveAs } = fileSaver;
+	import { toast } from 'svelte-sonner';
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
 
-import { goto } from "$app/navigation";
-import { onMount, getContext } from "svelte";
-import { WEBUI_NAME, config, prompts as _prompts, user } from "$lib/stores";
+	import { goto } from '$app/navigation';
+	import { onMount, getContext } from 'svelte';
+	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
 
-import {
-	createNewPrompt,
-	deletePromptByCommand,
-	getPrompts,
-	getPromptList,
-} from "$lib/apis/prompts";
+	import {
+		createNewPrompt,
+		deletePromptByCommand,
+		getPrompts,
+		getPromptList
+	} from '$lib/apis/prompts';
 
-import PromptMenu from "./Prompts/PromptMenu.svelte";
-import EllipsisHorizontal from "../icons/EllipsisHorizontal.svelte";
-import DeleteConfirmDialog from "$lib/components/common/ConfirmDialog.svelte";
-import Search from "../icons/Search.svelte";
-import Plus from "../icons/Plus.svelte";
-import ChevronRight from "../icons/ChevronRight.svelte";
-import Spinner from "../common/Spinner.svelte";
-import Tooltip from "../common/Tooltip.svelte";
-import { capitalizeFirstLetter } from "$lib/utils";
+	import PromptMenu from './Prompts/PromptMenu.svelte';
+	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Search from '../icons/Search.svelte';
+	import Plus from '../icons/Plus.svelte';
+	import ChevronRight from '../icons/ChevronRight.svelte';
+	import Spinner from '../common/Spinner.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
+	import { capitalizeFirstLetter } from '$lib/utils';
 
-const i18n = getContext("i18n");
-let promptsImportInputElement: HTMLInputElement;
-let loaded = false;
+	const i18n = getContext('i18n');
+	let promptsImportInputElement: HTMLInputElement;
+	let loaded = false;
 
-let importFiles = "";
-let query = "";
+	let importFiles = '';
+	let query = '';
 
-let prompts = [];
+	let prompts = [];
 
-let showDeleteConfirm = false;
-let deletePrompt = null;
+	let showDeleteConfirm = false;
+	let deletePrompt = null;
 
-let filteredItems = [];
-$: filteredItems = prompts.filter(
-	(p) => query === "" || p.command.includes(query),
-);
+	let filteredItems = [];
+	$: filteredItems = prompts.filter((p) => query === '' || p.command.includes(query));
 
-const shareHandler = async (prompt) => {
-	toast.success($i18n.t("Redirecting you to OpenWebUI Community"));
+	const shareHandler = async (prompt) => {
+		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
 
-	const url = "https://openwebui.com";
+		const url = 'https://openwebui.com';
 
-	const tab = await window.open(`${url}/prompts/create`, "_blank");
-	window.addEventListener(
-		"message",
-		(event) => {
-			if (event.origin !== url) return;
-			if (event.data === "loaded") {
-				tab.postMessage(JSON.stringify(prompt), "*");
-			}
-		},
-		false,
-	);
-};
+		const tab = await window.open(`${url}/prompts/create`, '_blank');
+		window.addEventListener(
+			'message',
+			(event) => {
+				if (event.origin !== url) return;
+				if (event.data === 'loaded') {
+					tab.postMessage(JSON.stringify(prompt), '*');
+				}
+			},
+			false
+		);
+	};
 
-const cloneHandler = async (prompt) => {
-	sessionStorage.prompt = JSON.stringify(prompt);
-	goto("/workspace/prompts/create");
-};
+	const cloneHandler = async (prompt) => {
+		sessionStorage.prompt = JSON.stringify(prompt);
+		goto('/workspace/prompts/create');
+	};
 
-const exportHandler = async (prompt) => {
-	let blob = new Blob([JSON.stringify([prompt])], {
-		type: "application/json",
+	const exportHandler = async (prompt) => {
+		let blob = new Blob([JSON.stringify([prompt])], {
+			type: 'application/json'
+		});
+		saveAs(blob, `prompt-export-${Date.now()}.json`);
+	};
+
+	const deleteHandler = async (prompt) => {
+		const command = prompt.command;
+		await deletePromptByCommand(localStorage.token, command);
+		await init();
+	};
+
+	const init = async () => {
+		prompts = await getPromptList(localStorage.token);
+		await _prompts.set(await getPrompts(localStorage.token));
+	};
+
+	onMount(async () => {
+		await init();
+		loaded = true;
 	});
-	saveAs(blob, `prompt-export-${Date.now()}.json`);
-};
-
-const deleteHandler = async (prompt) => {
-	const command = prompt.command;
-	await deletePromptByCommand(localStorage.token, command);
-	await init();
-};
-
-const init = async () => {
-	prompts = await getPromptList(localStorage.token);
-	await _prompts.set(await getPrompts(localStorage.token));
-};
-
-onMount(async () => {
-	await init();
-	loaded = true;
-});
 </script>
 
 <svelte:head>
@@ -146,7 +144,10 @@ onMount(async () => {
 				class="flex flex-col cursor-pointer w-full px-3 py-3 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition border border-gray-100 dark:border-gray-800 min-h-[200px]"
 			>
 				<div class="flex flex-col flex-1">
-					<a href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`} class="flex-1 flex">
+					<a
+						href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
+						class="flex-1 flex"
+					>
 						<div class="flex-1 px-1 mb-1 flex flex-col justify-center text-center">
 							<div class="font-semibold line-clamp-1 h-fit">{prompt.title}</div>
 							<div class="text-xs overflow-hidden text-ellipsis line-clamp-1">

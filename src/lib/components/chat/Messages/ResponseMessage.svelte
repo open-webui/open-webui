@@ -496,9 +496,7 @@
 		<div class="flex-auto w-0 pl-1">
 			<Name>
 				<Tooltip content={model?.name ?? message.model} placement="top-start">
-					<span class="line-clamp-1">
-						Albert
-					</span>
+					<span class="line-clamp-1"> Albert </span>
 				</Tooltip>
 
 				{#if message.timestamp}

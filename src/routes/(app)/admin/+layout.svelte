@@ -27,7 +27,7 @@
 
 {#if loaded}
 	<div
-		class=" flex flex-col w-full min-h-screen max-h-screen transition-width duration-200 ease-in-out  max-w-full"
+		class=" flex flex-col w-full min-h-screen max-h-screen transition-width duration-200 ease-in-out max-w-full"
 	>
 		<nav class="   px-2.5 pt-1 backdrop-blur-xl drag-region">
 			<div class=" flex items-center gap-1">
@@ -41,7 +41,7 @@
 						aria-label="Toggle Sidebar"
 					>
 						<div class=" m-auto self-center">
-							<DrawerOpen className="size-5" strokeWidth="2"/>
+							<DrawerOpen className="size-5" strokeWidth="2" />
 						</div>
 					</button>
 				</div>
