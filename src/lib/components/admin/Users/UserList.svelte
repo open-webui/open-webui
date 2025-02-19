@@ -85,8 +85,9 @@
 				return true;
 			} else {
 				let name = user.name.toLowerCase();
+				let email = user.email.toLowerCase();
 				const query = search.toLowerCase();
-				return name.includes(query);
+				return name.includes(query) || email.includes(query);
 			}
 		})
 		.sort((a, b) => {
