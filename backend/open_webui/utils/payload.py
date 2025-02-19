@@ -68,7 +68,6 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
 def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
     name_differences = {
         "max_tokens": "num_predict",
-        "frequency_penalty": "repeat_penalty",
     }
 
     for key, value in name_differences.items():
