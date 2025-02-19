@@ -1950,6 +1950,18 @@ PLAYWRIGHT_WS_URI = PersistentConfig(
     os.environ.get("PLAYWRIGHT_WS_URI", None),
 )
 
+FIRECRAWL_API_KEY = PersistentConfig(
+    "FIRECRAWL_API_KEY",
+    "firecrawl.api_key",
+    os.environ.get("FIRECRAWL_API_KEY", ""),
+)
+
+FIRECRAWL_API_BASE_URL = PersistentConfig(
+    "FIRECRAWL_API_BASE_URL",
+    "firecrawl.api_url",
+    os.environ.get("FIRECRAWL_API_BASE_URL", "https://api.firecrawl.dev"),
+)
+
 ####################################
 # Images
 ####################################

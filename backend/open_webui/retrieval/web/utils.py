@@ -14,7 +14,8 @@ from typing import (
     List,
     Optional,
     Sequence,
-    Union
+    Union,
+    Literal
 )
 import aiohttp
 import certifi
@@ -23,9 +24,17 @@ from langchain_community.document_loaders import (
     PlaywrightURLLoader,
     WebBaseLoader
 )
+from langchain_community.document_loaders.firecrawl import FireCrawlLoader
+from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.config import ENABLE_RAG_LOCAL_WEB_FETCH, PLAYWRIGHT_WS_URI, RAG_WEB_LOADER_ENGINE
+from open_webui.config import (
+    ENABLE_RAG_LOCAL_WEB_FETCH,
+    PLAYWRIGHT_WS_URI,
+    RAG_WEB_LOADER_ENGINE,
+    FIRECRAWL_API_BASE_URL,
+    FIRECRAWL_API_KEY
+)
 from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
@@ -89,6 +98,156 @@ def extract_metadata(soup, url):
     if html := soup.find("html"):
         metadata["language"] = html.get("lang", "No language found.")
     return metadata
+
+
+def verify_ssl_cert(url: str) -> bool:
+    """Verify SSL certificate for the given URL."""
+    if not url.startswith("https://"):
+        return True
+        
+    try:
+        hostname = url.split("://")[-1].split("/")[0]
+        context = ssl.create_default_context(cafile=certifi.where())
+        with context.wrap_socket(ssl.socket(), server_hostname=hostname) as s:
+            s.connect((hostname, 443))
+        return True
+    except ssl.SSLError:
+        return False
+    except Exception as e:
+        log.warning(f"SSL verification failed for {url}: {str(e)}")
+        return False
+
+
+class SafeFireCrawlLoader(BaseLoader):
+    def __init__(
+        self,
+        web_paths,
+        verify_ssl: bool = True,
+        trust_env: bool = False,
+        requests_per_second: Optional[float] = None,
+        continue_on_failure: bool = True,
+        api_key: Optional[str] = None,
+        api_url: Optional[str] = None,
+        mode: Literal["crawl", "scrape", "map"] = "crawl",
+        proxy: Optional[Dict[str, str]] = None,
+        params: Optional[Dict] = None,
+    ):
+        """Concurrent document loader for FireCrawl operations.
+        
+        Executes multiple FireCrawlLoader instances concurrently using thread pooling
+        to improve bulk processing efficiency.
+        Args:
+            web_paths: List of URLs/paths to process.
+            verify_ssl: If True, verify SSL certificates.
+            trust_env: If True, use proxy settings from environment variables.
+            requests_per_second: Number of requests per second to limit to.
+            continue_on_failure (bool): If True, continue loading other URLs on failure.
+            api_key: API key for FireCrawl service. Defaults to None 
+                (uses FIRE_CRAWL_API_KEY environment variable if not provided).
+            api_url: Base URL for FireCrawl API. Defaults to official API endpoint.
+            mode: Operation mode selection:
+                - 'crawl': Website crawling mode (default)
+                - 'scrape': Direct page scraping
+                - 'map': Site map generation
+            proxy: Proxy override settings for the FireCrawl API.
+            params: The parameters to pass to the Firecrawl API.
+                Examples include crawlerOptions.
+                For more details, visit: https://github.com/mendableai/firecrawl-py
+        """
+        proxy_server = proxy.get('server') if proxy else None
+        if trust_env and not proxy_server:
+            env_proxies = urllib.request.getproxies()
+            env_proxy_server = env_proxies.get('https') or env_proxies.get('http')
+            if env_proxy_server:
+                if proxy:
+                    proxy['server'] = env_proxy_server
+                else:
+                    proxy = { 'server': env_proxy_server }
+        self.web_paths = web_paths
+        self.verify_ssl = verify_ssl
+        self.requests_per_second = requests_per_second
+        self.last_request_time = None
+        self.trust_env = trust_env
+        self.continue_on_failure = continue_on_failure
+        self.api_key = api_key
+        self.api_url = api_url
+        self.mode = mode
+        self.params = params
+
+    def lazy_load(self) -> Iterator[Document]:
+        """Load documents concurrently using FireCrawl."""
+        for url in self.web_paths:
+            try:
+                self._safe_process_url_sync(url)
+                loader = FireCrawlLoader(
+                    url=url,
+                    api_key=self.api_key,
+                    api_url=self.api_url,
+                    mode=self.mode,
+                    params=self.params
+                )
+                yield from loader.lazy_load()
+            except Exception as e:
+                if self.continue_on_failure:
+                    log.exception(e, "Error loading %s", url)
+                    continue
+                raise e
+
+    async def alazy_load(self):
+        """Async version of lazy_load."""
+        for url in self.web_paths:
+            try:
+                await self._safe_process_url(url)
+                loader = FireCrawlLoader(
+                    url=url,
+                    api_key=self.api_key,
+                    api_url=self.api_url,
+                    mode=self.mode,
+                    params=self.params
+                )
+                async for document in loader.alazy_load():
+                    yield document
+            except Exception as e:
+                if self.continue_on_failure:
+                    log.exception(e, "Error loading %s", url)
+                    continue
+                raise e
+
+    def _verify_ssl_cert(self, url: str) -> bool:
+        return verify_ssl_cert(url)
+
+    async def _wait_for_rate_limit(self):
+        """Wait to respect the rate limit if specified."""
+        if self.requests_per_second and self.last_request_time:
+            min_interval = timedelta(seconds=1.0 / self.requests_per_second)
+            time_since_last = datetime.now() - self.last_request_time
+            if time_since_last < min_interval:
+                await asyncio.sleep((min_interval - time_since_last).total_seconds())
+        self.last_request_time = datetime.now()
+
+    def _sync_wait_for_rate_limit(self):
+        """Synchronous version of rate limit wait."""
+        if self.requests_per_second and self.last_request_time:
+            min_interval = timedelta(seconds=1.0 / self.requests_per_second)
+            time_since_last = datetime.now() - self.last_request_time
+            if time_since_last < min_interval:
+                time.sleep((min_interval - time_since_last).total_seconds())
+        self.last_request_time = datetime.now()
+
+    async def _safe_process_url(self, url: str) -> bool:
+        """Perform safety checks before processing a URL."""
+        if self.verify_ssl and not self._verify_ssl_cert(url):
+            raise ValueError(f"SSL certificate verification failed for {url}")
+        await self._wait_for_rate_limit()
+        return True
+
+    def _safe_process_url_sync(self, url: str) -> bool:
+        """Synchronous version of safety checks."""
+        if self.verify_ssl and not self._verify_ssl_cert(url):
+            raise ValueError(f"SSL certificate verification failed for {url}")
+        self._sync_wait_for_rate_limit()
+        return True
+
 
 class SafePlaywrightURLLoader(PlaywrightURLLoader):
     """Load HTML pages safely with Playwright, supporting SSL verification, rate limiting, and remote browser connection.
@@ -201,21 +360,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader):
             await browser.close()
 
     def _verify_ssl_cert(self, url: str) -> bool:
-        """Verify SSL certificate for the given URL."""
-        if not url.startswith("https://"):
-            return True
-            
-        try:
-            hostname = url.split("://")[-1].split("/")[0]
-            context = ssl.create_default_context(cafile=certifi.where())
-            with context.wrap_socket(ssl.socket(), server_hostname=hostname) as s:
-                s.connect((hostname, 443))
-            return True
-        except ssl.SSLError:
-            return False
-        except Exception as e:
-            log.warning(f"SSL verification failed for {url}: {str(e)}")
-            return False
+        return verify_ssl_cert(url)
 
     async def _wait_for_rate_limit(self):
         """Wait to respect the rate limit if specified."""
@@ -354,6 +499,7 @@ class SafeWebBaseLoader(WebBaseLoader):
 RAG_WEB_LOADER_ENGINES = defaultdict(lambda: SafeWebBaseLoader)
 RAG_WEB_LOADER_ENGINES["playwright"] = SafePlaywrightURLLoader
 RAG_WEB_LOADER_ENGINES["safe_web"] = SafeWebBaseLoader
+RAG_WEB_LOADER_ENGINES["firecrawl"] = SafeFireCrawlLoader
 
 def get_web_loader(
     urls: Union[str, Sequence[str]],
@@ -374,6 +520,10 @@ def get_web_loader(
 
     if PLAYWRIGHT_WS_URI.value:
         web_loader_args["playwright_ws_url"] = PLAYWRIGHT_WS_URI.value
+
+    if RAG_WEB_LOADER_ENGINE.value == "firecrawl":
+        web_loader_args["api_key"] = FIRECRAWL_API_KEY.value
+        web_loader_args["api_url"] = FIRECRAWL_API_BASE_URL.value
 
     # Create the appropriate WebLoader based on the configuration
     WebLoaderClass = RAG_WEB_LOADER_ENGINES[RAG_WEB_LOADER_ENGINE.value]
