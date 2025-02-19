@@ -164,6 +164,8 @@ export type AudioSettings = {
 		engine?: string;
 	};
 	tts?: {
+		engine?: string;
+		engineConfig?: Record<string, any>;
 		playbackRate?: number;
 		voice?: string;
 		defaultVoice?: string;

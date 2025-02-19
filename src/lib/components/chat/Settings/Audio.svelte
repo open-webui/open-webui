@@ -3,6 +3,7 @@
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import type { Settings, AudioSettings } from '$lib/stores';
 	import { KokoroTTS } from 'kokoro-js';
 
 	import { user, settings, config } from '$lib/stores';
@@ -15,7 +16,7 @@
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
-	export let saveSettings: Function;
+	export let saveSettings: (settings: Partial<Settings>) => Promise<void>;
 
 	// Audio
 	let conversationMode = false;
@@ -26,13 +27,13 @@
 	let STTEngine = '';
 
 	let TTSEngine = '';
-	let TTSEngineConfig = {};
+	let TTSEngineConfig: Record<string, any> = {};
 
-	let TTSModel = null;
-	let TTSModelProgress = null;
+	let TTSModel: any = null;
+	let TTSModelProgress: any = null;
 	let TTSModelLoading = false;
 
-	let voices = [];
+	let voices: Array<{id?: string; name: string; localService?: boolean}> = [];
 	let voice = '';
 
 	// Audio speed control
@@ -45,7 +46,7 @@
 				await loadKokoro();
 			}
 
-			voices = Object.entries(TTSModel.voices).map(([key, value]) => {
+			voices = Object.entries(TTSModel.voices as Record<string, {name: string}>).map(([key, value]) => {
 				return {
 					id: key,
 					name: value.name,
@@ -86,26 +87,23 @@
 	};
 
 	onMount(async () => {
-		playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
-		conversationMode = $settings.conversationMode ?? false;
-		speechAutoSend = $settings.speechAutoSend ?? false;
-		responseAutoPlayback = $settings.responseAutoPlayback ?? false;
+		playbackRate = $settings?.audio?.tts?.playbackRate ?? 1;
+		conversationMode = $settings?.conversationMode ?? false;
+		speechAutoSend = $settings?.speechAutoSend ?? false;
+		responseAutoPlayback = $settings?.responseAutoPlayback ?? false;
 
 		STTEngine = $settings?.audio?.stt?.engine ?? '';
 
 		TTSEngine = $settings?.audio?.tts?.engine ?? '';
 		TTSEngineConfig = $settings?.audio?.tts?.engineConfig ?? {};
 
-		TTSEngine = $settings?.audio?.tts?.engine ?? '';
-		TTSEngineConfig = $settings?.audio?.tts?.engineConfig ?? {};
-
-		if ($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice) {
-			voice = $settings?.audio?.tts?.voice ?? $config.audio.tts.voice ?? '';
+		if ($settings?.audio?.tts?.defaultVoice === ($config?.audio?.tts?.voice ?? '')) {
+			voice = $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice ?? '';
 		} else {
-			voice = $config.audio.tts.voice ?? '';
+			voice = $config?.audio?.tts?.voice ?? '';
 		}
 
-		nonLocalVoices = $settings.audio?.tts?.nonLocalVoices ?? false;
+		nonLocalVoices = $settings?.audio?.tts?.nonLocalVoices ?? false;
 
 		await getVoices();
 	});
@@ -132,25 +130,15 @@
 				const model_id = 'onnx-community/Kokoro-82M-v1.0-ONNX';
 
 				TTSModel = await KokoroTTS.from_pretrained(model_id, {
-					dtype: TTSEngineConfig.dtype, // Options: "fp32", "fp16", "q8", "q4", "q4f16"
-					device: !!navigator?.gpu ? 'webgpu' : 'wasm', // Detect WebGPU
-					progress_callback: (e) => {
+					dtype: TTSEngineConfig.dtype,
+					device: typeof navigator !== 'undefined' && 'gpu' in navigator ? 'webgpu' : 'wasm',
+					progress_callback: (e: any) => {
 						TTSModelProgress = e;
 						console.log(e);
 					}
 				});
 
 				await getVoices();
-
-				// const rawAudio = await tts.generate(inputText, {
-				// 	// Use `tts.list_voices()` to list all available voices
-				// 	voice: voice
-				// });
-
-				// const blobUrl = URL.createObjectURL(await rawAudio.toBlob());
-				// const audio = new Audio(blobUrl);
-
-				// audio.play();
 			}
 		}
 	};
@@ -293,7 +281,7 @@
 		{#if TTSEngine === 'browser-kokoro'}
 			{#if TTSModel}
 				<div>
-					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
+					<div class=" mb-2.5 text-sm font-medium">{$i18n?.t('Set Voice')}</div>
 					<div class="flex w-full">
 						<div class="flex-1">
 							<input
@@ -317,7 +305,7 @@
 						<Spinner className="size-4" />
 
 						<div class=" text-sm font-medium shimmer">
-							{$i18n.t('Loading Kokoro.js...')}
+							{$i18n?.t('Loading Kokoro.js...')}
 							{TTSModelProgress && TTSModelProgress.status === 'progress'
 								? `(${Math.round(TTSModelProgress.progress * 10) / 10}%)`
 								: ''}
@@ -325,11 +313,11 @@
 					</div>
 
 					<div class="text-xs text-gray-500">
-						{$i18n.t('Please do not close the settings page while loading the model.')}
+						{$i18n?.t('Please do not close the settings page while loading the model.')}
 					</div>
 				</div>
 			{/if}
-		{:else if $config.audio.tts.engine === ''}
+		{:else if $config?.audio?.tts?.engine !== ''}
 			<div>
 				<div class=" mb-2.5 text-sm font-medium">{$i18n?.t('Set Voice')}</div>
 				<div class="flex w-full">
@@ -356,26 +344,6 @@
 
 					<div class="mt-1">
 						<Switch bind:state={nonLocalVoices} />
-					</div>
-				</div>
-			</div>
-		{:else if $config?.audio?.tts?.engine !== ''}
-			<div>
-				<div class=" mb-2.5 text-sm font-medium">{$i18n?.t('Set Voice')}</div>
-				<div class="flex w-full">
-					<div class="flex-1">
-						<input
-							list="voice-list"
-							class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-							bind:value={voice}
-							placeholder="Select a voice"
-						/>
-
-						<datalist id="voice-list">
-							{#each voices as voice}
-								<option value={voice.id}>{voice.name}</option>
-							{/each}
-						</datalist>
 					</div>
 				</div>
 			</div>
