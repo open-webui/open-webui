@@ -78,7 +78,6 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         "num_keep",
         "num_predict",
         "repeat_last_n",
-        "tfs_z",
         "top_k",
         "min_p",
         "typical_p",
