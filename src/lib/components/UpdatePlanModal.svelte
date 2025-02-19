@@ -2,6 +2,19 @@
   export let showUpdatePlanModal: boolean;
   export let userId: string; // Принимаем user id как пропс
 
+import md5 from 'crypto-js/md5';
+
+function calculateSignatureValue(merchantLogin: string, outSum: string, password1: string, invId: string = ''): string {
+  // Формируем строку для расчета
+  const baseString = invId
+    ? `${merchantLogin}:${outSum}:${invId}:${password1}`
+    : `${merchantLogin}:${outSum}::${password1}`;
+
+  // Вычисляем MD5 хэш
+  return md5(baseString).toString();
+}
+
+
   // Функция для загрузки скрипта Robokassa
   function loadRobokassaScript() {
     return new Promise((resolve, reject) => {
@@ -13,31 +26,39 @@
     });
   }
 
-  // Функция для запуска Robokassa iframe
-  async function openRobokassaIframe() {
-    try {
-      // Загружаем скрипт Robokassa, если он ещё не загружен
-      if (!window.Robokassa) {
-        await loadRobokassaScript();
-      }
-
-      // Вызываем Robokassa.Render
-      Robokassa.Render({
-        MerchantLogin: 'aidachat',
-        OutSum: '11', // Сумма оплаты
-        InvId: '', // Номер заказа (может быть пустым)
-        Description: 'Оплата заказа в Тестовом магазине ROBOKASSA',
-        Culture: 'ru',
-        Encoding: 'utf-8',
-        IsTest: 1,
-        Shp: {userId},
-        Settings: JSON.stringify({ PaymentMethods: ['BankCard', 'SBP'], Mode: 'modal' }),
-        SignatureValue: '00c6675e103f387ae5a3c0ba80695b98' // Подпись (замените на вашу)
-      });
-    } catch (error) {
-      console.error('Ошибка при загрузке Robokassa:', error);
+async function openRobokassaIframe() {
+  try {
+    // Загружаем скрипт Robokassa, если он ещё не загружен
+    if (!window.Robokassa) {
+      await loadRobokassaScript();
     }
+
+    // Параметры для расчета SignatureValue
+    const merchantLogin = 'aidachat';
+    const outSum = '11';
+    const password1 = 'YgUKSjuCRDqO01x90IX2'; // Замените на ваш Пароль#1
+    const invId = ''; // Номер заказа (может быть пустым)
+
+    // Рассчитываем SignatureValue
+    const signatureValue = calculateSignatureValue(merchantLogin, outSum, password1, invId);
+
+    // Вызываем Robokassa.Render
+    Robokassa.Render({
+      MerchantLogin: merchantLogin,
+      OutSum: outSum,
+      InvId: invId,
+      Description: 'Оплата заказа в Тестовом магазине ROBOKASSA',
+      Culture: 'ru',
+      Encoding: 'utf-8',
+      IsTest: 1,
+      Shp: { userId },
+      Settings: JSON.stringify({ PaymentMethods: ['BankCard', 'SBP'], Mode: 'modal' }),
+      SignatureValue: signatureValue // Используем рассчитанное значение
+    });
+  } catch (error) {
+    console.error('Ошибка при загрузке Robokassa:', error);
   }
+}
 </script>
 
 {#if showUpdatePlanModal}
