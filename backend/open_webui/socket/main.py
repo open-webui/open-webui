@@ -325,7 +325,7 @@ def get_event_emitter(request_info):
 
 
 def get_event_call(request_info):
-    async def __event_call__(event_data):
+    async def __event_caller__(event_data):
         response = await sio.call(
             "chat-events",
             {
@@ -337,7 +337,10 @@ def get_event_call(request_info):
         )
         return response
 
-    return __event_call__
+    return __event_caller__
+
+
+get_event_caller = get_event_call
 
 
 def get_user_id_from_session_pool(sid):

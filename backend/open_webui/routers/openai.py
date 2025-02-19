@@ -489,7 +489,7 @@ async def get_models(
                 raise HTTPException(status_code=500, detail=error_detail)
 
     if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
-        models["data"] = get_filtered_models(models, user)
+        models["data"] = await get_filtered_models(models, user)
 
     return models
 
@@ -551,9 +551,9 @@ async def generate_chat_completion(
         bypass_filter = True
 
     idx = 0
+
     payload = {**form_data}
-    if "metadata" in payload:
-        del payload["metadata"]
+    metadata = payload.pop("metadata", None)
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
@@ -566,7 +566,7 @@ async def generate_chat_completion(
 
         params = model_info.params.model_dump()
         payload = apply_model_params_to_body_openai(params, payload)
-        payload = apply_model_system_prompt_to_body(params, payload, user)
+        payload = apply_model_system_prompt_to_body(params, payload, metadata, user)
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":

@@ -32,6 +32,12 @@ def get_task_model_id(
     return task_model_id
 
 
+def prompt_variables_template(template: str, variables: dict[str, str]) -> str:
+    for variable, value in variables.items():
+        template = template.replace(variable, value)
+    return template
+
+
 def prompt_template(
     template: str, user_name: Optional[str] = None, user_location: Optional[str] = None
 ) -> str:

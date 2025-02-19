@@ -233,7 +233,7 @@
 				history.currentId = userMessageId;
 
 				await tick();
-				await sendPrompt(userPrompt, userMessageId);
+				await sendPrompt(history, userPrompt, userMessageId);
 			} else {
 				// Edit user message
 				history.messages[messageId].content = content;

@@ -79,6 +79,7 @@ class ChatPermissions(BaseModel):
 class FeaturesPermissions(BaseModel):
     web_search: bool = True
     image_generation: bool = True
+    code_interpreter: bool = True
 
 
 class UserPermissions(BaseModel):

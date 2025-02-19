@@ -13,8 +13,10 @@
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import Markdown from './Markdown.svelte';
 	import Image from '$lib/components/common/Image.svelte';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	const i18n = getContext('i18n');
+	dayjs.extend(localizedFormat);
 
 	export let user;
 
@@ -112,7 +114,7 @@
 						<div
 							class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 						>
-							<Tooltip content={dayjs(message.timestamp * 1000).format('dddd, DD MMMM YYYY HH:mm')}>
+							<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
 								<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
 							</Tooltip>
 						</div>

@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 from typing import Optional
 import logging
+import re
 
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.task import (
@@ -89,6 +90,10 @@ async def update_task_config(
         form_data.TITLE_GENERATION_PROMPT_TEMPLATE
     )
 
+    request.app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (
+        form_data.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE
+    )
+
     request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION = (
         form_data.ENABLE_AUTOCOMPLETE_GENERATION
     )
@@ -161,9 +166,20 @@ async def generate_title(
     else:
         template = DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE
 
+    messages = form_data["messages"]
+
+    # Remove reasoning details from the messages
+    for message in messages:
+        message["content"] = re.sub(
+            r"<details\s+type=\"reasoning\"[^>]*>.*?<\/details>",
+            "",
+            message["content"],
+            flags=re.S,
+        ).strip()
+
     content = title_generation_template(
         template,
-        form_data["messages"],
+        messages,
         {
             "name": user.name,
             "location": user.info.get("location") if user.info else None,
@@ -175,10 +191,10 @@ async def generate_title(
         "messages": [{"role": "user", "content": content}],
         "stream": False,
         **(
-            {"max_tokens": 50}
+            {"max_tokens": 1000}
             if models[task_model_id]["owned_by"] == "ollama"
             else {
-                "max_completion_tokens": 50,
+                "max_completion_tokens": 1000,
             }
         ),
         "metadata": {

@@ -22,23 +22,27 @@
 	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import { uploadFile } from '$lib/apis/files';
-	import { getTools } from '$lib/apis/tools';
+	import { generateAutoCompletion } from '$lib/apis';
+	import { deleteFileById } from '$lib/apis/files';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
-	import Tooltip from '../common/Tooltip.svelte';
 	import InputMenu from './MessageInput/InputMenu.svelte';
-	import Headphone from '../icons/Headphone.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
-	import FileItem from '../common/FileItem.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import Commands from './MessageInput/Commands.svelte';
-	import XMark from '../icons/XMark.svelte';
+
 	import RichTextInput from '../common/RichTextInput.svelte';
-	import { generateAutoCompletion } from '$lib/apis';
-	import { error, text } from '@sveltejs/kit';
+	import Tooltip from '../common/Tooltip.svelte';
+	import FileItem from '../common/FileItem.svelte';
 	import Image from '../common/Image.svelte';
-	import { deleteFileById } from '$lib/apis/files';
+
+	import XMark from '../icons/XMark.svelte';
+	import Headphone from '../icons/Headphone.svelte';
+	import GlobeAlt from '../icons/GlobeAlt.svelte';
+	import PhotoSolid from '../icons/PhotoSolid.svelte';
+	import Photo from '../icons/Photo.svelte';
+	import CommandLine from '../icons/CommandLine.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -65,6 +69,7 @@
 
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
+	export let codeInterpreterEnabled = false;
 
 	$: onChange({
 		prompt,
@@ -211,7 +216,7 @@
 				files = files.filter((item) => item?.itemId !== tempItemId);
 			}
 		} catch (e) {
-			toast.error(e);
+			toast.error(`${e}`);
 			files = files.filter((item) => item?.itemId !== tempItemId);
 		}
 	};
@@ -385,7 +390,7 @@
 				</div>
 
 				<div class="w-full relative">
-					{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || webSearchEnabled || imageGenerationEnabled}
+					{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || webSearchEnabled || ($settings?.webSearch ?? false) === 'always' || imageGenerationEnabled || codeInterpreterEnabled}
 						<div
 							class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10"
 						>
@@ -421,23 +426,39 @@
 								</div>
 							{/if}
 
+							{#if webSearchEnabled || ($settings?.webSearch ?? false) === 'always'}
+								<div class="flex items-center justify-between w-full">
+									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
+										<div class="pl-1">
+											<span class="relative flex size-2">
+												<span
+													class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"
+												/>
+												<span class="relative inline-flex rounded-full size-2 bg-blue-500" />
+											</span>
+										</div>
+										<div class=" translate-y-[0.5px]">{$i18n.t('Search the internet')}</div>
+									</div>
+								</div>
+							{/if}
+
 							{#if imageGenerationEnabled}
 								<div class="flex items-center justify-between w-full">
 									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
 										<div class="pl-1">
 											<span class="relative flex size-2">
 												<span
-													class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
+													class="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"
 												/>
-												<span class="relative inline-flex rounded-full size-2 bg-green-500" />
+												<span class="relative inline-flex rounded-full size-2 bg-teal-500" />
 											</span>
 										</div>
-										<div class=" ">{$i18n.t('Image generation')}</div>
+										<div class=" translate-y-[0.5px]">{$i18n.t('Generate an image')}</div>
 									</div>
 								</div>
 							{/if}
 
-							{#if webSearchEnabled}
+							{#if codeInterpreterEnabled}
 								<div class="flex items-center justify-between w-full">
 									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
 										<div class="pl-1">
@@ -448,7 +469,7 @@
 												<span class="relative inline-flex rounded-full size-2 bg-green-500" />
 											</span>
 										</div>
-										<div class=" ">{$i18n.t('Search the web')}</div>
+										<div class=" translate-y-[0.5px]">{$i18n.t('Execute code for analysis')}</div>
 									</div>
 								</div>
 							{/if}
@@ -568,7 +589,7 @@
 								dir={$settings?.chatDirection ?? 'LTR'}
 							>
 								{#if files.length > 0}
-									<div class="mx-1 mt-2.5 mb-1 flex items-center flex-wrap gap-2">
+									<div class="mx-2 mt-2.5 -mb-1 flex items-center flex-wrap gap-2">
 										{#each files as file, fileIdx}
 											{#if file.type === 'image'}
 												<div class=" relative group">
@@ -606,7 +627,7 @@
 													</div>
 													<div class=" absolute -top-1 -right-1">
 														<button
-															class=" bg-gray-400 text-white border border-white rounded-full group-hover:visible invisible transition"
+															class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
 															type="button"
 															on:click={() => {
 																files.splice(fileIdx, 1);
@@ -656,65 +677,10 @@
 									</div>
 								{/if}
 
-								<div class=" flex">
-									<div class="ml-1 self-end mb-1.5 flex space-x-1">
-										<InputMenu
-											bind:imageGenerationEnabled
-											bind:webSearchEnabled
-											bind:selectedToolIds
-											{screenCaptureHandler}
-											uploadFilesHandler={() => {
-												filesInputElement.click();
-											}}
-											uploadGoogleDriveHandler={async () => {
-												try {
-													const fileData = await createPicker();
-													if (fileData) {
-														const file = new File([fileData.blob], fileData.name, {
-															type: fileData.blob.type
-														});
-														await uploadFileHandler(file);
-													} else {
-														console.log('No file was selected from Google Drive');
-													}
-												} catch (error) {
-													console.error('Google Drive Error:', error);
-													toast.error(
-														$i18n.t('Error accessing Google Drive: {{error}}', {
-															error: error.message
-														})
-													);
-												}
-											}}
-											onClose={async () => {
-												await tick();
-
-												const chatInput = document.getElementById('chat-input');
-												chatInput?.focus();
-											}}
-										>
-											<button
-												class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
-												type="button"
-												aria-label="More"
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="size-5"
-												>
-													<path
-														d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
-													/>
-												</svg>
-											</button>
-										</InputMenu>
-									</div>
-
+								<div class="px-2.5">
 									{#if $settings?.richTextInput ?? true}
 										<div
-											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full py-2.5 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
+											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
 										>
 											<RichTextInput
 												bind:this={chatInputElement}
@@ -918,7 +884,7 @@
 										<textarea
 											id="chat-input"
 											bind:this={chatInputElement}
-											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-none w-full py-3 px-1 rounded-xl resize-none h-[48px]"
+											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-none w-full pt-3 px-1 resize-none"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 											bind:value={prompt}
 											on:keypress={(e) => {
@@ -1107,8 +1073,125 @@
 											}}
 										/>
 									{/if}
+								</div>
 
-									<div class="self-end mb-1.5 flex space-x-1 mr-1">
+								<div class=" flex justify-between mt-1.5 mb-2.5 mx-0.5 max-w-full">
+									<div class="ml-1 self-end gap-0.5 flex items-center flex-1 max-w-[80%]">
+										<InputMenu
+											bind:selectedToolIds
+											{screenCaptureHandler}
+											{inputFilesHandler}
+											uploadFilesHandler={() => {
+												filesInputElement.click();
+											}}
+											uploadGoogleDriveHandler={async () => {
+												try {
+													const fileData = await createPicker();
+													if (fileData) {
+														const file = new File([fileData.blob], fileData.name, {
+															type: fileData.blob.type
+														});
+														await uploadFileHandler(file);
+													} else {
+														console.log('No file was selected from Google Drive');
+													}
+												} catch (error) {
+													console.error('Google Drive Error:', error);
+													toast.error(
+														$i18n.t('Error accessing Google Drive: {{error}}', {
+															error: error.message
+														})
+													);
+												}
+											}}
+											onClose={async () => {
+												await tick();
+
+												const chatInput = document.getElementById('chat-input');
+												chatInput?.focus();
+											}}
+										>
+											<button
+												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-none focus:outline-none"
+												type="button"
+												aria-label="More"
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="size-5"
+												>
+													<path
+														d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
+													/>
+												</svg>
+											</button>
+										</InputMenu>
+
+										<div class="flex gap-0.5 items-center overflow-x-auto scrollbar-none flex-1">
+											{#if $_user}
+												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
+													<Tooltip content={$i18n.t('Search the internet')} placement="top">
+														<button
+															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
+															type="button"
+															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {webSearchEnabled ||
+															($settings?.webSearch ?? false) === 'always'
+																? 'bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-400'
+																: 'bg-transparent text-gray-600 dark:text-gray-400 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+														>
+															<GlobeAlt className="size-5" strokeWidth="1.75" />
+															<span
+																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																>{$i18n.t('Web Search')}</span
+															>
+														</button>
+													</Tooltip>
+												{/if}
+
+												{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
+													<Tooltip content={$i18n.t('Generate an image')} placement="top">
+														<button
+															on:click|preventDefault={() =>
+																(imageGenerationEnabled = !imageGenerationEnabled)}
+															type="button"
+															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {imageGenerationEnabled
+																? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+														>
+															<Photo className="size-5" strokeWidth="1.75" />
+															<span
+																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																>{$i18n.t('Image')}</span
+															>
+														</button>
+													</Tooltip>
+												{/if}
+
+												{#if $_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter}
+													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
+														<button
+															on:click|preventDefault={() =>
+																(codeInterpreterEnabled = !codeInterpreterEnabled)}
+															type="button"
+															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
+																? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+														>
+															<CommandLine className="size-5" strokeWidth="1.75" />
+															<span
+																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																>{$i18n.t('Code Interpreter')}</span
+															>
+														</button>
+													</Tooltip>
+												{/if}
+											{/if}
+										</div>
+									</div>
+
+									<div class="self-end flex space-x-1 mr-1 flex-shrink-0">
 										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
 											<Tooltip content={$i18n.t('Record voice')}>
 												<button
@@ -1163,7 +1246,10 @@
 												<div class=" flex items-center">
 													<Tooltip content={$i18n.t('Call')}>
 														<button
-															class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-2 self-center"
+															class=" {webSearchEnabled ||
+															($settings?.webSearch ?? false) === 'always'
+																? 'bg-blue-500 text-white hover:bg-blue-400 '
+																: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100'} transition rounded-full p-1.5 self-center"
 															type="button"
 															on:click={async () => {
 																if (selectedModels.length > 1) {
@@ -1216,7 +1302,9 @@
 														<button
 															id="send-message-button"
 															class="{prompt !== ''
-																? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+																? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
+																	? 'bg-blue-500 text-white hover:bg-blue-400 '
+																	: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
 															type="submit"
 															disabled={prompt === ''}
@@ -1225,7 +1313,7 @@
 																xmlns="http://www.w3.org/2000/svg"
 																viewBox="0 0 16 16"
 																fill="currentColor"
-																class="size-6"
+																class="size-5"
 															>
 																<path
 																	fill-rule="evenodd"
@@ -1250,7 +1338,7 @@
 															xmlns="http://www.w3.org/2000/svg"
 															viewBox="0 0 24 24"
 															fill="currentColor"
-															class="size-6"
+															class="size-5"
 														>
 															<path
 																fill-rule="evenodd"

@@ -880,13 +880,14 @@ export const getChangelog = async () => {
 	return res;
 };
 
-export const getVersionUpdates = async () => {
+export const getVersionUpdates = async (token: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_BASE_URL}/api/version/updates`, {
 		method: 'GET',
 		headers: {
-			'Content-Type': 'application/json'
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
 		}
 	})
 		.then(async (res) => {

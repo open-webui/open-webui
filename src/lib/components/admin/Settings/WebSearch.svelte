@@ -25,7 +25,8 @@
 		'duckduckgo',
 		'tavily',
 		'jina',
-		'bing'
+		'bing',
+		'exa'
 	];
 
 	let youtubeLanguage = 'en';
@@ -259,6 +260,17 @@
 								<SensitiveInput
 									placeholder={$i18n.t('Enter Jina API Key')}
 									bind:value={webConfig.search.jina_api_key}
+								/>
+							</div>
+						{:else if webConfig.search.engine === 'exa'}
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Exa API Key')}
+								</div>
+
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Exa API Key')}
+									bind:value={webConfig.search.exa_api_key}
 								/>
 							</div>
 						{:else if webConfig.search.engine === 'bing'}
