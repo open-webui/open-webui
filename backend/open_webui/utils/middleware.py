@@ -1359,7 +1359,15 @@ async def process_chat_response(
 
             tool_calls = []
 
-            last_assistant_message = get_last_assistant_message(form_data["messages"])
+            last_assistant_message = None
+            try:
+                if form_data["messages"][-1]["role"] == "assistant":
+                    last_assistant_message = get_last_assistant_message(
+                        form_data["messages"]
+                    )
+            except Exception as e:
+                pass
+
             content = (
                 message.get("content", "")
                 if message
