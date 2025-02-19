@@ -42,7 +42,7 @@
       const paymentMethods = JSON.stringify({ PaymentMethods: ['BankCard', 'SBP'], Mode: 'modal' });
 
       // Секретный ключ (замените на ваш)
-      const secretKey = 'your-secret-key';
+      const secretKey = 'YgUKSjuCRDqO01x90IX2';
 
       // Строка для подписи
       const signatureString = `${merchantLogin}:${outSum}:${invId}:${shpUserId}:${secretKey}`;
