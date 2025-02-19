@@ -103,5 +103,9 @@ pytest-docker~=3.1.1
 googleapis-common-protos==1.63.2
 google-cloud-storage==2.19.0
 
+azure-identity==1.20.0
+azure-storage-blob==12.24.1
+
+
 ## LDAP
 ldap3==2.9.1
