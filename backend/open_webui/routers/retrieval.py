@@ -702,7 +702,7 @@ def save_docs_to_vector_db(
     collection_name,
     metadata: Optional[dict] = None,
     overwrite: bool = False,
-    split: bool = True,
+    split: bool = False,
     add: bool = False,
     user=None,
 ) -> bool:
@@ -972,25 +972,25 @@ def process_file(
         Files.update_file_hash_by_id(file.id, hash)
 
         try:
-            # result = save_docs_to_vector_db(
-            #     request,
-            #     docs=docs,
-            #     collection_name=collection_name,
-            #     metadata={
-            #         "file_id": file.id,
-            #         "name": file.filename,
-            #         "hash": hash,
-            #     },
-            #     add=(True if form_data.collection_name else False),
-            #     user=user,
-            # )
-            # if result:
-            Files.update_file_metadata_by_id(
-                file.id,
-                {
-                    "collection_name": collection_name,
+            result = save_docs_to_vector_db(
+                request,
+                docs=docs,
+                collection_name=collection_name,
+                metadata={
+                    "file_id": file.id,
+                    "name": file.filename,
+                    "hash": hash,
                 },
+                add=(True if form_data.collection_name else False),
+                user=user,
             )
+            if result:
+                Files.update_file_metadata_by_id(
+                    file.id,
+                    {
+                        "collection_name": collection_name,
+                    },
+                )
 
             return {
                 "status": True,

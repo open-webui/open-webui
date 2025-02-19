@@ -792,13 +792,23 @@ async def process_chat_payload(request, form_data, metadata, user, model):
     # If context is not empty, insert it into the messages
     if len(sources) > 0:
         context_string = ""
+        webpage_context_string = ""
+        file_context_string = ""
+        log.debug(f"sources: {json.dumps(sources)}")
         for source_idx, source in enumerate(sources):
             source_id = source.get("source", {}).get("name", "")
+            source_type = source.get("source", {}).get("type", "")
             log.debug(f"source_idx = {source_idx}, source_id = {source_id}")
             if "document" in source:
                 for doc_idx, doc_context in enumerate(source["document"]):
-                    log.debug(f"doc_idx = {doc_idx}")
-                    context_string += f"<source><source_id>{doc_idx}</source_id><source_context>{doc_context}</source_context></source>\n"
+                    # Special RAG Prompt for DeepSeek tool
+                    if model["architecture"]["tokenizer"] == "DeepSeek":
+                        if source_type == "web_search_docs":
+                            webpage_context_string += f"[webpage {doc_idx} begin]{doc_context}[webpage {doc_idx} end]\n"
+                        elif source_type == "file":
+                            file_context_string += f"[file {doc_idx} begin]{doc_context}[file {doc_idx} end]\n"
+                    else:
+                        context_string += f"<source><source_id>{doc_idx}</source_id><source_context>{doc_context}</source_context></source>\n"
 
         context_string = context_string.strip()
         prompt = get_last_user_message(form_data["messages"])
@@ -815,11 +825,28 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
         # Workaround for Ollama 2.0+ system prompt issue
         # TODO: replace with add_or_update_system_message
+        log.debug(f"process_chat_payload.model: {json.dumps(model)}")
         if model.get("owned_by") == "ollama":
             form_data["messages"] = prepend_to_first_user_message_content(
                 rag_template(
                     request.app.state.config.RAG_TEMPLATE, context_string, prompt
                 ),
+                form_data["messages"],
+            )
+            # DeepSeek tool prompt
+        elif model["architecture"]["tokenizer"] == "DeepSeek":
+            log.debug(f"webpage_context_string: {webpage_context_string}")
+            log.debug(f"file_context_string: {file_context_string}")
+            log.debug(
+                f'DeepSeek tool prompt: {request.app.state.config.RAG_DEEPSEEK_TEMPLATE.replace("{{SEARCH_RESULTS}}", webpage_context_string).replace("{{FILE_CONTEXT}", file_context_string).replace("{{CURRENT_DATE}}", time.strftime("%Y-%m-%d")).replace("{{QUESTION}}", prompt)}'
+            )
+            form_data["messages"] = add_or_update_system_message(
+                request.app.state.config.RAG_DEEPSEEK_TEMPLATE.replace(
+                    "{{SEARCH_RESULTS}}", webpage_context_string
+                )
+                .replace("{{FILE_CONTEXT}}", file_context_string)
+                .replace("{{CURRENT_DATE}}", time.strftime("%Y-%m-%d"))
+                .replace("{{QUESTION}}", prompt),
                 form_data["messages"],
             )
         else:
