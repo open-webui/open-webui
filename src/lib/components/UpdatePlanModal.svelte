@@ -45,11 +45,11 @@
       const secretKey = 'YgUKSjuCRDqO01x90IX2';
 
       // Строка для подписи
-      const signatureString = `${merchantLogin}:${outSum}:${invId}:${shpUserId}:${secretKey}`;
-
+      const signatureString = `${merchantLogin}:${outSum}:${invId}:${secretKey}:Shp_login=${shpUserId}`;
+       console.log("Sig1", signatureString)
       // Рассчитываем подпись (SHA-256)
       const signatureValue = await calculateSHA256(signatureString);
-      console.log("Sig", signatureValue)
+      console.log("Sig2", signatureValue)
       // Вызываем Robokassa.Render
       Robokassa.Render({
         MerchantLogin: merchantLogin,
