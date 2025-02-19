@@ -20,6 +20,7 @@
 		'kagi',
 		'mojeek',
 		'bocha',
+		'bochaai',
 		'serpstack',
 		'serper',
 		'serply',
@@ -220,6 +221,17 @@
 								<SensitiveInput
 									placeholder={$i18n.t('Enter Bocha Search API Key')}
 									bind:value={webConfig.search.bocha_search_api_key}
+								/>
+							</div>
+						{:else if webConfig.search.engine === 'bochaai'}
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Bocha AI Search API Key')}
+								</div>
+
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Bocha AI Search API Key')}
+									bind:value={webConfig.search.bocha_aisearch_api_key}
 								/>
 							</div>
 						{:else if webConfig.search.engine === 'serpstack'}
