@@ -154,15 +154,18 @@ def merge_get_results(get_results: list[dict]) -> dict:
     # Initialize lists to store combined data
     combined_documents = []
     combined_metadatas = []
+    combined_ids = []
 
     for data in get_results:
         combined_documents.extend(data["documents"][0])
         combined_metadatas.extend(data["metadatas"][0])
+        combined_ids.extend(data["ids"][0])
 
     # Create the output dictionary
     result = {
         "documents": [combined_documents],
         "metadatas": [combined_metadatas],
+        "ids": [combined_ids],
     }
 
     return result
