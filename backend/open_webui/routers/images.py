@@ -515,7 +515,8 @@ async def image_generations(
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == "gemini":
             headers = {}
             headers["Content-Type"] = "application/json"
-            api_key = request.app.state.config.IMAGES_GEMINI_API_KEY
+            headers["x-goog-api-key"] = request.app.state.config.IMAGES_GEMINI_API_KEY
+
             model = get_image_model(request)
             data = {
                 "instances": {"prompt": form_data.prompt},
@@ -528,7 +529,7 @@ async def image_generations(
             # Use asyncio.to_thread for the requests.post call
             r = await asyncio.to_thread(
                 requests.post,
-                url=f"{request.app.state.config.IMAGES_GEMINI_API_BASE_URL}/models/{model}:predict?key={api_key}",
+                url=f"{request.app.state.config.IMAGES_GEMINI_API_BASE_URL}/models/{model}:predict",
                 json=data,
                 headers=headers,
             )
