@@ -63,7 +63,7 @@
 		meta: {
 			profile_image_url: '/static/favicon.png',
 			description: '',
-			suggestion_prompts: null,
+			suggestion_prompts: [],
 			tags: []
 		},
 		params: {
@@ -592,71 +592,75 @@
 					<hr class=" border-gray-100 dark:border-gray-850 my-1" />
 
 					<div class="my-2">
-						<div class="flex w-full justify-between items-center">
+						<div class="flex w-full justify-between mb-2">
 							<div class="flex w-full justify-between items-center">
 								<div class=" self-center text-sm font-semibold">
 									{$i18n.t('Prompt suggestions')}
 								</div>
-
-								<button
-									class="p-1 text-xs flex rounded-sm transition"
-									type="button"
-									on:click={() => {
-										if ((info?.meta?.suggestion_prompts ?? null) === null) {
-											info.meta.suggestion_prompts = [{ content: '' }];
-										} else {
-											info.meta.suggestion_prompts = null;
-										}
-									}}
-								>
-									{#if (info?.meta?.suggestion_prompts ?? null) === null}
-										<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-									{:else}
-										<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-									{/if}
-								</button>
+								{#if !info?.meta?.suggestion_prompts || info.meta.suggestion_prompts.length === 0}
+									<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+								{:else}
+									<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+								{/if}
 							</div>
 
-							{#if (info?.meta?.suggestion_prompts ?? null) !== null}
-								<button
-									class="p-1 px-2 text-xs flex rounded-sm transition"
-									type="button"
-									on:click={() => {
-										if (
-											info.meta.suggestion_prompts.length === 0 ||
-											info.meta.suggestion_prompts.at(-1).content !== ''
-										) {
-											info.meta.suggestion_prompts = [
-												...info.meta.suggestion_prompts,
-												{ content: '' }
-											];
-										}
-									}}
+							<button
+								class="p-1 px-2 text-xs flex rounded-sm transition"
+								type="button"
+								on:click={() => {
+									if (
+										info.meta.suggestion_prompts.length === 0 ||
+										info.meta.suggestion_prompts.at(-1).content !== ''
+									) {
+										info.meta.suggestion_prompts = [
+											...info.meta.suggestion_prompts,
+											{ content: '', title: ['', '']  }
+										];
+									}
+								}}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="w-4 h-4"
 								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-										/>
-									</svg>
-								</button>
-							{/if}
+									<path
+										d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
+									/>
+								</svg>
+							</button>
 						</div>
 
 						{#if info?.meta?.suggestion_prompts}
-							<div class="flex flex-col space-y-1 mt-1 mb-3">
+							<div class="grid lg:grid-cols-2 flex-col gap-1.5">
 								{#if info.meta.suggestion_prompts.length > 0}
 									{#each info.meta.suggestion_prompts as prompt, promptIdx}
-										<div class=" flex rounded-lg">
-											<input
-												class=" text-sm w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
-												placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
-												bind:value={prompt.content}
-											/>
+										<div class=" flex border border-gray-100 dark:border-none dark:bg-gray-850 rounded-xl py-1.5">
+											<div class="flex flex-col flex-1 pl-1">
+												<div class="flex border-b border-gray-100 dark:border-gray-850 w-full">
+													<input
+														class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
+														placeholder={$i18n.t('Title (e.g. Tell me a fun fact)')}
+														bind:value={prompt.title[0]}
+													/>
+		
+													<input
+														class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
+														placeholder={$i18n.t('Subtitle (e.g. about the Roman Empire)')}
+														bind:value={prompt.title[1]}
+													/>
+												</div>
+		
+												<textarea
+													class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850 resize-none"
+													placeholder={$i18n.t(
+														'Prompt (e.g. Tell me a fun fact about the Roman Empire)'
+													)}
+													rows="3"
+													bind:value={prompt.content}
+												/>
+											</div>
 
 											<button
 												class="px-2"
@@ -679,8 +683,6 @@
 											</button>
 										</div>
 									{/each}
-								{:else}
-									<div class="text-xs text-center">No suggestion prompts</div>
 								{/if}
 							</div>
 						{/if}
