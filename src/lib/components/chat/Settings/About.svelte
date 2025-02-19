@@ -92,7 +92,7 @@
 		</div>
 
 		{#if ollamaVersion}
-			<hr class=" dark:border-gray-850" />
+			<hr class=" border-gray-100 dark:border-gray-850" />
 
 			<div>
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Ollama Version')}</div>
@@ -104,7 +104,7 @@
 			</div>
 		{/if}
 
-		<hr class=" dark:border-gray-850" />
+		<hr class=" border-gray-100 dark:border-gray-850" />
 
 		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
 			Emoji graphics provided by
