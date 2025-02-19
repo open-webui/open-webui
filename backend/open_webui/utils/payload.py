@@ -173,8 +173,6 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
         ollama_payload["format"] = openai_payload["format"]
 
     # If there are advanced parameters in the payload, format them in Ollama's options field
-    ollama_options = {}
-
     if openai_payload.get("options"):
         ollama_payload["options"] = openai_payload["options"]
         ollama_options = openai_payload["options"]
@@ -188,10 +186,6 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
         if "system" in ollama_options:
             ollama_payload["system"] = ollama_options["system"] 
             del ollama_options["system"] # To prevent Ollama warning of invalid option provided
-
-    # Add options to payload if any have been set
-    if ollama_options:
-        ollama_payload["options"] = ollama_options
 
     if "metadata" in openai_payload:
         ollama_payload["metadata"] = openai_payload["metadata"]
