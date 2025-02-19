@@ -1248,7 +1248,7 @@
 										{#if !history.currentId || history.messages[history.currentId]?.done == true}
 											{#if prompt === ''}
 												<div class=" flex items-center">
-													<Tooltip content={$i18n.t('Call')}>
+													<!-- <Tooltip content={$i18n.t('Call')}>
 														<button
 															class=" {webSearchEnabled ||
 															($settings?.webSearch ?? false) === 'always'
@@ -1298,7 +1298,7 @@
 														>
 															<Headphone className="size-5" />
 														</button>
-													</Tooltip>
+													</Tooltip> -->
 												</div>
 											{:else}
 												<div class=" flex items-center">
