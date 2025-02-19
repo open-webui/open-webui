@@ -20,7 +20,10 @@
 	let command = '';
 	let content = '';
 
-	let accessControl = null;
+let accessControl = {
+				read:  { group_ids: [] },
+				write: { group_ids: [] }
+			};
 
 	let showAccessControlModal = false;
 
@@ -56,16 +59,26 @@
 	};
 
 	onMount(async () => {
-		if (prompt) {
-			title = prompt.title;
-			await tick();
+	if (prompt) {
+		title = prompt.title;
+		await tick();
 
-			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
-			content = prompt.content;
+		command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
+		content = prompt.content;
 
-			accessControl = prompt?.access_control ?? null;
+		// If prompt?.access_control is explicitly null, keep it null (public).
+		// Otherwise (undefined or any object), default to private.
+		if (prompt?.access_control == null) {
+			accessControl = null; 
+		} else {
+			accessControl = {
+				read:  { group_ids: [] },
+				write: { group_ids: [] }
+			};
 		}
-	});
+	}
+});
+
 </script>
 
 <AccessControlModal
