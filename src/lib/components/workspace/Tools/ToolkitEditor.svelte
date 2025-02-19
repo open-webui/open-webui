@@ -29,7 +29,10 @@
 		description: ''
 	};
 	export let content = '';
-	export let accessControl = null;
+	let accessControl = {
+				read:  { group_ids: [] },
+				write: { group_ids: [] }
+			};
 
 	let _content = '';
 

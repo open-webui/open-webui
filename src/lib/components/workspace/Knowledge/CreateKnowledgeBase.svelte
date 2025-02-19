@@ -12,8 +12,10 @@
 
 	let name = '';
 	let description = '';
-
-	let accessControl = { read: { group_ids: [] }, write: { group_ids: [] } };
+	let accessControl = {
+				read:  { group_ids: [] },
+				write: { group_ids: [] }
+			};
 
 	const submitHandler = async () => {
 		loading = true;
