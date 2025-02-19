@@ -342,6 +342,13 @@
 		selectedChatId = null;
 	};
 
+	function truncateName(name) {
+		if (name && name.length > 12) {  // If name is longer than 12 characters
+			return `${name.slice(0, 4)}...${name.slice(-4)}`;
+		}
+		return name;
+	}
+
 	onMount(async () => {
 		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
 
@@ -878,7 +885,7 @@
 									alt="User profile"
 								/>
 							</div>
-							<div class=" self-center font-medium">{$user.name}</div>
+							<div class=" self-center font-medium">{truncateName($user.name)}</div>
 						</button>
 					</UserMenu>
 				{/if}
