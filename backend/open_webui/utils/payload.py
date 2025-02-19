@@ -194,10 +194,6 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     if "frequency_penalty" in openai_payload:
         ollama_options["repeat_penalty"] = openai_payload["frequency_penalty"]
 
-    if "presence_penalty" in openai_payload and "penalty" not in ollama_options:
-        # We are assuming presence penalty uses a similar concept in Ollama, which needs custom handling if exists.
-        ollama_options["new_topic_penalty"] = openai_payload["presence_penalty"]
-
     # Add options to payload if any have been set
     if ollama_options:
         ollama_payload["options"] = ollama_options
