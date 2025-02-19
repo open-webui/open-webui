@@ -185,9 +185,7 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
             ollama_options[param] = openai_payload[param]
 
     # Mapping OpenAI's `max_tokens` -> Ollama's `num_predict`
-    if "max_completion_tokens" in openai_payload:
-        ollama_options["num_predict"] = openai_payload["max_completion_tokens"]
-    elif "max_tokens" in openai_payload:
+    if "max_tokens" in openai_payload:
         ollama_options["num_predict"] = openai_payload["max_tokens"]
 
     # Add options to payload if any have been set
