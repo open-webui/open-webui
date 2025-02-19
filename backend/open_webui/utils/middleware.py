@@ -344,7 +344,7 @@ async def chat_web_search_handler(
                     "query": searchQuery,
                 }
             ),
-            user=user
+            user=user,
         )
 
         if results:
@@ -560,9 +560,9 @@ async def chat_completion_files_handler(
                         reranking_function=request.app.state.rf,
                         r=request.app.state.config.RELEVANCE_THRESHOLD,
                         hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+                        full_context=request.app.state.config.RAG_FULL_CONTEXT,
                     ),
                 )
-
         except Exception as e:
             log.exception(e)
 
