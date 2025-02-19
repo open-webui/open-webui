@@ -14,31 +14,16 @@
 
 	export let accessRoles = ['read'];
 	export let accessControl = null;
-	import { user } from '$lib/stores';
-
 
 	let selectedGroupId = '';
 	let groups = [];
-	let allow_public:boolean = false;
-
 
 	onMount(async () => {
 		groups = await getGroups(localStorage.token);
-				allow_public = false;
-
-
-				if ($user !== undefined && $user.role === "admin") {
-				// Admins are always allowed to set public
-				allow_public = true;
-			} 
-
 
 		if (accessControl === null) {
 			accessControl = null;
-		} 
-		
-		
-		else {
+		} else {
 			accessControl = {
 				read: {
 					group_ids: accessControl?.read?.group_ids ?? [],
@@ -128,11 +113,8 @@
 						}
 					}}
 				>
-				<option class=" text-gray-700" value="private" selected>Private</option> 
-					// || ($user !== undefined && $user.role === "admin")
-					{#if allow_public} 
-					<option class=" text-gray-700" value="public">Public</option>
-					{/if}
+					<option class=" text-gray-700" value="private" selected>Private</option>
+					<option class=" text-gray-700" value="public" selected>Public</option>
 				</select>
 
 				<div class=" text-xs text-gray-400 font-medium">
