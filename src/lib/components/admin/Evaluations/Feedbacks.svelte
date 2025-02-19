@@ -131,14 +131,16 @@
 	</div>
 </div>
 
-<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded pt-0.5">
+<div
+	class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm pt-0.5"
+>
 	{#if (feedbacks ?? []).length === 0}
 		<div class="text-center text-xs text-gray-500 dark:text-gray-400 py-1">
 			{$i18n.t('No feedbacks found')}
 		</div>
 	{:else}
 		<table
-			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full rounded"
+			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full rounded-sm"
 		>
 			<thead
 				class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
@@ -169,7 +171,7 @@
 						<td class=" py-0.5 text-right font-semibold">
 							<div class="flex justify-center">
 								<Tooltip content={feedback?.user?.name}>
-									<div class="flex-shrink-0">
+									<div class="shrink-0">
 										<img
 											src={feedback?.user?.profile_image_url ?? '/user.png'}
 											alt={feedback?.user?.name}

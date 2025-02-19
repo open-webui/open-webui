@@ -53,10 +53,7 @@
 
 	// Function to find the next template in the document
 	function findNextTemplate(doc, from = 0) {
-		const patterns = [
-			{ start: '[', end: ']' },
-			{ start: '{{', end: '}}' }
-		];
+		const patterns = [{ start: '{{', end: '}}' }];
 
 		let result = null;
 
