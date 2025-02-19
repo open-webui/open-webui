@@ -67,38 +67,49 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
 
 
 def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
-    opts = [
-        "temperature",
-        "top_p",
-        "seed",
-        "mirostat",
-        "mirostat_eta",
-        "mirostat_tau",
-        "num_ctx",
-        "num_batch",
-        "num_keep",
-        "repeat_last_n",
-        "tfs_z",
-        "top_k",
-        "min_p",
-        "use_mmap",
-        "use_mlock",
-        "num_thread",
-        "num_gpu",
-    ]
-    mappings = {i: lambda x: x for i in opts}
-    form_data = apply_model_params_to_body(params, form_data, mappings)
-
+    # Convert OpenAI parameter names to Ollama parameter names if needed.
     name_differences = {
         "max_tokens": "num_predict",
-        "frequency_penalty": "repeat_penalty",
     }
 
     for key, value in name_differences.items():
         if (param := params.get(key, None)) is not None:
-            form_data[value] = param
+            # Copy the parameter to new name then delete it, to prevent Ollama warning of invalid option provided
+            params[value] = params[key]
+            del params[key]
 
-    return form_data
+    # See https://github.com/ollama/ollama/blob/main/docs/api.md#request-8
+    mappings = {
+        "temperature": float,
+        "top_p": float,
+        "seed": lambda x: x,
+        "mirostat": int,
+        "mirostat_eta": float,
+        "mirostat_tau": float,
+        "num_ctx": int,
+        "num_batch": int,
+        "num_keep": int,
+        "num_predict": int,
+        "repeat_last_n": int,
+        "top_k": int,
+        "min_p": float,
+        "typical_p": float,
+        "repeat_penalty": float,
+        "presence_penalty": float,
+        "frequency_penalty": float,
+        "penalize_newline": bool,
+        "stop": lambda x: [bytes(s, "utf-8").decode("unicode_escape") for s in x],
+        "numa": bool,
+        "num_gpu": int,
+        "main_gpu": int,
+        "low_vram": bool,
+        "vocab_only": bool,
+        "use_mmap": bool,
+        "use_mlock": bool,
+        "num_thread": int,
+    }
+
+    return apply_model_params_to_body(params, form_data, mappings)
 
 
 def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
