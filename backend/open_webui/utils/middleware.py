@@ -322,6 +322,7 @@ async def chat_web_search_handler(
         return form_data
 
     searchQuery = queries[0]
+    log.info(f"generate searchQuery: {searchQuery}")
 
     await event_emitter(
         {
@@ -336,7 +337,7 @@ async def chat_web_search_handler(
     )
 
     try:
-
+        log.info(f"begin to process_web_search: {searchQuery}")
         results = await process_web_search(
             request,
             SearchForm(
@@ -347,6 +348,7 @@ async def chat_web_search_handler(
             user,
         )
 
+        log.debug(f"end to process_web_search, results: {results}")
         if results:
             await event_emitter(
                 {
@@ -566,7 +568,7 @@ async def chat_completion_files_handler(
         except Exception as e:
             log.exception(e)
 
-        log.debug(f"rag_contexts:sources: {sources}")
+        log.debug(f"sources: {json.dumps(sources,ensure_ascii=False)}")
 
     return body, {"sources": sources}
 
@@ -712,6 +714,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
     features = form_data.pop("features", None)
     if features:
         if "web_search" in features and features["web_search"]:
+            log.info("Web search feature is enabled")
             form_data = await chat_web_search_handler(
                 request, form_data, extra_params, user
             )
@@ -791,10 +794,11 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         context_string = ""
         for source_idx, source in enumerate(sources):
             source_id = source.get("source", {}).get("name", "")
-
+            log.debug(f"source_idx = {source_idx}, source_id = {source_id}")
             if "document" in source:
                 for doc_idx, doc_context in enumerate(source["document"]):
-                    context_string += f"<source><source_id>{source_idx}</source_id><source_context>{doc_context}</source_context></source>\n"
+                    log.debug(f"doc_idx = {doc_idx}")
+                    context_string += f"<source><source_id>{doc_idx}</source_id><source_context>{doc_context}</source_context></source>\n"
 
         context_string = context_string.strip()
         prompt = get_last_user_message(form_data["messages"])

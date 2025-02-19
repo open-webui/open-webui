@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import uuid
@@ -300,8 +301,34 @@ def get_sources_from_files(
     r,
     hybrid_search,
 ):
-    log.debug(f"files: {files} {queries} {embedding_function} {reranking_function}")
-
+    log.info(
+        f"files: {json.dumps(files, ensure_ascii=False)};\nqueries: {queries}\nembedding_function: {embedding_function}\nreranking_function: {reranking_function}"
+    )
+    if files[0].get("type", "file") == "web_search_docs":
+        for file in files:
+            context = {
+                "documents": [[doc.get("content") for doc in file.get("docs")]],
+                "metadatas": [[doc.get("metadata") for doc in file.get("docs")]],
+            }
+        relevant_contexts = []
+        if context:
+            if "data" in file:
+                del file["data"]
+            relevant_contexts.append({**context, "file": file})
+        sources = []
+        for context in relevant_contexts:
+            try:
+                if "documents" in context:
+                    if "metadatas" in context:
+                        source = {
+                            "source": context["file"],
+                            "document": context["documents"][0],
+                            "metadata": context["metadatas"][0],
+                        }
+                        sources.append(source)
+            except Exception as e:
+                log.exception(e)
+        return sources
     return [
         {
             "source": file["file"],
@@ -604,3 +631,10 @@ class RerankCompressor(BaseDocumentCompressor):
             )
             final_results.append(doc)
         return final_results
+
+
+# remove_extra_line_breaks 去除一个文本中多余的换行
+def remove_extra_line_breaks(text):
+    lines = text.split("\n")
+    lines = [line for line in lines if line.strip()]
+    return "\n".join(lines)

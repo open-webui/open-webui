@@ -25,10 +25,9 @@
 
 	// Helper function to check if text is a URL and return the domain
 	function formattedTitle(title: string): string {
-		if (title.startsWith('http')) {
+		if (title?.startsWith('http')) {
 			return getDomain(title);
 		}
-
 		return title;
 	}
 

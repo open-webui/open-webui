@@ -68,6 +68,7 @@ from open_webui.retrieval.utils import (
     query_collection_with_hybrid_search,
     query_doc,
     query_doc_with_hybrid_search,
+    remove_extra_line_breaks,
 )
 from open_webui.utils.misc import (
     calculate_sha256_string,
@@ -1069,7 +1070,7 @@ def process_youtube_video(
 
         docs = loader.load()
         content = " ".join([doc.page_content for doc in docs])
-        log.debug(f"text_content: {content}")
+        log.debug(f"youtube text_content: {content}")
 
         save_docs_to_vector_db(
             request, docs, collection_name, overwrite=True, user=user
@@ -1113,7 +1114,7 @@ def process_web(
         docs = loader.load()
         content = " ".join([doc.page_content for doc in docs])
 
-        log.debug(f"text_content: {content}")
+        log.debug(f"process_web text_content: {content}")
         save_docs_to_vector_db(
             request, docs, collection_name, overwrite=True, user=user
         )
@@ -1340,7 +1341,7 @@ async def process_web_search(
             detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
         )
 
-    log.debug(f"web_results: {web_results}")
+    log.info(f"process_web_search web_results: {web_results}")
 
     try:
         collection_name = form_data.collection_name
@@ -1363,7 +1364,7 @@ async def process_web_search(
                 "status": True,
                 "docs": [
                     {
-                        "content": doc.page_content,
+                        "content": remove_extra_line_breaks(doc.page_content),
                         "metadata": doc.metadata,
                     }
                     for doc in docs
@@ -1618,6 +1619,8 @@ def process_files_batch(
             errors.append(
                 BatchProcessFilesResult(file_id=file.id, status="failed", error=str(e))
             )
+
+    log.info(f"process_files_batch: Prepared {len(all_docs)} documents")
 
     # Save all documents in one batch
     if all_docs:

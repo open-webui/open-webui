@@ -1134,7 +1134,7 @@ Generate a concise, 3-5 word title with an emoji summarizing the chat history.
 ### Guidelines:
 - The title should clearly represent the main theme or subject of the conversation.
 - Use emojis that enhance understanding of the topic, but avoid quotation marks or special formatting.
-- Write the title in the chat's primary language; default to English if multilingual.
+- Write the title in the chat's primary language; default to Chinese if multilingual.
 - Prioritize accuracy over excessive creativity; keep it clear and simple.
 ### Output:
 JSON format: { "title": "your concise title here" }
@@ -1163,7 +1163,7 @@ Generate 1-3 broad tags categorizing the main themes of the chat history, along 
 - Start with high-level domains (e.g. Science, Technology, Philosophy, Arts, Politics, Business, Health, Sports, Entertainment, Education)
 - Consider including relevant subfields/subdomains if they are strongly represented throughout the conversation
 - If content is too short (less than 3 messages) or too diverse, use only ["General"]
-- Use the chat's primary language; default to English if multilingual
+- Use the chat's primary language; default to Chinese if multilingual
 - Prioritize accuracy over specificity
 
 ### Output:
@@ -1186,7 +1186,7 @@ Generate a detailed prompt for am image generation task based on the given langu
 ### Guidelines:
 - Be descriptive and detailed, focusing on the most important aspects of the image.
 - Avoid making assumptions or adding information not present in the image.
-- Use the chat's primary language; default to English if multilingual.
+- Use the chat's primary language; default to Chinese if multilingual.
 - If the image is too complex, focus on the most prominent elements.
 
 ### Output:
@@ -1243,6 +1243,7 @@ Analyze the chat history to determine the necessity of generating search queries
 - Be concise and focused on composing high-quality search queries, avoiding unnecessary elaboration, commentary, or assumptions.
 - Today's date is: {{CURRENT_DATE}}.
 - Always prioritize providing actionable and broad queries that maximize informational coverage.
+- All responses should be communicated in the chat's primary language, ensuring seamless understanding. If the chat is multilingual, default to Chinese for clarity.
 
 ### Output:
 Strictly return in JSON format:
@@ -1462,7 +1463,7 @@ DEFAULT_CODE_INTERPRETER_PROMPT = """
    - After obtaining the printed output, **always provide a concise analysis, interpretation, or next steps to help the user understand the findings or refine the outcome further.**
    - If the results are unclear, unexpected, or require validation, refine the code and execute it again as needed. Always aim to deliver meaningful insights from the results, iterating if necessary.
    - **If a link to an image, audio, or any file is provided in markdown format in the output, ALWAYS regurgitate word for word, explicitly display it as part of the response to ensure the user can access it easily, do NOT change the link.**
-   - All responses should be communicated in the chat's primary language, ensuring seamless understanding. If the chat is multilingual, default to English for clarity.
+   - All responses should be communicated in the chat's primary language, ensuring seamless understanding. If the chat is multilingual, default to Chinese for clarity.
 
 Ensure that the tools are effectively utilized to achieve the highest-quality analysis for the user."""
 
@@ -1682,7 +1683,7 @@ Respond to the user query using the provided context, incorporating inline citat
 ### Guidelines:
 - If you don't know the answer, clearly state that.
 - If uncertain, ask the user for clarification.
-- Respond in the same language as the user's query.
+- Use the chat's primary language; default to Chinese if multilingual
 - If the context is unreadable or of poor quality, inform the user and provide the best possible answer.
 - If the answer isn't present in the context but you possess the knowledge, explain this to the user and provide the answer using your own understanding.
 - **Only include inline citations using [source_id] when a <source_id> tag is explicitly provided in the context.**
@@ -1769,7 +1770,7 @@ RAG_WEB_SEARCH_ENGINE = PersistentConfig(
 RAG_WEB_SEARCH_FULL_CONTEXT = PersistentConfig(
     "RAG_WEB_SEARCH_FULL_CONTEXT",
     "rag.web.search.full_context",
-    os.getenv("RAG_WEB_SEARCH_FULL_CONTEXT", "False").lower() == "true",
+    os.getenv("RAG_WEB_SEARCH_FULL_CONTEXT", "true").lower() == "true",
 )
 
 # You can provide a list of your own websites to filter after performing a web search.
