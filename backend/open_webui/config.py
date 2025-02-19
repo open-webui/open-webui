@@ -1923,7 +1923,7 @@ RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
 RAG_WEB_SEARCH_TRUST_ENV = PersistentConfig(
     "RAG_WEB_SEARCH_TRUST_ENV",
     "rag.web.search.trust_env",
-    os.getenv("RAG_WEB_SEARCH_TRUST_ENV", False),
+    os.getenv("RAG_WEB_SEARCH_TRUST_ENV", True),
 )
 
 ####################################

@@ -427,7 +427,8 @@ async def get_models(
         async with aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(
                 total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST
-            )
+            ),
+            trust_env=True,
         ) as session:
             try:
                 async with session.get(
@@ -507,7 +508,8 @@ async def verify_connection(
     key = form_data.key
 
     async with aiohttp.ClientSession(
-        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
+        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST),
+        trust_env=True,
     ) as session:
         try:
             async with session.get(
@@ -592,6 +594,9 @@ async def generate_chat_completion(
     if model:
         idx = model["urlIdx"]
     else:
+        log.info(
+            f"Model not found: {model_id}, current models: {request.app.state.OPENAI_MODELS}"
+        )
         raise HTTPException(
             status_code=404,
             detail="Model not found",

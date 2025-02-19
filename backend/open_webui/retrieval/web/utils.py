@@ -71,7 +71,7 @@ def resolve_hostname(hostname):
 class SafeWebBaseLoader(WebBaseLoader):
     """WebBaseLoader with enhanced error handling for URLs."""
 
-    def __init__(self, trust_env: bool = False, *args, **kwargs):
+    def __init__(self, trust_env: bool = True, *args, **kwargs):
         """Initialize SafeWebBaseLoader
         Args:
             trust_env (bool, optional): set to True if using proxy to make web requests, for example
@@ -183,7 +183,7 @@ def get_web_loader(
     urls: Union[str, Sequence[str]],
     verify_ssl: bool = True,
     requests_per_second: int = 2,
-    trust_env: bool = False,
+    trust_env: bool = True,
 ):
     # Check if the URLs are valid
     safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
