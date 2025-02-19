@@ -76,14 +76,26 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         "num_ctx",
         "num_batch",
         "num_keep",
+        "num_predict",
         "repeat_last_n",
         "tfs_z",
         "top_k",
         "min_p",
+        "typical_p",
+        "repeat_penalty",
+        "presence_penalty",
+        "frequency_penalty",
+        "penalize_newline",
+        "stop",
+        "numa",
+        "num_gpu",
+        "main_gpu",
+        "low_vram",
+        "vocab_only",
         "use_mmap",
         "use_mlock",
         "num_thread",
-        "num_gpu",
+
     ]
     mappings = {i: lambda x: x for i in opts}
     form_data = apply_model_params_to_body(params, form_data, mappings)
