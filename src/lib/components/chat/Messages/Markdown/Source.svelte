@@ -2,7 +2,7 @@
 	export let token;
 	export let onClick: Function = () => {};
 
-	let attributes: Record<string, string> = {};
+	let attributes: Record<string, string | undefined> = {};
 
 	function extractAttributes(input: string): Record<string, string> {
 		const regex = /(\w+)="([^"]*)"/g;
@@ -42,6 +42,6 @@
 	}}
 >
 	<span class="line-clamp-1">
-		{formattedTitle(attributes.title)}
+		{attributes.title ? formattedTitle(attributes.title) : ''}
 	</span>
 </button>
