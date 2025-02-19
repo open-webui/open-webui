@@ -140,7 +140,14 @@ class OAuthManager:
         log.debug("Running OAUTH Group management")
         oauth_claim = auth_manager_config.OAUTH_GROUPS_CLAIM
 
-        user_oauth_groups: list[str] = user_data.get(oauth_claim, list())
+        # Nested claim search for groups claim
+        if oauth_claim:
+            claim_data = user_data
+            nested_claims = oauth_claim.split(".")
+            for nested_claim in nested_claims:
+                claim_data = claim_data.get(nested_claim, {})
+            user_oauth_groups = claim_data if isinstance(claim_data, list) else None
+
         user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
         all_available_groups: list[GroupModel] = Groups.get_groups()
 
