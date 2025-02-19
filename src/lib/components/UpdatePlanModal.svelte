@@ -38,15 +38,15 @@
       const culture = 'ru';
       const encoding = 'utf-8';
       const isTest = 1;
-      const shpUserId = userId; // Передаём user id в Shp
+      const shpUserId = `Shp_userId=${userId}`; // Передаём user id в Shp
       const paymentMethods = JSON.stringify({ PaymentMethods: ['BankCard', 'SBP'], Mode: 'modal' });
 
-      // Секретный ключ (замените на ваш)
-      const secretKey = 'YgUKSjuCRDqO01x90IX2';
+      // Пароль#1 (замените на ваш)
+      const password1 = 'r8xoXYKrTcsoT11Xq02N';
 
       // Строка для подписи
-      const signatureString = `${merchantLogin}:${outSum}:${invId}:${secretKey}:Shp_login=${shpUserId}`;
-       console.log("Sig1", signatureString)
+      const signatureString = `${merchantLogin}:${outSum}:${invId}:${password1}:${shpUserId}`;
+      console.log("Sig", signatureString)
       // Рассчитываем подпись (SHA-256)
       const signatureValue = await calculateSHA256(signatureString);
       console.log("Sig2", signatureValue)
