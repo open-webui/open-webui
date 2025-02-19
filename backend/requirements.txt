@@ -1,6 +1,6 @@
 fastapi==0.115.7
 uvicorn[standard]==0.30.6
-pydantic==2.9.2
+pydantic==2.10.3
 python-multipart==0.0.18
 
 python-socketio==5.11.3
