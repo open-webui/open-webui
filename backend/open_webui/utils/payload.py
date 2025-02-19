@@ -190,10 +190,6 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     elif "max_tokens" in openai_payload:
         ollama_options["num_predict"] = openai_payload["max_tokens"]
 
-    # Handle frequency / presence_penalty, which needs renaming and checking
-    if "frequency_penalty" in openai_payload:
-        ollama_options["repeat_penalty"] = openai_payload["frequency_penalty"]
-
     # Add options to payload if any have been set
     if ollama_options:
         ollama_payload["options"] = ollama_options
