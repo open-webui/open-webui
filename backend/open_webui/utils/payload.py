@@ -182,7 +182,12 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
         # Re-Mapping OpenAI's `max_tokens` -> Ollama's `num_predict`
         if "max_tokens" in ollama_options:
             ollama_options["num_predict"] = ollama_options["max_tokens"] 
-            del ollama_options["max_tokens"] # To prevent Ollama warning of invalid option provided        
+            del ollama_options["max_tokens"] # To prevent Ollama warning of invalid option provided
+
+        # Ollama lacks a "system" prompt option. It has to be provided as a direct parameter, so we copy it down.
+        if "system" in ollama_options:
+            ollama_payload["system"] = ollama_options["system"] 
+            del ollama_options["system"] # To prevent Ollama warning of invalid option provided
 
     # Add options to payload if any have been set
     if ollama_options:
