@@ -179,11 +179,6 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
         ollama_payload["options"] = openai_payload["options"]
         ollama_options = openai_payload["options"]
 
-    # Handle parameters which map directly
-    for param in ["temperature", "top_p", "seed"]:
-        if param in openai_payload:
-            ollama_options[param] = openai_payload[param]
-
     # Mapping OpenAI's `max_tokens` -> Ollama's `num_predict`
     if "max_tokens" in openai_payload:
         ollama_options["num_predict"] = openai_payload["max_tokens"]
