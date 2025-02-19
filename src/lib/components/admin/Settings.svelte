@@ -19,7 +19,7 @@
 	import ChartBar from '../icons/ChartBar.svelte';
 	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
 	import Evaluations from './Settings/Evaluations.svelte';
-	import CodeInterpreter from './Settings/CodeInterpreter.svelte';
+	import CodeExecution from './Settings/CodeExecution.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -191,11 +191,11 @@
 
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
-			'code-interpreter'
+			'code-execution'
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'code-interpreter';
+				selectedTab = 'code-execution';
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -212,7 +212,7 @@
 					/>
 				</svg>
 			</div>
-			<div class=" self-center">{$i18n.t('Code Interpreter')}</div>
+			<div class=" self-center">{$i18n.t('Code Execution')}</div>
 		</button>
 
 		<button
@@ -391,8 +391,8 @@
 					await config.set(await getBackendConfig());
 				}}
 			/>
-		{:else if selectedTab === 'code-interpreter'}
-			<CodeInterpreter
+		{:else if selectedTab === 'code-execution'}
+			<CodeExecution
 				saveHandler={async () => {
 					toast.success($i18n.t('Settings saved successfully!'));
 
