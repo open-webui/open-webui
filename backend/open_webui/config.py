@@ -1797,6 +1797,28 @@ RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
     ],
 )
 
+# You can provide a list of the only websites that should be fetched
+RAG_WEB_SEARCH_ALLOWED_DOMAIN_LIST = PersistentConfig(
+    "RAG_WEB_SEARCH_ALLOWED_DOMAIN_LIST",
+    "rag.web.search.domain.allowed",
+    [
+        # "wikipedia.com",
+        # "wikimedia.org",
+        # "wikidata.org",
+    ],
+)
+
+# You can provide a list of the only websites that should NOT be fetched
+RAG_WEB_SEARCH_BLOCKED_DOMAIN_LIST = PersistentConfig(
+    "RAG_WEB_SEARCH_BLOCKED_DOMAIN_LIST",
+    "rag.web.search.domain.blocked",
+    [
+        # "wikipedia.com",
+        # "wikimedia.org",
+        # "wikidata.org",
+    ],
+)
+
 
 SEARXNG_QUERY_URL = PersistentConfig(
     "SEARXNG_QUERY_URL",

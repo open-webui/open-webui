@@ -3,7 +3,7 @@ from typing import Optional
 
 import requests
 import json
-from open_webui.retrieval.web.main import SearchResult, get_filtered_results
+from open_webui.retrieval.web.main import SearchResult, get_filtered_results, SearchParameters
 from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
@@ -35,31 +35,32 @@ def _parse_response(response):
 
 
 def search_bocha(
-    api_key: str, query: str, count: int, filter_list: Optional[list[str]] = None
+    params : SearchParameters,
+    api_key : str,
 ) -> list[SearchResult]:
     """Search using Bocha's Search API and return the results as a list of SearchResult objects.
 
-    Args:
+    Args expected in params:
         api_key (str): A Bocha Search API key
-        query (str): The query to search for
+        params.query (str): The query to search for
     """
     url = "https://api.bochaai.com/v1/web-search?utm_source=ollama"
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
     payload = json.dumps(
-        {"query": query, "summary": True, "freshness": "noLimit", "count": count}
+        {"query": params.query, "summary": True, "freshness": "noLimit", "count": params.count}
     )
 
     response = requests.post(url, headers=headers, data=payload, timeout=5)
     response.raise_for_status()
     results = _parse_response(response.json())
     print(results)
-    if filter_list:
-        results = get_filtered_results(results, filter_list)
+
+    results = get_filtered_results(results, params)
 
     return [
         SearchResult(
             link=result["url"], title=result.get("name"), snippet=result.get("summary")
         )
-        for result in results.get("webpage", [])[:count]
+        for result in results.get("webpage", [])[:params.count]
     ]

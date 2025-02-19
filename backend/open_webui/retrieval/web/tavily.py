@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 import requests
-from open_webui.retrieval.web.main import SearchResult
+from open_webui.retrieval.web.main import SearchResult, SearchParameters
 from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
@@ -10,10 +10,8 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_tavily(
-    api_key: str,
-    query: str,
-    count: int,
-    filter_list: Optional[list[str]] = None,
+    params : SearchParameters,
+    api_key : str,
     # **kwargs,
 ) -> list[SearchResult]:
     """Search using Tavily's Search API and return the results as a list of SearchResult objects.
@@ -26,7 +24,7 @@ def search_tavily(
         list[SearchResult]: A list of search results
     """
     url = "https://api.tavily.com/search"
-    data = {"query": query, "api_key": api_key}
+    data = {"query": params.query, "api_key": api_key}
     response = requests.post(url, json=data)
     response.raise_for_status()
 

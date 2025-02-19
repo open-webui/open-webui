@@ -3,7 +3,7 @@ import os
 from pprint import pprint
 from typing import Optional
 import requests
-from open_webui.retrieval.web.main import SearchResult, get_filtered_results
+from open_webui.retrieval.web.main import SearchResult, get_filtered_results, SearchParameters
 from open_webui.env import SRC_LOG_LEVELS
 import argparse
 
@@ -15,24 +15,20 @@ Documentation: https://docs.microsoft.com/en-us/bing/search-apis/bing-web-search
 
 
 def search_bing(
-    subscription_key: str,
-    endpoint: str,
-    locale: str,
-    query: str,
-    count: int,
-    filter_list: Optional[list[str]] = None,
+    params : SearchParameters,
+    subscription_key : str,
+    endpoint : str,
+    locale : str,
 ) -> list[SearchResult]:
-    mkt = locale
-    params = {"q": query, "mkt": mkt, "count": count}
+    url_params = {"q": params.query, "mkt": locale, "count": params.count}
     headers = {"Ocp-Apim-Subscription-Key": subscription_key}
 
     try:
-        response = requests.get(endpoint, headers=headers, params=params)
+        response = requests.get(endpoint, headers=headers, params=url_params)
         response.raise_for_status()
         json_response = response.json()
         results = json_response.get("webPages", {}).get("value", [])
-        if filter_list:
-            results = get_filtered_results(results, filter_list)
+        results = get_filtered_results(results, params)
         return [
             SearchResult(
                 link=result["url"],

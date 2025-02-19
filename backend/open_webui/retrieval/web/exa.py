@@ -4,7 +4,7 @@ from typing import Optional
 
 import requests
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.retrieval.web.main import SearchResult
+from open_webui.retrieval.web.main import SearchResult, SearchParameters
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -20,27 +20,25 @@ class ExaResult:
 
 
 def search_exa(
-    api_key: str,
-    query: str,
-    count: int,
-    filter_list: Optional[list[str]] = None,
+    params : SearchParameters,
+    api_key : str,
 ) -> list[SearchResult]:
     """Search using Exa Search API and return the results as a list of SearchResult objects.
 
-    Args:
+    Args expected in params:
         api_key (str): A Exa Search API key
         query (str): The query to search for
         count (int): Number of results to return
-        filter_list (Optional[list[str]]): List of domains to filter results by
+        params.domains_allow (Optional[list[str]]): List of domains to filter results by
     """
-    log.info(f"Searching with Exa for query: {query}")
+    log.info(f"Searching with Exa for query: {params.query}")
 
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
     payload = {
-        "query": query,
-        "numResults": count or 5,
-        "includeDomains": filter_list,
+        "query": params.query,
+        "numResults": params.count or 5,
+        "includeDomains": params.domains_allow,
         "contents": {"text": True, "highlights": True},
         "type": "auto",  # Use the auto search type (keyword or neural)
     }

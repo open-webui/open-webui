@@ -41,7 +41,7 @@ from open_webui.retrieval.loaders.main import Loader
 from open_webui.retrieval.loaders.youtube import YoutubeLoader
 
 # Web search engines
-from open_webui.retrieval.web.main import SearchResult
+from open_webui.retrieval.web.main import SearchResult, SearchParameters
 from open_webui.retrieval.web.utils import get_web_loader
 from open_webui.retrieval.web.brave import search_brave
 from open_webui.retrieval.web.kagi import search_kagi
@@ -400,7 +400,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
                 "exa_api_key": request.app.state.config.EXA_API_KEY,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
-                "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                "domains_allow": request.app.state.config.RAG_WEB_SEARCH_ALLOWED_DOMAIN_LIST,
+                "domains_block": request.app.state.config.RAG_WEB_SEARCH_BLOCKED_DOMAIN_LIST,
             },
         },
     }
@@ -454,7 +455,8 @@ class WebSearchConfig(BaseModel):
     result_count: Optional[int] = None
     concurrent_requests: Optional[int] = None
     trust_env: Optional[bool] = None
-    domain_filter_list: Optional[List[str]] = []
+    domains_allow: Optional[List[str]] = []
+    domains_block: Optional[List[str]] = []
 
 
 class WebConfig(BaseModel):
@@ -589,8 +591,11 @@ async def update_rag_config(
         request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV = (
             form_data.web.search.trust_env
         )
-        request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = (
-            form_data.web.search.domain_filter_list
+        request.app.state.config.RAG_WEB_SEARCH_ALLOWED_DOMAIN_LIST = (
+            form_data.web.search.domains_allow
+        )
+        request.app.state.config.RAG_WEB_SEARCH_BLOCKED_DOMAIN_LIST = (
+            form_data.web.search.domains_block
         )
 
     return {
@@ -644,7 +649,8 @@ async def update_rag_config(
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
                 "trust_env": request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
-                "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                "domains_allow": request.app.state.config.RAG_WEB_SEARCH_ALLOWED_DOMAIN_LIST,
+                "domains_block": request.app.state.config.RAG_WEB_SEARCH_BLOCKED_DOMAIN_LIST,
             },
         },
     }
@@ -1170,13 +1176,21 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
     """
 
     # TODO: add playwright to search the web
+    params = SearchParameters(
+                query = query,
+                count=request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                domains_allow=request.app.state.config.RAG_WEB_SEARCH_ALLOWED_DOMAIN_LIST,
+                domains_block=request.app.state.config.RAG_WEB_SEARCH_BLOCKED_DOMAIN_LIST,
+                #locale=DEFAULT_LOCALE,
+                # language? device?
+            )
+    results = [] 
+    # TODO: add playwright to search the web
     if engine == "searxng":
         if request.app.state.config.SEARXNG_QUERY_URL:
             return search_searxng(
-                request.app.state.config.SEARXNG_QUERY_URL,
-                query,
-                request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                params,
+                query_url = request.app.state.config.SEARXNG_QUERY_URL,
             )
         else:
             raise Exception("No SEARXNG_QUERY_URL found in environment variables")
@@ -1186,11 +1200,9 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             and request.app.state.config.GOOGLE_PSE_ENGINE_ID
         ):
             return search_google_pse(
-                request.app.state.config.GOOGLE_PSE_API_KEY,
-                request.app.state.config.GOOGLE_PSE_ENGINE_ID,
-                query,
-                request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                params,
+                api_key = request.app.state.config.GOOGLE_PSE_API_KEY,
+                engine = request.app.state.config.GOOGLE_PSE_ENGINE_ID,
             )
         else:
             raise Exception(
@@ -1199,134 +1211,117 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
     elif engine == "brave":
         if request.app.state.config.BRAVE_SEARCH_API_KEY:
             return search_brave(
-                request.app.state.config.BRAVE_SEARCH_API_KEY,
-                query,
-                request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                params,
+                api_key = request.app.state.config.BRAVE_SEARCH_API_KEY,
             )
         else:
             raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
     elif engine == "kagi":
         if request.app.state.config.KAGI_SEARCH_API_KEY:
             return search_kagi(
-                request.app.state.config.KAGI_SEARCH_API_KEY,
-                query,
-                request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                params,
+                api_key = request.app.state.config.KAGI_SEARCH_API_KEY,
             )
         else:
             raise Exception("No KAGI_SEARCH_API_KEY found in environment variables")
     elif engine == "mojeek":
         if request.app.state.config.MOJEEK_SEARCH_API_KEY:
             return search_mojeek(
-                request.app.state.config.MOJEEK_SEARCH_API_KEY,
-                query,
-                request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                params,
+                api_key = request.app.state.config.MOJEEK_SEARCH_API_KEY,
             )
         else:
             raise Exception("No MOJEEK_SEARCH_API_KEY found in environment variables")
     elif engine == "bocha":
         if request.app.state.config.BOCHA_SEARCH_API_KEY:
             return search_bocha(
-                request.app.state.config.BOCHA_SEARCH_API_KEY,
-                query,
-                request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                params,
+                api_key = request.app.state.config.BOCHA_SEARCH_API_KEY,
             )
         else:
             raise Exception("No BOCHA_SEARCH_API_KEY found in environment variables")
     elif engine == "serpstack":
         if request.app.state.config.SERPSTACK_API_KEY:
             return search_serpstack(
-                request.app.state.config.SERPSTACK_API_KEY,
-                query,
-                request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
-                https_enabled=request.app.state.config.SERPSTACK_HTTPS,
+                params,
+                api_key = request.app.state.config.SERPSTACK_API_KEY, 
+                https_enabled = request.app.state.config.SERPSTACK_HTTPS
             )
         else:
             raise Exception("No SERPSTACK_API_KEY found in environment variables")
     elif engine == "serper":
         if request.app.state.config.SERPER_API_KEY:
             return search_serper(
-                request.app.state.config.SERPER_API_KEY,
-                query,
-                request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                params,
+                api_key = request.app.state.config.SERPER_API_KEY
             )
         else:
             raise Exception("No SERPER_API_KEY found in environment variables")
     elif engine == "serply":
         if request.app.state.config.SERPLY_API_KEY:
             return search_serply(
-                request.app.state.config.SERPLY_API_KEY,
-                query,
-                request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                params,
+                api_key = request.app.state.config.SERPLY_API_KEY
             )
         else:
             raise Exception("No SERPLY_API_KEY found in environment variables")
     elif engine == "duckduckgo":
         return search_duckduckgo(
-            query,
-            request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-            request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+            params,
         )
     elif engine == "tavily":
         if request.app.state.config.TAVILY_API_KEY:
             return search_tavily(
-                request.app.state.config.TAVILY_API_KEY,
-                query,
-                request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                params,
+                api_key = request.app.state.config.TAVILY_API_KEY
             )
         else:
             raise Exception("No TAVILY_API_KEY found in environment variables")
     elif engine == "searchapi":
         if request.app.state.config.SEARCHAPI_API_KEY:
             return search_searchapi(
-                request.app.state.config.SEARCHAPI_API_KEY,
-                request.app.state.config.SEARCHAPI_ENGINE,
-                query,
-                request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                params,
+                api_key = request.app.state.config.SEARCHAPI_API_KEY,
+                engine = request.app.state.config.SEARCHAPI_ENGINE,
             )
         else:
             raise Exception("No SEARCHAPI_API_KEY found in environment variables")
     elif engine == "serpapi":
         if request.app.state.config.SERPAPI_API_KEY:
             return search_serpapi(
-                request.app.state.config.SERPAPI_API_KEY,
-                request.app.state.config.SERPAPI_ENGINE,
-                query,
-                request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                params,
+                api_key = request.app.state.config.SERPAPI_API_KEY,
+                engine = request.app.state.config.SERPAPI_ENGINE
             )
         else:
             raise Exception("No SERPAPI_API_KEY found in environment variables")
     elif engine == "jina":
-        return search_jina(
-            request.app.state.config.JINA_API_KEY,
-            query,
-            request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-        )
+        if (request.app.state.config.JINA_API_KEY):
+            return search_jina(
+                params,
+                api_key = request.app.state.config.JINA_API_KEY
+            )
+        else:
+            raise Exception("No JINA_API_KEY found in environment variables")
     elif engine == "bing":
-        return search_bing(
-            request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
-            request.app.state.config.BING_SEARCH_V7_ENDPOINT,
-            str(DEFAULT_LOCALE),
-            query,
-            request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-            request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
-        )
+        if (request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY 
+            and request.app.state.config.BING_SEARCH_V7_ENDPOINT
+        ):
+            return search_bing(
+                params,
+                subscription_key = request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
+                endpoint = request.app.state.config.BING_SEARCH_V7_ENDPOINT
+            )
+        else:
+            raise Exception("No BING_SEARCH_V7_SUBSCRIPTION_KEY or BING_SEARCH_V7_ENDPOINT found in environment variables")
     elif engine == "exa":
-        return search_exa(
-            request.app.state.config.EXA_API_KEY,
-            query,
-            request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-            request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
-        )
+        if (request.app.state.config.EXA_API_KEY):
+            return search_exa(
+                params,
+                api_key = request.app.state.config.EXA_API_KEY
+            )
+        else:
+            raise Exception("No EXA_API_KEY found in environment variables")
     else:
         raise Exception("No search engine API key found in environment variables")
 
@@ -1336,7 +1331,7 @@ async def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
     try:
-        logging.info(
+        log.info(
             f"trying to web search with {request.app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query}"
         )
         web_results = search_web(
@@ -1350,59 +1345,64 @@ async def process_web_search(
             detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
         )
 
-    log.debug(f"web_results: {web_results}")
-
-    try:
-        collection_name = form_data.collection_name
-        if collection_name == "" or collection_name is None:
-            collection_name = f"web-search-{calculate_sha256_string(form_data.query)}"[
-                :63
-            ]
-
-        urls = [result.link for result in web_results]
-        loader = get_web_loader(
-            urls,
-            verify_ssl=request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
-            requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
-            trust_env=request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
-        )
-        docs = await loader.aload()
-
-        if request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT:
-            return {
-                "status": True,
-                "docs": [
-                    {
-                        "content": doc.page_content,
-                        "metadata": doc.metadata,
-                    }
-                    for doc in docs
-                ],
-                "filenames": urls,
-                "loaded_count": len(docs),
-            }
-        else:
-            await run_in_threadpool(
-                save_docs_to_vector_db,
-                request,
-                docs,
-                collection_name,
-                overwrite=True,
-                user=user,
+    n_results = len(web_results)
+    if n_results == 0:        
+        log.info("No search results found")
+        #chat_web_search_handler expects None in order to send the correct message
+        return None
+    else:
+        log.debug(f"web_results: {web_results}")
+        try:
+            collection_name = form_data.collection_name
+            if collection_name == "" or collection_name is None:
+                collection_name = f"web-search-{calculate_sha256_string(form_data.query)}"[
+                    :63
+                ]
+    
+            urls = [result.link for result in web_results]
+            loader = get_web_loader(
+                urls,
+                verify_ssl=request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+                requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+                trust_env=request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
             )
-
-            return {
-                "status": True,
-                "collection_name": collection_name,
-                "filenames": urls,
-                "loaded_count": len(docs),
-            }
-    except Exception as e:
-        log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
-        )
+            docs = await loader.aload()
+    
+            if request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT:
+                return {
+                    "status": True,
+                    "docs": [
+                        {
+                            "content": doc.page_content,
+                            "metadata": doc.metadata,
+                        }
+                        for doc in docs
+                    ],
+                    "filenames": urls,
+                    "loaded_count": len(docs),
+                }
+            else:
+                await run_in_threadpool(
+                    save_docs_to_vector_db,
+                    request,
+                    docs,
+                    collection_name,
+                    overwrite=True,
+                    user=user,
+                )
+    
+                return {
+                    "status": True,
+                    "collection_name": collection_name,
+                    "filenames": urls,
+                    "loaded_count": len(docs),
+                }
+        except Exception as e:
+            log.exception(e)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(e),
+            )
 
 
 class QueryDocForm(BaseModel):
