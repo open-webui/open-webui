@@ -36,7 +36,11 @@ from open_webui.config import (
     AppConfig,
 )
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
-from open_webui.env import WEBUI_AUTH_COOKIE_SAME_SITE, WEBUI_AUTH_COOKIE_SECURE
+from open_webui.env import (
+    WEBUI_NAME,
+    WEBUI_AUTH_COOKIE_SAME_SITE,
+    WEBUI_AUTH_COOKIE_SECURE,
+)
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.auth import get_password_hash, create_token
 from open_webui.utils.webhook import post_webhook
@@ -66,8 +70,9 @@ auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 
 
 class OAuthManager:
-    def __init__(self):
+    def __init__(self, app):
         self.oauth = OAuth()
+        self.app = app
         for _, provider_config in OAUTH_PROVIDERS.items():
             provider_config["register"](self.oauth)
 
@@ -200,7 +205,7 @@ class OAuthManager:
                     id=group_model.id, form_data=update_form, overwrite=False
                 )
 
-    async def handle_login(self, provider, request):
+    async def handle_login(self, request, provider):
         if provider not in OAUTH_PROVIDERS:
             raise HTTPException(404)
         # If the provider has a custom redirect URL, use that, otherwise automatically generate one
@@ -212,7 +217,7 @@ class OAuthManager:
             raise HTTPException(404)
         return await client.authorize_redirect(request, redirect_uri)
 
-    async def handle_callback(self, provider, request, response):
+    async def handle_callback(self, request, provider, response):
         if provider not in OAUTH_PROVIDERS:
             raise HTTPException(404)
         client = self.get_client(provider)
@@ -266,6 +271,17 @@ class OAuthManager:
                 Users.update_user_role_by_id(user.id, determined_role)
 
         if not user:
+            user_count = Users.get_num_users()
+
+            if (
+                request.app.state.USER_COUNT
+                and user_count >= request.app.state.USER_COUNT
+            ):
+                raise HTTPException(
+                    403,
+                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                )
+
             # If the user does not exist, check if signups are enabled
             if auth_manager_config.ENABLE_OAUTH_SIGNUP:
                 # Check if an existing user with the same email already exists
@@ -334,6 +350,7 @@ class OAuthManager:
 
                 if auth_manager_config.WEBHOOK_URL:
                     post_webhook(
+                        WEBUI_NAME,
                         auth_manager_config.WEBHOOK_URL,
                         WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
                         {
@@ -380,6 +397,3 @@ class OAuthManager:
         # Redirect back to the frontend with the JWT token
         redirect_url = f"{request.base_url}auth#token={jwt_token}"
         return RedirectResponse(url=redirect_url, headers=response.headers)
-
-
-oauth_manager = OAuthManager()
