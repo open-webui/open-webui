@@ -138,7 +138,7 @@ def query_doc_with_hybrid_search(
 
 
 def merge_and_sort_query_results(
-        query_results: list[dict], k: int, reverse: bool = False
+    query_results: list[dict], k: int, reverse: bool = False
 ) -> list[dict]:
     # Initialize lists to store combined data
     combined_distances = []
@@ -151,10 +151,17 @@ def merge_and_sort_query_results(
         combined_documents.extend(data["documents"][0])
         combined_metadatas.extend(data["metadatas"][0])
         # DISTINCT(chunk_id,file_id) - in case if id (chunk_ids) become ordinals
-        combined_ids.extend([id + meta["file_id"] for id, meta in zip(data["ids"][0], data["metadatas"][0])])
+        combined_ids.extend(
+            [
+                f"{id}-{meta['file_id']}"
+                for id, meta in zip(data["ids"][0], data["metadatas"][0])
+            ]
+        )
 
     # Create a list of tuples (distance, document, metadata, ids)
-    combined = list(zip(combined_distances, combined_documents, combined_metadatas, combined_ids))
+    combined = list(
+        zip(combined_distances, combined_documents, combined_metadatas, combined_ids)
+    )
 
     # Sort the list based on distances
     combined.sort(key=lambda x: x[0], reverse=reverse)
