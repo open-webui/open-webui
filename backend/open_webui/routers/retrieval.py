@@ -1379,7 +1379,7 @@ async def process_web_search(
                 docs,
                 collection_name,
                 overwrite=True,
-                user=user,
+                user=user
             )
 
             return {

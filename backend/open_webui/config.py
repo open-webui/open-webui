@@ -1926,10 +1926,22 @@ RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
     int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
 )
 
+RAG_WEB_LOADER_ENGINE = PersistentConfig(
+    "RAG_WEB_LOADER_ENGINE",
+    "rag.web.loader.engine",
+    os.environ.get("RAG_WEB_LOADER_ENGINE", "safe_web")
+)
+
 RAG_WEB_SEARCH_TRUST_ENV = PersistentConfig(
     "RAG_WEB_SEARCH_TRUST_ENV",
     "rag.web.search.trust_env",
     os.getenv("RAG_WEB_SEARCH_TRUST_ENV", False),
+)
+
+PLAYWRIGHT_WS_URI = PersistentConfig(
+    "PLAYWRIGHT_WS_URI",
+    "rag.web.loader.engine.playwright.ws.uri",
+    os.environ.get("PLAYWRIGHT_WS_URI", None)
 )
 
 ####################################
