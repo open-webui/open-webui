@@ -178,10 +178,11 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     if openai_payload.get("options"):
         ollama_payload["options"] = openai_payload["options"]
         ollama_options = openai_payload["options"]
-
-    # Mapping OpenAI's `max_tokens` -> Ollama's `num_predict`
-    if "max_tokens" in openai_payload:
-        ollama_options["num_predict"] = openai_payload["max_tokens"]
+        
+        # Re-Mapping OpenAI's `max_tokens` -> Ollama's `num_predict`
+        if "max_tokens" in ollama_options:
+            ollama_options["num_predict"] = ollama_options["max_tokens"] 
+            del ollama_options["max_tokens"] # To prevent Ollama warning of invalid option provided        
 
     # Add options to payload if any have been set
     if ollama_options:
