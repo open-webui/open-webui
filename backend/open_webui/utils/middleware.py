@@ -1761,6 +1761,7 @@ async def process_chat_response(
                                             == "password"
                                             else None
                                         ),
+                                        request.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT,
                                     )
                                 else:
                                     output = {

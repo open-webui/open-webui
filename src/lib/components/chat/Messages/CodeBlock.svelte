@@ -123,6 +123,12 @@
 	};
 
 	const executePython = async (code) => {
+		result = null;
+		stdout = null;
+		stderr = null;
+
+		executing = true;
+
 		if ($config?.code?.engine === 'jupyter') {
 			const output = await executeCode(localStorage.token, code).catch((error) => {
 				toast.error(`${error}`);
@@ -190,18 +196,14 @@
 
 				output['stderr'] && (stderr = output['stderr']);
 			}
+
+			executing = false;
 		} else {
 			executePythonAsWorker(code);
 		}
 	};
 
 	const executePythonAsWorker = async (code) => {
-		result = null;
-		stdout = null;
-		stderr = null;
-
-		executing = true;
-
 		let packages = [
 			code.includes('requests') ? 'requests' : null,
 			code.includes('bs4') ? 'beautifulsoup4' : null,
