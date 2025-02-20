@@ -209,33 +209,33 @@
 									{$i18n.t('Cancel')}
 								</button>
 
-							<button
-								id="confirm-edit-message-button"
-								class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
-								on:click={() => {
-									editMessageConfirmHandler();
-								}}
+								<button
+									id="confirm-edit-message-button"
+									class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+									on:click={() => {
+										editMessageConfirmHandler();
+									}}
+								>
+									{$i18n.t('Send')}
+								</button>
+							</div>
+						</div>
+					</div>
+				{:else}
+					<div class="w-full">
+						<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
+							<div
+								class="rounded-3xl {($settings?.chatBubble ?? true)
+									? `max-w-[90%] px-5 py-2  fr-background-contrast--grey ${
+											message.files ? 'rounded-tr-lg' : ''
+										}`
+									: ' w-full'}"
 							>
-								{$i18n.t('Send')}
-							</button>
+								{#if message.content}
+									<Markdown id={message.id} content={message.content} />
+								{/if}
+							</div>
 						</div>
-					</div>
-				</div>
-			{:else}
-				<div class="w-full">
-					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
-						<div
-							class="rounded-3xl {($settings?.chatBubble ?? true)
-								? `max-w-[90%] px-5 py-2  fr-background-contrast--grey ${
-										message.files ? 'rounded-tr-lg' : ''
-									}`
-								: ' w-full'}"
-						>
-							{#if message.content}
-								<Markdown id={message.id} content={message.content} />
-							{/if}
-						</div>
-					</div>
 
 						<div
 							class=" flex {($settings?.chatBubble ?? true)

@@ -33,7 +33,7 @@
 	let TTSModelProgress: any = null;
 	let TTSModelLoading = false;
 
-	let voices: Array<{id?: string; name: string; localService?: boolean}> = [];
+	let voices: Array<{ id?: string; name: string; localService?: boolean }> = [];
 	let voice = '';
 
 	// Audio speed control
@@ -46,13 +46,15 @@
 				await loadKokoro();
 			}
 
-			voices = Object.entries(TTSModel.voices as Record<string, {name: string}>).map(([key, value]) => {
-				return {
-					id: key,
-					name: value.name,
-					localService: false
-				};
-			});
+			voices = Object.entries(TTSModel.voices as Record<string, { name: string }>).map(
+				([key, value]) => {
+					return {
+						id: key,
+						name: value.name,
+						localService: false
+					};
+				}
+			);
 		} else {
 			if ($config?.audio?.tts?.engine === '') {
 				const getVoicesLoop = setInterval(async () => {
