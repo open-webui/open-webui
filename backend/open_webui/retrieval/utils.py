@@ -447,7 +447,7 @@ def generate_openai_batch_embeddings(
             f"{url}/embeddings?api-version=2024-10-21",
             headers={
                 "Content-Type": "application/json",
-                "api-key": f"{key}",
+                "api-key": f"{user.ust_api_key}",
                 **(
                     {
                         "X-OpenWebUI-User-Name": user.name,

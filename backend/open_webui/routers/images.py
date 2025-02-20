@@ -437,7 +437,7 @@ async def image_generations(
     try:
         if request.app.state.config.IMAGE_GENERATION_ENGINE == "openai":
             headers = {}
-            headers["api-key"] = request.app.state.config.IMAGES_OPENAI_API_KEY
+            headers["api-key"] = user.ust_api_key#request.app.state.config.IMAGES_OPENAI_API_KEY
             #headers["Authorization"] = (
             #    f"Bearer {request.app.state.config.IMAGES_OPENAI_API_KEY}"
             #)

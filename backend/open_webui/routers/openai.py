@@ -646,14 +646,14 @@ async def generate_chat_completion(
         session = aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         )
-
+        log.info(f"Requesting to {url}/chat/completions with {user.ust_api_key}")
         r = await session.request(
             method="POST",
             url=f"{url}/chat/completions?api-version=2024-10-21",
             data=payload,
             headers={
                 "Content-Type": "application/json",
-                "api-key": f"{key}",
+                "api-key": f"{user.ust_api_key}",
                 **(
                     {
                         "HTTP-Referer": "https://openwebui.com/",
