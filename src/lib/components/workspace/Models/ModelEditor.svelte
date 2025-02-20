@@ -67,12 +67,14 @@
 			tags: []
 		},
 		params: {
-			system: ''
+			system: '',
+			rag_prompt: ''
 		}
 	};
 
 	let params = {
-		system: ''
+		system: '',
+		rag_prompt: ''
 	};
 	let capabilities = {
 		vision: true,
@@ -690,6 +692,17 @@
 
 					<div class="my-2">
 						<Knowledge bind:selectedKnowledge={knowledge} collections={$knowledgeCollections} />
+					</div>
+					<div class="my-1">
+						<div class=" text-xs font-semibold mb-2">{$i18n.t('RAG Prompt')}</div>
+						<div>
+							<Textarea
+								className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
+								placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
+								rows={4}
+								bind:value={info.params.rag_prompt}
+							/>
+						</div>
 					</div>
 
 					<div class="my-2">
