@@ -34,6 +34,7 @@
 	import Switch from '../common/Switch.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
+	import { locale } from '$lib/stores/locale';
 
 	let shiftKey = false;
 
@@ -54,6 +55,19 @@
 		filteredModels = models.filter(
 			(m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase())
 		);
+	}
+
+	$: descriptions =
+		models?.map((model) => ({
+			id: model.id,
+			desc:
+				$locale === 'fr-CA'
+					? (model?.meta?.description_fr || '').trim()
+					: (model?.meta?.description || '').trim()
+		})) || [];
+
+	function getModelDesc(modelId) {
+		return descriptions.find((d) => d.id === modelId)?.desc || '';
 	}
 
 	let searchValue = '';
@@ -262,7 +276,7 @@
 					>
 						<div class=" flex-1 self-center {model.is_active ? '' : 'text-gray-500'}">
 							<Tooltip
-								content={marked.parse(model?.meta?.description ?? model.id)}
+								content={marked.parse(getModelDesc(model.id))}
 								className=" w-fit"
 								placement="top-start"
 							>
@@ -271,11 +285,7 @@
 
 							<div class="flex gap-1 text-xs overflow-hidden">
 								<div class="line-clamp-1">
-									{#if (model?.meta?.description ?? '').trim()}
-										{model?.meta?.description}
-									{:else}
-										{model.id}
-									{/if}
+									{getModelDesc(model.id)}
 								</div>
 							</div>
 						</div>

@@ -4,36 +4,26 @@
 	const i18n = getContext('i18n');
 
 	import { getGroups } from '$lib/apis/groups';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Plus from '$lib/components/icons/Plus.svelte';
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
+	import { user } from '$lib/stores';
 
 	export let onChange: Function = () => {};
 
-	export let accessRoles = ['read'];
-	export let accessControl = null;
+	export let accessControl = {
+		read: { group_ids: [], user_ids: [] },
+		write: { group_ids: [], user_ids: [] }
+	};
 
 	let selectedGroupId = '';
 	let groups = [];
 
 	onMount(async () => {
-		groups = await getGroups(localStorage.token);
-
-		if (accessControl === null) {
-			accessControl = null;
-		} else {
-			accessControl = {
-				read: {
-					group_ids: accessControl?.read?.group_ids ?? [],
-					user_ids: accessControl?.read?.user_ids ?? []
-				},
-				write: {
-					group_ids: accessControl?.write?.group_ids ?? [],
-					user_ids: accessControl?.write?.user_ids ?? []
-				}
-			};
+		try {
+			groups = await getGroups(localStorage.token);
+		} catch (error) {
+			console.error('Error loading groups:', error);
 		}
 	});
 
@@ -44,11 +34,22 @@
 	}
 
 	const onSelectGroup = () => {
-		if (selectedGroupId !== '') {
-			accessControl.read.group_ids = [...accessControl.read.group_ids, selectedGroupId];
+		if (!selectedGroupId) return;
 
-			selectedGroupId = '';
-		}
+		// Always set as read-only access for now
+		accessControl = {
+			...accessControl,
+			read: {
+				...accessControl.read,
+				group_ids: [...new Set([...accessControl.read.group_ids, selectedGroupId])]
+			},
+			write: {
+				group_ids: [],
+				user_ids: []
+			}
+		};
+
+		selectedGroupId = '';
 	};
 </script>
 
@@ -99,37 +100,46 @@
 					class="outline-none bg-transparent text-sm font-medium rounded-lg block w-fit pr-10 max-w-full placeholder-gray-400"
 					value={accessControl !== null ? 'private' : 'public'}
 					on:change={(e) => {
-						if (e.target.value === 'public') {
-							accessControl = null;
-						} else {
-							accessControl = {
-								read: {
-									group_ids: []
-								},
-								write: {
-									group_ids: []
-								}
-							};
+						if ($user?.role === 'admin') {
+							if (e.target.value === 'public') {
+								accessControl = null;
+							} else {
+								accessControl = {
+									read: {
+										group_ids: []
+									},
+									write: {
+										group_ids: []
+									}
+								};
+							}
 						}
 					}}
+					disabled={$user?.role === 'user'}
 				>
 					<option class=" text-gray-700" value="private" selected>Private</option>
-					<option class=" text-gray-700" value="public" selected>Public</option>
+					{#if $user?.role === 'admin'}
+						<option class=" text-gray-700" value="public">Public</option>
+					{/if}
 				</select>
 
 				<div class=" text-xs text-gray-400 font-medium">
-					{#if accessControl !== null}
-						{$i18n.t('Only select users and groups with permission can access')}
-					{:else}
-						{$i18n.t('Accessible to all users')}
+					{#if $user?.role === 'admin'}
+						{#if accessControl !== null}
+							{$i18n.t('Only select users and groups with permission can access')}
+						{:else}
+							{$i18n.t('Accessible to all users')}
+						{/if}
 					{/if}
 				</div>
 			</div>
 		</div>
 	</div>
 	{#if accessControl !== null}
-		{@const accessGroups = groups.filter((group) =>
-			accessControl.read.group_ids.includes(group.id)
+		{@const accessGroups = groups.filter(
+			(group) =>
+				(accessControl?.read?.group_ids || []).includes(group.id) ||
+				(accessControl?.write?.group_ids || []).includes(group.id)
 		)}
 		<div>
 			<div class="">
@@ -152,7 +162,7 @@
 									<option class=" text-gray-700" value="" disabled selected
 										>{$i18n.t('Select a group')}</option
 									>
-									{#each groups.filter((group) => !accessControl.read.group_ids.includes(group.id)) as group}
+									{#each groups.filter((group) => !(accessControl?.read?.group_ids || []).includes(group.id) && !(accessControl?.write?.group_ids || []).includes(group.id)) as group}
 										<option class=" text-gray-700" value={group.id}>{group.name}</option>
 									{/each}
 								</select>
@@ -189,30 +199,8 @@
 								</div>
 
 								<div class="w-full flex justify-end items-center gap-0.5">
-									<button
-										class=""
-										type="button"
-										on:click={() => {
-											if (accessRoles.includes('write')) {
-												if (accessControl.write.group_ids.includes(group.id)) {
-													accessControl.write.group_ids = accessControl.write.group_ids.filter(
-														(group_id) => group_id !== group.id
-													);
-												} else {
-													accessControl.write.group_ids = [
-														...accessControl.write.group_ids,
-														group.id
-													];
-												}
-											}
-										}}
-									>
-										{#if accessControl.write.group_ids.includes(group.id)}
-											<Badge type={'success'} content={$i18n.t('Write')} />
-										{:else}
-											<Badge type={'info'} content={$i18n.t('Read')} />
-										{/if}
-									</button>
+									<!-- Always show read-only badge for now -->
+									<Badge type={'info'} content={$i18n.t('Read')} />
 
 									<button
 										class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
@@ -231,7 +219,7 @@
 					{:else}
 						<div class="flex items-center justify-center">
 							<div class="text-gray-500 text-xs text-center py-2 px-10">
-								{$i18n.t('No groups with access, add a group to grant access')}
+								{$i18n.t('No groups selected, add a group to grant access')}
 							</div>
 						</div>
 					{/if}

@@ -1,12 +1,8 @@
 <script lang="ts">
 	import { onMount, tick, getContext } from 'svelte';
-
-	import Textarea from '$lib/components/common/Textarea.svelte';
 	import { toast } from 'svelte-sonner';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import AccessControl from '../common/AccessControl.svelte';
-	import LockClosed from '$lib/components/icons/LockClosed.svelte';
-	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import { user } from '$lib/stores';
 
 	export let onSubmit: Function;
 	export let edit = false;
@@ -17,20 +13,43 @@
 	let loading = false;
 
 	let title = '';
+	let baseCommand = '';
 	let command = '';
 	let content = '';
 
 	let accessControl = null;
 
-	let showAccessControlModal = false;
+	const generateRandomSuffix = () => {
+		const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
+		let result = '';
+		for (let i = 0; i < 5; i++) {
+			result += characters.charAt(Math.floor(Math.random() * characters.length));
+		}
+		return result;
+	};
+
+	const generateCommandString = () => {
+		if (!edit) {
+			// Add random suffix only for private prompts
+			if (accessControl !== null) {
+				return `${baseCommand}-${generateRandomSuffix()}`;
+			}
+			// For public prompts, just use the base command
+			return baseCommand;
+		}
+		return command;
+	};
 
 	$: if (!edit) {
-		command = title !== '' ? `${title.replace(/\s+/g, '-').toLowerCase()}` : '';
+		baseCommand = title !== '' ? title.replace(/\s+/g, '-').toLowerCase() : '';
+		command = baseCommand;
 	}
 
 	const submitHandler = async () => {
 		loading = true;
+		command = generateCommandString();
 
+		// Remove group requirement validation
 		if (validateCommandString(command)) {
 			await onSubmit({
 				title,
@@ -55,12 +74,23 @@
 		return regex.test(inputString);
 	};
 
+	// Initialize with group access control for non-admin users
 	onMount(async () => {
+		if (!edit && $user?.role === 'user') {
+			// Initialize empty access control without any group
+			// this makes user 'private' by default in Prompts edit/create
+			accessControl = {
+				read: { group_ids: [], user_ids: [] },
+				write: { group_ids: [], user_ids: [] }
+			};
+		}
+
 		if (prompt) {
 			title = prompt.title;
 			await tick();
 
-			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
+			baseCommand = command =
+				prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
 			content = prompt.content;
 
 			accessControl = prompt?.access_control ?? null;
@@ -68,123 +98,98 @@
 	});
 </script>
 
-<AccessControlModal
-	bind:show={showAccessControlModal}
-	bind:accessControl
-	accessRoles={['read', 'write']}
-/>
-
-<div class="w-full max-h-full flex justify-center">
+<div class="w-full max-h-full">
 	<form
-		class="flex flex-col w-full mb-10"
+		class="flex flex-col max-w-lg mx-auto mt-10 mb-10"
 		on:submit|preventDefault={() => {
 			submitHandler();
 		}}
 	>
-		<div class="my-2">
-			<Tooltip
-				content={`${$i18n.t('Only alphanumeric characters and hyphens are allowed')} - ${$i18n.t(
-					'Activate this command by typing "/{{COMMAND}}" to chat input.',
-					{
-						COMMAND: command
-					}
-				)}`}
-				placement="bottom-start"
-			>
-				<div class="flex flex-col w-full">
-					<div class="flex items-center">
+		<div class="w-full flex flex-col justify-center">
+			<div class="text-2xl font-medium font-primary mb-2.5">
+				{edit ? $i18n.t('Edit prompt') : $i18n.t('Create a prompt')}
+			</div>
+
+			<div class="w-full flex flex-col gap-2.5">
+				<div class="w-full">
+					<div class="text-sm mb-2">{$i18n.t('Title')}</div>
+					<div class="w-full mt-1">
 						<input
-							class="text-2xl font-semibold w-full bg-transparent outline-none"
-							placeholder={$i18n.t('Title')}
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							type="text"
 							bind:value={title}
+							placeholder={$i18n.t('Name your prompt')}
 							required
 						/>
+					</div>
+				</div>
 
-						<div class="self-center flex-shrink-0">
-							<button
-								class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
-								type="button"
-								on:click={() => {
-									showAccessControlModal = true;
-								}}
-							>
-								<LockClosed strokeWidth="2.5" className="size-3.5" />
-
-								<div class="text-sm font-medium flex-shrink-0">
-									{$i18n.t('Access')}
-								</div>
-							</button>
+				<div class="w-full">
+					<div class="text-sm mb-2">{$i18n.t('Command')}</div>
+					<div class="w-full mt-1">
+						<div class="flex items-center w-full rounded-lg bg-gray-50 dark:bg-gray-850">
+							<span class="text-gray-500 pl-4">/</span>
+							<input
+								class="w-full py-2 px-2 text-sm bg-transparent outline-none"
+								type="text"
+								bind:value={command}
+								placeholder={$i18n.t('Command trigger')}
+								required
+								disabled={edit}
+							/>
 						</div>
 					</div>
+				</div>
 
-					<div class="flex gap-0.5 items-center text-xs text-gray-500">
-						<div class="">/</div>
-						<input
-							class=" w-full bg-transparent outline-none"
-							placeholder={$i18n.t('Command')}
-							bind:value={command}
+				<div>
+					<div class="text-sm mb-2">{$i18n.t('Prompt Content')}</div>
+					<div class="w-full mt-1">
+						<textarea
+							class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							placeholder={$i18n.t(
+								'Write a summary in 50 words that summarizes [topic or keyword].'
+							)}
+							bind:value={content}
+							rows={4}
 							required
-							disabled={edit}
 						/>
+						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+							ⓘ {$i18n.t('Format your variables using brackets like this:')}
+							<span class="text-gray-600 dark:text-gray-300 font-medium"
+								>{'{{'}{$i18n.t('variable')}{'}}'}</span
+							>
+						</div>
 					</div>
 				</div>
-			</Tooltip>
-		</div>
-
-		<div class="my-2">
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt Content')}</div>
-			</div>
-
-			<div class="mt-2">
-				<div>
-					<Textarea
-						className="text-sm w-full bg-transparent outline-none overflow-y-hidden resize-none"
-						placeholder={$i18n.t('Write a summary in 50 words that summarizes [topic or keyword].')}
-						bind:value={content}
-						rows={6}
-						required
-					/>
-				</div>
-
-				<div class="text-xs text-gray-400 dark:text-gray-500">
-					ⓘ {$i18n.t('Format your variables using brackets like this:')}&nbsp;<span
-						class=" text-gray-600 dark:text-gray-300 font-medium"
-						>{'{{'}{$i18n.t('variable')}{'}}'}</span
-					>.
-					{$i18n.t('Make sure to enclose them with')}
-					<span class=" text-gray-600 dark:text-gray-300 font-medium">{'{{'}</span>
-					{$i18n.t('and')}
-					<span class=" text-gray-600 dark:text-gray-300 font-medium">{'}}'}</span>.
-				</div>
-
-				<div class="text-xs text-gray-400 dark:text-gray-500">
-					{$i18n.t('Utilize')}<span class=" text-gray-600 dark:text-gray-300 font-medium">
-						{` {{CLIPBOARD}}`}</span
-					>
-					{$i18n.t('variable to have them replaced with clipboard content.')}
-				</div>
 			</div>
 		</div>
 
-		<div class="my-4 flex justify-end pb-20">
+		<div class="mt-2">
+			<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+				<AccessControl bind:accessControl />
+			</div>
+		</div>
+
+		<div class="flex justify-end mt-2">
 			<button
-				class=" text-sm w-full lg:w-fit px-4 py-2 transition rounded-lg {loading
-					? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
-					: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
+				class="text-sm px-4 py-2 transition rounded-lg {loading
+					? 'cursor-not-allowed bg-gray-100 dark:bg-gray-800'
+					: 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800'} flex"
 				type="submit"
 				disabled={loading}
 			>
-				<div class=" self-center font-medium">{$i18n.t('Save & Create')}</div>
-
+				<div class="self-center font-medium">
+					{edit ? $i18n.t('Save Changes') : $i18n.t('Create Prompt')}
+				</div>
 				{#if loading}
 					<div class="ml-1.5 self-center">
 						<svg
-							class=" w-4 h-4"
+							class="w-4 h-4"
 							viewBox="0 0 24 24"
 							fill="currentColor"
 							xmlns="http://www.w3.org/2000/svg"
-							><style>
+						>
+							<style>
 								.spinner_ajPY {
 									transform-origin: center;
 									animation: spinner_AtaB 0.75s infinite linear;
@@ -194,14 +199,16 @@
 										transform: rotate(360deg);
 									}
 								}
-							</style><path
+							</style>
+							<path
 								d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
 								opacity=".25"
-							/><path
+							/>
+							<path
 								d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
 								class="spinner_ajPY"
-							/></svg
-						>
+							/>
+						</svg>
 					</div>
 				{/if}
 			</button>

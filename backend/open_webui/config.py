@@ -1005,7 +1005,7 @@ USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS = (
 )
 
 USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS = (
-    os.environ.get("USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS", "False").lower()
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS", "True").lower()
     == "true"
 )
 
@@ -1092,6 +1092,7 @@ DEFAULT_ARENA_MODEL = {
     "meta": {
         "profile_image_url": "/favicon.png",
         "description": "Submit your questions to anonymous AI chatbots and vote on the best response.",
+        "description_fr": "Soumettez vos questions à des robots conversationnels anonymes et votez pour la meilleure réponse.",
         "model_ids": None,
     },
 }
@@ -1109,7 +1110,7 @@ ENABLE_ADMIN_CHAT_ACCESS = (
 ENABLE_COMMUNITY_SHARING = PersistentConfig(
     "ENABLE_COMMUNITY_SHARING",
     "ui.enable_community_sharing",
-    os.environ.get("ENABLE_COMMUNITY_SHARING", "True").lower() == "true",
+    os.environ.get("ENABLE_COMMUNITY_SHARING", "False").lower() == "true",
 )
 
 ENABLE_MESSAGE_RATING = PersistentConfig(

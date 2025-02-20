@@ -83,9 +83,9 @@
 	});
 </script>
 
-<div class=" flex w-full user-message" dir={$settings.chatDirection} id="message-{message.id}">
+<div class=" flex w-full user-message" id="message-{message.id}">
 	{#if !($settings?.chatBubble ?? true)}
-		<div class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
+		<div class="flex-shrink-0 mr-3">
 			<ProfileImage
 				src={message.user
 					? ($models.find((m) => m.id === message.user)?.info?.meta?.profile_image_url ??
@@ -229,7 +229,7 @@
 					>
 						{#if !($settings?.chatBubble ?? true)}
 							{#if siblings.length > 1}
-								<div class="flex self-center" dir="ltr">
+								<div class="flex self-center">
 									<button
 										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 										on:click={() => {
@@ -358,7 +358,7 @@
 
 						{#if $settings?.chatBubble ?? true}
 							{#if siblings.length > 1}
-								<div class="flex self-center" dir="ltr">
+								<div class="flex self-center">
 									<button
 										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 										on:click={() => {

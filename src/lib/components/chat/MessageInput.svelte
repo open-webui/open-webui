@@ -520,6 +520,8 @@
 						type="file"
 						hidden
 						multiple
+						aria-label={$i18n.t('Upload files')}
+						title={$i18n.t('Upload files')}
 						on:change={async () => {
 							if (inputFiles && inputFiles.length > 0) {
 								const _inputFiles = Array.from(inputFiles);
@@ -565,7 +567,6 @@
 						>
 							<div
 								class="flex-1 flex flex-col relative w-full rounded-3xl px-1 bg-gray-600/5 dark:bg-gray-400/5 dark:text-gray-100"
-								dir={$settings?.chatDirection ?? 'LTR'}
 							>
 								{#if files.length > 0}
 									<div class="mx-1 mt-2.5 mb-1 flex items-center flex-wrap gap-2">
@@ -693,22 +694,17 @@
 												chatInput?.focus();
 											}}
 										>
-											<button
-												class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
-												type="button"
-												aria-label="More"
+											<!-- Removed nested <button> to avoid focusable descendants -->
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+												class="size-5"
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="size-5"
-												>
-													<path
-														d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
-													/>
-												</svg>
-											</button>
+												<path
+													d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
+												/>
+											</svg>
 										</InputMenu>
 									</div>
 
@@ -720,6 +716,9 @@
 												bind:this={chatInputElement}
 												bind:value={prompt}
 												id="chat-input"
+												aria-label={$i18n.t('Type your message here')}
+												title={$i18n.t('Type your message here')}
+												role="textbox"
 												messageInput={true}
 												shiftEnter={!$mobile ||
 													!(
@@ -920,6 +919,9 @@
 											bind:this={chatInputElement}
 											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-none w-full py-3 px-1 rounded-xl resize-none h-[48px]"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
+											aria-label={$i18n.t('Type your message here')}
+											title={$i18n.t('Type your message here')}
+											role="textbox"
 											bind:value={prompt}
 											on:keypress={(e) => {
 												if (

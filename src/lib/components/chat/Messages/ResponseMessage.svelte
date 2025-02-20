@@ -475,12 +475,8 @@
 </script>
 
 {#key message.id}
-	<div
-		class=" flex w-full message-{message.id}"
-		id="message-{message.id}"
-		dir={$settings.chatDirection}
-	>
-		<div class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
+	<div class=" flex w-full message-{message.id}" id="message-{message.id}">
+		<div class="flex-shrink-0 mr-3">
 			<ProfileImage
 				src={model?.info?.meta?.profile_image_url ??
 					($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
@@ -732,7 +728,7 @@
 							class=" flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
 						>
 							{#if siblings.length > 1}
-								<div class="flex self-center min-w-fit" dir="ltr">
+								<div class="flex self-center min-w-fit">
 									<button
 										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 										on:click={() => {

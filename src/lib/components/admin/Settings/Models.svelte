@@ -29,6 +29,7 @@
 	import Wrench from '$lib/components/icons/Wrench.svelte';
 	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
 	import ManageModelsModal from './Models/ManageModelsModal.svelte';
+	import { locale } from '$lib/stores/locale'; // Import locale store
 
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
@@ -44,18 +45,28 @@
 	let showConfigModal = false;
 	let showManageModal = false;
 
-	$: if (models) {
-		filteredModels = models
-			.filter((m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase()))
-			.sort((a, b) => {
-				// // Check if either model is inactive and push them to the bottom
-				// if ((a.is_active ?? true) !== (b.is_active ?? true)) {
-				// 	return (b.is_active ?? true) - (a.is_active ?? true);
-				// }
-				// If both models' active states are the same, sort alphabetically
-				return a.name.localeCompare(b.name);
-			});
+	// Helper: return description based on reactive locale
+	function getModelDesc(model) {
+		return $locale === 'fr-CA'
+			? (model?.meta?.description_fr || '').trim()
+			: (model?.meta?.description || '').trim();
 	}
+
+	onMount(() => {
+		const updateLocale = () => {
+			// Use store's set method instead of direct assignment
+			locale.set(localStorage.locale || 'en-GB');
+		};
+		window.addEventListener('storage', updateLocale);
+		return () => window.removeEventListener('storage', updateLocale);
+	});
+
+	$: filteredModels = models
+		?.filter((m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase()))
+		.map((model) => ({
+			...model,
+			description: $locale === 'fr-CA' ? model?.meta?.description_fr : model?.meta?.description
+		}));
 
 	let searchValue = '';
 
@@ -227,25 +238,21 @@
 
 							<div class=" flex-1 self-center {(model?.is_active ?? true) ? '' : 'text-gray-500'}">
 								<Tooltip
-									content={marked.parse(
-										!!model?.meta?.description
-											? model?.meta?.description
-											: model?.ollama?.digest
-												? `${model?.ollama?.digest} **(${model?.ollama?.modified_at})**`
-												: model.id
-									)}
+									content={marked.parse(getModelDesc(model))}
 									className=" w-fit"
 									placement="top-start"
 								>
 									<div class="  font-semibold line-clamp-1">{model.name}</div>
 								</Tooltip>
 								<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
-									<span class=" line-clamp-1">
-										{!!model?.meta?.description
-											? model?.meta?.description
-											: model?.ollama?.digest
-												? `${model.id} (${model?.ollama?.digest})`
-												: model.id}
+									<span class="line-clamp-1">
+										{#if model.description}
+											{model.description}
+										{:else if model.ollama?.digest}
+											{model.id} ({model.ollama.digest})
+										{:else}
+											{model.id}
+										{/if}
 									</span>
 								</div>
 							</div>

@@ -5,7 +5,7 @@
 
 	import { goto } from '$app/navigation';
 	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
+	import { WEBUI_NAME, prompts as _prompts, user } from '$lib/stores';
 
 	import {
 		createNewPrompt,
@@ -14,12 +14,13 @@
 		getPromptList
 	} from '$lib/apis/prompts';
 
+	import { getGroups } from '$lib/apis/groups';
+
 	import PromptMenu from './Prompts/PromptMenu.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Search from '../icons/Search.svelte';
 	import Plus from '../icons/Plus.svelte';
-	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
@@ -32,6 +33,7 @@
 	let query = '';
 
 	let prompts = [];
+	let groups = [];
 
 	let showDeleteConfirm = false;
 	let deletePrompt = null;
@@ -39,34 +41,9 @@
 	let filteredItems = [];
 	$: filteredItems = prompts.filter((p) => query === '' || p.command.includes(query));
 
-	const shareHandler = async (prompt) => {
-		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
-
-		const url = 'https://openwebui.com';
-
-		const tab = await window.open(`${url}/prompts/create`, '_blank');
-		window.addEventListener(
-			'message',
-			(event) => {
-				if (event.origin !== url) return;
-				if (event.data === 'loaded') {
-					tab.postMessage(JSON.stringify(prompt), '*');
-				}
-			},
-			false
-		);
-	};
-
 	const cloneHandler = async (prompt) => {
 		sessionStorage.prompt = JSON.stringify(prompt);
 		goto('/workspace/prompts/create');
-	};
-
-	const exportHandler = async (prompt) => {
-		let blob = new Blob([JSON.stringify([prompt])], {
-			type: 'application/json'
-		});
-		saveAs(blob, `prompt-export-${Date.now()}.json`);
 	};
 
 	const deleteHandler = async (prompt) => {
@@ -77,7 +54,52 @@
 
 	const init = async () => {
 		prompts = await getPromptList(localStorage.token);
+		groups = await getGroups(localStorage.token);
 		await _prompts.set(await getPrompts(localStorage.token));
+	};
+
+	const getPromptGroupName = (prompt) => {
+		if (prompt.access_control === null) return null;
+
+		// Check for both read and write group access
+		const writeGroupId = prompt.access_control.write.group_ids[0];
+		const readGroupId = prompt.access_control.read.group_ids[0];
+		const groupId = writeGroupId || readGroupId;
+
+		if (groupId) {
+			const group = groups.find((g) => g.id === groupId);
+			return group?.name;
+		}
+
+		// Return null for private prompts (will show user name instead)
+		return null;
+	};
+
+	const isGroupPrompt = (prompt) => {
+		return (
+			prompt.access_control !== null &&
+			(prompt.access_control.read.group_ids.length > 0 ||
+				prompt.access_control.write.group_ids.length > 0)
+		);
+	};
+
+	const getPromptDisplayText = (prompt) => {
+		if (prompt.access_control === null) {
+			return $i18n.t('Public');
+		}
+
+		const groupName = getPromptGroupName(prompt);
+		const userName = capitalizeFirstLetter(
+			prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
+		);
+
+		// If it's a group prompt but user didn't create it
+		if (groupName && prompt?.user?.id !== $user?.id) {
+			return $i18n.t('By {{name}}', { name: groupName });
+		}
+
+		// If user created it (with or without group)
+		return $i18n.t('By {{name}}', { name: userName });
 	};
 
 	onMount(async () => {
@@ -142,71 +164,90 @@
 	<div class="mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
 		{#each filteredItems as prompt}
 			<div
-				class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+				class="flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
 			>
-				<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
-					<a href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}>
-						<div class=" flex-1 flex items-center gap-2 self-center">
-							<div class=" font-semibold line-clamp-1 capitalize">{prompt.title}</div>
-							<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
+				<a
+					class="flex flex-1 w-full"
+					href={$user?.role === 'admin' ||
+					prompt?.user?.id === $user?.id ||
+					prompt.access_control?.write?.group_ids?.some((id) => groups.find((g) => g.id === id))
+						? `/workspace/prompts/edit?command=${encodeURIComponent(prompt.command.replace(/^\//, ''))}`
+						: `/workspace/prompts/view?command=${encodeURIComponent(prompt.command.replace(/^\//, ''))}`}
+				>
+					<div class="flex flex-col flex-1">
+						<div class="flex items-center gap-2">
+							<div class="font-semibold line-clamp-1 capitalize">{prompt.title}</div>
+							<div class="text-xs overflow-hidden text-ellipsis line-clamp-1">
 								{prompt.command}
 							</div>
 						</div>
-
-						<div class=" text-xs px-0.5">
+						<div class="text-xs">
 							<Tooltip
-								content={prompt?.user?.email ?? $i18n.t('Deleted User')}
+								content={prompt.access_control == null
+									? $i18n.t('Public')
+									: (getPromptGroupName(prompt) ?? prompt?.user?.email ?? $i18n.t('Deleted User'))}
 								className="flex shrink-0"
 								placement="top-start"
 							>
 								<div class="shrink-0 text-gray-500">
-									{$i18n.t('By {{name}}', {
-										name: capitalizeFirstLetter(
-											prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
-										)
-									})}
+									{#if prompt.access_control == null}
+										{$i18n.t('Public')}
+									{:else}
+										{getPromptDisplayText(prompt)}
+										{#if isGroupPrompt(prompt) && prompt?.user?.id === $user?.id}
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+												class="w-4 h-4 inline-block ml-0.5 -mt-0.5"
+											>
+												<path
+													d="M10 9a3 3 0 100-6 3 3 0 000 6zM6 8a2 2 0 11-4 0 2 2 0 014 0zM1.49 15.326a.78.78 0 01-.358-.442 3 3 0 014.308-3.516 6.484 6.484 0 00-1.905 3.959c-.023.222-.014.442.025.654a4.97 4.97 0 01-2.07-.655zM16.44 15.98a4.97 4.97 0 002.07-.654.78.78 0 00.357-.442 3 3 0 00-4.308-3.517 6.484 6.484 0 011.907 3.96 2.32 2.32 0 01-.026.654zM18 8a2 2 0 11-4 0 2 2 0 014 0zM5.304 16.19a.844.844 0 01-.277-.71 5 5 0 019.947 0 .843.843 0 01-.277.71A6.975 6.975 0 0110 18a6.974 6.974 0 01-4.696-1.81z"
+												/>
+											</svg>
+										{/if}
+									{/if}
 								</div>
 							</Tooltip>
 						</div>
-					</a>
-				</div>
+					</div>
+				</a>
 				<div class="flex flex-row gap-0.5 self-center">
-					<a
-						class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-						type="button"
-						href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="1.5"
-							stroke="currentColor"
-							class="w-4 h-4"
+					{#if $user?.role === 'admin' || prompt?.user?.id === $user?.id || prompt.access_control?.write?.group_ids?.some( (id) => groups.find((g) => g.id === id) )}
+						<a
+							class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+							type="button"
+							href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
 						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-							/>
-						</svg>
-					</a>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="1.5"
+								stroke="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
+								/>
+							</svg>
+						</a>
+					{/if}
 
 					<PromptMenu
-						shareHandler={() => {
-							shareHandler(prompt);
-						}}
 						cloneHandler={() => {
 							cloneHandler(prompt);
-						}}
-						exportHandler={() => {
-							exportHandler(prompt);
 						}}
 						deleteHandler={async () => {
 							deletePrompt = prompt;
 							showDeleteConfirm = true;
 						}}
 						onClose={() => {}}
+						canDelete={$user?.role === 'admin' ||
+							(prompt?.user?.id === $user?.id &&
+								!(prompt.user.role === 'user' && prompt.access_control === null))}
 					>
 						<button
 							class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
@@ -313,33 +354,6 @@
 					</div>
 				</button>
 			</div>
-		</div>
-	{/if}
-
-	{#if $config?.features.enable_community_sharing}
-		<div class=" my-16">
-			<div class=" text-xl font-medium mb-1 line-clamp-1">
-				{$i18n.t('Made by OpenWebUI Community')}
-			</div>
-
-			<a
-				class=" flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full mb-2 px-3.5 py-1.5 rounded-xl transition"
-				href="https://openwebui.com/#open-webui-community"
-				target="_blank"
-			>
-				<div class=" self-center">
-					<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a prompt')}</div>
-					<div class=" text-sm line-clamp-1">
-						{$i18n.t('Discover, download, and explore custom prompts')}
-					</div>
-				</div>
-
-				<div>
-					<div>
-						<ChevronRight />
-					</div>
-				</div>
-			</a>
 		</div>
 	{/if}
 {:else}

@@ -7,9 +7,16 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, user, models as _models, temporaryChatEnabled } from '$lib/stores';
+	import {
+		config,
+		user,
+		models as _models,
+		temporaryChatEnabled,
+		suggestionCycle
+	} from '$lib/stores';
 	import { sanitizeResponseContent, findWordIndices } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { locale } from '$lib/stores/locale';
 
 	import Suggestions from './Suggestions.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -84,7 +91,30 @@
 
 	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
 
-	onMount(() => {});
+	// Add helper function to get localized description
+	function getModelDesc(model) {
+		return $locale === 'fr-CA'
+			? sanitizeResponseContent(model?.info?.meta?.description_fr ?? '')
+			: sanitizeResponseContent(model?.info?.meta?.description ?? '');
+	}
+
+	// Create a reactive statement that updates descriptions when locale changes
+	$: modelDescription = getModelDesc(models[selectedModelIdx]);
+
+	$: {
+		// Whenever the model changes, trigger a suggestion reshuffle
+		models[selectedModelIdx]?.info?.meta?.suggestion_prompts;
+		suggestionCycle.update((n) => n + 1);
+	}
+
+	onMount(() => {
+		// Listen for storage event only since it's triggered by locale changes
+		const handleLocaleChange = () => {
+			modelDescription = getModelDesc(models[selectedModelIdx]);
+		};
+		window.addEventListener('storage', handleLocaleChange);
+		return () => window.removeEventListener('storage', handleLocaleChange);
+	});
 </script>
 
 <div class="m-auto w-full max-w-6xl px-2 xl:px-20 translate-y-6 py-24 text-center">
@@ -148,19 +178,11 @@
 			<div class="flex mt-1 mb-2">
 				<div in:fade={{ duration: 100, delay: 50 }}>
 					{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
-						<Tooltip
-							className=" w-fit"
-							content={marked.parse(
-								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description ?? '')
-							)}
-							placement="top"
-						>
+						<Tooltip className=" w-fit" content={marked.parse(modelDescription)} placement="top">
 							<div
-								class="mt-0.5 px-2 text-sm font-normal text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xl markdown"
+								class="mt-0.5 px-2 text-sm font-normal text-gray-600 dark:text-gray-400 line-clamp-2 max-w-xl markdown"
 							>
-								{@html marked.parse(
-									sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description)
-								)}
+								{@html marked.parse(modelDescription)}
 							</div>
 						</Tooltip>
 

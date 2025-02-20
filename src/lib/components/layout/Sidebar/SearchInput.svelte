@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { getAllTags } from '$lib/apis/chats';
 	import { tags } from '$lib/stores';
-	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
+	import { locale } from '$lib/stores/locale';
+	import { getContext, createEventDispatcher, onMount, onDestroy } from 'svelte';
 	import { fade } from 'svelte/transition';
 
 	const dispatch = createEventDispatcher();
@@ -15,12 +16,45 @@
 	let lastWord = '';
 	$: lastWord = value ? value.split(' ').at(-1) : value;
 
-	let options = [
+	// Get the tag prefix based on locale from translations and add colon
+	$: primaryTagPrefix = `${$i18n.t('tag')}:`;
+
+	// Create reactive options based on current locale
+	$: options = [
 		{
-			name: 'tag:',
+			name: primaryTagPrefix,
 			description: $i18n.t('search for tags')
 		}
 	];
+
+	// Update tag prefixes based on current locale translations
+	$: tagPrefixes =
+		$locale === 'fr-CA'
+			? ['étiquette:', 'tag:'] // Keep both for backwards compatibility
+			: ['tag:', 'étiquette:']; // Keep both for backwards compatibility
+
+	// Watch for locale changes and update existing tag prefixes in the search value
+	$: if (value && $locale) {
+		// Get the current primary prefix and old prefixes
+		const oldPrefixes =
+			$locale === 'fr-CA'
+				? ['tag:', 'étiquette:'] // If now in French, look for English prefixes
+				: ['étiquette:', 'tag:']; // If now in English, look for French prefixes
+
+		// Replace any old prefixes with the new primary prefix
+		const words = value.split(' ');
+		const updatedWords = words.map((word) => {
+			if (oldPrefixes.some((prefix) => word.startsWith(prefix))) {
+				// Extract the tag ID after the old prefix
+				const tagId = word.slice(word.indexOf(':') + 1);
+				// Replace with new prefix
+				return `${primaryTagPrefix}${tagId}`;
+			}
+			return word;
+		});
+		value = updatedWords.join(' ');
+	}
+
 	let focused = false;
 	let loading = false;
 
@@ -29,8 +63,8 @@
 		return option.name.startsWith(lastWord);
 	});
 
-	let filteredTags = [];
-	$: filteredTags = lastWord.startsWith('tag:')
+	// Update the filtering logic to check for any valid tag prefix
+	$: filteredTags = tagPrefixes.some((prefix) => lastWord.startsWith(prefix))
 		? [
 				...$tags,
 				{
@@ -38,18 +72,24 @@
 					name: $i18n.t('Untagged')
 				}
 			].filter((tag) => {
-				const tagName = lastWord.slice(4);
-				if (tagName) {
-					const tagId = tagName.replace(' ', '_').toLowerCase();
-
-					if (tag.id !== tagId) {
-						return tag.id.startsWith(tagId);
-					} else {
-						return false;
+				// Extract tag name after any of the valid prefixes
+				const tagName = tagPrefixes.reduce((name, prefix) => {
+					if (lastWord.startsWith(prefix)) {
+						return lastWord.slice(prefix.length);
 					}
-				} else {
-					return true;
+					return name;
+				}, '');
+
+				if (tagName) {
+					// Normalize the search tag ID
+					const searchTagId = tagName.trim().replace(' ', '_').toLowerCase();
+					// Compare with the actual tag ID
+					if (tag.id !== searchTagId) {
+						return tag.id.startsWith(searchTagId);
+					}
+					return false;
 				}
+				return true;
 			})
 		: [];
 
@@ -71,11 +111,27 @@
 		}
 	};
 
+	// Handle storage events for locale changes
+	const handleStorageChange = (event) => {
+		if (event?.detail?.locale || (event?.key === 'locale' && event?.newValue)) {
+			// Force options and tagPrefixes to update by triggering reactivity
+			options = [
+				{
+					name: primaryTagPrefix,
+					description: $i18n.t('search for tags')
+				}
+			];
+		}
+	};
+
 	onMount(() => {
+		// Listen for both custom event and storage event
+		window.addEventListener('storage', handleStorageChange);
 		document.addEventListener('click', documentClickHandler);
 	});
 
 	onDestroy(() => {
+		window.removeEventListener('storage', handleStorageChange);
 		document.removeEventListener('click', documentClickHandler);
 	});
 </script>
@@ -172,7 +228,7 @@
 									const words = value.split(' ');
 
 									words.pop();
-									words.push(`tag:${tag.id} `);
+									words.push(`${primaryTagPrefix}${tag.id} `);
 
 									value = words.join(' ');
 
@@ -208,7 +264,7 @@
 									const words = value.split(' ');
 
 									words.pop();
-									words.push('tag:');
+									words.push(`${primaryTagPrefix}`);
 
 									value = words.join(' ');
 

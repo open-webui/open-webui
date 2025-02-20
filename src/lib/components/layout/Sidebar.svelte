@@ -213,7 +213,22 @@
 			searchDebounceTimeout = setTimeout(async () => {
 				allChatsLoaded = false;
 				currentChatPage.set(1);
-				await chats.set(await getChatListBySearchText(localStorage.token, search));
+
+				// Normalize search text: for each word that looks like a tag search, force "tag:" prefix
+				const normalizedSearch = search
+					.split(' ')
+					.map((word) => {
+						const isTagSearch = ['tag:', 'étiquette:'].some((prefix) => word.startsWith(prefix));
+						if (isTagSearch) {
+							const tagId = word.slice(word.indexOf(':') + 1);
+							// Always convert to "tag:" prefix
+							return `tag:${tagId}`;
+						}
+						return word;
+					})
+					.join(' ');
+
+				await chats.set(await getChatListBySearchText(localStorage.token, normalizedSearch));
 
 				if ($chats.length === 0) {
 					tags.set(await getAllTags(localStorage.token));
@@ -480,6 +495,8 @@
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
 				}}
+				aria-label={$i18n.t('Toggle sidebar')}
+				title={$i18n.t('Toggle sidebar')}
 			>
 				<div class=" m-auto self-center">
 					<svg
@@ -778,7 +795,7 @@
 							{#each $chats as chat, idx}
 								{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
 									<div
-										class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
+										class="w-full pl-2.5 text-xs text-gray-700 dark:text-gray-400 font-medium {idx ===
 										0
 											? ''
 											: 'pt-5'} pb-1.5"
@@ -865,21 +882,19 @@
 							}
 						}}
 					>
-						<button
-							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-							on:click={() => {
-								showDropdown = !showDropdown;
-							}}
+						<div
+							class="select-none flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 						>
-							<div class=" self-center mr-3">
+							<div class="self-center mr-3">
 								<img
 									src={$user.profile_image_url}
-									class=" max-w-[30px] object-cover rounded-full"
+									class="max-w-[28px] object-cover rounded-full"
 									alt="User profile"
+									draggable="false"
 								/>
 							</div>
-							<div class=" self-center font-medium">{$user.name}</div>
-						</button>
+							<div class="self-center font-medium">{$user.name}</div>
+						</div>
 					</UserMenu>
 				{/if}
 			</div>

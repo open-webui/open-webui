@@ -1073,7 +1073,7 @@ async def get_app_latest_release_version():
         timeout = aiohttp.ClientTimeout(total=1)
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(
-                "https://api.github.com/repos/open-webui/open-webui/releases/latest"
+                "https://api.github.com/repos/ssc-dsai/canchat-v2/releases/latest"
             ) as response:
                 response.raise_for_status()
                 data = await response.json()

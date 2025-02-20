@@ -21,6 +21,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
 	import { goto } from '$app/navigation';
+	import { locale } from '$lib/stores/locale';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -217,6 +218,22 @@
 			toast.success(`${model} download has been canceled`);
 		}
 	};
+
+	// Create a reactive statement that recomputes descriptions when locale changes
+	$: descriptions = items.map((item) => {
+		return {
+			id: item.value,
+			desc:
+				$locale === 'fr-CA'
+					? (item.model?.info?.meta?.description_fr || '').trim()
+					: (item.model?.info?.meta?.description || '').trim()
+		};
+	});
+
+	// Get description helper that uses the reactive descriptions array
+	function getModelDesc(itemId) {
+		return descriptions.find((d) => d.id === itemId)?.desc || '';
+	}
 </script>
 
 <DropdownMenu.Root
@@ -230,18 +247,20 @@
 >
 	<DropdownMenu.Trigger
 		class="relative w-full font-primary"
-		aria-label={placeholder}
 		id="model-selector-{id}-button"
+		aria-label={selectedModel ? selectedModel.label : placeholder}
 	>
 		<div
-			class="flex w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-none"
+			class="flex w-full text-left px-0.5 outline-none bg-white dark:bg-gray-900 truncate {triggerClassName} justify-between font-medium text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md focus:outline-none"
 		>
-			{#if selectedModel}
-				{selectedModel.label}
-			{:else}
-				{placeholder}
-			{/if}
-			<ChevronDown className=" self-center ml-2 size-3" strokeWidth="2.5" />
+			<span class="truncate text-gray-900 dark:text-white">
+				{#if selectedModel}
+					{selectedModel.label}
+				{:else}
+					{placeholder}
+				{/if}
+			</span>
+			<ChevronDown className="self-center ml-2 size-3" strokeWidth="2.5" />
 		</div>
 	</DropdownMenu.Trigger>
 
@@ -290,7 +309,7 @@
 			<div class="px-3 my-2 max-h-64 overflow-y-auto scrollbar-hidden group">
 				{#each filteredItems as item, index}
 					<button
-						aria-label="model-item"
+						aria-label={getModelDesc(item.model)}
 						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
 						selectedModelIdx
 							? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
@@ -383,12 +402,9 @@
 
 								{#if item.model?.info?.meta?.description}
 									<Tooltip
-										content={`${marked.parse(
-											sanitizeResponseContent(item.model?.info?.meta?.description).replaceAll(
-												'\n',
-												'<br>'
-											)
-										)}`}
+										content={marked.parse(
+											sanitizeResponseContent(getModelDesc(item.value)).replaceAll('\n', '<br>')
+										)}
 									>
 										<div class=" translate-y-[1px]">
 											<svg

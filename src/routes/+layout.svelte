@@ -44,6 +44,7 @@
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
+	import TopRightControls from '$lib/components/layout/TopRightControls.svelte';
 
 	setContext('i18n', i18n);
 
@@ -370,12 +371,17 @@
 	{#if $isApp}
 		<div class="flex flex-row h-screen">
 			<AppSidebar />
-
 			<div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
+				{#if $user}
+					<TopRightControls />
+				{/if}
 				<slot />
 			</div>
 		</div>
 	{:else}
+		{#if $user}
+			<TopRightControls />
+		{/if}
 		<slot />
 	{/if}
 {/if}
