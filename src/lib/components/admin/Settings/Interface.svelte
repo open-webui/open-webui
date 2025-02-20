@@ -289,8 +289,7 @@
 							<div class=" self-center text-sm font-semibold">
 								{$i18n.t('Banners')}
 							</div>
-
-							<button
+						<button
 							class="p-1 px-3 text-xs flex rounded-sm transition"
 							type="button"
 							on:click={() => {
@@ -321,13 +320,19 @@
 							</svg>
 							</button>
 						</div>
-						<div class="mt-2 px-2 py-1.5 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 rounded-md">
-							<span class="font-medium">{$i18n.t('Security Notice')}: </span>
-							{$i18n.t('The Custom banner type allows execution of arbitrary HTML, JavaScript, and CSS code. Only add content from trusted sources as it could pose security risks to your application.')}
-						</div>
 					</div>
 					<div class=" flex flex-col space-y-1">
 						{#each banners as banner, bannerIdx}
+							{#if banner.type === 'html'}
+								<div
+									class="mt-2 px-2 py-1.5 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 rounded-md"
+								>
+									<span class="font-medium">{$i18n.t('Security Notice')}: </span>
+									{$i18n.t(
+										'The Custom banner type allows execution of arbitrary HTML, JavaScript, and CSS code. Only add content from trusted sources as it could pose security risks to your application.'
+									)}
+								</div>
+							{/if}
 							<div class=" flex justify-between">
 								<div
 									class="flex flex-row flex-1 border rounded-xl border-gray-100 dark:border-gray-850"
