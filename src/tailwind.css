@@ -36,5 +36,3 @@
 		@apply cursor-pointer;
 	}
 }
-
-@custom-variant hover (&:hover);
