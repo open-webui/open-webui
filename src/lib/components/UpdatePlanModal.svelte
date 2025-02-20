@@ -22,9 +22,9 @@
     const shpUserId = `Shp_userId=${userId}`; // Передаём user id в Shp
 
     // Пароль#1 (замените на ваш)
-    // const password1 = 'r8xoXYKrTcsoT11Xq02N';
     const password1 = process.env.ROBOKASSA_PASSWORD;
-    console.log("PASS", password1)
+    console.log("PAS", password1)
+
     // Строка для подписи
     const signatureString = `${merchantLogin}:${outSum}:${invId}:${password1}:${shpUserId}`;
 
@@ -122,28 +122,49 @@
   }
 </style>
 
-<div class="cards-container">
-  <!-- Карточка 1 -->
-  <div class="card">
-    <h3>Базовый план</h3>
-    <p>Идеально для начинающих. Включает основные функции.</p>
-    <div class="price">$10</div>
-    <button on:click={() => openPaymentWindow('10')}>Оплатить</button>
-  </div>
+{#if showUpdatePlanModal}
+  <!-- Модальное окно -->
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+    <div class="bg-white dark:bg-gray-850 p-6 rounded-xl shadow-xl w-11/12 max-w-4xl">
+      <h2 class="text-xl mb-4">Обновить план</h2>
+      <p>User ID: {userId}</p> <!-- Отображаем user id -->
 
-  <!-- Карточка 2 -->
-  <div class="card">
-    <h3>Стандартный план</h3>
-    <p>Для активных пользователей. Расширенные возможности.</p>
-    <div class="price">$25</div>
-    <button on:click={() => openPaymentWindow('25')}>Оплатить</button>
-  </div>
+      <!-- Контейнер с карточками -->
+      <div class="cards-container">
+        <!-- Карточка 1 -->
+        <div class="card">
+          <h3>Базовый план</h3>
+          <p>Идеально для начинающих. Включает основные функции.</p>
+          <div class="price">$10</div>
+          <button on:click={() => openPaymentWindow('10')}>Оплатить</button>
+        </div>
 
-  <!-- Карточка 3 -->
-  <div class="card">
-    <h3>Премиум план</h3>
-    <p>Для профессионалов. Все функции и приоритетная поддержка.</p>
-    <div class="price">$50</div>
-    <button on:click={() => openPaymentWindow('50')}>Оплатить</button>
+        <!-- Карточка 2 -->
+        <div class="card">
+          <h3>Стандартный план</h3>
+          <p>Для активных пользователей. Расширенные возможности.</p>
+          <div class="price">$25</div>
+          <button on:click={() => openPaymentWindow('25')}>Оплатить</button>
+        </div>
+
+        <!-- Карточка 3 -->
+        <div class="card">
+          <h3>Премиум план</h3>
+          <p>Для профессионалов. Все функции и приоритетная поддержка.</p>
+          <div class="price">$50</div>
+          <button on:click={() => openPaymentWindow('50')}>Оплатить</button>
+        </div>
+      </div>
+
+      <!-- Кнопка закрытия модального окна -->
+      <div class="mt-4 flex justify-end">
+        <button
+          class="bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 transition"
+          on:click={() => showUpdatePlanModal = false}
+        >
+          Закрыть
+        </button>
+      </div>
+    </div>
   </div>
-</div>
+{/if}
