@@ -7,7 +7,7 @@
 	} from '$lib/stores';
 </script>
 
-<nav class="sticky top-0 z-30 w-full px-1.5 py-4 -mb-8 flex items-center drag-region">
+<nav class="fixed top-0 z-30 w-full px-1.5 py-4 -mb-8 flex items-center drag-region">
 	<div class=" flex max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent">
 		<div class="flex justify-between items-center w-full max-w-full">
 			<div
@@ -44,9 +44,13 @@
 	</div>
 </nav>
 
-<content class="block mt-10 mx-3">
+<content class="flex flex-col items-center pt-20 mx-3 bg-neutral-50">
 	<slot />
 </content>
 
 <style>
+	/* Override this style from app.html */
+	:global(html[lang]) {
+		overflow-y: visible !important;
+	}
 </style>
