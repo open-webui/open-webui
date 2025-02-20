@@ -37,7 +37,7 @@
       const description = 'Оплата заказа в Тестовом магазине ROBOKASSA';
       const culture = 'ru';
       const encoding = 'utf-8';
-      const isTest = "1";
+      const isTest = '1';
       const shpUserId = `Shp_userId=${userId}`; // Передаём user id в Shp
       const paymentMethods = JSON.stringify({ PaymentMethods: ['BankCard', 'SBP'], Mode: 'modal' });
 
