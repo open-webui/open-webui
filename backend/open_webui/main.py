@@ -45,6 +45,9 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
 
 
+from open_webui.utils import logger
+from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
+from open_webui.utils.logger import start_logger
 from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
@@ -298,8 +301,11 @@ from open_webui.config import (
     reset_config,
 )
 from open_webui.env import (
+    AUDIT_EXCLUDED_PATHS,
+    AUDIT_LOG_LEVEL,
     CHANGELOG,
     GLOBAL_LOG_LEVEL,
+    MAX_BODY_LOG_SIZE,
     SAFE_MODE,
     SRC_LOG_LEVELS,
     VERSION,
@@ -384,6 +390,7 @@ https://github.com/open-webui/open-webui
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    start_logger()
     if RESET_CONFIG_ON_START:
         reset_config()
 
@@ -879,6 +886,19 @@ app.include_router(
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 
 
+try:
+    audit_level = AuditLevel(AUDIT_LOG_LEVEL)
+except ValueError as e:
+    logger.error(f"Invalid audit level: {AUDIT_LOG_LEVEL}. Error: {e}")
+    audit_level = AuditLevel.NONE
+
+if audit_level != AuditLevel.NONE:
+    app.add_middleware(
+        AuditLoggingMiddleware,
+        audit_level=audit_level,
+        excluded_paths=AUDIT_EXCLUDED_PATHS,
+        max_body_size=MAX_BODY_LOG_SIZE,
+    )
 ##################################
 #
 # Chat Endpoints
