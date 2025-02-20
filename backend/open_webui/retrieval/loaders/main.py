@@ -134,10 +134,17 @@ class Loader:
             docs = self.loader.load()
 
             if type(docs) == str:
-                return docs
+                return [
+                Document(
+                        page_content=docs
+                    )
+                ]
 
             return [
-                Document(docs)
+                Document(
+                    page_content=ftfy.fix_text(doc.page_content), metadata=doc.metadata
+                )
+                for doc in docs
             ]
         else:
             return self.loader.load()
@@ -156,21 +163,22 @@ class Loader:
                     file_path=file_path,
                     mime_type=file_content_type,
                 )
-        elif self.engine == "pdftotext" and file_ext == "pdf":
-            if isasync:
-                loader = PdftotextLoaderAsync(
-                    pdf_path=file_path,
-                    url=self.kwargs.get("PDFTOTEXT_SERVER_URL"),
-                    max_pages=self.kwargs.get("MAXPAGES_PDFTOTEXT"),
-                )
+        elif file_ext == "pdf":
+            if self.engine == "pdftotext":
+                if isasync:
+                    loader = PdftotextLoaderAsync(
+                        pdf_path=file_path,
+                        url=self.kwargs.get("PDFTOTEXT_SERVER_URL"),
+                        max_pages=self.kwargs.get("MAXPAGES_PDFTOTEXT"),
+                    )
+                else:
+                    loader = PdftotextLoader(file_path, url=self.kwargs.get("PDFTOTEXT_SERVER_URL"), max_pages = self.kwargs.get("MAXPAGES_PDFTOTEXT"))
             else:
-                loader = PdftotextLoader(file_path, url=self.kwargs.get("PDFTOTEXT_SERVER_URL"), max_pages = self.kwargs.get("MAXPAGES_PDFTOTEXT"))
-        else:
-            if file_ext == "pdf":
                 loader = PyPDFLoader(
                     file_path, extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES")
                 )
-            elif file_ext == "csv":
+        else:
+            if file_ext == "csv":
                 loader = CSVLoader(file_path)
             elif file_ext == "rst":
                 loader = UnstructuredRSTLoader(file_path, mode="elements")

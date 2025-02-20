@@ -897,6 +897,7 @@ def process_file(
         else:
             # Process the file and save the content
             # Usage: /files/
+            is_pdf2text = engine == "pdftotext" and file.meta.get("content_type") == "application/pdf"
             file_path = file.path
             if file_path:
                 file_path = Storage.get_file(file_path)
@@ -911,8 +912,8 @@ def process_file(
                     file.filename, file.meta.get("content_type"), file_path
                 )
 
-                if engine == "pdftotext":
-                    docs_text = docs
+                if is_pdf2text:
+                    docs_text = docs.page_content
                     docs = [Document(
                         page_content=docs_text,
                         metadata={
@@ -949,7 +950,7 @@ def process_file(
                         },
                     )
                 ]
-            if engine == "pdftotext":
+            if is_pdf2text:
                 text_content = docs_text
             else:
                 text_content = " ".join([doc.page_content for doc in docs])
@@ -1019,6 +1020,7 @@ async def process_file_async(
 
         collection_name = form_data.collection_name
         engine = request.app.state.config.CONTENT_EXTRACTION_ENGINE
+        is_pdf2text = engine == "pdftotext" and file.meta.get("content_type") == "application/pdf"
 
         if collection_name is None:
             collection_name = f"file-{file.id}"
@@ -1035,11 +1037,11 @@ async def process_file_async(
                 PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
                 MAXPAGES_PDFTOTEXT=request.app.state.config.MAXPAGES_PDFTOTEXT,
             )
-            if engine == "pdftotext":
+            if is_pdf2text:
                 task_id = loader.load(file.filename, file.meta.get("content_type"), file_path, isasync=True)
-                
+
                 text_content = loader.loader.get_text(task_id)
-                
+
                 docs = [Document(
                     page_content=text_content,
                     metadata={
@@ -1049,11 +1051,44 @@ async def process_file_async(
                         "source": file.filename,
                     },
                 )]
-                
+
                 log.info(f"OCR Task {task_id} created successfully.")
-                
-                
-                
+
+            else:
+                docs = loader.load(
+                    file.filename, file.meta.get("content_type"), file_path
+                )
+                docs = [
+                    Document(
+                        page_content=doc.page_content,
+                        metadata={
+                            **doc.metadata,
+                            "name": file.filename,
+                            "created_by": file.user_id,
+                            "file_id": file.id,
+                            "source": file.filename,
+                        },
+                    )
+                    for doc in docs
+                ]
+        else:
+            docs = [
+                Document(
+                    page_content=file.data.get("content", ""),
+                    metadata={
+                        **file.meta,
+                        "name": file.filename,
+                        "created_by": file.user_id,
+                        "file_id": file.id,
+                        "source": file.filename,
+                    },
+                )
+            ]
+
+        if not is_pdf2text:
+            text_content = " ".join([doc.page_content for doc in docs])
+
+
         Files.update_file_data_by_id(
             file.id,
             {"content": text_content},
@@ -1092,8 +1127,6 @@ async def process_file_async(
                 }
         except Exception as e:
             raise e
-
-                
 
 
     except Exception as e:
