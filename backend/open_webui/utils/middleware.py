@@ -792,8 +792,6 @@ async def process_chat_payload(request, form_data, metadata, user, model):
     # If context is not empty, insert it into the messages
     if len(sources) > 0:
         context_string = ""
-        webpage_context_string = ""
-        file_context_string = ""
         log.debug(f"sources: {json.dumps(sources)}")
         source_idx = 0
         for _, source in enumerate(sources):
@@ -803,10 +801,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
                     # Special RAG Prompt for DeepSeek tool
                     log.info(f"model: {json.dumps(model)}")
                     if "deepseek" in model.get("id", "deepseek".lower()):
-                        if source_type == "web_search_docs":
-                            webpage_context_string += f"[webpage {source_idx} begin]{doc_context}[webpage {source_idx} end]\n"
-                        elif source_type == "file":
-                            file_context_string += f"[file {source_idx} begin]{doc_context}[file {source_idx} end]\n"
+                        context_string += f"[file {source_idx} begin]\n{doc_context}\n[file {source_idx} end]\n"
                     else:
                         context_string += f"<source><source_id>{source_idx}</source_id><source_context>{doc_context}</source_context></source>\n"
                     source_idx += 1
@@ -836,18 +831,12 @@ async def process_chat_payload(request, form_data, metadata, user, model):
             )
             # DeepSeek tool prompt
         elif "deepseek" in model.get("id", "deepseek".lower()):
-            log.debug(f"webpage_context_string: {webpage_context_string}")
-            log.debug(f"file_context_string: {file_context_string}")
+            tool_prompt = request.app.state.config.RAG_DEEPSEEK_TEMPLATE.replace("{{CONTEXT}}", context_string).replace("{{CURRENT_DATE}}", time.strftime("%Y-%m-%d")).replace("{{QUESTION}}", prompt)
             log.debug(
-                f'DeepSeek tool prompt: {request.app.state.config.RAG_DEEPSEEK_TEMPLATE.replace("{{SEARCH_RESULTS}}", webpage_context_string).replace("{{FILE_CONTEXT}", file_context_string).replace("{{CURRENT_DATE}}", time.strftime("%Y-%m-%d")).replace("{{QUESTION}}", prompt)}'
+                f'DeepSeek tool prompt: {tool_prompt}'
             )
-            form_data["messages"] = add_or_update_system_message(
-                request.app.state.config.RAG_DEEPSEEK_TEMPLATE.replace(
-                    "{{SEARCH_RESULTS}}", webpage_context_string
-                )
-                .replace("{{FILE_CONTEXT}}", file_context_string)
-                .replace("{{CURRENT_DATE}}", time.strftime("%Y-%m-%d"))
-                .replace("{{QUESTION}}", prompt),
+            form_data["messages"] = prepend_to_first_user_message_content(
+                tool_prompt,
                 form_data["messages"],
             )
         else:
