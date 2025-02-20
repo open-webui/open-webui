@@ -591,6 +591,11 @@ def apply_params_to_form_data(form_data, model):
 
         if "reasoning_effort" in params:
             form_data["reasoning_effort"] = params["reasoning_effort"]
+        if "logit_bias" in params:
+            try:
+                form_data["logit_bias"] = json.loads(params["logit_bias"])
+            except json.JSONDecodeError:
+                print("Invalid JSON format for logit_bias")
 
     return form_data
 
