@@ -12,7 +12,7 @@ dependencies = [
     "python-multipart==0.0.18",
 
     "python-socketio==5.11.3",
-    "python-jose==3.3.0",
+    "python-jose==3.4.0",
     "passlib[bcrypt]==1.7.4",
 
     "requests==2.32.3",
@@ -113,6 +113,9 @@ dependencies = [
     "azure-storage-blob==12.24.1",
 
     "ldap3==2.9.1",
+
+    "firecrawl-py==1.12.0",
+
     "gcp-storage-emulator>=2024.8.3",
 ]
 readme = "README.md"

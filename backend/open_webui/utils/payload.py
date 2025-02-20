@@ -151,7 +151,7 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
 
             # Put the content to empty string (Ollama requires an empty string for tool calls)
             new_message["content"] = ""
-            
+
         else:
             # Otherwise, assume the content is a list of dicts, e.g., text followed by an image URL
             content_text = ""
@@ -215,16 +215,20 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     if openai_payload.get("options"):
         ollama_payload["options"] = openai_payload["options"]
         ollama_options = openai_payload["options"]
-        
+
         # Re-Mapping OpenAI's `max_tokens` -> Ollama's `num_predict`
         if "max_tokens" in ollama_options:
-            ollama_options["num_predict"] = ollama_options["max_tokens"] 
-            del ollama_options["max_tokens"] # To prevent Ollama warning of invalid option provided
+            ollama_options["num_predict"] = ollama_options["max_tokens"]
+            del ollama_options[
+                "max_tokens"
+            ]  # To prevent Ollama warning of invalid option provided
 
         # Ollama lacks a "system" prompt option. It has to be provided as a direct parameter, so we copy it down.
         if "system" in ollama_options:
-            ollama_payload["system"] = ollama_options["system"] 
-            del ollama_options["system"] # To prevent Ollama warning of invalid option provided
+            ollama_payload["system"] = ollama_options["system"]
+            del ollama_options[
+                "system"
+            ]  # To prevent Ollama warning of invalid option provided
 
     if "metadata" in openai_payload:
         ollama_payload["metadata"] = openai_payload["metadata"]
