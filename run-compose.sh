@@ -84,9 +84,9 @@ usage() {
     echo "  $0 --enable-gpu[count=1]"
     echo "  $0 --enable-gpu[count=all]"
     echo "  $0 --enable-api[port=11435]"
-    echo "  $0 --enable-gpu[count=1] --enable-api[port=12345] --webui[port=3000]"
-    echo "  $0 --enable-gpu[count=1] --enable-api[port=12345] --webui[port=3000] --data[folder=./ollama-data]"
-    echo "  $0 --enable-gpu[count=1] --enable-api[port=12345] --webui[port=3000] --data[folder=./ollama-data] --build"
+    echo "  $0 --enable-gpu[count=1] --enable-api[port=12345] --webui[port=8080]"
+    echo "  $0 --enable-gpu[count=1] --enable-api[port=12345] --webui[port=8080] --data[folder=./ollama-data]"
+    echo "  $0 --enable-gpu[count=1] --enable-api[port=12345] --webui[port=8080] --data[folder=./ollama-data] --build"
     echo ""
     echo "This script configures and runs a docker-compose setup with optional GPU support, API exposure, and web UI configuration."
     echo "About the gpu to use, the script automatically detects it using the "lspci" command."
@@ -96,7 +96,7 @@ usage() {
 # Default values
 gpu_count=1
 api_port=11435
-webui_port=3000
+webui_port=8080
 headless=false
 build_image=false
 kill_compose=false
@@ -123,7 +123,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --webui*)
             value=$(extract_value "$key")
-            webui_port=${value:-3000}
+            webui_port=${value:-8080}
             ;;
         --data*)
             value=$(extract_value "$key")
