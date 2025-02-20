@@ -1917,7 +1917,7 @@ RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(
 RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
     "RAG_WEB_SEARCH_CONCURRENT_REQUESTS",
     "rag.web.search.concurrent_requests",
-    int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
+    int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "20")),
 )
 
 RAG_WEB_SEARCH_TRUST_ENV = PersistentConfig(

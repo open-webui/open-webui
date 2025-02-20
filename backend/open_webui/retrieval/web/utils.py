@@ -59,7 +59,11 @@ def safe_validate_urls(url: Sequence[str]) -> Sequence[str]:
 
 def resolve_hostname(hostname):
     # Get address information
-    addr_info = socket.getaddrinfo(hostname, None)
+    try:
+        addr_info = socket.getaddrinfo(hostname, None)
+    except socket.gaierror as e:
+        log.error(f"Error resolving hostname {hostname}: {e}")
+        return [], []
 
     # Extract IP addresses from address information
     ipv4_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET]
@@ -81,9 +85,12 @@ class SafeWebBaseLoader(WebBaseLoader):
         self.trust_env = trust_env
 
     async def _fetch(
-        self, url: str, retries: int = 3, cooldown: int = 2, backoff: float = 1.5
+        self, url: str, retries: int = 1, cooldown: int = 2, backoff: float = 1.5
     ) -> str:
-        async with aiohttp.ClientSession(trust_env=self.trust_env) as session:
+        timeout = aiohttp.ClientTimeout(total=2)
+        async with aiohttp.ClientSession(
+            trust_env=self.trust_env, timeout=timeout
+        ) as session:
             for i in range(retries):
                 try:
                     kwargs: Dict = dict(
@@ -98,7 +105,9 @@ class SafeWebBaseLoader(WebBaseLoader):
                     ) as response:
                         if self.raise_for_status:
                             response.raise_for_status()
-                        return await response.text()
+                        content = await response.text()
+                        log.info(f"Successfully fetched {url}")
+                        return content
                 except aiohttp.ClientConnectionError as e:
                     if i == retries - 1:
                         raise
@@ -107,7 +116,10 @@ class SafeWebBaseLoader(WebBaseLoader):
                             f"Error fetching {url} with attempt "
                             f"{i + 1}/{retries}: {e}. Retrying..."
                         )
-                        await asyncio.sleep(cooldown * backoff**i)
+                        # await asyncio.sleep(cooldown * backoff**i)
+                except Exception as e:
+                    log.error(f"Error fetching {url}: {e}")
+                    raise
         raise ValueError("retry count exceeded")
 
     def _unpack_fetch_results(
@@ -118,14 +130,20 @@ class SafeWebBaseLoader(WebBaseLoader):
 
         final_results = []
         for i, result in enumerate(results):
-            url = urls[i]
-            if parser is None:
-                if url.endswith(".xml"):
-                    parser = "xml"
-                else:
-                    parser = self.default_parser
-                self._check_parser(parser)
-            final_results.append(BeautifulSoup(result, parser, **self.bs_kwargs))
+            try:
+                url = urls[i]
+                if parser is None:
+                    if url.endswith(".xml"):
+                        parser = "xml"
+                    else:
+                        parser = self.default_parser
+                    self._check_parser(parser)
+                final_results.append(BeautifulSoup(result, parser, **self.bs_kwargs))
+            except Exception as e:
+                log.error(
+                    f"Error parsing {url}: {e}\nparser: {parser}\n, result: {result}"
+                )
+                final_results.append(None)
         return final_results
 
     async def ascrape_all(
@@ -162,16 +180,20 @@ class SafeWebBaseLoader(WebBaseLoader):
         """Async lazy load text from the url(s) in web_path."""
         results = await self.ascrape_all(self.web_paths)
         for path, soup in zip(self.web_paths, results):
-            text = soup.get_text(**self.bs_get_text_kwargs)
-            metadata = {"source": path}
-            if title := soup.find("title"):
-                metadata["title"] = title.get_text()
-            if description := soup.find("meta", attrs={"name": "description"}):
-                metadata["description"] = description.get(
-                    "content", "No description found."
-                )
-            if html := soup.find("html"):
-                metadata["language"] = html.get("lang", "No language found.")
+            try:
+                text = soup.get_text(**self.bs_get_text_kwargs)
+                metadata = {"source": path}
+                if title := soup.find("title"):
+                    metadata["title"] = title.get_text()
+                if description := soup.find("meta", attrs={"name": "description"}):
+                    metadata["description"] = description.get(
+                        "content", "No description found."
+                    )
+                if html := soup.find("html"):
+                    metadata["language"] = html.get("lang", "No language found.")
+            except Exception as e:
+                # Log the error and continue with the next URL
+                log.error(f"Error loading {path}: {e}")
             yield Document(page_content=text, metadata=metadata)
 
     async def aload(self) -> list[Document]:
@@ -182,9 +204,10 @@ class SafeWebBaseLoader(WebBaseLoader):
 def get_web_loader(
     urls: Union[str, Sequence[str]],
     verify_ssl: bool = True,
-    requests_per_second: int = 2,
+    requests_per_second: int = 20,
     trust_env: bool = True,
 ):
+    log.info(f"trust_env: {trust_env}; requests_per_second: {requests_per_second}")
     # Check if the URLs are valid
     safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
 
