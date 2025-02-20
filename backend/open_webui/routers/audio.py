@@ -37,6 +37,7 @@ from open_webui.config import (
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
+    AIOHTTP_CLIENT_TIMEOUT,
     ENV,
     SRC_LOG_LEVELS,
     DEVICE_TYPE,
@@ -266,7 +267,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
         try:
             # print(payload)
-            async with aiohttp.ClientSession() as session:
+            timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            async with aiohttp.ClientSession(
+                timeout=timeout, trust_env=True
+            ) as session:
                 async with session.post(
                     url=f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech",
                     json=payload,
@@ -323,7 +327,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             )
 
         try:
-            async with aiohttp.ClientSession() as session:
+            timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            async with aiohttp.ClientSession(
+                timeout=timeout, trust_env=True
+            ) as session:
                 async with session.post(
                     f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
                     json={
@@ -380,7 +387,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             data = f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{locale}">
                 <voice name="{language}">{payload["input"]}</voice>
             </speak>"""
-            async with aiohttp.ClientSession() as session:
+            timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            async with aiohttp.ClientSession(
+                timeout=timeout, trust_env=True
+            ) as session:
                 async with session.post(
                     f"https://{region}.tts.speech.microsoft.com/cognitiveservices/v1",
                     headers={

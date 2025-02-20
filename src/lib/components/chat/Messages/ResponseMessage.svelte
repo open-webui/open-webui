@@ -732,9 +732,9 @@
 										onTaskClick={async (e) => {
 											console.log(e);
 										}}
-										onSourceClick={async (e) => {
-											console.log(e);
-											let sourceButton = document.getElementById(`source-${e}`);
+										onSourceClick={async (id, idx) => {
+											console.log(id, idx);
+											let sourceButton = document.getElementById(`source-${message.id}-${idx}`);
 											const sourcesCollapsible = document.getElementById(`collapsible-sources`);
 
 											if (sourceButton) {
@@ -753,7 +753,7 @@
 												});
 
 												// Try clicking the source button again
-												sourceButton = document.getElementById(`source-${e}`);
+												sourceButton = document.getElementById(`source-${message.id}-${idx}`);
 												sourceButton && sourceButton.click();
 											}
 										}}
@@ -790,7 +790,7 @@
 								{/if}
 
 								{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
-									<Citations sources={message?.sources ?? message?.citations} />
+									<Citations id={message?.id} sources={message?.sources ?? message?.citations} />
 								{/if}
 
 								{#if message.code_executions}

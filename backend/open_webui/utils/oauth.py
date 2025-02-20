@@ -140,7 +140,14 @@ class OAuthManager:
         log.debug("Running OAUTH Group management")
         oauth_claim = auth_manager_config.OAUTH_GROUPS_CLAIM
 
-        user_oauth_groups: list[str] = user_data.get(oauth_claim, list())
+        # Nested claim search for groups claim
+        if oauth_claim:
+            claim_data = user_data
+            nested_claims = oauth_claim.split(".")
+            for nested_claim in nested_claims:
+                claim_data = claim_data.get(nested_claim, {})
+            user_oauth_groups = claim_data if isinstance(claim_data, list) else None
+
         user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
         all_available_groups: list[GroupModel] = Groups.get_groups()
 
@@ -239,11 +246,46 @@ class OAuthManager:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         provider_sub = f"{provider}@{sub}"
         email_claim = auth_manager_config.OAUTH_EMAIL_CLAIM
-        email = user_data.get(email_claim, "").lower()
+        email = user_data.get(email_claim, "")
         # We currently mandate that email addresses are provided
         if not email:
-            log.warning(f"OAuth callback failed, email is missing: {user_data}")
-            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+            # If the provider is GitHub,and public email is not provided, we can use the access token to fetch the user's email
+            if provider == "github":
+                try:
+                    access_token = token.get("access_token")
+                    headers = {"Authorization": f"Bearer {access_token}"}
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(
+                            "https://api.github.com/user/emails", headers=headers
+                        ) as resp:
+                            if resp.ok:
+                                emails = await resp.json()
+                                # use the primary email as the user's email
+                                primary_email = next(
+                                    (e["email"] for e in emails if e.get("primary")),
+                                    None,
+                                )
+                                if primary_email:
+                                    email = primary_email
+                                else:
+                                    log.warning(
+                                        "No primary email found in GitHub response"
+                                    )
+                                    raise HTTPException(
+                                        400, detail=ERROR_MESSAGES.INVALID_CRED
+                                    )
+                            else:
+                                log.warning("Failed to fetch GitHub email")
+                                raise HTTPException(
+                                    400, detail=ERROR_MESSAGES.INVALID_CRED
+                                )
+                except Exception as e:
+                    log.warning(f"Error fetching GitHub email: {e}")
+                    raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+            else:
+                log.warning(f"OAuth callback failed, email is missing: {user_data}")
+                raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+        email = email.lower()
         if (
             "*" not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
             and email.split("@")[-1] not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
@@ -285,9 +327,7 @@ class OAuthManager:
             # If the user does not exist, check if signups are enabled
             if auth_manager_config.ENABLE_OAUTH_SIGNUP:
                 # Check if an existing user with the same email already exists
-                existing_user = Users.get_user_by_email(
-                    user_data.get("email", "").lower()
-                )
+                existing_user = Users.get_user_by_email(email)
                 if existing_user:
                     raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 

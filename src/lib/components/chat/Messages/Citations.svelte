@@ -7,6 +7,7 @@
 
 	const i18n = getContext('i18n');
 
+	export let id = '';
 	export let sources = [];
 
 	let citations = [];
@@ -100,7 +101,7 @@
 			<div class="flex text-xs font-medium flex-wrap">
 				{#each citations as citation, idx}
 					<button
-						id={`source-${idx}`}
+						id={`source-${id}-${idx}`}
 						class="no-toggle outline-hidden flex dark:text-gray-300 p-1 bg-white dark:bg-gray-900 rounded-xl max-w-96"
 						on:click={() => {
 							showCitationModal = true;
@@ -179,7 +180,7 @@
 					<div class="flex text-xs font-medium flex-wrap">
 						{#each citations as citation, idx}
 							<button
-								id={`source-${idx}`}
+								id={`source-${id}-${idx}`}
 								class="no-toggle outline-hidden flex dark:text-gray-300 p-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition rounded-xl max-w-96"
 								on:click={() => {
 									showCitationModal = true;
