@@ -6,7 +6,6 @@
 
 	export let show = true;
 	export let size = 'md';
-
 	export let containerClassName = 'p-3';
 	export let className = 'bg-gray-50 dark:bg-gray-900 rounded-2xl';
 
@@ -74,7 +73,7 @@
 		}}
 	>
 		<div
-			class=" m-auto max-w-full {sizeToWidth(size)} {size !== 'full'
+			class="m-auto max-w-full {sizeToWidth(size)} {size !== 'full'
 				? 'mx-2'
 				: ''} shadow-3xl min-h-fit scrollbar-hidden {className}"
 			in:flyAndScale
