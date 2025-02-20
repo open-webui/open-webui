@@ -73,7 +73,9 @@
 		}}
 	>
 		<div
-			class="m-auto max-w-full {sizeToWidth(size)} {size !== 'full' ? 'mx-2' : ''} shadow-3xl min-h-fit scrollbar-hidden {className}"
+			class="m-auto max-w-full {sizeToWidth(size)} {size !== 'full'
+				? 'mx-2'
+				: ''} shadow-3xl min-h-fit scrollbar-hidden {className}"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();

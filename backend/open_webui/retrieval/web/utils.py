@@ -15,15 +15,12 @@ from typing import (
     Optional,
     Sequence,
     Union,
-    Literal
+    Literal,
 )
 import aiohttp
 import certifi
 import validators
-from langchain_community.document_loaders import (
-    PlaywrightURLLoader,
-    WebBaseLoader
-)
+from langchain_community.document_loaders import PlaywrightURLLoader, WebBaseLoader
 from langchain_community.document_loaders.firecrawl import FireCrawlLoader
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
@@ -33,7 +30,7 @@ from open_webui.config import (
     PLAYWRIGHT_WS_URI,
     RAG_WEB_LOADER_ENGINE,
     FIRECRAWL_API_BASE_URL,
-    FIRECRAWL_API_KEY
+    FIRECRAWL_API_KEY,
 )
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -75,6 +72,7 @@ def safe_validate_urls(url: Sequence[str]) -> Sequence[str]:
             continue
     return valid_urls
 
+
 def resolve_hostname(hostname):
     # Get address information
     addr_info = socket.getaddrinfo(hostname, None)
@@ -85,16 +83,13 @@ def resolve_hostname(hostname):
 
     return ipv4_addresses, ipv6_addresses
 
+
 def extract_metadata(soup, url):
-    metadata = {
-        "source": url
-    }
+    metadata = {"source": url}
     if title := soup.find("title"):
         metadata["title"] = title.get_text()
     if description := soup.find("meta", attrs={"name": "description"}):
-        metadata["description"] = description.get(
-            "content", "No description found."
-        )
+        metadata["description"] = description.get("content", "No description found.")
     if html := soup.find("html"):
         metadata["language"] = html.get("lang", "No language found.")
     return metadata
@@ -104,7 +99,7 @@ def verify_ssl_cert(url: str) -> bool:
     """Verify SSL certificate for the given URL."""
     if not url.startswith("https://"):
         return True
-        
+
     try:
         hostname = url.split("://")[-1].split("/")[0]
         context = ssl.create_default_context(cafile=certifi.where())
@@ -133,7 +128,7 @@ class SafeFireCrawlLoader(BaseLoader):
         params: Optional[Dict] = None,
     ):
         """Concurrent document loader for FireCrawl operations.
-        
+
         Executes multiple FireCrawlLoader instances concurrently using thread pooling
         to improve bulk processing efficiency.
         Args:
@@ -142,7 +137,7 @@ class SafeFireCrawlLoader(BaseLoader):
             trust_env: If True, use proxy settings from environment variables.
             requests_per_second: Number of requests per second to limit to.
             continue_on_failure (bool): If True, continue loading other URLs on failure.
-            api_key: API key for FireCrawl service. Defaults to None 
+            api_key: API key for FireCrawl service. Defaults to None
                 (uses FIRE_CRAWL_API_KEY environment variable if not provided).
             api_url: Base URL for FireCrawl API. Defaults to official API endpoint.
             mode: Operation mode selection:
@@ -154,15 +149,15 @@ class SafeFireCrawlLoader(BaseLoader):
                 Examples include crawlerOptions.
                 For more details, visit: https://github.com/mendableai/firecrawl-py
         """
-        proxy_server = proxy.get('server') if proxy else None
+        proxy_server = proxy.get("server") if proxy else None
         if trust_env and not proxy_server:
             env_proxies = urllib.request.getproxies()
-            env_proxy_server = env_proxies.get('https') or env_proxies.get('http')
+            env_proxy_server = env_proxies.get("https") or env_proxies.get("http")
             if env_proxy_server:
                 if proxy:
-                    proxy['server'] = env_proxy_server
+                    proxy["server"] = env_proxy_server
                 else:
-                    proxy = { 'server': env_proxy_server }
+                    proxy = {"server": env_proxy_server}
         self.web_paths = web_paths
         self.verify_ssl = verify_ssl
         self.requests_per_second = requests_per_second
@@ -184,7 +179,7 @@ class SafeFireCrawlLoader(BaseLoader):
                     api_key=self.api_key,
                     api_url=self.api_url,
                     mode=self.mode,
-                    params=self.params
+                    params=self.params,
                 )
                 yield from loader.lazy_load()
             except Exception as e:
@@ -203,7 +198,7 @@ class SafeFireCrawlLoader(BaseLoader):
                     api_key=self.api_key,
                     api_url=self.api_url,
                     mode=self.mode,
-                    params=self.params
+                    params=self.params,
                 )
                 async for document in loader.alazy_load():
                     yield document
@@ -251,7 +246,7 @@ class SafeFireCrawlLoader(BaseLoader):
 
 class SafePlaywrightURLLoader(PlaywrightURLLoader):
     """Load HTML pages safely with Playwright, supporting SSL verification, rate limiting, and remote browser connection.
-    
+
     Attributes:
         web_paths (List[str]): List of URLs to load.
         verify_ssl (bool): If True, verify SSL certificates.
@@ -273,19 +268,19 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader):
         headless: bool = True,
         remove_selectors: Optional[List[str]] = None,
         proxy: Optional[Dict[str, str]] = None,
-        playwright_ws_url: Optional[str] = None
+        playwright_ws_url: Optional[str] = None,
     ):
         """Initialize with additional safety parameters and remote browser support."""
 
-        proxy_server = proxy.get('server') if proxy else None
+        proxy_server = proxy.get("server") if proxy else None
         if trust_env and not proxy_server:
             env_proxies = urllib.request.getproxies()
-            env_proxy_server = env_proxies.get('https') or env_proxies.get('http')
+            env_proxy_server = env_proxies.get("https") or env_proxies.get("http")
             if env_proxy_server:
                 if proxy:
-                    proxy['server'] = env_proxy_server
+                    proxy["server"] = env_proxy_server
                 else:
-                    proxy = { 'server': env_proxy_server }
+                    proxy = {"server": env_proxy_server}
 
         # We'll set headless to False if using playwright_ws_url since it's handled by the remote browser
         super().__init__(
@@ -293,7 +288,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader):
             continue_on_failure=continue_on_failure,
             headless=headless if playwright_ws_url is None else False,
             remove_selectors=remove_selectors,
-            proxy=proxy
+            proxy=proxy,
         )
         self.verify_ssl = verify_ssl
         self.requests_per_second = requests_per_second
@@ -339,7 +334,9 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader):
             if self.playwright_ws_url:
                 browser = await p.chromium.connect(self.playwright_ws_url)
             else:
-                browser = await p.chromium.launch(headless=self.headless, proxy=self.proxy)
+                browser = await p.chromium.launch(
+                    headless=self.headless, proxy=self.proxy
+                )
 
             for url in self.urls:
                 try:
@@ -393,6 +390,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader):
             raise ValueError(f"SSL certificate verification failed for {url}")
         self._sync_wait_for_rate_limit()
         return True
+
 
 class SafeWebBaseLoader(WebBaseLoader):
     """WebBaseLoader with enhanced error handling for URLs."""
@@ -496,10 +494,12 @@ class SafeWebBaseLoader(WebBaseLoader):
         """Load data into Document objects."""
         return [document async for document in self.alazy_load()]
 
+
 RAG_WEB_LOADER_ENGINES = defaultdict(lambda: SafeWebBaseLoader)
 RAG_WEB_LOADER_ENGINES["playwright"] = SafePlaywrightURLLoader
 RAG_WEB_LOADER_ENGINES["safe_web"] = SafeWebBaseLoader
 RAG_WEB_LOADER_ENGINES["firecrawl"] = SafeFireCrawlLoader
+
 
 def get_web_loader(
     urls: Union[str, Sequence[str]],
@@ -515,7 +515,7 @@ def get_web_loader(
         "verify_ssl": verify_ssl,
         "requests_per_second": requests_per_second,
         "continue_on_failure": True,
-        "trust_env": trust_env
+        "trust_env": trust_env,
     }
 
     if PLAYWRIGHT_WS_URI.value:
@@ -529,6 +529,10 @@ def get_web_loader(
     WebLoaderClass = RAG_WEB_LOADER_ENGINES[RAG_WEB_LOADER_ENGINE.value]
     web_loader = WebLoaderClass(**web_loader_args)
 
-    log.debug("Using RAG_WEB_LOADER_ENGINE %s for %s URLs", web_loader.__class__.__name__, len(safe_urls))
+    log.debug(
+        "Using RAG_WEB_LOADER_ENGINE %s for %s URLs",
+        web_loader.__class__.__name__,
+        len(safe_urls),
+    )
 
     return web_loader

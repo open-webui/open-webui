@@ -37,7 +37,7 @@ function initNetworkProxyFromEnv() {
 	 * @see https://github.com/nodejs/undici/issues/2224
 	 */
 	if (!preferedProxy || !preferedProxy.startsWith('http')) return;
-	let preferedProxyURL
+	let preferedProxyURL;
 	try {
 		preferedProxyURL = new URL(preferedProxy).toString();
 	} catch {

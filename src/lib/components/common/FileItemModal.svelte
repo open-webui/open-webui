@@ -16,8 +16,9 @@
 	export let edit = false;
 
 	let enableFullContent = false;
-	$: isPDF = item?.meta?.content_type === 'application/pdf' ||
-	          (item?.name && item?.name.toLowerCase().endsWith('.pdf'));
+	$: isPDF =
+		item?.meta?.content_type === 'application/pdf' ||
+		(item?.name && item?.name.toLowerCase().endsWith('.pdf'));
 
 	onMount(() => {
 		console.log(item);
@@ -38,7 +39,10 @@
 							class="hover:underline line-clamp-1"
 							on:click|preventDefault={() => {
 								if (!isPDF && item.url) {
-									window.open(item.type === 'file' ? `${item.url}/content` : `${item.url}`, '_blank');
+									window.open(
+										item.type === 'file' ? `${item.url}/content` : `${item.url}`,
+										'_blank'
+									);
 								}
 							}}
 						>
