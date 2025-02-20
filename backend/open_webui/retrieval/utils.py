@@ -14,7 +14,8 @@ from langchain_core.documents import Document
 
 from open_webui.config import VECTOR_DB
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
-from open_webui.utils.misc import get_last_user_message
+from open_webui.utils.misc import get_last_user_message, calculate_sha256_string
+
 from open_webui.models.users import UserModel
 
 from open_webui.env import (
@@ -178,45 +179,31 @@ def merge_and_sort_query_results(
     combined_distances = []
     combined_documents = []
     combined_metadatas = []
-    combined_ids = []
 
     for data in query_results:
         combined_distances.extend(data["distances"][0])
         combined_documents.extend(data["documents"][0])
         combined_metadatas.extend(data["metadatas"][0])
-        # DISTINCT(chunk_id,file_id) - in case if id (chunk_ids) become ordinals
-        combined_ids.extend(
-            [
-                f"{id}-{meta['file_id']}"
-                for id, meta in zip(data["ids"][0], data["metadatas"][0])
-            ]
-        )
 
-    # Create a list of tuples (distance, document, metadata, ids)
-    combined = list(
-        zip(combined_distances, combined_documents, combined_metadatas, combined_ids)
-    )
+    # Create a list of tuples (distance, document, metadata)
+    combined = list(zip(combined_distances, combined_documents, combined_metadatas))
 
     # Sort the list based on distances
     combined.sort(key=lambda x: x[0], reverse=reverse)
 
-    sorted_distances = []
-    sorted_documents = []
-    sorted_metadatas = []
-    # Otherwise we don't have anything :-(
-    if combined:
+    # We don't have anything :-(
+    if not combined:
+        sorted_distances = []
+        sorted_documents = []
+        sorted_metadatas = []
+    else:
         # Unzip the sorted list
-        all_distances, all_documents, all_metadatas, all_ids = zip(*combined)
-        seen_ids = set()
+        sorted_distances, sorted_documents, sorted_metadatas = zip(*combined)
+
         # Slicing the lists to include only k elements
-        for index, id in enumerate(all_ids):
-            if id not in seen_ids:
-                sorted_distances.append(all_distances[index])
-                sorted_documents.append(all_documents[index])
-                sorted_metadatas.append(all_metadatas[index])
-                seen_ids.add(id)
-                if len(sorted_distances) >= k:
-                    break
+        sorted_distances = list(sorted_distances)[:k]
+        sorted_documents = list(sorted_documents)[:k]
+        sorted_metadatas = list(sorted_metadatas)[:k]
 
     # Create the output dictionary
     result = {
