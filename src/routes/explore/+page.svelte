@@ -1,14 +1,17 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
 	import AgentSelector from '$lib/IONOS/components/AgentSelector.svelte'
+	import PromptSelector from '$lib/IONOS/components/PromptSelector.svelte'
 	import Robot from '$lib/components/icons/Robot.svelte'
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte'
 	import { init as initAgentsStore } from '$lib/IONOS/stores/agents';
+	import { init as initPromptsStore } from '$lib/IONOS/stores/prompts';
 
 	const i18n = getContext('i18n');
 
 	onMount(async () => {
 		await initAgentsStore();
+		await initPromptsStore();
 	});
 </script>
 
@@ -41,8 +44,8 @@
 	{$i18n.t('Whether you need great content, eye-catching designs, or clean code, your virtual team is here to help every step of the way.', { ns: 'ionos' })}
 </p>
 
-<div class="block w-full h-20 py-5 text-center my-8 bg-white">
-	... Preprompts here ...
+<div class="block w-full py-5 text-center my-8">
+	<PromptSelector />
 </div>
 
 <div class="my-20">
