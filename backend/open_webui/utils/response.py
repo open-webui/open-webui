@@ -104,7 +104,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
         data = json.loads(data)
 
         model = data.get("model", "ollama")
-        message_content = data.get("message", {}).get("content", "")
+        message_content = data.get("message", {}).get("content", None)
         tool_calls = data.get("message", {}).get("tool_calls", None)
         openai_tool_calls = None
 
@@ -118,7 +118,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
             usage = convert_ollama_usage_to_openai(data)
 
         data = openai_chat_chunk_message_template(
-            model, message_content if not done else None, openai_tool_calls, usage
+            model, message_content, openai_tool_calls, usage
         )
 
         line = f"data: {json.dumps(data)}\n\n"
