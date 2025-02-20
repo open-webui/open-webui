@@ -55,6 +55,7 @@
 	import ChannelModal from './Sidebar/ChannelModal.svelte';
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
+	import Robot from '../icons/Robot.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -514,6 +515,23 @@
 				</div>
 				<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
 					{$i18n.t('New Chat')}
+				</div>
+			</a>
+		</div>
+
+		<div class="px-1.5 flex justify-center text-gray-600 dark:text-gray-400">
+			<a
+				id="sidebar-explore-button"
+				class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
+				href="/explore"
+				draggable="false"
+				on:click={async () => { await goto('/explore'); }}
+			>
+				<div class="self-center">
+					<Robot className="h-4 w-4 inline-block" />
+				</div>
+				<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
+					{$i18n.t('Explore', { ns: 'ionos' })}
 				</div>
 			</a>
 		</div>

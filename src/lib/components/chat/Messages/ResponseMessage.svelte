@@ -23,7 +23,6 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Name from './Name.svelte';
-	import ProfileImage from './ProfileImage.svelte';
 	import Skeleton from './Skeleton.svelte';
 	import Image from '$lib/components/common/Image.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -34,6 +33,7 @@
 	import Error from './Error.svelte';
 	import Citations from './Citations.svelte';
 	import CodeExecutions from './CodeExecutions.svelte';
+	import ModelProfile from '$lib/IONOS/components/ModelProfile.svelte';
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -481,32 +481,10 @@
 		dir={$settings.chatDirection}
 	>
 		<div class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
-			<ProfileImage
-				src={model?.info?.meta?.profile_image_url ??
-					($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
-				className={'size-8'}
-			/>
+			<ModelProfile model={model} />
 		</div>
 
 		<div class="flex-auto w-0 pl-1">
-			<Name>
-				<Tooltip content={model?.name ?? message.model} placement="top-start">
-					<span class="line-clamp-1">
-						{model?.name ?? message.model}
-					</span>
-				</Tooltip>
-
-				{#if message.timestamp}
-					<div
-						class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
-					>
-						<Tooltip content={dayjs(message.timestamp * 1000).format('dddd, DD MMMM YYYY HH:mm')}>
-							<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
-						</Tooltip>
-					</div>
-				{/if}
-			</Name>
-
 			<div>
 				{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
 					<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">

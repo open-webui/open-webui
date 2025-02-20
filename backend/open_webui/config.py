@@ -899,7 +899,7 @@ USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS = (
 )
 
 USER_PERMISSIONS_CHAT_CONTROLS = (
-    os.environ.get("USER_PERMISSIONS_CHAT_CONTROLS", "True").lower() == "true"
+    os.environ.get("USER_PERMISSIONS_CHAT_CONTROLS", "False").lower() == "true"
 )
 
 USER_PERMISSIONS_CHAT_FILE_UPLOAD = (
@@ -1094,15 +1094,17 @@ TITLE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     os.environ.get("TITLE_GENERATION_PROMPT_TEMPLATE", ""),
 )
 
-DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = """Create a concise, 3-5 word title with an emoji as a title for the chat history, in the given language. Suitable Emojis for the summary can be used to enhance understanding but avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
+DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = """Create a concise, 3-5 word title as a title for the chat history, in the given language. Avoid quotation marks, emojis or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
+
 
 Examples of titles:
-📉 Stock Market Trends
-🍪 Perfect Chocolate Chip Recipe
+Stock Market Trends
+Perfect Chocolate Chip Recipe
+Poem about a bird
 Evolution of Music Streaming
 Remote Work Productivity Tips
 Artificial Intelligence in Healthcare
-🎮 Video Game Development Insights
+Video Game Development Insights
 
 <chat_history>
 {{MESSAGES:END:2}}
