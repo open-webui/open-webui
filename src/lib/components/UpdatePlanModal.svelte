@@ -11,61 +11,39 @@
     return hashArray.map((byte) => byte.toString(16).padStart(2, '0')).join('');
   }
 
-  // Функция для загрузки скрипта Robokassa
-  function loadRobokassaScript() {
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://auth.robokassa.ru/Merchant/bundle/robokassa_iframe.js';
-      script.onload = () => resolve(true);
-      script.onerror = () => reject(new Error('Не удалось загрузить скрипт Robokassa'));
-      document.head.appendChild(script);
-    });
+  // Функция для генерации ссылки на оплату
+  async function generatePaymentLink(): Promise<string> {
+    // Параметры для подписи
+    const merchantLogin = 'aidachat';
+    const outSum = '11'; // Сумма оплаты
+    const invId = ''; // Номер заказа (может быть пустым)
+    const description = encodeURIComponent('Оплата заказа в Тестовом магазине ROBOKASSA'); // Кодируем описание
+    const isTest = '1'; // Тестовый режим
+    const shpUserId = `Shp_userId=${userId}`; // Передаём user id в Shp
+
+    // Пароль#1 (замените на ваш)
+    const password1 = 'r8xoXYKrTcsoT11Xq02N';
+
+    // Строка для подписи
+    const signatureString = `${merchantLogin}:${outSum}:${invId}:${password1}:${shpUserId}`;
+
+    // Рассчитываем подпись (SHA-256)
+    const signatureValue = await calculateSHA256(signatureString);
+
+    // Формируем ссылку для оплаты
+    const paymentLink = `https://auth.robokassa.ru/Merchant/Index.aspx?MerchantLogin=${merchantLogin}&OutSum=${outSum}&InvoiceID=${invId}&Description=${description}&IsTest=${isTest}&${shpUserId}&SignatureValue=${signatureValue}`;
+
+    return paymentLink;
   }
 
-  // Функция для запуска Robokassa iframe
-  async function openRobokassaIframe() {
+  // Функция для перенаправления на страницу оплаты
+  async function redirectToPayment() {
     try {
-      // Загружаем скрипт Robokassa, если он ещё не загружен
-      if (!window.Robokassa) {
-        await loadRobokassaScript();
-      }
-
-      // Параметры для подписи
-      const merchantLogin = 'aidachat';
-      const outSum = '11'; // Сумма оплаты
-      const invId = ''; // Номер заказа (может быть пустым)
-      const description = 'Оплата заказа в Тестовом магазине ROBOKASSA';
-      const culture = 'ru';
-      const encoding = 'utf-8';
-      const isTest = '1';
-      const shpUserId = `Shp_userId=${userId}`; // Передаём user id в Shp
-      const paymentMethods = JSON.stringify({ PaymentMethods: ['BankCard', 'SBP'], Mode: 'modal' });
-
-      // Пароль#1 (замените на ваш)
-      const password1 = 'r8xoXYKrTcsoT11Xq02N';
-
-      // Строка для подписи
-      const signatureString = `${merchantLogin}:${outSum}:${invId}:${password1}:${shpUserId}`;
-      console.log("Sig", signatureString)
-      // Рассчитываем подпись (SHA-256)
-      const signatureValue = await calculateSHA256(signatureString);
-      console.log("Sig2", signatureValue)
-      // Вызываем Robokassa.Render
-      Robokassa.Render({
-        MerchantLogin: merchantLogin,
-        OutSum: outSum,
-        InvId: invId,
-        Description: description,
-        Culture: culture,
-        Encoding: encoding,
-        IsTest: isTest,
-        Shp: { userId: shpUserId },
-        Settings: paymentMethods,
-        SignatureValue: signatureValue
-      });
+      const paymentLink = await generatePaymentLink();
+      window.location.href = paymentLink; // Перенаправляем пользователя
     } catch (error) {
-      console.error('Ошибка при загрузке Robokassa:', error);
-      alert('Не удалось загрузить платёжную систему. Пожалуйста, попробуйте позже.');
+      console.error('Ошибка при генерации ссылки на оплату:', error);
+      alert('Не удалось сформировать платёжную ссылку. Пожалуйста, попробуйте позже.');
     }
   }
 </script>
@@ -77,11 +55,11 @@
       <p>User ID: {userId}</p> <!-- Отображаем user id -->
       <p>Здесь будет контент для обновления плана...</p>
 
-      <!-- Кнопка для запуска Robokassa iframe -->
+      <!-- Кнопка для перехода на страницу оплаты -->
       <div class="mt-4 flex justify-end">
         <button
           class="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition"
-          on:click={openRobokassaIframe}
+          on:click={redirectToPayment}
         >
           Оплатить
         </button>
