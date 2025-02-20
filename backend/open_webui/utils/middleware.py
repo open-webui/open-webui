@@ -792,13 +792,18 @@ async def process_chat_payload(request, form_data, metadata, user, model):
     # If context is not empty, insert it into the messages
     if len(sources) > 0:
         context_string = ""
-        for source_idx, source in enumerate(sources):
-            source_id = source.get("source", {}).get("name", "")
-            log.debug(f"source_idx = {source_idx}, source_id = {source_id}")
+        log.debug(f"model: {model}\nsources: {json.dumps(sources)}")
+        source_idx = 0
+        for _, source in enumerate(sources):
+            source_type = source.get("source", {}).get("type", "")
             if "document" in source:
                 for doc_idx, doc_context in enumerate(source["document"]):
-                    log.debug(f"doc_idx = {doc_idx}")
-                    context_string += f"<source><source_id>{doc_idx}</source_id><source_context>{doc_context}</source_context></source>\n"
+                    # Special RAG Prompt for DeepSeek tool
+                    if "deepseek" in model.get("id", "deepseek".lower()):
+                        context_string += f"[file {source_idx} begin]\n{doc_context}\n[file {source_idx} end]\n"
+                    else:
+                        context_string += f"<source><source_id>{source_idx}</source_id><source_context>{doc_context}</source_context></source>\n"
+                    source_idx += 1
 
         context_string = context_string.strip()
         prompt = get_last_user_message(form_data["messages"])
@@ -815,11 +820,26 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
         # Workaround for Ollama 2.0+ system prompt issue
         # TODO: replace with add_or_update_system_message
+        log.debug(f"process_chat_payload.model: {json.dumps(model)}")
         if model.get("owned_by") == "ollama":
             form_data["messages"] = prepend_to_first_user_message_content(
                 rag_template(
                     request.app.state.config.RAG_TEMPLATE, context_string, prompt
                 ),
+                form_data["messages"],
+            )
+            # DeepSeek tool prompt
+        elif "deepseek" in model.get("id", "deepseek".lower()):
+            tool_prompt = (
+                request.app.state.config.RAG_DEEPSEEK_TEMPLATE.replace(
+                    "{{CONTEXT}}", context_string
+                )
+                .replace("{{CURRENT_DATE}}", time.strftime("%Y-%m-%d"))
+                .replace("{{QUESTION}}", prompt)
+            )
+            log.debug(f"DeepSeek tool prompt: {tool_prompt}")
+            form_data["messages"] = prepend_to_first_user_message_content(
+                tool_prompt,
                 form_data["messages"],
             )
         else:

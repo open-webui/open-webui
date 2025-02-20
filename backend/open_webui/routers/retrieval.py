@@ -702,7 +702,7 @@ def save_docs_to_vector_db(
     collection_name,
     metadata: Optional[dict] = None,
     overwrite: bool = False,
-    split: bool = True,
+    split: bool = False,
     add: bool = False,
     user=None,
 ) -> bool:
