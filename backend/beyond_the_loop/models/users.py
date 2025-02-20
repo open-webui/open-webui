@@ -39,6 +39,8 @@ class User(Base):
 
     oauth_sub = Column(Text, unique=True)
 
+    stripe_customer_id = Column(String, nullable=True)
+
     company_id = Column(String, ForeignKey("company.id", ondelete="CASCADE"), nullable=False)
     company = relationship("Company", back_populates="users")
 
@@ -69,6 +71,9 @@ class UserModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     company_id: str
+
+    stripe_customer_id: Optional[str] = None
+
 
 ####################
 # Forms
@@ -168,6 +173,12 @@ class UsersTable:
                 return UserModel.model_validate(user)
         except Exception:
             return None
+
+    def get_user_by_stripe_customer_id(self, stripe_customer_id: str):
+        """Get a user by their Stripe customer ID."""
+        with get_db() as db:
+            user = db.query(User).filter(User.stripe_customer_id == stripe_customer_id).first()
+            return user
 
     def get_users(
         self, skip: Optional[int] = None, limit: Optional[int] = None

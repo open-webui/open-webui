@@ -3,7 +3,7 @@ from pydantic import BaseModel, ConfigDict
 from typing import Optional
 
 from sqlalchemy.orm import relationship
-from sqlalchemy import Integer, String, Column, Text
+from sqlalchemy import Integer, String, Column, Text, Boolean
 
 from open_webui.internal.db import get_db, Base
 
@@ -21,9 +21,11 @@ class Company(Base):
     id = Column(String, primary_key=True, unique=True)
     name = Column(String, nullable=False)
     profile_image_url = Column(Text, nullable=True)
-    default_model = Column(String, default="GPT 4o")
+    default_model = Column(String, nullable=True)
     allowed_models = Column(Text, nullable=True)
     credit_balance = Column(Integer, default=0)
+    auto_recharge = Column(Boolean, default=False)
+    credit_card_number = Column(String, nullable=True)
 
     users = relationship("User", back_populates="company", cascade="all, delete-orphan")
 
@@ -34,6 +36,8 @@ class CompanyModel(BaseModel):
     default_model: Optional[str] = "GPT 4o"
     allowed_models: Optional[str] = None
     credit_balance: Optional[int] = 0
+    auto_recharge: Optional[bool] = False
+    credit_card_number: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -55,6 +59,7 @@ class CompanyResponse(BaseModel):
     profile_image_url: str
     default_model: Optional[str] = "GPT 4o"
     allowed_models: Optional[str]
+    auto_recharge: bool
 
 
 class CompanyTable:
@@ -66,7 +71,8 @@ class CompanyTable:
         except Exception as e:
             print(f"Error getting company: {e}")
             return None
-        
+
+
     def update_company_by_id(self, id: str, updated: dict) -> Optional[CompanyModel]:
         try:
             with get_db() as db:
@@ -78,6 +84,41 @@ class CompanyTable:
             
         except Exception as e:
             print(f"Error updating company", e)
+            return None
+
+
+    def update_auto_recharge(self, company_id: str, auto_recharge: bool) -> Optional[CompanyModel]:
+
+        try:
+            with get_db() as db:
+                company = db.query(Company).filter_by(id=company_id).first()
+                if not company:
+                    print(f"Company with ID {company_id} not found.")
+                    return None
+
+                db.query(Company).filter_by(id=company_id).update({"auto_recharge": auto_recharge})
+                db.commit()
+
+                updated_company = db.query(Company).filter_by(id=company_id).first()
+                return CompanyModel.model_validate(updated_company)
+
+        except Exception as e:
+            print(f"Error updating auto_recharge for company {company_id}: {e}")
+            return None
+
+
+    def get_auto_recharge(self, company_id: str) -> Optional[bool]:
+        try:
+            with get_db() as db:
+                company = db.query(Company).filter_by(id=company_id).first()
+                if not company:
+                    print(f"Company with ID {company_id} not found.")
+                    return None
+
+                return company.auto_recharge
+
+        except Exception as e:
+            print(f"Error retrieving auto_recharge for company {company_id}: {e}")
             return None
         
         

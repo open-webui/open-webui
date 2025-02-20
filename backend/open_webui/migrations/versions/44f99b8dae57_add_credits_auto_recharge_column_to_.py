@@ -1,8 +1,8 @@
-"""Add credit_balance to company table
+"""Add credits_auto_recharge column to company table
 
-Revision ID: 804d2918bcd7
-Revises: 6eb174dec7b4
-Create Date: 2025-02-13 15:57:15.692481
+Revision ID: 44f99b8dae57
+Revises: 29c6dc90b192
+Create Date: 2025-02-19 14:21:03.371744
 
 """
 from typing import Sequence, Union
@@ -14,8 +14,8 @@ from sqlalchemy.engine.reflection import Inspector
 
 
 # revision identifiers, used by Alembic.
-revision: str = '804d2918bcd7'
-down_revision: Union[str, None] = '6eb174dec7b4'
+revision: str = '44f99b8dae57'
+down_revision: Union[str, None] = '29c6dc90b192'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -28,11 +28,12 @@ def column_exists(table, column):
 
 def upgrade() -> None:
     # Add company_id column if it doesn't exist
-    if not column_exists("company", "credit_balance"):
-        op.add_column('company', sa.Column('credit_balance', sa.Integer(), nullable=True))
+    if not column_exists("company", "auto_recharge"):
+        op.add_column('company', sa.Column('auto_recharge', sa.Boolean(), nullable=True))
 
 
 def downgrade() -> None:
     with op.batch_alter_table('company', schema=None) as batch_op:
-        if column_exists("company", "credit_balance"):
-            batch_op.drop_column('credit_balance')
+        if column_exists("company", "auto_recharge"):
+            batch_op.drop_column('auto_recharge')
+

@@ -3,19 +3,19 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Literal, Optional, overload
+from typing import Optional
 
 import aiohttp
 from aiocache import cached
 import requests
 
 
-from fastapi import Depends, FastAPI, HTTPException, Request, APIRouter
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Depends, HTTPException, Request, APIRouter
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from starlette.background import BackgroundTask
 
+from beyond_the_loop.routers.payments import charge_customer
 from beyond_the_loop.models.models import Models
 from beyond_the_loop.models.model_message_credit_costs import ModelMessageCreditCosts
 from beyond_the_loop.models.companies import Companies
@@ -34,7 +34,7 @@ from open_webui.env import (
 )
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import ENV, SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS
 
 
 from open_webui.utils.payload import (
@@ -583,7 +583,22 @@ async def generate_chat_completion(
     # Check 80% threshold
     if current_balance - model_message_credit_cost < EIGHTY_PERCENT_CREDIT_LIMIT:  # If balance is less than 125% of required (which means we're below 80%)
         email_service = EmailService()
-        email_service.send_budget_mail_80(to_email=user.email, recipient_name=user.name)
+        
+        should_send_budget_email_80 = True  # Default to sending email
+
+        if Companies.get_auto_recharge(user.company_id):
+            try:
+                # Trigger auto-recharge using the charge_customer endpoint
+                await charge_customer(user)
+                # Note: The webhook will handle adding the credits when payment succeeds
+                should_send_budget_email_80 = False  # Don't send email if auto-recharge succeeded
+            except HTTPException as e:
+                print(f"Auto-recharge failed: {str(e)}")
+            except Exception as e:
+                print(f"Unexpected error during auto-recharge: {str(e)}")
+
+        if should_send_budget_email_80:
+            email_service.send_budget_mail_80(to_email=user.email, recipient_name=user.name)
 
     # Subtract credits from balance
     Companies.subtract_credit_balance(user.company_id, model_message_credit_cost)

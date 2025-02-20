@@ -33,6 +33,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response
 
+from beyond_the_loop.routers import payments
 from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
@@ -762,6 +763,8 @@ app.include_router(
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
+
+app.include_router(payments.router, prefix="/api/v1/payments", tags=["payments"])
 
 
 ##################################
