@@ -1402,6 +1402,11 @@ CODE_EXECUTION_JUPYTER_AUTH_PASSWORD = PersistentConfig(
     os.environ.get("CODE_EXECUTION_JUPYTER_AUTH_PASSWORD", ""),
 )
 
+CODE_EXECUTION_JUPYTER_TIMEOUT = PersistentConfig(
+    "CODE_EXECUTION_JUPYTER_TIMEOUT",
+    "code_execution.jupyter.timeout",
+    int(os.environ.get("CODE_EXECUTION_JUPYTER_TIMEOUT", "60")),
+)
 
 ENABLE_CODE_INTERPRETER = PersistentConfig(
     "ENABLE_CODE_INTERPRETER",
@@ -1454,6 +1459,17 @@ CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD = PersistentConfig(
     os.environ.get(
         "CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD",
         os.environ.get("CODE_EXECUTION_JUPYTER_AUTH_PASSWORD", ""),
+    ),
+)
+
+CODE_INTERPRETER_JUPYTER_TIMEOUT = PersistentConfig(
+    "CODE_INTERPRETER_JUPYTER_TIMEOUT",
+    "code_interpreter.jupyter.timeout",
+    int(
+        os.environ.get(
+            "CODE_INTERPRETER_JUPYTER_TIMEOUT",
+            os.environ.get("CODE_EXECUTION_JUPYTER_TIMEOUT", "60"),
+        )
     ),
 )
 
