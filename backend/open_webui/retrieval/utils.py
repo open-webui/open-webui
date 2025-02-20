@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 import uuid
 from typing import Optional, Union
 
@@ -518,6 +519,49 @@ def generate_openai_batch_embeddings(
     user: UserModel = None,
 ) -> Optional[list[list[float]]]:
     try:
+        #r = requests.post(
+        #    f"{url}/embeddings?api-version=2024-10-21",
+        #    headers={
+        #        "Content-Type": "application/json",
+        #        "api-key": f"{user.ust_api_key}",
+        #        **(
+        #            {
+        #                "X-OpenWebUI-User-Name": user.name,
+        #                "X-OpenWebUI-User-Id": user.id,
+        #                "X-OpenWebUI-User-Email": user.email,
+        #                "X-OpenWebUI-User-Role": user.role,
+        #            }
+        #            if ENABLE_FORWARD_USER_INFO_HEADERS and user
+        #            else {}
+        #        ),
+        #    },
+        #    json={"input": texts, "model": model},
+        #)
+        #r.raise_for_status()
+        r = retry_embedding_request(model, texts, url, key, user, retries=3, retry_delay=1.0, is_first_try=True)
+        data = r.json()
+        if "data" in data:
+            return [elem["embedding"] for elem in data["data"]]
+        else:
+            raise "Something went wrong :/"
+    except Exception as e:
+        print(e)
+        return None
+
+def retry_embedding_request(
+    model: str,
+    texts: list[str],
+    url: str = "",
+    key: str = "",
+    user: UserModel = None,
+    retries: int = 3,
+    retry_delay: float = 0.5,
+    is_first_try: bool = True,
+) -> requests.Response:
+    if is_first_try == False:
+        log.warning(f"Retrying embedding request for {model} with {retries} retries left")
+        log.warning(f"text length: {len(texts[0])}")
+    try:
         r = requests.post(
             f"{url}/embeddings?api-version=2024-10-21",
             headers={
@@ -537,15 +581,14 @@ def generate_openai_batch_embeddings(
             json={"input": texts, "model": model},
         )
         r.raise_for_status()
-        data = r.json()
-        if "data" in data:
-            return [elem["embedding"] for elem in data["data"]]
-        else:
-            raise "Something went wrong :/"
+        return r
     except Exception as e:
         print(e)
-        return None
-
+        if retries < 2:
+            return r
+        time.sleep(retry_delay)
+        retries = retries - 1
+        return retry_embedding_request(model, texts, url, key, user, retries, retry_delay, False)
 
 def generate_ollama_batch_embeddings(
     model: str, texts: list[str], url: str, key: str = "", user: UserModel = None
