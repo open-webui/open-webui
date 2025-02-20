@@ -47,6 +47,13 @@
 	export let hide = false;
 </script>
 
+<style>
+.reasoning-content :global(*) {
+	color: #6B7280 !important; /* text-gray-500 for lighter gray */
+	font-size: 0.875rem !important;
+}
+</style>
+
 <div {id} class={className}>
 	{#if title !== null}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -123,12 +130,13 @@
 
 				{#if grow}
 					{#if open && !hide}
-						<div
-							transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}
-							on:pointerup={(e) => {
-								e.stopPropagation();
-							}}
-						>
+					<div
+						class="{attributes?.type === 'reasoning' ? 'reasoning-content' : ''}"
+						transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}
+						on:pointerup={(e) => {
+							e.stopPropagation();
+						}}
+					>
 							<slot name="content" />
 						</div>
 					{/if}
@@ -139,7 +147,10 @@
 
 	{#if !grow}
 		{#if open && !hide}
-			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
+			<div
+				class="{attributes?.type === 'reasoning' ? 'reasoning-content' : ''}"
+				transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}
+			>
 				<slot name="content" />
 			</div>
 		{/if}
