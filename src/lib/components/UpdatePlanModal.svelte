@@ -23,8 +23,6 @@
 
     // Пароль#1 (замените на ваш)
     password1 = os.environ.get("ROBOKASSA_PASSWORD")
-    if not password1:
-        raise ValueError("Пароль Robokassa не найден. Проверьте переменные окружения.")
     console.log("PAS", password1)
 
     // Строка для подписи
