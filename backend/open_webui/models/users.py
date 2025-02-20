@@ -63,7 +63,7 @@ class UserModel(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    ust_api_key: str
+    ust_api_key: Optional[str]
 
 ####################
 # Forms
