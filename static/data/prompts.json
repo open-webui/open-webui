@@ -1,0 +1,20 @@
+[
+	{
+		"id": 1,
+		"promptDisplayName": "Write a funny poem about an elephant in a dish store",
+		"prompt": "Write a funny poem about an elephant in a dish store",
+		"agentId": "improved-meta-llama-31-70b-instruct"
+	},
+	{
+		"id": 2,
+		"promptDisplayName": "Explain the concept of blockchain in simple terms",
+		"prompt": "Explain the concept of blockchain in simple terms",
+		"agentId": "improved-meta-llama-31-70b-instruct"
+	},
+	{
+		"id": 3,
+		"promptDisplayName": "Give me five creative ideas for a social media post",
+		"prompt": "Give me five creative ideas for a social media post",
+		"agentId": "meta-lama"
+	}
+]
