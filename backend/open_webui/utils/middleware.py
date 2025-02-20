@@ -1425,7 +1425,7 @@ async def process_chat_response(
                     nonlocal content_blocks
 
                     response_tool_calls = []
-
+                    stop_cache = {}
                     async for line in response.body_iterator:
                         line = line.decode("utf-8") if isinstance(line, bytes) else line
                         data = line
@@ -1456,9 +1456,14 @@ async def process_chat_response(
                             else:
                                 choices = data.get("choices", [])
                                 if not choices:
+                                    if stop_cache:
+                                        stop_cache["usage"] = data.get("usage", {})
                                     continue
-
                                 delta = choices[0].get("delta", {})
+                                finish_reason = choices[0].get("finish_reason", None)
+                                if not delta and finish_reason == "stop":
+                                    stop_cache = data
+                                    continue   
                                 delta_tool_calls = delta.get("tool_calls", None)
 
                                 if delta_tool_calls:
@@ -1560,7 +1565,14 @@ async def process_chat_response(
                         except Exception as e:
                             done = "data: [DONE]" in line
                             if done:
-                                pass
+                                if stop_cache:
+                                    await event_emitter(
+                                        {
+                                            "type": "chat:completion",
+                                            "data": stop_cache,
+                                        }
+                                    )
+                                    stop_cache = {}
                             else:
                                 log.debug("Error: ", e)
                                 continue
