@@ -22,7 +22,9 @@
     const shpUserId = `Shp_userId=${userId}`; // Передаём user id в Shp
 
     // Пароль#1 (замените на ваш)
-    const password1 = process.env.ROBOKASSA_PASSWORD;
+    password1 = os.environ.get("ROBOKASSA_PASSWORD")
+    if not password1:
+        raise ValueError("Пароль Robokassa не найден. Проверьте переменные окружения.")
     console.log("PAS", password1)
 
     // Строка для подписи
