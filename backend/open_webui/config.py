@@ -769,6 +769,15 @@ OLLAMA_API_CONFIGS = PersistentConfig(
 )
 
 ####################################
+# HKUST OPEN_API
+####################################
+
+HKUST_OPEN_API_BASE_URL = "https://hkust.azure-api.net/openai/deployments"
+HKUST_OPEN_API_QUERY = "chat/completions"
+
+DEFAULT_VALID_UST_API_KEY = os.environ.get("DEFAULT_VALID_UST_API_KEY", "")
+
+####################################
 # OPENAI_API
 ####################################
 
