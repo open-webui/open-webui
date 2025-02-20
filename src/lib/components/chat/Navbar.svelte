@@ -11,7 +11,8 @@
 		showControls,
 		showSidebar,
 		temporaryChatEnabled,
-		user
+		user,
+		suggestionCycle
 	} from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
@@ -39,6 +40,11 @@
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
+
+	const handleNewChat = () => {
+		suggestionCycle.update((n) => n + 1);
+		initNewChat();
+	};
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
@@ -129,6 +135,18 @@
 						</button>
 					</Tooltip>
 				{/if}
+				<Tooltip content={$i18n.t('New Chat')}>
+					<button
+						id="new-chat-button"
+						class="flex cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+						on:click={handleNewChat}
+						aria-label="New Chat"
+					>
+						<div class="m-auto self-center">
+							<PencilSquare className="size-5" strokeWidth="2" />
+						</div>
+					</button>
+				</Tooltip>
 			</div>
 		</div>
 	</div>

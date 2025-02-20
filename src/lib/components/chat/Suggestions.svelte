@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Bolt from '$lib/components/icons/Bolt.svelte';
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
+	import { suggestionCycle } from '$lib/stores/index';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -10,9 +11,18 @@
 
 	let prompts = [];
 
-	$: prompts = (suggestionPrompts ?? [])
-		.reduce((acc, current) => [...acc, ...[current]], [])
-		.sort(() => Math.random() - 0.5);
+	// Single function to handle shuffling
+	const shuffleSuggestions = (suggestions) => {
+		return [...(suggestions ?? [])]
+			.flat() // Replace reduce/spread with flat()
+			.sort(() => Math.random() - 0.5);
+	};
+
+	// Reshuffle when suggestionCycle changes or suggestions update
+	$: {
+		$suggestionCycle; // Just use to trigger reactivity
+		prompts = shuffleSuggestions(suggestionPrompts);
+	}
 </script>
 
 {#if prompts.length > 0}

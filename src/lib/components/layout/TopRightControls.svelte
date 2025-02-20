@@ -8,7 +8,8 @@
 		showControls,
 		showArchivedChats,
 		showSidebar,
-		temporaryChatEnabled
+		temporaryChatEnabled,
+		suggestionCycle
 	} from '$lib/stores';
 	import Tooltip from '../common/Tooltip.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
@@ -31,6 +32,11 @@
 	$: if (!isControlsEnabled && $showControls) {
 		showControls.set(false);
 	}
+
+	const handleNewChat = () => {
+		suggestionCycle.update((n) => n + 1);
+		goto('/');
+	};
 </script>
 
 <div class="fixed top-0 right-0 px-2 py-[7px] z-50 flex items-center gap-1">
@@ -56,7 +62,7 @@
 				<button
 					id="new-chat-button"
 					class="flex cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-					on:click={() => goto('/')}
+					on:click={handleNewChat}
 					aria-label="New Chat"
 				>
 					<div class="m-auto self-center">

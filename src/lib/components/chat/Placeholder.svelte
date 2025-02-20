@@ -7,7 +7,13 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, user, models as _models, temporaryChatEnabled } from '$lib/stores';
+	import {
+		config,
+		user,
+		models as _models,
+		temporaryChatEnabled,
+		suggestionCycle
+	} from '$lib/stores';
 	import { sanitizeResponseContent, findWordIndices } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { locale } from '$lib/stores/locale';
@@ -94,6 +100,12 @@
 
 	// Create a reactive statement that updates descriptions when locale changes
 	$: modelDescription = getModelDesc(models[selectedModelIdx]);
+
+	$: {
+		// Whenever the model changes, trigger a suggestion reshuffle
+		models[selectedModelIdx]?.info?.meta?.suggestion_prompts;
+		suggestionCycle.update((n) => n + 1);
+	}
 
 	onMount(() => {
 		// Listen for storage event only since it's triggered by locale changes
