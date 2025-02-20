@@ -87,9 +87,16 @@ class SignupForm(BaseModel):
     name: str
     email: str
     password: str
+    ust_api_key: str
     profile_image_url: Optional[str] = "/user.png"
 
-
+class CheckApiForm(BaseModel):
+    ust_api_key: str
+    api_version: str
+    
+class CheckApiResponse(BaseModel):
+    is_success: bool
+    
 class AddUserForm(SignupForm):
     role: Optional[str] = "pending"
 
@@ -100,13 +107,14 @@ class AuthsTable:
         email: str,
         password: str,
         name: str,
+        ust_api_key: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
         oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
             log.info("insert_new_auth")
-
+            
             id = str(uuid.uuid4())
 
             auth = AuthModel(
@@ -114,11 +122,11 @@ class AuthsTable:
             )
             result = Auth(**auth.model_dump())
             db.add(result)
-
+            
             user = Users.insert_new_user(
-                id, name, email, profile_image_url, role, oauth_sub
+                id, name, email, ust_api_key, profile_image_url, role, oauth_sub, 
             )
-
+            
             db.commit()
             db.refresh(result)
 

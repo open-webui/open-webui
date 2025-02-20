@@ -6,7 +6,7 @@
 	import { page } from '$app/stores';
 
 	import { getBackendConfig } from '$lib/apis';
-	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
+	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp, checkUstApiKey } from '$lib/apis/auths';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
@@ -25,6 +25,7 @@
 	let name = '';
 	let email = '';
 	let password = '';
+	let apikey = '';
 
 	let ldapUsername = '';
 
@@ -53,7 +54,18 @@
 	};
 
 	const signUpHandler = async () => {
-		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
+		const result = await checkUstApiKey(apikey).catch(
+			(error) => {
+				toast.error(`${error}`);
+				return null;
+			}
+		);
+
+		if (!result) {
+			return;
+		}
+
+		const sessionUser = await userSignUp(name, email, password, apikey, generateInitialsImage(name)).catch(
 			(error) => {
 				toast.error(`${error}`);
 				return null;
@@ -262,6 +274,21 @@
 											required
 										/>
 									</div>
+									{#if mode === 'signup'}
+										<div>
+											<div class=" text-sm font-medium text-left mb-1">HKUST Open API Key</div>
+
+											<input
+												bind:value={apikey}
+												type="password"
+												class="my-0.5 w-full text-sm outline-none bg-transparent"
+												placeholder={$i18n.t('Enter Your API Key')}
+												autocomplete="current-apikey"
+												name="current-apikey"
+												required
+											/>
+										</div>
+									{/if}
 								</div>
 							{/if}
 							<div class="mt-5">

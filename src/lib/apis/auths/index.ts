@@ -290,6 +290,7 @@ export const userSignUp = async (
 	name: string,
 	email: string,
 	password: string,
+	ust_api_key: string,
 	profile_image_url: string
 ) => {
 	let error = null;
@@ -304,6 +305,7 @@ export const userSignUp = async (
 			name: name,
 			email: email,
 			password: password,
+			ust_api_key: ust_api_key,
 			profile_image_url: profile_image_url
 		})
 	})
@@ -322,6 +324,40 @@ export const userSignUp = async (
 	}
 
 	return res;
+};
+
+export const checkUstApiKey = async (
+	ust_api_key: string,
+	api_version: string = "2024-06-01"
+) => {
+	try {
+		const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			credentials: "include",
+			body: JSON.stringify({
+				ust_api_key,
+				api_version,
+			}),
+		});
+
+		if (!res.ok) {
+			const errorResponse = await res.json();
+			// 400~499번대 상태 코드 처리
+			if (res.status >= 400 && res.status < 500) {
+				throw new Error("API 키 인증이 잘못되었습니다.");
+			}
+			// 기타 오류 메시지 반환
+			throw new Error(errorResponse.detail || "알 수 없는 오류가 발생했습니다.");
+		}
+
+		return true; // API 키 인증 성공
+	} catch (err) {
+		console.error(err);
+		throw err;
+	}
 };
 
 export const userSignOut = async () => {

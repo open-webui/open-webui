@@ -4,6 +4,7 @@ import time
 import datetime
 import logging
 from aiohttp import ClientSession
+import httpx
 
 from open_webui.models.auths import (
     AddUserForm,
@@ -14,6 +15,8 @@ from open_webui.models.auths import (
     SigninForm,
     SigninResponse,
     SignupForm,
+    CheckApiForm,
+    CheckApiResponse,
     UpdatePasswordForm,
     UpdateProfileForm,
     UserResponse,
@@ -34,6 +37,9 @@ from fastapi.responses import RedirectResponse, Response
 from open_webui.config import (
     OPENID_PROVIDER_URL,
     ENABLE_OAUTH_SIGNUP,
+    HKUST_OPEN_API_BASE_URL,
+    HKUST_OPEN_API_QUERY,
+    DEFAULT_VALID_UST_API_KEY
 )
 from pydantic import BaseModel
 from open_webui.utils.misc import parse_duration, validate_email_format
@@ -345,7 +351,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
                 request,
                 response,
                 SignupForm(
-                    email=trusted_email, password=str(uuid.uuid4()), name=trusted_name
+                    email=trusted_email, password=str(uuid.uuid4()), name=trusted_name, ust_api_key=DEFAULT_VALID_UST_API_KEY
                 ),
             )
         user = Auths.authenticate_user_by_trusted_header(trusted_email)
@@ -362,7 +368,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             await signup(
                 request,
                 response,
-                SignupForm(email=admin_email, password=admin_password, name="User"),
+                SignupForm(email=admin_email, password=admin_password, name="User", ust_api_key=DEFAULT_VALID_UST_API_KEY),
             )
 
             user = Auths.authenticate_user(admin_email.lower(), admin_password)
@@ -415,6 +421,33 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
+############################
+# CheckApi
+############################
+
+@router.post("/api", response_model=CheckApiResponse)
+async def checkApi(response: Response, form_data: CheckApiForm):
+    url = f"{HKUST_OPEN_API_BASE_URL}/gpt-4o-mini/{HKUST_OPEN_API_QUERY}?api-version={form_data.api_version}"
+    headers = {
+        "Content-Type": "application/json",
+        "api-key": form_data.ust_api_key
+    }
+    payload = {
+        "messages": [
+            {"role": "system", "content": "You are an Azure expert."},
+            {"role": "user", "content": "What is OpenAI?"}
+        ]
+    }
+
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(url, headers=headers, json=payload)
+            response.raise_for_status()  # 4xx, 5xx 에러 발생 시 예외 처리
+            return {'is_success': True}
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(status_code=e.response.status_code, detail=e.response.json())
+        except httpx.RequestError as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
 ############################
 # SignUp
@@ -466,6 +499,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             form_data.email.lower(),
             hashed,
             form_data.name,
+            form_data.ust_api_key,
             form_data.profile_image_url,
             role,
         )

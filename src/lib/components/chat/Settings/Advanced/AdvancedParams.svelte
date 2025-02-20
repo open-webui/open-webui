@@ -58,7 +58,11 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Stream Chat Response')}
 				</div>
-				<button
+				<!-- 
+				TODO: 2025/02/19 현재 스트림 채팅을 지원하고 있지 않기 때문에 해당 기능은 사용할 수 없도록 설정.
+				스트림 설정을 키면 에러남
+				-->
+				<!-- <button
 					class="p-1 px-3 text-xs flex rounded-sm transition"
 					on:click={() => {
 						params.stream_response =
@@ -77,7 +81,13 @@
 					{:else}
 						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 					{/if}
-				</button>
+				</button> -->
+				<button
+				disabled
+				class="p-1 px-3 text-xs flex rounded transition"
+				>
+					<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+			</button>
 			</div>
 		</Tooltip>
 	</div>

@@ -34,6 +34,8 @@ class User(Base):
     info = Column(JSONField, nullable=True)
 
     oauth_sub = Column(Text, unique=True)
+    
+    ust_api_key = Column(String, nullable=True)
 
 
 class UserSettings(BaseModel):
@@ -61,6 +63,7 @@ class UserModel(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+    ust_api_key: str
 
 ####################
 # Forms
@@ -100,6 +103,7 @@ class UsersTable:
         id: str,
         name: str,
         email: str,
+        ust_api_key: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
         oauth_sub: Optional[str] = None,
@@ -116,6 +120,7 @@ class UsersTable:
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                     "oauth_sub": oauth_sub,
+                    "ust_api_key": ust_api_key 
                 }
             )
             result = User(**user.model_dump())
