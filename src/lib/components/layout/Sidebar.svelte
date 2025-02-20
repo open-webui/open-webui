@@ -213,7 +213,22 @@
 			searchDebounceTimeout = setTimeout(async () => {
 				allChatsLoaded = false;
 				currentChatPage.set(1);
-				await chats.set(await getChatListBySearchText(localStorage.token, search));
+
+				// Normalize search text: for each word that looks like a tag search, force "tag:" prefix
+				const normalizedSearch = search
+					.split(' ')
+					.map((word) => {
+						const isTagSearch = ['tag:', 'étiquette:'].some((prefix) => word.startsWith(prefix));
+						if (isTagSearch) {
+							const tagId = word.slice(word.indexOf(':') + 1);
+							// Always convert to "tag:" prefix
+							return `tag:${tagId}`;
+						}
+						return word;
+					})
+					.join(' ');
+
+				await chats.set(await getChatListBySearchText(localStorage.token, normalizedSearch));
 
 				if ($chats.length === 0) {
 					tags.set(await getAllTags(localStorage.token));

@@ -209,9 +209,11 @@ export const getAllChats = async (token: string) => {
 
 export const getChatListBySearchText = async (token: string, text: string, page: number = 1) => {
 	let error = null;
+	// Normalize search text: convert any "étiquette:" (case-insensitive) into "tag:"
+	const normalizedText = text.replace(/étiquette:/gi, 'tag:');
 
 	const searchParams = new URLSearchParams();
-	searchParams.append('text', text);
+	searchParams.append('text', normalizedText);
 	searchParams.append('page', `${page}`);
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/search?${searchParams.toString()}`, {
