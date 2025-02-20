@@ -212,34 +212,19 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
         ollama_payload["format"] = openai_payload["format"]
 
     # If there are advanced parameters in the payload, format them in Ollama's options field
-    ollama_options = {}
-
     if openai_payload.get("options"):
         ollama_payload["options"] = openai_payload["options"]
         ollama_options = openai_payload["options"]
+        
+        # Re-Mapping OpenAI's `max_tokens` -> Ollama's `num_predict`
+        if "max_tokens" in ollama_options:
+            ollama_options["num_predict"] = ollama_options["max_tokens"] 
+            del ollama_options["max_tokens"] # To prevent Ollama warning of invalid option provided
 
-    # Handle parameters which map directly
-    for param in ["temperature", "top_p", "seed"]:
-        if param in openai_payload:
-            ollama_options[param] = openai_payload[param]
-
-    # Mapping OpenAI's `max_tokens` -> Ollama's `num_predict`
-    if "max_completion_tokens" in openai_payload:
-        ollama_options["num_predict"] = openai_payload["max_completion_tokens"]
-    elif "max_tokens" in openai_payload:
-        ollama_options["num_predict"] = openai_payload["max_tokens"]
-
-    # Handle frequency / presence_penalty, which needs renaming and checking
-    if "frequency_penalty" in openai_payload:
-        ollama_options["repeat_penalty"] = openai_payload["frequency_penalty"]
-
-    if "presence_penalty" in openai_payload and "penalty" not in ollama_options:
-        # We are assuming presence penalty uses a similar concept in Ollama, which needs custom handling if exists.
-        ollama_options["new_topic_penalty"] = openai_payload["presence_penalty"]
-
-    # Add options to payload if any have been set
-    if ollama_options:
-        ollama_payload["options"] = ollama_options
+        # Ollama lacks a "system" prompt option. It has to be provided as a direct parameter, so we copy it down.
+        if "system" in ollama_options:
+            ollama_payload["system"] = ollama_options["system"] 
+            del ollama_options["system"] # To prevent Ollama warning of invalid option provided
 
     if "metadata" in openai_payload:
         ollama_payload["metadata"] = openai_payload["metadata"]
