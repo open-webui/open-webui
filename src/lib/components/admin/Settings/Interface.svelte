@@ -326,7 +326,6 @@
 							{$i18n.t('The Custom banner type allows execution of arbitrary HTML, JavaScript, and CSS code. Only add content from trusted sources as it could pose security risks to your application.')}
 						</div>
 					</div>
-
 					<div class=" flex flex-col space-y-1">
 						{#each banners as banner, bannerIdx}
 							<div class=" flex justify-between">
@@ -350,12 +349,6 @@
 										<option value="html" class="text-gray-900">{$i18n.t('Custom')}</option>
 									</select>
 
-									{#if banner.type === 'html'}
-										<div class="mb-2 px-2 py-1.5 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 rounded-md">
-											<span class="font-medium">{$i18n.t('Warning')}: </span>
-											{$i18n.t('This feature allows execution of custom HTML, JavaScript, and CSS. Only add content from trusted sources as it could pose security risks.')}
-										</div>
-									{/if}
 									<input
 										class="pr-5 py-1.5 text-xs w-full bg-transparent outline-hidden"
 										placeholder={banner.type === 'html' ? $i18n.t('Enter custom HTML, JavaScript, or CSS here') : $i18n.t('Content')}
