@@ -15,12 +15,18 @@ from open_webui.config import (
     S3_SECRET_ACCESS_KEY,
     GCS_BUCKET_NAME,
     GOOGLE_APPLICATION_CREDENTIALS_JSON,
+    AZURE_STORAGE_ENDPOINT,
+    AZURE_STORAGE_CONTAINER_NAME,
+    AZURE_STORAGE_KEY,
     STORAGE_PROVIDER,
     UPLOAD_DIR,
 )
 from google.cloud import storage
 from google.cloud.exceptions import GoogleCloudError, NotFound
 from open_webui.constants import ERROR_MESSAGES
+from azure.identity import DefaultAzureCredential
+from azure.storage.blob import BlobServiceClient
+from azure.core.exceptions import ResourceNotFoundError
 
 
 class StorageProvider(ABC):
@@ -221,6 +227,74 @@ class GCSStorageProvider(StorageProvider):
         LocalStorageProvider.delete_all_files()
 
 
+class AzureStorageProvider(StorageProvider):
+    def __init__(self):
+        self.endpoint = AZURE_STORAGE_ENDPOINT
+        self.container_name = AZURE_STORAGE_CONTAINER_NAME
+        storage_key = AZURE_STORAGE_KEY
+
+        if storage_key:
+            # Configure using the Azure Storage Account Endpoint and Key
+            self.blob_service_client = BlobServiceClient(
+                account_url=self.endpoint, credential=storage_key
+            )
+        else:
+            # Configure using the Azure Storage Account Endpoint and DefaultAzureCredential
+            # If the key is not configured, then the DefaultAzureCredential will be used to support Managed Identity authentication
+            self.blob_service_client = BlobServiceClient(
+                account_url=self.endpoint, credential=DefaultAzureCredential()
+            )
+        self.container_client = self.blob_service_client.get_container_client(
+            self.container_name
+        )
+
+    def upload_file(self, file: BinaryIO, filename: str) -> Tuple[bytes, str]:
+        """Handles uploading of the file to Azure Blob Storage."""
+        contents, file_path = LocalStorageProvider.upload_file(file, filename)
+        try:
+            blob_client = self.container_client.get_blob_client(filename)
+            blob_client.upload_blob(contents, overwrite=True)
+            return contents, f"{self.endpoint}/{self.container_name}/{filename}"
+        except Exception as e:
+            raise RuntimeError(f"Error uploading file to Azure Blob Storage: {e}")
+
+    def get_file(self, file_path: str) -> str:
+        """Handles downloading of the file from Azure Blob Storage."""
+        try:
+            filename = file_path.split("/")[-1]
+            local_file_path = f"{UPLOAD_DIR}/{filename}"
+            blob_client = self.container_client.get_blob_client(filename)
+            with open(local_file_path, "wb") as download_file:
+                download_file.write(blob_client.download_blob().readall())
+            return local_file_path
+        except ResourceNotFoundError as e:
+            raise RuntimeError(f"Error downloading file from Azure Blob Storage: {e}")
+
+    def delete_file(self, file_path: str) -> None:
+        """Handles deletion of the file from Azure Blob Storage."""
+        try:
+            filename = file_path.split("/")[-1]
+            blob_client = self.container_client.get_blob_client(filename)
+            blob_client.delete_blob()
+        except ResourceNotFoundError as e:
+            raise RuntimeError(f"Error deleting file from Azure Blob Storage: {e}")
+
+        # Always delete from local storage
+        LocalStorageProvider.delete_file(file_path)
+
+    def delete_all_files(self) -> None:
+        """Handles deletion of all files from Azure Blob Storage."""
+        try:
+            blobs = self.container_client.list_blobs()
+            for blob in blobs:
+                self.container_client.delete_blob(blob.name)
+        except Exception as e:
+            raise RuntimeError(f"Error deleting all files from Azure Blob Storage: {e}")
+
+        # Always delete from local storage
+        LocalStorageProvider.delete_all_files()
+
+
 def get_storage_provider(storage_provider: str):
     if storage_provider == "local":
         Storage = LocalStorageProvider()
@@ -228,6 +302,8 @@ def get_storage_provider(storage_provider: str):
         Storage = S3StorageProvider()
     elif storage_provider == "gcs":
         Storage = GCSStorageProvider()
+    elif storage_provider == "azure":
+        Storage = AzureStorageProvider()
     else:
         raise RuntimeError(f"Unsupported storage provider: {storage_provider}")
     return Storage

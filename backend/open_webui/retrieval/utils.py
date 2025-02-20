@@ -84,6 +84,19 @@ def query_doc(
         raise e
 
 
+def get_doc(collection_name: str, user: UserModel = None):
+    try:
+        result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
+
+        if result:
+            log.info(f"query_doc:result {result.ids} {result.metadatas}")
+
+        return result
+    except Exception as e:
+        print(e)
+        raise e
+
+
 def query_doc_with_hybrid_search(
     collection_name: str,
     query: str,
@@ -137,6 +150,27 @@ def query_doc_with_hybrid_search(
         raise e
 
 
+def merge_get_results(get_results: list[dict]) -> dict:
+    # Initialize lists to store combined data
+    combined_documents = []
+    combined_metadatas = []
+    combined_ids = []
+
+    for data in get_results:
+        combined_documents.extend(data["documents"][0])
+        combined_metadatas.extend(data["metadatas"][0])
+        combined_ids.extend(data["ids"][0])
+
+    # Create the output dictionary
+    result = {
+        "documents": [combined_documents],
+        "metadatas": [combined_metadatas],
+        "ids": [combined_ids],
+    }
+
+    return result
+
+
 def merge_and_sort_query_results(
     query_results: list[dict], k: int, reverse: bool = False
 ) -> list[dict]:
@@ -144,31 +178,45 @@ def merge_and_sort_query_results(
     combined_distances = []
     combined_documents = []
     combined_metadatas = []
+    combined_ids = []
 
     for data in query_results:
         combined_distances.extend(data["distances"][0])
         combined_documents.extend(data["documents"][0])
         combined_metadatas.extend(data["metadatas"][0])
+        # DISTINCT(chunk_id,file_id) - in case if id (chunk_ids) become ordinals
+        combined_ids.extend(
+            [
+                f"{id}-{meta['file_id']}"
+                for id, meta in zip(data["ids"][0], data["metadatas"][0])
+            ]
+        )
 
-    # Create a list of tuples (distance, document, metadata)
-    combined = list(zip(combined_distances, combined_documents, combined_metadatas))
+    # Create a list of tuples (distance, document, metadata, ids)
+    combined = list(
+        zip(combined_distances, combined_documents, combined_metadatas, combined_ids)
+    )
 
     # Sort the list based on distances
     combined.sort(key=lambda x: x[0], reverse=reverse)
 
-    # We don't have anything :-(
-    if not combined:
-        sorted_distances = []
-        sorted_documents = []
-        sorted_metadatas = []
-    else:
+    sorted_distances = []
+    sorted_documents = []
+    sorted_metadatas = []
+    # Otherwise we don't have anything :-(
+    if combined:
         # Unzip the sorted list
-        sorted_distances, sorted_documents, sorted_metadatas = zip(*combined)
-
+        all_distances, all_documents, all_metadatas, all_ids = zip(*combined)
+        seen_ids = set()
         # Slicing the lists to include only k elements
-        sorted_distances = list(sorted_distances)[:k]
-        sorted_documents = list(sorted_documents)[:k]
-        sorted_metadatas = list(sorted_metadatas)[:k]
+        for index, id in enumerate(all_ids):
+            if id not in seen_ids:
+                sorted_distances.append(all_distances[index])
+                sorted_documents.append(all_documents[index])
+                sorted_metadatas.append(all_metadatas[index])
+                seen_ids.add(id)
+                if len(sorted_distances) >= k:
+                    break
 
     # Create the output dictionary
     result = {
@@ -178,6 +226,23 @@ def merge_and_sort_query_results(
     }
 
     return result
+
+
+def get_all_items_from_collections(collection_names: list[str]) -> dict:
+    results = []
+
+    for collection_name in collection_names:
+        if collection_name:
+            try:
+                result = get_doc(collection_name=collection_name)
+                if result is not None:
+                    results.append(result.model_dump())
+            except Exception as e:
+                log.exception(f"Error when querying the collection: {e}")
+        else:
+            pass
+
+    return merge_get_results(results)
 
 
 def query_collection(
@@ -297,8 +362,11 @@ def get_sources_from_files(
     reranking_function,
     r,
     hybrid_search,
+    full_context=False,
 ):
-    log.debug(f"files: {files} {queries} {embedding_function} {reranking_function}")
+    log.debug(
+        f"files: {files} {queries} {embedding_function} {reranking_function} {full_context}"
+    )
 
     extracted_collections = []
     relevant_contexts = []
@@ -336,36 +404,43 @@ def get_sources_from_files(
                 log.debug(f"skipping {file} as it has already been extracted")
                 continue
 
-            try:
-                context = None
-                if file.get("type") == "text":
-                    context = file["content"]
-                else:
-                    if hybrid_search:
-                        try:
-                            context = query_collection_with_hybrid_search(
+            if full_context:
+                try:
+                    context = get_all_items_from_collections(collection_names)
+                except Exception as e:
+                    log.exception(e)
+
+            else:
+                try:
+                    context = None
+                    if file.get("type") == "text":
+                        context = file["content"]
+                    else:
+                        if hybrid_search:
+                            try:
+                                context = query_collection_with_hybrid_search(
+                                    collection_names=collection_names,
+                                    queries=queries,
+                                    embedding_function=embedding_function,
+                                    k=k,
+                                    reranking_function=reranking_function,
+                                    r=r,
+                                )
+                            except Exception as e:
+                                log.debug(
+                                    "Error when using hybrid search, using"
+                                    " non hybrid search as fallback."
+                                )
+
+                        if (not hybrid_search) or (context is None):
+                            context = query_collection(
                                 collection_names=collection_names,
                                 queries=queries,
                                 embedding_function=embedding_function,
                                 k=k,
-                                reranking_function=reranking_function,
-                                r=r,
                             )
-                        except Exception as e:
-                            log.debug(
-                                "Error when using hybrid search, using"
-                                " non hybrid search as fallback."
-                            )
-
-                    if (not hybrid_search) or (context is None):
-                        context = query_collection(
-                            collection_names=collection_names,
-                            queries=queries,
-                            embedding_function=embedding_function,
-                            k=k,
-                        )
-            except Exception as e:
-                log.exception(e)
+                except Exception as e:
+                    log.exception(e)
 
             extracted_collections.extend(collection_names)
 
