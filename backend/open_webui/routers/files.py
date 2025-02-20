@@ -225,17 +225,24 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
                 filename = file.meta.get("name", file.filename)
                 encoded_filename = quote(filename)  # RFC5987 encoding
 
+                content_type = file.meta.get("content_type")
+                filename = file.meta.get("name", file.filename)
+                encoded_filename = quote(filename)
                 headers = {}
-                if file.meta.get("content_type") not in [
-                    "application/pdf",
-                    "text/plain",
-                ]:
-                    headers = {
-                        **headers,
-                        "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}",
-                    }
 
-                return FileResponse(file_path, headers=headers)
+                if content_type == "application/pdf" or filename.lower().endswith(
+                    ".pdf"
+                ):
+                    headers["Content-Disposition"] = (
+                        f"inline; filename*=UTF-8''{encoded_filename}"
+                    )
+                    content_type = "application/pdf"
+                elif content_type != "text/plain":
+                    headers["Content-Disposition"] = (
+                        f"attachment; filename*=UTF-8''{encoded_filename}"
+                    )
+
+                return FileResponse(file_path, headers=headers, media_type=content_type)
 
             else:
                 raise HTTPException(
