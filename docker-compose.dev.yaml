@@ -19,6 +19,7 @@ services:
       - ./src:/app/src
       - ./package.json:/app/package.json
       - ./package-lock.json:/app/package-lock.json
+      - ./static/data:/app/static/data
       - ./vite.config.ts:/app/vite.config.ts
       - ./svelte.config.js:/app/svelte.config.js
       - ./tsconfig.json:/app/tsconfig.json
