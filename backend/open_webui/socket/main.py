@@ -279,8 +279,8 @@ def get_event_emitter(request_info):
             await sio.emit(
                 "chat-events",
                 {
-                    "chat_id": request_info["chat_id"],
-                    "message_id": request_info["message_id"],
+                    "chat_id": request_info.get("chat_id", None),
+                    "message_id": request_info.get("message_id", None),
                     "data": event_data,
                 },
                 to=session_id,
@@ -329,8 +329,8 @@ def get_event_call(request_info):
         response = await sio.call(
             "chat-events",
             {
-                "chat_id": request_info["chat_id"],
-                "message_id": request_info["message_id"],
+                "chat_id": request_info.get("chat_id", None),
+                "message_id": request_info.get("message_id", None),
                 "data": event_data,
             },
             to=request_info["session_id"],

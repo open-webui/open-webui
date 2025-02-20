@@ -3,29 +3,22 @@ import os
 import uuid
 from pathlib import Path
 from typing import Optional
-from pydantic import BaseModel
-import mimetypes
 from urllib.parse import quote
 
-from open_webui.storage.provider import Storage
-
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status, BackgroundTasks
+from fastapi.responses import FileResponse, StreamingResponse
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.files import (
     FileForm,
     FileModel,
     FileModelResponse,
     Files,
 )
-from open_webui.routers.retrieval import process_file, ProcessFileForm, process_file_async
-
-from open_webui.config import UPLOAD_DIR
-from open_webui.env import SRC_LOG_LEVELS
-from open_webui.constants import ERROR_MESSAGES
-
-
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Request, BackgroundTasks
-from fastapi.responses import FileResponse, StreamingResponse
-
+from open_webui.routers.retrieval import ProcessFileForm, process_file, process_file_async
+from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -44,7 +37,10 @@ import asyncio
 
 @router.post("/", response_model=FileModelResponse)
 def upload_file(
-    request: Request, file: UploadFile = File(...), user=Depends(get_verified_user)
+    request: Request,
+    file: UploadFile = File(...),
+    user=Depends(get_verified_user),
+    file_metadata: dict = {},
 ):
     log.info(f"file.content_type: {file.content_type}")
     try:
@@ -68,6 +64,7 @@ def upload_file(
                         "name": name,
                         "content_type": file.content_type,
                         "size": len(contents),
+                        "data": file_metadata,
                     },
                 }
             ),
@@ -110,21 +107,21 @@ tasks_cache = {}  # Dictionary to store task results
 
 ### Cache temporário para exemplo (substituir por um sistema persistente)
 cache_lock = Lock()
-    
-    
+
+
 async def process_tasks(request, background_tasks, form_data, user, task_id):
     """Executa OCR e processamento do PDF de forma assíncrona."""
-    
+
     global tasks_cache
     with cache_lock:
         task = tasks_cache.get(task_id, {})
-    
+
     task['status'] = "Processing PDF..."
     text = await process_file_async(request, background_tasks, form_data, task_id, user)
     task['text'] = text
     task['status'] = "Processing Completed"
-    
-    
+
+
 
 @router.post("/async")
 async def upload_file_async(
@@ -135,7 +132,7 @@ async def upload_file_async(
 ):
     global tasks_cache
     log.info(f"file.content_type: {file.content_type}")
-    
+
     unsanitized_filename = file.filename
     filename = os.path.basename(unsanitized_filename)
 
@@ -167,7 +164,7 @@ async def upload_file_async(
         ),
     )
 
-    
+
     background_tasks.add_task(
         process_tasks,
         request,
@@ -177,9 +174,9 @@ async def upload_file_async(
         task_id,
     )
     #file_item = Files.get_file_by_id(id=id)
-    
+
     return {"task_id": task_id}
-    
+
 
 ############################
 # Get task_status
@@ -232,7 +229,7 @@ async def delete_all_files(user=Depends(get_admin_user)):
             Storage.delete_all_files()
         except Exception as e:
             log.exception(e)
-            log.error(f"Error deleting files")
+            log.error("Error deleting files")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),
@@ -335,17 +332,24 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
                 filename = file.meta.get("name", file.filename)
                 encoded_filename = quote(filename)  # RFC5987 encoding
 
+                content_type = file.meta.get("content_type")
+                filename = file.meta.get("name", file.filename)
+                encoded_filename = quote(filename)
                 headers = {}
-                if file.meta.get("content_type") not in [
-                    "application/pdf",
-                    "text/plain",
-                ]:
-                    headers = {
-                        **headers,
-                        "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}",
-                    }
 
-                return FileResponse(file_path, headers=headers)
+                if content_type == "application/pdf" or filename.lower().endswith(
+                    ".pdf"
+                ):
+                    headers["Content-Disposition"] = (
+                        f"inline; filename*=UTF-8''{encoded_filename}"
+                    )
+                    content_type = "application/pdf"
+                elif content_type != "text/plain":
+                    headers["Content-Disposition"] = (
+                        f"attachment; filename*=UTF-8''{encoded_filename}"
+                    )
+
+                return FileResponse(file_path, headers=headers, media_type=content_type)
 
             else:
                 raise HTTPException(
@@ -354,7 +358,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
                 )
         except Exception as e:
             log.exception(e)
-            log.error(f"Error getting file content")
+            log.error("Error getting file content")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT("Error getting file content"),
@@ -385,7 +389,7 @@ async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user)):
                 )
         except Exception as e:
             log.exception(e)
-            log.error(f"Error getting file content")
+            log.error("Error getting file content")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT("Error getting file content"),
@@ -461,7 +465,7 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
                 Storage.delete_file(file.path)
             except Exception as e:
                 log.exception(e)
-                log.error(f"Error deleting files")
+                log.error("Error deleting files")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),

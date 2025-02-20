@@ -37,6 +37,140 @@ async def export_config(user=Depends(get_admin_user)):
 
 
 ############################
+# Direct Connections Config
+############################
+
+
+class DirectConnectionsConfigForm(BaseModel):
+    ENABLE_DIRECT_CONNECTIONS: bool
+
+
+@router.get("/direct_connections", response_model=DirectConnectionsConfigForm)
+async def get_direct_connections_config(request: Request, user=Depends(get_admin_user)):
+    return {
+        "ENABLE_DIRECT_CONNECTIONS": request.app.state.config.ENABLE_DIRECT_CONNECTIONS,
+    }
+
+
+@router.post("/direct_connections", response_model=DirectConnectionsConfigForm)
+async def set_direct_connections_config(
+    request: Request,
+    form_data: DirectConnectionsConfigForm,
+    user=Depends(get_admin_user),
+):
+    request.app.state.config.ENABLE_DIRECT_CONNECTIONS = (
+        form_data.ENABLE_DIRECT_CONNECTIONS
+    )
+    return {
+        "ENABLE_DIRECT_CONNECTIONS": request.app.state.config.ENABLE_DIRECT_CONNECTIONS,
+    }
+
+
+############################
+# CodeInterpreterConfig
+############################
+class CodeInterpreterConfigForm(BaseModel):
+    CODE_EXECUTION_ENGINE: str
+    CODE_EXECUTION_JUPYTER_URL: Optional[str]
+    CODE_EXECUTION_JUPYTER_AUTH: Optional[str]
+    CODE_EXECUTION_JUPYTER_AUTH_TOKEN: Optional[str]
+    CODE_EXECUTION_JUPYTER_AUTH_PASSWORD: Optional[str]
+    CODE_EXECUTION_JUPYTER_TIMEOUT: Optional[int]
+    ENABLE_CODE_INTERPRETER: bool
+    CODE_INTERPRETER_ENGINE: str
+    CODE_INTERPRETER_PROMPT_TEMPLATE: Optional[str]
+    CODE_INTERPRETER_JUPYTER_URL: Optional[str]
+    CODE_INTERPRETER_JUPYTER_AUTH: Optional[str]
+    CODE_INTERPRETER_JUPYTER_AUTH_TOKEN: Optional[str]
+    CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD: Optional[str]
+    CODE_INTERPRETER_JUPYTER_TIMEOUT: Optional[int]
+
+
+@router.get("/code_execution", response_model=CodeInterpreterConfigForm)
+async def get_code_execution_config(request: Request, user=Depends(get_admin_user)):
+    return {
+        "CODE_EXECUTION_ENGINE": request.app.state.config.CODE_EXECUTION_ENGINE,
+        "CODE_EXECUTION_JUPYTER_URL": request.app.state.config.CODE_EXECUTION_JUPYTER_URL,
+        "CODE_EXECUTION_JUPYTER_AUTH": request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH,
+        "CODE_EXECUTION_JUPYTER_AUTH_TOKEN": request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_TOKEN,
+        "CODE_EXECUTION_JUPYTER_AUTH_PASSWORD": request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_PASSWORD,
+        "CODE_EXECUTION_JUPYTER_TIMEOUT": request.app.state.config.CODE_EXECUTION_JUPYTER_TIMEOUT,
+        "ENABLE_CODE_INTERPRETER": request.app.state.config.ENABLE_CODE_INTERPRETER,
+        "CODE_INTERPRETER_ENGINE": request.app.state.config.CODE_INTERPRETER_ENGINE,
+        "CODE_INTERPRETER_PROMPT_TEMPLATE": request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE,
+        "CODE_INTERPRETER_JUPYTER_URL": request.app.state.config.CODE_INTERPRETER_JUPYTER_URL,
+        "CODE_INTERPRETER_JUPYTER_AUTH": request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH,
+        "CODE_INTERPRETER_JUPYTER_AUTH_TOKEN": request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN,
+        "CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD": request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD,
+        "CODE_INTERPRETER_JUPYTER_TIMEOUT": request.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT,
+    }
+
+
+@router.post("/code_execution", response_model=CodeInterpreterConfigForm)
+async def set_code_execution_config(
+    request: Request, form_data: CodeInterpreterConfigForm, user=Depends(get_admin_user)
+):
+
+    request.app.state.config.CODE_EXECUTION_ENGINE = form_data.CODE_EXECUTION_ENGINE
+    request.app.state.config.CODE_EXECUTION_JUPYTER_URL = (
+        form_data.CODE_EXECUTION_JUPYTER_URL
+    )
+    request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH = (
+        form_data.CODE_EXECUTION_JUPYTER_AUTH
+    )
+    request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_TOKEN = (
+        form_data.CODE_EXECUTION_JUPYTER_AUTH_TOKEN
+    )
+    request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_PASSWORD = (
+        form_data.CODE_EXECUTION_JUPYTER_AUTH_PASSWORD
+    )
+    request.app.state.config.CODE_EXECUTION_JUPYTER_TIMEOUT = (
+        form_data.CODE_EXECUTION_JUPYTER_TIMEOUT
+    )
+
+    request.app.state.config.ENABLE_CODE_INTERPRETER = form_data.ENABLE_CODE_INTERPRETER
+    request.app.state.config.CODE_INTERPRETER_ENGINE = form_data.CODE_INTERPRETER_ENGINE
+    request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE = (
+        form_data.CODE_INTERPRETER_PROMPT_TEMPLATE
+    )
+
+    request.app.state.config.CODE_INTERPRETER_JUPYTER_URL = (
+        form_data.CODE_INTERPRETER_JUPYTER_URL
+    )
+
+    request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH = (
+        form_data.CODE_INTERPRETER_JUPYTER_AUTH
+    )
+
+    request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN = (
+        form_data.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN
+    )
+    request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD = (
+        form_data.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD
+    )
+    request.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT = (
+        form_data.CODE_INTERPRETER_JUPYTER_TIMEOUT
+    )
+
+    return {
+        "CODE_EXECUTION_ENGINE": request.app.state.config.CODE_EXECUTION_ENGINE,
+        "CODE_EXECUTION_JUPYTER_URL": request.app.state.config.CODE_EXECUTION_JUPYTER_URL,
+        "CODE_EXECUTION_JUPYTER_AUTH": request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH,
+        "CODE_EXECUTION_JUPYTER_AUTH_TOKEN": request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_TOKEN,
+        "CODE_EXECUTION_JUPYTER_AUTH_PASSWORD": request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_PASSWORD,
+        "CODE_EXECUTION_JUPYTER_TIMEOUT": request.app.state.config.CODE_EXECUTION_JUPYTER_TIMEOUT,
+        "ENABLE_CODE_INTERPRETER": request.app.state.config.ENABLE_CODE_INTERPRETER,
+        "CODE_INTERPRETER_ENGINE": request.app.state.config.CODE_INTERPRETER_ENGINE,
+        "CODE_INTERPRETER_PROMPT_TEMPLATE": request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE,
+        "CODE_INTERPRETER_JUPYTER_URL": request.app.state.config.CODE_INTERPRETER_JUPYTER_URL,
+        "CODE_INTERPRETER_JUPYTER_AUTH": request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH,
+        "CODE_INTERPRETER_JUPYTER_AUTH_TOKEN": request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN,
+        "CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD": request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD,
+        "CODE_INTERPRETER_JUPYTER_TIMEOUT": request.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT,
+    }
+
+
+############################
 # SetDefaultModels
 ############################
 class ModelsConfigForm(BaseModel):
