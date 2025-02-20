@@ -6,6 +6,17 @@ SETLOCAL ENABLEDELAYEDEXPANSION
 SET "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%" || exit /b
 
+:: Add conditional Playwright browser installation
+IF /I "%RAG_WEB_LOADER_ENGINE%" == "playwright" (
+    IF "%PLAYWRIGHT_WS_URI%" == "" (
+        echo Installing Playwright browsers...
+        playwright install chromium
+        playwright install-deps chromium
+    )
+
+    python -c "import nltk; nltk.download('punkt_tab')"
+)
+
 SET "KEY_FILE=.webui_secret_key"
 IF "%PORT%"=="" SET PORT=8080
 IF "%HOST%"=="" SET HOST=0.0.0.0

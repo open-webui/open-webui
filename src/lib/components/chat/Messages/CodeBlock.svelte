@@ -123,6 +123,12 @@
 	};
 
 	const executePython = async (code) => {
+		result = null;
+		stdout = null;
+		stderr = null;
+
+		executing = true;
+
 		if ($config?.code?.engine === 'jupyter') {
 			const output = await executeCode(localStorage.token, code).catch((error) => {
 				toast.error(`${error}`);
@@ -130,22 +136,74 @@
 			});
 
 			if (output) {
-				stdout = output.stdout;
-				stderr = output.stderr;
-				result = output.result;
+				if (output['stdout']) {
+					stdout = output['stdout'];
+					const stdoutLines = stdout.split('\n');
+
+					for (const [idx, line] of stdoutLines.entries()) {
+						if (line.startsWith('data:image/png;base64')) {
+							if (files) {
+								files.push({
+									type: 'image/png',
+									data: line
+								});
+							} else {
+								files = [
+									{
+										type: 'image/png',
+										data: line
+									}
+								];
+							}
+
+							if (stdout.startsWith(`${line}\n`)) {
+								stdout = stdout.replace(`${line}\n`, ``);
+							} else if (stdout.startsWith(`${line}`)) {
+								stdout = stdout.replace(`${line}`, ``);
+							}
+						}
+					}
+				}
+
+				if (output['result']) {
+					result = output['result'];
+					const resultLines = result.split('\n');
+
+					for (const [idx, line] of resultLines.entries()) {
+						if (line.startsWith('data:image/png;base64')) {
+							if (files) {
+								files.push({
+									type: 'image/png',
+									data: line
+								});
+							} else {
+								files = [
+									{
+										type: 'image/png',
+										data: line
+									}
+								];
+							}
+
+							if (result.startsWith(`${line}\n`)) {
+								result = result.replace(`${line}\n`, ``);
+							} else if (result.startsWith(`${line}`)) {
+								result = result.replace(`${line}`, ``);
+							}
+						}
+					}
+				}
+
+				output['stderr'] && (stderr = output['stderr']);
 			}
+
+			executing = false;
 		} else {
 			executePythonAsWorker(code);
 		}
 	};
 
 	const executePythonAsWorker = async (code) => {
-		result = null;
-		stdout = null;
-		stderr = null;
-
-		executing = true;
-
 		let packages = [
 			code.includes('requests') ? 'requests' : null,
 			code.includes('bs4') ? 'beautifulsoup4' : null,
@@ -205,7 +263,40 @@
 							];
 						}
 
-						stdout = stdout.replace(`${line}\n`, ``);
+						if (stdout.startsWith(`${line}\n`)) {
+							stdout = stdout.replace(`${line}\n`, ``);
+						} else if (stdout.startsWith(`${line}`)) {
+							stdout = stdout.replace(`${line}`, ``);
+						}
+					}
+				}
+			}
+
+			if (data['result']) {
+				result = data['result'];
+				const resultLines = result.split('\n');
+
+				for (const [idx, line] of resultLines.entries()) {
+					if (line.startsWith('data:image/png;base64')) {
+						if (files) {
+							files.push({
+								type: 'image/png',
+								data: line
+							});
+						} else {
+							files = [
+								{
+									type: 'image/png',
+									data: line
+								}
+							];
+						}
+
+						if (result.startsWith(`${line}\n`)) {
+							result = result.replace(`${line}\n`, ``);
+						} else if (result.startsWith(`${line}`)) {
+							result = result.replace(`${line}`, ``);
+						}
 					}
 				}
 			}
@@ -391,7 +482,7 @@
 				class="bg-gray-50 dark:bg-[#202123] dark:text-white max-w-full overflow-x-auto scrollbar-hidden"
 			/>
 
-			{#if executing || stdout || stderr || result}
+			{#if executing || stdout || stderr || result || files}
 				<div
 					class="bg-gray-50 dark:bg-[#202123] dark:text-white rounded-b-lg! py-4 px-4 flex flex-col gap-2"
 				>
@@ -404,7 +495,13 @@
 						{#if stdout || stderr}
 							<div class=" ">
 								<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
-								<div class="text-sm">{stdout || stderr}</div>
+								<div
+									class="text-sm {stdout?.split('\n')?.length > 100
+										? `max-h-96`
+										: ''}  overflow-y-auto"
+								>
+									{stdout || stderr}
+								</div>
 							</div>
 						{/if}
 						{#if result || files}
