@@ -173,7 +173,7 @@ def merge_get_results(get_results: list[dict]) -> dict:
 
 
 def merge_and_sort_query_results(
-        query_results: list[dict], k: int, reverse: bool = False
+    query_results: list[dict], k: int, reverse: bool = False
 ) -> list[dict]:
     # Initialize lists to store combined data
     combined_distances = []
@@ -185,11 +185,21 @@ def merge_and_sort_query_results(
         combined_distances.extend(data["distances"][0])
         combined_documents.extend(data["documents"][0])
         combined_metadatas.extend(data["metadatas"][0])
-        hashes = [hash((doc, meta.get("hash"),)) for doc, meta in zip(data["documents"][0], data["metadatas"][0])]
+        hashes = [
+            hash(
+                (
+                    doc,
+                    meta.get("hash"),
+                )
+            )
+            for doc, meta in zip(data["documents"][0], data["metadatas"][0])
+        ]
         combined_hashes.extend(hashes)
 
     # Create a list of tuples (distance, document, metadata, ids)
-    combined = list(zip(combined_distances, combined_documents, combined_metadatas, combined_hashes))
+    combined = list(
+        zip(combined_distances, combined_documents, combined_metadatas, combined_hashes)
+    )
 
     # Sort the list based on distances
     combined.sort(key=lambda x: x[0], reverse=reverse)
