@@ -101,21 +101,6 @@
 		// Revoke the URL to release memory
 		window.URL.revokeObjectURL(url);
 	};
-
-	const downloadJSONExport = async () => {
-		const chat = await getChatById(localStorage.token, chatId);
-
-		if (chat) {
-			let blob = new Blob([JSON.stringify([chat])], {
-				type: 'application/json'
-			});
-			saveAs(blob, `chat-export-${Date.now()}.json`);
-		}
-	};
-
-	$: if (show) {
-		checkPinned();
-	}
 </script>
 
 <Dropdown
@@ -196,14 +181,6 @@
 					transition={flyAndScale}
 					sideOffset={8}
 				>
-					<DropdownMenu.Item
-						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-						on:click={() => {
-							downloadJSONExport();
-						}}
-					>
-						<div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>
-					</DropdownMenu.Item>
 					<DropdownMenu.Item
 						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 						on:click={() => {
