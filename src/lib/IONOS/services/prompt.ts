@@ -14,3 +14,9 @@ export const selectPrompt = async (promptId: number): void => {
 
 	selectAgent(promptConfig.agentId);
 }
+
+export const getPrompt = (): string => {
+	const prompt = localStorage.getItem(LOCALSTORAGE_START_PROMPT_KEY) ?? '';
+	localStorage.removeItem(LOCALSTORAGE_START_PROMPT_KEY);
+	return prompt;
+}
