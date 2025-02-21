@@ -82,6 +82,7 @@
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
+	import { startup as ionosGptStartup } from '$lib/IONOS/services/startup';
 
 	export let chatIdProp = '';
 
@@ -131,6 +132,8 @@
 	let files = [];
 	let params = {};
 
+	let ionosGptStartupPrompt = '';
+
 	$: if (chatIdProp) {
 		(async () => {
 			console.log(chatIdProp);
@@ -167,18 +170,6 @@
 			}
 		})();
 	}
-
-	$: if (selectedModels && chatIdProp !== '') {
-		saveSessionSelectedModels();
-	}
-
-	const saveSessionSelectedModels = () => {
-		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
-			return;
-		}
-		sessionStorage.selectedModels = JSON.stringify(selectedModels);
-		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
-	};
 
 	$: if (selectedModels) {
 		setToolIds();
@@ -385,6 +376,16 @@
 
 	onMount(async () => {
 		console.log('mounted');
+
+		let ionosGptStartupModel = '';
+
+		({ agent: ionosGptStartupModel, prompt: ionosGptStartupPrompt } = await ionosGptStartup());
+
+		if (ionosGptStartupModel) {
+			selectedModels = [ionosGptStartupModel]
+			ionosGptStartupModel = '';
+		}
+
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
 
@@ -744,8 +745,9 @@
 			showControls.set(true);
 		}
 
-		if ($page.url.searchParams.get('q')) {
-			prompt = $page.url.searchParams.get('q') ?? '';
+		if (ionosGptStartupPrompt) {
+			prompt = ionosGptStartupPrompt;
+			ionosGptStartupPrompt = '';
 
 			if (prompt) {
 				await tick();
@@ -1325,8 +1327,6 @@
 		// focus on chat input
 		const chatInput = document.getElementById('chat-input');
 		chatInput?.focus();
-
-		saveSessionSelectedModels();
 
 		await sendPrompt(userPrompt, userMessageId, { newChat: true });
 	};
