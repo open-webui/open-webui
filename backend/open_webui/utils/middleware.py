@@ -556,8 +556,6 @@ async def chat_completion_files_handler(
             rag_top_k = metadata["model"].params.model_dump().get('rag_top_k') \
             if metadata["model"].params.model_dump().get('rag_top_k') \
             else request.app.state.config.TOP_K
-            log.info(type(request.app.state.config.TOP_K))
-            log.info(type(rag_top_k))
             with ThreadPoolExecutor() as executor:
                 sources = await loop.run_in_executor(
                     executor,
@@ -579,7 +577,6 @@ async def chat_completion_files_handler(
             log.exception(e)
 
         log.debug(f"rag_contexts:sources: {sources}")
-        log.info("SOMETHING HAS HAPPENED")
     return body, {"sources": sources}
 
 
