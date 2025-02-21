@@ -1,4 +1,4 @@
-Вот env.py import importlib.metadata
+import importlib.metadata
 import json
 import logging
 import os
@@ -414,7 +414,13 @@ else:
 ####################################
 # OFFLINE_MODE
 ####################################
-
+# Robokassa Password
+ROBOKASSA_PASSWORD = os.environ.get("ROBOKASSA_PASSWORD")
+log.info("ROB", ROBOKASSA_PASSWORD)
+if not ROBOKASSA_PASSWORD:
+    log.error("ROBOKASSA_PASSWORD не найден в переменных окружения.")
+    raise ValueError("ROBOKASSA_PASSWORD не найден в переменных окружения.")
+    
 OFFLINE_MODE = os.environ.get("OFFLINE_MODE", "false").lower() == "true"
 
 if OFFLINE_MODE:
