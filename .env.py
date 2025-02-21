@@ -414,7 +414,7 @@ else:
 ####################################
 # OFFLINE_MODE
 ####################################
-# Robokassa Password
+ # Robokassa Password
 ROBOKASSA_PASSWORD = os.environ.get("ROBOKASSA_PASSWORD")
 log.info("ROB", ROBOKASSA_PASSWORD)
 if not ROBOKASSA_PASSWORD:
