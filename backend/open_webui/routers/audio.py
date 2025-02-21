@@ -679,8 +679,6 @@ def transcription(
 
 def get_available_models(request: Request) -> list[dict]:
     available_models = []
-    """if request.app.state.config.TTS_ENGINE == "openai":
-        available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]"""
     if request.app.state.config.TTS_ENGINE == "openai":
         # Use custom endpoint if not using the official OpenAI API URL
         if not request.app.state.config.TTS_OPENAI_API_BASE_URL.startswith("https://api.openai.com"):
@@ -723,15 +721,6 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
 def get_available_voices(request) -> dict:
     """Returns {voice_id: voice_name} dict"""
     available_voices = {}
-    """if request.app.state.config.TTS_ENGINE == "openai":
-        available_voices = {
-            "alloy": "alloy",
-            "echo": "echo",
-            "fable": "fable",
-            "onyx": "onyx",
-            "nova": "nova",
-            "shimmer": "shimmer",
-        }"""
     if request.app.state.config.TTS_ENGINE == "openai":
         # Use custom endpoint if not using the official OpenAI API URL
         if not request.app.state.config.TTS_OPENAI_API_BASE_URL.startswith("https://api.openai.com"):
