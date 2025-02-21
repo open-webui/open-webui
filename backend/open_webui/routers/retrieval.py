@@ -715,7 +715,8 @@ def save_docs_to_vector_db(
     add: bool = False,
     user=None,
 ) -> bool:
-    time.sleep(1.0)
+    
+    time.sleep(0.5) # Intentional Delay For Preventing Too Many Requests
     def _get_docs_info(docs: list[Document]) -> str:
         docs_info = set()
 

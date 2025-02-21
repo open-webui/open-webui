@@ -68,13 +68,15 @@
 		},
 		params: {
 			system: '',
-			rag_prompt: ''
+			rag_template: '',
+			rag_top_k: ''
 		}
 	};
 
 	let params = {
 		system: '',
-		rag_prompt: ''
+		rag_template: '',
+		rag_top_k: ''
 	};
 	let capabilities = {
 		vision: true,
@@ -693,6 +695,18 @@
 					<div class="my-2">
 						<Knowledge bind:selectedKnowledge={knowledge} collections={$knowledgeCollections} />
 					</div>
+					<!-- Per Model RAG Related -->
+					<div class="my-1">
+						<div class="text-xs font-semibold mb-2">{$i18n.t('RAG Top K')}</div>
+						<div>
+							<input
+									type="number"
+									class="text-sm w-full bg-transparent outline-hidden"
+									placeholder={$i18n.t('Top K')}
+									bind:value={info.params.rag_top_k}
+							/>
+						</div>
+					</div>
 					<div class="my-1">
 						<div class=" text-xs font-semibold mb-2">{$i18n.t('RAG Template')}</div>
 						<div>
@@ -700,11 +714,11 @@
 								className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
 								placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 								rows={4}
-								bind:value={info.params.rag_prompt}
+								bind:value={info.params.rag_template}
 							/>
 						</div>
 					</div>
-
+					
 					<div class="my-2">
 						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
 					</div>

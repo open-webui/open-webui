@@ -511,9 +511,9 @@ async def chat_image_generation_handler(
 
     return form_data
 
-
+# add model metadata to the function
 async def chat_completion_files_handler(
-    request: Request, body: dict, user: UserModel
+    request: Request, body: dict, user: UserModel, metadata: dict
 ) -> tuple[dict, dict[str, list]]:
     sources = []
 
@@ -552,6 +552,12 @@ async def chat_completion_files_handler(
         try:
             # Offload get_sources_from_files to a separate thread
             loop = asyncio.get_running_loop()
+            # Retrieve per-model custom top-k if available
+            rag_top_k = metadata["model"].params.model_dump().get('rag_top_k') \
+            if metadata["model"].params.model_dump().get('rag_top_k') \
+            else request.app.state.config.TOP_K
+            log.info(type(request.app.state.config.TOP_K))
+            log.info(type(rag_top_k))
             with ThreadPoolExecutor() as executor:
                 sources = await loop.run_in_executor(
                     executor,
@@ -561,7 +567,8 @@ async def chat_completion_files_handler(
                         embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(
                             query, user=user
                         ),
-                        k=request.app.state.config.TOP_K,
+                        # Use the maybe custom top k
+                        k=rag_top_k, #=request.app.state.config.TOP_K,
                         reranking_function=request.app.state.rf,
                         r=request.app.state.config.RELEVANCE_THRESHOLD,
                         hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
@@ -572,7 +579,7 @@ async def chat_completion_files_handler(
             log.exception(e)
 
         log.debug(f"rag_contexts:sources: {sources}")
-
+        log.info("SOMETHING HAS HAPPENED")
     return body, {"sources": sources}
 
 
@@ -786,7 +793,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
                 log.exception(e)
 
     try:
-        form_data, flags = await chat_completion_files_handler(request, form_data, user)
+        form_data, flags = await chat_completion_files_handler(request, form_data, user, metadata)
         sources.extend(flags.get("sources", []))
     except Exception as e:
         log.exception(e)
@@ -813,28 +820,29 @@ async def process_chat_payload(request, form_data, metadata, user, model):
             log.debug(
                 f"With a 0 relevancy threshold for RAG, the context cannot be empty"
             )
-
-
-        rag_prompt_template = metadata["model"].params.model_dump().get('rag_prompt') \
-        if metadata["model"].params.model_dump().get('rag_prompt') \
+        
+        # Apply Per Model RAG Template if applicable
+        custom_rag_template = metadata["model"].params.model_dump().get('rag_template') \
+        if metadata["model"].params.model_dump().get('rag_template') \
         else request.app.state.config.RAG_TEMPLATE
+
         # Workaround for Ollama 2.0+ system prompt issue
         # TODO: replace with add_or_update_system_message
         if model.get("owned_by") == "ollama":
             form_data["messages"] = prepend_to_first_user_message_content(
                 rag_template(
-                    rag_prompt_template, context_string, prompt
+                    custom_rag_template, context_string, prompt
                 ),
                 form_data["messages"],
             )
         else:
             form_data["messages"] = add_or_update_system_message(
                 rag_template(
-                    rag_prompt_template, context_string, prompt
+                    custom_rag_template, context_string, prompt
                 ),
                 form_data["messages"],
             )
-
+    
     # If there are citations, add them to the data_items
     sources = [source for source in sources if source.get("source", {}).get("name", "")]
 
