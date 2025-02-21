@@ -130,6 +130,19 @@
 					</div>
 				</div>
 
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">{$i18n.t('Trust Proxy Environment')}</div>
+					<div class="flex items-center relative">
+						<Tooltip
+							content={webConfig.search.trust_env
+								? 'Use proxy designated by http_proxy and https_proxy environment variables to fetch page contents'
+								: 'Use no proxy to fetch page contents.'}
+						>
+							<Switch bind:state={webConfig.search.trust_env} />
+						</Tooltip>
+					</div>
+				</div>
+
 				{#if webConfig.search.engine !== ''}
 					<div class="mt-1.5">
 						{#if webConfig.search.engine === 'searxng'}
