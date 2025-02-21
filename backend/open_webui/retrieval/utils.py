@@ -179,17 +179,17 @@ def merge_and_sort_query_results(
     combined_distances = []
     combined_documents = []
     combined_metadatas = []
-    combined_ids = []
+    combined_hashes = []
 
     for data in query_results:
         combined_distances.extend(data["distances"][0])
         combined_documents.extend(data["documents"][0])
         combined_metadatas.extend(data["metadatas"][0])
-        # DISTINCT(chunk_id,file_id) - in case if id (chunk_ids) become ordinals
-        combined_ids.extend([id + meta["file_id"] for id, meta in zip(data["ids"][0], data["metadatas"][0])])
+        hashes = [hash((doc, meta.get("hash"),)) for doc, meta in zip(data["documents"][0], data["metadatas"][0])]
+        combined_hashes.extend(hashes)
 
     # Create a list of tuples (distance, document, metadata, ids)
-    combined = list(zip(combined_distances, combined_documents, combined_metadatas, combined_ids))
+    combined = list(zip(combined_distances, combined_documents, combined_metadatas, combined_hashes))
 
     # Sort the list based on distances
     combined.sort(key=lambda x: x[0], reverse=reverse)
@@ -200,15 +200,15 @@ def merge_and_sort_query_results(
     # Otherwise we don't have anything :-(
     if combined:
         # Unzip the sorted list
-        all_distances, all_documents, all_metadatas, all_ids = zip(*combined)
-        seen_ids = set()
+        all_distances, all_documents, all_metadatas, all_hashes = zip(*combined)
+        seen_hashes = set()
         # Slicing the lists to include only k elements
-        for index, id in enumerate(all_ids):
-            if id not in seen_ids:
+        for index, id in enumerate(all_hashes):
+            if id not in seen_hashes:
                 sorted_distances.append(all_distances[index])
                 sorted_documents.append(all_documents[index])
                 sorted_metadatas.append(all_metadatas[index])
-                seen_ids.add(id)
+                seen_hashes.add(id)
                 if len(sorted_distances) >= k:
                     break
 
