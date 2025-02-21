@@ -400,6 +400,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
                 "exa_api_key": request.app.state.config.EXA_API_KEY,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+                "trust_env": request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
                 "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             },
         },
