@@ -1579,6 +1579,18 @@ TIKA_SERVER_URL = PersistentConfig(
     os.getenv("TIKA_SERVER_URL", "http://tika:9998"),  # Default for sidecar deployment
 )
 
+DOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(
+    "DOCUMENT_INTELLIGENCE_ENDPOINT",
+    "rag.document_intelligence_endpoint",
+    os.getenv("DOCUMENT_INTELLIGENCE_ENDPOINT", ""),
+)
+
+DOCUMENT_INTELLIGENCE_KEY = PersistentConfig(
+    "DOCUMENT_INTELLIGENCE_KEY",
+    "rag.document_intelligence_key",
+    os.getenv("DOCUMENT_INTELLIGENCE_KEY", ""),
+)
+
 RAG_TOP_K = PersistentConfig(
     "RAG_TOP_K", "rag.top_k", int(os.environ.get("RAG_TOP_K", "3"))
 )

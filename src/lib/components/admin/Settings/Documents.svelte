@@ -49,6 +49,9 @@
 	let contentExtractionEngine = 'default';
 	let tikaServerUrl = '';
 	let showTikaServerUrl = false;
+	let documentIntelligenceEndpoint = '';
+	let documentIntelligenceKey = '';
+	let showDocumentIntelligenceConfig = false;
 
 	let textSplitter = '';
 	let chunkSize = 0;
@@ -176,6 +179,13 @@
 			toast.error($i18n.t('Tika Server URL required.'));
 			return;
 		}
+		if (
+			contentExtractionEngine === 'document_intelligence' &&
+			(documentIntelligenceEndpoint === '' || documentIntelligenceKey === '')
+		) {
+			toast.error($i18n.t('Document Intelligence endpoint and key required.'));
+			return;
+		}
 		const res = await updateRAGConfig(localStorage.token, {
 			pdf_extract_images: pdfExtractImages,
 			enable_google_drive_integration: enableGoogleDriveIntegration,
@@ -191,7 +201,11 @@
 			},
 			content_extraction: {
 				engine: contentExtractionEngine,
-				tika_server_url: tikaServerUrl
+				tika_server_url: tikaServerUrl,
+				document_intelligence_config: {
+					key: documentIntelligenceKey,
+					endpoint: documentIntelligenceEndpoint
+				}
 			}
 		});
 
@@ -249,6 +263,9 @@
 			contentExtractionEngine = res.content_extraction.engine;
 			tikaServerUrl = res.content_extraction.tika_server_url;
 			showTikaServerUrl = contentExtractionEngine === 'tika';
+			documentIntelligenceEndpoint = res.content_extraction.document_intelligence_config.endpoint;
+			documentIntelligenceKey = res.content_extraction.document_intelligence_config.key;
+			showDocumentIntelligenceConfig = contentExtractionEngine === 'document_intelligence';
 
 			fileMaxSize = res?.file.max_size ?? '';
 			fileMaxCount = res?.file.max_count ?? '';
@@ -585,10 +602,12 @@
 						bind:value={contentExtractionEngine}
 						on:change={(e) => {
 							showTikaServerUrl = e.target.value === 'tika';
+							showDocumentIntelligenceConfig = e.target.value === 'document_intelligence';
 						}}
 					>
 						<option value="">{$i18n.t('Default')} </option>
 						<option value="tika">{$i18n.t('Tika')}</option>
+						<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
 					</select>
 				</div>
 			</div>
@@ -602,6 +621,21 @@
 							bind:value={tikaServerUrl}
 						/>
 					</div>
+				</div>
+			{/if}
+
+			{#if showDocumentIntelligenceConfig}
+				<div class="my-0.5 flex gap-2 pr-2">
+					<input
+						class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+						placeholder={$i18n.t('Enter Document Intelligence Endpoint')}
+						bind:value={documentIntelligenceEndpoint}
+					/>
+
+					<SensitiveInput
+						placeholder={$i18n.t('Enter Document Intelligence Key')}
+						bind:value={documentIntelligenceKey}
+					/>
 				</div>
 			{/if}
 		</div>

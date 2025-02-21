@@ -356,6 +356,10 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
+            "document_intelligence_config": {
+                "endpoint": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
+                "key": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+            },
         },
         "chunk": {
             "text_splitter": request.app.state.config.TEXT_SPLITTER,
@@ -411,9 +415,15 @@ class FileConfig(BaseModel):
     max_count: Optional[int] = None
 
 
+class DocumentIntelligenceConfigForm(BaseModel):
+    endpoint: str
+    key: str
+
+
 class ContentExtractionConfig(BaseModel):
     engine: str = ""
     tika_server_url: Optional[str] = None
+    document_intelligence_config: Optional[DocumentIntelligenceConfigForm] = None
 
 
 class ChunkParamUpdateForm(BaseModel):
@@ -501,13 +511,22 @@ async def update_rag_config(
         request.app.state.config.FILE_MAX_COUNT = form_data.file.max_count
 
     if form_data.content_extraction is not None:
-        log.info(f"Updating text settings: {form_data.content_extraction}")
+        log.info(
+            f"Updating content extraction: {request.app.state.config.CONTENT_EXTRACTION_ENGINE} to {form_data.content_extraction.engine}"
+        )
         request.app.state.config.CONTENT_EXTRACTION_ENGINE = (
             form_data.content_extraction.engine
         )
         request.app.state.config.TIKA_SERVER_URL = (
             form_data.content_extraction.tika_server_url
         )
+        if form_data.content_extraction.document_intelligence_config is not None:
+            request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = (
+                form_data.content_extraction.document_intelligence_config.endpoint
+            )
+            request.app.state.config.DOCUMENT_INTELLIGENCE_KEY = (
+                form_data.content_extraction.document_intelligence_config.key
+            )
 
     if form_data.chunk is not None:
         request.app.state.config.TEXT_SPLITTER = form_data.chunk.text_splitter
@@ -604,6 +623,10 @@ async def update_rag_config(
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
+            "document_intelligence_config": {
+                "endpoint": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
+                "key": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+            },
         },
         "chunk": {
             "text_splitter": request.app.state.config.TEXT_SPLITTER,
@@ -937,6 +960,8 @@ def process_file(
                     engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
                     TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
                     PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
+                    DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
+                    DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
                 )
                 docs = loader.load(
                     file.filename, file.meta.get("content_type"), file_path
