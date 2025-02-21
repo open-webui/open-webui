@@ -586,9 +586,6 @@ async def update_rag_config(
         request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = (
             form_data.web.search.concurrent_requests
         )
-        request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV = (
-            form_data.web.search.trust_env
-        )
         request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = (
             form_data.web.search.domain_filter_list
         )
