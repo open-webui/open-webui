@@ -35,6 +35,8 @@
 	export let value = '';
 	export let id = '';
 
+	export let raw = false;
+
 	export let preserveBreaks = false;
 	export let generateAutoCompletion: Function = async () => null;
 	export let autocomplete = false;
@@ -51,10 +53,7 @@
 
 	// Function to find the next template in the document
 	function findNextTemplate(doc, from = 0) {
-		const patterns = [
-			{ start: '[', end: ']' },
-			{ start: '{{', end: '}}' }
-		];
+		const patterns = [{ start: '{{', end: '}}' }];
 
 		let result = null;
 
@@ -137,25 +136,29 @@
 			});
 		}
 
-		async function tryParse(value, attempts = 3, interval = 100) {
-			try {
-				// Try parsing the value
-				return marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
-					breaks: false
-				});
-			} catch (error) {
-				// If no attempts remain, fallback to plain text
-				if (attempts <= 1) {
-					return value;
-				}
-				// Wait for the interval, then retry
-				await new Promise((resolve) => setTimeout(resolve, interval));
-				return tryParse(value, attempts - 1, interval); // Recursive call
-			}
-		}
+		let content = value;
 
-		// Usage example
-		let content = await tryParse(value);
+		if (!raw) {
+			async function tryParse(value, attempts = 3, interval = 100) {
+				try {
+					// Try parsing the value
+					return marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
+						breaks: false
+					});
+				} catch (error) {
+					// If no attempts remain, fallback to plain text
+					if (attempts <= 1) {
+						return value;
+					}
+					// Wait for the interval, then retry
+					await new Promise((resolve) => setTimeout(resolve, interval));
+					return tryParse(value, attempts - 1, interval); // Recursive call
+				}
+			}
+
+			// Usage example
+			content = await tryParse(value);
+		}
 
 		editor = new Editor({
 			element: element,
@@ -191,28 +194,33 @@
 			onTransaction: () => {
 				// force re-render so `editor.isActive` works as expected
 				editor = editor;
-				let newValue = turndownService
-					.turndown(
-						editor
-							.getHTML()
-							.replace(/<p><\/p>/g, '<br/>')
-							.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
-					)
-					.replace(/\u00a0/g, ' ');
 
-				if (!preserveBreaks) {
-					newValue = newValue.replace(/<br\/>/g, '');
-				}
+				if (!raw) {
+					let newValue = turndownService
+						.turndown(
+							editor
+								.getHTML()
+								.replace(/<p><\/p>/g, '<br/>')
+								.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+						)
+						.replace(/\u00a0/g, ' ');
 
-				if (value !== newValue) {
-					value = newValue;
+					if (!preserveBreaks) {
+						newValue = newValue.replace(/<br\/>/g, '');
+					}
 
-					// check if the node is paragraph as well
-					if (editor.isActive('paragraph')) {
-						if (value === '') {
-							editor.commands.clearContent();
+					if (value !== newValue) {
+						value = newValue;
+
+						// check if the node is paragraph as well
+						if (editor.isActive('paragraph')) {
+							if (value === '') {
+								editor.commands.clearContent();
+							}
 						}
 					}
+				} else {
+					value = editor.getHTML();
 				}
 			},
 			editorProps: {
@@ -340,21 +348,30 @@
 	// Update the editor content if the external `value` changes
 	$: if (
 		editor &&
-		value !==
-			turndownService
-				.turndown(
-					(preserveBreaks
-						? editor.getHTML().replace(/<p><\/p>/g, '<br/>')
-						: editor.getHTML()
-					).replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
-				)
-				.replace(/\u00a0/g, ' ')
+		(raw
+			? value !== editor.getHTML()
+			: value !==
+				turndownService
+					.turndown(
+						(preserveBreaks
+							? editor.getHTML().replace(/<p><\/p>/g, '<br/>')
+							: editor.getHTML()
+						).replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+					)
+					.replace(/\u00a0/g, ' '))
 	) {
-		editor.commands.setContent(
-			marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
-				breaks: false
-			})
-		); // Update editor content
+		if (raw) {
+			editor.commands.setContent(value);
+		} else {
+			preserveBreaks
+				? editor.commands.setContent(value)
+				: editor.commands.setContent(
+						marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
+							breaks: false
+						})
+					); // Update editor content
+		}
+
 		selectTemplate();
 	}
 </script>

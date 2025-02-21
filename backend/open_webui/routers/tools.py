@@ -227,7 +227,11 @@ async def delete_tools_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if tools.user_id != user.id and user.role != "admin":
+    if (
+        tools.user_id != user.id
+        and not has_access(user.id, "write", tools.access_control)
+        and user.role != "admin"
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
@@ -309,6 +313,17 @@ async def update_tools_valves_by_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
+    if (
+        tools.user_id != user.id
+        and not has_access(user.id, "write", tools.access_control)
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
     if id in request.app.state.TOOLS:
         tools_module = request.app.state.TOOLS[id]
     else:

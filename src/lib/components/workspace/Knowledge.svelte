@@ -54,7 +54,7 @@
 
 	const deleteHandler = async (item) => {
 		const res = await deleteKnowledgeById(localStorage.token, item.id).catch((e) => {
-			toast.error(e);
+			toast.error(`${e}`);
 		});
 
 		if (res) {
@@ -101,7 +101,7 @@
 					<Search className="size-3.5" />
 				</div>
 				<input
-					class=" w-full text-sm py-1 rounded-r-xl outline-none bg-transparent"
+					class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
 					placeholder={$i18n.t('Search Knowledge')}
 				/>

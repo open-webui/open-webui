@@ -33,6 +33,7 @@
 	let loading = false;
 	let stopResponseFlag = false;
 
+	let systemTextareaElement: HTMLTextAreaElement;
 	let messagesContainerElement: HTMLDivElement;
 
 	let showSystem = false;
@@ -58,8 +59,29 @@
 		console.log('stopResponse');
 	};
 
+	const resizeSystemTextarea = async () => {
+		await tick();
+		if (systemTextareaElement) {
+			systemTextareaElement.style.height = '';
+			systemTextareaElement.style.height = Math.min(systemTextareaElement.scrollHeight, 555) + 'px';
+		}
+	};
+
+	$: if (showSystem) {
+		resizeSystemTextarea();
+	}
+
 	const chatCompletionHandler = async () => {
+		if (selectedModelId === '') {
+			toast.error($i18n.t('Please select a model.'));
+			return;
+		}
+
 		const model = $models.find((model) => model.id === selectedModelId);
+		if (!model) {
+			selectedModelId = '';
+			return;
+		}
 
 		const [res, controller] = await chatCompletion(
 			localStorage.token,
@@ -212,7 +234,7 @@
 
 						<div class="w-full">
 							<select
-								class="w-full bg-transparent border border-gray-50 dark:border-gray-850 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-none"
+								class="w-full bg-transparent border border-gray-100 dark:border-gray-850 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden"
 								bind:value={selectedModelId}
 							>
 								{#each $models as model}
@@ -230,11 +252,11 @@
 				<Collapsible
 					className="w-full flex-1"
 					bind:open={showSystem}
-					buttonClassName="w-full rounded-lg text-sm border border-gray-50 dark:border-gray-850 w-full py-1 px-1.5"
+					buttonClassName="w-full rounded-lg text-sm border border-gray-100 dark:border-gray-850 w-full py-1 px-1.5"
 					grow={true}
 				>
 					<div class="flex gap-2 justify-between items-center">
-						<div class=" flex-shrink-0 font-medium ml-1.5">
+						<div class=" shrink-0 font-medium ml-1.5">
 							{$i18n.t('System Instructions')}
 						</div>
 
@@ -244,7 +266,7 @@
 							</div>
 						{/if}
 
-						<div class="flex-shrink-0">
+						<div class="shrink-0">
 							<button class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg">
 								{#if showSystem}
 									<ChevronUp className="size-3.5" />
@@ -258,10 +280,13 @@
 					<div slot="content">
 						<div class="pt-1 px-1.5">
 							<textarea
-								id="system-textarea"
-								class="w-full h-full bg-transparent resize-none outline-none text-sm"
+								bind:this={systemTextareaElement}
+								class="w-full h-full bg-transparent resize-none outline-hidden text-sm"
 								bind:value={system}
 								placeholder={$i18n.t("You're a helpful assistant.")}
+								on:input={() => {
+									resizeSystemTextarea();
+								}}
 								rows="4"
 							/>
 						</div>
@@ -296,13 +321,13 @@
 				<div class="text-xs font-medium text-gray-500 px-2 py-1">
 					{selectedModelId}
 				</div>
-				<div class="border border-gray-50 dark:border-gray-850 w-full px-3 py-2.5 rounded-xl">
+				<div class="border border-gray-100 dark:border-gray-850 w-full px-3 py-2.5 rounded-xl">
 					<div class="py-0.5">
 						<!-- $i18n.t('a user') -->
 						<!-- $i18n.t('an assistant') -->
 						<textarea
 							bind:value={message}
-							class=" w-full h-full bg-transparent resize-none outline-none text-sm"
+							class=" w-full h-full bg-transparent resize-none outline-hidden text-sm"
 							placeholder={$i18n.t(`Enter {{role}} message here`, {
 								role: role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
 							})}

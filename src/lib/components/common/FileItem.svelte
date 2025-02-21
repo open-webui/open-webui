@@ -119,7 +119,7 @@
 	{#if dismissible}
 		<div class=" absolute -top-1 -right-1">
 			<button
-				class=" bg-gray-400 text-white border border-white rounded-full group-hover:visible invisible transition"
+				class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
 				type="button"
 				on:click|stopPropagation={() => {
 					dispatch('dismiss');

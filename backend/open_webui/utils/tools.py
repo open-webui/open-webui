@@ -61,6 +61,12 @@ def get_tools(
             )
 
         for spec in tools.specs:
+            # TODO: Fix hack for OpenAI API
+            # Some times breaks OpenAI but others don't. Leaving the comment
+            for val in spec.get("parameters", {}).get("properties", {}).values():
+                if val["type"] == "str":
+                    val["type"] = "string"
+
             # Remove internal parameters
             spec["parameters"]["properties"] = {
                 key: val
@@ -73,6 +79,13 @@ def get_tools(
             # convert to function that takes only model params and inserts custom params
             original_func = getattr(module, function_name)
             callable = apply_extra_params_to_tool_function(original_func, extra_params)
+
+            if callable.__doc__ and callable.__doc__.strip() != "":
+                s = re.split(":(param|return)", callable.__doc__, 1)
+                spec["description"] = s[0]
+            else:
+                spec["description"] = function_name
+
             # TODO: This needs to be a pydantic model
             tool_dict = {
                 "toolkit_id": tool_id,

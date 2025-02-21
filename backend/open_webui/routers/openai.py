@@ -75,9 +75,9 @@ async def cleanup_response(
         await session.close()
 
 
-def openai_o1_handler(payload):
+def openai_o1_o3_handler(payload):
     """
-    Handle O1 specific parameters
+    Handle o1, o3 specific parameters
     """
     if "max_tokens" in payload:
         # Remove "max_tokens" from the payload
@@ -489,7 +489,7 @@ async def get_models(
                 raise HTTPException(status_code=500, detail=error_detail)
 
     if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
-        models["data"] = get_filtered_models(models, user)
+        models["data"] = await get_filtered_models(models, user)
 
     return models
 
@@ -551,9 +551,9 @@ async def generate_chat_completion(
         bypass_filter = True
 
     idx = 0
+
     payload = {**form_data}
-    if "metadata" in payload:
-        del payload["metadata"]
+    metadata = payload.pop("metadata", None)
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
@@ -566,7 +566,7 @@ async def generate_chat_completion(
 
         params = model_info.params.model_dump()
         payload = apply_model_params_to_body_openai(params, payload)
-        payload = apply_model_system_prompt_to_body(params, payload, user)
+        payload = apply_model_system_prompt_to_body(params, payload, metadata, user)
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
@@ -621,10 +621,10 @@ async def generate_chat_completion(
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
 
-    # Fix: O1 does not support the "max_tokens" parameter, Modify "max_tokens" to "max_completion_tokens"
-    is_o1 = payload["model"].lower().startswith("o1-")
-    if is_o1:
-        payload = openai_o1_handler(payload)
+    # Fix: o1,o3 does not support the "max_tokens" parameter, Modify "max_tokens" to "max_completion_tokens"
+    is_o1_o3 = payload["model"].lower().startswith(("o1", "o3-"))
+    if is_o1_o3:
+        payload = openai_o1_o3_handler(payload)
     elif "api.openai.com" not in url:
         # Remove "max_completion_tokens" from the payload for backward compatibility
         if "max_completion_tokens" in payload:

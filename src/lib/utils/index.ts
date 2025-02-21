@@ -5,10 +5,12 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import isToday from 'dayjs/plugin/isToday';
 import isYesterday from 'dayjs/plugin/isYesterday';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 dayjs.extend(relativeTime);
 dayjs.extend(isToday);
 dayjs.extend(isYesterday);
+dayjs.extend(localizedFormat);
 
 import { WEBUI_BASE_URL } from '$lib/constants';
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
@@ -53,15 +55,12 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 
 	// Remove sourceIds from the content and replace them with <source_id>...</source_id>
 	if (Array.isArray(sourceIds)) {
-		sourceIds.forEach((sourceId) => {
-			// Escape special characters in the sourceId
-			const escapedSourceId = escapeRegExp(sourceId);
-
+		sourceIds.forEach((sourceId, idx) => {
 			// Create a token based on the exact `[sourceId]` string
-			const sourceToken = `\\[${escapedSourceId}\\]`; // Escape special characters for RegExp
+			const sourceToken = `\\[${idx}\\]`; // Escape special characters for RegExp
 			const sourceRegex = new RegExp(sourceToken, 'g'); // Match all occurrences of [sourceId]
 
-			content = content.replace(sourceRegex, `<source_id data="${sourceId}" />`);
+			content = content.replace(sourceRegex, `<source_id data="${idx}" title="${sourceId}" />`);
 		});
 	}
 
@@ -295,11 +294,11 @@ export const formatDate = (inputDate) => {
 	const now = dayjs();
 
 	if (date.isToday()) {
-		return `Today at ${date.format('HH:mm')}`;
+		return `Today at ${date.format('LT')}`;
 	} else if (date.isYesterday()) {
-		return `Yesterday at ${date.format('HH:mm')}`;
+		return `Yesterday at ${date.format('LT')}`;
 	} else {
-		return `${date.format('DD/MM/YYYY')} at ${date.format('HH:mm')}`;
+		return `${date.format('L')} at ${date.format('LT')}`;
 	}
 };
 
@@ -666,8 +665,15 @@ export const cleanText = (content: string) => {
 	return removeFormattings(removeEmojis(content.trim()));
 };
 
-export const removeDetailsWithReasoning = (content) => {
-	return content.replace(/<details\s+type="reasoning"[^>]*>.*?<\/details>/gis, '').trim();
+export const removeDetails = (content, types) => {
+	for (const type of types) {
+		content = content.replace(
+			new RegExp(`<details\\s+type="${type}"[^>]*>.*?<\\/details>`, 'gis'),
+			''
+		);
+	}
+
+	return content;
 };
 
 // This regular expression matches code blocks marked by triple backticks
@@ -739,7 +745,7 @@ export const extractSentencesForAudio = (text: string) => {
 };
 
 export const getMessageContentParts = (content: string, split_on: string = 'punctuation') => {
-	content = removeDetailsWithReasoning(content);
+	content = removeDetails(content, ['reasoning', 'code_interpreter']);
 	const messageContentParts: string[] = [];
 
 	switch (split_on) {
@@ -762,6 +768,19 @@ export const blobToFile = (blob, fileName) => {
 	// Create a new File object from the Blob
 	const file = new File([blob], fileName, { type: blob.type });
 	return file;
+};
+
+export const getPromptVariables = (user_name, user_location) => {
+	return {
+		'{{USER_NAME}}': user_name,
+		'{{USER_LOCATION}}': user_location || 'Unknown',
+		'{{CURRENT_DATETIME}}': getCurrentDateTime(),
+		'{{CURRENT_DATE}}': getFormattedDate(),
+		'{{CURRENT_TIME}}': getFormattedTime(),
+		'{{CURRENT_WEEKDAY}}': getWeekday(),
+		'{{CURRENT_TIMEZONE}}': getUserTimezone(),
+		'{{USER_LANGUAGE}}': localStorage.getItem('locale') || 'en-US'
+	};
 };
 
 /**
@@ -981,7 +1000,10 @@ export const bestMatchingLanguage = (supportedLanguages, preferredLanguages, def
 // Get the date in the format YYYY-MM-DD
 export const getFormattedDate = () => {
 	const date = new Date();
-	return date.toISOString().split('T')[0];
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
 };
 
 // Get the time in the format HH:MM:SS

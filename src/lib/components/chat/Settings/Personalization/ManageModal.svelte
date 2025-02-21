@@ -11,8 +11,10 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { error } from '@sveltejs/kit';
 	import EditMemoryModal from './EditMemoryModal.svelte';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	const i18n = getContext('i18n');
+	dayjs.extend(localizedFormat);
 
 	export let show = false;
 
@@ -64,7 +66,7 @@
 						<div class="relative overflow-x-auto">
 							<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto">
 								<thead
-									class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 dark:border-gray-800"
+									class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 dark:border-gray-850"
 								>
 									<tr>
 										<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
@@ -76,7 +78,7 @@
 								</thead>
 								<tbody>
 									{#each memories as memory}
-										<tr class="border-b dark:border-gray-800 items-center">
+										<tr class="border-b dark:border-gray-850 items-center">
 											<td class="px-3 py-1">
 												<div class="line-clamp-1">
 													{memory.content}
@@ -84,9 +86,7 @@
 											</td>
 											<td class=" px-3 py-1 hidden md:flex h-[2.5rem]">
 												<div class="my-auto whitespace-nowrap">
-													{dayjs(memory.updated_at * 1000).format(
-														$i18n.t('MMMM DD, YYYY hh:mm:ss A')
-													)}
+													{dayjs(memory.updated_at * 1000).format('LLL')}
 												</div>
 											</td>
 											<td class="px-3 py-1">
