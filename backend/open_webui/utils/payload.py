@@ -230,6 +230,12 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
                 "system"
             ]  # To prevent Ollama warning of invalid option provided
 
+    # If there is the "stop" parameter in the openai_payload, remap it to the ollama_payload.options
+    if "stop" in openai_payload:
+        ollama_options = ollama_payload.get("options", {})
+        ollama_options["stop"] = openai_payload.get("stop")
+        ollama_payload["options"] = ollama_options
+
     if "metadata" in openai_payload:
         ollama_payload["metadata"] = openai_payload["metadata"]
 
