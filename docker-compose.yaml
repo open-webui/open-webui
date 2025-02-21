@@ -24,6 +24,7 @@ services:
       - REDIS_HOST=redis
       - REDIS_PASSWORD=password
       - ENABLE_RATE_LIMIT=true
+      - ENABLE_RAG_PARENT_RETRIEVER=true
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
