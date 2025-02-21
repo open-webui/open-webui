@@ -1,7 +1,17 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
+	import type { ScrollerItem } from './scrollerItem.d.ts';
 	import { prompts, init } from '$lib/IONOS/stores/prompts';
 	import { selectPrompt } from '$lib/IONOS/services/prompt';
+	import { split, shuffle } from '$lib/IONOS/utils/arrays';
+	import Scroller from './Scroller.svelte';
+
+	const mapper = ({ id, promptDisplayName }): ScrollerItem => ({ id, text: promptDisplayName });
+
+	$: mapped = shuffle($prompts.map(mapper));
+	$: mappedSplit = split(mapped);
+	$: mappedA = mappedSplit[0];
+	$: mappedB = mappedSplit[1];
 
 	onMount(async () => {
 		await init();
@@ -9,14 +19,14 @@
 </script>
 
 <div>
-	{#each $prompts as { id, prompt, promptDisplayName, agentId }}
-		<button
-			class="fw-60 m-2 py-4 px-2 bg-white hover:bg-gray-100 shadow-md rounded-lg max-w-64 text-sm"
-			data-id={id}
-			on:click={() => selectPrompt(id)}
-		>
-			{promptDisplayName} →
-		</button>
-	{/each}
+	<Scroller
+		on:click={({ detail: id }) => selectPrompt(id)}
+		direction="left"
+		items={mappedA}
+	/>
+	<Scroller
+		on:click={({ detail: id }) => selectPrompt(id)}
+		direction="right"
+		items={mappedB}
+	/>
 </div>
-

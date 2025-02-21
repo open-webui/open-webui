@@ -44,7 +44,7 @@
 	{$i18n.t('Whether you need great content, eye-catching designs, or clean code, your virtual team is here to help every step of the way.', { ns: 'ionos' })}
 </p>
 
-<div class="block w-full py-5 text-center my-8">
+<div class="block w-full py-5 my-8">
 	<PromptSelector />
 </div>
 
