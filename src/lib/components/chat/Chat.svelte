@@ -1493,7 +1493,10 @@
 							params?.system ?? $settings?.system ?? '',
 							$user.name,
 							$settings?.userLocation
-								? await getAndUpdateUserLocation(localStorage.token)
+								? await getAndUpdateUserLocation(localStorage.token).catch((err) => {
+										console.error(err);
+										return undefined;
+									})
 								: undefined
 						)}${
 							(responseMessage?.userContext ?? null)
@@ -1578,7 +1581,12 @@
 				variables: {
 					...getPromptVariables(
 						$user.name,
-						$settings?.userLocation ? await getAndUpdateUserLocation(localStorage.token) : undefined
+						$settings?.userLocation
+							? await getAndUpdateUserLocation(localStorage.token).catch((err) => {
+									console.error(err);
+									return undefined;
+								})
+							: undefined
 					)
 				},
 				model_item: $models.find((m) => m.id === model.id),
