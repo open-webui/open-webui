@@ -23,6 +23,7 @@ from sqlalchemy.exc import NoSuchTableError
 
 from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import PGVECTOR_DB_URL, PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH
+from open_webui.env import ENV
 
 VECTOR_LENGTH = PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH
 Base = declarative_base()
@@ -68,19 +69,20 @@ class PgvectorClient:
             connection = self.session.connection()
             Base.metadata.create_all(bind=connection)
 
-            # Create an index on the vector column if it doesn't exist
-            self.session.execute(
-                text(
-                    "CREATE INDEX IF NOT EXISTS idx_document_chunk_vector "
-                    "ON document_chunk USING ivfflat (vector vector_cosine_ops) WITH (lists = 100);"
+            if ENV != "prod":
+                # Create an index on the vector column if it doesn't exist
+                self.session.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS idx_document_chunk_vector "
+                        "ON document_chunk USING ivfflat (vector vector_cosine_ops) WITH (lists = 100);"
+                    )
                 )
-            )
-            self.session.execute(
-                text(
-                    "CREATE INDEX IF NOT EXISTS idx_document_chunk_collection_name "
-                    "ON document_chunk (collection_name);"
+                self.session.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS idx_document_chunk_collection_name "
+                        "ON document_chunk (collection_name);"
+                    )
                 )
-            )
             self.session.commit()
             print("Initialization complete.")
         except Exception as e:

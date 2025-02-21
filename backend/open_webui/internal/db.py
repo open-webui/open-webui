@@ -5,6 +5,7 @@ from typing import Any, Optional
 
 from open_webui.internal.wrappers import register_connection
 from open_webui.env import (
+    ENV,
     OPEN_WEBUI_DIR,
     DATABASE_URL,
     DATABASE_SCHEMA,
@@ -59,7 +60,6 @@ def handle_peewee_migration(DATABASE_URL):
         router = Router(db, logger=log, migrate_dir=migrate_dir)
         router.run()
         db.close()
-
     except Exception as e:
         log.error(f"Failed to initialize the database connection: {e}")
         raise
@@ -72,7 +72,9 @@ def handle_peewee_migration(DATABASE_URL):
         assert db.is_closed(), "Database connection is still open."
 
 
-handle_peewee_migration(DATABASE_URL)
+# 如果是正式环境，则不调用handle_peewee_migration
+if ENV != "prod":
+    handle_peewee_migration(DATABASE_URL)
 
 
 SQLALCHEMY_DATABASE_URL = DATABASE_URL

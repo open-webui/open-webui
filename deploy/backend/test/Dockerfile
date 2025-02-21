@@ -13,13 +13,17 @@ COPY backend/requirements.txt /
 RUN python3 -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -U pip
 RUN python3 -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
-ENV http_proxy="http://10.10.1.81:2345" \
+
+ENV ENV="test" \
+    http_proxy="http://10.10.1.81:2345" \
     https_proxy="http://10.10.1.81:2345" \
     DATABASE_URL="postgresql://dbuser_staging:DBUser.Staging@10.10.1.146:6432/ttx-oi" \
     VECTOR_DB="pgvector" \
     PGVECTOR_DB_URL="postgresql://dbuser_staging:DBUser.Staging@10.10.1.146:6432/ttx-oi" \
     RAG_EMBEDDING_ENGINE="openai" \
-    RAG_EMBEDDING_MODEL="text-embedding-3-small"
+    RAG_EMBEDDING_MODEL="text-embedding-3-small" \
+    WEBUI_AUTH_TRUSTED_NAME_HEADER="webauth-username" \
+    WEBUI_AUTH_TRUSTED_EMAIL_HEADER="webauth-email"
 
 # RUN curl -O https://sqlite.org/2021/sqlite-autoconf-3350000.tar.gz && \
 #     tar -xvzf sqlite-autoconf-3350000.tar.gz && \
@@ -34,8 +38,6 @@ ENV http_proxy="http://10.10.1.81:2345" \
 #     # 清理临时文件
 #     cd .. && \
 #     rm -rf sqlite-autoconf-3350000.tar.gz sqlite-autoconf-3350000
-
-
 
 COPY . /
 COPY deploy/backend/test/entrypoint.sh /

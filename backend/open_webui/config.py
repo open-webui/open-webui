@@ -60,7 +60,8 @@ def run_migrations():
         print(f"Error: {e}")
 
 
-run_migrations()
+if ENV != "prod":
+    run_migrations()
 
 
 class Config(Base):
