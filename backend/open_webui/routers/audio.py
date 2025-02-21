@@ -681,15 +681,19 @@ def get_available_models(request: Request) -> list[dict]:
     available_models = []
     if request.app.state.config.TTS_ENGINE == "openai":
         # Use custom endpoint if not using the official OpenAI API URL
-        if not request.app.state.config.TTS_OPENAI_API_BASE_URL.startswith("https://api.openai.com"):
+        if not request.app.state.config.TTS_OPENAI_API_BASE_URL.startswith(
+            "https://api.openai.com"
+        ):
             try:
-                response = requests.get(f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/models")
+                response = requests.get(
+                    f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/models"
+                )
                 response.raise_for_status()
                 data = response.json()
                 available_models = data.get("models", [])
             except Exception as e:
                 log.error(f"Error fetching models from custom endpoint: {str(e)}")
-                available_models = []
+                available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
         else:
             available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
@@ -723,16 +727,27 @@ def get_available_voices(request) -> dict:
     available_voices = {}
     if request.app.state.config.TTS_ENGINE == "openai":
         # Use custom endpoint if not using the official OpenAI API URL
-        if not request.app.state.config.TTS_OPENAI_API_BASE_URL.startswith("https://api.openai.com"):
+        if not request.app.state.config.TTS_OPENAI_API_BASE_URL.startswith(
+            "https://api.openai.com"
+        ):
             try:
-                response = requests.get(f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/voices")
+                response = requests.get(
+                    f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/voices"
+                )
                 response.raise_for_status()
                 data = response.json()
                 voices_list = data.get("voices", [])
                 available_voices = {voice["id"]: voice["name"] for voice in voices_list}
             except Exception as e:
                 log.error(f"Error fetching voices from custom endpoint: {str(e)}")
-                available_voices = {}
+                available_voices = {
+                    "alloy": "alloy",
+                    "echo": "echo",
+                    "fable": "fable",
+                    "onyx": "onyx",
+                    "nova": "nova",
+                    "shimmer": "shimmer",
+                }
         else:
             available_voices = {
                 "alloy": "alloy",
