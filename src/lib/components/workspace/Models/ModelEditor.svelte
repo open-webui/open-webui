@@ -694,11 +694,11 @@
 						<Knowledge bind:selectedKnowledge={knowledge} collections={$knowledgeCollections} />
 					</div>
 					<div class="my-1">
-						<div class=" text-xs font-semibold mb-2">{$i18n.t('RAG Prompt')}</div>
+						<div class=" text-xs font-semibold mb-2">{$i18n.t('RAG Template')}</div>
 						<div>
 							<Textarea
 								className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
-								placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
+								placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 								rows={4}
 								bind:value={info.params.rag_prompt}
 							/>
