@@ -23,6 +23,6 @@ RUN make pack ENV=${env} VERSION=${version}
 FROM ${harbor}/cicd/static_nginx_base:v1.2.0
 ARG env
 COPY --from=builder /app/package /app
-COPY deploy/${env}/entrypoint.sh /
+COPY deploy/gpt-oi-web/${env}/entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT /bin/sh -c /entrypoint.sh
