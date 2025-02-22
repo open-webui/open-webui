@@ -1,4 +1,6 @@
 import logging
+import requests
+import json
 from typing import Optional
 
 from open_webui.models.auths import Auths
@@ -10,7 +12,9 @@ from open_webui.models.users import (
     UserSettings,
     UserUpdateForm,
 )
-
+from open_webui.config import (
+    HKUST_OPEN_API_BASE_URL,
+)
 
 from open_webui.socket.main import get_active_status_by_user_id
 from open_webui.constants import ERROR_MESSAGES
@@ -250,7 +254,67 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.USER_NOT_FOUND,
         )
+        
+############################
+# GetUserUstCredit
+############################
+@router.get("/user/credit", response_model=Optional[str])
+async def get_user_info_by_session_user(user=Depends(get_verified_user)):
+    user = Users.get_user_by_id(user.id)
 
+    if user:
+        try:
+            response = requests.get(
+                url = f"{HKUST_OPEN_API_BASE_URL}/openai-balance/get",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "api-key": user.ust_api_key
+                }
+            )
+
+            response.raise_for_status()  # Raise an exception for HTTP errors.
+            return json.dumps(response.json())
+            
+        except Exception as ex:
+            log.error(f"Error: {ex}")
+            raise ex
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+    
+
+@router.get("/{user_id}", response_model=str)
+async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
+    # Check if user_id is a shared chat
+    # If it is, get the user_id from the chat
+    if user_id.startswith("shared-"):
+        chat_id = user_id.replace("shared-", "")
+        chat = Chats.get_chat_by_id(chat_id)
+        if chat:
+            user_id = chat.user_id
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.USER_NOT_FOUND,
+            )
+
+    user = Users.get_user_by_id(user_id)
+
+    if user:
+        return UserResponse(
+            **{
+                "name": user.name,
+                "profile_image_url": user.profile_image_url,
+                "active": get_active_status_by_user_id(user_id),
+            }
+        )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
 
 ############################
 # UpdateUserById
