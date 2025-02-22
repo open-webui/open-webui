@@ -214,7 +214,7 @@
 		<div class="mx-5">
 			<Suggestions
 				suggestionPrompts={
-					atSelectedModel?.meta?.suggestion_prompts ??
+					atSelectedModel?.info?.meta?.suggestion_prompts ??
 					models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
 					$config?.default_prompt_suggestions ??
 					[]}
