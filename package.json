@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.5.14",
+	"version": "0.5.16",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
@@ -106,6 +106,7 @@
 		"svelte-sonner": "^0.3.19",
 		"tippy.js": "^6.3.7",
 		"turndown": "^7.2.0",
+		"undici": "^7.3.0",
 		"uuid": "^9.0.1",
 		"vite-plugin-static-copy": "^2.2.0"
 	},
