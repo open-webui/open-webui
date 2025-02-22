@@ -76,21 +76,6 @@ class RedisService:
         except Exception as e:
             log.error(f"Failed to connect to Redis: {redis_url} {e}")
 
-    def extract_username_from_token(self, token):
-        parts = token.split('.')
-        base64_str = parts[1]
-
-        if len(base64_str) % 4 == 2:
-            base64_str += "=="
-        elif len(base64_str) % 4 == 3:
-            base64_str += "="
-
-        json_bytes = base64.b64decode(base64_str)
-        json_str = json_bytes.decode('utf-8')
-        jwt = json.loads(json_str)
-
-        return jwt['oid']
-
 
 class RedisLock:
     def __init__(self, redis_url, lock_name, timeout_secs, **redis_kwargs):
