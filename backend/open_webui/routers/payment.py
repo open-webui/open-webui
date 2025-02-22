@@ -26,7 +26,7 @@ async def generate_signature(request: SignatureRequest):
    
 
     # Строка для подписи
-    signature_string = f"{merchant_login}:{out_sum}:{inv_id}:{email}:{ROBOKASSA_PASSWORD}:{shp_user_id}"
+    signature_string = f"{merchant_login}:{out_sum}:{inv_id}:{ROBOKASSA_PASSWORD}:{shp_user_id}"
 
     # Рассчитываем SHA-256 хэш
     signature_value = hashlib.sha256(signature_string.encode()).hexdigest()
