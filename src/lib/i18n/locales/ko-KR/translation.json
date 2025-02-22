@@ -888,6 +888,7 @@
 	"Send": "보내기",
 	"Send a Message": "메시지 보내기",
 	"Send message": "메시지 보내기",
+	"Purchase API Credit": "API 토큰 결제",
 	"Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.": "'stream_options: { include_usage: true }' 요청 보내기 \n지원되는 제공자가 토큰 사용 정보를 응답할 예정입니다",
 	"September": "9월",
 	"SerpApi API Key": "",

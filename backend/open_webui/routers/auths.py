@@ -427,7 +427,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
 @router.post("/api", response_model=CheckApiResponse)
 async def checkApi(response: Response, form_data: CheckApiForm):
-    url = f"{HKUST_OPEN_API_BASE_URL}/gpt-4o-mini/{HKUST_OPEN_API_QUERY}?api-version={form_data.api_version}"
+    url = f"{HKUST_OPEN_API_BASE_URL}/openai/deployments/gpt-4o-mini/{HKUST_OPEN_API_QUERY}?api-version={form_data.api_version}"
     headers = {
         "Content-Type": "application/json",
         "api-key": form_data.ust_api_key
