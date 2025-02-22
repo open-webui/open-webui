@@ -29,7 +29,10 @@
 
   	// Извлекаем user id
   	let userId = currentUser?.id; // Используем опциональную цепочку, чтобы избежать ошибок, если пользователь не загружен
-	console.log("ud", userId)
+	let email = currentUser?.email 
+	console.log("id", userId)
+	console.log("email", email)
+
 </script>
 
 <DropdownMenu.Root
@@ -63,7 +66,7 @@
      <div class="self-center truncate">{$i18n.t('Update Plan')}</div>
    </button>
    {#if showUpdatePlanModal}
-  <UpdatePlanModal bind:showUpdatePlanModal {userId} />
+  <UpdatePlanModal bind:showUpdatePlanModal {userId} {email} />
  {/if}
    <!-- Другие элементы меню -->
 
