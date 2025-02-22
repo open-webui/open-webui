@@ -465,7 +465,7 @@
 						saveCode();
 					}}
 					onChange={(e) => {
-						_code = e.detail.value;
+						_code = e;
 					}}
 				/>
 			</div>

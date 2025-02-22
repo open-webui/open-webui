@@ -89,13 +89,13 @@
 				{attributes}
 				{save}
 				onCode={(e) => {
-					dispatch('code', e.detail);
+					dispatch('code', e);
 				}}
 				onSave={(e) => {
 					dispatch('update', {
 						raw: token.raw,
 						oldContent: token.text,
-						newContent: e.detail
+						newContent: e
 					});
 				}}
 			/>

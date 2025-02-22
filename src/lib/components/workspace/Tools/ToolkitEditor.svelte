@@ -285,7 +285,7 @@ class Tools:
 						{boilerplate}
 						lang="python"
 						onChange={(e) => {
-							_content = e.detail.value;
+							_content = e;
 						}}
 						onSave={() => {
 							if (formElement) {

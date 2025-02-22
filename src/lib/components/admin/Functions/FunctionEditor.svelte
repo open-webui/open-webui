@@ -372,7 +372,7 @@ class Pipe:
 						lang="python"
 						{boilerplate}
 						onChange={(e) => {
-							_content = e.detail.value;
+							_content = e;
 						}}
 						onSave={async () => {
 							if (formElement) {
