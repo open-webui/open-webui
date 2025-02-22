@@ -130,7 +130,7 @@
   <div class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
     <div class="bg-white dark:bg-gray-850 p-6 rounded-xl shadow-xl w-11/12 max-w-4xl">
       <h2 class="text-xl mb-4">Обновить план</h2>
-      <p>User ID: {userId} P: {password1} </p> <!-- Отображаем user id -->
+      <p>User ID: {userId}</p> <!-- Отображаем user id -->
 
       <!-- Контейнер с карточками -->
       <div class="cards-container">
