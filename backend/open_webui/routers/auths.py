@@ -252,14 +252,6 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             if not user:
                 try:
                     user_count = Users.get_num_users()
-                    if (
-                        request.app.state.USER_COUNT
-                        and user_count >= request.app.state.USER_COUNT
-                    ):
-                        raise HTTPException(
-                            status.HTTP_403_FORBIDDEN,
-                            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-                        )
 
                     role = (
                         "admin"
@@ -439,11 +431,6 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             )
 
     user_count = Users.get_num_users()
-    if request.app.state.USER_COUNT and user_count >= request.app.state.USER_COUNT:
-        raise HTTPException(
-            status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
-        )
-
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
