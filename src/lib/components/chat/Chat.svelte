@@ -35,7 +35,8 @@
 		showOverview,
 		chatTitle,
 		showArtifacts,
-		tools
+		tools,
+		credit
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -66,7 +67,7 @@
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
-	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
+	import { getAndUpdateUserLocation, getUserCredit, getUserSettings } from '$lib/apis/users';
 	import {
 		chatCompleted,
 		generateQueries,
@@ -946,6 +947,10 @@
 		}, 1000);
 	};
 
+	const initCredit = async () => {
+		await credit.set(await getUserCredit(localStorage.token));
+	}
+
 	const createMessagePair = async (userPrompt) => {
 		prompt = '';
 		if (selectedModels.length === 0) {
@@ -1626,6 +1631,7 @@
 
 		await tick();
 		scrollToBottom();
+		initCredit();
 	};
 
 	const handleOpenAIError = async (error, responseMessage) => {

@@ -20,7 +20,8 @@
 		channels,
 		socket,
 		config,
-		isApp
+		isApp,
+		credit
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -54,9 +55,11 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import Folders from './Sidebar/Folders.svelte';
 	import { getChannels, createNewChannel } from '$lib/apis/channels';
+	import { getUserCredit } from '$lib/apis/users';
 	import ChannelModal from './Sidebar/ChannelModal.svelte';
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
+	import CreditMenu from './Sidebar/CreditMenu.svelte';
 	import Home from '../icons/Home.svelte';
 
 	const BREAKPOINT = 768;
@@ -68,6 +71,7 @@
 
 	let selectedChatId = null;
 	let showDropdown = false;
+	let showCreditDropdown = false;
 	let showPinnedChat = true;
 
 	let showCreateChannel = false;
@@ -153,6 +157,10 @@
 			await initFolders();
 		}
 	};
+
+	const initCredit = async () => {
+		await credit.set(await getUserCredit(localStorage.token));
+	}
 
 	const initChannels = async () => {
 		await channels.set(await getChannels(localStorage.token));
@@ -383,6 +391,7 @@
 			}
 		});
 
+		await initCredit();
 		await initChannels();
 		await initChatList();
 
@@ -884,6 +893,16 @@
 		<div class="px-2">
 			<div class="flex flex-col font-primary">
 				{#if $user !== undefined}
+					<CreditMenu>
+						<button
+							class="flex items-center rounded-xl py-4.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							on:click={() => {
+								showCreditDropdown = !showCreditDropdown;
+							}}
+						>
+							<div class="self-center font-semibold">Credit: HK$ {$credit}</div>
+						</button>
+					</CreditMenu>
 					<UserMenu
 						role={$user.role}
 						on:show={(e) => {
