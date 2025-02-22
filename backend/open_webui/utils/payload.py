@@ -124,7 +124,7 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
         tool_call_id = message.get("tool_call_id", None)
 
         # Check if the content is a string (just a simple message)
-        if isinstance(content, str):
+        if isinstance(content, str) and not tool_calls:
             # If the content is a string, it's pure text
             new_message["content"] = content
 
