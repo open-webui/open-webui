@@ -1,15 +1,104 @@
+import base64
 import json
 import redis
 import uuid
+import logging
+
+from open_webui.env import (
+    WEBSOCKET_REDIS_AZURE_CREDENTIALS,
+    SRC_LOG_LEVELS
+)
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["SOCKET"])
+
+
+class AzureCredentialService:
+    def __init__(self):
+        from azure.identity import DefaultAzureCredential
+        log.debug("Using DefaultAzureCredential provider for Redis Cache Authentication")
+        self.credential = DefaultAzureCredential()
+
+    def get_token(self):
+        token = self.credential.get_token("https://redis.azure.com/.default")
+        return token.token
+
+    def extract_username_from_token(self, token):
+        parts = token.split('.')
+        base64_str = parts[1]
+
+        if len(base64_str) % 4 == 2:
+            base64_str += "=="
+        elif len(base64_str) % 4 == 3:
+            base64_str += "="
+
+        json_bytes = base64.b64decode(base64_str)
+        json_str = json_bytes.decode('utf-8')
+        jwt = json.loads(json_str)
+
+        return jwt['oid']
+
+
+class RedisService:
+
+    def __init__(self, redis_url, ssl_ca_certs=None, username=None, password=None):
+        if not password and WEBSOCKET_REDIS_AZURE_CREDENTIALS:
+            azure_credential_service = AzureCredentialService()
+            password = azure_credential_service.get_token()
+            username = azure_credential_service.extract_username_from_token(password)
+
+        try:
+            masked_password = f"{password[:3]}***{password[-3:]}" if password else None
+            log.debug(f"redis_url: {redis_url}")
+            log.debug(f"redis_username: {username}")
+            log.debug(f"redis_password: {masked_password}")
+            log.debug(f"redis_ssl_ca_certs: {ssl_ca_certs}")
+            self.client = redis.Redis.from_url(
+                url=redis_url,
+                username=username,
+                password=password,
+                decode_responses=True,
+                ssl_ca_certs=ssl_ca_certs,
+                socket_timeout=5,
+            )
+
+            if self.client.ping():
+                log.debug(f"Connected to Redis: {redis_url}")
+            else:
+                log.error(f"Failed to connect to Redis: {redis_url}")
+
+        except ConnectionError as e:
+            log.error(f"Failed to connect to Redis: {redis_url} {e}")
+        except TimeoutError as e:
+            log.error(f"Timed out connecting to Redis: {redis_url} {e}")
+        except redis.AuthenticationError as e:
+            log.error(f"Authentication failed connecting to Redis: {redis_url} {e}")
+        except Exception as e:
+            log.error(f"Failed to connect to Redis: {redis_url} {e}")
+
+    def extract_username_from_token(self, token):
+        parts = token.split('.')
+        base64_str = parts[1]
+
+        if len(base64_str) % 4 == 2:
+            base64_str += "=="
+        elif len(base64_str) % 4 == 3:
+            base64_str += "="
+
+        json_bytes = base64.b64decode(base64_str)
+        json_str = json_bytes.decode('utf-8')
+        jwt = json.loads(json_str)
+
+        return jwt['oid']
 
 
 class RedisLock:
-    def __init__(self, redis_url, lock_name, timeout_secs):
+    def __init__(self, redis_url, lock_name, timeout_secs, **redis_kwargs):
         self.lock_name = lock_name
         self.lock_id = str(uuid.uuid4())
         self.timeout_secs = timeout_secs
         self.lock_obtained = False
-        self.redis = redis.Redis.from_url(redis_url, decode_responses=True)
+        self.redis = RedisService(redis_url, **redis_kwargs).client
 
     def aquire_lock(self):
         # nx=True will only set this key if it _hasn't_ already been set
@@ -31,9 +120,9 @@ class RedisLock:
 
 
 class RedisDict:
-    def __init__(self, name, redis_url):
+    def __init__(self, name, redis_url, **redis_kwargs):
         self.name = name
-        self.redis = redis.Redis.from_url(redis_url, decode_responses=True)
+        self.redis = RedisService(redis_url, **redis_kwargs).client
 
     def __setitem__(self, key, value):
         serialized_value = json.dumps(value)

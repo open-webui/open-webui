@@ -387,6 +387,12 @@ WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
 
 WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", REDIS_URL)
 
+WEBSOCKET_REDIS_CERTS = os.environ.get("WEBSOCKET_REDIS_CERTS", "")
+
+WEBSOCKET_REDIS_USERNAME = os.environ.get("WEBSOCKET_REDIS_USERNAME", "")
+
+WEBSOCKET_REDIS_PASSWORD = os.environ.get("WEBSOCKET_REDIS_PASSWORD", "")
+
 AIOHTTP_CLIENT_TIMEOUT = os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "")
 
 if AIOHTTP_CLIENT_TIMEOUT == "":
@@ -419,3 +425,11 @@ OFFLINE_MODE = os.environ.get("OFFLINE_MODE", "false").lower() == "true"
 
 if OFFLINE_MODE:
     os.environ["HF_HUB_OFFLINE"] = "1"
+
+####################################
+# WEBSOCKET_REDIS_AZURE_CREDENTIALS
+####################################
+
+WEBSOCKET_REDIS_AZURE_CREDENTIALS = (
+    os.environ.get("WEBSOCKET_REDIS_AZURE_CREDENTIALS", "True").lower() == "true"
+)
