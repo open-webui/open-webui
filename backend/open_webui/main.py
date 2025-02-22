@@ -44,6 +44,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
 
+from open_webui.routers.payment import router as payment_router
 
 from open_webui.socket.main import (
     app as socket_app,
@@ -846,6 +847,7 @@ app.mount("/ws", socket_app)
 app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
 
+app.include_router(payment_router, prefix="/api/v1/payment", tags=["payment"])
 
 app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])
 app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["tasks"])
