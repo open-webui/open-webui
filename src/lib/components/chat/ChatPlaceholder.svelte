@@ -16,6 +16,7 @@
 
 	export let modelIds = [];
 	export let models = [];
+	export let atSelectedModel;
 
 	export let submitPrompt;
 
@@ -126,7 +127,9 @@
 		<div class=" w-full font-primary" in:fade={{ duration: 200, delay: 300 }}>
 			<Suggestions
 				className="grid grid-cols-2"
-				suggestionPrompts={models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
+				suggestionPrompts={
+					atSelectedModel?.meta?.suggestion_prompts ??
+					models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
 					$config?.default_prompt_suggestions ??
 					[]}
 				on:select={(e) => {

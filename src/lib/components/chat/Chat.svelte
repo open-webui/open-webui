@@ -1978,6 +1978,7 @@
 									bind:autoScroll
 									bind:prompt
 									{selectedModels}
+									{atSelectedModel}
 									{sendPrompt}
 									{showMessage}
 									{submitMessage}
