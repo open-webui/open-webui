@@ -553,8 +553,8 @@ async def chat_completion_files_handler(
             # Offload get_sources_from_files to a separate thread
             loop = asyncio.get_running_loop()
             # Retrieve per-model custom top-k if available
-            rag_top_k = metadata["model"].params.model_dump().get('rag_top_k') \
-            if metadata["model"].params.model_dump().get('rag_top_k') \
+            rag_top_k = metadata["model"]["params"].get('rag_top_k') \
+            if metadata["model"]["params"].get('rag_top_k') \
             else request.app.state.config.TOP_K
             with ThreadPoolExecutor() as executor:
                 sources = await loop.run_in_executor(
@@ -819,8 +819,8 @@ async def process_chat_payload(request, form_data, metadata, user, model):
             )
         
         # Apply Per Model RAG Template if applicable
-        custom_rag_template = metadata["model"].params.model_dump().get('rag_template') \
-        if metadata["model"].params.model_dump().get('rag_template') \
+        custom_rag_template = metadata["model"]["params"].get('rag_template') \
+        if metadata["model"]["params"].get('rag_template') \
         else request.app.state.config.RAG_TEMPLATE
 
         # Workaround for Ollama 2.0+ system prompt issue
