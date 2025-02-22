@@ -20,34 +20,34 @@ services:
     restart: always
     env_file:
       - .env
-  searxng:
-    container_name: searxng
-    image: searxng/searxng:latest
-    environment:
-      - SEARXNG_UWSGI_WORKERS=${SEARXNG_UWSGI_WORKERS}
-      - SEARXNG_UWSGI_THREADS=${SEARXNG_UWSGI_THREADS}
-      - SEARXNG_HOSTNAME=${SEARXNG_HOSTNAME}
-    ports:
-      - "8080:8080"
-    volumes:
-      - searxng-data:/etc/searxng:rw
-      - ./searx-settings.yml:/usr/local/searxng/searx/settings.yml:ro
-    env_file:
-      - .env
-    restart: always
-    cap_drop:
-      - ALL
-    cap_add:
-      - CHOWN
-      - SETGID
-      - SETUID
-      - DAC_OVERRIDE
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "1m"
-        max-file: "1"
+  # searxng:
+  #   container_name: searxng
+  #   image: searxng/searxng:latest
+  #   environment:
+  #     - SEARXNG_UWSGI_WORKERS=${SEARXNG_UWSGI_WORKERS}
+  #     - SEARXNG_UWSGI_THREADS=${SEARXNG_UWSGI_THREADS}
+  #     - SEARXNG_HOSTNAME=${SEARXNG_HOSTNAME}
+  #   ports:
+  #     - "8080:8080"
+  #   volumes:
+  #     - searxng-data:/etc/searxng:rw
+  #     - ./searx-settings.yml:/usr/local/searxng/searx/settings.yml:ro
+  #   env_file:
+  #     - .env
+  #   restart: always
+  #   cap_drop:
+  #     - ALL
+  #   cap_add:
+  #     - CHOWN
+  #     - SETGID
+  #     - SETUID
+  #     - DAC_OVERRIDE
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "1m"
+  #       max-file: "1"
 
 volumes:
   open-webui-data:
-  searxng-data:
+  # searxng-data:
