@@ -222,7 +222,8 @@
 </script>
 
 <SettingsModal bind:show={$showSettings} />
-<ChangelogModal bind:show={$showChangelog} />
+<!-- 2025/Feb/22 업데이트 내역 알려주는 모달 안뜨도록 처리 -->
+<!-- <ChangelogModal bind:show={$showChangelog} /> -->
 
 {#if version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}
 	<div class=" absolute bottom-8 right-8 z-50" in:fade={{ duration: 100 }}>
