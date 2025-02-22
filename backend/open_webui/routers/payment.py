@@ -11,7 +11,7 @@ router = APIRouter()
 class SignatureRequest(BaseModel):
     user_id: str
     price: str
-    email: email
+    email: str
 
 # Пароль#1 (замените на ваш реальный пароль)
 ROBOKASSA_PASSWORD = os.getenv("ROBOKASSA_PASSWORD", "r8xoXYKrTcsoT11Xq02N")
