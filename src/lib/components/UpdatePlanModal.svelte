@@ -1,6 +1,7 @@
 <script lang="ts">
   export let showUpdatePlanModal: boolean;
   export let userId: string; // Принимаем user id как пропс
+  export let email: string; // Принимаем email как пропс
 
   // Функция для запроса подписи с бэкенда
   async function fetchSignature(price: string): Promise<string> {
@@ -13,6 +14,7 @@
         body: JSON.stringify({
           user_id: userId,
           price: price,
+          email: email
         }),
       });
 
@@ -36,12 +38,13 @@
     const description = encodeURIComponent("Оплата заказа в Тестовом магазине ROBOKASSA");
     const isTest = "1"; // Тестовый режим
     const shpUserId = `Shp_userId=${userId}`; // Передаём user id в Shp
+    const shpEmail= `Shp_email=${email}`; // Передаём email в Shp
 
     // Получаем подпись с бэкенда
     const signatureValue = await fetchSignature(price);
 
     // Формируем ссылку для оплаты
-    const paymentLink = `https://auth.robokassa.ru/Merchant/Index.aspx?MerchantLogin=${merchantLogin}&OutSum=${outSum}&InvoiceID=${invId}&Description=${description}&IsTest=${isTest}&${shpUserId}&SignatureValue=${signatureValue}`;
+    const paymentLink = `https://auth.robokassa.ru/Merchant/Index.aspx?MerchantLogin=${merchantLogin}&OutSum=${outSum}&InvoiceID=${invId}&Description=${description}&IsTest=${isTest}&${shpEmail}&${shpUserId}&SignatureValue=${signatureValue}`;
 
     return paymentLink;
   }
