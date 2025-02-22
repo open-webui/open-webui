@@ -171,7 +171,13 @@ def install_frontmatter_requirements(requirements):
             req_list = [req.strip() for req in requirements.split(",")]
             for req in req_list:
                 log.info(f"Installing requirement: {req}")
-                subprocess.check_call([sys.executable, "-m", "pip", "install", req])
+                subprocess.check_call([
+                    sys.executable, "-m", "uv", "pip",
+                    "install",
+                    "--overrides", "/app/backend/requirements.txt",
+                    req,
+                    "--system"
+                ])
         except Exception as e:
             log.error(f"Error installing package: {req}")
             raise e
