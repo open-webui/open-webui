@@ -1,6 +1,7 @@
 <script>
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
+	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 
 	let loadingProgress = spring(0, {
 		stiffness: 0.05
@@ -10,12 +11,21 @@
 	import {
 		config,
 		user,
+		settings,
 		theme,
 		WEBUI_NAME,
 		mobile,
 		socket,
-		activeUserCount,
-		USAGE_POOL
+		activeUserIds,
+		USAGE_POOL,
+		chatId,
+		chats,
+		currentChatPage,
+		tags,
+		temporaryChatEnabled,
+		isLastActiveTab,
+		isApp,
+		appInfo
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -32,23 +42,31 @@
 	import { WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
 	import i18n, { initI18n, getLanguages } from '$lib/i18n';
 	import { bestMatchingLanguage } from '$lib/utils';
+	import { getAllTags, getChatList } from '$lib/apis/chats';
+	import NotificationToast from '$lib/components/NotificationToast.svelte';
+	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
+	import { chatCompletion } from '$lib/apis/openai';
 
 	setContext('i18n', i18n);
 
+	const bc = new BroadcastChannel('active-tab-channel');
+
 	let loaded = false;
+
 	const BREAKPOINT = 768;
 
-	const setupSocket = () => {
+	const setupSocket = async (enableWebsocket) => {
 		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
 			reconnection: true,
 			reconnectionDelay: 1000,
 			reconnectionDelayMax: 5000,
 			randomizationFactor: 0.5,
 			path: '/ws/socket.io',
+			transports: enableWebsocket ? ['websocket'] : ['polling', 'websocket'],
 			auth: { token: localStorage.token }
 		});
 
-		socket.set(_socket);
+		await socket.set(_socket);
 
 		_socket.on('connect_error', (err) => {
 			console.log('connect_error', err);
@@ -73,9 +91,9 @@
 			}
 		});
 
-		_socket.on('user-count', (data) => {
-			console.log('user-count', data);
-			activeUserCount.set(data.count);
+		_socket.on('user-list', (data) => {
+			console.log('user-list', data);
+			activeUserIds.set(data.user_ids);
 		});
 
 		_socket.on('usage', (data) => {
@@ -84,7 +102,344 @@
 		});
 	};
 
+	const executePythonAsWorker = async (id, code, cb) => {
+		let result = null;
+		let stdout = null;
+		let stderr = null;
+
+		let executing = true;
+		let packages = [
+			code.includes('requests') ? 'requests' : null,
+			code.includes('bs4') ? 'beautifulsoup4' : null,
+			code.includes('numpy') ? 'numpy' : null,
+			code.includes('pandas') ? 'pandas' : null,
+			code.includes('matplotlib') ? 'matplotlib' : null,
+			code.includes('sklearn') ? 'scikit-learn' : null,
+			code.includes('scipy') ? 'scipy' : null,
+			code.includes('re') ? 'regex' : null,
+			code.includes('seaborn') ? 'seaborn' : null,
+			code.includes('sympy') ? 'sympy' : null,
+			code.includes('tiktoken') ? 'tiktoken' : null,
+			code.includes('pytz') ? 'pytz' : null
+		].filter(Boolean);
+
+		const pyodideWorker = new PyodideWorker();
+
+		pyodideWorker.postMessage({
+			id: id,
+			code: code,
+			packages: packages
+		});
+
+		setTimeout(() => {
+			if (executing) {
+				executing = false;
+				stderr = 'Execution Time Limit Exceeded';
+				pyodideWorker.terminate();
+
+				if (cb) {
+					cb(
+						JSON.parse(
+							JSON.stringify(
+								{
+									stdout: stdout,
+									stderr: stderr,
+									result: result
+								},
+								(_key, value) => (typeof value === 'bigint' ? value.toString() : value)
+							)
+						)
+					);
+				}
+			}
+		}, 60000);
+
+		pyodideWorker.onmessage = (event) => {
+			console.log('pyodideWorker.onmessage', event);
+			const { id, ...data } = event.data;
+
+			console.log(id, data);
+
+			data['stdout'] && (stdout = data['stdout']);
+			data['stderr'] && (stderr = data['stderr']);
+			data['result'] && (result = data['result']);
+
+			if (cb) {
+				cb(
+					JSON.parse(
+						JSON.stringify(
+							{
+								stdout: stdout,
+								stderr: stderr,
+								result: result
+							},
+							(_key, value) => (typeof value === 'bigint' ? value.toString() : value)
+						)
+					)
+				);
+			}
+
+			executing = false;
+		};
+
+		pyodideWorker.onerror = (event) => {
+			console.log('pyodideWorker.onerror', event);
+
+			if (cb) {
+				cb(
+					JSON.parse(
+						JSON.stringify(
+							{
+								stdout: stdout,
+								stderr: stderr,
+								result: result
+							},
+							(_key, value) => (typeof value === 'bigint' ? value.toString() : value)
+						)
+					)
+				);
+			}
+			executing = false;
+		};
+	};
+
+	const chatEventHandler = async (event, cb) => {
+		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
+
+		let isFocused = document.visibilityState !== 'visible';
+		if (window.electronAPI) {
+			const res = await window.electronAPI.send({
+				type: 'window:isFocused'
+			});
+			if (res) {
+				isFocused = res.isFocused;
+			}
+		}
+
+		await tick();
+		const type = event?.data?.type ?? null;
+		const data = event?.data?.data ?? null;
+
+		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isFocused) {
+			if (type === 'chat:completion') {
+				const { done, content, title } = data;
+
+				if (done) {
+					if ($isLastActiveTab) {
+						if ($settings?.notificationEnabled ?? false) {
+							new Notification(`${title} | Open WebUI`, {
+								body: content,
+								icon: `${WEBUI_BASE_URL}/static/favicon.png`
+							});
+						}
+					}
+
+					toast.custom(NotificationToast, {
+						componentProps: {
+							onClick: () => {
+								goto(`/c/${event.chat_id}`);
+							},
+							content: content,
+							title: title
+						},
+						duration: 15000,
+						unstyled: true
+					});
+				}
+			} else if (type === 'chat:title') {
+				currentChatPage.set(1);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			} else if (type === 'chat:tags') {
+				tags.set(await getAllTags(localStorage.token));
+			}
+		} else if (data?.session_id === $socket.id) {
+			if (type === 'execute:python') {
+				console.log('execute:python', data);
+				executePythonAsWorker(data.id, data.code, cb);
+			} else if (type === 'request:chat:completion') {
+				console.log(data, $socket.id);
+				const { session_id, channel, form_data, model } = data;
+
+				try {
+					const directConnections = $settings?.directConnections ?? {};
+
+					if (directConnections) {
+						const urlIdx = model?.urlIdx;
+
+						const OPENAI_API_URL = directConnections.OPENAI_API_BASE_URLS[urlIdx];
+						const OPENAI_API_KEY = directConnections.OPENAI_API_KEYS[urlIdx];
+						const API_CONFIG = directConnections.OPENAI_API_CONFIGS[urlIdx];
+
+						try {
+							if (API_CONFIG?.prefix_id) {
+								const prefixId = API_CONFIG.prefix_id;
+								form_data['model'] = form_data['model'].replace(`${prefixId}.`, ``);
+							}
+
+							const [res, controller] = await chatCompletion(
+								OPENAI_API_KEY,
+								form_data,
+								OPENAI_API_URL
+							);
+
+							if (res) {
+								// raise if the response is not ok
+								if (!res.ok) {
+									throw await res.json();
+								}
+
+								if (form_data?.stream ?? false) {
+									cb({
+										status: true
+									});
+									console.log({ status: true });
+
+									// res will either be SSE or JSON
+									const reader = res.body.getReader();
+									const decoder = new TextDecoder();
+
+									const processStream = async () => {
+										while (true) {
+											// Read data chunks from the response stream
+											const { done, value } = await reader.read();
+											if (done) {
+												break;
+											}
+
+											// Decode the received chunk
+											const chunk = decoder.decode(value, { stream: true });
+
+											// Process lines within the chunk
+											const lines = chunk.split('\n').filter((line) => line.trim() !== '');
+
+											for (const line of lines) {
+												console.log(line);
+												$socket?.emit(channel, line);
+											}
+										}
+									};
+
+									// Process the stream in the background
+									await processStream();
+								} else {
+									const data = await res.json();
+									cb(data);
+								}
+							} else {
+								throw new Error('An error occurred while fetching the completion');
+							}
+						} catch (error) {
+							console.error('chatCompletion', error);
+							cb(error);
+						}
+					}
+				} catch (error) {
+					console.error('chatCompletion', error);
+					cb(error);
+				} finally {
+					$socket.emit(channel, {
+						done: true
+					});
+				}
+			} else {
+				console.log('chatEventHandler', event);
+			}
+		}
+	};
+
+	const channelEventHandler = async (event) => {
+		if (event.data?.type === 'typing') {
+			return;
+		}
+
+		// check url path
+		const channel = $page.url.pathname.includes(`/channels/${event.channel_id}`);
+
+		let isFocused = document.visibilityState !== 'visible';
+		if (window.electronAPI) {
+			const res = await window.electronAPI.send({
+				type: 'window:isFocused'
+			});
+			if (res) {
+				isFocused = res.isFocused;
+			}
+		}
+
+		if ((!channel || isFocused) && event?.user?.id !== $user?.id) {
+			await tick();
+			const type = event?.data?.type ?? null;
+			const data = event?.data?.data ?? null;
+
+			if (type === 'message') {
+				if ($isLastActiveTab) {
+					if ($settings?.notificationEnabled ?? false) {
+						new Notification(`${data?.user?.name} (#${event?.channel?.name}) | Open WebUI`, {
+							body: data?.content,
+							icon: data?.user?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`
+						});
+					}
+				}
+
+				toast.custom(NotificationToast, {
+					componentProps: {
+						onClick: () => {
+							goto(`/channels/${event.channel_id}`);
+						},
+						content: data?.content,
+						title: event?.channel?.name
+					},
+					duration: 15000,
+					unstyled: true
+				});
+			}
+		}
+	};
+
 	onMount(async () => {
+		if (typeof window !== 'undefined' && window.applyTheme) {
+			window.applyTheme();
+		}
+
+		if (window?.electronAPI) {
+			const info = await window.electronAPI.send({
+				type: 'app:info'
+			});
+
+			if (info) {
+				isApp.set(true);
+				appInfo.set(info);
+
+				const data = await window.electronAPI.send({
+					type: 'app:data'
+				});
+
+				if (data) {
+					appData.set(data);
+				}
+			}
+		}
+
+		// Listen for messages on the BroadcastChannel
+		bc.onmessage = (event) => {
+			if (event.data === 'active') {
+				isLastActiveTab.set(false); // Another tab became active
+			}
+		};
+
+		// Set yourself as the last active tab when this tab is focused
+		const handleVisibilityChange = () => {
+			if (document.visibilityState === 'visible') {
+				isLastActiveTab.set(true); // This tab is now the active tab
+				bc.postMessage('active'); // Notify other tabs that this tab is active
+			}
+		};
+
+		// Add event listener for visibility state changes
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+
+		// Call visibility change handler initially to set state on load
+		handleVisibilityChange();
+
 		theme.set(localStorage.theme);
 
 		mobile.set(window.innerWidth < BREAKPOINT);
@@ -126,17 +481,22 @@
 			await WEBUI_NAME.set(backendConfig.name);
 
 			if ($config) {
-				setupSocket();
+				await setupSocket($config.features?.enable_websocket ?? true);
 
 				if (localStorage.token) {
 					// Get Session User Info
 					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
-						toast.error(error);
+						toast.error(`${error}`);
 						return null;
 					});
 
 					if (sessionUser) {
 						// Save Session User to Store
+						$socket.emit('user-join', { auth: { token: sessionUser.token } });
+
+						$socket?.on('chat-events', chatEventHandler);
+						$socket?.on('channel-events', channelEventHandler);
+
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());
 					} else {
@@ -206,7 +566,17 @@
 </svelte:head>
 
 {#if loaded}
-	<slot />
+	{#if $isApp}
+		<div class="flex flex-row h-screen">
+			<AppSidebar />
+
+			<div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
+				<slot />
+			</div>
+		</div>
+	{:else}
+		<slot />
+	{/if}
 {/if}
 
 <Toaster
@@ -218,5 +588,5 @@
 				: 'light'
 			: 'light'}
 	richColors
-	position="top-center"
+	position="top-right"
 />

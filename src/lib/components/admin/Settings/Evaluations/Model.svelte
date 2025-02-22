@@ -4,13 +4,13 @@
 	const i18n = getContext('i18n');
 
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
-	import ModelModal from './ModelModal.svelte';
+	import ArenaModelModal from './ArenaModelModal.svelte';
 	export let model;
 
 	let showModel = false;
 </script>
 
-<ModelModal
+<ArenaModelModal
 	bind:show={showModel}
 	edit={true}
 	{model}
@@ -34,7 +34,7 @@
 
 				<div class="w-full flex flex-col">
 					<div class="flex items-center gap-1">
-						<div class="flex-shrink-0 line-clamp-1">
+						<div class="shrink-0 line-clamp-1">
 							{model.name}
 						</div>
 					</div>

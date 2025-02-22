@@ -36,9 +36,10 @@
 			id: data.id,
 			name: data.name,
 			meta: data.meta,
-			content: data.content
+			content: data.content,
+			access_control: data.access_control
 		}).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -56,7 +57,7 @@
 
 		if (id) {
 			tool = await getToolById(localStorage.token, id).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				goto('/workspace/tools');
 				return null;
 			});
@@ -73,6 +74,7 @@
 		name={tool.name}
 		meta={tool.meta}
 		content={tool.content}
+		accessControl={tool.access_control}
 		on:save={(e) => {
 			saveHandler(e.detail);
 		}}

@@ -10,12 +10,14 @@
 		vision: $i18n.t('Model accepts image inputs'),
 		usage: $i18n.t(
 			'Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.'
-		)
+		),
+		citations: $i18n.t('Displays citations in the response')
 	};
 
 	export let capabilities: {
 		vision?: boolean;
 		usage?: boolean;
+		citations?: boolean;
 	} = {};
 </script>
 
@@ -23,9 +25,9 @@
 	<div class="flex w-full justify-between mb-1">
 		<div class=" self-center text-sm font-semibold">{$i18n.t('Capabilities')}</div>
 	</div>
-	<div class="flex flex-col">
+	<div class="flex">
 		{#each Object.keys(capabilities) as capability}
-			<div class=" flex items-center gap-2">
+			<div class=" flex items-center gap-2 mr-3">
 				<Checkbox
 					state={capabilities[capability] ? 'checked' : 'unchecked'}
 					on:change={(e) => {

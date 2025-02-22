@@ -1,6 +1,17 @@
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
 
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import isToday from 'dayjs/plugin/isToday';
+import isYesterday from 'dayjs/plugin/isYesterday';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
+
+dayjs.extend(relativeTime);
+dayjs.extend(isToday);
+dayjs.extend(isYesterday);
+dayjs.extend(localizedFormat);
+
 import { WEBUI_BASE_URL } from '$lib/constants';
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
@@ -8,7 +19,13 @@ import { TTS_RESPONSE_SPLIT } from '$lib/types';
 // Helper functions
 //////////////////////////
 
-export const replaceTokens = (content, char, user) => {
+export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function escapeRegExp(string: string): string {
+	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export const replaceTokens = (content, sourceIds, char, user) => {
 	const charToken = /{{char}}/gi;
 	const userToken = /{{user}}/gi;
 	const videoIdToken = /{{VIDEO_FILE_ID_([a-f0-9-]+)}}/gi; // Regex to capture the video ID
@@ -36,6 +53,17 @@ export const replaceTokens = (content, char, user) => {
 		return `<iframe src="${htmlUrl}" width="100%" frameborder="0" onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"></iframe>`;
 	});
 
+	// Remove sourceIds from the content and replace them with <source_id>...</source_id>
+	if (Array.isArray(sourceIds)) {
+		sourceIds.forEach((sourceId, idx) => {
+			// Create a token based on the exact `[sourceId]` string
+			const sourceToken = `\\[${idx}\\]`; // Escape special characters for RegExp
+			const sourceRegex = new RegExp(sourceToken, 'g'); // Match all occurrences of [sourceId]
+
+			content = content.replace(sourceRegex, `<source_id data="${idx}" title="${sourceId}" />`);
+		});
+	}
+
 	return content;
 };
 
@@ -52,10 +80,6 @@ export const sanitizeResponseContent = (content: string) => {
 
 export const processResponseContent = (content: string) => {
 	return content.trim();
-};
-
-export const revertSanitizedResponseContent = (content: string) => {
-	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>');
 };
 
 export function unescapeHtml(html: string) {
@@ -169,6 +193,67 @@ export const canvasPixelTest = () => {
 	return true;
 };
 
+export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
+	return new Promise((resolve, reject) => {
+		const img = new Image();
+		img.onload = () => {
+			const canvas = document.createElement('canvas');
+			let width = img.width;
+			let height = img.height;
+
+			// Maintain aspect ratio while resizing
+
+			if (maxWidth && maxHeight) {
+				// Resize with both dimensions defined (preserves aspect ratio)
+
+				if (width <= maxWidth && height <= maxHeight) {
+					resolve(imageUrl);
+					return;
+				}
+
+				if (width / height > maxWidth / maxHeight) {
+					height = Math.round((maxWidth * height) / width);
+					width = maxWidth;
+				} else {
+					width = Math.round((maxHeight * width) / height);
+					height = maxHeight;
+				}
+			} else if (maxWidth) {
+				// Only maxWidth defined
+
+				if (width <= maxWidth) {
+					resolve(imageUrl);
+					return;
+				}
+
+				height = Math.round((maxWidth * height) / width);
+				width = maxWidth;
+			} else if (maxHeight) {
+				// Only maxHeight defined
+
+				if (height <= maxHeight) {
+					resolve(imageUrl);
+					return;
+				}
+
+				width = Math.round((maxHeight * width) / height);
+				height = maxHeight;
+			}
+
+			canvas.width = width;
+			canvas.height = height;
+
+			const context = canvas.getContext('2d');
+			context.drawImage(img, 0, 0, width, height);
+
+			// Get compressed image URL
+			const compressedUrl = canvas.toDataURL();
+			resolve(compressedUrl);
+		};
+		img.onerror = (error) => reject(error);
+		img.src = imageUrl;
+	});
+};
 export const generateInitialsImage = (name) => {
 	const canvas = document.createElement('canvas');
 	const ctx = canvas.getContext('2d');
@@ -202,6 +287,19 @@ export const generateInitialsImage = (name) => {
 	ctx.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
 
 	return canvas.toDataURL();
+};
+
+export const formatDate = (inputDate) => {
+	const date = dayjs(inputDate);
+	const now = dayjs();
+
+	if (date.isToday()) {
+		return `Today at ${date.format('LT')}`;
+	} else if (date.isYesterday()) {
+		return `Yesterday at ${date.format('LT')}`;
+	} else {
+		return `${date.format('L')} at ${date.format('LT')}`;
+	}
 };
 
 export const copyToClipboard = async (text) => {
@@ -534,11 +632,48 @@ export const removeEmojis = (str: string) => {
 };
 
 export const removeFormattings = (str: string) => {
-	return str.replace(/(\*)(.*?)\1/g, '').replace(/(```)(.*?)\1/gs, '');
+	return (
+		str
+			// Block elements (remove completely)
+			.replace(/(```[\s\S]*?```)/g, '') // Code blocks
+			.replace(/^\|.*\|$/gm, '') // Tables
+			// Inline elements (preserve content)
+			.replace(/(?:\*\*|__)(.*?)(?:\*\*|__)/g, '$1') // Bold
+			.replace(/(?:[*_])(.*?)(?:[*_])/g, '$1') // Italic
+			.replace(/~~(.*?)~~/g, '$1') // Strikethrough
+			.replace(/`([^`]+)`/g, '$1') // Inline code
+
+			// Links and images
+			.replace(/!?\[([^\]]*)\](?:\([^)]+\)|\[[^\]]*\])/g, '$1') // Links & images
+			.replace(/^\[[^\]]+\]:\s*.*$/gm, '') // Reference definitions
+
+			// Block formatting
+			.replace(/^#{1,6}\s+/gm, '') // Headers
+			.replace(/^\s*[-*+]\s+/gm, '') // Lists
+			.replace(/^\s*(?:\d+\.)\s+/gm, '') // Numbered lists
+			.replace(/^\s*>[> ]*/gm, '') // Blockquotes
+			.replace(/^\s*:\s+/gm, '') // Definition lists
+
+			// Cleanup
+			.replace(/\[\^[^\]]*\]/g, '') // Footnotes
+			.replace(/[-*_~]/g, '') // Remaining markers
+			.replace(/\n{2,}/g, '\n')
+	); // Multiple newlines
 };
 
 export const cleanText = (content: string) => {
 	return removeFormattings(removeEmojis(content.trim()));
+};
+
+export const removeDetails = (content, types) => {
+	for (const type of types) {
+		content = content.replace(
+			new RegExp(`<details\\s+type="${type}"[^>]*>.*?<\\/details>`, 'gis'),
+			''
+		);
+	}
+
+	return content;
 };
 
 // This regular expression matches code blocks marked by triple backticks
@@ -610,6 +745,7 @@ export const extractSentencesForAudio = (text: string) => {
 };
 
 export const getMessageContentParts = (content: string, split_on: string = 'punctuation') => {
+	content = removeDetails(content, ['reasoning', 'code_interpreter']);
 	const messageContentParts: string[] = [];
 
 	switch (split_on) {
@@ -632,6 +768,19 @@ export const blobToFile = (blob, fileName) => {
 	// Create a new File object from the Blob
 	const file = new File([blob], fileName, { type: blob.type });
 	return file;
+};
+
+export const getPromptVariables = (user_name, user_location) => {
+	return {
+		'{{USER_NAME}}': user_name,
+		'{{USER_LOCATION}}': user_location || 'Unknown',
+		'{{CURRENT_DATETIME}}': getCurrentDateTime(),
+		'{{CURRENT_DATE}}': getFormattedDate(),
+		'{{CURRENT_TIME}}': getFormattedTime(),
+		'{{CURRENT_WEEKDAY}}': getWeekday(),
+		'{{CURRENT_TIMEZONE}}': getUserTimezone(),
+		'{{USER_LANGUAGE}}': localStorage.getItem('locale') || 'en-US'
+	};
 };
 
 /**
@@ -851,7 +1000,10 @@ export const bestMatchingLanguage = (supportedLanguages, preferredLanguages, def
 // Get the date in the format YYYY-MM-DD
 export const getFormattedDate = () => {
 	const date = new Date();
-	return date.toISOString().split('T')[0];
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
 };
 
 // Get the time in the format HH:MM:SS

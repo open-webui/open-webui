@@ -28,7 +28,7 @@
 		loading = true;
 
 		const res = await updateMemoryById(localStorage.token, memory.id, content).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 
 			return null;
 		});

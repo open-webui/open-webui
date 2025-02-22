@@ -16,7 +16,9 @@
 	import Markdown from './Markdown.svelte';
 	import Name from './Name.svelte';
 	import Skeleton from './Skeleton.svelte';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	const i18n = getContext('i18n');
+	dayjs.extend(localizedFormat);
 
 	export let chatId;
 	export let history;
@@ -25,12 +27,22 @@
 	export let isLastMessage;
 	export let readOnly = false;
 
+	export let updateChat: Function;
 	export let editMessage: Function;
+	export let saveMessage: Function;
 	export let rateMessage: Function;
+	export let actionMessage: Function;
+
+	export let submitMessage: Function;
+	export let deleteMessage: Function;
 
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
 	export let mergeResponses: Function;
+
+	export let addMessages: Function;
+
+	export let triggerScroll: Function;
 
 	const dispatch = createEventDispatcher();
 
@@ -46,7 +58,7 @@
 		}
 	}
 
-	const showPreviousMessage = (modelIdx) => {
+	const showPreviousMessage = async (modelIdx) => {
 		groupedMessageIdsIdx[modelIdx] = Math.max(0, groupedMessageIdsIdx[modelIdx] - 1);
 
 		let messageId = groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]];
@@ -60,10 +72,13 @@
 		}
 
 		history.currentId = messageId;
-		dispatch('change');
+
+		await tick();
+		await updateChat();
+		triggerScroll();
 	};
 
-	const showNextMessage = (modelIdx) => {
+	const showNextMessage = async (modelIdx) => {
 		groupedMessageIdsIdx[modelIdx] = Math.min(
 			groupedMessageIds[modelIdx].messageIds.length - 1,
 			groupedMessageIdsIdx[modelIdx] + 1
@@ -80,7 +95,10 @@
 		}
 
 		history.currentId = messageId;
-		dispatch('change');
+
+		await tick();
+		await updateChat();
+		triggerScroll();
 	};
 
 	const initHandler = async () => {
@@ -176,13 +194,13 @@
 					<div
 						class=" snap-center w-full max-w-full m-1 border {history.messages[messageId]
 							?.modelIdx == modelIdx
-							? `border-gray-100 dark:border-gray-800 border-[1.5px] ${
+							? `border-gray-100 dark:border-gray-850 border-[1.5px] ${
 									$mobile ? 'min-w-full' : 'min-w-80'
 								}`
-							: `border-gray-50 dark:border-gray-850 border-dashed ${
+							: `border-gray-100 dark:border-gray-850 border-dashed ${
 									$mobile ? 'min-w-full' : 'min-w-80'
 								}`} transition-all p-5 rounded-2xl"
-						on:click={() => {
+						on:click={async () => {
 							if (messageId != _messageId) {
 								let currentMessageId = _messageId;
 								let messageChildrenIds = history.messages[currentMessageId].childrenIds;
@@ -191,7 +209,10 @@
 									messageChildrenIds = history.messages[currentMessageId].childrenIds;
 								}
 								history.currentId = currentMessageId;
-								dispatch('change');
+
+								await tick();
+								await updateChat();
+								triggerScroll();
 							}
 						}}
 					>
@@ -205,8 +226,13 @@
 									siblings={groupedMessageIds[modelIdx].messageIds}
 									showPreviousMessage={() => showPreviousMessage(modelIdx)}
 									showNextMessage={() => showNextMessage(modelIdx)}
-									{rateMessage}
+									{updateChat}
 									{editMessage}
+									{saveMessage}
+									{rateMessage}
+									{deleteMessage}
+									{actionMessage}
+									{submitMessage}
 									{continueResponse}
 									regenerateResponse={async (message) => {
 										regenerateResponse(message);
@@ -214,18 +240,7 @@
 										groupedMessageIdsIdx[modelIdx] =
 											groupedMessageIds[modelIdx].messageIds.length - 1;
 									}}
-									on:submit={async (e) => {
-										dispatch('submit', e.detail);
-									}}
-									on:action={async (e) => {
-										dispatch('action', e.detail);
-									}}
-									on:update={async (e) => {
-										dispatch('update', e.detail);
-									}}
-									on:save={async (e) => {
-										dispatch('save', e.detail);
-									}}
+									{addMessages}
 									{readOnly}
 								/>
 							{/if}
@@ -254,7 +269,7 @@
 										<span
 											class=" self-center invisible group-hover:visible text-gray-400 text-xs font-medium uppercase ml-0.5 -mt-0.5"
 										>
-											{dayjs(message.timestamp * 1000).format($i18n.t('h:mm a'))}
+											{dayjs(message.timestamp * 1000).format('LT')}
 										</span>
 									{/if}
 								</Name>
@@ -271,7 +286,7 @@
 					</div>
 
 					{#if isLastMessage}
-						<div class=" flex-shrink-0 text-gray-600 dark:text-gray-500 mt-1">
+						<div class=" shrink-0 text-gray-600 dark:text-gray-500 mt-1">
 							<Tooltip content={$i18n.t('Merge Responses')} placement="bottom">
 								<button
 									type="button"

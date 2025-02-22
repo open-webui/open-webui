@@ -1,6 +1,14 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
-	import { chats, config, settings, user as _user, mobile, currentChatPage } from '$lib/stores';
+	import {
+		chats,
+		config,
+		settings,
+		user as _user,
+		mobile,
+		currentChatPage,
+		temporaryChatEnabled
+	} from '$lib/stores';
 	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 
@@ -16,6 +24,8 @@
 
 	const i18n = getContext('i18n');
 
+	export let className = 'h-full flex pt-8';
+
 	export let chatId = '';
 	export let user = $_user;
 
@@ -29,8 +39,11 @@
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
 	export let mergeResponses: Function;
+
 	export let chatActionHandler: Function;
 	export let showMessage: Function = () => {};
+	export let submitMessage: Function = () => {};
+	export let addMessages: Function = () => {};
 
 	export let readOnly = false;
 
@@ -79,16 +92,18 @@
 		element.scrollTop = element.scrollHeight;
 	};
 
-	const updateChatHistory = async () => {
-		await tick();
-		history = history;
-		await updateChatById(localStorage.token, chatId, {
-			history: history,
-			messages: messages
-		});
+	const updateChat = async () => {
+		if (!$temporaryChatEnabled) {
+			history = history;
+			await tick();
+			await updateChatById(localStorage.token, chatId, {
+				history: history,
+				messages: messages
+			});
 
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			currentChatPage.set(1);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		}
 	};
 
 	const showPreviousMessage = async (message) => {
@@ -195,7 +210,7 @@
 			rating: rating
 		};
 
-		await updateChatHistory();
+		await updateChat();
 	};
 
 	const editMessage = async (messageId, content, submit = true) => {
@@ -228,11 +243,11 @@
 				history.currentId = userMessageId;
 
 				await tick();
-				await sendPrompt(userPrompt, userMessageId);
+				await sendPrompt(history, userPrompt, userMessageId);
 			} else {
 				// Edit user message
 				history.messages[messageId].content = content;
-				await updateChatHistory();
+				await updateChat();
 			}
 		} else {
 			if (submit) {
@@ -246,6 +261,7 @@
 					id: responseMessageId,
 					parentId: parentId,
 					childrenIds: [],
+					files: undefined,
 					content: content,
 					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 				};
@@ -261,14 +277,23 @@
 					];
 				}
 
-				await updateChatHistory();
+				await updateChat();
 			} else {
 				// Edit response message
 				history.messages[messageId].originalContent = history.messages[messageId].content;
 				history.messages[messageId].content = content;
-				await updateChatHistory();
+				await updateChat();
 			}
 		}
+	};
+
+	const actionMessage = async (actionId, message, event = null) => {
+		await chatActionHandler(chatId, actionId, message.model, message.id, event);
+	};
+
+	const saveMessage = async (messageId, message) => {
+		history.messages[messageId] = message;
+		await updateChat();
 	};
 
 	const deleteMessage = async (messageId) => {
@@ -306,11 +331,21 @@
 		showMessage({ id: parentMessageId });
 
 		// Update the chat
-		await updateChatHistory();
+		await updateChat();
+	};
+
+	const triggerScroll = () => {
+		if (autoScroll) {
+			const element = document.getElementById('messages-container');
+			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			setTimeout(() => {
+				scrollToBottom();
+			}, 100);
+		}
 	};
 </script>
 
-<div class="h-full flex pt-8">
+<div class={className}>
 	{#if Object.keys(history?.messages ?? {}).length == 0}
 		<ChatPlaceholder
 			modelIds={selectedModels}
@@ -372,37 +407,19 @@
 							{user}
 							{showPreviousMessage}
 							{showNextMessage}
+							{updateChat}
 							{editMessage}
 							{deleteMessage}
 							{rateMessage}
+							{actionMessage}
+							{saveMessage}
+							{submitMessage}
 							{regenerateResponse}
 							{continueResponse}
 							{mergeResponses}
+							{addMessages}
+							{triggerScroll}
 							{readOnly}
-							on:submit={async (e) => {
-								dispatch('submit', e.detail);
-							}}
-							on:action={async (e) => {
-								if (typeof e.detail === 'string') {
-									await chatActionHandler(chatId, e.detail, message.model, message.id);
-								} else {
-									const { id, event } = e.detail;
-									await chatActionHandler(chatId, id, message.model, message.id, event);
-								}
-							}}
-							on:update={() => {
-								updateChatHistory();
-							}}
-							on:scroll={() => {
-								if (autoScroll) {
-									const element = document.getElementById('messages-container');
-									autoScroll =
-										element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-									setTimeout(() => {
-										scrollToBottom();
-									}, 100);
-								}
-							}}
 						/>
 					{/each}
 				</div>

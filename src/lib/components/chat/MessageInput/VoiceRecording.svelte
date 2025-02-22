@@ -137,7 +137,7 @@
 		const file = blobToFile(audioBlob, 'recording.wav');
 
 		const res = await transcribeAudio(localStorage.token, file).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -161,7 +161,13 @@
 	const startRecording = async () => {
 		startDurationCounter();
 
-		stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		stream = await navigator.mediaDevices.getUserMedia({
+			audio: {
+				echoCancellation: true,
+				noiseSuppression: true,
+				autoGainControl: true
+			}
+		});
 		mediaRecorder = new MediaRecorder(stream);
 		mediaRecorder.onstart = () => {
 			console.log('Recording started');
@@ -171,7 +177,7 @@
 		mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
 		mediaRecorder.onstop = async () => {
 			console.log('Recording stopped');
-			if (($settings?.audio?.stt?.engine ?? '') === 'web') {
+			if ($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web') {
 				audioChunks = [];
 			} else {
 				if (confirmed) {
@@ -229,8 +235,7 @@
 					console.log('recognition ended');
 
 					confirmRecording();
-					dispatch('confirm', transcription);
-
+					dispatch('confirm', { text: transcription });
 					confirmed = false;
 					loading = false;
 				};
@@ -251,6 +256,11 @@
 		if (recording && mediaRecorder) {
 			await mediaRecorder.stop();
 		}
+
+		if (speechRecognition) {
+			speechRecognition.stop();
+		}
+
 		stopDurationCounter();
 		audioChunks = [];
 
@@ -325,8 +335,8 @@
 
              rounded-full"
 			on:click={async () => {
-				dispatch('cancel');
 				stopRecording();
+				dispatch('cancel');
 			}}
 		>
 			<svg
@@ -352,7 +362,7 @@
 			{#each visualizerData.slice().reverse() as rms}
 				<div class="flex items-center h-full">
 					<div
-						class="w-[2px] flex-shrink-0
+						class="w-[2px] shrink-0
                     
                     {loading
 							? ' bg-gray-500 dark:bg-gray-400   '

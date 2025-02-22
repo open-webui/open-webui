@@ -77,7 +77,7 @@
 	const archiveAllChatsHandler = async () => {
 		await goto('/');
 		await archiveAllChats(localStorage.token).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 		});
 
 		currentChatPage.set(1);
@@ -88,7 +88,7 @@
 	const deleteAllChatsHandler = async () => {
 		await goto('/');
 		await deleteAllChats(localStorage.token).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 		});
 
 		currentChatPage.set(1);
@@ -97,8 +97,8 @@
 	};
 </script>
 
-<div class="flex flex-col h-full justify-between space-y-3 text-sm max-h-[22rem]">
-	<div class=" space-y-2">
+<div class="flex flex-col h-full justify-between space-y-3 text-sm">
+	<div class=" space-y-2 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div class="flex flex-col">
 			<input
 				id="chat-import-input"
@@ -154,7 +154,7 @@
 			</button>
 		</div>
 
-		<hr class=" dark:border-gray-850" />
+		<hr class=" border-gray-100 dark:border-gray-850" />
 
 		<div class="flex flex-col">
 			{#if showArchiveConfirm}

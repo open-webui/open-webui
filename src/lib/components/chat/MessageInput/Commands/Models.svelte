@@ -68,9 +68,9 @@
 {#if filteredItems.length > 0}
 	<div
 		id="commands-container"
-		class="pl-3 pr-14 mb-3 text-left w-full absolute bottom-0 left-0 right-0 z-10"
+		class="px-2 mb-2 text-left w-full absolute bottom-0 left-0 right-0 z-10"
 	>
-		<div class="flex w-full rounded-xl border border-gray-50 dark:border-gray-850">
+		<div class="flex w-full rounded-xl border border-gray-100 dark:border-gray-850">
 			<div
 				class="max-h-60 flex flex-col w-full rounded-xl bg-white dark:bg-gray-900 dark:text-gray-100"
 			>

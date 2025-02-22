@@ -7,6 +7,46 @@ from pathlib import Path
 from typing import Callable, Optional
 
 
+import collections.abc
+
+
+def deep_update(d, u):
+    for k, v in u.items():
+        if isinstance(v, collections.abc.Mapping):
+            d[k] = deep_update(d.get(k, {}), v)
+        else:
+            d[k] = v
+    return d
+
+
+def get_message_list(messages, message_id):
+    """
+    Reconstructs a list of messages in order up to the specified message_id.
+
+    :param message_id: ID of the message to reconstruct the chain
+    :param messages: Message history dict containing all messages
+    :return: List of ordered messages starting from the root to the given message
+    """
+
+    # Find the message by its id
+    current_message = messages.get(message_id)
+
+    if not current_message:
+        return None
+
+    # Reconstruct the chain by following the parentId links
+    message_list = []
+
+    while current_message:
+        message_list.insert(
+            0, current_message
+        )  # Insert the message at the beginning of the list
+        parent_id = current_message["parentId"]
+        current_message = messages.get(parent_id) if parent_id else None
+
+    return message_list
+
+
 def get_messages_content(messages: list[dict]) -> str:
     return "\n".join(
         [
@@ -38,6 +78,13 @@ def get_last_user_message(messages: list[dict]) -> Optional[str]:
     if message is None:
         return None
     return get_content_from_message(message)
+
+
+def get_last_assistant_message_item(messages: list[dict]) -> Optional[dict]:
+    for message in reversed(messages):
+        if message["role"] == "assistant":
+            return message
+    return None
 
 
 def get_last_assistant_message(messages: list[dict]) -> Optional[str]:
@@ -96,6 +143,44 @@ def add_or_update_system_message(content: str, messages: list[dict]):
     return messages
 
 
+def add_or_update_user_message(content: str, messages: list[dict]):
+    """
+    Adds a new user message at the end of the messages list
+    or updates the existing user message at the end.
+
+    :param msg: The message to be added or appended.
+    :param messages: The list of message dictionaries.
+    :return: The updated list of message dictionaries.
+    """
+
+    if messages and messages[-1].get("role") == "user":
+        messages[-1]["content"] = f"{messages[-1]['content']}\n{content}"
+    else:
+        # Insert at the end
+        messages.append({"role": "user", "content": content})
+
+    return messages
+
+
+def append_or_update_assistant_message(content: str, messages: list[dict]):
+    """
+    Adds a new assistant message at the end of the messages list
+    or updates the existing assistant message at the end.
+
+    :param msg: The message to be added or appended.
+    :param messages: The list of message dictionaries.
+    :return: The updated list of message dictionaries.
+    """
+
+    if messages and messages[-1].get("role") == "assistant":
+        messages[-1]["content"] = f"{messages[-1]['content']}\n{content}"
+    else:
+        # Insert at the end
+        messages.append({"role": "assistant", "content": content})
+
+    return messages
+
+
 def openai_chat_message_template(model: str):
     return {
         "id": f"{model}-{str(uuid.uuid4())}",
@@ -106,25 +191,50 @@ def openai_chat_message_template(model: str):
 
 
 def openai_chat_chunk_message_template(
-    model: str, message: Optional[str] = None
+    model: str,
+    content: Optional[str] = None,
+    tool_calls: Optional[list[dict]] = None,
+    usage: Optional[dict] = None,
 ) -> dict:
     template = openai_chat_message_template(model)
     template["object"] = "chat.completion.chunk"
-    if message:
-        template["choices"][0]["delta"] = {"content": message}
-    else:
+
+    template["choices"][0]["index"] = 0
+    template["choices"][0]["delta"] = {}
+
+    if content:
+        template["choices"][0]["delta"]["content"] = content
+
+    if tool_calls:
+        template["choices"][0]["delta"]["tool_calls"] = tool_calls
+
+    if not content and not tool_calls:
         template["choices"][0]["finish_reason"] = "stop"
+
+    if usage:
+        template["usage"] = usage
     return template
 
 
 def openai_chat_completion_message_template(
-    model: str, message: Optional[str] = None
+    model: str,
+    message: Optional[str] = None,
+    tool_calls: Optional[list[dict]] = None,
+    usage: Optional[dict] = None,
 ) -> dict:
     template = openai_chat_message_template(model)
     template["object"] = "chat.completion"
     if message is not None:
-        template["choices"][0]["message"] = {"content": message, "role": "assistant"}
+        template["choices"][0]["message"] = {
+            "content": message,
+            "role": "assistant",
+            **({"tool_calls": tool_calls} if tool_calls else {}),
+        }
+
     template["choices"][0]["finish_reason"] = "stop"
+
+    if usage:
+        template["usage"] = usage
     return template
 
 
@@ -142,11 +252,12 @@ def get_gravatar_url(email):
     return f"https://www.gravatar.com/avatar/{hash_hex}?d=mp"
 
 
-def calculate_sha256(file):
+def calculate_sha256(file_path, chunk_size):
+    # Compute SHA-256 hash of a file efficiently in chunks
     sha256 = hashlib.sha256()
-    # Read the file in chunks to efficiently handle large files
-    for chunk in iter(lambda: file.read(8192), b""):
-        sha256.update(chunk)
+    with open(file_path, "rb") as f:
+        while chunk := f.read(chunk_size):
+            sha256.update(chunk)
     return sha256.hexdigest()
 
 
