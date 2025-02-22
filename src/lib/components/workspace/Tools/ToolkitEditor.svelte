@@ -284,10 +284,10 @@ class Tools:
 						value={content}
 						{boilerplate}
 						lang="python"
-						on:change={(e) => {
+						onChange={(e) => {
 							_content = e.detail.value;
 						}}
-						on:save={() => {
+						onSave={() => {
 							if (formElement) {
 								formElement.requestSubmit();
 							}

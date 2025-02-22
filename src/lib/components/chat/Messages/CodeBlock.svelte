@@ -468,10 +468,10 @@
 					value={code}
 					{id}
 					{lang}
-					on:save={() => {
+					onSave={() => {
 						saveCode();
 					}}
-					on:change={(e) => {
+					onChange={(e) => {
 						_code = e.detail.value;
 					}}
 				/>
