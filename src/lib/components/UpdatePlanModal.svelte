@@ -38,13 +38,13 @@
     const description = encodeURIComponent("Оплата заказа в Тестовом магазине ROBOKASSA");
     const isTest = "1"; // Тестовый режим
     const shpUserId = `Shp_userId=${userId}`; // Передаём user id в Shp
-    const shpEmail= `Shp_email=${email}`; // Передаём email в Shp
+    const email= email; // Передаём email 
 
     // Получаем подпись с бэкенда
     const signatureValue = await fetchSignature(price);
 
     // Формируем ссылку для оплаты
-    const paymentLink = `https://auth.robokassa.ru/Merchant/Index.aspx?MerchantLogin=${merchantLogin}&OutSum=${outSum}&InvoiceID=${invId}&Description=${description}&IsTest=${isTest}&${shpEmail}&${shpUserId}&SignatureValue=${signatureValue}`;
+    const paymentLink = `https://auth.robokassa.ru/Merchant/Index.aspx?MerchantLogin=${merchantLogin}&OutSum=${outSum}&InvoiceID=${invId}&${email}&Description=${description}&IsTest=${isTest}&${shpUserId}&SignatureValue=${signatureValue}`;
 
     return paymentLink;
   }
