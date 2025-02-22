@@ -44,7 +44,7 @@
     const signatureValue = await fetchSignature(price);
 
     // Формируем ссылку для оплаты
-    const paymentLink = `https://auth.robokassa.ru/Merchant/Index.aspx?MerchantLogin=${merchantLogin}&OutSum=${outSum}&InvoiceID=${invId}&${email}&Description=${description}&IsTest=${isTest}&${shpUserId}&SignatureValue=${signatureValue}`;
+    const paymentLink = `https://auth.robokassa.ru/Merchant/Index.aspx?MerchantLogin=${merchantLogin}&OutSum=${outSum}&InvoiceID=${invId}&Email=${email}&Description=${description}&IsTest=${isTest}&${shpUserId}&SignatureValue=${signatureValue}`;
 
     return paymentLink;
   }
