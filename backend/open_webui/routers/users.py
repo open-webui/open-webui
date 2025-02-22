@@ -284,38 +284,6 @@ async def get_user_info_by_session_user(user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.USER_NOT_FOUND,
         )
     
-
-@router.get("/{user_id}", response_model=str)
-async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
-    # Check if user_id is a shared chat
-    # If it is, get the user_id from the chat
-    if user_id.startswith("shared-"):
-        chat_id = user_id.replace("shared-", "")
-        chat = Chats.get_chat_by_id(chat_id)
-        if chat:
-            user_id = chat.user_id
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.USER_NOT_FOUND,
-            )
-
-    user = Users.get_user_by_id(user_id)
-
-    if user:
-        return UserResponse(
-            **{
-                "name": user.name,
-                "profile_image_url": user.profile_image_url,
-                "active": get_active_status_by_user_id(user_id),
-            }
-        )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.USER_NOT_FOUND,
-        )
-
 ############################
 # UpdateUserById
 ############################
