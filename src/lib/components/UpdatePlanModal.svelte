@@ -31,28 +31,29 @@
   }
 
   // Функция для генерации ссылки на оплату
-  async function generatePaymentLink(price: string): Promise<string> {
+  async function generatePaymentLink(price: string, id: string): Promise<string> {
     const merchantLogin = "aidachat";
     const outSum = price; // Сумма оплаты
     const invId = ""; // Номер заказа (может быть пустым)
     const description = encodeURIComponent("Оплата заказа в Тестовом магазине ROBOKASSA");
     const isTest = "1"; // Тестовый режим
     const shpUserId = `Shp_userId=${userId}`; // Передаём user id в Shp
+    const shpID = `Shp_ID=${id}`; // Передаём id карточки в Shp
     const userEmail= email; // Передаём email 
 
     // Получаем подпись с бэкенда
     const signatureValue = await fetchSignature(price);
 
     // Формируем ссылку для оплаты
-    const paymentLink = `https://auth.robokassa.ru/Merchant/Index.aspx?MerchantLogin=${merchantLogin}&OutSum=${outSum}&InvoiceID=${invId}&Email=${userEmail}&Description=${description}&IsTest=${isTest}&${shpUserId}&SignatureValue=${signatureValue}`;
+    const paymentLink = `https://auth.robokassa.ru/Merchant/Index.aspx?MerchantLogin=${merchantLogin}&OutSum=${outSum}&InvoiceID=${invId}&Email=${userEmail}&Description=${description}&IsTest=${isTest}&${shpID}&${shpUserId}&SignatureValue=${signatureValue}`;
 
     return paymentLink;
   }
 
   // Функция для открытия нового окна с оплатой
-  async function openPaymentWindow(price: string) {
+  async function openPaymentWindow(price: string, id: string) {
     try {
-      const paymentLink = await generatePaymentLink(price);
+      const paymentLink = await generatePaymentLink(price, id);
       // Открываем новое окно с платежной страницей
       window.open(paymentLink, "_blank", "width=600,height=800");
     } catch (error) {
@@ -184,26 +185,26 @@
           <h3>Базовый план</h3>
           <p>Идеально для начинающих</p>
           <p>1 000 000 токенов</p>
-          <div class="price">₽950</div>
-          <button on:click={() => openPaymentWindow('10')}>Оплатить</button>
+          <div class="price">₽550</div>
+          <button on:click={() => openPaymentWindow('550', '1')}>Оплатить</button>
         </div>
 
         <!-- Карточка 2 -->
         <div class="card">
           <h3>Стандартный план</h3>
           <p>Для активных пользователей</p>
-          <p>3 000 000 токенов</p>
-          <div class="price">₽2499</div>
-          <button on:click={() => openPaymentWindow('2499')}>Оплатить</button>
+          <p>2 000 000 токенов</p>
+          <div class="price">₽1000</div>
+          <button on:click={() => openPaymentWindow('1000', '2')}>Оплатить</button>
         </div>
 
         <!-- Карточка 3 -->
         <div class="card">
           <h3>Премиум план</h3>
           <p>Для профессионалов</p>
-          <p>9 000 000 токенов</p>
-          <div class="price">₽5900</div>
-          <button on:click={() => openPaymentWindow('5900')}>Оплатить</button>
+          <p>5 000 000 токенов</p>
+          <div class="price">₽2000</div>
+          <button on:click={() => openPaymentWindow('2000', '3')}>Оплатить</button>
         </div>
       </div>
 
