@@ -14,7 +14,7 @@ class SignatureRequest(BaseModel):
     email: str
 
 # Пароль#1 (замените на ваш реальный пароль)
-ROBOKASSA_PASSWORD = os.getenv("ROBOKASSA_PASSWORD", "r8xoXYKrTcsoT11Xq02N")
+ROBOKASSA_PASSWORD = os.getenv("ROBOKASSA_PASSWORD", "P26IdRTzxRa4K0QE2SUA")
 
 @router.post("/generate-signature")
 async def generate_signature(request: SignatureRequest):
