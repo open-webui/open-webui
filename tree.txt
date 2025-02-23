@@ -1,0 +1,179 @@
+.
+├── backend
+│   └── open_webui
+│       ├── __init__.py
+│       ├── config.py
+│       ├── constants.py
+│       ├── env.py
+│       ├── functions.py
+│       ├── internal
+│       │   ├── db.py
+│       │   ├── migrations
+│       │   │   ├── 001_initial_schema.py
+│       │   │   ├── 002_add_local_sharing.py
+│       │   │   ├── 003_add_auth_api_key.py
+│       │   │   ├── 004_add_archived.py
+│       │   │   ├── 005_add_updated_at.py
+│       │   │   ├── 006_migrate_timestamps_and_charfields.py
+│       │   │   ├── 007_add_user_last_active_at.py
+│       │   │   ├── 008_add_memory.py
+│       │   │   ├── 009_add_models.py
+│       │   │   ├── 010_migrate_modelfiles_to_models.py
+│       │   │   ├── 011_add_user_settings.py
+│       │   │   ├── 012_add_tools.py
+│       │   │   ├── 013_add_user_info.py
+│       │   │   ├── 014_add_files.py
+│       │   │   ├── 015_add_functions.py
+│       │   │   ├── 016_add_valves_and_is_active.py
+│       │   │   ├── 017_add_user_oauth_sub.py
+│       │   │   └── 018_add_function_is_global.py
+│       │   └── wrappers.py
+│       ├── main.py
+│       ├── migrations
+│       │   ├── env.py
+│       │   ├── util.py
+│       │   └── versions
+│       │       ├── 1af9b942657b_migrate_tags.py
+│       │       ├── 242a2047eae0_update_chat_table.py
+│       │       ├── 3781e22d8b01_update_message_table.py
+│       │       ├── 3ab32c4b8f59_update_tags.py
+│       │       ├── 4ace53fd72c8_update_folder_table_datetime.py
+│       │       ├── 57c599a3cb57_add_channel_table.py
+│       │       ├── 6a39f3d8e55c_add_knowledge_table.py
+│       │       ├── 7826ab40b532_update_file_table.py
+│       │       ├── 7e5b5dc7342b_init.py
+│       │       ├── 922e7a387820_add_group_table.py
+│       │       ├── af906e964978_add_feedback_table.py
+│       │       ├── c0fbf31ca0db_update_file_table.py
+│       │       ├── c29facfe716b_update_file_table_path.py
+│       │       ├── c69f45358db4_add_folder_table.py
+│       │       └── ca81bd47c050_add_config_table.py
+│       ├── models
+│       │   ├── auths.py
+│       │   ├── channels.py
+│       │   ├── chats.py
+│       │   ├── feedbacks.py
+│       │   ├── files.py
+│       │   ├── folders.py
+│       │   ├── functions.py
+│       │   ├── groups.py
+│       │   ├── knowledge.py
+│       │   ├── memories.py
+│       │   ├── messages.py
+│       │   ├── models.py
+│       │   ├── prompts.py
+│       │   ├── tags.py
+│       │   ├── tools.py
+│       │   └── users.py
+│       ├── retrieval
+│       │   ├── loaders
+│       │   │   ├── main.py
+│       │   │   └── youtube.py
+│       │   ├── models
+│       │   │   └── colbert.py
+│       │   ├── utils.py
+│       │   ├── vector
+│       │   │   ├── connector.py
+│       │   │   ├── dbs
+│       │   │   │   ├── chroma.py
+│       │   │   │   ├── milvus.py
+│       │   │   │   ├── opensearch.py
+│       │   │   │   ├── pgvector.py
+│       │   │   │   └── qdrant.py
+│       │   │   └── main.py
+│       │   └── web
+│       │       ├── bing.py
+│       │       ├── bocha.py
+│       │       ├── brave.py
+│       │       ├── duckduckgo.py
+│       │       ├── exa.py
+│       │       ├── google_pse.py
+│       │       ├── jina_search.py
+│       │       ├── kagi.py
+│       │       ├── main.py
+│       │       ├── mojeek.py
+│       │       ├── searchapi.py
+│       │       ├── searxng.py
+│       │       ├── serpapi.py
+│       │       ├── serper.py
+│       │       ├── serply.py
+│       │       ├── serpstack.py
+│       │       ├── tavily.py
+│       │       └── utils.py
+│       ├── routers
+│       │   ├── alfred.py
+│       │   ├── audio.py
+│       │   ├── auths.py
+│       │   ├── channels.py
+│       │   ├── chats.py
+│       │   ├── configs.py
+│       │   ├── evaluations.py
+│       │   ├── files.py
+│       │   ├── folders.py
+│       │   ├── functions.py
+│       │   ├── groups.py
+│       │   ├── images.py
+│       │   ├── knowledge.py
+│       │   ├── memories.py
+│       │   ├── models.py
+│       │   ├── ollama.py
+│       │   ├── openai.py
+│       │   ├── pipelines.py
+│       │   ├── prompts.py
+│       │   ├── retrieval.py
+│       │   ├── tasks.py
+│       │   ├── tools.py
+│       │   ├── users.py
+│       │   └── utils.py
+│       ├── socket
+│       │   ├── main.py
+│       │   └── utils.py
+│       ├── storage
+│       │   └── provider.py
+│       ├── tasks.py
+│       ├── test
+│       │   ├── __init__.py
+│       │   ├── apps
+│       │   │   └── webui
+│       │   │       ├── routers
+│       │   │       │   ├── test_auths.py
+│       │   │       │   ├── test_chats.py
+│       │   │       │   ├── test_models.py
+│       │   │       │   ├── test_prompts.py
+│       │   │       │   └── test_users.py
+│       │   │       └── storage
+│       │   │           └── test_provider.py
+│       │   └── util
+│       │       ├── abstract_integration_test.py
+│       │       └── mock_user.py
+│       └── utils
+│           ├── access_control.py
+│           ├── auth.py
+│           ├── chat.py
+│           ├── code_interpreter.py
+│           ├── filter.py
+│           ├── images
+│           │   └── comfyui.py
+│           ├── middleware.py
+│           ├── misc.py
+│           ├── models.py
+│           ├── oauth.py
+│           ├── payload.py
+│           ├── pdf_generator.py
+│           ├── plugin.py
+│           ├── response.py
+│           ├── security_headers.py
+│           ├── task.py
+│           ├── tools.py
+│           └── webhook.py
+├── hatch_build.py
+└── node_modules
+    ├── flatted
+    │   └── python
+    │       ├── flatted.py
+    │       └── test.py
+    └── polyscript
+        └── python
+            └── mip.py
+
+30 directories, 147 files

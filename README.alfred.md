@@ -96,6 +96,26 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 docker compose restart open-webui
 
 
+
+----------------------------------
+# 파이썬 환경 설정
+----------------------------------
+cd ../backend
+python3 -m venv venv
+source venv/bin/activate  # Mac/Linux
+pip install -r requirements.txt
+
+---
+cd backend
+source venv/bin/activate  # Mac/Linux
+python3 main.py
+
+---
+pnpm dev
+pnpm build
+
+
+
 ----------------------------------
 # 작업이력
 ----------------------------------
