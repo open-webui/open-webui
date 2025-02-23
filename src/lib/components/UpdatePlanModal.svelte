@@ -14,7 +14,8 @@
         body: JSON.stringify({
           user_id: userId,
           price: price,
-          email: email
+          email: email,
+          cardId: id
         }),
       });
 
@@ -38,14 +39,14 @@
     const description = encodeURIComponent("Оплата заказа в Тестовом магазине ROBOKASSA");
     const isTest = "1"; // Тестовый режим
     const shpUserId = `Shp_userId=${userId}`; // Передаём user id в Shp
-    const shpID = `Shp_ID=${id}`; // Передаём id карточки в Shp
+    const shpId = `Shp_id=${id}`; // Передаём id карточки в Shp
     const userEmail= email; // Передаём email 
 
     // Получаем подпись с бэкенда
     const signatureValue = await fetchSignature(price);
 
     // Формируем ссылку для оплаты
-    const paymentLink = `https://auth.robokassa.ru/Merchant/Index.aspx?MerchantLogin=${merchantLogin}&OutSum=${outSum}&InvoiceID=${invId}&Email=${userEmail}&Description=${description}&IsTest=${isTest}&${shpID}&${shpUserId}&SignatureValue=${signatureValue}`;
+    const paymentLink = `https://auth.robokassa.ru/Merchant/Index.aspx?MerchantLogin=${merchantLogin}&OutSum=${outSum}&InvoiceID=${invId}&Email=${userEmail}&Description=${description}&IsTest=${isTest}&${shpId}&${shpUserId}&SignatureValue=${signatureValue}`;
 
     return paymentLink;
   }
