@@ -371,10 +371,10 @@ class Pipe:
 						value={content}
 						lang="python"
 						{boilerplate}
-						on:change={(e) => {
-							_content = e.detail.value;
+						onChange={(e) => {
+							_content = e;
 						}}
-						on:save={async () => {
+						onSave={async () => {
 							if (formElement) {
 								formElement.requestSubmit();
 							}

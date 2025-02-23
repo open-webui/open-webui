@@ -146,7 +146,7 @@ class OAuthManager:
             nested_claims = oauth_claim.split(".")
             for nested_claim in nested_claims:
                 claim_data = claim_data.get(nested_claim, {})
-            user_oauth_groups = claim_data if isinstance(claim_data, list) else None
+            user_oauth_groups = claim_data if isinstance(claim_data, list) else []
 
         user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
         all_available_groups: list[GroupModel] = Groups.get_groups()
@@ -314,15 +314,6 @@ class OAuthManager:
 
         if not user:
             user_count = Users.get_num_users()
-
-            if (
-                request.app.state.USER_COUNT
-                and user_count >= request.app.state.USER_COUNT
-            ):
-                raise HTTPException(
-                    403,
-                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-                )
 
             # If the user does not exist, check if signups are enabled
             if auth_manager_config.ENABLE_OAUTH_SIGNUP:
