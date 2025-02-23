@@ -1146,5 +1146,6 @@
 	"Your account status is currently pending activation.": "В настоящее время ваша учетная запись ожидает активации.",
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Весь ваш взнос будет направлен непосредственно разработчику плагина; Open WebUI не взимает никаких процентов. Однако выбранная платформа финансирования может иметь свои собственные сборы.",
 	"Youtube": "YouTube",
-	"Youtube Loader Settings": "Настройки загрузчика YouTube"
+	"Youtube Loader Settings": "Настройки загрузчика YouTube",
+	"Update Plan": "Подписка"
 }
