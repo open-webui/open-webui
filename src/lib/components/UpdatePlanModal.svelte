@@ -85,7 +85,7 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     padding: 20px;
     width: 90%; /* Ширина модального окна */
-    max-width: 600px; /* Максимальная ширина */
+    max-width: 1200px; /* Максимальная ширина */
     max-height: 90vh; /* Максимальная высота (90% высоты экрана) */
     overflow-y: auto; /* Прокрутка, если содержимое не помещается */
   }
@@ -176,32 +176,34 @@
   <div class="modal-overlay">
     <div class="modal-content">
       <h2 class="text-xl mb-4">Обновить план</h2>
-      <p>User ID: {userId}</p> <!-- Отображаем user id -->
 
       <!-- Контейнер с карточками -->
       <div class="cards-container">
         <!-- Карточка 1 -->
         <div class="card">
           <h3>Базовый план</h3>
-          <p>Идеально для начинающих. Включает основные функции.</p>
-          <div class="price">$10</div>
+          <p>Идеально для начинающих</p>
+          <p>1 000 000 токенов</p>
+          <div class="price">₽950</div>
           <button on:click={() => openPaymentWindow('10')}>Оплатить</button>
         </div>
 
         <!-- Карточка 2 -->
         <div class="card">
           <h3>Стандартный план</h3>
-          <p>Для активных пользователей. Расширенные возможности.</p>
-          <div class="price">$25</div>
-          <button on:click={() => openPaymentWindow('25')}>Оплатить</button>
+          <p>Для активных пользователей</p>
+          <p>3 000 000 токенов</p>
+          <div class="price">₽2499</div>
+          <button on:click={() => openPaymentWindow('2499')}>Оплатить</button>
         </div>
 
         <!-- Карточка 3 -->
         <div class="card">
           <h3>Премиум план</h3>
-          <p>Для профессионалов. Все функции и приоритетная поддержка.</p>
-          <div class="price">$50</div>
-          <button on:click={() => openPaymentWindow('50')}>Оплатить</button>
+          <p>Для профессионалов</p>
+          <p>9 000 000 токенов</p>
+          <div class="price">₽5900</div>
+          <button on:click={() => openPaymentWindow('5900')}>Оплатить</button>
         </div>
       </div>
 
