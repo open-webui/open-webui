@@ -678,6 +678,8 @@ S3_REGION_NAME = os.environ.get("S3_REGION_NAME", None)
 S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", None)
 S3_KEY_PREFIX = os.environ.get("S3_KEY_PREFIX", None)
 S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", None)
+S3_USE_ACCELERATE_ENDPOINT = os.environ.get("S3_USE_ACCELERATE_ENDPOINT", None)
+S3_ADDRESSING_STYLE = os.environ.get("S3_ADDRESSING_STYLE", None)
 
 GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME", None)
 GOOGLE_APPLICATION_CREDENTIALS_JSON = os.environ.get(
