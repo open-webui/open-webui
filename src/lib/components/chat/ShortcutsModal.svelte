@@ -285,7 +285,7 @@
 
 					<div class="w-full flex justify-between items-center">
 						<div class=" text-sm">
-							{$i18n.t('Accept Autocomplete Generation / Jumpt to prompt variable')}
+							{$i18n.t('Accept autocomplete generation / Jump to prompt variable')}
 						</div>
 
 						<div class="flex space-x-1 text-xs">
