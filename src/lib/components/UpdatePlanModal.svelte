@@ -4,7 +4,7 @@
   export let email: string; // Принимаем email как пропс
 
   // Функция для запроса подписи с бэкенда
-  async function fetchSignature(price: string): Promise<string> {
+  async function fetchSignature(price: string, id: string): Promise<string> {
     try {
       const response = await fetch("/api/v1/payment/generate-signature", {
         method: "POST",
@@ -43,7 +43,7 @@
     const userEmail= email; // Передаём email 
 
     // Получаем подпись с бэкенда
-    const signatureValue = await fetchSignature(price);
+    const signatureValue = await fetchSignature(price, id);
 
     // Формируем ссылку для оплаты
     const paymentLink = `https://auth.robokassa.ru/Merchant/Index.aspx?MerchantLogin=${merchantLogin}&OutSum=${outSum}&InvoiceID=${invId}&Email=${userEmail}&Description=${description}&IsTest=${isTest}&${shpId}&${shpUserId}&SignatureValue=${signatureValue}`;
