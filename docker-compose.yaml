@@ -28,7 +28,7 @@ services:
     depends_on:
       - litellm
     ports:
-      - "8000:8000"
+      - "8080:8080"
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
