@@ -21,6 +21,10 @@ services:
       - ENABLE_OAUTH_SIGNUP=True
       - OAUTH_MERGE_ACCOUNTS_BY_EMAIL=True
       - 'WEBUI_SECRET_KEY='
+      - GOOGLE_CLIENT_ID=
+      - GOOGLE_CLIENT_SECRET=
+      - 'WEBUI_SECRET_KEY='
+      - OPENAI_API_KEY=
     extra_hosts:
       - host.docker.internal:host-gateway
     networks:
