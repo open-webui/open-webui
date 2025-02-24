@@ -66,6 +66,7 @@ jobs:
           key: ${{ secrets.PROD_EC2_SSH_KEY }}
           source: "docker-compose.yaml"
           target: "~/beyond-the-loop"
+          overwrite: true
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
@@ -96,6 +97,7 @@ jobs:
           key: ${{ secrets.STAGING_EC2_SSH_KEY }}
           source: "docker-compose.yaml"
           target: "~/beyond-the-loop"
+          overwrite: true
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
