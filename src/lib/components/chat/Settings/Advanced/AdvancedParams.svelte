@@ -30,6 +30,8 @@
 		num_batch: null,
 		num_keep: null,
 		max_tokens: null,
+		enable_max_context: null,
+		max_context: null,
 		use_mmap: null,
 		use_mlock: null,
 		num_thread: null,
@@ -909,6 +911,105 @@
 			</div>
 		{/if}
 	</div>
+
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Automatically adjust max tokens based on input length. When enabled, the model will fully utilize the token budget for maximum token generation.'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Dynamic Max Tokens')}
+				</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					type="button"
+					on:click={() => {
+						params.enable_max_context = (params?.enable_max_context ?? null) === null ? false : null;
+					}}
+				>
+					{#if (params?.enable_max_context ?? null) === null}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+
+		{#if (params?.enable_max_context ?? null) !== null}
+			<div class="flex justify-between items-center mt-1">
+				<div class="text-xs text-gray-500">
+					{params.enable_max_context ? 'Enabled' : 'Disabled'}
+				</div>
+				<div class=" pr-2">
+					<Switch bind:state={params.enable_max_context} />
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	{#if params.enable_max_context === true}
+		<div class=" py-0.5 w-full justify-between">
+			<Tooltip
+				content={$i18n.t(
+					'Maximum context size in tokens. Model will automatically adjust max tokens based on input length.'
+				)}
+				placement="top-start"
+				className="inline-tooltip"
+			>
+				<div class="flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Max Context Size')}
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+						type="button"
+						on:click={() => {
+							params.max_context = (params?.max_context ?? null) === null ? 4096 : null;
+						}}
+					>
+						{#if (params?.max_context ?? null) === null}
+							<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+						{/if}
+					</button>
+				</div>
+			</Tooltip>
+
+			{#if (params?.max_context ?? null) !== null}
+				<div class="flex mt-0.5 space-x-2">
+					<div class=" flex-1">
+						<input
+							id="steps-range"
+							type="range"
+							min="1024"
+							max="200000"
+							step="1024"
+							bind:value={params.max_context}
+							class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						/>
+					</div>
+					<div>
+						<input
+							bind:value={params.max_context}
+							type="number"
+							class=" bg-transparent text-center w-14"
+							min="1024"
+							max="200000"
+							step="1024"
+						/>
+					</div>
+				</div>
+			{/if}
+		</div>
+	{/if}
 
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip

@@ -3,8 +3,45 @@ from open_webui.utils.misc import (
     add_or_update_system_message,
 )
 
-from typing import Callable, Optional
+from typing import Callable, Optional, List
 import json
+import transformers
+
+
+def count_input_tokens(messages: List[dict], model: str) -> int:
+    """Count input tokens for a given model and messages."""
+    try:
+        tokenizer = transformers.AutoTokenizer.from_pretrained(
+            "./deepseek_v3_tokenizer", trust_remote_code=True
+        )
+        total_tokens = 0
+        for msg in messages:
+            if isinstance(msg.get("content"), str):
+                total_tokens += len(tokenizer.encode(msg["content"]))
+        return total_tokens
+    except Exception as e:
+        return 0
+
+
+def calculate_adjusted_max_tokens(
+    model: str,
+    user_max: int,
+    messages: Optional[List[dict]] = None,
+    max_context: Optional[int] = None,
+) -> int:
+    """Calculate adjusted max tokens based on model context size.
+    If max_context is set, it will override any user_max setting and calculate
+    max tokens automatically based on input length.
+    """
+
+    if max_context is not None and messages is not None:
+        input_tokens = count_input_tokens(messages, model)
+
+        # Calculate available tokens without considering user_max, 1000 is a buffer
+        result = max(128, max_context - input_tokens - 1000)
+        return result
+
+    return user_max
 
 
 # inplace function: form_data is modified
@@ -45,9 +82,25 @@ def apply_model_params_to_body(
     if not params:
         return form_data
 
+    # First pass: Apply all parameters except max_tokens
     for key, cast_func in mappings.items():
-        if (value := params.get(key)) is not None:
+        if key != "max_tokens" and (value := params.get(key)) is not None:
             form_data[key] = cast_func(value)
+
+    # Second pass: Handle max_tokens with max_context if enabled
+    if params.get("enable_max_context") and params.get("max_context") is not None:
+        max_context = params["max_context"]
+        user_max = params.get("max_tokens", 128)  # Default to 128 if not set
+
+        adjusted_max = calculate_adjusted_max_tokens(
+            form_data.get("model", ""),
+            user_max,
+            form_data.get("messages"),
+            max_context,
+        )
+        form_data["max_tokens"] = adjusted_max
+    elif "max_tokens" in mappings and params.get("max_tokens") is not None:
+        form_data["max_tokens"] = mappings["max_tokens"](params["max_tokens"])
 
     return form_data
 
@@ -62,6 +115,8 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
         "reasoning_effort": str,
         "seed": lambda x: x,
         "stop": lambda x: [bytes(s, "utf-8").decode("unicode_escape") for s in x],
+        "enable_max_context": bool,
+        "max_context": int,
     }
     return apply_model_params_to_body(params, form_data, mappings)
 
@@ -196,6 +251,7 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     Returns:
         dict: A modified payload compatible with the Ollama API.
     """
+
     ollama_payload = {}
 
     # Mapping basic model and message details
@@ -216,19 +272,58 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
         ollama_payload["options"] = openai_payload["options"]
         ollama_options = openai_payload["options"]
 
-        # Re-Mapping OpenAI's `max_tokens` -> Ollama's `num_predict`
-        if "max_tokens" in ollama_options:
-            ollama_options["num_predict"] = ollama_options["max_tokens"]
-            del ollama_options[
-                "max_tokens"
-            ]  # To prevent Ollama warning of invalid option provided
+        # Handle parameters which map directly
+        for param in ["temperature", "top_p", "seed"]:
+            if param in openai_payload:
+                ollama_options[param] = openai_payload[param]
 
-        # Ollama lacks a "system" prompt option. It has to be provided as a direct parameter, so we copy it down.
+        # Re-Mapping OpenAI's `max_tokens` -> Ollama's `num_predict` with dynamic adjustment
+        if "max_tokens" in ollama_options or "max_context" in ollama_options:
+            model = openai_payload.get("model", "")
+            user_max = ollama_options.get(
+                "max_tokens", 128
+            )  # Default to 128 if not set
+            max_context = ollama_options.get("max_context")
+
+            adjusted_max = calculate_adjusted_max_tokens(
+                model,
+                user_max,
+                ollama_payload.get("messages"),
+                max_context,
+            )
+
+            ollama_options["num_predict"] = adjusted_max
+
+            # Remove max_context and max_tokens from options to prevent Ollama warning
+            if "max_context" in ollama_options:
+                del ollama_options["max_context"]
+            if "max_tokens" in ollama_options:
+                del ollama_options["max_tokens"]
+
+        # Mapping OpenAI's `max_tokens` -> Ollama's `num_predict`
+        if "max_completion_tokens" in openai_payload:
+            ollama_options["num_predict"] = openai_payload["max_completion_tokens"]
+        elif "max_tokens" in openai_payload:
+            ollama_options["num_predict"] = openai_payload["max_tokens"]
+
+        # Handle frequency / presence_penalty, which needs renaming and checking
+        if "frequency_penalty" in openai_payload:
+            ollama_options["repeat_penalty"] = openai_payload["frequency_penalty"]
+
+        if "presence_penalty" in openai_payload and "penalty" not in ollama_options:
+            # We are assuming presence penalty uses a similar concept in Ollama, which needs custom handling if exists.
+            ollama_options["new_topic_penalty"] = openai_payload["presence_penalty"]
+
+        # Handle system prompt
         if "system" in ollama_options:
             ollama_payload["system"] = ollama_options["system"]
             del ollama_options[
                 "system"
             ]  # To prevent Ollama warning of invalid option provided
+
+        # Add options to payload if any have been set
+        if ollama_options:
+            ollama_payload["options"] = ollama_options
 
     if "metadata" in openai_payload:
         ollama_payload["metadata"] = openai_payload["metadata"]

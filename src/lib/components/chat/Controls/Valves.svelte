@@ -59,11 +59,42 @@
 		}
 
 		if (valvesSpec) {
+			// Add max context controls for tools
+			if (tab === 'tools') {
+				valvesSpec.properties = {
+					...valvesSpec.properties,
+					enable_max_context: {
+						type: 'boolean',
+						title: 'Dynamic Max Tokens',
+						description: 'Automatically adjust max tokens based on input length. When enabled, the model will fully utilize the token budget for maximum token generation.',
+						default: false
+					},
+					max_context: {
+						type: 'number',
+						title: 'Max Context Size',
+						description: 'Maximum context size in tokens. Model will automatically adjust max tokens based on input length.',
+						minimum: 1024,
+						maximum: 200000,
+						default: 4096,
+						conditionalDisplay: {
+							dependsOn: 'enable_max_context',
+							condition: true
+						}
+					}
+				};
+			}
+
 			// Convert array to string
 			for (const property in valvesSpec.properties) {
 				if (valvesSpec.properties[property]?.type === 'array') {
 					valves[property] = (valves[property] ?? []).join(',');
 				}
+			}
+
+			// Set default values for new properties if not set
+			if (tab === 'tools') {
+				valves.enable_max_context = valves.enable_max_context ?? false;
+				valves.max_context = valves.max_context ?? 4096;
 			}
 		}
 
@@ -80,6 +111,11 @@
 			}
 
 			if (tab === 'tools') {
+				// Convert max_context to number
+				if (valves.max_context) {
+					valves.max_context = parseInt(valves.max_context);
+				}
+
 				const res = await updateToolUserValvesById(localStorage.token, selectedId, valves).catch(
 					(error) => {
 						toast.error(`${error}`);

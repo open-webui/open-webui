@@ -11,6 +11,9 @@
 
 {#if valvesSpec && Object.keys(valvesSpec?.properties ?? {}).length}
 	{#each Object.keys(valvesSpec.properties) as property, idx}
+		{#if !valvesSpec.properties[property].conditionalDisplay ||
+			(valvesSpec.properties[property].conditionalDisplay &&
+			valves[valvesSpec.properties[property].conditionalDisplay.dependsOn] === valvesSpec.properties[property].conditionalDisplay.condition)}
 		<div class=" py-0.5 w-full justify-between">
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
@@ -81,17 +84,33 @@
 								</div>
 							</div>
 						{:else}
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
-								type="text"
-								placeholder={valvesSpec.properties[property].title}
-								bind:value={valves[property]}
-								autocomplete="off"
-								required
-								on:change={() => {
-									dispatch('change');
-								}}
-							/>
+							{#if valvesSpec.properties[property].type === 'number'}
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
+									type="number"
+									min={valvesSpec.properties[property].minimum}
+									max={valvesSpec.properties[property].maximum}
+									placeholder={valvesSpec.properties[property].title}
+									bind:value={valves[property]}
+									autocomplete="off"
+									required
+									on:change={() => {
+										dispatch('change');
+									}}
+								/>
+							{:else}
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
+									type="text"
+									placeholder={valvesSpec.properties[property].title}
+									bind:value={valves[property]}
+									autocomplete="off"
+									required
+									on:change={() => {
+										dispatch('change');
+									}}
+								/>
+							{/if}
 						{/if}
 					</div>
 				</div>
@@ -103,6 +122,7 @@
 				</div>
 			{/if}
 		</div>
+		{/if}
 	{/each}
 {:else}
 	<div class="text-xs">No valves</div>
