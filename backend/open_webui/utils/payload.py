@@ -2,24 +2,37 @@ from open_webui.utils.task import prompt_template, prompt_variables_template
 from open_webui.utils.misc import (
     add_or_update_system_message,
 )
+from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
 from typing import Callable, Optional, List
+import os
 import json
+import logging
+import sys
 import transformers
+
+logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MODELS"])
+
+# 获取当前文件的目录
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+log.info(f"Current directory: {cur_dir}")
+tokenizer = transformers.AutoTokenizer.from_pretrained(
+    f"{cur_dir}/deepseek_v3_tokenizer", trust_remote_code=True
+)
 
 
 def count_input_tokens(messages: List[dict], model: str) -> int:
     """Count input tokens for a given model and messages."""
     try:
-        tokenizer = transformers.AutoTokenizer.from_pretrained(
-            "./deepseek_v3_tokenizer", trust_remote_code=True
-        )
         total_tokens = 0
         for msg in messages:
             if isinstance(msg.get("content"), str):
                 total_tokens += len(tokenizer.encode(msg["content"]))
         return total_tokens
     except Exception as e:
+        log.error(f"Error counting input tokens: {e}")
         return 0
 
 
@@ -38,7 +51,8 @@ def calculate_adjusted_max_tokens(
         input_tokens = count_input_tokens(messages, model)
 
         # Calculate available tokens without considering user_max, 1000 is a buffer
-        result = max(128, max_context - input_tokens - 1000)
+        result = max(128, max_context - input_tokens - max(max_context / 10, 1000))
+        log.info(f"Calculated input tokens: {input_tokens}, max_tokens: {result}")
         return result
 
     return user_max
