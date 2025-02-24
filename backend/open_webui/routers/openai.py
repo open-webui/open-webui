@@ -84,9 +84,9 @@ def openai_o1_o3_handler(payload):
         payload["max_completion_tokens"] = payload["max_tokens"]
         del payload["max_tokens"]
 
-    # Fix: O1 does not support the "system" parameter, Modify "system" to "user"
+    # Fix: o1 and o3 do not support the "system" parameter. Modify "system" to "developer"
     if payload["messages"][0]["role"] == "system":
-        payload["messages"][0]["role"] = "user"
+        payload["messages"][0]["role"] = "developer"
 
     return payload
 

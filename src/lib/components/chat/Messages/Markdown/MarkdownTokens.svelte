@@ -88,14 +88,14 @@
 				code={token?.text ?? ''}
 				{attributes}
 				{save}
-				onCode={(e) => {
-					dispatch('code', e);
+				onCode={(value) => {
+					dispatch('code', value);
 				}}
 				onSave={(e) => {
 					dispatch('update', {
 						raw: token.raw,
 						oldContent: token.text,
-						newContent: e
+						newContent: value
 					});
 				}}
 			/>
