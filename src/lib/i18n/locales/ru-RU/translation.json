@@ -211,7 +211,7 @@
 	"Content Extraction": "Извлечение контента",
 	"Context Length": "Длина контекста",
 	"Continue Response": "Продолжить ответ",
-	"Continue with {{provider}}": "Продолжить с {{provider}}",
+	"Continue with {{provider}}": "Войти или зарегистрироваться",
 	"Continue with Email": "Продолжить с Email",
 	"Continue with LDAP": "Продолжить с LDAP",
 	"Control how message text is split for TTS requests. 'Punctuation' splits into sentences, 'paragraphs' splits into paragraphs, and 'none' keeps the message as a single string.": "Управляйте разделением текста сообщения для запросов TTS. 'Пунктуация' разделяет на предложения, 'абзацы' - разделяет на абзацы, а 'нет' сохраняет сообщение в виде одной строки.",
