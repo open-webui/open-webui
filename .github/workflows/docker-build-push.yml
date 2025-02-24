@@ -64,7 +64,8 @@ jobs:
           host: ${{ secrets.PROD_EC2_HOST }}
           username: ${{ secrets.PROD_EC2_USERNAME }}
           key: ${{ secrets.PROD_EC2_SSH_KEY }}
-          script: mkdir -p ~/beyond-the-loop
+          script: |
+            mkdir -p ~/beyond-the-loop
 
       - name: Copy docker-compose file to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -73,8 +74,18 @@ jobs:
           username: ${{ secrets.PROD_EC2_USERNAME }}
           key: ${{ secrets.PROD_EC2_SSH_KEY }}
           source: "docker-compose-prod.yaml"
-          target: "~/beyond-the-loop/docker-compose.yaml"
+          target: "~/beyond-the-loop/"
           overwrite: true
+          strip_components: 0
+
+      - name: Rename file on remote
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_EC2_HOST }}
+          username: ${{ secrets.PROD_EC2_USERNAME }}
+          key: ${{ secrets.PROD_EC2_SSH_KEY }}
+          script: |
+            mv ~/beyond-the-loop/docker-compose-prod.yaml ~/beyond-the-loop/docker-compose.yaml
 
       - name: Copy litellm-config file to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -113,7 +124,8 @@ jobs:
           host: ${{ secrets.STAGING_EC2_HOST }}
           username: ${{ secrets.STAGING_EC2_USERNAME }}
           key: ${{ secrets.STAGING_EC2_SSH_KEY }}
-          script: mkdir -p ~/beyond-the-loop
+          script: |
+            mkdir -p ~/beyond-the-loop
 
       - name: Copy docker-compose file to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -122,8 +134,18 @@ jobs:
           username: ${{ secrets.STAGING_EC2_USERNAME }}
           key: ${{ secrets.STAGING_EC2_SSH_KEY }}
           source: "docker-compose-staging.yaml"
-          target: "~/beyond-the-loop/docker-compose.yaml"
+          target: "~/beyond-the-loop/"
           overwrite: true
+          strip_components: 0
+
+      - name: Rename file on remote
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_EC2_HOST }}
+          username: ${{ secrets.STAGING_EC2_USERNAME }}
+          key: ${{ secrets.STAGING_EC2_SSH_KEY }}
+          script: |
+            mv ~/beyond-the-loop/docker-compose-staging.yaml ~/beyond-the-loop/docker-compose.yaml
 
       - name: Copy litellm-config file to EC2
         uses: appleboy/scp-action@v0.1.7
