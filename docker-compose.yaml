@@ -16,9 +16,14 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
 
-  open-webui:
-    image: ghcr.io/${GITHUB_REPOSITORY}:main
-    container_name: open-webui
+  beyond-the-loop:
+    image: ghcr.io/philszalay/beyond-the-loop:main
+    #build:
+    #  context: .
+    #  dockerfile: Dockerfile
+    #  args:
+    #    LITELLM_BASE_URL: '/litellm'
+    container_name: beyond-the-loop
     volumes:
       - ./backend/data:/app/backend/data
     depends_on:
@@ -33,5 +38,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  open-webui: {}
+  beyond-the-loop: {}
   litellm: {}
