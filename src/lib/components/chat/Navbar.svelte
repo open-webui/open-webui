@@ -15,6 +15,7 @@
 	} from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
@@ -73,7 +74,7 @@
 			<div
 				class="items-center flex h-10 overflow-hidden py-0.5"
 			>
-				<a href="/">
+				<a href="/" on:click={() => goto('/')}>
 					<IonosLogo className={"h-6"} />
 				</a>
 			</div>
