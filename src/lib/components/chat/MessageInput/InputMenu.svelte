@@ -5,6 +5,7 @@
 
 	import { config, user, tools as _tools, mobile } from '$lib/stores';
 	import { createPicker } from '$lib/utils/google-drive-picker';
+	
 	import { getTools } from '$lib/apis/tools';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -24,6 +25,7 @@
 	export let inputFilesHandler: Function;
 
 	export let uploadGoogleDriveHandler: Function;
+	export let uploadOneDriveHandler: Function;
 
 	export let selectedToolIds: string[] = [];
 
@@ -223,6 +225,35 @@
 						/>
 					</svg>
 					<div class="line-clamp-1">{$i18n.t('Google Drive')}</div>
+				</DropdownMenu.Item>
+			{/if}
+
+			{#if $config?.features?.enable_onedrive_integration || true}
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+					on:click={() => {
+						uploadOneDriveHandler();
+					}}
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5">
+						<path
+							d="M21.69 13.91l-5.5-3.16l-4.08 3.45l-1.87-1.08l-4.86 4.47l.86.5a2.998 2.998 0 0 0 4.09-1.11a3 3 0 0 0 4.09-1.11a3.06 3.06 0 0 0 1.27-.13a3 3 0 0 0 4.09-1.11a2.81 2.81 0 0 0 1.91-.72z"
+							fill="#0364B8"
+						/>
+						<path
+							d="M7.5 13.5L2 10.5l5-3l5.5 3.16l-5 2.84z"
+							fill="#0078D4"
+						/>
+						<path
+							d="M16.19 10.75L12 7.94V4.5l5.5 3.16l-1.31 3.09z"
+							fill="#1490DF"
+						/>
+						<path
+							d="M12 4.5l-5 3l-5-3l5-3l5 3z"
+							fill="#28A8EA"
+						/>
+					</svg>
+					<div class="line-clamp-1">{$i18n.t('OneDrive')}</div>
 				</DropdownMenu.Item>
 			{/if}
 		</DropdownMenu.Content>
