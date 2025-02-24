@@ -84,9 +84,15 @@ def openai_o1_o3_handler(payload):
         payload["max_completion_tokens"] = payload["max_tokens"]
         del payload["max_tokens"]
 
-    # Fix: o1 and o3 do not support the "system" parameter. Modify "system" to "developer"
+    # Fix: o1 and o3 do not support the "system" role directly.
+    # For older models like "o1-mini" or "o1-preview", use role "user".
+    # For newer o1/o3 models, replace "system" with "developer".
     if payload["messages"][0]["role"] == "system":
-        payload["messages"][0]["role"] = "developer"
+        model_lower = payload["model"].lower()
+        if model_lower.startswith("o1-mini") or model_lower.startswith("o1-preview"):
+            payload["messages"][0]["role"] = "user"
+        else:
+            payload["messages"][0]["role"] = "developer"
 
     return payload
 
