@@ -6,6 +6,22 @@ from open_webui.models.groups import Groups
 from open_webui.config import DEFAULT_USER_PERMISSIONS
 import json
 
+def is_private_access(access_control: Optional[dict] = None) -> bool:
+    if access_control is None:
+        return False
+    if access_control == {}:
+        return True
+
+    types = ["write", "read"]
+    for type in types:
+        permission_access = access_control.get(type, {})
+        permitted_group_ids = permission_access.get("group_ids", [])
+        permitted_user_ids = permission_access.get("user_ids", [])
+
+        if permitted_group_ids or permitted_user_ids:
+            return False
+
+    return True
 
 def fill_missing_permissions(
     permissions: Dict[str, Any], default_permissions: Dict[str, Any]

@@ -21,7 +21,7 @@ from open_webui.storage.provider import Storage
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user
-from open_webui.utils.access_control import has_access, has_permission
+from open_webui.utils.access_control import has_access, has_permission, is_private_access
 
 
 from open_webui.env import SRC_LOG_LEVELS
@@ -150,6 +150,12 @@ async def create_new_knowledge(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
+    if user.role != "admin" and not is_private_access(form_data.access_control):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
     knowledge = Knowledges.insert_new_knowledge(user.id, form_data)
 
     if knowledge:
@@ -221,6 +227,12 @@ async def update_knowledge_by_id(
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    if user.role != "admin" and not is_private_access(form_data.access_control):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
