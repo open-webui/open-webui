@@ -58,6 +58,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Create directory on EC2 if it doesn't exist
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_EC2_HOST }}
+          username: ${{ secrets.PROD_EC2_USERNAME }}
+          key: ${{ secrets.PROD_EC2_SSH_KEY }}
+          script: mkdir -p ~/beyond-the-loop
+
       - name: Copy docker-compose file to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -98,6 +106,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Create directory on EC2 if it doesn't exist
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_EC2_HOST }}
+          username: ${{ secrets.STAGING_EC2_USERNAME }}
+          key: ${{ secrets.STAGING_EC2_SSH_KEY }}
+          script: mkdir -p ~/beyond-the-loop
 
       - name: Copy docker-compose file to EC2
         uses: appleboy/scp-action@v0.1.7
