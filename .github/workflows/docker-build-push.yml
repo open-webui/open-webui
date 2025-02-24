@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Beyond The Loop - Build and Push Docker Image
 
 on:
   workflow_dispatch:
