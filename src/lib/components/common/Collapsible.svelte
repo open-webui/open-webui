@@ -31,11 +31,13 @@
 
 	// Watch the 'done' attribute to control the open/close state for each panel
 	$: {
-		// Based on each panel's 'done' state, toggle its open state
-		if (attributes?.done === 'true') {
-			openState[id] = false;  // Collapse the panel when the operation is done
-		} else {
-			openState[id] = true;   // Expand the panel when the operation is still ongoing
+		// Only automatically control openState for "reasoning" and "code_interpreter"
+		if (attributes?.type === 'reasoning' || attributes?.type === 'code_interpreter') {
+			if (attributes?.done === 'true') {
+				openState[id] = false;  // Collapse the panel when the operation is done
+			} else {
+				openState[id] = true;   // Expand the panel when the operation is still ongoing
+			}
 		}
 	}
 
