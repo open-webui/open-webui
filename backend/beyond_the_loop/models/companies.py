@@ -221,4 +221,17 @@ class CompanyTable:
             company = db.query(Company).filter(Company.id == company_id).first()
             return company.credit_balance if company else None
 
+    def create_company(self, company_data: dict) -> Optional[CompanyModel]:
+        """Create a new company"""
+        try:
+            with get_db() as db:
+                company = Company(**company_data)
+                db.add(company)
+                db.commit()
+                db.refresh(company)
+                return CompanyModel.model_validate(company)
+        except Exception as e:
+            print(f"Error creating company: {e}")
+            return None
+
 Companies = CompanyTable()

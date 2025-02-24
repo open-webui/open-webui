@@ -21,9 +21,8 @@ from open_webui.models.auths import (
     UserResponse,
 )
 from beyond_the_loop.models.users import Users
+from beyond_the_loop.models.companies import Companies, NO_COMPANY
 from beyond_the_loop.services.email_service import EmailService
-from beyond_the_loop.models.companies import NO_COMPANY
-
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
     WEBUI_AUTH,
@@ -449,13 +448,24 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
         if Users.get_num_users() == 0:
             # Disable signup after the first user is created
             request.app.state.config.ENABLE_SIGNUP = False
+            # Create a new company for the first user
+            company_id = str(uuid.uuid4())
+            company = Companies.create_company({
+                "id": company_id,
+                "name": f"{form_data.name}'s Company",
+                "credit_balance": 5000  # Initial credit balance
+            })
+            if not company:
+                raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_COMPANY_ERROR)
+        else:
+            company_id = NO_COMPANY
 
         hashed = get_password_hash(form_data.password)
         user = Auths.insert_new_auth(
             form_data.email.lower(),
             hashed,
             form_data.name,
-            NO_COMPANY,
+            company_id,
             form_data.profile_image_url,
             role,
         )

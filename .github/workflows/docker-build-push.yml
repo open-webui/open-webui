@@ -2,9 +2,9 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "staging" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "staging" ]
 
 env:
   REGISTRY: ghcr.io
@@ -47,3 +47,123 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             LITELLM_BASE_URL=/litellm
+
+  deploy-production:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create directory on EC2 if it doesn't exist
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_EC2_HOST }}
+          username: ${{ secrets.PROD_EC2_USERNAME }}
+          key: ${{ secrets.PROD_EC2_SSH_KEY }}
+          script: |
+            mkdir -p ~/beyond-the-loop
+
+      - name: Copy docker-compose file to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_EC2_HOST }}
+          username: ${{ secrets.PROD_EC2_USERNAME }}
+          key: ${{ secrets.PROD_EC2_SSH_KEY }}
+          source: "docker-compose-prod.yaml"
+          target: "~/beyond-the-loop/"
+          overwrite: true
+          strip_components: 0
+
+      - name: Rename file on remote
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_EC2_HOST }}
+          username: ${{ secrets.PROD_EC2_USERNAME }}
+          key: ${{ secrets.PROD_EC2_SSH_KEY }}
+          script: |
+            mv ~/beyond-the-loop/docker-compose-prod.yaml ~/beyond-the-loop/docker-compose.yaml
+
+      - name: Copy litellm-config file to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_EC2_HOST }}
+          username: ${{ secrets.PROD_EC2_USERNAME }}
+          key: ${{ secrets.PROD_EC2_SSH_KEY }}
+          source: "litellm-config.yaml"
+          target: "~/beyond-the-loop"
+          overwrite: true
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_EC2_HOST }}
+          username: ${{ secrets.PROD_EC2_USERNAME }}
+          key: ${{ secrets.PROD_EC2_SSH_KEY }}
+          script: |
+            cd ~/beyond-the-loop
+            docker-compose pull
+            docker-compose up -d
+
+  deploy-staging:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+    environment: staging
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create directory on EC2 if it doesn't exist
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_EC2_HOST }}
+          username: ${{ secrets.STAGING_EC2_USERNAME }}
+          key: ${{ secrets.STAGING_EC2_SSH_KEY }}
+          script: |
+            mkdir -p ~/beyond-the-loop
+
+      - name: Copy docker-compose file to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.STAGING_EC2_HOST }}
+          username: ${{ secrets.STAGING_EC2_USERNAME }}
+          key: ${{ secrets.STAGING_EC2_SSH_KEY }}
+          source: "docker-compose-staging.yaml"
+          target: "~/beyond-the-loop/"
+          overwrite: true
+          strip_components: 0
+
+      - name: Rename file on remote
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_EC2_HOST }}
+          username: ${{ secrets.STAGING_EC2_USERNAME }}
+          key: ${{ secrets.STAGING_EC2_SSH_KEY }}
+          script: |
+            mv ~/beyond-the-loop/docker-compose-staging.yaml ~/beyond-the-loop/docker-compose.yaml
+
+      - name: Copy litellm-config file to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.STAGING_EC2_HOST }}
+          username: ${{ secrets.STAGING_EC2_USERNAME }}
+          key: ${{ secrets.STAGING_EC2_SSH_KEY }}
+          source: "litellm-config.yaml"
+          target: "~/beyond-the-loop"
+          overwrite: true
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_EC2_HOST }}
+          username: ${{ secrets.STAGING_EC2_USERNAME }}
+          key: ${{ secrets.STAGING_EC2_SSH_KEY }}
+          script: |
+            cd ~/beyond-the-loop
+            docker-compose pull
+            docker-compose up -d
