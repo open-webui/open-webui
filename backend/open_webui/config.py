@@ -1570,6 +1570,18 @@ GOOGLE_DRIVE_API_KEY = PersistentConfig(
     os.environ.get("GOOGLE_DRIVE_API_KEY", ""),
 )
 
+ENABLE_ONEDRIVE_INTEGRATION = PersistentConfig(
+    "ENABLE_ONEDRIVE_INTEGRATION",
+    "onedrive.enable",
+    os.getenv("ENABLE_ONEDRIVE_INTEGRATION", "False").lower() == "true",
+)
+
+ONEDRIVE_CLIENT_ID = PersistentConfig(
+    "ONEDRIVE_CLIENT_ID",
+    "onedrive.client_id",
+    os.environ.get("ONEDRIVE_CLIENT_ID", ""),
+)
+
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = PersistentConfig(
     "CONTENT_EXTRACTION_ENGINE",

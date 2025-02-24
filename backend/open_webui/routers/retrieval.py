@@ -353,6 +353,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
         "enable_google_drive_integration": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
+        "enable_onedrive_integration": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
@@ -381,6 +382,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "search": {
                 "enabled": request.app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "drive": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
+                "onedrive": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
                 "engine": request.app.state.config.RAG_WEB_SEARCH_ENGINE,
                 "searxng_query_url": request.app.state.config.SEARXNG_QUERY_URL,
                 "google_pse_api_key": request.app.state.config.GOOGLE_PSE_API_KEY,
@@ -478,6 +480,7 @@ class ConfigUpdateForm(BaseModel):
     RAG_FULL_CONTEXT: Optional[bool] = None
     pdf_extract_images: Optional[bool] = None
     enable_google_drive_integration: Optional[bool] = None
+    enable_onedrive_integration: Optional[bool] = None
     file: Optional[FileConfig] = None
     content_extraction: Optional[ContentExtractionConfig] = None
     chunk: Optional[ChunkParamUpdateForm] = None
@@ -505,6 +508,12 @@ async def update_rag_config(
         form_data.enable_google_drive_integration
         if form_data.enable_google_drive_integration is not None
         else request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION
+    )
+
+    request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION = (
+        form_data.enable_onedrive_integration
+        if form_data.enable_onedrive_integration is not None
+        else request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION
     )
 
     if form_data.file is not None:
