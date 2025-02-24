@@ -21,22 +21,22 @@ jobs:
         envkey_OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         file_name: .env
     # docker build, login to GCP and push
-    # - name: 'Docker build'
-    #   run: docker build -t europe-west3-docker.pkg.dev/w-calderone/w-chat-gpt-2/w-chat-gpt-2 .
-    # - id: 'auth'
-    #   name: 'Authenticate to Google Cloud'
-    #   uses: 'google-github-actions/auth@v0.6.0'
-    #   with:
-    #     credentials_json: '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}'
-    #     token_format: 'access_token'
-    # - uses: 'docker/login-action@v1'
-    #   name: 'Docker login'
-    #   with:
-    #     registry: 'europe-west3-docker.pkg.dev'
-    #     username: 'oauth2accesstoken'
-    #     password: '${{ steps.auth.outputs.access_token }}'
-    # - name: 'Docker push'
-    #   run: docker push europe-west3-docker.pkg.dev/w-calderone/w-chat-gpt-2/w-chat-gpt-2 
+    - name: 'Docker build'
+      run: docker build -t europe-west3-docker.pkg.dev/w-calderone/w-chat-gpt-2/w-chat-gpt-2 .
+    - id: 'auth'
+      name: 'Authenticate to Google Cloud'
+      uses: 'google-github-actions/auth@v0.6.0'
+      with:
+        credentials_json: '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}'
+        token_format: 'access_token'
+    - uses: 'docker/login-action@v1'
+      name: 'Docker login'
+      with:
+        registry: 'europe-west3-docker.pkg.dev'
+        username: 'oauth2accesstoken'
+        password: '${{ steps.auth.outputs.access_token }}'
+    - name: 'Docker push'
+      run: docker push europe-west3-docker.pkg.dev/w-calderone/w-chat-gpt-2/w-chat-gpt-2 
     # deploy to VM
     - name: Deploy
       run: | 
@@ -46,5 +46,3 @@ jobs:
         scp -o 'StrictHostKeyChecking no' -rp -i $TEMP compose-prod.yml ${{ secrets.USERNAME }}@${{ secrets.HOST }}:/var/www/chatgpt-ui/docker-compose.yml
         scp -o 'StrictHostKeyChecking no' -rp -i $TEMP .env.production ${{ secrets.USERNAME }}@${{ secrets.HOST }}:/var/www/chatgpt-ui/.env.production
         ssh -o 'StrictHostKeyChecking no' -i $TEMP ${{ secrets.USERNAME }}@${{ secrets.HOST }} 'bash -s' < deploy.sh
-
-# end
