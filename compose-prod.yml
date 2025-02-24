@@ -1,17 +1,18 @@
 version: '3.4'
 
 services:
-  w-chatbot-ui:
-    container_name: w-chatbot-ui
-    image: europe-west3-docker.pkg.dev/w-calderone/w-chatbot-ui/w-chatbot-ui:latest
+  w-open-webui:
+    container_name: w-open-webui
+    #image: europe-west3-docker.pkg.dev/w-calderone/w-chatbot-ui/w-chatbot-ui:latest
+    image: europe-west3-docker.pkg.dev/w-calderone/w-chat-gpt-2/w-chat-gpt-2:latest
     ports:
       - '3000'
     restart: always
     labels:
       - 'traefik.enable=true'
-      - 'traefik.http.routers.w-chatbot-ui.rule=Host(`gpt.webranking.tools`)'
-      - 'traefik.http.routers.w-chatbot-ui.entrypoints=websecure'
-      - 'traefik.http.routers.w-chatbot-ui.tls.certresolver=myhttpchallenge'
+      - 'traefik.http.routers.w-open-webui.rule=Host(`gpt2.webranking.tools`)'
+      - 'traefik.http.routers.w-open-webui.entrypoints=websecure'
+      - 'traefik.http.routers.w-open-webui.tls.certresolver=myhttpchallenge'
       - 'traefik.port=3000'
     env_file: .env.production
     networks:
