@@ -27,7 +27,7 @@
 
 	// Automatically open if operation is not done, and close when done
 	$: {
-		if (attributes?.done != 'true') {
+		if (attributes?.done === 'false') {
 			open = true;   // Keep open when operation is still ongoing
 		} else {
 			open = false;  // Close when the operation is done
