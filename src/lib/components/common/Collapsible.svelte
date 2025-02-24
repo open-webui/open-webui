@@ -29,7 +29,7 @@
 	$: {
 		if (attributes?.done === 'false') {
 			open = true;   // Keep open when operation is still ongoing
-		} else {
+		} else if (attributes?.done === 'true') {
 			open = false;  // Close when the operation is done
 		}
 	}
