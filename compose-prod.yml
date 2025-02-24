@@ -20,10 +20,7 @@ services:
       # - 'OLLAMA_BASE_URL=http://ollama:11434'
       - ENABLE_OAUTH_SIGNUP=True
       - OAUTH_MERGE_ACCOUNTS_BY_EMAIL=True
-      - GOOGLE_CLIENT_ID=
-      - GOOGLE_CLIENT_SECRET=
       - 'WEBUI_SECRET_KEY='
-      - OPENAI_API_KEY=
     extra_hosts:
       - host.docker.internal:host-gateway
     networks:
