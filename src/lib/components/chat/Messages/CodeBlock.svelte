@@ -464,8 +464,8 @@
 					onSave={() => {
 						saveCode();
 					}}
-					onChange={(e) => {
-						_code = e;
+					onChange={(value) => {
+						_code = value;
 					}}
 				/>
 			</div>
