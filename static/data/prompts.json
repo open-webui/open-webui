@@ -1,20 +1,62 @@
 [
 	{
 		"id": 1,
-		"promptDisplayName": "Write a funny poem about an elephant in a dish store",
+		"promptDisplayName": "(C) Write a funny poem about an elephant in a dish store",
 		"prompt": "Write a funny poem about an elephant in a dish store",
 		"agentId": "improved-meta-llama-31-70b-instruct"
 	},
 	{
 		"id": 2,
-		"promptDisplayName": "Explain the concept of blockchain in simple terms",
+		"promptDisplayName": "(C) Explain the concept of blockchain in simple terms",
 		"prompt": "Explain the concept of blockchain in simple terms",
 		"agentId": "improved-meta-llama-31-70b-instruct"
 	},
 	{
 		"id": 3,
-		"promptDisplayName": "Give me five creative ideas for a social media post",
+		"promptDisplayName": "(G) Give me five creative ideas for a social media post",
 		"prompt": "Give me five creative ideas for a social media post",
 		"agentId": "meta-lama"
+	},
+	{
+		"id": 4,
+		"promptDisplayName": "4 (G) Give me five creative ideas for a social media post",
+		"prompt": "Give me five creative ideas for a social media post",
+		"agentId": "meta-lama"
+	},
+	{
+		"id": 5,
+		"promptDisplayName": "5 (G) Give me five creative ideas for a social media post",
+		"prompt": "Give me five creative ideas for a social media post",
+		"agentId": "meta-lama"
+	},
+	{
+		"id": 6,
+		"promptDisplayName": "6 (G) Give me five creative ideas for a social media post",
+		"prompt": "Give me five creative ideas for a social media post",
+		"agentId": "meta-lama"
+	},
+	{
+		"id": 7,
+		"promptDisplayName": "7 (G) Give me five creative ideas for a social media post",
+		"prompt": "Give me five creative ideas for a social media post",
+		"agentId": "meta-lama"
+	},
+	{
+		"id": 8,
+		"promptDisplayName": "8 (G) Give me five creative ideas for a social media post",
+		"prompt": "Give me five creative ideas for a social media post",
+		"agentId": "meta-lama"
+	},
+	{
+		"id": 9,
+		"promptDisplayName": "9 (G) Give me five creative ideas for a social media post",
+		"prompt": "Give me five creative ideas for a social media post",
+		"agentId": "meta-lama"
+	},
+	{
+		"id": 10,
+		"promptDisplayName": "A (C) Explain options trading",
+		"prompt": "Explain options trading",
+		"agentId": "improved-meta-llama-31-70b-instruct"
 	}
 ]
