@@ -962,31 +962,19 @@ def process_file(
                     file.filename, file.meta.get("content_type"), file_path
                 )
 
-                if is_pdf2text:
-                    docs_text = docs.page_content
-                    docs = [Document(
-                        page_content=docs_text,
+                docs = [
+                    Document(
+                        page_content=doc.page_content,
                         metadata={
+                            **doc.metadata,
                             "name": file.filename,
                             "created_by": file.user_id,
                             "file_id": file.id,
                             "source": file.filename,
                         },
-                    )]
-                else:
-                    docs = [
-                        Document(
-                            page_content=doc.page_content,
-                            metadata={
-                                **doc.metadata,
-                                "name": file.filename,
-                                "created_by": file.user_id,
-                                "file_id": file.id,
-                                "source": file.filename,
-                            },
-                        )
-                        for doc in docs
-                    ]
+                    )
+                    for doc in docs
+                ]
             else:
                 docs = [
                     Document(
@@ -1000,10 +988,7 @@ def process_file(
                         },
                     )
                 ]
-            if is_pdf2text:
-                text_content = docs_text
-            else:
-                text_content = " ".join([doc.page_content for doc in docs])
+            text_content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {text_content}")
         Files.update_file_data_by_id(
