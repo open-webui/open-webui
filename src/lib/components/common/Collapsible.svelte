@@ -9,7 +9,6 @@
 	dayjs.extend(duration);
 	dayjs.extend(relativeTime);
 
-	// Function to load the locale for dayjs
 	async function loadLocale(locales) {
 		for (const locale of locales) {
 			try {
@@ -26,18 +25,12 @@
 
 	const dispatch = createEventDispatcher();
 
-	// Create a reactive object to manage the open state of each panel
-	let openState = {}; // Stores the open state for each panel
-
-	// Watch the 'done' attribute to control the open/close state for each panel
+	// Automatically open if operation is not done, and close when done
 	$: {
-		// Only automatically control openState for "reasoning" and "code_interpreter"
-		if (attributes?.type === 'reasoning' || attributes?.type === 'code_interpreter') {
-			if (attributes?.done === 'true') {
-				openState[id] = false;  // Collapse the panel when the operation is done
-			} else {
-				openState[id] = true;   // Expand the panel when the operation is still ongoing
-			}
+		if (attributes?.done != 'true') {
+			open = true;   // Keep open when operation is still ongoing
+		} else {
+			open = false;  // Close when the operation is done
 		}
 	}
 
@@ -48,6 +41,7 @@
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Spinner from './Spinner.svelte';
 
+	export let open = false;
 	export let id = '';
 	export let className = '';
 	export let buttonClassName =
@@ -69,12 +63,15 @@
 			class="{buttonClassName} cursor-pointer"
 			on:pointerup={() => {
 				if (!disabled) {
-					openState[id] = !openState[id];  // Toggle the open state for this panel
+					open = !open;
 				}
 			}}
 		>
 			<div
-				class="w-full font-medium flex items-center justify-between gap-2 {attributes?.done && attributes?.done !== 'true' ? 'shimmer' : ''}"
+				class=" w-full font-medium flex items-center justify-between gap-2 {attributes?.done &&
+				attributes?.done !== 'true'
+					? 'shimmer'
+					: ''}"
 			>
 				{#if attributes?.done && attributes?.done !== 'true'}
 					<div>
@@ -82,7 +79,7 @@
 					</div>
 				{/if}
 
-				<div>
+				<div class="">
 					{#if attributes?.type === 'reasoning'}
 						{#if attributes?.done === 'true' && attributes?.duration}
 							{#if attributes.duration < 60}
@@ -109,7 +106,7 @@
 				</div>
 
 				<div class="flex self-center translate-y-[1px]">
-					{#if openState[id]}  <!-- Check the open state of the current panel -->
+					{#if open}
 						<ChevronUp strokeWidth="3.5" className="size-3.5" />
 					{:else}
 						<ChevronDown strokeWidth="3.5" className="size-3.5" />
@@ -124,7 +121,7 @@
 			class="{buttonClassName} cursor-pointer"
 			on:pointerup={() => {
 				if (!disabled) {
-					openState[id] = !openState[id];  // Toggle the open state for this panel
+					open = !open;
 				}
 			}}
 		>
@@ -132,7 +129,7 @@
 				<slot />
 
 				{#if grow}
-					{#if openState[id] && !hide}  <!-- Check the open state of the current panel -->
+					{#if open && !hide}
 						<div
 							transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}
 							on:pointerup={(e) => {
@@ -148,7 +145,7 @@
 	{/if}
 
 	{#if !grow}
-		{#if openState[id] && !hide}  <!-- Check the open state of the current panel -->
+		{#if open && !hide}
 			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
 				<slot name="content" />
 			</div>
