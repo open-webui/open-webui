@@ -23,7 +23,8 @@ ENV ENV="test" \
     RAG_EMBEDDING_ENGINE="openai" \
     RAG_EMBEDDING_MODEL="text-embedding-3-small" \
     WEBUI_AUTH_TRUSTED_NAME_HEADER="webauth-username" \
-    WEBUI_AUTH_TRUSTED_EMAIL_HEADER="webauth-email"
+    WEBUI_AUTH_TRUSTED_EMAIL_HEADER="webauth-email" \
+    RAG_WEB_SEARCH_TRUST_ENV="true"
 
 # RUN curl -O https://sqlite.org/2021/sqlite-autoconf-3350000.tar.gz && \
 #     tar -xvzf sqlite-autoconf-3350000.tar.gz && \

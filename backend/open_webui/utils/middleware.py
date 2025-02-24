@@ -321,91 +321,95 @@ async def chat_web_search_handler(
         )
         return form_data
 
-    searchQuery = queries[0]
-    log.info(f"generate searchQuery: {searchQuery}")
+    all_results = []
+    log.info(f"generate queries: {queries}")
 
-    await event_emitter(
-        {
-            "type": "status",
-            "data": {
-                "action": "web_search",
-                "description": 'Searching "{{searchQuery}}"',
-                "query": searchQuery,
-                "done": False,
-            },
-        }
-    )
-
-    try:
-        log.info(f"begin to process_web_search: {searchQuery}")
-        results = await process_web_search(
-            request,
-            SearchForm(
-                **{
+    for searchQuery in queries:
+        await event_emitter(
+            {
+                "type": "status",
+                "data": {
+                    "action": "web_search",
+                    "description": 'Searching "{{searchQuery}}"',
                     "query": searchQuery,
-                }
-            ),
-            user,
+                    "done": False,
+                },
+            }
         )
 
-        log.debug(f"end to process_web_search, results: {results}")
-        if results:
-            await event_emitter(
-                {
-                    "type": "status",
-                    "data": {
-                        "action": "web_search",
-                        "description": "Searched {{count}} sites",
+        try:
+            results = await process_web_search(
+                request,
+                SearchForm(
+                    **{
                         "query": searchQuery,
-                        "urls": results["filenames"],
-                        "done": True,
-                    },
-                }
+                    }
+                ),
+                user=user,
             )
 
-            files = form_data.get("files", [])
+            if results:
+                all_results.append(results)
+                files = form_data.get("files", [])
 
-            if request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT:
-                files.append(
-                    {
-                        "docs": results.get("docs", []),
-                        "name": searchQuery,
-                        "type": "web_search_docs",
-                        "urls": results["filenames"],
-                    }
-                )
-            else:
-                files.append(
-                    {
-                        "collection_name": results["collection_name"],
-                        "name": searchQuery,
-                        "type": "web_search_results",
-                        "urls": results["filenames"],
-                    }
-                )
-            form_data["files"] = files
-        else:
+                if request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT:
+                    files.append(
+                        {
+                            "docs": results.get("docs", []),
+                            "name": searchQuery,
+                            "type": "web_search_docs",
+                            "urls": results["filenames"],
+                        }
+                    )
+                else:
+                    files.append(
+                        {
+                            "collection_name": results["collection_name"],
+                            "name": searchQuery,
+                            "type": "web_search_results",
+                            "urls": results["filenames"],
+                        }
+                    )
+                form_data["files"] = files
+        except Exception as e:
+            log.exception(e)
             await event_emitter(
                 {
                     "type": "status",
                     "data": {
                         "action": "web_search",
-                        "description": "No search results found",
+                        "description": 'Error searching "{{searchQuery}}"',
                         "query": searchQuery,
                         "done": True,
                         "error": True,
                     },
                 }
             )
-    except Exception as e:
-        log.exception(e)
+
+    if all_results:
+        urls = []
+        for results in all_results:
+            if "filenames" in results:
+                urls.extend(results["filenames"])
+
         await event_emitter(
             {
                 "type": "status",
                 "data": {
                     "action": "web_search",
-                    "description": 'Error searching "{{searchQuery}}"',
-                    "query": searchQuery,
+                    "description": "Searched {{count}} sites",
+                    "urls": urls,
+                    "done": True,
+                },
+            }
+        )
+    else:
+        await event_emitter(
+            {
+                "type": "status",
+                "data": {
+                    "action": "web_search",
+                    "description": "No search results found",
                     "done": True,
                     "error": True,
                 },
@@ -562,9 +566,9 @@ async def chat_completion_files_handler(
                         reranking_function=request.app.state.rf,
                         r=request.app.state.config.RELEVANCE_THRESHOLD,
                         hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+                        full_context=request.app.state.config.RAG_FULL_CONTEXT,
                     ),
                 )
-
         except Exception as e:
             log.exception(e)
 
@@ -1383,7 +1387,15 @@ async def process_chat_response(
 
             tool_calls = []
 
-            last_assistant_message = get_last_assistant_message(form_data["messages"])
+            last_assistant_message = None
+            try:
+                if form_data["messages"][-1]["role"] == "assistant":
+                    last_assistant_message = get_last_assistant_message(
+                        form_data["messages"]
+                    )
+            except Exception as e:
+                pass
+
             content = (
                 message.get("content", "")
                 if message
@@ -1772,6 +1784,7 @@ async def process_chat_response(
                                             == "password"
                                             else None
                                         ),
+                                        request.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT,
                                     )
                                 else:
                                     output = {

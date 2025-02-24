@@ -27,7 +27,6 @@
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
-	import { text } from '@sveltejs/kit';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 
 	const i18n = getContext('i18n');
@@ -55,6 +54,8 @@
 	let chunkSize = 0;
 	let chunkOverlap = 0;
 	let pdfExtractImages = true;
+
+	let RAG_FULL_CONTEXT = false;
 
 	let enableGoogleDriveIntegration = false;
 
@@ -182,6 +183,7 @@
 				max_size: fileMaxSize === '' ? null : fileMaxSize,
 				max_count: fileMaxCount === '' ? null : fileMaxCount
 			},
+			RAG_FULL_CONTEXT: RAG_FULL_CONTEXT,
 			chunk: {
 				text_splitter: textSplitter,
 				chunk_overlap: chunkOverlap,
@@ -241,6 +243,8 @@
 			textSplitter = res.chunk.text_splitter;
 			chunkSize = res.chunk.chunk_size;
 			chunkOverlap = res.chunk.chunk_overlap;
+
+			RAG_FULL_CONTEXT = res.RAG_FULL_CONTEXT;
 
 			contentExtractionEngine = res.content_extraction.engine;
 			tikaServerUrl = res.content_extraction.tika_server_url;
@@ -387,6 +391,19 @@
 						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 					{/if}
 				</button>
+			</div>
+
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('Full Context Mode')}</div>
+				<div class="flex items-center relative">
+					<Tooltip
+						content={RAG_FULL_CONTEXT
+							? 'Inject entire contents as context for comprehensive processing, this is recommended for complex queries.'
+							: 'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'}
+					>
+						<Switch bind:state={RAG_FULL_CONTEXT} />
+					</Tooltip>
+				</div>
 			</div>
 		</div>
 

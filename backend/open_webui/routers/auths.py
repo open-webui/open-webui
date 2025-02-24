@@ -546,7 +546,8 @@ async def signout(request: Request, response: Response):
                             if logout_url:
                                 response.delete_cookie("oauth_id_token")
                                 return RedirectResponse(
-                                    url=f"{logout_url}?id_token_hint={oauth_id_token}"
+                                    headers=response.headers,
+                                    url=f"{logout_url}?id_token_hint={oauth_id_token}",
                                 )
                         else:
                             raise HTTPException(

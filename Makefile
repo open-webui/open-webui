@@ -23,7 +23,7 @@ clean:
 	@echo "clean success"
 
 install-deps:
-	npm install
+	npm install --registry=https://registry.npmmirror.com
 
 pack:
 	npm run ${BUILD_CMD}
