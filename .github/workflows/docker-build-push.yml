@@ -53,8 +53,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             LITELLM_BASE_URL=/litellm
-            USE_CUDA=false
-            USE_OLLAMA=false
 
   deploy-production:
     needs: build-and-push
