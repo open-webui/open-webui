@@ -61,6 +61,7 @@
 	let RAG_FULL_CONTEXT = false;
 
 	let enableGoogleDriveIntegration = false;
+	let enableOneDriveIntegration = false;
 
 	let OpenAIUrl = '';
 	let OpenAIKey = '';
@@ -189,6 +190,7 @@
 		const res = await updateRAGConfig(localStorage.token, {
 			pdf_extract_images: pdfExtractImages,
 			enable_google_drive_integration: enableGoogleDriveIntegration,
+			enable_onedrive_integration: enableOneDriveIntegration,
 			file: {
 				max_size: fileMaxSize === '' ? null : fileMaxSize,
 				max_count: fileMaxCount === '' ? null : fileMaxCount
@@ -271,6 +273,7 @@
 			fileMaxCount = res?.file.max_count ?? '';
 
 			enableGoogleDriveIntegration = res.enable_google_drive_integration;
+			enableOneDriveIntegration = res.enable_onedrive_integration;
 		}
 	});
 </script>
@@ -652,6 +655,18 @@
 				</div>
 			</div>
 		</div>
+
+		<div class="text-sm font-medium mb-1">{$i18n.t('OneDrive')}</div>
+
+		<div class="">
+			<div class="flex justify-between items-center text-xs">
+				<div class="text-xs font-medium">{$i18n.t('Enable OneDrive')}</div>
+				<div>
+					<Switch bind:state={enableOneDriveIntegration} />
+				</div>
+			</div>
+		</div>
+
 
 		<hr class=" border-gray-100 dark:border-gray-850" />
 
