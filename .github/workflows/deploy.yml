@@ -46,3 +46,5 @@ jobs:
         scp -o 'StrictHostKeyChecking no' -rp -i $TEMP compose-prod.yml ${{ secrets.USERNAME }}@${{ secrets.HOST }}:/var/www/chatgpt-ui/docker-compose.yml
         scp -o 'StrictHostKeyChecking no' -rp -i $TEMP .env.production ${{ secrets.USERNAME }}@${{ secrets.HOST }}:/var/www/chatgpt-ui/.env.production
         ssh -o 'StrictHostKeyChecking no' -i $TEMP ${{ secrets.USERNAME }}@${{ secrets.HOST }} 'bash -s' < deploy.sh
+
+# end
