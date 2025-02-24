@@ -4,13 +4,14 @@ import sys
 
 from fastapi import Request
 
+from beyond_the_loop.models.users import User
 from open_webui.routers import ollama
 from beyond_the_loop.routers import openai
 from open_webui.functions import get_function_models
 
 
 from open_webui.models.functions import Functions
-from beyond_the_loop.models.models import Models
+from beyond_the_loop.models.models import Models, ModelForm, ModelMeta, ModelParams
 
 
 from open_webui.utils.plugin import load_function_module_by_id
@@ -29,7 +30,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
-async def get_all_base_models(request: Request):
+async def get_all_base_models(request: Request, user: User):
     function_models = []
     openai_models = []
     ollama_models = []
@@ -37,6 +38,24 @@ async def get_all_base_models(request: Request):
     if request.app.state.config.ENABLE_OPENAI_API:
         openai_models = await openai.get_all_models(request)
         openai_models = openai_models["data"]
+        
+        # Register OpenAI models in the database if they don't exist
+        for model in openai_models:
+            existing_model = Models.get_model_by_id(model["id"])
+            if not existing_model:
+                Models.insert_new_model(
+                    ModelForm(
+                        id=model["id"],
+                        name=model["id"],  # Use ID as name since OpenAI models don't have separate names
+                        meta=ModelMeta(
+                            description="OpenAI model",
+                            profile_image_url="/static/favicon.png",
+                        ),
+                        params=ModelParams(),
+                        access_control=None,  # None means public access
+                    ),
+                    company_id=user.company_id,
+                )
 
     if request.app.state.config.ENABLE_OLLAMA_API:
         ollama_models = await ollama.get_all_models(request)
@@ -58,8 +77,8 @@ async def get_all_base_models(request: Request):
     return models
 
 
-async def get_all_models(request):
-    models = await get_all_base_models(request)
+async def get_all_models(request: Request, user: User):
+    models = await get_all_base_models(request, user)
 
     # If there are no models, return an empty list
     if len(models) == 0:
@@ -237,8 +256,7 @@ def check_model_access(user, model):
         if not model_info:
             raise Exception("Model not found")
         elif not (
-            user.id == model_info.user_id
-            or has_access(
+            has_access(
                 user.id, type="read", access_control=model_info.access_control
             )
         ):

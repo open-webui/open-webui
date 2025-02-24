@@ -792,14 +792,14 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
 
             model_info = Models.get_model_by_id(model["id"])
             if model_info:
-                if user.id == model_info.user_id or has_access(
+                if has_access(
                     user.id, type="read", access_control=model_info.access_control
                 ):
                     filtered_models.append(model)
 
         return filtered_models
 
-    models = await get_all_models(request)
+    models = await get_all_models(request, user)
 
     # Filter out filter pipelines
     models = [
@@ -828,7 +828,7 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
 
 @app.get("/api/models/base")
 async def get_base_models(request: Request, user=Depends(get_admin_user)):
-    models = await get_all_base_models(request)
+    models = await get_all_base_models(request, user)
     return {"data": models}
 
 
