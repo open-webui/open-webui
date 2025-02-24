@@ -1,10 +1,16 @@
-name: Build and Push Docker Image
+name: Beyond The Loop - Build and Push Docker Image
 
 on:
-  push:
-    branches: [ "main", "staging" ]
-  pull_request:
-    branches: [ "main", "staging" ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: 'staging'
 
 env:
   REGISTRY: ghcr.io
@@ -51,7 +57,7 @@ jobs:
   deploy-production:
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.event.inputs.environment == 'production'
     environment: production
 
     steps:
@@ -111,7 +117,7 @@ jobs:
   deploy-staging:
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/staging'
+    if: github.event.inputs.environment == 'staging'
     environment: staging
 
     steps:
