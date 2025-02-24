@@ -64,8 +64,8 @@ jobs:
           host: ${{ secrets.PROD_EC2_HOST }}
           username: ${{ secrets.PROD_EC2_USERNAME }}
           key: ${{ secrets.PROD_EC2_SSH_KEY }}
-          source: "docker-compose.yaml"
-          target: "~/beyond-the-loop"
+          source: "docker-compose-prod.yaml"
+          target: "~/beyond-the-loop/docker-compose.yaml"
           overwrite: true
 
       - name: Copy litellm-config file to EC2
@@ -105,8 +105,8 @@ jobs:
           host: ${{ secrets.STAGING_EC2_HOST }}
           username: ${{ secrets.STAGING_EC2_USERNAME }}
           key: ${{ secrets.STAGING_EC2_SSH_KEY }}
-          source: "docker-compose.yaml"
-          target: "~/beyond-the-loop"
+          source: "docker-compose-staging.yaml"
+          target: "~/beyond-the-loop/docker-compose.yaml"
           overwrite: true
 
       - name: Copy litellm-config file to EC2
