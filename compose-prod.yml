@@ -5,20 +5,30 @@ services:
     container_name: w-open-webui
     #image: europe-west3-docker.pkg.dev/w-calderone/w-chatbot-ui/w-chatbot-ui:latest
     image: europe-west3-docker.pkg.dev/w-calderone/w-chat-gpt-2/w-chat-gpt-2:latest
+    volumes:
+      - open-webui:/app/backend/data
     ports:
-      - '3000'
-    restart: always
+      - ${OPEN_WEBUI_PORT-3000}:8080
     labels:
       - 'traefik.enable=true'
       - 'traefik.http.routers.w-open-webui.rule=Host(`gpt2.webranking.tools`)'
       - 'traefik.http.routers.w-open-webui.entrypoints=websecure'
       - 'traefik.http.routers.w-open-webui.tls.certresolver=myhttpchallenge'
-      - 'traefik.port=3000'
+      - 'traefik.port=8080'
     env_file: .env.production
+    environment:
+      # - 'OLLAMA_BASE_URL=http://ollama:11434'
+      - ENABLE_OAUTH_SIGNUP=True
+      - OAUTH_MERGE_ACCOUNTS_BY_EMAIL=True
+      - GOOGLE_CLIENT_ID=
+      - GOOGLE_CLIENT_SECRET=
+      - 'WEBUI_SECRET_KEY='
+      - OPENAI_API_KEY=
+    extra_hosts:
+      - host.docker.internal:host-gateway
     networks:
       - chatbot-network
-    volumes:
-      - ./creds:/app/creds
+    restart: unless-stopped
 
   traefik:
     image: 'traefik:v2.0.0-rc3'
@@ -44,6 +54,10 @@ services:
       - '/var/run/docker.sock:/var/run/docker.sock:ro'
     networks:
       - chatbot-network
+
+volumes:
+  # ollama: {}
+  open-webui: {}
 
 networks:
   chatbot-network:
