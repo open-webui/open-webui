@@ -17,12 +17,7 @@ services:
       - host.docker.internal:host-gateway
 
   open-webui:
-    build:
-      context: .
-      args:
-        LITELLM_BASE_URL: '/litellm'
-      dockerfile: Dockerfile
-    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
+    image: ghcr.io/${GITHUB_REPOSITORY}:main
     container_name: open-webui
     volumes:
       - ./backend/data:/app/backend/data
