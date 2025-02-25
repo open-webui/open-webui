@@ -61,7 +61,12 @@ async def process_filter_functions(
         try:
             # Prepare parameters
             sig = inspect.signature(handler)
-            params = {"body": form_data} | {
+
+            params = {"body": form_data}
+            if filter_type == "stream":
+                params = {"event": form_data}
+
+            params = params | {
                 k: v
                 for k, v in {
                     **extra_params,
