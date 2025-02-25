@@ -351,7 +351,7 @@ def get_models(request: Request, user=Depends(get_verified_user)):
             if model_node_id:
                 model_list_key = None
 
-                print(workflow[model_node_id]["class_type"])
+                log.info(workflow[model_node_id]["class_type"])
                 for key in info[workflow[model_node_id]["class_type"]]["input"][
                     "required"
                 ]:

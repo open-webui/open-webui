@@ -810,7 +810,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         if r is not None:
             try:
                 res = await r.json()
-                print(res)
+                log.error(res)
                 if "error" in res:
                     detail = f"External: {res['error']['message'] if 'message' in res['error'] else res['error']}"
             except Exception:

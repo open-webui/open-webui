@@ -1588,11 +1588,11 @@ def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
                     elif os.path.isdir(file_path):
                         shutil.rmtree(file_path)  # Remove the directory
                 except Exception as e:
-                    print(f"Failed to delete {file_path}. Reason: {e}")
+                    log.exception(f"Failed to delete {file_path}. Reason: {e}")
         else:
-            print(f"The directory {folder} does not exist")
+            log.warning(f"The directory {folder} does not exist")
     except Exception as e:
-        print(f"Failed to process the directory {folder}. Reason: {e}")
+        log.exception(f"Failed to process the directory {folder}. Reason: {e}")
     return True
 
 

@@ -81,7 +81,7 @@ def query_doc(
 
         return result
     except Exception as e:
-        print(e)
+        log.exception(f"Error querying doc {collection_name} with limit {k}: {e}")
         raise e
 
 
@@ -94,7 +94,7 @@ def get_doc(collection_name: str, user: UserModel = None):
 
         return result
     except Exception as e:
-        print(e)
+        log.exception(f"Error getting doc {collection_name}: {e}")
         raise e
 
 
@@ -530,7 +530,7 @@ def generate_openai_batch_embeddings(
         else:
             raise "Something went wrong :/"
     except Exception as e:
-        print(e)
+        log.exception(f"Error generating openai batch embeddings: {e}")
         return None
 
 
@@ -564,7 +564,7 @@ def generate_ollama_batch_embeddings(
         else:
             raise "Something went wrong :/"
     except Exception as e:
-        print(e)
+        log.exception(f"Error generating ollama batch embeddings: {e}")
         return None
 
 
