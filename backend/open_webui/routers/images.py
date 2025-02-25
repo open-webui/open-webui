@@ -493,7 +493,11 @@ async def image_generations(
                     if form_data.size
                     else request.app.state.config.IMAGE_SIZE
                 ),
-                "response_format": "url" if request.app.state.config.IMAGES_OPENAI_USE_URL else "b64_json",
+                "response_format": (
+                    "url"
+                    if request.app.state.config.IMAGES_OPENAI_USE_URL
+                    else "b64_json"
+                ),
             }
 
             # Use asyncio.to_thread for the requests.post call
