@@ -47,6 +47,10 @@
 
 	let codeEditor;
 
+	export const focus = () => {
+		codeEditor.focus();
+	};
+
 	let isDarkMode = false;
 	let editorTheme = new Compartment();
 	let editorLanguage = new Compartment();
