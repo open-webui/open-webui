@@ -1,4 +1,4 @@
-<script lang="ts">
+	<script lang="ts">
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext } from 'svelte';
@@ -160,11 +160,15 @@
 	}}
 />
 <Header />
+<!-- Main container -->
 <div class="w-full h-screen max-h-[100dvh] text-white relative">
+	<!-- Background -->
 	<div class="w-full h-full absolute top-0 left-0 bg-white dark:bg-black"></div>
 
+	<!-- Drag region -->
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
 
+	<!-- Loading spinner -->
 	{#if !loaded || !$i18n?.isInitialized}
 		<div
 			class="fixed bg-transparent min-h-screen w-full flex justify-center items-center font-primary z-10"
@@ -172,13 +176,16 @@
 			<Spinner />
 		</div>
 	{:else}
+		<!-- Main content -->
 		<div
 			class="fixed bg-transparent min-h-screen w-full flex justify-center font-primary z-10 text-black dark:text-white pt-16"
 		>
+			<!-- Content container -->	
 			<div
-				class="container max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-start md:items-center justify-between min-h-[calc(100vh-8rem)] py-8 md:py-0 gap-6 md:gap-12"
+				class="container max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-start md:items-center md:justify-between min-h-[calc(100vh-10rem)] md:min-h-[calc(100vh-8rem)] py-4 md:py-0 gap-4 md:gap-12"
 			>
 				{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
+					<!-- Trusted header auth loading state -->
 					<div class="w-full order-1 md:order-none">
 						<div class="pb-6 md:pb-10 w-full">
 							<div
@@ -195,13 +202,15 @@
 						</div>
 					</div>
 				{:else}
-					<div class="flex flex-col w-full md:w-1/2 gap-8 md:gap-12">
-						<div class="order-1 md:order-none">
-							<div class="w-full max-w-md mx-auto md:mx-0">
-								<div class="pb-6 md:pb-10 w-full dark:text-gray-100">
-									<div class="flex flex-col gap-4 md:gap-6 items-center text-center md:text-left">
+					<!-- Left column - Login content -->
+					<div class="flex flex-col w-full md:w-1/2 gap-4 items-center justify-center">
+						<!-- Title section -->
+						<div class="">
+							<div class="w-full max-w-md mx-auto">
+								<div class="pb-4 w-full dark:text-gray-100 text-center">
+									<div class="flex flex-col gap-3 items-center text-center">
 										<div
-											class="text-3xl sm:text-4xl md:text-5xl fr-text-default--grey font-bold text-center md:text-left"
+											class="text-2xl sm:text-4xl md:text-5xl fr-text-default--grey font-bold text-center"
 										>
 											{$i18n.t("L'IA")}
 											<br />
@@ -214,22 +223,29 @@
 							</div>
 						</div>
 
-						<div class="order-0 md:order-none w-full flex justify-center md:justify-start">
+						<!-- Login button -->
+						<div class=" w-full flex justify-center">
 							<ProconnectButton />
 						</div>
 					</div>
 
-					<div class="order-2 md:order-none w-full md:w-1/2">
+					<!-- Right column - Carousel -->
+					<div class="mt-6 md:mt-0 md:order-none w-full md:w-1/2">
 						<div class="w-full max-w-md mx-auto">
-							<div class="carousel relative min-h-[220px] sm:min-h-[250px] md:min-h-[300px]">
+							<!-- Carousel container -->
+							<div
+								class="carousel relative min-h-[180px] sm:min-h-[250px] md:min-h-[300px] mb-16 md:mb-0"
+							>
 								{#each carouselItems as item, i}
 									{#if currentIndex === i}
+										<!-- Carousel item -->
 										<div
 											class="carousel-item flex flex-col gap-4 md:gap-6 absolute w-full"
 											in:fly={{ x: 200, duration: 1000, opacity: 1 }}
 											out:fly={{ x: -200, duration: 1000, opacity: 0 }}
 										>
-											<div class="text-left">
+											<!-- Carousel text content -->
+											<div class="text-center md:text-left">
 												<h2 class="text-xl md:text-2xl font-bold mb-2">
 													{$i18n.t(item.title)}
 												</h2>
@@ -237,6 +253,7 @@
 													{$i18n.t(item.description)}
 												</p>
 											</div>
+											<!-- Carousel image -->
 											<div class="w-full h-36 md:h-48 relative">
 												<img
 													src={item.image}
@@ -244,6 +261,7 @@
 													class="w-full h-full object-contain"
 												/>
 											</div>
+											<!-- Carousel navigation dots -->
 											<div class="flex justify-center gap-2 mt-2 md:mt-4">
 												{#each carouselItems as _, i}
 													<button
@@ -269,6 +287,7 @@
 		</div>
 	{/if}
 
+	<!-- Footer -->
 	<div class="w-full fixed bottom-0 left-0 right-0 fr-background-default--grey z-20">
 		<Footer />
 	</div>
