@@ -225,10 +225,11 @@ def openai_chat_completion_message_template(
     template = openai_chat_message_template(model)
     template["object"] = "chat.completion"
     if message is not None:
-        template["choices"][0]["message"] = {"content": message, "role": "assistant"}
-
-    if tool_calls:
-        template["choices"][0]["tool_calls"] = tool_calls
+        template["choices"][0]["message"] = {
+            "content": message,
+            "role": "assistant",
+            **({"tool_calls": tool_calls} if tool_calls else {}),
+        }
 
     template["choices"][0]["finish_reason"] = "stop"
 

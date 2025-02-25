@@ -21,6 +21,7 @@
 
 <AddConnectionModal
 	edit
+	direct
 	bind:show={showConfigModal}
 	connection={{
 		url,
@@ -52,7 +53,7 @@
 		<div class="flex w-full">
 			<div class="flex-1 relative">
 				<input
-					class=" outline-none w-full bg-transparent {pipeline ? 'pr-8' : ''}"
+					class=" outline-hidden w-full bg-transparent {pipeline ? 'pr-8' : ''}"
 					placeholder={$i18n.t('API Base URL')}
 					bind:value={url}
 					autocomplete="off"
@@ -60,7 +61,7 @@
 			</div>
 
 			<SensitiveInput
-				inputClassName=" outline-none bg-transparent w-full"
+				inputClassName=" outline-hidden bg-transparent w-full"
 				placeholder={$i18n.t('API Key')}
 				bind:value={key}
 			/>

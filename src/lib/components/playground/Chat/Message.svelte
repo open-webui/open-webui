@@ -31,7 +31,7 @@
 		<textarea
 			id="{message.role}-{idx}-textarea"
 			bind:this={textAreaElement}
-			class="w-full bg-transparent outline-none rounded-lg p-2 text-sm resize-none overflow-hidden"
+			class="w-full bg-transparent outline-hidden rounded-lg p-2 text-sm resize-none overflow-hidden"
 			placeholder={$i18n.t(`Enter {{role}} message here`, {
 				role: message.role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
 			})}
