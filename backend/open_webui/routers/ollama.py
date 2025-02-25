@@ -130,12 +130,10 @@ async def send_post_request(
         }
         
         log.info(f"headers: {headers}")
-        log.info(f"Testing 1")
-        
+ 
         log.info(f"user : {user} and enable {ENABLE_FORWARD_USER_INFO_HEADERS} ")
         # Conditionally add user info
         if user and ENABLE_FORWARD_USER_INFO_HEADERS:
-            log.info(f"Testing inside post request")
             # log.info(f"user : {user} and enable {ENABLE_FORWARD_USER_INFO_HEADERS} ")
             headers.update(
                 {
