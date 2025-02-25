@@ -350,7 +350,7 @@
 	{#if Object.keys(history?.messages ?? {}).length == 0}
 		<ChatPlaceholder
 			modelIds={selectedModels}
-			atSelectedModel={atSelectedModel}
+			{atSelectedModel}
 			submitPrompt={async (p) => {
 				let text = p;
 

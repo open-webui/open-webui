@@ -1186,9 +1186,7 @@ async def get_app_config(request: Request):
                     "client_id": GOOGLE_DRIVE_CLIENT_ID.value,
                     "api_key": GOOGLE_DRIVE_API_KEY.value,
                 },
-                "onedrive": {
-                    "client_id": ONEDRIVE_CLIENT_ID.value
-                }
+                "onedrive": {"client_id": ONEDRIVE_CLIENT_ID.value},
             }
             if user is not None
             else {}

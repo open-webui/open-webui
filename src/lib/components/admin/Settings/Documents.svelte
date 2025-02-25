@@ -667,7 +667,6 @@
 			</div>
 		</div>
 
-
 		<hr class=" border-gray-100 dark:border-gray-850" />
 
 		<div class=" ">
