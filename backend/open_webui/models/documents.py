@@ -88,6 +88,7 @@ class DocumentTable:
                 db.add_all(result)
                 db.commit()
                 db.refresh(result)
+                print('Insert parent documents successfully')
                 return [DocumentModel.model_validate(doc) for doc in docs]
             except Exception as e:
                 print(e)

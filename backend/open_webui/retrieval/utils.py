@@ -469,6 +469,7 @@ def get_sources_from_files(
                             if distances:
                                 new_distances.append(distances[idx])
 
+                            print('get parent_id', parent_id)
                             parent_doc = (
                                 DocumentDBs.get_document_by_id(parent_id)
                                 if parent_id

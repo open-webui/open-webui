@@ -811,6 +811,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         context_string = context_string.strip()
         prompt = get_last_user_message(form_data["messages"])
 
+        print('context_string', context_string)
         if prompt is None:
             raise Exception("No user message found")
         if (
