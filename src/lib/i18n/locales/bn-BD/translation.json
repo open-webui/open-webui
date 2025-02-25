@@ -1086,6 +1086,7 @@
 	"Use Gravatar": "Gravatar ব্যবহার করুন",
 	"Use groups to group your users and assign permissions.": "",
 	"Use Initials": "নামের আদ্যক্ষর ব্যবহার করুন",
+	"Use URL response format instead of Base64": "",
 	"use_mlock (Ollama)": "use_mlock (ওলামা)",
 	"use_mmap (Ollama)": "use_mmap (ওলামা)",
 	"user": "ব্যবহারকারী",

@@ -1086,6 +1086,7 @@
 	"Use Gravatar": "Gravatar أستخدم",
 	"Use groups to group your users and assign permissions.": "",
 	"Use Initials": "Initials أستخدم",
+	"Use URL response format instead of Base64": "",
 	"use_mlock (Ollama)": "use_mlock (أولاما)",
 	"use_mmap (Ollama)": "use_mmap (أولاما)",
 	"user": "مستخدم",

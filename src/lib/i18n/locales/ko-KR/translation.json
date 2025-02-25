@@ -1086,6 +1086,7 @@
 	"Use Gravatar": "Gravatar 사용",
 	"Use groups to group your users and assign permissions.": "그룹을 사용하여 사용자를 그룹화하고 권한을 할당하세요.",
 	"Use Initials": "초성 사용",
+	"Use URL response format instead of Base64": "",
 	"use_mlock (Ollama)": "use_mlock (올라마)",
 	"use_mmap (Ollama)": "use_mmap (올라마)",
 	"user": "사용자",
