@@ -1855,7 +1855,8 @@ async def process_chat_response(
                             }
                         )
 
-                        print(content_blocks, serialize_content_blocks(content_blocks))
+                        log.info(f"content_blocks={content_blocks}")
+                        log.info(f"serialize_content_blocks={serialize_content_blocks(content_blocks)}")
 
                         try:
                             res = await generate_chat_completion(
@@ -1926,7 +1927,7 @@ async def process_chat_response(
 
                 await background_tasks_handler()
             except asyncio.CancelledError:
-                print("Task was cancelled!")
+                log.warning("Task was cancelled!")
                 await event_emitter({"type": "task-cancelled"})
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
