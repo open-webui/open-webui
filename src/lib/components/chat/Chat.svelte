@@ -1279,7 +1279,9 @@
 		const chatInputElement = document.getElementById('chat-input');
 
 		if (chatInputElement) {
+			await tick();
 			chatInputElement.style.height = '';
+			chatInputElement.style.height = Math.min(chatInputElement.scrollHeight, 320) + 'px';
 		}
 
 		const _files = JSON.parse(JSON.stringify(files));
