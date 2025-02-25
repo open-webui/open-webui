@@ -117,7 +117,7 @@
 
 	onMount(async () => {
 		if ($user !== undefined) {
-			await goto('/oauth/oidc/login');
+			await goto('/');
 		}
 		await checkOauthCallback();
 
