@@ -35,7 +35,7 @@
 			return null;
 		});
 
-		if (res) {
+		if (res && memories.length > 0) {
 			toast.success($i18n.t('Memory cleared successfully'));
 			memories = [];
 		}
@@ -192,7 +192,11 @@
 				<button
 					class=" px-3.5 py-1.5 font-medium text-red-500 hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-red-300 dark:outline-red-800 rounded-3xl"
 					on:click={() => {
-						showClearConfirmDialog = true;
+						if (memories.length > 0) {
+							showClearConfirmDialog = true;
+						} else {
+							toast.error($i18n.t('No memories to clear'));
+						}
 					}}>{$i18n.t('Clear memory')}</button
 				>
 			</div>
