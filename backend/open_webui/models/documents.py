@@ -105,7 +105,7 @@ class DocumentTable:
     def get_document_by_id(self, id: str) -> Optional[DocumentModel]:
         try:
             with get_db() as db:
-                document = db.query(DocumentDB).filter(id=id).first()
+                document = db.query(DocumentDB).filter_by(id=id).first()
                 return DocumentModel.model_validate(document)
         except Exception:
             return None
