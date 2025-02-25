@@ -1474,129 +1474,136 @@ async def process_chat_response(
                                 extra_params=extra_params,
                             )
 
-                            if "selected_model_id" in data:
-                                model_id = data["selected_model_id"]
-                                Chats.upsert_message_to_chat_by_id_and_message_id(
-                                    metadata["chat_id"],
-                                    metadata["message_id"],
-                                    {
-                                        "selectedModelId": model_id,
-                                    },
-                                )
-                            else:
-                                choices = data.get("choices", [])
-                                if not choices:
-                                    continue
-
-                                delta = choices[0].get("delta", {})
-                                delta_tool_calls = delta.get("tool_calls", None)
-
-                                if delta_tool_calls:
-                                    for delta_tool_call in delta_tool_calls:
-                                        tool_call_index = delta_tool_call.get("index")
-
-                                        if tool_call_index is not None:
-                                            if (
-                                                len(response_tool_calls)
-                                                <= tool_call_index
-                                            ):
-                                                response_tool_calls.append(
-                                                    delta_tool_call
-                                                )
-                                            else:
-                                                delta_name = delta_tool_call.get(
-                                                    "function", {}
-                                                ).get("name")
-                                                delta_arguments = delta_tool_call.get(
-                                                    "function", {}
-                                                ).get("arguments")
-
-                                                if delta_name:
-                                                    response_tool_calls[
-                                                        tool_call_index
-                                                    ]["function"]["name"] += delta_name
-
-                                                if delta_arguments:
-                                                    response_tool_calls[
-                                                        tool_call_index
-                                                    ]["function"][
-                                                        "arguments"
-                                                    ] += delta_arguments
-
-                                value = delta.get("content")
-
-                                if value:
-                                    content = f"{content}{value}"
-
-                                    if not content_blocks:
-                                        content_blocks.append(
-                                            {
-                                                "type": "text",
-                                                "content": "",
-                                            }
-                                        )
-
-                                    content_blocks[-1]["content"] = (
-                                        content_blocks[-1]["content"] + value
+                            if data:
+                                if "selected_model_id" in data:
+                                    model_id = data["selected_model_id"]
+                                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                                        metadata["chat_id"],
+                                        metadata["message_id"],
+                                        {
+                                            "selectedModelId": model_id,
+                                        },
                                     )
+                                else:
+                                    choices = data.get("choices", [])
+                                    if not choices:
+                                        continue
 
-                                    if DETECT_REASONING:
-                                        content, content_blocks, _ = (
-                                            tag_content_handler(
-                                                "reasoning",
-                                                reasoning_tags,
-                                                content,
-                                                content_blocks,
+                                    delta = choices[0].get("delta", {})
+                                    delta_tool_calls = delta.get("tool_calls", None)
+
+                                    if delta_tool_calls:
+                                        for delta_tool_call in delta_tool_calls:
+                                            tool_call_index = delta_tool_call.get(
+                                                "index"
                                             )
+
+                                            if tool_call_index is not None:
+                                                if (
+                                                    len(response_tool_calls)
+                                                    <= tool_call_index
+                                                ):
+                                                    response_tool_calls.append(
+                                                        delta_tool_call
+                                                    )
+                                                else:
+                                                    delta_name = delta_tool_call.get(
+                                                        "function", {}
+                                                    ).get("name")
+                                                    delta_arguments = (
+                                                        delta_tool_call.get(
+                                                            "function", {}
+                                                        ).get("arguments")
+                                                    )
+
+                                                    if delta_name:
+                                                        response_tool_calls[
+                                                            tool_call_index
+                                                        ]["function"][
+                                                            "name"
+                                                        ] += delta_name
+
+                                                    if delta_arguments:
+                                                        response_tool_calls[
+                                                            tool_call_index
+                                                        ]["function"][
+                                                            "arguments"
+                                                        ] += delta_arguments
+
+                                    value = delta.get("content")
+
+                                    if value:
+                                        content = f"{content}{value}"
+
+                                        if not content_blocks:
+                                            content_blocks.append(
+                                                {
+                                                    "type": "text",
+                                                    "content": "",
+                                                }
+                                            )
+
+                                        content_blocks[-1]["content"] = (
+                                            content_blocks[-1]["content"] + value
                                         )
 
-                                    if DETECT_CODE_INTERPRETER:
-                                        content, content_blocks, end = (
-                                            tag_content_handler(
-                                                "code_interpreter",
-                                                code_interpreter_tags,
-                                                content,
-                                                content_blocks,
+                                        if DETECT_REASONING:
+                                            content, content_blocks, _ = (
+                                                tag_content_handler(
+                                                    "reasoning",
+                                                    reasoning_tags,
+                                                    content,
+                                                    content_blocks,
+                                                )
                                             )
-                                        )
 
-                                        if end:
-                                            break
-
-                                    if DETECT_SOLUTION:
-                                        content, content_blocks, _ = (
-                                            tag_content_handler(
-                                                "solution",
-                                                solution_tags,
-                                                content,
-                                                content_blocks,
+                                        if DETECT_CODE_INTERPRETER:
+                                            content, content_blocks, end = (
+                                                tag_content_handler(
+                                                    "code_interpreter",
+                                                    code_interpreter_tags,
+                                                    content,
+                                                    content_blocks,
+                                                )
                                             )
-                                        )
 
-                                    if ENABLE_REALTIME_CHAT_SAVE:
-                                        # Save message in the database
-                                        Chats.upsert_message_to_chat_by_id_and_message_id(
-                                            metadata["chat_id"],
-                                            metadata["message_id"],
-                                            {
+                                            if end:
+                                                break
+
+                                        if DETECT_SOLUTION:
+                                            content, content_blocks, _ = (
+                                                tag_content_handler(
+                                                    "solution",
+                                                    solution_tags,
+                                                    content,
+                                                    content_blocks,
+                                                )
+                                            )
+
+                                        if ENABLE_REALTIME_CHAT_SAVE:
+                                            # Save message in the database
+                                            Chats.upsert_message_to_chat_by_id_and_message_id(
+                                                metadata["chat_id"],
+                                                metadata["message_id"],
+                                                {
+                                                    "content": serialize_content_blocks(
+                                                        content_blocks
+                                                    ),
+                                                },
+                                            )
+                                        else:
+                                            data = {
                                                 "content": serialize_content_blocks(
                                                     content_blocks
                                                 ),
-                                            },
-                                        )
-                                    else:
-                                        data = {
-                                            "content": serialize_content_blocks(
-                                                content_blocks
-                                            ),
-                                        }
+                                            }
 
-                            await event_emitter(
-                                {
-                                    "type": "chat:completion",
-                                    "data": data,
-                                }
-                            )
+                                await event_emitter(
+                                    {
+                                        "type": "chat:completion",
+                                        "data": data,
+                                    }
+                                )
                         except Exception as e:
                             done = "data: [DONE]" in line
                             if done:
@@ -2000,7 +2007,9 @@ async def process_chat_response(
                     form_data=event,
                     extra_params=extra_params,
                 )
-                yield wrap_item(json.dumps(event))
+
+                if event:
+                    yield wrap_item(json.dumps(event))
 
             async for data in original_generator:
                 data, _ = await process_filter_functions(
@@ -2010,7 +2019,9 @@ async def process_chat_response(
                     form_data=data,
                     extra_params=extra_params,
                 )
-                yield data
+
+                if data:
+                    yield data
 
         return StreamingResponse(
             stream_wrapper(response.body_iterator, events),
