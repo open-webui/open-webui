@@ -469,16 +469,16 @@ def get_sources_from_files(
                             if distances:
                                 new_distances.append(distances[idx])
 
-                            print('get parent_id', parent_id)
                             parent_doc = (
                                 DocumentDBs.get_document_by_id(parent_id)
                                 if parent_id
                                 else None
                             )
-
+                            
                             new_document.append(
                                 parent_doc.page_content if parent_doc else document[idx]
                             )
+                            print(f'parent_id {parent_id}, len of child chunk {len(document[idx])}, len of parent {len(parent_doc.page_content) if parent_doc else 0}')
 
                         document = new_document
                         metadatas = new_metadatas
