@@ -59,6 +59,7 @@ from open_webui.retrieval.web.serpstack import search_serpstack
 from open_webui.retrieval.web.tavily import search_tavily
 from open_webui.retrieval.web.bing import search_bing
 from open_webui.retrieval.web.exa import search_exa
+from open_webui.retrieval.web.tavily_exa import search_tavily_and_exa
 
 
 from open_webui.retrieval.utils import (
@@ -1283,6 +1284,17 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             )
         else:
             raise Exception("No TAVILY_API_KEY found in environment variables")
+    elif engine == "tavily+exa":
+        if request.app.state.config.TAVILY_API_KEY and request.app.state.config.EXA_API_KEY:
+            return search_tavily_and_exa(
+                request.app.state.config.TAVILY_API_KEY,
+                request.app.state.config.EXA_API_KEY,
+                query,
+                request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception("No TAVILY_API_KEY or EXA_API_KEY found in environment variables")
     elif engine == "searchapi":
         if request.app.state.config.SEARCHAPI_API_KEY:
             return search_searchapi(
