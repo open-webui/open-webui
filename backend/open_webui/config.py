@@ -44,7 +44,7 @@ logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 # Function to run the alembic migrations
 def run_migrations():
-    print("Running migrations")
+    log.info("Running migrations")
     try:
         from alembic import command
         from alembic.config import Config
@@ -57,7 +57,7 @@ def run_migrations():
 
         command.upgrade(alembic_cfg, "head")
     except Exception as e:
-        print(f"Error: {e}")
+        log.exception(f"Error running migrations: {e}")
 
 
 run_migrations()
@@ -678,6 +678,10 @@ S3_REGION_NAME = os.environ.get("S3_REGION_NAME", None)
 S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", None)
 S3_KEY_PREFIX = os.environ.get("S3_KEY_PREFIX", None)
 S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", None)
+S3_USE_ACCELERATE_ENDPOINT = (
+    os.environ.get("S3_USE_ACCELERATE_ENDPOINT", "False").lower() == "true"
+)
+S3_ADDRESSING_STYLE = os.environ.get("S3_ADDRESSING_STYLE", None)
 
 GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME", None)
 GOOGLE_APPLICATION_CREDENTIALS_JSON = os.environ.get(
@@ -1094,7 +1098,7 @@ try:
     banners = json.loads(os.environ.get("WEBUI_BANNERS", "[]"))
     banners = [BannerModel(**banner) for banner in banners]
 except Exception as e:
-    print(f"Error loading WEBUI_BANNERS: {e}")
+    log.exception(f"Error loading WEBUI_BANNERS: {e}")
     banners = []
 
 WEBUI_BANNERS = PersistentConfig("WEBUI_BANNERS", "ui.banners", banners)
@@ -1566,6 +1570,18 @@ GOOGLE_DRIVE_API_KEY = PersistentConfig(
     os.environ.get("GOOGLE_DRIVE_API_KEY", ""),
 )
 
+ENABLE_ONEDRIVE_INTEGRATION = PersistentConfig(
+    "ENABLE_ONEDRIVE_INTEGRATION",
+    "onedrive.enable",
+    os.getenv("ENABLE_ONEDRIVE_INTEGRATION", "False").lower() == "true",
+)
+
+ONEDRIVE_CLIENT_ID = PersistentConfig(
+    "ONEDRIVE_CLIENT_ID",
+    "onedrive.client_id",
+    os.environ.get("ONEDRIVE_CLIENT_ID", ""),
+)
+
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = PersistentConfig(
     "CONTENT_EXTRACTION_ENGINE",
@@ -1577,6 +1593,18 @@ TIKA_SERVER_URL = PersistentConfig(
     "TIKA_SERVER_URL",
     "rag.tika_server_url",
     os.getenv("TIKA_SERVER_URL", "http://tika:9998"),  # Default for sidecar deployment
+)
+
+DOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(
+    "DOCUMENT_INTELLIGENCE_ENDPOINT",
+    "rag.document_intelligence_endpoint",
+    os.getenv("DOCUMENT_INTELLIGENCE_ENDPOINT", ""),
+)
+
+DOCUMENT_INTELLIGENCE_KEY = PersistentConfig(
+    "DOCUMENT_INTELLIGENCE_KEY",
+    "rag.document_intelligence_key",
+    os.getenv("DOCUMENT_INTELLIGENCE_KEY", ""),
 )
 
 RAG_TOP_K = PersistentConfig(

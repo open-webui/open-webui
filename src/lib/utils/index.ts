@@ -846,6 +846,9 @@ export const promptTemplate = (
 	if (user_location) {
 		// Replace {{USER_LOCATION}} in the template with the current location
 		template = template.replace('{{USER_LOCATION}}', user_location);
+	} else {
+		// Replace {{USER_LOCATION}} in the template with 'Unknown' if no location is provided
+		template = template.replace('{{USER_LOCATION}}', 'LOCATION_UNKNOWN');
 	}
 
 	return template;

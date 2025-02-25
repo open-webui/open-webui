@@ -353,9 +353,14 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
         "enable_google_drive_integration": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
+        "enable_onedrive_integration": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
+            "document_intelligence_config": {
+                "endpoint": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
+                "key": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+            },
         },
         "chunk": {
             "text_splitter": request.app.state.config.TEXT_SPLITTER,
@@ -377,6 +382,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "search": {
                 "enabled": request.app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "drive": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
+                "onedrive": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
                 "engine": request.app.state.config.RAG_WEB_SEARCH_ENGINE,
                 "searxng_query_url": request.app.state.config.SEARXNG_QUERY_URL,
                 "google_pse_api_key": request.app.state.config.GOOGLE_PSE_API_KEY,
@@ -399,6 +405,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
                 "bing_search_v7_subscription_key": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
                 "exa_api_key": request.app.state.config.EXA_API_KEY,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                "trust_env": request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
                 "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             },
@@ -411,9 +418,15 @@ class FileConfig(BaseModel):
     max_count: Optional[int] = None
 
 
+class DocumentIntelligenceConfigForm(BaseModel):
+    endpoint: str
+    key: str
+
+
 class ContentExtractionConfig(BaseModel):
     engine: str = ""
     tika_server_url: Optional[str] = None
+    document_intelligence_config: Optional[DocumentIntelligenceConfigForm] = None
 
 
 class ChunkParamUpdateForm(BaseModel):
@@ -467,6 +480,7 @@ class ConfigUpdateForm(BaseModel):
     RAG_FULL_CONTEXT: Optional[bool] = None
     pdf_extract_images: Optional[bool] = None
     enable_google_drive_integration: Optional[bool] = None
+    enable_onedrive_integration: Optional[bool] = None
     file: Optional[FileConfig] = None
     content_extraction: Optional[ContentExtractionConfig] = None
     chunk: Optional[ChunkParamUpdateForm] = None
@@ -496,18 +510,33 @@ async def update_rag_config(
         else request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION
     )
 
+    request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION = (
+        form_data.enable_onedrive_integration
+        if form_data.enable_onedrive_integration is not None
+        else request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION
+    )
+
     if form_data.file is not None:
         request.app.state.config.FILE_MAX_SIZE = form_data.file.max_size
         request.app.state.config.FILE_MAX_COUNT = form_data.file.max_count
 
     if form_data.content_extraction is not None:
-        log.info(f"Updating text settings: {form_data.content_extraction}")
+        log.info(
+            f"Updating content extraction: {request.app.state.config.CONTENT_EXTRACTION_ENGINE} to {form_data.content_extraction.engine}"
+        )
         request.app.state.config.CONTENT_EXTRACTION_ENGINE = (
             form_data.content_extraction.engine
         )
         request.app.state.config.TIKA_SERVER_URL = (
             form_data.content_extraction.tika_server_url
         )
+        if form_data.content_extraction.document_intelligence_config is not None:
+            request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = (
+                form_data.content_extraction.document_intelligence_config.endpoint
+            )
+            request.app.state.config.DOCUMENT_INTELLIGENCE_KEY = (
+                form_data.content_extraction.document_intelligence_config.key
+            )
 
     if form_data.chunk is not None:
         request.app.state.config.TEXT_SPLITTER = form_data.chunk.text_splitter
@@ -604,6 +633,10 @@ async def update_rag_config(
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
+            "document_intelligence_config": {
+                "endpoint": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
+                "key": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+            },
         },
         "chunk": {
             "text_splitter": request.app.state.config.TEXT_SPLITTER,
@@ -937,6 +970,8 @@ def process_file(
                     engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
                     TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
                     PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
+                    DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
+                    DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
                 )
                 docs = loader.load(
                     file.filename, file.meta.get("content_type"), file_path
@@ -1553,11 +1588,11 @@ def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
                     elif os.path.isdir(file_path):
                         shutil.rmtree(file_path)  # Remove the directory
                 except Exception as e:
-                    print(f"Failed to delete {file_path}. Reason: {e}")
+                    log.exception(f"Failed to delete {file_path}. Reason: {e}")
         else:
-            print(f"The directory {folder} does not exist")
+            log.warning(f"The directory {folder} does not exist")
     except Exception as e:
-        print(f"Failed to process the directory {folder}. Reason: {e}")
+        log.exception(f"Failed to process the directory {folder}. Reason: {e}")
     return True
 
 

@@ -273,7 +273,7 @@ async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user)):
 
             # Check if the file already exists in the cache
             if file_path.is_file():
-                print(f"file_path: {file_path}")
+                log.info(f"file_path: {file_path}")
                 return FileResponse(file_path)
             else:
                 raise HTTPException(

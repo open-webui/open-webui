@@ -2,6 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
+	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
 
 	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
 	const dispatch = createEventDispatcher();
@@ -827,7 +828,11 @@
 															}
 
 															// Submit the prompt when Enter key is pressed
-															if (prompt !== '' && e.keyCode === 13 && !e.shiftKey) {
+															if (
+																(prompt !== '' || files.length > 0) &&
+																e.keyCode === 13 &&
+																!e.shiftKey
+															) {
 																dispatch('submit', prompt);
 															}
 														}
@@ -906,7 +911,11 @@
 													}
 
 													// Submit the prompt when Enter key is pressed
-													if (prompt !== '' && e.key === 'Enter' && !e.shiftKey) {
+													if (
+														(prompt !== '' || files.length > 0) &&
+														e.key === 'Enter' &&
+														!e.shiftKey
+													) {
 														dispatch('submit', prompt);
 													}
 												}
@@ -1108,6 +1117,21 @@
 													);
 												}
 											}}
+											uploadOneDriveHandler={async () => {
+												try {
+													const fileData = await pickAndDownloadFile();
+													if (fileData) {
+														const file = new File([fileData.blob], fileData.name, {
+															type: fileData.blob.type || 'application/octet-stream'
+														});
+														await uploadFileHandler(file);
+													} else {
+														console.log('No file was selected from OneDrive');
+													}
+												} catch (error) {
+													console.error('OneDrive Error:', error);
+												}
+											}}
 											onClose={async () => {
 												await tick();
 
@@ -1285,14 +1309,17 @@
 
 																	stream = null;
 
-																	if (!$TTSWorker) {
-																		await TTSWorker.set(
-																			new KokoroWorker({
-																				dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
-																			})
-																		);
+																	if ($settings.audio?.tts?.engine === 'browser-kokoro') {
+																		// If the user has not initialized the TTS worker, initialize it
+																		if (!$TTSWorker) {
+																			await TTSWorker.set(
+																				new KokoroWorker({
+																					dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
+																				})
+																			);
 
-																		await $TTSWorker.init();
+																			await $TTSWorker.init();
+																		}
 																	}
 
 																	showCallOverlay.set(true);
