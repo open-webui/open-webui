@@ -144,6 +144,9 @@ async def update_config(
     request.app.state.config.COMFYUI_BASE_URL = (
         form_data.comfyui.COMFYUI_BASE_URL.strip("/")
     )
+    request.app.state.config.COMFYUI_API_KEY = (
+            form_data.comfyui.COMFYUI_API_KEY
+    )
     request.app.state.config.COMFYUI_WORKFLOW = form_data.comfyui.COMFYUI_WORKFLOW
     request.app.state.config.COMFYUI_WORKFLOW_NODES = (
         form_data.comfyui.COMFYUI_WORKFLOW_NODES
@@ -205,7 +208,8 @@ async def verify_url(request: Request, user=Depends(get_admin_user)):
     elif request.app.state.config.IMAGE_GENERATION_ENGINE == "comfyui":
         try:
             r = requests.get(
-                url=f"{request.app.state.config.COMFYUI_BASE_URL}/object_info"
+                url=f"{request.app.state.config.COMFYUI_BASE_URL}/object_info",
+                headers={"Authorization": f"Bearer {request.app.state.config.COMFYUI_API_KEY}"},
             )
             r.raise_for_status()
             return True
