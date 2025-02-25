@@ -430,7 +430,7 @@
 								</div>
 							{/if}
 
-							{#if webSearchEnabled || ($settings?.webSearch ?? false) === 'always'}
+							{#if webSearchEnabled || ($config?.features?.enable_web_search && ($settings?.webSearch ?? false)) === 'always'}
 								<div class="flex items-center justify-between w-full">
 									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
 										<div class="pl-1">

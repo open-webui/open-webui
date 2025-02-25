@@ -66,6 +66,12 @@
 		return () => clearInterval(carouselInterval);
 	});
 
+	const querystringValue = (key) => {
+		const querystring = window.location.search;
+		const urlParams = new URLSearchParams(querystring);
+		return urlParams.get(key);
+	};
+
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
 			console.log(sessionUser);
@@ -77,7 +83,9 @@
 			$socket?.emit('user-join', { auth: { token: sessionUser.token } });
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
-			goto('/');
+
+			const redirectPath = querystringValue('redirect') || '/';
+			goto(redirectPath);
 		}
 	};
 

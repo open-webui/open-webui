@@ -1,0 +1,32 @@
+name: Release to PyPI
+
+on:
+  push:
+    branches:
+      - main # or whatever branch you want to use
+      - pypi-release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/open-webui
+    permissions:
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - name: Build
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+          python -m build .
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
