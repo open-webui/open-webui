@@ -828,7 +828,11 @@
 															}
 
 															// Submit the prompt when Enter key is pressed
-															if (prompt !== '' && e.keyCode === 13 && !e.shiftKey) {
+															if (
+																(prompt !== '' || files.length > 0) &&
+																e.keyCode === 13 &&
+																!e.shiftKey
+															) {
 																dispatch('submit', prompt);
 															}
 														}
@@ -907,7 +911,11 @@
 													}
 
 													// Submit the prompt when Enter key is pressed
-													if (prompt !== '' && e.key === 'Enter' && !e.shiftKey) {
+													if (
+														(prompt !== '' || files.length > 0) &&
+														e.key === 'Enter' &&
+														!e.shiftKey
+													) {
 														dispatch('submit', prompt);
 													}
 												}
