@@ -82,9 +82,6 @@
         bannersSortable = new Sortable(document.querySelector('.banners-sortable'), {
                 handle: ".flex-1",
                 animation: 300,
-                onSort: (event) => {
-                        updateBanners();
-                },
         });
 });
 </script>
