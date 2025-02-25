@@ -41,6 +41,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
         "openai": {
             "OPENAI_API_BASE_URL": request.app.state.config.IMAGES_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": request.app.state.config.IMAGES_OPENAI_API_KEY,
+            "OPENAI_USE_URL": request.app.state.config.IMAGES_OPENAI_USE_URL,
         },
         "automatic1111": {
             "AUTOMATIC1111_BASE_URL": request.app.state.config.AUTOMATIC1111_BASE_URL,
@@ -65,6 +66,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
 class OpenAIConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
     OPENAI_API_KEY: str
+    OPENAI_USE_URL: bool
 
 
 class Automatic1111ConfigForm(BaseModel):
@@ -156,6 +158,7 @@ async def update_config(
         "openai": {
             "OPENAI_API_BASE_URL": request.app.state.config.IMAGES_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": request.app.state.config.IMAGES_OPENAI_API_KEY,
+            "OPENAI_USE_URL": request.app.state.config.IMAGES_OPENAI_USE_URL,
         },
         "automatic1111": {
             "AUTOMATIC1111_BASE_URL": request.app.state.config.AUTOMATIC1111_BASE_URL,
@@ -490,7 +493,7 @@ async def image_generations(
                     if form_data.size
                     else request.app.state.config.IMAGE_SIZE
                 ),
-                "response_format": "b64_json",
+                "response_format": "url" if request.app.state.config.IMAGES_OPENAI_USE_URL else "b64_json",
             }
 
             # Use asyncio.to_thread for the requests.post call
@@ -507,7 +510,10 @@ async def image_generations(
             images = []
 
             for image in res["data"]:
-                image_data, content_type = load_b64_image_data(image["b64_json"])
+                if request.app.state.config.IMAGES_OPENAI_USE_URL:
+                    image_data, content_type = load_url_image_data(image["url"])
+                else:
+                    image_data, content_type = load_url_image_data(image["b64_json"])
                 url = upload_image(request, data, image_data, content_type, user)
                 images.append({"url": url})
             return images
