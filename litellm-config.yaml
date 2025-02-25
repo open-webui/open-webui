@@ -15,7 +15,6 @@ model_list:
       arena_elo: 1287
       knowledge_cutoff: "October 2023"
       context_window: 128000
-
   - model_name: "GPT 3.5 Turbo"
     litellm_params:
       model: "azure/gpt-35-turbo"
@@ -27,5 +26,69 @@ model_list:
       arena_elo: 1116
       knowledge_cutoff: "September 2021"
       context_window: 16000
+  - model_name: 'Claude 3 Haiku'
+    litellm_params:
+      model: 'vertex_ai/claude-3-haiku@20240307'
+      vertex_project: 'testllm-94944'
+      vertex_location: 'europe-west4'
+    model_info:
+      description: 'Lightning-fast responses for simple queries.'
+      arena_elo: 1178
+      knowledge_cutoff: 'August 2023'
+      context_window: 200_000
+  - model_name: 'Claude 3.5 Sonnet'
+    litellm_params:
+      model: 'vertex_ai/claude-3-5-sonnet@20240620'
+      vertex_project: 'testllm-94944'
+      vertex_location: 'europe-west1'
+    model_info:
+      description: "Anthropic's latest model."
+      arena_elo: 1271
+      knowledge_cutoff: 'August 2023'
+      context_window: 200_000
+  - model_name: 'Gemini 1.5 Pro'
+    litellm_params:
+      model: 'gemini-1.5-pro'
+      vertex_project: 'testllm-94944'
+      vertex_location: 'europe-west3'
+    model_info:
+      description: "Google's leading model with a very large context window."
+      arena_elo: 1265
+      knowledge_cutoff: 'November 2023'
+      context_window: 2_000_000
+  - model_name: 'Gemini 1.5 Flash'
+    litellm_params:
+      model: 'gemini-1.5-flash-001'
+      vertex_project: 'testllm-94944'
+      vertex_location: 'europe-west3'
+    model_info:
+      description: 'Optimized for speed and efficiency.'
+      arena_elo: 1231
+      knowledge_cutoff: 'November 2023'
+      context_window: 1_000_000
+  - model_name: 'Mistral Medium'
+    litellm_params:
+      model: mistral/mistral-medium
+    model_info:
+      description: 'Good balance between performance and capacity.'
+      arena_elo: 1148
+      knowledge_cutoff: 'Unknown'
+      context_window: 32_000
+  - model_name: 'Mistral Large'
+    litellm_params:
+      model: mistral/mistral-large-latest
+    model_info:
+      description: 'Ideal for specialized and complex text and code generation.'
+      arena_elo: 1156
+      knowledge_cutoff: 'Unknown'
+      context_window: 32_000
+  - model_name: 'Perplexity'
+    litellm_params:
+      model: 'perplexity/llama-3-sonar-large-32k-online'
+    model_info:
+      max_input_tokens: '32000'
+      input_cost_per_token: 0.000001
+      output_cost_per_token: 0.000001
+      description: 'Optimal for search queries and research.'
 
 general_settings: {}
