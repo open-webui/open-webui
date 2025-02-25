@@ -1487,6 +1487,16 @@ async def process_chat_response(
                                 else:
                                     choices = data.get("choices", [])
                                     if not choices:
+                                        usage = data.get("usage", {})
+                                        if usage:
+                                            await event_emitter(
+                                                {
+                                                    "type": "chat:completion",
+                                                    "data": {
+                                                        "usage": usage,
+                                                    },
+                                                }
+                                            )
                                         continue
 
                                     delta = choices[0].get("delta", {})
