@@ -108,7 +108,9 @@ class ChromaClient:
                 )
             return None
         except Exception as e:
-            log.exception(f"Error querying collection {collection} with limit {limit}: {e}")
+            log.exception(
+                f"Error querying collection {collection_name} with limit {limit}: {e}"
+            )
             return None
 
     def get(self, collection_name: str) -> Optional[GetResult]:
