@@ -250,7 +250,7 @@
 							<div class="m-auto text-center mt-4">
 								<p class="text-2xl font-bold mb-4">Empty Page</p>
 								<p class="text-md text-gray-600">
-									There's nothing here to show! Ask your favorite LLM for some HTML code with some
+									There's nothing here to show! Ask your favorite LLM for some HTML with some
 									styling to get started!
 								</p>
 							</div>
