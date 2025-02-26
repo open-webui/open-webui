@@ -65,12 +65,16 @@ except Exception:
 # LOGGING
 ####################################
 
-log_levels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
+GLOBAL_LOG_LEVEL = os.environ.get("GLOBAL_LOG_LEVEL")
+if GLOBAL_LOG_LEVEL is not None:
+    GLOBAL_LOG_LEVEL = GLOBAL_LOG_LEVEL.upper()
+    if GLOBAL_LOG_LEVEL in logging.getLevelNamesMapping():
+        logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL, force=True)
+    else:
+        logging.warn("GLOBAL_LOG_LEVEL was set to an invalid log level")
+        GLOBAL_LOG_LEVEL = None
 
-GLOBAL_LOG_LEVEL = os.environ.get("GLOBAL_LOG_LEVEL", "").upper()
-if GLOBAL_LOG_LEVEL in log_levels:
-    logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL, force=True)
-else:
+if GLOBAL_LOG_LEVEL is None:
     GLOBAL_LOG_LEVEL = "INFO"
 
 log = logging.getLogger(__name__)
@@ -102,7 +106,7 @@ SRC_LOG_LEVELS = {}
 for source in log_sources:
     log_env_var = source + "_LOG_LEVEL"
     SRC_LOG_LEVELS[source] = os.environ.get(log_env_var, "").upper()
-    if SRC_LOG_LEVELS[source] not in log_levels:
+    if SRC_LOG_LEVELS[source] not in logging.getLevelNamesMapping():
         SRC_LOG_LEVELS[source] = GLOBAL_LOG_LEVEL
     log.info(f"{log_env_var}: {SRC_LOG_LEVELS[source]}")
 
