@@ -502,7 +502,7 @@ def generate_openai_batch_embeddings(
     texts: list[str],
     url: str = "https://api.openai.com/v1",
     key: str = "",
-    user: UserModel = None,
+    user: UserModel | None = None,
 ) -> Optional[list[list[float]]]:
     try:
         r = requests.post(
@@ -535,7 +535,11 @@ def generate_openai_batch_embeddings(
 
 
 def generate_ollama_batch_embeddings(
-    model: str, texts: list[str], url: str, key: str = "", user: UserModel = None
+    model: str,
+    texts: list[str],
+    url: str,
+    key: str = "",
+    user: UserModel | None = None
 ) -> Optional[list[list[float]]]:
     try:
         r = requests.post(
